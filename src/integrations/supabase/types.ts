@@ -4977,11 +4977,16 @@ export type Database = {
           descricao: string
           executor_id: string
           id: string
+          moeda: string | null
           parceiro_id: string | null
+          perda_registrada_ledger: boolean | null
           prioridade: Database["public"]["Enums"]["ocorrencia_prioridade"]
           projeto_id: string | null
           requerente_id: string
           resolved_at: string | null
+          resultado_financeiro:
+            | Database["public"]["Enums"]["ocorrencia_resultado_financeiro"]
+            | null
           sla_alerta_em: string | null
           sla_horas: number | null
           sla_violado: boolean
@@ -4990,6 +4995,8 @@ export type Database = {
           tipo: Database["public"]["Enums"]["ocorrencia_tipo"]
           titulo: string
           updated_at: string
+          valor_perda: number | null
+          valor_risco: number | null
           wallet_id: string | null
           workspace_id: string
         }
@@ -5003,11 +5010,16 @@ export type Database = {
           descricao: string
           executor_id: string
           id?: string
+          moeda?: string | null
           parceiro_id?: string | null
+          perda_registrada_ledger?: boolean | null
           prioridade?: Database["public"]["Enums"]["ocorrencia_prioridade"]
           projeto_id?: string | null
           requerente_id: string
           resolved_at?: string | null
+          resultado_financeiro?:
+            | Database["public"]["Enums"]["ocorrencia_resultado_financeiro"]
+            | null
           sla_alerta_em?: string | null
           sla_horas?: number | null
           sla_violado?: boolean
@@ -5016,6 +5028,8 @@ export type Database = {
           tipo?: Database["public"]["Enums"]["ocorrencia_tipo"]
           titulo: string
           updated_at?: string
+          valor_perda?: number | null
+          valor_risco?: number | null
           wallet_id?: string | null
           workspace_id: string
         }
@@ -5029,11 +5043,16 @@ export type Database = {
           descricao?: string
           executor_id?: string
           id?: string
+          moeda?: string | null
           parceiro_id?: string | null
+          perda_registrada_ledger?: boolean | null
           prioridade?: Database["public"]["Enums"]["ocorrencia_prioridade"]
           projeto_id?: string | null
           requerente_id?: string
           resolved_at?: string | null
+          resultado_financeiro?:
+            | Database["public"]["Enums"]["ocorrencia_resultado_financeiro"]
+            | null
           sla_alerta_em?: string | null
           sla_horas?: number | null
           sla_violado?: boolean
@@ -5042,6 +5061,8 @@ export type Database = {
           tipo?: Database["public"]["Enums"]["ocorrencia_tipo"]
           titulo?: string
           updated_at?: string
+          valor_perda?: number | null
+          valor_risco?: number | null
           wallet_id?: string | null
           workspace_id?: string
         }
@@ -13045,6 +13066,10 @@ export type Database = {
         | "prioridade_alterada"
         | "vinculo_adicionado"
       ocorrencia_prioridade: "baixa" | "media" | "alta" | "urgente"
+      ocorrencia_resultado_financeiro:
+        | "sem_impacto"
+        | "perda_confirmada"
+        | "perda_parcial"
       ocorrencia_status:
         | "aberto"
         | "em_andamento"
@@ -13257,6 +13282,11 @@ export const Constants = {
         "vinculo_adicionado",
       ],
       ocorrencia_prioridade: ["baixa", "media", "alta", "urgente"],
+      ocorrencia_resultado_financeiro: [
+        "sem_impacto",
+        "perda_confirmada",
+        "perda_parcial",
+      ],
       ocorrencia_status: [
         "aberto",
         "em_andamento",

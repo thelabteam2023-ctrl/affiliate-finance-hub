@@ -42,6 +42,7 @@ async function fetchOcorrencias(
     prioridade?: OcorrenciaPrioridade[];
     executorId?: string;
     requerenteId?: string;
+    projetoId?: string;
   }
 ): Promise<Ocorrencia[]> {
   let query = ocorrenciasTable()
@@ -63,6 +64,9 @@ async function fetchOcorrencias(
   }
   if (filters?.requerenteId) {
     query = query.eq('requerente_id', filters.requerenteId);
+  }
+  if (filters?.projetoId) {
+    query = query.eq('projeto_id', filters.projetoId);
   }
 
   const { data, error } = await query;
