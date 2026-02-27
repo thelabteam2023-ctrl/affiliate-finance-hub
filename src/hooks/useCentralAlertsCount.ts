@@ -9,6 +9,8 @@ import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useRole } from "@/hooks/useRole";
 import { useAuth } from "@/hooks/useAuth";
+import { useOcorrenciasKpis } from "@/hooks/useOcorrencias";
+import { useSolicitacoesKpis } from "@/hooks/useSolicitacoes";
 
 // Classificação de domínio dos eventos
 type EventDomain = 'project_event' | 'financial_event' | 'partner_event' | 'admin_event';
@@ -23,10 +25,14 @@ const ROLE_VISIBILITY: Record<string, EventDomain[]> = {
 };
 
 export function useCentralAlertsCount() {
-  const [count, setCount] = useState(0);
+  const [financialCount, setFinancialCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const { role, isOperator } = useRole();
   const { user, workspaceId } = useAuth();
+  const { data: kpisOcorrencias } = useOcorrenciasKpis();
+  const { data: kpisSolicitacoes } = useSolicitacoesKpis();
+
+  const count = financialCount + (kpisOcorrencias?.abertas_total ?? 0) + (kpisSolicitacoes?.total_abertas ?? 0);
 
   // Domínios permitidos para o role atual
   const allowedDomains = useMemo(() => {
@@ -301,7 +307,7 @@ export function useCentralAlertsCount() {
           totalCount += conciliacaoPendenteResult.data.length;
         }
 
-        setCount(totalCount);
+        setFinancialCount(totalCount);
       } catch (error) {
         console.error("Error fetching central alerts count:", error);
       } finally {

@@ -16,6 +16,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { OcorrenciasModule } from "@/components/ocorrencias/OcorrenciasModule";
 import { SolicitacoesModule } from "@/components/solicitacoes/SolicitacoesModule";
 import { useOcorrenciasKpis } from "@/hooks/useOcorrencias";
+import { useSolicitacoesKpis } from "@/hooks/useSolicitacoes";
 import { formatCurrency as formatCurrencyUtil } from "@/utils/formatCurrency";
 import { supabase } from "@/integrations/supabase/client";
 import { getFirstLastName } from "@/lib/utils";
@@ -317,6 +318,7 @@ export default function CentralOperacoes() {
   const { role, isOperator } = useRole();
   const { user, workspaceId } = useAuth();
   const { data: kpisOcorrencias } = useOcorrenciasKpis();
+  const { data: kpisSolicitacoes } = useSolicitacoesKpis();
 
   // Domínios permitidos para o role atual
   const allowedDomains = useMemo(() => {
@@ -1835,16 +1837,30 @@ export default function CentralOperacoes() {
       {/* Tabs principais */}
       <Tabs value={mainTab} onValueChange={(v) => setMainTab(v as typeof mainTab)}>
         <TabsList>
-          <TabsTrigger value="financeiro">Financeiro</TabsTrigger>
-          <TabsTrigger value="ocorrencias" className="relative">
-            Ocorrências
-            {(kpisOcorrencias?.urgentes ?? 0) > 0 && (
-              <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold leading-none">
-                {kpisOcorrencias!.urgentes}
+          <TabsTrigger value="financeiro" className="relative">
+            Financeiro
+            {alertCards.length > 0 && (
+              <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-orange-500 text-white text-[10px] font-bold leading-none">
+                {alertCards.length}
               </span>
             )}
           </TabsTrigger>
-          <TabsTrigger value="solicitacoes">Solicitações</TabsTrigger>
+          <TabsTrigger value="ocorrencias" className="relative">
+            Ocorrências
+            {(kpisOcorrencias?.abertas_total ?? 0) > 0 && (
+              <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold leading-none">
+                {kpisOcorrencias!.abertas_total}
+              </span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="solicitacoes" className="relative">
+            Solicitações
+            {(kpisSolicitacoes?.total_abertas ?? 0) > 0 && (
+              <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-yellow-500 text-white text-[10px] font-bold leading-none">
+                {kpisSolicitacoes!.total_abertas}
+              </span>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="alertas" disabled className="opacity-50">
             Alertas
             <span className="ml-1.5 text-[10px] text-muted-foreground">(em breve)</span>
