@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { TrendingUp, TrendingDown, ArrowDownToLine, ArrowUpFromLine, Target, Building2, User, Wallet, AlertCircle, Eye, EyeOff, History, BarChart3, IdCard, Edit, Trash2, Copy, Check, Calendar, RefreshCw, CircleDashed, CircleCheck, Lock, Search, Pencil, Plus, Minus, FolderKanban, Loader2 } from "lucide-react";
+import { TrendingUp, TrendingDown, ArrowDownToLine, ArrowUpFromLine, Target, Building2, User, Wallet, AlertCircle, Eye, EyeOff, History, BarChart3, IdCard, Edit, Trash2, Copy, Check, Calendar, RefreshCw, CircleDashed, CircleCheck, Lock, Search, Pencil, Plus, Minus, FolderKanban, Loader2, AlertTriangle, DollarSign } from "lucide-react";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -33,6 +33,7 @@ import { NativeCurrencyKpi } from "@/components/ui/native-currency-kpi";
 import { useBookmakerUsageStatus, getUsageCategoryConfig } from "@/hooks/useBookmakerUsageStatus";
 import { useCotacoes } from "@/hooks/useCotacoes";
 import { ParceiroKpiCard } from "./ParceiroKpiCard";
+import { RegistrarPerdaRapidaDialog } from "./RegistrarPerdaRapidaDialog";
 
 interface ParceiroCache {
   resumoData: ParceiroFinanceiroConsolidado | null;
@@ -88,6 +89,7 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
   const [historicoDialog, setHistoricoDialog] = useState<{ open: boolean; bookmakerId: string; bookmakerNome: string; logoUrl: string | null }>({ open: false, bookmakerId: "", bookmakerNome: "", logoUrl: null });
   const [filtroMoeda, setFiltroMoeda] = useState<string>("todas");
   const [buscaCasa, setBuscaCasa] = useState("");
+  const [perdaDialog, setPerdaDialog] = useState<{ open: boolean; bookmakerId: string; bookmakerNome: string; moeda: string; saldoAtual: number } | null>(null);
   const { canEdit, canDelete } = useActionAccess();
   const { convertToBRL, dataSource, isUsingFallback, rates } = useCotacoes();
   const { workspaceId } = useWorkspace();
@@ -1038,20 +1040,36 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                               </div>
                             </ContextMenuTrigger>
                             <ContextMenuContent>
-                              <ContextMenuItem
-                                onClick={() => onNewTransacao?.(bm.bookmaker_id, bm.bookmaker_nome, bm.moeda || "BRL", bm.saldo_atual ?? 0, 0, "deposito")}
-                                className="gap-2"
-                              >
-                                <Plus className="h-4 w-4 text-success" />
-                                Depósito
-                              </ContextMenuItem>
-                              <ContextMenuItem
-                                onClick={() => onNewTransacao?.(bm.bookmaker_id, bm.bookmaker_nome, bm.moeda || "BRL", bm.saldo_atual ?? 0, 0, "retirada")}
-                                className="gap-2"
-                              >
-                                <Minus className="h-4 w-4 text-destructive" />
-                                Saque
-                              </ContextMenuItem>
+                              <ContextMenuSub>
+                                <ContextMenuSubTrigger className="gap-2">
+                                  <DollarSign className="h-4 w-4" />
+                                  Financeiro
+                                </ContextMenuSubTrigger>
+                                <ContextMenuSubContent className="min-w-[180px]">
+                                  <ContextMenuItem
+                                    onClick={() => onNewTransacao?.(bm.bookmaker_id, bm.bookmaker_nome, bm.moeda || "BRL", bm.saldo_atual ?? 0, 0, "deposito")}
+                                    className="gap-2"
+                                  >
+                                    <Plus className="h-4 w-4 text-success" />
+                                    Depósito
+                                  </ContextMenuItem>
+                                  <ContextMenuItem
+                                    onClick={() => onNewTransacao?.(bm.bookmaker_id, bm.bookmaker_nome, bm.moeda || "BRL", bm.saldo_atual ?? 0, 0, "retirada")}
+                                    className="gap-2"
+                                  >
+                                    <Minus className="h-4 w-4 text-destructive" />
+                                    Saque
+                                  </ContextMenuItem>
+                                  <ContextMenuSeparator />
+                                  <ContextMenuItem
+                                    onClick={() => setPerdaDialog({ open: true, bookmakerId: bm.bookmaker_id, bookmakerNome: bm.bookmaker_nome, moeda: bm.moeda || "BRL", saldoAtual: bm.saldo_atual ?? 0 })}
+                                    className="gap-2 text-destructive focus:text-destructive"
+                                  >
+                                    <AlertTriangle className="h-4 w-4" />
+                                    Registrar perda
+                                  </ContextMenuItem>
+                                </ContextMenuSubContent>
+                              </ContextMenuSub>
                               <ContextMenuSeparator />
                               {(() => {
                                 const usage = usageMap[bm.bookmaker_id];
@@ -1152,6 +1170,22 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
         bookmakerNome={historicoDialog.bookmakerNome}
         logoUrl={historicoDialog.logoUrl}
       />
+
+      {/* Dialog de Perda Rápida */}
+      {perdaDialog && (
+        <RegistrarPerdaRapidaDialog
+          open={perdaDialog.open}
+          onOpenChange={(open) => { if (!open) setPerdaDialog(null); }}
+          bookmakerId={perdaDialog.bookmakerId}
+          bookmakerNome={perdaDialog.bookmakerNome}
+          moeda={perdaDialog.moeda}
+          saldoAtual={perdaDialog.saldoAtual}
+          onSuccess={() => {
+            parceiroCache.refreshCurrent();
+            queryClient.invalidateQueries({ queryKey: ["bookmakers"] });
+          }}
+        />
+      )}
     </>
   );
 });
