@@ -431,7 +431,7 @@ export function useResolverOcorrenciaComFinanceiro() {
           // Buscar moeda do bookmaker
           const { data: bkInfo } = await (supabase as any)
             .from('bookmakers')
-            .select('moeda, workspace_id')
+            .select('moeda, workspace_id, saldo_irrecuperavel')
             .eq('id', ocorrencia.bookmaker_id)
             .single();
 
@@ -445,6 +445,20 @@ export function useResolverOcorrenciaComFinanceiro() {
             perdaId: id,
             categoria: ocorrencia.tipo,
           });
+
+          // Se o sub-motivo for saldo_irrecuperavel, acumular no campo da bookmaker
+          const { data: ocorrenciaFull } = await ocorrenciasTable()
+            .select('sub_motivo')
+            .eq('id', id)
+            .single();
+
+          if (ocorrenciaFull?.sub_motivo === 'saldo_irrecuperavel') {
+            const currentIrrec = Number(bkInfo?.saldo_irrecuperavel || 0);
+            await (supabase as any)
+              .from('bookmakers')
+              .update({ saldo_irrecuperavel: currentIrrec + valorPerda })
+              .eq('id', ocorrencia.bookmaker_id);
+          }
         }
       }
     },

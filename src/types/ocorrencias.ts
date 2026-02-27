@@ -170,6 +170,7 @@ export const SUB_MOTIVOS: Record<OcorrenciaTipo, { value: string; label: string 
     { value: 'metodo_indisponivel', label: 'Método de pagamento indisponível' },
     // Financeiro geral
     { value: 'saldo_divergente', label: 'Saldo divergente do esperado' },
+    { value: 'saldo_irrecuperavel', label: 'Saldo irrecuperável (casa limitada)' },
     { value: 'taxa_indevida', label: 'Taxa/cobrança indevida' },
     { value: 'verificacao_pendente', label: 'Verificação de identidade pendente' },
     { value: 'outro', label: 'Outro motivo' },
