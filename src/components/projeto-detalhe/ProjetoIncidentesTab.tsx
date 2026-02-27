@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { AlertTriangle, ShieldAlert } from 'lucide-react';
+import { AlertTriangle, ShieldAlert, BarChart3 } from 'lucide-react';
 import { ProjetoOcorrenciasTab } from './ProjetoOcorrenciasTab';
 import { LimitationSection } from './limitation/LimitationSection';
+import { IncidentesEstatisticasTab } from './IncidentesEstatisticasTab';
 
 interface ProjetoIncidentesTabProps {
   projetoId: string;
@@ -26,6 +27,10 @@ export function ProjetoIncidentesTab({ projetoId, onDataChange, formatCurrency }
               <ShieldAlert className="h-3.5 w-3.5" />
               Limitações
             </TabsTrigger>
+            <TabsTrigger value="estatisticas" className="gap-1.5 text-xs">
+              <BarChart3 className="h-3.5 w-3.5" />
+              Estatísticas
+            </TabsTrigger>
           </TabsList>
         </div>
 
@@ -43,6 +48,10 @@ export function ProjetoIncidentesTab({ projetoId, onDataChange, formatCurrency }
               <LimitationSection projetoId={projetoId} />
             </div>
           </div>
+        </TabsContent>
+
+        <TabsContent value="estatisticas" className="flex-1 m-0 min-h-0 overflow-y-auto">
+          <IncidentesEstatisticasTab projetoId={projetoId} formatCurrency={formatCurrency} />
         </TabsContent>
       </Tabs>
     </div>
