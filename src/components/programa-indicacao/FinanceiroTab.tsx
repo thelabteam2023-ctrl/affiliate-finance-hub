@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { parseLocalDate } from "@/lib/dateUtils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,7 +14,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Ban } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Ban, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -88,6 +90,7 @@ interface ParceiroPendente {
 
 export function FinanceiroTab() {
   const { toast } = useToast();
+  const { workspaceId } = useWorkspace();
   const [loading, setLoading] = useState(true);
   const [movimentacoes, setMovimentacoes] = useState<Movimentacao[]>([]);
   const [bonusPendentes, setBonusPendentes] = useState<BonusPendente[]>([]);
@@ -110,6 +113,11 @@ export function FinanceiroTab() {
   const [dispensaParceiroNome, setDispensaParceiroNome] = useState('');
   const [dispensaMotivo, setDispensaMotivo] = useState('');
   const [dispensaLoading, setDispensaLoading] = useState(false);
+  // Estorno do indicador
+  const [dispensaComissaoJaPaga, setDispensaComissaoJaPaga] = useState(false);
+  const [dispensaValorComissao, setDispensaValorComissao] = useState(0);
+  const [dispensaEstornar, setDispensaEstornar] = useState(false);
+  const [dispensaIndicadorNome, setDispensaIndicadorNome] = useState('');
 
   // Estado para editar parceria após renovação
   const [editParceriaOpen, setEditParceriaOpen] = useState(false);
@@ -367,6 +375,7 @@ export function FinanceiroTab() {
       BONIFICACAO_ESTRATEGICA: "Bonif. Estratégica",
       PAGTO_PARCEIRO_DISPENSADO: "Dispensado",
       COMISSAO_INDICADOR_DISPENSADA: "Comissão Dispensada",
+      ESTORNO_COMISSAO_INDICADOR: "Estorno Comissão",
     };
     return labels[tipo] || tipo;
   };
@@ -378,7 +387,6 @@ export function FinanceiroTab() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Não autenticado");
 
-      // 1. Fetch parceria data for audit record (including comissão info)
       const { data: parceria } = await supabase
         .from("parcerias")
         .select("parceiro_id, valor_parceiro, valor_comissao_indicador, comissao_paga, indicacao_id, workspace_id")
@@ -387,7 +395,7 @@ export function FinanceiroTab() {
 
       if (!parceria) throw new Error("Parceria não encontrada");
 
-      // 2. Mark as dispensed + also mark comissão as "paid" (dispensed) to remove from pending
+      // Mark as dispensed
       const { error } = await supabase
         .from("parcerias")
         .update({
@@ -395,12 +403,22 @@ export function FinanceiroTab() {
           dispensa_motivo: dispensaMotivo.trim(),
           dispensa_at: new Date().toISOString(),
           dispensa_por: user.id,
-          comissao_paga: true, // Also dismiss the indicator commission
+          comissao_paga: true,
         })
         .eq("id", dispensaParceriaId);
       if (error) throw error;
 
-      // 3. Insert zero-value audit records in movimentacoes_indicacao
+      // Find indicador_id
+      let indicadorId: string | null = null;
+      if (parceria.indicacao_id) {
+        const { data: indicacao } = await supabase
+          .from("v_indicacoes_workspace")
+          .select("indicador_id")
+          .eq("id", parceria.indicacao_id)
+          .maybeSingle();
+        indicadorId = indicacao?.indicador_id || null;
+      }
+
       const auditRecords: any[] = [
         {
           user_id: user.id,
@@ -416,19 +434,60 @@ export function FinanceiroTab() {
         },
       ];
 
-      // If there was a pending comissão, also create a dispensed record for it
-      if (parceria.valor_comissao_indicador && parceria.valor_comissao_indicador > 0 && !parceria.comissao_paga) {
-        // Find the indicador_id via indicacao
-        let indicadorId: string | null = null;
-        if (parceria.indicacao_id) {
-          const { data: indicacao } = await supabase
-            .from("v_indicacoes_workspace")
-            .select("indicador_id")
-            .eq("id", parceria.indicacao_id)
-            .maybeSingle();
-          indicadorId = indicacao?.indicador_id || null;
-        }
+      // Cenário: comissão já paga + estorno solicitado
+      if (dispensaComissaoJaPaga && dispensaEstornar) {
+        const valorEstorno = dispensaValorComissao;
+        
+        // Lançamento de estorno no cash_ledger (entrada de volta no caixa)
+        const { error: ledgerError } = await supabase
+          .from("cash_ledger")
+          .insert({
+            user_id: user.id,
+            workspace_id: parceria.workspace_id,
+            tipo_transacao: "ESTORNO_COMISSAO_INDICADOR",
+            tipo_moeda: "FIAT",
+            moeda: "BRL",
+            valor: valorEstorno,
+            origem_tipo: "PARCEIRO",
+            destino_tipo: "CAIXA_OPERACIONAL",
+            data_transacao: new Date().toISOString().split("T")[0],
+            descricao: `Estorno comissão - parceria dispensada (${dispensaParceiroNome})`,
+            status: "CONFIRMADO",
+          });
+        if (ledgerError) throw ledgerError;
 
+        auditRecords.push({
+          user_id: user.id,
+          workspace_id: parceria.workspace_id,
+          tipo: "ESTORNO_COMISSAO_INDICADOR",
+          valor: valorEstorno,
+          moeda: "BRL",
+          status: "CONFIRMADO",
+          parceria_id: dispensaParceriaId,
+          parceiro_id: parceria.parceiro_id,
+          indicador_id: indicadorId,
+          descricao: `Estorno comissão: parceria dispensada - ${dispensaMotivo.trim()}`,
+          data_movimentacao: new Date().toISOString().split("T")[0],
+        });
+      } 
+      // Cenário: comissão já paga + sem estorno → registrar nota de sobrepagamento
+      else if (dispensaComissaoJaPaga && !dispensaEstornar) {
+        auditRecords.push({
+          user_id: user.id,
+          workspace_id: parceria.workspace_id,
+          tipo: "COMISSAO_INDICADOR_DISPENSADA",
+          valor: 0,
+          moeda: "BRL",
+          status: "CONFIRMADO",
+          parceria_id: dispensaParceriaId,
+          parceiro_id: parceria.parceiro_id,
+          indicador_id: indicadorId,
+          descricao: `⚠️ Comissão de R$ ${dispensaValorComissao.toFixed(2)} já paga ao indicador. Sobrepagamento mantido sem estorno. Motivo dispensa: ${dispensaMotivo.trim()}`,
+          data_movimentacao: new Date().toISOString().split("T")[0],
+        });
+      }
+      // Cenário: comissão nunca paga → dispensar normalmente
+      else if (!dispensaComissaoJaPaga && parceria.valor_comissao_indicador && parceria.valor_comissao_indicador > 0) {
         auditRecords.push({
           user_id: user.id,
           workspace_id: parceria.workspace_id,
@@ -446,10 +505,12 @@ export function FinanceiroTab() {
 
       await supabase.from("movimentacoes_indicacao").insert(auditRecords);
 
-      toast({ title: "Pagamento dispensado", description: `Pagamento de ${dispensaParceiroNome} foi dispensado com sucesso.` });
+      toast({ title: "Pagamento dispensado", description: `Pagamento de ${dispensaParceiroNome} foi dispensado com sucesso.${dispensaComissaoJaPaga && dispensaEstornar ? " Estorno da comissão registrado." : ""}` });
       setDispensaOpen(false);
       setDispensaMotivo('');
       setDispensaParceriaId(null);
+      setDispensaComissaoJaPaga(false);
+      setDispensaEstornar(false);
       fetchData();
     } catch (err: any) {
       console.error("Erro ao dispensar pagamento:", err);
@@ -476,6 +537,8 @@ export function FinanceiroTab() {
       case "PAGTO_PARCEIRO_DISPENSADO":
       case "COMISSAO_INDICADOR_DISPENSADA":
         return <Ban className="h-4 w-4" />;
+      case "ESTORNO_COMISSAO_INDICADOR":
+        return <RefreshCw className="h-4 w-4" />;
       default:
         return <Wallet className="h-4 w-4" />;
     }
@@ -672,10 +735,39 @@ export function FinanceiroTab() {
                         size="sm"
                         variant="ghost"
                         className="text-muted-foreground hover:text-destructive"
-                        onClick={() => {
+                        onClick={async () => {
                           setDispensaParceriaId(parceiro.parceriaId);
                           setDispensaParceiroNome(parceiro.parceiroNome);
                           setDispensaMotivo('');
+                          setDispensaEstornar(false);
+                          // Check if comissão was already paid
+                          const { data: parData } = await supabase
+                            .from("parcerias")
+                            .select("comissao_paga, valor_comissao_indicador, indicacao_id")
+                            .eq("id", parceiro.parceriaId)
+                            .single();
+                          const jaPaga = parData?.comissao_paga === true && (parData?.valor_comissao_indicador || 0) > 0;
+                          setDispensaComissaoJaPaga(jaPaga);
+                          setDispensaValorComissao(parData?.valor_comissao_indicador || 0);
+                          if (jaPaga && parData?.indicacao_id) {
+                            const { data: ind } = await supabase
+                              .from("v_indicacoes_workspace")
+                              .select("indicador_id")
+                              .eq("id", parData.indicacao_id)
+                              .maybeSingle();
+                            if (ind?.indicador_id) {
+                              const { data: indRef } = await supabase
+                                .from("indicadores_referral")
+                                .select("nome")
+                                .eq("id", ind.indicador_id)
+                                .maybeSingle();
+                              setDispensaIndicadorNome(indRef?.nome || "Indicador");
+                            } else {
+                              setDispensaIndicadorNome("Indicador");
+                            }
+                          } else {
+                            setDispensaIndicadorNome("");
+                          }
                           setDispensaOpen(true);
                         }}
                       >
@@ -946,6 +1038,34 @@ export function FinanceiroTab() {
               Esta parceria não será contabilizada como indicação bem-sucedida. Um registro será mantido no histórico.
             </AlertDialogDescription>
           </AlertDialogHeader>
+
+          {/* Alerta de comissão já paga */}
+          {dispensaComissaoJaPaga && (
+            <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 space-y-3">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+                <div className="text-sm">
+                  <p className="font-semibold text-amber-500">Comissão já paga ao indicador</p>
+                  <p className="text-muted-foreground mt-1">
+                    A comissão de <strong>R$ {dispensaValorComissao.toFixed(2)}</strong>
+                    {dispensaIndicadorNome ? ` para ${getFirstLastName(dispensaIndicadorNome)}` : ""} já foi creditada. 
+                    Ao dispensar sem estorno, esse valor ficará registrado como sobrepagamento.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 ml-7">
+                <Checkbox 
+                  id="estornar-comissao" 
+                  checked={dispensaEstornar}
+                  onCheckedChange={(checked) => setDispensaEstornar(checked === true)}
+                />
+                <label htmlFor="estornar-comissao" className="text-sm font-medium cursor-pointer">
+                  Estornar comissão (devolver R$ {dispensaValorComissao.toFixed(2)} ao caixa)
+                </label>
+              </div>
+            </div>
+          )}
+
           <Textarea
             placeholder="Motivo da dispensa (obrigatório)..."
             value={dispensaMotivo}
@@ -959,7 +1079,7 @@ export function FinanceiroTab() {
               disabled={!dispensaMotivo.trim() || dispensaLoading}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {dispensaLoading ? "Dispensando..." : "Dispensar"}
+              {dispensaLoading ? "Dispensando..." : dispensaComissaoJaPaga && dispensaEstornar ? "Dispensar + Estornar" : "Dispensar"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -42,6 +42,7 @@ export const CASH_REAL_TYPES = [
   'DESPESA_ADMINISTRATIVA',
   'RENOVACAO_PARCERIA',
   'BONIFICACAO_ESTRATEGICA',
+  'ESTORNO_COMISSAO_INDICADOR',
   
   // Ajustes de Caixa (quando afetam caixa real)
   'AJUSTE_MANUAL',
