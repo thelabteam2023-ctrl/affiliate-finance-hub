@@ -484,12 +484,13 @@ export function OcorrenciaCollapseCard({
         onOpenChange={setResolucaoOpen}
         valorRisco={Number((ocorrencia as any).valor_risco) || 0}
         moeda={(ocorrencia as any).moeda || 'BRL'}
-        onConfirmar={async (resultado, valorPerda) => {
+        onConfirmar={async (resultado, valorPerda, dataResolucao) => {
           await resolverComFinanceiro({
             id: ocorrencia.id,
             statusAnterior: ocorrencia.status,
             resultadoFinanceiro: resultado,
             valorPerda,
+            resolvedAt: dataResolucao.toISOString(),
           });
         }}
       />

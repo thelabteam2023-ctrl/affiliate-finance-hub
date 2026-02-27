@@ -11,8 +11,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Loader2, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Loader2, CheckCircle, XCircle, AlertTriangle, CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 export type ResultadoFinanceiro = 'sem_impacto' | 'perda_confirmada' | 'perda_parcial';
 
@@ -21,7 +25,7 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   valorRisco: number;
   moeda: string;
-  onConfirmar: (resultado: ResultadoFinanceiro, valorPerda: number) => Promise<void>;
+  onConfirmar: (resultado: ResultadoFinanceiro, valorPerda: number, dataResolucao: Date) => Promise<void>;
 }
 
 const formatCurrency = (value: number, moeda: string) =>
@@ -36,6 +40,7 @@ export function ResolucaoFinanceiraDialog({
 }: Props) {
   const [resultado, setResultado] = useState<ResultadoFinanceiro>('sem_impacto');
   const [valorPerda, setValorPerda] = useState<string>(String(valorRisco || 0));
+  const [dataResolucao, setDataResolucao] = useState<Date>(new Date());
   const [loading, setLoading] = useState(false);
 
   const handleConfirmar = async () => {
@@ -47,7 +52,7 @@ export function ResolucaoFinanceiraDialog({
           : resultado === 'perda_confirmada'
           ? valorRisco
           : Number(valorPerda) || 0;
-      await onConfirmar(resultado, valor);
+      await onConfirmar(resultado, valor, dataResolucao);
       onOpenChange(false);
     } finally {
       setLoading(false);
@@ -138,6 +143,35 @@ export function ResolucaoFinanceiraDialog({
             </p>
           </div>
         )}
+
+        {/* Data de resolução */}
+        <div className="space-y-2 pt-2">
+          <Label className="text-sm">Data de resolução</Label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn('w-full pl-3 text-left font-normal')}
+              >
+                {format(dataResolucao, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={dataResolucao}
+                onSelect={(d) => d && setDataResolucao(d)}
+                disabled={(date) => date > new Date()}
+                initialFocus
+                className={cn('p-3 pointer-events-auto')}
+              />
+            </PopoverContent>
+          </Popover>
+          <p className="text-xs text-muted-foreground">
+            Quando a ocorrência foi de fato resolvida.
+          </p>
+        </div>
 
         <DialogFooter className="pt-2">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
