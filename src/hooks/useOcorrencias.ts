@@ -331,17 +331,19 @@ export function useResolverOcorrenciaComFinanceiro() {
       statusAnterior,
       resultadoFinanceiro,
       valorPerda,
+      resolvedAt,
     }: {
       id: string;
       statusAnterior: OcorrenciaStatus;
       resultadoFinanceiro: 'sem_impacto' | 'perda_confirmada' | 'perda_parcial';
       valorPerda: number;
+      resolvedAt?: string;
     }) => {
       // 1. Atualizar ocorrência com status + resultado financeiro
       const { error } = await ocorrenciasTable()
         .update({
           status: 'resolvido',
-          resolved_at: new Date().toISOString(),
+          resolved_at: resolvedAt || new Date().toISOString(),
           resultado_financeiro: resultadoFinanceiro,
           valor_perda: valorPerda,
           perda_registrada_ledger: valorPerda > 0,
