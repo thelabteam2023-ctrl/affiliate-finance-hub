@@ -158,9 +158,12 @@ export const EVENTO_TIPO_LABELS: Record<OcorrenciaEventoTipo, string> = {
 
 export const SUB_MOTIVOS: Record<OcorrenciaTipo, { value: string; label: string }[]> = {
   movimentacao_financeira: [
+    // Mais utilizados
+    { value: 'saldo_irrecuperavel', label: 'Saldo irrecuperável (casa limitada)' },
+    { value: 'saldo_divergente', label: 'Saldo divergente do esperado' },
     // Saques
-    { value: 'atraso_provedor', label: 'Atraso do provedor de pagamento' },
     { value: 'saque_rejeitado', label: 'Saque rejeitado pela plataforma' },
+    { value: 'atraso_provedor', label: 'Atraso do provedor de pagamento' },
     { value: 'limite_excedido', label: 'Limite de saque excedido' },
     { value: 'dados_incorretos', label: 'Dados bancários incorretos' },
     // Depósitos
@@ -168,9 +171,7 @@ export const SUB_MOTIVOS: Record<OcorrenciaTipo, { value: string; label: string 
     { value: 'deposito_duplicado', label: 'Depósito duplicado' },
     { value: 'deposito_estornado', label: 'Depósito estornado' },
     { value: 'metodo_indisponivel', label: 'Método de pagamento indisponível' },
-    // Financeiro geral
-    { value: 'saldo_divergente', label: 'Saldo divergente do esperado' },
-    { value: 'saldo_irrecuperavel', label: 'Saldo irrecuperável (casa limitada)' },
+    // Outros
     { value: 'taxa_indevida', label: 'Taxa/cobrança indevida' },
     { value: 'verificacao_pendente', label: 'Verificação de identidade pendente' },
     { value: 'outro', label: 'Outro motivo' },
