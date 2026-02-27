@@ -1,10 +1,13 @@
 import { useMemo } from 'react';
 import { useOcorrencias } from '@/hooks/useOcorrencias';
 import { useWorkspaceMembers } from '@/hooks/useWorkspaceMembers';
+import { useFinanceiroConsolidado } from '@/hooks/useFinanceiroConsolidado';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { TIPO_LABELS, PRIORIDADE_LABELS, STATUS_LABELS } from '@/types/ocorrencias';
+import { CURRENCY_SYMBOLS, type SupportedCurrency } from '@/types/currency';
 import type { Ocorrencia, OcorrenciaTipo, OcorrenciaPrioridade } from '@/types/ocorrencias';
 import { getFirstLastName } from '@/lib/utils';
 import {
@@ -48,6 +51,7 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
   const filters = projetoId ? { projetoId } : undefined;
   const { data: ocorrencias = [], isLoading } = useOcorrencias(filters);
   const { data: members = [] } = useWorkspaceMembers();
+  const { converterParaBRL, formatBRL } = useFinanceiroConsolidado();
 
   const stats = useMemo(() => {
     if (!ocorrencias.length) return null;
@@ -124,9 +128,32 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
       if (o.status === 'resolvido') porExecutor[o.executor_id].resolvidas += 1;
     });
 
-    // === IMPACTO FINANCEIRO ===
-    const valorRiscoAberto = abertas.reduce((acc, o) => acc + Number((o as any).valor_risco || 0), 0);
-    const valorPerdaConfirmada = resolvidas.reduce((acc, o) => acc + Number((o as any).valor_perda || 0), 0);
+    // === IMPACTO FINANCEIRO (MULTI-MOEDA via PTAX) ===
+    // Agrupar risco por moeda para exibição detalhada
+    const riscoPorMoeda: Record<string, number> = {};
+    let valorRiscoAbertoBRL = 0;
+    abertas.forEach((o) => {
+      const valor = Number((o as any).valor_risco || 0);
+      const moeda = (o as any).moeda || 'BRL';
+      if (valor > 0) {
+        riscoPorMoeda[moeda] = (riscoPorMoeda[moeda] || 0) + valor;
+        const convertido = converterParaBRL(valor, moeda);
+        valorRiscoAbertoBRL += convertido.valorBRL;
+      }
+    });
+
+    const perdaPorMoeda: Record<string, number> = {};
+    let valorPerdaConfirmadaBRL = 0;
+    resolvidas.forEach((o) => {
+      const valor = Number((o as any).valor_perda || 0);
+      const moeda = (o as any).moeda || 'BRL';
+      if (valor > 0) {
+        perdaPorMoeda[moeda] = (perdaPorMoeda[moeda] || 0) + valor;
+        const convertido = converterParaBRL(valor, moeda);
+        valorPerdaConfirmadaBRL += convertido.valorBRL;
+      }
+    });
+
     const resolvidasSemImpacto = resolvidas.filter((o) => (o as any).resultado_financeiro === 'sem_impacto').length;
     const resolvidasComPerda = resolvidas.filter((o) =>
       ['perda_confirmada', 'perda_parcial'].includes((o as any).resultado_financeiro || '')
@@ -145,12 +172,14 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
       topTipos,
       porPrioridade,
       porExecutor,
-      valorRiscoAberto,
-      valorPerdaConfirmada,
+      valorRiscoAbertoBRL,
+      valorPerdaConfirmadaBRL,
+      riscoPorMoeda,
+      perdaPorMoeda,
       resolvidasSemImpacto,
       resolvidasComPerda,
     };
-  }, [ocorrencias]);
+  }, [ocorrencias, converterParaBRL]);
 
   if (isLoading) {
     return (
@@ -201,12 +230,31 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
           value={formatDuration(stats.tempoMedio)}
           sub="para resolução"
         />
-        <MiniKpi
-          icon={<DollarSign className="h-4 w-4 text-yellow-400" />}
-          label="Risco Aberto"
-          value={fmt(stats.valorRiscoAberto)}
-          sub={`${fmt(stats.valorPerdaConfirmada)} perdido`}
-        />
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div>
+                <MiniKpi
+                  icon={<DollarSign className="h-4 w-4 text-yellow-400" />}
+                  label="Risco Aberto"
+                  value={formatBRL(stats.valorRiscoAbertoBRL)}
+                  sub={`${formatBRL(stats.valorPerdaConfirmadaBRL)} perdido`}
+                />
+              </div>
+            </TooltipTrigger>
+            {Object.keys(stats.riscoPorMoeda).length > 0 && (
+              <TooltipContent side="bottom" className="text-xs space-y-1">
+                <p className="font-medium mb-1">Risco por moeda (PTAX):</p>
+                {Object.entries(stats.riscoPorMoeda).map(([moeda, valor]) => (
+                  <p key={moeda}>
+                    {CURRENCY_SYMBOLS[moeda as SupportedCurrency] || moeda}{' '}
+                    {valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </p>
+                ))}
+              </TooltipContent>
+            )}
+          </Tooltip>
+        </TooltipProvider>
       </div>
 
       {/* ROW 2: Tempo por prioridade + Distribuição prioridade */}
@@ -333,12 +381,32 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
           <CardContent className="space-y-3">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Valor em risco (abertas)</span>
-              <span className="font-medium text-yellow-400">{fmt(stats.valorRiscoAberto)}</span>
+              <span className="font-medium text-yellow-400">{formatBRL(stats.valorRiscoAbertoBRL)}</span>
             </div>
+            {Object.keys(stats.riscoPorMoeda).length > 1 && (
+              <div className="pl-2 space-y-0.5">
+                {Object.entries(stats.riscoPorMoeda).map(([moeda, valor]) => (
+                  <div key={moeda} className="flex justify-between text-xs text-muted-foreground">
+                    <span>{moeda}</span>
+                    <span>{CURRENCY_SYMBOLS[moeda as SupportedCurrency] || moeda} {valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                ))}
+              </div>
+            )}
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Perdas confirmadas</span>
-              <span className="font-medium text-red-400">{fmt(stats.valorPerdaConfirmada)}</span>
+              <span className="font-medium text-red-400">{formatBRL(stats.valorPerdaConfirmadaBRL)}</span>
             </div>
+            {Object.keys(stats.perdaPorMoeda).length > 1 && (
+              <div className="pl-2 space-y-0.5">
+                {Object.entries(stats.perdaPorMoeda).map(([moeda, valor]) => (
+                  <div key={moeda} className="flex justify-between text-xs text-muted-foreground">
+                    <span>{moeda}</span>
+                    <span>{CURRENCY_SYMBOLS[moeda as SupportedCurrency] || moeda} {valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                ))}
+              </div>
+            )}
             <div className="border-t border-border/50 pt-2 space-y-1.5">
               <div className="flex justify-between text-xs">
                 <span className="text-muted-foreground">Resolvidas sem impacto</span>

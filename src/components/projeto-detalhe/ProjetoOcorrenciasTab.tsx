@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useOcorrencias, useAtualizarStatusOcorrencia } from '@/hooks/useOcorrencias';
 import { useAuth } from '@/hooks/useAuth';
 import { useRole } from '@/hooks/useRole';
+import { useFinanceiroConsolidado } from '@/hooks/useFinanceiroConsolidado';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -62,6 +63,7 @@ function useParceiroNames(ids: string[]) {
 }
 
 export function ProjetoOcorrenciasTab({ projetoId, onDataChange, formatCurrency: formatCurrencyProp }: ProjetoOcorrenciasTabProps) {
+  const { converterParaBRL, formatBRL } = useFinanceiroConsolidado();
   const formatCurrency = formatCurrencyProp || defaultFormatCurrency;
   const { user } = useAuth();
   const { isOwnerOrAdmin } = useRole();
@@ -85,10 +87,26 @@ export function ProjetoOcorrenciasTab({ projetoId, onDataChange, formatCurrency:
 
   const todas = [...abertas, ...historico];
 
-  // KPIs
-  const valorRiscoAberto = abertas.reduce((acc, o) => acc + (Number((o as any).valor_risco) || 0), 0);
+  // KPIs - consolidação multi-moeda via PTAX
+  const valorRiscoAberto = useMemo(() => {
+    return abertas.reduce((acc, o) => {
+      const valor = Number((o as any).valor_risco || 0);
+      const moeda = (o as any).moeda || 'BRL';
+      if (valor <= 0) return acc;
+      return acc + converterParaBRL(valor, moeda).valorBRL;
+    }, 0);
+  }, [abertas, converterParaBRL]);
+
   const perdasConfirmadas = historico.filter((o) => (o as any).resultado_financeiro === 'perda_confirmada' || (o as any).resultado_financeiro === 'perda_parcial');
-  const totalPerdasConfirmadas = perdasConfirmadas.reduce((acc, o) => acc + (Number((o as any).valor_perda) || 0), 0);
+  const totalPerdasConfirmadas = useMemo(() => {
+    return perdasConfirmadas.reduce((acc, o) => {
+      const valor = Number((o as any).valor_perda || 0);
+      const moeda = (o as any).moeda || 'BRL';
+      if (valor <= 0) return acc;
+      return acc + converterParaBRL(valor, moeda).valorBRL;
+    }, 0);
+  }, [perdasConfirmadas, converterParaBRL]);
+
   const resolvidasSemImpacto = historico.filter((o) => o.status === 'resolvido' && !(o as any).resultado_financeiro);
 
   // Entity names
@@ -172,16 +190,16 @@ export function ProjetoOcorrenciasTab({ projetoId, onDataChange, formatCurrency:
                   <p className="text-muted-foreground">Incidentes em andamento neste projeto.</p>
                   <div className="flex justify-between gap-4 border-t border-border/50 pt-1">
                     <span>Valor em risco</span>
-                    <span className="font-semibold text-foreground">{formatCurrency(valorRiscoAberto)}</span>
+                    <span className="font-semibold text-foreground">{formatBRL(valorRiscoAberto)}</span>
                   </div>
                 </div>
               ),
               valueClassName: abertas.length > 0 ? 'text-amber-500' : 'text-muted-foreground',
-              subtitle: <span className="text-muted-foreground">{formatCurrency(valorRiscoAberto)} em risco</span>,
+              subtitle: <span className="text-muted-foreground">{formatBRL(valorRiscoAberto)} em risco</span>,
             },
             {
               label: 'Perdas Confirmadas',
-              value: formatCurrency(totalPerdasConfirmadas),
+              value: formatBRL(totalPerdasConfirmadas),
               tooltip: (
                 <div className="space-y-1">
                   <p className="font-semibold text-foreground">Perdas Confirmadas</p>
