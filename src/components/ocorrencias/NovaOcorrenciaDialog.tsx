@@ -465,11 +465,6 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                                     onSelect={() => {
                                       field.onChange(bk.id);
                                       setBookmakerPopoverOpen(false);
-                                      // Auto-preencher valor em risco com saldo da conta
-                                      const saldo = Number(bk.saldo_atual || 0);
-                                      if (saldo > 0) {
-                                        form.setValue('valor_risco', saldo);
-                                      }
                                     }}
                                   >
                                     <Check
@@ -698,25 +693,44 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
             <FormField
               control={form.control}
               name="valor_risco"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Valor em risco (opcional)</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      placeholder="0,00"
-                      className="font-mono"
-                      {...field}
-                    />
-                  </FormControl>
-                  <p className="text-xs text-muted-foreground">
-                    Valor financeiro potencialmente afetado por esta ocorrência.
-                  </p>
-                  <FormMessage />
-                </FormItem>
-              )}
+              render={({ field }) => {
+                const saldoRef = selectedBookmaker ? Number(selectedBookmaker.saldo_atual || 0) : null;
+                const moedaRef = selectedBookmaker?.moeda || 'BRL';
+                return (
+                  <FormItem>
+                    <div className="flex items-center justify-between">
+                      <FormLabel>Valor em risco (opcional)</FormLabel>
+                      {saldoRef !== null && saldoRef > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => form.setValue('valor_risco', saldoRef)}
+                          className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+                        >
+                          Saldo na casa:
+                          <span className="font-mono font-medium text-foreground">
+                            {moedaRef === 'BRL' ? 'R$' : '$'} {saldoRef.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </span>
+                          <span className="text-primary ml-0.5">← usar</span>
+                        </button>
+                      )}
+                    </div>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="0,00"
+                        className="font-mono"
+                        {...field}
+                      />
+                    </FormControl>
+                    <p className="text-xs text-muted-foreground">
+                      Valor financeiro potencialmente afetado por esta ocorrência.
+                    </p>
+                    <FormMessage />
+                  </FormItem>
+                );
+              }}
             />
 
             {contextoInicial?.contexto_metadata && (
