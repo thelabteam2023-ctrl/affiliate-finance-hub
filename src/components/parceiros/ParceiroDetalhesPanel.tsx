@@ -1023,7 +1023,7 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                                         <p className="text-[10px]">Result - Saldo = {formatMoneyValue(bm.lucro_prejuizo - bm.saldo_atual, bm.moeda || "BRL")}</p>
                                         {Math.abs(diferenca) > 1 && (
                                           <p className="text-[10px] text-warning">
-                                            Δ {formatMoneyValue(diferenca, bm.moeda || "BRL")} (bônus/FX)
+                                            Δ {formatMoneyValue(diferenca, bm.moeda || "BRL")} (FX)
                                           </p>
                                         )}
                                       </div>
