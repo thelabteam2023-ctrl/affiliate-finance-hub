@@ -14,9 +14,10 @@ import { OcorrenciaDetalheDialog } from '@/components/ocorrencias/OcorrenciaDeta
 import { NovaOcorrenciaDialog } from '@/components/ocorrencias/NovaOcorrenciaDialog';
 import type { OcorrenciaStatus, OcorrenciaPrioridade } from '@/types/ocorrencias';
 import { PRIORIDADE_LABELS, PRIORIDADE_COLORS, PRIORIDADE_BG } from '@/types/ocorrencias';
-import { Plus, Inbox, Zap, AlertTriangle, ArrowUp, ArrowDown, ShieldAlert, CheckCircle } from 'lucide-react';
+import { Plus, Inbox, Zap, AlertTriangle, ArrowUp, ArrowDown, ShieldAlert, CheckCircle, BarChart3 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { IncidentesEstatisticasTab } from './IncidentesEstatisticasTab';
 
 interface ProjetoOcorrenciasTabProps {
   projetoId: string;
@@ -69,7 +70,7 @@ export function ProjetoOcorrenciasTab({ projetoId, onDataChange, formatCurrency:
   const { isOwnerOrAdmin } = useRole();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [detalheId, setDetalheId] = useState<string | null>(null);
-  const [subTab, setSubTab] = useState<'abertas' | 'historico'>('abertas');
+  const [subTab, setSubTab] = useState<'abertas' | 'historico' | 'estatisticas'>('abertas');
 
   const { mutate: atualizarStatus } = useAtualizarStatusOcorrencia();
 
@@ -234,7 +235,7 @@ export function ProjetoOcorrenciasTab({ projetoId, onDataChange, formatCurrency:
       </div>
 
       {/* Sub-tabs */}
-      <Tabs value={subTab} onValueChange={(v) => setSubTab(v as 'abertas' | 'historico')}>
+      <Tabs value={subTab} onValueChange={(v) => setSubTab(v as 'abertas' | 'historico' | 'estatisticas')}>
         <TabsList>
           <TabsTrigger value="abertas" className="gap-2">
             <ShieldAlert className="h-4 w-4" />
@@ -249,6 +250,10 @@ export function ProjetoOcorrenciasTab({ projetoId, onDataChange, formatCurrency:
             {historico.length > 0 && (
               <Badge variant="secondary" className="ml-1 text-xs">{historico.length}</Badge>
             )}
+          </TabsTrigger>
+          <TabsTrigger value="estatisticas" className="gap-2">
+            <BarChart3 className="h-4 w-4" />
+            Estatísticas
           </TabsTrigger>
         </TabsList>
 
@@ -314,6 +319,10 @@ export function ProjetoOcorrenciasTab({ projetoId, onDataChange, formatCurrency:
               ))}
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="estatisticas" className="mt-4">
+          <IncidentesEstatisticasTab projetoId={projetoId} formatCurrency={formatCurrency} />
         </TabsContent>
       </Tabs>
 
