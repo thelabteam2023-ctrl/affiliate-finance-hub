@@ -909,8 +909,14 @@ export default function CentralOperacoes() {
     if (!dispensaParceriaId || !dispensaMotivo.trim()) return;
     setDispensaLoading(true);
     try {
-      // Find the parceria data from the list
       const pagData = pagamentosParceiros.find(p => p.parceriaId === dispensaParceriaId);
+
+      // Fetch parceria comissão info
+      const { data: parceria } = await supabase
+        .from("parcerias")
+        .select("valor_comissao_indicador, comissao_paga, indicacao_id")
+        .eq("id", dispensaParceriaId)
+        .single();
 
       const { error } = await supabase
         .from("parcerias")
@@ -919,24 +925,55 @@ export default function CentralOperacoes() {
           dispensa_motivo: dispensaMotivo.trim(),
           dispensa_at: new Date().toISOString(),
           dispensa_por: user?.id,
+          comissao_paga: true, // Also dismiss indicator commission
         })
         .eq("id", dispensaParceriaId);
       if (error) throw error;
 
-      // Insert zero-value audit record in movimentacoes_indicacao
+      // Insert audit records
       if (pagData && user) {
-        await supabase.from("movimentacoes_indicacao").insert({
-          user_id: user.id,
-          workspace_id: pagData.workspaceId,
-          tipo: "PAGTO_PARCEIRO_DISPENSADO",
-          valor: 0,
-          moeda: "BRL",
-          status: "CONFIRMADO",
-          parceria_id: dispensaParceriaId,
-          parceiro_id: pagData.parceiroId,
-          descricao: `Pagamento dispensado: ${dispensaMotivo.trim()}`,
-          data_movimentacao: new Date().toISOString().split("T")[0],
-        });
+        const auditRecords: any[] = [
+          {
+            user_id: user.id,
+            workspace_id: pagData.workspaceId,
+            tipo: "PAGTO_PARCEIRO_DISPENSADO",
+            valor: 0,
+            moeda: "BRL",
+            status: "CONFIRMADO",
+            parceria_id: dispensaParceriaId,
+            parceiro_id: pagData.parceiroId,
+            descricao: `Pagamento dispensado: ${dispensaMotivo.trim()}`,
+            data_movimentacao: new Date().toISOString().split("T")[0],
+          },
+        ];
+
+        // If there was a pending comissão, also create a dispensed record
+        if (parceria?.valor_comissao_indicador && parceria.valor_comissao_indicador > 0 && !parceria.comissao_paga) {
+          let indicadorId: string | null = null;
+          if (parceria.indicacao_id) {
+            const { data: indicacao } = await supabase
+              .from("v_indicacoes_workspace")
+              .select("indicador_id")
+              .eq("id", parceria.indicacao_id)
+              .maybeSingle();
+            indicadorId = indicacao?.indicador_id || null;
+          }
+          auditRecords.push({
+            user_id: user.id,
+            workspace_id: pagData.workspaceId,
+            tipo: "COMISSAO_INDICADOR_DISPENSADA",
+            valor: 0,
+            moeda: "BRL",
+            status: "CONFIRMADO",
+            parceria_id: dispensaParceriaId,
+            parceiro_id: pagData.parceiroId,
+            indicador_id: indicadorId,
+            descricao: `Comissão dispensada: parceria não efetivada`,
+            data_movimentacao: new Date().toISOString().split("T")[0],
+          });
+        }
+
+        await supabase.from("movimentacoes_indicacao").insert(auditRecords);
       }
 
       toast.success(`Pagamento de ${dispensaParceiroNome} dispensado`);
