@@ -508,10 +508,10 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
 
             {/* Seletor Banco/Wallet: Parceiro → Conta/Wallet */}
             {contextoEntidade === 'banco' && (
-              <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
                 {/* Seletor de Parceiro */}
                 <FormItem className="flex flex-col">
-                  <FormLabel>Parceiro (Vínculo) *</FormLabel>
+                  <FormLabel>Parceiro *</FormLabel>
                   <Popover open={parceiroPopoverOpen} onOpenChange={setParceiroPopoverOpen}>
                     <PopoverTrigger asChild>
                       <Button
@@ -523,7 +523,7 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                         )}
                       >
                         {selectedParceiro ? (
-                          <span className="truncate">{selectedParceiro.nome}</span>
+                          <span className="truncate">{getFirstLastName(selectedParceiro.nome)}</span>
                         ) : (
                           'Selecione o parceiro...'
                         )}
@@ -552,7 +552,7 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                                     selectedParceiroId === p.id ? 'opacity-100' : 'opacity-0'
                                   )}
                                 />
-                                <span>{p.nome}</span>
+                                <span>{getFirstLastName(p.nome)}</span>
                               </CommandItem>
                             ))}
                           </CommandGroup>
