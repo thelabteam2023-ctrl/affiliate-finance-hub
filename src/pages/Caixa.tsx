@@ -487,6 +487,7 @@ export default function Caixa() {
       AJUSTE_RECONCILIACAO: "Reconciliação",
       RENOVACAO_PARCERIA: "Renovação Parceria",
       BONIFICACAO_ESTRATEGICA: "Bonif. Estratégica",
+      ESTORNO_COMISSAO_INDICADOR: "Estorno Comissão",
     };
     const base = labels[tipo] || tipo;
     
@@ -532,6 +533,7 @@ export default function Caixa() {
       AJUSTE_RECONCILIACAO: "bg-indigo-500/20 text-indigo-400 border-indigo-500/30",
       RENOVACAO_PARCERIA: "bg-teal-500/20 text-teal-400 border-teal-500/30",
       BONIFICACAO_ESTRATEGICA: "bg-violet-500/20 text-violet-400 border-violet-500/30",
+      ESTORNO_COMISSAO_INDICADOR: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
     };
     return colors[tipo] || "bg-muted text-muted-foreground";
   };
