@@ -319,6 +319,61 @@ export function useAtualizarStatusOcorrencia() {
 }
 
 // ============================================================
+// MUTATION: editar ocorrência
+// ============================================================
+interface EditarOcorrenciaPayload {
+  id: string;
+  titulo?: string;
+  descricao?: string;
+  tipo?: OcorrenciaTipo;
+  sub_motivo?: string | null;
+  prioridade?: OcorrenciaPrioridade;
+  valor_risco?: number;
+  data_ocorrencia?: string;
+}
+
+export function useEditarOcorrencia() {
+  const { workspaceId, user } = useAuth();
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: EditarOcorrenciaPayload) => {
+      const { id, ...fields } = payload;
+      const updateData: Record<string, unknown> = {};
+      if (fields.titulo !== undefined) updateData.titulo = fields.titulo;
+      if (fields.descricao !== undefined) updateData.descricao = fields.descricao;
+      if (fields.tipo !== undefined) updateData.tipo = fields.tipo;
+      if (fields.sub_motivo !== undefined) updateData.sub_motivo = fields.sub_motivo;
+      if (fields.prioridade !== undefined) updateData.prioridade = fields.prioridade;
+      if (fields.valor_risco !== undefined) updateData.valor_risco = fields.valor_risco;
+      if (fields.data_ocorrencia !== undefined) updateData.data_ocorrencia = fields.data_ocorrencia;
+
+      const { error } = await ocorrenciasTable()
+        .update(updateData)
+        .eq('id', id)
+        .eq('workspace_id', workspaceId!);
+      if (error) throw error;
+
+      // Registrar evento de edição
+      await eventosTable().insert({
+        ocorrencia_id: id,
+        workspace_id: workspaceId!,
+        tipo: 'comentario',
+        conteudo: 'Ocorrência editada',
+        autor_id: user!.id,
+      });
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: OCORRENCIAS_KEYS.all(workspaceId!) });
+      qc.invalidateQueries({ queryKey: OCORRENCIAS_KEYS.detail(vars.id) });
+      qc.invalidateQueries({ queryKey: OCORRENCIAS_KEYS.eventos(vars.id) });
+      toast.success('Ocorrência atualizada com sucesso');
+    },
+    onError: () => toast.error('Erro ao editar ocorrência'),
+  });
+}
+
+// ============================================================
 // MUTATION: resolver ocorrência com desfecho financeiro
 // ============================================================
 export function useResolverOcorrenciaComFinanceiro() {
