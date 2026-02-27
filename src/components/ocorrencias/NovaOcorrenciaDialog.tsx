@@ -643,7 +643,12 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                                         )}
                                       />
                                       <Wallet className="h-4 w-4 mr-2 text-muted-foreground shrink-0" />
-                                      <span>{w.label}</span>
+                                      <span>
+                                        {w.tipo === 'wallet' && 'exchange' in w ? (w as any).exchange || (w as any).network : ''}
+                                        <span className="text-muted-foreground text-xs ml-1">
+                                          {(w as any).endereco ? `${(w as any).endereco.slice(0, 6)}...${(w as any).endereco.slice(-4)}` : ''}
+                                        </span>
+                                      </span>
                                     </CommandItem>
                                   ))}
                                 </CommandGroup>
