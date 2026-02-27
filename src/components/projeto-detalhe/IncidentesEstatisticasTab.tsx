@@ -64,10 +64,12 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
     // === TAXA DE RESOLUÇÃO ===
     const taxaResolucao = total > 0 ? (resolvidas.length / total) * 100 : 0;
 
-    // === TEMPO MÉDIO DE RESOLUÇÃO ===
+    // === TEMPO MÉDIO DE RESOLUÇÃO (baseado em data_ocorrencia) ===
+    const getInicio = (o: Ocorrencia) => (o as any).data_ocorrencia || o.created_at;
+
     const temposResolucao = resolvidas
       .filter((o) => o.resolved_at)
-      .map((o) => diffHours(o.created_at, o.resolved_at!));
+      .map((o) => diffHours(getInicio(o), o.resolved_at!));
     const tempoMedio = temposResolucao.length > 0
       ? temposResolucao.reduce((a, b) => a + b, 0) / temposResolucao.length
       : 0;
@@ -75,7 +77,7 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
     // === TEMPO MÉDIO POR PRIORIDADE ===
     const tempoPorPrioridade: Record<string, { total: number; count: number }> = {};
     resolvidas.filter((o) => o.resolved_at).forEach((o) => {
-      const h = diffHours(o.created_at, o.resolved_at!);
+      const h = diffHours(getInicio(o), o.resolved_at!);
       if (!tempoPorPrioridade[o.prioridade]) tempoPorPrioridade[o.prioridade] = { total: 0, count: 0 };
       tempoPorPrioridade[o.prioridade].total += h;
       tempoPorPrioridade[o.prioridade].count += 1;
@@ -83,12 +85,12 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
 
     // === OCORRÊNCIAS MAIS ANTIGAS ABERTAS ===
     const maisAntigas = [...abertas]
-      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+      .sort((a, b) => new Date(getInicio(a)).getTime() - new Date(getInicio(b)).getTime())
       .slice(0, 5)
       .map((o) => ({
         id: o.id,
         titulo: o.titulo,
-        horasAbertas: diffHours(o.created_at, new Date().toISOString()),
+        horasAbertas: diffHours(getInicio(o), new Date().toISOString()),
         prioridade: o.prioridade,
       }));
 

@@ -74,7 +74,7 @@ const STATUS_TRANSICOES: Record<OcorrenciaStatus, OcorrenciaStatus[]> = {
 };
 
 function calcularDuracao(ocorrencia: Ocorrencia) {
-  const inicio = new Date(ocorrencia.created_at);
+  const inicio = new Date((ocorrencia as any).data_ocorrencia || ocorrencia.created_at);
   const fim = ocorrencia.resolved_at
     ? new Date(ocorrencia.resolved_at)
     : ocorrencia.cancelled_at
@@ -253,7 +253,7 @@ export function OcorrenciaCollapseCard({
                   <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground flex-wrap">
                     <span className="flex items-center gap-1">
                       <Clock className="h-3 w-3" />
-                      {formatDistanceToNow(new Date(ocorrencia.created_at), {
+                      {formatDistanceToNow(new Date((ocorrencia as any).data_ocorrencia || ocorrencia.created_at), {
                         addSuffix: true,
                         locale: ptBR,
                       })}
