@@ -37,9 +37,10 @@ import { useWorkspaceMembers } from '@/hooks/useWorkspaceMembers';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
+import { useParceiroContas, type ContaOuWallet } from '@/hooks/useParceiroContas';
 import { TIPO_LABELS, PRIORIDADE_LABELS, SUB_MOTIVOS } from '@/types/ocorrencias';
 import type { OcorrenciaTipo, OcorrenciaPrioridade } from '@/types/ocorrencias';
-import { AlertTriangle, Loader2, X, ChevronsUpDown, Check, Users, Filter, CalendarIcon } from 'lucide-react';
+import { AlertTriangle, Loader2, X, ChevronsUpDown, Check, Users, Filter, CalendarIcon, Wallet, Building2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getFirstLastName } from '@/lib/utils';
 import { getRoleLabel } from '@/lib/roleLabels';
@@ -85,7 +86,9 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
   const [bookmakerPopoverOpen, setBookmakerPopoverOpen] = useState(false);
   const [casaPopoverOpen, setCasaPopoverOpen] = useState(false);
   const [bancoPopoverOpen, setBancoPopoverOpen] = useState(false);
+  const [parceiroPopoverOpen, setParceiroPopoverOpen] = useState(false);
   const [selectedCasa, setSelectedCasa] = useState<string>('');
+  const [selectedParceiroId, setSelectedParceiroId] = useState<string | null>(null);
 
   // Carregar bookmakers do workspace com logo do catálogo
   const { data: bookmakers = [] } = useQuery({
@@ -102,20 +105,23 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
     enabled: !!workspaceId && open,
   });
 
-  // Carregar contas bancárias do workspace
-  const { data: contasBancarias = [] } = useQuery({
-    queryKey: ['ocorrencia-contas-bancarias', workspaceId],
+  // Carregar parceiros do workspace
+  const { data: parceiros = [] } = useQuery({
+    queryKey: ['ocorrencia-parceiros', workspaceId],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from('contas_bancarias')
-        .select('id, banco, titular, agencia, conta')
+      const { data, error } = await supabase
+        .from('parceiros')
+        .select('id, nome')
         .eq('workspace_id', workspaceId!)
-        .order('banco');
+        .order('nome');
       if (error) throw error;
       return data || [];
     },
     enabled: !!workspaceId && open,
   });
+
+  // Carregar contas e wallets do parceiro selecionado
+  const { data: contasEWallets = [] } = useParceiroContas(selectedParceiroId);
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -150,17 +156,18 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
     ? (bookmakers as any[]).filter((bk) => bk.nome === selectedCasa)
     : [];
 
-  // Agrupar contas bancárias por banco
-  const contasPorBanco = (contasBancarias as any[]).reduce<Record<string, any[]>>((acc, cb) => {
-    const banco = cb.banco || 'Sem banco';
-    if (!acc[banco]) acc[banco] = [];
-    acc[banco].push(cb);
-    return acc;
-  }, {});
-
   // Label do bookmaker selecionado
   const selectedBookmaker = (bookmakers as any[]).find((bk) => bk.id === form.watch('entidade_id'));
-  const selectedConta = (contasBancarias as any[]).find((cb) => cb.id === form.watch('entidade_id'));
+
+  // Parceiro selecionado (para exibição)
+  const selectedParceiro = parceiros.find((p: any) => p.id === selectedParceiroId);
+
+  // Conta ou wallet selecionada
+  const selectedContaOuWallet = contasEWallets.find((c) => c.id === form.watch('entidade_id'));
+
+  // Separar contas bancárias e wallets
+  const contasBancariasLista = contasEWallets.filter((c) => c.tipo === 'banco');
+  const walletsLista = contasEWallets.filter((c) => c.tipo === 'wallet');
 
   const allSelected = executoresSelecionados.length === members.length && members.length > 0;
 
@@ -194,9 +201,10 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
         prioridade: data.prioridade,
         executor_id: executorId,
         bookmaker_id: isBookmaker ? data.entidade_id : contextoInicial?.bookmaker_id,
-        conta_bancaria_id: isBanco ? data.entidade_id : undefined,
+        conta_bancaria_id: isBanco && selectedContaOuWallet?.tipo === 'banco' ? data.entidade_id : undefined,
+        wallet_id: isBanco && selectedContaOuWallet?.tipo === 'wallet' ? data.entidade_id : undefined,
         projeto_id: contextoInicial?.projeto_id,
-        parceiro_id: contextoInicial?.parceiro_id,
+        parceiro_id: isBanco ? selectedParceiroId || undefined : contextoInicial?.parceiro_id,
         contexto_metadata: contextoInicial?.contexto_metadata,
         valor_risco: data.valor_risco || 0,
         data_ocorrencia: data.data_ocorrencia ? format(data.data_ocorrencia, 'yyyy-MM-dd') : undefined,
@@ -344,6 +352,7 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                         field.onChange(v);
                         form.setValue('entidade_id', '');
                         setSelectedCasa('');
+                        setSelectedParceiroId(null);
                       }}
                       value={field.value || ''}
                     >
@@ -497,73 +506,157 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
               </div>
             )}
 
-            {/* Seletor de Conta Bancária com busca agrupada por banco */}
+            {/* Seletor Banco/Wallet: Parceiro → Conta/Wallet */}
             {contextoEntidade === 'banco' && (
-              <FormField
-                control={form.control}
-                name="entidade_id"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Conta Bancária *</FormLabel>
-                    <Popover open={bancoPopoverOpen} onOpenChange={setBancoPopoverOpen}>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            role="combobox"
-                            className={cn(
-                              'w-full justify-between font-normal',
-                              !field.value && 'text-muted-foreground'
-                            )}
-                          >
-                            {selectedConta ? (
-                              <span className="truncate">
-                                {selectedConta.banco} — {selectedConta.titular || selectedConta.conta || 'Sem nome'}
-                              </span>
-                            ) : (
-                              'Selecione a conta...'
-                            )}
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                        <Command>
-                          <CommandInput placeholder="Buscar banco ou titular..." />
-                          <CommandList>
-                            <CommandEmpty>Nenhuma conta encontrada.</CommandEmpty>
-                            {Object.entries(contasPorBanco)
-                              .sort(([a], [b]) => a.localeCompare(b))
-                              .map(([banco, contas]) => (
-                                <CommandGroup key={banco} heading={banco}>
-                                  {contas.map((cb: any) => (
+              <div className="space-y-4">
+                {/* Seletor de Parceiro */}
+                <FormItem className="flex flex-col">
+                  <FormLabel>Parceiro (Vínculo) *</FormLabel>
+                  <Popover open={parceiroPopoverOpen} onOpenChange={setParceiroPopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        className={cn(
+                          'w-full justify-between font-normal h-10',
+                          !selectedParceiroId && 'text-muted-foreground'
+                        )}
+                      >
+                        {selectedParceiro ? (
+                          <span className="truncate">{selectedParceiro.nome}</span>
+                        ) : (
+                          'Selecione o parceiro...'
+                        )}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Buscar parceiro..." />
+                        <CommandList>
+                          <CommandEmpty>Nenhum parceiro encontrado.</CommandEmpty>
+                          <CommandGroup>
+                            {parceiros.map((p: any) => (
+                              <CommandItem
+                                key={p.id}
+                                value={p.nome}
+                                onSelect={() => {
+                                  setSelectedParceiroId(p.id);
+                                  form.setValue('entidade_id', '');
+                                  setParceiroPopoverOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    'mr-2 h-4 w-4',
+                                    selectedParceiroId === p.id ? 'opacity-100' : 'opacity-0'
+                                  )}
+                                />
+                                <span>{p.nome}</span>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </FormItem>
+
+                {/* Seletor de Conta Bancária / Wallet */}
+                <FormField
+                  control={form.control}
+                  name="entidade_id"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Conta / Wallet *</FormLabel>
+                      <Popover open={bancoPopoverOpen} onOpenChange={setBancoPopoverOpen}>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              disabled={!selectedParceiroId}
+                              className={cn(
+                                'w-full justify-between font-normal h-10',
+                                !field.value && 'text-muted-foreground'
+                              )}
+                            >
+                              {selectedContaOuWallet ? (
+                                <span className="flex items-center gap-2 truncate">
+                                  {selectedContaOuWallet.tipo === 'banco' ? (
+                                    <Building2 className="h-4 w-4 shrink-0 text-muted-foreground" />
+                                  ) : (
+                                    <Wallet className="h-4 w-4 shrink-0 text-muted-foreground" />
+                                  )}
+                                  {selectedContaOuWallet.label}
+                                </span>
+                              ) : (
+                                selectedParceiroId ? 'Selecione a conta ou wallet...' : 'Selecione o parceiro primeiro'
+                              )}
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                          <Command>
+                            <CommandInput placeholder="Buscar conta ou wallet..." />
+                            <CommandList>
+                              <CommandEmpty>Nenhuma conta ou wallet encontrada.</CommandEmpty>
+                              {contasBancariasLista.length > 0 && (
+                                <CommandGroup heading="Contas Bancárias">
+                                  {contasBancariasLista.map((c) => (
                                     <CommandItem
-                                      key={cb.id}
-                                      value={`${cb.banco} ${cb.titular || ''} ${cb.conta || ''}`}
+                                      key={c.id}
+                                      value={c.label}
                                       onSelect={() => {
-                                        field.onChange(cb.id);
+                                        field.onChange(c.id);
                                         setBancoPopoverOpen(false);
                                       }}
                                     >
                                       <Check
                                         className={cn(
                                           'mr-2 h-4 w-4',
-                                          field.value === cb.id ? 'opacity-100' : 'opacity-0'
+                                          field.value === c.id ? 'opacity-100' : 'opacity-0'
                                         )}
                                       />
-                                      <span>{cb.titular || cb.conta || cb.agencia || 'Sem nome'}</span>
+                                      <Building2 className="h-4 w-4 mr-2 text-muted-foreground shrink-0" />
+                                      <span>{c.label}</span>
                                     </CommandItem>
                                   ))}
                                 </CommandGroup>
-                              ))}
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                              )}
+                              {walletsLista.length > 0 && (
+                                <CommandGroup heading="Wallets Crypto">
+                                  {walletsLista.map((w) => (
+                                    <CommandItem
+                                      key={w.id}
+                                      value={w.label}
+                                      onSelect={() => {
+                                        field.onChange(w.id);
+                                        setBancoPopoverOpen(false);
+                                      }}
+                                    >
+                                      <Check
+                                        className={cn(
+                                          'mr-2 h-4 w-4',
+                                          field.value === w.id ? 'opacity-100' : 'opacity-0'
+                                        )}
+                                      />
+                                      <Wallet className="h-4 w-4 mr-2 text-muted-foreground shrink-0" />
+                                      <span>{w.label}</span>
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              )}
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             )}
 
             {/* Executor Responsável - Multi-select com filtro por papel */}
