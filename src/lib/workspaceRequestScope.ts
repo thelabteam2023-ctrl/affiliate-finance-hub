@@ -4,7 +4,14 @@ const PATCH_FLAG = "__lovable_workspace_fetch_patched__";
 
 function shouldPatchUrl(url: string): boolean {
   const base = import.meta.env.VITE_SUPABASE_URL;
-  return typeof base === "string" && base.length > 0 && url.startsWith(base);
+  if (typeof base !== "string" || base.length === 0 || !url.startsWith(base)) {
+    return false;
+  }
+
+  // IMPORTANT: only inject workspace header on backend functions.
+  // Injecting custom headers on REST/Auth endpoints can trigger CORS/preflight
+  // rejections and block app bootstrap (infinite "Carregando...").
+  return url.includes("/functions/v1/");
 }
 
 /**
