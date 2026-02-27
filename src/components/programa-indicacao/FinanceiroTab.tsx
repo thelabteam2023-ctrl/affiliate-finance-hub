@@ -95,6 +95,8 @@ export function FinanceiroTab() {
   const [parceirosPendentes, setParceirosPendentes] = useState<ParceiroPendente[]>([]);
   
   const [bonusDialogOpen, setBonusDialogOpen] = useState(false);
+  // Map parceiro_id -> nome for history display
+  const [parceirosNomesMap, setParceirosNomesMap] = useState<Record<string, string>>({});
   const [comissaoDialogOpen, setComissaoDialogOpen] = useState(false);
   const [parceiroDialogOpen, setParceiroDialogOpen] = useState(false);
   const [captacaoDialogOpen, setCaptacaoDialogOpen] = useState(false);
@@ -152,6 +154,12 @@ export function FinanceiroTab() {
     }
   };
 
+  const getFirstLastName = (nome: string) => {
+    const parts = nome.trim().split(/\s+/);
+    if (parts.length <= 2) return nome;
+    return `${parts[0]} ${parts[parts.length - 1]}`;
+  };
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -161,7 +169,7 @@ export function FinanceiroTab() {
       setLoading(true);
 
       // Fetch all data in parallel - use workspace-scoped views to prevent data leakage
-      const [movResult, custosResult, acordosResult, parceriasResult, indicacoesResult, indicadoresResult, parceirosResult] = await Promise.all([
+      const [movResult, custosResult, acordosResult, parceriasResult, indicacoesResult, indicadoresResult, parceirosResult, parceirosNomesResult] = await Promise.all([
         // Use workspace-scoped view for movimentacoes
         supabase
           .from("v_movimentacoes_indicacao_workspace")
@@ -169,7 +177,7 @@ export function FinanceiroTab() {
           .order("data_movimentacao", { ascending: false }),
         supabase.from("v_custos_aquisicao").select("*"),
         supabase.from("indicador_acordos").select("*").eq("ativo", true),
-        // Fetch parcerias with comissão pendente (parcerias table has workspace RLS)
+        // Fetch parcerias with comissão pendente - exclude dispensed
         supabase
           .from("parcerias")
           .select(`
@@ -178,9 +186,11 @@ export function FinanceiroTab() {
             valor_comissao_indicador,
             comissao_paga,
             indicacao_id,
+            pagamento_dispensado,
             parceiro:parceiros(nome)
           `)
           .eq("comissao_paga", false)
+          .eq("pagamento_dispensado", false)
           .not("valor_comissao_indicador", "is", null)
           .gt("valor_comissao_indicador", 0),
         // Use workspace-scoped view for indicacoes
@@ -207,10 +217,19 @@ export function FinanceiroTab() {
           .or("custo_aquisicao_isento.is.null,custo_aquisicao_isento.eq.false")
           .gt("valor_parceiro", 0)
           .eq("pagamento_dispensado", false),
+        // Fetch all parceiros for name resolution in history
+        supabase.from("parceiros").select("id, nome"),
       ]);
 
       if (movResult.error) throw movResult.error;
       setMovimentacoes(movResult.data || []);
+
+      // Build parceiro name map for history
+      const nomesMap: Record<string, string> = {};
+      (parceirosNomesResult.data || []).forEach((p: any) => {
+        if (p.id && p.nome) nomesMap[p.id] = p.nome;
+      });
+      setParceirosNomesMap(nomesMap);
 
       // Calculate bonus pendentes
       if (custosResult.data && acordosResult.data) {
@@ -347,6 +366,7 @@ export function FinanceiroTab() {
       RENOVACAO_PARCERIA: "Renovação",
       BONIFICACAO_ESTRATEGICA: "Bonif. Estratégica",
       PAGTO_PARCEIRO_DISPENSADO: "Dispensado",
+      COMISSAO_INDICADOR_DISPENSADA: "Comissão Dispensada",
     };
     return labels[tipo] || tipo;
   };
@@ -358,16 +378,16 @@ export function FinanceiroTab() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Não autenticado");
 
-      // 1. Fetch parceria data for audit record
+      // 1. Fetch parceria data for audit record (including comissão info)
       const { data: parceria } = await supabase
         .from("parcerias")
-        .select("parceiro_id, valor_parceiro, workspace_id")
+        .select("parceiro_id, valor_parceiro, valor_comissao_indicador, comissao_paga, indicacao_id, workspace_id")
         .eq("id", dispensaParceriaId)
         .single();
 
       if (!parceria) throw new Error("Parceria não encontrada");
 
-      // 2. Mark as dispensed
+      // 2. Mark as dispensed + also mark comissão as "paid" (dispensed) to remove from pending
       const { error } = await supabase
         .from("parcerias")
         .update({
@@ -375,23 +395,56 @@ export function FinanceiroTab() {
           dispensa_motivo: dispensaMotivo.trim(),
           dispensa_at: new Date().toISOString(),
           dispensa_por: user.id,
+          comissao_paga: true, // Also dismiss the indicator commission
         })
         .eq("id", dispensaParceriaId);
       if (error) throw error;
 
-      // 3. Insert zero-value audit record in movimentacoes_indicacao
-      await supabase.from("movimentacoes_indicacao").insert({
-        user_id: user.id,
-        workspace_id: parceria.workspace_id,
-        tipo: "PAGTO_PARCEIRO_DISPENSADO",
-        valor: 0,
-        moeda: "BRL",
-        status: "CONFIRMADO",
-        parceria_id: dispensaParceriaId,
-        parceiro_id: parceria.parceiro_id,
-        descricao: `Pagamento dispensado: ${dispensaMotivo.trim()}`,
-        data_movimentacao: new Date().toISOString().split("T")[0],
-      });
+      // 3. Insert zero-value audit records in movimentacoes_indicacao
+      const auditRecords: any[] = [
+        {
+          user_id: user.id,
+          workspace_id: parceria.workspace_id,
+          tipo: "PAGTO_PARCEIRO_DISPENSADO",
+          valor: 0,
+          moeda: "BRL",
+          status: "CONFIRMADO",
+          parceria_id: dispensaParceriaId,
+          parceiro_id: parceria.parceiro_id,
+          descricao: `Pagamento dispensado: ${dispensaMotivo.trim()}`,
+          data_movimentacao: new Date().toISOString().split("T")[0],
+        },
+      ];
+
+      // If there was a pending comissão, also create a dispensed record for it
+      if (parceria.valor_comissao_indicador && parceria.valor_comissao_indicador > 0 && !parceria.comissao_paga) {
+        // Find the indicador_id via indicacao
+        let indicadorId: string | null = null;
+        if (parceria.indicacao_id) {
+          const { data: indicacao } = await supabase
+            .from("v_indicacoes_workspace")
+            .select("indicador_id")
+            .eq("id", parceria.indicacao_id)
+            .maybeSingle();
+          indicadorId = indicacao?.indicador_id || null;
+        }
+
+        auditRecords.push({
+          user_id: user.id,
+          workspace_id: parceria.workspace_id,
+          tipo: "COMISSAO_INDICADOR_DISPENSADA",
+          valor: 0,
+          moeda: "BRL",
+          status: "CONFIRMADO",
+          parceria_id: dispensaParceriaId,
+          parceiro_id: parceria.parceiro_id,
+          indicador_id: indicadorId,
+          descricao: `Comissão dispensada: parceria não efetivada`,
+          data_movimentacao: new Date().toISOString().split("T")[0],
+        });
+      }
+
+      await supabase.from("movimentacoes_indicacao").insert(auditRecords);
 
       toast({ title: "Pagamento dispensado", description: `Pagamento de ${dispensaParceiroNome} foi dispensado com sucesso.` });
       setDispensaOpen(false);
@@ -421,6 +474,7 @@ export function FinanceiroTab() {
       case "BONIFICACAO_ESTRATEGICA":
         return <Star className="h-4 w-4" />;
       case "PAGTO_PARCEIRO_DISPENSADO":
+      case "COMISSAO_INDICADOR_DISPENSADA":
         return <Ban className="h-4 w-4" />;
       default:
         return <Wallet className="h-4 w-4" />;
@@ -779,7 +833,7 @@ export function FinanceiroTab() {
                           <Badge variant="outline" className="text-xs">
                             {getTipoLabel(mov.tipo)}
                           </Badge>
-                          {mov.tipo === "PAGTO_PARCEIRO_DISPENSADO" ? (
+                          {(mov.tipo === "PAGTO_PARCEIRO_DISPENSADO" || mov.tipo === "COMISSAO_INDICADOR_DISPENSADA") ? (
                             <Ban className="h-3 w-3 text-muted-foreground" />
                           ) : mov.status === "CONFIRMADO" ? (
                             <CheckCircle2 className="h-3 w-3 text-success" />
@@ -787,13 +841,18 @@ export function FinanceiroTab() {
                             <Clock className="h-3 w-3 text-warning" />
                           )}
                         </div>
-                        <p className="text-xs text-muted-foreground mt-1">
+                        {mov.parceiro_id && parceirosNomesMap[mov.parceiro_id] && (
+                          <p className="text-xs font-medium mt-0.5">
+                            {getFirstLastName(parceirosNomesMap[mov.parceiro_id])}
+                          </p>
+                        )}
+                        <p className="text-xs text-muted-foreground mt-0.5">
                           {mov.descricao || "Sem descrição"}
                         </p>
                       </div>
                     </div>
                     <div className="text-right">
-                      {mov.tipo === "PAGTO_PARCEIRO_DISPENSADO" ? (
+                      {(mov.tipo === "PAGTO_PARCEIRO_DISPENSADO" || mov.tipo === "COMISSAO_INDICADOR_DISPENSADA") ? (
                         <p className="font-bold text-muted-foreground">
                           R$ 0,00
                         </p>
