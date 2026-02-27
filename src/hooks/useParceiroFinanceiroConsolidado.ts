@@ -47,6 +47,7 @@ export interface BookmakerFinanceiro {
   resultado_apostas: number;
   resultado_giros: number;
   resultado_cashback: number;
+  resultado_bonus: number;
   qtd_apostas: number;
   status: string;
   projetos: string[];
@@ -211,6 +212,7 @@ export function useParceiroFinanceiroConsolidado(parceiroId: string | null) {
         resultado_apostas: number;
         resultado_giros: number;
         resultado_cashback: number;
+        resultado_bonus: number;
         resultado_total: number;
         qtd_apostas: number;
       }>();
@@ -218,7 +220,7 @@ export function useParceiroFinanceiroConsolidado(parceiroId: string | null) {
       if (bookmakerIds.length > 0) {
         const { data: resultadosOperacionais } = await supabase
           .from("v_bookmaker_resultado_operacional")
-          .select("bookmaker_id, resultado_apostas, resultado_giros, resultado_cashback, resultado_operacional_total, qtd_apostas")
+          .select("bookmaker_id, resultado_apostas, resultado_giros, resultado_cashback, resultado_bonus, resultado_operacional_total, qtd_apostas")
           .in("bookmaker_id", bookmakerIds);
 
         resultadosOperacionais?.forEach((r) => {
@@ -226,6 +228,7 @@ export function useParceiroFinanceiroConsolidado(parceiroId: string | null) {
             resultado_apostas: Number(r.resultado_apostas) || 0,
             resultado_giros: Number(r.resultado_giros) || 0,
             resultado_cashback: Number(r.resultado_cashback) || 0,
+            resultado_bonus: Number(r.resultado_bonus) || 0,
             resultado_total: Number(r.resultado_operacional_total) || 0,
             qtd_apostas: Number(r.qtd_apostas) || 0,
           });
@@ -251,6 +254,7 @@ export function useParceiroFinanceiroConsolidado(parceiroId: string | null) {
           resultado_apostas: 0,
           resultado_giros: 0,
           resultado_cashback: 0,
+          resultado_bonus: 0,
           resultado_total: 0,
           qtd_apostas: 0,
         };
@@ -283,6 +287,7 @@ export function useParceiroFinanceiroConsolidado(parceiroId: string | null) {
           resultado_apostas: resultadoOp.resultado_apostas,
           resultado_giros: resultadoOp.resultado_giros,
           resultado_cashback: resultadoOp.resultado_cashback,
+          resultado_bonus: resultadoOp.resultado_bonus,
           qtd_apostas: resultadoOp.qtd_apostas,
           status: bm.status,
           projetos: bm.projeto_id ? [bm.projeto_id] : [],

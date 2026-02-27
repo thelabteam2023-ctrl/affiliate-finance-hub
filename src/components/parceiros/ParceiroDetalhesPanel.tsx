@@ -999,6 +999,14 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                                         </span>
                                       </div>
                                     )}
+                                    {bm.resultado_bonus !== 0 && (
+                                      <div className="flex justify-between gap-4">
+                                        <span className="text-muted-foreground">Bônus</span>
+                                        <span className={bm.resultado_bonus >= 0 ? "text-success" : "text-destructive"}>
+                                          {formatMoneyValue(bm.resultado_bonus, bm.moeda || "BRL")}
+                                        </span>
+                                      </div>
+                                    )}
                                     <div className="border-t border-border pt-1 flex justify-between gap-4 font-medium">
                                       <span>Total</span>
                                       <span className={bm.lucro_prejuizo >= 0 ? "text-success" : "text-destructive"}>

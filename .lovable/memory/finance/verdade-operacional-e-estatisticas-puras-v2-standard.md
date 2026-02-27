@@ -1,0 +1,4 @@
+# Memory: finance/verdade-operacional-e-estatisticas-puras-v2-standard
+Updated: 2026-02-27
+
+A view 'v_bookmaker_resultado_operacional' é a fonte única da verdade para a coluna 'RESULTADO' em relatórios operacionais, seguindo a fórmula atualizada: **RESULTADO = Apostas (Juice) + Giros Grátis + Cashback Manual + Bônus Líquido (Creditados - Cancelados)**. O campo 'resultado_bonus' representa o bônus líquido (BONUS_CREDITADO do cash_ledger menos AJUSTE_SALDO com motivo BONUS_CANCELAMENTO). Para fins de auditoria e transparência (ParceiroDetalhesPanel), o sistema implementa um padrão de reconciliação financeira: 'Resultado = (Saque - Depósito) + Saldo + Delta (Δ)'. O 'Delta' identifica discrepâncias superiores a R$ 1,00 causadas por ajustes de câmbio (FX). Esta métrica representa o Lucro Operacional Total e é distinta do Fluxo de Caixa Físico (Net Cash Flow).
