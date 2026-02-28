@@ -16,6 +16,8 @@ import { CurrencyBadge } from "@/components/ui/currency-display";
 import type { SupportedCurrency } from "@/hooks/useCurrencySnapshot";
 // Estrutura de entrada individual (para múltiplas entradas)
 export interface SurebetPernaEntry {
+  /** ID da perna no banco (apostas_pernas.id) — necessário para liquidação individual */
+  id?: string;
   bookmaker_id: string;
   bookmaker_nome: string;
   moeda: string;
@@ -373,6 +375,14 @@ function PernaItem({
             <ChevronUp className="h-3 w-3 text-muted-foreground shrink-0" />
           ) : (
             <ChevronDown className="h-3 w-3 text-muted-foreground shrink-0" />
+          )}
+          
+          {/* Result pill per grouped perna */}
+          {onResultChange && (
+            <SurebetPernaResultPill
+              resultado={perna.resultado}
+              onResultChange={onResultChange}
+            />
           )}
         </button>
       </CollapsibleTrigger>

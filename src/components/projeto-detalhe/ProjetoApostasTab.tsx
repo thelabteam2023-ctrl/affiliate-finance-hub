@@ -869,25 +869,62 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
       const surebet = surebets.find(sb => sb.id === surebetId);
       if (!surebet || !surebet.pernas || !surebet.workspace_id) return;
 
-      const pernas = surebet.pernas.filter(p => p.bookmaker_id && p.odd && p.odd > 0);
+      // Agrupar pernas por seleção para alinhar com os índices do menu (que usa pernas agrupadas)
+      const pernasAgrupadas = groupPernasBySelecao(
+        (surebet.pernas || []).map((p: any) => ({
+          id: p.id,
+          selecao: p.selecao,
+          selecao_livre: p.selecao_livre,
+          odd: p.odd,
+          stake: p.stake,
+          resultado: p.resultado,
+          bookmaker_nome: p.bookmaker?.nome || p.bookmaker_nome || "—",
+          bookmaker_id: p.bookmaker_id,
+          moeda: p.moeda || 'BRL',
+        }))
+      ).filter(p => p.bookmaker_id && p.odd && p.odd > 0);
       
-      for (let i = 0; i < pernas.length; i++) {
-        const perna = pernas[i];
+      for (let i = 0; i < pernasAgrupadas.length; i++) {
+        const perna = pernasAgrupadas[i];
         const isWinner = quickResult.winners.includes(i);
         const resultado = quickResult.type === "all_void" ? "VOID" : (isWinner ? "GREEN" : "RED");
 
-        await handleSurebetPernaResolve({
-          pernaId: perna.id,
-          surebetId,
-          bookmarkerId: perna.bookmaker_id,
-          resultado,
-          stake: perna.stake,
-          odd: perna.odd,
-          moeda: perna.moeda || 'BRL',
-          resultadoAnterior: perna.resultado,
-          workspaceId: surebet.workspace_id!,
-          silent: true,
-        });
+        // Se a perna tem sub-entries (múltiplas casas na mesma seleção),
+        // liquidar CADA sub-entry individualmente com o mesmo resultado
+        const hasEntries = perna.entries && perna.entries.length > 1;
+        
+        if (hasEntries) {
+          for (const entry of perna.entries!) {
+            const entryPernaId = entry.id;
+            if (!entryPernaId || !entry.bookmaker_id) continue;
+            
+            await handleSurebetPernaResolve({
+              pernaId: entryPernaId,
+              surebetId,
+              bookmarkerId: entry.bookmaker_id,
+              resultado,
+              stake: entry.stake,
+              odd: entry.odd,
+              moeda: entry.moeda || 'BRL',
+              resultadoAnterior: perna.resultado,
+              workspaceId: surebet.workspace_id!,
+              silent: true,
+            });
+          }
+        } else {
+          await handleSurebetPernaResolve({
+            pernaId: perna.id,
+            surebetId,
+            bookmarkerId: perna.bookmaker_id!,
+            resultado,
+            stake: perna.stake,
+            odd: perna.odd,
+            moeda: perna.moeda || 'BRL',
+            resultadoAnterior: perna.resultado,
+            workspaceId: surebet.workspace_id!,
+            silent: true,
+          });
+        }
       }
 
       toast.success("Resultado da surebet alterado com sucesso");

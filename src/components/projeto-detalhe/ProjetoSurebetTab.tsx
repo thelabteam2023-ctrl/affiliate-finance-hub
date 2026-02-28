@@ -539,18 +539,42 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
         const isWinner = result.winners.includes(i);
         const resultado = result.type === "all_void" ? "VOID" : (isWinner ? "GREEN" : "RED");
 
-        await handleSurebetPernaResolve({
-          pernaId: perna.id,
-          surebetId,
-          bookmarkerId: perna.bookmaker_id!,
-          resultado,
-          stake: perna.stake,
-          odd: perna.odd,
-          moeda: perna.moeda || 'BRL',
-          resultadoAnterior: perna.resultado,
-          workspaceId: operacao.workspace_id!,
-          silent: true,
-        });
+        // Se a perna tem sub-entries (múltiplas casas na mesma seleção),
+        // liquidar CADA sub-entry individualmente com o mesmo resultado
+        const hasEntries = perna.entries && perna.entries.length > 1;
+        
+        if (hasEntries) {
+          for (const entry of perna.entries!) {
+            const entryPernaId = entry.id;
+            if (!entryPernaId || !entry.bookmaker_id) continue;
+            
+            await handleSurebetPernaResolve({
+              pernaId: entryPernaId,
+              surebetId,
+              bookmarkerId: entry.bookmaker_id,
+              resultado,
+              stake: entry.stake,
+              odd: entry.odd,
+              moeda: entry.moeda || 'BRL',
+              resultadoAnterior: perna.resultado, // grouped result
+              workspaceId: operacao.workspace_id!,
+              silent: true,
+            });
+          }
+        } else {
+          await handleSurebetPernaResolve({
+            pernaId: perna.id,
+            surebetId,
+            bookmarkerId: perna.bookmaker_id!,
+            resultado,
+            stake: perna.stake,
+            odd: perna.odd,
+            moeda: perna.moeda || 'BRL',
+            resultadoAnterior: perna.resultado,
+            workspaceId: operacao.workspace_id!,
+            silent: true,
+          });
+        }
       }
 
       toast.success("Resultado da surebet alterado com sucesso");

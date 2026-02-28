@@ -80,6 +80,7 @@ export function groupPernasBySelecao(
       result.odd_media = oddMedia;
       result.stake_total = stakeTotal;
       result.entries = group.map(p => ({
+        id: p.id,
         bookmaker_id: p.bookmaker_id || '',
         bookmaker_nome: resolve(p),
         moeda: p.moeda || 'BRL',
