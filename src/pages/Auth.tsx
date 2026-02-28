@@ -44,14 +44,38 @@ export default function Auth() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  const AUTH_TIMEOUT_MS = 5000;
+
+  const withTimeout = async <T,>(label: string, promise: Promise<T>, fallback: T): Promise<T> => {
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+    const timeoutPromise = new Promise<T>((resolve) => {
+      timeoutId = setTimeout(() => {
+        console.warn(`[AuthPage] Timeout em ${label} após ${AUTH_TIMEOUT_MS}ms`);
+        resolve(fallback);
+      }, AUTH_TIMEOUT_MS);
+    });
+
+    try {
+      return await Promise.race([promise, timeoutPromise]);
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId);
+    }
+  };
+
   // Capturar o redirect da URL (para convites)
   const redirectTo = searchParams.get("redirect");
 
   useEffect(() => {
     const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const sessionResult = await withTimeout(
+        "checkSession/getSession",
+        supabase.auth.getSession(),
+        { data: { session: null } } as Awaited<ReturnType<typeof supabase.auth.getSession>>
+      );
+
+      const session = sessionResult.data.session;
       if (session) {
-        // Se tiver redirect pendente, ir para lá
         if (redirectTo) {
           console.log("[Auth] Usuário logado, redirecionando para:", redirectTo);
           navigate(redirectTo);
@@ -60,7 +84,7 @@ export default function Auth() {
         }
       }
     };
-    checkSession();
+    void checkSession();
   }, [navigate, redirectTo]);
 
   // Check if account is blocked before attempting login
@@ -96,7 +120,7 @@ export default function Auth() {
       await supabase.rpc('record_login_attempt', {
         p_email: emailToRecord,
         p_success: success,
-        p_ip_address: null // IP is captured server-side if needed
+        p_ip_address: null
       });
     } catch (err) {
       console.error('Error recording login attempt:', err);
@@ -106,7 +130,6 @@ export default function Auth() {
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
     try {
-      // Determinar para onde redirecionar após login
       const finalRedirect = redirectTo || '/parceiros';
       
       const { error } = await supabase.auth.signInWithOAuth({
@@ -147,7 +170,6 @@ export default function Auth() {
       setIsBlocked(false);
       setBlockedUntil(null);
     } catch (error: any) {
-      // Generic error message - don't reveal if email exists
       toast({
         title: "Erro",
         description: "Não foi possível processar sua solicitação. Tente novamente.",
@@ -163,7 +185,6 @@ export default function Auth() {
     setLoading(true);
 
     try {
-      // Validação com Zod antes de processar
       if (isLogin) {
         const validation = loginSchema.safeParse({ email, password });
         if (!validation.success) {
@@ -171,45 +192,37 @@ export default function Auth() {
           throw new Error(firstError.message);
         }
 
-        // Check if blocked before attempting login
-        const blocked = await checkIfBlocked(email);
+        // Nunca bloquear login indefinidamente por verificação auxiliar
+        const blocked = await withTimeout("checkIfBlocked", checkIfBlocked(email), false);
         if (blocked) {
-          setLoading(false);
           return;
         }
 
-        const { error } = await supabase.auth.signInWithPassword({
-          email: validation.data.email,
-          password: validation.data.password,
-        });
+        const loginResult = await withTimeout(
+          "signInWithPassword",
+          supabase.auth.signInWithPassword({
+            email: validation.data.email,
+            password: validation.data.password,
+          }),
+          { data: { user: null, session: null }, error: new Error("timeout") as any }
+        );
 
-        if (error) {
-          // Record failed attempt
-          await recordLoginAttempt(email, false);
-          
-          // Check if now blocked after this attempt
-          await checkIfBlocked(email);
-          
-          // Generic error message - don't reveal if email exists or password is wrong
+        if (loginResult.error) {
+          void recordLoginAttempt(email, false);
+          void checkIfBlocked(email);
           throw new Error("Credenciais inválidas. Verifique seus dados e tente novamente.");
         }
 
-        // Record successful login
-        await recordLoginAttempt(email, true);
-        
-        // NOTA: O histórico de login é registrado automaticamente pelo AuthContext.signIn()
-        // via a RPC secure_login, evitando duplicação
+        void recordLoginAttempt(email, true);
 
         toast({
           title: "Login realizado!",
           description: "Bem-vindo de volta.",
         });
         
-        // Redirecionar para o destino correto
         const destination = redirectTo || "/parceiros";
         navigate(destination);
       } else {
-        // Validação de signup
         const validation = signupSchema.safeParse({ email, password, fullName });
         if (!validation.success) {
           const firstError = validation.error.errors[0];
@@ -238,13 +251,14 @@ export default function Auth() {
     } catch (error: any) {
       let errorMessage = error.message;
       
-      // Keep error messages generic for security
       if (error.message.includes("Invalid login credentials")) {
         errorMessage = "Credenciais inválidas. Verifique seus dados e tente novamente.";
       } else if (error.message.includes("Email not confirmed")) {
         errorMessage = "Email não confirmado. Verifique sua caixa de entrada.";
       } else if (error.message.includes("User already registered")) {
         errorMessage = "Este email já está em uso.";
+      } else if (error.message.includes("timeout")) {
+        errorMessage = "A autenticação demorou demais. Tente novamente.";
       }
       
       toast({
