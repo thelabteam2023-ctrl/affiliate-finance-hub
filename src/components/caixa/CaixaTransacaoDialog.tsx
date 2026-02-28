@@ -505,6 +505,7 @@ export function CaixaTransacaoDialog({
         parceiroSelectRef.current?.open();
       }, 100);
     }
+    // TRANSFERENCIA CAIXA_PARCEIRO: handled in separate effect after fluxoTransferencia declaration
   }, [moeda, tipoMoeda, tipoTransacao]);
 
   // Auto-focus para outros tipos (não DEPÓSITO): quando moeda é selecionada, foca no Valor
@@ -685,6 +686,20 @@ export function CaixaTransacaoDialog({
     }
     prevValor.current = valor;
   }, [valor, tipoMoeda, tipoTransacao, fluxoTransferencia]);
+
+  // TRANSFERENCIA CAIXA_PARCEIRO: quando moeda é selecionada, abrir parceiro destino
+  useEffect(() => {
+    if (tipoMoeda !== "FIAT") return;
+    if (isResettingContext.current) return;
+    if (tipoTransacao !== "TRANSFERENCIA" || fluxoTransferencia !== "CAIXA_PARCEIRO") return;
+    if (!moeda) return;
+    // Only trigger when parceiro hasn't been selected yet
+    if (destinoParceiroId) return;
+    
+    setTimeout(() => {
+      parceiroDestinoSelectRef.current?.open();
+    }, 150);
+  }, [moeda, tipoMoeda, tipoTransacao, fluxoTransferencia, destinoParceiroId]);
 
   useEffect(() => {
     if (open) {
@@ -3754,11 +3769,17 @@ export function CaixaTransacaoDialog({
             <>
               <div className="space-y-2">
                 <Label>Parceiro</Label>
-                <ParceiroSelect
+              <ParceiroSelect
+                  ref={parceiroDestinoSelectRef}
                   value={destinoParceiroId}
                   onValueChange={(value) => {
                     setDestinoParceiroId(value);
                     setDestinoContaId("");
+                    // Auto-focus: parceiro → conta bancária
+                    setTimeout(() => {
+                      destinoContaBancariaSelectRef.current?.focus();
+                      destinoContaBancariaSelectRef.current?.click();
+                    }, 180);
                   }}
                   showSaldo={true}
                   tipoMoeda="FIAT"
@@ -3773,9 +3794,13 @@ export function CaixaTransacaoDialog({
                     value={destinoContaId} 
                     onValueChange={(value) => {
                       setDestinoContaId(value);
+                      // Auto-focus: conta bancária → valor
+                      setTimeout(() => {
+                        valorFiatInputRef.current?.focus();
+                      }, 180);
                     }}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger ref={destinoContaBancariaSelectRef}>
                       <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
                     <SelectContent>
