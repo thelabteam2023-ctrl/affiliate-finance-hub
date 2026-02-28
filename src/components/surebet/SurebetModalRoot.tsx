@@ -332,7 +332,7 @@ export function SurebetModalRoot({
     };
   }, [moedaConsolidacao, cotacaoUsdFormulario, getCotacaoRate]);
 
-  const { analysis, pernasValidas, arredondarStake, getOddMediaPerna, getStakeTotalPerna, directedStakes } = useSurebetCalculator({
+  const { analysis, calculatedStakes, pernasValidas, arredondarStake, getOddMediaPerna, getStakeTotalPerna, directedStakes } = useSurebetCalculator({
     odds,
     directedProfitLegs,
     numPernas,
@@ -778,16 +778,24 @@ export function SurebetModalRoot({
       const newOdds = [...prev];
       const currentEntries = newOdds[pernaIndex].additionalEntries || [];
       if (currentEntries.length >= 4) return prev; // max 5 total (1 main + 4 additional)
+
+      // Calcular stake restante: totalNeeded - mainStake - subStakes existentes
+      const totalNeeded = calculatedStakes?.[pernaIndex] || 0;
+      const mainStake = parseFloat(newOdds[pernaIndex].stake) || 0;
+      const existingSubStakes = currentEntries.reduce((sum, e) => sum + (parseFloat(e.stake) || 0), 0);
+      const remainingStake = Math.max(0, totalNeeded - mainStake - existingSubStakes);
+      const prefilledStake = remainingStake > 0 ? arredondarStake(remainingStake).toFixed(2) : "";
+
       newOdds[pernaIndex] = {
         ...newOdds[pernaIndex],
         additionalEntries: [
           ...currentEntries,
-          { bookmaker_id: "", moeda: "BRL" as SupportedCurrency, odd: "", stake: "", selecaoLivre: "" }
+          { bookmaker_id: "", moeda: "BRL" as SupportedCurrency, odd: "", stake: prefilledStake, selecaoLivre: "" }
         ]
       };
       return newOdds;
     });
-  }, []);
+  }, [calculatedStakes, arredondarStake]);
 
   const updateAdditionalEntry = useCallback((pernaIndex: number, entryIndex: number, field: string, value: string) => {
     setOdds(prev => {
