@@ -1037,14 +1037,30 @@ export function SurebetDialogTable({
     
     let needsUpdate = false;
     const newOdds = odds.map((o, i) => {
-      const targetStake = directedStakes[i];
+      let adjustedStake = directedStakes[i];
+      
+      // Fix: ajustar para sub-entradas (directedStakes são TOTAIS por perna)
+      const additionalEntries = o.additionalEntries || [];
+      if (additionalEntries.length > 0) {
+        const oddMedia = getOddMediaPerna(o);
+        const mainOdd = parseFloat(o.odd) || 0;
+        if (mainOdd > 1 && oddMedia > 0) {
+          const targetReturn = adjustedStake * oddMedia;
+          const subPayout = additionalEntries.reduce((sum, ae) =>
+            sum + (parseFloat(ae.stake) || 0) * (parseFloat(ae.odd) || 0), 0);
+          if (subPayout > 0) {
+            adjustedStake = arredondarStake(Math.max(0, (targetReturn - subPayout) / mainOdd));
+          }
+        }
+      }
+      
       const currentStake = parseFloat(o.stake) || 0;
       
-      if (Math.abs(targetStake - currentStake) > 0.01) {
+      if (Math.abs(adjustedStake - currentStake) > 0.01) {
         needsUpdate = true;
         return { 
           ...o, 
-          stake: targetStake.toFixed(2),
+          stake: adjustedStake.toFixed(2),
           isManuallyEdited: false,
           stakeOrigem: "referencia" as StakeOrigem
         };

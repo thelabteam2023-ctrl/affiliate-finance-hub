@@ -122,6 +122,56 @@ export interface SurebetEngineAnalysis {
   moedaDominante: SupportedCurrency;
 }
 
+// ─── Ajuste de stake para sub-entradas ───────────────────────
+
+/**
+ * Ajusta a stake equalizada TOTAL de uma perna para a stake PRINCIPAL correta
+ * quando há sub-entradas com stakes/odds fixas.
+ *
+ * PROBLEMA: O equalizador calcula `targetReturn / oddMedia = totalStake`.
+ * Mas se sub-entradas têm stakes fixas, alterar apenas a entrada principal
+ * muda a oddMedia efetiva, fazendo o payout real ≠ targetReturn.
+ *
+ * SOLUÇÃO: mainStake = (targetReturn - subPayout) / mainOdd
+ * onde targetReturn = totalStake * oddMedia (reconstruído)
+ *
+ * Para sub-entradas multi-moeda, converte cada subPayout para a moeda
+ * da perna antes de subtrair.
+ */
+export function adjustStakeForSubEntries(
+  totalStakeNeeded: number,
+  mainOdd: number,
+  oddMedia: number,
+  subEntries: Array<{ odd: string; stake: string; moeda?: string }>,
+  roundFn: (v: number) => number,
+  brlRates?: BRLRates,
+  legMoeda?: string
+): number {
+  if (!subEntries || subEntries.length === 0) return totalStakeNeeded;
+  if (mainOdd <= 1 || oddMedia <= 0) return totalStakeNeeded;
+
+  // Calcular payout das sub-entradas (convertido para moeda da perna se necessário)
+  const subPayout = subEntries.reduce((sum, ae) => {
+    const s = parseFloat(ae.stake) || 0;
+    const aeOdd = parseFloat(ae.odd) || 0;
+    if (s <= 0 || aeOdd <= 0) return sum;
+    const payoutLocal = s * aeOdd;
+    // Se temos info de moeda e taxas, converter para moeda da perna
+    if (brlRates && legMoeda && ae.moeda && ae.moeda !== legMoeda) {
+      return sum + convertViaBRL(payoutLocal, ae.moeda, legMoeda, brlRates);
+    }
+    return sum + payoutLocal;
+  }, 0);
+
+  if (subPayout <= 0) return totalStakeNeeded;
+
+  // targetReturn = totalStakeNeeded * oddMedia (reconstruir o retorno-alvo)
+  const targetReturn = totalStakeNeeded * oddMedia;
+  const adjustedMainStake = (targetReturn - subPayout) / mainOdd;
+
+  return roundFn(Math.max(0, adjustedMainStake));
+}
+
 // ─── Funções puras do engine ─────────────────────────────────
 
 /**
