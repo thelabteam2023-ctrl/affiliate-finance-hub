@@ -58,7 +58,7 @@ Duas alterações simples no arquivo `src/components/AppSidebar.tsx`:
 
 ## 🏗️ Refatoração Arquitetural — Auth & Bootstrap
 
-### Status: PENDENTE (aguardando aprovação)
+### Status: Fase 1 ✅ | Fase 2 PENDENTE | Fase 3 PENDENTE
 
 ### Diagnóstico
 
@@ -68,7 +68,7 @@ O sistema acumulou **complexidade acidental** nos patches de auth. 3 problemas e
 2. **40+ chamadas decrypt no carregamento** — `usePasswordDecryption` descriptografa eagerly para cada bookmaker renderizado
 3. **State machine implícita** — 5 flags booleanas (loading, initialized, bootstrapInFlight, bootstrapResolved, lastHandledAccessToken) = 32 combinações, maioria inválida. Safety net de 8s é band-aid.
 
-### Fase 1: Centralizar Auth Events (PRIORIDADE MÁXIMA)
+### Fase 1: Centralizar Auth Events ✅ CONCLUÍDO
 
 **Um único listener** `onAuthStateChange` no AuthContext. Demais contextos reagem via React context (`useAuth().session`).
 

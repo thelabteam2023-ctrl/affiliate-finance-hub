@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, useCallback, ReactNode,
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useWorkspace } from "@/hooks/useWorkspace";
-import { useQueryClient } from "@tanstack/react-query";
+
 
 /**
  * Interface for the effective access data from the backend
@@ -77,7 +77,7 @@ const PermissionsContext = createContext<PermissionsContextType | undefined>(und
 export function PermissionsProvider({ children }: { children: ReactNode }) {
   const { user, isSystemOwner: authIsSystemOwner, initialized: authInitialized } = useAuth();
   const { workspaceId } = useWorkspace();
-  const queryClient = useQueryClient();
+  
   
   const [access, setAccess] = useState<EffectiveAccess | null>(null);
   const [loading, setLoading] = useState(true);
@@ -142,22 +142,15 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
     }
   }, [authInitialized, fetchEffectiveAccess]);
   
-  // Listen for auth changes to invalidate
+  // Reagir a mudanças de sessão via AuthContext (sem listener duplicado)
+  // O useEffect acima já reage a authInitialized + fetchEffectiveAccess (que depende de user/workspaceId)
+  // Aqui só precisamos limpar o state quando o user desloga
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      // CRÍTICO: evitar chamadas de backend síncronas no callback de auth
-      setTimeout(() => {
-        if (event === 'SIGNED_OUT') {
-          setAccess(null);
-          setInitialized(false);
-        } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-          void fetchEffectiveAccess();
-        }
-      }, 0);
-    });
-    
-    return () => subscription.unsubscribe();
-  }, [fetchEffectiveAccess]);
+    if (authInitialized && !user) {
+      setAccess(null);
+      setInitialized(true);
+    }
+  }, [authInitialized, user]);
   
   /**
    * Check if user has a specific permission
