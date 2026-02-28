@@ -913,6 +913,13 @@ export function CaixaTransacaoDialog({
   // Também auto-seleciona se houver apenas uma conta disponível
   useEffect(() => {
     if (tipoMoeda === "FIAT" && origemParceiroId && origemParceiroId !== prevOrigemParceiroId.current) {
+      // Para affiliate_deposit, aguardar até que contasBancarias esteja carregado
+      // antes de tentar abrir o seletor (evita race condition com fetch assíncrono)
+      if (entryPoint === "affiliate_deposit" && contasBancarias.length === 0) {
+        // Dados ainda não carregaram — não atualizar prevRef, aguardar próximo render
+        return;
+      }
+      
       // Verificar quantas contas com saldo o parceiro tem
       const contasComSaldo = contasBancarias.filter((c) => {
         if (c.parceiro_id !== origemParceiroId) return false;
@@ -940,8 +947,11 @@ export function CaixaTransacaoDialog({
         walletCryptoSelectRef.current?.click();
       }, 150);
     }
-    prevOrigemParceiroId.current = origemParceiroId;
-  }, [origemParceiroId, tipoMoeda, contasBancarias, saldosParceirosContas, moeda]);
+    // Só atualizar prevRef quando realmente processamos (não quando aguardando dados)
+    if (origemParceiroId && (entryPoint !== "affiliate_deposit" || contasBancarias.length > 0)) {
+      prevOrigemParceiroId.current = origemParceiroId;
+    }
+  }, [origemParceiroId, tipoMoeda, contasBancarias, saldosParceirosContas, moeda, entryPoint]);
 
   // Auto-focus FIAT DEPÓSITO: quando conta bancária é selecionada, abre o select Bookmaker
   // Se bookmaker já está pré-preenchido (affiliate_deposit), pula direto para o campo Valor
