@@ -1136,6 +1136,9 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                 refreshKey={bookmakerRefreshKey}
                 onNewTransacao={onNewTransacao}
                 onEditVinculo={onEditVinculo}
+                projetos={projetos || []}
+                onVincularProjeto={handleVincularProjeto}
+                onDesvincularProjeto={handleDesvincularProjeto}
               />
             </TabsContent>
           </div>
