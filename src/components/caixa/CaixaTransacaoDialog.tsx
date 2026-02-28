@@ -1275,10 +1275,26 @@ export function CaixaTransacaoDialog({
       
       if (hasTipoMoeda && hasMoedaOrCoin) {
         // Defaults already cover tipoMoeda + moeda/coin.
-        // The existing auto-focus chain handles conta bancária when origemParceiroId changes.
-        // No guided focus needed — just let the natural chain do its work.
+        // The natural auto-focus chain (origemParceiroId → contaBancária) relies on
+        // moeda/tipoMoeda effects firing, but since prevMoeda/prevTipoMoeda are already
+        // set to match, those effects are skipped. We need to manually kick the chain.
         affiliateFocusActiveRef.current = false;
         affiliateFocusStepRef.current = 0;
+        
+        // Manually trigger the parceiro→conta focus chain since the natural effects won't fire
+        // Wait for contasBancarias to be available
+        const kickContaFocus = () => {
+          setTimeout(() => {
+            if (currentTipoMoeda === "CRYPTO" && walletCryptoSelectRef.current) {
+              walletCryptoSelectRef.current.focus();
+              walletCryptoSelectRef.current.click();
+            } else if (currentTipoMoeda === "FIAT" && contaBancariaSelectRef.current) {
+              contaBancariaSelectRef.current.focus();
+              contaBancariaSelectRef.current.click();
+            }
+          }, 300);
+        };
+        kickContaFocus();
         return;
       }
       
