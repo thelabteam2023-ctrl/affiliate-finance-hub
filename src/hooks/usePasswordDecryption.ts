@@ -2,46 +2,57 @@ import { useCallback, useRef, useState } from "react";
 import { decryptPassword as decryptPasswordValue } from "@/utils/cryptoPassword";
 
 /**
- * Cacheia a descriptografia por id lógico para evitar mostrar ciphertext na UI
- * quando houver falha temporária de rede/back-end.
+ * Lazy password decryption hook.
+ * Passwords show "••••••••" by default. Decryption only happens on explicit user action.
  */
 export function usePasswordDecryption() {
   const [cache, setCache] = useState<Record<string, string>>({});
   const pendingRef = useRef<Set<string>>(new Set());
 
-  const ensureDecrypted = useCallback(async (key: string, encrypted: string | null | undefined) => {
-    if (!encrypted) {
-      setCache((prev) => (Object.prototype.hasOwnProperty.call(prev, key) ? prev : { ...prev, [key]: "" }));
-      return;
+  /** Request decryption for a given key. Returns the decrypted value or "" on failure. */
+  const requestDecrypt = useCallback(async (key: string, encrypted: string | null | undefined): Promise<string> => {
+    if (!encrypted) return "";
+
+    // Already cached
+    if (Object.prototype.hasOwnProperty.call(cache, key)) {
+      return cache[key] || "";
     }
 
-    if (Object.prototype.hasOwnProperty.call(cache, key) || pendingRef.current.has(key)) {
-      return;
+    // Already in flight — wait for it
+    if (pendingRef.current.has(key)) {
+      return "••••••••";
     }
 
     pendingRef.current.add(key);
     try {
       const decrypted = await decryptPasswordValue(encrypted);
-      setCache((prev) => ({ ...prev, [key]: decrypted || "" }));
+      const value = decrypted || "";
+      setCache((prev) => ({ ...prev, [key]: value }));
+      return value;
     } catch {
       setCache((prev) => ({ ...prev, [key]: "" }));
+      return "";
     } finally {
       pendingRef.current.delete(key);
     }
   }, [cache]);
 
-  const getDecryptedPassword = useCallback((key: string, encrypted: string | null | undefined): string => {
-    if (!encrypted) return "";
+  /** Check if a key has already been decrypted */
+  const isDecrypted = useCallback((key: string): boolean => {
+    return Object.prototype.hasOwnProperty.call(cache, key);
+  }, [cache]);
 
+  /** Get cached value (returns undefined if not yet decrypted) */
+  const getCached = useCallback((key: string): string | undefined => {
     if (Object.prototype.hasOwnProperty.call(cache, key)) {
       return cache[key] || "";
     }
-
-    void ensureDecrypted(key, encrypted);
-    return "••••••••";
-  }, [cache, ensureDecrypted]);
+    return undefined;
+  }, [cache]);
 
   return {
-    getDecryptedPassword,
+    requestDecrypt,
+    isDecrypted,
+    getCached,
   };
 }

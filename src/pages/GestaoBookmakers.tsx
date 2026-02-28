@@ -40,6 +40,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { usePasswordDecryption } from "@/hooks/usePasswordDecryption";
+import { LazyPasswordField } from "@/components/parceiros/LazyPasswordField";
 interface Bookmaker {
   id: string;
   nome: string;
@@ -93,7 +94,7 @@ export default function GestaoBookmakers() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isSystemOwner } = useAuth();
-  const { getDecryptedPassword } = usePasswordDecryption();
+  const { requestDecrypt, isDecrypted, getCached } = usePasswordDecryption();
   const { canCreate, canEdit, canDelete } = useActionAccess();
 
   // Hook para obter status de uso de cada bookmaker
@@ -303,8 +304,7 @@ export default function GestaoBookmakers() {
   };
 
 
-  const resolvePassword = (bookmakerId: string, encrypted: string | null | undefined) =>
-    getDecryptedPassword(`gestao-bookmakers:${bookmakerId}`, encrypted);
+  // resolvePassword removed — now using LazyPasswordField component
 
   const hasCredentials = (bookmaker: Bookmaker) => {
     return bookmaker.login_username && bookmaker.login_password_encrypted;
@@ -773,26 +773,13 @@ export default function GestaoBookmakers() {
                                 </div>
                                 <div>
                                   <label className="text-[10px] text-muted-foreground">Senha</label>
-                                  <div className="flex items-center gap-1 mt-0.5">
-                                    <code className="flex-1 text-xs bg-muted px-1.5 py-0.5 rounded truncate">
-                                      {resolvePassword(bookmaker.id, bookmaker.login_password_encrypted)}
-                                    </code>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => {
-                                        const pwd = resolvePassword(bookmaker.id, bookmaker.login_password_encrypted);
-                                        if (pwd && pwd !== "••••••••") copyToClipboard(pwd, "Senha");
-                                      }}
-                                      className="h-6 w-6 p-0 shrink-0"
-                                    >
-                                      {copiedField === "Senha" ? (
-                                        <Check className="h-3 w-3 text-green-500" />
-                                      ) : (
-                                        <Copy className="h-3 w-3" />
-                                      )}
-                                    </Button>
-                                  </div>
+                                  <LazyPasswordField
+                                    cacheKey={`gestao-bookmakers:${bookmaker.id}`}
+                                    encrypted={bookmaker.login_password_encrypted}
+                                    requestDecrypt={requestDecrypt}
+                                    isDecrypted={isDecrypted}
+                                    getCached={getCached}
+                                  />
                                 </div>
                               </div>
                             </PopoverContent>
@@ -1044,26 +1031,13 @@ export default function GestaoBookmakers() {
                                           </div>
                                           <div>
                                             <label className="text-[10px] text-muted-foreground">Senha</label>
-                                            <div className="flex items-center gap-1 mt-0.5">
-                                              <code className="flex-1 text-xs bg-muted px-1.5 py-0.5 rounded truncate">
-                                                {resolvePassword(bookmaker.id, bookmaker.login_password_encrypted)}
-                                              </code>
-                                              <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => {
-                                                  const pwd = resolvePassword(bookmaker.id, bookmaker.login_password_encrypted);
-                                                  if (pwd && pwd !== "••••••••") copyToClipboard(pwd, "Senha");
-                                                }}
-                                                className="h-6 w-6 p-0 shrink-0"
-                                              >
-                                                {copiedField === "Senha" ? (
-                                                  <Check className="h-3 w-3 text-green-500" />
-                                                ) : (
-                                                  <Copy className="h-3 w-3" />
-                                                )}
-                                              </Button>
-                                            </div>
+                                            <LazyPasswordField
+                                              cacheKey={`gestao-bookmakers:${bookmaker.id}`}
+                                              encrypted={bookmaker.login_password_encrypted}
+                                              requestDecrypt={requestDecrypt}
+                                              isDecrypted={isDecrypted}
+                                              getCached={getCached}
+                                            />
                                           </div>
                                         </div>
                                       </PopoverContent>

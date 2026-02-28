@@ -35,6 +35,7 @@ import { useCotacoes } from "@/hooks/useCotacoes";
 import { ParceiroKpiCard } from "./ParceiroKpiCard";
 import { RegistrarPerdaRapidaDialog } from "./RegistrarPerdaRapidaDialog";
 import { usePasswordDecryption } from "@/hooks/usePasswordDecryption";
+import { LazyPasswordField } from "./LazyPasswordField";
 
 interface ParceiroCache {
   resumoData: ParceiroFinanceiroConsolidado | null;
@@ -85,7 +86,7 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
   const error = parceiroCache.resumoError;
   
   const { toast } = useToast();
-  const { getDecryptedPassword } = usePasswordDecryption();
+  const { requestDecrypt, isDecrypted, getCached } = usePasswordDecryption();
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [credentialsPopoverOpen, setCredentialsPopoverOpen] = useState<string | null>(null);
   const [historicoDialog, setHistoricoDialog] = useState<{ open: boolean; bookmakerId: string; bookmakerNome: string; logoUrl: string | null }>({ open: false, bookmakerId: "", bookmakerNome: "", logoUrl: null });
@@ -316,8 +317,7 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
     }
   };
 
-  const resolvePassword = (bookmakerId: string, encrypted: string | null | undefined) =>
-    getDecryptedPassword(`parceiro-detalhes:${bookmakerId}`, encrypted);
+  // resolvePassword removed — now using LazyPasswordField component
 
   const isUSDMoeda = (moeda: string) => moeda === "USD" || moeda === "USDT";
 
@@ -768,28 +768,14 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                                           </div>
                                           <div>
                                             <label className="text-[10px] text-muted-foreground">Senha</label>
-                                            <div className="flex items-center gap-1 mt-0.5">
-                                              <code className="flex-1 text-xs bg-muted px-1.5 py-0.5 rounded truncate">
-                                                {showSensitiveData && bm.login_password_encrypted
-                                                  ? resolvePassword(bm.bookmaker_id, bm.login_password_encrypted)
-                                                  : "••••••"}
-                                              </code>
-                                              <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => {
-                                                  const pwd = resolvePassword(bm.bookmaker_id, bm.login_password_encrypted);
-                                                  if (pwd && pwd !== "••••••••") copyToClipboard(pwd, "Senha");
-                                                }}
-                                                className="h-6 w-6 p-0 shrink-0"
-                                              >
-                                                {copiedField === "Senha" ? (
-                                                  <Check className="h-3 w-3 text-success" />
-                                                ) : (
-                                                  <Copy className="h-3 w-3" />
-                                                )}
-                                              </Button>
-                                            </div>
+                                            <LazyPasswordField
+                                              cacheKey={`parceiro-detalhes:${bm.bookmaker_id}`}
+                                              encrypted={bm.login_password_encrypted}
+                                              parentMasked={!showSensitiveData}
+                                              requestDecrypt={requestDecrypt}
+                                              isDecrypted={isDecrypted}
+                                              getCached={getCached}
+                                            />
                                           </div>
                                         </div>
                                       </PopoverContent>
