@@ -1243,10 +1243,16 @@ export function CaixaTransacaoDialog({
     if (tipoTransacao !== "DEPOSITO" && tipoTransacao !== "SAQUE") return;
     
     // Start guided focus after defaults are applied
+    // Use longer delay to ensure defaults (setTimeout 50ms) have been applied and React has re-rendered
     const timer = setTimeout(() => {
-      // Check if tipoMoeda and moeda/coin are already set from defaults
-      const hasTipoMoeda = !!tipoMoeda;
-      const hasMoedaOrCoin = (tipoMoeda === "CRYPTO" && !!coin) || (tipoMoeda === "FIAT" && !!moeda);
+      // Read latest values from refs/state (closure might be stale)
+      // prevMoeda.current is set synchronously during default application
+      const currentMoeda = prevMoeda.current;
+      const currentCoin = prevCoin.current;
+      const currentTipoMoeda = prevTipoMoeda.current;
+      
+      const hasTipoMoeda = !!currentTipoMoeda;
+      const hasMoedaOrCoin = (currentTipoMoeda === "CRYPTO" && !!currentCoin) || (currentTipoMoeda === "FIAT" && !!currentMoeda);
       
       if (hasTipoMoeda && hasMoedaOrCoin) {
         // Defaults already cover tipoMoeda + moeda/coin.
@@ -1263,10 +1269,10 @@ export function CaixaTransacaoDialog({
         // Skip to step 2: open moeda/coin selector
         affiliateFocusStepRef.current = 2;
         setTimeout(() => {
-          if (tipoMoeda === "CRYPTO" && coinSelectRef.current) {
+          if (currentTipoMoeda === "CRYPTO" && coinSelectRef.current) {
             coinSelectRef.current.focus();
             coinSelectRef.current.click();
-          } else if (tipoMoeda === "FIAT" && moedaFiatSelectRef.current) {
+          } else if (currentTipoMoeda === "FIAT" && moedaFiatSelectRef.current) {
             moedaFiatSelectRef.current.focus();
             moedaFiatSelectRef.current.click();
           }
