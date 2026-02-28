@@ -83,6 +83,7 @@ export interface BookmakerVinculado {
   login_password_encrypted: string;
   bookmaker_catalogo_id: string | null;
   instance_identifier: string | null;
+  projeto_id: string | null;
   logo_url?: string;
 }
 
@@ -395,7 +396,7 @@ export function useParceiroBookmakersCache(parceiroId: string): UseBookmakersCac
       
       const { data: vinculadosData, error: vinculadosError } = await supabase
         .from("bookmakers")
-        .select("id, nome, saldo_atual, status, moeda, login_username, login_password_encrypted, bookmaker_catalogo_id, instance_identifier")
+        .select("id, nome, saldo_atual, status, moeda, login_username, login_password_encrypted, bookmaker_catalogo_id, instance_identifier, projeto_id")
         .eq("parceiro_id", parceiroId);
 
       if (vinculadosError) throw vinculadosError;

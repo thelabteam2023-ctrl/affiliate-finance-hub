@@ -24,6 +24,8 @@ import {
   Pencil,
   DollarSign,
   AlertTriangle,
+  FolderKanban,
+  Unlink,
 } from "lucide-react";
 import {
   ContextMenu,
@@ -55,6 +57,9 @@ interface ParceiroBookmakersTabProps {
   refreshKey?: number;
   onNewTransacao?: (bookmakerId: string, bookmakerNome: string, moeda: string, saldoAtual: number, saldoUsd: number, tipo: "deposito" | "retirada") => void;
   onEditVinculo?: (bookmakerId: string) => void;
+  projetos?: Array<{ id: string; nome: string }>;
+  onVincularProjeto?: (bookmakerId: string, projetoId: string, projetoNome: string) => void;
+  onDesvincularProjeto?: (bookmakerId: string, projetoNome: string) => void;
 }
 
 /**
@@ -77,6 +82,9 @@ export const ParceiroBookmakersTab = memo(function ParceiroBookmakersTab({
   refreshKey,
   onNewTransacao,
   onEditVinculo,
+  projetos,
+  onVincularProjeto,
+  onDesvincularProjeto,
 }: ParceiroBookmakersTabProps) {
   const [data, setData] = useState<BookmakersData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -129,7 +137,7 @@ export const ParceiroBookmakersTab = memo(function ParceiroBookmakersTab({
       // Usando apenas saldo_atual como fonte única (já normalizado no banco)
       const { data: vinculadosData, error: vinculadosError } = await supabase
         .from("bookmakers")
-        .select("id, nome, saldo_atual, status, moeda, login_username, login_password_encrypted, bookmaker_catalogo_id, instance_identifier")
+        .select("id, nome, saldo_atual, status, moeda, login_username, login_password_encrypted, bookmaker_catalogo_id, instance_identifier, projeto_id")
         .eq("parceiro_id", parceiroId);
 
       if (vinculadosError) throw vinculadosError;
@@ -400,6 +408,50 @@ export const ParceiroBookmakersTab = memo(function ParceiroBookmakersTab({
                       <Pencil className="h-4 w-4" />
                       Editar vínculo
                     </ContextMenuItem>
+                    <ContextMenuSeparator />
+                    {(() => {
+                      const isLinked = !!bm.projeto_id;
+                      const projetoNome = projetos?.find(p => p.id === bm.projeto_id)?.nome || "atual";
+                      
+                      if (isLinked) {
+                        return (
+                          <ContextMenuItem
+                            onClick={() => onDesvincularProjeto?.(bm.id, projetoNome)}
+                            className="gap-2 text-destructive focus:text-destructive"
+                          >
+                            <Unlink className="h-4 w-4" />
+                            Desvincular do projeto {projetoNome}
+                          </ContextMenuItem>
+                        );
+                      }
+                      
+                      return (
+                        <ContextMenuSub>
+                          <ContextMenuSubTrigger className="gap-2">
+                            <FolderKanban className="h-4 w-4" />
+                            Vincular a projeto
+                          </ContextMenuSubTrigger>
+                          <ContextMenuSubContent className="min-w-[180px]">
+                            {projetos && projetos.length > 0 ? (
+                              projetos.map((proj) => (
+                                <ContextMenuItem
+                                  key={proj.id}
+                                  onClick={() => onVincularProjeto?.(bm.id, proj.id, proj.nome)}
+                                  className="gap-2"
+                                >
+                                  <FolderKanban className="h-3.5 w-3.5 text-muted-foreground" />
+                                  {proj.nome}
+                                </ContextMenuItem>
+                              ))
+                            ) : (
+                              <ContextMenuItem disabled className="text-muted-foreground text-xs">
+                                Nenhum projeto disponível
+                              </ContextMenuItem>
+                            )}
+                          </ContextMenuSubContent>
+                        </ContextMenuSub>
+                      );
+                    })()}
                   </ContextMenuContent>
                 </ContextMenu>
               ))}
