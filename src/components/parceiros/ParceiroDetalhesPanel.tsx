@@ -1134,6 +1134,8 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                 onCreateVinculo={onCreateVinculo}
                 onDataChange={handleBookmakersDataChange}
                 refreshKey={bookmakerRefreshKey}
+                onNewTransacao={onNewTransacao}
+                onEditVinculo={onEditVinculo}
               />
             </TabsContent>
           </div>
