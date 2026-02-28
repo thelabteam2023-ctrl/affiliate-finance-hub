@@ -261,24 +261,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       async (event, newSession) => {
         console.log(`[Auth][${tabId}] Auth state changed:`, event);
         
-        setSession(newSession);
-        setUser(newSession?.user ?? null);
-
         if (newSession?.user) {
-          // Use setTimeout to avoid blocking the auth state change
-          setTimeout(async () => {
-            await initializeTabWorkspace(newSession.user.id);
-            
-            // Garantir login registrado em qualquer evento de autenticação
-            if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-              await ensureLoginRecorded(
-                newSession.user.id,
-                newSession.user.email || '',
-                newSession.user.user_metadata?.full_name
-              );
-            }
-          }, 0);
+          // Set loading while we resolve the workspace to prevent
+          // ProtectedRoute from showing NoWorkspaceScreen prematurely.
+          setLoading(true);
+          setSession(newSession);
+          setUser(newSession.user);
+
+          await initializeTabWorkspace(newSession.user.id);
+
+          // Garantir login registrado em qualquer evento de autenticação
+          if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+            await ensureLoginRecorded(
+              newSession.user.id,
+              newSession.user.email || '',
+              newSession.user.user_metadata?.full_name
+            );
+          }
+
+          setLoading(false);
+          setInitialized(true);
         } else {
+          setSession(newSession);
+          setUser(null);
           setWorkspace(null);
           setRole(null);
         }
