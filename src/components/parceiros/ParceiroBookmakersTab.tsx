@@ -10,6 +10,7 @@ import {
   Building2,
   Search,
   Plus,
+  Minus,
   ShieldCheck,
   ShieldAlert,
   AlertCircle,
@@ -20,7 +21,20 @@ import {
   Check,
   RefreshCw,
   History,
+  Pencil,
+  DollarSign,
+  AlertTriangle,
 } from "lucide-react";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+  ContextMenuSeparator,
+  ContextMenuSub,
+  ContextMenuSubTrigger,
+  ContextMenuSubContent,
+} from "@/components/ui/context-menu";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { BookmakerHistoricoDialog } from "@/components/bookmakers/BookmakerHistoricoDialog";
@@ -39,6 +53,8 @@ interface ParceiroBookmakersTabProps {
   onCreateVinculo?: (parceiroId: string, bookmakerId: string) => void;
   onDataChange?: () => void;
   refreshKey?: number;
+  onNewTransacao?: (bookmakerId: string, bookmakerNome: string, moeda: string, saldoAtual: number, saldoUsd: number, tipo: "deposito" | "retirada") => void;
+  onEditVinculo?: (bookmakerId: string) => void;
 }
 
 /**
@@ -59,6 +75,8 @@ export const ParceiroBookmakersTab = memo(function ParceiroBookmakersTab({
   onCreateVinculo, 
   onDataChange,
   refreshKey,
+  onNewTransacao,
+  onEditVinculo,
 }: ParceiroBookmakersTabProps) {
   const [data, setData] = useState<BookmakersData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -291,64 +309,99 @@ export const ParceiroBookmakersTab = memo(function ParceiroBookmakersTab({
               {displayedVinculados.length === 0 ? (
                 <div className="text-center py-6 text-muted-foreground text-xs"><AlertCircle className="h-6 w-6 mx-auto mb-1 opacity-30" />Nenhuma casa vinculada</div>
               ) : displayedVinculados.map((bm) => (
-                <div key={bm.id} className="flex items-center gap-2 p-2 border border-border rounded-lg hover:bg-muted/20">
-                  {bm.logo_url ? <img src={bm.logo_url} alt={bm.nome} className="h-10 w-10 rounded object-contain p-0.5 shrink-0" /> : <div className="h-10 w-10 rounded bg-muted flex items-center justify-center shrink-0"><Building2 className="h-5 w-5 text-muted-foreground" /></div>}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <p className="text-xs font-medium truncate">{bm.nome}</p>
-                      {/* MULTI-CONTA: Exibir identificador de instância se existir */}
-                      {bm.instance_identifier && (
-                        <Badge variant="outline" className="text-[8px] px-1 py-0 h-3.5 border-primary/50 text-primary">
-                          {bm.instance_identifier}
-                        </Badge>
-                      )}
-                      {hasCredentials(bm) && (
-                        <Popover open={credentialsPopoverOpen === bm.id} onOpenChange={(open) => setCredentialsPopoverOpen(open ? bm.id : null)}>
-                          <PopoverTrigger asChild><button type="button" className="h-6 w-6 p-0.5 shrink-0 rounded hover:bg-muted/50 transition-colors cursor-pointer flex items-center justify-center" onClick={(e) => { e.stopPropagation(); setCredentialsPopoverOpen(credentialsPopoverOpen === bm.id ? null : bm.id); }}><IdCard className="h-5 w-5 text-muted-foreground hover:text-foreground" /></button></PopoverTrigger>
-                          <PopoverContent className="w-52 p-2" align="start">
-                            <div className="space-y-2">
-                              <div><label className="text-[10px] text-muted-foreground">Usuário</label><div className="flex items-center gap-1 mt-0.5"><code className="flex-1 text-xs bg-muted px-1.5 py-0.5 rounded truncate">{showSensitiveData ? bm.login_username : "••••••"}</code><Button variant="ghost" size="sm" onClick={() => copyToClipboard(bm.login_username, "Usuário")} className="h-6 w-6 p-0 shrink-0">{copiedField === "Usuário" ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}</Button></div></div>
-                              <div><label className="text-[10px] text-muted-foreground">Senha</label><LazyPasswordField cacheKey={`parceiro-bookmakers:${bm.id}`} encrypted={bm.login_password_encrypted} parentMasked={!showSensitiveData} requestDecrypt={requestDecrypt} isDecrypted={isDecrypted} getCached={getCached} /></div>
-                            </div>
-                          </PopoverContent>
-                        </Popover>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <Badge variant="outline" className={`text-[8px] px-1 py-0 h-3.5 ${bm.moeda === "BRL" ? "border-emerald-500/50 text-emerald-500" : "border-amber-500/50 text-amber-500"}`}>{bm.moeda || "BRL"}</Badge>
-                      <span className="text-[10px] font-medium">{maskCurrency(getSaldoCorreto(bm), bm.moeda)}</span>
-                    </div>
-                  </div>
-                  {/* Botão Histórico */}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 px-1.5"
-                        onClick={() => setHistoricoDialog({ open: true, bookmaker: bm })}
-                      >
-                        <History className="h-4 w-4 text-muted-foreground hover:text-foreground" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Ver histórico de projetos</p>
-                    </TooltipContent>
-                  </Tooltip>
-                  {/* Botão Status */}
-                  <Popover>
-                    <PopoverTrigger asChild><Button variant="ghost" size="sm" className="h-6 px-1.5" disabled={editingStatus === bm.id}>{bm.status === "ativo" ? <ShieldCheck className="h-4 w-4 text-success" /> : <ShieldAlert className="h-4 w-4 text-warning" />}</Button></PopoverTrigger>
-                    <PopoverContent className="w-auto p-3" align="end">
-                      <div className="space-y-2">
-                        <p className="text-xs text-muted-foreground">Alterar status para <span className="font-semibold">{bm.status === "ativo" ? "LIMITADA" : "ATIVO"}</span>?</p>
-                        <div className="flex gap-2">
-                          <Button size="sm" variant="outline" className="h-7 text-xs" onClick={(e) => { const trigger = document.querySelector(`[aria-expanded="true"]`) as HTMLButtonElement; trigger?.click(); }}>Cancelar</Button>
-                          <Button size="sm" className="h-7 text-xs" onClick={() => handleToggleStatus(bm.id, bm.status)} disabled={editingStatus === bm.id}>Confirmar</Button>
+                <ContextMenu key={bm.id}>
+                  <ContextMenuTrigger asChild>
+                    <div className="flex items-center gap-2 p-2 border border-border rounded-lg hover:bg-muted/20 cursor-context-menu">
+                      {bm.logo_url ? <img src={bm.logo_url} alt={bm.nome} className="h-10 w-10 rounded object-contain p-0.5 shrink-0" /> : <div className="h-10 w-10 rounded bg-muted flex items-center justify-center shrink-0"><Building2 className="h-5 w-5 text-muted-foreground" /></div>}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-xs font-medium truncate">{bm.nome}</p>
+                          {bm.instance_identifier && (
+                            <Badge variant="outline" className="text-[8px] px-1 py-0 h-3.5 border-primary/50 text-primary">
+                              {bm.instance_identifier}
+                            </Badge>
+                          )}
+                          {hasCredentials(bm) && (
+                            <Popover open={credentialsPopoverOpen === bm.id} onOpenChange={(open) => setCredentialsPopoverOpen(open ? bm.id : null)}>
+                              <PopoverTrigger asChild><button type="button" className="h-6 w-6 p-0.5 shrink-0 rounded hover:bg-muted/50 transition-colors cursor-pointer flex items-center justify-center" onClick={(e) => { e.stopPropagation(); setCredentialsPopoverOpen(credentialsPopoverOpen === bm.id ? null : bm.id); }}><IdCard className="h-5 w-5 text-muted-foreground hover:text-foreground" /></button></PopoverTrigger>
+                              <PopoverContent className="w-52 p-2" align="start">
+                                <div className="space-y-2">
+                                  <div><label className="text-[10px] text-muted-foreground">Usuário</label><div className="flex items-center gap-1 mt-0.5"><code className="flex-1 text-xs bg-muted px-1.5 py-0.5 rounded truncate">{showSensitiveData ? bm.login_username : "••••••"}</code><Button variant="ghost" size="sm" onClick={() => copyToClipboard(bm.login_username, "Usuário")} className="h-6 w-6 p-0 shrink-0">{copiedField === "Usuário" ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}</Button></div></div>
+                                  <div><label className="text-[10px] text-muted-foreground">Senha</label><LazyPasswordField cacheKey={`parceiro-bookmakers:${bm.id}`} encrypted={bm.login_password_encrypted} parentMasked={!showSensitiveData} requestDecrypt={requestDecrypt} isDecrypted={isDecrypted} getCached={getCached} /></div>
+                                </div>
+                              </PopoverContent>
+                            </Popover>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Badge variant="outline" className={`text-[8px] px-1 py-0 h-3.5 ${bm.moeda === "BRL" ? "border-emerald-500/50 text-emerald-500" : "border-amber-500/50 text-amber-500"}`}>{bm.moeda || "BRL"}</Badge>
+                          <span className="text-[10px] font-medium">{maskCurrency(getSaldoCorreto(bm), bm.moeda)}</span>
                         </div>
                       </div>
-                    </PopoverContent>
-                  </Popover>
-                </div>
+                      {/* Botão Histórico */}
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 px-1.5"
+                            onClick={() => setHistoricoDialog({ open: true, bookmaker: bm })}
+                          >
+                            <History className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Ver histórico de projetos</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      {/* Botão Status */}
+                      <Popover>
+                        <PopoverTrigger asChild><Button variant="ghost" size="sm" className="h-6 px-1.5" disabled={editingStatus === bm.id}>{bm.status === "ativo" ? <ShieldCheck className="h-4 w-4 text-success" /> : <ShieldAlert className="h-4 w-4 text-warning" />}</Button></PopoverTrigger>
+                        <PopoverContent className="w-auto p-3" align="end">
+                          <div className="space-y-2">
+                            <p className="text-xs text-muted-foreground">Alterar status para <span className="font-semibold">{bm.status === "ativo" ? "LIMITADA" : "ATIVO"}</span>?</p>
+                            <div className="flex gap-2">
+                              <Button size="sm" variant="outline" className="h-7 text-xs" onClick={(e) => { const trigger = document.querySelector(`[aria-expanded="true"]`) as HTMLButtonElement; trigger?.click(); }}>Cancelar</Button>
+                              <Button size="sm" className="h-7 text-xs" onClick={() => handleToggleStatus(bm.id, bm.status)} disabled={editingStatus === bm.id}>Confirmar</Button>
+                            </div>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </ContextMenuTrigger>
+                  <ContextMenuContent>
+                    <ContextMenuSub>
+                      <ContextMenuSubTrigger className="gap-2">
+                        <DollarSign className="h-4 w-4" />
+                        Financeiro
+                      </ContextMenuSubTrigger>
+                      <ContextMenuSubContent className="min-w-[180px]">
+                        <ContextMenuItem
+                          onClick={() => onNewTransacao?.(bm.id, bm.nome, bm.moeda || "BRL", getSaldoCorreto(bm), 0, "deposito")}
+                          className="gap-2"
+                        >
+                          <Plus className="h-4 w-4 text-success" />
+                          Depósito
+                        </ContextMenuItem>
+                        <ContextMenuItem
+                          onClick={() => onNewTransacao?.(bm.id, bm.nome, bm.moeda || "BRL", getSaldoCorreto(bm), 0, "retirada")}
+                          className="gap-2"
+                        >
+                          <Minus className="h-4 w-4 text-destructive" />
+                          Saque
+                        </ContextMenuItem>
+                      </ContextMenuSubContent>
+                    </ContextMenuSub>
+                    <ContextMenuSeparator />
+                    <ContextMenuItem
+                      onClick={() => onEditVinculo?.(bm.id)}
+                      className="gap-2"
+                    >
+                      <Pencil className="h-4 w-4" />
+                      Editar vínculo
+                    </ContextMenuItem>
+                  </ContextMenuContent>
+                </ContextMenu>
               ))}
               {hasMoreVinculados && !showAllVinculados && <Button variant="ghost" size="sm" className="w-full h-7 text-xs text-muted-foreground" onClick={() => setShowAllVinculados(true)}><ChevronDown className="h-3 w-3 mr-1" />Ver mais ({filteredVinculados.length - 6})</Button>}
               {showAllVinculados && hasMoreVinculados && <Button variant="ghost" size="sm" className="w-full h-7 text-xs text-muted-foreground" onClick={() => setShowAllVinculados(false)}><ChevronUp className="h-3 w-3 mr-1" />Ver menos</Button>}
