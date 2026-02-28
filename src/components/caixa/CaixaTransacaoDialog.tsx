@@ -412,21 +412,27 @@ export function CaixaTransacaoDialog({
     // "Trocar FIAT ↔ CRYPTO não muda a transação. Muda apenas a origem financeira."
     resetContextoDependente(true, true, true);
     
-    // Auto-focus baseado no novo contexto
-    setTimeout(() => {
-      if (tipoMoeda === "CRYPTO") {
-        if (tipoTransacao !== "SAQUE") {
-          coinSelectRef.current?.focus();
-          coinSelectRef.current?.click();
+    // Para affiliate_deposit com moeda já pré-definida, NÃO abrir o seletor de moeda
+    // A auto-focus chain (contasBancarias) vai cuidar de abrir o campo correto
+    const isAffiliateWithDefaults = entryPoint === "affiliate_deposit" && pendingDefaultsRef.current === null && moeda;
+    
+    if (!isAffiliateWithDefaults) {
+      // Auto-focus baseado no novo contexto
+      setTimeout(() => {
+        if (tipoMoeda === "CRYPTO") {
+          if (tipoTransacao !== "SAQUE") {
+            coinSelectRef.current?.focus();
+            coinSelectRef.current?.click();
+          }
+        } else {
+          moedaFiatSelectRef.current?.focus();
+          moedaFiatSelectRef.current?.click();
         }
-      } else {
-        moedaFiatSelectRef.current?.focus();
-        moedaFiatSelectRef.current?.click();
-      }
-    }, 100);
+      }, 100);
+    }
     
     prevTipoMoeda.current = tipoMoeda;
-  }, [tipoMoeda, tipoTransacao]);
+  }, [tipoMoeda, tipoTransacao, entryPoint, moeda]);
 
   // ============================================================================
   // CONTEXTO: Quando coin muda, resetar seleções de origem/destino
