@@ -512,20 +512,7 @@ export function CaixaTransacaoDialog({
     }
   }, [moeda, tipoMoeda, tipoTransacao]);
 
-  // Auto-focus FIAT: quando valor é preenchido (>0), abre o select Parceiro
-  // IMPORTANTE: Apenas para tipos que NÃO são DEPOSITO e NÃO são SAQUE
-  // Em SAQUE, o parceiro já vem pré-selecionado ou é selecionado antes do valor
-  useEffect(() => {
-    const valorNum = parseFloat(valor);
-    const prevValorNum = parseFloat(prevValor.current || "0");
-    // Excluir SAQUE pois o fluxo é diferente (parceiro → conta → bookmaker → valor)
-    if (tipoTransacao !== "DEPOSITO" && tipoTransacao !== "SAQUE" && tipoMoeda === "FIAT" && valorNum > 0 && prevValorNum === 0 && parceiroSelectRef.current) {
-      setTimeout(() => {
-        parceiroSelectRef.current?.open();
-      }, 150);
-    }
-    prevValor.current = valor;
-  }, [valor, tipoMoeda, tipoTransacao]);
+  // Auto-focus FIAT valor→parceiro: moved below fluxoTransferencia declaration (see later useEffect)
 
   // Buscar cotações em tempo real da Binance quando tipo_moeda for CRYPTO
   // e atualizar automaticamente a cada 30 segundos
@@ -681,6 +668,21 @@ export function CaixaTransacaoDialog({
   const [parceiroDialogOpen, setParceiroDialogOpen] = useState(false);
   const [parceiroToEdit, setParceiroToEdit] = useState<any>(null);
   const [parceiroDialogInitialTab, setParceiroDialogInitialTab] = useState<"dados" | "bancos" | "crypto">("bancos");
+
+  // Auto-focus FIAT: quando valor é preenchido (>0), abre o select Parceiro
+  // IMPORTANTE: Apenas para fluxos onde o parceiro é selecionado DEPOIS do valor
+  // Exclui: DEPOSITO, SAQUE, e TRANSFERENCIA PARCEIRO→PARCEIRO (parceiro já selecionado antes do valor)
+  useEffect(() => {
+    const valorNum = parseFloat(valor);
+    const prevValorNum = parseFloat(prevValor.current || "0");
+    const isTransferenciaParceiroParceiro = tipoTransacao === "TRANSFERENCIA" && fluxoTransferencia === "PARCEIRO_PARCEIRO";
+    if (tipoTransacao !== "DEPOSITO" && tipoTransacao !== "SAQUE" && !isTransferenciaParceiroParceiro && tipoMoeda === "FIAT" && valorNum > 0 && prevValorNum === 0 && parceiroSelectRef.current) {
+      setTimeout(() => {
+        parceiroSelectRef.current?.open();
+      }, 150);
+    }
+    prevValor.current = valor;
+  }, [valor, tipoMoeda, tipoTransacao, fluxoTransferencia]);
 
   useEffect(() => {
     if (open) {
