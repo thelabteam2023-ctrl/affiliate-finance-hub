@@ -228,55 +228,54 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [tabId, secureLoginRecord]);
 
   useEffect(() => {
-    // Flag to prevent double-processing (getSession + INITIAL_SESSION race)
-    let initialSessionHandled = false;
+    let mounted = true;
+    let lastHandledAccessToken: string | null = null;
 
-    // Single source of truth: onAuthStateChange handles ALL auth events
-    // including INITIAL_SESSION (replaces the old getSession() call).
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, newSession) => {
+    const applySessionState = async (event: string, newSession: Session | null) => {
+      if (!mounted) return;
+
+      try {
         console.log(`[Auth][${tabId}] Auth state changed:`, event);
 
-        // For INITIAL_SESSION, guard against double-fire
-        if (event === 'INITIAL_SESSION') {
-          if (initialSessionHandled) {
-            console.log(`[Auth][${tabId}] INITIAL_SESSION already handled, skipping`);
-            return;
-          }
-          initialSessionHandled = true;
+        const accessToken = newSession?.access_token ?? null;
+
+        // Evita processamento duplicado do INITIAL_SESSION para a mesma sessão
+        if (event === "INITIAL_SESSION" && accessToken && accessToken === lastHandledAccessToken) {
+          console.log(`[Auth][${tabId}] INITIAL_SESSION duplicado ignorado`);
+          return;
+        }
+
+        if (accessToken) {
+          lastHandledAccessToken = accessToken;
         }
 
         if (newSession?.user) {
-          // Keep loading=true while we resolve workspace, so ProtectedRoute
-          // doesn't flash NoWorkspaceScreen.
           setLoading(true);
           setSession(newSession);
           setUser(newSession.user);
 
           await initializeTabWorkspace(newSession.user.id);
 
-          // Record login for sign-in events and persisted sessions
-          if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
+          if (
+            event === "SIGNED_IN" ||
+            event === "TOKEN_REFRESHED" ||
+            event === "INITIAL_SESSION" ||
+            event === "BOOTSTRAP"
+          ) {
             await ensureLoginRecorded(
               newSession.user.id,
-              newSession.user.email || '',
+              newSession.user.email || "",
               newSession.user.user_metadata?.full_name
             );
           }
-
-          setLoading(false);
-          setInitialized(true);
         } else {
-          setSession(newSession);
+          setSession(null);
           setUser(null);
           setWorkspace(null);
           setRole(null);
-          setLoading(false);
-          setInitialized(true);
         }
 
-        if (event === 'SIGNED_OUT') {
-          // CRITICAL: Limpar cache e sessionStorage ao deslogar
+        if (event === "SIGNED_OUT") {
           queryClient.clear();
           clearTabWorkspaceId();
           console.log(`[Auth][${tabId}] SIGNED_OUT event, cleared cache and tab workspace`);
@@ -286,14 +285,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setIsBlocked(false);
           setPublicId(null);
         }
+      } catch (error) {
+        console.error(`[Auth][${tabId}] Error applying session state:`, error);
+      } finally {
+        if (mounted) {
+          setLoading(false);
+          setInitialized(true);
+        }
       }
-    );
+    };
 
-    // Trigger INITIAL_SESSION event by calling getSession AFTER listener is set.
-    // This follows the Supabase recommended pattern.
-    supabase.auth.getSession();
+    // Bootstrap explícito para garantir inicialização mesmo se INITIAL_SESSION falhar
+    void (async () => {
+      try {
+        const {
+          data: { session: initialSession },
+        } = await supabase.auth.getSession();
+
+        await applySessionState("BOOTSTRAP", initialSession);
+      } catch (error) {
+        console.error(`[Auth][${tabId}] Bootstrap auth error:`, error);
+        if (mounted) {
+          setLoading(false);
+          setInitialized(true);
+        }
+      }
+    })();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, newSession) => {
+      void applySessionState(event, newSession);
+    });
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
   }, [initializeTabWorkspace, tabId, queryClient, ensureLoginRecorded]);
