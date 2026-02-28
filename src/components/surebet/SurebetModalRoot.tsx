@@ -923,20 +923,27 @@ export function SurebetModalRoot({
       // Passo 3: converter retorno-alvo da consolidação para moeda da perna
       const targetReturnInLegCurrency = convertViaBRL(targetReturnConsolidated, consolidationCurrency, legMoeda, brlRates);
       
-      // Passo 4: stake TOTAL necessário para a perna = retorno-alvo / odd
-      const totalStakeNeeded = arredondarStake(targetReturnInLegCurrency / oddMedia);
+      // Passo 4: calcular stake da entrada PRINCIPAL considerando sub-entradas
+      const mainOdd = parseFloat(o.odd) || 0;
+      const additionalEntries = o.additionalEntries || [];
       
-      // Passo 5: subtrair contribuição das sub-entradas adicionais
-      // Sem isso, o main stake recebe o total e as sub-entradas são somadas por cima,
-      // causando acumulação progressiva ao alternar referências.
-      const additionalStakeInLegCurrency = (o.additionalEntries || []).reduce((acc, e) => {
-        const s = parseFloat(e.stake) || 0;
-        if (s <= 0) return acc;
-        const m = (e.moeda as string) || legMoeda;
-        return acc + convertViaBRL(s, m, legMoeda, brlRates);
-      }, 0);
-      
-      const calculatedStake = Math.max(0, totalStakeNeeded - additionalStakeInLegCurrency);
+      let calculatedStake: number;
+      if (additionalEntries.length > 0 && mainOdd > 1) {
+        // Fix: subtrair PAYOUT das sub-entradas (não stake) do retorno-alvo
+        // mainStake = (targetReturn - subPayout) / mainOdd
+        const subPayoutInLegCurrency = additionalEntries.reduce((sum, ae) => {
+          const s = parseFloat(ae.stake) || 0;
+          const aeOdd = parseFloat(ae.odd) || 0;
+          if (s <= 0 || aeOdd <= 0) return sum;
+          const payoutInAeMoeda = s * aeOdd;
+          const aeMoeda = (ae.moeda as string) || legMoeda;
+          return sum + convertViaBRL(payoutInAeMoeda, aeMoeda, legMoeda, brlRates);
+        }, 0);
+        
+        calculatedStake = arredondarStake(Math.max(0, (targetReturnInLegCurrency - subPayoutInLegCurrency) / mainOdd));
+      } else {
+        calculatedStake = arredondarStake(targetReturnInLegCurrency / oddMedia);
+      }
       const currentStake = parseFloat(o.stake) || 0;
       
       if (Math.abs(calculatedStake - currentStake) > 0.01) {
@@ -991,14 +998,30 @@ export function SurebetModalRoot({
     // Aplicar todas as stakes do resultado (marcadas E desmarcadas vêm do snapshot)
     let needsUpdate = false;
     const newOdds = odds.map((o, i) => {
-      const calculatedStake = directedStakes[i];
+      let targetStake = directedStakes[i];
+      
+      // Fix: ajustar para sub-entradas (directedStakes são TOTAIS por perna)
+      const additionalEntries = o.additionalEntries || [];
+      if (additionalEntries.length > 0) {
+        const oddMedia = getOddMediaPerna(o);
+        const mainOdd = parseFloat(o.odd) || 0;
+        if (mainOdd > 1 && oddMedia > 0) {
+          const targetReturn = targetStake * oddMedia;
+          const subPayout = additionalEntries.reduce((sum, ae) =>
+            sum + (parseFloat(ae.stake) || 0) * (parseFloat(ae.odd) || 0), 0);
+          if (subPayout > 0) {
+            targetStake = arredondarStake(Math.max(0, (targetReturn - subPayout) / mainOdd));
+          }
+        }
+      }
+      
       const currentStake = parseFloat(o.stake) || 0;
       
-      if (Math.abs(calculatedStake - currentStake) > 0.01) {
+      if (Math.abs(targetStake - currentStake) > 0.01) {
         needsUpdate = true;
         return { 
           ...o, 
-          stake: calculatedStake.toFixed(2), 
+          stake: targetStake.toFixed(2), 
           stakeOrigem: "referencia" as const,
           isManuallyEdited: false
         };
