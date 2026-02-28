@@ -217,6 +217,8 @@ export function CaixaTransacaoDialog({
   const bookmakerSelectRef = useRef<BookmakerSelectRef>(null);
   const tipoMoedaSelectRef = useRef<HTMLButtonElement>(null);
   const parceiroDestinoSelectRef = useRef<ParceiroSelectRef>(null);
+  const destinoContaBancariaSelectRef = useRef<HTMLButtonElement>(null);
+  const destinoWalletSelectRef = useRef<HTMLButtonElement>(null);
 
   // Guided focus sequence state for affiliate deposit flow
   const affiliateFocusActiveRef = useRef<boolean>(false);
@@ -1359,7 +1361,7 @@ export function CaixaTransacaoDialog({
 
   // ====== GUIDED FOCUS SEQUENCE FOR PARCEIRO→PARCEIRO TRANSFER ======
   // Activated when fluxoTransferencia changes to PARCEIRO_PARCEIRO
-  // Sequence: Tipo de Moeda → Moeda/Coin → Qtd Coins (CRYPTO) → Parceiro origem → Wallet/Conta origem → Parceiro destino
+  // Sequence: Tipo de Moeda → Moeda/Coin → Parceiro origem → Conta origem → Parceiro destino → Conta destino → Valor
   useEffect(() => {
     if (tipoTransacao !== "TRANSFERENCIA" || fluxoTransferencia !== "PARCEIRO_PARCEIRO") {
       transferFocusActiveRef.current = false;
@@ -1369,10 +1371,22 @@ export function CaixaTransacaoDialog({
     
     const timer = setTimeout(() => {
       transferFocusActiveRef.current = true;
-      transferFocusStepRef.current = 1;
-      if (tipoMoedaSelectRef.current) {
-        tipoMoedaSelectRef.current.focus();
-        tipoMoedaSelectRef.current.click();
+      // If tipoMoeda is already set (e.g. "FIAT" default), skip step 1 and go directly to step 2 (moeda selector)
+      if (tipoMoeda) {
+        transferFocusStepRef.current = 2;
+        if (tipoMoeda === "CRYPTO" && coinSelectRef.current) {
+          coinSelectRef.current.focus();
+          coinSelectRef.current.click();
+        } else if (tipoMoeda === "FIAT" && moedaFiatSelectRef.current) {
+          moedaFiatSelectRef.current.focus();
+          moedaFiatSelectRef.current.click();
+        }
+      } else {
+        transferFocusStepRef.current = 1;
+        if (tipoMoedaSelectRef.current) {
+          tipoMoedaSelectRef.current.focus();
+          tipoMoedaSelectRef.current.click();
+        }
       }
     }, 300);
     
@@ -1450,11 +1464,40 @@ export function CaixaTransacaoDialog({
     if (!hasOrigemWalletOrConta) return;
     
     transferFocusStepRef.current = 6;
-    transferFocusActiveRef.current = false; // End guided focus
     setTimeout(() => {
       parceiroDestinoSelectRef.current?.open();
     }, 200);
   }, [origemWalletId, origemContaId, tipoMoeda]);
+
+  // Transfer focus step 7: After destino parceiro selected, open destino conta/wallet
+  useEffect(() => {
+    if (!transferFocusActiveRef.current || transferFocusStepRef.current !== 6) return;
+    if (!destinoParceiroId) return;
+    
+    transferFocusStepRef.current = 7;
+    setTimeout(() => {
+      if (tipoMoeda === "CRYPTO" && destinoWalletSelectRef.current) {
+        destinoWalletSelectRef.current.focus();
+        destinoWalletSelectRef.current.click();
+      } else if (tipoMoeda === "FIAT" && destinoContaBancariaSelectRef.current) {
+        destinoContaBancariaSelectRef.current.focus();
+        destinoContaBancariaSelectRef.current.click();
+      }
+    }, 200);
+  }, [destinoParceiroId, tipoMoeda]);
+
+  // Transfer focus step 8: After destino conta/wallet selected, focus valor input
+  useEffect(() => {
+    if (!transferFocusActiveRef.current || transferFocusStepRef.current !== 7) return;
+    const hasDestinoConta = (tipoMoeda === "CRYPTO" && destinoWalletId) || (tipoMoeda === "FIAT" && destinoContaId);
+    if (!hasDestinoConta) return;
+    
+    transferFocusStepRef.current = 8;
+    transferFocusActiveRef.current = false; // End guided focus
+    setTimeout(() => {
+      valorFiatInputRef.current?.focus();
+    }, 200);
+  }, [destinoContaId, destinoWalletId, tipoMoeda]);
 
   // Handler for qtdCoin blur to advance transfer focus to parceiro
   const handleQtdCoinBlurTransferFocus = () => {
@@ -3879,7 +3922,7 @@ export function CaixaTransacaoDialog({
                   }}
                   disabled={!origemEstaCompleta}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger ref={destinoContaBancariaSelectRef}>
                     <SelectValue placeholder="Selecione" />
                   </SelectTrigger>
                   <SelectContent>
@@ -3949,7 +3992,7 @@ export function CaixaTransacaoDialog({
                   }}
                   disabled={!origemEstaCompleta}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger ref={destinoWalletSelectRef}>
                     <SelectValue placeholder="Selecione" />
                   </SelectTrigger>
                   <SelectContent>
