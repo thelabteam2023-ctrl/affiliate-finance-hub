@@ -145,12 +145,15 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
   // Listen for auth changes to invalidate
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'SIGNED_OUT') {
-        setAccess(null);
-        setInitialized(false);
-      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        fetchEffectiveAccess();
-      }
+      // CRÍTICO: evitar chamadas de backend síncronas no callback de auth
+      setTimeout(() => {
+        if (event === 'SIGNED_OUT') {
+          setAccess(null);
+          setInitialized(false);
+        } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          void fetchEffectiveAccess();
+        }
+      }, 0);
     });
     
     return () => subscription.unsubscribe();
