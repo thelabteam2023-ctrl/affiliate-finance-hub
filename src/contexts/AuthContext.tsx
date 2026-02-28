@@ -228,50 +228,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [tabId, secureLoginRecord]);
 
   useEffect(() => {
-    // Get initial session
-    const initializeAuth = async () => {
-      try {
-        const { data: { session: initialSession } } = await supabase.auth.getSession();
-        
-        if (initialSession?.user) {
-          setSession(initialSession);
-          setUser(initialSession.user);
-          await initializeTabWorkspace(initialSession.user.id);
-          
-          // NOVO: Garantir que o login está registrado para usuários com sessão persistida
-          // Isso resolve o problema de usuários que já estavam logados antes da implementação
-          await ensureLoginRecorded(
-            initialSession.user.id,
-            initialSession.user.email || '',
-            initialSession.user.user_metadata?.full_name
-          );
-        }
-      } catch (error) {
-        console.error("Error initializing auth:", error);
-      } finally {
-        setLoading(false);
-        setInitialized(true);
-      }
-    };
+    // Flag to prevent double-processing (getSession + INITIAL_SESSION race)
+    let initialSessionHandled = false;
 
-    initializeAuth();
-
-    // Listen for auth changes
+    // Single source of truth: onAuthStateChange handles ALL auth events
+    // including INITIAL_SESSION (replaces the old getSession() call).
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
         console.log(`[Auth][${tabId}] Auth state changed:`, event);
-        
+
+        // For INITIAL_SESSION, guard against double-fire
+        if (event === 'INITIAL_SESSION') {
+          if (initialSessionHandled) {
+            console.log(`[Auth][${tabId}] INITIAL_SESSION already handled, skipping`);
+            return;
+          }
+          initialSessionHandled = true;
+        }
+
         if (newSession?.user) {
-          // Set loading while we resolve the workspace to prevent
-          // ProtectedRoute from showing NoWorkspaceScreen prematurely.
+          // Keep loading=true while we resolve workspace, so ProtectedRoute
+          // doesn't flash NoWorkspaceScreen.
           setLoading(true);
           setSession(newSession);
           setUser(newSession.user);
 
           await initializeTabWorkspace(newSession.user.id);
 
-          // Garantir login registrado em qualquer evento de autenticação
-          if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          // Record login for sign-in events and persisted sessions
+          if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
             await ensureLoginRecorded(
               newSession.user.id,
               newSession.user.email || '',
@@ -286,6 +271,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser(null);
           setWorkspace(null);
           setRole(null);
+          setLoading(false);
+          setInitialized(true);
         }
 
         if (event === 'SIGNED_OUT') {
@@ -301,6 +288,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
     );
+
+    // Trigger INITIAL_SESSION event by calling getSession AFTER listener is set.
+    // This follows the Supabase recommended pattern.
+    supabase.auth.getSession();
 
     return () => {
       subscription.unsubscribe();
