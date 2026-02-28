@@ -230,8 +230,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let mounted = true;
     let lastHandledAccessToken: string | null = null;
+    let bootstrapInFlight = false;
+    let bootstrapResolved = false;
 
-    const BOOTSTRAP_TIMEOUT_MS = 12000;
+    const BOOTSTRAP_TIMEOUT_MS = 5000;
 
     const runWithTimeout = async (
       label: string,
@@ -262,8 +264,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const applySessionState = async (event: string, newSession: Session | null) => {
       if (!mounted) return;
 
-      const isBlockingAuthEvent =
-        event === "BOOTSTRAP" || event === "INITIAL_SESSION" || event === "SIGNED_IN";
+      const isPrimaryBootstrapEvent = event === "BOOTSTRAP" || event === "INITIAL_SESSION";
+      const isBootstrapFallbackEvent = event === "SIGNED_IN" && !bootstrapResolved;
+      const isBlockingAuthEvent = isPrimaryBootstrapEvent || isBootstrapFallbackEvent;
+
+      // Guard anti-reentrância do bootstrap
+      if (isBlockingAuthEvent) {
+        if (bootstrapResolved) {
+          console.log(`[Auth][${tabId}] Evento de bootstrap ignorado (já resolvido):`, event);
+          return;
+        }
+        if (bootstrapInFlight) {
+          console.log(`[Auth][${tabId}] Evento de bootstrap ignorado (já em execução):`, event);
+          return;
+        }
+        bootstrapInFlight = true;
+      }
 
       try {
         console.log(`[Auth][${tabId}] Auth state changed:`, event);
@@ -281,7 +297,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         if (newSession?.user) {
-          // Só bloqueia UI em eventos de entrada/inicialização; evita "loading" infinito em refresh cross-tab
+          // Loader global apenas em bootstrap real (ou fallback de bootstrap na 1ª entrada)
           if (isBlockingAuthEvent) {
             setLoading(true);
           }
@@ -325,12 +341,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setIsSystemOwner(false);
           setIsBlocked(false);
           setPublicId(null);
+          bootstrapResolved = false;
         }
       } catch (error) {
         console.error(`[Auth][${tabId}] Error applying session state:`, error);
       } finally {
+        if (isBlockingAuthEvent) {
+          bootstrapInFlight = false;
+          bootstrapResolved = true;
+        }
+
         if (mounted) {
-          // Só encerra loading global quando o evento era de bootstrap/signed-in
           if (isBlockingAuthEvent || event === "SIGNED_OUT") {
             setLoading(false);
           }
@@ -342,9 +363,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Bootstrap explícito para garantir inicialização mesmo se INITIAL_SESSION falhar
     void (async () => {
       try {
+        const getSessionWithTimeout = Promise.race([
+          supabase.auth.getSession(),
+          new Promise<{ data: { session: Session | null } }>((resolve) =>
+            setTimeout(() => resolve({ data: { session: null } }), BOOTSTRAP_TIMEOUT_MS)
+          ),
+        ]);
+
         const {
           data: { session: initialSession },
-        } = await supabase.auth.getSession();
+        } = await getSessionWithTimeout;
 
         await applySessionState("BOOTSTRAP", initialSession);
       } catch (error) {
@@ -359,7 +387,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, newSession) => {
-      void applySessionState(event, newSession);
+      // CRÍTICO: evitar chamadas Supabase síncronas dentro do callback de auth
+      setTimeout(() => {
+        void applySessionState(event, newSession);
+      }, 0);
     });
 
     return () => {

@@ -442,17 +442,42 @@ export function ExchangeRatesProvider({ children }: ExchangeRatesProviderProps) 
     let mounted = true;
     let interval: ReturnType<typeof setInterval> | null = null;
 
+    const PIPELINE_TIMEOUT_MS = 5000;
+
+    const runPipelineWithTimeout = async (label: string, task: Promise<void>) => {
+      let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+      const timeoutPromise = new Promise<void>((resolve) => {
+        timeoutId = setTimeout(() => {
+          console.warn(`[ExchangeRatesContext] Timeout em ${label} após ${PIPELINE_TIMEOUT_MS}ms`);
+          resolve();
+        }, PIPELINE_TIMEOUT_MS);
+      });
+
+      await Promise.race([
+        task.catch((error) => {
+          console.error(`[ExchangeRatesContext] Erro em ${label}:`, error);
+        }),
+        timeoutPromise,
+      ]);
+
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+
     const startPipeline = async () => {
       if (!mounted) return;
       setLoading(true);
-      await fetchRates();
-      if (!mounted) return;
-      setLoading(false);
+      try {
+        await runPipelineWithTimeout("fetchRates", fetchRates());
+      } finally {
+        if (!mounted) return;
+        setLoading(false);
 
-      if (!interval) {
-        interval = setInterval(() => {
-          void fetchRates();
-        }, FRONTEND_REFRESH_INTERVAL_MS);
+        if (!interval) {
+          interval = setInterval(() => {
+            void fetchRates();
+          }, FRONTEND_REFRESH_INTERVAL_MS);
+        }
       }
     };
 
@@ -467,25 +492,39 @@ export function ExchangeRatesProvider({ children }: ExchangeRatesProviderProps) 
     };
 
     const bootstrap = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        await startPipeline();
-      } else {
+      try {
+        const sessionResult = await Promise.race([
+          supabase.auth.getSession(),
+          new Promise<{ data: { session: Session | null } }>((resolve) =>
+            setTimeout(() => resolve({ data: { session: null } }), PIPELINE_TIMEOUT_MS)
+          ),
+        ]);
+
+        if (sessionResult.data.session?.user) {
+          await startPipeline();
+        } else {
+          stopPipeline();
+        }
+      } catch (error) {
+        console.error("[ExchangeRatesContext] Erro no bootstrap:", error);
         stopPipeline();
       }
     };
 
     void bootstrap();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session: Session | null) => {
-      if (event === "SIGNED_OUT" || !session?.user) {
-        stopPipeline();
-        return;
-      }
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session: Session | null) => {
+      // CRÍTICO: evitar await/calls síncronas no callback de auth
+      setTimeout(() => {
+        if (event === "SIGNED_OUT" || !session?.user) {
+          stopPipeline();
+          return;
+        }
 
-      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "INITIAL_SESSION") {
-        await startPipeline();
-      }
+        if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "INITIAL_SESSION") {
+          void startPipeline();
+        }
+      }, 0);
     });
 
     return () => {
