@@ -783,7 +783,11 @@ export function CaixaTransacaoDialog({
         // Aplicar parceiro origem (ex: depósito contextual)
         if (pendingDefaults.origemParceiroId) {
           setOrigemParceiroId(pendingDefaults.origemParceiroId);
-          prevOrigemParceiroId.current = pendingDefaults.origemParceiroId;
+          // NÃO setar prevOrigemParceiroId.current aqui para affiliate_deposit,
+          // para que a auto-focus chain (origemParceiroId → contaBancária) dispare naturalmente
+          if (entryPoint !== "affiliate_deposit") {
+            prevOrigemParceiroId.current = pendingDefaults.origemParceiroId;
+          }
         }
         
         // Aplicar bookmaker origem com delay adicional para garantir que o parceiro foi processado
@@ -940,14 +944,22 @@ export function CaixaTransacaoDialog({
   }, [origemParceiroId, tipoMoeda, contasBancarias, saldosParceirosContas, moeda]);
 
   // Auto-focus FIAT DEPÓSITO: quando conta bancária é selecionada, abre o select Bookmaker
+  // Se bookmaker já está pré-preenchido (affiliate_deposit), pula direto para o campo Valor
   useEffect(() => {
-    if (tipoTransacao === "DEPOSITO" && tipoMoeda === "FIAT" && origemContaId && origemContaId !== prevOrigemContaId.current && bookmakerSelectRef.current) {
-      setTimeout(() => {
-        bookmakerSelectRef.current?.open();
-      }, 150);
+    if (tipoTransacao === "DEPOSITO" && tipoMoeda === "FIAT" && origemContaId && origemContaId !== prevOrigemContaId.current) {
+      if (destinoBookmakerId) {
+        // Bookmaker já pré-preenchido → foca no campo Valor
+        setTimeout(() => {
+          valorFiatInputRef.current?.focus();
+        }, 150);
+      } else if (bookmakerSelectRef.current) {
+        setTimeout(() => {
+          bookmakerSelectRef.current?.open();
+        }, 150);
+      }
     }
     prevOrigemContaId.current = origemContaId;
-  }, [origemContaId, tipoMoeda, tipoTransacao]);
+  }, [origemContaId, tipoMoeda, tipoTransacao, destinoBookmakerId]);
 
   // ====== AUTO-FOCUS CHAIN FOR SAQUE (WITHDRAWAL) FLOW ======
   
@@ -1208,18 +1220,48 @@ export function CaixaTransacaoDialog({
   // Activated only when entryPoint === "affiliate_deposit"
   // DEPOSITO sequence: Tipo de Moeda → Moeda/Coin → Wallet/Conta (origem) → Valor
   // SAQUE sequence: Tipo de Moeda → Moeda/Coin → Wallet/Conta (destino) → Valor
+  // SKIP logic: If defaults already fill tipoMoeda+moeda, the existing auto-focus chain
+  // (origemParceiroId → contaBancária → bookmaker → valor) handles the rest naturally.
   useEffect(() => {
     if (!open || entryPoint !== "affiliate_deposit") return;
     if (tipoTransacao !== "DEPOSITO" && tipoTransacao !== "SAQUE") return;
     
     // Start guided focus after defaults are applied
     const timer = setTimeout(() => {
+      // Check if tipoMoeda and moeda/coin are already set from defaults
+      const hasTipoMoeda = !!tipoMoeda;
+      const hasMoedaOrCoin = (tipoMoeda === "CRYPTO" && !!coin) || (tipoMoeda === "FIAT" && !!moeda);
+      
+      if (hasTipoMoeda && hasMoedaOrCoin) {
+        // Defaults already cover tipoMoeda + moeda/coin.
+        // The existing auto-focus chain handles conta bancária when origemParceiroId changes.
+        // No guided focus needed — just let the natural chain do its work.
+        affiliateFocusActiveRef.current = false;
+        affiliateFocusStepRef.current = 0;
+        return;
+      }
+      
       affiliateFocusActiveRef.current = true;
-      affiliateFocusStepRef.current = 1;
-      // Step 1: Open Tipo de Moeda selector
-      if (tipoMoedaSelectRef.current) {
-        tipoMoedaSelectRef.current.focus();
-        tipoMoedaSelectRef.current.click();
+      
+      if (hasTipoMoeda) {
+        // Skip to step 2: open moeda/coin selector
+        affiliateFocusStepRef.current = 2;
+        setTimeout(() => {
+          if (tipoMoeda === "CRYPTO" && coinSelectRef.current) {
+            coinSelectRef.current.focus();
+            coinSelectRef.current.click();
+          } else if (tipoMoeda === "FIAT" && moedaFiatSelectRef.current) {
+            moedaFiatSelectRef.current.focus();
+            moedaFiatSelectRef.current.click();
+          }
+        }, 200);
+      } else {
+        // Step 1: Open Tipo de Moeda selector
+        affiliateFocusStepRef.current = 1;
+        if (tipoMoedaSelectRef.current) {
+          tipoMoedaSelectRef.current.focus();
+          tipoMoedaSelectRef.current.click();
+        }
       }
     }, 400);
     
