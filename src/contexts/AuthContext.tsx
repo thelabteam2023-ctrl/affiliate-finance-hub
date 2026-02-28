@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from "react";
+import { createContext, useContext, useEffect, useReducer, useCallback, ReactNode } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
@@ -21,6 +21,103 @@ interface Workspace {
   plan: string;
 }
 
+// ── State Machine ──────────────────────────────────────────────
+type AuthStatus = 'idle' | 'bootstrapping' | 'ready' | 'signed_out' | 'error';
+
+interface AuthState {
+  status: AuthStatus;
+  user: User | null;
+  session: Session | null;
+  workspace: Workspace | null;
+  role: AppRole | null;
+  isSystemOwner: boolean;
+  isBlocked: boolean;
+  publicId: string | null;
+}
+
+type AuthAction =
+  | { type: 'BOOTSTRAP_START' }
+  | { type: 'BOOTSTRAP_SUCCESS'; user: User; session: Session; workspace: Workspace | null; role: AppRole | null; isSystemOwner: boolean; isBlocked: boolean; publicId: string | null }
+  | { type: 'BOOTSTRAP_EMPTY' }
+  | { type: 'BOOTSTRAP_ERROR' }
+  | { type: 'SESSION_UPDATE'; user: User; session: Session; workspace: Workspace | null; role: AppRole | null; isSystemOwner: boolean; isBlocked: boolean; publicId: string | null }
+  | { type: 'SIGNED_OUT' }
+  | { type: 'WORKSPACE_UPDATE'; workspace: Workspace; role: AppRole | null };
+
+function authReducer(state: AuthState, action: AuthAction): AuthState {
+  switch (action.type) {
+    case 'BOOTSTRAP_START':
+      if (state.status !== 'idle') return state; // only from idle
+      return { ...state, status: 'bootstrapping' };
+
+    case 'BOOTSTRAP_SUCCESS':
+      if (state.status !== 'bootstrapping') return state;
+      return {
+        ...state,
+        status: 'ready',
+        user: action.user,
+        session: action.session,
+        workspace: action.workspace,
+        role: action.role,
+        isSystemOwner: action.isSystemOwner,
+        isBlocked: action.isBlocked,
+        publicId: action.publicId,
+      };
+
+    case 'BOOTSTRAP_EMPTY':
+      if (state.status !== 'bootstrapping') return state;
+      return { ...state, status: 'signed_out', user: null, session: null, workspace: null, role: null };
+
+    case 'BOOTSTRAP_ERROR':
+      if (state.status !== 'bootstrapping') return state;
+      return { ...state, status: 'error', user: null, session: null };
+
+    case 'SESSION_UPDATE':
+      // Allow session updates when ready (e.g. TOKEN_REFRESHED)
+      return {
+        ...state,
+        status: 'ready',
+        user: action.user,
+        session: action.session,
+        workspace: action.workspace,
+        role: action.role,
+        isSystemOwner: action.isSystemOwner,
+        isBlocked: action.isBlocked,
+        publicId: action.publicId,
+      };
+
+    case 'SIGNED_OUT':
+      return {
+        status: 'signed_out',
+        user: null,
+        session: null,
+        workspace: null,
+        role: null,
+        isSystemOwner: false,
+        isBlocked: false,
+        publicId: null,
+      };
+
+    case 'WORKSPACE_UPDATE':
+      return { ...state, workspace: action.workspace, role: action.role };
+
+    default:
+      return state;
+  }
+}
+
+const initialState: AuthState = {
+  status: 'idle',
+  user: null,
+  session: null,
+  workspace: null,
+  role: null,
+  isSystemOwner: false,
+  isBlocked: false,
+  publicId: null,
+};
+
+// ── Context interface (backwards-compatible) ───────────────────
 interface AuthContextType {
   user: User | null;
   session: Session | null;
@@ -44,138 +141,89 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// ── Provider ───────────────────────────────────────────────────
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [workspace, setWorkspace] = useState<Workspace | null>(null);
-  const [role, setRole] = useState<AppRole | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [initialized, setInitialized] = useState(false);
-  const [isSystemOwner, setIsSystemOwner] = useState(false);
-  const [isBlocked, setIsBlocked] = useState(false);
-  const [publicId, setPublicId] = useState<string | null>(null);
-  
-  // Tab ID para identificação única desta aba
+  const [state, dispatch] = useReducer(authReducer, initialState);
   const tabId = getTabId();
 
-  /**
-   * Busca workspace e role para um workspace_id específico.
-   * IMPORTANTE: Usa o workspace da ABA, não do banco.
-   */
-  const fetchWorkspaceDetails = useCallback(async (userId: string, targetWorkspaceId: string) => {
+  // Derived flags for backwards compatibility
+  const loading = state.status === 'idle' || state.status === 'bootstrapping';
+  const initialized = state.status !== 'idle';
+
+  // ── Helpers ────────────────────────────────────────────────
+
+  const fetchWorkspaceAndRole = useCallback(async (userId: string, targetWorkspaceId: string): Promise<{ workspace: Workspace | null; role: AppRole | null }> => {
     try {
-      // Fetch workspace details
-      const { data: workspaceData, error: wsError } = await supabase
-        .from('workspaces')
-        .select('id, name, slug, plan')
-        .eq('id', targetWorkspaceId)
-        .single();
+      const [wsResult, roleResult] = await Promise.all([
+        supabase.from('workspaces').select('id, name, slug, plan').eq('id', targetWorkspaceId).single(),
+        supabase.rpc('get_user_role', { _user_id: userId, _workspace_id: targetWorkspaceId }),
+      ]);
 
-      if (!wsError && workspaceData) {
-        setWorkspace(workspaceData);
-        // Garantir que sessionStorage está sincronizado
-        setTabWorkspaceId(workspaceData.id);
+      const workspace = (!wsResult.error && wsResult.data) ? wsResult.data : null;
+      const role = (!roleResult.error && roleResult.data) ? roleResult.data as AppRole : null;
+
+      if (workspace) {
+        setTabWorkspaceId(workspace.id);
       }
 
-      // Get user's role in THIS specific workspace
-      const { data: userRole, error: roleError } = await supabase
-        .rpc('get_user_role', { _user_id: userId, _workspace_id: targetWorkspaceId });
-
-      if (!roleError && userRole) {
-        setRole(userRole as AppRole);
-        console.log(`[Auth][${tabId}] Role fetched for workspace:`, targetWorkspaceId, '- Role:', userRole);
-      }
+      console.log(`[Auth][${tabId}] Workspace/role fetched:`, targetWorkspaceId, role);
+      return { workspace, role };
     } catch (error) {
       console.error(`[Auth][${tabId}] Error fetching workspace details:`, error);
+      return { workspace: null, role: null };
     }
   }, [tabId]);
 
-  /**
-   * Inicializa o workspace para esta aba.
-   * Prioridade:
-   * 1. sessionStorage desta aba (se já inicializada)
-   * 2. default_workspace_id do perfil
-   * 3. Primeiro workspace do usuário
-   */
-  const initializeTabWorkspace = useCallback(async (userId: string) => {
-    try {
-      // Check if user is system owner or blocked, and get public_id
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('is_system_owner, is_blocked, public_id, default_workspace_id')
-        .eq('id', userId)
-        .single();
-      
-      if (!profileError && profileData) {
-        setIsSystemOwner(profileData.is_system_owner || false);
-        setIsBlocked(profileData.is_blocked || false);
-        setPublicId(profileData.public_id || null);
-      }
-
-      // PRIORIDADE 1: Verificar se esta aba já tem um workspace definido
-      const tabWorkspaceId = getTabWorkspaceId();
-      if (tabWorkspaceId && isTabWorkspaceInitialized()) {
-        console.log(`[Auth][${tabId}] Usando workspace da aba:`, tabWorkspaceId);
-        await fetchWorkspaceDetails(userId, tabWorkspaceId);
-        return;
-      }
-
-      // PRIORIDADE 2: Usar default_workspace_id do perfil
-      if (profileData?.default_workspace_id) {
-        console.log(`[Auth][${tabId}] Usando default_workspace_id do perfil:`, profileData.default_workspace_id);
-        setTabWorkspaceId(profileData.default_workspace_id);
-        await fetchWorkspaceDetails(userId, profileData.default_workspace_id);
-        markTabAsInitialized();
-        return;
-      }
-
-      // PRIORIDADE 3: Buscar primeiro workspace do usuário
-      const { data: firstMembership } = await supabase
-        .from('workspace_members')
-        .select('workspace_id')
-        .eq('user_id', userId)
-        .eq('is_active', true)
-        .order('created_at', { ascending: true })
-        .limit(1)
-        .single();
-
-      if (firstMembership?.workspace_id) {
-        console.log(`[Auth][${tabId}] Usando primeiro workspace do usuário:`, firstMembership.workspace_id);
-        setTabWorkspaceId(firstMembership.workspace_id);
-        await fetchWorkspaceDetails(userId, firstMembership.workspace_id);
-        markTabAsInitialized();
-        return;
-      }
-
-      // Usuário sem workspace
-      console.log(`[Auth][${tabId}] Usuário sem workspace`);
-      markTabAsInitialized();
-    } catch (error) {
-      console.error(`[Auth][${tabId}] Error initializing tab workspace:`, error);
+  const resolveWorkspaceId = useCallback(async (userId: string, profileData: { default_workspace_id: string | null }): Promise<string | null> => {
+    // Priority 1: this tab's sessionStorage
+    const tabWsId = getTabWorkspaceId();
+    if (tabWsId && isTabWorkspaceInitialized()) {
+      console.log(`[Auth][${tabId}] Using tab workspace:`, tabWsId);
+      return tabWsId;
     }
-  }, [tabId, fetchWorkspaceDetails]);
 
-  // Função de login seguro - usa RPC que encerra sessões anteriores atomicamente
-  const secureLoginRecord = useCallback(async (userId: string, email: string, userName?: string, forceRecord: boolean = false) => {
+    // Priority 2: profile default
+    if (profileData.default_workspace_id) {
+      console.log(`[Auth][${tabId}] Using profile default workspace:`, profileData.default_workspace_id);
+      setTabWorkspaceId(profileData.default_workspace_id);
+      markTabAsInitialized();
+      return profileData.default_workspace_id;
+    }
+
+    // Priority 3: first membership
+    const { data: firstMembership } = await supabase
+      .from('workspace_members')
+      .select('workspace_id')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .single();
+
+    if (firstMembership?.workspace_id) {
+      console.log(`[Auth][${tabId}] Using first workspace:`, firstMembership.workspace_id);
+      setTabWorkspaceId(firstMembership.workspace_id);
+      markTabAsInitialized();
+      return firstMembership.workspace_id;
+    }
+
+    console.log(`[Auth][${tabId}] User has no workspace`);
+    markTabAsInitialized();
+    return null;
+  }, [tabId]);
+
+  const secureLoginRecord = useCallback(async (userId: string, email: string, userName?: string) => {
     try {
-      console.log(`[Auth][${tabId}] Recording secure login for user:`, userId, forceRecord ? '(forced)' : '');
-      
-      // Get workspace info for this user
       const { data: workspaceId } = await supabase.rpc('get_user_workspace', { _user_id: userId });
       
       let workspaceName: string | null = null;
       if (workspaceId) {
-        const { data: wsData } = await supabase
-          .from('workspaces')
-          .select('name')
-          .eq('id', workspaceId)
-          .single();
+        const { data: wsData } = await supabase.from('workspaces').select('name').eq('id', workspaceId).single();
         workspaceName = wsData?.name || null;
       }
 
-      // Usar secure_login que encerra sessões anteriores automaticamente
-      const { data: sessionId, error } = await supabase.rpc('secure_login', {
+      const { error } = await supabase.rpc('secure_login', {
         p_user_id: userId,
         p_user_email: email,
         p_user_name: userName || null,
@@ -187,22 +235,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       if (error) {
         console.error(`[Auth][${tabId}] secure_login RPC error:`, error);
-      } else {
-        console.log(`[Auth][${tabId}] Secure login recorded, session ID:`, sessionId);
       }
     } catch (error) {
       console.error(`[Auth][${tabId}] Exception in secureLoginRecord:`, error);
     }
   }, [tabId]);
 
-  /**
-   * Verifica se o usuário tem sessão ativa registrada.
-   * Se não tiver, registra automaticamente.
-   * Isso garante que usuários com sessão persistida também tenham login registrado.
-   */
   const ensureLoginRecorded = useCallback(async (userId: string, email: string, userName?: string) => {
     try {
-      // Verificar se existe sessão ativa para este usuário
       const { data: activeSessions, error } = await supabase
         .from('login_history')
         .select('id')
@@ -215,211 +255,145 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // Se não há sessão ativa, registrar login
       if (!activeSessions || activeSessions.length === 0) {
-        console.log(`[Auth][${tabId}] Nenhuma sessão ativa encontrada, registrando login automático`);
-        await secureLoginRecord(userId, email, userName, true);
-      } else {
-        console.log(`[Auth][${tabId}] Sessão ativa já existe, não precisa registrar`);
+        console.log(`[Auth][${tabId}] No active session found, recording auto-login`);
+        await secureLoginRecord(userId, email, userName);
       }
     } catch (error) {
       console.error(`[Auth][${tabId}] Exception in ensureLoginRecorded:`, error);
     }
   }, [tabId, secureLoginRecord]);
 
+  // ── Bootstrap + listener ───────────────────────────────────
+
   useEffect(() => {
     let mounted = true;
-    let lastHandledAccessToken: string | null = null;
-    let bootstrapInFlight = false;
-    let bootstrapResolved = false;
+    const TIMEOUT_MS = 5000;
 
-    const BOOTSTRAP_TIMEOUT_MS = 5000;
-    
-    // SAFETY NET: absolute maximum loading time - loading CANNOT exceed this
-    const absoluteSafetyTimer = setTimeout(() => {
-      if (mounted) {
-        console.warn(`[Auth][${tabId}] SAFETY NET: Forçando fim do loading após 8s absolutos`);
-        setLoading(false);
-        setInitialized(true);
-      }
-    }, 8000);
-
-    const runWithTimeout = async (
-      label: string,
-      promise: Promise<void>,
-      timeoutMs: number = BOOTSTRAP_TIMEOUT_MS
-    ) => {
-      let timeoutId: ReturnType<typeof setTimeout> | null = null;
-
-      const timeoutPromise = new Promise<void>((resolve) => {
-        timeoutId = setTimeout(() => {
-          console.warn(`[Auth][${tabId}] Timeout em ${label} após ${timeoutMs}ms - seguindo sem bloquear UI`);
-          resolve();
-        }, timeoutMs);
-      });
-
-      await Promise.race([
-        promise.catch((error) => {
-          console.error(`[Auth][${tabId}] Erro em ${label}:`, error);
-        }),
-        timeoutPromise,
+    const raceTimeout = <T,>(promise: Promise<T>, fallback: T): Promise<T> =>
+      Promise.race([
+        promise,
+        new Promise<T>((resolve) => setTimeout(() => resolve(fallback), TIMEOUT_MS)),
       ]);
 
-      if (timeoutId) {
-        clearTimeout(timeoutId);
+    /**
+     * Full bootstrap: fetch session → profile → workspace → role → dispatch
+     */
+    const bootstrap = async () => {
+      if (!mounted) return;
+      dispatch({ type: 'BOOTSTRAP_START' });
+
+      try {
+        const { data: { session } } = await raceTimeout(
+          supabase.auth.getSession(),
+          { data: { session: null } } as any
+        );
+
+        if (!mounted) return;
+
+        if (!session?.user) {
+          dispatch({ type: 'BOOTSTRAP_EMPTY' });
+          return;
+        }
+
+        const result = await resolveSession(session);
+        if (!mounted) return;
+
+        dispatch({ type: 'BOOTSTRAP_SUCCESS', ...result });
+
+        // Non-blocking: ensure login is recorded
+        ensureLoginRecorded(session.user.id, session.user.email || '', session.user.user_metadata?.full_name);
+      } catch (error) {
+        console.error(`[Auth][${tabId}] Bootstrap error:`, error);
+        if (mounted) dispatch({ type: 'BOOTSTRAP_ERROR' });
       }
     };
 
-    const applySessionState = async (event: string, newSession: Session | null) => {
-      if (!mounted) return;
+    /**
+     * Shared: given a valid session, resolve profile + workspace + role
+     */
+    const resolveSession = async (session: Session) => {
+      const userId = session.user.id;
 
-      const isPrimaryBootstrapEvent = event === "BOOTSTRAP" || event === "INITIAL_SESSION";
-      const isBootstrapFallbackEvent = event === "SIGNED_IN" && !bootstrapResolved;
-      const isBlockingAuthEvent = isPrimaryBootstrapEvent || isBootstrapFallbackEvent;
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('is_system_owner, is_blocked, public_id, default_workspace_id')
+        .eq('id', userId)
+        .single();
 
-      // Guard anti-reentrância do bootstrap
-      if (isBlockingAuthEvent) {
-        if (bootstrapResolved) {
-          console.log(`[Auth][${tabId}] Evento de bootstrap ignorado (já resolvido):`, event);
-          return;
-        }
-        if (bootstrapInFlight) {
-          console.log(`[Auth][${tabId}] Evento de bootstrap ignorado (já em execução):`, event);
-          return;
-        }
-        bootstrapInFlight = true;
+      const wsId = await resolveWorkspaceId(userId, {
+        default_workspace_id: profileData?.default_workspace_id ?? null,
+      });
+
+      let workspace: Workspace | null = null;
+      let role: AppRole | null = null;
+      if (wsId) {
+        const res = await fetchWorkspaceAndRole(userId, wsId);
+        workspace = res.workspace;
+        role = res.role;
       }
 
-      try {
-        console.log(`[Auth][${tabId}] Auth state changed:`, event);
+      return {
+        user: session.user,
+        session,
+        workspace,
+        role,
+        isSystemOwner: profileData?.is_system_owner || false,
+        isBlocked: profileData?.is_blocked || false,
+        publicId: profileData?.public_id || null,
+      };
+    };
 
-        const accessToken = newSession?.access_token ?? null;
+    // Start bootstrap
+    bootstrap();
 
-        // Evita processamento duplicado do INITIAL_SESSION para a mesma sessão
-        if (event === "INITIAL_SESSION" && accessToken && accessToken === lastHandledAccessToken) {
-          console.log(`[Auth][${tabId}] INITIAL_SESSION duplicado ignorado`);
-          return;
-        }
+    // Listener for subsequent events
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
+      // Defer to avoid sync Supabase calls inside the callback
+      setTimeout(async () => {
+        if (!mounted) return;
+        console.log(`[Auth][${tabId}] Auth event:`, event);
 
-        if (accessToken) {
-          lastHandledAccessToken = accessToken;
-        }
-
-        if (newSession?.user) {
-          // Loader global apenas em bootstrap real (ou fallback de bootstrap na 1ª entrada)
-          if (isBlockingAuthEvent) {
-            setLoading(true);
-          }
-
-          setSession(newSession);
-          setUser(newSession.user);
-
-          await runWithTimeout(
-            `initializeTabWorkspace (${event})`,
-            initializeTabWorkspace(newSession.user.id)
-          );
-
-          if (
-            event === "SIGNED_IN" ||
-            event === "TOKEN_REFRESHED" ||
-            event === "INITIAL_SESSION" ||
-            event === "BOOTSTRAP"
-          ) {
-            await runWithTimeout(
-              `ensureLoginRecorded (${event})`,
-              ensureLoginRecorded(
-                newSession.user.id,
-                newSession.user.email || "",
-                newSession.user.user_metadata?.full_name
-              )
-            );
-          }
-        } else {
-          setSession(null);
-          setUser(null);
-          setWorkspace(null);
-          setRole(null);
-        }
-
-        if (event === "SIGNED_OUT") {
+        if (event === 'SIGNED_OUT') {
           queryClient.clear();
           clearTabWorkspaceId();
-          console.log(`[Auth][${tabId}] SIGNED_OUT event, cleared cache and tab workspace`);
-          setWorkspace(null);
-          setRole(null);
-          setIsSystemOwner(false);
-          setIsBlocked(false);
-          setPublicId(null);
-          bootstrapResolved = false;
-        }
-      } catch (error) {
-        console.error(`[Auth][${tabId}] Error applying session state:`, error);
-      } finally {
-        if (isBlockingAuthEvent) {
-          bootstrapInFlight = false;
-          bootstrapResolved = true;
+          dispatch({ type: 'SIGNED_OUT' });
+          return;
         }
 
-        if (mounted) {
-          if (isBlockingAuthEvent || event === "SIGNED_OUT") {
-            setLoading(false);
+        // INITIAL_SESSION is handled by bootstrap — skip it
+        if (event === 'INITIAL_SESSION') return;
+
+        if (newSession?.user) {
+          try {
+            const result = await resolveSession(newSession);
+            if (mounted) {
+              dispatch({ type: 'SESSION_UPDATE', ...result });
+            }
+            if (event === 'SIGNED_IN') {
+              ensureLoginRecorded(newSession.user.id, newSession.user.email || '', newSession.user.user_metadata?.full_name);
+            }
+          } catch (error) {
+            console.error(`[Auth][${tabId}] Error handling ${event}:`, error);
           }
-          setInitialized(true);
         }
-      }
-    };
-
-    // Bootstrap explícito para garantir inicialização mesmo se INITIAL_SESSION falhar
-    void (async () => {
-      try {
-        const getSessionWithTimeout = Promise.race([
-          supabase.auth.getSession(),
-          new Promise<{ data: { session: Session | null } }>((resolve) =>
-            setTimeout(() => resolve({ data: { session: null } }), BOOTSTRAP_TIMEOUT_MS)
-          ),
-        ]);
-
-        const {
-          data: { session: initialSession },
-        } = await getSessionWithTimeout;
-
-        await applySessionState("BOOTSTRAP", initialSession);
-      } catch (error) {
-        console.error(`[Auth][${tabId}] Bootstrap auth error:`, error);
-        if (mounted) {
-          setLoading(false);
-          setInitialized(true);
-        }
-      }
-    })();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, newSession) => {
-      // CRÍTICO: evitar chamadas Supabase síncronas dentro do callback de auth
-      setTimeout(() => {
-        void applySessionState(event, newSession);
       }, 0);
     });
 
     return () => {
       mounted = false;
-      clearTimeout(absoluteSafetyTimer);
       subscription.unsubscribe();
     };
-  }, [initializeTabWorkspace, tabId, queryClient, ensureLoginRecorded]);
+  }, [tabId, queryClient, fetchWorkspaceAndRole, resolveWorkspaceId, ensureLoginRecorded]);
+
+  // ── Actions ────────────────────────────────────────────────
 
   const signIn = async (email: string, password: string) => {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       
       if (!error && data.user) {
-        // Usar secure_login que encerra sessões anteriores automaticamente
-        secureLoginRecord(
-          data.user.id, 
-          data.user.email || email, 
-          data.user.user_metadata?.full_name
-        );
+        secureLoginRecord(data.user.id, data.user.email || email, data.user.user_metadata?.full_name);
       }
       
       return { error: error ? new Error(error.message) : null };
@@ -445,101 +419,69 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
-    const userId = user?.id;
+    const userId = state.user?.id;
     
-    // CRÍTICO: Encerrar sessão na base ANTES de limpar estado local
     if (userId) {
-      console.log(`[Auth][${tabId}] LOGOUT: Encerrar sessão para user:`, userId);
+      console.log(`[Auth][${tabId}] LOGOUT: ending session for user:`, userId);
       try {
-        // Chamar RPC para encerrar todas as sessões ativas deste usuário
-        const { data: closedCount, error } = await supabase.rpc('end_user_session', { p_user_id: userId });
-        if (error) {
-          console.error(`[Auth][${tabId}] LOGOUT FALHOU - RPC error:`, error);
-        } else {
-          console.log(`[Auth][${tabId}] LOGOUT: Sessões encerradas:`, closedCount);
-        }
+        const { error } = await supabase.rpc('end_user_session', { p_user_id: userId });
+        if (error) console.error(`[Auth][${tabId}] LOGOUT RPC error:`, error);
       } catch (error) {
         console.error(`[Auth][${tabId}] LOGOUT exception:`, error);
       }
-    } else {
-      console.log(`[Auth][${tabId}] LOGOUT: Sem user_id para encerrar sessão`);
     }
 
-    // Limpar cache do React Query
     queryClient.clear();
-    // Limpar workspace da aba
     clearTabWorkspaceId();
-    console.log(`[Auth][${tabId}] Cache React Query e workspace da aba limpos`);
-    
-    // Executar logout do Supabase Auth (invalida token)
     await supabase.auth.signOut();
-    console.log(`[Auth][${tabId}] Deslogado do Supabase Auth`);
-    
-    // Limpar estado local
-    setWorkspace(null);
-    setRole(null);
-    setIsSystemOwner(false);
-    setIsBlocked(false);
-    setPublicId(null);
+    dispatch({ type: 'SIGNED_OUT' });
   };
 
-  /**
-   * Atualiza o workspace para esta aba específica.
-   * Também atualiza o default_workspace_id no perfil para persistência.
-   */
   const setWorkspaceForTab = async (workspaceId: string) => {
-    if (!user) return;
+    if (!state.user) return;
     
-    console.log(`[Auth][${tabId}] Alterando workspace da aba para:`, workspaceId);
-    
-    // Atualizar sessionStorage desta aba
+    console.log(`[Auth][${tabId}] Switching tab workspace to:`, workspaceId);
     setTabWorkspaceId(workspaceId);
 
-    // Revalidar sessão para garantir que o backend reconheça o novo contexto.
-    // (o request-scoped workspace é enviado via header, mas refresh evita estados limítrofes)
     try {
       await supabase.auth.refreshSession();
     } catch (error) {
-      console.warn(`[Auth][${tabId}] Falha ao refreshSession após trocar workspace:`, error);
+      console.warn(`[Auth][${tabId}] Failed to refresh session after workspace switch:`, error);
     }
     
-    // Carregar detalhes do novo workspace
-    await fetchWorkspaceDetails(user.id, workspaceId);
+    const { workspace, role } = await fetchWorkspaceAndRole(state.user.id, workspaceId);
+    if (workspace) {
+      dispatch({ type: 'WORKSPACE_UPDATE', workspace, role });
+    }
     
-    // Atualizar default_workspace_id no banco para persistência
     await supabase.rpc('set_current_workspace', { _workspace_id: workspaceId });
-    
-    // Limpar cache do React Query para forçar reload com novo workspace
     queryClient.clear();
   };
 
   const refreshWorkspace = async () => {
-    if (user) {
-      const tabWorkspaceId = getTabWorkspaceId();
-      if (tabWorkspaceId) {
-        await fetchWorkspaceDetails(user.id, tabWorkspaceId);
-      } else {
-        await initializeTabWorkspace(user.id);
+    if (!state.user) return;
+    const tabWsId = getTabWorkspaceId();
+    if (tabWsId) {
+      const { workspace, role } = await fetchWorkspaceAndRole(state.user.id, tabWsId);
+      if (workspace) {
+        dispatch({ type: 'WORKSPACE_UPDATE', workspace, role });
       }
     }
   };
 
   const hasPermission = async (permissionCode: string): Promise<boolean> => {
-    if (!user) return false;
+    if (!state.user) return false;
     
     try {
-      const { data, error } = await supabase
-        .rpc('has_permission', { 
-          _user_id: user.id, 
-          _permission_code: permissionCode,
-          _workspace_id: workspace?.id ?? null
-        });
-
+      const { data, error } = await supabase.rpc('has_permission', { 
+        _user_id: state.user.id, 
+        _permission_code: permissionCode,
+        _workspace_id: state.workspace?.id ?? null
+      });
       if (error) {
         console.error("Error checking permission:", error);
         return false;
       }
-
       return data ?? false;
     } catch (error) {
       console.error("Error in hasPermission:", error);
@@ -548,20 +490,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const isOwnerOrAdmin = (): boolean => {
-    return role === 'owner' || role === 'admin';
+    return state.role === 'owner' || state.role === 'admin';
   };
 
   const value: AuthContextType = {
-    user,
-    session,
-    workspace,
-    workspaceId: workspace?.id ?? null,
-    role,
+    user: state.user,
+    session: state.session,
+    workspace: state.workspace,
+    workspaceId: state.workspace?.id ?? null,
+    role: state.role,
     loading,
     initialized,
-    isSystemOwner,
-    isBlocked,
-    publicId,
+    isSystemOwner: state.isSystemOwner,
+    isBlocked: state.isBlocked,
+    publicId: state.publicId,
     tabId,
     signIn,
     signUp,
