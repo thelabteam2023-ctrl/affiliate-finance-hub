@@ -3903,6 +3903,12 @@ export function CaixaTransacaoDialog({
                 onValueChange={(value) => {
                   setDestinoParceiroId(value);
                   setDestinoContaId("");
+                  if (tipoTransacao === "TRANSFERENCIA" && fluxoTransferencia === "PARCEIRO_PARCEIRO" && tipoMoeda === "FIAT") {
+                    setTimeout(() => {
+                      destinoContaBancariaSelectRef.current?.focus();
+                      destinoContaBancariaSelectRef.current?.click();
+                    }, 180);
+                  }
                 }}
                 disabled={!origemEstaCompleta}
                 onlyParceiros={parceirosDisponiveis}
@@ -3919,6 +3925,11 @@ export function CaixaTransacaoDialog({
                   value={destinoContaId} 
                   onValueChange={(value) => {
                     setDestinoContaId(value);
+                    if (tipoTransacao === "TRANSFERENCIA" && fluxoTransferencia === "PARCEIRO_PARCEIRO" && tipoMoeda === "FIAT") {
+                      setTimeout(() => {
+                        valorFiatInputRef.current?.focus();
+                      }, 180);
+                    }
                   }}
                   disabled={!origemEstaCompleta}
                 >
@@ -3973,6 +3984,12 @@ export function CaixaTransacaoDialog({
                 onValueChange={(value) => {
                   setDestinoParceiroId(value);
                   setDestinoWalletId("");
+                  if (tipoTransacao === "TRANSFERENCIA" && fluxoTransferencia === "PARCEIRO_PARCEIRO" && tipoMoeda === "CRYPTO") {
+                    setTimeout(() => {
+                      destinoWalletSelectRef.current?.focus();
+                      destinoWalletSelectRef.current?.click();
+                    }, 180);
+                  }
                 }}
                 disabled={!origemEstaCompleta}
                 onlyParceiros={parceirosDisponiveis}
@@ -3989,6 +4006,11 @@ export function CaixaTransacaoDialog({
                   value={destinoWalletId} 
                   onValueChange={(value) => {
                     setDestinoWalletId(value);
+                    if (tipoTransacao === "TRANSFERENCIA" && fluxoTransferencia === "PARCEIRO_PARCEIRO" && tipoMoeda === "CRYPTO") {
+                      setTimeout(() => {
+                        valorFiatInputRef.current?.focus();
+                      }, 180);
+                    }
                   }}
                   disabled={!origemEstaCompleta}
                 >
@@ -4418,7 +4440,19 @@ export function CaixaTransacaoDialog({
                 type="button"
                 variant={fluxoTransferencia === "PARCEIRO_PARCEIRO" ? "default" : "outline"}
                 size="sm"
-                onClick={() => setFluxoTransferencia("PARCEIRO_PARCEIRO")}
+                onClick={() => {
+                  setFluxoTransferencia("PARCEIRO_PARCEIRO");
+                  // Garantir foco no seletor de moeda ao entrar no fluxo (primeira abertura em FIAT)
+                  setTimeout(() => {
+                    if (tipoMoeda === "FIAT") {
+                      moedaFiatSelectRef.current?.focus();
+                      moedaFiatSelectRef.current?.click();
+                    } else {
+                      coinSelectRef.current?.focus();
+                      coinSelectRef.current?.click();
+                    }
+                  }, 260);
+                }}
                 className="flex-1"
               >
                 Parceiro → Parceiro
