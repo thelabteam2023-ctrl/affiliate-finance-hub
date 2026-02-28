@@ -53,3 +53,54 @@ Duas alterações simples no arquivo `src/components/AppSidebar.tsx`:
 ### Próximos passos (Fase 4)
 - Liquidação granular por perna (se necessário)
 - Suporte a multi-moeda entre entradas (conversão BRL para cálculo de peso)
+
+---
+
+## 🏗️ Refatoração Arquitetural — Auth & Bootstrap
+
+### Status: PENDENTE (aguardando aprovação)
+
+### Diagnóstico
+
+O sistema acumulou **complexidade acidental** nos patches de auth. 3 problemas estruturais:
+
+1. **3 listeners `onAuthStateChange` independentes** (AuthContext, ExchangeRatesContext, PermissionsContext) — cada um faz bootstrap próprio, responde aos mesmos eventos de forma descoordenada
+2. **40+ chamadas decrypt no carregamento** — `usePasswordDecryption` descriptografa eagerly para cada bookmaker renderizado
+3. **State machine implícita** — 5 flags booleanas (loading, initialized, bootstrapInFlight, bootstrapResolved, lastHandledAccessToken) = 32 combinações, maioria inválida. Safety net de 8s é band-aid.
+
+### Fase 1: Centralizar Auth Events (PRIORIDADE MÁXIMA)
+
+**Um único listener** `onAuthStateChange` no AuthContext. Demais contextos reagem via React context (`useAuth().session`).
+
+**Remover**:
+- `onAuthStateChange` + `getSession()` bootstrap do `ExchangeRatesContext.tsx`
+- `onAuthStateChange` do `PermissionsContext.tsx`
+
+**Substituir por**:
+- ExchangeRatesContext: `useEffect` que reage a `session?.user?.id`
+- PermissionsContext: já reage via `authInitialized` — apenas remover listener duplicado
+
+### Fase 2: State Machine Explícita no AuthContext
+
+```ts
+type AuthStatus = 'idle' | 'bootstrapping' | 'ready' | 'signed_out' | 'error';
+// loading = status === 'bootstrapping'
+// initialized = status !== 'idle'
+```
+
+Transições determinísticas. Elimina safety net de 8s e todas as flags.
+
+### Fase 3: Decrypt Lazy
+
+Senhas exibem "••••••••" por padrão. Decrypt só acontece no clique de "ver senha".
+
+**Arquivos**: `usePasswordDecryption.ts`, `ParceiroDetalhesPanel.tsx`, `ParceiroBookmakersTab.tsx`
+
+### Ordem: Fase 1 → Fase 2 → Fase 3 (independentes, validáveis isoladamente)
+
+### Critérios de Sucesso
+- Login normal: < 3s
+- Rota direta (/caixa): sem loader infinito
+- Duplicar aba: funciona
+- Zero chamadas crypto-password no boot
+- Apenas 1 listener `onAuthStateChange`
