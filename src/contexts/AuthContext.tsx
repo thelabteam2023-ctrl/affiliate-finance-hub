@@ -234,6 +234,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let bootstrapResolved = false;
 
     const BOOTSTRAP_TIMEOUT_MS = 5000;
+    
+    // SAFETY NET: absolute maximum loading time - loading CANNOT exceed this
+    const absoluteSafetyTimer = setTimeout(() => {
+      if (mounted) {
+        console.warn(`[Auth][${tabId}] SAFETY NET: Forçando fim do loading após 8s absolutos`);
+        setLoading(false);
+        setInitialized(true);
+      }
+    }, 8000);
 
     const runWithTimeout = async (
       label: string,
@@ -395,6 +404,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => {
       mounted = false;
+      clearTimeout(absoluteSafetyTimer);
       subscription.unsubscribe();
     };
   }, [initializeTabWorkspace, tabId, queryClient, ensureLoginRecorded]);
