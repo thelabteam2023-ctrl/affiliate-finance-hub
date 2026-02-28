@@ -9,11 +9,14 @@
  * 
  * O banco É a fonte de verdade. A Edge Function apenas ATUALIZA o banco.
  * O ícone ⚠️ só aparece quando realmente usando fallback hardcoded.
+ * 
+ * FASE 1 REFACTOR: Não usa mais onAuthStateChange próprio.
+ * Reage ao session do AuthContext via useAuth().
  */
 
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode, useMemo } from "react";
-import { Session } from "@supabase/supabase-js";
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { 
   FALLBACK_RATES, 
   FRONTEND_REFRESH_INTERVAL_MS,
@@ -437,102 +440,40 @@ export function ExchangeRatesProvider({ children }: ExchangeRatesProviderProps) 
     }
   }, []);
 
-  // Inicialização + sincronização com autenticação
+  // ============= INICIALIZAÇÃO VIA AUTHCONTEXT (sem listener duplicado) =============
+  const { user, initialized: authInitialized } = useAuth();
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   useEffect(() => {
-    let mounted = true;
-    let interval: ReturnType<typeof setInterval> | null = null;
+    if (!authInitialized) return;
 
-    const PIPELINE_TIMEOUT_MS = 5000;
-
-    const runPipelineWithTimeout = async (label: string, task: Promise<void>) => {
-      let timeoutId: ReturnType<typeof setTimeout> | null = null;
-
-      const timeoutPromise = new Promise<void>((resolve) => {
-        timeoutId = setTimeout(() => {
-          console.warn(`[ExchangeRatesContext] Timeout em ${label} após ${PIPELINE_TIMEOUT_MS}ms`);
-          resolve();
-        }, PIPELINE_TIMEOUT_MS);
-      });
-
-      await Promise.race([
-        task.catch((error) => {
-          console.error(`[ExchangeRatesContext] Erro em ${label}:`, error);
-        }),
-        timeoutPromise,
-      ]);
-
-      if (timeoutId) clearTimeout(timeoutId);
-    };
-
-    const startPipeline = async () => {
-      if (!mounted) return;
+    if (user) {
+      // Usuário logado: iniciar pipeline
       setLoading(true);
-      try {
-        await runPipelineWithTimeout("fetchRates", fetchRates());
-      } finally {
-        if (!mounted) return;
-        setLoading(false);
+      fetchRates().finally(() => setLoading(false));
 
-        if (!interval) {
-          interval = setInterval(() => {
-            void fetchRates();
-          }, FRONTEND_REFRESH_INTERVAL_MS);
-        }
+      // Iniciar polling
+      if (!intervalRef.current) {
+        intervalRef.current = setInterval(() => {
+          void fetchRates();
+        }, FRONTEND_REFRESH_INTERVAL_MS);
       }
-    };
-
-    const stopPipeline = () => {
-      if (interval) {
-        clearInterval(interval);
-        interval = null;
+    } else {
+      // Usuário deslogado: parar pipeline
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
       }
-      if (mounted) {
-        setLoading(false);
-      }
-    };
-
-    const bootstrap = async () => {
-      try {
-        const sessionResult = await Promise.race([
-          supabase.auth.getSession(),
-          new Promise<{ data: { session: Session | null } }>((resolve) =>
-            setTimeout(() => resolve({ data: { session: null } }), PIPELINE_TIMEOUT_MS)
-          ),
-        ]);
-
-        if (sessionResult.data.session?.user) {
-          await startPipeline();
-        } else {
-          stopPipeline();
-        }
-      } catch (error) {
-        console.error("[ExchangeRatesContext] Erro no bootstrap:", error);
-        stopPipeline();
-      }
-    };
-
-    void bootstrap();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session: Session | null) => {
-      // CRÍTICO: evitar await/calls síncronas no callback de auth
-      setTimeout(() => {
-        if (event === "SIGNED_OUT" || !session?.user) {
-          stopPipeline();
-          return;
-        }
-
-        if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "INITIAL_SESSION") {
-          void startPipeline();
-        }
-      }, 0);
-    });
+      setLoading(false);
+    }
 
     return () => {
-      mounted = false;
-      if (interval) clearInterval(interval);
-      subscription.unsubscribe();
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
     };
-  }, [fetchRates]);
+  }, [user?.id, authInitialized, fetchRates]);
 
   // Helpers memoizados
   const getRate = useCallback((moeda: string): number => {
