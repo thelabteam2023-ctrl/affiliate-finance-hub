@@ -231,8 +231,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let mounted = true;
     let lastHandledAccessToken: string | null = null;
 
+    const BOOTSTRAP_TIMEOUT_MS = 12000;
+
+    const runWithTimeout = async (
+      label: string,
+      promise: Promise<void>,
+      timeoutMs: number = BOOTSTRAP_TIMEOUT_MS
+    ) => {
+      let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+      const timeoutPromise = new Promise<void>((resolve) => {
+        timeoutId = setTimeout(() => {
+          console.warn(`[Auth][${tabId}] Timeout em ${label} após ${timeoutMs}ms - seguindo sem bloquear UI`);
+          resolve();
+        }, timeoutMs);
+      });
+
+      await Promise.race([
+        promise.catch((error) => {
+          console.error(`[Auth][${tabId}] Erro em ${label}:`, error);
+        }),
+        timeoutPromise,
+      ]);
+
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+
     const applySessionState = async (event: string, newSession: Session | null) => {
       if (!mounted) return;
+
+      const isBlockingAuthEvent =
+        event === "BOOTSTRAP" || event === "INITIAL_SESSION" || event === "SIGNED_IN";
 
       try {
         console.log(`[Auth][${tabId}] Auth state changed:`, event);
@@ -250,11 +281,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         if (newSession?.user) {
-          setLoading(true);
+          // Só bloqueia UI em eventos de entrada/inicialização; evita "loading" infinito em refresh cross-tab
+          if (isBlockingAuthEvent) {
+            setLoading(true);
+          }
+
           setSession(newSession);
           setUser(newSession.user);
 
-          await initializeTabWorkspace(newSession.user.id);
+          await runWithTimeout(
+            `initializeTabWorkspace (${event})`,
+            initializeTabWorkspace(newSession.user.id)
+          );
 
           if (
             event === "SIGNED_IN" ||
@@ -262,10 +300,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             event === "INITIAL_SESSION" ||
             event === "BOOTSTRAP"
           ) {
-            await ensureLoginRecorded(
-              newSession.user.id,
-              newSession.user.email || "",
-              newSession.user.user_metadata?.full_name
+            await runWithTimeout(
+              `ensureLoginRecorded (${event})`,
+              ensureLoginRecorded(
+                newSession.user.id,
+                newSession.user.email || "",
+                newSession.user.user_metadata?.full_name
+              )
             );
           }
         } else {
@@ -289,7 +330,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.error(`[Auth][${tabId}] Error applying session state:`, error);
       } finally {
         if (mounted) {
-          setLoading(false);
+          // Só encerra loading global quando o evento era de bootstrap/signed-in
+          if (isBlockingAuthEvent || event === "SIGNED_OUT") {
+            setLoading(false);
+          }
           setInitialized(true);
         }
       }
