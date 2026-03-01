@@ -775,40 +775,13 @@ export default function ProjetoDetalhe() {
             <div className="h-8 w-px bg-border/50 hidden sm:block flex-shrink-0" />
 
             {/* Volume */}
-            {(() => {
-              const cb = kpiBreakdowns?.volume?.currencyBreakdown || [];
-              const volByCurrency: Record<string, number> = {};
-              cb.forEach(item => { volByCurrency[item.moeda] = item.valor; });
-              const moeda = projetoResultado?.moedaConsolidacao || kpiBreakdowns?.volume?.currency || 'BRL';
-              const rateDateStr = rateLastUpdate ? new Date(rateLastUpdate).toLocaleDateString('pt-BR') : undefined;
-
-              // Inline compact volume
-              const consolidation = (() => {
-                let total = 0;
-                Object.entries(volByCurrency).forEach(([m, v]) => {
-                  if (m === moeda) { total += v; }
-                  else {
-                    const rate = getRate(m);
-                    if (moeda === 'BRL') { total += v * rate; }
-                    else { total += v / rate * getRate(moeda); }
-                  }
-                });
-                // Fallback simples
-                if (total === 0) {
-                  total = Object.values(volByCurrency).reduce((a, b) => a + b, 0);
-                }
-                return total;
-              })();
-
-              return (
-                <div className="flex flex-col min-w-[80px]">
-                  <span className="text-xs text-muted-foreground leading-tight">Volume</span>
-                  <span className="text-base md:text-lg font-bold leading-tight truncate">
-                    {formatCurrency(consolidation)}
-                  </span>
-                </div>
-              );
-            })()}
+            {/* Volume — usar .total já consolidado pelo useKpiBreakdowns (getConsolidatedStake) */}
+            <div className="flex flex-col min-w-[80px]">
+              <span className="text-xs text-muted-foreground leading-tight">Volume</span>
+              <span className="text-base md:text-lg font-bold leading-tight truncate">
+                {formatCurrency(kpiBreakdowns?.volume?.total || 0)}
+              </span>
+            </div>
 
             <div className="h-8 w-px bg-border/50 hidden sm:block flex-shrink-0" />
 
