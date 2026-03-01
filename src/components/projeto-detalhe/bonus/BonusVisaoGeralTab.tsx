@@ -53,8 +53,8 @@ interface BonusResultEntry {
 export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = false, periodFilter, actionsSlot }: BonusVisaoGeralTabProps) {
   const queryClient = useQueryClient();
   const { bonuses, getSummary, getBookmakersWithActiveBonus } = useProjectBonuses({ projectId: projetoId });
-  const { formatCurrency, convertToConsolidation, convertToConsolidationOficial } = useProjetoCurrency(projetoId);
-  const { summary: analyticsSummary, stats: analyticsStats } = useProjectBonusAnalytics(projetoId, convertToConsolidationOficial);
+  const { formatCurrency, convertToConsolidation } = useProjetoCurrency(projetoId);
+  const { summary: analyticsSummary, stats: analyticsStats } = useProjectBonusAnalytics(projetoId, convertToConsolidation);
   const [bookmakersWithBonus, setBookmakersWithBonus] = useState<BookmakerWithBonus[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -226,8 +226,8 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
   const activeBonusTotalConsolidated = useMemo(() => {
     return bonuses
       .filter((b) => b.status === "credited" && (b.saldo_atual || 0) > 0)
-      .reduce((acc, b) => acc + convertToConsolidationOficial(b.saldo_atual || 0, b.currency), 0);
-  }, [bonuses, convertToConsolidationOficial]);
+      .reduce((acc, b) => acc + convertToConsolidation(b.saldo_atual || 0, b.currency), 0);
+  }, [bonuses, convertToConsolidation]);
 
   // Fetch ajustes pós-limitação (financial_events com AJUSTE_POS_LIMITACAO)
   const { data: ajustesPostLimitacao = [] } = useQuery({
@@ -331,7 +331,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
     }
     
     const totalBonusCreditado = eligibleBonuses
-      .reduce((acc, b) => acc + convertToConsolidationOficial(b.bonus_amount || 0, b.currency), 0);
+      .reduce((acc, b) => acc + convertToConsolidation(b.bonus_amount || 0, b.currency), 0);
     
     // Breakdown de bônus por moeda original
     const bonusPorMoedaMap: Record<string, number> = {};
@@ -350,7 +350,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
       }
       
       const moedaOperacao = bet.moeda_operacao || "BRL";
-      return acc + convertToConsolidationOficial(bet.lucro_prejuizo ?? 0, moedaOperacao);
+      return acc + convertToConsolidation(bet.lucro_prejuizo ?? 0, moedaOperacao);
     }, 0);
 
     // Somar ajustes pós-limitação ao juice - FILTRAR POR PERÍODO
@@ -365,7 +365,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
     }
     
     const juiceAjustes = filteredAjustes.reduce((acc, a) => {
-      return acc + convertToConsolidationOficial(a.valor, a.moeda);
+      return acc + convertToConsolidation(a.valor, a.moeda);
     }, 0);
 
     const totalJuice = juiceBets + juiceAjustes;
@@ -381,7 +381,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
       });
     }
     const totalPerdasCancelamento = filteredPerdas.reduce((acc, p) => {
-      return acc + convertToConsolidationOficial(p.valor, p.moeda);
+      return acc + convertToConsolidation(p.valor, p.moeda);
     }, 0);
     
     const total = totalBonusCreditado + totalJuice + totalPerdasCancelamento;
@@ -391,7 +391,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
       : 0;
     
     return { totalBonusCreditado, totalJuice, totalPerdasCancelamento, total, performancePercent, bonusPorMoeda };
-  }, [bonuses, bonusBetsData, ajustesPostLimitacao, perdasCancelamento, convertToConsolidationOficial, dateRange]);
+  }, [bonuses, bonusBetsData, ajustesPostLimitacao, perdasCancelamento, convertToConsolidation, dateRange]);
 
   // NOTA: totalSaldoOperavel agora vem do hook useSaldoOperavel (já declarado no início)
 
@@ -593,7 +593,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
               (b.status === "credited" || b.status === "finalized") && b.credited_at
             );
             const totalCredited = eligibleForAvg.reduce(
-              (acc, b) => acc + convertToConsolidationOficial(b.bonus_amount || 0, b.currency), 0
+              (acc, b) => acc + convertToConsolidation(b.bonus_amount || 0, b.currency), 0
             );
             
             // Dias corridos: período selecionado ou primeiro bônus até hoje
@@ -712,7 +712,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
         bonusBets={bonusBetsData}
         ajustesPostLimitacao={[...ajustesPostLimitacao, ...perdasCancelamento]}
         formatCurrency={formatCurrency}
-        convertToConsolidation={convertToConsolidationOficial}
+        convertToConsolidation={convertToConsolidation}
         isSingleDayPeriod={isSingleDayPeriod}
         dateRange={dateRange}
       />

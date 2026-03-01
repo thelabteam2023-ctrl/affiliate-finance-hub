@@ -32,8 +32,8 @@ interface ProjectBonusAnalyticsTabProps {
 }
 
 export function ProjectBonusAnalyticsTab({ projectId }: ProjectBonusAnalyticsTabProps) {
-  const { convertToConsolidationOficial } = useProjetoCurrency(projectId);
-  const { stats, summary, loading, error } = useProjectBonusAnalytics(projectId, convertToConsolidationOficial);
+  const { convertToConsolidation } = useProjetoCurrency(projectId);
+  const { stats, summary, loading, error } = useProjectBonusAnalytics(projectId, convertToConsolidation);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedBookmaker, setSelectedBookmaker] = useState<BookmakerBonusStats | null>(null);
 
