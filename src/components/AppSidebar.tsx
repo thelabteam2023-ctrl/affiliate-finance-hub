@@ -392,13 +392,13 @@ export function AppSidebar() {
     const projetoId = projectFavorite.project_id;
 
     const handleOpenSimples = () => {
-      openApostaWindow({ projetoId, activeTab: 'apostas', estrategia: 'PUNTER' });
+      openApostaWindow({ projetoId, activeTab: 'apostas' });
     };
     const handleOpenMultipla = () => {
-      openApostaMultiplaWindow({ projetoId, activeTab: 'apostas', estrategia: 'PUNTER' });
+      openApostaMultiplaWindow({ projetoId, activeTab: 'apostas' });
     };
     const handleOpenSurebet = () => {
-      openSurebetWindow({ projetoId, activeTab: 'surebet' });
+      openSurebetWindow({ projetoId, activeTab: 'apostas' });
     };
 
     const contextMenuItems = (

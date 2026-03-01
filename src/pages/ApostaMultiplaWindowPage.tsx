@@ -25,7 +25,7 @@ export default function ApostaMultiplaWindowPage() {
   
   const projetoId = searchParams.get('projetoId') || '';
   const activeTab = searchParams.get('tab') || 'apostas';
-  const estrategia = searchParams.get('estrategia') || 'PUNTER';
+  const estrategia = searchParams.get('estrategia') || null;
   const rascunhoId = searchParams.get('rascunhoId');
   
   const isEditing = id && id !== 'novo';
