@@ -1,4 +1,4 @@
-import { Bell, Users, Users2, Landmark, Wallet, Building2, TrendingUp, UserPlus, PieChart, Briefcase, FolderKanban, FlaskConical, Settings, LogOut, Star, Shield, Calculator, StickyNote, ShieldCheck, ChevronUp, ChevronDown, Sun, Moon, Target, Layers, ArrowLeftRight } from "lucide-react";
+import { Bell, Users, Users2, Landmark, Wallet, Building2, TrendingUp, UserPlus, PieChart, Briefcase, FolderKanban, FlaskConical, Settings, LogOut, Star, Shield, Calculator, StickyNote, ShieldCheck, ChevronUp, ChevronDown, Sun, Moon, Target, Layers, ArrowLeftRight, Zap } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -12,7 +12,7 @@ import { useUserWorkspaces } from "@/hooks/useUserWorkspaces";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { openApostaWindow, openApostaMultiplaWindow, openSurebetWindow } from "@/lib/windowHelper";
 import { getRoleLabel } from "@/lib/roleLabels";
 import {
@@ -155,6 +155,7 @@ export function AppSidebar() {
   
   // State for project names
   const [projectNames, setProjectNames] = useState<Record<string, string>>({});
+  const [projectDefaultTabs, setProjectDefaultTabs] = useState<Record<string, string>>({});
   
   const isCollapsed = state === "collapsed";
   const isActive = (path: string) => currentPath === path;
@@ -186,26 +187,32 @@ export function AppSidebar() {
 
   // Load project names for favorites
   useEffect(() => {
-    const loadProjectNames = async () => {
+    const loadProjectData = async () => {
       if (projectFavorites.length === 0) return;
       
       const projectIds = projectFavorites.map(f => f.project_id);
-      const { data } = await supabase
-        .from('projetos')
-        .select('id, nome')
-        .in('id', projectIds);
       
-      if (data) {
+      // Load names and default tabs in parallel
+      const [namesResult, tabsResult] = await Promise.all([
+        supabase.from('projetos').select('id, nome').in('id', projectIds),
+        user ? supabase.from('project_user_preferences').select('project_id, default_tab').eq('user_id', user.id).in('project_id', projectIds) : Promise.resolve({ data: null }),
+      ]);
+      
+      if (namesResult.data) {
         const names: Record<string, string> = {};
-        data.forEach(p => {
-          names[p.id] = p.nome;
-        });
+        namesResult.data.forEach(p => { names[p.id] = p.nome; });
         setProjectNames(names);
+      }
+      
+      if (tabsResult.data) {
+        const tabs: Record<string, string> = {};
+        tabsResult.data.forEach((p: any) => { tabs[p.project_id] = p.default_tab; });
+        setProjectDefaultTabs(tabs);
       }
     };
     
-    loadProjectNames();
-  }, [projectFavorites]);
+    loadProjectData();
+  }, [projectFavorites, user]);
 
   // Function to check if user can see a menu item using the new module access system
   const canSeeItem = (item: MenuItem): boolean => {
@@ -390,6 +397,7 @@ export function AppSidebar() {
     const projectPath = `/projeto/${projectFavorite.project_id}`;
     const projectName = projectNames[projectFavorite.project_id] || "Projeto";
     const projetoId = projectFavorite.project_id;
+    const defaultTab = projectDefaultTabs[projetoId];
 
     const handleOpenSimples = () => {
       openApostaWindow({ projetoId, activeTab: 'apostas' });
@@ -400,9 +408,35 @@ export function AppSidebar() {
     const handleOpenSurebet = () => {
       openSurebetWindow({ projetoId, activeTab: 'apostas' });
     };
+    const handleOpenOperacoes = () => {
+      if (defaultTab) {
+        navigate(`${projectPath}?tab=${defaultTab}`);
+      }
+    };
+
+    const tabLabels: Record<string, string> = {
+      apostas: "Todas Apostas",
+      surebet: "Surebet",
+      bonus: "Bônus",
+      freebets: "Freebets",
+      valuebet: "ValueBet",
+      duplogreen: "Duplo Green",
+      promocoes: "Promoções",
+      cashback: "Cashback",
+      vinculos: "Vínculos",
+    };
 
     const contextMenuItems = (
-      <ContextMenuContent className="w-48">
+      <ContextMenuContent className="w-52">
+        {defaultTab && (
+          <>
+            <ContextMenuItem onClick={handleOpenOperacoes} className="font-medium">
+              <Zap className="mr-2 h-4 w-4 text-primary" />
+              Operações · {tabLabels[defaultTab] || defaultTab}
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+          </>
+        )}
         <ContextMenuItem onClick={handleOpenSimples}>
           <Target className="mr-2 h-4 w-4" />
           Aposta Simples
