@@ -234,12 +234,22 @@ async function fetchExtrasLucroFn(projetoId: string): Promise<ExtraLucroEntry[]>
     }
   });
 
-  const { data: eventos } = await supabase
-    .from("cash_ledger")
-    .select("data_transacao, valor, tipo_transacao, evento_promocional_tipo, destino_bookmaker_id")
-    .eq("status", "CONFIRMADO")
-    .in("tipo_transacao", ["FREEBET_CONVERTIDA", "BONUS_CREDITADO", "CREDITO_PROMOCIONAL", "GIRO_GRATIS_GANHO"]);
+  // CORREÇÃO: Buscar bônus creditados da tabela master (project_bookmaker_link_bonuses)
+  // em vez do cash_ledger, que continha ajustes de bônus contados como créditos novos
+  const { data: bonusCreditados } = await supabase
+    .from("project_bookmaker_link_bonuses")
+    .select("credited_at, bonus_amount, status")
+    .eq("project_id", projetoId)
+    .in("status", ["credited", "finalized"]);
 
+  bonusCreditados?.forEach(b => {
+    const valor = Number(b.bonus_amount) || 0;
+    if (valor > 0 && b.credited_at) {
+      extras.push({ data: b.credited_at.split('T')[0], valor, tipo: 'bonus' });
+    }
+  });
+
+  // Buscar outros eventos promocionais do ledger (excluindo BONUS_CREDITADO que agora vem da tabela master)
   const { data: projectBookmakers } = await supabase
     .from("bookmakers")
     .select("id")
@@ -247,13 +257,18 @@ async function fetchExtrasLucroFn(projetoId: string): Promise<ExtraLucroEntry[]>
 
   const projectBookmakerIds = new Set(projectBookmakers?.map(b => b.id) || []);
 
+  const { data: eventos } = await supabase
+    .from("cash_ledger")
+    .select("data_transacao, valor, tipo_transacao, evento_promocional_tipo, destino_bookmaker_id")
+    .eq("status", "CONFIRMADO")
+    .in("tipo_transacao", ["FREEBET_CONVERTIDA", "CREDITO_PROMOCIONAL", "GIRO_GRATIS_GANHO"]);
+
   eventos?.forEach(ev => {
     if (ev.destino_bookmaker_id && projectBookmakerIds.has(ev.destino_bookmaker_id)) {
       const valor = ev.valor || 0;
       if (valor > 0) {
         let tipo: ExtraLucroEntry['tipo'] = 'promocional';
         if (ev.tipo_transacao === 'FREEBET_CONVERTIDA') tipo = 'freebet';
-        else if (ev.tipo_transacao === 'BONUS_CREDITADO') tipo = 'bonus';
         else if (ev.tipo_transacao === 'GIRO_GRATIS_GANHO') tipo = 'giro_gratis';
         extras.push({ data: ev.data_transacao, valor, tipo });
       }
