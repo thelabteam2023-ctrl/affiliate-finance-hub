@@ -122,7 +122,7 @@ export function BonusHistoricoTab({ projetoId }: BonusHistoricoTabProps) {
         return meta?.bonus_id && finalizedBonusIds.includes(meta.bonus_id);
       }).map(d => {
         const meta = typeof d.auditoria_metadata === "string" ? JSON.parse(d.auditoria_metadata) : d.auditoria_metadata;
-        return { bonusId: meta.bonus_id as string, valor: Number(d.valor) || 0 };
+        return { bonusId: meta.bonus_id as string, valor: Number(meta.valor_perdido ?? d.valor) || 0 };
       });
     },
     enabled: !!projetoId && finalizedBonusIds.length > 0,
