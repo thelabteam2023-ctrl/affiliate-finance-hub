@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PERIOD_STALE_TIME, PERIOD_GC_TIME } from "@/lib/query-cache-config";
+import { getConsolidatedStake } from "@/utils/consolidatedValues";
 
 /**
  * Estatísticas de bônus por casa (bookmaker_catalogo_id) DENTRO DE UM PROJETO
@@ -120,6 +121,9 @@ async function fetchBonusAnalytics(projectId: string): Promise<AnalyticsRawData>
         stake,
         stake_total,
         stake_consolidado,
+        pl_consolidado,
+        valor_brl_referencia,
+        lucro_prejuizo_brl_referencia,
         resultado,
         status,
         bonus_id,
@@ -136,7 +140,7 @@ async function fetchBonusAnalytics(projectId: string): Promise<AnalyticsRawData>
       .neq("status", "CANCELADA"),
     supabase
       .from("projetos")
-      .select("moeda_consolidacao")
+      .select("moeda_consolidacao, cotacao_trabalho")
       .eq("id", projectId)
       .single(),
     supabase
@@ -153,6 +157,16 @@ async function fetchBonusAnalytics(projectId: string): Promise<AnalyticsRawData>
   const betsData = betsRes.data || [];
   const withdrawalsData = withdrawalsRes.data || [];
   const moedaConsolidacao = projetoRes.data?.moeda_consolidacao || 'BRL';
+  const cotacaoTrabalho = projetoRes.data?.cotacao_trabalho || 0;
+
+  // Função de conversão para moeda de consolidação (mesma lógica de useKpiBreakdowns)
+  const convertToConsolidation = (valor: number, moedaOrigem: string): number => {
+    if (!valor || moedaOrigem === moedaConsolidacao) return valor;
+    if (cotacaoTrabalho <= 0) return valor; // sem taxa, retorna bruto
+    if (moedaConsolidacao === 'BRL') return valor * cotacaoTrabalho;
+    if (moedaOrigem === 'BRL') return valor / cotacaoTrabalho;
+    return valor; // cross-currency sem taxa disponível
+  };
 
   // 3. Agregar por bookmaker_catalogo_id
   const catalogoMap = new Map<string, {
@@ -232,9 +246,7 @@ async function fetchBonusAnalytics(projectId: string): Promise<AnalyticsRawData>
 
     const totalBets = bets.length;
     const totalStake = bets.reduce((sum: number, b: any) => {
-      const isMultiLeg = b.forma_registro === 'ARBITRAGEM' || b.forma_registro === 'SUREBET';
-      const stakeBase = isMultiLeg ? Number(b.stake_total ?? 0) : Number(b.stake ?? 0);
-      return sum + stakeBase;
+      return sum + getConsolidatedStake(b, convertToConsolidation, moedaConsolidacao);
     }, 0);
     const betsWon = bets.filter((b: any) => b.resultado === 'GREEN' || b.resultado === 'MEIO_GREEN').length;
     const betsLost = bets.filter((b: any) => b.resultado === 'RED' || b.resultado === 'MEIO_RED').length;
