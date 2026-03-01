@@ -66,6 +66,7 @@ interface AnalyticsRawData {
   bookmakerStatuses: Map<string, string>;
   moedaConsolidacao: string;
   orphanStakeConsolidated: number;
+  rawVolumeBreakdown: CurrencyVolumeBreakdown[];
 }
 
 interface UseProjectBonusAnalyticsReturn {
@@ -109,7 +110,7 @@ async function fetchBonusAnalytics(projectId: string): Promise<AnalyticsRawData>
     .filter((id: string | null): id is string => !!id);
 
   if (bookmakerIds.length === 0) {
-    return { stats: [], bookmakerStatuses: new Map(), moedaConsolidacao: 'BRL', orphanStakeConsolidated: 0 };
+    return { stats: [], bookmakerStatuses: new Map(), moedaConsolidacao: 'BRL', orphanStakeConsolidated: 0, rawVolumeBreakdown: [] };
   }
 
   // 2. Parallel fetches
@@ -169,6 +170,8 @@ async function fetchBonusAnalytics(projectId: string): Promise<AnalyticsRawData>
   };
 
   let orphanStakeConsolidated = 0;
+  // Track orphan raw volume per currency too
+  const orphanRawVolume: Record<string, number> = {};
 
   // 3. Agregar por bookmaker_catalogo_id
   const catalogoMap = new Map<string, {
@@ -212,6 +215,12 @@ async function fetchBonusAnalytics(projectId: string): Promise<AnalyticsRawData>
     const catalogoId = bet.bookmakers?.bookmaker_catalogo_id;
     if (!catalogoId || !catalogoMap.has(catalogoId)) {
       orphanStakeConsolidated += getConsolidatedStake(bet, convertToConsolidation, moedaConsolidacao);
+      // Track orphan raw volume per currency
+      const moeda = (bet.moeda_operacao || 'BRL').toUpperCase();
+      const rawStake = bet.forma_registro === 'ARBITRAGEM' 
+        ? Number(bet.stake_total || 0) 
+        : Number(bet.stake || 0);
+      orphanRawVolume[moeda] = (orphanRawVolume[moeda] || 0) + rawStake;
       return;
     }
     catalogoMap.get(catalogoId)!.bets.push(bet);
@@ -228,6 +237,8 @@ async function fetchBonusAnalytics(projectId: string): Promise<AnalyticsRawData>
 
   // 4. Calcular métricas
   const statsArray: BookmakerBonusStats[] = [];
+  // Track raw volume per currency (BEFORE consolidation) for breakdown display
+  const rawVolumeByCurrency: Record<string, number> = {};
 
   catalogoMap.forEach((data, catalogoId) => {
     const bonuses = data.bonus;
@@ -253,6 +264,16 @@ async function fetchBonusAnalytics(projectId: string): Promise<AnalyticsRawData>
     const totalStake = bets.reduce((sum: number, b: any) => {
       return sum + getConsolidatedStake(b, convertToConsolidation, moedaConsolidacao);
     }, 0);
+    
+    // Track raw volume per currency for breakdown (NOT consolidated)
+    bets.forEach((b: any) => {
+      const moeda = (b.moeda_operacao || 'BRL').toUpperCase();
+      const rawStake = b.forma_registro === 'ARBITRAGEM' 
+        ? Number(b.stake_total || 0) 
+        : Number(b.stake || 0);
+      rawVolumeByCurrency[moeda] = (rawVolumeByCurrency[moeda] || 0) + rawStake;
+    });
+    
     const betsWon = bets.filter((b: any) => b.resultado === 'GREEN' || b.resultado === 'MEIO_GREEN').length;
     const betsLost = bets.filter((b: any) => b.resultado === 'RED' || b.resultado === 'MEIO_RED').length;
     const betsPending = bets.filter((b: any) => b.status === 'PENDENTE').length;
@@ -308,7 +329,17 @@ async function fetchBonusAnalytics(projectId: string): Promise<AnalyticsRawData>
     });
   });
 
-  return { stats: statsArray, bookmakerStatuses: statusMap, moedaConsolidacao, orphanStakeConsolidated };
+  // Build raw volume breakdown (values in ORIGINAL currency, not consolidated)
+  // Merge orphan raw volumes into the main breakdown
+  const mergedRawVolume = { ...rawVolumeByCurrency };
+  Object.entries(orphanRawVolume).forEach(([moeda, valor]) => {
+    mergedRawVolume[moeda] = (mergedRawVolume[moeda] || 0) + valor;
+  });
+  const rawVolumeBreakdown: CurrencyVolumeBreakdown[] = Object.entries(mergedRawVolume)
+    .map(([moeda, valor]) => ({ moeda, valor }))
+    .filter(item => Math.abs(item.valor) >= 0.01);
+
+  return { stats: statsArray, bookmakerStatuses: statusMap, moedaConsolidacao, orphanStakeConsolidated, rawVolumeBreakdown };
 }
 
 const emptyBreakdown: BookmakerStatusBreakdown = {
@@ -341,6 +372,7 @@ export function useProjectBonusAnalytics(projectId: string): UseProjectBonusAnal
   const bookmakerStatuses = rawData?.bookmakerStatuses ?? new Map<string, string>();
   const moedaConsolidacaoProjeto = rawData?.moedaConsolidacao ?? 'BRL';
   const orphanStakeConsolidated = rawData?.orphanStakeConsolidated ?? 0;
+  const rawVolumeBreakdown = rawData?.rawVolumeBreakdown ?? [];
 
   const summary = useMemo((): ProjectBonusAnalyticsSummary => {
     if (stats.length === 0 && orphanStakeConsolidated <= 0) {
@@ -356,37 +388,31 @@ export function useProjectBonusAnalytics(projectId: string): UseProjectBonusAnal
       return `${symbols[currency] || currency} ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
     };
 
-    // Volume breakdown by currency
-    const volumeByCurrency: Record<string, number> = {};
-    stats.forEach(s => {
-      volumeByCurrency[s.currency] = (volumeByCurrency[s.currency] || 0) + s.total_stake;
-    });
-    const volumeBreakdown: CurrencyVolumeBreakdown[] = Object.entries(volumeByCurrency)
-      .map(([moeda, valor]) => ({ moeda, valor }))
-      .filter(item => Math.abs(item.valor) >= 0.01);
+    // Volume breakdown: use RAW values per currency (NOT consolidated)
+    // This prevents double-conversion when the display layer calls convertToConsolidation
+    const volumeBreakdown: CurrencyVolumeBreakdown[] = rawVolumeBreakdown.length > 0
+      ? rawVolumeBreakdown
+      : [];
 
+    // Total volume already consolidated correctly
     const totalVolumeConsolidated = stats.reduce((sum, s) => sum + s.total_stake, 0) + orphanStakeConsolidated;
 
     let totalBonusValueDisplay: string;
     let totalStakeDisplay: string;
 
     if (isMultiCurrency) {
-      const byCurrency: Record<string, { bonus: number; stake: number }> = {};
+      const byCurrencyBonus: Record<string, number> = {};
       stats.forEach(s => {
-        if (!byCurrency[s.currency]) byCurrency[s.currency] = { bonus: 0, stake: 0 };
-        byCurrency[s.currency].bonus += s.total_bonus_value;
-        byCurrency[s.currency].stake += s.total_stake;
+        byCurrencyBonus[s.currency] = (byCurrencyBonus[s.currency] || 0) + s.total_bonus_value;
       });
-      if (orphanStakeConsolidated !== 0) {
-        if (!byCurrency[moedaConsolidacaoProjeto]) byCurrency[moedaConsolidacaoProjeto] = { bonus: 0, stake: 0 };
-        byCurrency[moedaConsolidacaoProjeto].stake += orphanStakeConsolidated;
-      }
-      totalBonusValueDisplay = Object.entries(byCurrency).map(([curr, vals]) => formatValue(vals.bonus, curr)).join(' + ');
-      totalStakeDisplay = Object.entries(byCurrency).map(([curr, vals]) => formatValue(vals.stake, curr)).join(' + ');
+      totalBonusValueDisplay = Object.entries(byCurrencyBonus).map(([curr, val]) => formatValue(val, curr)).join(' + ');
+      // Use raw volume breakdown for stake display
+      totalStakeDisplay = volumeBreakdown.map(item => formatValue(item.valor, item.moeda)).join(' + ');
     } else {
       const currency = currencies[0] || 'BRL';
       totalBonusValueDisplay = formatValue(stats.reduce((sum, s) => sum + s.total_bonus_value, 0), currency);
-      totalStakeDisplay = formatValue(stats.reduce((sum, s) => sum + s.total_stake, 0) + orphanStakeConsolidated, currency);
+      const rawTotal = volumeBreakdown.reduce((sum, item) => sum + item.valor, 0);
+      totalStakeDisplay = formatValue(rawTotal > 0 ? rawTotal : totalVolumeConsolidated, currency);
     }
 
     // Status breakdown
@@ -412,7 +438,7 @@ export function useProjectBonusAnalytics(projectId: string): UseProjectBonusAnal
       total_volume_consolidated: totalVolumeConsolidated,
       moeda_consolidacao: moedaConsolidacaoProjeto,
     };
-  }, [stats, bookmakerStatuses, moedaConsolidacaoProjeto, orphanStakeConsolidated]);
+  }, [stats, bookmakerStatuses, moedaConsolidacaoProjeto, orphanStakeConsolidated, rawVolumeBreakdown]);
 
   return {
     stats,
