@@ -1,4 +1,4 @@
-import { Bell, Users, Users2, Landmark, Wallet, Building2, TrendingUp, UserPlus, PieChart, Briefcase, FolderKanban, FlaskConical, Settings, LogOut, Star, Shield, Calculator, StickyNote, ShieldCheck, ChevronUp, ChevronDown, Sun, Moon } from "lucide-react";
+import { Bell, Users, Users2, Landmark, Wallet, Building2, TrendingUp, UserPlus, PieChart, Briefcase, FolderKanban, FlaskConical, Settings, LogOut, Star, Shield, Calculator, StickyNote, ShieldCheck, ChevronUp, ChevronDown, Sun, Moon, Target, Layers, ArrowLeftRight } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -12,6 +12,8 @@ import { useUserWorkspaces } from "@/hooks/useUserWorkspaces";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
+import { openApostaWindow, openApostaMultiplaWindow, openSurebetWindow } from "@/lib/windowHelper";
 import { getRoleLabel } from "@/lib/roleLabels";
 import {
   Sidebar,
@@ -387,38 +389,69 @@ export function AppSidebar() {
   const renderProjectFavoriteItem = (projectFavorite: { project_id: string }) => {
     const projectPath = `/projeto/${projectFavorite.project_id}`;
     const projectName = projectNames[projectFavorite.project_id] || "Projeto";
+    const projetoId = projectFavorite.project_id;
 
-    return (
-      <SidebarMenuItem key={projectFavorite.project_id}>
-        {isCollapsed ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <SidebarMenuButton asChild isActive={currentPath === projectPath}>
-                <NavLink 
-                  to={projectPath}
-                  className="flex items-center justify-center h-9 w-9 rounded-md transition-colors hover:bg-primary/10"
-                  activeClassName="bg-primary/10 text-primary"
-                >
-                  <FolderKanban className="h-4 w-4" />
-                </NavLink>
-              </SidebarMenuButton>
-            </TooltipTrigger>
-            <TooltipContent side="right" className="font-medium">
-              {projectName}
-            </TooltipContent>
-          </Tooltip>
-        ) : (
+    const handleOpenSimples = () => {
+      openApostaWindow({ projetoId, activeTab: 'apostas', estrategia: 'PUNTER' });
+    };
+    const handleOpenMultipla = () => {
+      openApostaMultiplaWindow({ projetoId, activeTab: 'apostas', estrategia: 'PUNTER' });
+    };
+    const handleOpenSurebet = () => {
+      openSurebetWindow({ projetoId, activeTab: 'surebet' });
+    };
+
+    const navContent = isCollapsed ? (
+      <Tooltip>
+        <TooltipTrigger asChild>
           <SidebarMenuButton asChild isActive={currentPath === projectPath}>
             <NavLink 
               to={projectPath}
-              className="flex items-center gap-3 px-3 py-2 rounded-md transition-colors hover:bg-primary/10"
-              activeClassName="bg-primary/10 text-primary font-medium"
+              className="flex items-center justify-center h-9 w-9 rounded-md transition-colors hover:bg-primary/10"
+              activeClassName="bg-primary/10 text-primary"
             >
-              <FolderKanban className="h-4 w-4 shrink-0" />
-              <span className="text-sm truncate">{projectName}</span>
+              <FolderKanban className="h-4 w-4" />
             </NavLink>
           </SidebarMenuButton>
-        )}
+        </TooltipTrigger>
+        <TooltipContent side="right" className="font-medium">
+          {projectName}
+        </TooltipContent>
+      </Tooltip>
+    ) : (
+      <SidebarMenuButton asChild isActive={currentPath === projectPath}>
+        <NavLink 
+          to={projectPath}
+          className="flex items-center gap-3 px-3 py-2 rounded-md transition-colors hover:bg-primary/10"
+          activeClassName="bg-primary/10 text-primary font-medium"
+        >
+          <FolderKanban className="h-4 w-4 shrink-0" />
+          <span className="text-sm truncate">{projectName}</span>
+        </NavLink>
+      </SidebarMenuButton>
+    );
+
+    return (
+      <SidebarMenuItem key={projectFavorite.project_id}>
+        <ContextMenu>
+          <ContextMenuTrigger asChild>
+            {navContent}
+          </ContextMenuTrigger>
+          <ContextMenuContent className="w-48">
+            <ContextMenuItem onClick={handleOpenSimples}>
+              <Target className="mr-2 h-4 w-4" />
+              Aposta Simples
+            </ContextMenuItem>
+            <ContextMenuItem onClick={handleOpenMultipla}>
+              <Layers className="mr-2 h-4 w-4" />
+              Aposta Múltipla
+            </ContextMenuItem>
+            <ContextMenuItem onClick={handleOpenSurebet}>
+              <ArrowLeftRight className="mr-2 h-4 w-4" />
+              Surebet
+            </ContextMenuItem>
+          </ContextMenuContent>
+        </ContextMenu>
       </SidebarMenuItem>
     );
   };
