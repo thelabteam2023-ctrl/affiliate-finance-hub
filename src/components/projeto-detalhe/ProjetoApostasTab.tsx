@@ -188,6 +188,7 @@ interface Surebet {
   esporte: string;
   modelo: string;
   estrategia: string | null;
+  contexto_operacional?: string | null;
   stake_total: number;
   spread_calculado: number | null;
   roi_esperado: number | null;
@@ -267,17 +268,27 @@ function getSurebetContexto(
   surebet: Surebet,
   bookmakersComBonusAtivo: string[]
 ): ApostaContexto {
-  // Verifica se alguma perna usa freebet
+  // PRIORIDADE 1: contexto_operacional explícito salvo no BD
+  if (surebet.contexto_operacional) {
+    const ctx = surebet.contexto_operacional as ApostaContexto;
+    if (["NORMAL", "FREEBET", "BONUS", "SUREBET"].includes(ctx)) {
+      return ctx;
+    }
+  }
+
+  // PRIORIDADE 2: estratégia explícita salva no BD
+  if (surebet.estrategia === "EXTRACAO_BONUS") return "BONUS";
+  if (surebet.estrategia === "EXTRACAO_FREEBET") return "FREEBET";
+
+  // FALLBACK legado: inferir pelas pernas/bookmakers
   const hasFreebetPerna = surebet.pernas?.some(p => p.tipo_freebet || p.gerou_freebet);
   if (hasFreebetPerna) return "FREEBET";
-  
-  // Verifica se alguma perna tem bônus ativo via bookmaker
-  // Para surebets, usamos apenas o bookmaker já que pernas não têm estrategia individual
+
   const hasBonusPerna = surebet.pernas?.some(p => 
     bookmakersComBonusAtivo.includes(p.bookmaker_id)
   );
   if (hasBonusPerna) return "BONUS";
-  
+
   return "NORMAL";
 }
 
@@ -577,6 +588,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
           id, evento, esporte, modelo, stake_total, spread_calculado,
           roi_esperado, roi_real, lucro_esperado, lucro_prejuizo,
           status, resultado, data_aposta, observacoes, created_at, pernas, estrategia,
+          contexto_operacional,
           workspace_id, moeda_operacao, stake_consolidado, pl_consolidado,
           valor_brl_referencia, lucro_prejuizo_brl_referencia,
           apostas_pernas (
