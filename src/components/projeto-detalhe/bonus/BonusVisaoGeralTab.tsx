@@ -297,12 +297,17 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
 
       if (error) throw error;
 
-      return (data || []).map(entry => ({
-        valor: -(Number(entry.valor) || 0), // Negativo pois é perda
-        moeda: entry.moeda || moedaMap.get(entry.origem_bookmaker_id || "") || "BRL",
-        bookmaker_id: entry.origem_bookmaker_id || "",
-        data_operacional: entry.data_transacao,
-      }));
+      return (data || []).map(entry => {
+        const meta = typeof entry.auditoria_metadata === "string" ? JSON.parse(entry.auditoria_metadata) : entry.auditoria_metadata;
+        const valorPerdido = Number(meta?.valor_perdido ?? entry.valor) || 0;
+
+        return {
+          valor: -valorPerdido, // Negativo pois é perda
+          moeda: entry.moeda || moedaMap.get(entry.origem_bookmaker_id || "") || "BRL",
+          bookmaker_id: entry.origem_bookmaker_id || "",
+          data_operacional: entry.data_transacao,
+        };
+      });
     },
     enabled: !!projetoId,
     staleTime: PERIOD_STALE_TIME,

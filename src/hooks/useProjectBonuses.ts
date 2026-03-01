@@ -592,23 +592,32 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
         finalize_reason: reason,
       };
 
-      const { error } = await supabase
+      if (reason === "cancelled_reversed" && (!debitAmount || debitAmount <= 0)) {
+        throw new Error("Informe o valor perdido para finalizar como Cancelado / Revertido.");
+      }
+
+      const { data: updatedBonus, error } = await supabase
         .from("project_bookmaker_link_bonuses")
         .update(updateData)
         .eq("id", id)
-        .eq("status", "credited"); // Only finalize if still credited (DB-level guard)
+        .eq("status", "credited") // Only finalize if still credited (DB-level guard)
+        .select("id")
+        .maybeSingle();
 
       if (error) throw error;
+      if (!updatedBonus) {
+        throw new Error("Este bônus não está mais em estado creditado para finalização.");
+      }
 
-      // FINANCIAL IMPACT: If cancelled_reversed with debit amount, create ledger entry
-      if (reason === "cancelled_reversed" && debitAmount && debitAmount > 0 && currentBonus) {
+      // FINANCIAL IMPACT: cancelled_reversed MUST create ledger entry
+      if (reason === "cancelled_reversed" && currentBonus) {
         const { error: ledgerError } = await supabase
           .from("cash_ledger")
           .insert({
             tipo_transacao: "AJUSTE_SALDO",
             tipo_moeda: "FIAT",
             moeda: currentBonus.currency || "BRL",
-            valor: debitAmount,
+            valor: debitAmount!,
             status: "CONFIRMADO",
             data_transacao: new Date().toISOString().split("T")[0],
             data_confirmacao: new Date().toISOString(),
@@ -629,8 +638,18 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
           });
 
         if (ledgerError) {
-          console.error("Erro ao criar débito no ledger:", ledgerError);
-          toast.error("Bônus finalizado, mas houve erro ao debitar o saldo. Verifique manualmente.");
+          // Rollback de estado para evitar bônus finalizado sem débito financeiro
+          await supabase
+            .from("project_bookmaker_link_bonuses")
+            .update({
+              status: "credited",
+              finalized_at: null,
+              finalized_by: null,
+              finalize_reason: null,
+            } as any)
+            .eq("id", id);
+
+          throw new Error(`Falha ao debitar valor perdido no saldo: ${ledgerError.message}`);
         }
       }
 
@@ -801,6 +820,10 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
   // Update finalize reason mutation (ONLY changes finalize_reason, no financial impact)
   const updateFinalizeReasonMutation = useMutation({
     mutationFn: async ({ id, reason }: { id: string; reason: FinalizeReason }) => {
+      if (reason === "cancelled_reversed") {
+        throw new Error("Para usar 'Cancelado / Revertido', finalize pelo fluxo completo informando o valor perdido.");
+      }
+
       const { error } = await supabase
         .from("project_bookmaker_link_bonuses")
         .update({ finalize_reason: reason } as any)
