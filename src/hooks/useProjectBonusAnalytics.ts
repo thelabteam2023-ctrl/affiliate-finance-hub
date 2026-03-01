@@ -77,7 +77,9 @@ interface UseProjectBonusAnalyticsReturn {
   refetch: () => void;
 }
 
-async function fetchBonusAnalytics(projectId: string): Promise<AnalyticsRawData> {
+type ConvertToConsolidationFn = (valor: number, moedaOrigem: string) => number;
+
+async function fetchBonusAnalytics(projectId: string, convertToConsolidationOficial?: ConvertToConsolidationFn): Promise<AnalyticsRawData> {
   // 1. Buscar bônus DO PROJETO agrupados por bookmaker
   const { data: bonusData, error: bonusError } = await supabase
     .from("project_bookmaker_link_bonuses")
@@ -163,10 +165,17 @@ async function fetchBonusAnalytics(projectId: string): Promise<AnalyticsRawData>
   // Função de conversão para moeda de consolidação (mesma lógica de useKpiBreakdowns)
   const convertToConsolidation = (valor: number, moedaOrigem: string): number => {
     if (!valor || moedaOrigem === moedaConsolidacao) return valor;
-    if (cotacaoTrabalho <= 0) return valor; // sem taxa, retorna bruto
+
+    // Prioridade: usar a mesma fonte oficial já aplicada no restante da UI/KPIs
+    if (convertToConsolidationOficial) {
+      return convertToConsolidationOficial(valor, moedaOrigem);
+    }
+
+    // Fallback operacional (mantido para compatibilidade)
+    if (cotacaoTrabalho <= 0) return valor;
     if (moedaConsolidacao === 'BRL') return valor * cotacaoTrabalho;
     if (moedaOrigem === 'BRL') return valor / cotacaoTrabalho;
-    return valor; // cross-currency sem taxa disponível
+    return valor;
   };
 
   let orphanStakeConsolidated = 0;
@@ -358,10 +367,13 @@ const emptySummary: ProjectBonusAnalyticsSummary = {
   moeda_consolidacao: 'BRL',
 };
 
-export function useProjectBonusAnalytics(projectId: string): UseProjectBonusAnalyticsReturn {
+export function useProjectBonusAnalytics(
+  projectId: string,
+  convertToConsolidationOficial?: ConvertToConsolidationFn,
+): UseProjectBonusAnalyticsReturn {
   const { data: rawData, isLoading, error, refetch } = useQuery({
-    queryKey: ["bonus-analytics", projectId],
-    queryFn: () => fetchBonusAnalytics(projectId),
+    queryKey: ["bonus-analytics", projectId, Boolean(convertToConsolidationOficial)],
+    queryFn: () => fetchBonusAnalytics(projectId, convertToConsolidationOficial),
     enabled: !!projectId,
     staleTime: PERIOD_STALE_TIME,
     gcTime: PERIOD_GC_TIME,

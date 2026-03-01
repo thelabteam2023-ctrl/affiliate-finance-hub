@@ -22,7 +22,7 @@ interface BonusSummaryCardsProps {
 export function BonusSummaryCards({ projetoId, compact = false }: BonusSummaryCardsProps) {
   const { bonuses, getSummary, loading: bonusesLoading } = useProjectBonuses({ projectId: projetoId });
   const { formatCurrency, convertToConsolidation, convertToConsolidationOficial } = useProjetoCurrency(projetoId);
-  const { summary: analyticsSummary } = useProjectBonusAnalytics(projetoId);
+  const { summary: analyticsSummary } = useProjectBonusAnalytics(projetoId, convertToConsolidationOficial);
 
   const summary = getSummary();
 

@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useProjectBonusAnalytics, BookmakerBonusStats } from "@/hooks/useProjectBonusAnalytics";
+import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { useWithdrawalLeadTime, formatLeadTimeDays } from "@/hooks/useWithdrawalLeadTime";
 import { ProjectBonusAnalyticsSummary } from "./ProjectBonusAnalyticsSummary";
 import { ProjectBonusDetailDialog } from "./ProjectBonusDetailDialog";
@@ -31,7 +32,8 @@ interface ProjectBonusAnalyticsTabProps {
 }
 
 export function ProjectBonusAnalyticsTab({ projectId }: ProjectBonusAnalyticsTabProps) {
-  const { stats, summary, loading, error } = useProjectBonusAnalytics(projectId);
+  const { convertToConsolidationOficial } = useProjetoCurrency(projectId);
+  const { stats, summary, loading, error } = useProjectBonusAnalytics(projectId, convertToConsolidationOficial);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedBookmaker, setSelectedBookmaker] = useState<BookmakerBonusStats | null>(null);
 
