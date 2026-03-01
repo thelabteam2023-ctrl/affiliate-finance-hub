@@ -100,21 +100,37 @@ async function fetchBreakdownsData(
 
   const cotacaoTrabalho = projetoData?.cotacao_trabalho || 0;
 
-  // Função para obter taxa efetiva (trabalho > API fallback)
-  const getEffectiveRate = (moedaOrigem: string): number => {
-    if (cotacaoTrabalho > 0) return cotacaoTrabalho;
-    if (getRateFallback) return getRateFallback(moedaOrigem);
+  // Taxa para BRL por moeda (hierarquia: trabalho para USD > fallback)
+  const getRateToBRL = (moeda: string): number => {
+    const m = (moeda || 'BRL').toUpperCase();
+    if (m === 'BRL') return 1;
+
+    // cotacao_trabalho representa USD->BRL no contexto operacional
+    if (m === 'USD' && cotacaoTrabalho > 0) return cotacaoTrabalho;
+
+    if (getRateFallback) {
+      const r = getRateFallback(m);
+      if (r > 0) return r;
+    }
+
     return 0;
   };
 
-  // Função de conversão para consolidação
+  // Conversão pivô BRL: origem -> BRL -> moedaConsolidacao
   const convertToConsolidation = (valor: number, moedaOrigem: string): number => {
-    if (!valor || moedaOrigem === moedaConsolidacao) return valor;
-    const taxa = getEffectiveRate(moedaOrigem);
-    if (!taxa || taxa <= 0) return valor;
-    if (moedaConsolidacao === 'BRL') return valor * taxa;
-    if (moedaOrigem === 'BRL') return valor / taxa;
-    return valor * taxa;
+    if (!valor) return valor;
+
+    const origem = (moedaOrigem || 'BRL').toUpperCase();
+    const destino = (moedaConsolidacao || 'BRL').toUpperCase();
+    if (origem === destino) return valor;
+
+    const rateOrigemToBRL = getRateToBRL(origem);
+    const rateDestinoToBRL = getRateToBRL(destino);
+
+    if (rateOrigemToBRL <= 0 || rateDestinoToBRL <= 0) return valor;
+
+    const valorEmBRL = origem === 'BRL' ? valor : valor * rateOrigemToBRL;
+    return destino === 'BRL' ? valorEmBRL : valorEmBRL / rateDestinoToBRL;
   };
 
   // Fetch dados de todos os módulos em paralelo

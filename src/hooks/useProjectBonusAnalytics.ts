@@ -65,6 +65,7 @@ interface AnalyticsRawData {
   stats: BookmakerBonusStats[];
   bookmakerStatuses: Map<string, string>;
   moedaConsolidacao: string;
+  orphanStakeConsolidated: number;
 }
 
 interface UseProjectBonusAnalyticsReturn {
@@ -108,7 +109,7 @@ async function fetchBonusAnalytics(projectId: string): Promise<AnalyticsRawData>
     .filter((id: string | null): id is string => !!id);
 
   if (bookmakerIds.length === 0) {
-    return { stats: [], bookmakerStatuses: new Map(), moedaConsolidacao: 'BRL' };
+    return { stats: [], bookmakerStatuses: new Map(), moedaConsolidacao: 'BRL', orphanStakeConsolidated: 0 };
   }
 
   // 2. Parallel fetches
@@ -135,7 +136,6 @@ async function fetchBonusAnalytics(projectId: string): Promise<AnalyticsRawData>
         bookmakers!apostas_unificada_bookmaker_id_fkey ( bookmaker_catalogo_id, moeda )
       `)
       .eq("projeto_id", projectId)
-      .in("bookmaker_id", bookmakerIds)
       .or("bonus_id.not.is.null,is_bonus_bet.eq.true,estrategia.eq.EXTRACAO_BONUS,contexto_operacional.eq.BONUS")
       .neq("status", "CANCELADA"),
     supabase
@@ -167,6 +167,8 @@ async function fetchBonusAnalytics(projectId: string): Promise<AnalyticsRawData>
     if (moedaOrigem === 'BRL') return valor / cotacaoTrabalho;
     return valor; // cross-currency sem taxa disponível
   };
+
+  let orphanStakeConsolidated = 0;
 
   // 3. Agregar por bookmaker_catalogo_id
   const catalogoMap = new Map<string, {
@@ -208,7 +210,10 @@ async function fetchBonusAnalytics(projectId: string): Promise<AnalyticsRawData>
 
   betsData.forEach((bet: any) => {
     const catalogoId = bet.bookmakers?.bookmaker_catalogo_id;
-    if (!catalogoId || !catalogoMap.has(catalogoId)) return;
+    if (!catalogoId || !catalogoMap.has(catalogoId)) {
+      orphanStakeConsolidated += getConsolidatedStake(bet, convertToConsolidation, moedaConsolidacao);
+      return;
+    }
     catalogoMap.get(catalogoId)!.bets.push(bet);
   });
 
@@ -303,7 +308,7 @@ async function fetchBonusAnalytics(projectId: string): Promise<AnalyticsRawData>
     });
   });
 
-  return { stats: statsArray, bookmakerStatuses: statusMap, moedaConsolidacao };
+  return { stats: statsArray, bookmakerStatuses: statusMap, moedaConsolidacao, orphanStakeConsolidated };
 }
 
 const emptyBreakdown: BookmakerStatusBreakdown = {
@@ -335,9 +340,10 @@ export function useProjectBonusAnalytics(projectId: string): UseProjectBonusAnal
   const stats = rawData?.stats ?? [];
   const bookmakerStatuses = rawData?.bookmakerStatuses ?? new Map<string, string>();
   const moedaConsolidacaoProjeto = rawData?.moedaConsolidacao ?? 'BRL';
+  const orphanStakeConsolidated = rawData?.orphanStakeConsolidated ?? 0;
 
   const summary = useMemo((): ProjectBonusAnalyticsSummary => {
-    if (stats.length === 0) {
+    if (stats.length === 0 && orphanStakeConsolidated <= 0) {
       return { ...emptySummary, moeda_consolidacao: moedaConsolidacaoProjeto };
     }
 
@@ -359,7 +365,7 @@ export function useProjectBonusAnalytics(projectId: string): UseProjectBonusAnal
       .map(([moeda, valor]) => ({ moeda, valor }))
       .filter(item => Math.abs(item.valor) >= 0.01);
 
-    const totalVolumeConsolidated = stats.reduce((sum, s) => sum + s.total_stake, 0);
+    const totalVolumeConsolidated = stats.reduce((sum, s) => sum + s.total_stake, 0) + orphanStakeConsolidated;
 
     let totalBonusValueDisplay: string;
     let totalStakeDisplay: string;
@@ -371,12 +377,16 @@ export function useProjectBonusAnalytics(projectId: string): UseProjectBonusAnal
         byCurrency[s.currency].bonus += s.total_bonus_value;
         byCurrency[s.currency].stake += s.total_stake;
       });
+      if (orphanStakeConsolidated !== 0) {
+        if (!byCurrency[moedaConsolidacaoProjeto]) byCurrency[moedaConsolidacaoProjeto] = { bonus: 0, stake: 0 };
+        byCurrency[moedaConsolidacaoProjeto].stake += orphanStakeConsolidated;
+      }
       totalBonusValueDisplay = Object.entries(byCurrency).map(([curr, vals]) => formatValue(vals.bonus, curr)).join(' + ');
       totalStakeDisplay = Object.entries(byCurrency).map(([curr, vals]) => formatValue(vals.stake, curr)).join(' + ');
     } else {
       const currency = currencies[0] || 'BRL';
       totalBonusValueDisplay = formatValue(stats.reduce((sum, s) => sum + s.total_bonus_value, 0), currency);
-      totalStakeDisplay = formatValue(stats.reduce((sum, s) => sum + s.total_stake, 0), currency);
+      totalStakeDisplay = formatValue(stats.reduce((sum, s) => sum + s.total_stake, 0) + orphanStakeConsolidated, currency);
     }
 
     // Status breakdown
@@ -402,7 +412,7 @@ export function useProjectBonusAnalytics(projectId: string): UseProjectBonusAnal
       total_volume_consolidated: totalVolumeConsolidated,
       moeda_consolidacao: moedaConsolidacaoProjeto,
     };
-  }, [stats, bookmakerStatuses, moedaConsolidacaoProjeto]);
+  }, [stats, bookmakerStatuses, moedaConsolidacaoProjeto, orphanStakeConsolidated]);
 
   return {
     stats,
