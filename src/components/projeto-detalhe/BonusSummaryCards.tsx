@@ -263,9 +263,7 @@ export function BonusSummaryCards({ projetoId, compact = false }: BonusSummaryCa
             moedaConsolidacao={analyticsSummary.moeda_consolidacao}
           >
             <div className="text-2xl font-bold truncate">
-              {formatCurrency(analyticsSummary.volume_breakdown.reduce((acc, item) => 
-                acc + convertToConsolidationOficial(item.valor, item.moeda), 0
-              ))}
+              {formatCurrency(analyticsSummary.total_volume_consolidated)}
             </div>
           </CurrencyBreakdownTooltip>
           <p className="text-xs text-muted-foreground">Volume apostado em bônus</p>

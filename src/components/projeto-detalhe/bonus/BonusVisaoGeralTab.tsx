@@ -476,9 +476,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
                 moedaConsolidacao={analyticsSummary.moeda_consolidacao}
               >
                 <span className="truncate">
-                  {formatCurrency(analyticsSummary.volume_breakdown.reduce((acc, item) => 
-                    acc + convertToConsolidationOficial(item.valor, item.moeda), 0
-                  ))}
+                  {formatCurrency(analyticsSummary.total_volume_consolidated)}
                 </span>
               </CurrencyBreakdownTooltip>
             ),
