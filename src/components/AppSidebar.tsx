@@ -401,56 +401,69 @@ export function AppSidebar() {
       openSurebetWindow({ projetoId, activeTab: 'surebet' });
     };
 
-    const navContent = isCollapsed ? (
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <SidebarMenuButton asChild isActive={currentPath === projectPath}>
-            <NavLink 
-              to={projectPath}
-              className="flex items-center justify-center h-9 w-9 rounded-md transition-colors hover:bg-primary/10"
-              activeClassName="bg-primary/10 text-primary"
-            >
-              <FolderKanban className="h-4 w-4" />
-            </NavLink>
-          </SidebarMenuButton>
-        </TooltipTrigger>
-        <TooltipContent side="right" className="font-medium">
-          {projectName}
-        </TooltipContent>
-      </Tooltip>
-    ) : (
-      <SidebarMenuButton asChild isActive={currentPath === projectPath}>
-        <NavLink 
-          to={projectPath}
-          className="flex items-center gap-3 px-3 py-2 rounded-md transition-colors hover:bg-primary/10"
-          activeClassName="bg-primary/10 text-primary font-medium"
-        >
-          <FolderKanban className="h-4 w-4 shrink-0" />
-          <span className="text-sm truncate">{projectName}</span>
-        </NavLink>
-      </SidebarMenuButton>
+    const contextMenuItems = (
+      <ContextMenuContent className="w-48">
+        <ContextMenuItem onClick={handleOpenSimples}>
+          <Target className="mr-2 h-4 w-4" />
+          Aposta Simples
+        </ContextMenuItem>
+        <ContextMenuItem onClick={handleOpenMultipla}>
+          <Layers className="mr-2 h-4 w-4" />
+          Aposta Múltipla
+        </ContextMenuItem>
+        <ContextMenuItem onClick={handleOpenSurebet}>
+          <ArrowLeftRight className="mr-2 h-4 w-4" />
+          Surebet
+        </ContextMenuItem>
+      </ContextMenuContent>
     );
+
+    if (isCollapsed) {
+      return (
+        <SidebarMenuItem key={projectFavorite.project_id}>
+          <ContextMenu>
+            <ContextMenuTrigger asChild>
+              <div>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <SidebarMenuButton asChild isActive={currentPath === projectPath}>
+                      <NavLink 
+                        to={projectPath}
+                        className="flex items-center justify-center h-9 w-9 rounded-md transition-colors hover:bg-primary/10"
+                        activeClassName="bg-primary/10 text-primary"
+                      >
+                        <FolderKanban className="h-4 w-4" />
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="font-medium">
+                    {projectName}
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+            </ContextMenuTrigger>
+            {contextMenuItems}
+          </ContextMenu>
+        </SidebarMenuItem>
+      );
+    }
 
     return (
       <SidebarMenuItem key={projectFavorite.project_id}>
         <ContextMenu>
           <ContextMenuTrigger asChild>
-            {navContent}
+            <SidebarMenuButton asChild isActive={currentPath === projectPath}>
+              <NavLink 
+                to={projectPath}
+                className="flex items-center gap-3 px-3 py-2 rounded-md transition-colors hover:bg-primary/10"
+                activeClassName="bg-primary/10 text-primary font-medium"
+              >
+                <FolderKanban className="h-4 w-4 shrink-0" />
+                <span className="text-sm truncate">{projectName}</span>
+              </NavLink>
+            </SidebarMenuButton>
           </ContextMenuTrigger>
-          <ContextMenuContent className="w-48">
-            <ContextMenuItem onClick={handleOpenSimples}>
-              <Target className="mr-2 h-4 w-4" />
-              Aposta Simples
-            </ContextMenuItem>
-            <ContextMenuItem onClick={handleOpenMultipla}>
-              <Layers className="mr-2 h-4 w-4" />
-              Aposta Múltipla
-            </ContextMenuItem>
-            <ContextMenuItem onClick={handleOpenSurebet}>
-              <ArrowLeftRight className="mr-2 h-4 w-4" />
-              Surebet
-            </ContextMenuItem>
-          </ContextMenuContent>
+          {contextMenuItems}
         </ContextMenu>
       </SidebarMenuItem>
     );
