@@ -167,6 +167,7 @@ async function fetchBreakdownsData(
   ], moedaConsolidacao);
 
   // === BREAKDOWN VOLUME (stake) ===
+  // NOTA: Giros Grátis NÃO entram no volume (apenas no lucro)
   const volumeBreakdown = createKpiBreakdown([
     createModuleContribution(
       'apostas',
@@ -175,20 +176,10 @@ async function fetchBreakdownsData(
       true,
       { icon: 'Target', color: 'default' }
     ),
-    createModuleContribution(
-      'giros_gratis',
-      'Giros Grátis',
-      girosGratisData.valorTotal || 0,
-      girosGratisData.count > 0,
-      { icon: 'Dices', color: 'default' }
-    ),
   ], moedaConsolidacao);
 
-  // Adiciona breakdown por moeda ao volume
-  volumeBreakdown.currencyBreakdown = combinarBreakdownsMoeda(
-    apostasData.volumePorMoeda,
-    girosGratisData.volumePorMoeda
-  );
+  // Adiciona breakdown por moeda ao volume (apenas apostas, sem giros)
+  volumeBreakdown.currencyBreakdown = apostasData.volumePorMoeda;
 
   // === BREAKDOWN LUCRO ===
   const lucroBreakdown = createKpiBreakdown([
