@@ -25,7 +25,7 @@ export default function ApostaWindowPage() {
   
   const projetoId = searchParams.get('projetoId') || '';
   const activeTab = searchParams.get('tab') || 'apostas';
-  const estrategia = searchParams.get('estrategia') || 'PUNTER';
+  const estrategia = searchParams.get('estrategia') || null;
   
   const isEditing = id && id !== 'novo';
   

@@ -42,9 +42,10 @@ export function openSurebetWindow(params: WindowOpenParams & { numPernas?: numbe
  * Abre o formulário de Aposta Simples em uma nova janela.
  */
 export function openApostaWindow(params: WindowOpenParams) {
-  const { projetoId, id, activeTab = 'apostas', estrategia = 'PUNTER' } = params;
+  const { projetoId, id, activeTab = 'apostas', estrategia } = params;
   const apostaId = id || 'novo';
-  const url = `/janela/aposta/${apostaId}?projetoId=${encodeURIComponent(projetoId)}&tab=${encodeURIComponent(activeTab)}&estrategia=${encodeURIComponent(estrategia)}`;
+  const estrategiaParam = estrategia ? `&estrategia=${encodeURIComponent(estrategia)}` : '';
+  const url = `/janela/aposta/${apostaId}?projetoId=${encodeURIComponent(projetoId)}&tab=${encodeURIComponent(activeTab)}${estrategiaParam}`;
   window.open(url, '_blank', DEFAULT_WINDOW_FEATURES);
 }
 
@@ -52,9 +53,10 @@ export function openApostaWindow(params: WindowOpenParams) {
  * Abre o formulário de Aposta Múltipla em uma nova janela.
  */
 export function openApostaMultiplaWindow(params: WindowOpenParams) {
-  const { projetoId, id, activeTab = 'apostas', estrategia = 'PUNTER' } = params;
+  const { projetoId, id, activeTab = 'apostas', estrategia } = params;
   const apostaId = id || 'novo';
-  const url = `/janela/multipla/${apostaId}?projetoId=${encodeURIComponent(projetoId)}&tab=${encodeURIComponent(activeTab)}&estrategia=${encodeURIComponent(estrategia)}`;
+  const estrategiaParam = estrategia ? `&estrategia=${encodeURIComponent(estrategia)}` : '';
+  const url = `/janela/multipla/${apostaId}?projetoId=${encodeURIComponent(projetoId)}&tab=${encodeURIComponent(activeTab)}${estrategiaParam}`;
   window.open(url, '_blank', DEFAULT_WINDOW_FEATURES);
 }
 
