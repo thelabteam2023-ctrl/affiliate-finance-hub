@@ -1,9 +1,16 @@
 import { useState, useMemo } from "react";
-import { Search, User, Plus, Clock, ArrowUp, ArrowDown } from "lucide-react";
+import { Search, User, Plus, Clock, Edit, Wallet, ArrowLeftRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import { cn } from "@/lib/utils";
 import { maskCPFPartial } from "@/lib/validators";
 import { useActionAccess } from "@/hooks/useModuleAccess";
@@ -29,6 +36,8 @@ interface ParceiroListaSidebarProps {
   onSelect: (id: string) => void;
   showSensitiveData?: boolean;
   onAddParceiro?: () => void;
+  onEditParceiro?: (id: string) => void;
+  onNewTransacao?: (id: string) => void;
 }
 
 /*
@@ -46,6 +55,8 @@ export function ParceiroListaSidebar({
   onSelect,
   showSensitiveData = true,
   onAddParceiro,
+  onEditParceiro,
+  onNewTransacao,
 }: ParceiroListaSidebarProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("ativo");
@@ -135,41 +146,61 @@ export function ParceiroListaSidebar({
             const entries = buildCurrencyEntries(parceiro.resultado_por_moeda, parceiro.moedas_utilizadas);
             
             return (
-              <button
-                key={parceiro.id}
-                onClick={() => onSelect(parceiro.id)}
-                className={cn(
-                  "w-full flex items-center gap-3 p-3 rounded-lg text-left transition-colors",
-                  selectedId === parceiro.id
-                    ? "bg-primary/10 border border-primary/30"
-                    : "hover:bg-muted/50 border border-transparent"
-                )}
-              >
-                <div className={cn(
-                  "flex h-9 w-9 shrink-0 items-center justify-center rounded-full",
-                  parceiro.status === "ativo" ? "bg-primary/10" : "bg-warning/10"
-                )}>
-                  <User className={cn(
-                    "h-4 w-4",
-                    parceiro.status === "ativo" ? "text-primary" : "text-warning"
-                  )} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm leading-tight">{parceiro.nome}</p>
-                  <div className="flex items-center justify-between gap-2 mt-0.5">
-                    <span className="text-xs text-muted-foreground font-mono">
-                      {maskCPFPartial(parceiro.cpf)}
-                    </span>
-                    <NativeCurrencyKpi
-                      entries={entries}
-                      size="xs"
-                      variant="auto"
-                      masked={!showSensitiveData}
-                      showDashOnZero
-                    />
-                  </div>
-                </div>
-              </button>
+              <ContextMenu key={parceiro.id}>
+                <ContextMenuTrigger asChild>
+                  <button
+                    onClick={() => onSelect(parceiro.id)}
+                    className={cn(
+                      "w-full flex items-center gap-3 p-3 rounded-lg text-left transition-colors",
+                      selectedId === parceiro.id
+                        ? "bg-primary/10 border border-primary/30"
+                        : "hover:bg-muted/50 border border-transparent"
+                    )}
+                  >
+                    <div className={cn(
+                      "flex h-9 w-9 shrink-0 items-center justify-center rounded-full",
+                      parceiro.status === "ativo" ? "bg-primary/10" : "bg-warning/10"
+                    )}>
+                      <User className={cn(
+                        "h-4 w-4",
+                        parceiro.status === "ativo" ? "text-primary" : "text-warning"
+                      )} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm leading-tight">{parceiro.nome}</p>
+                      <div className="flex items-center justify-between gap-2 mt-0.5">
+                        <span className="text-xs text-muted-foreground font-mono">
+                          {maskCPFPartial(parceiro.cpf)}
+                        </span>
+                        <NativeCurrencyKpi
+                          entries={entries}
+                          size="xs"
+                          variant="auto"
+                          masked={!showSensitiveData}
+                          showDashOnZero
+                        />
+                      </div>
+                    </div>
+                  </button>
+                </ContextMenuTrigger>
+                <ContextMenuContent className="w-52">
+                  {onEditParceiro && (
+                    <ContextMenuItem onClick={() => onEditParceiro(parceiro.id)} className="gap-2">
+                      <Edit className="h-4 w-4" />
+                      Editar Dados Pessoais
+                    </ContextMenuItem>
+                  )}
+                  {onNewTransacao && (
+                    <>
+                      <ContextMenuSeparator />
+                      <ContextMenuItem onClick={() => onNewTransacao(parceiro.id)} className="gap-2">
+                        <ArrowLeftRight className="h-4 w-4" />
+                        Nova Transação
+                      </ContextMenuItem>
+                    </>
+                  )}
+                </ContextMenuContent>
+              </ContextMenu>
             );
           })}
 
