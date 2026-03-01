@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { LayoutDashboard, Building2, Target, PanelLeft, LayoutList, RotateCcw } from "lucide-react";
+import { LayoutDashboard, Building2, Target, PanelLeft, LayoutList } from "lucide-react";
 import { BonusVisaoGeralTab } from "./BonusVisaoGeralTab";
 import { BonusBookmakersTab } from "./BonusBookmakersTab";
 import { BonusApostasTab } from "./BonusApostasTab";
@@ -11,16 +11,6 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange as FilterDateRange } from "../StandardTimeFilter";
 import { useOpenOperationsCount } from "@/hooks/useOpenOperationsCount";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { startOfDay, endOfDay } from "date-fns";
 
 interface ProjetoBonusAreaProps {
   projetoId: string;
@@ -38,21 +28,18 @@ export function ProjetoBonusArea({ projetoId, refreshTrigger, actionsSlot, onDat
   const { getBookmakersWithActiveBonus, fetchBonuses } = useProjectBonuses({ projectId: projetoId });
   const bookmakersInBonusMode = getBookmakersWithActiveBonus();
   
-  // Count of open operations (pending bets in bonus context) - uses canonical hook
   const { count: openOperationsCount } = useOpenOperationsCount({
     projetoId,
     estrategia: "BONUS",
     refreshTrigger,
   });
   
-  // NAV_ITEMS with dynamic counts
   const NAV_ITEMS = useMemo(() => [
     { value: "visao-geral" as TabValue, label: "Visão Geral", icon: LayoutDashboard },
     { value: "apostas" as TabValue, label: "Operações", icon: Target, showBadge: true, count: openOperationsCount },
     { value: "bookmakers" as TabValue, label: "Por Casa", icon: Building2, showCount: true, count: bookmakersInBonusMode.length },
   ], [openOperationsCount, bookmakersInBonusMode.length]);
   
-  // Refetch when refreshTrigger changes
   useEffect(() => {
     if (refreshTrigger !== undefined && refreshTrigger > 0) {
       fetchBonuses();
@@ -90,98 +77,22 @@ export function ProjetoBonusArea({ projetoId, refreshTrigger, actionsSlot, onDat
   // Standard time filter state
   const [internalPeriod, setInternalPeriod] = useState<StandardPeriodFilter>("mes_atual");
   const [internalDateRange, setInternalDateRange] = useState<FilterDateRange | undefined>(undefined);
-  const [selectedCycleId, setSelectedCycleId] = useState<string>("none");
 
-  // Fetch cycles for this project
-  const { data: projectCycles = [] } = useQuery({
-    queryKey: ["projeto-ciclos-bonus-filter", projetoId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("projeto_ciclos")
-        .select("id, numero_ciclo, data_inicio, data_fim_prevista, data_fim_real, status")
-        .eq("projeto_id", projetoId)
-        .order("numero_ciclo", { ascending: false });
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!projetoId,
-    staleTime: 5 * 60 * 1000,
-  });
-
-  // When a cycle is selected, override the dateRange
   const dateRange = useMemo(() => {
-    if (selectedCycleId !== "none") {
-      const cycle = projectCycles.find(c => c.id === selectedCycleId);
-      if (cycle) {
-        const start = startOfDay(new Date(cycle.data_inicio + "T00:00:00"));
-        const end = endOfDay(new Date((cycle.data_fim_real || cycle.data_fim_prevista) + "T00:00:00"));
-        return { start, end };
-      }
-    }
     return getDateRangeFromPeriod(internalPeriod, internalDateRange);
-  }, [internalPeriod, internalDateRange, selectedCycleId, projectCycles]);
+  }, [internalPeriod, internalDateRange]);
 
-  const isSingleDayPeriod = selectedCycleId === "none" && internalPeriod === "1dia";
+  const isSingleDayPeriod = internalPeriod === "1dia";
 
-  const handleCycleChange = useCallback((value: string) => {
-    setSelectedCycleId(value);
-  }, []);
-
-  const handlePeriodChange = useCallback((period: StandardPeriodFilter) => {
-    setSelectedCycleId("none");
-    setInternalPeriod(period);
-  }, []);
-
-  const handleDateRangeChange = useCallback((range: FilterDateRange | undefined) => {
-    setSelectedCycleId("none");
-    setInternalDateRange(range);
-  }, []);
-
-  // Cycle selector component
-  const cycleSelector = projectCycles.length > 0 ? (
-    <div className="flex items-center gap-2">
-      <Select value={selectedCycleId} onValueChange={handleCycleChange}>
-        <SelectTrigger className="w-[180px] h-8 text-xs">
-          <SelectValue placeholder="Filtrar por ciclo" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="none">Sem filtro de ciclo</SelectItem>
-          {projectCycles.map(cycle => (
-            <SelectItem key={cycle.id} value={cycle.id}>
-              Ciclo {cycle.numero_ciclo} {cycle.status === "CONCLUIDO" ? "✓" : cycle.status === "EM_ANDAMENTO" ? "●" : ""}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      {selectedCycleId !== "none" && (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
-          onClick={() => setSelectedCycleId("none")}
-        >
-          <RotateCcw className="h-3.5 w-3.5" />
-        </Button>
-      )}
-    </div>
-  ) : null;
-
-  // Period filter component (with cycle selector)
+  // Period filter component (with cycle selector via projetoId)
   const periodFilterComponent = (
-    <div className="flex flex-wrap items-center gap-3">
-      <StandardTimeFilter
-        period={internalPeriod}
-        onPeriodChange={handlePeriodChange}
-        customDateRange={internalDateRange}
-        onCustomDateRangeChange={handleDateRangeChange}
-      />
-      {cycleSelector}
-      {selectedCycleId !== "none" && (
-        <Badge variant="outline" className="text-xs text-amber-400 border-amber-500/30 bg-amber-500/10">
-          Ciclo {projectCycles.find(c => c.id === selectedCycleId)?.numero_ciclo}
-        </Badge>
-      )}
-    </div>
+    <StandardTimeFilter
+      period={internalPeriod}
+      onPeriodChange={setInternalPeriod}
+      customDateRange={internalDateRange}
+      onCustomDateRangeChange={setInternalDateRange}
+      projetoId={projetoId}
+    />
   );
 
   const renderContent = () => {
@@ -269,7 +180,6 @@ export function ProjetoBonusArea({ projetoId, refreshTrigger, actionsSlot, onDat
   // Mode: Sidebar
   return (
     <div className="space-y-4">
-      
       <div className="flex gap-6">
         {/* Sidebar Navigation */}
         <div className="w-48 shrink-0">

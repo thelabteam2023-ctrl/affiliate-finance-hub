@@ -259,6 +259,7 @@ export function ProjetoGirosGratisTab({ projetoId }: ProjetoGirosGratisTabProps)
         onPeriodChange={setPeriod}
         customDateRange={customDateRange}
         onCustomDateRangeChange={setCustomDateRange}
+        projetoId={projetoId}
       />
 
       {/* KPIs de Performance - Compactos */}

@@ -642,6 +642,7 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
       onPeriodChange={setInternalPeriod}
       customDateRange={internalDateRange}
       onCustomDateRangeChange={setInternalDateRange}
+      projetoId={projetoId}
     />
   );
 
