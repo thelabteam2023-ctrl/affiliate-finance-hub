@@ -767,6 +767,21 @@ export default function GestaoParceiros() {
                 onSelect={handleSelectParceiroDetalhes}
                 showSensitiveData={showSensitiveData}
                 onAddParceiro={() => setDialogOpen(true)}
+                onEditParceiro={(id) => {
+                  const parceiro = parceiros.find(p => p.id === id);
+                  if (parceiro) {
+                    setEditingParceiro(parceiro);
+                    setViewMode(false);
+                    setDialogOpen(true);
+                  }
+                }}
+                onNewTransacao={(id) => {
+                  handleSelectParceiroDetalhes(id);
+                  setTransacaoBookmaker(null);
+                  setTransacaoTipo("DEPOSITO");
+                  setTransacaoEntryPoint("affiliate_deposit");
+                  setTransacaoDialogOpen(true);
+                }}
               />
 
               {/* MainPanel: altura 100%, gerencia internamente */}
@@ -817,18 +832,18 @@ export default function GestaoParceiros() {
           onConfirmDeposit={handleConfirmDeposit}
         />
 
-        {transacaoBookmaker && (
+        {transacaoDialogOpen && (
           <CaixaTransacaoDialog
             open={transacaoDialogOpen}
             onClose={handleTransacaoClose}
             onSuccess={handleTransacaoClose}
             defaultTipoTransacao={transacaoTipo}
-            defaultOrigemBookmakerId={transacaoTipo === "SAQUE" ? transacaoBookmaker.id : undefined}
-            defaultDestinoBookmakerId={transacaoTipo === "DEPOSITO" ? transacaoBookmaker.id : undefined}
+            defaultOrigemBookmakerId={transacaoBookmaker && transacaoTipo === "SAQUE" ? transacaoBookmaker.id : undefined}
+            defaultDestinoBookmakerId={transacaoBookmaker && transacaoTipo === "DEPOSITO" ? transacaoBookmaker.id : undefined}
             defaultOrigemParceiroId={transacaoTipo === "DEPOSITO" ? selectedParceiroDetalhes || undefined : undefined}
             defaultDestinoParceiroId={transacaoTipo === "SAQUE" ? selectedParceiroDetalhes || undefined : undefined}
             defaultTipoMoeda="FIAT"
-            defaultMoeda={transacaoBookmaker.moeda || "BRL"}
+            defaultMoeda={transacaoBookmaker?.moeda || "BRL"}
             entryPoint={transacaoEntryPoint}
           />
         )}
