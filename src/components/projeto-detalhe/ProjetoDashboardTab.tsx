@@ -480,6 +480,7 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
         onPeriodChange={setPeriod}
         customDateRange={customDateRange}
         onCustomDateRangeChange={setCustomDateRange}
+        projetoId={projetoId}
       />
 
       {/* Conteúdo com transição suave ao trocar filtro */}

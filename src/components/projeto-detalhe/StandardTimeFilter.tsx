@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -7,11 +7,21 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { CalendarIcon, LayoutDashboard, LayoutList, Check, X } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { CalendarIcon, LayoutDashboard, LayoutList, Check, X, RotateCcw } from "lucide-react";
 import { format, startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, subMonths, startOfYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { DateRange } from "react-day-picker";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 export type { DateRange };
 
@@ -45,6 +55,11 @@ interface StandardTimeFilterProps {
   onNavModeChange?: (mode: NavigationMode) => void;
   showNavMode?: boolean;
   className?: string;
+  /** When provided, enables cycle selector for the project */
+  projetoId?: string;
+  /** Controlled cycle selection - if not provided, internal state is used */
+  selectedCycleId?: string;
+  onCycleChange?: (cycleId: string) => void;
 }
 
 const PERIOD_OPTIONS: { value: StandardPeriodFilter; label: string }[] = [
@@ -106,75 +121,100 @@ export function StandardTimeFilter({
   onNavModeChange,
   showNavMode = false,
   className,
+  projetoId,
+  selectedCycleId: controlledCycleId,
+  onCycleChange,
 }: StandardTimeFilterProps) {
   const [calendarOpen, setCalendarOpen] = useState(false);
-  
-  // ============================================
-  // ESTADO TEMPORÁRIO PARA SELEÇÃO DE PERÍODO
-  // ============================================
-  // O filtro real SÓ é atualizado quando o usuário
-  // clica em "Aplicar" com período completo.
-  // ============================================
   const [tempDateRange, setTempDateRange] = useState<DateRange | undefined>(undefined);
+  const [internalCycleId, setInternalCycleId] = useState("none");
 
-  // Sincronizar estado temporário quando o calendário abre
-  useEffect(() => {
-    if (calendarOpen) {
-      // Ao abrir, inicializa com o período atual (se existir)
-      setTempDateRange(customDateRange);
+  const activeCycleId = controlledCycleId ?? internalCycleId;
+  const setActiveCycleId = onCycleChange ?? setInternalCycleId;
+
+  // Fetch cycles when projetoId is provided
+  const { data: allCycles = [] } = useQuery({
+    queryKey: ["projeto-ciclos-filter", projetoId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("projeto_ciclos")
+        .select("id, numero_ciclo, data_inicio, data_fim_prevista, data_fim_real, status")
+        .eq("projeto_id", projetoId!)
+        .order("numero_ciclo", { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!projetoId,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Filter: only show cycles that are active or past (not future/planned)
+  const projectCycles = useMemo(() => {
+    const today = startOfDay(new Date());
+    return allCycles.filter(cycle => {
+      // Show if status is EM_ANDAMENTO or CONCLUIDO
+      if (cycle.status === "EM_ANDAMENTO" || cycle.status === "CONCLUIDO") return true;
+      // Also show if data_inicio <= today (even if status is PLANEJADO but already started)
+      const cycleStart = new Date(cycle.data_inicio + "T00:00:00");
+      return cycleStart <= today;
+    });
+  }, [allCycles]);
+
+  // When cycle is selected, auto-set custom date range
+  const handleCycleSelect = useCallback((value: string) => {
+    setActiveCycleId(value);
+    if (value !== "none") {
+      const cycle = projectCycles.find(c => c.id === value);
+      if (cycle) {
+        const from = new Date(cycle.data_inicio + "T00:00:00");
+        const to = new Date((cycle.data_fim_real || cycle.data_fim_prevista) + "T00:00:00");
+        onCustomDateRangeChange?.({ from, to });
+        onPeriodChange("custom");
+      }
     }
-  }, [calendarOpen]);
+  }, [projectCycles, onCustomDateRangeChange, onPeriodChange, setActiveCycleId]);
 
+  // Clear cycle when user manually changes period
   const handlePeriodChange = (value: string) => {
     if (value) {
+      if (activeCycleId !== "none") {
+        setActiveCycleId("none");
+      }
       onPeriodChange(value as StandardPeriodFilter);
     }
   };
 
-  /**
-   * SELEÇÃO TEMPORÁRIA - NÃO APLICA FILTRO
-   * Apenas atualiza o estado visual do calendário.
-   * O filtro real só é aplicado no handleApplyPeriod.
-   */
+  // Sync state when calendar opens
+  useEffect(() => {
+    if (calendarOpen) {
+      setTempDateRange(customDateRange);
+    }
+  }, [calendarOpen]);
+
   const handleTempDateRangeSelect = useCallback((range: DateRange | undefined) => {
     setTempDateRange(range);
-    // NÃO fecha calendário
-    // NÃO aplica filtro
-    // NÃO dispara fetch
   }, []);
 
-  /**
-   * APLICAÇÃO EXPLÍCITA DO PERÍODO
-   * Só executa quando o período está completo (from + to).
-   */
   const handleApplyPeriod = useCallback(() => {
     if (tempDateRange?.from && tempDateRange?.to) {
-      // Aplica o filtro REAL
+      if (activeCycleId !== "none") {
+        setActiveCycleId("none");
+      }
       onCustomDateRangeChange?.(tempDateRange);
       onPeriodChange("custom");
       setCalendarOpen(false);
     }
-  }, [tempDateRange, onCustomDateRangeChange, onPeriodChange]);
+  }, [tempDateRange, onCustomDateRangeChange, onPeriodChange, activeCycleId, setActiveCycleId]);
 
-  /**
-   * LIMPAR SELEÇÃO TEMPORÁRIA
-   * Reseta apenas o estado temporário, não aplica nada.
-   */
   const handleClearTemp = useCallback(() => {
     setTempDateRange(undefined);
-    // Mantém calendário aberto para nova seleção
   }, []);
 
-  /**
-   * CANCELAR E FECHAR
-   * Descarta seleção temporária e fecha o calendário.
-   */
   const handleCancel = useCallback(() => {
-    setTempDateRange(customDateRange); // Restaura estado original
+    setTempDateRange(customDateRange);
     setCalendarOpen(false);
   }, [customDateRange]);
 
-  // Verifica se o período temporário está completo
   const isPeriodComplete = tempDateRange?.from && tempDateRange?.to;
   const isPeriodStarted = tempDateRange?.from && !tempDateRange?.to;
 
@@ -197,6 +237,9 @@ export function StandardTimeFilter({
     }
     return "Selecione a data inicial";
   };
+
+  const showCycleSelector = !!projetoId && projectCycles.length > 0;
+  const selectedCycle = projectCycles.find(c => c.id === activeCycleId);
 
   return (
     <div className={cn("flex flex-wrap items-center gap-2", className)}>
@@ -226,15 +269,15 @@ export function StandardTimeFilter({
       <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
         <PopoverTrigger asChild>
           <Button
-            variant={period === "custom" ? "default" : "outline"}
+            variant={period === "custom" && activeCycleId === "none" ? "default" : "outline"}
             size="sm"
             className={cn(
               "h-7 text-xs gap-1.5",
-              period === "custom" && "bg-primary text-primary-foreground"
+              period === "custom" && activeCycleId === "none" && "bg-primary text-primary-foreground"
             )}
           >
             <CalendarIcon className="h-3.5 w-3.5" />
-            {period === "custom" ? formatDateRange() : "Período"}
+            {period === "custom" && activeCycleId === "none" ? formatDateRange() : "Período"}
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start">
@@ -250,7 +293,6 @@ export function StandardTimeFilter({
           
           {/* Barra de Status e Ações */}
           <div className="p-3 border-t bg-muted/30">
-            {/* Status da seleção */}
             <div className="flex items-center justify-between mb-3">
               <span className={cn(
                 "text-xs",
@@ -260,7 +302,6 @@ export function StandardTimeFilter({
               </span>
             </div>
             
-            {/* Botões de ação */}
             <div className="flex items-center justify-between gap-2">
               <div className="flex gap-2">
                 {tempDateRange?.from && (
@@ -298,7 +339,6 @@ export function StandardTimeFilter({
               </div>
             </div>
             
-            {/* Dica de uso */}
             {isPeriodStarted && (
               <p className="text-[10px] text-muted-foreground mt-2 text-center">
                 Clique em outra data para definir o período
@@ -307,6 +347,40 @@ export function StandardTimeFilter({
           </div>
         </PopoverContent>
       </Popover>
+
+      {/* Cycle Selector - only shown when project has cycles */}
+      {showCycleSelector && (
+        <>
+          <Select value={activeCycleId} onValueChange={handleCycleSelect}>
+            <SelectTrigger className="w-[170px] h-7 text-xs">
+              <SelectValue placeholder="Filtrar por ciclo" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Sem filtro de ciclo</SelectItem>
+              {projectCycles.map(cycle => (
+                <SelectItem key={cycle.id} value={cycle.id}>
+                  Ciclo {cycle.numero_ciclo} {cycle.status === "CONCLUIDO" ? "✓" : cycle.status === "EM_ANDAMENTO" ? "●" : ""}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {activeCycleId !== "none" && (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                onClick={() => handleCycleSelect("none")}
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+              </Button>
+              <Badge variant="outline" className="text-xs text-amber-400 border-amber-500/30 bg-amber-500/10">
+                Ciclo {selectedCycle?.numero_ciclo}
+              </Badge>
+            </>
+          )}
+        </>
+      )}
 
       {/* Navigation Mode Toggle */}
       {showNavMode && onNavModeChange && (

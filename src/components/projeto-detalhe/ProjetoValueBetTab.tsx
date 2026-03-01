@@ -763,6 +763,7 @@ export function ProjetoValueBetTab({
       onPeriodChange={tabFilters.setPeriod}
       customDateRange={tabFilters.customDateRange}
       onCustomDateRangeChange={tabFilters.setCustomDateRange}
+      projetoId={projetoId}
     />
   );
 

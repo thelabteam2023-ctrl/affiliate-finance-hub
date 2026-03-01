@@ -973,6 +973,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
       onPeriodChange={tabFilters.setPeriod}
       customDateRange={tabFilters.customDateRange}
       onCustomDateRangeChange={tabFilters.setCustomDateRange}
+      projetoId={projetoId}
     />
   );
 

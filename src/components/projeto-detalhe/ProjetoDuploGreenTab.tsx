@@ -845,7 +845,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
   const modeToggle = (
     <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="sm" onClick={handleModeToggle} className="h-8 w-8 p-0 text-muted-foreground/60 hover:text-foreground hover:bg-muted/50 transition-colors">{navMode === "tabs" ? <PanelLeft className="h-4 w-4" /> : <LayoutList className="h-4 w-4" />}</Button></TooltipTrigger><TooltipContent side="bottom" className="text-xs">{navMode === "tabs" ? "Modo Gestão" : "Modo Compacto"}</TooltipContent></Tooltip>
   );
-  const periodFilterComponent = <StandardTimeFilter period={tabFilters.period} onPeriodChange={tabFilters.setPeriod} customDateRange={tabFilters.customDateRange} onCustomDateRangeChange={tabFilters.setCustomDateRange} />;
+  const periodFilterComponent = <StandardTimeFilter period={tabFilters.period} onPeriodChange={tabFilters.setPeriod} customDateRange={tabFilters.customDateRange} onCustomDateRangeChange={tabFilters.setCustomDateRange} projetoId={projetoId} />;
 
   const renderVisaoGeral = () => (
     <div className="space-y-6">
