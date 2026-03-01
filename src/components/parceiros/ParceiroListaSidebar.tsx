@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Search, User, Plus, Clock, Edit, Wallet, ArrowLeftRight } from "lucide-react";
+import { Search, User, Plus, Clock, Edit, ArrowLeftRight, ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
@@ -37,7 +37,9 @@ interface ParceiroListaSidebarProps {
   showSensitiveData?: boolean;
   onAddParceiro?: () => void;
   onEditParceiro?: (id: string) => void;
-  onNewTransacao?: (id: string) => void;
+  onDeposito?: (id: string) => void;
+  onSaque?: (id: string) => void;
+  onTransferencia?: (id: string) => void;
 }
 
 /*
@@ -56,7 +58,9 @@ export function ParceiroListaSidebar({
   showSensitiveData = true,
   onAddParceiro,
   onEditParceiro,
-  onNewTransacao,
+  onDeposito,
+  onSaque,
+  onTransferencia,
 }: ParceiroListaSidebarProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("ativo");
@@ -190,13 +194,27 @@ export function ParceiroListaSidebar({
                       Editar Dados Pessoais
                     </ContextMenuItem>
                   )}
-                  {onNewTransacao && (
+                  {(onDeposito || onSaque || onTransferencia) && (
                     <>
                       <ContextMenuSeparator />
-                      <ContextMenuItem onClick={() => onNewTransacao(parceiro.id)} className="gap-2">
-                        <ArrowLeftRight className="h-4 w-4" />
-                        Nova Transação
-                      </ContextMenuItem>
+                      {onDeposito && (
+                        <ContextMenuItem onClick={() => onDeposito(parceiro.id)} className="gap-2">
+                          <ArrowDownToLine className="h-4 w-4" />
+                          Depósito
+                        </ContextMenuItem>
+                      )}
+                      {onSaque && (
+                        <ContextMenuItem onClick={() => onSaque(parceiro.id)} className="gap-2">
+                          <ArrowUpFromLine className="h-4 w-4" />
+                          Saque
+                        </ContextMenuItem>
+                      )}
+                      {onTransferencia && (
+                        <ContextMenuItem onClick={() => onTransferencia(parceiro.id)} className="gap-2">
+                          <ArrowLeftRight className="h-4 w-4" />
+                          Transferência
+                        </ContextMenuItem>
+                      )}
                     </>
                   )}
                 </ContextMenuContent>

@@ -775,10 +775,24 @@ export default function GestaoParceiros() {
                     setDialogOpen(true);
                   }
                 }}
-                onNewTransacao={(id) => {
+                onDeposito={(id) => {
                   handleSelectParceiroDetalhes(id);
                   setTransacaoBookmaker(null);
                   setTransacaoTipo("DEPOSITO");
+                  setTransacaoEntryPoint("affiliate_deposit");
+                  setTransacaoDialogOpen(true);
+                }}
+                onSaque={(id) => {
+                  handleSelectParceiroDetalhes(id);
+                  setTransacaoBookmaker(null);
+                  setTransacaoTipo("SAQUE");
+                  setTransacaoEntryPoint("affiliate_deposit");
+                  setTransacaoDialogOpen(true);
+                }}
+                onTransferencia={(id) => {
+                  handleSelectParceiroDetalhes(id);
+                  setTransacaoBookmaker(null);
+                  setTransacaoTipo("TRANSFERENCIA");
                   setTransacaoEntryPoint("affiliate_deposit");
                   setTransacaoDialogOpen(true);
                 }}
