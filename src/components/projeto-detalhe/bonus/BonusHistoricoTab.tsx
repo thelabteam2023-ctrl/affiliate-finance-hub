@@ -106,6 +106,36 @@ export function BonusHistoricoTab({ projetoId }: BonusHistoricoTabProps) {
     gcTime: PERIOD_GC_TIME,
   });
 
+  // Fetch debit amounts for cancelled bonuses
+  const finalizedBonusIds = useMemo(() => bonuses.filter(b => b.status === 'finalized').map(b => b.id), [bonuses]);
+  const { data: bonusDebits = [] } = useQuery({
+    queryKey: ["bonus-debits-historico", projetoId, finalizedBonusIds],
+    queryFn: async () => {
+      if (finalizedBonusIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from("cash_ledger")
+        .select("id, valor, moeda, auditoria_metadata")
+        .eq("ajuste_motivo", "BONUS_CANCELAMENTO");
+      if (error) throw error;
+      return (data || []).filter(d => {
+        const meta = typeof d.auditoria_metadata === "string" ? JSON.parse(d.auditoria_metadata) : d.auditoria_metadata;
+        return meta?.bonus_id && finalizedBonusIds.includes(meta.bonus_id);
+      }).map(d => {
+        const meta = typeof d.auditoria_metadata === "string" ? JSON.parse(d.auditoria_metadata) : d.auditoria_metadata;
+        return { bonusId: meta.bonus_id as string, valor: Number(d.valor) || 0 };
+      });
+    },
+    enabled: !!projetoId && finalizedBonusIds.length > 0,
+    staleTime: PERIOD_STALE_TIME,
+    gcTime: PERIOD_GC_TIME,
+  });
+
+  const debitByBonusId = useMemo(() => {
+    const map = new Map<string, number>();
+    bonusDebits.forEach(d => map.set(d.bonusId, (map.get(d.bonusId) || 0) + d.valor));
+    return map;
+  }, [bonusDebits]);
+
   const formatCurrencyValue = (value: number, moeda: string = 'BRL') => {
     const symbols: Record<string, string> = { BRL: 'R$', USD: '$', EUR: '€', GBP: '£', USDT: '$', USDC: '$' };
     return `${symbols[moeda] || moeda} ${value.toFixed(2)}`;
@@ -258,6 +288,24 @@ export function BonusHistoricoTab({ projetoId }: BonusHistoricoTabProps) {
                         </div>
                         <div className="text-right flex-shrink-0">
                           <p className="font-bold">{formatCurrencyValue(bonus.bonus_amount, bonus.currency)}</p>
+                          {(() => {
+                            const debit = debitByBonusId.get(bonus.id);
+                            if (debit && debit > 0) {
+                              return (
+                                <p className="text-xs text-destructive font-medium">
+                                  -{formatCurrencyValue(debit, bonus.currency)} perdido
+                                </p>
+                              );
+                            }
+                            if (bonus.finalize_reason === "cancelled_reversed") {
+                              return (
+                                <p className="text-xs text-destructive font-medium">
+                                  -{formatCurrencyValue(bonus.bonus_amount, bonus.currency)} perdido
+                                </p>
+                              );
+                            }
+                            return null;
+                          })()}
                           <div className="flex items-center gap-1 justify-end">
                             {getReasonBadge(bonus.finalize_reason)}
                             <button

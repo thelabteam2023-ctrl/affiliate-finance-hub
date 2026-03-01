@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -89,6 +89,38 @@ function FinalizedBonusHistory({
   const [editingBonus, setEditingBonus] = useState<ProjectBonus | null>(null);
   
   const finalizedBonuses = bonuses.filter(b => b.status === 'finalized');
+  
+  // Fetch debit amounts for cancelled bonuses from cash_ledger
+  const finalizedBonusIds = finalizedBonuses.map(b => b.id);
+  const { data: bonusDebits = [] } = useQuery({
+    queryKey: ["bonus-debits", projetoId, finalizedBonusIds],
+    queryFn: async () => {
+      if (finalizedBonusIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from("cash_ledger")
+        .select("id, valor, moeda, auditoria_metadata")
+        .eq("ajuste_motivo", "BONUS_CANCELAMENTO");
+      if (error) throw error;
+      // Filter by bonus_id in metadata
+      return (data || []).filter(d => {
+        const meta = typeof d.auditoria_metadata === "string" ? JSON.parse(d.auditoria_metadata) : d.auditoria_metadata;
+        return meta?.bonus_id && finalizedBonusIds.includes(meta.bonus_id);
+      }).map(d => {
+        const meta = typeof d.auditoria_metadata === "string" ? JSON.parse(d.auditoria_metadata) : d.auditoria_metadata;
+        return { bonusId: meta.bonus_id as string, valor: Number(d.valor) || 0, moeda: d.moeda };
+      });
+    },
+    enabled: !!projetoId && finalizedBonusIds.length > 0,
+    staleTime: PERIOD_STALE_TIME,
+    gcTime: PERIOD_GC_TIME,
+  });
+
+  // Map bonus_id -> debit amount
+  const debitByBonusId = useMemo(() => {
+    const map = new Map<string, number>();
+    bonusDebits.forEach(d => map.set(d.bonusId, (map.get(d.bonusId) || 0) + d.valor));
+    return map;
+  }, [bonusDebits]);
   
   // Fetch ajustes pós-limitação
   const { data: ajustesData = [] } = useQuery({
@@ -246,6 +278,25 @@ function FinalizedBonusHistory({
                         </div>
                         <div className="text-right flex-shrink-0 flex flex-col items-end gap-1">
                           <span className="font-semibold text-sm">{formatCurrency(bonus.bonus_amount, bonus.currency)}</span>
+                          {(() => {
+                            const debit = debitByBonusId.get(bonus.id);
+                            if (debit && debit > 0) {
+                              return (
+                                <span className="text-xs text-destructive font-medium">
+                                  -{formatCurrency(debit, bonus.currency)} perdido
+                                </span>
+                              );
+                            }
+                            // For cancelled/reversed without explicit debit, show bonus_amount as lost
+                            if (bonus.finalize_reason === "cancelled_reversed") {
+                              return (
+                                <span className="text-xs text-destructive font-medium">
+                                  -{formatCurrency(bonus.bonus_amount, bonus.currency)} perdido
+                                </span>
+                              );
+                            }
+                            return null;
+                          })()}
                           <div className="flex items-center gap-1">
                             {getReasonBadge(bonus.finalize_reason)}
                             <button
