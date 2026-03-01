@@ -115,11 +115,24 @@ async function fetchBonusAnalytics(projectId: string): Promise<AnalyticsRawData>
     supabase
       .from("apostas_unificada")
       .select(`
-        id, bookmaker_id, stake, stake_consolidado, resultado, status, bonus_id, moeda_operacao,
+        id,
+        bookmaker_id,
+        stake,
+        stake_total,
+        stake_consolidado,
+        resultado,
+        status,
+        bonus_id,
+        is_bonus_bet,
+        estrategia,
+        contexto_operacional,
+        forma_registro,
+        moeda_operacao,
         bookmakers!apostas_unificada_bookmaker_id_fkey ( bookmaker_catalogo_id, moeda )
       `)
       .eq("projeto_id", projectId)
       .in("bookmaker_id", bookmakerIds)
+      .or("bonus_id.not.is.null,is_bonus_bet.eq.true,estrategia.eq.EXTRACAO_BONUS,contexto_operacional.eq.BONUS")
       .neq("status", "CANCELADA"),
     supabase
       .from("projetos")
@@ -218,7 +231,11 @@ async function fetchBonusAnalytics(projectId: string): Promise<AnalyticsRawData>
     ).length;
 
     const totalBets = bets.length;
-    const totalStake = bets.reduce((sum: number, b: any) => sum + Number(b.stake || 0), 0);
+    const totalStake = bets.reduce((sum: number, b: any) => {
+      const isMultiLeg = b.forma_registro === 'ARBITRAGEM' || b.forma_registro === 'SUREBET';
+      const stakeBase = isMultiLeg ? Number(b.stake_total ?? 0) : Number(b.stake ?? 0);
+      return sum + stakeBase;
+    }, 0);
     const betsWon = bets.filter((b: any) => b.resultado === 'GREEN' || b.resultado === 'MEIO_GREEN').length;
     const betsLost = bets.filter((b: any) => b.resultado === 'RED' || b.resultado === 'MEIO_RED').length;
     const betsPending = bets.filter((b: any) => b.status === 'PENDENTE').length;
