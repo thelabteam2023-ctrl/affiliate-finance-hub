@@ -149,12 +149,10 @@ export function StandardTimeFilter({
   });
 
   // Filter: only show cycles that are active or past (not future/planned)
+  // Only show cycles whose start date has arrived (strictly date-based, ignoring status)
   const projectCycles = useMemo(() => {
     const today = startOfDay(new Date());
     return allCycles.filter(cycle => {
-      // Show if status is EM_ANDAMENTO or CONCLUIDO
-      if (cycle.status === "EM_ANDAMENTO" || cycle.status === "CONCLUIDO") return true;
-      // Also show if data_inicio <= today (even if status is PLANEJADO but already started)
       const cycleStart = new Date(cycle.data_inicio + "T00:00:00");
       return cycleStart <= today;
     });
@@ -246,7 +244,7 @@ export function StandardTimeFilter({
       {/* Period Toggle */}
       <ToggleGroup
         type="single"
-        value={period === "custom" ? undefined : period}
+        value={period === "custom" || activeCycleId !== "none" ? undefined : period}
         onValueChange={handlePeriodChange}
         className="bg-muted/50 p-0.5 rounded-lg"
       >
@@ -257,7 +255,7 @@ export function StandardTimeFilter({
             size="sm"
             className={cn(
               "text-xs px-3 h-7 data-[state=on]:bg-card data-[state=on]:text-foreground data-[state=on]:shadow-sm data-[state=on]:border data-[state=on]:border-border",
-              period === option.value && "bg-card text-foreground shadow-sm border border-border"
+              period === option.value && activeCycleId === "none" && "bg-card text-foreground shadow-sm border border-border"
             )}
           >
             {option.label}
