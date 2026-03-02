@@ -178,6 +178,29 @@ export function CasasLimitadasSmartFilter<T extends CasaLimitadaItem>({ casas, c
         </Select>
       </div>
 
+      {/* Quick filter chips for parceiros */}
+      {filterOptions.parceiros.length > 1 && (
+        <div className="flex flex-wrap gap-1">
+          {filterOptions.parceiros.map((p) => {
+            const isActive = parceiroFilter === p;
+            return (
+              <button
+                key={`parc-${p}`}
+                onClick={() => setParceiroFilter(isActive ? "all" : p)}
+                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium transition-colors border ${
+                  isActive
+                    ? "bg-yellow-500/20 text-yellow-400 border-yellow-500/40"
+                    : "bg-muted/30 text-muted-foreground border-border hover:bg-muted/50"
+                }`}
+              >
+                {getFirstLastName(p)}
+                {isActive && <X className="h-2.5 w-2.5" />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* Results count when filtered */}
       {hasFilter && (
         <div className="flex items-center justify-between">
