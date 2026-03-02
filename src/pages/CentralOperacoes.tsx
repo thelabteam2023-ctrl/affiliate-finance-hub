@@ -77,6 +77,7 @@ import { PagamentoParticipacaoDialog } from "@/components/projetos/PagamentoPart
 import { useCicloAlertas } from "@/hooks/useCicloAlertas";
 import { useRole } from "@/hooks/useRole";
 import { useAuth } from "@/hooks/useAuth";
+import { RegistrarPerdaRapidaDialog } from "@/components/parceiros/RegistrarPerdaRapidaDialog";
 
 // Classificação de domínio dos eventos
 type EventDomain = 'project_event' | 'financial_event' | 'partner_event' | 'admin_event';
@@ -330,6 +331,13 @@ export default function CentralOperacoes() {
   const [dispensaValorComissao, setDispensaValorComissao] = useState(0);
   const [dispensaEstornar, setDispensaEstornar] = useState(false);
   const [dispensaIndicadorNome, setDispensaIndicadorNome] = useState('');
+  const [perdaLimitadaDialog, setPerdaLimitadaDialog] = useState<{
+    open: boolean;
+    bookmakerId: string;
+    bookmakerNome: string;
+    moeda: string;
+    saldoAtual: number;
+  } | null>(null);
   const [mainTab, setMainTabState] = useState<'financeiro' | 'ocorrencias' | 'solicitacoes' | 'alertas'>(() => {
     const saved = localStorage.getItem('central-operacoes-main-tab');
     if (saved === 'financeiro' || saved === 'ocorrencias' || saved === 'solicitacoes' || saved === 'alertas') return saved;
@@ -1337,6 +1345,20 @@ export default function CentralOperacoes() {
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           {alerta.valor && <span className="text-xs font-bold text-orange-400">{formatCurrency(alerta.valor, alerta.moeda)}</span>}
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => setPerdaLimitadaDialog({
+                              open: true,
+                              bookmakerId: alerta.entidade_id,
+                              bookmakerNome: alerta.titulo,
+                              moeda: alerta.moeda || "BRL",
+                              saldoAtual: alerta.valor || 0,
+                            })}
+                            className="border-destructive/50 text-destructive hover:bg-destructive/10 h-6 text-xs px-2"
+                          >
+                            Perda
+                          </Button>
                           <Button size="sm" onClick={() => handleSaqueAction(alerta)} className="bg-orange-600 hover:bg-orange-700 h-6 text-xs px-2">
                             Sacar
                           </Button>
@@ -2269,6 +2291,19 @@ export default function CentralOperacoes() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Dialog Registrar Perda - Casas Limitadas */}
+      {perdaLimitadaDialog && (
+        <RegistrarPerdaRapidaDialog
+          open={perdaLimitadaDialog.open}
+          onOpenChange={(open) => { if (!open) setPerdaLimitadaDialog(null); }}
+          bookmakerId={perdaLimitadaDialog.bookmakerId}
+          bookmakerNome={perdaLimitadaDialog.bookmakerNome}
+          moeda={perdaLimitadaDialog.moeda}
+          saldoAtual={perdaLimitadaDialog.saldoAtual}
+          onSuccess={() => fetchData()}
+        />
+      )}
     </div>
   );
 }
