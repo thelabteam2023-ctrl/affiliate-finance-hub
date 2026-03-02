@@ -16,7 +16,7 @@ import {
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { parseLocalDateTime, extractLocalDateKey } from "@/utils/dateUtils";
+import { parseLocalDateTime, extractLocalDateKey, extractCivilDateKey } from "@/utils/dateUtils";
 
 interface ApostaData {
   data_aposta: string;
@@ -106,7 +106,8 @@ export function CalendarioLucros({
 
     // 2. Extras (cashback, giros grátis) por data de competência
     extrasLucro.forEach((extra) => {
-      const dataKey = extractLocalDateKey(extra.data);
+      // extra.data já vem como YYYY-MM-DD (civil date key), usar diretamente
+      const dataKey = extra.data;
       if (!dataKey) return;
       const atual = mapa.get(dataKey) || { lucro: 0, count: 0 };
       mapa.set(dataKey, {
@@ -154,7 +155,7 @@ export function CalendarioLucros({
     // 2. Extras (cashback, giros grátis) com competência no mês
     const mesAno = format(currentMonth, "yyyy-MM");
     extrasLucro.forEach((extra) => {
-      const extraDate = extractLocalDateKey(extra.data);
+      const extraDate = extra.data;
       if (extraDate && extraDate.startsWith(mesAno)) {
         lucroTotal += extra.valor;
       }
