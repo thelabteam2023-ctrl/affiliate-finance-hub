@@ -210,42 +210,55 @@ async function fetchApostasFiltradas(
 async function fetchExtrasLucroFn(projetoId: string): Promise<ExtraLucroEntry[]> {
   const extras: ExtraLucroEntry[] = [];
 
+  // CORREÇÃO: Buscar moeda_operacao para conversão multi-moeda
   const { data: cashback } = await supabase
     .from("cashback_manual")
-    .select("data_credito, valor")
+    .select("data_credito, valor, moeda_operacao")
     .eq("projeto_id", projetoId);
 
   cashback?.forEach(cb => {
     if (cb.valor && cb.valor > 0) {
-      extras.push({ data: cb.data_credito, valor: cb.valor, tipo: 'cashback' });
+      extras.push({ data: cb.data_credito, valor: cb.valor, moeda: cb.moeda_operacao || "BRL", tipo: 'cashback' });
     }
   });
 
+  // CORREÇÃO: Buscar bookmaker_id para resolver moeda via join
   const { data: girosGratis } = await supabase
     .from("giros_gratis" as any)
-    .select("data_registro, valor_retorno")
+    .select("data_registro, valor_retorno, bookmaker_id")
     .eq("projeto_id", projetoId)
     .eq("status", "confirmado")
     .not("valor_retorno", "is", null);
 
+  // Buscar moedas dos bookmakers para giros grátis
+  const girosBookmakerIds = [...new Set((girosGratis as any[])?.map((g: any) => g.bookmaker_id).filter(Boolean) || [])];
+  let bookmakerMoedaMap: Record<string, string> = {};
+  if (girosBookmakerIds.length > 0) {
+    const { data: bookmakersMoeda } = await supabase
+      .from("bookmakers")
+      .select("id, moeda")
+      .in("id", girosBookmakerIds);
+    bookmakersMoeda?.forEach(bm => { bookmakerMoedaMap[bm.id] = bm.moeda; });
+  }
+
   (girosGratis as any[])?.forEach((gg: any) => {
     if (gg.valor_retorno && gg.valor_retorno > 0 && gg.data_registro) {
-      extras.push({ data: gg.data_registro, valor: gg.valor_retorno, tipo: 'giro_gratis' });
+      const moeda = bookmakerMoedaMap[gg.bookmaker_id] || "BRL";
+      extras.push({ data: gg.data_registro, valor: gg.valor_retorno, moeda, tipo: 'giro_gratis' });
     }
   });
 
-  // CORREÇÃO: Buscar bônus creditados da tabela master (project_bookmaker_link_bonuses)
-  // em vez do cash_ledger, que continha ajustes de bônus contados como créditos novos
+  // CORREÇÃO: Buscar currency para conversão multi-moeda
   const { data: bonusCreditados } = await supabase
     .from("project_bookmaker_link_bonuses")
-    .select("credited_at, bonus_amount, status")
+    .select("credited_at, bonus_amount, status, currency")
     .eq("project_id", projetoId)
     .in("status", ["credited", "finalized"]);
 
   bonusCreditados?.forEach(b => {
     const valor = Number(b.bonus_amount) || 0;
     if (valor > 0 && b.credited_at) {
-      extras.push({ data: b.credited_at.split('T')[0], valor, tipo: 'bonus' });
+      extras.push({ data: b.credited_at.split('T')[0], valor, moeda: b.currency || "BRL", tipo: 'bonus' });
     }
   });
 
@@ -257,9 +270,10 @@ async function fetchExtrasLucroFn(projetoId: string): Promise<ExtraLucroEntry[]>
 
   const projectBookmakerIds = new Set(projectBookmakers?.map(b => b.id) || []);
 
+  // CORREÇÃO: Buscar moeda para conversão
   const { data: eventos } = await supabase
     .from("cash_ledger")
-    .select("data_transacao, valor, tipo_transacao, evento_promocional_tipo, destino_bookmaker_id")
+    .select("data_transacao, valor, tipo_transacao, evento_promocional_tipo, destino_bookmaker_id, moeda")
     .eq("status", "CONFIRMADO")
     .in("tipo_transacao", ["FREEBET_CONVERTIDA", "CREDITO_PROMOCIONAL", "GIRO_GRATIS_GANHO"]);
 
@@ -270,7 +284,7 @@ async function fetchExtrasLucroFn(projetoId: string): Promise<ExtraLucroEntry[]>
         let tipo: ExtraLucroEntry['tipo'] = 'promocional';
         if (ev.tipo_transacao === 'FREEBET_CONVERTIDA') tipo = 'freebet';
         else if (ev.tipo_transacao === 'GIRO_GRATIS_GANHO') tipo = 'giro_gratis';
-        extras.push({ data: ev.data_transacao, valor, tipo });
+        extras.push({ data: ev.data_transacao, valor, moeda: ev.moeda || "BRL", tipo });
       }
     }
   });

@@ -98,6 +98,7 @@ interface EvolucaoData {
 export interface ExtraLucroEntry {
   data: string; // formato YYYY-MM-DD ou ISO
   valor: number;
+  moeda?: string; // Moeda original do valor (para conversão multi-moeda)
   tipo: 'cashback' | 'giro_gratis' | 'freebet' | 'bonus' | 'promocional';
 }
 
@@ -597,13 +598,19 @@ export function VisaoGeralCharts({
     });
 
     // Extras: filtrar pelo período selecionado (periodStart/periodEnd)
+    // CRÍTICO: Converter extras para moeda de consolidação
     extrasLucro.forEach((e) => {
-      const dateStr = e.data.includes('T') ? e.data.split('T')[0] : e.data;
+      const dateStr = e.data.includes('T') ? extractLocalDateKey(e.data) : e.data;
       if (periodStart && periodEnd) {
         const extraDate = new Date(dateStr + 'T12:00:00');
         if (extraDate < startOfDay(periodStart) || extraDate > periodEnd) return;
       }
-      total += e.valor;
+      let valorConsolidado = e.valor;
+      const moedaExtra = e.moeda || "BRL";
+      if (convertToConsolidation && moedaConsolidacao && moedaExtra !== moedaConsolidacao) {
+        valorConsolidado = convertToConsolidation(e.valor, moedaExtra);
+      }
+      total += valorConsolidado;
     });
 
     return total;
@@ -612,16 +619,37 @@ export function VisaoGeralCharts({
   const isPositiveBadge = periodTotal >= 0;
   
   // Prepara mapa de extras por data para inclusão no gráfico de evolução
+  // CRÍTICO: Converter extras para moeda de consolidação antes de somar
   const extrasMap = useMemo(() => {
     const map = new Map<string, number>();
     extrasLucro.forEach(e => {
       // Normaliza data para formato yyyy-MM-dd
-      const dateStr = e.data.includes('T') ? e.data.split('T')[0] : e.data;
+      const dateStr = e.data.includes('T') ? extractLocalDateKey(e.data) : e.data;
+      
+      // CORREÇÃO: Converter valor para moeda de consolidação
+      let valorConsolidado = e.valor;
+      const moedaExtra = e.moeda || "BRL";
+      if (convertToConsolidation && moedaConsolidacao && moedaExtra !== moedaConsolidacao) {
+        valorConsolidado = convertToConsolidation(e.valor, moedaExtra);
+      }
+      
       const current = map.get(dateStr) || 0;
-      map.set(dateStr, current + e.valor);
+      map.set(dateStr, current + valorConsolidado);
     });
     return map;
-  }, [extrasLucro]);
+  }, [extrasLucro, convertToConsolidation, moedaConsolidacao]);
+
+  // Extras pré-convertidos para o calendário (que espera { data, valor } sem moeda)
+  const extrasConvertidos = useMemo(() => {
+    return extrasLucro.map(e => {
+      let valorConsolidado = e.valor;
+      const moedaExtra = e.moeda || "BRL";
+      if (convertToConsolidation && moedaConsolidacao && moedaExtra !== moedaConsolidacao) {
+        valorConsolidado = convertToConsolidation(e.valor, moedaExtra);
+      }
+      return { data: e.data, valor: valorConsolidado };
+    });
+  }, [extrasLucro, convertToConsolidation, moedaConsolidacao]);
   
   const evolucaoData = useMemo((): EvolucaoData[] => {
     const sorted = [...apostas].sort(
@@ -961,7 +989,7 @@ export function VisaoGeralCharts({
                         resultado: null,
                         lucro_prejuizo: consolidateLucro(a)
                       }))} 
-                      extrasLucro={extrasLucro}
+                      extrasLucro={extrasConvertidos}
                       titulo="Calendário de Lucros"
                       accentColor="purple"
                       compact
@@ -1024,7 +1052,7 @@ export function VisaoGeralCharts({
                         resultado: null,
                         lucro_prejuizo: consolidateLucro(a)
                       }))} 
-                      extrasLucro={extrasLucro}
+                      extrasLucro={extrasConvertidos}
                       titulo="Calendário de Lucros"
                       accentColor="purple"
                       compact
