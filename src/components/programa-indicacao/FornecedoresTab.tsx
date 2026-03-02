@@ -23,7 +23,8 @@ interface Fornecedor {
   observacoes: string | null;
   // Calculated fields
   total_parceiros?: number;
-  total_pago?: number;
+  total_contratado?: number;
+  total_liquidado?: number;
 }
 
 export function FornecedoresTab() {
@@ -64,13 +65,26 @@ export function FornecedoresTab() {
         .select("fornecedor_id, valor_fornecedor")
         .eq("origem_tipo", "FORNECEDOR");
 
+      // Fetch real payments from movimentacoes_indicacao
+      const { data: pagamentosData } = await supabase
+        .from("movimentacoes_indicacao")
+        .select("parceria_id, valor, tipo, status")
+        .eq("tipo", "PAGTO_FORNECEDOR")
+        .eq("status", "CONFIRMADO");
+
       // Calculate stats
       const fornecedoresWithStats = (fornecedoresData || []).map((f) => {
         const parceriasFornecedor = (parceriasData || []).filter((p) => p.fornecedor_id === f.id);
+        const parceriaIds = parceriasFornecedor.map(p => (p as any).id);
+        // Sum real payments linked to this supplier's partnerships
+        const totalLiquidado = (pagamentosData || [])
+          .filter((m) => parceriaIds.includes(m.parceria_id))
+          .reduce((acc, m) => acc + (m.valor || 0), 0);
         return {
           ...f,
           total_parceiros: parceriasFornecedor.length,
-          total_pago: parceriasFornecedor.reduce((acc, p) => acc + (p.valor_fornecedor || 0), 0),
+          total_contratado: parceriasFornecedor.reduce((acc, p) => acc + (p.valor_fornecedor || 0), 0),
+          total_liquidado: totalLiquidado,
         };
       });
 
@@ -165,7 +179,8 @@ export function FornecedoresTab() {
     total: fornecedores.length,
     ativos: fornecedores.filter((f) => f.status === "ATIVO").length,
     totalParceiros: fornecedores.reduce((acc, f) => acc + (f.total_parceiros || 0), 0),
-    totalPago: fornecedores.reduce((acc, f) => acc + (f.total_pago || 0), 0),
+    totalContratado: fornecedores.reduce((acc, f) => acc + (f.total_contratado || 0), 0),
+    totalLiquidado: fornecedores.reduce((acc, f) => acc + (f.total_liquidado || 0), 0),
   };
 
   if (loading) {
@@ -209,11 +224,16 @@ export function FornecedoresTab() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Pago</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Contratado</CardTitle>
             <DollarSign className="h-4 w-4 text-orange-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-500">{formatCurrency(stats.totalPago)}</div>
+            <div className="text-2xl font-bold text-orange-500">{formatCurrency(stats.totalContratado)}</div>
+            {stats.totalLiquidado > 0 && (
+              <p className="text-xs text-emerald-500 mt-1">
+                {formatCurrency(stats.totalLiquidado)} liquidado
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -308,8 +328,11 @@ export function FornecedoresTab() {
                     <p className="font-semibold">{fornecedor.total_parceiros || 0}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Total Pago</p>
-                    <p className="font-semibold text-orange-500">{formatCurrency(fornecedor.total_pago || 0)}</p>
+                    <p className="text-sm text-muted-foreground">Contratado</p>
+                    <p className="font-semibold text-orange-500">{formatCurrency(fornecedor.total_contratado || 0)}</p>
+                    {(fornecedor.total_liquidado || 0) > 0 && (
+                      <p className="text-xs text-emerald-500">{formatCurrency(fornecedor.total_liquidado || 0)} pago</p>
+                    )}
                   </div>
                 </div>
 
@@ -342,9 +365,12 @@ export function FornecedoresTab() {
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
-                  <div className="text-right">
+                   <div className="text-right">
                     <div className="font-semibold">{fornecedor.total_parceiros || 0} parceiros</div>
-                    <div className="text-sm text-orange-500">{formatCurrency(fornecedor.total_pago || 0)}</div>
+                    <div className="text-sm text-orange-500">{formatCurrency(fornecedor.total_contratado || 0)}</div>
+                    {(fornecedor.total_liquidado || 0) > 0 && (
+                      <div className="text-xs text-emerald-500">{formatCurrency(fornecedor.total_liquidado || 0)} pago</div>
+                    )}
                   </div>
                   {getStatusBadge(fornecedor.status)}
                   <div className="flex gap-1">

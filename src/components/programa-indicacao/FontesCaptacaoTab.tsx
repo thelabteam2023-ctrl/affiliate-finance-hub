@@ -79,7 +79,7 @@ interface Fornecedor {
   status: string;
   observacoes: string | null;
   total_parceiros?: number;
-  total_pago?: number;
+  total_contratado?: number;
 }
 
 // Unified type for display
@@ -164,7 +164,7 @@ export function FontesCaptacaoTab() {
         return {
           ...f,
           total_parceiros: parceriasFornecedor.length,
-          total_pago: parceriasFornecedor.reduce((acc, p) => acc + (p.valor_fornecedor || 0), 0),
+          total_contratado: parceriasFornecedor.reduce((acc, p) => acc + (p.valor_fornecedor || 0), 0),
         };
       });
       setFornecedores(fornecedoresWithStats);
@@ -224,7 +224,7 @@ export function FontesCaptacaoTab() {
         telefone: f.telefone,
         email: f.email,
         totalParceiros: f.total_parceiros || 0,
-        totalPago: f.total_pago || 0,
+        totalPago: f.total_contratado || 0,
         originalData: f,
       }));
     }
@@ -251,7 +251,7 @@ export function FontesCaptacaoTab() {
     total: fornecedores.length,
     ativos: fornecedores.filter((f) => f.status === "ATIVO").length,
     parceiros: fornecedores.reduce((acc, f) => acc + (f.total_parceiros || 0), 0),
-    pago: fornecedores.reduce((acc, f) => acc + (f.total_pago || 0), 0),
+    contratado: fornecedores.reduce((acc, f) => acc + (f.total_contratado || 0), 0),
   };
 
   const formatCurrency = (value: number) => {
@@ -406,8 +406,8 @@ export function FontesCaptacaoTab() {
                   <p className="font-semibold">{statsFornecedores.parceiros}</p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground text-xs">Investido</p>
-                  <p className="font-semibold text-blue-500">{formatCurrency(statsFornecedores.pago)}</p>
+                  <p className="text-muted-foreground text-xs">Contratado</p>
+                  <p className="font-semibold text-blue-500">{formatCurrency(statsFornecedores.contratado)}</p>
                 </div>
               </div>
             </div>
@@ -556,12 +556,12 @@ export function FontesCaptacaoTab() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Pago</CardTitle>
+            <CardTitle className="text-sm font-medium">{tipoFonte === "INDICADOR" ? "Total Pago" : "Total Contratado"}</CardTitle>
             <DollarSign className={`h-4 w-4 ${tipoFonte === "INDICADOR" ? "text-emerald-500" : "text-blue-500"}`} />
           </CardHeader>
           <CardContent>
             <div className={`text-2xl font-bold ${tipoFonte === "INDICADOR" ? "text-emerald-500" : "text-blue-500"}`}>
-              {formatCurrency(tipoFonte === "INDICADOR" ? statsIndicadores.pago : statsFornecedores.pago)}
+              {formatCurrency(tipoFonte === "INDICADOR" ? statsIndicadores.pago : statsFornecedores.contratado)}
             </div>
           </CardContent>
         </Card>
