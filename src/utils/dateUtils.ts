@@ -116,6 +116,35 @@ export const extractLocalDateKey = (dateString: string | null | undefined): stri
 };
 
 /**
+ * Extrai a data civil (YYYY-MM-DD) de uma string de data do banco SEM conversão de timezone.
+ * 
+ * QUANDO USAR: Para campos que representam "datas civis" (ex: credited_at de bônus,
+ * data_transacao de ajustes), onde o valor é armazenado como meia-noite UTC
+ * mas o usuário quis dizer "este dia civil" (sem hora real).
+ * 
+ * QUANDO NÃO USAR: Para data_aposta (timestamps reais com hora).
+ * Use extractLocalDateKey para esses casos.
+ * 
+ * Exemplo: credited_at = "2026-02-23 00:00:00+00" → retorna "2026-02-23"
+ * (extractLocalDateKey retornaria "2026-02-22" porque São Paulo é UTC-3)
+ * 
+ * @param dateString - String de data do banco
+ * @returns String no formato "YYYY-MM-DD" representando a data civil
+ */
+export const extractCivilDateKey = (dateString: string | null | undefined): string => {
+  if (!dateString) return '';
+  
+  // Se é apenas data (sem hora), retornar diretamente
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+    return dateString;
+  }
+  
+  // Extrair a parte de data diretamente da string (sem conversão de timezone)
+  const match = dateString.match(/^(\d{4}-\d{2}-\d{2})/);
+  return match ? match[1] : '';
+};
+
+/**
  * Converte um range de datas operacionais (dia civil em São Paulo) para 
  * um range de timestamps UTC para uso em queries de banco.
  * 
