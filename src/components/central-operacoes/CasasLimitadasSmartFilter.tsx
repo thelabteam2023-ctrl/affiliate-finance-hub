@@ -55,20 +55,6 @@ export function CasasLimitadasSmartFilter<T extends CasaLimitadaItem>({ casas, c
     };
   }, [casas]);
 
-  // Totals grouped by currency
-  const totalsByMoeda = useMemo(() => {
-    const map = new Map<string, number>();
-    casas.forEach((c) => {
-      if (c.valor) {
-        const moeda = c.moeda || "BRL";
-        map.set(moeda, (map.get(moeda) || 0) + c.valor);
-      }
-    });
-    return Array.from(map.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([moeda, total]) => ({ moeda, total }));
-  }, [casas]);
-
   const filtered = useMemo(() => {
     let result = [...casas];
 
@@ -101,6 +87,20 @@ export function CasasLimitadasSmartFilter<T extends CasaLimitadaItem>({ casas, c
 
     return result;
   }, [casas, search, sortMode, projetoFilter, parceiroFilter]);
+
+  // Totals grouped by currency (from filtered results)
+  const totalsByMoeda = useMemo(() => {
+    const map = new Map<string, number>();
+    filtered.forEach((c) => {
+      if (c.valor) {
+        const moeda = c.moeda || "BRL";
+        map.set(moeda, (map.get(moeda) || 0) + c.valor);
+      }
+    });
+    return Array.from(map.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([moeda, total]) => ({ moeda, total }));
+  }, [filtered]);
 
   const hasFilter = search.trim() || projetoFilter !== "all" || parceiroFilter !== "all";
 

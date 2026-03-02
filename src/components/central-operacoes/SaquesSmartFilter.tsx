@@ -92,17 +92,7 @@ export function SaquesSmartFilter({ saques, children }: SaquesSmartFilterProps) 
       .sort((a, b) => b.total - a.total);
   }, [saques]);
 
-  // Totals grouped by currency
-  const totalsByMoeda = useMemo(() => {
-    const map = new Map<string, number>();
-    saques.forEach((s) => {
-      const moeda = s.moeda_origem || s.moeda || "BRL";
-      map.set(moeda, (map.get(moeda) || 0) + (s.valor_origem || s.valor));
-    });
-    return Array.from(map.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([moeda, total]) => ({ moeda, total }));
-  }, [saques]);
+
 
   const addFilter = useCallback((type: ActiveFilter["type"], value: string) => {
     setActiveFilters((prev) => {
@@ -173,6 +163,18 @@ export function SaquesSmartFilter({ saques, children }: SaquesSmartFilterProps) 
 
     return result;
   }, [saques, search, activeFilters, sortMode]);
+
+  // Totals grouped by currency (from filtered results)
+  const totalsByMoeda = useMemo(() => {
+    const map = new Map<string, number>();
+    filtered.forEach((s) => {
+      const moeda = s.moeda_origem || s.moeda || "BRL";
+      map.set(moeda, (map.get(moeda) || 0) + (s.valor_origem || s.valor));
+    });
+    return Array.from(map.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([moeda, total]) => ({ moeda, total }));
+  }, [filtered]);
 
   const sortLabels: Record<SortMode, string> = {
     oldest: "Mais antigo",
