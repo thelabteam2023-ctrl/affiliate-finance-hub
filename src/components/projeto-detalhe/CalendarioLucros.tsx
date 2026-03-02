@@ -40,6 +40,8 @@ interface CalendarioLucrosProps {
   formatCurrency?: (value: number) => string;
   /** Callback disparado quando o lucro total do mês exibido muda (navegação ou dados) */
   onMonthTotalChange?: (total: number) => void;
+  /** Mês inicial para exibição (ex: abrir no mês do filtro ativo). Não filtra dados. */
+  initialMonth?: Date;
 }
 
 // Fallback para formatação de moeda
@@ -70,8 +72,16 @@ export function CalendarioLucros({
   compact = false,
   formatCurrency: formatCurrencyProp,
   onMonthTotalChange,
+  initialMonth,
 }: CalendarioLucrosProps) {
-  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [currentMonth, setCurrentMonth] = useState(initialMonth ?? new Date());
+
+  // Atualiza o mês exibido quando initialMonth muda (ex: troca de filtro)
+  useEffect(() => {
+    if (initialMonth) {
+      setCurrentMonth(initialMonth);
+    }
+  }, [initialMonth]);
 
   // Agrupar lucro por dia (apostas + extras por competência)
   const lucroPorDia = useMemo(() => {
