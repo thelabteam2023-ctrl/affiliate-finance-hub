@@ -204,8 +204,8 @@ async function fetchExtrasLucroFn(projetoId: string): Promise<ExtraLucroEntry[]>
     .eq("projeto_id", projetoId);
 
   cashback?.forEach(cb => {
-    if (cb.valor && cb.valor > 0) {
-      extras.push({ data: cb.data_credito, valor: cb.valor, moeda: cb.moeda_operacao || "BRL", tipo: 'cashback' });
+    if (cb.valor && cb.valor > 0 && cb.data_credito) {
+      extras.push({ data: extractLocalDateKey(cb.data_credito), valor: cb.valor, moeda: cb.moeda_operacao || "BRL", tipo: 'cashback' });
     }
   });
 
@@ -254,13 +254,18 @@ async function fetchExtrasLucroFn(projetoId: string): Promise<ExtraLucroEntry[]>
     }
   });
 
-  // Buscar outros eventos promocionais do ledger (excluindo BONUS_CREDITADO que agora vem da tabela master)
+  // Buscar todos os bookmakers do projeto (IDs + moeda) para extras relacionados a bônus
   const { data: projectBookmakers } = await supabase
     .from("bookmakers")
-    .select("id")
+    .select("id, moeda")
     .eq("projeto_id", projetoId);
 
   const projectBookmakerIds = new Set(projectBookmakers?.map(b => b.id) || []);
+  const projectBookmakerMoeda = new Map((projectBookmakers || []).map(b => [b.id, b.moeda || "BRL"]));
+
+  if (projectBookmakerIds.size === 0) {
+    return extras;
+  }
 
   // CORREÇÃO: Buscar moeda para conversão
   const { data: eventos } = await supabase
@@ -278,6 +283,55 @@ async function fetchExtrasLucroFn(projetoId: string): Promise<ExtraLucroEntry[]>
         else if (ev.tipo_transacao === 'GIRO_GRATIS_GANHO') tipo = 'giro_gratis';
         extras.push({ data: extractLocalDateKey(ev.data_transacao), valor, moeda: ev.moeda || "BRL", tipo });
       }
+    }
+  });
+
+  // ALINHAMENTO COM ABA BÔNUS: incluir perdas por cancelamento de bônus
+  const { data: perdasCancelamento } = await supabase
+    .from("cash_ledger")
+    .select("valor, moeda, origem_bookmaker_id, data_transacao, auditoria_metadata")
+    .eq("ajuste_motivo", "BONUS_CANCELAMENTO")
+    .eq("ajuste_direcao", "SAIDA")
+    .in("origem_bookmaker_id", Array.from(projectBookmakerIds));
+
+  perdasCancelamento?.forEach((entry: any) => {
+    const meta = typeof entry.auditoria_metadata === "string" ? JSON.parse(entry.auditoria_metadata) : entry.auditoria_metadata;
+    const valorPerdido = Number(meta?.valor_perdido ?? entry.valor) || 0;
+    if (valorPerdido > 0) {
+      extras.push({
+        data: extractLocalDateKey(entry.data_transacao),
+        valor: -valorPerdido,
+        moeda: entry.moeda || projectBookmakerMoeda.get(entry.origem_bookmaker_id || "") || "BRL",
+        tipo: 'promocional',
+      });
+    }
+  });
+
+  // ALINHAMENTO COM ABA BÔNUS: incluir ajustes pós-limitação por data operacional
+  const { data: ajustesRaw } = await supabase
+    .from("financial_events")
+    .select("valor, moeda, bookmaker_id, metadata, created_at")
+    .eq("tipo_evento", "AJUSTE")
+    .in("bookmaker_id", Array.from(projectBookmakerIds))
+    .not("metadata", "is", null);
+
+  ajustesRaw?.forEach((evt: any) => {
+    try {
+      const meta = typeof evt.metadata === "string" ? JSON.parse(evt.metadata) : evt.metadata;
+      if (meta?.tipo_ajuste !== "AJUSTE_POS_LIMITACAO") return;
+
+      const dataOperacional = meta?.data_encerramento || evt.created_at;
+      const valor = Number(evt.valor) || 0;
+      if (!valor) return;
+
+      extras.push({
+        data: extractLocalDateKey(dataOperacional),
+        valor,
+        moeda: evt.moeda || projectBookmakerMoeda.get(evt.bookmaker_id) || "BRL",
+        tipo: 'promocional',
+      });
+    } catch {
+      // metadata inválido: ignora registro
     }
   });
 
