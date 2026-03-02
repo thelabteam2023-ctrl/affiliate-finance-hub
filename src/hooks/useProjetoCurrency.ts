@@ -57,6 +57,8 @@ export interface ProjectCurrencyReturn {
   isLoading: boolean;
   moedaConsolidacao: MoedaConsolidacao;
   cotacaoAtual: number;
+  /** Cotação oficial USD (FastForex). Útil como dependency key para queries. */
+  cotacaoOficialUSD: number;
 }
 
 /**
@@ -111,6 +113,13 @@ export function useProjetoCurrency(projetoId: string | undefined): ProjectCurren
   const _convert = useCallback((valor: number, moedaOrigem: string, cotacaoUsdToUse: number): number => {
     if (!valor || isNaN(valor)) return 0;
     if (moedaOrigem === moedaConsolidacao) {
+      return valor;
+    }
+
+    // PROTEÇÃO: Se cotação é zero/inválida, não converter (retorna valor original)
+    // Isso previne divisão por zero e valores inflados/Infinity
+    if (!cotacaoUsdToUse || cotacaoUsdToUse <= 0) {
+      console.warn('[useProjetoCurrency._convert] Cotação USD inválida:', cotacaoUsdToUse, '- retornando valor sem conversão');
       return valor;
     }
 
@@ -286,6 +295,8 @@ export function useProjetoCurrency(projetoId: string | undefined): ProjectCurren
     isLoading: loadingConfig || loadingCotacao,
     moedaConsolidacao,
     cotacaoAtual,
+    /** Cotação oficial USD (FastForex). Útil como dependency key para queries. */
+    cotacaoOficialUSD: cotacaoUSD,
   };
 }
 

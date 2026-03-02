@@ -45,6 +45,9 @@ interface UseProjetoResultadoProps {
   /** Função oficial de conversão (de ProjectCurrencyContext.convertToConsolidation).
    *  PADRONIZAÇÃO: Todos os KPIs devem usar esta mesma função para garantir paridade entre abas. */
   convertToConsolidation?: (valor: number, moedaOrigem: string) => number;
+  /** Cotação USD atual — usada apenas como dependency na query key para re-fetch quando a cotação muda.
+   *  Sem ela, a query pode usar uma versão stale da função de conversão. */
+  cotacaoKey?: number;
 }
 
 interface UseProjetoResultadoReturn {
@@ -100,11 +103,15 @@ export function useProjetoResultado({
   projetoId, 
   dataInicio = null, 
   dataFim = null,
-  convertToConsolidation: convertToConsolidationProp 
+  convertToConsolidation: convertToConsolidationProp,
+  cotacaoKey = 0
 }: UseProjetoResultadoProps): UseProjetoResultadoReturn {
   const queryClient = useQueryClient();
 
-  const queryKey = getProjetoResultadoQueryKey(projetoId, dataInicio, dataFim);
+  // CRÍTICO: Incluir cotacaoKey na query key para re-fetch quando cotação muda
+  // Arredondar para evitar re-fetches desnecessários por flutuações mínimas
+  const cotacaoKeyRounded = Math.round((cotacaoKey || 0) * 100) / 100;
+  const queryKey = [...getProjetoResultadoQueryKey(projetoId, dataInicio, dataFim), cotacaoKeyRounded];
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey,
