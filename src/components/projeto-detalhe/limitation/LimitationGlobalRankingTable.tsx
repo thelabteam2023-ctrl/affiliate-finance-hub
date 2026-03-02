@@ -100,6 +100,23 @@ export function LimitationGlobalRankingTable({ stats }: LimitationGlobalRankingT
     return result;
   }, [stats, search, sortMode, profileFilter]);
 
+  // Totals grouped by currency
+  const totalsByMoeda = useMemo(() => {
+    const volMap = new Map<string, number>();
+    const plMap = new Map<string, number>();
+    filtered.forEach((s) => {
+      const moeda = s.moeda_volume || "BRL";
+      volMap.set(moeda, (volMap.get(moeda) || 0) + (s.volume_total ?? 0));
+      plMap.set(moeda, (plMap.get(moeda) || 0) + (s.lucro_prejuizo_total ?? 0));
+    });
+    const moedas = Array.from(new Set([...volMap.keys(), ...plMap.keys()])).sort();
+    return moedas.map((moeda) => ({
+      moeda,
+      volume: volMap.get(moeda) || 0,
+      pl: plMap.get(moeda) || 0,
+    }));
+  }, [filtered]);
+
   if (stats.length === 0) {
     return (
       <div className="text-center py-10 text-muted-foreground text-sm">
@@ -110,6 +127,29 @@ export function LimitationGlobalRankingTable({ stats }: LimitationGlobalRankingT
 
   return (
     <>
+      {/* Totals by currency */}
+      {totalsByMoeda.length > 0 && (
+        <div className="flex items-center gap-3 flex-wrap mb-3">
+          <span className="text-[10px] text-muted-foreground font-medium">Totais:</span>
+          {totalsByMoeda.map(({ moeda, volume, pl }) => (
+            <div key={moeda} className="flex items-center gap-1.5">
+              <Badge variant="outline" className="text-[11px] font-semibold px-2 py-0.5 border-border">
+                Vol: {formatWithCurrency(volume, moeda)}
+              </Badge>
+              <Badge
+                variant="outline"
+                className={`text-[11px] font-semibold px-2 py-0.5 border-border ${
+                  pl > 0 ? "text-emerald-500" : pl < 0 ? "text-red-500" : "text-muted-foreground"
+                }`}
+              >
+                P&L: {formatWithCurrency(pl, moeda)}
+              </Badge>
+              <span className="text-[9px] text-muted-foreground">{moeda}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Smart Filter Bar */}
       <div className="flex items-center gap-2 mb-3">
         <div className="relative flex-1 max-w-xs">

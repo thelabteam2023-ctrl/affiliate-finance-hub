@@ -92,6 +92,18 @@ export function SaquesSmartFilter({ saques, children }: SaquesSmartFilterProps) 
       .sort((a, b) => b.total - a.total);
   }, [saques]);
 
+  // Totals grouped by currency
+  const totalsByMoeda = useMemo(() => {
+    const map = new Map<string, number>();
+    saques.forEach((s) => {
+      const moeda = s.moeda_origem || s.moeda || "BRL";
+      map.set(moeda, (map.get(moeda) || 0) + (s.valor_origem || s.valor));
+    });
+    return Array.from(map.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([moeda, total]) => ({ moeda, total }));
+  }, [saques]);
+
   const addFilter = useCallback((type: ActiveFilter["type"], value: string) => {
     setActiveFilters((prev) => {
       if (prev.some((f) => f.type === type && f.value === value)) return prev;
@@ -171,9 +183,24 @@ export function SaquesSmartFilter({ saques, children }: SaquesSmartFilterProps) 
 
   const hasAnyFilter = search.trim() || activeFilters.length > 0;
 
+  const CURRENCY_SYMBOLS: Record<string, string> = {
+    BRL: 'R$', USD: 'US$', EUR: '€', GBP: '£', MYR: 'RM', USDT: 'US$', USDC: 'US$',
+  };
+
   return (
     <div className="space-y-2">
-      {/* Search + Sort + Project filter row */}
+      {/* Totals by currency */}
+      {totalsByMoeda.length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[10px] text-muted-foreground font-medium">Total pendente:</span>
+          {totalsByMoeda.map(({ moeda, total }) => (
+            <Badge key={moeda} variant="outline" className="text-[11px] font-semibold px-2 py-0.5 border-yellow-500/30 text-yellow-400">
+              {CURRENCY_SYMBOLS[moeda] || moeda} {total.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              <span className="ml-1 text-[9px] font-normal text-muted-foreground">{moeda}</span>
+            </Badge>
+          ))}
+        </div>
+      )}
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
