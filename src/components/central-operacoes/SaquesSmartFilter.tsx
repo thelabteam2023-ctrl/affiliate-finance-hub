@@ -173,7 +173,7 @@ export function SaquesSmartFilter({ saques, children }: SaquesSmartFilterProps) 
 
   return (
     <div className="space-y-2">
-      {/* Search + Sort row */}
+      {/* Search + Sort + Project filter row */}
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
@@ -193,6 +193,27 @@ export function SaquesSmartFilter({ saques, children }: SaquesSmartFilterProps) 
             </button>
           )}
         </div>
+        {filterOptions.projetos.length > 0 && (
+          <Select
+            value={activeFilters.find((f) => f.type === "projeto")?.value || "all"}
+            onValueChange={(v) => {
+              setActiveFilters((prev) => prev.filter((f) => f.type !== "projeto"));
+              if (v !== "all") {
+                addFilter("projeto", v);
+              }
+            }}
+          >
+            <SelectTrigger className="h-8 w-[130px] text-xs">
+              <SelectValue placeholder="Projeto" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos projetos</SelectItem>
+              {filterOptions.projetos.map((p) => (
+                <SelectItem key={p} value={p}>{p}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
         <Select value={sortMode} onValueChange={(v) => setSortMode(v as SortMode)}>
           <SelectTrigger className="h-8 w-[140px] text-xs" icon={<ArrowUpDown className="h-3.5 w-3.5" />}>
             <SelectValue />
