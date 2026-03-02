@@ -31,7 +31,7 @@ import {
   Cell,
 } from "recharts";
 import { format, addDays, startOfDay } from "date-fns";
-import { extractLocalDateKey, parseLocalDateTime } from "@/utils/dateUtils";
+import { extractLocalDateKey, extractCivilDateKey, parseLocalDateTime } from "@/utils/dateUtils";
 import { ptBR } from "date-fns/locale";
 import { ProjectBonus } from "@/hooks/useProjectBonuses";
 import { CalendarioLucros } from "../CalendarioLucros";
@@ -112,7 +112,7 @@ export function BonusResultadoLiquidoChart({
       .forEach(b => {
         // Filtra por dateRange se especificado
         if (dateRange) {
-          const dateKey = extractLocalDateKey(b.credited_at!);
+          const dateKey = extractCivilDateKey(b.credited_at!);
           const bonusDate = new Date(dateKey + "T12:00:00");
           if (bonusDate < startOfDay(dateRange.start) || bonusDate > dateRange.end) return;
         }
@@ -148,8 +148,8 @@ export function BonusResultadoLiquidoChart({
     filteredBonuses
       .filter(b => (b.status === "credited" || b.status === "finalized") && b.credited_at)
       .forEach(b => {
-        // CORREÇÃO: Usar extractLocalDateKey para respeitar timezone operacional
-        const date = extractLocalDateKey(b.credited_at!);
+        // CORREÇÃO: credited_at é data civil (meia-noite UTC), usar extractCivilDateKey
+        const date = extractCivilDateKey(b.credited_at!);
         
         // Filtra por dateRange se especificado
         if (dateRange) {
@@ -200,8 +200,8 @@ export function BonusResultadoLiquidoChart({
       // Filtro por bookmaker se ativo
       if (selectedBookmaker && ajuste.bookmaker_id !== selectedBookmaker) return;
 
-      // CORREÇÃO: Usar extractLocalDateKey para timezone operacional
-      const date = extractLocalDateKey(ajuste.data_operacional);
+      // CORREÇÃO: data_operacional é data civil, usar extractCivilDateKey
+      const date = extractCivilDateKey(ajuste.data_operacional);
 
       // Filtro por dateRange
       if (dateRange) {
@@ -305,7 +305,7 @@ export function BonusResultadoLiquidoChart({
     filteredForCalendar
       .filter(b => (b.status === "credited" || b.status === "finalized") && b.credited_at)
       .forEach(b => {
-        const date = extractLocalDateKey(b.credited_at!);
+        const date = extractCivilDateKey(b.credited_at!);
         const rawAmount = b.bonus_amount || 0;
         const consolidated = convertToConsolidation ? convertToConsolidation(rawAmount, b.currency || "BRL") : rawAmount;
         resultByDate[date] = (resultByDate[date] || 0) + consolidated;
@@ -334,7 +334,7 @@ export function BonusResultadoLiquidoChart({
     // Ajustes pós-limitação (sem filtro de data)
     ajustesPostLimitacao.forEach(ajuste => {
       if (selectedBookmaker && ajuste.bookmaker_id !== selectedBookmaker) return;
-      const date = extractLocalDateKey(ajuste.data_operacional);
+      const date = extractCivilDateKey(ajuste.data_operacional);
       const valor = convertToConsolidation ? convertToConsolidation(ajuste.valor, ajuste.moeda) : ajuste.valor;
       resultByDate[date] = (resultByDate[date] || 0) + valor;
     });
