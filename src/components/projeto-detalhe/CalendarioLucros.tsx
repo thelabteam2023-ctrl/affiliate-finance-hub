@@ -106,7 +106,8 @@ export function CalendarioLucros({
 
     // 2. Extras (cashback, giros grátis) por data de competência
     extrasLucro.forEach((extra) => {
-      const dataKey = extra.data.includes('T') ? extra.data.split('T')[0] : extra.data;
+      const dataKey = extractLocalDateKey(extra.data);
+      if (!dataKey) return;
       const atual = mapa.get(dataKey) || { lucro: 0, count: 0 };
       mapa.set(dataKey, {
         lucro: atual.lucro + extra.valor,
@@ -153,8 +154,8 @@ export function CalendarioLucros({
     // 2. Extras (cashback, giros grátis) com competência no mês
     const mesAno = format(currentMonth, "yyyy-MM");
     extrasLucro.forEach((extra) => {
-      const extraDate = extra.data.includes('T') ? extra.data.split('T')[0] : extra.data;
-      if (extraDate.startsWith(mesAno)) {
+      const extraDate = extractLocalDateKey(extra.data);
+      if (extraDate && extraDate.startsWith(mesAno)) {
         lucroTotal += extra.valor;
       }
     });
