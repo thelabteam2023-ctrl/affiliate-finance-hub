@@ -128,6 +128,7 @@ export function StandardTimeFilter({
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [tempDateRange, setTempDateRange] = useState<DateRange | undefined>(undefined);
   const [internalCycleId, setInternalCycleId] = useState("none");
+  const [initialCycleApplied, setInitialCycleApplied] = useState(false);
 
   const activeCycleId = controlledCycleId ?? internalCycleId;
   const setActiveCycleId = onCycleChange ?? setInternalCycleId;
@@ -157,6 +158,24 @@ export function StandardTimeFilter({
       return cycleStart <= today;
     });
   }, [allCycles]);
+
+  // Auto-select the cycle covering today on first load
+  useEffect(() => {
+    if (initialCycleApplied || projectCycles.length === 0) return;
+    const today = startOfDay(new Date());
+    const currentCycle = projectCycles.find(cycle => {
+      const start = new Date(cycle.data_inicio + "T00:00:00");
+      const endStr = cycle.data_fim_prevista || cycle.data_fim_real;
+      const end = endStr ? new Date(endStr + "T00:00:00") : null;
+      return start <= today && (!end || end >= today);
+    });
+    if (currentCycle) {
+      setInitialCycleApplied(true);
+      handleCycleSelect(currentCycle.id);
+    } else {
+      setInitialCycleApplied(true);
+    }
+  }, [projectCycles, initialCycleApplied]);
 
   // When cycle is selected, auto-set custom date range
   const handleCycleSelect = useCallback((value: string) => {
