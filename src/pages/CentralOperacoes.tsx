@@ -52,7 +52,14 @@ import {
   Unlink,
   Wallet,
   XCircle,
+  Ghost,
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -1345,20 +1352,33 @@ export default function CentralOperacoes() {
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           {alerta.valor && <span className="text-xs font-bold text-orange-400">{formatCurrency(alerta.valor, alerta.moeda)}</span>}
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => setPerdaLimitadaDialog({
-                              open: true,
-                              bookmakerId: alerta.entidade_id,
-                              bookmakerNome: alerta.titulo,
-                              moeda: alerta.moeda || "BRL",
-                              saldoAtual: alerta.valor || 0,
-                            })}
-                            className="border-destructive/50 text-destructive hover:bg-destructive/10 h-6 text-xs px-2"
-                          >
-                            Perda
-                          </Button>
+                          <TooltipProvider>
+                            <Tooltip delayDuration={200}>
+                              <TooltipTrigger asChild>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  onClick={() => setPerdaLimitadaDialog({
+                                    open: true,
+                                    bookmakerId: alerta.entidade_id,
+                                    bookmakerNome: alerta.titulo,
+                                    moeda: alerta.moeda || "BRL",
+                                    saldoAtual: alerta.valor || 0,
+                                  })}
+                                  className="border-destructive/50 text-destructive hover:bg-destructive/10 h-6 text-xs px-2 gap-1"
+                                >
+                                  <Ghost className="h-3 w-3" />
+                                  Fantasma
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="max-w-xs p-3 space-y-1">
+                                <p className="font-medium text-sm">Saldo Fantasma</p>
+                                <p className="text-xs text-muted-foreground">
+                                  Registra como perda operacional o saldo residual que não pode ser sacado (arredondamentos, odds travadas, centavos retidos). Remove a pendência de saque e não afeta estatísticas de apostas.
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                           <Button size="sm" onClick={() => handleSaqueAction(alerta)} className="bg-orange-600 hover:bg-orange-700 h-6 text-xs px-2">
                             Sacar
                           </Button>
