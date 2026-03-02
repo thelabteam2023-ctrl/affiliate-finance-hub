@@ -144,7 +144,7 @@ export default function ProjetoDetalhe() {
   }>({ open: false, moduleId: "", targetTab: "" });
   
   // Hook de formatação de moeda do projeto
-  const { formatCurrency, formatChartAxis, convertToConsolidationOficial } = useProjetoCurrency(id);
+  const { formatCurrency, formatChartAxis, convertToConsolidationOficial, cotacaoOficialUSD } = useProjetoCurrency(id);
   const { getRate, lastUpdate: rateLastUpdate } = useCotacoes();
   
   // Project tab preference (página inicial por projeto)
@@ -369,6 +369,7 @@ export default function ProjetoDetalhe() {
     dataInicio,
     dataFim,
     convertToConsolidation: convertToConsolidationOficial,
+    cotacaoKey: cotacaoOficialUSD,
   });
 
   // Hook para breakdowns dinâmicos dos KPIs por módulo
@@ -378,6 +379,7 @@ export default function ProjetoDetalhe() {
     dataFim,
     moedaConsolidacao: projetoResultado?.moedaConsolidacao || 'BRL',
     convertToConsolidation: convertToConsolidationOficial,
+    cotacaoKey: cotacaoOficialUSD,
   });
 
   useEffect(() => {

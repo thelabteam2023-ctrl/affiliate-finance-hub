@@ -20,6 +20,8 @@ interface UseKpiBreakdownsProps {
   /** Função oficial de conversão (de useProjetoCurrency.convertToConsolidationOficial).
    *  PADRONIZAÇÃO: Todos os KPIs devem usar esta mesma função para garantir paridade entre abas. */
   convertToConsolidation?: (valor: number, moedaOrigem: string) => number;
+  /** Cotação USD como dependency key para re-fetch quando cotação muda */
+  cotacaoKey?: number;
 }
 
 interface UseKpiBreakdownsReturn {
@@ -227,8 +229,11 @@ export function useKpiBreakdowns({
   dataFim = null,
   moedaConsolidacao = 'BRL',
   convertToConsolidation,
+  cotacaoKey = 0,
 }: UseKpiBreakdownsProps): UseKpiBreakdownsReturn {
   const queryClient = useQueryClient();
+
+  const cotacaoKeyRounded = Math.round((cotacaoKey || 0) * 100) / 100;
 
   const { 
     data: breakdowns = null, 
@@ -241,7 +246,8 @@ export function useKpiBreakdowns({
       projetoId, 
       dataInicio?.toISOString(), 
       dataFim?.toISOString(),
-      moedaConsolidacao
+      moedaConsolidacao,
+      cotacaoKeyRounded
     ],
     queryFn: () => fetchBreakdownsData(projetoId, dataInicio, dataFim, moedaConsolidacao, convertToConsolidation),
     enabled: !!projetoId,
