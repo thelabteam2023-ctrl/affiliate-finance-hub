@@ -715,6 +715,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
         convertToConsolidation={convertToConsolidation}
         isSingleDayPeriod={isSingleDayPeriod}
         dateRange={dateRange}
+        potencialBruto={bonusPerformance.totalBonusCreditado}
       />
 
       {/* Central de Análise de Bônus - Card Analítico Unificado */}

@@ -1,10 +1,11 @@
 import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Receipt, TrendingUp, TrendingDown, AreaChart as AreaChartIcon, Activity, Filter, X, Calendar, Info } from "lucide-react";
+import { Receipt, TrendingUp, TrendingDown, AreaChart as AreaChartIcon, Activity, Filter, X, Calendar, Info, Target } from "lucide-react";
 import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -61,6 +62,8 @@ interface BonusResultadoLiquidoChartProps {
   convertToConsolidation?: (valor: number, moedaOrigem: string) => number;
   isSingleDayPeriod?: boolean;
   dateRange?: { start: Date; end: Date } | null;
+  /** Valor bruto total de bônus creditados (potencial máximo) - já consolidado */
+  potencialBruto?: number;
 }
 
 interface ChartDataPoint {
@@ -91,10 +94,12 @@ export function BonusResultadoLiquidoChart({
   convertToConsolidation,
   isSingleDayPeriod = false,
   dateRange,
+  potencialBruto = 0,
 }: BonusResultadoLiquidoChartProps) {
   const [chartMode, setChartMode] = useState<ChartMode>("resultado");
   const [selectedBookmaker, setSelectedBookmaker] = useState<string | null>(null);
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [showBenchmark, setShowBenchmark] = useState(false);
 
   // Calcula estatísticas por bookmaker (para filtro e breakdown)
   const bookmakerStats = useMemo(() => {
@@ -250,7 +255,24 @@ export function BonusResultadoLiquidoChart({
     return { totalBonus, totalJuice, resultadoLiquido, diasOperados, ultimoAcumulado, performancePercent };
   }, [chartData]);
 
-  // Dados para o calendário: resultado líquido diário (bônus + juice)
+  // Benchmark levels (baseado no potencial bruto, não na curva real)
+  const benchmarkLevels = useMemo(() => {
+    if (!potencialBruto || potencialBruto <= 0) return [];
+    return [
+      { percent: 100, value: potencialBruto, label: "100%", color: "hsl(var(--chart-4))" },
+      { percent: 75, value: potencialBruto * 0.75, label: "75%", color: "hsl(var(--chart-3))" },
+      { percent: 50, value: potencialBruto * 0.50, label: "50%", color: "hsl(var(--chart-2))" },
+      { percent: 25, value: potencialBruto * 0.25, label: "25%", color: "hsl(var(--muted-foreground))" },
+    ];
+  }, [potencialBruto]);
+
+  // Eficiência operacional (% do potencial atingido)
+  const eficiencia = useMemo(() => {
+    if (!potencialBruto || potencialBruto <= 0) return null;
+    return (kpis.ultimoAcumulado / potencialBruto) * 100;
+  }, [kpis.ultimoAcumulado, potencialBruto]);
+
+
   const calendarApostas = useMemo(() => {
     return chartData.map(d => ({
       data_aposta: d.data + "T12:00:00",
@@ -333,6 +355,23 @@ export function BonusResultadoLiquidoChart({
                 <span className="text-muted-foreground">Performance</span>
                 <span className={`font-semibold ${getPerformanceColorClass(kpis.performancePercent).replace(/border-\S+/g, '').replace(/bg-\S+/g, '').trim()}`}>{kpis.performancePercent.toFixed(1)}%</span>
               </div>
+              {potencialBruto > 0 && eficiencia !== null && (
+                <div className="border-t border-border/50 pt-1 mt-1 space-y-1">
+                  <p className="font-semibold text-foreground text-[10px] uppercase tracking-wide">Benchmark Potencial</p>
+                  <div className="flex justify-between gap-4 text-xs">
+                    <span className="text-muted-foreground">Potencial Bruto (100%)</span>
+                    <span className="font-semibold">{formatCurrency(potencialBruto)}</span>
+                  </div>
+                  <div className="flex justify-between gap-4 text-xs">
+                    <span className="text-muted-foreground">Eficiência Atingida</span>
+                    <span className={`font-semibold ${
+                      eficiencia >= 70 ? "text-emerald-500" :
+                      eficiencia >= 50 ? "text-warning" :
+                      "text-destructive"
+                    }`}>{eficiencia.toFixed(1)}%</span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         );
@@ -452,6 +491,24 @@ export function BonusResultadoLiquidoChart({
             />
             <Tooltip content={<ResultadoTooltip formatCurrency={formatCurrency} />} />
             <ReferenceLine y={0} stroke="hsl(var(--muted-foreground))" strokeDasharray="3 3" strokeOpacity={0.5} />
+            {/* Benchmark lines - linhas de referência baseadas no potencial bruto */}
+            {showBenchmark && benchmarkLevels.map((level) => (
+              <ReferenceLine
+                key={`benchmark-${level.percent}`}
+                y={level.value}
+                stroke={level.color}
+                strokeDasharray="8 4"
+                strokeOpacity={0.6}
+                strokeWidth={1.5}
+                label={{
+                  value: `${level.label} (${formatCurrency(level.value)})`,
+                  position: "right",
+                  fill: level.color,
+                  fontSize: 10,
+                  fontWeight: 500,
+                }}
+              />
+            ))}
             <Area
               type="monotone"
               dataKey="acumulado"
@@ -593,9 +650,50 @@ export function BonusResultadoLiquidoChart({
           </div>
         </div>
         
-        {/* KPIs dinâmicos */}
+        {/* KPIs dinâmicos + Benchmark toggle */}
         <div className="flex flex-wrap items-center gap-2 mt-2">
           {renderBonusJuiceFilters()}
+          
+          {/* Benchmark toggle - só mostra no modo resultado e quando há potencial */}
+          {chartMode === "resultado" && potencialBruto > 0 && (
+            <div className="flex items-center gap-1.5 ml-auto">
+              {eficiencia !== null && showBenchmark && (
+                <Badge 
+                  variant="outline" 
+                  className={`text-[10px] h-5 ${
+                    eficiencia >= 70 ? "border-emerald-500/50 text-emerald-500 bg-emerald-500/10" :
+                    eficiencia >= 50 ? "border-warning/50 text-warning bg-warning/10" :
+                    "border-destructive/50 text-destructive bg-destructive/10"
+                  }`}
+                >
+                  {eficiencia.toFixed(1)}% eficiência
+                </Badge>
+              )}
+              <TooltipProvider>
+                <UITooltip>
+                  <TooltipTrigger asChild>
+                    <label className="flex items-center gap-1.5 cursor-pointer">
+                      <Target className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="text-[10px] text-muted-foreground">Benchmark</span>
+                      <Switch 
+                        checked={showBenchmark} 
+                        onCheckedChange={setShowBenchmark}
+                        className="h-4 w-7 data-[state=checked]:bg-chart-4"
+                      />
+                    </label>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-[220px]">
+                    <p className="text-xs">
+                      Exibe linhas de referência em 25%, 50%, 75% e 100% do valor bruto total de bônus creditados ({formatCurrency(potencialBruto)}).
+                      <br /><br />
+                      <strong>Estes são benchmarks fixos</strong>, independentes da curva real. Representam níveis de eficiência operacional.
+                    </p>
+                  </TooltipContent>
+                </UITooltip>
+              </TooltipProvider>
+            </div>
+          )}
+          
           <TooltipProvider>
             <UITooltip>
               <TooltipTrigger asChild>
@@ -618,6 +716,21 @@ export function BonusResultadoLiquidoChart({
             {renderChart()}
           </ResponsiveContainer>
         </div>
+        {/* Legenda de benchmark quando ativo */}
+        {showBenchmark && chartMode === "resultado" && benchmarkLevels.length > 0 && (
+          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 mt-3 pt-2 border-t border-border/30">
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-0.5 rounded" style={{ backgroundColor: isPositivo ? colorPositivo : colorNegativo }} />
+              <span className="text-[10px] text-muted-foreground">Resultado Real</span>
+            </div>
+            {benchmarkLevels.map((level) => (
+              <div key={level.percent} className="flex items-center gap-1.5">
+                <div className="w-3 h-0 border-t-[1.5px] border-dashed" style={{ borderColor: level.color }} />
+                <span className="text-[10px] text-muted-foreground">{level.label} Potencial</span>
+              </div>
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
