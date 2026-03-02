@@ -507,6 +507,13 @@ export function BonusResultadoLiquidoChart({
               tickLine={false}
               axisLine={false}
               width={60}
+              domain={showBenchmark && benchmarkLevels.length > 0
+                ? [
+                    (dataMin: number) => Math.min(dataMin, 0),
+                    (dataMax: number) => Math.max(dataMax, ...benchmarkLevels.map(l => l.value)) * 1.05,
+                  ]
+                : undefined
+              }
               tickFormatter={(value) => {
                 if (Math.abs(value) >= 1000) return `${(value / 1000).toFixed(1)}k`;
                 return value.toFixed(0);
