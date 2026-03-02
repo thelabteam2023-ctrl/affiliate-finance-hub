@@ -69,6 +69,7 @@ import { CardInfoTooltip } from "@/components/ui/card-info-tooltip";
 import { EntregaConciliacaoDialog } from "@/components/entregas/EntregaConciliacaoDialog";
 import { ConfirmarSaqueDialog } from "@/components/caixa/ConfirmarSaqueDialog";
 import { SaquesSmartFilter } from "@/components/central-operacoes/SaquesSmartFilter";
+import { CasasLimitadasSmartFilter } from "@/components/central-operacoes/CasasLimitadasSmartFilter";
 import { PagamentoOperadorDialog } from "@/components/operadores/PagamentoOperadorDialog";
 import { PropostasPagamentoCard } from "@/components/operadores/PropostasPagamentoCard";
 import { PagamentoParticipacaoDialog } from "@/components/projetos/PagamentoParticipacaoDialog";
@@ -1319,27 +1320,34 @@ export default function CentralOperacoes() {
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-0">
-              <div className="max-h-[240px] overflow-y-auto space-y-2 pr-1">
-                {alertasLimitadas.map((alerta) => (
-                  <div key={alerta.entidade_id} className="flex items-center justify-between p-2 rounded-lg border border-orange-500/30 bg-orange-500/10">
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <Building2 className="h-3.5 w-3.5 text-orange-400 shrink-0" />
-                      <div className="min-w-0">
-                        <p className="text-xs font-medium truncate">{alerta.titulo}</p>
-                        <p className="text-[10px] text-muted-foreground truncate">
-                          {alerta.parceiro_nome && `${getFirstLastName(alerta.parceiro_nome)} • `}Sacar ou realocar saldo
-                        </p>
+              <CasasLimitadasSmartFilter casas={alertasLimitadas}>
+                {(filtered) => (
+                  <div className="max-h-[300px] overflow-y-auto space-y-2 pr-1">
+                    {filtered.map((alerta) => (
+                      <div key={alerta.entidade_id} className="flex items-center justify-between p-2 rounded-lg border border-orange-500/30 bg-orange-500/10">
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <Building2 className="h-3.5 w-3.5 text-orange-400 shrink-0" />
+                          <div className="min-w-0">
+                            <p className="text-xs font-medium truncate">{alerta.titulo}</p>
+                            <p className="text-[10px] text-muted-foreground truncate">
+                              {alerta.parceiro_nome && `${getFirstLastName(alerta.parceiro_nome)} • `}Sacar ou realocar saldo
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {alerta.valor && <span className="text-xs font-bold text-orange-400">{formatCurrency(alerta.valor, alerta.moeda)}</span>}
+                          <Button size="sm" onClick={() => handleSaqueAction(alerta)} className="bg-orange-600 hover:bg-orange-700 h-6 text-xs px-2">
+                            Sacar
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      {alerta.valor && <span className="text-xs font-bold text-orange-400">{formatCurrency(alerta.valor, alerta.moeda)}</span>}
-                      <Button size="sm" onClick={() => handleSaqueAction(alerta)} className="bg-orange-600 hover:bg-orange-700 h-6 text-xs px-2">
-                        Sacar
-                      </Button>
-                    </div>
+                    ))}
+                    {filtered.length === 0 && (
+                      <p className="text-center text-[10px] text-muted-foreground py-4">Nenhuma casa encontrada com os filtros aplicados.</p>
+                    )}
                   </div>
-                ))}
-              </div>
+                )}
+              </CasasLimitadasSmartFilter>
             </CardContent>
           </Card>
         ),
