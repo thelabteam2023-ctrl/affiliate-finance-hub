@@ -53,6 +53,7 @@ import {
   Wallet,
   XCircle,
   Ghost,
+  Truck,
 } from "lucide-react";
 import {
   Tooltip,
@@ -114,6 +115,7 @@ const CARD_DOMAIN_MAP: Record<string, EventDomain> = {
   'entregas-pendentes': 'project_event',
   'parceiros-sem-parceria': 'partner_event',
   'pagamentos-parceiros': 'partner_event',
+  'pagamentos-fornecedores': 'partner_event',
   'bonus-pendentes': 'partner_event',
   'comissoes-pendentes': 'partner_event',
   'parcerias-encerrando': 'partner_event',
@@ -181,6 +183,16 @@ interface PagamentoParceiroPendente {
   origemTipo: string;
   diasRestantes: number;
   parceiroId: string;
+  workspaceId: string;
+}
+
+interface PagamentoFornecedorPendente {
+  parceriaId: string;
+  parceiroNome: string;
+  fornecedorNome: string;
+  fornecedorId: string;
+  valorFornecedor: number;
+  diasRestantes: number;
   workspaceId: string;
 }
 
@@ -308,6 +320,7 @@ export default function CentralOperacoes() {
   const [alertas, setAlertas] = useState<Alerta[]>([]);
   const [entregasPendentes, setEntregasPendentes] = useState<EntregaPendente[]>([]);
   const [pagamentosParceiros, setPagamentosParceiros] = useState<PagamentoParceiroPendente[]>([]);
+  const [pagamentosFornecedores, setPagamentosFornecedores] = useState<PagamentoFornecedorPendente[]>([]);
   const [bonusPendentes, setBonusPendentes] = useState<BonusPendente[]>([]);
   const [comissoesPendentes, setComissoesPendentes] = useState<ComissaoPendente[]>([]);
   const [parceriasEncerramento, setParceriasEncerramento] = useState<ParceriaAlertaEncerramento[]>([]);
@@ -427,7 +440,9 @@ export default function CentralOperacoes() {
         comissoesResult,
         indicacoesResult,
         indicadoresResult,
-        pagamentosOperadorResult
+        pagamentosOperadorResult,
+        fornecedoresParceriasResult,
+        fornecedoresNomesResult,
       ] = await Promise.all([
         // Alertas do painel operacional (saques e casas limitadas) - financial_event
         canSeeFinancialData 
@@ -510,6 +525,20 @@ export default function CentralOperacoes() {
           .select(`id, operador_id, tipo_pagamento, valor, data_pagamento, projeto_id, operador:operadores(nome), projeto:projetos(nome)`)
           .eq("status", "PENDENTE")
           .order("data_pagamento", { ascending: false }),
+        // Parcerias com fornecedor para pagamentos pendentes
+        canSeePartnerData
+          ? supabase
+              .from("parcerias")
+              .select(`id, parceiro_id, fornecedor_id, valor_fornecedor, data_fim_prevista, workspace_id, parceiro:parceiros(nome)`)
+              .in("status", ["ATIVA", "EM_ENCERRAMENTO"])
+              .eq("origem_tipo", "FORNECEDOR")
+              .gt("valor_fornecedor", 0)
+              .eq("pagamento_dispensado", false)
+          : Promise.resolve({ data: [], error: null }),
+        // Nomes dos fornecedores
+        canSeePartnerData
+          ? supabase.from("fornecedores").select("id, nome")
+          : Promise.resolve({ data: [], error: null }),
       ]);
 
       if (alertasResult.error) throw alertasResult.error;
@@ -563,6 +592,37 @@ export default function CentralOperacoes() {
             };
           });
         setPagamentosParceiros(pagamentosMap);
+      }
+
+      // Pagamentos a fornecedores pendentes
+      if (!fornecedoresParceriasResult.error && !movimentacoesResult.error) {
+        const fornecedoresMap = new Map(
+          (fornecedoresNomesResult.data || []).map((f: any) => [f.id, f.nome])
+        );
+        const parceriasPagasFornecedor = (movimentacoesResult.data || [])
+          .filter((m: any) => m.tipo === "PAGTO_FORNECEDOR" && m.status === "CONFIRMADO")
+          .map((m: any) => m.parceria_id);
+
+        const pagFornecedores: PagamentoFornecedorPendente[] = (fornecedoresParceriasResult.data || [])
+          .filter((p: any) => !parceriasPagasFornecedor.includes(p.id))
+          .map((p: any) => {
+            const dataFim = p.data_fim_prevista ? new Date(p.data_fim_prevista) : null;
+            let diasRestantes = 999;
+            if (dataFim) {
+              dataFim.setHours(0, 0, 0, 0);
+              diasRestantes = Math.ceil((dataFim.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
+            }
+            return {
+              parceriaId: p.id,
+              parceiroNome: p.parceiro?.nome || "N/A",
+              fornecedorNome: fornecedoresMap.get(p.fornecedor_id) || "Fornecedor",
+              fornecedorId: p.fornecedor_id,
+              valorFornecedor: p.valor_fornecedor,
+              diasRestantes,
+              workspaceId: p.workspace_id,
+            };
+          });
+        setPagamentosFornecedores(pagFornecedores);
       }
 
       if (custosResult.data && acordosResult.data && movimentacoesResult.data) {
@@ -1912,6 +1972,54 @@ export default function CentralOperacoes() {
       });
     }
 
+    // 11b. Pagamentos a Fornecedores - partner_event
+    if (pagamentosFornecedores.length > 0 && allowedDomains.includes('partner_event')) {
+      cards.push({
+        id: "pagamentos-fornecedores",
+        priority: PRIORITY.MEDIUM,
+        domain: 'partner_event',
+        component: (
+          <Card key="pagamentos-fornecedores" className="border-orange-500/30">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <Truck className="h-4 w-4 text-orange-400" />
+                Pagamentos a Fornecedores
+                <CardInfoTooltip 
+                  title="Pagamentos a Fornecedores"
+                  description="Valores devidos aos fornecedores conforme acordado na parceria."
+                  flow="Quando uma parceria é vinculada a um fornecedor com valor contratado, ele aparece aqui para pagamento."
+                />
+                <Badge className="ml-auto bg-orange-500/20 text-orange-400">{pagamentosFornecedores.length}</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="max-h-[240px] overflow-y-auto space-y-2 pr-1">
+                {pagamentosFornecedores.map((pag) => (
+                  <div key={pag.parceriaId} className="flex items-center justify-between p-2 rounded-lg border border-orange-500/20 bg-orange-500/5">
+                    <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <Truck className="h-3.5 w-3.5 text-orange-400 shrink-0" />
+                        <span className="text-xs font-medium truncate">{pag.fornecedorNome}</span>
+                      </div>
+                      <span className="text-[10px] text-muted-foreground ml-5">
+                        Parceiro: {getFirstLastName(pag.parceiroNome)}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <span className="text-xs font-bold text-orange-400">{formatCurrency(pag.valorFornecedor)}</span>
+                      <Button size="sm" variant="ghost" onClick={() => navigate("/programa-indicacao", { state: { tab: "financeiro" } })} className="h-6 text-xs px-2">
+                        Pagar
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        ),
+      });
+    }
+
     // 12. Bônus Pendentes - partner_event
     if (bonusPendentes.length > 0 && allowedDomains.includes('partner_event')) {
       cards.push({
@@ -2057,7 +2165,7 @@ export default function CentralOperacoes() {
   }, [
     alertasCriticos, saquesPendentes, alertasSaques, alertasLimitadas, casasDesvinculadas,
     participacoesPendentes, pagamentosOperadorPendentes, alertasCiclosFiltrados, alertasLucro, 
-    entregasPendentes, parceirosSemParceria, pagamentosParceiros, bonusPendentes, comissoesPendentes, 
+    entregasPendentes, parceirosSemParceria, pagamentosParceiros, pagamentosFornecedores, bonusPendentes, comissoesPendentes, 
     parceriasEncerramento, allowedDomains, propostasPagamentoCount, casasPendentesConciliacao, navigate
   ]);
 
