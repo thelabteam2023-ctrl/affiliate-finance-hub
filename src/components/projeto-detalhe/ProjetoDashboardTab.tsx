@@ -24,7 +24,7 @@ import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod } from
 import { PERIOD_STALE_TIME, PERIOD_GC_TIME } from "@/lib/query-cache-config";
 import { DateRange } from "react-day-picker";
 import { isSameDay } from "date-fns";
-import { getOperationalDateRangeForQuery, extractLocalDateKey } from "@/utils/dateUtils";
+import { getOperationalDateRangeForQuery, extractLocalDateKey, extractCivilDateKey } from "@/utils/dateUtils";
 
 interface ProjetoDashboardTabProps {
   projetoId: string;
@@ -205,7 +205,7 @@ async function fetchExtrasLucroFn(projetoId: string): Promise<ExtraLucroEntry[]>
 
   cashback?.forEach(cb => {
     if (cb.valor && cb.valor > 0 && cb.data_credito) {
-      extras.push({ data: extractLocalDateKey(cb.data_credito), valor: cb.valor, moeda: cb.moeda_operacao || "BRL", tipo: 'cashback' });
+      extras.push({ data: extractCivilDateKey(cb.data_credito), valor: cb.valor, moeda: cb.moeda_operacao || "BRL", tipo: 'cashback' });
     }
   });
 
@@ -231,7 +231,7 @@ async function fetchExtrasLucroFn(projetoId: string): Promise<ExtraLucroEntry[]>
   (girosGratis as any[])?.forEach((gg: any) => {
     if (gg.valor_retorno && gg.valor_retorno > 0 && gg.data_registro) {
       const moeda = bookmakerMoedaMap[gg.bookmaker_id] || "BRL";
-      extras.push({ data: extractLocalDateKey(gg.data_registro), valor: gg.valor_retorno, moeda, tipo: 'giro_gratis' });
+      extras.push({ data: extractCivilDateKey(gg.data_registro), valor: gg.valor_retorno, moeda, tipo: 'giro_gratis' });
     }
   });
 
@@ -250,7 +250,7 @@ async function fetchExtrasLucroFn(projetoId: string): Promise<ExtraLucroEntry[]>
     if (b.tipo_bonus === "FREEBET") return;
     const valor = Number(b.bonus_amount) || 0;
     if (valor > 0 && b.credited_at) {
-      extras.push({ data: extractLocalDateKey(b.credited_at), valor, moeda: b.currency || "BRL", tipo: 'bonus' });
+      extras.push({ data: extractCivilDateKey(b.credited_at), valor, moeda: b.currency || "BRL", tipo: 'bonus' });
     }
   });
 
@@ -281,7 +281,7 @@ async function fetchExtrasLucroFn(projetoId: string): Promise<ExtraLucroEntry[]>
         let tipo: ExtraLucroEntry['tipo'] = 'promocional';
         if (ev.tipo_transacao === 'FREEBET_CONVERTIDA') tipo = 'freebet';
         else if (ev.tipo_transacao === 'GIRO_GRATIS_GANHO') tipo = 'giro_gratis';
-        extras.push({ data: extractLocalDateKey(ev.data_transacao), valor, moeda: ev.moeda || "BRL", tipo });
+        extras.push({ data: extractCivilDateKey(ev.data_transacao), valor, moeda: ev.moeda || "BRL", tipo });
       }
     }
   });
@@ -299,7 +299,7 @@ async function fetchExtrasLucroFn(projetoId: string): Promise<ExtraLucroEntry[]>
     const valorPerdido = Number(meta?.valor_perdido ?? entry.valor) || 0;
     if (valorPerdido > 0) {
       extras.push({
-        data: extractLocalDateKey(entry.data_transacao),
+        data: extractCivilDateKey(entry.data_transacao),
         valor: -valorPerdido,
         moeda: entry.moeda || projectBookmakerMoeda.get(entry.origem_bookmaker_id || "") || "BRL",
         tipo: 'promocional',
@@ -325,7 +325,7 @@ async function fetchExtrasLucroFn(projetoId: string): Promise<ExtraLucroEntry[]>
       if (!valor) return;
 
       extras.push({
-        data: extractLocalDateKey(dataOperacional),
+        data: extractCivilDateKey(dataOperacional),
         valor,
         moeda: evt.moeda || projectBookmakerMoeda.get(evt.bookmaker_id) || "BRL",
         tipo: 'promocional',
