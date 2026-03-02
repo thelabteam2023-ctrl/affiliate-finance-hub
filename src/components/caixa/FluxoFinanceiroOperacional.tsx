@@ -6,7 +6,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { ModernBarChart } from "@/components/ui/modern-bar-chart";
-import { format, isWithinInterval, subDays } from "date-fns";
+import { format, isWithinInterval, subDays, subMonths, startOfMonth } from "date-fns";
 import { parseLocalDate } from "@/lib/dateUtils";
 import { ptBR } from "date-fns/locale";
 import { TrendingUp, TrendingDown, ArrowRightLeft, AlertCircle, Building2, Users, HelpCircle, CalendarIcon } from "lucide-react";
@@ -192,10 +192,32 @@ export function FluxoFinanceiroOperacional({
   }, [cotacaoUSD, cotacaoEUR, cotacaoGBP, cotacaoMXN, cotacaoMYR, cotacaoARS, cotacaoCOP]);
 
   // Handler para mudar período
+  // CRITICAL: Ao trocar granularidade, expandir o range de datas para que
+  // meses/semanas anteriores sejam buscados do servidor e exibidos no gráfico.
   const handlePeriodoChange = (newPeriodo: Periodo) => {
     setPeriodo(newPeriodo);
     if (newPeriodo !== "customizado") {
       setShowCustomDatePicker(false);
+      
+      // Expandir range de datas conforme a granularidade selecionada
+      const now = new Date();
+      switch (newPeriodo) {
+        case "mes":
+          // Mostrar últimos 6 meses completos
+          if (setDataInicio) setDataInicio(startOfMonth(subMonths(now, 5)));
+          if (setDataFim) setDataFim(now);
+          break;
+        case "semana":
+          // Mostrar últimas 12 semanas (~90 dias)
+          if (setDataInicio) setDataInicio(subDays(now, 84));
+          if (setDataFim) setDataFim(now);
+          break;
+        case "dia":
+          // Mostrar últimos 30 dias
+          if (setDataInicio) setDataInicio(subDays(now, 30));
+          if (setDataFim) setDataFim(now);
+          break;
+      }
     } else {
       setShowCustomDatePicker(true);
       // Aplicar datas customizadas quando mudar para customizado
