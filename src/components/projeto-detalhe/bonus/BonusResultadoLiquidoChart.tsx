@@ -768,8 +768,6 @@ function ResultadoTooltip({ active, payload, label, formatCurrency, showBenchmar
   if (!data) return null;
 
   const isLast = data.isLastPoint && showBenchmark && benchmarkLevels?.length > 0;
-  // Média diária para projeção
-  const mediaDiaria = kpis?.diasOperados > 0 ? data.acumulado / kpis.diasOperados : 0;
 
   return (
     <div className="bg-card border border-border rounded-lg p-3 shadow-lg max-w-[280px]">
@@ -819,28 +817,13 @@ function ResultadoTooltip({ active, payload, label, formatCurrency, showBenchmar
             const gap = level.value - data.acumulado;
             const gapPercent = level.value > 0 ? ((data.acumulado - level.value) / level.value) * 100 : 0;
             const isAbove = data.acumulado >= level.value;
-            const diasParaAlcancar = !isAbove && mediaDiaria > 0 ? Math.ceil(gap / mediaDiaria) : null;
 
             return (
-              <div key={level.percent} className="space-y-0.5">
-                <div className="flex justify-between gap-2 text-xs">
-                  <span className="text-muted-foreground">{level.label} Potencial:</span>
-                  <span className="font-medium" style={{ color: level.color }}>{formatCurrency(level.value)}</span>
-                </div>
-                <div className="flex justify-between gap-2 text-[10px]">
-                  <span className="text-muted-foreground/70">
-                    {isAbove ? "Acima:" : "Faltam:"}
-                  </span>
-                  <span className={`font-medium ${isAbove ? "text-emerald-500" : "text-destructive"}`}>
-                    {isAbove ? "+" : ""}{formatCurrency(Math.abs(gap))} ({gapPercent >= 0 ? "+" : ""}{gapPercent.toFixed(1)}%)
-                  </span>
-                </div>
-                {diasParaAlcancar !== null && diasParaAlcancar > 0 && (
-                  <div className="flex justify-between gap-2 text-[10px]">
-                    <span className="text-muted-foreground/50">Projeção:</span>
-                    <span className="text-muted-foreground">~{diasParaAlcancar} dias (média {formatCurrency(mediaDiaria)}/dia)</span>
-                  </div>
-                )}
+              <div key={level.percent} className="flex justify-between gap-2 text-xs">
+                <span className="text-muted-foreground">{level.label} Potencial:</span>
+                <span className={`font-medium ${isAbove ? "text-emerald-500" : "text-destructive"}`}>
+                  {isAbove ? "+" : "-"}{formatCurrency(Math.abs(gap))} ({gapPercent >= 0 ? "+" : ""}{gapPercent.toFixed(1)}%)
+                </span>
               </div>
             );
           })}
