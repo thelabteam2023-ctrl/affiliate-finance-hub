@@ -194,7 +194,7 @@ export function FornecedoresTab() {
   return (
     <div className="space-y-6">
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total</CardTitle>
@@ -224,16 +224,20 @@ export function FornecedoresTab() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Contratado</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Pago</CardTitle>
+            <DollarSign className="h-4 w-4 text-emerald-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-emerald-500">{formatCurrency(stats.totalLiquidado)}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Pendente</CardTitle>
             <DollarSign className="h-4 w-4 text-orange-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-500">{formatCurrency(stats.totalContratado)}</div>
-            {stats.totalLiquidado > 0 && (
-              <p className="text-xs text-emerald-500 mt-1">
-                {formatCurrency(stats.totalLiquidado)} liquidado
-              </p>
-            )}
+            <div className="text-2xl font-bold text-orange-500">{formatCurrency(stats.totalContratado - stats.totalLiquidado)}</div>
           </CardContent>
         </Card>
       </div>
@@ -322,17 +326,18 @@ export function FornecedoresTab() {
                   {getStatusBadge(fornecedor.status)}
                 </div>
 
-                <div className="mt-4 grid grid-cols-2 gap-4">
+                <div className="mt-4 grid grid-cols-3 gap-4">
                   <div>
                     <p className="text-sm text-muted-foreground">Parceiros</p>
                     <p className="font-semibold">{fornecedor.total_parceiros || 0}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Contratado</p>
-                    <p className="font-semibold text-orange-500">{formatCurrency(fornecedor.total_contratado || 0)}</p>
-                    {(fornecedor.total_liquidado || 0) > 0 && (
-                      <p className="text-xs text-emerald-500">{formatCurrency(fornecedor.total_liquidado || 0)} pago</p>
-                    )}
+                    <p className="text-sm text-muted-foreground">Total Pago</p>
+                    <p className="font-semibold text-emerald-500">{formatCurrency(fornecedor.total_liquidado || 0)}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Pendente</p>
+                    <p className="font-semibold text-orange-500">{formatCurrency((fornecedor.total_contratado || 0) - (fornecedor.total_liquidado || 0))}</p>
                   </div>
                 </div>
 
@@ -367,10 +372,8 @@ export function FornecedoresTab() {
                 <div className="flex items-center gap-4">
                    <div className="text-right">
                     <div className="font-semibold">{fornecedor.total_parceiros || 0} parceiros</div>
-                    <div className="text-sm text-orange-500">{formatCurrency(fornecedor.total_contratado || 0)}</div>
-                    {(fornecedor.total_liquidado || 0) > 0 && (
-                      <div className="text-xs text-emerald-500">{formatCurrency(fornecedor.total_liquidado || 0)} pago</div>
-                    )}
+                    <div className="text-sm text-emerald-500">{formatCurrency(fornecedor.total_liquidado || 0)} pago</div>
+                    <div className="text-xs text-orange-500">{formatCurrency((fornecedor.total_contratado || 0) - (fornecedor.total_liquidado || 0))} pendente</div>
                   </div>
                   {getStatusBadge(fornecedor.status)}
                   <div className="flex gap-1">
