@@ -248,14 +248,19 @@ async function fetchExtrasLucroFn(projetoId: string): Promise<ExtraLucroEntry[]>
     }
   });
 
-  // CORREÇÃO: Buscar currency para conversão multi-moeda
+  // CORREÇÃO: Buscar currency e tipo_bonus para conversão multi-moeda
+  // CRÍTICO: Excluir tipo FREEBET — freebets não são receita direta.
+  // O benefício econômico da freebet já está capturado no lucro_prejuizo da aposta (SNR).
+  // Somar o valor nominal como extra causaria dupla contagem.
   const { data: bonusCreditados } = await supabase
     .from("project_bookmaker_link_bonuses")
-    .select("credited_at, bonus_amount, status, currency")
+    .select("credited_at, bonus_amount, status, currency, tipo_bonus")
     .eq("project_id", projetoId)
     .in("status", ["credited", "finalized"]);
 
   bonusCreditados?.forEach(b => {
+    // Pular FREEBET — evita dupla contagem com o P&L da aposta
+    if (b.tipo_bonus === "FREEBET") return;
     const valor = Number(b.bonus_amount) || 0;
     if (valor > 0 && b.credited_at) {
       extras.push({ data: b.credited_at.split('T')[0], valor, moeda: b.currency || "BRL", tipo: 'bonus' });
