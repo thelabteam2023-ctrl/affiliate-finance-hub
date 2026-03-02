@@ -75,42 +75,29 @@ async function fetchApostasCalendarioFn(projetoId: string): Promise<ApostaUnific
 
   if (error) throw error;
 
-  return (data || []).map((item: any) => {
-    const moedaOp = item.moeda_operacao || 'BRL';
-    const rawStake = item.forma_registro === 'ARBITRAGEM' ? (item.stake_total || 0) : (item.stake || 0);
-    // Consolidated stake
-    let stake = rawStake;
-    if (item.stake_consolidado != null && item.stake_consolidado !== 0) {
-      stake = item.stake_consolidado;
-    } else if (moedaOp !== 'BRL' && item.valor_brl_referencia != null) {
-      stake = item.valor_brl_referencia;
-    }
-    // Consolidated lucro
-    let lucro = item.lucro_prejuizo || 0;
-    if (item.pl_consolidado != null) {
-      lucro = item.pl_consolidado;
-    } else if (moedaOp !== 'BRL' && item.lucro_prejuizo_brl_referencia != null) {
-      lucro = item.lucro_prejuizo_brl_referencia;
-    }
-    return {
-      id: item.id,
-      data_aposta: item.data_aposta,
-      lucro_prejuizo: lucro,
-      pl_consolidado: item.pl_consolidado,
-      resultado: item.resultado,
-      stake: stake,
-      stake_total: item.forma_registro === 'ARBITRAGEM' ? stake : item.stake_total,
-      esporte: 'N/A',
-      bookmaker_id: item.bookmaker_id || 'unknown',
-      bookmaker_nome: '',
-      parceiro_nome: null,
-      logo_url: null,
-      forma_registro: item.forma_registro,
-      estrategia: null,
-      bonus_id: null,
-      pernas: undefined,
-    };
-  });
+  return (data || []).map((item: any) => ({
+    id: item.id,
+    data_aposta: item.data_aposta,
+    // IMPORTANTE: manter valor bruto + metadados de moeda para evitar dupla conversão no calendário
+    lucro_prejuizo: item.lucro_prejuizo,
+    pl_consolidado: item.pl_consolidado,
+    resultado: item.resultado,
+    stake: item.stake || 0,
+    stake_total: item.stake_total,
+    esporte: 'N/A',
+    bookmaker_id: item.bookmaker_id || 'unknown',
+    bookmaker_nome: '',
+    parceiro_nome: null,
+    logo_url: null,
+    forma_registro: item.forma_registro,
+    estrategia: null,
+    bonus_id: null,
+    moeda_operacao: item.moeda_operacao,
+    stake_consolidado: item.stake_consolidado,
+    valor_brl_referencia: item.valor_brl_referencia,
+    lucro_prejuizo_brl_referencia: item.lucro_prejuizo_brl_referencia,
+    pernas: undefined,
+  }));
 }
 
 async function fetchApostasFiltradas(
@@ -526,7 +513,12 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
         apostas={apostasParaGraficos}
         apostasCalendario={apostasCalendario.map(a => ({
           data_aposta: a.data_aposta,
-          lucro_prejuizo: a.pl_consolidado ?? a.lucro_prejuizo,
+          lucro_prejuizo: a.lucro_prejuizo,
+          pl_consolidado: a.pl_consolidado,
+          moeda_operacao: a.moeda_operacao,
+          lucro_prejuizo_brl_referencia: a.lucro_prejuizo_brl_referencia,
+          valor_brl_referencia: a.valor_brl_referencia,
+          stake_consolidado: a.stake_consolidado,
           stake: a.stake,
           stake_total: a.stake_total,
           bookmaker_nome: a.bookmaker_nome,
