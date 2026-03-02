@@ -75,6 +75,7 @@ interface ChartDataPoint {
   acumulado: number;
   acumuladoPositivo: number;
   acumuladoNegativo: number;
+  isLastPoint?: boolean;
 }
 
 interface BookmakerBonusStats {
@@ -218,7 +219,7 @@ export function BonusResultadoLiquidoChart({
 
     // Calcula resultado líquido e acumulado
     let acumulado = 0;
-    const data: ChartDataPoint[] = sortedDates.map(date => {
+    const data: ChartDataPoint[] = sortedDates.map((date, index) => {
       const bonus = bonusByDate[date] || 0;
       const juice = juiceByDate[date] || 0;
       const resultado_dia = bonus + juice;
@@ -233,6 +234,7 @@ export function BonusResultadoLiquidoChart({
         acumulado,
         acumuladoPositivo: acumulado >= 0 ? acumulado : 0,
         acumuladoNegativo: acumulado < 0 ? acumulado : 0,
+        isLastPoint: index === sortedDates.length - 1,
       };
     });
 
@@ -458,6 +460,27 @@ export function BonusResultadoLiquidoChart({
     );
   };
 
+  // Custom dot renderer - destaca último ponto
+  const renderCustomDot = (props: any) => {
+    const { cx, cy, payload } = props;
+    if (!payload?.isLastPoint || !showBenchmark) return null;
+    
+    // Cor baseada na posição relativa ao benchmark de 50%
+    const midBenchmark = potencialBruto * 0.5;
+    const dotColor = payload.acumulado >= midBenchmark 
+      ? "hsl(var(--chart-2))" 
+      : "hsl(var(--destructive))";
+    
+    return (
+      <g>
+        {/* Glow ring */}
+        <circle cx={cx} cy={cy} r={8} fill={dotColor} fillOpacity={0.15} />
+        <circle cx={cx} cy={cy} r={5} fill={dotColor} fillOpacity={0.3} stroke={dotColor} strokeWidth={2} />
+        <circle cx={cx} cy={cy} r={2.5} fill={dotColor} />
+      </g>
+    );
+  };
+
   // Renderiza gráfico baseado no modo
   const renderChart = () => {
     switch (chartMode) {
@@ -489,9 +512,9 @@ export function BonusResultadoLiquidoChart({
                 return value.toFixed(0);
               }}
             />
-            <Tooltip content={<ResultadoTooltip formatCurrency={formatCurrency} />} />
+            <Tooltip content={<ResultadoTooltip formatCurrency={formatCurrency} showBenchmark={showBenchmark} benchmarkLevels={benchmarkLevels} kpis={kpis} />} />
             <ReferenceLine y={0} stroke="hsl(var(--muted-foreground))" strokeDasharray="3 3" strokeOpacity={0.5} />
-            {/* Benchmark lines - linhas de referência baseadas no potencial bruto */}
+            {/* Benchmark lines */}
             {showBenchmark && benchmarkLevels.map((level) => (
               <ReferenceLine
                 key={`benchmark-${level.percent}`}
@@ -515,6 +538,8 @@ export function BonusResultadoLiquidoChart({
               stroke={isPositivo ? colorPositivo : colorNegativo}
               strokeWidth={2}
               fill="url(#bonusGradient)"
+              dot={renderCustomDot}
+              activeDot={{ r: 4, strokeWidth: 2 }}
             />
           </AreaChart>
         );
@@ -737,13 +762,17 @@ export function BonusResultadoLiquidoChart({
 }
 
 // Tooltip para modo Resultado
-function ResultadoTooltip({ active, payload, label, formatCurrency }: any) {
+function ResultadoTooltip({ active, payload, label, formatCurrency, showBenchmark, benchmarkLevels, kpis }: any) {
   if (!active || !payload || payload.length === 0) return null;
   const data = payload[0]?.payload as ChartDataPoint;
   if (!data) return null;
 
+  const isLast = data.isLastPoint && showBenchmark && benchmarkLevels?.length > 0;
+  // Média diária para projeção
+  const mediaDiaria = kpis?.diasOperados > 0 ? data.acumulado / kpis.diasOperados : 0;
+
   return (
-    <div className="bg-card border border-border rounded-lg p-3 shadow-lg">
+    <div className="bg-card border border-border rounded-lg p-3 shadow-lg max-w-[280px]">
       <p className="text-xs text-muted-foreground mb-2">Data: {label}</p>
       <div className="space-y-1">
         {data.bonus_creditado > 0 && (
@@ -777,6 +806,46 @@ function ResultadoTooltip({ active, payload, label, formatCurrency }: any) {
           </div>
         </div>
       </div>
+
+      {/* Gap Analysis - apenas no último ponto com benchmark ativo */}
+      {isLast && (
+        <div className="border-t border-border/50 mt-2 pt-2 space-y-1.5">
+          <p className="text-[10px] text-muted-foreground/70 uppercase tracking-wide font-semibold flex items-center gap-1">
+            <Target className="h-3 w-3" />
+            Análise vs Benchmarks
+          </p>
+          <p className="text-[9px] text-muted-foreground/50 italic">Referência analítica • Não altera dados reais</p>
+          {benchmarkLevels.map((level: any) => {
+            const gap = level.value - data.acumulado;
+            const gapPercent = level.value > 0 ? ((data.acumulado - level.value) / level.value) * 100 : 0;
+            const isAbove = data.acumulado >= level.value;
+            const diasParaAlcancar = !isAbove && mediaDiaria > 0 ? Math.ceil(gap / mediaDiaria) : null;
+
+            return (
+              <div key={level.percent} className="space-y-0.5">
+                <div className="flex justify-between gap-2 text-xs">
+                  <span className="text-muted-foreground">{level.label} Potencial:</span>
+                  <span className="font-medium" style={{ color: level.color }}>{formatCurrency(level.value)}</span>
+                </div>
+                <div className="flex justify-between gap-2 text-[10px]">
+                  <span className="text-muted-foreground/70">
+                    {isAbove ? "Acima:" : "Faltam:"}
+                  </span>
+                  <span className={`font-medium ${isAbove ? "text-emerald-500" : "text-destructive"}`}>
+                    {isAbove ? "+" : ""}{formatCurrency(Math.abs(gap))} ({gapPercent >= 0 ? "+" : ""}{gapPercent.toFixed(1)}%)
+                  </span>
+                </div>
+                {diasParaAlcancar !== null && diasParaAlcancar > 0 && (
+                  <div className="flex justify-between gap-2 text-[10px]">
+                    <span className="text-muted-foreground/50">Projeção:</span>
+                    <span className="text-muted-foreground">~{diasParaAlcancar} dias (média {formatCurrency(mediaDiaria)}/dia)</span>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
