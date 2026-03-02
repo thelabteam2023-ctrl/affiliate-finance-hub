@@ -30,7 +30,8 @@ import {
   ReferenceLine,
   Cell,
 } from "recharts";
-import { format, parseISO } from "date-fns";
+import { format, addDays, startOfDay } from "date-fns";
+import { extractLocalDateKey, parseLocalDateTime } from "@/utils/dateUtils";
 import { ptBR } from "date-fns/locale";
 import { ProjectBonus } from "@/hooks/useProjectBonuses";
 import { CalendarioLucros } from "../CalendarioLucros";
@@ -111,8 +112,9 @@ export function BonusResultadoLiquidoChart({
       .forEach(b => {
         // Filtra por dateRange se especificado
         if (dateRange) {
-          const bonusDate = parseISO(b.credited_at!.split("T")[0]);
-          if (bonusDate < dateRange.start || bonusDate > dateRange.end) return;
+          const dateKey = extractLocalDateKey(b.credited_at!);
+          const bonusDate = new Date(dateKey + "T12:00:00");
+          if (bonusDate < startOfDay(dateRange.start) || bonusDate > dateRange.end) return;
         }
         
         const id = b.bookmaker_id;
@@ -141,17 +143,18 @@ export function BonusResultadoLiquidoChart({
 
   // Calcula dados do gráfico: Resultado Líquido = Bônus creditados + Juice
   const chartData = useMemo(() => {
-    // Agrupa bônus creditados por data
+    // Agrupa bônus creditados por data (usando timezone operacional)
     const bonusByDate: Record<string, number> = {};
     filteredBonuses
       .filter(b => (b.status === "credited" || b.status === "finalized") && b.credited_at)
       .forEach(b => {
-        const date = b.credited_at!.split("T")[0];
+        // CORREÇÃO: Usar extractLocalDateKey para respeitar timezone operacional
+        const date = extractLocalDateKey(b.credited_at!);
         
         // Filtra por dateRange se especificado
         if (dateRange) {
-          const bonusDate = parseISO(date);
-          if (bonusDate < dateRange.start || bonusDate > dateRange.end) return;
+          const bonusDate = new Date(date + "T12:00:00");
+          if (bonusDate < startOfDay(dateRange.start) || bonusDate > dateRange.end) return;
         }
         
         const rawAmount = b.bonus_amount || 0;
@@ -161,7 +164,7 @@ export function BonusResultadoLiquidoChart({
 
     // Agrupa juice (P&L das apostas com bônus) por data
     // Inclui apostas com bonus_id OU estratégia EXTRACAO_BONUS
-    // CRÍTICO: Converter valores para moeda de consolidação do projeto
+    // CRÍTICO: Usar extractLocalDateKey para consistência de timezone com Visão Geral
     const juiceByDate: Record<string, number> = {};
     bonusBets.forEach(bet => {
       const isBonusBet = bet.bonus_id || bet.estrategia === "EXTRACAO_BONUS";
@@ -173,7 +176,8 @@ export function BonusResultadoLiquidoChart({
         if (relatedBonus && relatedBonus.bookmaker_id !== selectedBookmaker) return;
       }
       
-      const date = bet.data_aposta.split("T")[0];
+      // CORREÇÃO: Usar extractLocalDateKey em vez de split("T")[0]
+      const date = extractLocalDateKey(bet.data_aposta);
       
       // Priorizar pl_consolidado se disponível (já está na moeda do projeto)
       let pl: number;
@@ -196,12 +200,13 @@ export function BonusResultadoLiquidoChart({
       // Filtro por bookmaker se ativo
       if (selectedBookmaker && ajuste.bookmaker_id !== selectedBookmaker) return;
 
-      const date = ajuste.data_operacional.split("T")[0];
+      // CORREÇÃO: Usar extractLocalDateKey para timezone operacional
+      const date = extractLocalDateKey(ajuste.data_operacional);
 
       // Filtro por dateRange
       if (dateRange) {
-        const ajusteDate = parseISO(date);
-        if (ajusteDate < dateRange.start || ajusteDate > dateRange.end) return;
+        const ajusteDate = new Date(date + "T12:00:00");
+        if (ajusteDate < startOfDay(dateRange.start) || ajusteDate > dateRange.end) return;
       }
 
       const valor = convertToConsolidation
@@ -213,6 +218,18 @@ export function BonusResultadoLiquidoChart({
 
     // Combina todas as datas
     const allDates = new Set([...Object.keys(bonusByDate), ...Object.keys(juiceByDate)]);
+    
+    // CORREÇÃO: Preencher dias vazios no intervalo (calendário completo, como Visão Geral)
+    if (dateRange) {
+      let cursor = startOfDay(dateRange.start);
+      const endDay = startOfDay(dateRange.end);
+      while (cursor <= endDay) {
+        const dateKey = format(cursor, "yyyy-MM-dd");
+        allDates.add(dateKey);
+        cursor = addDays(cursor, 1);
+      }
+    }
+    
     const sortedDates = Array.from(allDates).sort();
 
     if (sortedDates.length === 0) return [];
@@ -227,7 +244,7 @@ export function BonusResultadoLiquidoChart({
 
       return {
         data: date,
-        label: format(parseISO(date), "dd/MM", { locale: ptBR }),
+        label: format(new Date(date + "T12:00:00"), "dd/MM", { locale: ptBR }),
         bonus_creditado: bonus,
         juice: juice,
         resultado_dia,
