@@ -17,8 +17,9 @@ interface UseKpiBreakdownsProps {
   dataInicio?: Date | null;
   dataFim?: Date | null;
   moedaConsolidacao?: string;
-  /** Fallback: retorna taxa BRL para uma moeda (ex: USD -> 5.16). Usado quando cotacao_trabalho não está definida. */
-  getRateFallback?: (moeda: string) => number;
+  /** Função oficial de conversão (de useProjetoCurrency.convertToConsolidationOficial).
+   *  PADRONIZAÇÃO: Todos os KPIs devem usar esta mesma função para garantir paridade entre abas. */
+  convertToConsolidation?: (valor: number, moedaOrigem: string) => number;
 }
 
 interface UseKpiBreakdownsReturn {
@@ -89,49 +90,12 @@ async function fetchBreakdownsData(
   dataInicio: Date | null,
   dataFim: Date | null,
   moedaConsolidacao: string,
-  getRateFallback?: (moeda: string) => number
+  convertToConsolidation?: (valor: number, moedaOrigem: string) => number
 ): Promise<ProjetoKpiBreakdowns> {
-  // Buscar cotação de trabalho do projeto
-  const { data: projetoData } = await supabase
-    .from('projetos')
-    .select('cotacao_trabalho, fonte_cotacao')
-    .eq('id', projetoId)
-    .single();
+  // PADRONIZADO: Usar exclusivamente a função de conversão oficial passada pelo caller.
+  // Isso garante paridade com todas as outras abas (Bônus, Surebet, etc.)
+  const safeConvert = convertToConsolidation || ((valor: number, _moeda: string) => valor);
 
-  const cotacaoTrabalho = projetoData?.cotacao_trabalho || 0;
-
-  // Taxa para BRL por moeda (hierarquia: trabalho para USD > fallback)
-  const getRateToBRL = (moeda: string): number => {
-    const m = (moeda || 'BRL').toUpperCase();
-    if (m === 'BRL') return 1;
-
-    // cotacao_trabalho representa USD->BRL no contexto operacional
-    if (m === 'USD' && cotacaoTrabalho > 0) return cotacaoTrabalho;
-
-    if (getRateFallback) {
-      const r = getRateFallback(m);
-      if (r > 0) return r;
-    }
-
-    return 0;
-  };
-
-  // Conversão pivô BRL: origem -> BRL -> moedaConsolidacao
-  const convertToConsolidation = (valor: number, moedaOrigem: string): number => {
-    if (!valor) return valor;
-
-    const origem = (moedaOrigem || 'BRL').toUpperCase();
-    const destino = (moedaConsolidacao || 'BRL').toUpperCase();
-    if (origem === destino) return valor;
-
-    const rateOrigemToBRL = getRateToBRL(origem);
-    const rateDestinoToBRL = getRateToBRL(destino);
-
-    if (rateOrigemToBRL <= 0 || rateDestinoToBRL <= 0) return valor;
-
-    const valorEmBRL = origem === 'BRL' ? valor : valor * rateOrigemToBRL;
-    return destino === 'BRL' ? valorEmBRL : valorEmBRL / rateDestinoToBRL;
-  };
 
   // Fetch dados de todos os módulos em paralelo
   const [
@@ -141,11 +105,11 @@ async function fetchBreakdownsData(
     ajustesData,
     cashbackData,
   ] = await Promise.all([
-    fetchApostasModuleData(projetoId, dataInicio, dataFim, moedaConsolidacao, convertToConsolidation),
+    fetchApostasModuleData(projetoId, dataInicio, dataFim, moedaConsolidacao, safeConvert),
     fetchGirosGratisModuleData(projetoId, dataInicio, dataFim),
     fetchPerdasModuleData(projetoId, dataInicio, dataFim),
     fetchAjustesModuleData(projetoId),
-    fetchCashbackModuleData(projetoId, dataInicio, dataFim, moedaConsolidacao, convertToConsolidation),
+    fetchCashbackModuleData(projetoId, dataInicio, dataFim, moedaConsolidacao, safeConvert),
   ]);
 
   // === BREAKDOWN APOSTAS (quantidade) ===
@@ -262,7 +226,7 @@ export function useKpiBreakdowns({
   dataInicio = null,
   dataFim = null,
   moedaConsolidacao = 'BRL',
-  getRateFallback,
+  convertToConsolidation,
 }: UseKpiBreakdownsProps): UseKpiBreakdownsReturn {
   const queryClient = useQueryClient();
 
@@ -279,7 +243,7 @@ export function useKpiBreakdowns({
       dataFim?.toISOString(),
       moedaConsolidacao
     ],
-    queryFn: () => fetchBreakdownsData(projetoId, dataInicio, dataFim, moedaConsolidacao, getRateFallback),
+    queryFn: () => fetchBreakdownsData(projetoId, dataInicio, dataFim, moedaConsolidacao, convertToConsolidation),
     enabled: !!projetoId,
     staleTime: PERIOD_STALE_TIME,
     gcTime: PERIOD_GC_TIME,
