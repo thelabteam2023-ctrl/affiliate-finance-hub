@@ -165,7 +165,9 @@ export function StandardTimeFilter({
       const cycle = projectCycles.find(c => c.id === value);
       if (cycle) {
         const from = new Date(cycle.data_inicio + "T00:00:00");
-        const to = new Date((cycle.data_fim_real || cycle.data_fim_prevista) + "T00:00:00");
+        // CRITICAL: Usar data_fim_prevista como limite operacional do ciclo
+        // data_fim_real é quando o ciclo foi administrativamente fechado, não o fim do período de apostas
+        const to = new Date((cycle.data_fim_prevista || cycle.data_fim_real) + "T00:00:00");
         onCustomDateRangeChange?.({ from, to });
         onPeriodChange("custom");
       }
