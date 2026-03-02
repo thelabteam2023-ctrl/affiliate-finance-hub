@@ -68,6 +68,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { CardInfoTooltip } from "@/components/ui/card-info-tooltip";
 import { EntregaConciliacaoDialog } from "@/components/entregas/EntregaConciliacaoDialog";
 import { ConfirmarSaqueDialog } from "@/components/caixa/ConfirmarSaqueDialog";
+import { SaquesSmartFilter } from "@/components/central-operacoes/SaquesSmartFilter";
 import { PagamentoOperadorDialog } from "@/components/operadores/PagamentoOperadorDialog";
 import { PropostasPagamentoCard } from "@/components/operadores/PropostasPagamentoCard";
 import { PagamentoParticipacaoDialog } from "@/components/projetos/PagamentoParticipacaoDialog";
@@ -1196,39 +1197,50 @@ export default function CentralOperacoes() {
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
-              <div className="max-h-[240px] overflow-y-auto space-y-2 pr-1">
-                {saquesPendentes.map((saque) => {
-                  const destinoNome = saque.destino_wallet_id 
-                    ? (saque.wallet_exchange || saque.wallet_nome || "Wallet") 
-                    : (saque.banco_nome || "Conta Bancária");
-                  const parceiroShort = saque.parceiro_nome ? getFirstLastName(saque.parceiro_nome) : "";
-                  
-                  return (
-                    <div key={saque.id} className="flex items-center gap-2 p-2 rounded-lg border border-yellow-500/30 bg-yellow-500/5">
-                      {saque.destino_wallet_id ? (
-                        <Wallet className="h-4 w-4 text-yellow-400 shrink-0" />
-                      ) : (
-                        <Building2 className="h-4 w-4 text-yellow-400 shrink-0" />
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs font-medium truncate">
-                          {destinoNome}{parceiroShort ? ` · ${parceiroShort}` : ""}
-                        </p>
-                        <p className="text-[10px] text-muted-foreground truncate">
-                          {saque.bookmaker_nome}
-                          {saque.coin ? ` · ${saque.coin}` : ""}
-                        </p>
-                      </div>
-                      <span className="text-xs font-bold text-yellow-400 shrink-0">
-                        {formatCurrency(saque.valor_origem || saque.valor, saque.moeda_origem || saque.moeda)}
-                      </span>
-                      <Button size="sm" onClick={() => handleConfirmarSaque(saque)} className="bg-yellow-600 hover:bg-yellow-700 h-6 text-xs px-2 shrink-0">
-                        Confirmar
-                      </Button>
-                    </div>
-                  );
-                })}
-              </div>
+              <SaquesSmartFilter saques={saquesPendentes}>
+                {(filtered) => (
+                  <div className="max-h-[300px] overflow-y-auto space-y-2 pr-1">
+                    {filtered.length === 0 ? (
+                      <p className="text-xs text-muted-foreground text-center py-4">
+                        Nenhum saque encontrado com os filtros aplicados.
+                      </p>
+                    ) : (
+                      filtered.map((saque) => {
+                        const destinoNome = saque.destino_wallet_id 
+                          ? (saque.wallet_exchange || saque.wallet_nome || "Wallet") 
+                          : (saque.banco_nome || "Conta Bancária");
+                        const parceiroShort = saque.parceiro_nome ? getFirstLastName(saque.parceiro_nome) : "";
+                        
+                        return (
+                          <div key={saque.id} className="flex items-center gap-2 p-2 rounded-lg border border-yellow-500/30 bg-yellow-500/5">
+                            {saque.destino_wallet_id ? (
+                              <Wallet className="h-4 w-4 text-yellow-400 shrink-0" />
+                            ) : (
+                              <Building2 className="h-4 w-4 text-yellow-400 shrink-0" />
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs font-medium truncate">
+                                {destinoNome}{parceiroShort ? ` · ${parceiroShort}` : ""}
+                              </p>
+                              <p className="text-[10px] text-muted-foreground truncate">
+                                {saque.bookmaker_nome}
+                                {saque.coin ? ` · ${saque.coin}` : ""}
+                                {saque.projeto_nome ? ` · ${saque.projeto_nome}` : ""}
+                              </p>
+                            </div>
+                            <span className="text-xs font-bold text-yellow-400 shrink-0">
+                              {formatCurrency(saque.valor_origem || saque.valor, saque.moeda_origem || saque.moeda)}
+                            </span>
+                            <Button size="sm" onClick={() => handleConfirmarSaque(saque)} className="bg-yellow-600 hover:bg-yellow-700 h-6 text-xs px-2 shrink-0">
+                              Confirmar
+                            </Button>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                )}
+              </SaquesSmartFilter>
             </CardContent>
           </Card>
         ),
