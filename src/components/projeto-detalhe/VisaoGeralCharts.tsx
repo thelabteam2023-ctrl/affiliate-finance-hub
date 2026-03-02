@@ -21,7 +21,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CalendarioLucros } from "./CalendarioLucros";
 import { getFirstLastName } from "@/lib/utils";
-import { parseLocalDateTime, extractLocalDateKey, extractCivilDateKey } from "@/utils/dateUtils";
+import { parseLocalDateTime, extractLocalDateKey } from "@/utils/dateUtils";
 
 // =====================================================
 // TIPOS
@@ -600,7 +600,7 @@ export function VisaoGeralCharts({
     // Extras: filtrar pelo período selecionado (periodStart/periodEnd)
     // CRÍTICO: Converter extras para moeda de consolidação
     extrasLucro.forEach((e) => {
-      const dateStr = e.data.includes('T') ? extractCivilDateKey(e.data) : e.data;
+      const dateStr = e.data.includes('T') ? extractLocalDateKey(e.data) : e.data;
       if (periodStart && periodEnd) {
         const extraDate = new Date(dateStr + 'T12:00:00');
         if (extraDate < startOfDay(periodStart) || extraDate > periodEnd) return;
@@ -624,7 +624,7 @@ export function VisaoGeralCharts({
     const map = new Map<string, number>();
     extrasLucro.forEach(e => {
       // Normaliza data para formato yyyy-MM-dd
-      const dateStr = e.data.includes('T') ? extractCivilDateKey(e.data) : e.data;
+      const dateStr = e.data.includes('T') ? extractLocalDateKey(e.data) : e.data;
       
       // CORREÇÃO: Converter valor para moeda de consolidação
       let valorConsolidado = e.valor;
