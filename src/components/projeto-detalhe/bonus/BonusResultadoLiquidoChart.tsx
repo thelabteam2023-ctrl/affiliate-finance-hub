@@ -292,13 +292,67 @@ export function BonusResultadoLiquidoChart({
   }, [kpis.ultimoAcumulado, potencialBruto]);
 
 
+  // Calendário: dados COMPLETOS (sem filtro de dateRange) para ser independente do filtro de período
   const calendarApostas = useMemo(() => {
-    return chartData.map(d => ({
-      data_aposta: d.data + "T12:00:00",
-      resultado: d.resultado_dia >= 0 ? "GREEN" as const : "RED" as const,
-      lucro_prejuizo: d.resultado_dia,
-    }));
-  }, [chartData]);
+    // Agrupa tudo (bonuses + juice) por data, SEM filtro de dateRange
+    const resultByDate: Record<string, number> = {};
+
+    // Bônus creditados (sem filtro de data)
+    const filteredForCalendar = selectedBookmaker
+      ? bonuses.filter(b => b.bookmaker_id === selectedBookmaker)
+      : bonuses;
+
+    filteredForCalendar
+      .filter(b => (b.status === "credited" || b.status === "finalized") && b.credited_at)
+      .forEach(b => {
+        const date = extractLocalDateKey(b.credited_at!);
+        const rawAmount = b.bonus_amount || 0;
+        const consolidated = convertToConsolidation ? convertToConsolidation(rawAmount, b.currency || "BRL") : rawAmount;
+        resultByDate[date] = (resultByDate[date] || 0) + consolidated;
+      });
+
+    // Juice (P&L das apostas de bônus, sem filtro de data)
+    bonusBets.forEach(bet => {
+      const isBonusBet = bet.bonus_id || bet.estrategia === "EXTRACAO_BONUS";
+      if (!isBonusBet) return;
+      if (selectedBookmaker && bet.bonus_id) {
+        const relatedBonus = bonuses.find(b => b.id === bet.bonus_id);
+        if (relatedBonus && relatedBonus.bookmaker_id !== selectedBookmaker) return;
+      }
+      const date = extractLocalDateKey(bet.data_aposta);
+      let pl: number;
+      if (bet.pl_consolidado != null) {
+        pl = bet.pl_consolidado;
+      } else if (convertToConsolidation) {
+        pl = convertToConsolidation(bet.lucro_prejuizo ?? 0, bet.moeda_operacao || "BRL");
+      } else {
+        pl = bet.lucro_prejuizo ?? 0;
+      }
+      resultByDate[date] = (resultByDate[date] || 0) + pl;
+    });
+
+    // Ajustes pós-limitação (sem filtro de data)
+    ajustesPostLimitacao.forEach(ajuste => {
+      if (selectedBookmaker && ajuste.bookmaker_id !== selectedBookmaker) return;
+      const date = extractLocalDateKey(ajuste.data_operacional);
+      const valor = convertToConsolidation ? convertToConsolidation(ajuste.valor, ajuste.moeda) : ajuste.valor;
+      resultByDate[date] = (resultByDate[date] || 0) + valor;
+    });
+
+    return Object.entries(resultByDate)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, resultado]) => ({
+        data_aposta: date + "T12:00:00",
+        resultado: resultado >= 0 ? "GREEN" as const : "RED" as const,
+        lucro_prejuizo: resultado,
+      }));
+  }, [bonuses, bonusBets, ajustesPostLimitacao, selectedBookmaker, convertToConsolidation]);
+
+  // Mês inicial do calendário: abre no mês do filtro ativo
+  const calendarInitialMonth = useMemo(() => {
+    if (dateRange?.start) return dateRange.start;
+    return new Date();
+  }, [dateRange]);
 
   // Cores
   const colorPositivo = "hsl(var(--chart-2))";
@@ -676,6 +730,7 @@ export function BonusResultadoLiquidoChart({
                   accentColor="amber"
                   compact
                   formatCurrency={formatCurrency}
+                  initialMonth={calendarInitialMonth}
                 />
               </PopoverContent>
             </Popover>
