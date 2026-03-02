@@ -144,7 +144,7 @@ export default function ProjetoDetalhe() {
   }>({ open: false, moduleId: "", targetTab: "" });
   
   // Hook de formatação de moeda do projeto
-  const { formatCurrency, formatChartAxis } = useProjetoCurrency(id);
+  const { formatCurrency, formatChartAxis, convertToConsolidationOficial } = useProjetoCurrency(id);
   const { getRate, lastUpdate: rateLastUpdate } = useCotacoes();
   
   // Project tab preference (página inicial por projeto)
@@ -377,7 +377,7 @@ export default function ProjetoDetalhe() {
     dataInicio,
     dataFim,
     moedaConsolidacao: projetoResultado?.moedaConsolidacao || 'BRL',
-    getRateFallback: getRate,
+    convertToConsolidation: convertToConsolidationOficial,
   });
 
   useEffect(() => {
