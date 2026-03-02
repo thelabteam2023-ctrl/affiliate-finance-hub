@@ -70,6 +70,7 @@ import { EntregaConciliacaoDialog } from "@/components/entregas/EntregaConciliac
 import { ConfirmarSaqueDialog } from "@/components/caixa/ConfirmarSaqueDialog";
 import { SaquesSmartFilter } from "@/components/central-operacoes/SaquesSmartFilter";
 import { CasasLimitadasSmartFilter } from "@/components/central-operacoes/CasasLimitadasSmartFilter";
+import { ParticipacoesSmartFilter } from "@/components/central-operacoes/ParticipacoesSmartFilter";
 import { PagamentoOperadorDialog } from "@/components/operadores/PagamentoOperadorDialog";
 import { PropostasPagamentoCard } from "@/components/operadores/PropostasPagamentoCard";
 import { PagamentoParticipacaoDialog } from "@/components/projetos/PagamentoParticipacaoDialog";
@@ -1509,25 +1510,29 @@ export default function CentralOperacoes() {
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
-              <div className="max-h-[240px] overflow-y-auto space-y-2 pr-1">
-                {participacoesPendentes.map((part) => (
-                  <div key={part.id} className="flex items-center justify-between p-2 rounded-lg border border-indigo-500/20 bg-indigo-500/5 cursor-pointer" onClick={() => { setSelectedParticipacao(part); setPagamentoParticipacaoOpen(true); }}>
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <User className="h-3.5 w-3.5 text-indigo-400 shrink-0" />
-                      <div className="min-w-0">
-                        <p className="text-xs font-medium truncate">{part.investidor_nome}</p>
-                        <p className="text-[10px] text-muted-foreground truncate">{part.projeto_nome} • Ciclo {part.ciclo_numero}</p>
+              <ParticipacoesSmartFilter participacoes={participacoesPendentes}>
+                {(filtered) => (
+                  <div className="max-h-[300px] overflow-y-auto space-y-2 pr-1">
+                    {filtered.map((part) => (
+                      <div key={part.id} className="flex items-center justify-between p-2 rounded-lg border border-indigo-500/20 bg-indigo-500/5 cursor-pointer" onClick={() => { setSelectedParticipacao(part); setPagamentoParticipacaoOpen(true); }}>
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <User className="h-3.5 w-3.5 text-indigo-400 shrink-0" />
+                          <div className="min-w-0">
+                            <p className="text-xs font-medium truncate">{part.investidor_nome}</p>
+                            <p className="text-[10px] text-muted-foreground truncate">{part.projeto_nome} • Ciclo {part.ciclo_numero}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-xs font-bold text-indigo-400">{formatCurrency(part.valor_participacao)}</span>
+                          <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700 h-6 text-xs px-2" onClick={(e) => { e.stopPropagation(); setSelectedParticipacao(part); setPagamentoParticipacaoOpen(true); }}>
+                            Pagar
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-xs font-bold text-indigo-400">{formatCurrency(part.valor_participacao)}</span>
-                      <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700 h-6 text-xs px-2" onClick={(e) => { e.stopPropagation(); setSelectedParticipacao(part); setPagamentoParticipacaoOpen(true); }}>
-                        Pagar
-                      </Button>
-                    </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                )}
+              </ParticipacoesSmartFilter>
             </CardContent>
           </Card>
         ),
