@@ -1,13 +1,21 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Clock, TrendingUp, TrendingDown, HelpCircle } from "lucide-react";
+import { Building2, Clock, TrendingUp, TrendingDown, HelpCircle, Search, ArrowUpDown, X } from "lucide-react";
 import { format } from "date-fns";
 import {
   type GlobalLimitationStats,
   STRATEGIC_PROFILE_CONFIG,
   type StrategicProfile,
 } from "@/hooks/useLimitationEvents";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -38,11 +46,61 @@ interface LimitationGlobalRankingTableProps {
   stats: GlobalLimitationStats[];
 }
 
+type SortMode = "events" | "avg_bets" | "volume" | "pl" | "withdrawal";
+type ProfileFilter = "all" | StrategicProfile;
+
+const SORT_LABELS: Record<SortMode, string> = {
+  events: "Mais eventos",
+  avg_bets: "Média apostas",
+  volume: "Maior volume",
+  pl: "Maior lucro",
+  withdrawal: "Tempo saque",
+};
+
+const PROFILE_FILTER_OPTIONS: { value: ProfileFilter; label: string }[] = [
+  { value: "all", label: "Todos perfis" },
+  ...Object.entries(STRATEGIC_PROFILE_CONFIG).map(([key, cfg]) => ({
+    value: key as ProfileFilter,
+    label: cfg.label,
+  })),
+];
+
 export function LimitationGlobalRankingTable({ stats }: LimitationGlobalRankingTableProps) {
   const [selectedBookmaker, setSelectedBookmaker] = useState<GlobalLimitationStats | null>(null);
-  const sorted = [...stats].sort((a, b) => b.total_events - a.total_events);
+  const [search, setSearch] = useState("");
+  const [sortMode, setSortMode] = useState<SortMode>("events");
+  const [profileFilter, setProfileFilter] = useState<ProfileFilter>("all");
 
-  if (sorted.length === 0) {
+  const filtered = useMemo(() => {
+    let result = [...stats];
+
+    // Search
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      result = result.filter(s => s.bookmaker_nome.toLowerCase().includes(q));
+    }
+
+    // Profile filter
+    if (profileFilter !== "all") {
+      result = result.filter(s => s.strategic_profile === profileFilter);
+    }
+
+    // Sort
+    result.sort((a, b) => {
+      switch (sortMode) {
+        case "events": return b.total_events - a.total_events;
+        case "avg_bets": return b.avg_bets_before_limitation - a.avg_bets_before_limitation;
+        case "volume": return (b.volume_total ?? 0) - (a.volume_total ?? 0);
+        case "pl": return (b.lucro_prejuizo_total ?? 0) - (a.lucro_prejuizo_total ?? 0);
+        case "withdrawal": return (b.avg_withdrawal_days ?? 999) - (a.avg_withdrawal_days ?? 999);
+        default: return 0;
+      }
+    });
+
+    return result;
+  }, [stats, search, sortMode, profileFilter]);
+
+  if (stats.length === 0) {
     return (
       <div className="text-center py-10 text-muted-foreground text-sm">
         Nenhum dado de limitação global disponível.
@@ -52,6 +110,52 @@ export function LimitationGlobalRankingTable({ stats }: LimitationGlobalRankingT
 
   return (
     <>
+      {/* Smart Filter Bar */}
+      <div className="flex items-center gap-2 mb-3">
+        <div className="relative flex-1 max-w-xs">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar casa..."
+            className="h-8 pl-8 pr-8 text-xs"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+        <Select value={profileFilter} onValueChange={(v) => setProfileFilter(v as ProfileFilter)}>
+          <SelectTrigger className="h-8 w-[150px] text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {PROFILE_FILTER_OPTIONS.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={sortMode} onValueChange={(v) => setSortMode(v as SortMode)}>
+          <SelectTrigger className="h-8 w-[150px] text-xs" icon={<ArrowUpDown className="h-3.5 w-3.5" />}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {Object.entries(SORT_LABELS).map(([k, label]) => (
+              <SelectItem key={k} value={k}>{label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {(search || profileFilter !== "all") && (
+          <Badge variant="secondary" className="text-[10px] h-6">
+            {filtered.length} de {stats.length}
+          </Badge>
+        )}
+      </div>
+
       <div className="rounded-md border border-border/50 overflow-hidden">
         <Table>
           <TableHeader>
@@ -94,7 +198,14 @@ export function LimitationGlobalRankingTable({ stats }: LimitationGlobalRankingT
             </TableRow>
           </TableHeader>
           <TableBody>
-            {sorted.map((s) => {
+            {filtered.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={9} className="text-center py-8 text-muted-foreground text-sm">
+                  Nenhuma casa encontrada com os filtros aplicados.
+                </TableCell>
+              </TableRow>
+            ) : null}
+            {filtered.map((s) => {
               const profileConfig = STRATEGIC_PROFILE_CONFIG[s.strategic_profile as StrategicProfile] || STRATEGIC_PROFILE_CONFIG.low_data;
 
               return (
