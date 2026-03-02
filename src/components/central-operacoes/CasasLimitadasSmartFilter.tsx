@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { Search, X, ArrowUpDown } from "lucide-react";
+import { getFirstLastName } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -160,7 +161,7 @@ export function CasasLimitadasSmartFilter<T extends CasaLimitadaItem>({ casas, c
             <SelectContent>
               <SelectItem value="all">Todos</SelectItem>
               {filterOptions.parceiros.map((p) => (
-                <SelectItem key={p} value={p}>{p}</SelectItem>
+                <SelectItem key={p} value={p}>{getFirstLastName(p)}</SelectItem>
               ))}
             </SelectContent>
           </Select>

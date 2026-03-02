@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from "react";
 import { Search, SortAsc, SortDesc, X, AlertTriangle, ArrowUpDown } from "lucide-react";
+import { getFirstLastName } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -290,7 +291,7 @@ export function SaquesSmartFilter({ saques, children }: SaquesSmartFilterProps) 
                       : "bg-muted/30 text-muted-foreground border-border hover:bg-muted/50"
                   }`}
                 >
-                  {p}
+                  {getFirstLastName(p)}
                   {isActive && <X className="h-2.5 w-2.5" />}
                 </button>
               );
