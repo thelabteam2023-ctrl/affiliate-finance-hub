@@ -143,7 +143,7 @@ async function fetchBonusAnalytics(projectId: string, convertToConsolidationOfic
       .neq("status", "CANCELADA"),
     supabase
       .from("projetos")
-      .select("moeda_consolidacao, cotacao_trabalho")
+      .select("moeda_consolidacao")
       .eq("id", projectId)
       .single(),
     supabase
@@ -160,21 +160,18 @@ async function fetchBonusAnalytics(projectId: string, convertToConsolidationOfic
   const betsData = betsRes.data || [];
   const withdrawalsData = withdrawalsRes.data || [];
   const moedaConsolidacao = projetoRes.data?.moeda_consolidacao || 'BRL';
-  const cotacaoTrabalho = projetoRes.data?.cotacao_trabalho || 0;
 
-  // Função de conversão para moeda de consolidação (mesma lógica de useKpiBreakdowns)
+  // PADRONIZADO: Usar EXCLUSIVAMENTE a função oficial de conversão (mesma do useKpiBreakdowns/Visão Geral).
+  // Elimina divergências de taxa entre abas causadas por fallbacks internos diferentes.
   const convertToConsolidation = (valor: number, moedaOrigem: string): number => {
     if (!valor || moedaOrigem === moedaConsolidacao) return valor;
 
-    // Prioridade: usar a mesma fonte oficial já aplicada no restante da UI/KPIs
     if (convertToConsolidationOficial) {
       return convertToConsolidationOficial(valor, moedaOrigem);
     }
 
-    // Fallback operacional (mantido para compatibilidade)
-    if (cotacaoTrabalho <= 0) return valor;
-    if (moedaConsolidacao === 'BRL') return valor * cotacaoTrabalho;
-    if (moedaOrigem === 'BRL') return valor / cotacaoTrabalho;
+    // Se a função oficial não está disponível, retornar valor bruto.
+    // Nunca usar fallback próprio — isso causa divergências com Visão Geral.
     return valor;
   };
 
