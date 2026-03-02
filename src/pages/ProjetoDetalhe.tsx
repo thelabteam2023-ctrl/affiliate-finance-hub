@@ -368,7 +368,7 @@ export default function ProjetoDetalhe() {
     projetoId: id || '',
     dataInicio,
     dataFim,
-    getRateFallback: getRate,
+    convertToConsolidation: convertToConsolidationOficial,
   });
 
   // Hook para breakdowns dinâmicos dos KPIs por módulo
