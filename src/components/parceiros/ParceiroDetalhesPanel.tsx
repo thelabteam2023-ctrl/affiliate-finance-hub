@@ -592,7 +592,7 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                         <TrendingUp className="h-4 w-4 text-muted-foreground" />
                       )
                     }
-                    label="Resultado"
+                    label="Resultado Financeiro"
                     entries={kpisFiltrados.resultado}
                     consolidadoBRL={kpisFiltrados.resultadoBRL}
                     showBreakdown={kpisFiltrados.isConsolidado}
@@ -686,7 +686,7 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                         <div className="text-right">Dep.</div>
                         <div className="text-right">Saq.</div>
                         <div className="text-right">Saldo</div>
-                        <div className="text-right">Result.</div>
+                        <div className="text-right">Result. Fin.</div>
                         <div className="text-right">Apost.</div>
                       </div>
 
@@ -941,7 +941,7 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                                 </TooltipContent>
                               )}
                             </Tooltip>
-                            {/* Resultado - sempre na moeda nativa da casa */}
+                            {/* Resultado Financeiro Real - Saq + Saldo - Dep */}
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <div className="text-right">
@@ -956,60 +956,56 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                               </TooltipTrigger>
                               {showSensitiveData && (
                                 <TooltipContent side="top" className="text-xs">
-                                  <p className="font-semibold mb-1.5">Composição do Resultado</p>
-                                  <div className="space-y-1 min-w-[180px]">
+                                  <p className="font-semibold mb-1.5">Resultado Financeiro Real</p>
+                                  <div className="space-y-1 min-w-[200px]">
                                     <div className="flex justify-between gap-4">
-                                      <span className="text-muted-foreground">Apostas</span>
-                                      <span className={bm.resultado_apostas >= 0 ? "text-success" : "text-destructive"}>
-                                        {formatMoneyValue(bm.resultado_apostas, bm.moeda || "BRL")}
+                                      <span className="text-muted-foreground">Saques</span>
+                                      <span className="text-success">
+                                        {formatMoneyValue(bm.total_sacado, bm.moeda || "BRL")}
                                       </span>
                                     </div>
-                                    {bm.resultado_giros !== 0 && (
-                                      <div className="flex justify-between gap-4">
-                                        <span className="text-muted-foreground">Giros Grátis</span>
-                                        <span className="text-success">
-                                          {formatMoneyValue(bm.resultado_giros, bm.moeda || "BRL")}
-                                        </span>
-                                      </div>
-                                    )}
-                                    {bm.resultado_cashback !== 0 && (
-                                      <div className="flex justify-between gap-4">
-                                        <span className="text-muted-foreground">Cashback</span>
-                                        <span className="text-success">
-                                          {formatMoneyValue(bm.resultado_cashback, bm.moeda || "BRL")}
-                                        </span>
-                                      </div>
-                                    )}
-                                    {bm.resultado_bonus !== 0 && (
-                                      <div className="flex justify-between gap-4">
-                                        <span className="text-muted-foreground">Bônus</span>
-                                        <span className={bm.resultado_bonus >= 0 ? "text-success" : "text-destructive"}>
-                                          {formatMoneyValue(bm.resultado_bonus, bm.moeda || "BRL")}
-                                        </span>
-                                      </div>
-                                    )}
+                                    <div className="flex justify-between gap-4">
+                                      <span className="text-muted-foreground">+ Saldo Atual</span>
+                                      <span>
+                                        {formatMoneyValue(bm.saldo_atual, bm.moeda || "BRL")}
+                                      </span>
+                                    </div>
+                                    <div className="flex justify-between gap-4">
+                                      <span className="text-muted-foreground">− Depósitos</span>
+                                      <span className="text-destructive">
+                                        {formatMoneyValue(bm.total_depositado, bm.moeda || "BRL")}
+                                      </span>
+                                    </div>
                                     <div className="border-t border-border pt-1 flex justify-between gap-4 font-medium">
-                                      <span>Total</span>
+                                      <span>= Resultado</span>
                                       <span className={bm.lucro_prejuizo >= 0 ? "text-success" : "text-destructive"}>
                                         {formatMoneyValue(bm.lucro_prejuizo, bm.moeda || "BRL")}
                                       </span>
                                     </div>
                                   </div>
-                                  {(() => {
-                                    const fluxoLiquido = bm.total_sacado - bm.total_depositado;
-                                    const diferenca = bm.lucro_prejuizo - fluxoLiquido - bm.saldo_atual;
-                                    return (
-                                      <div className="mt-2 pt-1.5 border-t border-border/50 space-y-0.5 text-muted-foreground">
-                                        <p className="text-[10px]">Saq - Dep = {formatMoneyValue(fluxoLiquido, bm.moeda || "BRL")}</p>
-                                        <p className="text-[10px]">Result - Saldo = {formatMoneyValue(bm.lucro_prejuizo - bm.saldo_atual, bm.moeda || "BRL")}</p>
-                                        {Math.abs(diferenca) > 1 && (
-                                          <p className="text-[10px] text-warning">
-                                            Δ {formatMoneyValue(diferenca, bm.moeda || "BRL")} (FX)
-                                          </p>
-                                        )}
-                                      </div>
-                                    );
-                                  })()}
+                                  {/* Performance Operacional como métrica secundária */}
+                                  {bm.resultado_operacional !== 0 && (
+                                    <div className="mt-2 pt-1.5 border-t border-border/50 space-y-0.5 text-muted-foreground">
+                                      <p className="text-[10px] font-medium">Performance Operacional</p>
+                                      {bm.resultado_apostas !== 0 && (
+                                        <p className="text-[10px]">Apostas: {formatMoneyValue(bm.resultado_apostas, bm.moeda || "BRL")}</p>
+                                      )}
+                                      {bm.resultado_giros !== 0 && (
+                                        <p className="text-[10px]">Giros: {formatMoneyValue(bm.resultado_giros, bm.moeda || "BRL")}</p>
+                                      )}
+                                      {bm.resultado_cashback !== 0 && (
+                                        <p className="text-[10px]">Cashback: {formatMoneyValue(bm.resultado_cashback, bm.moeda || "BRL")}</p>
+                                      )}
+                                      {bm.resultado_bonus !== 0 && (
+                                        <p className="text-[10px]">Bônus: {formatMoneyValue(bm.resultado_bonus, bm.moeda || "BRL")}</p>
+                                      )}
+                                      <p className="text-[10px] font-medium">
+                                        Total Op: <span className={bm.resultado_operacional >= 0 ? "text-success" : "text-destructive"}>
+                                          {formatMoneyValue(bm.resultado_operacional, bm.moeda || "BRL")}
+                                        </span>
+                                      </p>
+                                    </div>
+                                  )}
                                 </TooltipContent>
                               )}
                             </Tooltip>
