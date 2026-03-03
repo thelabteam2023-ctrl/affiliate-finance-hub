@@ -593,6 +593,40 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode, isRen
             </div>
           )}
 
+          {/* Valor da Renovação - mostrado apenas em modo renovação */}
+          {isRenewalMode && !isViewMode && (
+            <div className="space-y-4 p-4 rounded-lg bg-primary/5 border border-primary/20">
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Label className="text-primary font-medium">Valor da Renovação (R$)</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-5 w-5 rounded-full">
+                        <HelpCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-80 text-sm">
+                      <p>Defina o valor a ser pago ao parceiro pela renovação. Este valor gerará uma pendência de pagamento na Central de Operações.</p>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <Input
+                  type="number"
+                  value={formData.valor_parceiro}
+                  onChange={(e) => setFormData({...formData, valor_parceiro: parseFloat(e.target.value) || 0})}
+                  min={0}
+                  step={0.01}
+                  placeholder="Ex: 200.00"
+                />
+                {formData.valor_parceiro > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    💡 Ao salvar, uma pendência de pagamento será criada automaticamente.
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Aquisição Direta - Custo de Aquisição (oculto se pagamento já foi feito via Financeiro ou em modo renovação) */}
           {formData.origem_tipo === "DIRETO" && !pagamentoJaRealizado && !isRenewalMode && !isViewMode && (
             <div className="space-y-4 p-4 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
