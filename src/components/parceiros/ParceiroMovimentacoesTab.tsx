@@ -582,19 +582,33 @@ export const ParceiroMovimentacoesTab = memo(function ParceiroMovimentacoesTab({
   // =========================================================================
   // FILTROS: Tipos disponíveis, filtragem por tipo/data/projeto
   // =========================================================================
-  const availableTypes = useMemo(() => {
-    const types = new Set<string>();
-    transacoes.forEach(t => types.add(t.tipo_transacao));
-    return Array.from(types).sort();
+  // Tipos principais que têm badge próprio
+  const MAIN_FILTER_TYPES = ['DEPOSITO', 'SAQUE', 'TRANSFERENCIA'] as const;
+  
+  const { mainTypes, hasOutros } = useMemo(() => {
+    const allTypes = new Set<string>();
+    transacoes.forEach(t => allTypes.add(t.tipo_transacao));
+    const main = MAIN_FILTER_TYPES.filter(t => allTypes.has(t));
+    const outros = Array.from(allTypes).some(t => !MAIN_FILTER_TYPES.includes(t as any));
+    return { mainTypes: main, hasOutros: outros };
   }, [transacoes]);
 
   const toggleType = useCallback((tipo: string) => {
-    setSelectedTypes(prev => {
-      const next = new Set(prev);
-      if (next.has(tipo)) next.delete(tipo);
-      else next.add(tipo);
-      return next;
-    });
+    if (tipo === '__OUTROS__') {
+      setSelectedTypes(prev => {
+        const next = new Set(prev);
+        if (next.has('__OUTROS__')) next.delete('__OUTROS__');
+        else next.add('__OUTROS__');
+        return next;
+      });
+    } else {
+      setSelectedTypes(prev => {
+        const next = new Set(prev);
+        if (next.has(tipo)) next.delete(tipo);
+        else next.add(tipo);
+        return next;
+      });
+    }
   }, []);
 
   const clearFilters = useCallback(() => {
@@ -607,7 +621,12 @@ export const ParceiroMovimentacoesTab = memo(function ParceiroMovimentacoesTab({
 
   const filteredTransacoes = useMemo(() => {
     return transacoes.filter(t => {
-      if (selectedTypes.size > 0 && !selectedTypes.has(t.tipo_transacao)) return false;
+      if (selectedTypes.size > 0) {
+        const isMainType = MAIN_FILTER_TYPES.includes(t.tipo_transacao as any);
+        const matchesMain = selectedTypes.has(t.tipo_transacao);
+        const matchesOutros = selectedTypes.has('__OUTROS__') && !isMainType;
+        if (!matchesMain && !matchesOutros) return false;
+      }
       if (dateRange?.from) {
         const tDate = parseLocalDateTime(t.data_transacao);
         if (tDate < dateRange.from) return false;
@@ -839,10 +858,10 @@ export const ParceiroMovimentacoesTab = memo(function ParceiroMovimentacoesTab({
           </div>
 
           {/* Row 2: Type chips */}
-          {availableTypes.length > 1 && (
+          {(mainTypes.length > 0 || hasOutros) && (
             <ScrollArea className="w-full">
               <div className="flex gap-1.5 pb-1">
-                {availableTypes.map(tipo => {
+                {mainTypes.map(tipo => {
                   const isActive = selectedTypes.has(tipo);
                   return (
                     <button
@@ -859,6 +878,19 @@ export const ParceiroMovimentacoesTab = memo(function ParceiroMovimentacoesTab({
                     </button>
                   );
                 })}
+                {hasOutros && (
+                  <button
+                    type="button"
+                    onClick={() => toggleType('__OUTROS__')}
+                    className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-medium border transition-colors whitespace-nowrap ${
+                      selectedTypes.has('__OUTROS__')
+                        ? "bg-muted text-foreground border-foreground/40"
+                        : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"
+                    }`}
+                  >
+                    Outros
+                  </button>
+                )}
               </div>
               <ScrollBar orientation="horizontal" />
             </ScrollArea>
