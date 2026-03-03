@@ -86,6 +86,8 @@ import { useCicloAlertas } from "@/hooks/useCicloAlertas";
 import { useRole } from "@/hooks/useRole";
 import { useAuth } from "@/hooks/useAuth";
 import { RegistrarPerdaRapidaDialog } from "@/components/parceiros/RegistrarPerdaRapidaDialog";
+import { PagamentoFornecedorDialog } from "@/components/programa-indicacao/PagamentoFornecedorDialog";
+import { PagamentoParceiroDialog } from "@/components/programa-indicacao/PagamentoParceiroDialog";
 
 // Classificação de domínio dos eventos
 type EventDomain = 'project_event' | 'financial_event' | 'partner_event' | 'admin_event';
@@ -358,6 +360,10 @@ export default function CentralOperacoes() {
     moeda: string;
     saldoAtual: number;
   } | null>(null);
+  const [pagamentoFornecedorOpen, setPagamentoFornecedorOpen] = useState(false);
+  const [selectedPagamentoFornecedor, setSelectedPagamentoFornecedor] = useState<PagamentoFornecedorPendente | null>(null);
+  const [pagamentoParceiroDialogOpen, setPagamentoParceiroDialogOpen] = useState(false);
+  const [selectedPagamentoParceiro, setSelectedPagamentoParceiro] = useState<PagamentoParceiroPendente | null>(null);
   const [mainTab, setMainTabState] = useState<'financeiro' | 'ocorrencias' | 'solicitacoes' | 'alertas'>(() => {
     const saved = localStorage.getItem('central-operacoes-main-tab');
     if (saved === 'financeiro' || saved === 'ocorrencias' || saved === 'solicitacoes' || saved === 'alertas') return saved;
@@ -1916,7 +1922,10 @@ export default function CentralOperacoes() {
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
                       <span className="text-xs font-bold text-cyan-400">{formatCurrency(pag.valorParceiro)}</span>
-                      <Button size="sm" variant="ghost" onClick={() => navigate("/programa-indicacao", { state: { tab: "financeiro" } })} className="h-6 text-xs px-2">
+                      <Button size="sm" variant="ghost" onClick={() => {
+                          setSelectedPagamentoParceiro(pag);
+                          setPagamentoParceiroDialogOpen(true);
+                        }} className="h-6 text-xs px-2">
                         Pagar
                       </Button>
                       <Button
@@ -2007,7 +2016,10 @@ export default function CentralOperacoes() {
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
                       <span className="text-xs font-bold text-orange-400">{formatCurrency(pag.valorFornecedor)}</span>
-                      <Button size="sm" variant="ghost" onClick={() => navigate("/programa-indicacao", { state: { tab: "financeiro" } })} className="h-6 text-xs px-2">
+                      <Button size="sm" variant="ghost" onClick={() => {
+                          setSelectedPagamentoFornecedor(pag);
+                          setPagamentoFornecedorOpen(true);
+                        }} className="h-6 text-xs px-2">
                         Pagar
                       </Button>
                     </div>
@@ -2432,6 +2444,38 @@ export default function CentralOperacoes() {
           onSuccess={() => fetchData()}
         />
       )}
+
+      {/* Dialog Pagamento Fornecedor */}
+      <PagamentoFornecedorDialog
+        open={pagamentoFornecedorOpen}
+        onOpenChange={(open) => {
+          setPagamentoFornecedorOpen(open);
+          if (!open) setSelectedPagamentoFornecedor(null);
+        }}
+        parceria={selectedPagamentoFornecedor ? {
+          parceriaId: selectedPagamentoFornecedor.parceriaId,
+          fornecedorNome: selectedPagamentoFornecedor.fornecedorNome,
+          fornecedorId: selectedPagamentoFornecedor.fornecedorId,
+          parceiroNome: selectedPagamentoFornecedor.parceiroNome,
+          valorFornecedor: selectedPagamentoFornecedor.valorFornecedor,
+        } : null}
+        onSuccess={() => fetchData()}
+      />
+
+      {/* Dialog Pagamento Parceiro */}
+      <PagamentoParceiroDialog
+        open={pagamentoParceiroDialogOpen}
+        onOpenChange={(open) => {
+          setPagamentoParceiroDialogOpen(open);
+          if (!open) setSelectedPagamentoParceiro(null);
+        }}
+        parceria={selectedPagamentoParceiro ? {
+          id: selectedPagamentoParceiro.parceriaId,
+          parceiroNome: selectedPagamentoParceiro.parceiroNome,
+          valorParceiro: selectedPagamentoParceiro.valorParceiro,
+        } : null}
+        onSuccess={() => fetchData()}
+      />
     </div>
   );
 }
