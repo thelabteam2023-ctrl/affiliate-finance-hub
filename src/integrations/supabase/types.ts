@@ -2581,6 +2581,7 @@ export type Database = {
           edited_at: string | null
           has_chat_activity: boolean
           id: string
+          image_urls: string[] | null
           is_anonymous: boolean | null
           status: string
           titulo: string
@@ -2598,6 +2599,7 @@ export type Database = {
           edited_at?: string | null
           has_chat_activity?: boolean
           id?: string
+          image_urls?: string[] | null
           is_anonymous?: boolean | null
           status?: string
           titulo: string
@@ -2615,6 +2617,7 @@ export type Database = {
           edited_at?: string | null
           has_chat_activity?: boolean
           id?: string
+          image_urls?: string[] | null
           is_anonymous?: boolean | null
           status?: string
           titulo?: string

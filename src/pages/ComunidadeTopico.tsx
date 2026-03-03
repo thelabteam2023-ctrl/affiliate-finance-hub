@@ -91,7 +91,7 @@ export default function ComunidadeTopico() {
       const { data: t, error } = await supabase
         .from('community_topics')
         .select(`
-          id, user_id, titulo, conteudo, categoria, is_anonymous, created_at, edited_at,
+          id, user_id, titulo, conteudo, categoria, is_anonymous, created_at, edited_at, image_urls,
           bookmaker_catalogo_id,
           bookmakers_catalogo(nome, logo_url, visibility)
         `)
@@ -309,6 +309,22 @@ export default function ComunidadeTopico() {
 
           <div className="bg-muted/50 rounded-lg p-4">
             <p className="text-sm whitespace-pre-wrap">{topic.conteudo}</p>
+            
+            {/* Topic Images */}
+            {(topic as any).image_urls && (topic as any).image_urls.length > 0 && (
+              <div className={`mt-4 grid gap-2 ${(topic as any).image_urls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                {(topic as any).image_urls.map((url: string, i: number) => (
+                  <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="block">
+                    <img
+                      src={url}
+                      alt={`Imagem ${i + 1}`}
+                      className="w-full rounded-lg border border-border object-cover max-h-64 hover:opacity-90 transition-opacity cursor-zoom-in"
+                      loading="lazy"
+                    />
+                  </a>
+                ))}
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

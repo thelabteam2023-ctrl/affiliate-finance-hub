@@ -19,9 +19,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Building2, X, Check, ChevronsUpDown, Sparkles, Loader2, Mic, MicOff } from 'lucide-react';
+import { Building2, X, Check, ChevronsUpDown, Sparkles, Loader2, Mic, MicOff, ImagePlus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+
+const MAX_IMAGES = 4;
+const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
+const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 interface CreateTopicDialogProps {
   open: boolean;
@@ -49,11 +53,14 @@ export function CreateTopicDialog({
   const [listening, setListening] = useState(false);
   const [activeField, setActiveField] = useState<'titulo' | 'conteudo' | null>(null);
   const recognitionRef = useRef<any>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [categoria, setCategoria] = useState<CommunityCategory>(defaultCategory || 'casas_de_aposta');
   const [titulo, setTitulo] = useState('');
   const [conteudo, setConteudo] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(false);
+  const [selectedImages, setSelectedImages] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
 
   // Bookmaker tag (optional)
   const [bookmakerSearch, setBookmakerSearch] = useState('');
@@ -81,8 +88,73 @@ export function CreateTopicDialog({
       setSelectedBookmakerId(defaultBookmakerId || null);
       setBookmakerSearch('');
       setPopoverOpen(false);
+      setSelectedImages([]);
+      setImagePreviews([]);
     }
   }, [open, defaultCategory, defaultBookmakerId]);
+
+  // Clean up previews on unmount
+  useEffect(() => {
+    return () => {
+      imagePreviews.forEach(url => URL.revokeObjectURL(url));
+    };
+  }, [imagePreviews]);
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    const remaining = MAX_IMAGES - selectedImages.length;
+    if (remaining <= 0) {
+      toast({ title: `Máximo de ${MAX_IMAGES} imagens`, variant: 'destructive' });
+      return;
+    }
+
+    const validFiles: File[] = [];
+    for (const file of files.slice(0, remaining)) {
+      if (!ACCEPTED_TYPES.includes(file.type)) {
+        toast({ title: 'Formato inválido', description: `${file.name}: use JPG, PNG ou WebP.`, variant: 'destructive' });
+        continue;
+      }
+      if (file.size > MAX_FILE_SIZE) {
+        toast({ title: 'Arquivo muito grande', description: `${file.name}: máximo 2MB.`, variant: 'destructive' });
+        continue;
+      }
+      validFiles.push(file);
+    }
+
+    if (validFiles.length > 0) {
+      const newPreviews = validFiles.map(f => URL.createObjectURL(f));
+      setSelectedImages(prev => [...prev, ...validFiles]);
+      setImagePreviews(prev => [...prev, ...newPreviews]);
+    }
+
+    // Reset input
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const removeImage = (index: number) => {
+    URL.revokeObjectURL(imagePreviews[index]);
+    setSelectedImages(prev => prev.filter((_, i) => i !== index));
+    setImagePreviews(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const uploadImages = async (userId: string): Promise<string[]> => {
+    const urls: string[] = [];
+    for (const file of selectedImages) {
+      const ext = file.name.split('.').pop() || 'jpg';
+      const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error } = await supabase.storage
+        .from('community-images')
+        .upload(path, file, { contentType: file.type });
+      if (error) throw error;
+      const { data: urlData } = supabase.storage
+        .from('community-images')
+        .getPublicUrl(path);
+      urls.push(urlData.publicUrl);
+    }
+    return urls;
+  };
 
   const handlePolish = async () => {
     if (!titulo.trim() && !conteudo.trim()) {
@@ -124,6 +196,12 @@ export function CreateTopicDialog({
 
     setSaving(true);
     try {
+      // Upload images first
+      let imageUrls: string[] = [];
+      if (selectedImages.length > 0) {
+        imageUrls = await uploadImages(user.id);
+      }
+
       const { error } = await supabase.from('community_topics').insert({
         user_id: user.id,
         categoria,
@@ -131,7 +209,8 @@ export function CreateTopicDialog({
         conteudo: conteudo.trim(),
         is_anonymous: isAnonymous,
         bookmaker_catalogo_id: selectedBookmaker?.id || null,
-      });
+        image_urls: imageUrls.length > 0 ? imageUrls : undefined,
+      } as any);
 
       if (error) {
         if (error.code === 'P0001' || error.message?.includes('termos não permitidos')) {
@@ -202,19 +281,17 @@ export function CreateTopicDialog({
     };
 
     recognition.onend = () => {
-      // Don't restart — user clicked stop
       setListening(false);
       setActiveField(null);
       recognitionRef.current = null;
     };
 
     recognition.onerror = (e: any) => {
-      if (e.error === 'no-speech') return; // ignore silence errors in continuous mode
+      if (e.error === 'no-speech') return;
       stopVoice();
       toast({ title: 'Erro no microfone', description: 'Não foi possível capturar áudio. Verifique as permissões.', variant: 'destructive' });
     };
 
-    // Capture current conteudo as base before starting
     const currentConteudo = conteudo;
     recognition.onresult = (event: any) => {
       let final = '';
@@ -240,7 +317,7 @@ export function CreateTopicDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Novo Tópico</DialogTitle>
           <DialogDescription>
@@ -333,6 +410,52 @@ export function CreateTopicDialog({
               </>
             )}
           </Button>
+
+          {/* Image Upload */}
+          <div className="space-y-2">
+            <Label className="text-sm">Imagens (opcional — máx. {MAX_IMAGES})</Label>
+            
+            {/* Preview grid */}
+            {imagePreviews.length > 0 && (
+              <div className="grid grid-cols-4 gap-2">
+                {imagePreviews.map((preview, i) => (
+                  <div key={i} className="relative group aspect-square rounded-lg overflow-hidden border border-border">
+                    <img src={preview} alt={`Preview ${i + 1}`} className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => removeImage(i)}
+                      className="absolute top-1 right-1 h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {selectedImages.length < MAX_IMAGES && (
+              <>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  multiple
+                  className="hidden"
+                  onChange={handleImageSelect}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full gap-2 border-dashed"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <ImagePlus className="h-4 w-4" />
+                  Adicionar imagem ({selectedImages.length}/{MAX_IMAGES})
+                </Button>
+              </>
+            )}
+          </div>
 
           {/* Bookmaker tag (optional) */}
           <div className="space-y-2">

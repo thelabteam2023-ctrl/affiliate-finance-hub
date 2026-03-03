@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { MessageSquare, User, Clock, TrendingUp, Building2 } from 'lucide-react';
+import { MessageSquare, User, Clock, TrendingUp, Building2, ImageIcon } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { getCategoryByValue, type CommunityCategory } from '@/lib/communityCategories';
@@ -24,6 +24,7 @@ interface FeedTopic {
   comment_count: number;
   last_activity: string;
   author_name?: string | null;
+  image_urls?: string[];
 }
 
 interface TopicFeedProps {
@@ -46,7 +47,7 @@ export function TopicFeed({ categoryFilter, bookmakerFilter, searchTerm, sortBy,
         .from('community_topics')
         .select(`
           id, titulo, conteudo, categoria, is_anonymous, created_at, user_id,
-          bookmaker_catalogo_id,
+          bookmaker_catalogo_id, image_urls,
           bookmakers_catalogo(nome, logo_url, visibility)
         `)
         .eq('status', 'ATIVO');
@@ -124,6 +125,7 @@ export function TopicFeed({ categoryFilter, bookmakerFilter, searchTerm, sortBy,
         comment_count: commentCounts[t.id] || 0,
         last_activity: lastComments[t.id] || t.created_at,
         author_name: t.is_anonymous ? 'Anônimo' : (profileMap[t.user_id] || 'Usuário PRO'),
+        image_urls: t.image_urls || [],
       }));
 
       // Sort
@@ -200,6 +202,17 @@ export function TopicFeed({ categoryFilter, bookmakerFilter, searchTerm, sortBy,
                   <p className="text-xs text-muted-foreground line-clamp-1 mb-2">
                     {topic.conteudo}
                   </p>
+
+                  {/* Image thumbnails */}
+                  {topic.image_urls && topic.image_urls.length > 0 && (
+                    <div className="flex gap-1.5 mb-2">
+                      {topic.image_urls.slice(0, 4).map((url, i) => (
+                        <div key={i} className="h-10 w-10 rounded border border-border overflow-hidden shrink-0">
+                          <img src={url} alt="" className="w-full h-full object-cover" />
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
                   {/* Meta row */}
                   <div className="flex items-center gap-2 flex-wrap">
