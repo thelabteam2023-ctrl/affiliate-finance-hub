@@ -88,7 +88,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { RegistrarPerdaRapidaDialog } from "@/components/parceiros/RegistrarPerdaRapidaDialog";
 import { PagamentoFornecedorDialog } from "@/components/programa-indicacao/PagamentoFornecedorDialog";
 import { PagamentoParceiroDialog } from "@/components/programa-indicacao/PagamentoParceiroDialog";
-import { ParceriaDialog } from "@/components/parcerias/ParceriaDialog";
+import { ParceriaDialog, type RenewalSuccessData } from "@/components/parcerias/ParceriaDialog";
 
 // Classificação de domínio dos eventos
 type EventDomain = 'project_event' | 'financial_event' | 'partner_event' | 'admin_event';
@@ -971,6 +971,41 @@ export default function CentralOperacoes() {
     setRenovarDialogOpen(false);
     setParceriaToRenovar(null);
     fetchData(true);
+  };
+
+  const handleRenewalSuccess = (data: RenewalSuccessData) => {
+    // Close renewal dialog
+    setRenovarDialogOpen(false);
+    setParceriaToRenovar(null);
+    fetchData(true);
+
+    // Open payment dialog based on origin type
+    if (data.origem_tipo === "FORNECEDOR" && data.fornecedor_id) {
+      setSelectedPagamentoFornecedor({
+        parceriaId: data.newParceriaId,
+        fornecedorNome: data.fornecedorNome || "",
+        fornecedorId: data.fornecedor_id,
+        parceiroNome: data.parceiroNome,
+        valorFornecedor: data.valor_fornecedor,
+        valorPago: 0,
+        valorRestante: data.valor_fornecedor,
+        diasRestantes: 0,
+        workspaceId: "",
+      });
+      setPagamentoFornecedorOpen(true);
+    } else {
+      // For DIRETO or INDICADOR, open partner payment dialog
+      setSelectedPagamentoParceiro({
+        parceriaId: data.newParceriaId,
+        parceiroNome: data.parceiroNome,
+        valorParceiro: data.valor_parceiro,
+        origemTipo: data.origem_tipo,
+        diasRestantes: 0,
+        parceiroId: data.parceiro_id,
+        workspaceId: "",
+      });
+      setPagamentoParceiroDialogOpen(true);
+    }
   };
 
   // Usa helper centralizado que previne RangeError em tokens cripto
@@ -2525,6 +2560,21 @@ export default function CentralOperacoes() {
         />
       )}
 
+      {/* Dialog Pagamento Parceiro */}
+      <PagamentoParceiroDialog
+        open={pagamentoParceiroDialogOpen}
+        onOpenChange={(open) => {
+          setPagamentoParceiroDialogOpen(open);
+          if (!open) setSelectedPagamentoParceiro(null);
+        }}
+        parceria={selectedPagamentoParceiro ? {
+          id: selectedPagamentoParceiro.parceriaId,
+          parceiroNome: selectedPagamentoParceiro.parceiroNome,
+          valorParceiro: selectedPagamentoParceiro.valorParceiro,
+        } : null}
+        onSuccess={() => fetchData()}
+      />
+
       {/* Dialog Pagamento Fornecedor */}
       <PagamentoFornecedorDialog
         open={pagamentoFornecedorOpen}
@@ -2585,6 +2635,7 @@ export default function CentralOperacoes() {
         } : null}
         isViewMode={false}
         isRenewalMode={true}
+        onRenewalSuccess={handleRenewalSuccess}
       />
     </div>
   );
