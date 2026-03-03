@@ -678,7 +678,7 @@ export function DashboardTab() {
                     </div>
                     <div className="text-right">
                       <p className="font-bold text-orange-500">{formatCurrency(forn.valorTotal)}</p>
-                      <p className="text-xs text-muted-foreground">pago</p>
+                      <p className="text-xs text-muted-foreground">contratado</p>
                     </div>
                   </div>
                 ))}
