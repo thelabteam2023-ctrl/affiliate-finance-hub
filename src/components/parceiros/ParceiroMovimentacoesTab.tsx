@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback, memo, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowRight, AlertCircle, RefreshCw, Info, Building2, Wallet, Landmark } from "lucide-react";
+import { ArrowRight, AlertCircle, RefreshCw, Info, Building2, Wallet, Landmark, Filter, X, CalendarDays, FolderOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -10,6 +10,22 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
+import { DateRange } from "react-day-picker";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { 
   getGlobalMovimentacoesCache, 
   MovimentacoesData, 
@@ -20,6 +36,7 @@ import {
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { parseLocalDateTime } from "@/utils/dateUtils";
 import { CryptoTransactionCard, CryptoTransactionData, CryptoParty } from "./CryptoTransactionCard";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
 interface ParceiroMovimentacoesTabProps {
   parceiroId: string;
@@ -44,10 +61,27 @@ export const ParceiroMovimentacoesTab = memo(function ParceiroMovimentacoesTab({
   const [error, setError] = useState<string | null>(null);
   const { getLogoUrl } = useBookmakerLogoMap();
   
+  const [selectedTypes, setSelectedTypes] = useState<Set<string>>(new Set());
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>("all");
+  const [projects, setProjects] = useState<Array<{ id: string; nome: string }>>([]);
+
   // Referência para evitar race conditions
   const lastFetchedIdRef = useRef<string | null>(null);
   const isFetchingRef = useRef(false);
   const isMountedRef = useRef(true);
+
+  // Fetch projects for filter
+  useEffect(() => {
+    const fetchProjects = async () => {
+      const { data: projectsData } = await supabase
+        .from("projetos")
+        .select("id, nome")
+        .order("nome");
+      if (projectsData) setProjects(projectsData);
+    };
+    fetchProjects();
+  }, []);
 
   const fetchData = useCallback(async (forceRefresh = false) => {
     if (!parceiroId) return;
@@ -543,6 +577,53 @@ export const ParceiroMovimentacoesTab = memo(function ParceiroMovimentacoesTab({
     );
   };
 
+  const transacoes = data?.transacoes || [];
+
+  // =========================================================================
+  // FILTROS: Tipos disponíveis, filtragem por tipo/data/projeto
+  // =========================================================================
+  const availableTypes = useMemo(() => {
+    const types = new Set<string>();
+    transacoes.forEach(t => types.add(t.tipo_transacao));
+    return Array.from(types).sort();
+  }, [transacoes]);
+
+  const toggleType = useCallback((tipo: string) => {
+    setSelectedTypes(prev => {
+      const next = new Set(prev);
+      if (next.has(tipo)) next.delete(tipo);
+      else next.add(tipo);
+      return next;
+    });
+  }, []);
+
+  const clearFilters = useCallback(() => {
+    setSelectedTypes(new Set());
+    setDateRange(undefined);
+    setSelectedProjectId("all");
+  }, []);
+
+  const hasActiveFilters = selectedTypes.size > 0 || !!dateRange?.from || selectedProjectId !== "all";
+
+  const filteredTransacoes = useMemo(() => {
+    return transacoes.filter(t => {
+      if (selectedTypes.size > 0 && !selectedTypes.has(t.tipo_transacao)) return false;
+      if (dateRange?.from) {
+        const tDate = parseLocalDateTime(t.data_transacao);
+        if (tDate < dateRange.from) return false;
+        if (dateRange.to) {
+          const endOfDay = new Date(dateRange.to);
+          endOfDay.setHours(23, 59, 59, 999);
+          if (tDate > endOfDay) return false;
+        }
+      }
+      if (selectedProjectId !== "all") {
+        if (t.projeto_id_snapshot !== selectedProjectId) return false;
+      }
+      return true;
+    });
+  }, [transacoes, selectedTypes, dateRange, selectedProjectId]);
+
   // LOADING (apenas no primeiro carregamento)
   if (loading && !data) {
     return (
@@ -567,8 +648,6 @@ export const ParceiroMovimentacoesTab = memo(function ParceiroMovimentacoesTab({
       </div>
     );
   }
-
-  const transacoes = data?.transacoes || [];
 
   // =========================================================================
   // TRANSFORMAÇÃO: Converter transação para formato de card crypto
@@ -669,7 +748,7 @@ export const ParceiroMovimentacoesTab = memo(function ParceiroMovimentacoesTab({
     };
   };
 
-  // EMPTY
+  // EMPTY (sem dados brutos)
   if (transacoes.length === 0) {
     return (
       <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
@@ -679,12 +758,126 @@ export const ParceiroMovimentacoesTab = memo(function ParceiroMovimentacoesTab({
     );
   }
 
+  const dateRangeLabel = dateRange?.from
+    ? dateRange.to
+      ? `${format(dateRange.from, "dd/MM", { locale: ptBR })} - ${format(dateRange.to, "dd/MM", { locale: ptBR })}`
+      : format(dateRange.from, "dd/MM/yy", { locale: ptBR })
+    : null;
+
   // CONTENT
   return (
     <TooltipProvider>
-      <div className="h-full overflow-y-auto">
+      <div className="h-full flex flex-col overflow-hidden">
+        {/* ============ FILTER BAR ============ */}
+        <div className="shrink-0 space-y-2 pb-3 border-b border-border mb-3">
+          {/* Row 1: Date + Project + Clear */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Date Range Picker */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant={dateRange?.from ? "secondary" : "outline"}
+                  size="sm"
+                  className="h-7 text-xs gap-1.5"
+                >
+                  <CalendarDays className="h-3.5 w-3.5" />
+                  {dateRangeLabel || "Período"}
+                  {dateRange?.from && (
+                    <X
+                      className="h-3 w-3 ml-0.5 hover:text-destructive"
+                      onClick={(e) => { e.stopPropagation(); setDateRange(undefined); }}
+                    />
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  initialFocus
+                  mode="range"
+                  defaultMonth={dateRange?.from}
+                  selected={dateRange}
+                  onSelect={setDateRange}
+                  numberOfMonths={2}
+                  locale={ptBR}
+                />
+              </PopoverContent>
+            </Popover>
+
+            {/* Project Select */}
+            {projects.length > 0 && (
+              <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
+                <SelectTrigger className="h-7 text-xs w-auto min-w-[120px] max-w-[180px]">
+                  <FolderOpen className="h-3.5 w-3.5 mr-1.5 shrink-0" />
+                  <SelectValue placeholder="Projeto" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os projetos</SelectItem>
+                  {projects.map(p => (
+                    <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+
+            {/* Clear all */}
+            {hasActiveFilters && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs text-muted-foreground hover:text-destructive gap-1"
+                onClick={clearFilters}
+              >
+                <X className="h-3 w-3" />
+                Limpar
+              </Button>
+            )}
+
+            {/* Counter */}
+            <span className="text-[10px] text-muted-foreground ml-auto">
+              {filteredTransacoes.length}/{transacoes.length}
+            </span>
+          </div>
+
+          {/* Row 2: Type chips */}
+          {availableTypes.length > 1 && (
+            <ScrollArea className="w-full">
+              <div className="flex gap-1.5 pb-1">
+                {availableTypes.map(tipo => {
+                  const isActive = selectedTypes.has(tipo);
+                  return (
+                    <button
+                      key={tipo}
+                      type="button"
+                      onClick={() => toggleType(tipo)}
+                      className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-medium border transition-colors whitespace-nowrap ${
+                        isActive
+                          ? getTipoBadgeColor(tipo)
+                          : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"
+                      }`}
+                    >
+                      {getTipoLabel(tipo)}
+                    </button>
+                  );
+                })}
+              </div>
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
+          )}
+        </div>
+
+        {/* ============ TRANSACTION LIST ============ */}
+        {filteredTransacoes.length === 0 ? (
+          <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
+            <Filter className="h-6 w-6 mb-2 opacity-30" />
+            <p className="text-sm">Nenhuma movimentação com esses filtros</p>
+            <Button variant="link" size="sm" className="text-xs mt-1" onClick={clearFilters}>
+              Limpar filtros
+            </Button>
+          </div>
+        ) : (
+        <div className="flex-1 overflow-y-auto">
         <div className="space-y-2 pr-1">
-          {transacoes.map((transacao) => {
+          {filteredTransacoes.map((transacao) => {
             // ===============================================================
             // RENDERIZAÇÃO CONDICIONAL: Card Crypto vs Card Padrão
             // ===============================================================
@@ -768,6 +961,8 @@ export const ParceiroMovimentacoesTab = memo(function ParceiroMovimentacoesTab({
             );
           })}
         </div>
+        </div>
+        )}
       </div>
     </TooltipProvider>
   );

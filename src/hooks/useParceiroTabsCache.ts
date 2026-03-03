@@ -44,6 +44,7 @@ export interface Transacao {
   nome_investidor: string | null;
   ajuste_direcao: string | null;
   ajuste_motivo: string | null;
+  projeto_id_snapshot: string | null;
 }
 
 export interface ContaBancaria {
