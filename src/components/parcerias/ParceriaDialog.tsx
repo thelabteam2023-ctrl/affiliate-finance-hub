@@ -17,6 +17,17 @@ import { parseLocalDate } from "@/lib/dateUtils";
 import { UserPlus, Truck, ArrowRight, DollarSign, HelpCircle } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
+export interface RenewalSuccessData {
+  newParceriaId: string;
+  parceiro_id: string;
+  parceiroNome: string;
+  origem_tipo: string;
+  fornecedor_id?: string;
+  fornecedorNome?: string;
+  valor_parceiro: number;
+  valor_fornecedor: number;
+}
+
 interface ParceriaDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -25,6 +36,7 @@ interface ParceriaDialogProps {
   isRenewalMode?: boolean;
   preSelectedParceiroId?: string | null;
   pagamentoJaRealizado?: boolean;
+  onRenewalSuccess?: (data: RenewalSuccessData) => void;
 }
 
 interface Parceiro {
@@ -44,7 +56,7 @@ interface Fornecedor {
   nome: string;
 }
 
-export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode, isRenewalMode = false, preSelectedParceiroId, pagamentoJaRealizado = false }: ParceriaDialogProps) {
+export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode, isRenewalMode = false, preSelectedParceiroId, pagamentoJaRealizado = false, onRenewalSuccess }: ParceriaDialogProps) {
   const { toast } = useToast();
   const { workspaceId } = useWorkspace();
   const [loading, setLoading] = useState(false);
@@ -316,11 +328,30 @@ export function ParceriaDialog({ open, onOpenChange, parceria, isViewMode, isRen
           .eq("id", parceria.id);
         if (updateError) throw updateError;
 
-        const { error: insertError } = await supabase
+        const { data: newParceria, error: insertError } = await supabase
           .from("parcerias")
-          .insert(payload);
+          .insert(payload)
+          .select("id")
+          .single();
         if (insertError) throw insertError;
         toast({ title: "Parceria renovada com sucesso" });
+
+        // Find partner and supplier names for payment dialog
+        const parceiroNome = parceiros.find(p => p.id === formData.parceiro_id)?.nome || "";
+        const fornecedorNome = fornecedores.find(f => f.id === formData.fornecedor_id)?.nome || "";
+
+        if (onRenewalSuccess && newParceria) {
+          onRenewalSuccess({
+            newParceriaId: newParceria.id,
+            parceiro_id: formData.parceiro_id,
+            parceiroNome,
+            origem_tipo: formData.origem_tipo,
+            fornecedor_id: formData.fornecedor_id || undefined,
+            fornecedorNome: fornecedorNome || undefined,
+            valor_parceiro: formData.valor_parceiro,
+            valor_fornecedor: formData.valor_fornecedor || 0,
+          });
+        }
       } else if (parceria?.id) {
         const { error } = await supabase
           .from("parcerias")
