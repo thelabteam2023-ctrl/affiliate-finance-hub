@@ -6,6 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SearchInput } from "@/components/ui/search-input";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -38,11 +44,19 @@ import {
   Minus,
   Target,
   ArrowRight,
+  Info,
 } from "lucide-react";
 import { useActionAccess } from "@/hooks/useModuleAccess";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type TipoFonte = "INDICADOR" | "FORNECEDOR";
+
+interface ParceriaDetalhe {
+  parceriaId: string;
+  parceiroNome: string;
+  valorContratado: number;
+  valorPago: number;
+}
 
 interface IndicadorPerformance {
   indicador_id: string;
@@ -80,6 +94,8 @@ interface Fornecedor {
   observacoes: string | null;
   total_parceiros?: number;
   total_contratado?: number;
+  total_liquidado?: number;
+  parcerias_detalhes?: ParceriaDetalhe[];
 }
 
 // Unified type for display
@@ -93,10 +109,13 @@ interface FonteCaptacao {
   email: string | null;
   totalParceiros: number;
   totalPago: number;
+  totalPendente: number;
   // Indicador-specific
   parcerias_ativas?: number;
   total_comissoes?: number;
   total_bonus?: number;
+  // Fornecedor-specific
+  parcerias_detalhes?: ParceriaDetalhe[];
   // Original data for dialogs
   originalData: IndicadorPerformance | Fornecedor;
 }
@@ -145,26 +164,47 @@ export function FontesCaptacaoTab() {
     try {
       setLoading(true);
       
-      const [indicadoresRes, acordosRes, fornecedoresRes, parceriasRes, custosDiretosRes, lucrosDiretosRes] = await Promise.all([
+      const [indicadoresRes, acordosRes, fornecedoresRes, parceriasRes, custosDiretosRes, lucrosDiretosRes, pagamentosRes] = await Promise.all([
         supabase.from("v_indicador_performance").select("*"),
         supabase.from("indicador_acordos").select("*").eq("ativo", true),
         supabase.from("fornecedores").select("*").order("nome"),
-        supabase.from("parcerias").select("fornecedor_id, valor_fornecedor").eq("origem_tipo", "FORNECEDOR"),
+        supabase.from("parcerias").select("id, fornecedor_id, valor_fornecedor, parceiro:parceiros!parcerias_parceiro_id_fkey(nome)").eq("origem_tipo", "FORNECEDOR"),
         supabase.from("v_custos_aquisicao").select("parceiro_id, custo_total").eq("origem_tipo", "DIRETO"),
         supabase.from("v_parceiro_lucro_total").select("parceiro_id, lucro_projetos"),
+        supabase.from("movimentacoes_indicacao").select("parceria_id, valor, tipo, status").eq("tipo", "PAGTO_FORNECEDOR").eq("status", "CONFIRMADO"),
       ]);
 
       if (indicadoresRes.error) throw indicadoresRes.error;
       setIndicadores(indicadoresRes.data || []);
       setAcordos(acordosRes.data || []);
 
+      // Build payment sum per parceria
+      const pagamentosPorParceria = new Map<string, number>();
+      (pagamentosRes.data || []).forEach((m: any) => {
+        const atual = pagamentosPorParceria.get(m.parceria_id) || 0;
+        pagamentosPorParceria.set(m.parceria_id, atual + (m.valor || 0));
+      });
+
       // Calculate fornecedor stats
       const fornecedoresWithStats = (fornecedoresRes.data || []).map((f) => {
-        const parceriasFornecedor = (parceriasRes.data || []).filter((p) => p.fornecedor_id === f.id);
+        const parceriasFornecedor = (parceriasRes.data || []).filter((p: any) => p.fornecedor_id === f.id);
+        let totalLiquidado = 0;
+        const detalhes: ParceriaDetalhe[] = parceriasFornecedor.map((p: any) => {
+          const valorPago = pagamentosPorParceria.get(p.id) || 0;
+          totalLiquidado += valorPago;
+          return {
+            parceriaId: p.id,
+            parceiroNome: p.parceiro?.nome || "N/A",
+            valorContratado: p.valor_fornecedor || 0,
+            valorPago,
+          };
+        });
         return {
           ...f,
           total_parceiros: parceriasFornecedor.length,
-          total_contratado: parceriasFornecedor.reduce((acc, p) => acc + (p.valor_fornecedor || 0), 0),
+          total_contratado: parceriasFornecedor.reduce((acc: number, p: any) => acc + (p.valor_fornecedor || 0), 0),
+          total_liquidado: totalLiquidado,
+          parcerias_detalhes: detalhes,
         };
       });
       setFornecedores(fornecedoresWithStats);
@@ -209,6 +249,7 @@ export function FontesCaptacaoTab() {
         email: ind.email,
         totalParceiros: ind.total_parceiros_indicados,
         totalPago: ind.total_comissoes + ind.total_bonus,
+        totalPendente: 0,
         parcerias_ativas: ind.parcerias_ativas,
         total_comissoes: ind.total_comissoes,
         total_bonus: ind.total_bonus,
@@ -224,7 +265,9 @@ export function FontesCaptacaoTab() {
         telefone: f.telefone,
         email: f.email,
         totalParceiros: f.total_parceiros || 0,
-        totalPago: f.total_contratado || 0,
+        totalPago: f.total_liquidado || 0,
+        totalPendente: Math.max(0, (f.total_contratado || 0) - (f.total_liquidado || 0)),
+        parcerias_detalhes: f.parcerias_detalhes,
         originalData: f,
       }));
     }
@@ -252,6 +295,7 @@ export function FontesCaptacaoTab() {
     ativos: fornecedores.filter((f) => f.status === "ATIVO").length,
     parceiros: fornecedores.reduce((acc, f) => acc + (f.total_parceiros || 0), 0),
     contratado: fornecedores.reduce((acc, f) => acc + (f.total_contratado || 0), 0),
+    liquidado: fornecedores.reduce((acc, f) => acc + (f.total_liquidado || 0), 0),
   };
 
   const formatCurrency = (value: number) => {
@@ -510,7 +554,7 @@ export function FontesCaptacaoTab() {
       </Tabs>
 
       {/* KPIs for current type */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className={`grid grid-cols-2 ${tipoFonte === "FORNECEDOR" ? "md:grid-cols-5" : "md:grid-cols-4"} gap-4`}>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total</CardTitle>
@@ -556,15 +600,28 @@ export function FontesCaptacaoTab() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{tipoFonte === "INDICADOR" ? "Total Pago" : "Total Contratado"}</CardTitle>
-            <DollarSign className={`h-4 w-4 ${tipoFonte === "INDICADOR" ? "text-emerald-500" : "text-blue-500"}`} />
+            <CardTitle className="text-sm font-medium">{tipoFonte === "INDICADOR" ? "Total Pago" : "Total Pago"}</CardTitle>
+            <DollarSign className="h-4 w-4 text-emerald-500" />
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${tipoFonte === "INDICADOR" ? "text-emerald-500" : "text-blue-500"}`}>
-              {formatCurrency(tipoFonte === "INDICADOR" ? statsIndicadores.pago : statsFornecedores.contratado)}
+            <div className="text-2xl font-bold text-emerald-500">
+              {formatCurrency(tipoFonte === "INDICADOR" ? statsIndicadores.pago : statsFornecedores.liquidado)}
             </div>
           </CardContent>
         </Card>
+        {tipoFonte === "FORNECEDOR" && (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Pendente</CardTitle>
+              <DollarSign className="h-4 w-4 text-orange-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-orange-500">
+                {formatCurrency(statsFornecedores.contratado - statsFornecedores.liquidado)}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Toolbar */}
@@ -680,14 +737,43 @@ export function FontesCaptacaoTab() {
                       {getStatusBadge(fonte.status)}
                     </div>
 
-                    <div className="mt-4 grid grid-cols-2 gap-4">
+                    <div className="mt-4 grid grid-cols-3 gap-4">
                       <div>
                         <p className="text-sm text-muted-foreground">Parceiros</p>
                         <p className="font-semibold">{fonte.totalParceiros}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Total Pago</p>
-                        <p className="font-semibold text-blue-500">{formatCurrency(fonte.totalPago)}</p>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <p className="text-sm text-muted-foreground flex items-center gap-1 cursor-help">
+                                Total Pago <Info className="h-3 w-3" />
+                              </p>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-xs">
+                              <div className="space-y-1 text-xs">
+                                <p className="font-semibold mb-1">Histórico de Fornecimento</p>
+                                {(fonte.parcerias_detalhes || []).length === 0 ? (
+                                  <p className="text-muted-foreground">Nenhuma parceria vinculada</p>
+                                ) : (
+                                  (fonte.parcerias_detalhes || []).map((d) => (
+                                    <div key={d.parceriaId} className="flex justify-between gap-3">
+                                      <span className="truncate">{d.parceiroNome}</span>
+                                      <span className="shrink-0">
+                                        {formatCurrency(d.valorPago)} / {formatCurrency(d.valorContratado)}
+                                      </span>
+                                    </div>
+                                  ))
+                                )}
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        <p className="font-semibold text-emerald-500">{formatCurrency(fonte.totalPago)}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Pendente</p>
+                        <p className="font-semibold text-orange-500">{formatCurrency(fonte.totalPendente)}</p>
                       </div>
                     </div>
 
@@ -729,10 +815,13 @@ export function FontesCaptacaoTab() {
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="text-right">
-                    <div className={`font-semibold ${fonte.tipo === "INDICADOR" ? "text-emerald-500" : "text-blue-500"}`}>
+                    <div className="font-semibold text-emerald-500">
                       {formatCurrency(fonte.totalPago)}
                     </div>
                     <div className="text-sm text-muted-foreground">Total pago</div>
+                    {fonte.tipo === "FORNECEDOR" && fonte.totalPendente > 0 && (
+                      <div className="text-xs text-orange-500">{formatCurrency(fonte.totalPendente)} pendente</div>
+                    )}
                   </div>
                   {getStatusBadge(fonte.status)}
                   <div className="flex gap-1">
