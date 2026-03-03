@@ -826,7 +826,7 @@ export const ParceiroMovimentacoesTab = memo(function ParceiroMovimentacoesTab({
               <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
                 <SelectTrigger
                   icon={<FolderOpen className="h-3.5 w-3.5" />}
-                  className="h-7 text-xs w-auto min-w-0 max-w-[160px] shrink-0 pl-7 pr-6"
+                  className="h-7 text-xs w-auto min-w-[140px] max-w-[200px] shrink-0 pl-7 pr-7"
                 >
                   <SelectValue placeholder="Projeto: Todos" />
                 </SelectTrigger>
