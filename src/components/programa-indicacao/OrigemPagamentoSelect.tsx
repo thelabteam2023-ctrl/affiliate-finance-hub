@@ -680,12 +680,14 @@ export function OrigemPagamentoSelect({
                   role="combobox"
                   aria-expanded={parceiroWalletOpen}
                   disabled={disabled}
-                  className="w-full justify-between font-normal"
+                  className="w-full justify-center font-normal relative"
                 >
-                  {value.origemParceiroId
-                    ? parceiros.find(p => p.id === value.origemParceiroId)?.nome || "Parceiro"
-                    : "Buscar parceiro..."}
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  <span className="text-center flex-1">
+                    {value.origemParceiroId
+                      ? parceiros.find(p => p.id === value.origemParceiroId)?.nome || "Parceiro"
+                      : "Buscar parceiro..."}
+                  </span>
+                  <ChevronsUpDown className="absolute right-3 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
@@ -1090,12 +1092,14 @@ export function OrigemPagamentoSelect({
                   role="combobox"
                   aria-expanded={parceiroContaOpen}
                   disabled={disabled}
-                  className="w-full justify-between font-normal"
+                  className="w-full justify-center font-normal relative"
                 >
-                  {value.origemParceiroId
-                    ? parceiros.find(p => p.id === value.origemParceiroId)?.nome || "Parceiro"
-                    : "Buscar parceiro..."}
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  <span className="text-center flex-1">
+                    {value.origemParceiroId
+                      ? parceiros.find(p => p.id === value.origemParceiroId)?.nome || "Parceiro"
+                      : "Buscar parceiro..."}
+                  </span>
+                  <ChevronsUpDown className="absolute right-3 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
