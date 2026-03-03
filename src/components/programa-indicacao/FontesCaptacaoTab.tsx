@@ -28,6 +28,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { IndicadorDialog } from "@/components/indicadores/IndicadorDialog";
 import { FornecedorDialog } from "@/components/fornecedores/FornecedorDialog";
 import { IndicadorCard } from "@/components/indicadores/IndicadorCard";
@@ -45,6 +47,7 @@ import {
   Target,
   ArrowRight,
   Info,
+  Ban,
 } from "lucide-react";
 import { useActionAccess } from "@/hooks/useModuleAccess";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -56,6 +59,8 @@ interface ParceriaDetalhe {
   parceiroNome: string;
   valorContratado: number;
   valorPago: number;
+  dispensado: boolean;
+  dispensaMotivo?: string;
 }
 
 interface IndicadorPerformance {
@@ -145,7 +150,15 @@ export function FontesCaptacaoTab() {
   // Delete
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [fonteToDelete, setFonteToDelete] = useState<FonteCaptacao | null>(null);
-  
+
+  // Dispensa fornecedor
+  const [dispensaOpen, setDispensaOpen] = useState(false);
+  const [dispensaMotivo, setDispensaMotivo] = useState("");
+  const [dispensaParceriaId, setDispensaParceriaId] = useState<string | null>(null);
+  const [dispensaParceiroNome, setDispensaParceiroNome] = useState("");
+  const [dispensaFornecedorNome, setDispensaFornecedorNome] = useState("");
+  const [dispensaLoading, setDispensaLoading] = useState(false);
+
   const { canCreate, canEdit, canDelete } = useActionAccess();
 
   useEffect(() => {
@@ -168,7 +181,7 @@ export function FontesCaptacaoTab() {
         supabase.from("v_indicador_performance").select("*"),
         supabase.from("indicador_acordos").select("*").eq("ativo", true),
         supabase.from("fornecedores").select("*").order("nome"),
-        supabase.from("parcerias").select("id, fornecedor_id, valor_fornecedor, parceiro:parceiros!parcerias_parceiro_id_fkey(nome)").eq("origem_tipo", "FORNECEDOR"),
+        supabase.from("parcerias").select("id, fornecedor_id, valor_fornecedor, pagamento_dispensado, dispensa_motivo, parceiro:parceiros!parcerias_parceiro_id_fkey(nome)").eq("origem_tipo", "FORNECEDOR"),
         supabase.from("v_custos_aquisicao").select("parceiro_id, custo_total").eq("origem_tipo", "DIRETO"),
         supabase.from("v_parceiro_lucro_total").select("parceiro_id, lucro_projetos"),
         supabase.from("movimentacoes_indicacao").select("parceria_id, valor, tipo, status").eq("tipo", "PAGTO_FORNECEDOR").eq("status", "CONFIRMADO"),
@@ -189,20 +202,25 @@ export function FontesCaptacaoTab() {
       const fornecedoresWithStats = (fornecedoresRes.data || []).map((f) => {
         const parceriasFornecedor = (parceriasRes.data || []).filter((p: any) => p.fornecedor_id === f.id);
         let totalLiquidado = 0;
-        const detalhes: ParceriaDetalhe[] = parceriasFornecedor.map((p: any) => {
+      const detalhes: ParceriaDetalhe[] = parceriasFornecedor.map((p: any) => {
           const valorPago = pagamentosPorParceria.get(p.id) || 0;
-          totalLiquidado += valorPago;
+          const isDispensado = p.pagamento_dispensado === true;
+          if (!isDispensado) {
+            totalLiquidado += valorPago;
+          }
           return {
             parceriaId: p.id,
             parceiroNome: p.parceiro?.nome || "N/A",
             valorContratado: p.valor_fornecedor || 0,
             valorPago,
+            dispensado: isDispensado,
+            dispensaMotivo: p.dispensa_motivo || undefined,
           };
         });
         return {
           ...f,
           total_parceiros: parceriasFornecedor.length,
-          total_contratado: parceriasFornecedor.reduce((acc: number, p: any) => acc + (p.valor_fornecedor || 0), 0),
+          total_contratado: parceriasFornecedor.filter((p: any) => !p.pagamento_dispensado).reduce((acc: number, p: any) => acc + (p.valor_fornecedor || 0), 0),
           total_liquidado: totalLiquidado,
           parcerias_detalhes: detalhes,
         };
@@ -389,6 +407,71 @@ export function FontesCaptacaoTab() {
     setSelectedFornecedor(null);
     setIsViewMode(false);
     fetchData();
+  };
+
+  const handleDispensaClick = (parceriaId: string, parceiroNome: string, fornecedorNome: string) => {
+    setDispensaParceriaId(parceriaId);
+    setDispensaParceiroNome(parceiroNome);
+    setDispensaFornecedorNome(fornecedorNome);
+    setDispensaMotivo("");
+    setDispensaOpen(true);
+  };
+
+  const handleDispensa = async () => {
+    if (!dispensaParceriaId || !dispensaMotivo.trim()) return;
+    setDispensaLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Usuário não autenticado");
+
+      // Get parceria details
+      const { data: parceria, error: parceriaErr } = await supabase
+        .from("parcerias")
+        .select("workspace_id, parceiro_id, fornecedor_id")
+        .eq("id", dispensaParceriaId)
+        .single();
+      if (parceriaErr || !parceria) throw parceriaErr || new Error("Parceria não encontrada");
+
+      // Mark as dispensed
+      const { error: updateErr } = await supabase
+        .from("parcerias")
+        .update({
+          pagamento_dispensado: true,
+          dispensa_motivo: dispensaMotivo.trim(),
+          dispensa_at: new Date().toISOString(),
+        })
+        .eq("id", dispensaParceriaId);
+      if (updateErr) throw updateErr;
+
+      // Register audit movement
+      await supabase.from("movimentacoes_indicacao").insert({
+        user_id: user.id,
+        workspace_id: parceria.workspace_id,
+        tipo: "PAGTO_FORNECEDOR_DISPENSADO",
+        valor: 0,
+        moeda: "BRL",
+        status: "CONFIRMADO",
+        parceria_id: dispensaParceriaId,
+        parceiro_id: parceria.parceiro_id,
+        descricao: `Pagamento dispensado: ${dispensaMotivo.trim()}`,
+        data_movimentacao: new Date().toISOString().split("T")[0],
+      });
+
+      toast({
+        title: "Pagamento dispensado",
+        description: `Pagamento de ${dispensaParceiroNome} (fornecedor: ${dispensaFornecedorNome}) foi dispensado.`,
+      });
+      setDispensaOpen(false);
+      fetchData();
+    } catch (error: any) {
+      toast({
+        title: "Erro ao dispensar pagamento",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setDispensaLoading(false);
+    }
   };
 
   // Permission checks
@@ -750,18 +833,25 @@ export function FontesCaptacaoTab() {
                                 Total Pago <Info className="h-3 w-3" />
                               </p>
                             </TooltipTrigger>
-                            <TooltipContent side="top" className="max-w-xs">
-                              <div className="space-y-1 text-xs">
+                            <TooltipContent side="top" className="max-w-sm">
+                              <div className="space-y-1.5 text-xs">
                                 <p className="font-semibold mb-1">Histórico de Fornecimento</p>
                                 {(fonte.parcerias_detalhes || []).length === 0 ? (
                                   <p className="text-muted-foreground">Nenhuma parceria vinculada</p>
                                 ) : (
                                   (fonte.parcerias_detalhes || []).map((d) => (
-                                    <div key={d.parceriaId} className="flex justify-between gap-3">
+                                    <div key={d.parceriaId} className="flex items-center justify-between gap-3">
                                       <span className="truncate">{d.parceiroNome}</span>
-                                      <span className="shrink-0">
-                                        {formatCurrency(d.valorPago)} / {formatCurrency(d.valorContratado)}
-                                      </span>
+                                      {d.dispensado ? (
+                                        <Badge variant="outline" className="text-[10px] h-5 shrink-0">
+                                          <Ban className="h-3 w-3 mr-1" />
+                                          Dispensado
+                                        </Badge>
+                                      ) : (
+                                        <span className="shrink-0">
+                                          {formatCurrency(d.valorPago)} / {formatCurrency(d.valorContratado)}
+                                        </span>
+                                      )}
                                     </div>
                                   ))
                                 )}
@@ -781,6 +871,31 @@ export function FontesCaptacaoTab() {
                       <Button variant="outline" size="sm" className="flex-1" onClick={() => handleEdit(fonte)}>
                         Editar
                       </Button>
+                      {(fonte.parcerias_detalhes || []).some(d => !d.dispensado && d.valorPago < d.valorContratado) && (
+                        <Select
+                          onValueChange={(parceriaId) => {
+                            const detalhe = (fonte.parcerias_detalhes || []).find(d => d.parceriaId === parceriaId);
+                            if (detalhe) {
+                              handleDispensaClick(parceriaId, detalhe.parceiroNome, fonte.nome);
+                            }
+                          }}
+                        >
+                          <SelectTrigger className="flex-1 h-8 text-sm">
+                            <Ban className="h-3 w-3 mr-1" />
+                            <span>Dispensar Pgto</span>
+                          </SelectTrigger>
+                          <SelectContent>
+                            {(fonte.parcerias_detalhes || [])
+                              .filter(d => !d.dispensado && d.valorPago < d.valorContratado)
+                              .map(d => (
+                                <SelectItem key={d.parceriaId} value={d.parceriaId}>
+                                  {d.parceiroNome} — {formatCurrency(d.valorContratado)}
+                                </SelectItem>
+                              ))
+                            }
+                          </SelectContent>
+                        </Select>
+                      )}
                       <Button variant="outline" size="sm" className="flex-1" onClick={() => handleDeleteClick(fonte)}>
                         Excluir
                       </Button>
@@ -870,6 +985,39 @@ export function FontesCaptacaoTab() {
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">
               Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Dispensa Dialog */}
+      <AlertDialog open={dispensaOpen} onOpenChange={setDispensaOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Dispensar pagamento ao fornecedor</AlertDialogTitle>
+            <AlertDialogDescription>
+              O pagamento de <strong>{dispensaParceiroNome}</strong> (fornecedor: <strong>{dispensaFornecedorNome}</strong>) será dispensado. Esta parceria não será contabilizada como pendência financeira.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-3 py-2">
+            <Label htmlFor="dispensa-motivo">Motivo da dispensa *</Label>
+            <Textarea
+              id="dispensa-motivo"
+              placeholder="Ex: Parceria não foi efetivada, desistência do parceiro..."
+              value={dispensaMotivo}
+              onChange={(e) => setDispensaMotivo(e.target.value)}
+              rows={3}
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={dispensaLoading}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDispensa}
+              disabled={!dispensaMotivo.trim() || dispensaLoading}
+              className="bg-destructive text-destructive-foreground"
+            >
+              <Ban className="h-4 w-4 mr-2" />
+              {dispensaLoading ? "Processando..." : "Dispensar Pagamento"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
