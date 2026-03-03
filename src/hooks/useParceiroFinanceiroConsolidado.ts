@@ -36,14 +36,15 @@ export interface BookmakerFinanceiro {
   // Valores na moeda NATIVA da casa
   total_depositado: number;
   total_sacado: number;
-  lucro_prejuizo: number; // AGORA: resultado operacional puro (apostas + giros + cashback)
+  lucro_prejuizo: number; // RESULTADO FINANCEIRO REAL (Saq + Saldo - Dep)
   saldo_atual: number;
   // Breakdown multi-moeda (para casos onde há transações em moedas diferentes)
   depositado_por_moeda: SaldosPorMoeda;
   sacado_por_moeda: SaldosPorMoeda;
   saldo_por_moeda: SaldosPorMoeda;
   resultado_por_moeda: SaldosPorMoeda;
-  // Resultado operacional detalhado
+  // Resultado operacional (métrica secundária - tooltip)
+  resultado_operacional: number;
   resultado_apostas: number;
   resultado_giros: number;
   resultado_cashback: number;
@@ -204,10 +205,17 @@ export function useParceiroFinanceiroConsolidado(parceiroId: string | null) {
       }
 
       // =====================================================================
-      // NOVO: Buscar RESULTADO OPERACIONAL PURO da view
-      // Inclui APENAS: apostas + giros + cashback
-      // Exclui: depósitos, saques, FX, ajustes
+      // Buscar RESULTADO FINANCEIRO REAL da view
+      // Fórmula: Saques + Saldo - Depósitos
       // =====================================================================
+      let resultadoFinanceiroMap = new Map<string, {
+        deposito_total: number;
+        saque_total: number;
+        saldo_atual: number;
+        resultado_financeiro_real: number;
+      }>();
+
+      // Buscar RESULTADO OPERACIONAL (mantido como métrica secundária)
       let resultadoOperacionalMap = new Map<string, {
         resultado_apostas: number;
         resultado_giros: number;
@@ -218,6 +226,22 @@ export function useParceiroFinanceiroConsolidado(parceiroId: string | null) {
       }>();
 
       if (bookmakerIds.length > 0) {
+        // Resultado Financeiro Real
+        const { data: resultadosFinanceiros } = await supabase
+          .from("v_bookmaker_resultado_financeiro")
+          .select("bookmaker_id, deposito_total, saque_total, saldo_atual, resultado_financeiro_real")
+          .in("bookmaker_id", bookmakerIds);
+
+        resultadosFinanceiros?.forEach((r) => {
+          resultadoFinanceiroMap.set(r.bookmaker_id, {
+            deposito_total: Number(r.deposito_total) || 0,
+            saque_total: Number(r.saque_total) || 0,
+            saldo_atual: Number(r.saldo_atual) || 0,
+            resultado_financeiro_real: Number(r.resultado_financeiro_real) || 0,
+          });
+        });
+
+        // Resultado Operacional (métrica secundária para tooltip)
         const { data: resultadosOperacionais } = await supabase
           .from("v_bookmaker_resultado_operacional")
           .select("bookmaker_id, resultado_apostas, resultado_giros, resultado_cashback, resultado_bonus, resultado_operacional_total, qtd_apostas")
@@ -247,9 +271,10 @@ export function useParceiroFinanceiroConsolidado(parceiroId: string | null) {
         saldoPorMoeda[moedaNativa] = saldoAtual;
         
         // =====================================================================
-        // NOVO: Usar resultado operacional PURO (apostas + giros + cashback)
-        // NÃO usa mais a fórmula "Sacado + Saldo - Depositado" que incluía FX
+        // RESULTADO FINANCEIRO REAL = Saques + Saldo - Depósitos
+        // Métrica principal: quanto dinheiro retornou vs quanto saiu
         // =====================================================================
+        const resultadoFin = resultadoFinanceiroMap.get(bm.id);
         const resultadoOp = resultadoOperacionalMap.get(bm.id) || {
           resultado_apostas: 0,
           resultado_giros: 0,
@@ -259,16 +284,15 @@ export function useParceiroFinanceiroConsolidado(parceiroId: string | null) {
           qtd_apostas: 0,
         };
         
-        // Resultado por moeda baseado no resultado operacional
+        // Resultado por moeda baseado no resultado FINANCEIRO REAL
         const resultadoPorMoeda = createEmptySaldos();
-        resultadoPorMoeda[moedaNativa] = resultadoOp.resultado_total;
-        
         // Valores consolidados na moeda nativa para exibição principal
         const totalDepositado = depositadoPorMoeda[moedaNativa] || 0;
         const totalSacado = sacadoPorMoeda[moedaNativa] || 0;
-        
-        // lucro_prejuizo = resultado operacional (PURO)
-        const lucroPrejuizo = resultadoOp.resultado_total;
+        const lucroPrejuizo = resultadoFin
+          ? resultadoFin.resultado_financeiro_real
+          : (totalSacado + saldoAtual - totalDepositado); // fallback manual
+        resultadoPorMoeda[moedaNativa] = lucroPrejuizo;
 
         return {
           bookmaker_id: bm.id,
@@ -284,6 +308,7 @@ export function useParceiroFinanceiroConsolidado(parceiroId: string | null) {
           sacado_por_moeda: sacadoPorMoeda,
           saldo_por_moeda: saldoPorMoeda,
           resultado_por_moeda: resultadoPorMoeda,
+          resultado_operacional: resultadoOp.resultado_total,
           resultado_apostas: resultadoOp.resultado_apostas,
           resultado_giros: resultadoOp.resultado_giros,
           resultado_cashback: resultadoOp.resultado_cashback,
