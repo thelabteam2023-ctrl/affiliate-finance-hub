@@ -320,13 +320,6 @@ export default function TransacaoDialog({ open, onClose, bookmaker, defaultTipo 
                 onChange={setOrigemData}
                 valorPagamento={valorNum}
               />
-              
-              {isDebitoOrigem && isSaldoInsuficiente && (
-                <div className="flex items-center gap-2 text-destructive text-sm mt-2">
-                  <AlertTriangle className="h-4 w-4" />
-                  <span>Saldo insuficiente na origem selecionada</span>
-                </div>
-              )}
             </div>
           )}
 

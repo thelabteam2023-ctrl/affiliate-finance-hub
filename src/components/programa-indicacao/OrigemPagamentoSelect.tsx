@@ -752,8 +752,11 @@ export function OrigemPagamentoSelect({
                       return (
                         <SelectItem key={c.id} value={c.id}>
                           <div className="flex items-center justify-between w-full gap-4">
-                            <span>{c.banco} - {c.titular}</span>
-                            <span className={`text-xs ${saldo < valorEfetivo ? "text-destructive font-semibold" : "text-muted-foreground"}`}>
+                            <div className="flex flex-col">
+                              <span className="font-medium text-sm">{c.banco}</span>
+                              <span className="text-xs text-muted-foreground">{c.titular}</span>
+                            </div>
+                            <span className={`text-xs font-medium ${saldo < valorEfetivo ? "text-destructive" : "text-emerald-600"}`}>
                               {formatCurrency(saldo)}
                             </span>
                           </div>
@@ -766,22 +769,11 @@ export function OrigemPagamentoSelect({
             </div>
           )}
 
-          {/* Show selected balance for Partner accounts */}
-          {value.origemContaBancariaId && (
-            <div className={`p-3 rounded-lg text-sm flex items-center gap-2 ${
-              isInsuficiente && valorEfetivo > 0
-                ? "bg-destructive/10 border border-destructive/30 text-destructive" 
-                : "bg-muted/50 text-muted-foreground"
-            }`}>
-              {isInsuficiente && valorEfetivo > 0 && (
-                <AlertTriangle className="h-4 w-4 shrink-0" />
-              )}
-              <span>
-                Saldo disponível: {formatCurrency(value.saldoDisponivel)}
-                {isInsuficiente && valorEfetivo > 0 && (
-                  <span className="ml-2 font-semibold">— Saldo insuficiente!</span>
-                )}
-              </span>
+          {/* Alerta único de saldo insuficiente para conta selecionada */}
+          {value.origemContaBancariaId && isInsuficiente && valorEfetivo > 0 && (
+            <div className="p-2.5 rounded-lg text-sm flex items-center gap-2 bg-destructive/10 border border-destructive/30 text-destructive">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              <span>Saldo disponível: {formatCurrency(value.saldoDisponivel)} — Insuficiente</span>
             </div>
           )}
         </div>
@@ -881,9 +873,12 @@ export function OrigemPagamentoSelect({
                       return (
                         <SelectItem key={w.id} value={w.id}>
                           <div className="flex items-center justify-between w-full gap-4">
-                            <span>{w.exchange} - {w.endereco.slice(0, 8)}...</span>
+                            <div className="flex flex-col">
+                              <span className="font-medium text-sm">{w.exchange}</span>
+                              <span className="text-xs text-muted-foreground">{w.endereco.slice(0, 12)}...</span>
+                            </div>
                             <div className="flex flex-col items-end text-xs">
-                              <span className={walletSaldo.saldoBRL < valorEfetivo ? "text-destructive font-semibold" : "text-muted-foreground"}>
+                              <span className={walletSaldo.saldoBRL < valorEfetivo ? "text-destructive font-medium" : "text-emerald-600 font-medium"}>
                                 {formatCoin(walletSaldo.saldoCoin, walletSaldo.coin)}
                               </span>
                               <span className="text-muted-foreground/70">
@@ -900,22 +895,11 @@ export function OrigemPagamentoSelect({
             </div>
           )}
 
-          {/* Show selected balance for Partner wallets */}
-          {value.origemWalletId && (
-            <div className={`p-3 rounded-lg text-sm flex items-center gap-2 ${
-              isInsuficiente && valorEfetivo > 0
-                ? "bg-destructive/10 border border-destructive/30 text-destructive" 
-                : "bg-muted/50 text-muted-foreground"
-            }`}>
-              {isInsuficiente && valorEfetivo > 0 && (
-                <AlertTriangle className="h-4 w-4 shrink-0" />
-              )}
-              <span>
-                Saldo disponível: {formatCoin(getSaldoWalletParceiro(value.origemWalletId).saldoCoin, getSaldoWalletParceiro(value.origemWalletId).coin)} ≈ {formatCurrency(value.saldoDisponivel)}
-                {isInsuficiente && valorEfetivo > 0 && (
-                  <span className="ml-2 font-semibold">— Saldo insuficiente!</span>
-                )}
-              </span>
+          {/* Alerta único de saldo insuficiente para wallet selecionada */}
+          {value.origemWalletId && isInsuficiente && valorEfetivo > 0 && (
+            <div className="p-2.5 rounded-lg text-sm flex items-center gap-2 bg-destructive/10 border border-destructive/30 text-destructive">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              <span>Saldo disponível: ≈ {formatCurrency(value.saldoDisponivel)} — Insuficiente</span>
             </div>
           )}
         </div>
