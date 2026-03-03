@@ -7,9 +7,17 @@ import { Badge } from "@/components/ui/badge";
 import { SearchInput } from "@/components/ui/search-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { FornecedorDialog } from "@/components/fornecedores/FornecedorDialog";
-import { Truck, Users, DollarSign, LayoutGrid, List, UserX } from "lucide-react";
+import { Truck, Users, DollarSign, LayoutGrid, List, UserX, Info } from "lucide-react";
 import { useActionAccess } from "@/hooks/useModuleAccess";
+
+interface ParceriaDetalhe {
+  parceriaId: string;
+  parceiroNome: string;
+  valorContratado: number;
+  valorPago: number;
+}
 
 interface Fornecedor {
   id: string;
@@ -25,6 +33,7 @@ interface Fornecedor {
   total_parceiros?: number;
   total_contratado?: number;
   total_liquidado?: number;
+  parcerias_detalhes?: ParceriaDetalhe[];
 }
 
 export function FornecedoresTab() {
@@ -62,7 +71,7 @@ export function FornecedoresTab() {
       // Fetch parcerias stats per fornecedor
       const { data: parceriasData } = await supabase
         .from("parcerias")
-        .select("fornecedor_id, valor_fornecedor")
+        .select("id, fornecedor_id, valor_fornecedor, parceiro:parceiros!parcerias_parceiro_id_fkey(nome)")
         .eq("origem_tipo", "FORNECEDOR");
 
       // Fetch real payments from movimentacoes_indicacao
@@ -72,19 +81,33 @@ export function FornecedoresTab() {
         .eq("tipo", "PAGTO_FORNECEDOR")
         .eq("status", "CONFIRMADO");
 
+      // Build payment sum per parceria
+      const pagamentosPorParceria = new Map<string, number>();
+      (pagamentosData || []).forEach((m) => {
+        const atual = pagamentosPorParceria.get(m.parceria_id) || 0;
+        pagamentosPorParceria.set(m.parceria_id, atual + (m.valor || 0));
+      });
+
       // Calculate stats
       const fornecedoresWithStats = (fornecedoresData || []).map((f) => {
-        const parceriasFornecedor = (parceriasData || []).filter((p) => p.fornecedor_id === f.id);
-        const parceriaIds = parceriasFornecedor.map(p => (p as any).id);
-        // Sum real payments linked to this supplier's partnerships
-        const totalLiquidado = (pagamentosData || [])
-          .filter((m) => parceriaIds.includes(m.parceria_id))
-          .reduce((acc, m) => acc + (m.valor || 0), 0);
+        const parceriasFornecedor = (parceriasData || []).filter((p: any) => p.fornecedor_id === f.id);
+        let totalLiquidado = 0;
+        const detalhes: ParceriaDetalhe[] = parceriasFornecedor.map((p: any) => {
+          const valorPago = pagamentosPorParceria.get(p.id) || 0;
+          totalLiquidado += valorPago;
+          return {
+            parceriaId: p.id,
+            parceiroNome: p.parceiro?.nome || "N/A",
+            valorContratado: p.valor_fornecedor || 0,
+            valorPago,
+          };
+        });
         return {
           ...f,
           total_parceiros: parceriasFornecedor.length,
-          total_contratado: parceriasFornecedor.reduce((acc, p) => acc + (p.valor_fornecedor || 0), 0),
+          total_contratado: parceriasFornecedor.reduce((acc: number, p: any) => acc + (p.valor_fornecedor || 0), 0),
           total_liquidado: totalLiquidado,
+          parcerias_detalhes: detalhes,
         };
       });
 
@@ -332,12 +355,39 @@ export function FornecedoresTab() {
                     <p className="font-semibold">{fornecedor.total_parceiros || 0}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Total Pago</p>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <p className="text-sm text-muted-foreground flex items-center gap-1 cursor-help">
+                            Total Pago <Info className="h-3 w-3" />
+                          </p>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs">
+                          <div className="space-y-1 text-xs">
+                            <p className="font-semibold mb-1">Histórico de Fornecimento</p>
+                            {(fornecedor.parcerias_detalhes || []).length === 0 ? (
+                              <p className="text-muted-foreground">Nenhuma parceria vinculada</p>
+                            ) : (
+                              (fornecedor.parcerias_detalhes || []).map((d) => (
+                                <div key={d.parceriaId} className="flex justify-between gap-3">
+                                  <span className="truncate">{d.parceiroNome}</span>
+                                  <span className="shrink-0">
+                                    {formatCurrency(d.valorPago)} / {formatCurrency(d.valorContratado)}
+                                  </span>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                     <p className="font-semibold text-emerald-500">{formatCurrency(fornecedor.total_liquidado || 0)}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Pendente</p>
-                    <p className="font-semibold text-orange-500">{formatCurrency((fornecedor.total_contratado || 0) - (fornecedor.total_liquidado || 0))}</p>
+                    <p className="font-semibold text-orange-500">
+                      {formatCurrency(Math.max(0, (fornecedor.total_contratado || 0) - (fornecedor.total_liquidado || 0)))}
+                    </p>
                   </div>
                 </div>
 
