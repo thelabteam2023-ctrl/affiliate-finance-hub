@@ -2604,6 +2604,12 @@ export function CaixaTransacaoDialog({
              destinoWallet: destinoWalletId,
              valorEstimado: valorUsdReferencia,
            });
+         } else if (destinoWalletId && !origemWalletId && origemTipo === "CAIXA_OPERACIONAL") {
+           // CAIXA → WALLET: Aporte interno, instantâneo - não passa por blockchain
+           transactionData.transit_status = "CONFIRMED";
+           console.log("[CRYPTO TRANSIT] CAIXA→WALLET: CONFIRMED (aporte interno)", {
+             destinoWallet: destinoWalletId,
+           });
          } else {
            // Outros casos crypto com wallet envolvida - conservador = PENDING
            transactionData.transit_status = "PENDING";
