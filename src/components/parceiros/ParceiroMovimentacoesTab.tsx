@@ -630,8 +630,11 @@ export const ParceiroMovimentacoesTab = memo(function ParceiroMovimentacoesTab({
 
   const filteredTransacoes = useMemo(() => {
     return transacoes.filter(t => {
-      if (selectedTypes.size > 0) {
-        const isMainType = MAIN_FILTER_TYPES.includes(t.tipo_transacao as any);
+      // Tipo: sem seleção = somente tipos principais; com seleção = conforme badges ativos
+      const isMainType = MAIN_FILTER_TYPES.includes(t.tipo_transacao as any);
+      if (selectedTypes.size === 0) {
+        if (!isMainType) return false;
+      } else {
         const matchesMain = selectedTypes.has(t.tipo_transacao);
         const matchesOutros = selectedTypes.has('__OUTROS__') && !isMainType;
         if (!matchesMain && !matchesOutros) return false;
