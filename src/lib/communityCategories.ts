@@ -1,4 +1,4 @@
-import { Building2, Landmark, Gift, CreditCard, Target, AlertTriangle } from 'lucide-react';
+import { Building2, Landmark, Gift, CreditCard, Target, AlertTriangle, Briefcase } from 'lucide-react';
 
 export const COMMUNITY_CATEGORIES = [
   { value: 'casas_de_aposta', label: 'Casas de Aposta', icon: Building2, color: 'text-blue-500' },
@@ -7,6 +7,7 @@ export const COMMUNITY_CATEGORIES = [
   { value: 'pagamentos_e_saques', label: 'Pagamentos e Saques', icon: CreditCard, color: 'text-amber-500' },
   { value: 'estrategias', label: 'Estratégias', icon: Target, color: 'text-primary' },
   { value: 'alertas', label: 'Alertas', icon: AlertTriangle, color: 'text-destructive' },
+  { value: 'escritorio', label: 'Escritório', icon: Briefcase, color: 'text-cyan-500' },
 ] as const;
 
 export type CommunityCategory = typeof COMMUNITY_CATEGORIES[number]['value'];
