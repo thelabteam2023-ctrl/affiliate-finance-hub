@@ -247,6 +247,27 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
   // dateRange derivado dos filtros locais
   const dateRange = tabFilters.dateRange;
 
+  // Ciclo ativo para comparativo de meta diária
+  const { data: cicloAtivo } = useQuery({
+    queryKey: ["ciclo-ativo-meta", projetoId],
+    queryFn: async () => {
+      const hoje = new Date().toISOString().split("T")[0];
+      const { data } = await supabase
+        .from("projeto_ciclos")
+        .select("id, meta_volume, data_inicio, data_fim_prevista, metrica_acumuladora, tipo_gatilho")
+        .eq("projeto_id", projetoId)
+        .eq("status", "EM_ANDAMENTO")
+        .lte("data_inicio", hoje)
+        .gte("data_fim_prevista", hoje)
+        .order("numero_ciclo", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return data;
+    },
+    staleTime: PERIOD_STALE_TIME,
+    gcTime: PERIOD_GC_TIME,
+  });
+
   // React Query para surebets - com cache e transição suave
   const surebetsQueryKey = useMemo(() => [
     "surebets-tab", projetoId, dateRange?.start?.toISOString(), dateRange?.end?.toISOString(),
@@ -1067,37 +1088,76 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
             valueClassName: kpis.roi >= 0 ? "text-emerald-500" : "text-red-500",
             minWidth: "min-w-[50px]",
           },
-          {
-            label: "Lucro/Dia",
-            value: formatCurrency(kpis.lucroPorDia),
-            valueClassName: kpis.lucroPorDia >= 0 ? "text-emerald-500" : "text-red-500",
-            tooltip: (
-              <div className="space-y-1.5">
-                <p className="font-semibold text-foreground">Lucro Médio por Dia</p>
-                <div className="space-y-0.5">
-                  <div className="flex justify-between gap-4">
-                    <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-muted-foreground" /> Dias corridos</span>
-                    <span className="font-semibold text-foreground">{kpis.diasCorridos}</span>
+          (() => {
+            // Meta diária do ciclo ativo
+            const metaDiariaCiclo = (() => {
+              if (!cicloAtivo?.meta_volume || !cicloAtivo.data_inicio || !cicloAtivo.data_fim_prevista) return null;
+              const inicio = new Date(cicloAtivo.data_inicio);
+              const fim = new Date(cicloAtivo.data_fim_prevista);
+              const diffMs = fim.getTime() - inicio.getTime();
+              const diasCiclo = Math.max(1, Math.round(diffMs / (24 * 60 * 60 * 1000)) + 1);
+              return { metaDiaria: cicloAtivo.meta_volume / diasCiclo, diasCiclo, metaTotal: cicloAtivo.meta_volume };
+            })();
+
+            const diffVsMeta = metaDiariaCiclo ? kpis.lucroPorDia - metaDiariaCiclo.metaDiaria : null;
+
+            return {
+              label: "Lucro/Dia",
+              value: formatCurrency(kpis.lucroPorDia),
+              valueClassName: kpis.lucroPorDia >= 0 ? "text-emerald-500" : "text-red-500",
+              tooltip: (
+                <div className="space-y-2 min-w-[220px]">
+                  <p className="font-semibold text-foreground">Lucro Médio por Dia</p>
+                  
+                  {/* Contagem de dias */}
+                  <div className="space-y-0.5">
+                    <div className="flex justify-between gap-4">
+                      <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-muted-foreground" /> Dias corridos</span>
+                      <span className="font-semibold text-foreground">{kpis.diasCorridos}</span>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" /> Dias trabalhados</span>
+                      <span className="font-semibold text-foreground">{kpis.diasTrabalhados}</span>
+                    </div>
                   </div>
-                  <div className="flex justify-between gap-4">
-                    <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" /> Dias trabalhados</span>
-                    <span className="font-semibold text-foreground">{kpis.diasTrabalhados}</span>
+
+                  {/* Médias separadas */}
+                  <div className="border-t border-border/50 pt-1.5 space-y-0.5">
+                    <div className="flex justify-between gap-4">
+                      <span>Média (corridos)</span>
+                      <span className={cn("font-semibold", kpis.lucroPorDia >= 0 ? "text-emerald-500" : "text-red-500")}>{formatCurrency(kpis.lucroPorDia)}</span>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <span>Média (trabalhados)</span>
+                      <span className={cn("font-semibold", kpis.lucroPorDiaTrabalhado >= 0 ? "text-emerald-500" : "text-red-500")}>{formatCurrency(kpis.lucroPorDiaTrabalhado)}</span>
+                    </div>
                   </div>
+
+                  {/* Comparativo com meta do ciclo */}
+                  {metaDiariaCiclo && (
+                    <div className="border-t border-border/50 pt-1.5 space-y-0.5">
+                      <p className="text-[10px] uppercase text-muted-foreground font-medium tracking-wide">Meta do Ciclo</p>
+                      <div className="flex justify-between gap-4">
+                        <span>Meta total</span>
+                        <span className="font-semibold text-foreground">{formatCurrency(metaDiariaCiclo.metaTotal)}</span>
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <span>Meta/dia ({metaDiariaCiclo.diasCiclo}d)</span>
+                        <span className="font-semibold text-foreground">{formatCurrency(metaDiariaCiclo.metaDiaria)}</span>
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <span>Diferença</span>
+                        <span className={cn("font-semibold", diffVsMeta! >= 0 ? "text-emerald-500" : "text-red-500")}>
+                          {diffVsMeta! >= 0 ? "+" : ""}{formatCurrency(diffVsMeta!)}
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div className="border-t border-border/50 pt-1 space-y-0.5">
-                  <div className="flex justify-between gap-4">
-                    <span>Média (corridos)</span>
-                    <span className={cn("font-semibold", kpis.lucroPorDia >= 0 ? "text-emerald-500" : "text-red-500")}>{formatCurrency(kpis.lucroPorDia)}</span>
-                  </div>
-                  <div className="flex justify-between gap-4">
-                    <span>Média (trabalhados)</span>
-                    <span className={cn("font-semibold", kpis.lucroPorDiaTrabalhado >= 0 ? "text-emerald-500" : "text-red-500")}>{formatCurrency(kpis.lucroPorDiaTrabalhado)}</span>
-                  </div>
-                </div>
-              </div>
-            ),
-            minWidth: "min-w-[80px]",
-          },
+              ),
+              minWidth: "min-w-[80px]",
+            };
+          })()
         ]}
       />
 
