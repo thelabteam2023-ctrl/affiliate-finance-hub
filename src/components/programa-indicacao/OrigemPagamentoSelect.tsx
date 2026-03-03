@@ -9,7 +9,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Wallet, Building2, Bitcoin, Loader2, AlertTriangle } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
+import { Button } from "@/components/ui/button";
+import { Wallet, Building2, Bitcoin, Loader2, AlertTriangle, ChevronsUpDown, Check, Search } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useCotacoes } from "@/hooks/useCotacoes";
 
 interface ContaBancaria {
@@ -114,6 +118,10 @@ export function OrigemPagamentoSelect({
 
   // Flag para indicar que os dados foram carregados
   const [dataLoaded, setDataLoaded] = useState(false);
+  const [parceiroContaOpen, setParceiroContaOpen] = useState(false);
+  const [parceiroWalletOpen, setParceiroWalletOpen] = useState(false);
+  const [parceiroContaSearch, setParceiroContaSearch] = useState("");
+  const [parceiroWalletSearch, setParceiroWalletSearch] = useState("");
 
   // Extrair lista de moedas crypto únicas para buscar cotações em tempo real
   // MEMOIZADO para evitar re-renders desnecessários no useCotacoes
@@ -665,66 +673,92 @@ export function OrigemPagamentoSelect({
         <div className="space-y-3 pt-2 border-t">
          <div className="space-y-2">
             <Label className="text-xs text-muted-foreground text-center block">Selecione o Parceiro</Label>
-            <Select
-              value={value.origemParceiroId || ""}
-              onValueChange={handleParceiroChange}
-              disabled={disabled}
-            >
-              <SelectTrigger className="text-center [&>span]:w-full [&>span]:text-center">
-                <SelectValue placeholder="Escolha um parceiro..." />
-              </SelectTrigger>
-              <SelectContent>
-                {parceiros.map((p) => {
-                  const walletsDoParceiro = walletsCrypto.filter(w => w.parceiro_id === p.id);
-                  const saldosDoParceiroWallets = saldosParceirosWallets.filter(s => s.parceiro_id === p.id);
-
-                  const saldoTotalUSD = saldosDoParceiroWallets.reduce((acc, s) => {
-                    const coinSafe = (s.coin || "USDT").toUpperCase();
-                    const priceUSD = getCoinPriceUSD(coinSafe);
-                    return acc + (s.saldo_coin || 0) * priceUSD;
-                  }, 0);
-                  const temSaldo = saldoTotalUSD > 0;
-                  const temWallets = walletsDoParceiro.length > 0;
-
-                  return (
-                    <SelectItem key={p.id} value={p.id}>
-                      <div className="flex flex-col w-full gap-0.5">
-                        <div className="flex items-center gap-2">
-                          <span className={`font-medium ${!temSaldo ? "text-muted-foreground" : ""}`}>
-                            {p.nome}
-                          </span>
-                        </div>
-                        {temWallets ? (
-                          <div className="space-y-0.5">
-                            {saldosDoParceiroWallets.length > 0 ? (
-                              saldosDoParceiroWallets.map((s, idx) => {
-                                const coinSafe = (s.coin || "USDT").toUpperCase();
-                                return (
-                                  <div key={`${s.wallet_id}-${coinSafe}-${idx}`} className="flex items-center gap-2 text-xs">
-                                    <span className="text-muted-foreground">•</span>
-                                    <span className={s.saldo_coin > 0 ? "text-emerald-600" : "text-muted-foreground"}>
-                                      {coinSafe} {s.saldo_coin?.toFixed(4) || "0"}
-                                    </span>
-                                  </div>
-                                );
-                              })
-                            ) : (
-                              <span className="text-xs text-muted-foreground italic">
-                                Sem saldo em wallets
+            <Popover open={parceiroWalletOpen} onOpenChange={setParceiroWalletOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={parceiroWalletOpen}
+                  disabled={disabled}
+                  className="w-full justify-between font-normal"
+                >
+                  {value.origemParceiroId
+                    ? parceiros.find(p => p.id === value.origemParceiroId)?.nome || "Parceiro"
+                    : "Buscar parceiro..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                <Command shouldFilter={false}>
+                  <CommandInput
+                    placeholder="Buscar por nome..."
+                    value={parceiroWalletSearch}
+                    onValueChange={setParceiroWalletSearch}
+                  />
+                  <CommandList>
+                    <CommandEmpty>Nenhum parceiro encontrado.</CommandEmpty>
+                    <CommandGroup>
+                      {parceiros
+                        .map((p) => {
+                          const walletsDoParceiro = walletsCrypto.filter(w => w.parceiro_id === p.id);
+                          const saldosDoParceiroWallets2 = saldosParceirosWallets.filter(s => s.parceiro_id === p.id);
+                          const saldoTotalUSD = saldosDoParceiroWallets2.reduce((acc, s) => {
+                            const coinSafe = (s.coin || "USDT").toUpperCase();
+                            const priceUSD = getCoinPriceUSD(coinSafe);
+                            return acc + (s.saldo_coin || 0) * priceUSD;
+                          }, 0);
+                          return { ...p, saldoTotalUSD, temSaldo: saldoTotalUSD > 0, temWallets: walletsDoParceiro.length > 0, saldos: saldosDoParceiroWallets2 };
+                        })
+                        .filter((p) => {
+                          if (!parceiroWalletSearch) return p.temSaldo;
+                          return p.nome.toLowerCase().includes(parceiroWalletSearch.toLowerCase());
+                        })
+                        .sort((a, b) => b.saldoTotalUSD - a.saldoTotalUSD)
+                        .map((p) => (
+                          <CommandItem
+                            key={p.id}
+                            value={p.id}
+                            onSelect={() => {
+                              handleParceiroChange(p.id);
+                              setParceiroWalletOpen(false);
+                              setParceiroWalletSearch("");
+                            }}
+                            className="flex flex-col items-start gap-0.5"
+                          >
+                            <div className="flex items-center gap-2 w-full">
+                              <Check className={cn("h-4 w-4 shrink-0", value.origemParceiroId === p.id ? "opacity-100" : "opacity-0")} />
+                              <span className={`font-medium ${!p.temSaldo ? "text-muted-foreground" : ""}`}>
+                                {p.nome}
                               </span>
+                            </div>
+                            {p.temWallets ? (
+                              <div className="space-y-0.5 ml-6">
+                                {p.saldos.length > 0 ? (
+                                  p.saldos.map((s, idx) => {
+                                    const coinSafe = (s.coin || "USDT").toUpperCase();
+                                    return (
+                                      <div key={`${s.wallet_id}-${coinSafe}-${idx}`} className="flex items-center gap-2 text-xs">
+                                        <span className="text-muted-foreground">•</span>
+                                        <span className={s.saldo_coin > 0 ? "text-emerald-600" : "text-muted-foreground"}>
+                                          {coinSafe} {s.saldo_coin?.toFixed(4) || "0"}
+                                        </span>
+                                      </div>
+                                    );
+                                  })
+                                ) : (
+                                  <span className="text-xs text-muted-foreground italic">Sem saldo</span>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-xs text-muted-foreground italic ml-6">Sem wallets</span>
                             )}
-                          </div>
-                        ) : (
-                          <span className="text-xs text-muted-foreground italic">
-                            Sem wallets cadastradas
-                          </span>
-                        )}
-                      </div>
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
+                          </CommandItem>
+                        ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
 
           {value.origemParceiroId && (
@@ -1047,40 +1081,71 @@ export function OrigemPagamentoSelect({
       {/* Partner selection for PARCEIRO_CONTA (FIAT) */}
       {value.origemTipo === "PARCEIRO_CONTA" && (
         <div className="space-y-3 pt-2 border-t">
-          <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground">Selecione o Parceiro</Label>
-            <Select
-              value={value.origemParceiroId || ""}
-              onValueChange={handleParceiroChange}
-              disabled={disabled}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Escolha um parceiro..." />
-              </SelectTrigger>
-              <SelectContent>
-                {parceiros.map((p) => {
-                  // Calcular saldo total FIAT do parceiro
-                  const contasDoParceiro = saldosParceirosContas.filter(s => s.parceiro_id === p.id);
-                  const saldoTotal = contasDoParceiro.reduce((acc, c) => acc + (c.saldo || 0), 0);
-                  const temSaldo = saldoTotal > 0;
-                  
-                  return (
-                    <SelectItem key={p.id} value={p.id}>
-                      <div className="flex flex-col w-full gap-0.5">
-                        <div className="flex items-center gap-2">
-                          <span className={`font-medium ${!temSaldo ? "text-muted-foreground" : ""}`}>
-                            {p.nome}
-                          </span>
-                        </div>
-                        <span className={`text-xs ${temSaldo ? "text-emerald-600 font-medium" : "text-muted-foreground"}`}>
-                          Saldo: {formatCurrency(saldoTotal)}
-                        </span>
-                      </div>
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
+         <div className="space-y-2">
+            <Label className="text-xs text-muted-foreground text-center block">Selecione o Parceiro</Label>
+            <Popover open={parceiroContaOpen} onOpenChange={setParceiroContaOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={parceiroContaOpen}
+                  disabled={disabled}
+                  className="w-full justify-between font-normal"
+                >
+                  {value.origemParceiroId
+                    ? parceiros.find(p => p.id === value.origemParceiroId)?.nome || "Parceiro"
+                    : "Buscar parceiro..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                <Command shouldFilter={false}>
+                  <CommandInput
+                    placeholder="Buscar por nome..."
+                    value={parceiroContaSearch}
+                    onValueChange={setParceiroContaSearch}
+                  />
+                  <CommandList>
+                    <CommandEmpty>Nenhum parceiro encontrado.</CommandEmpty>
+                    <CommandGroup>
+                      {parceiros
+                        .map((p) => {
+                          const contasDoParceiro = saldosParceirosContas.filter(s => s.parceiro_id === p.id);
+                          const saldoTotal = contasDoParceiro.reduce((acc, c) => acc + (c.saldo || 0), 0);
+                          return { ...p, saldoTotal, temSaldo: saldoTotal > 0 };
+                        })
+                        .filter((p) => {
+                          if (!parceiroContaSearch) return p.temSaldo;
+                          return p.nome.toLowerCase().includes(parceiroContaSearch.toLowerCase());
+                        })
+                        .sort((a, b) => b.saldoTotal - a.saldoTotal)
+                        .map((p) => (
+                          <CommandItem
+                            key={p.id}
+                            value={p.id}
+                            onSelect={() => {
+                              handleParceiroChange(p.id);
+                              setParceiroContaOpen(false);
+                              setParceiroContaSearch("");
+                            }}
+                            className="flex flex-col items-start gap-0.5"
+                          >
+                            <div className="flex items-center gap-2 w-full">
+                              <Check className={cn("h-4 w-4 shrink-0", value.origemParceiroId === p.id ? "opacity-100" : "opacity-0")} />
+                              <span className={`font-medium ${!p.temSaldo ? "text-muted-foreground" : ""}`}>
+                                {p.nome}
+                              </span>
+                            </div>
+                            <span className={`text-xs ml-6 ${p.temSaldo ? "text-emerald-600 font-medium" : "text-muted-foreground"}`}>
+                              Saldo: {formatCurrency(p.saldoTotal)}
+                            </span>
+                          </CommandItem>
+                        ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
 
           {/* Account selection for FIAT */}
