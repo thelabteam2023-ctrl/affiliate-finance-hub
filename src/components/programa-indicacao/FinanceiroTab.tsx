@@ -95,6 +95,8 @@ interface FornecedorPendente {
   fornecedorNome: string;
   fornecedorId: string;
   valorFornecedor: number;
+  valorPago: number;
+  valorRestante: number;
 }
 
 export function FinanceiroTab() {
@@ -374,24 +376,36 @@ export function FinanceiroTab() {
         setParceirosPendentes(pendentes);
       }
 
-      // Calculate fornecedores pendentes (supplier payments)
+      // Calculate fornecedores pendentes (supplier payments) - supports partial payments
       if (fornecedoresParceriasResult.data && movResult.data) {
         const fornecedoresMap = new Map(
           (fornecedoresNomesResult.data || []).map((f: any) => [f.id, f.nome])
         );
-        const parceriasPagasFornecedor = (movResult.data || [])
+        // Sum all confirmed payments per parceria
+        const pagamentosPorParceria = new Map<string, number>();
+        (movResult.data || [])
           .filter((m: any) => m.tipo === "PAGTO_FORNECEDOR" && m.status === "CONFIRMADO")
-          .map((m: any) => m.parceria_id);
+          .forEach((m: any) => {
+            const atual = pagamentosPorParceria.get(m.parceria_id) || 0;
+            pagamentosPorParceria.set(m.parceria_id, atual + (m.valor || 0));
+          });
 
         const pendentesForn: FornecedorPendente[] = (fornecedoresParceriasResult.data || [])
-          .filter((p: any) => !parceriasPagasFornecedor.includes(p.id))
-          .map((p: any) => ({
-            parceriaId: p.id,
-            parceiroNome: p.parceiro?.nome || "N/A",
-            fornecedorNome: fornecedoresMap.get(p.fornecedor_id) || "Fornecedor",
-            fornecedorId: p.fornecedor_id,
-            valorFornecedor: p.valor_fornecedor || 0,
-          }));
+          .map((p: any) => {
+            const valorTotal = p.valor_fornecedor || 0;
+            const valorPago = pagamentosPorParceria.get(p.id) || 0;
+            const valorRestante = Math.max(0, valorTotal - valorPago);
+            return {
+              parceriaId: p.id,
+              parceiroNome: p.parceiro?.nome || "N/A",
+              fornecedorNome: fornecedoresMap.get(p.fornecedor_id) || "Fornecedor",
+              fornecedorId: p.fornecedor_id,
+              valorFornecedor: valorTotal,
+              valorPago,
+              valorRestante,
+            };
+          })
+          .filter((p) => p.valorRestante > 0);
         setFornecedoresPendentes(pendentesForn);
       }
     } catch (error: any) {
@@ -854,11 +868,16 @@ export function FinanceiroTab() {
                         <p className="text-xs text-muted-foreground">
                           Parceiro: {forn.parceiroNome}
                         </p>
+                        {forn.valorPago > 0 && (
+                          <p className="text-xs text-muted-foreground">
+                            Pago: {formatCurrency(forn.valorPago)} de {formatCurrency(forn.valorFornecedor)}
+                          </p>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="font-bold text-orange-500">
-                        {formatCurrency(forn.valorFornecedor)}
+                        {formatCurrency(forn.valorRestante)}
                       </span>
                       <Button
                         size="sm"
@@ -1184,7 +1203,7 @@ export function FinanceiroTab() {
           fornecedorNome: selectedFornecedor.fornecedorNome,
           fornecedorId: selectedFornecedor.fornecedorId,
           parceiroNome: selectedFornecedor.parceiroNome,
-          valorFornecedor: selectedFornecedor.valorFornecedor,
+          valorFornecedor: selectedFornecedor.valorRestante,
         } : null}
         onSuccess={() => fetchData()}
       />

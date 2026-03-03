@@ -194,6 +194,8 @@ interface PagamentoFornecedorPendente {
   fornecedorNome: string;
   fornecedorId: string;
   valorFornecedor: number;
+  valorPago: number;
+  valorRestante: number;
   diasRestantes: number;
   workspaceId: string;
 }
@@ -600,17 +602,21 @@ export default function CentralOperacoes() {
         setPagamentosParceiros(pagamentosMap);
       }
 
-      // Pagamentos a fornecedores pendentes
+      // Pagamentos a fornecedores pendentes - supports partial payments
       if (!fornecedoresParceriasResult.error && !movimentacoesResult.error) {
         const fornecedoresMap = new Map(
           (fornecedoresNomesResult.data || []).map((f: any) => [f.id, f.nome])
         );
-        const parceriasPagasFornecedor = (movimentacoesResult.data || [])
+        // Sum all confirmed payments per parceria
+        const pagamentosPorParceria = new Map<string, number>();
+        (movimentacoesResult.data || [])
           .filter((m: any) => m.tipo === "PAGTO_FORNECEDOR" && m.status === "CONFIRMADO")
-          .map((m: any) => m.parceria_id);
+          .forEach((m: any) => {
+            const atual = pagamentosPorParceria.get(m.parceria_id) || 0;
+            pagamentosPorParceria.set(m.parceria_id, atual + (m.valor || 0));
+          });
 
         const pagFornecedores: PagamentoFornecedorPendente[] = (fornecedoresParceriasResult.data || [])
-          .filter((p: any) => !parceriasPagasFornecedor.includes(p.id))
           .map((p: any) => {
             const dataFim = p.data_fim_prevista ? new Date(p.data_fim_prevista) : null;
             let diasRestantes = 999;
@@ -618,16 +624,22 @@ export default function CentralOperacoes() {
               dataFim.setHours(0, 0, 0, 0);
               diasRestantes = Math.ceil((dataFim.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
             }
+            const valorTotal = p.valor_fornecedor || 0;
+            const valorPago = pagamentosPorParceria.get(p.id) || 0;
+            const valorRestante = Math.max(0, valorTotal - valorPago);
             return {
               parceriaId: p.id,
               parceiroNome: p.parceiro?.nome || "N/A",
               fornecedorNome: fornecedoresMap.get(p.fornecedor_id) || "Fornecedor",
               fornecedorId: p.fornecedor_id,
-              valorFornecedor: p.valor_fornecedor,
+              valorFornecedor: valorTotal,
+              valorPago,
+              valorRestante,
               diasRestantes,
               workspaceId: p.workspace_id,
             };
-          });
+          })
+          .filter((p) => p.valorRestante > 0);
         setPagamentosFornecedores(pagFornecedores);
       }
 
@@ -2012,10 +2024,11 @@ export default function CentralOperacoes() {
                       </div>
                       <span className="text-[10px] text-muted-foreground ml-5">
                         Parceiro: {getFirstLastName(pag.parceiroNome)}
+                        {pag.valorPago > 0 && ` · Pago: ${formatCurrency(pag.valorPago)} de ${formatCurrency(pag.valorFornecedor)}`}
                       </span>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
-                      <span className="text-xs font-bold text-orange-400">{formatCurrency(pag.valorFornecedor)}</span>
+                      <span className="text-xs font-bold text-orange-400">{formatCurrency(pag.valorRestante)}</span>
                       <Button size="sm" variant="ghost" onClick={() => {
                           setSelectedPagamentoFornecedor(pag);
                           setPagamentoFornecedorOpen(true);
@@ -2457,7 +2470,7 @@ export default function CentralOperacoes() {
           fornecedorNome: selectedPagamentoFornecedor.fornecedorNome,
           fornecedorId: selectedPagamentoFornecedor.fornecedorId,
           parceiroNome: selectedPagamentoFornecedor.parceiroNome,
-          valorFornecedor: selectedPagamentoFornecedor.valorFornecedor,
+          valorFornecedor: selectedPagamentoFornecedor.valorRestante,
         } : null}
         onSuccess={() => fetchData()}
       />
