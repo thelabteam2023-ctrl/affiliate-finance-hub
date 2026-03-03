@@ -1,22 +1,20 @@
 import { ReactNode, useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertTriangle, RefreshCw } from "lucide-react";
 import { NoWorkspaceScreen } from "@/components/NoWorkspaceScreen";
 import { BlockedUserScreen } from "@/components/BlockedUserScreen";
 import { AccessDenied } from "@/components/AccessDenied";
+import { Button } from "@/components/ui/button";
 
 interface ProtectedRouteProps {
   children: ReactNode;
-  requiredPermission?: string | string[];  // Aceita string ou array (qualquer uma é suficiente)
+  requiredPermission?: string | string[];
   requiredRole?: string[];
   requireSystemOwner?: boolean;
   fallback?: ReactNode;
 }
 
-/**
- * Logs access denial for debugging
- */
 function logAccessDenial(reason: string, details: Record<string, any>) {
   console.warn('[ProtectedRoute] Access Denied:', reason, {
     timestamp: new Date().toISOString(),
@@ -38,9 +36,14 @@ export function ProtectedRoute({
   const [denyReason, setDenyReason] = useState<string | null>(null);
   const [denyCode, setDenyCode] = useState<string | null>(null);
 
+  // Access the raw status from context to detect 'error' state
+  const authContext = useAuth() as any;
+  const authStatus: string | undefined = authContext?.status;
+  // Derive error from initialized + no user + no loading (error state keeps user if session existed)
+  const isErrorWithoutUser = initialized && !loading && !user && authStatus === undefined;
+
   useEffect(() => {
     const checkAccess = async () => {
-      // Wait until fully initialized
       if (!user || !initialized) return;
 
       const debugInfo = {
@@ -54,7 +57,6 @@ export function ProtectedRoute({
         require_system_owner: requireSystemOwner,
       };
 
-      // SYSTEM OWNER has full access to everything
       if (isSystemOwner) {
         console.log('[ProtectedRoute] System owner - full access granted', debugInfo);
         setHasAccess(true);
@@ -62,7 +64,6 @@ export function ProtectedRoute({
         return;
       }
 
-      // System owner requirement - only system owners can access
       if (requireSystemOwner) {
         logAccessDenial('REQUIRES_SYSTEM_OWNER', debugInfo);
         setDenyCode('REQUIRES_SYSTEM_OWNER');
@@ -72,16 +73,10 @@ export function ProtectedRoute({
         return;
       }
 
-      // Check role requirement
       if (requiredRole && requiredRole.length > 0) {
         if (!role || !requiredRole.includes(role)) {
-          // Owner bypasses role checks
           if (role !== 'owner') {
-            logAccessDenial('ROLE_INSUFFICIENT', {
-              ...debugInfo,
-              user_role: role,
-              required_roles: requiredRole,
-            });
+            logAccessDenial('ROLE_INSUFFICIENT', { ...debugInfo, user_role: role, required_roles: requiredRole });
             setDenyCode('ROLE_INSUFFICIENT');
             setDenyReason(`Acesso restrito para: ${requiredRole.join(', ')}`);
             setHasAccess(false);
@@ -91,9 +86,7 @@ export function ProtectedRoute({
         }
       }
 
-      // Check permission requirement
       if (requiredPermission) {
-        // Owner and admin bypass permission checks
         if (role === 'owner' || role === 'admin') {
           console.log('[ProtectedRoute] Owner/Admin - permission check bypassed', debugInfo);
           setHasAccess(true);
@@ -101,34 +94,16 @@ export function ProtectedRoute({
           return;
         }
 
-        // Handle array of permissions (ANY is sufficient)
-        const permissionsToCheck = Array.isArray(requiredPermission) 
-          ? requiredPermission 
-          : [requiredPermission];
+        const permissionsToCheck = Array.isArray(requiredPermission) ? requiredPermission : [requiredPermission];
 
-        console.log('[ProtectedRoute] Checking permissions:', {
-          permissions: permissionsToCheck,
-          role: role,
-          workspaceId: workspace?.id
-        });
-
-        // Check if user has ANY of the required permissions
-        const results = await Promise.all(
-          permissionsToCheck.map(p => hasPermission(p))
-        );
+        const results = await Promise.all(permissionsToCheck.map(p => hasPermission(p)));
         const allowed = results.some(r => r === true);
         
         if (!allowed) {
-          logAccessDenial('PERMISSION_MISSING', {
-            ...debugInfo,
-            required_permissions: permissionsToCheck,
-          });
+          logAccessDenial('PERMISSION_MISSING', { ...debugInfo, required_permissions: permissionsToCheck });
           setDenyCode('PERMISSION_MISSING');
           const permLabel = permissionsToCheck.join(' ou ');
           setDenyReason(`Permissão necessária: ${permLabel}`);
-        } else {
-          const grantedPerm = permissionsToCheck[results.findIndex(r => r)];
-          console.log('[ProtectedRoute] Permission granted:', grantedPerm);
         }
         
         setHasAccess(allowed);
@@ -140,7 +115,7 @@ export function ProtectedRoute({
     checkAccess();
   }, [user, initialized, role, requiredPermission, requiredRole, requireSystemOwner, hasPermission, isSystemOwner, workspace?.id, location.pathname]);
 
-  // Show loading while checking auth
+  // Show loading while bootstrapping
   if (loading || !initialized) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -152,22 +127,60 @@ export function ProtectedRoute({
     );
   }
 
-  // Redirect to auth if not logged in, passing current location
-  if (!user) {
+  // ── ERROR STATE: show retry screen instead of redirecting to /auth ──
+  // This prevents the infinite redirect loop when bootstrap fails but session exists
+  if (!user && !loading && initialized) {
+    // Check if there's a Supabase token in localStorage (session might exist but bootstrap failed)
+    const hasStoredSession = Object.keys(localStorage).some(key => 
+      key.startsWith('sb-') && key.endsWith('-auth-token')
+    );
+
+    if (hasStoredSession) {
+      // Session exists in storage but AuthContext failed to load it — show error with retry
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-background">
+          <div className="flex flex-col items-center gap-4 max-w-md text-center p-6">
+            <AlertTriangle className="h-10 w-10 text-destructive" />
+            <h2 className="text-xl font-semibold">Erro ao carregar sessão</h2>
+            <p className="text-muted-foreground text-sm">
+              Não foi possível verificar sua autenticação. Isso pode ser um problema temporário de conexão.
+            </p>
+            <div className="flex gap-3">
+              <Button 
+                onClick={() => window.location.reload()} 
+                className="gap-2"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Tentar novamente
+              </Button>
+              <Button 
+                variant="outline"
+                onClick={async () => {
+                  const { supabase } = await import("@/integrations/supabase/client");
+                  await supabase.auth.signOut();
+                  window.location.href = "/auth";
+                }}
+              >
+                Fazer login novamente
+              </Button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // No stored session — genuinely not authenticated
     return <Navigate to="/auth" state={{ from: location.pathname }} replace />;
   }
 
-  // Check if user is blocked
   if (isBlocked) {
     return <BlockedUserScreen />;
   }
 
-  // Check if user has no workspace (system owner bypasses this requirement)
   if (!workspace && !isSystemOwner) {
     return <NoWorkspaceScreen />;
   }
 
-  // Show loading while checking permissions
   if ((requiredPermission || requiredRole || requireSystemOwner) && !permissionChecked) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -179,13 +192,10 @@ export function ProtectedRoute({
     );
   }
 
-  // Show access denied if no permission
   if (!hasAccess) {
     if (fallback) {
       return <>{fallback}</>;
     }
-
-    // Render AccessDenied with state for smart navigation
     return <AccessDenied message={denyReason || undefined} />;
   }
 
