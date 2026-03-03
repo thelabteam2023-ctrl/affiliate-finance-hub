@@ -68,6 +68,14 @@ const FINANCIAL_STATE_KEYS = {
   // Apostas
   APOSTAS: "apostas",
   
+  // Dashboard (Visão Geral)
+  DASHBOARD_CALENDARIO: "projeto-dashboard-calendario",
+  DASHBOARD_APOSTAS: "projeto-dashboard-apostas",
+  DASHBOARD_EXTRAS: "projeto-dashboard-extras",
+  
+  // Calendário por estratégia (Surebet, ValueBet, DuploGreen)
+  CALENDAR_APOSTAS: "calendar-apostas",
+  
   // Exposição
   EXPOSICAO_PROJETO: "exposicao-projeto",
   CAPACIDADE_APOSTA: "capacidade-aposta",
@@ -150,6 +158,26 @@ export function useInvalidateFinancialState() {
         invalidations.push(
           queryClient.invalidateQueries({ 
             queryKey: [FINANCIAL_STATE_KEYS.APOSTAS, projetoId] 
+          })
+        );
+
+        // Dashboard (Visão Geral) - calendário, apostas filtradas, extras
+        invalidations.push(
+          queryClient.invalidateQueries({ 
+            queryKey: [FINANCIAL_STATE_KEYS.DASHBOARD_CALENDARIO, projetoId] 
+          }),
+          queryClient.invalidateQueries({ 
+            queryKey: [FINANCIAL_STATE_KEYS.DASHBOARD_APOSTAS, projetoId] 
+          }),
+          queryClient.invalidateQueries({ 
+            queryKey: [FINANCIAL_STATE_KEYS.DASHBOARD_EXTRAS, projetoId] 
+          })
+        );
+
+        // Calendário por estratégia (Surebet, ValueBet, DuploGreen tabs)
+        invalidations.push(
+          queryClient.invalidateQueries({ 
+            queryKey: [FINANCIAL_STATE_KEYS.CALENDAR_APOSTAS, projetoId] 
           })
         );
 
