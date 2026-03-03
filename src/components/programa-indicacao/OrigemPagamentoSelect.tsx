@@ -92,6 +92,16 @@ export function OrigemPagamentoSelect({
   // Valor efetivo para comparação de saldo: desconta o crédito virtual da edição
   const valorEfetivo = Math.max(0, valorPagamento - valorCreditoEdicao);
   const [loading, setLoading] = useState(true);
+
+  const DEBUG_WALLET_FLOW = true;
+  const debugLog = useCallback((stage: string, payload?: unknown) => {
+    if (!DEBUG_WALLET_FLOW) return;
+    if (payload !== undefined) {
+      console.log(`[OrigemPagamentoSelect][${stage}]`, payload);
+      return;
+    }
+    console.log(`[OrigemPagamentoSelect][${stage}]`);
+  }, []);
   
   // Data
   const [parceiros, setParceiros] = useState<Parceiro[]>([]);
@@ -118,11 +128,19 @@ export function OrigemPagamentoSelect({
   const { cotacaoUSD, getCryptoPrice, loading: cotacoesLoading } = useCotacoes(cryptoCoins);
 
   useEffect(() => {
+    debugLog("component-mounted", {
+      origemTipo: value.origemTipo,
+      tipoMoeda: value.tipoMoeda,
+      valorPagamento,
+      valorEfetivo,
+    });
     fetchData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchData = async () => {
     setLoading(true);
+    debugLog("fetchData:start");
     try {
       const [
         parceirosRes,
@@ -142,6 +160,18 @@ export function OrigemPagamentoSelect({
         supabase.from("v_saldo_parceiro_wallets").select("wallet_id, parceiro_id, coin, saldo_usd, saldo_coin"),
       ]);
 
+      if (parceirosRes.error || contasRes.error || walletsRes.error || saldoFiatRes.error || saldoCryptoRes.error || saldoContasRes.error || saldoWalletsRes.error) {
+        debugLog("fetchData:query-errors", {
+          parceirosError: parceirosRes.error,
+          contasError: contasRes.error,
+          walletsError: walletsRes.error,
+          saldoFiatError: saldoFiatRes.error,
+          saldoCryptoError: saldoCryptoRes.error,
+          saldoContasError: saldoContasRes.error,
+          saldoWalletsError: saldoWalletsRes.error,
+        });
+      }
+
       setParceiros(parceirosRes.data || []);
       setContasBancarias(contasRes.data || []);
       setWalletsCrypto(walletsRes.data || []);
@@ -150,9 +180,20 @@ export function OrigemPagamentoSelect({
       setSaldosParceirosContas(saldoContasRes.data || []);
       setSaldosParceirosWallets(saldoWalletsRes.data || []);
       setDataLoaded(true);
+
+      debugLog("fetchData:success", {
+        parceiros: (parceirosRes.data || []).length,
+        contas: (contasRes.data || []).length,
+        wallets: (walletsRes.data || []).length,
+        saldoCaixaFiat: (saldoFiatRes.data || []).length,
+        saldoCaixaCrypto: (saldoCryptoRes.data || []).length,
+        saldoParceirosContas: (saldoContasRes.data || []).length,
+        saldoParceirosWallets: (saldoWalletsRes.data || []).length,
+      });
     } catch (error) {
-      console.error("Erro ao carregar dados:", error);
+      console.error("[OrigemPagamentoSelect][fetchData:catch]", error);
     } finally {
+      debugLog("fetchData:finally");
       setLoading(false);
     }
   };
@@ -165,10 +206,16 @@ export function OrigemPagamentoSelect({
 
   // Obter preço da crypto em USD (usa cotação real-time da Binance)
   const getCoinPriceUSD = (coin: string): number => {
+    const safeCoin = (coin || "").toUpperCase().trim();
+    if (!safeCoin) {
+      console.error("[OrigemPagamentoSelect][getCoinPriceUSD] coin inválida", { coin });
+      return 0;
+    }
+
     // Stablecoins = 1 USD
-    if (coin === "USDT" || coin === "USDC") return 1;
+    if (safeCoin === "USDT" || safeCoin === "USDC") return 1;
     // Buscar cotação real-time
-    const price = getCryptoPrice(coin);
+    const price = getCryptoPrice(safeCoin);
     return price ?? 0;
   };
 
@@ -299,6 +346,16 @@ export function OrigemPagamentoSelect({
     const currentValue = valueRef.current;
     const currentCotacao = cotacaoUSDRef.current;
 
+    debugLog("effect:selection:start", {
+      origemTipo: currentValue.origemTipo,
+      tipoMoeda: currentValue.tipoMoeda,
+      coin: currentValue.coin,
+      origemContaBancariaId: currentValue.origemContaBancariaId,
+      origemWalletId: currentValue.origemWalletId,
+      cotacaoUSD: currentCotacao,
+      valorEfetivo,
+    });
+
     const { saldoDisponivel, saldoInsuficiente } = calcularSaldoEValidar(
       currentValue.origemTipo,
       currentValue.tipoMoeda,
@@ -318,6 +375,15 @@ export function OrigemPagamentoSelect({
       }
     }
 
+    if (Number.isNaN(saldoDisponivel) || Number.isNaN(newCotacao) || Number.isNaN(newCoinPriceUSD)) {
+      console.error("[OrigemPagamentoSelect][effect:selection:nan-detected]", {
+        saldoDisponivel,
+        newCotacao,
+        newCoinPriceUSD,
+        currentValue,
+      });
+    }
+
     // Comparar com últimos valores emitidos (tolerância para floats)
     const prev = lastEmittedRef.current;
     const changed =
@@ -326,6 +392,12 @@ export function OrigemPagamentoSelect({
       (currentValue.tipoMoeda === "CRYPTO" && Math.abs(prev.cotacao - newCotacao) > 0.01) ||
       (currentValue.tipoMoeda === "CRYPTO" && Math.abs(prev.coinPrice - newCoinPriceUSD) > 0.01);
 
+    debugLog("effect:selection:diff", {
+      changed,
+      prev,
+      next: { saldoDisponivel, saldoInsuficiente, newCotacao, newCoinPriceUSD },
+    });
+
     if (changed) {
       lastEmittedRef.current = {
         saldo: saldoDisponivel,
@@ -333,6 +405,12 @@ export function OrigemPagamentoSelect({
         cotacao: newCotacao,
         coinPrice: newCoinPriceUSD,
       };
+
+      debugLog("effect:selection:emit-onChange", {
+        origemTipo: currentValue.origemTipo,
+        tipoMoeda: currentValue.tipoMoeda,
+      });
+
       onChangeRef.current({
         ...currentValue,
         saldoDisponivel,
@@ -349,6 +427,12 @@ export function OrigemPagamentoSelect({
     if (!dataLoaded || valueRef.current.tipoMoeda !== "CRYPTO") return;
     
     const currentValue = valueRef.current;
+    debugLog("effect:rates:start", {
+      origemTipo: currentValue.origemTipo,
+      coin: currentValue.coin,
+      cotacaoUSD,
+    });
+
     const { saldoDisponivel, saldoInsuficiente } = calcularSaldoEValidar(
       currentValue.origemTipo,
       currentValue.tipoMoeda,
@@ -360,11 +444,26 @@ export function OrigemPagamentoSelect({
     const newCotacao = cotacaoUSD;
     const newCoinPriceUSD = currentValue.coin ? getCoinPriceUSD(currentValue.coin) : (currentValue.coinPriceUSD ?? 0);
 
+    if (Number.isNaN(saldoDisponivel) || Number.isNaN(newCotacao) || Number.isNaN(newCoinPriceUSD)) {
+      console.error("[OrigemPagamentoSelect][effect:rates:nan-detected]", {
+        saldoDisponivel,
+        newCotacao,
+        newCoinPriceUSD,
+        currentValue,
+      });
+    }
+
     const prev = lastEmittedRef.current;
     const changed =
       Math.abs(prev.saldo - saldoDisponivel) > 0.01 ||
       prev.insuf !== saldoInsuficiente ||
       Math.abs(prev.cotacao - newCotacao) > 0.01;
+
+    debugLog("effect:rates:diff", {
+      changed,
+      prev,
+      next: { saldoDisponivel, saldoInsuficiente, newCotacao, newCoinPriceUSD },
+    });
 
     if (changed) {
       lastEmittedRef.current = {
@@ -373,6 +472,7 @@ export function OrigemPagamentoSelect({
         cotacao: newCotacao,
         coinPrice: newCoinPriceUSD,
       };
+      debugLog("effect:rates:emit-onChange");
       onChangeRef.current({
         ...currentValue,
         saldoDisponivel,
@@ -386,6 +486,12 @@ export function OrigemPagamentoSelect({
 
   // Handle origem type change
   const handleOrigemTipoChange = (tipo: "CAIXA_OPERACIONAL" | "PARCEIRO_CONTA" | "PARCEIRO_WALLET") => {
+    debugLog("handler:origemTipo:before-click", {
+      from: value.origemTipo,
+      to: tipo,
+      currentTipoMoeda: value.tipoMoeda,
+    });
+
     const tipoMoeda: "FIAT" | "CRYPTO" = tipo === "PARCEIRO_WALLET" ? "CRYPTO" : "FIAT";
     const moeda = tipoMoeda === "FIAT" ? "BRL" : "USD";
     
@@ -419,6 +525,7 @@ export function OrigemPagamentoSelect({
       saldoInsuficiente,
     };
 
+    debugLog("handler:origemTipo:emit-onChange", newData);
     onChange(newData);
   };
 
@@ -467,6 +574,11 @@ export function OrigemPagamentoSelect({
 
   // Handle partner selection
   const handleParceiroChange = (parceiroId: string) => {
+    debugLog("handler:parceiro:click", {
+      origemTipo: value.origemTipo,
+      parceiroId,
+    });
+
     onChange({
       ...value,
       origemParceiroId: parceiroId,
@@ -480,6 +592,8 @@ export function OrigemPagamentoSelect({
   // Handle account selection
   const handleContaChange = (contaId: string) => {
     const saldo = getSaldoContaParceiro(contaId);
+    debugLog("handler:conta:click", { contaId, saldo });
+
     onChange({
       ...value,
       origemContaBancariaId: contaId,
@@ -490,7 +604,15 @@ export function OrigemPagamentoSelect({
 
   // Handle wallet selection
   const handleWalletChange = (walletId: string) => {
+    debugLog("handler:wallet:click", {
+      walletId,
+      origemParceiroId: value.origemParceiroId,
+      valorEfetivo,
+    });
+
     const walletSaldo = getSaldoWalletParceiro(walletId);
+    debugLog("handler:wallet:saldo-calculado", walletSaldo);
+
     onChange({
       ...value,
       origemWalletId: walletId,
@@ -531,7 +653,158 @@ export function OrigemPagamentoSelect({
       : value.saldoDisponivel < valorEfetivo
   );
 
+  const renderWalletSection = () => {
+    try {
+      debugLog("wallet-section:render:start", {
+        origemParceiroId: value.origemParceiroId,
+        origemWalletId: value.origemWalletId,
+        walletsParceiroSelecionado: walletsParceiroSelecionado.length,
+      });
+
+      return (
+        <div className="space-y-3 pt-2 border-t">
+          <div className="space-y-2">
+            <Label className="text-xs text-muted-foreground">Selecione o Parceiro</Label>
+            <Select
+              value={value.origemParceiroId || ""}
+              onValueChange={handleParceiroChange}
+              disabled={disabled}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Escolha um parceiro..." />
+              </SelectTrigger>
+              <SelectContent>
+                {parceiros.map((p) => {
+                  const walletsDoParceiro = walletsCrypto.filter(w => w.parceiro_id === p.id);
+                  const saldosDoParceiroWallets = saldosParceirosWallets.filter(s => s.parceiro_id === p.id);
+
+                  const saldoTotalUSD = saldosDoParceiroWallets.reduce((acc, s) => {
+                    const coinSafe = (s.coin || "USDT").toUpperCase();
+                    const priceUSD = getCoinPriceUSD(coinSafe);
+                    return acc + (s.saldo_coin || 0) * priceUSD;
+                  }, 0);
+                  const temSaldo = saldoTotalUSD > 0;
+                  const temWallets = walletsDoParceiro.length > 0;
+
+                  return (
+                    <SelectItem key={p.id} value={p.id}>
+                      <div className="flex flex-col w-full gap-0.5">
+                        <div className="flex items-center gap-2">
+                          <span className={`font-medium ${!temSaldo ? "text-muted-foreground" : ""}`}>
+                            {p.nome}
+                          </span>
+                        </div>
+                        {temWallets ? (
+                          <div className="space-y-0.5">
+                            {saldosDoParceiroWallets.length > 0 ? (
+                              saldosDoParceiroWallets.map((s, idx) => {
+                                const coinSafe = (s.coin || "USDT").toUpperCase();
+                                return (
+                                  <div key={`${s.wallet_id}-${coinSafe}-${idx}`} className="flex items-center gap-2 text-xs">
+                                    <span className="text-muted-foreground">•</span>
+                                    <span className={s.saldo_coin > 0 ? "text-emerald-600" : "text-muted-foreground"}>
+                                      {coinSafe} {s.saldo_coin?.toFixed(4) || "0"}
+                                    </span>
+                                  </div>
+                                );
+                              })
+                            ) : (
+                              <span className="text-xs text-muted-foreground italic">
+                                Sem saldo em wallets
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground italic">
+                            Sem wallets cadastradas
+                          </span>
+                        )}
+                      </div>
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {value.origemParceiroId && (
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">Selecione a Wallet</Label>
+              {walletsParceiroSelecionado.length === 0 ? (
+                <p className="text-sm text-muted-foreground italic">
+                  Este parceiro não possui wallets cadastradas.
+                </p>
+              ) : (
+                <Select
+                  value={value.origemWalletId || ""}
+                  onValueChange={handleWalletChange}
+                  disabled={disabled}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Escolha uma wallet..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {walletsParceiroSelecionado.map((w) => {
+                      const walletSaldo = getSaldoWalletParceiro(w.id);
+                      const exchangeDisplay = w.exchange || "Wallet";
+                      const enderecoDisplay = w.endereco ? `${w.endereco.slice(0, 12)}...` : "—";
+                      return (
+                        <SelectItem key={w.id} value={w.id}>
+                          <div className="flex items-center justify-between w-full gap-4">
+                            <div className="flex flex-col">
+                              <span className="font-medium text-sm">{exchangeDisplay}</span>
+                              <span className="text-xs text-muted-foreground">{enderecoDisplay}</span>
+                            </div>
+                            <div className="flex flex-col items-end text-xs">
+                              <span className={walletSaldo.saldoBRL < valorEfetivo ? "text-destructive font-medium" : "text-emerald-600 font-medium"}>
+                                {formatCoin(walletSaldo.saldoCoin, walletSaldo.coin)}
+                              </span>
+                              <span className="text-muted-foreground/70">
+                                ≈ {formatCurrency(walletSaldo.saldoBRL)}
+                              </span>
+                            </div>
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          )}
+
+          {value.origemWalletId && isInsuficiente && valorEfetivo > 0 && (
+            <div className="p-2.5 rounded-lg text-sm flex items-center gap-2 bg-destructive/10 border border-destructive/30 text-destructive">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              <span>Saldo disponível: ≈ {formatCurrency(value.saldoDisponivel)} — Insuficiente</span>
+            </div>
+          )}
+        </div>
+      );
+    } catch (error) {
+      console.error("[OrigemPagamentoSelect][wallet-section:render:crash]", {
+        error,
+        value,
+        walletsParceiroSelecionado,
+        saldosParceirosWallets,
+      });
+
+      return (
+        <div className="p-3 rounded-lg border border-destructive/30 bg-destructive/10 text-destructive text-sm">
+          Erro ao renderizar Wallet. Verifique o console para detalhes.
+        </div>
+      );
+    }
+  };
+
+  debugLog("render:before-loading-check", {
+    loading,
+    origemTipo: value.origemTipo,
+    tipoMoeda: value.tipoMoeda,
+  });
+
   if (loading) {
+    debugLog("render:return-loading");
     return (
       <div className="flex items-center justify-center p-4">
         <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -539,13 +812,22 @@ export function OrigemPagamentoSelect({
     );
   }
 
+  debugLog("render:return-main", {
+    origemTipo: value.origemTipo,
+    tipoMoeda: value.tipoMoeda,
+    isInsuficiente,
+  });
+
   return (
     <div className="space-y-4">
       <Label className="text-sm font-medium">Origem do Pagamento</Label>
       
       <RadioGroup
         value={value.origemTipo}
-        onValueChange={(v) => handleOrigemTipoChange(v as any)}
+        onValueChange={(v) => {
+          debugLog("radio:onValueChange", { selected: v });
+          handleOrigemTipoChange(v as any);
+        }}
         disabled={disabled}
         className="grid gap-2"
       >
@@ -852,132 +1134,7 @@ export function OrigemPagamentoSelect({
       )}
 
       {/* Partner selection for PARCEIRO_WALLET (CRYPTO) */}
-      {value.origemTipo === "PARCEIRO_WALLET" && (
-        <div className="space-y-3 pt-2 border-t">
-          <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground">Selecione o Parceiro</Label>
-            <Select
-              value={value.origemParceiroId || ""}
-              onValueChange={handleParceiroChange}
-              disabled={disabled}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Escolha um parceiro..." />
-              </SelectTrigger>
-              <SelectContent>
-                {parceiros.map((p) => {
-                  // Buscar todas as wallets do parceiro
-                  const walletsDoParceiro = walletsCrypto.filter(w => w.parceiro_id === p.id);
-                  const saldosDoParceiroWallets = saldosParceirosWallets.filter(s => s.parceiro_id === p.id);
-                  
-                  // Calcular saldo total em USD de todas as wallets
-                  const saldoTotalUSD = saldosDoParceiroWallets.reduce((acc, s) => {
-                    const priceUSD = getCoinPriceUSD(s.coin);
-                    return acc + (s.saldo_coin || 0) * priceUSD;
-                  }, 0);
-                  const saldoTotalBRL = saldoTotalUSD * cotacaoUSD;
-                  const temSaldo = saldoTotalUSD > 0;
-                  const temWallets = walletsDoParceiro.length > 0;
-                  
-                  return (
-                    <SelectItem key={p.id} value={p.id}>
-                      <div className="flex flex-col w-full gap-0.5">
-                        <div className="flex items-center gap-2">
-                          <span className={`font-medium ${!temSaldo ? "text-muted-foreground" : ""}`}>
-                            {p.nome}
-                          </span>
-                        </div>
-                        {temWallets ? (
-                          <div className="space-y-0.5">
-                            {saldosDoParceiroWallets.length > 0 ? (
-                              saldosDoParceiroWallets.map(s => {
-                                const wallet = walletsDoParceiro.find(w => 
-                                  saldosParceirosWallets.find(sw => sw.wallet_id === w.id && sw.coin === s.coin)
-                                );
-                                return (
-                                  <div key={s.wallet_id} className="flex items-center gap-2 text-xs">
-                                    <span className="text-muted-foreground">•</span>
-                                    <span className={s.saldo_coin > 0 ? "text-emerald-600" : "text-muted-foreground"}>
-                                      {s.coin} {s.saldo_coin?.toFixed(4) || "0"}
-                                    </span>
-                                  </div>
-                                );
-                              })
-                            ) : (
-                              <span className="text-xs text-muted-foreground italic">
-                                Sem saldo em wallets
-                              </span>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-xs text-muted-foreground italic">
-                            Sem wallets cadastradas
-                          </span>
-                        )}
-                      </div>
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Wallet selection for CRYPTO */}
-          {value.origemParceiroId && (
-            <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground">Selecione a Wallet</Label>
-              {walletsParceiroSelecionado.length === 0 ? (
-                <p className="text-sm text-muted-foreground italic">
-                  Este parceiro não possui wallets cadastradas.
-                </p>
-              ) : (
-                <Select
-                  value={value.origemWalletId || ""}
-                  onValueChange={handleWalletChange}
-                  disabled={disabled}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Escolha uma wallet..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {walletsParceiroSelecionado.map((w) => {
-                      const walletSaldo = getSaldoWalletParceiro(w.id);
-                      const exchangeDisplay = w.exchange || "Wallet";
-                      const enderecoDisplay = w.endereco ? `${w.endereco.slice(0, 12)}...` : "—";
-                      return (
-                        <SelectItem key={w.id} value={w.id}>
-                          <div className="flex items-center justify-between w-full gap-4">
-                            <div className="flex flex-col">
-                              <span className="font-medium text-sm">{exchangeDisplay}</span>
-                              <span className="text-xs text-muted-foreground">{enderecoDisplay}</span>
-                            </div>
-                            <div className="flex flex-col items-end text-xs">
-                              <span className={walletSaldo.saldoBRL < valorEfetivo ? "text-destructive font-medium" : "text-emerald-600 font-medium"}>
-                                {formatCoin(walletSaldo.saldoCoin, walletSaldo.coin)}
-                              </span>
-                              <span className="text-muted-foreground/70">
-                                ≈ {formatCurrency(walletSaldo.saldoBRL)}
-                              </span>
-                            </div>
-                          </div>
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
-          )}
-
-          {/* Alerta único de saldo insuficiente para wallet selecionada */}
-          {value.origemWalletId && isInsuficiente && valorEfetivo > 0 && (
-            <div className="p-2.5 rounded-lg text-sm flex items-center gap-2 bg-destructive/10 border border-destructive/30 text-destructive">
-              <AlertTriangle className="h-4 w-4 shrink-0" />
-              <span>Saldo disponível: ≈ {formatCurrency(value.saldoDisponivel)} — Insuficiente</span>
-            </div>
-          )}
-        </div>
-      )}
+      {value.origemTipo === "PARCEIRO_WALLET" && renderWalletSection()}
 
     </div>
   );
