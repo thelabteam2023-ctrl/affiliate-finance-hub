@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -272,6 +272,11 @@ export function OrigemPagamentoSelect({
   };
 
   // 🔒 EFEITO CRÍTICO: Recalcula e propaga saldoInsuficiente quando dados são carregados ou valor muda
+  // Ref para evitar loop infinito: rastreia últimos valores emitidos
+  const lastEmittedRef = useRef<{ saldo: number; insuf: boolean; cotacao: number; coinPrice: number }>({
+    saldo: 0, insuf: false, cotacao: 0, coinPrice: 0,
+  });
+
   useEffect(() => {
     if (!dataLoaded) return;
 
@@ -284,8 +289,8 @@ export function OrigemPagamentoSelect({
     );
 
     // 🔒 Propagar cotação e preço da crypto quando disponíveis
-    let newCotacao = value.cotacao;
-    let newCoinPriceUSD = value.coinPriceUSD;
+    let newCotacao = value.cotacao ?? 0;
+    let newCoinPriceUSD = value.coinPriceUSD ?? 0;
     
     if (value.tipoMoeda === "CRYPTO") {
       newCotacao = cotacaoUSD;
@@ -294,14 +299,21 @@ export function OrigemPagamentoSelect({
       }
     }
 
-    // Só atualiza se houver diferença para evitar loop infinito
-    const needsUpdate = 
-      value.saldoDisponivel !== saldoDisponivel || 
-      value.saldoInsuficiente !== saldoInsuficiente ||
-      (value.tipoMoeda === "CRYPTO" && value.cotacao !== newCotacao) ||
-      (value.tipoMoeda === "CRYPTO" && value.coinPriceUSD !== newCoinPriceUSD);
-      
-    if (needsUpdate) {
+    // Comparar com últimos valores emitidos (tolerância para floats)
+    const prev = lastEmittedRef.current;
+    const changed =
+      Math.abs(prev.saldo - saldoDisponivel) > 0.001 ||
+      prev.insuf !== saldoInsuficiente ||
+      (value.tipoMoeda === "CRYPTO" && Math.abs(prev.cotacao - newCotacao) > 0.001) ||
+      (value.tipoMoeda === "CRYPTO" && Math.abs(prev.coinPrice - newCoinPriceUSD) > 0.001);
+
+    if (changed) {
+      lastEmittedRef.current = {
+        saldo: saldoDisponivel,
+        insuf: saldoInsuficiente,
+        cotacao: newCotacao,
+        coinPrice: newCoinPriceUSD,
+      };
       onChange({
         ...value,
         saldoDisponivel,
