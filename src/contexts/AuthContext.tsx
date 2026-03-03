@@ -70,7 +70,9 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
 
     case 'BOOTSTRAP_ERROR':
       if (state.status !== 'bootstrapping') return state;
-      return { ...state, status: 'error', user: null, session: null };
+      // CRITICAL: Do NOT clear user/session on error if they exist.
+      // This prevents redirect loops when secondary RPCs fail but the session is valid.
+      return { ...state, status: 'error' };
 
     case 'SESSION_UPDATE':
       // Allow session updates when ready (e.g. TOKEN_REFRESHED)
