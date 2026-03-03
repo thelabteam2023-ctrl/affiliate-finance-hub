@@ -90,7 +90,7 @@ export function PagamentoOperadorDialog({
     data_pagamento: new Date().toISOString().split("T")[0],
     data_competencia: null,
     descricao: null,
-    status: "PENDENTE",
+    status: "CONFIRMADO",
   });
   const [origemData, setOrigemData] = useState<OrigemPagamentoData>({
     origemTipo: "CAIXA_OPERACIONAL",
@@ -102,7 +102,7 @@ export function PagamentoOperadorDialog({
   const [cicloRef, setCicloRef] = useState<CicloRef | null>(null);
 
   const isEditing = !!pagamento?.id;
-  const isSaldoInsuficiente = formData.status === "CONFIRMADO" && formData.valor > 0 && (origemData.saldoInsuficiente || origemData.saldoDisponivel < formData.valor);
+  const isSaldoInsuficiente = formData.status !== "CANCELADO" && formData.valor > 0 && (origemData.saldoInsuficiente || origemData.saldoDisponivel < formData.valor);
 
   useEffect(() => {
     if (open) {
@@ -113,6 +113,8 @@ export function PagamentoOperadorDialog({
         setFormData({
           ...pagamento,
           data_competencia: pagamento.data_competencia || null,
+          // Migrar PENDENTE → CONFIRMADO (status removido do fluxo)
+          status: pagamento.status === "PENDENTE" ? "CONFIRMADO" : pagamento.status,
         });
         if (pagamento.id) {
           fetchCicloRef(pagamento.id);
@@ -127,7 +129,7 @@ export function PagamentoOperadorDialog({
           data_pagamento: new Date().toISOString().split("T")[0],
           data_competencia: null,
           descricao: null,
-          status: "PENDENTE",
+          status: "CONFIRMADO",
         });
         setOrigemData({
           origemTipo: "CAIXA_OPERACIONAL",
@@ -510,15 +512,14 @@ export function PagamentoOperadorDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="PENDENTE">Pendente</SelectItem>
                 <SelectItem value="CONFIRMADO">Confirmado</SelectItem>
                 <SelectItem value="CANCELADO">Cancelado</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          {/* Origem de Pagamento - apenas quando status é CONFIRMADO */}
-          {formData.status === "CONFIRMADO" && (
+          {/* Origem de Pagamento - sempre visível (exceto quando cancelado) */}
+          {formData.status !== "CANCELADO" && (
             <div className="space-y-2 p-4 border rounded-lg bg-muted/30">
               <OrigemPagamentoSelect
                 value={origemData}
@@ -552,7 +553,7 @@ export function PagamentoOperadorDialog({
           </Button>
           <Button 
             onClick={handleSubmit} 
-            disabled={loading || (formData.status === "CONFIRMADO" && isSaldoInsuficiente)}
+            disabled={loading || isSaldoInsuficiente}
           >
             {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             {pagamento?.id ? "Salvar" : "Registrar"}
