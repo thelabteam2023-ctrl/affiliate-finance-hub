@@ -788,16 +788,15 @@ export const ParceiroMovimentacoesTab = memo(function ParceiroMovimentacoesTab({
     <TooltipProvider>
       <div className="h-full flex flex-col overflow-hidden">
         {/* ============ FILTER BAR ============ */}
-        <div className="shrink-0 space-y-2 pb-3 border-b border-border mb-3">
-          {/* Row 1: Date + Project + Clear */}
-          <div className="flex items-center gap-2 flex-wrap">
+        <div className="shrink-0 pb-3 border-b border-border mb-3">
+          <div className="flex items-center gap-2 flex-nowrap overflow-x-auto">
             {/* Date Range Picker */}
             <Popover>
               <PopoverTrigger asChild>
                 <Button
                   variant={dateRange?.from ? "secondary" : "outline"}
                   size="sm"
-                  className="h-7 text-xs gap-1.5"
+                  className="h-7 text-xs gap-1.5 shrink-0"
                 >
                   <CalendarDays className="h-3.5 w-3.5" />
                   {dateRangeLabel || "Período"}
@@ -825,9 +824,13 @@ export const ParceiroMovimentacoesTab = memo(function ParceiroMovimentacoesTab({
             {/* Project Select */}
             {projects.length > 0 && (
               <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
-                <SelectTrigger className="h-7 text-xs w-auto min-w-[120px] max-w-[180px]">
-                  <FolderOpen className="h-3.5 w-3.5 mr-1.5 shrink-0" />
-                  <SelectValue placeholder="Projeto" />
+                <SelectTrigger className="h-7 text-xs w-auto min-w-0 max-w-[160px] shrink-0 [&>svg]:shrink-0">
+                  <FolderOpen className="h-3.5 w-3.5 mr-1 shrink-0" />
+                  <span className="truncate">
+                    {selectedProjectId === "all"
+                      ? "Projeto: Todos"
+                      : projects.find(p => p.id === selectedProjectId)?.nome || "Projeto"}
+                  </span>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos os projetos</SelectItem>
@@ -838,63 +841,61 @@ export const ParceiroMovimentacoesTab = memo(function ParceiroMovimentacoesTab({
               </Select>
             )}
 
-            {/* Clear all */}
-            {hasActiveFilters && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 text-xs text-muted-foreground hover:text-destructive gap-1"
-                onClick={clearFilters}
-              >
-                <X className="h-3 w-3" />
-                Limpar
-              </Button>
+            {/* Separator */}
+            {(mainTypes.length > 0 || hasOutros) && (
+              <div className="h-4 w-px bg-border shrink-0" />
             )}
 
-            {/* Counter */}
-            <span className="text-[10px] text-muted-foreground ml-auto">
-              {filteredTransacoes.length}/{transacoes.length}
-            </span>
-          </div>
+            {/* Type badges - inline */}
+            {mainTypes.map(tipo => {
+              const isActive = selectedTypes.has(tipo);
+              return (
+                <button
+                  key={tipo}
+                  type="button"
+                  onClick={() => toggleType(tipo)}
+                  className={`shrink-0 px-2.5 py-0.5 rounded-full text-[10px] font-medium border transition-colors whitespace-nowrap ${
+                    isActive
+                      ? getTipoBadgeColor(tipo)
+                      : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"
+                  }`}
+                >
+                  {getTipoLabel(tipo)}
+                </button>
+              );
+            })}
+            {hasOutros && (
+              <button
+                type="button"
+                onClick={() => toggleType('__OUTROS__')}
+                className={`shrink-0 px-2.5 py-0.5 rounded-full text-[10px] font-medium border transition-colors whitespace-nowrap ${
+                  selectedTypes.has('__OUTROS__')
+                    ? "bg-muted text-foreground border-foreground/40"
+                    : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"
+                }`}
+              >
+                Outros
+              </button>
+            )}
 
-          {/* Row 2: Type chips */}
-          {(mainTypes.length > 0 || hasOutros) && (
-            <ScrollArea className="w-full">
-              <div className="flex gap-1.5 pb-1">
-                {mainTypes.map(tipo => {
-                  const isActive = selectedTypes.has(tipo);
-                  return (
-                    <button
-                      key={tipo}
-                      type="button"
-                      onClick={() => toggleType(tipo)}
-                      className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-medium border transition-colors whitespace-nowrap ${
-                        isActive
-                          ? getTipoBadgeColor(tipo)
-                          : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"
-                      }`}
-                    >
-                      {getTipoLabel(tipo)}
-                    </button>
-                  );
-                })}
-                {hasOutros && (
-                  <button
-                    type="button"
-                    onClick={() => toggleType('__OUTROS__')}
-                    className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-medium border transition-colors whitespace-nowrap ${
-                      selectedTypes.has('__OUTROS__')
-                        ? "bg-muted text-foreground border-foreground/40"
-                        : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"
-                    }`}
-                  >
-                    Outros
-                  </button>
-                )}
-              </div>
-              <ScrollBar orientation="horizontal" />
-            </ScrollArea>
-          )}
+            {/* Clear + Counter pushed right */}
+            <div className="flex items-center gap-1.5 ml-auto shrink-0">
+              {hasActiveFilters && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-1.5 text-[10px] text-muted-foreground hover:text-destructive gap-1"
+                  onClick={clearFilters}
+                >
+                  <X className="h-3 w-3" />
+                  Limpar
+                </Button>
+              )}
+              <span className="text-[10px] text-muted-foreground tabular-nums">
+                {filteredTransacoes.length}/{transacoes.length}
+              </span>
+            </div>
+          </div>
         </div>
 
         {/* ============ TRANSACTION LIST ============ */}
