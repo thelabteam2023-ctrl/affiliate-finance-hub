@@ -823,22 +823,20 @@ export const ParceiroMovimentacoesTab = memo(function ParceiroMovimentacoesTab({
 
             {/* Project Select */}
             {projects.length > 0 && (
-              <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
-                <SelectTrigger className="h-7 text-xs w-auto min-w-0 max-w-[160px] shrink-0 [&>svg]:shrink-0">
-                  <FolderOpen className="h-3.5 w-3.5 mr-1 shrink-0" />
-                  <span className="truncate">
-                    {selectedProjectId === "all"
-                      ? "Projeto: Todos"
-                      : projects.find(p => p.id === selectedProjectId)?.nome || "Projeto"}
-                  </span>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os projetos</SelectItem>
-                  {projects.map(p => (
-                    <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex items-center shrink-0">
+                <FolderOpen className="h-3.5 w-3.5 mr-1.5 text-muted-foreground shrink-0" />
+                <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
+                  <SelectTrigger className="h-7 text-xs w-auto min-w-0 max-w-[150px] shrink-0">
+                    <SelectValue placeholder="Projeto: Todos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Projeto: Todos</SelectItem>
+                    {projects.map(p => (
+                      <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             )}
 
             {/* Separator */}
