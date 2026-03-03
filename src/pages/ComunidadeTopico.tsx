@@ -9,7 +9,11 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, MessageSquare, User, Clock, Send, Building2, Pencil, Trash2, Radio } from 'lucide-react';
+import { ArrowLeft, MessageSquare, User, Clock, Send, Building2, Pencil, Trash2, Radio, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+} from '@/components/ui/dialog';
 import { format, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { parseLocalDateTime } from '@/utils/dateUtils';
@@ -64,6 +68,8 @@ export default function ComunidadeTopico() {
   const { canWrite, canEditAny } = useCommunityAccess();
   const { toast } = useToast();
   const [showLiveChat, setShowLiveChat] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
   const { onlineCount, isConnected } = useChatPresence('topic', id);
 
   const [topic, setTopic] = useState<TopicDetail | null>(null);
@@ -314,14 +320,19 @@ export default function ComunidadeTopico() {
             {(topic as any).image_urls && (topic as any).image_urls.length > 0 && (
               <div className={`mt-4 grid gap-2 ${(topic as any).image_urls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
                 {(topic as any).image_urls.map((url: string, i: number) => (
-                  <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="block">
+                  <button
+                    key={i}
+                    type="button"
+                    className="block w-full text-left"
+                    onClick={() => { setLightboxIndex(i); setLightboxOpen(true); }}
+                  >
                     <img
                       src={url}
                       alt={`Imagem ${i + 1}`}
                       className="w-full rounded-lg border border-border object-cover max-h-64 hover:opacity-90 transition-opacity cursor-zoom-in"
                       loading="lazy"
                     />
-                  </a>
+                  </button>
                 ))}
               </div>
             )}
@@ -485,6 +496,59 @@ export default function ComunidadeTopico() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Image Lightbox */}
+      {(topic as any).image_urls && (topic as any).image_urls.length > 0 && (
+        <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
+          <DialogContent className="max-w-[90vw] max-h-[90vh] p-0 bg-black/95 border-none flex items-center justify-center overflow-hidden">
+            <button
+              type="button"
+              className="absolute top-3 right-3 z-50 text-white/70 hover:text-white"
+              onClick={() => setLightboxOpen(false)}
+            >
+              <X className="h-6 w-6" />
+            </button>
+
+            {(topic as any).image_urls.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  className="absolute left-3 z-50 text-white/70 hover:text-white p-2"
+                  onClick={() => setLightboxIndex((prev: number) => (prev - 1 + (topic as any).image_urls.length) % (topic as any).image_urls.length)}
+                >
+                  <ChevronLeft className="h-8 w-8" />
+                </button>
+                <button
+                  type="button"
+                  className="absolute right-3 z-50 text-white/70 hover:text-white p-2"
+                  onClick={() => setLightboxIndex((prev: number) => (prev + 1) % (topic as any).image_urls.length)}
+                >
+                  <ChevronRight className="h-8 w-8" />
+                </button>
+              </>
+            )}
+
+            <img
+              src={(topic as any).image_urls[lightboxIndex]}
+              alt={`Imagem ${lightboxIndex + 1}`}
+              className="max-w-full max-h-[85vh] object-contain"
+            />
+
+            {(topic as any).image_urls.length > 1 && (
+              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+                {(topic as any).image_urls.map((_: string, i: number) => (
+                  <button
+                    key={i}
+                    type="button"
+                    className={`h-2 w-2 rounded-full transition-colors ${i === lightboxIndex ? 'bg-white' : 'bg-white/40'}`}
+                    onClick={() => setLightboxIndex(i)}
+                  />
+                ))}
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
