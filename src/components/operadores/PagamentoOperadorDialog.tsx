@@ -549,7 +549,7 @@ export function PagamentoOperadorDialog({
             disabled={loading || isSaldoInsuficiente}
           >
             {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            {pagamento?.id ? "Salvar" : "Registrar"}
+            {pagamento?.id ? "Confirmar Pagamento" : "Registrar Pagamento"}
           </Button>
         </DialogFooter>
       </DialogContent>
