@@ -663,14 +663,14 @@ export function OrigemPagamentoSelect({
 
       return (
         <div className="space-y-3 pt-2 border-t">
-          <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground">Selecione o Parceiro</Label>
+         <div className="space-y-2">
+            <Label className="text-xs text-muted-foreground text-center block">Selecione o Parceiro</Label>
             <Select
               value={value.origemParceiroId || ""}
               onValueChange={handleParceiroChange}
               disabled={disabled}
             >
-              <SelectTrigger>
+              <SelectTrigger className="text-center [&>span]:w-full [&>span]:text-center">
                 <SelectValue placeholder="Escolha um parceiro..." />
               </SelectTrigger>
               <SelectContent>
@@ -729,9 +729,9 @@ export function OrigemPagamentoSelect({
 
           {value.origemParceiroId && (
             <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground">Selecione a Wallet</Label>
+              <Label className="text-xs text-muted-foreground text-center block">Selecione a Wallet</Label>
               {walletsParceiroSelecionado.length === 0 ? (
-                <p className="text-sm text-muted-foreground italic">
+                <p className="text-sm text-muted-foreground italic text-center">
                   Este parceiro não possui wallets cadastradas.
                 </p>
               ) : (
@@ -740,7 +740,7 @@ export function OrigemPagamentoSelect({
                   onValueChange={handleWalletChange}
                   disabled={disabled}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="text-center [&>span]:w-full [&>span]:text-center">
                     <SelectValue placeholder="Escolha uma wallet..." />
                   </SelectTrigger>
                   <SelectContent>
