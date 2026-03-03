@@ -88,6 +88,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { RegistrarPerdaRapidaDialog } from "@/components/parceiros/RegistrarPerdaRapidaDialog";
 import { PagamentoFornecedorDialog } from "@/components/programa-indicacao/PagamentoFornecedorDialog";
 import { PagamentoParceiroDialog } from "@/components/programa-indicacao/PagamentoParceiroDialog";
+import { ParceriaDialog } from "@/components/parcerias/ParceriaDialog";
 
 // Classificação de domínio dos eventos
 type EventDomain = 'project_event' | 'financial_event' | 'partner_event' | 'admin_event';
@@ -231,9 +232,21 @@ interface PagamentoOperadorPendente {
 
 interface ParceriaAlertaEncerramento {
   id: string;
+  parceiro_id: string;
   parceiroNome: string;
   diasRestantes: number;
   dataFim: string;
+  dataInicio: string;
+  duracaoDias: number;
+  valor_parceiro: number;
+  valor_indicador: number;
+  valor_fornecedor: number;
+  origem_tipo: string;
+  fornecedor_id: string | null;
+  indicacao_id: string | null;
+  elegivel_renovacao: boolean;
+  observacoes: string | null;
+  status: string;
 }
 
 interface ParceiroSemParceria {
@@ -366,6 +379,12 @@ export default function CentralOperacoes() {
   const [selectedPagamentoFornecedor, setSelectedPagamentoFornecedor] = useState<PagamentoFornecedorPendente | null>(null);
   const [pagamentoParceiroDialogOpen, setPagamentoParceiroDialogOpen] = useState(false);
   const [selectedPagamentoParceiro, setSelectedPagamentoParceiro] = useState<PagamentoParceiroPendente | null>(null);
+  // Parcerias encerramento
+  const [encerrarDialogOpen, setEncerrarDialogOpen] = useState(false);
+  const [parceriaToEncerrar, setParceriaToEncerrar] = useState<ParceriaAlertaEncerramento | null>(null);
+  const [encerrarLoading, setEncerrarLoading] = useState(false);
+  const [renovarDialogOpen, setRenovarDialogOpen] = useState(false);
+  const [parceriaToRenovar, setParceriaToRenovar] = useState<ParceriaAlertaEncerramento | null>(null);
   const [mainTab, setMainTabState] = useState<'financeiro' | 'ocorrencias' | 'solicitacoes' | 'alertas'>(() => {
     const saved = localStorage.getItem('central-operacoes-main-tab');
     if (saved === 'financeiro' || saved === 'ocorrencias' || saved === 'solicitacoes' || saved === 'alertas') return saved;
@@ -476,7 +495,7 @@ export default function CentralOperacoes() {
         canSeePartnerData
           ? supabase
               .from("parcerias")
-              .select(`id, data_fim_prevista, parceiro:parceiros(nome)`)
+              .select(`id, parceiro_id, data_inicio, data_fim_prevista, duracao_dias, valor_parceiro, valor_indicador, valor_fornecedor, origem_tipo, fornecedor_id, indicacao_id, elegivel_renovacao, observacoes, status, parceiro:parceiros(nome)`)
               .in("status", ["ATIVA", "EM_ENCERRAMENTO"])
               .not("data_fim_prevista", "is", null)
           : Promise.resolve({ data: [], error: null }),
@@ -727,9 +746,21 @@ export default function CentralOperacoes() {
             const diasRestantes = Math.ceil((dataFim.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
             return {
               id: p.id,
+              parceiro_id: p.parceiro_id,
               parceiroNome: p.parceiro?.nome || "N/A",
               diasRestantes,
               dataFim: p.data_fim_prevista,
+              dataInicio: p.data_inicio,
+              duracaoDias: p.duracao_dias,
+              valor_parceiro: p.valor_parceiro || 0,
+              valor_indicador: p.valor_indicador || 0,
+              valor_fornecedor: p.valor_fornecedor || 0,
+              origem_tipo: p.origem_tipo || "DIRETO",
+              fornecedor_id: p.fornecedor_id,
+              indicacao_id: p.indicacao_id,
+              elegivel_renovacao: p.elegivel_renovacao ?? true,
+              observacoes: p.observacoes,
+              status: p.status,
             };
           })
           .filter((p) => p.diasRestantes <= 7)
@@ -907,6 +938,39 @@ export default function CentralOperacoes() {
       setLoading(false);
       setRefreshing(false);
     }
+  };
+
+  const handleEncerrarParceria = async () => {
+    if (!parceriaToEncerrar) return;
+    try {
+      setEncerrarLoading(true);
+      const hoje = new Date();
+      const hojeStr = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(hoje.getDate()).padStart(2, '0')}`;
+      const { error } = await supabase
+        .from("parcerias")
+        .update({ status: "ENCERRADA", data_fim_real: hojeStr })
+        .eq("id", parceriaToEncerrar.id);
+      if (error) throw error;
+      toast.success(`Parceria com ${parceriaToEncerrar.parceiroNome} encerrada com sucesso`);
+      setParceriasEncerramento(prev => prev.filter(p => p.id !== parceriaToEncerrar.id));
+    } catch (error: any) {
+      toast.error("Erro ao encerrar parceria: " + error.message);
+    } finally {
+      setEncerrarLoading(false);
+      setEncerrarDialogOpen(false);
+      setParceriaToEncerrar(null);
+    }
+  };
+
+  const handleRenovarClick = (parc: ParceriaAlertaEncerramento) => {
+    setParceriaToRenovar(parc);
+    setRenovarDialogOpen(true);
+  };
+
+  const handleRenovarDialogClose = () => {
+    setRenovarDialogOpen(false);
+    setParceriaToRenovar(null);
+    fetchData(true);
   };
 
   // Usa helper centralizado que previne RangeError em tokens cripto
@@ -2167,12 +2231,15 @@ export default function CentralOperacoes() {
                         <Calendar className={`h-3.5 w-3.5 shrink-0 ${isRed ? "text-red-400" : "text-yellow-400"}`} />
                         <span className="text-xs font-medium truncate">{getFirstLastName(parc.parceiroNome)}</span>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
+                      <div className="flex items-center gap-1.5 shrink-0">
                         <Badge className={`text-[10px] h-5 ${isRed ? "bg-red-500/20 text-red-400" : "bg-yellow-500/20 text-yellow-400"}`}>
-                          {parc.diasRestantes}d
+                          {parc.diasRestantes <= 0 ? `${Math.abs(parc.diasRestantes)}d atrás` : `${parc.diasRestantes}d`}
                         </Badge>
-                        <Button size="sm" variant={isRed ? "destructive" : "ghost"} onClick={() => navigate("/programa-indicacao")} className="h-6 text-xs px-2">
-                          {isRed ? "Encerrar" : "Ver"}
+                        <Button size="sm" variant="outline" onClick={() => handleRenovarClick(parc)} className="h-6 text-xs px-2">
+                          Renovar
+                        </Button>
+                        <Button size="sm" variant="destructive" onClick={() => { setParceriaToEncerrar(parc); setEncerrarDialogOpen(true); }} className="h-6 text-xs px-2">
+                          Encerrar
                         </Button>
                       </div>
                     </div>
@@ -2475,19 +2542,49 @@ export default function CentralOperacoes() {
         onSuccess={() => fetchData()}
       />
 
-      {/* Dialog Pagamento Parceiro */}
-      <PagamentoParceiroDialog
-        open={pagamentoParceiroDialogOpen}
-        onOpenChange={(open) => {
-          setPagamentoParceiroDialogOpen(open);
-          if (!open) setSelectedPagamentoParceiro(null);
-        }}
-        parceria={selectedPagamentoParceiro ? {
-          id: selectedPagamentoParceiro.parceriaId,
-          parceiroNome: selectedPagamentoParceiro.parceiroNome,
-          valorParceiro: selectedPagamentoParceiro.valorParceiro,
+      {/* Dialog Encerrar Parceria */}
+      <AlertDialog open={encerrarDialogOpen} onOpenChange={setEncerrarDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Encerrar Parceria</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja encerrar a parceria com "{parceriaToEncerrar?.parceiroNome}"?
+              O status será alterado para ENCERRADA e a data de fim real será definida como hoje.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={encerrarLoading}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleEncerrarParceria} disabled={encerrarLoading} className="bg-destructive text-destructive-foreground">
+              {encerrarLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Encerrar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Dialog Renovar Parceria */}
+      <ParceriaDialog
+        open={renovarDialogOpen}
+        onOpenChange={handleRenovarDialogClose}
+        parceria={parceriaToRenovar ? {
+          id: parceriaToRenovar.id,
+          parceiro_id: parceriaToRenovar.parceiro_id,
+          parceiro_nome: parceriaToRenovar.parceiroNome,
+          data_inicio: parceriaToRenovar.dataInicio,
+          data_fim_prevista: parceriaToRenovar.dataFim,
+          duracao_dias: parceriaToRenovar.duracaoDias,
+          valor_parceiro: parceriaToRenovar.valor_parceiro,
+          valor_indicador: parceriaToRenovar.valor_indicador,
+          valor_fornecedor: parceriaToRenovar.valor_fornecedor,
+          origem_tipo: parceriaToRenovar.origem_tipo,
+          fornecedor_id: parceriaToRenovar.fornecedor_id,
+          indicacao_id: parceriaToRenovar.indicacao_id,
+          elegivel_renovacao: parceriaToRenovar.elegivel_renovacao,
+          observacoes: parceriaToRenovar.observacoes,
+          status: parceriaToRenovar.status,
         } : null}
-        onSuccess={() => fetchData()}
+        isViewMode={false}
+        isRenewalMode={true}
       />
     </div>
   );
