@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -106,10 +106,13 @@ export function OrigemPagamentoSelect({
   const [dataLoaded, setDataLoaded] = useState(false);
 
   // Extrair lista de moedas crypto únicas para buscar cotações em tempo real
-  const cryptoCoins = [...new Set([
-    ...saldosCaixaCrypto.map(s => s.coin),
-    ...saldosParceirosWallets.map(s => s.coin)
-  ])].filter(Boolean);
+  // MEMOIZADO para evitar re-renders desnecessários no useCotacoes
+  const cryptoCoins = useMemo(() => {
+    return [...new Set([
+      ...saldosCaixaCrypto.map(s => s.coin),
+      ...saldosParceirosWallets.map(s => s.coin)
+    ])].filter(Boolean);
+  }, [saldosCaixaCrypto, saldosParceirosWallets]);
 
   // Usar hook de cotações com as moedas crypto detectadas
   const { cotacaoUSD, getCryptoPrice, loading: cotacoesLoading } = useCotacoes(cryptoCoins);
@@ -274,38 +277,54 @@ export function OrigemPagamentoSelect({
   // 🔒 EFEITO CRÍTICO: Recalcula e propaga saldoInsuficiente quando dados são carregados ou valor muda
   // Ref para evitar loop infinito: rastreia últimos valores emitidos
   const lastEmittedRef = useRef<{ saldo: number; insuf: boolean; cotacao: number; coinPrice: number }>({
-    saldo: 0, insuf: false, cotacao: 0, coinPrice: 0,
+    saldo: -1, insuf: false, cotacao: -1, coinPrice: -1,
   });
 
+  // Ref estável para cotacaoUSD - permite acessar valor atual sem incluir na dep array
+  const cotacaoUSDRef = useRef(cotacaoUSD);
+  cotacaoUSDRef.current = cotacaoUSD;
+
+  // Ref estável para o value atual - evita incluir value fields voláteis nas deps
+  const valueRef = useRef(value);
+  valueRef.current = value;
+
+  // Ref estável para onChange
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+
+  // Efeito principal: reage a mudanças de seleção e dados carregados
   useEffect(() => {
     if (!dataLoaded) return;
 
+    const currentValue = valueRef.current;
+    const currentCotacao = cotacaoUSDRef.current;
+
     const { saldoDisponivel, saldoInsuficiente } = calcularSaldoEValidar(
-      value.origemTipo,
-      value.tipoMoeda,
-      value.coin,
-      value.origemContaBancariaId,
-      value.origemWalletId
+      currentValue.origemTipo,
+      currentValue.tipoMoeda,
+      currentValue.coin,
+      currentValue.origemContaBancariaId,
+      currentValue.origemWalletId
     );
 
     // 🔒 Propagar cotação e preço da crypto quando disponíveis
-    let newCotacao = value.cotacao ?? 0;
-    let newCoinPriceUSD = value.coinPriceUSD ?? 0;
+    let newCotacao = currentValue.cotacao ?? 0;
+    let newCoinPriceUSD = currentValue.coinPriceUSD ?? 0;
     
-    if (value.tipoMoeda === "CRYPTO") {
-      newCotacao = cotacaoUSD;
-      if (value.coin) {
-        newCoinPriceUSD = getCoinPriceUSD(value.coin);
+    if (currentValue.tipoMoeda === "CRYPTO") {
+      newCotacao = currentCotacao;
+      if (currentValue.coin) {
+        newCoinPriceUSD = getCoinPriceUSD(currentValue.coin);
       }
     }
 
     // Comparar com últimos valores emitidos (tolerância para floats)
     const prev = lastEmittedRef.current;
     const changed =
-      Math.abs(prev.saldo - saldoDisponivel) > 0.001 ||
+      Math.abs(prev.saldo - saldoDisponivel) > 0.01 ||
       prev.insuf !== saldoInsuficiente ||
-      (value.tipoMoeda === "CRYPTO" && Math.abs(prev.cotacao - newCotacao) > 0.001) ||
-      (value.tipoMoeda === "CRYPTO" && Math.abs(prev.coinPrice - newCoinPriceUSD) > 0.001);
+      (currentValue.tipoMoeda === "CRYPTO" && Math.abs(prev.cotacao - newCotacao) > 0.01) ||
+      (currentValue.tipoMoeda === "CRYPTO" && Math.abs(prev.coinPrice - newCoinPriceUSD) > 0.01);
 
     if (changed) {
       lastEmittedRef.current = {
@@ -314,15 +333,56 @@ export function OrigemPagamentoSelect({
         cotacao: newCotacao,
         coinPrice: newCoinPriceUSD,
       };
-      onChange({
-        ...value,
+      onChangeRef.current({
+        ...currentValue,
         saldoDisponivel,
         saldoInsuficiente,
-        cotacao: value.tipoMoeda === "CRYPTO" ? newCotacao : value.cotacao,
-        coinPriceUSD: value.tipoMoeda === "CRYPTO" ? newCoinPriceUSD : value.coinPriceUSD,
+        cotacao: currentValue.tipoMoeda === "CRYPTO" ? newCotacao : currentValue.cotacao,
+        coinPriceUSD: currentValue.tipoMoeda === "CRYPTO" ? newCoinPriceUSD : currentValue.coinPriceUSD,
       });
     }
-  }, [dataLoaded, valorPagamento, value.origemTipo, value.tipoMoeda, value.coin, value.origemContaBancariaId, value.origemWalletId, saldosCaixaFiat, saldosCaixaCrypto, saldosParceirosContas, saldosParceirosWallets, cotacaoUSD]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dataLoaded, valorPagamento, value.origemTipo, value.tipoMoeda, value.coin, value.origemContaBancariaId, value.origemWalletId]);
+
+  // Efeito SEPARADO: atualiza saldo quando cotações mudam (com debounce implícito via ref)
+  useEffect(() => {
+    if (!dataLoaded || valueRef.current.tipoMoeda !== "CRYPTO") return;
+    
+    const currentValue = valueRef.current;
+    const { saldoDisponivel, saldoInsuficiente } = calcularSaldoEValidar(
+      currentValue.origemTipo,
+      currentValue.tipoMoeda,
+      currentValue.coin,
+      currentValue.origemContaBancariaId,
+      currentValue.origemWalletId
+    );
+
+    const newCotacao = cotacaoUSD;
+    const newCoinPriceUSD = currentValue.coin ? getCoinPriceUSD(currentValue.coin) : (currentValue.coinPriceUSD ?? 0);
+
+    const prev = lastEmittedRef.current;
+    const changed =
+      Math.abs(prev.saldo - saldoDisponivel) > 0.01 ||
+      prev.insuf !== saldoInsuficiente ||
+      Math.abs(prev.cotacao - newCotacao) > 0.01;
+
+    if (changed) {
+      lastEmittedRef.current = {
+        saldo: saldoDisponivel,
+        insuf: saldoInsuficiente,
+        cotacao: newCotacao,
+        coinPrice: newCoinPriceUSD,
+      };
+      onChangeRef.current({
+        ...currentValue,
+        saldoDisponivel,
+        saldoInsuficiente,
+        cotacao: newCotacao,
+        coinPriceUSD: newCoinPriceUSD,
+      });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cotacaoUSD, dataLoaded]);
 
   // Handle origem type change
   const handleOrigemTipoChange = (tipo: "CAIXA_OPERACIONAL" | "PARCEIRO_CONTA" | "PARCEIRO_WALLET") => {
@@ -882,12 +942,14 @@ export function OrigemPagamentoSelect({
                   <SelectContent>
                     {walletsParceiroSelecionado.map((w) => {
                       const walletSaldo = getSaldoWalletParceiro(w.id);
+                      const exchangeDisplay = w.exchange || "Wallet";
+                      const enderecoDisplay = w.endereco ? `${w.endereco.slice(0, 12)}...` : "—";
                       return (
                         <SelectItem key={w.id} value={w.id}>
                           <div className="flex items-center justify-between w-full gap-4">
                             <div className="flex flex-col">
-                              <span className="font-medium text-sm">{w.exchange}</span>
-                              <span className="text-xs text-muted-foreground">{w.endereco.slice(0, 12)}...</span>
+                              <span className="font-medium text-sm">{exchangeDisplay}</span>
+                              <span className="text-xs text-muted-foreground">{enderecoDisplay}</span>
                             </div>
                             <div className="flex flex-col items-end text-xs">
                               <span className={walletSaldo.saldoBRL < valorEfetivo ? "text-destructive font-medium" : "text-emerald-600 font-medium"}>
