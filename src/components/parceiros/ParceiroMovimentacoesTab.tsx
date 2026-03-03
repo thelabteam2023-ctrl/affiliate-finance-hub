@@ -64,7 +64,7 @@ export const ParceiroMovimentacoesTab = memo(function ParceiroMovimentacoesTab({
   const [selectedTypes, setSelectedTypes] = useState<Set<string>>(new Set());
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [selectedProjectId, setSelectedProjectId] = useState<string>("all");
-  const [projects, setProjects] = useState<Array<{ id: string; nome: string }>>([]);
+  const [allProjects, setAllProjects] = useState<Array<{ id: string; nome: string }>>([]);
 
   // Referência para evitar race conditions
   const lastFetchedIdRef = useRef<string | null>(null);
@@ -78,7 +78,7 @@ export const ParceiroMovimentacoesTab = memo(function ParceiroMovimentacoesTab({
         .from("projetos")
         .select("id, nome")
         .order("nome");
-      if (projectsData) setProjects(projectsData);
+      if (projectsData) setAllProjects(projectsData);
     };
     fetchProjects();
   }, []);
@@ -578,6 +578,15 @@ export const ParceiroMovimentacoesTab = memo(function ParceiroMovimentacoesTab({
   };
 
   const transacoes = data?.transacoes || [];
+
+  // Projetos com movimentações (derivado dos dados reais)
+  const projects = useMemo(() => {
+    const projectIds = new Set<string>();
+    transacoes.forEach(t => {
+      if (t.projeto_id_snapshot) projectIds.add(t.projeto_id_snapshot);
+    });
+    return allProjects.filter(p => projectIds.has(p.id));
+  }, [transacoes, allProjects]);
 
   // =========================================================================
   // FILTROS: Tipos disponíveis, filtragem por tipo/data/projeto
