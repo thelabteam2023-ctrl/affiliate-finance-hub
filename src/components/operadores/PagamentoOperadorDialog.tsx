@@ -520,19 +520,12 @@ export function PagamentoOperadorDialog({
 
           {/* Origem de Pagamento - sempre visível (exceto quando cancelado) */}
           {formData.status !== "CANCELADO" && (
-            <div className="space-y-2 p-4 border rounded-lg bg-muted/30">
+            <div className="p-4 border rounded-lg bg-muted/30">
               <OrigemPagamentoSelect
                 value={origemData}
                 onChange={setOrigemData}
                 valorPagamento={formData.valor}
               />
-              
-              {isSaldoInsuficiente && (
-                <div className="flex items-center gap-2 text-destructive text-sm mt-2">
-                  <AlertTriangle className="h-4 w-4" />
-                  <span>Saldo insuficiente na origem selecionada</span>
-                </div>
-              )}
             </div>
           )}
 
