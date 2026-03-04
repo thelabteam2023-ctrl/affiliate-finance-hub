@@ -19,58 +19,56 @@ interface ProjetoFinancialMetricsCardProps {
   projetoId: string;
 }
 
+interface LedgerEntry {
+  valor: number;
+  valor_confirmado?: number | null;
+  moeda: string;
+}
+
 interface FinancialMetricsRaw {
   bookmakerSaldos: { saldo_atual: number; moeda: string }[];
-  depositosTotal: number;
-  saquesRecebidos: number;
-  saquesPendentes: number;
+  depositos: LedgerEntry[];
+  saques: LedgerEntry[];
+  saquesPendentes: LedgerEntry[];
 }
 
 async function fetchFinancialMetricsRaw(projetoId: string): Promise<FinancialMetricsRaw> {
-  // 1. Buscar bookmakers do projeto COM moeda
+  // 1. Buscar bookmakers ATUAIS do projeto para saldos
   const { data: bookmakers } = await supabase
     .from("bookmakers")
     .select("id, saldo_atual, moeda")
     .eq("projeto_id", projetoId);
 
-  const bookmakerIds = (bookmakers || []).map(b => b.id);
   const bookmakerSaldos = (bookmakers || []).map(b => ({ saldo_atual: b.saldo_atual || 0, moeda: b.moeda || "BRL" }));
 
-  if (bookmakerIds.length === 0) {
-    return { bookmakerSaldos: [], depositosTotal: 0, saquesRecebidos: 0, saquesPendentes: 0 };
-  }
-
-  // 2-4: Buscar ledger em paralelo
+  // 2-4: Buscar ledger por projeto_id_snapshot (inclui casas desvinculadas)
   const [depositos, saques, saquesPend] = await Promise.all([
     supabase
       .from("cash_ledger")
       .select("valor, moeda")
       .in("tipo_transacao", ["DEPOSITO", "DEPOSITO_VIRTUAL"])
       .eq("status", "CONFIRMADO")
-      .in("destino_bookmaker_id", bookmakerIds)
       .eq("projeto_id_snapshot", projetoId),
     supabase
       .from("cash_ledger")
       .select("valor, valor_confirmado, moeda")
       .in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])
       .eq("status", "CONFIRMADO")
-      .in("origem_bookmaker_id", bookmakerIds)
       .eq("projeto_id_snapshot", projetoId),
     supabase
       .from("cash_ledger")
       .select("valor, moeda")
       .in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])
       .eq("status", "PENDENTE")
-      .in("origem_bookmaker_id", bookmakerIds)
       .eq("projeto_id_snapshot", projetoId),
   ]);
 
-  // Retornar dados brutos — conversão será feita no componente com acesso às cotações
-  const depositosTotal = (depositos.data || []).reduce((acc, d) => acc + (d.valor || 0), 0);
-  const saquesRecebidos = (saques.data || []).reduce((acc, s) => acc + (s.valor_confirmado ?? s.valor ?? 0), 0);
-  const saquesPendentes = (saquesPend.data || []).reduce((acc, s) => acc + (s.valor || 0), 0);
-
-  return { bookmakerSaldos, depositosTotal, saquesRecebidos, saquesPendentes };
+  return {
+    bookmakerSaldos,
+    depositos: (depositos.data || []) as LedgerEntry[],
+    saques: (saques.data || []) as LedgerEntry[],
+    saquesPendentes: (saquesPend.data || []) as LedgerEntry[],
+  };
 }
 
 export function ProjetoFinancialMetricsCard({ projetoId }: ProjetoFinancialMetricsCardProps) {
@@ -93,9 +91,19 @@ export function ProjetoFinancialMetricsCard({ projetoId }: ProjetoFinancialMetri
       0
     );
 
-    // Depósitos e saques já estão na moeda da transação — por ora assumem BRL
-    // TODO: converter ledger entries individualmente se multi-moeda
-    const { depositosTotal, saquesRecebidos, saquesPendentes } = rawMetrics;
+    // Converter cada entrada do ledger para moeda de consolidação
+    const depositosTotal = rawMetrics.depositos.reduce(
+      (acc, d) => acc + convertToConsolidationOficial(d.valor, d.moeda),
+      0
+    );
+    const saquesRecebidos = rawMetrics.saques.reduce(
+      (acc, s) => acc + convertToConsolidationOficial(s.valor_confirmado ?? s.valor, s.moeda),
+      0
+    );
+    const saquesPendentes = rawMetrics.saquesPendentes.reduce(
+      (acc, s) => acc + convertToConsolidationOficial(s.valor, s.moeda),
+      0
+    );
 
     const lucroRealizado = saquesRecebidos - depositosTotal;
     const lucroPotencial = saldoCasas - depositosTotal;
