@@ -245,26 +245,14 @@ export function ProjetoFinancialMetricsCard({ projetoId }: ProjetoFinancialMetri
     const lucroOperacionalPuro = (metrics.saldoCasas + metrics.saquesRecebidos) - capitalTotal;
 
     const breakEvenReached = metrics.fluxoCaixaLiquido >= 0;
-    const breakEvenLabel = breakEvenReached
-      ? `Break Even em ${metrics.breakEvenDays ?? "—"}d ✓`
-      : "Falta p/ Break Even";
-    const breakEvenTooltip = breakEvenReached
-      ? `O projeto se pagou em ${metrics.breakEvenDays} dias (${metrics.breakEvenDate ? format(parseISO(metrics.breakEvenDate), "dd/MM/yyyy") : "—"}). Saques (${formatCurrency(metrics.saquesRecebidos)}) já superaram Depósitos (${formatCurrency(metrics.depositosTotal)}). Saldo positivo: ${formatCurrency(metrics.fluxoCaixaLiquido)}.`
-      : `Ainda falta ${formatCurrency(Math.abs(metrics.fluxoCaixaLiquido))} em saques para recuperar os depósitos (${formatCurrency(metrics.depositosTotal)}).`;
 
     const mainItems = [
-    {
-      label: breakEvenLabel,
-      value: metrics.fluxoCaixaLiquido,
-      icon: TrendingUp,
-      tooltip: breakEvenTooltip,
-      primary: true,
-    },
     {
       label: "Fluxo Líquido Ajustado",
       value: fluxoLiquidoAjustado,
       icon: ArrowRightLeft,
-      tooltip: `Saques (${formatCurrency(metrics.saquesRecebidos)}) - Capital na Operação (${formatCurrency(capitalTotal)}). Fluxo descontando créditos extras (cashback, giros, etc).`,
+      richFluxoTooltip: true,
+      primary: true,
     },
     {
       label: "Saldo nas Casas",
@@ -334,7 +322,7 @@ export function ProjetoFinancialMetricsCard({ projetoId }: ProjetoFinancialMetri
       </CardHeader>
       <CardContent className="space-y-3">
         {/* Main metrics grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5">
           {mainItems.map((item) => {
             const Icon = item.icon;
             const isPositive = item.value >= 0;
@@ -377,7 +365,50 @@ export function ProjetoFinancialMetricsCard({ projetoId }: ProjetoFinancialMetri
                     </span>
                   </div>
                 </TooltipTrigger>
-                {(item as any).richTooltip ? (
+                {(item as any).richFluxoTooltip ? (
+                  <TooltipContent side="top" className="text-xs max-w-sm p-3">
+                    <p className="font-semibold mb-2">Fluxo Líquido Ajustado</p>
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between gap-6">
+                        <span className="text-muted-foreground">Saques Recebidos</span>
+                        <span className="font-mono">{formatCurrency(metrics.saquesRecebidos)}</span>
+                      </div>
+                      <div className="flex justify-between gap-6">
+                        <span className="text-muted-foreground">Capital na Operação</span>
+                        <span className="font-mono">−{formatCurrency(capitalTotal)}</span>
+                      </div>
+                      <div className="border-t border-border/40 pt-1.5 mt-1">
+                        <div className="flex justify-between gap-6 font-medium">
+                          <span>Resultado</span>
+                          <span className={`font-mono font-bold ${fluxoLiquidoAjustado >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                            {formatCurrency(fluxoLiquidoAjustado)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    {/* Break Even section */}
+                    <div className="border-t border-border/40 mt-2 pt-2">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <TrendingUp className={`h-3 w-3 ${breakEvenReached ? "text-emerald-500" : "text-muted-foreground"}`} />
+                        <span className="font-semibold">
+                          {breakEvenReached ? "Break Even Atingido" : "Break Even Pendente"}
+                        </span>
+                      </div>
+                      {breakEvenReached ? (
+                        <p className="text-muted-foreground leading-relaxed">
+                          O projeto se pagou em <span className="text-foreground font-medium">{metrics.breakEvenDays ?? "—"} dias</span>
+                          {metrics.breakEvenDate && (
+                            <> ({format(parseISO(metrics.breakEvenDate), "dd/MM/yyyy")})</>
+                          )}. Saques ({formatCurrency(metrics.saquesRecebidos)}) já superaram Depósitos ({formatCurrency(metrics.depositosTotal)}).
+                        </p>
+                      ) : (
+                        <p className="text-muted-foreground leading-relaxed">
+                          Falta <span className="text-foreground font-medium">{formatCurrency(Math.abs(metrics.fluxoCaixaLiquido))}</span> em saques para recuperar os depósitos ({formatCurrency(metrics.depositosTotal)}).
+                        </p>
+                      )}
+                    </div>
+                  </TooltipContent>
+                ) : (item as any).richTooltip ? (
                   <TooltipContent side="top" className="text-xs max-w-sm p-3">
                     <p className="font-semibold mb-2">Capital na Operação</p>
                     <div className="space-y-1">
