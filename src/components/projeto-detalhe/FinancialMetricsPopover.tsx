@@ -12,6 +12,8 @@ import {
   ArrowRightLeft,
   Gift,
   BarChart3,
+  CheckCircle2,
+  AlertCircle,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
@@ -86,6 +88,36 @@ async function fetchFinancialMetricsRaw(projetoId: string) {
   };
 }
 
+function MetricRow({ label, value, colorClass = "text-foreground", bold = false, indent = false }: {
+  label: string;
+  value: string;
+  colorClass?: string;
+  bold?: boolean;
+  indent?: boolean;
+}) {
+  return (
+    <div className={`flex items-center justify-between gap-4 ${indent ? "pl-3" : ""}`}>
+      <span className={`text-[11px] ${bold ? "font-medium text-foreground" : "text-muted-foreground"}`}>{label}</span>
+      <span className={`text-[11px] font-mono tabular-nums ${bold ? "font-bold" : "font-semibold"} ${colorClass}`}>
+        {value}
+      </span>
+    </div>
+  );
+}
+
+function SectionHeader({ icon: Icon, label, iconClass = "text-muted-foreground" }: {
+  icon: React.ElementType;
+  label: string;
+  iconClass?: string;
+}) {
+  return (
+    <div className="flex items-center gap-1.5 mb-1.5">
+      <Icon className={`h-3 w-3 ${iconClass}`} />
+      <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</span>
+    </div>
+  );
+}
+
 export function FinancialMetricsPopover({ projetoId }: FinancialMetricsPopoverProps) {
   const { formatCurrency, convertToConsolidationOficial, cotacaoOficialUSD } = useProjetoCurrency(projetoId);
 
@@ -133,6 +165,8 @@ export function FinancialMetricsPopover({ projetoId }: FinancialMetricsPopoverPr
     const extrasPositivos = cashbackLiquido + girosGratis + ajustes + ganhoConfirmacao + ganhoFx;
     const capitalTotal = depositosTotal + extrasPositivos;
     const fluxoLiquidoAjustado = saquesRecebidos - capitalTotal;
+    const patrimonio = saldoCasas + saquesRecebidos + saquesPendentes;
+    const lucroFinanceiro = patrimonio - depositosTotal;
 
     // Break-even
     let cumulativeFlow = 0;
@@ -157,91 +191,151 @@ export function FinancialMetricsPopover({ projetoId }: FinancialMetricsPopoverPr
       depositosTotal, saquesRecebidos, saquesPendentes, saldoCasas,
       fluxoCaixaLiquido, fluxoLiquidoAjustado, capitalTotal, extrasPositivos,
       cashbackLiquido, girosGratis, ajustes, ganhoConfirmacao, ganhoFx, perdaOp, perdaFx,
+      patrimonio, lucroFinanceiro,
       breakEvenDate, breakEvenDays,
     };
   }, [rawMetrics, convertToConsolidationOficial, cotacaoOficialUSD]);
 
   if (isLoading || !metrics) {
     return (
-      <div className="p-4 space-y-2 w-72">
-        <Skeleton className="h-4 w-32" />
-        <Skeleton className="h-8 w-full" />
-        <Skeleton className="h-8 w-full" />
-        <Skeleton className="h-8 w-full" />
+      <div className="p-5 space-y-3 w-[340px]">
+        <Skeleton className="h-5 w-40" />
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-full" />
       </div>
     );
   }
 
   const breakEvenReached = metrics.fluxoCaixaLiquido >= 0;
-
-  const items = [
-    { label: "Fluxo Líquido Ajustado", value: metrics.fluxoLiquidoAjustado, icon: ArrowRightLeft, highlight: true },
-    { label: "Saldo nas Casas", value: metrics.saldoCasas, icon: Wallet },
-    { label: "Capital Aportado", value: metrics.capitalTotal, icon: ArrowDownCircle },
-    { label: "Depósitos", value: metrics.depositosTotal, icon: ArrowDownCircle },
-    { label: "Saques Recebidos", value: metrics.saquesRecebidos, icon: ArrowUpCircle },
-    { label: "Saques Pendentes", value: metrics.saquesPendentes, icon: Clock, warning: metrics.saquesPendentes > 0 },
-    { label: "Cashback Líquido", value: metrics.cashbackLiquido, icon: Gift },
-    { label: "Giros Grátis", value: metrics.girosGratis, icon: BarChart3 },
-  ].filter(item => item.highlight || Math.abs(item.value) >= 0.01 || item.label === "Saques Pendentes");
+  const hasExtras = Math.abs(metrics.extrasPositivos) >= 0.01;
 
   return (
-    <div className="p-3 w-80 space-y-3">
-      <div className="flex items-center gap-2">
-        <DollarSign className="h-3.5 w-3.5 text-primary" />
-        <span className="text-xs font-semibold">Indicadores Financeiros</span>
+    <div className="p-4 w-[340px] space-y-0">
+      {/* Header */}
+      <div className="flex items-center gap-2 mb-4">
+        <div className="p-1.5 rounded-md bg-primary/10">
+          <DollarSign className="h-3.5 w-3.5 text-primary" />
+        </div>
+        <span className="text-xs font-bold tracking-tight">Indicadores Financeiros</span>
       </div>
 
-      <div className="space-y-1.5">
-        {items.map((item) => {
-          const Icon = item.icon;
-          const isPositive = item.value >= 0;
-          return (
-            <div 
-              key={item.label} 
-              className={`flex items-center justify-between gap-3 py-1 px-2 rounded-md ${
-                item.highlight ? "bg-primary/10" : ""
-              }`}
-            >
-              <div className="flex items-center gap-2 min-w-0">
-                <Icon className={`h-3 w-3 flex-shrink-0 ${
-                  item.warning ? "text-amber-500" : "text-muted-foreground"
-                }`} />
-                <span className="text-xs text-muted-foreground truncate">{item.label}</span>
-              </div>
-              <span className={`text-xs font-mono font-semibold flex-shrink-0 ${
-                item.highlight 
-                  ? isPositive ? "text-emerald-500" : "text-red-500"
-                  : "text-foreground"
-              }`}>
-                {formatCurrency(item.value)}
-              </span>
-            </div>
-          );
-        })}
+      {/* ─── Seção 1: Fluxo de Caixa ─── */}
+      <div className="space-y-1 pb-3">
+        <SectionHeader icon={ArrowRightLeft} label="Fluxo de Caixa" />
+        <MetricRow label="Depósitos Confirmados" value={formatCurrency(metrics.depositosTotal)} />
+        <MetricRow label="Saques Recebidos" value={formatCurrency(metrics.saquesRecebidos)} />
+        {metrics.saquesPendentes > 0 && (
+          <MetricRow 
+            label="Saques Pendentes" 
+            value={formatCurrency(metrics.saquesPendentes)} 
+            colorClass="text-amber-500"
+          />
+        )}
+        <div className="border-t border-border/30 mt-1.5 pt-1.5">
+          <MetricRow 
+            label="Fluxo Líquido (Saques − Depósitos)" 
+            value={formatCurrency(metrics.fluxoCaixaLiquido)} 
+            colorClass={metrics.fluxoCaixaLiquido >= 0 ? "text-emerald-500" : "text-red-500"}
+            bold
+          />
+        </div>
       </div>
 
-      {/* Break Even */}
-      <div className="border-t border-border/40 pt-2">
-        <div className="flex items-center gap-1.5 mb-1">
-          <TrendingUp className={`h-3 w-3 ${breakEvenReached ? "text-emerald-500" : "text-muted-foreground"}`} />
-          <span className="text-xs font-semibold">
-            {breakEvenReached 
-              ? `Break Even em ${metrics.breakEvenDays ?? "—"}d ✓` 
-              : "Break Even Pendente"
-            }
+      {/* ─── Seção 2: Patrimônio ─── */}
+      <div className="border-t border-border/40 pt-3 pb-3 space-y-1">
+        <SectionHeader icon={Wallet} label="Patrimônio Atual" />
+        <MetricRow label="Saldo nas Casas" value={formatCurrency(metrics.saldoCasas)} />
+        <MetricRow label="Saques Recebidos" value={formatCurrency(metrics.saquesRecebidos)} />
+        {metrics.saquesPendentes > 0 && (
+          <MetricRow label="Saques Pendentes" value={formatCurrency(metrics.saquesPendentes)} />
+        )}
+        <div className="border-t border-border/30 mt-1.5 pt-1.5">
+          <MetricRow 
+            label="Resultado Financeiro" 
+            value={formatCurrency(metrics.lucroFinanceiro)} 
+            colorClass={metrics.lucroFinanceiro >= 0 ? "text-emerald-500" : "text-red-500"}
+            bold
+          />
+          <p className="text-[9px] text-muted-foreground/70 mt-0.5">
+            Patrimônio ({formatCurrency(metrics.patrimonio)}) − Depósitos ({formatCurrency(metrics.depositosTotal)})
+          </p>
+        </div>
+      </div>
+
+      {/* ─── Seção 3: Créditos Extras ─── */}
+      {hasExtras && (
+        <div className="border-t border-border/40 pt-3 pb-3 space-y-1">
+          <SectionHeader icon={Gift} label="Créditos Extras" />
+          {Math.abs(metrics.cashbackLiquido) >= 0.01 && (
+            <MetricRow label="Cashback Líquido" value={formatCurrency(metrics.cashbackLiquido)} colorClass="text-emerald-500" indent />
+          )}
+          {Math.abs(metrics.girosGratis) >= 0.01 && (
+            <MetricRow label="Giros Grátis" value={formatCurrency(metrics.girosGratis)} colorClass="text-emerald-500" indent />
+          )}
+          {Math.abs(metrics.ganhoConfirmacao) >= 0.01 && (
+            <MetricRow label="Ganho de Confirmação" value={formatCurrency(metrics.ganhoConfirmacao)} colorClass="text-emerald-500" indent />
+          )}
+          {Math.abs(metrics.ajustes) >= 0.01 && (
+            <MetricRow label="Ajustes" value={formatCurrency(metrics.ajustes)} colorClass={metrics.ajustes >= 0 ? "text-emerald-500" : "text-red-500"} indent />
+          )}
+          {Math.abs(metrics.ganhoFx) >= 0.01 && (
+            <MetricRow label="Ganho Cambial" value={formatCurrency(metrics.ganhoFx)} colorClass="text-emerald-500" indent />
+          )}
+          {Math.abs(metrics.perdaFx) >= 0.01 && (
+            <MetricRow label="Perda Cambial" value={`−${formatCurrency(metrics.perdaFx)}`} colorClass="text-red-500" indent />
+          )}
+          {Math.abs(metrics.perdaOp) >= 0.01 && (
+            <MetricRow label="Perdas Operacionais" value={`−${formatCurrency(metrics.perdaOp)}`} colorClass="text-red-500" indent />
+          )}
+          <div className="border-t border-border/30 mt-1.5 pt-1.5">
+            <MetricRow 
+              label="Fluxo Líquido Ajustado" 
+              value={formatCurrency(metrics.fluxoLiquidoAjustado)} 
+              colorClass={metrics.fluxoLiquidoAjustado >= 0 ? "text-emerald-500" : "text-red-500"}
+              bold
+            />
+            <p className="text-[9px] text-muted-foreground/70 mt-0.5">
+              Saques − (Depósitos + Créditos Extras)
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Seção 4: Retorno de Capital ─── */}
+      <div className="border-t border-border/40 pt-3">
+        <div className="flex items-center gap-1.5 mb-1.5">
+          {breakEvenReached ? (
+            <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+          ) : (
+            <AlertCircle className="h-3 w-3 text-amber-500" />
+          )}
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Retorno de Capital
           </span>
         </div>
-        <p className="text-[10px] text-muted-foreground leading-relaxed">
-          {breakEvenReached ? (
-            <>
-              Projeto se pagou em {metrics.breakEvenDays} dias
-              {metrics.breakEvenDate && <> ({format(parseISO(metrics.breakEvenDate), "dd/MM/yyyy")})</>}.
-            </>
-          ) : (
-            <>Falta {formatCurrency(Math.abs(metrics.fluxoCaixaLiquido))} em saques para recuperar depósitos.</>
-          )}
-        </p>
+        
+        {breakEvenReached ? (
+          <div className="rounded-lg bg-emerald-500/5 border border-emerald-500/15 px-3 py-2">
+            <p className="text-[11px] text-foreground font-medium">
+              Capital recuperado em {metrics.breakEvenDays ?? "—"} dias
+            </p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">
+              Saques superaram depósitos em{" "}
+              {metrics.breakEvenDate && format(parseISO(metrics.breakEvenDate), "dd/MM/yyyy")}.
+              O caixa já recebeu de volta todo o valor investido.
+            </p>
+          </div>
+        ) : (
+          <div className="rounded-lg bg-amber-500/5 border border-amber-500/15 px-3 py-2">
+            <p className="text-[11px] text-foreground font-medium">
+              Faltam {formatCurrency(Math.abs(metrics.fluxoCaixaLiquido))} para recuperar
+            </p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">
+              Saques recebidos ainda não cobriram os depósitos realizados.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
