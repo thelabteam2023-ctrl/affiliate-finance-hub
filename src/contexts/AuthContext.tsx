@@ -128,6 +128,7 @@ interface AuthContextType {
   role: AppRole | null;
   loading: boolean;
   initialized: boolean;
+  status: AuthStatus;
   isSystemOwner: boolean;
   isBlocked: boolean;
   publicId: string | null;
@@ -503,6 +504,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     role: state.role,
     loading,
     initialized,
+    status: state.status,
     isSystemOwner: state.isSystemOwner,
     isBlocked: state.isBlocked,
     publicId: state.publicId,
