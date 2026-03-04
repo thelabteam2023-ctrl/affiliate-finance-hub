@@ -19,7 +19,7 @@ import { ModernBarChart } from "@/components/ui/modern-bar-chart";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { VisaoGeralCharts, ExtraLucroEntry } from "./VisaoGeralCharts";
-import { ProjetoFinancialMetricsCard } from "./ProjetoFinancialMetricsCard";
+
 import { PerformancePorCasaCard } from "./PerformancePorCasaCard";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod } from "./StandardTimeFilter";
 import { PERIOD_STALE_TIME, PERIOD_GC_TIME } from "@/lib/query-cache-config";
@@ -551,8 +551,6 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
         className="transition-opacity duration-300 ease-in-out" 
         style={{ opacity: isTransitioning ? 0.5 : 1 }}
       >
-      {/* Indicadores Financeiros Reais — Separação Operacional × Financeiro */}
-      <ProjetoFinancialMetricsCard projetoId={projetoId} />
 
       <VisaoGeralCharts 
         apostas={apostasParaGraficos}
