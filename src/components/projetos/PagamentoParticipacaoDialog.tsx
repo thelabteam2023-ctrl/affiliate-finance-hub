@@ -90,6 +90,21 @@ export function PagamentoParticipacaoDialog({
 
     setLoading(true);
     try {
+      // 🔒 IDEMPOTÊNCIA: Verificar se a participação ainda está pendente antes de processar
+      const { data: currentStatus, error: checkError } = await supabase
+        .from("participacao_ciclos")
+        .select("status")
+        .eq("id", participacao.id)
+        .single();
+
+      if (checkError) throw checkError;
+
+      if (currentStatus?.status === "PAGO") {
+        toast.error("Esta participação já foi paga por outro usuário.");
+        onOpenChange(false);
+        return;
+      }
+
       const { data: session } = await supabase.auth.getSession();
       if (!session.session) {
         toast.error("Usuário não autenticado");
@@ -130,8 +145,8 @@ export function PagamentoParticipacaoDialog({
 
       if (ledgerError) throw ledgerError;
 
-      // 2. Atualizar participacao_ciclos para PAGO
-      const { error: updateError } = await supabase
+      // 2. Atualizar participacao_ciclos para PAGO (com trava otimista)
+      const { data: updateResult, error: updateError } = await supabase
         .from("participacao_ciclos")
         .update({
           status: "PAGO",
@@ -139,9 +154,20 @@ export function PagamentoParticipacaoDialog({
           pagamento_ledger_id: ledgerEntry.id,
           observacoes: observacoes || null,
         })
-        .eq("id", participacao.id);
+        .eq("id", participacao.id)
+        .neq("status", "PAGO")
+        .select("id");
 
       if (updateError) throw updateError;
+
+      // 🔒 Se nenhuma linha foi atualizada, outro operador já pagou
+      if (!updateResult || updateResult.length === 0) {
+        toast.error("Esta participação já foi paga por outro usuário. O lançamento no caixa será revertido.");
+        // Reverter o ledger entry criado
+        await supabase.from("cash_ledger").update({ status: "CANCELADO" }).eq("id", ledgerEntry.id);
+        onOpenChange(false);
+        return;
+      }
 
       toast.success(`Pagamento de ${formatCurrency(participacao.valor_participacao)} realizado com sucesso`);
       onSuccess();

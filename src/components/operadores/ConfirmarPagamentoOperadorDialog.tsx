@@ -89,6 +89,21 @@ export function ConfirmarPagamentoOperadorDialog({
 
     setLoading(true);
     try {
+      // 🔒 IDEMPOTÊNCIA: Verificar se pagamento ainda está pendente
+      const { data: currentStatus, error: checkError } = await supabase
+        .from("pagamentos_operador")
+        .select("status")
+        .eq("id", pagamento.id)
+        .single();
+
+      if (checkError) throw checkError;
+
+      if (currentStatus?.status !== "PENDENTE") {
+        toast.error("Este pagamento já foi processado por outro usuário.");
+        onOpenChange(false);
+        return;
+      }
+
       const { data: session } = await supabase.auth.getSession();
       if (!session.session) {
         toast.error("Usuário não autenticado");
@@ -153,8 +168,8 @@ export function ConfirmarPagamentoOperadorDialog({
 
       if (ledgerError) throw ledgerError;
 
-      // 2. Atualizar pagamento para CONFIRMADO
-      const { error: updateError } = await supabase
+      // 2. Atualizar pagamento para CONFIRMADO (com trava otimista)
+      const { data: updateResult, error: updateError } = await supabase
         .from("pagamentos_operador")
         .update({
           status: "CONFIRMADO",
@@ -163,9 +178,19 @@ export function ConfirmarPagamentoOperadorDialog({
             ? `${pagamento.descricao || ""}${pagamento.descricao ? " | " : ""}${observacoes}`
             : pagamento.descricao,
         })
-        .eq("id", pagamento.id);
+        .eq("id", pagamento.id)
+        .eq("status", "PENDENTE")
+        .select("id");
 
       if (updateError) throw updateError;
+
+      // 🔒 Se nenhuma linha foi atualizada, outro operador já confirmou
+      if (!updateResult || updateResult.length === 0) {
+        toast.error("Este pagamento já foi processado por outro usuário.");
+        await supabase.from("cash_ledger").update({ status: "CANCELADO" }).eq("id", ledgerData.id);
+        onOpenChange(false);
+        return;
+      }
 
       toast.success(`Pagamento de ${formatCurrency(pagamento.valor)} confirmado com sucesso`);
       onSuccess();

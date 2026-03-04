@@ -106,6 +106,25 @@ export function PagamentoParceiroDialog({
         return;
       }
 
+      // 🔒 IDEMPOTÊNCIA: Verificar se já existe pagamento confirmado para esta parceria
+      const { data: existingPayment } = await supabase
+        .from("movimentacoes_indicacao")
+        .select("id")
+        .eq("parceria_id", parceria.id)
+        .eq("tipo", "PAGTO_PARCEIRO")
+        .eq("status", "CONFIRMADO")
+        .limit(1);
+
+      if (existingPayment && existingPayment.length > 0) {
+        toast({
+          title: "Pagamento já realizado",
+          description: "Esta parceria já possui um pagamento confirmado registrado por outro usuário.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
       // PASSO 1: Debitar da origem selecionada via cash_ledger
       // 🔒 REGRA DE CONVERSÃO CRYPTO:
       // A dívida é sempre em BRL. Se pagando com crypto:
