@@ -53,33 +53,38 @@ async function fetchFinancialMetrics(projetoId: string): Promise<FinancialMetric
     };
   }
 
-  // 2. Buscar depósitos confirmados (destino = bookmaker do projeto)
+  // 2. Buscar depósitos confirmados — FILTRADO POR PROJETO (projeto_id_snapshot)
+  // CRÍTICO: Sem esse filtro, movimentações de projetos anteriores seriam incluídas
+  // quando uma bookmaker é transferida entre projetos.
   const { data: depositos } = await supabase
     .from("cash_ledger")
     .select("valor")
     .eq("tipo_transacao", "DEPOSITO")
     .eq("status", "CONFIRMADO")
-    .in("destino_bookmaker_id", bookmakerIds);
+    .in("destino_bookmaker_id", bookmakerIds)
+    .or(`projeto_id_snapshot.eq.${projetoId},projeto_id_snapshot.is.null`);
 
   const depositosTotal = (depositos || []).reduce((acc, d) => acc + (d.valor || 0), 0);
 
-  // 3. Buscar saques confirmados (origem = bookmaker do projeto)
+  // 3. Buscar saques confirmados — FILTRADO POR PROJETO
   const { data: saques } = await supabase
     .from("cash_ledger")
     .select("valor, valor_confirmado")
     .eq("tipo_transacao", "SAQUE")
     .eq("status", "CONFIRMADO")
-    .in("origem_bookmaker_id", bookmakerIds);
+    .in("origem_bookmaker_id", bookmakerIds)
+    .or(`projeto_id_snapshot.eq.${projetoId},projeto_id_snapshot.is.null`);
 
   const saquesRecebidos = (saques || []).reduce((acc, s) => acc + (s.valor_confirmado ?? s.valor ?? 0), 0);
 
-  // 4. Buscar saques pendentes
+  // 4. Buscar saques pendentes — FILTRADO POR PROJETO
   const { data: saquesPend } = await supabase
     .from("cash_ledger")
     .select("valor")
     .eq("tipo_transacao", "SAQUE")
     .eq("status", "PENDENTE")
-    .in("origem_bookmaker_id", bookmakerIds);
+    .in("origem_bookmaker_id", bookmakerIds)
+    .or(`projeto_id_snapshot.eq.${projetoId},projeto_id_snapshot.is.null`);
 
   const saquesPendentes = (saquesPend || []).reduce((acc, s) => acc + (s.valor || 0), 0);
 
