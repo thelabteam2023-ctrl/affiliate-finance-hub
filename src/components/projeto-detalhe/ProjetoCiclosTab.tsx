@@ -68,6 +68,8 @@ interface Ciclo {
 interface ProjetoCiclosTabProps {
   projetoId: string;
   formatCurrency?: (value: number) => string;
+  convertToConsolidation?: (valor: number, moedaOrigem: string) => number;
+  moedaConsolidacao?: string;
 }
 
 // Fallback para formatação de moeda
@@ -108,7 +110,7 @@ interface CicloMetrics {
   perdas: PerdasCiclo;
 }
 
-export function ProjetoCiclosTab({ projetoId, formatCurrency: formatCurrencyProp }: ProjetoCiclosTabProps) {
+export function ProjetoCiclosTab({ projetoId, formatCurrency: formatCurrencyProp, convertToConsolidation, moedaConsolidacao = 'BRL' }: ProjetoCiclosTabProps) {
   const formatCurrency = formatCurrencyProp || defaultFormatCurrency;
   const [ciclos, setCiclos] = useState<Ciclo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -234,6 +236,8 @@ export function ProjetoCiclosTab({ projetoId, formatCurrency: formatCurrencyProp
         dataInicio: ciclo.data_inicio,
         dataFim,
         incluirDetalhePerdas: true,
+        convertToConsolidation,
+        moedaConsolidacao,
       });
 
       // Categorizar perdas para a UI específica de ciclos
@@ -985,7 +989,7 @@ export function ProjetoCiclosTab({ projetoId, formatCurrency: formatCurrencyProp
       </TabsContent>
 
       <TabsContent value="comparativo">
-        <ComparativoCiclosTab projetoId={projetoId} formatCurrency={formatCurrency} />
+        <ComparativoCiclosTab projetoId={projetoId} formatCurrency={formatCurrency} convertToConsolidation={convertToConsolidation} moedaConsolidacao={moedaConsolidacao} />
       </TabsContent>
     </Tabs>
   );

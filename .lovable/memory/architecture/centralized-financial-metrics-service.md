@@ -11,17 +11,20 @@ LUCRO_BRUTO = LUCRO_APOSTAS + CASHBACK + GIROS_GRATIS
 LUCRO_LIQUIDO = LUCRO_BRUTO - PERDAS_CONFIRMADAS
 ```
 
-### Hierarquia de campos consolidados:
-- Lucro: `pl_consolidado ?? lucro_prejuizo_brl_referencia ?? lucro_prejuizo`
-- Volume: `stake_consolidado ?? stake/stake_total`
+### Conversão Multimoeda (CRÍTICO):
+O serviço aceita `convertToConsolidation` e `moedaConsolidacao` para conversão correta em projetos multimoedas.
+- Se `pl_consolidado` existe e `consolidation_currency === moedaConsolidacao`, usa o valor consolidado
+- Caso contrário, aplica `convertToConsolidation(lucro_prejuizo, moeda_operacao)` para converter
+- Mesma lógica para volume (stake_consolidado → fallback com conversão)
+- **SEM a função de conversão**, valores não-consolidados são usados nominalmente (POSSÍVEL DIVERGÊNCIA)
 
 ### Consumidores atuais:
-- `ProjetoCiclosTab.tsx` — métricas do ciclo ativo ✅
-- `ComparativoCiclosTab.tsx` — tabela comparativa de ciclos ✅
-- `useCicloAlertas.ts` — alertas de ciclo ✅
+- `ProjetoCiclosTab.tsx` — métricas do ciclo ativo ✅ (recebe convertToConsolidation via props)
+- `ComparativoCiclosTab.tsx` — tabela comparativa de ciclos ✅ (recebe convertToConsolidation via props)
+- `useCicloAlertas.ts` — alertas de ciclo ✅ (sem conversão, alertas são indicativos)
 
 ### Regra Absoluta:
-**PROIBIDO** reimplementar a lógica de cálculo de lucro/volume/ROI manualmente em qualquer componente. Todo novo consumidor DEVE usar `calcularMetricasPeriodo()`.
+**PROIBIDO** reimplementar a lógica de cálculo de lucro/volume/ROI manualmente em qualquer componente. Todo novo consumidor DEVE usar `calcularMetricasPeriodo()` e passar `convertToConsolidation` quando disponível.
 
 ### Próximos candidatos à migração:
 - `ProjetoDashboardTab.tsx` (calendário)

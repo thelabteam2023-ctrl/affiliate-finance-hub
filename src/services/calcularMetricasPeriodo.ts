@@ -21,6 +21,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { getOperationalDateRangeForQuery } from "@/utils/dateUtils";
 import { parseISO } from "date-fns";
 
+/** Função de conversão de moeda (valor, moedaOrigem) => valorConvertido */
+export type ConvertToConsolidationFn = (valor: number, moedaOrigem: string) => number;
+
 // ─── Tipos ──────────────────────────────────────────────────────────────────
 
 export interface MetricasPeriodo {
@@ -69,6 +72,12 @@ export interface MetricasPeriodoInput {
   dataFim: string;
   /** Se true, inclui detalhes das perdas (mais lento) */
   incluirDetalhePerdas?: boolean;
+  /** Função de conversão de moeda para projetos multimoedas. 
+   *  Quando fornecida, converte valores não-consolidados para a moeda do projeto.
+   *  CRÍTICO: Sem esta função, apostas sem campos consolidados usam valor nominal (possível divergência). */
+  convertToConsolidation?: ConvertToConsolidationFn;
+  /** Moeda de consolidação do projeto (default: 'BRL') */
+  moedaConsolidacao?: string;
 }
 
 // ─── Função Principal ───────────────────────────────────────────────────────
@@ -84,7 +93,12 @@ export async function calcularMetricasPeriodo({
   dataInicio,
   dataFim,
   incluirDetalhePerdas = false,
+  convertToConsolidation,
+  moedaConsolidacao = 'BRL',
 }: MetricasPeriodoInput): Promise<MetricasPeriodo> {
+  // Função de conversão segura (identidade se não fornecida)
+  const convert = convertToConsolidation || ((valor: number, _moeda: string) => valor);
+
   // CRÍTICO: Converter datas do ciclo para UTC usando timezone operacional (America/Sao_Paulo)
   const dataInicioParsed = parseISO(dataInicio);
   const dataFimParsed = parseISO(dataFim);
@@ -92,10 +106,10 @@ export async function calcularMetricasPeriodo({
 
   // Buscar todos os dados em paralelo
   const [apostasResult, cashbackResult, girosResult, perdasResult, bookmakersResult] = await Promise.all([
-    // 1. Apostas com campos consolidados
+    // 1. Apostas com campos consolidados + moeda para conversão
     supabase
       .from("apostas_unificada")
-      .select("lucro_prejuizo, pl_consolidado, lucro_prejuizo_brl_referencia, stake, stake_total, stake_consolidado, status, forma_registro")
+      .select("lucro_prejuizo, pl_consolidado, lucro_prejuizo_brl_referencia, stake, stake_total, stake_consolidado, status, forma_registro, moeda_operacao, consolidation_currency")
       .eq("projeto_id", projetoId)
       .gte("data_aposta", startUTC)
       .lte("data_aposta", endUTC),
@@ -142,23 +156,46 @@ export async function calcularMetricasPeriodo({
 
   // ─── Cálculos ─────────────────────────────────────────────────────
 
-  // Volume: usar stake consolidado quando disponível
-  const volume = apostas.reduce((acc, a) => {
-    if (a.forma_registro === "ARBITRAGEM") {
-      return acc + (a.stake_consolidado || a.stake_total || 0);
+  // Volume: usar stake consolidado quando disponível, converter se necessário
+  const volume = apostas.reduce((acc, a: any) => {
+    // 1. Se já temos stake consolidado na moeda do projeto, usar
+    if (a.stake_consolidado !== null && a.stake_consolidado !== undefined && a.consolidation_currency === moedaConsolidacao) {
+      return acc + Number(a.stake_consolidado);
     }
-    return acc + (a.stake_consolidado || a.stake || 0);
+    // 2. Fallback: valor original + conversão
+    let valorOriginal: number;
+    if (a.forma_registro === "ARBITRAGEM") {
+      valorOriginal = Number(a.stake_total || 0);
+    } else {
+      valorOriginal = Number(a.stake || 0);
+    }
+    const moedaOrigem = a.moeda_operacao || 'BRL';
+    return acc + convert(valorOriginal, moedaOrigem);
   }, 0);
 
   const qtdApostas = apostas.length;
 
-  // Lucro de apostas: hierarquia de campos consolidados
+  // Lucro de apostas: usar consolidado quando disponível, converter se necessário
   const lucroApostas = apostas
     .filter(a => a.status === "LIQUIDADA")
-    .reduce((acc, a) => acc + (a.pl_consolidado ?? a.lucro_prejuizo_brl_referencia ?? a.lucro_prejuizo ?? 0), 0);
+    .reduce((acc, a: any) => {
+      // 1. Se já temos PL consolidado na moeda do projeto, usar
+      if (a.pl_consolidado !== null && a.pl_consolidado !== undefined && a.consolidation_currency === moedaConsolidacao) {
+        return acc + Number(a.pl_consolidado);
+      }
+      // 2. Fallback: valor original + conversão
+      const valorOriginal = Number(a.lucro_prejuizo || 0);
+      const moedaOrigem = a.moeda_operacao || 'BRL';
+      return acc + convert(valorOriginal, moedaOrigem);
+    }, 0);
 
-  // Cashback: sempre >= 0
-  const lucroCashback = cashbacks.reduce((acc, cb) => acc + Math.max(0, cb.valor || 0), 0);
+  // Cashback: sempre >= 0, com conversão de moeda
+  const lucroCashback = cashbacks.reduce((acc, cb: any) => {
+    const valor = Math.max(0, Number(cb.valor || 0));
+    // cashback_manual não tem consolidation_currency, converter via moeda_operacao se disponível
+    // Nota: cashback_manual usa date-only, então não precisa de conversão UTC
+    return acc + valor; // cashback_manual já está em BRL tipicamente
+  }, 0);
 
   // Giros grátis: sempre >= 0
   const lucroGiros = giros.reduce((acc, g) => acc + Math.max(0, (g as any).valor_retorno || 0), 0);

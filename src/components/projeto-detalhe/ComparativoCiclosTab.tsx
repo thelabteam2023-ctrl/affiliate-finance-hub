@@ -59,6 +59,8 @@ interface CicloData {
 interface ComparativoCiclosTabProps {
   projetoId: string;
   formatCurrency?: (value: number) => string;
+  convertToConsolidation?: (valor: number, moedaOrigem: string) => number;
+  moedaConsolidacao?: string;
 }
 
 // Fallback para formatação de moeda
@@ -69,7 +71,7 @@ const defaultFormatCurrency = (value: number): string => {
   }).format(value);
 };
 
-export function ComparativoCiclosTab({ projetoId, formatCurrency: formatCurrencyProp }: ComparativoCiclosTabProps) {
+export function ComparativoCiclosTab({ projetoId, formatCurrency: formatCurrencyProp, convertToConsolidation, moedaConsolidacao = 'BRL' }: ComparativoCiclosTabProps) {
   const formatCurrency = formatCurrencyProp || defaultFormatCurrency;
   const [ciclos, setCiclos] = useState<CicloData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -111,6 +113,8 @@ export function ComparativoCiclosTab({ projetoId, formatCurrency: formatCurrency
             dataInicio: ciclo.data_inicio,
             dataFim,
             incluirDetalhePerdas: true,
+            convertToConsolidation,
+            moedaConsolidacao,
           });
           
           // Para ciclos fechados, usar lucro_liquido do banco; para em andamento, calcular
