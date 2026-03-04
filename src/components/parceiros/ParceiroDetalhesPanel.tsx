@@ -119,7 +119,7 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
     // Check if bookmaker is already linked to a project
     const { data: current } = await supabase
       .from("bookmakers")
-      .select("projeto_id")
+      .select("projeto_id, saldo_atual, moeda, workspace_id")
       .eq("id", bookmakerId)
       .single();
     if (current?.projeto_id) {
@@ -145,12 +145,37 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
         .in("origem_bookmaker_id", [bookmakerId])
         .is("projeto_id_snapshot", null);
 
+      // DEPOSITO_VIRTUAL — estabelece baseline de capital para o novo projeto
+      if (current && current.saldo_atual > 0 && current.workspace_id) {
+        const { data: userData } = await supabase.auth.getUser();
+        if (userData.user) {
+          const { registrarDepositoVirtualViaLedger } = await import("@/lib/ledgerService");
+          await registrarDepositoVirtualViaLedger({
+            bookmakerId,
+            saldoAtual: current.saldo_atual,
+            moeda: current.moeda || 'BRL',
+            workspaceId: current.workspace_id,
+            userId: userData.user.id,
+            projetoId,
+          });
+        }
+      }
+
       toast({ title: "Projeto vinculado", description: `Casa vinculada ao projeto "${projetoNome}"` });
       queryClient.invalidateQueries({ queryKey: ["parceiro-financeiro"] });
     }
   }, [toast, queryClient]);
 
   const handleDesvincularProjeto = useCallback(async (bookmakerId: string, projetoNome: string) => {
+    // 0. Buscar saldo ANTES de desvincular (para SAQUE_VIRTUAL)
+    const { data: bmData } = await supabase
+      .from("bookmakers")
+      .select("saldo_atual, moeda, workspace_id, projeto_id")
+      .eq("id", bookmakerId)
+      .single();
+
+    const projetoIdAtual = bmData?.projeto_id;
+
     const { error } = await supabase
       .from("bookmakers")
       .update({ projeto_id: null })
@@ -158,6 +183,22 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
     if (error) {
       toast({ title: "Erro ao desvincular", description: error.message, variant: "destructive" });
     } else {
+      // SAQUE_VIRTUAL — fecha P&L do projeto
+      if (projetoIdAtual && bmData && bmData.saldo_atual > 0 && bmData.workspace_id) {
+        const { data: userData } = await supabase.auth.getUser();
+        if (userData.user) {
+          const { registrarSaqueVirtualViaLedger } = await import("@/lib/ledgerService");
+          await registrarSaqueVirtualViaLedger({
+            bookmakerId,
+            saldoAtual: bmData.saldo_atual,
+            moeda: bmData.moeda || 'BRL',
+            workspaceId: bmData.workspace_id,
+            userId: userData.user.id,
+            projetoId: projetoIdAtual,
+          });
+        }
+      }
+
       toast({ title: "Projeto desvinculado", description: `Casa desvinculada do projeto "${projetoNome}"` });
       queryClient.invalidateQueries({ queryKey: ["parceiro-financeiro"] });
     }

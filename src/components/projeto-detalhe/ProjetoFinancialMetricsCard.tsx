@@ -59,7 +59,7 @@ async function fetchFinancialMetrics(projetoId: string): Promise<FinancialMetric
   const { data: depositos } = await supabase
     .from("cash_ledger")
     .select("valor")
-    .eq("tipo_transacao", "DEPOSITO")
+    .in("tipo_transacao", ["DEPOSITO", "DEPOSITO_VIRTUAL"])
     .eq("status", "CONFIRMADO")
     .in("destino_bookmaker_id", bookmakerIds)
     .eq("projeto_id_snapshot", projetoId);
@@ -70,7 +70,7 @@ async function fetchFinancialMetrics(projetoId: string): Promise<FinancialMetric
   const { data: saques } = await supabase
     .from("cash_ledger")
     .select("valor, valor_confirmado")
-    .eq("tipo_transacao", "SAQUE")
+    .in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])
     .eq("status", "CONFIRMADO")
     .in("origem_bookmaker_id", bookmakerIds)
     .eq("projeto_id_snapshot", projetoId);
@@ -81,7 +81,7 @@ async function fetchFinancialMetrics(projetoId: string): Promise<FinancialMetric
   const { data: saquesPend } = await supabase
     .from("cash_ledger")
     .select("valor")
-    .eq("tipo_transacao", "SAQUE")
+    .in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])
     .eq("status", "PENDENTE")
     .in("origem_bookmaker_id", bookmakerIds)
     .eq("projeto_id_snapshot", projetoId);
