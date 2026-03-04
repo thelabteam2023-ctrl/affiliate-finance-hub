@@ -11,7 +11,7 @@
  * - admin_event: Alertas críticos, configurações (owner/admin)
  */
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { OcorrenciasModule } from "@/components/ocorrencias/OcorrenciasModule";
 import { SolicitacoesModule } from "@/components/solicitacoes/SolicitacoesModule";
@@ -412,6 +412,35 @@ export default function CentralOperacoes() {
       fetchData();
     }
   }, [user, role, workspaceId]);
+
+  // ─── REALTIME: Auto-refresh quando outro operador faz uma ação ─────
+  const realtimeDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
+  useEffect(() => {
+    if (!workspaceId) return;
+
+    const debouncedRefresh = () => {
+      if (realtimeDebounceRef.current) clearTimeout(realtimeDebounceRef.current);
+      realtimeDebounceRef.current = setTimeout(() => {
+        fetchData(true);
+      }, 1000); // 1s debounce para agrupar mudanças simultâneas
+    };
+
+    const channel = supabase
+      .channel('central-operacoes-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cash_ledger', filter: `workspace_id=eq.${workspaceId}` }, debouncedRefresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookmakers', filter: `workspace_id=eq.${workspaceId}` }, debouncedRefresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'parcerias', filter: `workspace_id=eq.${workspaceId}` }, debouncedRefresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'pagamentos_operador' }, debouncedRefresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'movimentacoes_indicacao' }, debouncedRefresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'parceiro_lucro_alertas' }, debouncedRefresh)
+      .subscribe();
+
+    return () => {
+      if (realtimeDebounceRef.current) clearTimeout(realtimeDebounceRef.current);
+      supabase.removeChannel(channel);
+    };
+  }, [workspaceId]);
 
   const fetchData = async (isRefresh = false) => {
     try {
