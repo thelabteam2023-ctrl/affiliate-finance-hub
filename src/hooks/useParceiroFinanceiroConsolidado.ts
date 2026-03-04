@@ -213,6 +213,7 @@ export function useParceiroFinanceiroConsolidado(parceiroId: string | null) {
         saque_total: number;
         saldo_atual: number;
         resultado_financeiro_real: number;
+        qtd_apostas: number;
       }>();
 
       // Buscar RESULTADO OPERACIONAL (mantido como métrica secundária)
@@ -229,7 +230,7 @@ export function useParceiroFinanceiroConsolidado(parceiroId: string | null) {
         // Resultado Financeiro Real
         const { data: resultadosFinanceiros } = await supabase
           .from("v_bookmaker_resultado_financeiro")
-          .select("bookmaker_id, deposito_total, saque_total, saldo_atual, resultado_financeiro_real")
+          .select("bookmaker_id, deposito_total, saque_total, saldo_atual, resultado_financeiro_real, qtd_apostas")
           .in("bookmaker_id", bookmakerIds);
 
         resultadosFinanceiros?.forEach((r) => {
@@ -238,6 +239,7 @@ export function useParceiroFinanceiroConsolidado(parceiroId: string | null) {
             saque_total: Number(r.saque_total) || 0,
             saldo_atual: Number(r.saldo_atual) || 0,
             resultado_financeiro_real: Number(r.resultado_financeiro_real) || 0,
+            qtd_apostas: Number(r.qtd_apostas) || 0,
           });
         });
 
@@ -313,7 +315,7 @@ export function useParceiroFinanceiroConsolidado(parceiroId: string | null) {
           resultado_giros: resultadoOp.resultado_giros,
           resultado_cashback: resultadoOp.resultado_cashback,
           resultado_bonus: resultadoOp.resultado_bonus,
-          qtd_apostas: resultadoOp.qtd_apostas,
+          qtd_apostas: resultadoFin?.qtd_apostas ?? resultadoOp.qtd_apostas,
           status: bm.status,
           projetos: bm.projeto_id ? [bm.projeto_id] : [],
           has_credentials: !!(bm.login_username && bm.login_username.trim()),

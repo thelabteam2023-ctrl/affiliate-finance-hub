@@ -9608,6 +9608,7 @@ export type Database = {
           moeda: string | null
           parceiro_id: string | null
           projeto_id: string | null
+          qtd_apostas: number | null
           resultado_financeiro_real: number | null
           saldo_atual: number | null
           saldo_bonus: number | null
