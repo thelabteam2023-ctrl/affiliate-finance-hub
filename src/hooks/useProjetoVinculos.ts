@@ -11,7 +11,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { registrarSaqueVirtualViaLedger, registrarDepositoVirtualViaLedger } from "@/lib/ledgerService";
+import { preCheckUnlink, executeUnlink, executeLink } from "@/lib/projetoTransitionService";
 
 export interface Vinculo {
   id: string;
@@ -357,32 +357,17 @@ export function useAddVinculos(projetoId: string, workspaceId: string | undefine
           .from("projeto_bookmaker_historico")
           .upsert(historicoRecords, { onConflict: "projeto_id,bookmaker_id" });
 
-        // CRÍTICO: Atualizar retroativamente transações órfãs (projeto_id_snapshot = NULL)
-        await supabase
-          .from("cash_ledger")
-          .update({ projeto_id_snapshot: projetoId })
-          .in("destino_bookmaker_id", selectedIds)
-          .is("projeto_id_snapshot", null);
-
-        await supabase
-          .from("cash_ledger")
-          .update({ projeto_id_snapshot: projetoId })
-          .in("origem_bookmaker_id", selectedIds)
-          .is("projeto_id_snapshot", null);
-
-        // DEPOSITO_VIRTUAL — estabelece baseline de capital para o novo projeto
+        // executeLink cuida de: atribuir órfãs + DEPOSITO_VIRTUAL
         if (bmSaldos) {
           for (const bm of bmSaldos) {
-            if (bm.saldo_atual > 0) {
-              await registrarDepositoVirtualViaLedger({
-                bookmakerId: bm.id,
-                saldoAtual: bm.saldo_atual,
-                moeda: bm.moeda || 'BRL',
-                workspaceId,
-                userId: userData.user!.id,
-                projetoId,
-              });
-            }
+            await executeLink({
+              bookmakerId: bm.id,
+              projetoId,
+              workspaceId,
+              userId: userData.user!.id,
+              saldoAtual: bm.saldo_atual,
+              moeda: bm.moeda || 'BRL',
+            });
           }
         }
       }
@@ -440,56 +425,34 @@ export function useRemoveVinculo(projetoId: string, workspaceId: string | undefi
     mutationFn: async ({ bookmakerId, statusFinal }: { bookmakerId: string; statusFinal: string }) => {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error("Usuário não autenticado");
+      if (!workspaceId) throw new Error("Workspace não definido");
 
-      // 0. Buscar saldo atual ANTES de desvincular (para SAQUE_VIRTUAL)
-      const { data: bmData } = await supabase
-        .from("bookmakers")
-        .select("saldo_atual, moeda, projeto_id")
-        .eq("id", bookmakerId)
-        .single();
+      // Pre-check: calcula saldo efetivo e identifica pendências
+      const check = await preCheckUnlink(bookmakerId);
 
-      const projetoIdAtual = bmData?.projeto_id;
-
-      // 1. Desvincular bookmaker do projeto
-      const { error: updateError } = await supabase
-        .from("bookmakers")
-        .update({ 
-          projeto_id: null, 
-          status: statusFinal 
-        })
-        .eq("id", bookmakerId);
-
-      if (updateError) throw updateError;
-
-      // 2. SAQUE_VIRTUAL — fecha o P&L do projeto com saldo residual
-      if (projetoIdAtual && bmData && bmData.saldo_atual > 0 && workspaceId) {
-        await registrarSaqueVirtualViaLedger({
-          bookmakerId,
-          saldoAtual: bmData.saldo_atual,
-          moeda: bmData.moeda,
-          workspaceId,
-          userId: userData.user.id,
-          projetoId: projetoIdAtual,
-        });
+      if (check.warnings.length > 0) {
+        console.warn('[useRemoveVinculo] Warnings:', check.warnings);
       }
 
-      // 3. Atualizar histórico com data de desvinculação
-      if (workspaceId) {
-        await supabase
-          .from("projeto_bookmaker_historico")
-          .update({
-            data_desvinculacao: new Date().toISOString(),
-            status_final: statusFinal,
-          })
-          .eq("projeto_id", projetoId)
-          .eq("bookmaker_id", bookmakerId)
-          .is("data_desvinculacao", null);
-      }
+      // Executa desvinculação com todas as proteções
+      await executeUnlink({
+        bookmakerId,
+        projetoId,
+        workspaceId,
+        userId: userData.user.id,
+        statusFinal,
+        saldoVirtualEfetivo: check.saldoVirtualEfetivo,
+        moeda: check.moeda,
+      });
 
-      return { bookmakerId, statusFinal };
+      return { bookmakerId, statusFinal, warnings: check.warnings };
     },
-    onSuccess: ({ statusFinal }) => {
-      toast.success(`Bookmaker desvinculada com status: ${statusFinal}`);
+    onSuccess: ({ statusFinal, warnings }) => {
+      if (warnings.length > 0) {
+        toast.warning(`Desvinculada com avisos: ${warnings.join('; ')}`);
+      } else {
+        toast.success(`Bookmaker desvinculada com status: ${statusFinal}`);
+      }
       // CRÍTICO: Invalidar TODAS as queries afetadas para reatividade completa
       invalidateAllVinculoRelatedQueries(queryClient, projetoId);
     },

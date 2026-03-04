@@ -133,30 +133,18 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
     if (error) {
       toast({ title: "Erro ao vincular projeto", description: error.message, variant: "destructive" });
     } else {
-      // CRÍTICO: Atualizar retroativamente transações órfãs (projeto_id_snapshot = NULL)
-      await supabase
-        .from("cash_ledger")
-        .update({ projeto_id_snapshot: projetoId })
-        .in("destino_bookmaker_id", [bookmakerId])
-        .is("projeto_id_snapshot", null);
-      await supabase
-        .from("cash_ledger")
-        .update({ projeto_id_snapshot: projetoId })
-        .in("origem_bookmaker_id", [bookmakerId])
-        .is("projeto_id_snapshot", null);
-
-      // DEPOSITO_VIRTUAL — estabelece baseline de capital para o novo projeto
-      if (current && current.saldo_atual > 0 && current.workspace_id) {
+      // executeLink cuida de: atribuir órfãs + DEPOSITO_VIRTUAL
+      if (current && current.workspace_id) {
         const { data: userData } = await supabase.auth.getUser();
         if (userData.user) {
-          const { registrarDepositoVirtualViaLedger } = await import("@/lib/ledgerService");
-          await registrarDepositoVirtualViaLedger({
+          const { executeLink } = await import("@/lib/projetoTransitionService");
+          await executeLink({
             bookmakerId,
-            saldoAtual: current.saldo_atual,
-            moeda: current.moeda || 'BRL',
+            projetoId,
             workspaceId: current.workspace_id,
             userId: userData.user.id,
-            projetoId,
+            saldoAtual: current.saldo_atual || 0,
+            moeda: current.moeda || 'BRL',
           });
         }
       }
@@ -167,40 +155,39 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
   }, [toast, queryClient]);
 
   const handleDesvincularProjeto = useCallback(async (bookmakerId: string, projetoNome: string) => {
-    // 0. Buscar saldo ANTES de desvincular (para SAQUE_VIRTUAL)
-    const { data: bmData } = await supabase
-      .from("bookmakers")
-      .select("saldo_atual, moeda, workspace_id, projeto_id")
-      .eq("id", bookmakerId)
-      .single();
-
-    const projetoIdAtual = bmData?.projeto_id;
-
-    const { error } = await supabase
-      .from("bookmakers")
-      .update({ projeto_id: null })
-      .eq("id", bookmakerId);
-    if (error) {
-      toast({ title: "Erro ao desvincular", description: error.message, variant: "destructive" });
-    } else {
-      // SAQUE_VIRTUAL — fecha P&L do projeto
-      if (projetoIdAtual && bmData && bmData.saldo_atual > 0 && bmData.workspace_id) {
-        const { data: userData } = await supabase.auth.getUser();
-        if (userData.user) {
-          const { registrarSaqueVirtualViaLedger } = await import("@/lib/ledgerService");
-          await registrarSaqueVirtualViaLedger({
-            bookmakerId,
-            saldoAtual: bmData.saldo_atual,
-            moeda: bmData.moeda || 'BRL',
-            workspaceId: bmData.workspace_id,
-            userId: userData.user.id,
-            projetoId: projetoIdAtual,
-          });
-        }
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) {
+        toast({ title: "Erro", description: "Usuário não autenticado", variant: "destructive" });
+        return;
       }
 
-      toast({ title: "Projeto desvinculado", description: `Casa desvinculada do projeto "${projetoNome}"` });
+      const { preCheckUnlink, executeUnlink } = await import("@/lib/projetoTransitionService");
+      const check = await preCheckUnlink(bookmakerId);
+
+      if (!check.projetoId) {
+        toast({ title: "Erro", description: "Casa não está vinculada a nenhum projeto", variant: "destructive" });
+        return;
+      }
+
+      await executeUnlink({
+        bookmakerId,
+        projetoId: check.projetoId,
+        workspaceId: check.workspaceId,
+        userId: userData.user.id,
+        statusFinal: "disponivel",
+        saldoVirtualEfetivo: check.saldoVirtualEfetivo,
+        moeda: check.moeda,
+      });
+
+      if (check.warnings.length > 0) {
+        toast({ title: "Desvinculado com avisos", description: check.warnings.join('; ') });
+      } else {
+        toast({ title: "Projeto desvinculado", description: `Casa desvinculada do projeto "${projetoNome}"` });
+      }
       queryClient.invalidateQueries({ queryKey: ["parceiro-financeiro"] });
+    } catch (err: any) {
+      toast({ title: "Erro ao desvincular", description: err.message, variant: "destructive" });
     }
   }, [toast, queryClient]);
 
