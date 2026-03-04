@@ -64,7 +64,10 @@ export type LedgerTransactionType =
   | 'FREEBET_CONSUMIDA'
   | 'FREEBET_ESTORNO'
   | 'FREEBET_EXPIRADA'
-  | 'FREEBET_CONVERTIDA';
+  | 'FREEBET_CONVERTIDA'
+  // Tipos Virtuais (contábeis - NÃO movimentam saldo real, apenas isolam P&L entre projetos)
+  | 'SAQUE_VIRTUAL'
+  | 'DEPOSITO_VIRTUAL';
 
 export interface LedgerEntryInput {
   /** Tipo da transação - determina como o trigger processa */
@@ -489,4 +492,137 @@ export async function getBookmakerMoeda(bookmakerId: string): Promise<string> {
     .maybeSingle();
   
   return data?.moeda || 'BRL';
+}
+
+/**
+ * Registra SAQUE_VIRTUAL ao desvincular bookmaker de um projeto.
+ * 
+ * ARQUITETURA DE ISOLAMENTO DE PROJETOS:
+ * - Contábil apenas — NÃO movimenta saldo real da bookmaker
+ * - Fecha o P&L do projeto com o saldo residual
+ * - Garante que o resultado financeiro do projeto reflita o lucro real
+ * - O trigger NÃO gera financial_events para este tipo
+ * 
+ * IMPORTANTE: projeto_id_snapshot DEVE ser definido explicitamente
+ * porque a bookmaker já terá projeto_id = NULL quando isso for inserido.
+ */
+export async function registrarSaqueVirtualViaLedger(params: {
+  bookmakerId: string;
+  saldoAtual: number;
+  moeda: string;
+  workspaceId: string;
+  userId: string;
+  projetoId: string;
+  descricao?: string;
+}): Promise<LedgerEntryResult> {
+  if (params.saldoAtual <= 0) {
+    console.log('[registrarSaqueVirtualViaLedger] Saldo zero ou negativo, ignorando');
+    return { success: true };
+  }
+
+  try {
+    const insertPayload = {
+      tipo_transacao: 'SAQUE_VIRTUAL',
+      valor: params.saldoAtual,
+      moeda: params.moeda,
+      workspace_id: params.workspaceId,
+      user_id: params.userId,
+      origem_bookmaker_id: params.bookmakerId,
+      valor_origem: params.saldoAtual,
+      descricao: params.descricao || `Saque virtual – desvinculação do projeto`,
+      data_transacao: new Date().toISOString().split('T')[0],
+      impacta_caixa_operacional: false,
+      tipo_moeda: 'FIAT' as const,
+      status: 'CONFIRMADO',
+      // CRÍTICO: Definir explicitamente porque bookmaker.projeto_id já será NULL
+      projeto_id_snapshot: params.projetoId,
+      auditoria_metadata: {
+        tipo: 'saque_virtual_desvinculacao',
+        projeto_id: params.projetoId,
+        saldo_snapshot: params.saldoAtual,
+      },
+    };
+
+    const { data, error } = await supabase
+      .from('cash_ledger')
+      .insert(insertPayload as any)
+      .select('id')
+      .single();
+
+    if (error) {
+      console.error('[registrarSaqueVirtualViaLedger] Erro:', error);
+      return { success: false, error: error.message };
+    }
+
+    console.log(`[registrarSaqueVirtualViaLedger] ✅ SAQUE_VIRTUAL criado: ${data.id} (R$${params.saldoAtual})`);
+    return { success: true, entryId: data.id };
+  } catch (err: any) {
+    console.error('[registrarSaqueVirtualViaLedger] Exceção:', err);
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Registra DEPOSITO_VIRTUAL ao vincular bookmaker a um projeto.
+ * 
+ * ARQUITETURA DE ISOLAMENTO DE PROJETOS:
+ * - Contábil apenas — NÃO movimenta saldo real da bookmaker
+ * - Estabelece baseline de capital para o novo projeto
+ * - Saldo atual da bookmaker no momento da vinculação é o valor do depósito virtual
+ * - O trigger NÃO gera financial_events para este tipo
+ */
+export async function registrarDepositoVirtualViaLedger(params: {
+  bookmakerId: string;
+  saldoAtual: number;
+  moeda: string;
+  workspaceId: string;
+  userId: string;
+  projetoId: string;
+  descricao?: string;
+}): Promise<LedgerEntryResult> {
+  if (params.saldoAtual <= 0) {
+    console.log('[registrarDepositoVirtualViaLedger] Saldo zero ou negativo, ignorando');
+    return { success: true };
+  }
+
+  try {
+    const insertPayload = {
+      tipo_transacao: 'DEPOSITO_VIRTUAL',
+      valor: params.saldoAtual,
+      moeda: params.moeda,
+      workspace_id: params.workspaceId,
+      user_id: params.userId,
+      destino_bookmaker_id: params.bookmakerId,
+      valor_destino: params.saldoAtual,
+      descricao: params.descricao || `Depósito virtual – vinculação ao projeto`,
+      data_transacao: new Date().toISOString().split('T')[0],
+      impacta_caixa_operacional: false,
+      tipo_moeda: 'FIAT' as const,
+      status: 'CONFIRMADO',
+      // Será preenchido pelo trigger fn_cash_ledger_projeto_snapshot, mas definimos para segurança
+      projeto_id_snapshot: params.projetoId,
+      auditoria_metadata: {
+        tipo: 'deposito_virtual_vinculacao',
+        projeto_id: params.projetoId,
+        saldo_snapshot: params.saldoAtual,
+      },
+    };
+
+    const { data, error } = await supabase
+      .from('cash_ledger')
+      .insert(insertPayload as any)
+      .select('id')
+      .single();
+
+    if (error) {
+      console.error('[registrarDepositoVirtualViaLedger] Erro:', error);
+      return { success: false, error: error.message };
+    }
+
+    console.log(`[registrarDepositoVirtualViaLedger] ✅ DEPOSITO_VIRTUAL criado: ${data.id} (R$${params.saldoAtual})`);
+    return { success: true, entryId: data.id };
+  } catch (err: any) {
+    console.error('[registrarDepositoVirtualViaLedger] Exceção:', err);
+    return { success: false, error: err.message };
+  }
 }

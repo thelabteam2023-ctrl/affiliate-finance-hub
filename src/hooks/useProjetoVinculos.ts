@@ -11,6 +11,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { registrarSaqueVirtualViaLedger, registrarDepositoVirtualViaLedger } from "@/lib/ledgerService";
 
 export interface Vinculo {
   id: string;
@@ -317,6 +318,12 @@ export function useAddVinculos(projetoId: string, workspaceId: string | undefine
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error("Usuário não autenticado");
 
+      // 0. Buscar saldos ANTES de vincular (para DEPOSITO_VIRTUAL)
+      const { data: bmSaldos } = await supabase
+        .from("bookmakers")
+        .select("id, saldo_atual, moeda")
+        .in("id", selectedIds);
+
       // Update bookmakers with projeto_id and reset status to ativo
       const { error } = await supabase
         .from("bookmakers")
@@ -332,8 +339,6 @@ export function useAddVinculos(projetoId: string, workspaceId: string | undefine
         .in("id", selectedIds);
 
       // Insert history records
-      // IMPORTANT: When re-linking a bookmaker that was previously unlinked,
-      // we must clear data_desvinculacao and status_final to prevent date inconsistencies
       if (bookmakers && workspaceId) {
         const historicoRecords = bookmakers.map((bk: any) => ({
           user_id: userData.user!.id,
@@ -344,7 +349,6 @@ export function useAddVinculos(projetoId: string, workspaceId: string | undefine
           bookmaker_nome: bk.nome,
           parceiro_nome: bk.parceiros?.nome || null,
           data_vinculacao: new Date().toISOString(),
-          // Clear unlinking data when re-linking to fix date inversion bug
           data_desvinculacao: null,
           status_final: null,
         }));
@@ -354,8 +358,6 @@ export function useAddVinculos(projetoId: string, workspaceId: string | undefine
           .upsert(historicoRecords, { onConflict: "projeto_id,bookmaker_id" });
 
         // CRÍTICO: Atualizar retroativamente transações órfãs (projeto_id_snapshot = NULL)
-        // Isso garante que depósitos feitos ANTES da vinculação sejam atribuídos ao projeto correto.
-        // Só atualiza registros sem projeto — registros de outros projetos não são tocados.
         await supabase
           .from("cash_ledger")
           .update({ projeto_id_snapshot: projetoId })
@@ -367,6 +369,22 @@ export function useAddVinculos(projetoId: string, workspaceId: string | undefine
           .update({ projeto_id_snapshot: projetoId })
           .in("origem_bookmaker_id", selectedIds)
           .is("projeto_id_snapshot", null);
+
+        // DEPOSITO_VIRTUAL — estabelece baseline de capital para o novo projeto
+        if (bmSaldos) {
+          for (const bm of bmSaldos) {
+            if (bm.saldo_atual > 0) {
+              await registrarDepositoVirtualViaLedger({
+                bookmakerId: bm.id,
+                saldoAtual: bm.saldo_atual,
+                moeda: bm.moeda || 'BRL',
+                workspaceId,
+                userId: userData.user!.id,
+                projetoId,
+              });
+            }
+          }
+        }
       }
 
       return selectedIds.length;
@@ -423,6 +441,15 @@ export function useRemoveVinculo(projetoId: string, workspaceId: string | undefi
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error("Usuário não autenticado");
 
+      // 0. Buscar saldo atual ANTES de desvincular (para SAQUE_VIRTUAL)
+      const { data: bmData } = await supabase
+        .from("bookmakers")
+        .select("saldo_atual, moeda, projeto_id")
+        .eq("id", bookmakerId)
+        .single();
+
+      const projetoIdAtual = bmData?.projeto_id;
+
       // 1. Desvincular bookmaker do projeto
       const { error: updateError } = await supabase
         .from("bookmakers")
@@ -434,7 +461,19 @@ export function useRemoveVinculo(projetoId: string, workspaceId: string | undefi
 
       if (updateError) throw updateError;
 
-      // 2. Atualizar histórico com data de desvinculação
+      // 2. SAQUE_VIRTUAL — fecha o P&L do projeto com saldo residual
+      if (projetoIdAtual && bmData && bmData.saldo_atual > 0 && workspaceId) {
+        await registrarSaqueVirtualViaLedger({
+          bookmakerId,
+          saldoAtual: bmData.saldo_atual,
+          moeda: bmData.moeda,
+          workspaceId,
+          userId: userData.user.id,
+          projetoId: projetoIdAtual,
+        });
+      }
+
+      // 3. Atualizar histórico com data de desvinculação
       if (workspaceId) {
         await supabase
           .from("projeto_bookmaker_historico")

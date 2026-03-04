@@ -99,7 +99,7 @@ export function HistoricoVinculosTab({ projetoId }: HistoricoVinculosTabProps) {
       const { data: depositos } = await supabase
         .from("cash_ledger")
         .select("destino_bookmaker_id, valor, status, projeto_id_snapshot")
-        .eq("tipo_transacao", "DEPOSITO")
+        .in("tipo_transacao", ["DEPOSITO", "DEPOSITO_VIRTUAL"])
         .in("status", ["CONFIRMADO", "PENDENTE", "LIQUIDADO"])
         .in("destino_bookmaker_id", bookmakerIds)
         .eq("projeto_id_snapshot", projetoId);
@@ -108,7 +108,7 @@ export function HistoricoVinculosTab({ projetoId }: HistoricoVinculosTabProps) {
       const { data: saques } = await supabase
         .from("cash_ledger")
         .select("origem_bookmaker_id, valor, status, projeto_id_snapshot")
-        .eq("tipo_transacao", "SAQUE")
+        .in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])
         .in("status", ["CONFIRMADO", "PENDENTE", "LIQUIDADO"])
         .in("origem_bookmaker_id", bookmakerIds)
         .eq("projeto_id_snapshot", projetoId);
