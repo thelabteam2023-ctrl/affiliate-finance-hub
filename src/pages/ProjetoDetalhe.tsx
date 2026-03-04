@@ -1022,7 +1022,7 @@ export default function ProjetoDetalhe() {
           </TabsContent>
 
           <TabsContent value="ciclos" className="h-full m-0">
-            <ProjetoCiclosTab projetoId={id!} formatCurrency={formatCurrency} />
+            <ProjetoCiclosTab projetoId={id!} formatCurrency={formatCurrency} convertToConsolidation={convertToConsolidationOficial} moedaConsolidacao={projetoResultado?.moedaConsolidacao || 'BRL'} />
           </TabsContent>
         </div>
 
