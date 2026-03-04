@@ -187,19 +187,24 @@ export function ProjetoFinancialMetricsCard({ projetoId }: ProjetoFinancialMetri
     );
   }
 
-  const mainItems = [
+    // Capital total na operação = Depósitos + Créditos que entraram sem depósito
+    const capitalTotal = metrics.depositosTotal + metrics.cashbackLiquido + metrics.girosGratis + metrics.ajustes + metrics.ganhoConfirmacao + metrics.ganhoFx;
+    // Lucro Operacional Puro = Patrimônio - Capital Total (exclui extras)
+    const lucroOperacionalPuro = (metrics.saldoCasas + metrics.saquesRecebidos) - capitalTotal;
+
+    const mainItems = [
     {
       label: "Lucro Total",
       value: metrics.lucroTotal,
       icon: TrendingUp,
-      tooltip: "Patrimônio Total - Depósitos = (Saldo Casas + Saques Recebidos) - Depósitos. Inclui saldo ainda nas casas.",
+      tooltip: "Patrimônio Total - Depósitos = (Saldo Casas + Saques Recebidos) - Depósitos. Inclui cashback, giros e créditos extras.",
       primary: true,
     },
     {
       label: "Fluxo Líquido",
       value: metrics.fluxoCaixaLiquido,
       icon: ArrowRightLeft,
-      tooltip: "Saques Recebidos - Depósitos. Dinheiro que efetivamente voltou ao caixa. Inclui cashback, giros e ajustes (veja a conciliação abaixo).",
+      tooltip: "Saques Recebidos - Depósitos. Dinheiro que efetivamente voltou ao caixa.",
     },
     {
       label: "Saldo nas Casas",
@@ -209,11 +214,16 @@ export function ProjetoFinancialMetricsCard({ projetoId }: ProjetoFinancialMetri
       neutral: true,
     },
     {
-      label: "Depósitos",
-      value: metrics.depositosTotal,
+      label: "Capital na Operação",
+      value: capitalTotal,
       icon: ArrowDownCircle,
-      tooltip: "Total de depósitos confirmados nas bookmakers do projeto.",
+      tooltip: `Depósitos (${formatCurrency(metrics.depositosTotal)}) + Créditos extras sem depósito: Cashback (${formatCurrency(metrics.cashbackLiquido)}), Giros (${formatCurrency(metrics.girosGratis)}), Ajustes (${formatCurrency(metrics.ajustes)}), Ganho Confirmação (${formatCurrency(metrics.ganhoConfirmacao)}), Ganho FX (${formatCurrency(metrics.ganhoFx)}).`,
       neutral: true,
+      composite: true,
+      compositeValues: {
+        depositos: metrics.depositosTotal,
+        extras: capitalTotal - metrics.depositosTotal,
+      },
     },
     {
       label: "Saques Recebidos",
@@ -240,6 +250,8 @@ export function ProjetoFinancialMetricsCard({ projetoId }: ProjetoFinancialMetri
     { label: "Ajustes/FX", value: metrics.ajustes + metrics.ganhoFx - metrics.perdaFx, icon: ArrowRightLeft },
     { label: "Perdas Operacionais", value: -metrics.perdaOp, icon: ArrowDownCircle },
   ].filter(item => Math.abs(item.value) >= 0.01);
+
+  const lucroApenas = lucroOperacionalPuro;
 
   return (
     <Card>
@@ -290,6 +302,16 @@ export function ProjetoFinancialMetricsCard({ projetoId }: ProjetoFinancialMetri
                     <span className={`font-bold tabular-nums text-base ${colorClass}`}>
                       {formatCurrency(item.value)}
                     </span>
+                    {(item as any).composite && (item as any).compositeValues && (
+                      <div className="flex items-center gap-1 mt-0.5">
+                        <span className="text-muted-foreground text-[9px] tabular-nums">
+                          {formatCurrency((item as any).compositeValues.depositos)}
+                        </span>
+                        <span className="text-emerald-500 text-[9px] tabular-nums">
+                          +{formatCurrency((item as any).compositeValues.extras)}
+                        </span>
+                      </div>
+                    )}
                     <span className="text-muted-foreground text-[10px] mt-1 text-center leading-tight">
                       {item.label}
                     </span>
@@ -304,10 +326,10 @@ export function ProjetoFinancialMetricsCard({ projetoId }: ProjetoFinancialMetri
         </div>
 
         {/* Reconciliation breakdown */}
-        {reconciliationItems.length > 0 && (
+{reconciliationItems.length > 0 && (
           <div className="rounded-lg border border-border/40 bg-muted/20 px-3 py-2.5">
             <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-              Conciliação: Composição do Fluxo Líquido
+              Créditos Extras (sem depósito)
             </p>
             <div className="space-y-1">
               {reconciliationItems.map((item) => {
@@ -324,11 +346,19 @@ export function ProjetoFinancialMetricsCard({ projetoId }: ProjetoFinancialMetri
                   </div>
                 );
               })}
-              <div className="border-t border-border/40 pt-1 mt-1 flex items-center justify-between text-xs">
-                <span className="text-muted-foreground font-medium">Total Extras (fora apostas)</span>
-                <span className={`font-mono font-bold ${metrics.totalExtras >= 0 ? "text-emerald-500" : "text-red-500"}`}>
-                  {metrics.totalExtras >= 0 ? "+" : ""}{formatCurrency(metrics.totalExtras)}
-                </span>
+              <div className="border-t border-border/40 pt-1 mt-1 space-y-1">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground font-medium">Total Créditos Extras</span>
+                  <span className={`font-mono font-bold ${metrics.totalExtras >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                    {metrics.totalExtras >= 0 ? "+" : ""}{formatCurrency(metrics.totalExtras)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground font-medium">Lucro Puro (só apostas)</span>
+                  <span className={`font-mono font-bold ${lucroApenas >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                    {formatCurrency(lucroApenas)}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
