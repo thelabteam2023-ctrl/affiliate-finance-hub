@@ -22,6 +22,11 @@ interface CalendarApostaData {
   bookmaker_nome: string;
   parceiro_nome: string | null;
   bookmaker_id: string | null;
+  // Campos multi-moeda para consolidação correta
+  moeda_operacao: string | null;
+  stake_consolidado: number | null;
+  lucro_prejuizo_brl_referencia: number | null;
+  valor_brl_referencia: number | null;
 }
 
 interface UseCalendarApostasOptions {
@@ -47,7 +52,11 @@ async function fetchCalendarApostas(
       resultado,
       stake,
       stake_total,
-      bookmaker_id
+      bookmaker_id,
+      moeda_operacao,
+      stake_consolidado,
+      lucro_prejuizo_brl_referencia,
+      valor_brl_referencia
     `)
     .eq("projeto_id", projetoId)
     .eq("status", "LIQUIDADA")
@@ -91,7 +100,7 @@ async function fetchCalendarApostas(
     return {
       id: item.id,
       data_aposta: item.data_aposta,
-      lucro_prejuizo: item.pl_consolidado ?? item.lucro_prejuizo,
+      lucro_prejuizo: item.lucro_prejuizo,
       pl_consolidado: item.pl_consolidado,
       resultado: item.resultado,
       stake: item.stake || 0,
@@ -99,6 +108,10 @@ async function fetchCalendarApostas(
       bookmaker_nome: bkInfo.nome,
       parceiro_nome: bkInfo.parceiro_nome,
       bookmaker_id: item.bookmaker_id,
+      moeda_operacao: item.moeda_operacao,
+      stake_consolidado: item.stake_consolidado,
+      lucro_prejuizo_brl_referencia: item.lucro_prejuizo_brl_referencia,
+      valor_brl_referencia: item.valor_brl_referencia,
     };
   });
 }
@@ -137,5 +150,11 @@ export function transformCalendarApostasForCharts(apostas: CalendarApostaData[])
     bookmaker_nome: a.bookmaker_nome,
     parceiro_nome: a.parceiro_nome,
     bookmaker_id: a.bookmaker_id,
+    // Campos multi-moeda para consolidação correta no VisaoGeralCharts
+    pl_consolidado: a.pl_consolidado,
+    moeda_operacao: a.moeda_operacao,
+    stake_consolidado: a.stake_consolidado,
+    lucro_prejuizo_brl_referencia: a.lucro_prejuizo_brl_referencia,
+    valor_brl_referencia: a.valor_brl_referencia,
   }));
 }
