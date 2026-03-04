@@ -197,10 +197,10 @@ export function ProjetoFinancialMetricsCard({ projetoId }: ProjetoFinancialMetri
 
     const mainItems = [
     {
-      label: "Lucro Total",
+      label: metrics.lucroTotal >= 0 ? "Break Even ✓" : "Falta p/ Break Even",
       value: metrics.lucroTotal,
       icon: TrendingUp,
-      tooltip: "Patrimônio Total - Depósitos = (Saldo Casas + Saques Recebidos) - Depósitos. Inclui cashback, giros e créditos extras.",
+      tooltip: `Saques Recebidos (${formatCurrency(metrics.saquesRecebidos)}) + Saldo nas Casas (${formatCurrency(metrics.saldoCasas)}) - Depósitos (${formatCurrency(metrics.depositosTotal)}) = ${formatCurrency(metrics.lucroTotal)}. ${metrics.lucroTotal >= 0 ? "Projeto já ultrapassou o break even!" : `Ainda falta recuperar ${formatCurrency(Math.abs(metrics.lucroTotal))} para atingir o break even.`}`,
       primary: true,
     },
     {
