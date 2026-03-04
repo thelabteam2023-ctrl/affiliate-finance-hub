@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { differenceInDays, parseISO, format } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -14,6 +14,7 @@ import {
   BarChart3,
   CheckCircle2,
   AlertCircle,
+  ChevronDown,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
@@ -114,6 +115,51 @@ function SectionHeader({ icon: Icon, label, iconClass = "text-muted-foreground" 
     <div className="flex items-center gap-1.5 mb-1.5">
       <Icon className={`h-3 w-3 ${iconClass}`} />
       <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</span>
+    </div>
+  );
+}
+
+function ExtrasCollapsible({ metrics, formatCurrency }: { metrics: any; formatCurrency: (v: number) => string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div>
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center justify-between gap-4 w-full group"
+      >
+        <span className="text-[11px] text-muted-foreground flex items-center gap-1">
+          Créditos Extras
+          <ChevronDown className={`h-3 w-3 text-muted-foreground/60 transition-transform ${open ? "rotate-180" : ""}`} />
+        </span>
+        <span className="text-[11px] font-mono tabular-nums font-semibold text-emerald-500">
+          {formatCurrency(metrics.extrasPositivos)}
+        </span>
+      </button>
+      {open && (
+        <div className="mt-1 space-y-0.5 pl-2 border-l-2 border-border/30 ml-1">
+          {Math.abs(metrics.cashbackLiquido) >= 0.01 && (
+            <MetricRow label="Cashback Líquido" value={formatCurrency(metrics.cashbackLiquido)} colorClass="text-emerald-500" indent />
+          )}
+          {Math.abs(metrics.girosGratis) >= 0.01 && (
+            <MetricRow label="Giros Grátis" value={formatCurrency(metrics.girosGratis)} colorClass="text-emerald-500" indent />
+          )}
+          {Math.abs(metrics.ganhoConfirmacao) >= 0.01 && (
+            <MetricRow label="Ganho de Confirmação" value={formatCurrency(metrics.ganhoConfirmacao)} colorClass="text-emerald-500" indent />
+          )}
+          {Math.abs(metrics.ajustes) >= 0.01 && (
+            <MetricRow label="Ajustes" value={formatCurrency(metrics.ajustes)} colorClass={metrics.ajustes >= 0 ? "text-emerald-500" : "text-red-500"} indent />
+          )}
+          {Math.abs(metrics.ganhoFx) >= 0.01 && (
+            <MetricRow label="Ganho Cambial" value={formatCurrency(metrics.ganhoFx)} colorClass="text-emerald-500" indent />
+          )}
+          {Math.abs(metrics.perdaFx) >= 0.01 && (
+            <MetricRow label="Perda Cambial" value={`−${formatCurrency(metrics.perdaFx)}`} colorClass="text-red-500" indent />
+          )}
+          {Math.abs(metrics.perdaOp) >= 0.01 && (
+            <MetricRow label="Perdas Operacionais" value={`−${formatCurrency(metrics.perdaOp)}`} colorClass="text-red-500" indent />
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -225,11 +271,7 @@ export function FinancialMetricsPopover({ projetoId }: FinancialMetricsPopoverPr
         <SectionHeader icon={ArrowRightLeft} label="Fluxo de Caixa" />
         <MetricRow label="Depósitos Confirmados" value={formatCurrency(metrics.depositosTotal)} />
         {hasExtras && (
-          <MetricRow 
-            label="Créditos Extras" 
-            value={formatCurrency(metrics.extrasPositivos)} 
-            colorClass="text-emerald-500"
-          />
+          <ExtrasCollapsible metrics={metrics} formatCurrency={formatCurrency} />
         )}
         <MetricRow label="Saques Recebidos" value={formatCurrency(metrics.saquesRecebidos)} />
         {metrics.saquesPendentes > 0 && (
