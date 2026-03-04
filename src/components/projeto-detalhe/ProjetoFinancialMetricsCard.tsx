@@ -99,8 +99,7 @@ export function ProjetoFinancialMetricsCard({ projetoId }: ProjetoFinancialMetri
 
     const lucroRealizado = saquesRecebidos - depositosTotal;
     const lucroPotencial = saldoCasas - depositosTotal;
-    const patrimonioTotal = saldoCasas + saquesRecebidos;
-    const lucroTotal = patrimonioTotal - depositosTotal;
+    const lucroTotal = (saldoCasas + saquesRecebidos) - depositosTotal;
 
     return {
       depositosTotal,
@@ -110,7 +109,6 @@ export function ProjetoFinancialMetricsCard({ projetoId }: ProjetoFinancialMetri
       lucroRealizado,
       lucroPotencial,
       lucroTotal,
-      patrimonioTotal,
     };
   }, [rawMetrics, convertToConsolidationOficial, cotacaoOficialUSD]);
 
@@ -180,13 +178,6 @@ export function ProjetoFinancialMetricsCard({ projetoId }: ProjetoFinancialMetri
       tooltip: "Saques solicitados mas ainda não recebidos. Capital em trânsito.",
       neutral: true,
       warning: metrics.saquesPendentes > 0,
-    },
-    {
-      label: "Patrimônio Total",
-      value: metrics.patrimonioTotal,
-      icon: TrendingUp,
-      tooltip: "Saldo nas Casas + Saques Recebidos. Todo o capital gerado pela operação.",
-      neutral: true,
     },
   ];
 
