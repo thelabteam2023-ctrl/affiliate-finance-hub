@@ -257,9 +257,6 @@ export function FinancialMetricsPopover({ projetoId }: FinancialMetricsPopoverPr
             colorClass={metrics.lucroFinanceiro >= 0 ? "text-emerald-500" : "text-red-500"}
             bold
           />
-          <p className="text-[9px] text-muted-foreground/70 mt-0.5">
-            Patrimônio ({formatCurrency(metrics.patrimonio)}) − Depósitos ({formatCurrency(metrics.depositosTotal)})
-          </p>
         </div>
       </div>
 
