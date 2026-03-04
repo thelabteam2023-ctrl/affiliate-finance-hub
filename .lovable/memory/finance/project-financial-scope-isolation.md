@@ -9,27 +9,28 @@ KPIs e métricas de lucro nos dashboards de projeto são obrigatoriamente filtra
 
 Para garantir resultado fidedigno quando uma bookmaker é transferida entre projetos:
 
-1. **Ao desvincular** (Projeto A): Gera `SAQUE_VIRTUAL` com o `saldo_atual` da bookmaker, atribuído ao `projeto_id_snapshot = Projeto A`. Isso "fecha" o P&L do projeto.
+1. **Ao desvincular** (Projeto A): Gera `SAQUE_VIRTUAL` com saldo efetivo (saldo_atual - saques_pendentes), atribuído ao `projeto_id_snapshot = Projeto A`.
+2. **Ao vincular** (Projeto B): Gera `DEPOSITO_VIRTUAL` com o `saldo_atual` da bookmaker, atribuído ao `projeto_id_snapshot = Projeto B`.
 
-2. **Ao vincular** (Projeto B): Gera `DEPOSITO_VIRTUAL` com o `saldo_atual` da bookmaker, atribuído ao `projeto_id_snapshot = Projeto B`. Isso estabelece o baseline de capital.
+### Proteções contra Edge Cases
 
-### Regras Críticas
+#### Saques Pendentes (cenário 4)
+- `SAQUE_VIRTUAL = saldo_atual - saques_pendentes` → evita dupla contagem quando o saque pendente for confirmado.
 
-- **Contábil apenas**: SAQUE_VIRTUAL e DEPOSITO_VIRTUAL NÃO movimentam saldo real (o trigger `fn_cash_ledger_generate_financial_events` não possui handler para esses tipos).
-- **projeto_id_snapshot explícito**: SAQUE_VIRTUAL define o snapshot manualmente porque a bookmaker já terá `projeto_id = NULL` no momento da inserção.
-- **Saldo zero**: Se `saldo_atual <= 0`, nenhuma transação virtual é gerada.
-- **Fórmula P&L do projeto**: `(Saques + Saques Virtuais + Saldo Atual) - (Depósitos + Depósitos Virtuais)`.
+#### Depósitos Pendentes (cenário 5)
+- Ao desvincular, todas as transações PENDENTES recebem `projeto_id_snapshot` explícito → confirmação futura mantém atribuição correta.
 
-### Atribuição Retroativa
+#### Apostas Pendentes (cenário 3)
+- Sistema emite **warnings** ao operador informando quantas apostas pendentes existem.
+- Resultado de apostas liquidadas após desvinculação ficará sem projeto (limitação aceita, operador avisado).
 
-No momento da vinculação, transações órfãs (`projeto_id_snapshot IS NULL`) são retroativamente atribuídas ao novo projeto. Transações de outros projetos nunca são tocadas.
+### Serviço Centralizado
+
+`src/lib/projetoTransitionService.ts` encapsula toda a lógica:
+- `preCheckUnlink()` — verifica pendências, calcula saldo efetivo, gera warnings
+- `executeUnlink()` — trava snapshots + desvincula + SAQUE_VIRTUAL + histórico
+- `executeLink()` — atribui órfãs + DEPOSITO_VIRTUAL
 
 ### Frontend
 
-Queries em `ProjetoFinancialMetricsCard` e `HistoricoVinculosTab` usam `.in("tipo_transacao", ["DEPOSITO", "DEPOSITO_VIRTUAL"])` e `.in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])` para incluir ambos tipos no cálculo.
-
-### Locais de Implementação
-
-- `src/lib/ledgerService.ts` — `registrarSaqueVirtualViaLedger()`, `registrarDepositoVirtualViaLedger()`
-- `src/hooks/useProjetoVinculos.ts` — `useRemoveVinculo`, `useAddVinculos`
-- `src/components/parceiros/ParceiroDetalhesPanel.tsx` — `handleVincularProjeto`, `handleDesvincularProjeto`
+Queries em `ProjetoFinancialMetricsCard` e `HistoricoVinculosTab` usam `.in("tipo_transacao", ["DEPOSITO", "DEPOSITO_VIRTUAL"])` e `.in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])`.
