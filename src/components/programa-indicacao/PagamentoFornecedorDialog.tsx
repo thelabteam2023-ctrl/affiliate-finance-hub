@@ -103,6 +103,25 @@ export function PagamentoFornecedorDialog({
         return;
       }
 
+      // 🔒 IDEMPOTÊNCIA: Verificar se já existe pagamento confirmado para este fornecedor nesta parceria
+      const { data: existingPayment } = await supabase
+        .from("movimentacoes_indicacao")
+        .select("id")
+        .eq("parceria_id", parceria.parceriaId)
+        .eq("tipo", "PAGTO_FORNECEDOR")
+        .eq("status", "CONFIRMADO")
+        .limit(1);
+
+      if (existingPayment && existingPayment.length > 0) {
+        toast({
+          title: "Pagamento já realizado",
+          description: "Este fornecedor já recebeu pagamento por esta parceria.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
       const isCrypto = origemData.tipoMoeda === "CRYPTO";
       const cotacaoUSD = origemData.cotacao || 5.40;
       const coinPriceUSD = origemData.coinPriceUSD || 1;
