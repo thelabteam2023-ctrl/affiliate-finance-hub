@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { differenceInDays, parseISO, format } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -38,12 +39,21 @@ interface ReconciliationRaw {
   ganhoCambial: { valor: number; moeda: string }[];
 }
 
+interface DatedLedgerEntry {
+  valor: number;
+  valor_confirmado?: number | null;
+  moeda: string;
+  data_transacao: string;
+  tipo_transacao: string;
+}
+
 interface FinancialMetricsRaw {
   bookmakerSaldos: { saldo_atual: number; moeda: string }[];
   depositos: LedgerEntry[];
   saques: LedgerEntry[];
   saquesPendentes: LedgerEntry[];
   reconciliation: ReconciliationRaw;
+  breakEvenTimeline: DatedLedgerEntry[];
 }
 
 async function fetchFinancialMetricsRaw(projetoId: string): Promise<FinancialMetricsRaw> {
@@ -81,6 +91,15 @@ async function fetchFinancialMetricsRaw(projetoId: string): Promise<FinancialMet
       .eq("tipo_transacao", "GANHO_CAMBIAL").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId),
   ]);
 
+  // Timeline: all deposits and withdrawals with dates for break-even calculation
+  const { data: timelineData } = await supabase
+    .from("cash_ledger")
+    .select("valor, valor_confirmado, moeda, data_transacao, tipo_transacao")
+    .in("tipo_transacao", ["DEPOSITO", "DEPOSITO_VIRTUAL", "SAQUE", "SAQUE_VIRTUAL"])
+    .eq("status", "CONFIRMADO")
+    .eq("projeto_id_snapshot", projetoId)
+    .order("data_transacao", { ascending: true });
+
   return {
     bookmakerSaldos,
     depositos: (depositos.data || []) as LedgerEntry[],
@@ -95,6 +114,7 @@ async function fetchFinancialMetricsRaw(projetoId: string): Promise<FinancialMet
       perdaCambial: (perdasFx.data || []) as { valor: number; moeda: string }[],
       ganhoCambial: (ganhosFx.data || []) as { valor: number; moeda: string }[],
     },
+    breakEvenTimeline: (timelineData || []) as DatedLedgerEntry[],
   };
 }
 
@@ -150,6 +170,34 @@ export function ProjetoFinancialMetricsCard({ projetoId }: ProjetoFinancialMetri
     // Extras = tudo que não é aposta mas impacta fluxo de caixa
     const totalExtras = cashbackLiquido + girosGratis + ajustes + ganhoConfirmacao + ganhoFx - perdaOp - perdaFx;
 
+    // Break-even calculation: find when cumulative saques first exceeded cumulative deposits
+    let cumulativeFlow = 0;
+    let breakEvenDate: string | null = null;
+    let firstTransactionDate: string | null = null;
+    const timeline = rawMetrics.breakEvenTimeline;
+    
+    for (const entry of timeline) {
+      if (!firstTransactionDate) firstTransactionDate = entry.data_transacao;
+      const isSaque = entry.tipo_transacao === "SAQUE" || entry.tipo_transacao === "SAQUE_VIRTUAL";
+      const valor = isSaque
+        ? convertToConsolidationOficial(entry.valor_confirmado ?? entry.valor, entry.moeda)
+        : convertToConsolidationOficial(entry.valor, entry.moeda);
+      
+      cumulativeFlow += isSaque ? valor : -valor;
+      
+      if (cumulativeFlow >= 0 && !breakEvenDate) {
+        breakEvenDate = entry.data_transacao;
+      }
+      // Reset if it goes negative again (we want the LAST time it crossed zero and stayed)
+      if (cumulativeFlow < 0) {
+        breakEvenDate = null;
+      }
+    }
+
+    const breakEvenDays = breakEvenDate && firstTransactionDate
+      ? differenceInDays(parseISO(breakEvenDate), parseISO(firstTransactionDate))
+      : null;
+
     return {
       depositosTotal,
       saquesRecebidos,
@@ -157,7 +205,6 @@ export function ProjetoFinancialMetricsCard({ projetoId }: ProjetoFinancialMetri
       saldoCasas,
       fluxoCaixaLiquido,
       lucroTotal,
-      // Reconciliation items
       cashbackLiquido,
       girosGratis,
       ajustes,
@@ -166,6 +213,8 @@ export function ProjetoFinancialMetricsCard({ projetoId }: ProjetoFinancialMetri
       perdaOp,
       perdaFx,
       totalExtras,
+      breakEvenDate,
+      breakEvenDays,
     };
   }, [rawMetrics, convertToConsolidationOficial, cotacaoOficialUSD]);
 
@@ -195,19 +244,27 @@ export function ProjetoFinancialMetricsCard({ projetoId }: ProjetoFinancialMetri
     // Lucro Operacional Puro = Patrimônio - Capital Total (exclui extras)
     const lucroOperacionalPuro = (metrics.saldoCasas + metrics.saquesRecebidos) - capitalTotal;
 
+    const breakEvenReached = metrics.fluxoCaixaLiquido >= 0;
+    const breakEvenLabel = breakEvenReached
+      ? `Break Even em ${metrics.breakEvenDays ?? "—"}d ✓`
+      : "Falta p/ Break Even";
+    const breakEvenTooltip = breakEvenReached
+      ? `O projeto se pagou em ${metrics.breakEvenDays} dias (${metrics.breakEvenDate ? format(parseISO(metrics.breakEvenDate), "dd/MM/yyyy") : "—"}). Saques (${formatCurrency(metrics.saquesRecebidos)}) já superaram Depósitos (${formatCurrency(metrics.depositosTotal)}). Saldo positivo: ${formatCurrency(metrics.fluxoCaixaLiquido)}.`
+      : `Ainda falta ${formatCurrency(Math.abs(metrics.fluxoCaixaLiquido))} em saques para recuperar os depósitos (${formatCurrency(metrics.depositosTotal)}).`;
+
     const mainItems = [
     {
-      label: metrics.fluxoCaixaLiquido >= 0 ? "Break Even ✓" : "Falta p/ Break Even",
+      label: breakEvenLabel,
       value: metrics.fluxoCaixaLiquido,
       icon: TrendingUp,
-      tooltip: `Saques Recebidos (${formatCurrency(metrics.saquesRecebidos)}) - Depósitos (${formatCurrency(metrics.depositosTotal)}) = ${formatCurrency(metrics.fluxoCaixaLiquido)}. ${metrics.fluxoCaixaLiquido >= 0 ? "O caixa já recuperou todo o capital investido!" : `Ainda falta ${formatCurrency(Math.abs(metrics.fluxoCaixaLiquido))} voltar ao caixa para zerar o investimento.`}`,
+      tooltip: breakEvenTooltip,
       primary: true,
     },
     {
       label: "Fluxo Líquido Ajustado",
       value: fluxoLiquidoAjustado,
       icon: ArrowRightLeft,
-      tooltip: `Saques (${formatCurrency(metrics.saquesRecebidos)}) - Capital na Operação (${formatCurrency(capitalTotal)}). Fluxo real descontando créditos extras. Fluxo bruto (Saques - Depósitos): ${formatCurrency(metrics.fluxoCaixaLiquido)}.`,
+      tooltip: `Saques (${formatCurrency(metrics.saquesRecebidos)}) - Capital na Operação (${formatCurrency(capitalTotal)}). Fluxo descontando créditos extras (cashback, giros, etc).`,
     },
     {
       label: "Saldo nas Casas",
