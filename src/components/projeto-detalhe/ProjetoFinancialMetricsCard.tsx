@@ -188,7 +188,10 @@ export function ProjetoFinancialMetricsCard({ projetoId }: ProjetoFinancialMetri
   }
 
     // Capital total na operação = Depósitos + Créditos que entraram sem depósito
-    const capitalTotal = metrics.depositosTotal + metrics.cashbackLiquido + metrics.girosGratis + metrics.ajustes + metrics.ganhoConfirmacao + metrics.ganhoFx;
+    const extrasPositivos = metrics.cashbackLiquido + metrics.girosGratis + metrics.ajustes + metrics.ganhoConfirmacao + metrics.ganhoFx;
+    const capitalTotal = metrics.depositosTotal + extrasPositivos;
+    // Fluxo Líquido Ajustado = desconta os créditos extras do fluxo de caixa
+    const fluxoLiquidoAjustado = metrics.saquesRecebidos - capitalTotal;
     // Lucro Operacional Puro = Patrimônio - Capital Total (exclui extras)
     const lucroOperacionalPuro = (metrics.saldoCasas + metrics.saquesRecebidos) - capitalTotal;
 
@@ -201,10 +204,10 @@ export function ProjetoFinancialMetricsCard({ projetoId }: ProjetoFinancialMetri
       primary: true,
     },
     {
-      label: "Fluxo Líquido",
-      value: metrics.fluxoCaixaLiquido,
+      label: "Fluxo Líquido Ajustado",
+      value: fluxoLiquidoAjustado,
       icon: ArrowRightLeft,
-      tooltip: "Saques Recebidos - Depósitos. Dinheiro que efetivamente voltou ao caixa.",
+      tooltip: `Saques (${formatCurrency(metrics.saquesRecebidos)}) - Capital na Operação (${formatCurrency(capitalTotal)}). Fluxo real descontando créditos extras. Fluxo bruto (Saques - Depósitos): ${formatCurrency(metrics.fluxoCaixaLiquido)}.`,
     },
     {
       label: "Saldo nas Casas",
