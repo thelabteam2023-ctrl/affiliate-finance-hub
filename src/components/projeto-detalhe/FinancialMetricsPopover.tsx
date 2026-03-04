@@ -232,6 +232,13 @@ export function FinancialMetricsPopover({ projetoId }: FinancialMetricsPopoverPr
             colorClass="text-amber-500"
           />
         )}
+        {hasExtras && (
+          <MetricRow 
+            label="Créditos Extras" 
+            value={formatCurrency(metrics.extrasPositivos)} 
+            colorClass="text-emerald-500"
+          />
+        )}
         <div className="border-t border-border/30 mt-1.5 pt-1.5">
           <MetricRow 
             label="Fluxo Líquido (Saques − Depósitos)" 
