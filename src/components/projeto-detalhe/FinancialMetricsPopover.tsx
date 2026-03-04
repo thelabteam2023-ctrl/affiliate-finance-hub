@@ -253,18 +253,9 @@ export function FinancialMetricsPopover({ projetoId }: FinancialMetricsPopoverPr
       <div className="border-t border-border/40 pt-3 pb-3 space-y-1">
         <SectionHeader icon={Wallet} label="Patrimônio Atual" />
         <MetricRow label="Saldo nas Casas" value={formatCurrency(metrics.saldoCasas)} />
-        <MetricRow label="Saques Recebidos" value={formatCurrency(metrics.saquesRecebidos)} />
         {metrics.saquesPendentes > 0 && (
           <MetricRow label="Saques Pendentes" value={formatCurrency(metrics.saquesPendentes)} />
         )}
-        <div className="border-t border-border/30 mt-1.5 pt-1.5">
-          <MetricRow 
-            label="Resultado Financeiro" 
-            value={formatCurrency(metrics.lucroFinanceiro)} 
-            colorClass={metrics.lucroFinanceiro >= 0 ? "text-emerald-500" : "text-red-500"}
-            bold
-          />
-        </div>
       </div>
 
       {/* ─── Seção 3: Créditos Extras ─── */}
