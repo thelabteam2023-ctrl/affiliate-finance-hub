@@ -177,7 +177,7 @@ export function FinancialMetricsPopover({ projetoId }: FinancialMetricsPopoverPr
   const items = [
     { label: "Fluxo Líquido Ajustado", value: metrics.fluxoLiquidoAjustado, icon: ArrowRightLeft, highlight: true },
     { label: "Saldo nas Casas", value: metrics.saldoCasas, icon: Wallet },
-    { label: "Capital na Operação", value: metrics.capitalTotal, icon: ArrowDownCircle },
+    { label: "Capital Aportado", value: metrics.capitalTotal, icon: ArrowDownCircle },
     { label: "Depósitos", value: metrics.depositosTotal, icon: ArrowDownCircle },
     { label: "Saques Recebidos", value: metrics.saquesRecebidos, icon: ArrowUpCircle },
     { label: "Saques Pendentes", value: metrics.saquesPendentes, icon: Clock, warning: metrics.saquesPendentes > 0 },
