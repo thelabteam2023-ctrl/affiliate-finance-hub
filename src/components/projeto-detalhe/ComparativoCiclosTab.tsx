@@ -98,113 +98,42 @@ export function ComparativoCiclosTab({ projetoId, formatCurrency: formatCurrency
         return;
       }
 
-      // Calcular métricas para cada ciclo incluindo perdas
+      const { calcularMetricasPeriodo } = await import("@/services/calcularMetricasPeriodo");
+
+      // Calcular métricas para cada ciclo usando serviço canônico
       const ciclosComMetricas: CicloData[] = await Promise.all(
         ciclosData.map(async (ciclo) => {
           const dataFim = ciclo.data_fim_real || ciclo.data_fim_prevista;
           
-          // CRÍTICO: Converter datas do ciclo para UTC usando timezone operacional (America/Sao_Paulo)
-          const dataInicioCiclo = parseISO(ciclo.data_inicio);
-          const dataFimCiclo = parseISO(dataFim);
-          const { startUTC, endUTC } = getOperationalDateRangeForQuery(dataInicioCiclo, dataFimCiclo);
-          
-          const [apostasResult, perdasResult, bookmakersResult, cashbackResult, girosResult] = await Promise.all([
-            supabase
-              .from("apostas_unificada")
-              .select("lucro_prejuizo, pl_consolidado, lucro_prejuizo_brl_referencia, stake, stake_total, stake_consolidado, status, forma_registro")
-              .eq("projeto_id", projetoId)
-              .gte("data_aposta", startUTC)
-              .lte("data_aposta", endUTC),
-            supabase
-              .from("projeto_perdas")
-              .select("valor, status, categoria, bookmaker_id")
-              .eq("projeto_id", projetoId)
-              .eq("status", "CONFIRMADA")
-              .gte("data_registro", startUTC)
-              .lte("data_registro", endUTC),
-            supabase
-              .from("bookmakers")
-              .select("id, nome"),
-            // Buscar cashback do período do ciclo (usa date-only)
-            supabase
-              .from("cashback_manual")
-              .select("valor")
-              .eq("projeto_id", projetoId)
-              .gte("data_credito", ciclo.data_inicio)
-              .lte("data_credito", dataFim),
-            // Buscar giros grátis do período do ciclo
-            supabase
-              .from("giros_gratis")
-              .select("valor_retorno")
-              .eq("projeto_id", projetoId)
-              .eq("status", "confirmado")
-              .gte("data_registro", startUTC)
-              .lte("data_registro", endUTC)
-          ]);
-
-          const apostas = apostasResult.data || [];
-          const perdas = perdasResult.data || [];
-          const bookmakers = bookmakersResult.data || [];
-          const cashbacks = cashbackResult.data || [];
-          const giros = girosResult.data || [];
-          
-          // Mapa de bookmaker ID -> nome
-          const bookmakerMap = new Map(bookmakers.map(b => [b.id, b.nome]));
-
-          const qtdApostas = apostas.length;
-          const volume = apostas.reduce((acc, a) => {
-            // Usar stake consolidado quando disponível (multimoeda)
-            if (a.forma_registro === 'ARBITRAGEM') {
-              return acc + (a.stake_consolidado || a.stake_total || 0);
-            }
-            return acc + (a.stake_consolidado || a.stake || 0);
-          }, 0);
-          
-          // Lucro de apostas liquidadas - usar valor consolidado para paridade com Visão Geral
-          const lucroApostas = apostas
-            .filter(a => a.status === "LIQUIDADA")
-            .reduce((acc, a) => acc + (a.pl_consolidado ?? a.lucro_prejuizo_brl_referencia ?? a.lucro_prejuizo ?? 0), 0);
-          
-          // NOVO: Lucro de cashback (sempre >= 0)
-          const lucroCashback = cashbacks.reduce((acc, cb) => acc + Math.max(0, cb.valor || 0), 0);
-          
-          // NOVO: Lucro de giros grátis (sempre >= 0)
-          const lucroGiros = giros.reduce((acc, g) => acc + Math.max(0, (g as any).valor_retorno || 0), 0);
-          
-          // LUCRO BRUTO = apostas + cashback + giros
-          const lucroBrutoCalculado = lucroApostas + lucroCashback + lucroGiros;
-
-          const perdasConfirmadas = perdas.reduce((acc, p) => acc + p.valor, 0);
-          
-          // Detalhes das perdas para tooltip
-          const perdasDetalhes: PerdaDetalhe[] = perdas.map(p => ({
-            valor: p.valor,
-            categoria: p.categoria,
-            bookmaker_nome: p.bookmaker_id ? bookmakerMap.get(p.bookmaker_id) : undefined
-          }));
+          // Usar serviço canônico para métricas financeiras
+          const metricas = await calcularMetricasPeriodo({
+            projetoId,
+            dataInicio: ciclo.data_inicio,
+            dataFim,
+            incluirDetalhePerdas: true,
+          });
           
           // Para ciclos fechados, usar lucro_liquido do banco; para em andamento, calcular
           const lucroReal = ciclo.status === "FECHADO" 
             ? (ciclo.lucro_liquido ?? ciclo.lucro_bruto) 
-            : lucroBrutoCalculado - perdasConfirmadas;
-
-          const ticketMedio = qtdApostas > 0 ? volume / qtdApostas : 0;
-          const roi = volume > 0 ? (lucroReal / volume) * 100 : 0;
-          const lucroPoAposta = qtdApostas > 0 ? lucroReal / qtdApostas : 0;
-          const lucroPor100Apostados = volume > 0 ? (lucroReal / volume) * 100 : 0;
+            : metricas.lucroLiquido;
 
           return {
             ...ciclo,
-            qtdApostas,
-            volume,
-            ticketMedio,
+            qtdApostas: metricas.qtdApostas,
+            volume: metricas.volume,
+            ticketMedio: metricas.ticketMedio,
             lucro: lucroReal,
-            lucroBruto: ciclo.status === "FECHADO" ? ciclo.lucro_bruto : lucroBrutoCalculado,
-            perdasConfirmadas,
-            perdasDetalhes,
-            roi,
-            lucroPoAposta,
-            lucroPor100Apostados,
+            lucroBruto: ciclo.status === "FECHADO" ? ciclo.lucro_bruto : metricas.lucroBruto,
+            perdasConfirmadas: metricas.perdasConfirmadas,
+            perdasDetalhes: metricas.perdasDetalhes.map(p => ({
+              valor: p.valor,
+              categoria: p.categoria,
+              bookmaker_nome: p.bookmaker_nome,
+            })),
+            roi: metricas.volume > 0 ? (lucroReal / metricas.volume) * 100 : 0,
+            lucroPoAposta: metricas.qtdApostas > 0 ? lucroReal / metricas.qtdApostas : 0,
+            lucroPor100Apostados: metricas.volume > 0 ? (lucroReal / metricas.volume) * 100 : 0,
           };
         })
       );

@@ -222,59 +222,21 @@ export function ProjetoCiclosTab({ projetoId, formatCurrency: formatCurrencyProp
   };
 
   const fetchMetricsForActiveCycles = async (activeCycles: Ciclo[]) => {
+    const { calcularMetricasPeriodo } = await import("@/services/calcularMetricasPeriodo");
     const metricsMap: Record<string, CicloMetrics> = {};
     
     for (const ciclo of activeCycles) {
       const dataFim = ciclo.data_fim_real || ciclo.data_fim_prevista;
       
-      // CRÍTICO: Converter datas do ciclo para UTC usando timezone operacional (America/Sao_Paulo)
-      const dataInicioCiclo = parseISO(ciclo.data_inicio);
-      const dataFimCiclo = parseISO(dataFim);
-      const { startUTC, endUTC } = getOperationalDateRangeForQuery(dataInicioCiclo, dataFimCiclo);
-      
-      const [apostasResult, perdasResult, bookmakersResult, cashbackResult, girosResult] = await Promise.all([
-        supabase
-          .from("apostas_unificada")
-          .select("lucro_prejuizo, pl_consolidado, lucro_prejuizo_brl_referencia, stake, stake_total, stake_consolidado, status, forma_registro")
-          .eq("projeto_id", projetoId)
-          .gte("data_aposta", startUTC)
-          .lte("data_aposta", endUTC),
-        supabase
-          .from("projeto_perdas")
-          .select("id, valor, categoria, status, bookmaker_id, descricao, data_registro")
-          .eq("projeto_id", projetoId)
-          .gte("data_registro", startUTC)
-          .lte("data_registro", endUTC),
-        supabase
-          .from("bookmakers")
-          .select("id, nome"),
-        // Buscar cashback do período do ciclo (usa date-only)
-        supabase
-          .from("cashback_manual")
-          .select("valor")
-          .eq("projeto_id", projetoId)
-          .gte("data_credito", ciclo.data_inicio)
-          .lte("data_credito", dataFim),
-        // Buscar giros grátis do período do ciclo
-        supabase
-          .from("giros_gratis")
-          .select("valor_retorno")
-          .eq("projeto_id", projetoId)
-          .eq("status", "confirmado")
-          .gte("data_registro", startUTC)
-          .lte("data_registro", endUTC)
-      ]);
+      // Usar serviço canônico para métricas financeiras
+      const metricas = await calcularMetricasPeriodo({
+        projetoId,
+        dataInicio: ciclo.data_inicio,
+        dataFim,
+        incluirDetalhePerdas: true,
+      });
 
-      const apostas = apostasResult.data || [];
-      const perdasData = perdasResult.data || [];
-      const bookmakers = bookmakersResult.data || [];
-      const cashbacks = cashbackResult.data || [];
-      const giros = girosResult.data || [];
-
-      // Map bookmaker IDs to names
-      const bookmakerMap = new Map(bookmakers.map(b => [b.id, b.nome]));
-
-      // Categorize losses
+      // Categorizar perdas para a UI específica de ciclos
       const perdas: PerdasCiclo = {
         confirmadas: [],
         pendentes: [],
@@ -284,10 +246,16 @@ export function ProjetoCiclosTab({ projetoId, formatCurrency: formatCurrencyProp
         totalRevertidas: 0
       };
 
-      perdasData.forEach(perda => {
+      metricas.perdasDetalhes.forEach(perda => {
         const perdaComNome: PerdaCiclo = {
-          ...perda,
-          bookmaker_nome: perda.bookmaker_id ? bookmakerMap.get(perda.bookmaker_id) : undefined
+          id: perda.id || "",
+          valor: perda.valor,
+          categoria: perda.categoria,
+          status: perda.status || "CONFIRMADA",
+          bookmaker_id: perda.bookmaker_id || null,
+          descricao: perda.descricao || null,
+          data_registro: perda.data_registro || null,
+          bookmaker_nome: perda.bookmaker_nome,
         };
         
         if (perda.status === "CONFIRMADA") {
@@ -302,38 +270,15 @@ export function ProjetoCiclosTab({ projetoId, formatCurrency: formatCurrencyProp
         }
       });
 
-      // Count all entries (including pending)
-      const qtdApostas = apostas.length;
-      
-      // Calculate volume from all entries (usar consolidado para multimoeda)
-      const volume = apostas.reduce((acc, a) => {
-        if (a.forma_registro === 'ARBITRAGEM') {
-          return acc + (a.stake_consolidado || a.stake_total || 0);
-        }
-        return acc + (a.stake_consolidado || a.stake || 0);
-      }, 0);
-      
-      // Calculate profit only from finalized entries - usar valor consolidado para paridade com Visão Geral
-      const lucroApostas = apostas
-        .filter(a => a.status === "LIQUIDADA")
-        .reduce((acc, a) => acc + (a.pl_consolidado ?? a.lucro_prejuizo_brl_referencia ?? a.lucro_prejuizo ?? 0), 0);
-      
-      // NOVO: Calcular lucro de cashback (sempre >= 0)
-      const lucroCashback = cashbacks.reduce((acc, cb) => acc + Math.max(0, cb.valor || 0), 0);
-      
-      // NOVO: Calcular lucro de giros grátis (sempre >= 0)
-      const lucroGiros = giros.reduce((acc, g) => acc + Math.max(0, (g as any).valor_retorno || 0), 0);
-      
-      // LUCRO BRUTO DO CICLO = apostas + cashback + giros
-      const lucroBruto = lucroApostas + lucroCashback + lucroGiros;
-
-      // Lucro real = lucro bruto - perdas confirmadas
-      const lucroReal = lucroBruto - perdas.totalConfirmadas;
-
-      const ticketMedio = qtdApostas > 0 ? volume / qtdApostas : 0;
-      const roi = volume > 0 ? (lucroReal / volume) * 100 : 0;
-
-      metricsMap[ciclo.id] = { qtdApostas, volume, ticketMedio, lucroBruto, lucroReal, roi, perdas };
+      metricsMap[ciclo.id] = {
+        qtdApostas: metricas.qtdApostas,
+        volume: metricas.volume,
+        ticketMedio: metricas.ticketMedio,
+        lucroBruto: metricas.lucroBruto,
+        lucroReal: metricas.lucroLiquido,
+        roi: metricas.roi,
+        perdas,
+      };
     }
     
     setCicloMetrics(metricsMap);
