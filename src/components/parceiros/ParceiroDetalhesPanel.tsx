@@ -133,6 +133,18 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
     if (error) {
       toast({ title: "Erro ao vincular projeto", description: error.message, variant: "destructive" });
     } else {
+      // CRÍTICO: Atualizar retroativamente transações órfãs (projeto_id_snapshot = NULL)
+      await supabase
+        .from("cash_ledger")
+        .update({ projeto_id_snapshot: projetoId })
+        .in("destino_bookmaker_id", [bookmakerId])
+        .is("projeto_id_snapshot", null);
+      await supabase
+        .from("cash_ledger")
+        .update({ projeto_id_snapshot: projetoId })
+        .in("origem_bookmaker_id", [bookmakerId])
+        .is("projeto_id_snapshot", null);
+
       toast({ title: "Projeto vinculado", description: `Casa vinculada ao projeto "${projetoNome}"` });
       queryClient.invalidateQueries({ queryKey: ["parceiro-financeiro"] });
     }
