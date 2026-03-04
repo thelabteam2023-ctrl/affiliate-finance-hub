@@ -401,16 +401,57 @@ export function useFreebetEstoque({ projetoId, dataInicio, dataFim }: UseFreebet
     try {
       // Buscar dados da freebet antes de deletar para reverter o saldo
       const freebet = freebets.find(fb => fb.id === id);
-      
-      const { error } = await supabase
-        .from("freebets_recebidas")
-        .delete()
-        .eq("id", id);
+      if (!freebet) {
+        toast.error("Freebet não encontrada");
+        return false;
+      }
 
-      if (error) throw error;
+      // ================================================================
+      // ROTA 1: Freebet originada do módulo de Bônus (project_bookmaker_link_bonuses)
+      // Precisa deletar da tabela correta E reverter saldo via estorno
+      // ================================================================
+      if (freebet.origem === "PROMOCAO") {
+        // 1a. Se estava creditada (LIBERADA), estornar saldo_freebet ANTES de deletar
+        if (freebet.status === "LIBERADA" && !freebet.utilizada) {
+          const { error: rpcError } = await supabase.rpc("process_financial_event", {
+            p_bookmaker_id: freebet.bookmaker_id,
+            p_tipo_evento: "FREEBET_EXPIRE",
+            p_tipo_uso: "FREEBET",
+            p_origem: "EXCLUSAO_FREEBET_PROMOCAO",
+            p_valor: -freebet.valor, // negativo para debitar
+            p_moeda: freebet.moeda,
+            p_descricao: `Reversão por exclusão de freebet (promoção): ${freebet.motivo}`,
+          });
 
-      // Se era LIBERADA e não utilizada, reverter o saldo_freebet
-      if (freebet && freebet.status === "LIBERADA" && !freebet.utilizada) {
+          if (rpcError) {
+            console.error("[useFreebetEstoque] Erro ao reverter saldo_freebet (promoção):", rpcError);
+            toast.error("Erro ao reverter saldo da freebet");
+            return false; // Não prosseguir se não conseguir reverter
+          }
+        }
+
+        // 1b. Deletar da tabela project_bookmaker_link_bonuses
+        const { error } = await supabase
+          .from("project_bookmaker_link_bonuses")
+          .delete()
+          .eq("id", id);
+
+        if (error) {
+          console.error("[useFreebetEstoque] Erro ao deletar bonus freebet:", error);
+          throw error;
+        }
+
+        toast.success("Freebet (promoção) removida e saldo estornado");
+        await fetchEstoque();
+        return true;
+      }
+
+      // ================================================================
+      // ROTA 2: Freebet manual (freebets_recebidas)
+      // ================================================================
+
+      // 2a. Se era LIBERADA e não utilizada, reverter o saldo_freebet ANTES de deletar
+      if (freebet.status === "LIBERADA" && !freebet.utilizada) {
         const { error: rpcError } = await supabase.rpc("process_financial_event", {
           p_bookmaker_id: freebet.bookmaker_id,
           p_tipo_evento: "FREEBET_EXPIRE",
@@ -423,11 +464,20 @@ export function useFreebetEstoque({ projetoId, dataInicio, dataFim }: UseFreebet
 
         if (rpcError) {
           console.error("[useFreebetEstoque] Erro ao reverter saldo_freebet:", rpcError);
-          toast.error("Freebet removida, mas erro ao reverter saldo");
+          toast.error("Erro ao reverter saldo da freebet");
+          return false; // Não prosseguir se não conseguir reverter
         }
       }
 
-      toast.success("Freebet removida com sucesso");
+      // 2b. Deletar da tabela freebets_recebidas
+      const { error } = await supabase
+        .from("freebets_recebidas")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast.success("Freebet removida e saldo estornado");
       await fetchEstoque();
       return true;
     } catch (err: any) {
