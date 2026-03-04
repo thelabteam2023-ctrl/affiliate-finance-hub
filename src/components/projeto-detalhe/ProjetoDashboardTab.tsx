@@ -19,6 +19,7 @@ import { ModernBarChart } from "@/components/ui/modern-bar-chart";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { VisaoGeralCharts, ExtraLucroEntry } from "./VisaoGeralCharts";
+import { ProjetoFinancialMetricsCard } from "./ProjetoFinancialMetricsCard";
 import { PerformancePorCasaCard } from "./PerformancePorCasaCard";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod } from "./StandardTimeFilter";
 import { PERIOD_STALE_TIME, PERIOD_GC_TIME } from "@/lib/query-cache-config";
@@ -235,24 +236,11 @@ async function fetchExtrasLucroFn(projetoId: string): Promise<ExtraLucroEntry[]>
     }
   });
 
-  // CORREÇÃO: Buscar currency e tipo_bonus para conversão multi-moeda
-  // CRÍTICO: Excluir tipo FREEBET — freebets não são receita direta.
-  // O benefício econômico da freebet já está capturado no lucro_prejuizo da aposta (SNR).
-  // Somar o valor nominal como extra causaria dupla contagem.
-  const { data: bonusCreditados } = await supabase
-    .from("project_bookmaker_link_bonuses")
-    .select("credited_at, bonus_amount, status, currency, tipo_bonus")
-    .eq("project_id", projetoId)
-    .in("status", ["credited", "finalized"]);
-
-  bonusCreditados?.forEach(b => {
-    // Pular FREEBET — evita dupla contagem com o P&L da aposta
-    if (b.tipo_bonus === "FREEBET") return;
-    const valor = Number(b.bonus_amount) || 0;
-    if (valor > 0 && b.credited_at) {
-      extras.push({ data: extractCivilDateKey(b.credited_at), valor, moeda: b.currency || "BRL", tipo: 'bonus' });
-    }
-  });
+  // AUDITORIA 2026-03-04: Bônus creditados REMOVIDOS do cálculo de lucro.
+  // MOTIVO: Bônus NÃO é receita. Ele aumenta capital de giro, mas o resultado real
+  // da operação já está capturado no P&L das apostas feitas com esse bônus.
+  // Adicionar bonus_amount como extra causava distorção contábil (inflava lucro).
+  // A "Performance de Bônus" permanece como métrica operacional na aba Bônus.
 
   // Buscar todos os bookmakers do projeto (IDs + moeda) para extras relacionados a bônus
   const { data: projectBookmakers } = await supabase
@@ -563,6 +551,9 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
         className="transition-opacity duration-300 ease-in-out" 
         style={{ opacity: isTransitioning ? 0.5 : 1 }}
       >
+      {/* Indicadores Financeiros Reais — Separação Operacional × Financeiro */}
+      <ProjetoFinancialMetricsCard projetoId={projetoId} formatCurrency={formatCurrency} />
+
       <VisaoGeralCharts 
         apostas={apostasParaGraficos}
         apostasCalendario={apostasCalendario.map(a => ({
