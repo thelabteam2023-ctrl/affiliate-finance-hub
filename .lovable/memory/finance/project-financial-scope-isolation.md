@@ -18,18 +18,23 @@ Para garantir resultado fidedigno quando uma bookmaker é transferida entre proj
 - `SAQUE_VIRTUAL = saldo_atual - saques_pendentes` → evita dupla contagem quando o saque pendente for confirmado.
 
 #### Depósitos Pendentes (cenário 5)
-- Ao desvincular, todas as transações PENDENTES recebem `projeto_id_snapshot` explícito → confirmação futura mantém atribuição correta.
+- Ao desvincular, todas as transações PENDENTES e LIQUIDADO recebem `projeto_id_snapshot` explícito → confirmação futura mantém atribuição correta.
 
 #### Apostas Pendentes (cenário 3)
 - Sistema emite **warnings** ao operador informando quantas apostas pendentes existem.
 - Resultado de apostas liquidadas após desvinculação ficará sem projeto (limitação aceita, operador avisado).
+
+#### Dupla Contagem (cenário crítico — CORRIGIDO)
+- `executeLink` **NÃO** atribui transações órfãs retroativamente ao novo projeto.
+- O `DEPOSITO_VIRTUAL` é a ÚNICA fonte de baseline para o novo projeto.
+- Atribuir órfãs + DEPOSITO_VIRTUAL causava inflação do capital investido.
 
 ### Serviço Centralizado
 
 `src/lib/projetoTransitionService.ts` encapsula toda a lógica:
 - `preCheckUnlink()` — verifica pendências, calcula saldo efetivo, gera warnings
 - `executeUnlink()` — trava snapshots + desvincula + SAQUE_VIRTUAL + histórico
-- `executeLink()` — atribui órfãs + DEPOSITO_VIRTUAL
+- `executeLink()` — DEPOSITO_VIRTUAL (sem atribuição retroativa de órfãs)
 
 ### Frontend
 

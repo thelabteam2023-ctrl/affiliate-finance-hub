@@ -185,20 +185,11 @@ export async function executeLink(params: {
 }): Promise<void> {
   const { bookmakerId, projetoId, workspaceId, userId, saldoAtual, moeda } = params;
 
-  // 1. Atribuir transações órfãs ao projeto
-  await supabase
-    .from("cash_ledger")
-    .update({ projeto_id_snapshot: projetoId })
-    .eq("destino_bookmaker_id", bookmakerId)
-    .is("projeto_id_snapshot", null);
+  // NOTA: NÃO atribuímos transações órfãs (projeto_id_snapshot = null) ao novo projeto.
+  // O DEPOSITO_VIRTUAL já captura o baseline completo do saldo atual.
+  // Atribuir órfãs + DEPOSITO_VIRTUAL causaria dupla contagem.
 
-  await supabase
-    .from("cash_ledger")
-    .update({ projeto_id_snapshot: projetoId })
-    .eq("origem_bookmaker_id", bookmakerId)
-    .is("projeto_id_snapshot", null);
-
-  // 2. DEPOSITO_VIRTUAL com saldo atual (baseline para o novo projeto)
+  // 1. DEPOSITO_VIRTUAL com saldo atual (baseline para o novo projeto)
   if (saldoAtual > 0) {
     await registrarDepositoVirtualViaLedger({
       bookmakerId,
