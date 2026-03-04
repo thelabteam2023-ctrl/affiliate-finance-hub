@@ -224,6 +224,13 @@ export function FinancialMetricsPopover({ projetoId }: FinancialMetricsPopoverPr
       <div className="space-y-1 pb-3">
         <SectionHeader icon={ArrowRightLeft} label="Fluxo de Caixa" />
         <MetricRow label="Depósitos Confirmados" value={formatCurrency(metrics.depositosTotal)} />
+        {hasExtras && (
+          <MetricRow 
+            label="Créditos Extras" 
+            value={formatCurrency(metrics.extrasPositivos)} 
+            colorClass="text-emerald-500"
+          />
+        )}
         <MetricRow label="Saques Recebidos" value={formatCurrency(metrics.saquesRecebidos)} />
         {metrics.saquesPendentes > 0 && (
           <MetricRow 
@@ -232,70 +239,20 @@ export function FinancialMetricsPopover({ projetoId }: FinancialMetricsPopoverPr
             colorClass="text-amber-500"
           />
         )}
-        {hasExtras && (
-          <MetricRow 
-            label="Créditos Extras" 
-            value={formatCurrency(metrics.extrasPositivos)} 
-            colorClass="text-emerald-500"
-          />
-        )}
         <div className="border-t border-border/30 mt-1.5 pt-1.5">
           <MetricRow 
-            label="Fluxo Líquido (Saques − Depósitos)" 
-            value={formatCurrency(metrics.fluxoCaixaLiquido)} 
-            colorClass={metrics.fluxoCaixaLiquido >= 0 ? "text-emerald-500" : "text-red-500"}
+            label={hasExtras ? "Fluxo Líquido Ajustado" : "Fluxo Líquido"} 
+            value={formatCurrency(hasExtras ? metrics.fluxoLiquidoAjustado : metrics.fluxoCaixaLiquido)} 
+            colorClass={(hasExtras ? metrics.fluxoLiquidoAjustado : metrics.fluxoCaixaLiquido) >= 0 ? "text-emerald-500" : "text-red-500"}
             bold
           />
-        </div>
-      </div>
-
-      {/* ─── Seção 2: Patrimônio ─── */}
-      <div className="border-t border-border/40 pt-3 pb-3 space-y-1">
-        <SectionHeader icon={Wallet} label="Patrimônio Atual" />
-        <MetricRow label="Saldo nas Casas" value={formatCurrency(metrics.saldoCasas)} />
-        {metrics.saquesPendentes > 0 && (
-          <MetricRow label="Saques Pendentes" value={formatCurrency(metrics.saquesPendentes)} />
-        )}
-      </div>
-
-      {/* ─── Seção 3: Créditos Extras ─── */}
-      {hasExtras && (
-        <div className="border-t border-border/40 pt-3 pb-3 space-y-1">
-          <SectionHeader icon={Gift} label="Créditos Extras" />
-          {Math.abs(metrics.cashbackLiquido) >= 0.01 && (
-            <MetricRow label="Cashback Líquido" value={formatCurrency(metrics.cashbackLiquido)} colorClass="text-emerald-500" indent />
-          )}
-          {Math.abs(metrics.girosGratis) >= 0.01 && (
-            <MetricRow label="Giros Grátis" value={formatCurrency(metrics.girosGratis)} colorClass="text-emerald-500" indent />
-          )}
-          {Math.abs(metrics.ganhoConfirmacao) >= 0.01 && (
-            <MetricRow label="Ganho de Confirmação" value={formatCurrency(metrics.ganhoConfirmacao)} colorClass="text-emerald-500" indent />
-          )}
-          {Math.abs(metrics.ajustes) >= 0.01 && (
-            <MetricRow label="Ajustes" value={formatCurrency(metrics.ajustes)} colorClass={metrics.ajustes >= 0 ? "text-emerald-500" : "text-red-500"} indent />
-          )}
-          {Math.abs(metrics.ganhoFx) >= 0.01 && (
-            <MetricRow label="Ganho Cambial" value={formatCurrency(metrics.ganhoFx)} colorClass="text-emerald-500" indent />
-          )}
-          {Math.abs(metrics.perdaFx) >= 0.01 && (
-            <MetricRow label="Perda Cambial" value={`−${formatCurrency(metrics.perdaFx)}`} colorClass="text-red-500" indent />
-          )}
-          {Math.abs(metrics.perdaOp) >= 0.01 && (
-            <MetricRow label="Perdas Operacionais" value={`−${formatCurrency(metrics.perdaOp)}`} colorClass="text-red-500" indent />
-          )}
-          <div className="border-t border-border/30 mt-1.5 pt-1.5">
-            <MetricRow 
-              label="Fluxo Líquido Ajustado" 
-              value={formatCurrency(metrics.fluxoLiquidoAjustado)} 
-              colorClass={metrics.fluxoLiquidoAjustado >= 0 ? "text-emerald-500" : "text-red-500"}
-              bold
-            />
+          {hasExtras && (
             <p className="text-[9px] text-muted-foreground/70 mt-0.5">
               Saques − (Depósitos + Créditos Extras)
             </p>
-          </div>
+          )}
         </div>
-      )}
+      </div>
 
       {/* ─── Seção 4: Retorno de Capital ─── */}
       <div className="border-t border-border/40 pt-3">
