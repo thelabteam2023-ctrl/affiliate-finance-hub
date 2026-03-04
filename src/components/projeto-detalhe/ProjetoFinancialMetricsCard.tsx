@@ -62,7 +62,7 @@ async function fetchFinancialMetrics(projetoId: string): Promise<FinancialMetric
     .eq("tipo_transacao", "DEPOSITO")
     .eq("status", "CONFIRMADO")
     .in("destino_bookmaker_id", bookmakerIds)
-    .or(`projeto_id_snapshot.eq.${projetoId},projeto_id_snapshot.is.null`);
+    .eq("projeto_id_snapshot", projetoId);
 
   const depositosTotal = (depositos || []).reduce((acc, d) => acc + (d.valor || 0), 0);
 
@@ -73,7 +73,7 @@ async function fetchFinancialMetrics(projetoId: string): Promise<FinancialMetric
     .eq("tipo_transacao", "SAQUE")
     .eq("status", "CONFIRMADO")
     .in("origem_bookmaker_id", bookmakerIds)
-    .or(`projeto_id_snapshot.eq.${projetoId},projeto_id_snapshot.is.null`);
+    .eq("projeto_id_snapshot", projetoId);
 
   const saquesRecebidos = (saques || []).reduce((acc, s) => acc + (s.valor_confirmado ?? s.valor ?? 0), 0);
 
@@ -84,7 +84,7 @@ async function fetchFinancialMetrics(projetoId: string): Promise<FinancialMetric
     .eq("tipo_transacao", "SAQUE")
     .eq("status", "PENDENTE")
     .in("origem_bookmaker_id", bookmakerIds)
-    .or(`projeto_id_snapshot.eq.${projetoId},projeto_id_snapshot.is.null`);
+    .eq("projeto_id_snapshot", projetoId);
 
   const saquesPendentes = (saquesPend || []).reduce((acc, s) => acc + (s.valor || 0), 0);
 

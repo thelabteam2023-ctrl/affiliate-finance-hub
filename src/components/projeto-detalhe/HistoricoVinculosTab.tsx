@@ -102,7 +102,7 @@ export function HistoricoVinculosTab({ projetoId }: HistoricoVinculosTabProps) {
         .eq("tipo_transacao", "DEPOSITO")
         .in("status", ["CONFIRMADO", "PENDENTE", "LIQUIDADO"])
         .in("destino_bookmaker_id", bookmakerIds)
-        .or(`projeto_id_snapshot.eq.${projetoId},projeto_id_snapshot.is.null`);
+        .eq("projeto_id_snapshot", projetoId);
 
       // Saques - valor original, filtrado pelo projeto
       const { data: saques } = await supabase
@@ -111,7 +111,7 @@ export function HistoricoVinculosTab({ projetoId }: HistoricoVinculosTabProps) {
         .eq("tipo_transacao", "SAQUE")
         .in("status", ["CONFIRMADO", "PENDENTE", "LIQUIDADO"])
         .in("origem_bookmaker_id", bookmakerIds)
-        .or(`projeto_id_snapshot.eq.${projetoId},projeto_id_snapshot.is.null`);
+        .eq("projeto_id_snapshot", projetoId);
 
       // Lucro de apostas - priorizar pl_consolidado para evitar inflação em surebets
       const { data: apostasData } = await supabase
