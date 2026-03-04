@@ -174,7 +174,7 @@ export function ProjetoFinancialMetricsCard({ projetoId }: ProjetoFinancialMetri
     let cumulativeFlow = 0;
     let breakEvenDate: string | null = null;
     let firstTransactionDate: string | null = null;
-    const timeline = rawMetrics.breakEvenTimeline;
+    const timeline = rawMetrics.breakEvenTimeline || [];
     
     for (const entry of timeline) {
       if (!firstTransactionDate) firstTransactionDate = entry.data_transacao;
