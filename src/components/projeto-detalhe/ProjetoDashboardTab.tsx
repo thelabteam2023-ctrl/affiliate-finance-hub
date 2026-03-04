@@ -552,7 +552,7 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
         style={{ opacity: isTransitioning ? 0.5 : 1 }}
       >
       {/* Indicadores Financeiros Reais — Separação Operacional × Financeiro */}
-      <ProjetoFinancialMetricsCard projetoId={projetoId} formatCurrency={formatCurrency} />
+      <ProjetoFinancialMetricsCard projetoId={projetoId} />
 
       <VisaoGeralCharts 
         apostas={apostasParaGraficos}

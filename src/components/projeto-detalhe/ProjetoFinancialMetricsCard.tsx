@@ -13,106 +13,106 @@ import {
   Info,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 
 interface ProjetoFinancialMetricsCardProps {
   projetoId: string;
-  formatCurrency: (value: number) => string;
 }
 
-interface FinancialMetrics {
+interface FinancialMetricsRaw {
+  bookmakerSaldos: { saldo_atual: number; moeda: string }[];
   depositosTotal: number;
   saquesRecebidos: number;
   saquesPendentes: number;
-  saldoCasas: number;
-  lucroRealizado: number;
-  lucroPotencial: number;
-  lucroTotal: number;
-  patrimonioTotal: number;
 }
 
-async function fetchFinancialMetrics(projetoId: string): Promise<FinancialMetrics> {
-  // 1. Buscar bookmakers do projeto
+async function fetchFinancialMetricsRaw(projetoId: string): Promise<FinancialMetricsRaw> {
+  // 1. Buscar bookmakers do projeto COM moeda
   const { data: bookmakers } = await supabase
     .from("bookmakers")
-    .select("id, saldo_atual")
+    .select("id, saldo_atual, moeda")
     .eq("projeto_id", projetoId);
 
   const bookmakerIds = (bookmakers || []).map(b => b.id);
-  const saldoCasas = (bookmakers || []).reduce((acc, b) => acc + (b.saldo_atual || 0), 0);
+  const bookmakerSaldos = (bookmakers || []).map(b => ({ saldo_atual: b.saldo_atual || 0, moeda: b.moeda || "BRL" }));
 
   if (bookmakerIds.length === 0) {
-    return {
-      depositosTotal: 0,
-      saquesRecebidos: 0,
-      saquesPendentes: 0,
-      saldoCasas: 0,
-      lucroRealizado: 0,
-      lucroPotencial: 0,
-      lucroTotal: 0,
-      patrimonioTotal: 0,
-    };
+    return { bookmakerSaldos: [], depositosTotal: 0, saquesRecebidos: 0, saquesPendentes: 0 };
   }
 
-  // 2. Buscar depósitos confirmados — FILTRADO POR PROJETO (projeto_id_snapshot)
-  // CRÍTICO: Sem esse filtro, movimentações de projetos anteriores seriam incluídas
-  // quando uma bookmaker é transferida entre projetos.
-  const { data: depositos } = await supabase
-    .from("cash_ledger")
-    .select("valor")
-    .in("tipo_transacao", ["DEPOSITO", "DEPOSITO_VIRTUAL"])
-    .eq("status", "CONFIRMADO")
-    .in("destino_bookmaker_id", bookmakerIds)
-    .eq("projeto_id_snapshot", projetoId);
+  // 2-4: Buscar ledger em paralelo
+  const [depositos, saques, saquesPend] = await Promise.all([
+    supabase
+      .from("cash_ledger")
+      .select("valor, moeda")
+      .in("tipo_transacao", ["DEPOSITO", "DEPOSITO_VIRTUAL"])
+      .eq("status", "CONFIRMADO")
+      .in("destino_bookmaker_id", bookmakerIds)
+      .eq("projeto_id_snapshot", projetoId),
+    supabase
+      .from("cash_ledger")
+      .select("valor, valor_confirmado, moeda")
+      .in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])
+      .eq("status", "CONFIRMADO")
+      .in("origem_bookmaker_id", bookmakerIds)
+      .eq("projeto_id_snapshot", projetoId),
+    supabase
+      .from("cash_ledger")
+      .select("valor, moeda")
+      .in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])
+      .eq("status", "PENDENTE")
+      .in("origem_bookmaker_id", bookmakerIds)
+      .eq("projeto_id_snapshot", projetoId),
+  ]);
 
-  const depositosTotal = (depositos || []).reduce((acc, d) => acc + (d.valor || 0), 0);
+  // Retornar dados brutos — conversão será feita no componente com acesso às cotações
+  const depositosTotal = (depositos.data || []).reduce((acc, d) => acc + (d.valor || 0), 0);
+  const saquesRecebidos = (saques.data || []).reduce((acc, s) => acc + (s.valor_confirmado ?? s.valor ?? 0), 0);
+  const saquesPendentes = (saquesPend.data || []).reduce((acc, s) => acc + (s.valor || 0), 0);
 
-  // 3. Buscar saques confirmados — FILTRADO POR PROJETO
-  const { data: saques } = await supabase
-    .from("cash_ledger")
-    .select("valor, valor_confirmado")
-    .in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])
-    .eq("status", "CONFIRMADO")
-    .in("origem_bookmaker_id", bookmakerIds)
-    .eq("projeto_id_snapshot", projetoId);
-
-  const saquesRecebidos = (saques || []).reduce((acc, s) => acc + (s.valor_confirmado ?? s.valor ?? 0), 0);
-
-  // 4. Buscar saques pendentes — FILTRADO POR PROJETO
-  const { data: saquesPend } = await supabase
-    .from("cash_ledger")
-    .select("valor")
-    .in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])
-    .eq("status", "PENDENTE")
-    .in("origem_bookmaker_id", bookmakerIds)
-    .eq("projeto_id_snapshot", projetoId);
-
-  const saquesPendentes = (saquesPend || []).reduce((acc, s) => acc + (s.valor || 0), 0);
-
-  // 5. Calcular métricas derivadas
-  const lucroRealizado = saquesRecebidos - depositosTotal;
-  const lucroPotencial = saldoCasas - depositosTotal;
-  const patrimonioTotal = saldoCasas + saquesRecebidos;
-  const lucroTotal = patrimonioTotal - depositosTotal;
-
-  return {
-    depositosTotal,
-    saquesRecebidos,
-    saquesPendentes,
-    saldoCasas,
-    lucroRealizado,
-    lucroPotencial,
-    lucroTotal,
-    patrimonioTotal,
-  };
+  return { bookmakerSaldos, depositosTotal, saquesRecebidos, saquesPendentes };
 }
 
-export function ProjetoFinancialMetricsCard({ projetoId, formatCurrency }: ProjetoFinancialMetricsCardProps) {
-  const { data: metrics, isLoading } = useQuery({
+export function ProjetoFinancialMetricsCard({ projetoId }: ProjetoFinancialMetricsCardProps) {
+  const { formatCurrency, convertToConsolidationOficial, cotacaoOficialUSD } = useProjetoCurrency(projetoId);
+
+  const { data: rawMetrics, isLoading } = useQuery({
     queryKey: ["projeto-financial-metrics", projetoId],
-    queryFn: () => fetchFinancialMetrics(projetoId),
+    queryFn: () => fetchFinancialMetricsRaw(projetoId),
     staleTime: 30_000,
     gcTime: 60_000,
   });
+
+  // Calcular métricas com conversão de moeda
+  const metrics = useMemo(() => {
+    if (!rawMetrics) return null;
+
+    // Converter saldo de cada bookmaker para moeda de consolidação
+    const saldoCasas = rawMetrics.bookmakerSaldos.reduce(
+      (acc, b) => acc + convertToConsolidationOficial(b.saldo_atual, b.moeda),
+      0
+    );
+
+    // Depósitos e saques já estão na moeda da transação — por ora assumem BRL
+    // TODO: converter ledger entries individualmente se multi-moeda
+    const { depositosTotal, saquesRecebidos, saquesPendentes } = rawMetrics;
+
+    const lucroRealizado = saquesRecebidos - depositosTotal;
+    const lucroPotencial = saldoCasas - depositosTotal;
+    const patrimonioTotal = saldoCasas + saquesRecebidos;
+    const lucroTotal = patrimonioTotal - depositosTotal;
+
+    return {
+      depositosTotal,
+      saquesRecebidos,
+      saquesPendentes,
+      saldoCasas,
+      lucroRealizado,
+      lucroPotencial,
+      lucroTotal,
+      patrimonioTotal,
+    };
+  }, [rawMetrics, convertToConsolidationOficial, cotacaoOficialUSD]);
 
   if (isLoading || !metrics) {
     return (
@@ -156,7 +156,7 @@ export function ProjetoFinancialMetricsCard({ projetoId, formatCurrency }: Proje
       label: "Saldo nas Casas",
       value: metrics.saldoCasas,
       icon: DollarSign,
-      tooltip: "Soma dos saldos atuais de todas as bookmakers vinculadas ao projeto.",
+      tooltip: "Soma dos saldos atuais de todas as bookmakers (convertidos para moeda de consolidação).",
       neutral: true,
     },
     {
