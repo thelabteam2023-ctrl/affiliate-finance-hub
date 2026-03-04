@@ -149,12 +149,12 @@ function ExtrasCollapsible({ metrics, formatCurrency }: { metrics: any; formatCu
           {Math.abs(metrics.ajustes) >= 0.01 && (
             <MetricRow label="Ajustes" value={formatCurrency(metrics.ajustes)} colorClass={metrics.ajustes >= 0 ? "text-emerald-500" : "text-red-500"} indent />
           )}
-          {Math.abs(metrics.ganhoFx) >= 0.01 && (
-            <MetricRow label="Ganho Cambial" value={formatCurrency(metrics.ganhoFx)} colorClass="text-emerald-500" indent />
-          )}
-          {Math.abs(metrics.perdaFx) >= 0.01 && (
-            <MetricRow label="Perda Cambial" value={`−${formatCurrency(metrics.perdaFx)}`} colorClass="text-red-500" indent />
-          )}
+          {(() => {
+            const fxLiquido = metrics.ganhoFx - metrics.perdaFx;
+            return Math.abs(fxLiquido) >= 0.01 ? (
+              <MetricRow label="Resultado Cambial" value={fxLiquido < 0 ? `−${formatCurrency(Math.abs(fxLiquido))}` : formatCurrency(fxLiquido)} colorClass={fxLiquido >= 0 ? "text-emerald-500" : "text-red-500"} indent />
+            ) : null;
+          })()}
           {Math.abs(metrics.perdaOp) >= 0.01 && (
             <MetricRow label="Perdas Operacionais" value={`−${formatCurrency(metrics.perdaOp)}`} colorClass="text-red-500" indent />
           )}
