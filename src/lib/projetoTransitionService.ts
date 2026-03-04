@@ -76,19 +76,21 @@ export async function preCheckUnlink(bookmakerId: string): Promise<UnlinkPreChec
   const pendingDepositosTotal = (depositosPendentes || []).reduce((acc, d) => acc + (d.valor || 0), 0);
 
   // 6. Calcular saldo virtual efetivo
-  // SAQUE_VIRTUAL = saldo_atual - saques_pendentes (já contabilizados no projeto)
-  // Depósitos pendentes não afetam saldo_atual (só creditam na confirmação)
-  const saldoVirtualEfetivo = Math.max(0, bm.saldo_atual - pendingSaquesTotal);
+  // SAQUE_VIRTUAL = saldo_atual - saques_pendentes + depositos_pendentes
+  // - Saques pendentes: já contabilizados no projeto, serão confirmados depois → descontar para evitar dupla contagem
+  // - Depósitos pendentes: quando confirmados, creditarão saldo e serão atribuídos ao projeto antigo (snapshot travado)
+  //   → incluir no SAQUE_VIRTUAL para "fechar" o ciclo, evitando que o crédito futuro fique sem contrapartida
+  const saldoVirtualEfetivo = Math.max(0, bm.saldo_atual - pendingSaquesTotal + pendingDepositosTotal);
 
   // 7. Warnings
   if (totalPendingBets > 0) {
-    warnings.push(`${totalPendingBets} aposta(s) pendente(s) — resultado será atribuído sem projeto`);
+    warnings.push(`⚠️ ${totalPendingBets} aposta(s) pendente(s) — se liquidadas após desvinculação, o resultado NÃO será atribuído a nenhum projeto`);
   }
   if (pendingSaquesTotal > 0) {
-    warnings.push(`Saques pendentes: ${pendingSaquesTotal.toFixed(2)} ${bm.moeda} (excluídos do saque virtual)`);
+    warnings.push(`Saques pendentes: ${pendingSaquesTotal.toFixed(2)} ${bm.moeda} (descontados do saque virtual)`);
   }
   if (pendingDepositosTotal > 0) {
-    warnings.push(`Depósitos pendentes: ${pendingDepositosTotal.toFixed(2)} ${bm.moeda} (serão travados ao projeto)`);
+    warnings.push(`Depósitos pendentes: ${pendingDepositosTotal.toFixed(2)} ${bm.moeda} (incluídos no saque virtual, serão atribuídos a este projeto quando confirmados)`);
   }
 
   return {
