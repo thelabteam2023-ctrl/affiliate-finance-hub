@@ -220,12 +220,12 @@ export function ProjetoFinancialMetricsCard({ projetoId }: ProjetoFinancialMetri
       label: "Capital na Operação",
       value: capitalTotal,
       icon: ArrowDownCircle,
-      tooltip: `Depósitos (${formatCurrency(metrics.depositosTotal)}) + Créditos extras sem depósito: Cashback (${formatCurrency(metrics.cashbackLiquido)}), Giros (${formatCurrency(metrics.girosGratis)}), Ajustes (${formatCurrency(metrics.ajustes)}), Ganho Confirmação (${formatCurrency(metrics.ganhoConfirmacao)}), Ganho FX (${formatCurrency(metrics.ganhoFx)}).`,
+      richTooltip: true,
       neutral: true,
       composite: true,
       compositeValues: {
         depositos: metrics.depositosTotal,
-        extras: capitalTotal - metrics.depositosTotal,
+        extras: extrasPositivos,
       },
     },
     {
@@ -320,52 +320,50 @@ export function ProjetoFinancialMetricsCard({ projetoId }: ProjetoFinancialMetri
                     </span>
                   </div>
                 </TooltipTrigger>
-                <TooltipContent side="top" className="text-xs max-w-xs">
-                  {item.tooltip}
-                </TooltipContent>
+                {(item as any).richTooltip ? (
+                  <TooltipContent side="top" className="text-xs max-w-sm p-3">
+                    <p className="font-semibold mb-2">Capital na Operação</p>
+                    <div className="space-y-1">
+                      <div className="flex justify-between gap-4">
+                        <span className="text-muted-foreground">Depósitos</span>
+                        <span className="font-mono">{formatCurrency(metrics.depositosTotal)}</span>
+                      </div>
+                      {reconciliationItems.map((ri) => {
+                        const riPositive = ri.value >= 0;
+                        return (
+                          <div key={ri.label} className="flex justify-between gap-4">
+                            <span className="text-muted-foreground">{ri.label}</span>
+                            <span className={`font-mono ${riPositive ? "text-emerald-500" : "text-red-500"}`}>
+                              {riPositive ? "+" : ""}{formatCurrency(ri.value)}
+                            </span>
+                          </div>
+                        );
+                      })}
+                      <div className="border-t border-border/40 pt-1 mt-1 space-y-1">
+                        <div className="flex justify-between gap-4 font-medium">
+                          <span>Total Créditos Extras</span>
+                          <span className={`font-mono font-bold ${metrics.totalExtras >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                            {metrics.totalExtras >= 0 ? "+" : ""}{formatCurrency(metrics.totalExtras)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between gap-4 font-medium">
+                          <span>Lucro Puro (só apostas)</span>
+                          <span className={`font-mono font-bold ${lucroApenas >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                            {formatCurrency(lucroApenas)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </TooltipContent>
+                ) : (
+                  <TooltipContent side="top" className="text-xs max-w-xs">
+                    {item.tooltip}
+                  </TooltipContent>
+                )}
               </Tooltip>
             );
           })}
         </div>
-
-        {/* Reconciliation breakdown */}
-{reconciliationItems.length > 0 && (
-          <div className="rounded-lg border border-border/40 bg-muted/20 px-3 py-2.5">
-            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-              Créditos Extras (sem depósito)
-            </p>
-            <div className="space-y-1">
-              {reconciliationItems.map((item) => {
-                const isPositive = item.value >= 0;
-                return (
-                  <div key={item.label} className="flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-1.5 text-muted-foreground">
-                      <item.icon className="h-3 w-3" />
-                      <span>{item.label}</span>
-                    </div>
-                    <span className={`font-mono font-medium ${isPositive ? "text-emerald-500" : "text-red-500"}`}>
-                      {isPositive ? "+" : ""}{formatCurrency(item.value)}
-                    </span>
-                  </div>
-                );
-              })}
-              <div className="border-t border-border/40 pt-1 mt-1 space-y-1">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground font-medium">Total Créditos Extras</span>
-                  <span className={`font-mono font-bold ${metrics.totalExtras >= 0 ? "text-emerald-500" : "text-red-500"}`}>
-                    {metrics.totalExtras >= 0 ? "+" : ""}{formatCurrency(metrics.totalExtras)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground font-medium">Lucro Puro (só apostas)</span>
-                  <span className={`font-mono font-bold ${lucroApenas >= 0 ? "text-emerald-500" : "text-red-500"}`}>
-                    {formatCurrency(lucroApenas)}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </CardContent>
     </Card>
   );
