@@ -4,6 +4,7 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { ResponsiveTabsList, TabItem } from "@/components/ui/responsive-tabs";
@@ -40,6 +41,7 @@ import {
   Sparkles,
   Zap,
   Puzzle,
+  Plus,
 } from "lucide-react";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { useCotacoes } from "@/hooks/useCotacoes";
@@ -52,6 +54,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { differenceInDays } from "date-fns";
 import { ProjetoDashboardTab } from "@/components/projeto-detalhe/ProjetoDashboardTab";
+import { FinancialMetricsPopover } from "@/components/projeto-detalhe/FinancialMetricsPopover";
 import { ProjetoApostasTab } from "@/components/projeto-detalhe/ProjetoApostasTab";
 import { ProjetoVinculosTab } from "@/components/projeto-detalhe/ProjetoVinculosTab";
 import { ProjetoIncidentesTab } from "@/components/projeto-detalhe/ProjetoIncidentesTab";
@@ -852,6 +855,18 @@ export default function ProjetoDetalhe() {
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
+
+            {/* + Mais Indicadores */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <button className="flex items-center justify-center h-7 w-7 rounded-md border border-border/50 bg-muted/40 hover:bg-accent transition-colors flex-shrink-0">
+                  <Plus className="h-3.5 w-3.5 text-muted-foreground" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent side="bottom" align="end" className="p-0 w-auto" sideOffset={8}>
+                <FinancialMetricsPopover projetoId={id!} />
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
       )}
