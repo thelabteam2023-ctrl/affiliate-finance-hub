@@ -235,7 +235,7 @@ export function ProjetoCiclosTab({ projetoId, formatCurrency: formatCurrencyProp
       const [apostasResult, perdasResult, bookmakersResult, cashbackResult, girosResult] = await Promise.all([
         supabase
           .from("apostas_unificada")
-          .select("lucro_prejuizo, stake, stake_total, status, forma_registro")
+          .select("lucro_prejuizo, pl_consolidado, lucro_prejuizo_brl_referencia, stake, stake_total, stake_consolidado, status, forma_registro")
           .eq("projeto_id", projetoId)
           .gte("data_aposta", startUTC)
           .lte("data_aposta", endUTC),
@@ -305,18 +305,18 @@ export function ProjetoCiclosTab({ projetoId, formatCurrency: formatCurrencyProp
       // Count all entries (including pending)
       const qtdApostas = apostas.length;
       
-      // Calculate volume from all entries
+      // Calculate volume from all entries (usar consolidado para multimoeda)
       const volume = apostas.reduce((acc, a) => {
         if (a.forma_registro === 'ARBITRAGEM') {
-          return acc + (a.stake_total || 0);
+          return acc + (a.stake_consolidado || a.stake_total || 0);
         }
-        return acc + (a.stake || 0);
+        return acc + (a.stake_consolidado || a.stake || 0);
       }, 0);
       
-      // Calculate profit only from finalized entries (lucro bruto das apostas)
+      // Calculate profit only from finalized entries - usar valor consolidado para paridade com Visão Geral
       const lucroApostas = apostas
         .filter(a => a.status === "LIQUIDADA")
-        .reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0);
+        .reduce((acc, a) => acc + (a.pl_consolidado ?? a.lucro_prejuizo_brl_referencia ?? a.lucro_prejuizo ?? 0), 0);
       
       // NOVO: Calcular lucro de cashback (sempre >= 0)
       const lucroCashback = cashbacks.reduce((acc, cb) => acc + Math.max(0, cb.valor || 0), 0);
