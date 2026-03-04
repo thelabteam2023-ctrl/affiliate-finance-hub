@@ -29,18 +29,12 @@ export function ProtectedRoute({
   requireSystemOwner,
   fallback 
 }: ProtectedRouteProps) {
-  const { user, loading, initialized, role, hasPermission, workspace, isSystemOwner, isBlocked } = useAuth();
+  const { user, loading, initialized, role, hasPermission, workspace, isSystemOwner, isBlocked, status } = useAuth();
   const location = useLocation();
   const [permissionChecked, setPermissionChecked] = useState(false);
   const [hasAccess, setHasAccess] = useState(true);
   const [denyReason, setDenyReason] = useState<string | null>(null);
   const [denyCode, setDenyCode] = useState<string | null>(null);
-
-  // Access the raw status from context to detect 'error' state
-  const authContext = useAuth() as any;
-  const authStatus: string | undefined = authContext?.status;
-  // Derive error from initialized + no user + no loading (error state keeps user if session existed)
-  const isErrorWithoutUser = initialized && !loading && !user && authStatus === undefined;
 
   useEffect(() => {
     const checkAccess = async () => {
@@ -127,43 +121,53 @@ export function ProtectedRoute({
     );
   }
 
-  // ── ERROR STATE: show retry screen instead of redirecting to /auth ──
-  // This prevents the infinite redirect loop when bootstrap fails but session exists
+  // ── ERROR STATE: show retry screen only when status is truly 'error' ──
   if (!user && !loading && initialized) {
-    // Check if there's a Supabase token in localStorage (session might exist but bootstrap failed)
     const hasStoredSession = Object.keys(localStorage).some(key => 
       key.startsWith('sb-') && key.endsWith('-auth-token')
     );
 
     if (hasStoredSession) {
-      // Session exists in storage but AuthContext failed to load it — show error with retry
+      // If status is 'error', show the error/retry screen
+      if (status === 'error') {
+        return (
+          <div className="min-h-screen flex items-center justify-center bg-background">
+            <div className="flex flex-col items-center gap-4 max-w-md text-center p-6">
+              <AlertTriangle className="h-10 w-10 text-destructive" />
+              <h2 className="text-xl font-semibold">Erro ao carregar sessão</h2>
+              <p className="text-muted-foreground text-sm">
+                Não foi possível verificar sua autenticação. Isso pode ser um problema temporário de conexão.
+              </p>
+              <div className="flex gap-3">
+                <Button 
+                  onClick={() => window.location.reload()} 
+                  className="gap-2"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Tentar novamente
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={async () => {
+                    const { supabase } = await import("@/integrations/supabase/client");
+                    await supabase.auth.signOut();
+                    window.location.href = "/auth";
+                  }}
+                >
+                  Fazer login novamente
+                </Button>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      // Status is 'signed_out' but token exists — transient state during login, show spinner
       return (
         <div className="min-h-screen flex items-center justify-center bg-background">
-          <div className="flex flex-col items-center gap-4 max-w-md text-center p-6">
-            <AlertTriangle className="h-10 w-10 text-destructive" />
-            <h2 className="text-xl font-semibold">Erro ao carregar sessão</h2>
-            <p className="text-muted-foreground text-sm">
-              Não foi possível verificar sua autenticação. Isso pode ser um problema temporário de conexão.
-            </p>
-            <div className="flex gap-3">
-              <Button 
-                onClick={() => window.location.reload()} 
-                className="gap-2"
-              >
-                <RefreshCw className="h-4 w-4" />
-                Tentar novamente
-              </Button>
-              <Button 
-                variant="outline"
-                onClick={async () => {
-                  const { supabase } = await import("@/integrations/supabase/client");
-                  await supabase.auth.signOut();
-                  window.location.href = "/auth";
-                }}
-              >
-                Fazer login novamente
-              </Button>
-            </div>
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-muted-foreground">Carregando...</p>
           </div>
         </div>
       );
