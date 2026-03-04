@@ -48,7 +48,7 @@ interface RolloverPorCasa {
 }
 
 export function useSaldoOperavel(projetoId: string) {
-  const { convertToConsolidation, moedaConsolidacao, cotacaoAtual } = useProjetoCurrency(projetoId);
+  const { convertToConsolidationOficial, moedaConsolidacao, cotacaoOficialUSD } = useProjetoCurrency(projetoId);
 
   // Usa a RPC canônica que já calcula corretamente todos os componentes do saldo
   // CRITICAL FIX: Increased staleTime to prevent frequent refetches triggered by rate changes
@@ -115,12 +115,12 @@ export function useSaldoOperavel(projetoId: string) {
     bookmakers.forEach((bk) => {
       const moeda = bk.moeda || "BRL";
       
-      // Converte cada componente para a moeda de consolidação
-      saldoOperavel += convertToConsolidation(Number(bk.saldo_operavel) || 0, moeda);
-      saldoReal += convertToConsolidation(Number(bk.saldo_real) || 0, moeda);
-      saldoBonus += convertToConsolidation(Number(bk.saldo_bonus) || 0, moeda);
-      saldoFreebet += convertToConsolidation(Number(bk.saldo_freebet) || 0, moeda);
-      saldoEmAposta += convertToConsolidation(Number(bk.saldo_em_aposta) || 0, moeda);
+      // Converte cada componente para a moeda de consolidação usando cotação OFICIAL
+      saldoOperavel += convertToConsolidationOficial(Number(bk.saldo_operavel) || 0, moeda);
+      saldoReal += convertToConsolidationOficial(Number(bk.saldo_real) || 0, moeda);
+      saldoBonus += convertToConsolidationOficial(Number(bk.saldo_bonus) || 0, moeda);
+      saldoFreebet += convertToConsolidationOficial(Number(bk.saldo_freebet) || 0, moeda);
+      saldoEmAposta += convertToConsolidationOficial(Number(bk.saldo_em_aposta) || 0, moeda);
     });
 
     return {
@@ -131,7 +131,7 @@ export function useSaldoOperavel(projetoId: string) {
       saldoEmAposta,
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bookmakers, moedaConsolidacao, cotacaoAtual]); // Primitive deps instead of function reference
+  }, [bookmakers, moedaConsolidacao, cotacaoOficialUSD]); // Primitive deps instead of function reference
 
   // Mapear rollover por bookmaker_id
   const rolloverPorCasa = useMemo(() => {
@@ -174,13 +174,13 @@ export function useSaldoOperavel(projetoId: string) {
     return bookmakers
       .map((bk) => {
         const moeda = bk.moeda || "BRL";
-        // Converter todos os componentes para moeda de consolidação
-        const saldoOperavel = convertToConsolidation(Number(bk.saldo_operavel) || 0, moeda);
-        const saldoReal = convertToConsolidation(Number(bk.saldo_real) || 0, moeda);
-        const saldoDisponivel = convertToConsolidation(Number(bk.saldo_disponivel) || 0, moeda);
-        const saldoEmAposta = convertToConsolidation(Number(bk.saldo_em_aposta) || 0, moeda);
-        const saldoFreebet = convertToConsolidation(Number(bk.saldo_freebet) || 0, moeda);
-        const saldoBonus = convertToConsolidation(Number(bk.saldo_bonus) || 0, moeda);
+        // Converter todos os componentes para moeda de consolidação (cotação OFICIAL)
+        const saldoOperavel = convertToConsolidationOficial(Number(bk.saldo_operavel) || 0, moeda);
+        const saldoReal = convertToConsolidationOficial(Number(bk.saldo_real) || 0, moeda);
+        const saldoDisponivel = convertToConsolidationOficial(Number(bk.saldo_disponivel) || 0, moeda);
+        const saldoEmAposta = convertToConsolidationOficial(Number(bk.saldo_em_aposta) || 0, moeda);
+        const saldoFreebet = convertToConsolidationOficial(Number(bk.saldo_freebet) || 0, moeda);
+        const saldoBonus = convertToConsolidationOficial(Number(bk.saldo_bonus) || 0, moeda);
         
         // Valores nativos (sem conversão) para exibição na lista "Saldo por Casa"
         const saldoRealNativo = Number(bk.saldo_real) || 0;
@@ -217,7 +217,7 @@ export function useSaldoOperavel(projetoId: string) {
       })
       .filter((casa) => casa.saldoOperavel > 0 || casa.saldoEmAposta > 0)
       .sort((a, b) => b.saldoOperavel - a.saldoOperavel);
-  }, [bookmakers, convertToConsolidation, rolloverPorCasa]);
+  }, [bookmakers, convertToConsolidationOficial, rolloverPorCasa]);
 
   return {
     // Valor principal do KPI
