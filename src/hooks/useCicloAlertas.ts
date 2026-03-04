@@ -70,7 +70,7 @@ export function useCicloAlertas() {
         const [apostasResult, cashbackResult, girosResult] = await Promise.all([
           supabase
             .from("apostas_unificada")
-            .select("lucro_prejuizo, stake, stake_total, status, resultado, estrategia")
+            .select("lucro_prejuizo, pl_consolidado, lucro_prejuizo_brl_referencia, stake, stake_total, stake_consolidado, status, resultado, estrategia")
             .eq("projeto_id", ciclo.projeto_id)
             .gte("data_aposta", startUTC)
             .lte("data_aposta", endUTC),
@@ -100,17 +100,17 @@ export function useCicloAlertas() {
         const apostasMultiplas = allApostas.filter(a => a.estrategia === "MULTIPLA");
         const surebets = allApostas.filter(a => a.estrategia === "SUREBET");
 
-        // Calcular volume total (todas as apostas, independente de status)
+        // Calcular volume total (todas as apostas, independente de status) - usar consolidado
         const volumeTotal = 
-          apostasSimples.reduce((acc, a) => acc + (a.stake || 0), 0) +
-          apostasMultiplas.reduce((acc, a) => acc + (a.stake || 0), 0) +
-          surebets.reduce((acc, a) => acc + (a.stake_total || 0), 0);
+          apostasSimples.reduce((acc, a) => acc + (a.stake_consolidado || a.stake || 0), 0) +
+          apostasMultiplas.reduce((acc, a) => acc + (a.stake_consolidado || a.stake || 0), 0) +
+          surebets.reduce((acc, a) => acc + (a.stake_consolidado || a.stake_total || 0), 0);
 
-        // Calcular lucro realizado (apenas apostas finalizadas)
+        // Calcular lucro realizado (apenas apostas finalizadas) - usar valor consolidado
         const lucroApostas = 
-          apostasSimples.filter(a => a.status === "LIQUIDADA").reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0) +
-          apostasMultiplas.filter(a => ["GREEN", "RED", "VOID", "MEIO_GREEN", "MEIO_RED"].includes(a.resultado || "")).reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0) +
-          surebets.filter(a => a.status === "LIQUIDADA").reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0);
+          apostasSimples.filter(a => a.status === "LIQUIDADA").reduce((acc, a) => acc + (a.pl_consolidado ?? a.lucro_prejuizo_brl_referencia ?? a.lucro_prejuizo ?? 0), 0) +
+          apostasMultiplas.filter(a => ["GREEN", "RED", "VOID", "MEIO_GREEN", "MEIO_RED"].includes(a.resultado || "")).reduce((acc, a) => acc + (a.pl_consolidado ?? a.lucro_prejuizo_brl_referencia ?? a.lucro_prejuizo ?? 0), 0) +
+          surebets.filter(a => a.status === "LIQUIDADA").reduce((acc, a) => acc + (a.pl_consolidado ?? a.lucro_prejuizo_brl_referencia ?? a.lucro_prejuizo ?? 0), 0);
 
         // Calcular lucro de cashback (sempre positivo)
         const lucroCashback = cashbacks.reduce((acc, cb) => acc + Math.max(0, cb.valor || 0), 0);
