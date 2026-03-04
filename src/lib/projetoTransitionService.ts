@@ -5,6 +5,9 @@
  * 1. SAQUE_VIRTUAL descontando saques/depositos pendentes
  * 2. Travamento de projeto_id_snapshot em transações pendentes
  * 3. Verificação de apostas pendentes
+ * 4. Proteção contra race conditions (idempotência)
+ * 5. Detecção de re-vinculação ao mesmo projeto
+ * 6. Tracking de saldo freebet
  */
 
 import { supabase } from "@/integrations/supabase/client";
@@ -16,6 +19,7 @@ export interface UnlinkPreCheck {
   pendingSaquesTotal: number;
   pendingDepositosTotal: number;
   saldoAtual: number;
+  saldoFreebet: number;
   saldoVirtualEfetivo: number;
   moeda: string;
   projetoId: string | null;
@@ -31,7 +35,7 @@ export async function preCheckUnlink(bookmakerId: string): Promise<UnlinkPreChec
   // 1. Dados da bookmaker
   const { data: bm } = await supabase
     .from("bookmakers")
-    .select("saldo_atual, moeda, projeto_id, workspace_id")
+    .select("saldo_atual, saldo_freebet, moeda, projeto_id, workspace_id")
     .eq("id", bookmakerId)
     .single();
 
@@ -77,9 +81,6 @@ export async function preCheckUnlink(bookmakerId: string): Promise<UnlinkPreChec
 
   // 6. Calcular saldo virtual efetivo
   // SAQUE_VIRTUAL = saldo_atual - saques_pendentes + depositos_pendentes
-  // - Saques pendentes: já contabilizados no projeto, serão confirmados depois → descontar para evitar dupla contagem
-  // - Depósitos pendentes: quando confirmados, creditarão saldo e serão atribuídos ao projeto antigo (snapshot travado)
-  //   → incluir no SAQUE_VIRTUAL para "fechar" o ciclo, evitando que o crédito futuro fique sem contrapartida
   const saldoVirtualEfetivo = Math.max(0, bm.saldo_atual - pendingSaquesTotal + pendingDepositosTotal);
 
   // 7. Warnings
@@ -87,18 +88,22 @@ export async function preCheckUnlink(bookmakerId: string): Promise<UnlinkPreChec
     warnings.push(`⚠️ ${totalPendingBets} aposta(s) pendente(s) — se liquidadas após desvinculação, o resultado NÃO será atribuído a nenhum projeto`);
   }
   if (pendingSaquesTotal > 0) {
-    warnings.push(`Saques pendentes: ${pendingSaquesTotal.toFixed(2)} ${bm.moeda} (descontados do saque virtual)`);
+    warnings.push(`Saques pendentes: ${pendingSaquesTotal.toFixed(2)} ${bm.moeda} (descontados do saque virtual). Se cancelados após desvinculação, o valor ficará sub-contado no projeto.`);
   }
   if (pendingDepositosTotal > 0) {
     warnings.push(`Depósitos pendentes: ${pendingDepositosTotal.toFixed(2)} ${bm.moeda} (incluídos no saque virtual, serão atribuídos a este projeto quando confirmados)`);
   }
+  if ((bm.saldo_freebet || 0) > 0) {
+    warnings.push(`Saldo freebet: ${bm.saldo_freebet.toFixed(2)} ${bm.moeda} — freebets não são transferidas entre projetos e permanecerão na bookmaker`);
+  }
 
   return {
-    canUnlink: true, // Permitir sempre, mas com warnings
+    canUnlink: true,
     pendingBetsCount: totalPendingBets,
     pendingSaquesTotal,
     pendingDepositosTotal,
     saldoAtual: bm.saldo_atual,
+    saldoFreebet: bm.saldo_freebet || 0,
     saldoVirtualEfetivo,
     moeda: bm.moeda,
     projetoId: bm.projeto_id,
@@ -108,10 +113,34 @@ export async function preCheckUnlink(bookmakerId: string): Promise<UnlinkPreChec
 }
 
 /**
+ * Verifica se já existe um SAQUE_VIRTUAL ou DEPOSITO_VIRTUAL recente (< 10s)
+ * para evitar duplicatas por race condition.
+ */
+async function hasRecentVirtualTransaction(
+  bookmakerId: string,
+  tipoTransacao: "SAQUE_VIRTUAL" | "DEPOSITO_VIRTUAL",
+  windowSeconds = 10
+): Promise<boolean> {
+  const cutoff = new Date(Date.now() - windowSeconds * 1000).toISOString();
+
+  const column = tipoTransacao === "SAQUE_VIRTUAL" ? "origem_bookmaker_id" : "destino_bookmaker_id";
+
+  const { count } = await supabase
+    .from("cash_ledger")
+    .select("id", { count: "exact", head: true })
+    .eq(column, bookmakerId)
+    .eq("tipo_transacao", tipoTransacao)
+    .gte("created_at", cutoff);
+
+  return (count || 0) > 0;
+}
+
+/**
  * Executa a desvinculação com todas as proteções:
- * 1. Trava projeto_id_snapshot em transações PENDENTES
+ * 1. Trava projeto_id_snapshot em transações PENDENTES/LIQUIDADO
  * 2. Gera SAQUE_VIRTUAL com saldo efetivo (descontando pendentes)
  * 3. Desvincula a bookmaker
+ * 4. Proteção contra race condition (idempotência)
  */
 export async function executeUnlink(params: {
   bookmakerId: string;
@@ -124,8 +153,14 @@ export async function executeUnlink(params: {
 }): Promise<void> {
   const { bookmakerId, projetoId, workspaceId, userId, statusFinal, saldoVirtualEfetivo, moeda } = params;
 
+  // 0. Proteção contra race condition — verificar duplicata recente
+  const hasDuplicate = await hasRecentVirtualTransaction(bookmakerId, "SAQUE_VIRTUAL");
+  if (hasDuplicate) {
+    console.warn(`[projetoTransitionService] SAQUE_VIRTUAL duplicado detectado para bookmaker ${bookmakerId}. Operação ignorada.`);
+    return;
+  }
+
   // 1. TRAVAR projeto_id_snapshot em transações PENDENTES antes de desvincular
-  // Isso garante que confirmações futuras mantenham a atribuição ao projeto correto
   await supabase
     .from("cash_ledger")
     .update({ projeto_id_snapshot: projetoId })
@@ -149,7 +184,7 @@ export async function executeUnlink(params: {
 
   if (updateError) throw updateError;
 
-  // 3. SAQUE_VIRTUAL com saldo efetivo (já descontou saques pendentes)
+  // 3. SAQUE_VIRTUAL com saldo efetivo (já descontou saques pendentes + incluiu depósitos pendentes)
   if (saldoVirtualEfetivo > 0) {
     await registrarSaqueVirtualViaLedger({
       bookmakerId,
@@ -175,7 +210,11 @@ export async function executeUnlink(params: {
 
 /**
  * Executa a vinculação com DEPOSITO_VIRTUAL.
- * Também trava transações órfãs ao novo projeto.
+ * 
+ * Proteções:
+ * - Não atribui transações órfãs (evita dupla contagem)
+ * - Detecta re-vinculação ao mesmo projeto (skip se último projeto = atual)
+ * - Proteção contra race condition (idempotência)
  */
 export async function executeLink(params: {
   bookmakerId: string;
@@ -187,11 +226,47 @@ export async function executeLink(params: {
 }): Promise<void> {
   const { bookmakerId, projetoId, workspaceId, userId, saldoAtual, moeda } = params;
 
-  // NOTA: NÃO atribuímos transações órfãs (projeto_id_snapshot = null) ao novo projeto.
-  // O DEPOSITO_VIRTUAL já captura o baseline completo do saldo atual.
-  // Atribuir órfãs + DEPOSITO_VIRTUAL causaria dupla contagem.
+  // 0. Detectar re-vinculação ao mesmo projeto
+  // Se o último vínculo foi com o mesmo projeto e o SAQUE_VIRTUAL se anularia com o DEPOSITO_VIRTUAL,
+  // podemos pular a criação de transações virtuais desnecessárias.
+  const { data: ultimoVinculo } = await supabase
+    .from("projeto_bookmaker_historico")
+    .select("projeto_id, data_desvinculacao")
+    .eq("bookmaker_id", bookmakerId)
+    .not("data_desvinculacao", "is", null)
+    .order("data_desvinculacao", { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
-  // 1. DEPOSITO_VIRTUAL com saldo atual (baseline para o novo projeto)
+  if (ultimoVinculo?.projeto_id === projetoId) {
+    // Re-vinculação ao mesmo projeto — verificar se houve SAQUE_VIRTUAL recente
+    // Se sim, o DEPOSITO_VIRTUAL se anularia, gerando apenas ruído no ledger.
+    // Verificar se o saldo não mudou significativamente (tolerância de 0.01)
+    const { data: ultimoSaqueVirtual } = await supabase
+      .from("cash_ledger")
+      .select("valor")
+      .eq("origem_bookmaker_id", bookmakerId)
+      .eq("tipo_transacao", "SAQUE_VIRTUAL")
+      .eq("projeto_id_snapshot", projetoId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (ultimoSaqueVirtual && Math.abs(ultimoSaqueVirtual.valor - saldoAtual) < 0.01) {
+      console.info(`[projetoTransitionService] Re-vinculação ao mesmo projeto ${projetoId} detectada. Saldo idêntico — transações virtuais suprimidas.`);
+      return;
+    }
+  }
+
+  // 1. Proteção contra race condition
+  const hasDuplicate = await hasRecentVirtualTransaction(bookmakerId, "DEPOSITO_VIRTUAL");
+  if (hasDuplicate) {
+    console.warn(`[projetoTransitionService] DEPOSITO_VIRTUAL duplicado detectado para bookmaker ${bookmakerId}. Operação ignorada.`);
+    return;
+  }
+
+  // 2. DEPOSITO_VIRTUAL com saldo atual (baseline para o novo projeto)
+  // NOTA: NÃO atribuímos transações órfãs — o DEPOSITO_VIRTUAL é a única fonte de baseline.
   if (saldoAtual > 0) {
     await registrarDepositoVirtualViaLedger({
       bookmakerId,
