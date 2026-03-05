@@ -135,18 +135,16 @@ export async function estornarFreebetViaLedger(
     const descricao = typeof descricaoLegada === 'string' 
       ? descricaoLegada 
       : descricaoLegada?.descricao || 'Estorno de freebet';
-    const eventoOriginalId = typeof descricaoLegada === 'object' 
-      ? descricaoLegada?.eventoOriginalId 
-      : undefined;
 
     const result = await processFinancialEvent({
       bookmakerId,
-      tipoEvento: 'REVERSAL',
+      // IMPORTANTE: exclusão/cancelamento de freebet deve DEBITAR do pool FREEBET,
+      // não criar REVERSAL genérico (que pode inverter semântica no motor).
+      tipoEvento: 'FREEBET_EXPIRE',
       tipoUso: 'FREEBET',
       origem: 'FREEBET',
-      valor: -valor, // Negativo = débito (estorno remove saldo_freebet)
+      valor: -valor, // Negativo = débito (remove saldo_freebet)
       descricao,
-      reversedEventId: eventoOriginalId,
       idempotencyKey: `fb_estorno_${bookmakerId}_${Date.now()}`,
     });
 
