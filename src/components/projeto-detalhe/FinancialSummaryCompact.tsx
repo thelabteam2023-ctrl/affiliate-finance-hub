@@ -13,7 +13,7 @@ interface FinancialSummaryCompactProps {
 
 async function fetchCompactMetrics(projetoId: string) {
   const [bookmakers, depositos, saques, saquesPend] = await Promise.all([
-    supabase.from("bookmakers").select("saldo_atual, saldo_bonus, saldo_freebet, moeda").eq("projeto_id", projetoId),
+    supabase.from("bookmakers").select("saldo_atual, moeda").eq("projeto_id", projetoId),
     supabase.from("cash_ledger").select("valor, moeda")
       .in("tipo_transacao", ["DEPOSITO", "DEPOSITO_VIRTUAL"])
       .eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId),
@@ -26,7 +26,7 @@ async function fetchCompactMetrics(projetoId: string) {
   ]);
 
   return {
-    bookmakerSaldos: (bookmakers.data || []).map(b => ({ saldo_atual: b.saldo_atual || 0, saldo_bonus: b.saldo_bonus || 0, saldo_freebet: b.saldo_freebet || 0, moeda: b.moeda || "BRL" })),
+    bookmakerSaldos: (bookmakers.data || []).map(b => ({ saldo_atual: b.saldo_atual || 0, moeda: b.moeda || "BRL" })),
     depositos: (depositos.data || []) as { valor: number; moeda: string }[],
     saques: (saques.data || []) as { valor: number; valor_confirmado?: number | null; moeda: string }[],
     saquesPendentes: (saquesPend.data || []) as { valor: number; moeda: string }[],
@@ -47,10 +47,7 @@ export function FinancialSummaryCompact({ projetoId }: FinancialSummaryCompactPr
     if (!raw) return null;
 
     const saldoCasas = raw.bookmakerSaldos.reduce(
-      (acc, b) => {
-        const saldoReal = b.saldo_atual - b.saldo_bonus - b.saldo_freebet;
-        return acc + convertToConsolidationOficial(saldoReal, b.moeda);
-      }, 0
+      (acc, b) => acc + convertToConsolidationOficial(b.saldo_atual, b.moeda), 0
     );
     const depositosTotal = raw.depositos.reduce(
       (acc, d) => acc + convertToConsolidationOficial(d.valor, d.moeda), 0
