@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { usePromotionalCurrencyConversion } from "@/hooks/usePromotionalCurrencyConversion";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useQueryClient } from "@tanstack/react-query";
+import { creditarFreebetViaLedger, estornarFreebetViaLedger } from "@/lib/freebetLedgerService";
 
 export interface FreebetRecebidaCompleta {
   id: string;
@@ -333,28 +334,18 @@ export function useFreebetEstoque({ projetoId, dataInicio, dataFim }: UseFreebet
 
       if (error) throw error;
 
-      // Se status LIBERADA, gerar financial_event para incrementar saldo_freebet
+      // Se status LIBERADA, gerar evento financeiro para incrementar saldo_freebet
       if (data.status === "LIBERADA") {
-        // Buscar moeda da bookmaker
-        const { data: bkData } = await supabase
-          .from("bookmakers")
-          .select("moeda")
-          .eq("id", data.bookmaker_id)
-          .single();
+        const result = await creditarFreebetViaLedger(
+          data.bookmaker_id,
+          data.valor,
+          "MANUAL",
+          { descricao: `Freebet manual: ${data.motivo}` }
+        );
 
-        const { error: rpcError } = await supabase.rpc("process_financial_event", {
-          p_bookmaker_id: data.bookmaker_id,
-          p_tipo_evento: "FREEBET_CREDIT",
-          p_tipo_uso: "FREEBET",
-          p_origem: "FREEBET_MANUAL",
-          p_valor: data.valor,
-          p_moeda: bkData?.moeda || "BRL",
-          p_descricao: `Freebet manual: ${data.motivo}`,
-        });
-        
-        if (rpcError) {
-          console.error("[useFreebetEstoque] Erro ao creditar freebet no saldo:", rpcError);
-          toast.error("Freebet registrada, mas erro ao atualizar saldo");
+        if (!result.success) {
+          console.error("[useFreebetEstoque] Erro ao creditar freebet no saldo:", result.error);
+          toast.error(`Freebet registrada, mas erro ao atualizar saldo: ${result.error || "falha desconhecida"}`);
         }
       }
 
@@ -415,19 +406,15 @@ export function useFreebetEstoque({ projetoId, dataInicio, dataFim }: UseFreebet
       if (freebet.origem === "PROMOCAO") {
         // 1a. Se estava creditada (LIBERADA), estornar saldo_freebet ANTES de deletar
         if (freebet.status === "LIBERADA" && !freebet.utilizada) {
-          const { error: rpcError } = await supabase.rpc("process_financial_event", {
-            p_bookmaker_id: freebet.bookmaker_id,
-            p_tipo_evento: "FREEBET_EXPIRE",
-            p_tipo_uso: "FREEBET",
-            p_origem: "EXCLUSAO_FREEBET_PROMOCAO",
-            p_valor: -freebet.valor, // negativo para debitar
-            p_moeda: freebet.moeda,
-            p_descricao: `Reversão por exclusão de freebet (promoção): ${freebet.motivo}`,
-          });
+          const result = await estornarFreebetViaLedger(
+            freebet.bookmaker_id,
+            freebet.valor,
+            `Reversão por exclusão de freebet (promoção): ${freebet.motivo}`
+          );
 
-          if (rpcError) {
-            console.error("[useFreebetEstoque] Erro ao reverter saldo_freebet (promoção):", rpcError);
-            toast.error("Erro ao reverter saldo da freebet");
+          if (!result.success) {
+            console.error("[useFreebetEstoque] Erro ao reverter saldo_freebet (promoção):", result.error);
+            toast.error(`Erro ao reverter saldo da freebet: ${result.error || "falha desconhecida"}`);
             return false; // Não prosseguir se não conseguir reverter
           }
         }
@@ -457,19 +444,15 @@ export function useFreebetEstoque({ projetoId, dataInicio, dataFim }: UseFreebet
 
       // 2a. Se era LIBERADA e não utilizada, reverter o saldo_freebet ANTES de deletar
       if (freebet.status === "LIBERADA" && !freebet.utilizada) {
-        const { error: rpcError } = await supabase.rpc("process_financial_event", {
-          p_bookmaker_id: freebet.bookmaker_id,
-          p_tipo_evento: "FREEBET_EXPIRE",
-          p_tipo_uso: "FREEBET",
-          p_origem: "EXCLUSAO_FREEBET",
-          p_valor: -freebet.valor, // negativo para debitar
-          p_moeda: freebet.moeda,
-          p_descricao: `Reversão por exclusão de freebet: ${freebet.motivo}`,
-        });
+        const result = await estornarFreebetViaLedger(
+          freebet.bookmaker_id,
+          freebet.valor,
+          `Reversão por exclusão de freebet: ${freebet.motivo}`
+        );
 
-        if (rpcError) {
-          console.error("[useFreebetEstoque] Erro ao reverter saldo_freebet:", rpcError);
-          toast.error("Erro ao reverter saldo da freebet");
+        if (!result.success) {
+          console.error("[useFreebetEstoque] Erro ao reverter saldo_freebet:", result.error);
+          toast.error(`Erro ao reverter saldo da freebet: ${result.error || "falha desconhecida"}`);
           return false; // Não prosseguir se não conseguir reverter
         }
       }
