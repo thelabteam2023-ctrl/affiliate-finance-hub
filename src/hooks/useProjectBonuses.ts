@@ -575,7 +575,7 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
       // GUARD: Check current status in DB to prevent double finalization
       const { data: currentBonus, error: fetchError } = await supabase
         .from("project_bookmaker_link_bonuses")
-        .select("status, bookmaker_id, workspace_id, currency, title")
+        .select("status, bookmaker_id, workspace_id, currency, title, tipo_bonus, valor_creditado_no_saldo, bonus_amount")
         .eq("id", id)
         .single();
 
@@ -611,45 +611,83 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
 
       // FINANCIAL IMPACT: cancelled_reversed MUST create ledger entry
       if (reason === "cancelled_reversed" && currentBonus) {
-        const { error: ledgerError } = await supabase
-          .from("cash_ledger")
-          .insert({
-            tipo_transacao: "AJUSTE_SALDO",
-            tipo_moeda: "FIAT",
-            moeda: currentBonus.currency || "BRL",
-            valor: debitAmount!,
-            status: "CONFIRMADO",
-            data_transacao: new Date().toISOString().split("T")[0],
-            data_confirmacao: new Date().toISOString(),
-            impacta_caixa_operacional: false,
-            user_id: userData.user.id,
-            workspace_id: currentBonus.workspace_id || "",
-            origem_tipo: "BOOKMAKER",
-            origem_bookmaker_id: currentBonus.bookmaker_id,
-            ajuste_direcao: "SAIDA",
-            ajuste_motivo: `BONUS_CANCELAMENTO`,
-            descricao: `Débito por cancelamento de bônus: ${currentBonus.title || "Bônus"} — valor perdido`,
-            auditoria_metadata: {
-              tipo: "BONUS_CANCELAMENTO",
-              bonus_id: id,
-              bonus_title: currentBonus.title,
-              valor_perdido: debitAmount,
-            },
-          });
+        const tipoBonus = (currentBonus as any).tipo_bonus || 'BONUS';
+        
+        if (tipoBonus === 'FREEBET') {
+          // Para FREEBET: estornar saldo_freebet via engine financeiro
+          const valorEstorno = debitAmount || (currentBonus as any).valor_creditado_no_saldo || (currentBonus as any).bonus_amount || 0;
+          if (valorEstorno > 0) {
+            const result = await estornarFreebetViaLedger(
+              currentBonus.bookmaker_id,
+              valorEstorno,
+              `Estorno por cancelamento de freebet: ${currentBonus.title || 'Freebet'}`
+            );
+            if (!result.success) {
+              // Rollback
+              await supabase
+                .from("project_bookmaker_link_bonuses")
+                .update({ status: "credited", finalized_at: null, finalized_by: null, finalize_reason: null } as any)
+                .eq("id", id);
+              throw new Error(`Falha ao estornar freebet: ${result.error}`);
+            }
+          }
+        } else {
+          // Para BONUS: débito via cash_ledger (comportamento existente)
+          const { error: ledgerError } = await supabase
+            .from("cash_ledger")
+            .insert({
+              tipo_transacao: "AJUSTE_SALDO",
+              tipo_moeda: "FIAT",
+              moeda: currentBonus.currency || "BRL",
+              valor: debitAmount!,
+              status: "CONFIRMADO",
+              data_transacao: new Date().toISOString().split("T")[0],
+              data_confirmacao: new Date().toISOString(),
+              impacta_caixa_operacional: false,
+              user_id: userData.user.id,
+              workspace_id: currentBonus.workspace_id || "",
+              origem_tipo: "BOOKMAKER",
+              origem_bookmaker_id: currentBonus.bookmaker_id,
+              ajuste_direcao: "SAIDA",
+              ajuste_motivo: `BONUS_CANCELAMENTO`,
+              descricao: `Débito por cancelamento de bônus: ${currentBonus.title || "Bônus"} — valor perdido`,
+              auditoria_metadata: {
+                tipo: "BONUS_CANCELAMENTO",
+                bonus_id: id,
+                bonus_title: currentBonus.title,
+                valor_perdido: debitAmount,
+              },
+            });
 
-        if (ledgerError) {
-          // Rollback de estado para evitar bônus finalizado sem débito financeiro
-          await supabase
-            .from("project_bookmaker_link_bonuses")
-            .update({
-              status: "credited",
-              finalized_at: null,
-              finalized_by: null,
-              finalize_reason: null,
-            } as any)
-            .eq("id", id);
-
-          throw new Error(`Falha ao debitar valor perdido no saldo: ${ledgerError.message}`);
+          if (ledgerError) {
+            // Rollback de estado para evitar bônus finalizado sem débito financeiro
+            await supabase
+              .from("project_bookmaker_link_bonuses")
+              .update({ status: "credited", finalized_at: null, finalized_by: null, finalize_reason: null } as any)
+              .eq("id", id);
+            throw new Error(`Falha ao debitar valor perdido no saldo: ${ledgerError.message}`);
+          }
+        }
+      }
+      
+      // Para FREEBET finalizada por qualquer motivo exceto cancelled_reversed,
+      // estornar o saldo_freebet (expiração, ciclo encerrado, rollover concluído)
+      if (reason !== "cancelled_reversed" && currentBonus) {
+        const tipoBonus = (currentBonus as any).tipo_bonus || 'BONUS';
+        if (tipoBonus === 'FREEBET') {
+          const valorCreditado = (currentBonus as any).valor_creditado_no_saldo || (currentBonus as any).bonus_amount || 0;
+          if (valorCreditado > 0 && reason === 'expired') {
+            // Expiração de freebet: debitar do saldo_freebet
+            const { expirarFreebetViaLedger } = await import("@/lib/freebetLedgerService");
+            const result = await expirarFreebetViaLedger(
+              currentBonus.bookmaker_id,
+              valorCreditado,
+              { descricao: `Expiração de freebet: ${currentBonus.title || 'Freebet'}` }
+            );
+            if (!result.success) {
+              console.error("[useProjectBonuses] Erro ao expirar freebet:", result.error);
+            }
+          }
         }
       }
 

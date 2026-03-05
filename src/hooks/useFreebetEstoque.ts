@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { usePromotionalCurrencyConversion } from "@/hooks/usePromotionalCurrencyConversion";
 import { useWorkspace } from "@/hooks/useWorkspace";
+import { useQueryClient } from "@tanstack/react-query";
 
 export interface FreebetRecebidaCompleta {
   id: string;
@@ -62,6 +63,7 @@ export function useFreebetEstoque({ projetoId, dataInicio, dataFim }: UseFreebet
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { workspaceId } = useWorkspace();
+  const queryClient = useQueryClient();
 
   // Hook centralizado para conversão de moeda
   const { converterParaConsolidacao, config: currencyConfig } = usePromotionalCurrencyConversion(projetoId);
@@ -442,6 +444,9 @@ export function useFreebetEstoque({ projetoId, dataInicio, dataFim }: UseFreebet
         }
 
         toast.success("Freebet (promoção) removida e saldo estornado");
+        // Invalidar queries de bônus para sincronizar a aba Bônus
+        queryClient.invalidateQueries({ queryKey: ["project-bonuses"] });
+        queryClient.invalidateQueries({ queryKey: ["FINANCIAL_STATE"] });
         await fetchEstoque();
         return true;
       }
