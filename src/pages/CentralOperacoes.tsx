@@ -413,7 +413,7 @@ export default function CentralOperacoes() {
         .select('id', { count: 'exact', head: true })
         .is('projeto_id', null)
         .eq('workspace_id', workspaceId!)
-        .gt('saldo_atual', 0);
+        .gte('saldo_atual', 1);
       if (error) throw error;
       return count ?? 0;
     },
