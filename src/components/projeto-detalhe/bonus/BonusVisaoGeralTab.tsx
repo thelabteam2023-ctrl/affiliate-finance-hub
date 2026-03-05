@@ -485,6 +485,41 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
             ),
             minWidth: "min-w-[80px]",
           },
+          (() => {
+            const volume = analyticsSummary.total_volume_consolidated;
+            const juice = bonusPerformance.totalJuice;
+            const roiOp = volume > 0 ? (juice / volume) * 100 : 0;
+            const roiColor = roiOp >= 0 ? "text-emerald-500" : "text-red-500";
+            return {
+              label: "ROI Operacional",
+              value: (
+                <span className={roiColor}>
+                  {roiOp.toFixed(2)}%
+                </span>
+              ),
+              tooltip: (
+                <div className="space-y-1.5">
+                  <p className="font-semibold text-foreground">ROI Operacional</p>
+                  <p className="text-muted-foreground text-xs">Retorno sobre o volume apostado (stakes), não sobre o capital investido.</p>
+                  <div className="space-y-0.5">
+                    <div className="flex justify-between gap-4">
+                      <span>Resultado Apostas (Juice)</span>
+                      <span className={`font-semibold ${juice >= 0 ? "text-emerald-500" : "text-red-500"}`}>{formatCurrency(juice)}</span>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <span>Volume Operado</span>
+                      <span className="font-semibold text-foreground">{formatCurrency(volume)}</span>
+                    </div>
+                  </div>
+                  <div className="border-t border-border/50 pt-1">
+                    <p className="text-muted-foreground text-xs">Fórmula: Juice ÷ Volume × 100</p>
+                  </div>
+                </div>
+              ),
+              subtitle: <span className="text-muted-foreground">sobre volume</span>,
+              minWidth: "min-w-[90px]",
+            };
+          })(),
           {
             label: "Performance de Bônus",
             tooltip: (
