@@ -128,6 +128,7 @@ export function useInvalidateBonusQueries() {
     queryClient.invalidateQueries({ queryKey: ["bookmaker-saldos", projectId] });
     queryClient.invalidateQueries({ queryKey: ["bookmaker-saldos"] });
     queryClient.invalidateQueries({ queryKey: ["bookmakers"] });
+    queryClient.invalidateQueries({ queryKey: ["saldo-operavel-rpc", projectId] });
     
     // Vínculos (saldos aparecem na aba vínculos)
     queryClient.invalidateQueries({ queryKey: ["projeto-vinculos", projectId] });

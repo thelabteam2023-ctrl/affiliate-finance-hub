@@ -1,0 +1,1 @@
+UPDATE public.bookmakers SET saldo_freebet = 0 WHERE id = 'd4342e9a-c933-4661-a16d-ae7668d0d489'

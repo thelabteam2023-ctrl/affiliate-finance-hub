@@ -144,7 +144,7 @@ export async function estornarFreebetViaLedger(
       tipoEvento: 'REVERSAL',
       tipoUso: 'FREEBET',
       origem: 'FREEBET',
-      valor: valor, // Positivo = crédito (estorno)
+      valor: -valor, // Negativo = débito (estorno remove saldo_freebet)
       descricao,
       reversedEventId: eventoOriginalId,
       idempotencyKey: `fb_estorno_${bookmakerId}_${Date.now()}`,
