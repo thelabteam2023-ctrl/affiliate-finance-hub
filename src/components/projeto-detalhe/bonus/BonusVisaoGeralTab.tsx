@@ -516,8 +516,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
                   </div>
                 </div>
               ),
-              subtitle: <span className="text-muted-foreground">sobre volume</span>,
-              minWidth: "min-w-[90px]",
+              minWidth: "min-w-[100px]",
             };
           })(),
           {
