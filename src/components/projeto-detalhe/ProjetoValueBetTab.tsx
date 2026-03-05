@@ -65,6 +65,7 @@ import { useTabFilters } from "@/hooks/useTabFilters";
 import { OperationsSubTabHeader, type HistorySubTab } from "./operations";
 import { ExportMenu, transformApostaToExport } from "./ExportMenu";
 import { SaldoOperavelCard } from "./SaldoOperavelCard";
+import { FinancialSummaryCompact } from "./FinancialSummaryCompact";
 import { useCalendarApostas, transformCalendarApostasForCharts } from "@/hooks/useCalendarApostas";
 
 interface ProjetoValueBetTabProps {
@@ -773,7 +774,7 @@ export function ProjetoValueBetTab({
       {/* KPIs - Faixa compacta */}
       <KpiSummaryBar
         actions={actionsSlot}
-        leading={<SaldoOperavelCard projetoId={projetoId} variant="compact" />}
+        leading={<><SaldoOperavelCard projetoId={projetoId} variant="compact" /><FinancialSummaryCompact projetoId={projetoId} /></>}
         items={[
           {
             label: "Apostas ValueBet",

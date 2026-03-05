@@ -70,6 +70,7 @@ import { useTabFilters } from "@/hooks/useTabFilters";
 import { OperationsSubTabHeader, type HistorySubTab } from "./operations";
 import { ExportMenu, transformApostaToExport, transformSurebetToExport } from "./ExportMenu";
 import { SaldoOperavelCard } from "./SaldoOperavelCard";
+import { FinancialSummaryCompact } from "./FinancialSummaryCompact";
 import { useCalendarApostas, transformCalendarApostasForCharts } from "@/hooks/useCalendarApostas";
 
 interface ProjetoDuploGreenTabProps {
@@ -851,7 +852,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
     <div className="space-y-6">
       <KpiSummaryBar
         actions={actionsSlot}
-        leading={<SaldoOperavelCard projetoId={projetoId} variant="compact" />}
+        leading={<><SaldoOperavelCard projetoId={projetoId} variant="compact" /><FinancialSummaryCompact projetoId={projetoId} /></>}
         items={[
           {
             label: "Duplo Green",
