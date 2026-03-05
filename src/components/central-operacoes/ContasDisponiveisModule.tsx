@@ -358,8 +358,7 @@ export function ContasDisponiveisModule() {
           />
         </div>
         <Select value={minSaldo} onValueChange={setMinSaldo}>
-          <SelectTrigger className="w-[150px] h-9 text-sm">
-            <Filter className="h-3.5 w-3.5 mr-1.5 shrink-0" />
+          <SelectTrigger className="w-[150px] h-9 text-sm" icon={<Filter className="h-3.5 w-3.5" />}>
             <SelectValue placeholder="Saldo mín." />
           </SelectTrigger>
           <SelectContent>
@@ -386,8 +385,7 @@ export function ContasDisponiveisModule() {
         )}
         {parceirosUnicos.length > 1 && (
           <Select value={parceiroFilter} onValueChange={setParceiroFilter}>
-            <SelectTrigger className="w-[170px] h-9 text-sm">
-              <User className="h-3.5 w-3.5 mr-1.5 shrink-0" />
+            <SelectTrigger className="w-[170px] h-9 text-sm" icon={<User className="h-3.5 w-3.5" />}>
               <SelectValue placeholder="Parceiro" />
             </SelectTrigger>
             <SelectContent>
