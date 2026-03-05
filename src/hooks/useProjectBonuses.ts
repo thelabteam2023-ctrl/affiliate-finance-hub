@@ -147,8 +147,8 @@ export function useInvalidateBonusQueries() {
     // Perdas por cancelamento de bônus
     queryClient.invalidateQueries({ queryKey: ["bonus-perdas-cancelamento"] });
     
-    // Estoque de freebets (aba Promoções) - sincronizar quando bônus FREEBET é criado/editado/excluído
-    queryClient.invalidateQueries({ queryKey: ["freebet-estoque", projectId] });
+    // Estoque de freebets (aba Promoções) - sincronizar via evento customizado
+    window.dispatchEvent(new CustomEvent("freebet-estoque-invalidate", { detail: { projectId } }));
     
     console.log(`[useInvalidateBonusQueries] Invalidated FINANCIAL_STATE + freebet-estoque for project ${projectId}`);
   }, [queryClient]);
