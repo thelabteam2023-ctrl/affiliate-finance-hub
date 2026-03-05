@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { registrarBonusCreditadoViaLedger, estornarBonusViaLedger, getBookmakerMoeda } from "@/lib/ledgerService";
 import { creditarFreebetViaLedger, estornarFreebetViaLedger } from "@/lib/freebetLedgerService";
 import { useWorkspace } from "@/hooks/useWorkspace";
+import { FREEBET_ESTOQUE_KEYS } from "@/hooks/freebet-estoque/types";
 
 export type BonusStatus = "pending" | "credited" | "failed" | "expired" | "reversed" | "finalized";
 
@@ -147,8 +148,8 @@ export function useInvalidateBonusQueries() {
     // Perdas por cancelamento de bônus
     queryClient.invalidateQueries({ queryKey: ["bonus-perdas-cancelamento"] });
     
-    // Estoque de freebets (aba Promoções) - sincronizar via evento customizado
-    window.dispatchEvent(new CustomEvent("freebet-estoque-invalidate", { detail: { projectId } }));
+    // Estoque de freebets (aba Promoções) — invalidação nativa via useQuery
+    queryClient.invalidateQueries({ queryKey: FREEBET_ESTOQUE_KEYS.all(projectId) });
     
     console.log(`[useInvalidateBonusQueries] Invalidated FINANCIAL_STATE + freebet-estoque for project ${projectId}`);
   }, [queryClient]);
