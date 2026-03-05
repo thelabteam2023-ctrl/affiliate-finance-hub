@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { usePromotionalCurrencyConversion } from "@/hooks/usePromotionalCurrencyConversion";
 import { useWorkspace } from "@/hooks/useWorkspace";
-import { useQueryClient, useQuery } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { creditarFreebetViaLedger, estornarFreebetViaLedger } from "@/lib/freebetLedgerService";
 
 export interface FreebetRecebidaCompleta {
@@ -247,17 +247,21 @@ export function useFreebetEstoque({ projetoId, dataInicio, dataFim }: UseFreebet
     fetchEstoque();
   }, [fetchEstoque]);
 
-  // React-query sentinel: quando "freebet-estoque" é invalidado (ex: pela aba Bônus), refetch automático
-  useQuery({
-    queryKey: ["freebet-estoque", projetoId],
-    queryFn: async () => {
-      await fetchEstoque();
-      return Date.now(); // dummy return
-    },
-    enabled: !!projetoId,
-    staleTime: Infinity, // só refetch quando invalidado explicitamente
-    refetchOnWindowFocus: false,
-  });
+  // Sentinel: quando "freebet-estoque" é invalidado (ex: pela aba Bônus), refetch automático
+  useEffect(() => {
+    const queryCache = queryClient.getQueryCache();
+    const unsubscribe = queryCache.subscribe((event) => {
+      if (
+        event?.type === "updated" &&
+        event.action?.type === "invalidate" &&
+        event.query.queryKey?.[0] === "freebet-estoque" &&
+        event.query.queryKey?.[1] === projetoId
+      ) {
+        fetchEstoque();
+      }
+    });
+    return () => unsubscribe();
+  }, [queryClient, projetoId, fetchEstoque]);
 
   /**
    * MÉTRICAS COM CONVERSÃO PARA MOEDA DE CONSOLIDAÇÃO
