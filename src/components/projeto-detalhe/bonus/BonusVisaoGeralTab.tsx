@@ -471,51 +471,47 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
             ),
             subtitle: <span className="text-muted-foreground">{analyticsSummary.total_bookmakers === 1 ? "casa já operada" : "casas já operadas"}</span>,
           },
-          {
-            label: "Volume Operado",
-            value: (
-              <CurrencyBreakdownTooltip
-                breakdown={analyticsSummary.volume_breakdown}
-                moedaConsolidacao={analyticsSummary.moeda_consolidacao}
-              >
-                <span className="truncate">
-                  {formatCurrency(analyticsSummary.total_volume_consolidated)}
-                </span>
-              </CurrencyBreakdownTooltip>
-            ),
-            minWidth: "min-w-[80px]",
-          },
           (() => {
             const volume = analyticsSummary.total_volume_consolidated;
             const juice = bonusPerformance.totalJuice;
             const roiOp = volume > 0 ? (juice / volume) * 100 : 0;
             const roiColor = roiOp >= 0 ? "text-emerald-500" : "text-red-500";
             return {
-              label: "ROI Operacional",
+              label: "Volume Operado",
               value: (
-                <span className={roiColor}>
-                  {roiOp.toFixed(2)}%
-                </span>
+                <CurrencyBreakdownTooltip
+                  breakdown={analyticsSummary.volume_breakdown}
+                  moedaConsolidacao={analyticsSummary.moeda_consolidacao}
+                >
+                  <span className="truncate">
+                    {formatCurrency(volume)}
+                  </span>
+                </CurrencyBreakdownTooltip>
               ),
               tooltip: (
                 <div className="space-y-1.5">
-                  <p className="font-semibold text-foreground">ROI Operacional</p>
-                  <p className="text-muted-foreground text-xs">Retorno sobre o volume apostado (stakes), não sobre o capital investido.</p>
+                  <p className="font-semibold text-foreground">Volume Operado & ROI Operacional</p>
+                  <p className="text-muted-foreground text-xs">Volume total apostado e retorno sobre esse volume.</p>
                   <div className="space-y-0.5">
+                    <div className="flex justify-between gap-4">
+                      <span>Volume Total</span>
+                      <span className="font-semibold text-foreground">{formatCurrency(volume)}</span>
+                    </div>
                     <div className="flex justify-between gap-4">
                       <span>Resultado Apostas (Juice)</span>
                       <span className={`font-semibold ${juice >= 0 ? "text-emerald-500" : "text-red-500"}`}>{formatCurrency(juice)}</span>
                     </div>
-                    <div className="flex justify-between gap-4">
-                      <span>Volume Operado</span>
-                      <span className="font-semibold text-foreground">{formatCurrency(volume)}</span>
-                    </div>
                   </div>
-                  <div className="border-t border-border/50 pt-1">
+                  <div className="border-t border-border/50 pt-1 space-y-0.5">
+                    <div className="flex justify-between gap-4">
+                      <span className="text-muted-foreground text-xs">ROI Operacional</span>
+                      <span className={`font-semibold text-xs ${roiColor}`}>{roiOp.toFixed(2)}%</span>
+                    </div>
                     <p className="text-muted-foreground text-xs">Fórmula: Juice ÷ Volume × 100</p>
                   </div>
                 </div>
               ),
+              subtitle: <span className={`text-xs ${roiColor}`}>ROI {roiOp.toFixed(2)}%</span>,
               minWidth: "min-w-[100px]",
             };
           })(),
