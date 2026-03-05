@@ -89,6 +89,7 @@ import { RegistrarPerdaRapidaDialog } from "@/components/parceiros/RegistrarPerd
 import { PagamentoFornecedorDialog } from "@/components/programa-indicacao/PagamentoFornecedorDialog";
 import { PagamentoParceiroDialog } from "@/components/programa-indicacao/PagamentoParceiroDialog";
 import { ParceriaDialog, type RenewalSuccessData } from "@/components/parcerias/ParceriaDialog";
+import { ContasDisponiveisModule } from "@/components/central-operacoes/ContasDisponiveisModule";
 
 // Classificação de domínio dos eventos
 type EventDomain = 'project_event' | 'financial_event' | 'partner_event' | 'admin_event';
@@ -385,12 +386,12 @@ export default function CentralOperacoes() {
   const [encerrarLoading, setEncerrarLoading] = useState(false);
   const [renovarDialogOpen, setRenovarDialogOpen] = useState(false);
   const [parceriaToRenovar, setParceriaToRenovar] = useState<ParceriaAlertaEncerramento | null>(null);
-  const [mainTab, setMainTabState] = useState<'financeiro' | 'ocorrencias' | 'solicitacoes' | 'alertas'>(() => {
+  const [mainTab, setMainTabState] = useState<'financeiro' | 'contas' | 'ocorrencias' | 'solicitacoes' | 'alertas'>(() => {
     const saved = localStorage.getItem('central-operacoes-main-tab');
-    if (saved === 'financeiro' || saved === 'ocorrencias' || saved === 'solicitacoes' || saved === 'alertas') return saved;
+    if (saved === 'financeiro' || saved === 'contas' || saved === 'ocorrencias' || saved === 'solicitacoes' || saved === 'alertas') return saved;
     return 'financeiro';
   });
-  const setMainTab = (tab: 'financeiro' | 'ocorrencias' | 'solicitacoes' | 'alertas') => {
+  const setMainTab = (tab: 'financeiro' | 'contas' | 'ocorrencias' | 'solicitacoes' | 'alertas') => {
     setMainTabState(tab);
     localStorage.setItem('central-operacoes-main-tab', tab);
   };
@@ -2353,6 +2354,8 @@ export default function CentralOperacoes() {
             ? (hasAnyAlerts
                 ? (isOperator ? "Ações pendentes nos seus projetos" : "Ações que demandam atenção imediata")
                 : "Todas as operações estão em dia")
+            : mainTab === 'contas'
+            ? 'Bookmakers sem vínculo a projeto com saldo disponível'
             : mainTab === 'ocorrencias'
             ? 'Incidentes e problemas operacionais'
             : mainTab === 'solicitacoes'
@@ -2360,7 +2363,7 @@ export default function CentralOperacoes() {
             : 'Alertas automáticos do sistema'}
           </p>
         </div>
-        {mainTab === 'financeiro' && (
+        {(mainTab === 'financeiro' || mainTab === 'contas') && (
           <Button variant="outline" onClick={() => { fetchData(true); refetchCiclos(); }} disabled={refreshing}>
             {refreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
             <span className="ml-2">Atualizar</span>
@@ -2378,6 +2381,9 @@ export default function CentralOperacoes() {
                 {alertCards.length}
               </span>
             )}
+          </TabsTrigger>
+          <TabsTrigger value="contas" className="relative">
+            Contas Disponíveis
           </TabsTrigger>
           <TabsTrigger value="ocorrencias" className="relative">
             Ocorrências
@@ -2426,6 +2432,11 @@ export default function CentralOperacoes() {
               {alertCards.map((card) => card.component)}
             </div>
           )}
+        </TabsContent>
+
+        {/* ABA: CONTAS DISPONÍVEIS */}
+        <TabsContent value="contas" className="mt-4">
+          <ContasDisponiveisModule />
         </TabsContent>
 
         {/* ABA: OCORRÊNCIAS */}
