@@ -320,7 +320,8 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
   // CRÍTICO: Converter TODOS os valores para moeda de consolidação do projeto
   const bonusPerformance = useMemo(() => {
     // Filtrar bônus por período (usar credited_at como data de competência)
-    let eligibleBonuses = bonuses.filter(b => b.status === "credited" || b.status === "finalized");
+    // FREEBET excluído: segue regra SNR (Stake Not Returned), seu potencial não é 100% do face value
+    let eligibleBonuses = bonuses.filter(b => (b.status === "credited" || b.status === "finalized") && b.tipo_bonus !== "FREEBET");
     
     if (dateRange?.start || dateRange?.end) {
       eligibleBonuses = eligibleBonuses.filter(b => {
