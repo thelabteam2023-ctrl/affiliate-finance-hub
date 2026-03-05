@@ -12,6 +12,7 @@
  */
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { OcorrenciasModule } from "@/components/ocorrencias/OcorrenciasModule";
 import { SolicitacoesModule } from "@/components/solicitacoes/SolicitacoesModule";
@@ -403,6 +404,22 @@ export default function CentralOperacoes() {
   const { data: kpisOcorrencias } = useOcorrenciasKpis();
   const { data: kpisSolicitacoes } = useSolicitacoesKpis();
 
+  // Contagem de contas disponíveis com saldo (alerta visual)
+  const { data: contasDisponiveisCount } = useQuery({
+    queryKey: ['contas-disponiveis-count', workspaceId],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('bookmakers')
+        .select('id', { count: 'exact', head: true })
+        .is('projeto_id', null)
+        .eq('workspace_id', workspaceId!)
+        .gt('saldo_atual', 0);
+      if (error) throw error;
+      return count ?? 0;
+    },
+    enabled: !!workspaceId,
+    staleTime: 30_000,
+  });
   // Domínios permitidos para o role atual
   const allowedDomains = useMemo(() => {
     return ROLE_VISIBILITY[role || 'viewer'] || [];
@@ -2384,6 +2401,11 @@ export default function CentralOperacoes() {
           </TabsTrigger>
           <TabsTrigger value="contas" className="relative">
             Contas Disponíveis
+            {(contasDisponiveisCount ?? 0) > 0 && (
+              <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-amber-500 text-white text-[10px] font-bold leading-none animate-pulse">
+                !
+              </span>
+            )}
           </TabsTrigger>
           <TabsTrigger value="ocorrencias" className="relative">
             Ocorrências
