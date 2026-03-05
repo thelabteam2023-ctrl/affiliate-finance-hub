@@ -62,7 +62,7 @@ export function BookmakerSelectOption({
   
   return (
     <div className={cn(
-      "grid grid-cols-[auto_1fr_auto] items-center w-full gap-2 min-w-0",
+      "grid grid-cols-[20px_1fr_auto] items-center w-full gap-1.5 min-w-0 overflow-hidden",
       disabled && "opacity-50",
       className
     )}>
@@ -80,8 +80,8 @@ export function BookmakerSelectOption({
       </div>
 
       {/* Coluna 2: Nome + Parceiro (centralizado) */}
-      <div className="flex flex-col items-center justify-center min-w-0">
-        <div className="flex items-center gap-1.5">
+      <div className="flex flex-col items-start justify-center min-w-0 overflow-hidden">
+        <div className="flex items-center gap-1 min-w-0 max-w-full">
           <span className="uppercase text-xs font-medium truncate">
             {nome}
             {instance_identifier && (
@@ -91,14 +91,14 @@ export function BookmakerSelectOption({
           <CurrencyBadge moeda={moeda} />
         </div>
         {parceiroShortName && (
-          <span className="text-[10px] text-muted-foreground truncate">
+          <span className="text-[10px] text-muted-foreground truncate max-w-full">
             {parceiroShortName}
           </span>
         )}
       </div>
       
       {/* Coluna 3: Saldo (fixo à direita) */}
-      <div className="flex flex-col items-end flex-shrink-0">
+      <div className="flex flex-col items-end flex-shrink-0 whitespace-nowrap">
         {disabled ? (
           <span className="text-xs font-medium text-destructive">Indisponível</span>
         ) : saldo_freebet > 0 ? (
