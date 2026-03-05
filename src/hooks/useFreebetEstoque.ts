@@ -247,21 +247,17 @@ export function useFreebetEstoque({ projetoId, dataInicio, dataFim }: UseFreebet
     fetchEstoque();
   }, [fetchEstoque]);
 
-  // Sentinel: quando "freebet-estoque" é invalidado (ex: pela aba Bônus), refetch automático
+  // Sentinel: escuta evento customizado disparado pela aba Bônus para refetch
   useEffect(() => {
-    const queryCache = queryClient.getQueryCache();
-    const unsubscribe = queryCache.subscribe((event) => {
-      if (
-        event?.type === "updated" &&
-        event.action?.type === "invalidate" &&
-        event.query.queryKey?.[0] === "freebet-estoque" &&
-        event.query.queryKey?.[1] === projetoId
-      ) {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (!detail || detail.projectId === projetoId) {
         fetchEstoque();
       }
-    });
-    return () => unsubscribe();
-  }, [queryClient, projetoId, fetchEstoque]);
+    };
+    window.addEventListener("freebet-estoque-invalidate", handler);
+    return () => window.removeEventListener("freebet-estoque-invalidate", handler);
+  }, [projetoId, fetchEstoque]);
 
   /**
    * MÉTRICAS COM CONVERSÃO PARA MOEDA DE CONSOLIDAÇÃO
