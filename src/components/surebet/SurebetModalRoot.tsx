@@ -43,6 +43,8 @@ import { calcSurebetWindowHeight } from "@/lib/windowHelper";
 import { SurebetTableRow } from "./SurebetTableRow";
 import { SurebetTableFooter } from "./SurebetTableFooter";
 import { SurebetColumnsView } from "./SurebetColumnsView";
+import { SurebetMobileCard } from "./SurebetMobileCard";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 // ============================================
 // TIPOS
@@ -156,6 +158,7 @@ export function SurebetModalRoot({
 }: SurebetModalRootProps) {
   const isEditing = !!surebet;
   const { workspaceId } = useWorkspace();
+  const isMobile = useIsMobile();
   
   // Hook de rascunhos
   const { criarRascunho, atualizarRascunho, deletarRascunho } = useApostaRascunho(projetoId, workspaceId || '');
@@ -1855,7 +1858,7 @@ export function SurebetModalRoot({
           />
 
           {/* CONTENT */}
-          <div className="p-4 space-y-3">
+          <div className="p-3 md:p-4 space-y-3 overflow-auto flex-1">
             {/* Operação parcial warning */}
             {analysis.isOperacaoParcial && !isEditing && (
               <div className="flex items-center gap-3 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-sm">
@@ -1911,35 +1914,66 @@ export function SurebetModalRoot({
                   />
                 </div>
               )}
-              {/* Toggle de layout */}
-              <div className="flex items-center rounded-md border border-border/40 overflow-hidden ml-auto">
-                <button
-                  type="button"
-                  onClick={() => setViewLayout('vertical')}
-                  className={cn(
-                    "p-1.5 transition-colors",
-                    viewLayout === 'vertical' ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"
-                  )}
-                  title="Layout vertical (tabela)"
-                >
-                  <Rows3 className="h-3.5 w-3.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setViewLayout('horizontal')}
-                  className={cn(
-                    "p-1.5 transition-colors",
-                    viewLayout === 'horizontal' ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"
-                  )}
-                  title="Layout horizontal (colunas)"
-                >
-                  <Columns3 className="h-3.5 w-3.5" />
-                </button>
-              </div>
+              {/* Toggle de layout - hidden on mobile */}
+              {!isMobile && (
+                <div className="flex items-center rounded-md border border-border/40 overflow-hidden ml-auto">
+                  <button
+                    type="button"
+                    onClick={() => setViewLayout('vertical')}
+                    className={cn(
+                      "p-1.5 transition-colors",
+                      viewLayout === 'vertical' ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"
+                    )}
+                    title="Layout vertical (tabela)"
+                  >
+                    <Rows3 className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewLayout('horizontal')}
+                    className={cn(
+                      "p-1.5 transition-colors",
+                      viewLayout === 'horizontal' ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"
+                    )}
+                    title="Layout horizontal (colunas)"
+                  >
+                    <Columns3 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
             </div>
 
-            {/* TABELA PRINCIPAL ou COLUNAS */}
-            {viewLayout === 'vertical' ? (
+            {/* MOBILE: Cards empilhados */}
+            {isMobile ? (
+              <div className="space-y-3" ref={tableContainerRef}>
+                {odds.map((entry, pernaIndex) => (
+                  <SurebetMobileCard
+                    key={pernaIndex}
+                    entry={entry}
+                    pernaIndex={pernaIndex}
+                    label={getPernaLabel(pernaIndex, numPernas)}
+                    scenario={analysis.scenarios[pernaIndex]}
+                    isEditing={isEditing}
+                    isProcessing={legPrints[pernaIndex]?.isProcessing || false}
+                    bookmakers={getAdjustedBookmakersForLeg(pernaIndex)}
+                    directedProfitLegs={directedProfitLegs}
+                    numPernas={numPernas}
+                    moedaDominante={analysis.moedaDominante}
+                    hasInsufficientBalance={balanceValidation.insufficientLegs.includes(pernaIndex)}
+                    onResultadoChange={handlePernaResultadoChange}
+                    onUpdateOdd={updateOdd}
+                    onSetReference={setReferenceIndex}
+                    onToggleDirected={toggleDirectedLeg}
+                    onAddEntry={addAdditionalEntry}
+                    onUpdateAdditionalEntry={updateAdditionalEntry}
+                    onRemoveAdditionalEntry={removeAdditionalEntry}
+                    onDeletePerna={handleDeletePerna}
+                    canDeletePerna={isEditing && odds.length > 2}
+                    onFieldKeyDown={handleFieldKeyDown}
+                  />
+                ))}
+              </div>
+            ) : viewLayout === 'vertical' ? (
               <div className="overflow-x-auto" ref={tableContainerRef}>
                 <table className="w-full text-xs border-collapse">
                   <thead>
@@ -2042,7 +2076,7 @@ export function SurebetModalRoot({
           </div>
 
           {/* ACTIONS */}
-          <div className="flex items-center justify-between px-4 py-2 border-t border-border/50 bg-muted/30">
+          <div className="flex flex-wrap items-center justify-between gap-2 px-3 md:px-4 py-2 border-t border-border/50 bg-muted/30">
             <div>
               {isEditing && (
                 <AlertDialog>
@@ -2065,7 +2099,7 @@ export function SurebetModalRoot({
                 </AlertDialog>
               )}
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button variant="outline" onClick={() => onOpenChange(false)}>
                 Cancelar
               </Button>
