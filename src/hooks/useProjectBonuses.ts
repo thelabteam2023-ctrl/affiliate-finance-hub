@@ -580,7 +580,7 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
       // GUARD: Check current status in DB to prevent double finalization
       const { data: currentBonus, error: fetchError } = await supabase
         .from("project_bookmaker_link_bonuses")
-        .select("status, bookmaker_id, workspace_id, currency, title, tipo_bonus, valor_creditado_no_saldo, bonus_amount")
+        .select("status, bookmaker_id, workspace_id, currency, title, tipo_bonus, valor_creditado_no_saldo, bonus_amount, saldo_atual, finalize_reason")
         .eq("id", id)
         .single();
 
@@ -675,24 +675,46 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
         }
       }
       
-      // Para FREEBET finalizada por qualquer motivo exceto cancelled_reversed,
-      // estornar o saldo_freebet (expiração, ciclo encerrado, rollover concluído)
+      // Para FREEBET finalizada (expirada/ciclo encerrado/rollover concluído),
+      // estornar o saldo remanescente no ledger para evitar saldo fantasma.
       if (reason !== "cancelled_reversed" && currentBonus) {
         const tipoBonus = (currentBonus as any).tipo_bonus || 'BONUS';
         if (tipoBonus === 'FREEBET') {
-          const valorCreditado = (currentBonus as any).valor_creditado_no_saldo || (currentBonus as any).bonus_amount || 0;
-          if (valorCreditado > 0 && reason === 'expired') {
-            // Expiração de freebet: debitar do saldo_freebet
-            const { expirarFreebetViaLedger } = await import("@/lib/freebetLedgerService");
-            const result = await expirarFreebetViaLedger(
-              currentBonus.bookmaker_id,
-              valorCreditado,
-              { descricao: `Expiração de freebet: ${currentBonus.title || 'Freebet'}` }
-            );
-            if (!result.success) {
-              console.error("[useProjectBonuses] Erro ao expirar freebet:", result.error);
+          const valorCreditado = Number((currentBonus as any).valor_creditado_no_saldo || (currentBonus as any).bonus_amount || 0);
+          const saldoRegistradoNoBonus = Number((currentBonus as any).saldo_atual || 0);
+          const valorParaDebitar = Math.max(0, Math.min(
+            saldoRegistradoNoBonus > 0 ? saldoRegistradoNoBonus : valorCreditado,
+            valorCreditado
+          ));
+
+          if (valorParaDebitar > 0) {
+            if (reason === 'expired') {
+              const { expirarFreebetViaLedger } = await import("@/lib/freebetLedgerService");
+              const result = await expirarFreebetViaLedger(
+                currentBonus.bookmaker_id,
+                valorParaDebitar,
+                { descricao: `Expiração de freebet: ${currentBonus.title || 'Freebet'}` }
+              );
+              if (!result.success) {
+                console.error("[useProjectBonuses] Erro ao expirar freebet:", result.error);
+              }
+            } else {
+              const result = await estornarFreebetViaLedger(
+                currentBonus.bookmaker_id,
+                valorParaDebitar,
+                `Finalização de freebet (${reason}): ${currentBonus.title || 'Freebet'}`
+              );
+              if (!result.success) {
+                console.error("[useProjectBonuses] Erro ao estornar freebet na finalização:", result.error);
+              }
             }
           }
+
+          // Zera saldo remanescente no registro histórico do bônus
+          await supabase
+            .from("project_bookmaker_link_bonuses")
+            .update({ saldo_atual: 0 } as any)
+            .eq("id", id);
         }
       }
 
@@ -722,7 +744,7 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
       // 1. Buscar dados do bônus antes de excluir para saber se precisa estornar
       const { data: bonusData, error: fetchError } = await supabase
         .from("project_bookmaker_link_bonuses")
-        .select("id, bookmaker_id, bonus_amount, status, valor_creditado_no_saldo, title, tipo_bonus")
+        .select("id, bookmaker_id, bonus_amount, status, valor_creditado_no_saldo, saldo_atual, title, tipo_bonus, finalize_reason")
         .eq("id", id)
         .single();
 
@@ -731,34 +753,40 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error("Usuário não autenticado");
 
-      // 2. Se o bônus estava creditado, estornar o valor no ledger ANTES de excluir
-      if (bonusData.status === "credited") {
-        const valorCreditado = (bonusData as any).valor_creditado_no_saldo ?? bonusData.bonus_amount;
-        const tipoBonus = (bonusData as any).tipo_bonus || 'BONUS';
-        
-        if (valorCreditado > 0) {
-          if (tipoBonus === 'FREEBET') {
-            const result = await estornarFreebetViaLedger(
-              bonusData.bookmaker_id,
-              valorCreditado,
-              `Estorno por exclusão de freebet: ${bonusData.title || 'Sem título'}`
-            );
-            if (!result.success) throw new Error(`Falha ao estornar freebet: ${result.error}`);
-          } else {
-            const moeda = await getBookmakerMoeda(bonusData.bookmaker_id);
-            const result = await estornarBonusViaLedger({
-              bookmakerId: bonusData.bookmaker_id,
-              valor: valorCreditado,
-              moeda,
-              workspaceId: workspaceId!,
-              userId: userData.user.id,
-              descricao: `Estorno por exclusão de bônus: ${bonusData.title || 'Sem título'}`,
-              bonusId: bonusData.id,
-            });
-            if (!result.success) throw new Error(`Falha ao estornar saldo do bônus: ${result.error}`);
-          }
-          console.log(`[useProjectBonuses] ${tipoBonus} estornado via ledger: ${valorCreditado}`);
+      // 2. Estornar no ledger ANTES de excluir
+      const tipoBonus = (bonusData as any).tipo_bonus || 'BONUS';
+      const finalizeReason = (bonusData as any).finalize_reason as FinalizeReason | null;
+      const valorCreditado = Number((bonusData as any).valor_creditado_no_saldo ?? (bonusData as any).saldo_atual ?? bonusData.bonus_amount ?? 0);
+
+      const freebetFinalizadaSemEstorno =
+        bonusData.status === "finalized" &&
+        tipoBonus === "FREEBET" &&
+        (finalizeReason === "cycle_completed" || finalizeReason === "rollover_completed");
+
+      const shouldRevert = bonusData.status === "credited" || freebetFinalizadaSemEstorno;
+
+      if (shouldRevert && valorCreditado > 0) {
+        if (tipoBonus === 'FREEBET') {
+          const result = await estornarFreebetViaLedger(
+            bonusData.bookmaker_id,
+            valorCreditado,
+            `Estorno por exclusão de freebet: ${bonusData.title || 'Sem título'}`
+          );
+          if (!result.success) throw new Error(`Falha ao estornar freebet: ${result.error}`);
+        } else {
+          const moeda = await getBookmakerMoeda(bonusData.bookmaker_id);
+          const result = await estornarBonusViaLedger({
+            bookmakerId: bonusData.bookmaker_id,
+            valor: valorCreditado,
+            moeda,
+            workspaceId: workspaceId!,
+            userId: userData.user.id,
+            descricao: `Estorno por exclusão de bônus: ${bonusData.title || 'Sem título'}`,
+            bonusId: bonusData.id,
+          });
+          if (!result.success) throw new Error(`Falha ao estornar saldo do bônus: ${result.error}`);
         }
+        console.log(`[useProjectBonuses] ${tipoBonus} estornado via ledger: ${valorCreditado}`);
       }
 
       // 3. Excluir o registro do bônus
