@@ -443,9 +443,16 @@ export function useFreebetEstoque({ projetoId, dataInicio, dataFim }: UseFreebet
         }
 
         toast.success("Freebet (promoção) removida e saldo estornado");
-        // Invalidar queries de bônus para sincronizar a aba Bônus
-        queryClient.invalidateQueries({ queryKey: ["project-bonuses"] });
-        queryClient.invalidateQueries({ queryKey: ["FINANCIAL_STATE"] });
+        // Invalidar queries de bônus E saldos para sincronizar aba Bônus + dashboard
+        queryClient.invalidateQueries({ queryKey: ["bonus", "project", projetoId] });
+        queryClient.invalidateQueries({ queryKey: ["bookmaker-saldos", projetoId] });
+        queryClient.invalidateQueries({ queryKey: ["bookmaker-saldos"] });
+        queryClient.invalidateQueries({ queryKey: ["bookmakers"] });
+        queryClient.invalidateQueries({ queryKey: ["saldo-operavel-rpc", projetoId] });
+        queryClient.invalidateQueries({ queryKey: ["projeto-vinculos", projetoId] });
+        queryClient.invalidateQueries({ queryKey: ["projeto-resultado", projetoId] });
+        queryClient.invalidateQueries({ queryKey: ["projeto-breakdowns", projetoId] });
+        queryClient.invalidateQueries({ queryKey: ["exposicao-projeto", projetoId] });
         await fetchEstoque();
         return true;
       }
@@ -478,6 +485,13 @@ export function useFreebetEstoque({ projetoId, dataInicio, dataFim }: UseFreebet
       if (error) throw error;
 
       toast.success("Freebet removida e saldo estornado");
+      // Invalidar saldos para atualizar dashboard sem F5
+      queryClient.invalidateQueries({ queryKey: ["bookmaker-saldos", projetoId] });
+      queryClient.invalidateQueries({ queryKey: ["bookmaker-saldos"] });
+      queryClient.invalidateQueries({ queryKey: ["bookmakers"] });
+      queryClient.invalidateQueries({ queryKey: ["saldo-operavel-rpc", projetoId] });
+      queryClient.invalidateQueries({ queryKey: ["projeto-resultado", projetoId] });
+      queryClient.invalidateQueries({ queryKey: ["projeto-vinculos", projetoId] });
       await fetchEstoque();
       return true;
     } catch (err: any) {
