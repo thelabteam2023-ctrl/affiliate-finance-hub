@@ -69,6 +69,7 @@ import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateR
 import { OperationsSubTabHeader, type HistorySubTab } from "./operations";
 import { ExportMenu, transformSurebetToExport, transformApostaToExport } from "./ExportMenu";
 import { SaldoOperavelCard } from "./SaldoOperavelCard";
+import { FinancialSummaryCompact } from "./FinancialSummaryCompact";
 import { useCalendarApostas, transformCalendarApostasForCharts } from "@/hooks/useCalendarApostas";
 import { ChartEmptyState } from "@/components/ui/chart-empty-state";
 
@@ -1004,7 +1005,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
       {/* KPIs - Faixa compacta horizontal */}
       <KpiSummaryBar
         actions={actionsSlot}
-        leading={<SaldoOperavelCard projetoId={projetoId} variant="compact" />}
+        leading={<><SaldoOperavelCard projetoId={projetoId} variant="compact" /><FinancialSummaryCompact projetoId={projetoId} /></>}
         items={[
           {
             label: "Surebets",

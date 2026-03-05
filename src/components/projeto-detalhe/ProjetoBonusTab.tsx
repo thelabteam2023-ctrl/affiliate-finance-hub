@@ -64,6 +64,7 @@ import { useProjectBonuses, ProjectBonus, BonusStatus, BonusFormData } from "@/h
 import { BonusDialog } from "./BonusDialog";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange as FilterDateRange } from "./StandardTimeFilter";
 import { useBookmakerSaldosQuery, BookmakerSaldo } from "@/hooks/useBookmakerSaldosQuery";
+import { FinancialSummaryCompact } from "./FinancialSummaryCompact";
 
 interface ProjetoBonusTabProps {
   projetoId: string;
@@ -316,6 +317,7 @@ export function ProjetoBonusTab({ projetoId }: ProjetoBonusTabProps) {
     <div className="space-y-6">
       {/* KPIs - Faixa compacta */}
       <KpiSummaryBar
+        leading={<FinancialSummaryCompact projetoId={projetoId} />}
         items={[
           {
             label: "Bônus Creditados",

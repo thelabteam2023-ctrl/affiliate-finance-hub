@@ -9,6 +9,7 @@ import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { useProjectBonusAnalytics } from "@/hooks/useProjectBonusAnalytics";
 import { Building2, Coins, TrendingUp, TrendingDown, AlertTriangle, Timer, Receipt, BarChart3, Gift } from "lucide-react";
 import { SaldoOperavelCard } from "../SaldoOperavelCard";
+import { FinancialSummaryCompact } from "../FinancialSummaryCompact";
 import { differenceInDays, parseISO, format, subDays, isWithinInterval, startOfDay } from "date-fns";
 import { useCrossWindowSync } from "@/hooks/useCrossWindowSync";
 import { BonusAnalyticsCard } from "./BonusAnalyticsCard";
@@ -412,7 +413,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
       <TooltipProvider>
       <KpiSummaryBar
         actions={actionsSlot}
-        leading={<SaldoOperavelCard projetoId={projetoId} variant="compact" />}
+        leading={<><SaldoOperavelCard projetoId={projetoId} variant="compact" /><FinancialSummaryCompact projetoId={projetoId} /></>}
         items={[
           {
             label: "Histórico de Casas",
