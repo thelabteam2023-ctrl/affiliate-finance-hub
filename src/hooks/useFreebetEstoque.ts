@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { usePromotionalCurrencyConversion } from "@/hooks/usePromotionalCurrencyConversion";
 import { useWorkspace } from "@/hooks/useWorkspace";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { creditarFreebetViaLedger, estornarFreebetViaLedger } from "@/lib/freebetLedgerService";
 
 export interface FreebetRecebidaCompleta {
@@ -246,6 +246,18 @@ export function useFreebetEstoque({ projetoId, dataInicio, dataFim }: UseFreebet
   useEffect(() => {
     fetchEstoque();
   }, [fetchEstoque]);
+
+  // React-query sentinel: quando "freebet-estoque" é invalidado (ex: pela aba Bônus), refetch automático
+  useQuery({
+    queryKey: ["freebet-estoque", projetoId],
+    queryFn: async () => {
+      await fetchEstoque();
+      return Date.now(); // dummy return
+    },
+    enabled: !!projetoId,
+    staleTime: Infinity, // só refetch quando invalidado explicitamente
+    refetchOnWindowFocus: false,
+  });
 
   /**
    * MÉTRICAS COM CONVERSÃO PARA MOEDA DE CONSOLIDAÇÃO
