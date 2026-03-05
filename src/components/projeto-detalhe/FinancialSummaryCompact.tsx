@@ -73,7 +73,7 @@ export function FinancialSummaryCompact({ projetoId }: FinancialSummaryCompactPr
       <PopoverTrigger asChild>
         <button className="flex items-center gap-3 rounded-lg border border-border/50 bg-muted/30 px-3 py-1.5 hover:bg-muted/60 transition-colors cursor-pointer group">
           <div className="flex flex-col items-center">
-            <span className="text-[10px] text-muted-foreground leading-tight">Lucro</span>
+            <span className="text-[10px] text-muted-foreground leading-tight">{metrics.lucro >= 0 ? "Lucro" : "Prejuízo"}</span>
             <span className={`text-sm font-bold leading-tight tabular-nums ${lucroColor}`}>
               {formatCurrency(metrics.lucro)}
             </span>
