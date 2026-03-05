@@ -24,6 +24,7 @@ import {
   ArrowDownToLine,
 } from "lucide-react";
 import { registrarAjusteViaLedger } from "@/lib/ledgerService";
+import { preCheckUnlink, executeUnlink } from "@/lib/projetoTransitionService";
 import { getCurrencySymbol, SupportedCurrency } from "@/types/currency";
 
 interface ConciliacaoVinculoDialogProps {
@@ -155,6 +156,7 @@ export function ConciliacaoVinculoDialog({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
+      // 1. Se houver diferença de saldo, ajustar ANTES de desvincular
       if (temDiferenca) {
         const result = await registrarAjusteViaLedger({
           bookmakerId: vinculo.id,
@@ -176,38 +178,38 @@ export function ConciliacaoVinculoDialog({
         );
       }
 
-      await supabase
-        .from("projeto_bookmaker_historico")
-        .update({
-          data_desvinculacao: new Date().toISOString(),
-          status_final: vinculo.bookmaker_status,
-        })
-        .eq("projeto_id", projetoId)
-        .eq("bookmaker_id", vinculo.id);
-
       const saldoFinalReal = temDiferenca ? saldoRealNum : saldoSistema;
       const isLimitada = vinculo.bookmaker_status.toUpperCase() === "LIMITADA";
       const deveMarcarParaSaque = isLimitada || marcarParaSaque;
+
+      // 2. Determinar status final
+      const statusFinal = deveMarcarParaSaque && saldoFinalReal > 0 
+        ? "aguardando_saque" 
+        : "ativo";
+
+      // 3. CRÍTICO: Usar executeUnlink para gerar SAQUE_VIRTUAL corretamente
+      // Recalcular saldo efetivo com preCheckUnlink (pois pode ter mudado após ajuste)
+      const check = await preCheckUnlink(vinculo.id);
       
+      await executeUnlink({
+        bookmakerId: vinculo.id,
+        projetoId,
+        workspaceId,
+        userId: user.id,
+        statusFinal,
+        saldoVirtualEfetivo: check.saldoVirtualEfetivo,
+        moeda: vinculo.moeda,
+      });
+
+      // 4. Se deve marcar para saque, usar a RPC
       if (deveMarcarParaSaque && saldoFinalReal > 0) {
         const { error } = await supabase.rpc('marcar_para_saque', {
           p_bookmaker_id: vinculo.id
         });
-        if (error) throw error;
-        
-        await supabase
-          .from("bookmakers")
-          .update({ projeto_id: null })
-          .eq("id", vinculo.id);
-      } else {
-        const { error } = await supabase
-          .from("bookmakers")
-          .update({
-            projeto_id: null,
-            status: "ativo",
-          })
-          .eq("id", vinculo.id);
-        if (error) throw error;
+        if (error) {
+          console.error("[ConciliacaoVinculoDialog] Erro ao marcar para saque:", error);
+          // Não bloquear — a desvinculação já aconteceu
+        }
       }
 
       if (isLimitada) {
@@ -222,7 +224,7 @@ export function ConciliacaoVinculoDialog({
         );
       } else if (saldoFinalReal > 0) {
         toast.success(
-          `Vínculo liberado. Casa disponível com ${formatCurrency(saldoFinalReal, vinculo.moeda)}.`,
+          `Vínculo liberado com saque virtual de ${formatCurrency(saldoFinalReal, vinculo.moeda)} registrado.`,
           { duration: 5000 }
         );
       } else {
