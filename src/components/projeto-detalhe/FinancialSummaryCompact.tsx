@@ -46,9 +46,8 @@ export function FinancialSummaryCompact({ projetoId }: FinancialSummaryCompactPr
   const metrics = useMemo(() => {
     if (!raw) return null;
 
-    const saldoCasas = raw.bookmakerSaldos.reduce(
-      (acc, b) => acc + convertToConsolidationOficial(b.saldo_atual, b.moeda), 0
-    );
+    // LUCRO REAL = Saques Confirmados - Depósitos Confirmados
+    // Nenhum outro evento (bônus, apostas, cashback) entra neste cálculo
     const depositosTotal = raw.depositos.reduce(
       (acc, d) => acc + convertToConsolidationOficial(d.valor, d.moeda), 0
     );
@@ -56,7 +55,7 @@ export function FinancialSummaryCompact({ projetoId }: FinancialSummaryCompactPr
       (acc, s) => acc + convertToConsolidationOficial(s.valor_confirmado ?? s.valor, s.moeda), 0
     );
 
-    const lucro = (saldoCasas + saquesRecebidos) - depositosTotal;
+    const lucro = saquesRecebidos - depositosTotal;
     const roi = depositosTotal > 0 ? (lucro / depositosTotal) * 100 : 0;
 
     return { lucro, roi };
