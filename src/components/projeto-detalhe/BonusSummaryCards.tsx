@@ -112,8 +112,7 @@ export function BonusSummaryCards({ projetoId, compact = false }: BonusSummaryCa
 
   // Performance de Bônus = Total de bônus creditados + Juice das operações + Ajustes Pós-Limitação
   const bonusPerformance = useMemo(() => {
-    // FREEBET excluído: segue regra SNR, potencial ≠ face value
-    const eligibleBonuses = bonuses.filter(b => (b.status === "credited" || b.status === "finalized") && b.tipo_bonus !== "FREEBET");
+    const eligibleBonuses = bonuses.filter(b => b.status === "credited" || b.status === "finalized");
     
     const totalBonusCreditado = eligibleBonuses
       .reduce((acc, b) => acc + convertToConsolidation(b.bonus_amount || 0, b.currency), 0);
