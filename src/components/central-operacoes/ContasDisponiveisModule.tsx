@@ -348,7 +348,7 @@ export function ContasDisponiveisModule() {
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-2">
-        <div className="relative flex-1 min-w-[200px]">
+        <div className="relative w-[220px] shrink-0">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Buscar casa ou parceiro..."
@@ -358,8 +358,8 @@ export function ContasDisponiveisModule() {
           />
         </div>
         <Select value={minSaldo} onValueChange={setMinSaldo}>
-          <SelectTrigger className="w-[140px] h-9 text-sm">
-            <Filter className="h-3.5 w-3.5 mr-1.5" />
+          <SelectTrigger className="w-[150px] h-9 text-sm">
+            <Filter className="h-3.5 w-3.5 mr-1.5 shrink-0" />
             <SelectValue placeholder="Saldo mín." />
           </SelectTrigger>
           <SelectContent>
@@ -373,7 +373,7 @@ export function ContasDisponiveisModule() {
         </Select>
         {moedasUnicas.length > 1 && (
           <Select value={moedaFilter} onValueChange={setMoedaFilter}>
-            <SelectTrigger className="w-[120px] h-9 text-sm">
+            <SelectTrigger className="w-[150px] h-9 text-sm">
               <SelectValue placeholder="Moeda" />
             </SelectTrigger>
             <SelectContent>
@@ -386,8 +386,8 @@ export function ContasDisponiveisModule() {
         )}
         {parceirosUnicos.length > 1 && (
           <Select value={parceiroFilter} onValueChange={setParceiroFilter}>
-            <SelectTrigger className="w-[160px] h-9 text-sm">
-              <User className="h-3.5 w-3.5 mr-1.5" />
+            <SelectTrigger className="w-[170px] h-9 text-sm">
+              <User className="h-3.5 w-3.5 mr-1.5 shrink-0" />
               <SelectValue placeholder="Parceiro" />
             </SelectTrigger>
             <SelectContent>
