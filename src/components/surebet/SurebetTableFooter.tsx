@@ -30,12 +30,12 @@ export function SurebetTableFooter({
   
 }: SurebetTableFooterProps) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-4 pt-2 border-t border-border/50">
+    <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-border/50">
       {/* Totais */}
-      <div className="flex items-center gap-6">
+      <div className="flex items-center gap-3 md:gap-6">
         <div className="text-center">
           <div className="text-[10px] text-muted-foreground uppercase">Lucro Garantido</div>
-          <div className={`text-lg font-bold ${analysis.minLucro >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+          <div className={`text-base md:text-lg font-bold ${analysis.minLucro >= 0 ? "text-emerald-500" : "text-red-500"}`}>
             {analysis.stakeTotal > 0 
               ? `${analysis.minLucro >= 0 ? "+" : ""}${formatCurrency(analysis.minLucro, analysis.moedaDominante)}`
               : "—"
@@ -44,7 +44,7 @@ export function SurebetTableFooter({
         </div>
         <div className="text-center">
           <div className="text-[10px] text-muted-foreground uppercase">Total Apostado</div>
-          <div className="text-lg font-bold text-foreground">
+          <div className="text-base md:text-lg font-bold text-foreground">
             {analysis.stakeTotal > 0 
               ? formatCurrency(analysis.stakeTotal, analysis.moedaDominante)
               : "—"
@@ -53,7 +53,7 @@ export function SurebetTableFooter({
         </div>
         <div className="text-center">
           <div className="text-[10px] text-muted-foreground uppercase">ROI</div>
-          <div className={`text-lg font-bold ${analysis.minRoi >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+          <div className={`text-base md:text-lg font-bold ${analysis.minRoi >= 0 ? "text-emerald-500" : "text-red-500"}`}>
             {analysis.stakeTotal > 0 
               ? `${analysis.minRoi >= 0 ? "+" : ""}${analysis.minRoi.toFixed(2)}%`
               : "—"
