@@ -71,18 +71,14 @@ export function FinancialSummaryCompact({ projetoId }: FinancialSummaryCompactPr
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <button className="flex items-center gap-3 rounded-lg border border-border/50 bg-muted/30 px-3 py-1.5 hover:bg-muted/60 transition-colors cursor-pointer group">
-          <div className="flex flex-col items-center">
+        <button className="flex items-center gap-2 rounded-lg border border-border/50 bg-muted/30 px-3 py-1.5 hover:bg-muted/60 transition-colors cursor-pointer group">
+          <div className="flex flex-col items-start">
             <span className="text-[10px] text-muted-foreground leading-tight">{metrics.lucro >= 0 ? "Lucro" : "Prejuízo"}</span>
             <span className={`text-sm font-bold leading-tight tabular-nums ${lucroColor}`}>
               {formatCurrency(metrics.lucro)}
             </span>
-          </div>
-          <div className="h-6 w-px bg-border/50" />
-          <div className="flex flex-col items-center">
-            <span className="text-[10px] text-muted-foreground leading-tight">ROI</span>
-            <span className={`text-sm font-bold leading-tight tabular-nums ${roiColor}`}>
-              {metrics.roi.toFixed(2)}%
+            <span className={`text-[10px] leading-tight tabular-nums ${roiColor}`}>
+              ROI {metrics.roi.toFixed(2)}%
             </span>
           </div>
           <div className="h-6 w-6 rounded-full bg-muted/60 flex items-center justify-center group-hover:bg-muted transition-colors">
