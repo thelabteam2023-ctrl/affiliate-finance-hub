@@ -166,14 +166,15 @@ export async function executeUnlink(params: {
 }
 
 /**
- * Executa a vinculação com DEPOSITO_VIRTUAL.
+ * Executa a vinculação.
  * 
- * Proteções:
- * - Proteção contra race condition (idempotência)
- * - Validação de retorno do ledger
- * - DEPOSITO_VIRTUAL é OBRIGATÓRIO quando saldo > 0 (sem exceções)
+ * O DEPOSITO_VIRTUAL é criado automaticamente pelo trigger de banco de dados
+ * (tr_ensure_deposito_virtual_on_link) quando projeto_id muda de NULL para um valor.
+ * 
+ * Esta função NÃO cria DEPOSITO_VIRTUAL para evitar duplicatas.
+ * O trigger é a única fonte de verdade para baselines de vinculação.
  */
-export async function executeLink(params: {
+export async function executeLink(_params: {
   bookmakerId: string;
   projetoId: string;
   workspaceId: string;
@@ -181,24 +182,8 @@ export async function executeLink(params: {
   saldoAtual: number;
   moeda: string;
 }): Promise<void> {
-  const { bookmakerId, projetoId, workspaceId, userId, saldoAtual, moeda } = params;
-
-  // DEPOSITO_VIRTUAL com saldo atual (baseline para o novo projeto)
-  if (saldoAtual > 0) {
-    const depositoResult = await registrarDepositoVirtualViaLedger({
-      bookmakerId,
-      saldoAtual,
-      moeda,
-      workspaceId,
-      userId,
-      projetoId,
-    });
-
-    if (!depositoResult.success) {
-      throw new Error(
-        `Falha ao criar DEPOSITO_VIRTUAL para bookmaker ${bookmakerId}: ${depositoResult.error || 'Erro desconhecido'}. ` +
-        `A vinculação pode estar incompleta — verifique o ledger.`
-      );
-    }
-  }
+  // DEPOSITO_VIRTUAL é agora responsabilidade exclusiva do trigger
+  // tr_ensure_deposito_virtual_on_link no banco de dados.
+  // Esta função mantém a assinatura para compatibilidade de API.
+  console.log(`[executeLink] Vinculação de ${_params.bookmakerId} ao projeto ${_params.projetoId}. DV será criado pelo trigger do DB.`);
 }
