@@ -796,7 +796,7 @@ export default function ProjetoDetalhe() {
             <KpiBreakdownTooltip
               breakdown={kpiBreakdowns?.lucro || null}
               formatValue={formatCurrency}
-              title="Lucro por Módulo"
+              title="Resultado por Estratégia"
             >
               <div className="flex flex-col cursor-help min-w-[80px]">
                 <span className="text-xs text-muted-foreground leading-tight">
