@@ -362,9 +362,10 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
       await fetchGiros();
       invalidateProjectKPIs(); // Atualiza KPIs globais automaticamente
       return (data as any)?.id || null;
-    } catch (err) {
+    } catch (err: any) {
       console.error("Erro ao criar giro grátis:", err);
-      toast.error("Erro ao registrar giro grátis");
+      console.error("[createGiro] Detalhes:", JSON.stringify({ message: err?.message, code: err?.code, details: err?.details, hint: err?.hint }));
+      toast.error(`Erro ao registrar giro grátis: ${err?.message || 'Erro desconhecido'}`);
       return null;
     }
   };
