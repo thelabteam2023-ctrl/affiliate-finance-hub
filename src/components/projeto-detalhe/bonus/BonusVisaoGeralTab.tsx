@@ -488,29 +488,61 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
                   </span>
                 </CurrencyBreakdownTooltip>
               ),
-              tooltip: (
-                <div className="space-y-1.5">
-                  <p className="font-semibold text-foreground">Volume Operado & ROI Operacional</p>
-                  <p className="text-muted-foreground text-xs">Volume total apostado e retorno sobre esse volume.</p>
-                  <div className="space-y-0.5">
-                    <div className="flex justify-between gap-4">
-                      <span>Volume Total</span>
-                      <span className="font-semibold text-foreground">{formatCurrency(volume)}</span>
+              tooltip: (() => {
+                // Calcular custo a cada R$ 100k para mensagem didática
+                const custoPor100k = volume > 0 ? (Math.abs(juice) / volume) * 100000 : 0;
+                const isJuiceNeg = juice < 0;
+                
+                return (
+                  <div className="space-y-2 max-w-[280px]">
+                    <p className="font-semibold text-foreground">Volume Operado & Custo Operacional</p>
+                    
+                    {/* Dados numéricos */}
+                    <div className="space-y-0.5">
+                      <div className="flex justify-between gap-4">
+                        <span>Volume Girado</span>
+                        <span className="font-semibold text-foreground">{formatCurrency(volume)}</span>
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <span>Resultado das Apostas</span>
+                        <span className={`font-semibold ${juice >= 0 ? "text-emerald-500" : "text-red-500"}`}>{formatCurrency(juice)}</span>
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <span className="text-muted-foreground text-xs">ROI Operacional</span>
+                        <span className={`font-semibold text-xs ${roiColor}`}>{roiOp.toFixed(2)}%</span>
+                      </div>
                     </div>
-                    <div className="flex justify-between gap-4">
-                      <span>Resultado Apostas (Juice)</span>
-                      <span className={`font-semibold ${juice >= 0 ? "text-emerald-500" : "text-red-500"}`}>{formatCurrency(juice)}</span>
+                    
+                    {/* Mensagem didática */}
+                    <div className="border-t border-border/50 pt-2">
+                      {volume > 0 ? (
+                        <p className="text-xs leading-relaxed text-muted-foreground">
+                          {isJuiceNeg ? (
+                            <>
+                              📊 <span className="text-foreground font-medium">Na prática:</span> A cada <span className="text-foreground font-semibold">R$ 100.000</span> girados em apostas de bônus, o custo operacional é de <span className="text-red-500 font-semibold">{formatCurrency(custoPor100k)}</span>. Esse é o "preço" pago em juice para extrair os bônus.
+                            </>
+                          ) : (
+                            <>
+                              📊 <span className="text-foreground font-medium">Na prática:</span> A cada <span className="text-foreground font-semibold">R$ 100.000</span> girados, houve um retorno positivo de <span className="text-emerald-500 font-semibold">{formatCurrency(custoPor100k)}</span> nas apostas — um resultado acima do esperado para extração de bônus.
+                            </>
+                          )}
+                        </p>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">Nenhum volume registrado ainda.</p>
+                      )}
                     </div>
+                    
+                    {/* Dica de uso */}
+                    {volume > 0 && (
+                      <div className="border-t border-border/50 pt-2">
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                          💡 <span className="text-foreground font-medium">Use para:</span> Comparar eficiência entre operadores, estimar o custo antes de aceitar um bônus com rollover alto, ou detectar anomalias operacionais.
+                        </p>
+                      </div>
+                    )}
                   </div>
-                  <div className="border-t border-border/50 pt-1 space-y-0.5">
-                    <div className="flex justify-between gap-4">
-                      <span className="text-muted-foreground text-xs">ROI Operacional</span>
-                      <span className={`font-semibold text-xs ${roiColor}`}>{roiOp.toFixed(2)}%</span>
-                    </div>
-                    <p className="text-muted-foreground text-xs">Fórmula: Juice ÷ Volume × 100</p>
-                  </div>
-                </div>
-              ),
+                );
+              })(),
               subtitle: <span className={`text-xs ${roiColor}`}>ROI {roiOp.toFixed(2)}%</span>,
               minWidth: "min-w-[100px]",
             };
