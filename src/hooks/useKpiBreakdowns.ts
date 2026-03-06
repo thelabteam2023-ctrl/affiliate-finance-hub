@@ -112,7 +112,7 @@ async function fetchBreakdownsData(
     bonusGanhosData,
   ] = await Promise.all([
     fetchApostasModuleData(projetoId, dataInicio, dataFim, moedaConsolidacao, safeConvert),
-    fetchGirosGratisModuleData(projetoId, dataInicio, dataFim),
+    fetchGirosGratisModuleData(projetoId, dataInicio, dataFim, moedaConsolidacao, safeConvert),
     fetchPerdasModuleData(projetoId, dataInicio, dataFim),
     fetchAjustesModuleData(projetoId),
     fetchCashbackModuleData(projetoId, dataInicio, dataFim, moedaConsolidacao, safeConvert),
@@ -390,7 +390,9 @@ async function fetchApostasModuleData(
 async function fetchGirosGratisModuleData(
   projetoId: string,
   dataInicio: Date | null,
-  dataFim: Date | null
+  dataFim: Date | null,
+  moedaConsolidacao: string,
+  convertToConsolidation: (valor: number, moedaOrigem: string) => number
 ): Promise<ModuleDataWithCurrency> {
   let query = supabase
     .from('giros_gratis' as any)
@@ -437,9 +439,15 @@ async function fetchGirosGratisModuleData(
 
   const count = giros.length;
   const valorTotal = giros.reduce((acc, g) => acc + Number(g.valor_total_giros || 0), 0);
-  const lucro = giros.reduce((acc, g) => acc + Math.max(0, Number(g.valor_retorno || 0)), 0);
+  
+  // CORREÇÃO: Converter valor_retorno para moeda de consolidação antes de somar
+  const lucro = giros.reduce((acc, g) => {
+    const valorOriginal = Math.max(0, Number(g.valor_retorno || 0));
+    const moedaOrigem = bookmakerMoedas[g.bookmaker_id] || 'BRL';
+    return acc + convertToConsolidation(valorOriginal, moedaOrigem);
+  }, 0);
 
-  // Agregação por moeda
+  // Agregação por moeda ORIGINAL (sem conversão) - para tooltip breakdown
   const volumeItems = giros.map(g => ({
     valor: Number(g.valor_total_giros || 0),
     moeda: bookmakerMoedas[g.bookmaker_id] || 'BRL'
