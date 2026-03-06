@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface FinancialMetricsPopoverProps {
   projetoId: string;
@@ -89,16 +90,30 @@ async function fetchFinancialMetricsRaw(projetoId: string) {
   };
 }
 
-function MetricRow({ label, value, colorClass = "text-foreground", bold = false, indent = false }: {
+function MetricRow({ label, value, colorClass = "text-foreground", bold = false, indent = false, tooltip }: {
   label: string;
   value: string;
   colorClass?: string;
   bold?: boolean;
   indent?: boolean;
+  tooltip?: string;
 }) {
+  const labelEl = (
+    <span className={`text-[11px] ${bold ? "font-medium text-foreground" : "text-muted-foreground"} ${tooltip ? "border-b border-dotted border-muted-foreground/40 cursor-help" : ""}`}>
+      {label}
+    </span>
+  );
+
   return (
     <div className={`flex items-center justify-between gap-4 ${indent ? "pl-3" : ""}`}>
-      <span className={`text-[11px] ${bold ? "font-medium text-foreground" : "text-muted-foreground"}`}>{label}</span>
+      {tooltip ? (
+        <Tooltip>
+          <TooltipTrigger asChild>{labelEl}</TooltipTrigger>
+          <TooltipContent side="left" className="max-w-[240px] text-xs">
+            {tooltip}
+          </TooltipContent>
+        </Tooltip>
+      ) : labelEl}
       <span className={`text-[11px] font-mono tabular-nums ${bold ? "font-bold" : "font-semibold"} ${colorClass}`}>
         {value}
       </span>
@@ -147,7 +162,7 @@ function ExtrasCollapsible({ metrics, formatCurrency }: { metrics: any; formatCu
             <MetricRow label="Ganho de Confirmação" value={formatCurrency(metrics.ganhoConfirmacao)} colorClass="text-emerald-500" indent />
           )}
           {Math.abs(metrics.ajustes) >= 0.01 && (
-            <MetricRow label="Ajustes de Saldo" value={formatCurrency(metrics.ajustes)} colorClass={metrics.ajustes >= 0 ? "text-emerald-500" : "text-red-500"} indent />
+            <MetricRow label="Ajustes de Saldo" value={formatCurrency(metrics.ajustes)} colorClass={metrics.ajustes >= 0 ? "text-emerald-500" : "text-red-500"} indent tooltip="Correções feitas quando o saldo da casa diverge do esperado — por exemplo, variações de odds em décimos durante a operação que geram pequenas diferenças. O ajuste garante que o lucro real seja apurado corretamente." />
           )}
           {(() => {
             const fxLiquido = metrics.ganhoFx - metrics.perdaFx;
