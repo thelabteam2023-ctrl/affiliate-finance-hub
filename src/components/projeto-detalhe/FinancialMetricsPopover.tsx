@@ -15,10 +15,12 @@ import {
   CheckCircle2,
   AlertCircle,
   ChevronDown,
+  Layers,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { ESTRATEGIA_LABELS, type ApostaEstrategia } from "@/lib/apostaConstants";
 
 interface FinancialMetricsPopoverProps {
   projetoId: string;
@@ -72,6 +74,14 @@ async function fetchFinancialMetricsRaw(projetoId: string) {
     .eq("projeto_id_snapshot", projetoId)
     .order("data_transacao", { ascending: true });
 
+  // Fetch profit by strategy
+  const { data: strategyData } = await supabase
+    .from("apostas_unificada")
+    .select("estrategia, pl_consolidado, lucro_prejuizo, lucro_prejuizo_brl_referencia, moeda_operacao")
+    .eq("projeto_id", projetoId)
+    .in("status", ["LIQUIDADA", "GREEN", "RED", "MEIO_GREEN", "MEIO_RED"])
+    .not("resultado", "is", null);
+
   return {
     bookmakerSaldos,
     depositos: (depositos.data || []) as LedgerEntry[],
@@ -87,6 +97,7 @@ async function fetchFinancialMetricsRaw(projetoId: string) {
       ganhoCambial: (ganhosFx.data || []) as { valor: number; moeda: string }[],
     },
     breakEvenTimeline: (timelineData || []) as { valor: number; valor_confirmado?: number | null; moeda: string; data_transacao: string; tipo_transacao: string }[],
+    strategyProfits: (strategyData || []) as { estrategia: string; pl_consolidado: number | null; lucro_prejuizo: number | null; lucro_prejuizo_brl_referencia: number | null; moeda_operacao: string | null }[],
   };
 }
 
@@ -251,12 +262,24 @@ export function FinancialMetricsPopover({ projetoId }: FinancialMetricsPopoverPr
       ? differenceInDays(parseISO(breakEvenDate), parseISO(firstTransactionDate))
       : null;
 
+    // Strategy breakdown
+    const strategyMap: Record<string, number> = {};
+    for (const row of rawMetrics.strategyProfits) {
+      const key = row.estrategia || 'OUTROS';
+      const pl = row.pl_consolidado ?? row.lucro_prejuizo_brl_referencia ?? row.lucro_prejuizo ?? 0;
+      strategyMap[key] = (strategyMap[key] || 0) + pl;
+    }
+    const strategyBreakdown = Object.entries(strategyMap)
+      .map(([estrategia, lucro]) => ({ estrategia, lucro }))
+      .sort((a, b) => Math.abs(b.lucro) - Math.abs(a.lucro));
+
     return {
       depositosTotal, saquesRecebidos, saquesPendentes, saldoCasas,
       fluxoCaixaLiquido, fluxoLiquidoAjustado, capitalTotal, extrasPositivos,
       cashbackLiquido, girosGratis, ajustes, ganhoConfirmacao, ganhoFx, perdaOp, perdaFx,
       patrimonio, lucroFinanceiro,
       breakEvenDate, breakEvenDays,
+      strategyBreakdown,
     };
   }, [rawMetrics, convertToConsolidationOficial, cotacaoOficialUSD]);
 
@@ -283,6 +306,34 @@ export function FinancialMetricsPopover({ projetoId }: FinancialMetricsPopoverPr
         </div>
         <span className="text-xs font-bold tracking-tight">Indicadores Financeiros</span>
       </div>
+
+      {/* ─── Seção 0: Lucro por Módulo ─── */}
+      {metrics.strategyBreakdown.length > 0 && (
+        <div className="space-y-1 pb-3">
+          <SectionHeader icon={Layers} label="Lucro por Módulo" />
+          {metrics.strategyBreakdown.map(({ estrategia, lucro }) => (
+            <MetricRow
+              key={estrategia}
+              label={ESTRATEGIA_LABELS[estrategia as ApostaEstrategia] || estrategia}
+              value={`${lucro < 0 ? "−" : "+"}${formatCurrency(Math.abs(lucro))}`}
+              colorClass={lucro >= 0 ? "text-emerald-500" : "text-red-500"}
+            />
+          ))}
+          {metrics.strategyBreakdown.length > 1 && (() => {
+            const total = metrics.strategyBreakdown.reduce((acc, s) => acc + s.lucro, 0);
+            return (
+              <div className="border-t border-border/30 mt-1.5 pt-1.5">
+                <MetricRow
+                  label="Total Apostas"
+                  value={`${total < 0 ? "−" : "+"}${formatCurrency(Math.abs(total))}`}
+                  colorClass={total >= 0 ? "text-emerald-500" : "text-red-500"}
+                  bold
+                />
+              </div>
+            );
+          })()}
+        </div>
+      )}
 
       {/* ─── Seção 1: Fluxo de Caixa ─── */}
       <div className="space-y-1 pb-3">
