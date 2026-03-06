@@ -294,22 +294,6 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-          {hasBonus && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="p-2 rounded bg-muted/30 cursor-help">
-                    <span className="text-muted-foreground">Bônus Creditados</span>
-                    <p className="font-semibold text-primary">{formatCurrency(saldoBonus)}</p>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="text-xs max-w-[240px]">
-                  <p>Valor de bônus já creditados nas casas.</p>
-                  <p className="text-muted-foreground mt-1">Este valor já está incluído no Saldo Disponível — não é somado ao total.</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
           {hasFreebet && (
             <TooltipProvider>
               <Tooltip>
@@ -345,9 +329,15 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
         </div>
       </div>
 
-      <p className="text-[10px] text-muted-foreground bg-muted/20 p-2 rounded border border-border/30">
-        Total Operável = Saldo Disponível + Freebet. Bônus creditados já estão incluídos no saldo disponível.
-      </p>
+      {hasBonus ? (
+        <p className="text-[10px] text-muted-foreground bg-muted/20 p-2 rounded border border-border/30">
+          Total Operável = Saldo Disponível + Freebet. O saldo disponível já inclui <span className="text-primary font-medium">{formatCurrency(saldoBonus)}</span> de bônus creditados.
+        </p>
+      ) : (
+        <p className="text-[10px] text-muted-foreground bg-muted/20 p-2 rounded border border-border/30">
+          Total Operável = Saldo Disponível + Freebet.
+        </p>
+      )}
 
       {/* Saldo por Casa — GRID RESPONSIVO */}
       <div className="space-y-2">
