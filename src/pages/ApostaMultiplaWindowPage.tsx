@@ -87,12 +87,40 @@ export default function ApostaMultiplaWindowPage() {
   // FLUXO DISTINTO: Criação mantém aberto, Edição fecha automaticamente
   const handleSuccess = useCallback((action?: ApostaMultiplaActionType) => {
     // Notificar janela principal para atualizar listas/KPIs/saldos
+    const payload = { 
+      type: 'APOSTA_MULTIPLA_SAVED', 
+      projetoId, 
+      action,
+      source: 'aposta_multipla_window',
+    };
+
+    // 1. BroadcastChannel (same-origin tabs/windows)
     try {
       const channel = new BroadcastChannel('aposta_multipla_channel');
-      channel.postMessage({ type: 'APOSTA_MULTIPLA_SAVED', projetoId, action });
+      channel.postMessage(payload);
       channel.close();
     } catch (err) {
-      localStorage.setItem('aposta_multipla_saved', JSON.stringify({ projetoId, action, timestamp: Date.now() }));
+      console.warn('[ApostaMultiplaWindowPage] BroadcastChannel não disponível:', err);
+    }
+
+    // 2. window.opener.postMessage (cross-context, iframe scenarios)
+    try {
+      if (window.opener && !window.opener.closed) {
+        window.opener.postMessage(payload, '*');
+      }
+    } catch (err) {
+      // ignore
+    }
+
+    // 3. localStorage fallback (triggers StorageEvent in other windows)
+    try {
+      localStorage.setItem('aposta_multipla_saved', JSON.stringify({ 
+        ...payload,
+        timestamp: Date.now() 
+      }));
+      setTimeout(() => localStorage.removeItem('aposta_multipla_saved'), 100);
+    } catch (err) {
+      // ignore
     }
     
     // Se veio de rascunho, deletar o rascunho após salvar com sucesso (não em delete)
