@@ -73,6 +73,9 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
     console.log("[BonusVisaoGeralTab] Aposta atualizada via BroadcastChannel, invalidando queries...");
     // Invalidar query de apostas de bônus (gráfico de juice)
     queryClient.invalidateQueries({ queryKey: ["bonus-bets-juice", projetoId] });
+    // Invalidar queries de resumo de bônus (Volume Operado, Performance)
+    queryClient.invalidateQueries({ queryKey: ["bonus-bets-summary", projetoId] });
+    queryClient.invalidateQueries({ queryKey: ["bonus-analytics", projetoId] });
     // Invalidar queries de bônus gerais
     queryClient.invalidateQueries({ queryKey: ["bonus", "project", projetoId] });
     // Invalidar KPIs financeiros

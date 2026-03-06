@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -177,6 +178,7 @@ type ApostaUnificada = {
 };
 
 export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApostasTabProps) {
+  const queryClient = useQueryClient();
   const { getBookmakersWithActiveBonus, bonuses } = useProjectBonuses({ projectId: projetoId });
   const { convertToConsolidation, moedaConsolidacao, formatCurrency: formatProjectCurrency } = useProjetoCurrency(projetoId);
   
@@ -573,6 +575,11 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
         fetchBookmakersInternal(currentProjetoId, currentBonusIds)
       ]);
       
+      // Invalidar queries de resumo de bônus (Volume Operado, Performance, Analytics)
+      queryClient.invalidateQueries({ queryKey: ["bonus-bets-summary", currentProjetoId] });
+      queryClient.invalidateQueries({ queryKey: ["bonus-analytics", currentProjetoId] });
+      queryClient.invalidateQueries({ queryKey: ["bonus-bets-juice", currentProjetoId] });
+      
       // Notificar pai para refresh global (KPIs, Visão Geral, outras abas)
       onDataChange?.();
     } catch (error) {
@@ -580,7 +587,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
     } finally {
       setLoading(false);
     }
-  }, [onDataChange]);
+  }, [onDataChange, queryClient]);
 
   // Hook centralizado para sincronização cross-window
   useCrossWindowSync({
