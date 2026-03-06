@@ -279,7 +279,9 @@ async function fetchApostasModuleData(
   let query = supabase
     .from('apostas_unificada')
     .select('stake, stake_total, lucro_prejuizo, resultado, forma_registro, status, moeda_operacao, consolidation_currency, pl_consolidado, stake_consolidado, lucro_prejuizo_brl_referencia, valor_brl_referencia')
-    .eq('projeto_id', projetoId);
+    .eq('projeto_id', projetoId)
+    .is('bonus_id', null)
+    .neq('estrategia', 'EXTRACAO_BONUS');
 
   // CRÍTICO: Usar timezone operacional (America/Sao_Paulo)
   if (dataInicio && dataFim) {
