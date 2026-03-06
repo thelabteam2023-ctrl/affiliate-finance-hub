@@ -12539,6 +12539,19 @@ export type Database = {
         }[]
       }
       deletar_perna_surebet_v1: { Args: { p_perna_id: string }; Returns: Json }
+      desvincular_bookmaker_atomico: {
+        Args: {
+          p_bookmaker_id: string
+          p_marcar_para_saque?: boolean
+          p_moeda: string
+          p_projeto_id: string
+          p_saldo_virtual_efetivo: number
+          p_status_final: string
+          p_user_id: string
+          p_workspace_id: string
+        }
+        Returns: Json
+      }
       editar_perna_surebet_atomica: {
         Args: {
           p_new_bookmaker_id?: string

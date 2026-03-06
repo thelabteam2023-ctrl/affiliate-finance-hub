@@ -189,7 +189,7 @@ export function ConciliacaoVinculoDialog({
         ? "aguardando_saque" 
         : "ativo";
 
-      // 3. CRÍTICO: Usar executeUnlink para gerar SAQUE_VIRTUAL corretamente
+      // 3. CRÍTICO: Usar executeUnlink ATÔMICO para gerar SAQUE_VIRTUAL + unlink na mesma transação
       // Recalcular saldo efetivo com preCheckUnlink (pois pode ter mudado após ajuste)
       const check = await preCheckUnlink(vinculo.id);
       
@@ -201,18 +201,8 @@ export function ConciliacaoVinculoDialog({
         statusFinal,
         saldoVirtualEfetivo: check.saldoVirtualEfetivo,
         moeda: vinculo.moeda,
+        marcarParaSaque: deveMarcarParaSaque && saldoFinalReal > 0,
       });
-
-      // 4. Se deve marcar para saque, usar a RPC
-      if (deveMarcarParaSaque && saldoFinalReal > 0) {
-        const { error } = await supabase.rpc('marcar_para_saque', {
-          p_bookmaker_id: vinculo.id
-        });
-        if (error) {
-          console.error("[ConciliacaoVinculoDialog] Erro ao marcar para saque:", error);
-          // Não bloquear — a desvinculação já aconteceu
-        }
-      }
 
       if (isLimitada) {
         toast.success(
