@@ -212,7 +212,9 @@ async function fetchGrossProfitFromBets(
     .from('apostas_unificada')
     .select('lucro_prejuizo, pl_consolidado, moeda_operacao, consolidation_currency')
     .eq('projeto_id', projetoId)
-    .eq('status', 'LIQUIDADA');
+    .eq('status', 'LIQUIDADA')
+    .is('bonus_id', null)
+    .neq('estrategia', 'EXTRACAO_BONUS');
   
   if (dataInicio && dataFim) {
     const { startUTC, endUTC } = getOperationalDateRangeForQuery(dataInicio, dataFim);
@@ -254,7 +256,9 @@ async function fetchTotalStaked(
   let query = supabase
     .from('apostas_unificada')
     .select('stake, stake_total, stake_consolidado, forma_registro, moeda_operacao, consolidation_currency')
-    .eq('projeto_id', projetoId);
+    .eq('projeto_id', projetoId)
+    .is('bonus_id', null)
+    .neq('estrategia', 'EXTRACAO_BONUS');
   
   if (dataInicio && dataFim) {
     const { startUTC, endUTC } = getOperationalDateRangeForQuery(dataInicio, dataFim);

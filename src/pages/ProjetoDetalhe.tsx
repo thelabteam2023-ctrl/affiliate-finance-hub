@@ -478,7 +478,9 @@ export default function ProjetoDetalhe() {
       let apostasQuery = supabase
         .from("apostas_unificada")
         .select("id, stake, lucro_prejuizo, lucro_prejuizo_brl_referencia, moeda_operacao, status, resultado, forma_registro")
-        .eq("projeto_id", id);
+        .eq("projeto_id", id)
+        .is("bonus_id", null)
+        .neq("estrategia", "EXTRACAO_BONUS");
       
       // Build query for cashback_manual
       let cashbackQuery = supabase
