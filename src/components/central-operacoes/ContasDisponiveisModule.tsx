@@ -179,8 +179,8 @@ export function ContasDisponiveisModule() {
   const filtered = useMemo(() => {
     if (!contas) return [];
     return contas.filter((c) => {
-      const saldoEfetivo = c.moeda === "USD" || c.moeda === "USDT" ? c.saldo_usd : c.saldo_atual;
-      const totalSaldo = saldoEfetivo + c.saldo_freebet;
+      // saldo_atual é SEMPRE a fonte de verdade (mantido pelos triggers do motor financeiro)
+      const totalSaldo = c.saldo_atual + c.saldo_freebet;
       
       if (totalSaldo < minSaldoNum) return false;
       if (moedaFilter !== "todas" && c.moeda !== moedaFilter) return false;
