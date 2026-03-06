@@ -1104,6 +1104,27 @@ export default function CentralOperacoes() {
     navigate("/caixa", { state: { openDialog: true, bookmakerId: casa.id, bookmakerNome: casa.nome } });
   };
 
+  // Cancelar liberação de saque - reverte bookmaker ao estado anterior
+  const handleCancelarLiberacao = async (alerta: Alerta) => {
+    try {
+      const { error } = await supabase
+        .from("bookmakers")
+        .update({
+          aguardando_saque_at: null,
+          status: "ativo",
+        })
+        .eq("id", alerta.entidade_id);
+
+      if (error) throw error;
+
+      toast.success(`Liberação de "${alerta.titulo}" cancelada — casa devolvida ao status ativo`);
+      fetchData(true);
+    } catch (err) {
+      console.error("Erro ao cancelar liberação:", err);
+      toast.error("Erro ao cancelar liberação");
+    }
+  };
+
   // Marcar casa para saque (decisão do responsável)
   // Usa RPC que preserva estado_conta antes de entrar no workflow
   const handleMarcarParaSaque = async (casa: BookmakerDesvinculado) => {
