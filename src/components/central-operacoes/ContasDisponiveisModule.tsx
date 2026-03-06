@@ -238,7 +238,7 @@ export function ContasDisponiveisModule() {
     if (!selectedConta || !selectedProjetoId) return;
     setVincularLoading(true);
     try {
-      // Update bookmaker to link to project
+      // 1. Update bookmaker to link to project
       const { error: updateError } = await supabase
         .from("bookmakers")
         .update({ projeto_id: selectedProjetoId })
@@ -246,7 +246,7 @@ export function ContasDisponiveisModule() {
 
       if (updateError) throw updateError;
 
-      // Create historico entry
+      // 2. Create historico entry
       const { error: histError } = await supabase
         .from("projeto_bookmaker_historico")
         .insert({
@@ -263,7 +263,19 @@ export function ContasDisponiveisModule() {
         console.error("[ContasDisponiveis] Erro ao criar histórico:", histError);
       }
 
-      // Update existing ledger entries without projeto_id_snapshot
+      // 3. DEPOSITO_VIRTUAL — baseline financeiro para o novo ciclo
+      // Sem isso, re-vinculações inflam o Fluxo Líquido do projeto
+      const { executeLink } = await import("@/lib/projetoTransitionService");
+      await executeLink({
+        bookmakerId: selectedConta.id,
+        projetoId: selectedProjetoId,
+        workspaceId: workspaceId!,
+        userId: user!.id,
+        saldoAtual: selectedConta.saldo_atual,
+        moeda: selectedConta.moeda,
+      });
+
+      // 4. Atribuir transações órfãs (sem projeto_id_snapshot) a este projeto
       await supabase
         .from("cash_ledger")
         .update({ projeto_id_snapshot: selectedProjetoId })
