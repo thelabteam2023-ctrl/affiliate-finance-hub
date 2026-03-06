@@ -276,11 +276,50 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
       <div className="space-y-2">
         <p className="text-xs font-medium text-foreground">Composição do Saldo</p>
         <div className="space-y-0 text-xs rounded-lg border border-border/50 overflow-hidden">
-          {/* Saldo Disponível */}
-          <div className="flex items-center justify-between px-3 py-2 bg-muted/20">
-            <span className="text-muted-foreground">Saldo Disponível</span>
-            <span className="font-semibold">{formatCurrency(Math.max(0, saldoReal - saldoEmAposta))}</span>
-          </div>
+          {/* Saldo Disponível — com tooltip mostrando composição incluindo bônus */}
+          <TooltipProvider delayDuration={0}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex items-center justify-between px-3 py-2 bg-muted/20 cursor-help">
+                  <span className="text-muted-foreground">Saldo Disponível</span>
+                  <span className="font-semibold">{formatCurrency(Math.max(0, saldoReal - saldoEmAposta))}</span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="left" className="z-[10000] p-0 overflow-hidden rounded-lg border border-border/50 bg-background shadow-xl min-w-[220px]">
+                <div className="px-3 py-2 border-b border-border/30">
+                  <p className="text-xs font-semibold text-foreground">Composição do Saldo</p>
+                </div>
+                <div className="text-xs">
+                  <div className="flex items-center justify-between px-3 py-1.5">
+                    <span className="text-muted-foreground">Saldo Real</span>
+                    <span className="font-medium">{formatCurrency(saldoReal)}</span>
+                  </div>
+                  {saldoEmAposta > 0 && (
+                    <div className="flex items-center justify-between px-3 py-1.5">
+                      <span className="text-muted-foreground">Em Aposta</span>
+                      <span className="font-medium text-amber-500">- {formatCurrency(saldoEmAposta)}</span>
+                    </div>
+                  )}
+                  {hasBonus && (
+                    <>
+                      <div className="border-t border-border/30 mx-2" />
+                      <div className="flex items-center justify-between px-3 py-1.5">
+                        <span className="text-muted-foreground">Bônus Creditados</span>
+                        <span className="font-medium text-primary">+{formatCurrency(saldoBonus)}</span>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground/70 px-3 pb-2">
+                        Já incluído no saldo real
+                      </p>
+                    </>
+                  )}
+                </div>
+                <div className="flex items-center justify-between px-3 py-2 border-t border-border/50 bg-muted/30">
+                  <span className="font-semibold text-foreground">Total Disponível</span>
+                  <span className="font-bold text-primary">{formatCurrency(Math.max(0, saldoReal - saldoEmAposta))}</span>
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           {/* Freebet */}
           {hasFreebet && (
             <div className="flex items-center justify-between px-3 py-2 bg-muted/20 border-t border-border/30">
@@ -298,24 +337,12 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
               <span className="font-semibold text-amber-500">- {formatCurrency(saldoEmAposta)}</span>
             </div>
           )}
-          {/* Bônus creditados (informativo) */}
-          {hasBonus && (
-            <div className="flex items-center justify-between px-3 py-2 bg-muted/20 border-t border-border/30">
-              <span className="text-muted-foreground">Bônus Creditados</span>
-              <span className="font-medium text-primary">{formatCurrency(saldoBonus)}</span>
-            </div>
-          )}
           {/* Total */}
           <div className="flex items-center justify-between px-3 py-2.5 border-t border-border/50 bg-muted/30">
             <span className="font-semibold text-foreground">Total Operável</span>
             <span className="font-bold text-primary">{formatCurrency(saldoOperavel)}</span>
           </div>
         </div>
-        {hasBonus && (
-          <p className="text-[10px] text-muted-foreground">
-            Bônus creditados já estão incluídos no saldo disponível.
-          </p>
-        )}
       </div>
 
       {/* Saldo por Casa — GRID RESPONSIVO */}
