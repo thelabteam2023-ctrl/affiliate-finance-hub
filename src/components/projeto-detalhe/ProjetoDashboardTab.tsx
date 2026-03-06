@@ -324,6 +324,30 @@ async function fetchExtrasLucroFn(projetoId: string): Promise<ExtraLucroEntry[]>
   });
 
   // ============================================================
+  // BÔNUS CREDITADOS (impactam patrimônio via saldo_bonus/saldo_atual)
+  // Exclui FREEBET pois o lucro SNR já está no P&L da aposta
+  // ============================================================
+  const { data: bonusCreditados } = await supabase
+    .from("project_bookmaker_link_bonuses")
+    .select("credited_at, bonus_amount, currency, tipo_bonus, bookmaker_id")
+    .eq("project_id", projetoId)
+    .in("status", ["credited", "finalized"])
+    .not("credited_at", "is", null);
+
+  bonusCreditados?.forEach(b => {
+    // FREEBET excluído: lucro já contabilizado via SNR no P&L da aposta
+    if (b.tipo_bonus === "FREEBET") return;
+    const valor = Number(b.bonus_amount || 0);
+    if (!valor) return;
+    extras.push({
+      data: extractCivilDateKey(b.credited_at!),
+      valor,
+      moeda: b.currency || projectBookmakerMoeda.get(b.bookmaker_id) || "BRL",
+      tipo: 'bonus',
+    });
+  });
+
+  // ============================================================
   // AJUSTES DE SALDO (impactam patrimônio via saldo_atual)
   // ============================================================
   const { data: ajustesSaldo } = await supabase
