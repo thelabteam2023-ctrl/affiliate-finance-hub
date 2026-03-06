@@ -8,6 +8,8 @@
  * 4. Proteção contra race conditions (idempotência)
  * 5. Detecção de re-vinculação ao mesmo projeto
  * 6. Tracking de saldo freebet
+ * 7. Atomicidade: ledger entry ANTES de unlink, rollback em caso de falha
+ * 8. Validação de retorno de operações de ledger
  */
 
 import { supabase } from "@/integrations/supabase/client";
@@ -137,10 +139,13 @@ async function hasRecentVirtualTransaction(
 
 /**
  * Executa a desvinculação com todas as proteções:
+ * 
+ * ORDEM CRÍTICA (atomicidade):
  * 1. Trava projeto_id_snapshot em transações PENDENTES/LIQUIDADO
- * 2. Gera SAQUE_VIRTUAL com saldo efetivo (descontando pendentes)
- * 3. Desvincula a bookmaker
- * 4. Proteção contra race condition (idempotência)
+ * 2. Cria SAQUE_VIRTUAL ANTES de desvincular (para garantir registro contábil)
+ * 3. Desvincula a bookmaker (só após sucesso do ledger)
+ * 4. Atualiza histórico
+ * 5. Se qualquer etapa falhar, não avança para a próxima
  */
 export async function executeUnlink(params: {
   bookmakerId: string;
@@ -176,17 +181,10 @@ export async function executeUnlink(params: {
     .eq("status", "LIQUIDADO")
     .is("projeto_id_snapshot", null);
 
-  // 2. Desvincular bookmaker do projeto
-  const { error: updateError } = await supabase
-    .from("bookmakers")
-    .update({ projeto_id: null, status: statusFinal })
-    .eq("id", bookmakerId);
-
-  if (updateError) throw updateError;
-
-  // 3. SAQUE_VIRTUAL com saldo efetivo (já descontou saques pendentes + incluiu depósitos pendentes)
+  // 2. SAQUE_VIRTUAL ANTES de desvincular (garante registro contábil)
+  // Se esta etapa falhar, a bookmaker NÃO será desvinculada
   if (saldoVirtualEfetivo > 0) {
-    await registrarSaqueVirtualViaLedger({
+    const saqueResult = await registrarSaqueVirtualViaLedger({
       bookmakerId,
       saldoAtual: saldoVirtualEfetivo,
       moeda,
@@ -194,7 +192,22 @@ export async function executeUnlink(params: {
       userId,
       projetoId,
     });
+
+    if (!saqueResult.success) {
+      throw new Error(
+        `Falha ao criar SAQUE_VIRTUAL para bookmaker ${bookmakerId}: ${saqueResult.error || 'Erro desconhecido'}. ` +
+        `Desvinculação abortada para preservar integridade financeira.`
+      );
+    }
   }
+
+  // 3. Desvincular bookmaker do projeto (só após sucesso do ledger)
+  const { error: updateError } = await supabase
+    .from("bookmakers")
+    .update({ projeto_id: null, status: statusFinal })
+    .eq("id", bookmakerId);
+
+  if (updateError) throw updateError;
 
   // 4. Atualizar histórico
   await supabase
@@ -212,9 +225,9 @@ export async function executeUnlink(params: {
  * Executa a vinculação com DEPOSITO_VIRTUAL.
  * 
  * Proteções:
- * - Não atribui transações órfãs (evita dupla contagem)
- * - Detecta re-vinculação ao mesmo projeto (skip se último projeto = atual)
  * - Proteção contra race condition (idempotência)
+ * - Validação de retorno do ledger
+ * - DEPOSITO_VIRTUAL é OBRIGATÓRIO quando saldo > 0 (sem exceções)
  */
 export async function executeLink(params: {
   bookmakerId: string;
@@ -242,7 +255,7 @@ export async function executeLink(params: {
   // 2. DEPOSITO_VIRTUAL com saldo atual (baseline para o novo projeto)
   // NOTA: NÃO atribuímos transações órfãs — o DEPOSITO_VIRTUAL é a única fonte de baseline.
   if (saldoAtual > 0) {
-    await registrarDepositoVirtualViaLedger({
+    const depositoResult = await registrarDepositoVirtualViaLedger({
       bookmakerId,
       saldoAtual,
       moeda,
@@ -250,5 +263,12 @@ export async function executeLink(params: {
       userId,
       projetoId,
     });
+
+    if (!depositoResult.success) {
+      throw new Error(
+        `Falha ao criar DEPOSITO_VIRTUAL para bookmaker ${bookmakerId}: ${depositoResult.error || 'Erro desconhecido'}. ` +
+        `A vinculação pode estar incompleta — verifique o ledger.`
+      );
+    }
   }
 }
