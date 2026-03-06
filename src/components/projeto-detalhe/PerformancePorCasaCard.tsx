@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Building2, Layers, Users, Info, TrendingUp } from "lucide-react";
+import { CurrencyBreakdownTooltip, type CurrencyBreakdownItem } from "@/components/ui/currency-breakdown-tooltip";
 import {
   Tooltip,
   TooltipContent,
@@ -79,11 +80,14 @@ interface PerformanceMetrics {
   greens: number;
   reds: number;
   roi: number;
+  /** Breakdown de lucro por moeda original (para tooltip multi-moeda) */
+  lucroBreakdown?: Record<string, number>;
 }
 
 interface ExtraLucroEntry {
   data: string;
   valor: number;
+  moeda?: string;
   tipo: 'cashback' | 'giro_gratis' | 'freebet' | 'bonus' | 'promocional' | 'ajuste_saldo' | 'resultado_cambial' | 'conciliacao';
   bookmaker_id?: string;
   bookmaker_nome?: string;
@@ -94,6 +98,7 @@ interface PerformancePorCasaCardProps {
   extrasLucro?: ExtraLucroEntry[];
   formatCurrency: (value: number) => string;
   getLogoUrl: (nome: string) => string | undefined;
+  moedaConsolidacao?: string;
 }
 
 const VIEW_LABELS: Record<PerformanceView, { label: string; tooltip: string }> = {
@@ -128,6 +133,7 @@ export function PerformancePorCasaCard({
   extrasLucro = [],
   formatCurrency,
   getLogoUrl,
+  moedaConsolidacao = "BRL",
 }: PerformancePorCasaCardProps) {
   const [view, setView] = useState<PerformanceView>("estrategia");
 
@@ -195,11 +201,21 @@ export function PerformancePorCasaCard({
           greens: 0,
           reds: 0,
           roi: 0,
+          lucroBreakdown: {},
         };
       }
 
       estrategiaMap[tipoNome].totalOperacoes++;
       estrategiaMap[tipoNome].lucro += extra.valor || 0;
+      
+      // Rastrear breakdown por moeda original
+      const moedaOriginal = extra.moeda || "BRL";
+      if (!estrategiaMap[tipoNome].lucroBreakdown) {
+        estrategiaMap[tipoNome].lucroBreakdown = {};
+      }
+      estrategiaMap[tipoNome].lucroBreakdown![moedaOriginal] = 
+        (estrategiaMap[tipoNome].lucroBreakdown![moedaOriginal] || 0) + (extra.valor || 0);
+      
       // Extras sempre são "positivos" (greens) pois representam créditos
       if (extra.valor > 0) {
         estrategiaMap[tipoNome].greens++;
@@ -493,7 +509,7 @@ export function PerformancePorCasaCard({
                     <div className="text-right">
                       <p className="text-sm font-mono">{formatCurrency(item.totalStake)}</p>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right flex items-center justify-end gap-1">
                       <p
                         className={`text-sm font-mono font-medium ${
                           item.lucro >= 0 ? "text-emerald-400" : "text-red-400"
@@ -501,6 +517,12 @@ export function PerformancePorCasaCard({
                       >
                         {formatCurrency(item.lucro)}
                       </p>
+                      {item.lucroBreakdown && Object.keys(item.lucroBreakdown).length > 0 && (
+                        <CurrencyBreakdownTooltip
+                          breakdown={Object.entries(item.lucroBreakdown).map(([moeda, valor]) => ({ moeda, valor }))}
+                          moedaConsolidacao={moedaConsolidacao}
+                        />
+                      )}
                     </div>
                     <div className="text-right">
                       <p

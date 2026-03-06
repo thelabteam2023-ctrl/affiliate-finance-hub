@@ -684,6 +684,7 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
         extrasLucro={extrasLucro}
         formatCurrency={formatCurrency}
         getLogoUrl={getCatalogLogoUrl}
+        moedaConsolidacao={moedaConsolidacao}
       />
 
       {/* Performance por Esporte */}
