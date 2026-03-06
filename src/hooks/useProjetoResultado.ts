@@ -501,9 +501,12 @@ async function fetchCapitalData(
     console.error("[fetchCapitalData] Erro na RPC get_bookmaker_saldos:", rpcError);
   }
 
+  // CRÍTICO: Usar saldo_real (saldo_atual) para a fórmula de equity patrimonial.
+  // saldo_operavel subtrai stakes em apostas pendentes, mas esse dinheiro ainda EXISTE
+  // e faz parte do patrimônio do projeto. Usar saldo_operavel deflaciona o lucro.
   const saldoBookmakers = rpcData?.reduce((acc: number, b: any) => {
     const moedaOrigem = b.moeda || 'BRL';
-    return acc + convert(Number(b.saldo_operavel || 0), moedaOrigem);
+    return acc + convert(Number(b.saldo_real || 0), moedaOrigem);
   }, 0) || 0;
   
   // Buscar saldo irrecuperável separadamente (não está na RPC)
