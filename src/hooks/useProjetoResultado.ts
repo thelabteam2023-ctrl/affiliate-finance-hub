@@ -525,9 +525,25 @@ async function fetchCapitalData(
     .eq('status', 'CONFIRMADO')
     .eq('projeto_id_snapshot', projetoId);
 
-  const totalDepositos = depositos?.reduce((acc, d) => {
+  // SAFETY NET: Também capturar depósitos órfãos (sem projeto_id_snapshot)
+  // para bookmakers ATUALMENTE vinculados ao projeto.
+  // Isso evita que depósitos feitos antes do sistema de snapshot distorçam o lucro.
+  const currentBookmakerIds = rpcData?.map((b: any) => b.id) || [];
+  let depositosOrfaos: typeof depositos = [];
+  if (currentBookmakerIds.length > 0) {
+    const { data: orfaos } = await supabase
+      .from('cash_ledger')
+      .select('valor, moeda')
+      .in('tipo_transacao', ['DEPOSITO', 'DEPOSITO_VIRTUAL'])
+      .eq('status', 'CONFIRMADO')
+      .is('projeto_id_snapshot', null)
+      .in('destino_bookmaker_id', currentBookmakerIds);
+    depositosOrfaos = orfaos || [];
+  }
+
+  const totalDepositos = [...(depositos || []), ...depositosOrfaos].reduce((acc, d) => {
     return acc + convert(Number(d.valor), d.moeda || 'BRL');
-  }, 0) || 0;
+  }, 0);
 
   // Saques (SAQUE + SAQUE_VIRTUAL) filtrados por projeto_id_snapshot
   const { data: saques } = await supabase
