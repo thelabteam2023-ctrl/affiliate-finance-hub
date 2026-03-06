@@ -1557,6 +1557,19 @@ export default function CentralOperacoes() {
                       <Button size="sm" onClick={() => handleSaqueAction(alerta)} className="h-6 text-xs px-2">
                         Processar
                       </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                            <MoreVertical className="h-3.5 w-3.5" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleCancelarLiberacao(alerta)} className="text-xs gap-2">
+                            <Undo2 className="h-3.5 w-3.5" />
+                            Cancelar Liberação
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
                 ))}
