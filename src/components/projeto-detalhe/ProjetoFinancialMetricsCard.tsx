@@ -295,7 +295,7 @@ export function ProjetoFinancialMetricsCard({ projetoId }: ProjetoFinancialMetri
     { label: "Cashback Líquido", value: metrics.cashbackLiquido, icon: Gift },
     { label: "Giros Grátis", value: metrics.girosGratis, icon: BarChart3 },
     { label: "Ganho Confirmação", value: metrics.ganhoConfirmacao, icon: ArrowUpCircle },
-    { label: "Ajustes/FX", value: metrics.ajustes + metrics.ganhoFx - metrics.perdaFx, icon: ArrowRightLeft },
+    { label: "Ajustes de Saldo/FX", value: metrics.ajustes + metrics.ganhoFx - metrics.perdaFx, icon: ArrowRightLeft },
     { label: "Perdas Operacionais", value: -metrics.perdaOp, icon: ArrowDownCircle },
   ].filter(item => Math.abs(item.value) >= 0.01);
 

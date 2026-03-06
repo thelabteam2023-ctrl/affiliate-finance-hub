@@ -147,7 +147,7 @@ function ExtrasCollapsible({ metrics, formatCurrency }: { metrics: any; formatCu
             <MetricRow label="Ganho de Confirmação" value={formatCurrency(metrics.ganhoConfirmacao)} colorClass="text-emerald-500" indent />
           )}
           {Math.abs(metrics.ajustes) >= 0.01 && (
-            <MetricRow label="Ajustes" value={formatCurrency(metrics.ajustes)} colorClass={metrics.ajustes >= 0 ? "text-emerald-500" : "text-red-500"} indent />
+            <MetricRow label="Ajustes de Saldo" value={formatCurrency(metrics.ajustes)} colorClass={metrics.ajustes >= 0 ? "text-emerald-500" : "text-red-500"} indent />
           )}
           {(() => {
             const fxLiquido = metrics.ganhoFx - metrics.perdaFx;
