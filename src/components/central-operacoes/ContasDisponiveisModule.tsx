@@ -179,8 +179,8 @@ export function ContasDisponiveisModule() {
   const filtered = useMemo(() => {
     if (!contas) return [];
     return contas.filter((c) => {
-      const saldoEfetivo = c.moeda === "USD" || c.moeda === "USDT" ? c.saldo_usd : c.saldo_atual;
-      const totalSaldo = saldoEfetivo + c.saldo_freebet;
+      // saldo_atual é SEMPRE a fonte de verdade (mantido pelos triggers do motor financeiro)
+      const totalSaldo = c.saldo_atual + c.saldo_freebet;
       
       if (totalSaldo < minSaldoNum) return false;
       if (moedaFilter !== "todas" && c.moeda !== moedaFilter) return false;
@@ -217,10 +217,9 @@ export function ContasDisponiveisModule() {
   const totaisPorMoeda = useMemo(() => {
     const map = new Map<string, { saldo: number; freebet: number; count: number }>();
     filtered.forEach((c) => {
-      const saldo = c.moeda === "USD" || c.moeda === "USDT" ? c.saldo_usd : c.saldo_atual;
       const current = map.get(c.moeda) || { saldo: 0, freebet: 0, count: 0 };
       map.set(c.moeda, {
-        saldo: current.saldo + saldo,
+        saldo: current.saldo + c.saldo_atual,
         freebet: current.freebet + c.saldo_freebet,
         count: current.count + 1,
       });
@@ -306,7 +305,8 @@ export function ContasDisponiveisModule() {
   };
 
   const getSaldoEfetivo = (c: ContaDisponivel) => {
-    return c.moeda === "USD" || c.moeda === "USDT" ? c.saldo_usd : c.saldo_atual;
+    // saldo_atual é a fonte de verdade para TODAS as moedas
+    return c.saldo_atual;
   };
 
   if (isLoading) {
