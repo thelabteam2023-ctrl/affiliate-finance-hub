@@ -276,7 +276,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
       <div className="space-y-2">
         <p className="text-xs font-medium text-foreground">Composição do Saldo</p>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-          <TooltipProvider>
+          <TooltipProvider delayDuration={0}>
             <Tooltip>
               <TooltipTrigger asChild>
                 <div className="p-2 rounded bg-muted/30 cursor-help">
@@ -284,7 +284,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
                   <p className="font-semibold">{formatCurrency(Math.max(0, saldoReal - saldoEmAposta))}</p>
                 </div>
               </TooltipTrigger>
-              <TooltipContent side="bottom" className="text-xs max-w-[240px]">
+              <TooltipContent side="bottom" className="text-xs max-w-[240px] z-[10000] pointer-events-auto">
                 <p className="font-medium mb-1">Saldo Real − Apostas em Aberto</p>
                 <div className="space-y-0.5">
                   <p>Saldo Real: {formatCurrency(saldoReal)}</p>
@@ -295,7 +295,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
             </Tooltip>
           </TooltipProvider>
           {hasFreebet && (
-            <TooltipProvider>
+            <TooltipProvider delayDuration={0}>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div className="p-2 rounded bg-muted/30 cursor-help">
@@ -303,7 +303,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
                     <p className="font-semibold text-warning">{formatCurrency(saldoFreebet)}</p>
                   </div>
                 </TooltipTrigger>
-                <TooltipContent side="bottom" className="text-xs max-w-[240px]">
+                <TooltipContent side="bottom" className="text-xs max-w-[240px] z-[10000] pointer-events-auto">
                   <p>Apostas gratuitas disponíveis.</p>
                   <p className="text-muted-foreground mt-1">Somado ao saldo disponível para compor o Total Operável.</p>
                 </TooltipContent>
@@ -311,7 +311,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
             </TooltipProvider>
           )}
           {saldoEmAposta > 0 && (
-            <TooltipProvider>
+            <TooltipProvider delayDuration={0}>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div className="p-2 rounded bg-muted/30 cursor-help">
@@ -319,7 +319,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
                     <p className="font-semibold text-amber-500">{formatCurrency(saldoEmAposta)}</p>
                   </div>
                 </TooltipTrigger>
-                <TooltipContent side="bottom" className="text-xs max-w-[240px]">
+                <TooltipContent side="bottom" className="text-xs max-w-[240px] z-[10000] pointer-events-auto">
                   <p>Capital alocado em apostas pendentes.</p>
                   <p className="text-muted-foreground mt-1">Já descontado do Saldo Disponível.</p>
                 </TooltipContent>
