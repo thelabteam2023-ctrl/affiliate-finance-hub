@@ -233,7 +233,7 @@ export function SaquesSmartFilter({ saques, children }: SaquesSmartFilterProps) 
               }
             }}
           >
-            <SelectTrigger className="h-8 w-[130px] text-xs">
+            <SelectTrigger className="h-8 w-[180px] text-xs">
               <SelectValue placeholder="Projeto" />
             </SelectTrigger>
             <SelectContent>
