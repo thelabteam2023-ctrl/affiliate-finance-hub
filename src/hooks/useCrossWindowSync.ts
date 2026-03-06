@@ -131,9 +131,10 @@ export function useCrossWindowSync(options: CrossWindowSyncOptions): void {
     };
     
     // Fallback 2: postMessage (cross-origin compatible, from window.opener)
+    const VALID_SOURCES = new Set(['surebet_window', 'aposta_window', 'aposta_multipla_window']);
     const handleMessage = (event: MessageEvent) => {
       const data = event.data;
-      if (!data || data.source !== 'surebet_window') return;
+      if (!data || !VALID_SOURCES.has(data.source)) return;
       
       const matchesChannel = channels.some((ch) => {
         const config = CHANNEL_CONFIG[ch];
