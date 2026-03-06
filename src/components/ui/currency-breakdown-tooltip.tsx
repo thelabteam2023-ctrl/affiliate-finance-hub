@@ -46,6 +46,10 @@ export function CurrencyBreakdownTooltip({
   const hasDifferentCurrency = breakdown.some(r => r.moeda !== moedaConsolidacao);
   
   if (!hasMultipleCurrencies && !hasDifferentCurrency) {
+    // Se children foi fornecido, renderizar sem tooltip (apenas o conteúdo)
+    if (children) {
+      return <>{children}</>;
+    }
     return null;
   }
 
