@@ -55,7 +55,15 @@ import {
   XCircle,
   Ghost,
   Truck,
+  MoreVertical,
+  Undo2,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Tooltip,
   TooltipContent,
