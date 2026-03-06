@@ -194,7 +194,7 @@ export function useInvalidateProjectQueries() {
         );
       }
 
-      // Dashboard (Evolução do Lucro, Calendário, Extras)
+      // Dashboard (Evolução do Lucro, Calendário, Extras, Indicadores Financeiros)
       // CRÍTICO: Sempre invalidar quando qualquer dado financeiro muda
       if (shouldInvalidate("dashboard") || !only || only.length === 0) {
         invalidations.push(
@@ -206,6 +206,10 @@ export function useInvalidateProjectQueries() {
           }),
           queryClient.invalidateQueries({ 
             queryKey: ["projeto-dashboard-calendario", projetoId] 
+          }),
+          // CRÍTICO: Indicadores Financeiros (Fluxo Líquido Ajustado, Break-Even, etc.)
+          queryClient.invalidateQueries({ 
+            queryKey: ["projeto-financial-metrics", projetoId] 
           })
         );
       }
