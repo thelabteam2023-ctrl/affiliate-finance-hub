@@ -5,15 +5,15 @@
  * 1. SAQUE_VIRTUAL descontando saques/depositos pendentes
  * 2. Travamento de projeto_id_snapshot em transações pendentes
  * 3. Verificação de apostas pendentes
- * 4. Proteção contra race conditions (idempotência)
+ * 4. Proteção contra race conditions (idempotência via FOR UPDATE no DB)
  * 5. Detecção de re-vinculação ao mesmo projeto
  * 6. Tracking de saldo freebet
- * 7. Atomicidade: ledger entry ANTES de unlink, rollback em caso de falha
+ * 7. ATOMICIDADE: RPC garante SAQUE_VIRTUAL + unlink na mesma transação DB
  * 8. Validação de retorno de operações de ledger
  */
 
 import { supabase } from "@/integrations/supabase/client";
-import { registrarSaqueVirtualViaLedger, registrarDepositoVirtualViaLedger } from "@/lib/ledgerService";
+import { registrarDepositoVirtualViaLedger } from "@/lib/ledgerService";
 
 export interface UnlinkPreCheck {
   canUnlink: boolean;
@@ -82,7 +82,6 @@ export async function preCheckUnlink(bookmakerId: string): Promise<UnlinkPreChec
   const pendingDepositosTotal = (depositosPendentes || []).reduce((acc, d) => acc + (d.valor || 0), 0);
 
   // 6. Calcular saldo virtual efetivo
-  // SAQUE_VIRTUAL = saldo_atual - saques_pendentes + depositos_pendentes
   const saldoVirtualEfetivo = Math.max(0, bm.saldo_atual - pendingSaquesTotal + pendingDepositosTotal);
 
   // 7. Warnings
@@ -114,38 +113,21 @@ export async function preCheckUnlink(bookmakerId: string): Promise<UnlinkPreChec
   };
 }
 
-/**
- * Verifica se já existe um SAQUE_VIRTUAL ou DEPOSITO_VIRTUAL recente (< 10s)
- * para evitar duplicatas por race condition.
- */
-async function hasRecentVirtualTransaction(
-  bookmakerId: string,
-  tipoTransacao: "SAQUE_VIRTUAL" | "DEPOSITO_VIRTUAL",
-  windowSeconds = 10
-): Promise<boolean> {
-  const cutoff = new Date(Date.now() - windowSeconds * 1000).toISOString();
-
-  const column = tipoTransacao === "SAQUE_VIRTUAL" ? "origem_bookmaker_id" : "destino_bookmaker_id";
-
-  const { count } = await supabase
-    .from("cash_ledger")
-    .select("id", { count: "exact", head: true })
-    .eq(column, bookmakerId)
-    .eq("tipo_transacao", tipoTransacao)
-    .gte("created_at", cutoff);
-
-  return (count || 0) > 0;
+interface UnlinkResult {
+  success: boolean;
+  error?: string;
+  code?: string;
+  saque_virtual_id?: string;
 }
 
 /**
- * Executa a desvinculação com todas as proteções:
+ * Executa a desvinculação via RPC ATÔMICA no banco de dados.
  * 
- * ORDEM CRÍTICA (atomicidade):
- * 1. Trava projeto_id_snapshot em transações PENDENTES/LIQUIDADO
- * 2. Cria SAQUE_VIRTUAL ANTES de desvincular (para garantir registro contábil)
- * 3. Desvincula a bookmaker (só após sucesso do ledger)
- * 4. Atualiza histórico
- * 5. Se qualquer etapa falhar, não avança para a próxima
+ * GARANTIAS:
+ * - SAQUE_VIRTUAL + unlink + histórico na MESMA transação PostgreSQL
+ * - FOR UPDATE lock previne concorrência entre abas/operadores
+ * - Se qualquer etapa falhar, TUDO é revertido automaticamente
+ * - Proteção contra duplicatas (10s window no DB)
  */
 export async function executeUnlink(params: {
   bookmakerId: string;
@@ -155,70 +137,32 @@ export async function executeUnlink(params: {
   statusFinal: string;
   saldoVirtualEfetivo: number;
   moeda: string;
+  marcarParaSaque?: boolean;
 }): Promise<void> {
-  const { bookmakerId, projetoId, workspaceId, userId, statusFinal, saldoVirtualEfetivo, moeda } = params;
+  const { bookmakerId, projetoId, workspaceId, userId, statusFinal, saldoVirtualEfetivo, moeda, marcarParaSaque = false } = params;
 
-  // 0. Proteção contra race condition — verificar duplicata recente
-  const hasDuplicate = await hasRecentVirtualTransaction(bookmakerId, "SAQUE_VIRTUAL");
-  if (hasDuplicate) {
-    console.warn(`[projetoTransitionService] SAQUE_VIRTUAL duplicado detectado para bookmaker ${bookmakerId}. Operação ignorada.`);
-    return;
+  const { data, error } = await supabase.rpc('desvincular_bookmaker_atomico', {
+    p_bookmaker_id: bookmakerId,
+    p_projeto_id: projetoId,
+    p_user_id: userId,
+    p_workspace_id: workspaceId,
+    p_status_final: statusFinal,
+    p_saldo_virtual_efetivo: saldoVirtualEfetivo,
+    p_moeda: moeda,
+    p_marcar_para_saque: marcarParaSaque,
+  });
+
+  if (error) {
+    throw new Error(`Erro na desvinculação atômica: ${error.message}`);
   }
 
-  // 1. TRAVAR projeto_id_snapshot em transações PENDENTES antes de desvincular
-  await supabase
-    .from("cash_ledger")
-    .update({ projeto_id_snapshot: projetoId })
-    .or(`origem_bookmaker_id.eq.${bookmakerId},destino_bookmaker_id.eq.${bookmakerId}`)
-    .eq("status", "PENDENTE")
-    .is("projeto_id_snapshot", null);
+  const result = data as unknown as UnlinkResult;
 
-  // Também travar transações com status intermediários
-  await supabase
-    .from("cash_ledger")
-    .update({ projeto_id_snapshot: projetoId })
-    .or(`origem_bookmaker_id.eq.${bookmakerId},destino_bookmaker_id.eq.${bookmakerId}`)
-    .eq("status", "LIQUIDADO")
-    .is("projeto_id_snapshot", null);
-
-  // 2. SAQUE_VIRTUAL ANTES de desvincular (garante registro contábil)
-  // Se esta etapa falhar, a bookmaker NÃO será desvinculada
-  if (saldoVirtualEfetivo > 0) {
-    const saqueResult = await registrarSaqueVirtualViaLedger({
-      bookmakerId,
-      saldoAtual: saldoVirtualEfetivo,
-      moeda,
-      workspaceId,
-      userId,
-      projetoId,
-    });
-
-    if (!saqueResult.success) {
-      throw new Error(
-        `Falha ao criar SAQUE_VIRTUAL para bookmaker ${bookmakerId}: ${saqueResult.error || 'Erro desconhecido'}. ` +
-        `Desvinculação abortada para preservar integridade financeira.`
-      );
-    }
+  if (!result.success) {
+    throw new Error(result.error || 'Erro desconhecido na desvinculação');
   }
 
-  // 3. Desvincular bookmaker do projeto (só após sucesso do ledger)
-  const { error: updateError } = await supabase
-    .from("bookmakers")
-    .update({ projeto_id: null, status: statusFinal })
-    .eq("id", bookmakerId);
-
-  if (updateError) throw updateError;
-
-  // 4. Atualizar histórico
-  await supabase
-    .from("projeto_bookmaker_historico")
-    .update({
-      data_desvinculacao: new Date().toISOString(),
-      status_final: statusFinal,
-    })
-    .eq("projeto_id", projetoId)
-    .eq("bookmaker_id", bookmakerId)
-    .is("data_desvinculacao", null);
+  console.log(`[executeUnlink] ✅ Bookmaker ${bookmakerId} desvinculada atomicamente. SV: ${result.saque_virtual_id || 'N/A'}`);
 }
 
 /**
@@ -239,21 +183,7 @@ export async function executeLink(params: {
 }): Promise<void> {
   const { bookmakerId, projetoId, workspaceId, userId, saldoAtual, moeda } = params;
 
-  // NOTA: A supressão de transações virtuais em re-vinculação ao mesmo projeto foi REMOVIDA.
-  // Motivo: O SAQUE_VIRTUAL já é criado durante o desvínculo. Se suprimirmos o DEPOSITO_VIRTUAL,
-  // o ledger fica desbalanceado (saques > depósitos), inflando artificialmente o lucro.
-  // É preferível ter pares completos (SAQUE_VIRTUAL + DEPOSITO_VIRTUAL) no ledger
-  // do que comprometer a integridade financeira.
-
-  // 1. Proteção contra race condition
-  const hasDuplicate = await hasRecentVirtualTransaction(bookmakerId, "DEPOSITO_VIRTUAL");
-  if (hasDuplicate) {
-    console.warn(`[projetoTransitionService] DEPOSITO_VIRTUAL duplicado detectado para bookmaker ${bookmakerId}. Operação ignorada.`);
-    return;
-  }
-
-  // 2. DEPOSITO_VIRTUAL com saldo atual (baseline para o novo projeto)
-  // NOTA: NÃO atribuímos transações órfãs — o DEPOSITO_VIRTUAL é a única fonte de baseline.
+  // DEPOSITO_VIRTUAL com saldo atual (baseline para o novo projeto)
   if (saldoAtual > 0) {
     const depositoResult = await registrarDepositoVirtualViaLedger({
       bookmakerId,
