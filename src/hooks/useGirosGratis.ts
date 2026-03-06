@@ -403,8 +403,9 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
           user_id: user.id,
           descricao: `Ajuste de giro grátis: ${giroAtual.bookmaker_nome} (${isAumento ? "+" : "-"}${valorAbs.toFixed(2)})`,
           status: "CONFIRMADO",
-          impacta_caixa_operacional: false, // Evento promocional - não impacta caixa real
+          impacta_caixa_operacional: false,
           tipo_moeda: "FIAT",
+          projeto_id_snapshot: projetoId,
           // Integridade ledger: preencher valor_destino/valor_origem
           ...(isAumento 
             ? { destino_bookmaker_id: giroAtual.bookmaker_id, valor_destino: valorAbs }

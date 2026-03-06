@@ -413,6 +413,7 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
             userId: userData.user.id,
             descricao: `Crédito de bônus: ${data.title || 'Sem título'}`,
             dataCredito: creditedAt.split('T')[0],
+            projetoIdSnapshot: projectId,
           });
           if (!result.success) {
             console.error("[useProjectBonuses] Erro ao creditar bônus via ledger:", result.error);
@@ -475,6 +476,7 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
               descricao: `Crédito de bônus: ${existingBonus.title || 'Sem título'}`,
               bonusId: id,
               dataCredito: creditedAt.split('T')[0],
+              projetoIdSnapshot: projectId,
             });
             if (!result.success) {
               console.error("[useProjectBonuses] Erro ao creditar bônus via ledger:", result.error);
@@ -525,6 +527,7 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
                 userId: userData?.user?.id || '',
                 descricao: `Ajuste de bônus: ${valorAnteriorNoSaldo} → ${data.bonus_amount} (+${delta})`,
                 bonusId: id,
+                projetoIdSnapshot: projectId,
               });
               if (!result.success) console.error("[useProjectBonuses] Erro ao ajustar bônus (crédito):", result.error);
             } else {
@@ -534,6 +537,7 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
                 userId: userData?.user?.id || '',
                 descricao: `Ajuste de bônus: ${valorAnteriorNoSaldo} → ${data.bonus_amount} (${delta})`,
                 bonusId: id,
+                projetoIdSnapshot: projectId,
               });
               if (!result.success) console.error("[useProjectBonuses] Erro ao ajustar bônus (estorno):", result.error);
             }
@@ -783,6 +787,7 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
             userId: userData.user.id,
             descricao: `Estorno por exclusão de bônus: ${bonusData.title || 'Sem título'}`,
             bonusId: bonusData.id,
+            projetoIdSnapshot: projectId,
           });
           if (!result.success) throw new Error(`Falha ao estornar saldo do bônus: ${result.error}`);
         }

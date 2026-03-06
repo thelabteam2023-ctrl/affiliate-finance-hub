@@ -312,6 +312,7 @@ export function useCashbackManual({ projetoId, dataInicio, dataFim }: UseCashbac
           dataCredito: dataCredito,
           cotacao: cotacaoSnapshot || undefined,
           referenciaId: novoCashback.id,
+          projetoIdSnapshot: projetoId,
         });
 
         if (!ledgerResult.success) {
@@ -388,6 +389,7 @@ export function useCashbackManual({ projetoId, dataInicio, dataFim }: UseCashbac
           userId: user?.id || '',
           descricao: "Estorno de cashback manual deletado",
           referenciaId: id,
+          projetoIdSnapshot: projetoId,
         });
 
         if (!estornoResult.success) {
@@ -455,6 +457,7 @@ export function useCashbackManual({ projetoId, dataInicio, dataFim }: UseCashbac
             userId: user.id,
             descricao: "Estorno de cashback manual (edição)",
             referenciaId: id,
+            projetoIdSnapshot: projetoId,
           });
 
           if (!estornoResult.success) {
@@ -536,6 +539,7 @@ export function useCashbackManual({ projetoId, dataInicio, dataFim }: UseCashbac
           dataCredito: dataCredito,
           cotacao: cotacaoSnapshot || undefined,
           referenciaId: id,
+          projetoIdSnapshot: projetoId,
         });
 
         if (!ledgerResult.success) {
