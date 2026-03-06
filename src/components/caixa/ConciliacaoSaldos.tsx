@@ -379,6 +379,7 @@ export function ConciliacaoSaldos({
               userId: user.id,
               descricao: `Ganho cambial em conciliação: ${formatCurrency(valorNominal)} nominal → ${formatCurrency(valorReal)} confirmado`,
               transacaoOrigemId: selectedTransaction.id,
+              projetoIdSnapshot: selectedTransaction.projeto_id_snapshot || undefined,
             });
             
             if (!result.success) {
@@ -397,6 +398,7 @@ export function ConciliacaoSaldos({
               userId: user.id,
               descricao: `Perda cambial em conciliação: ${formatCurrency(valorNominal)} nominal → ${formatCurrency(valorReal)} confirmado`,
               transacaoOrigemId: selectedTransaction.id,
+              projetoIdSnapshot: selectedTransaction.projeto_id_snapshot || undefined,
             });
             
             if (!result.success) {

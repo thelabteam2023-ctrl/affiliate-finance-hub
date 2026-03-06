@@ -286,6 +286,8 @@ interface SaquePendenteConfirmacao {
   wallet_network?: string;
   wallet_exchange?: string;
   wallet_moedas?: string[];
+  // Snapshot do projeto para rastreabilidade FX
+  projeto_id_snapshot?: string | null;
 }
 
 interface AlertaLucroParceiro {
@@ -558,7 +560,7 @@ export default function CentralOperacoes() {
         canSeeFinancialData
           ? supabase
               .from("cash_ledger")
-              .select(`id, valor, moeda, data_transacao, descricao, origem_bookmaker_id, destino_parceiro_id, destino_conta_bancaria_id, destino_wallet_id, coin, qtd_coin, cotacao, moeda_origem, moeda_destino, valor_origem, valor_destino`)
+              .select(`id, valor, moeda, data_transacao, descricao, origem_bookmaker_id, destino_parceiro_id, destino_conta_bancaria_id, destino_wallet_id, coin, qtd_coin, cotacao, moeda_origem, moeda_destino, valor_origem, valor_destino, projeto_id_snapshot`)
               .eq("tipo_transacao", "SAQUE")
               .eq("status", "PENDENTE")
               .order("data_transacao", { ascending: false })

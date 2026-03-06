@@ -1070,6 +1070,8 @@ export default function Caixa() {
             // Dados da wallet
             wallet_network: walletDetail?.network || undefined,
             wallet_exchange: walletDetail?.exchange?.replace(/-/g, " ").toUpperCase() || undefined,
+            // Snapshot do projeto para rastreabilidade FX
+            projeto_id_snapshot: saqueParaConfirmar.projeto_id_snapshot || null,
           };
         })() : null}
       />
