@@ -76,6 +76,8 @@ export interface SaquePendente {
   wallet_network?: string;
   wallet_exchange?: string;
   wallet_moedas?: string[];
+  // Snapshot do projeto para rastreabilidade FX
+  projeto_id_snapshot?: string | null;
 }
 
 interface ConfirmarSaqueDialogProps {
@@ -289,6 +291,8 @@ export function ConfirmarSaqueDialog({
               destino_wallet_id: saque.destino_wallet_id,
               coin: coinMoeda,
               qtd_coin: Math.abs(diferencaCoin),
+              // Herdar projeto do saque pai para isolamento financeiro
+              projeto_id_snapshot: saque.projeto_id_snapshot || null,
             });
           }
         }
@@ -346,6 +350,8 @@ export function ConfirmarSaqueDialog({
               impacta_caixa_operacional: false,
               referencia_transacao_id: saque.id,
               destino_conta_bancaria_id: saque.destino_conta_bancaria_id,
+              // Herdar projeto do saque pai para isolamento financeiro
+              projeto_id_snapshot: saque.projeto_id_snapshot || null,
             });
           }
         }

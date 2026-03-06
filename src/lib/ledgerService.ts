@@ -84,6 +84,8 @@ export interface LedgerEntryInput {
   destinoBookmakerId?: string;
   /** ID da bookmaker de origem (para débitos) */
   origemBookmakerId?: string;
+  /** Snapshot do projeto para isolamento financeiro (herda do lançamento pai) */
+  projetoIdSnapshot?: string;
   /** ID do projeto (se aplicável) */
   projetoId?: string;
   /** Descrição da operação */
@@ -146,6 +148,8 @@ export async function insertLedgerEntry(
       status: 'CONFIRMADO',
       ajuste_motivo: input.ajusteMotivo || null,
       ajuste_direcao: input.ajusteDirecao || null,
+      // Isolamento financeiro: herdar projeto do lançamento pai (ex: FX de saque pós-desvínculo)
+      projeto_id_snapshot: input.projetoIdSnapshot || null,
       // INTEGRIDADE LEDGER: Preencher valor_destino/valor_origem para reconstrução de saldo
       valor_destino: isCredit ? input.valor : null,
       valor_origem: isDebit ? input.valor : null,
@@ -410,6 +414,7 @@ export async function registrarGanhoCambialViaLedger(params: {
   userId: string;
   descricao?: string;
   transacaoOrigemId?: string;
+  projetoIdSnapshot?: string;
 }): Promise<LedgerEntryResult> {
   return insertLedgerEntry({
     tipoTransacao: 'GANHO_CAMBIAL',
@@ -421,6 +426,7 @@ export async function registrarGanhoCambialViaLedger(params: {
     descricao: params.descricao || 'Ganho cambial em conciliação',
     impactaCaixaOperacional: false, // Ajuste contábil, não cash real
     referenciaTransacaoId: params.transacaoOrigemId,
+    projetoIdSnapshot: params.projetoIdSnapshot,
     auditoriaMetadata: { tipo: 'ganho_cambial' },
   });
 }
@@ -436,6 +442,7 @@ export async function registrarPerdaCambialViaLedger(params: {
   userId: string;
   descricao?: string;
   transacaoOrigemId?: string;
+  projetoIdSnapshot?: string;
 }): Promise<LedgerEntryResult> {
   return insertLedgerEntry({
     tipoTransacao: 'PERDA_CAMBIAL',
@@ -447,6 +454,7 @@ export async function registrarPerdaCambialViaLedger(params: {
     descricao: params.descricao || 'Perda cambial em conciliação',
     impactaCaixaOperacional: false, // Ajuste contábil, não cash real
     referenciaTransacaoId: params.transacaoOrigemId,
+    projetoIdSnapshot: params.projetoIdSnapshot,
     auditoriaMetadata: { tipo: 'perda_cambial' },
   });
 }

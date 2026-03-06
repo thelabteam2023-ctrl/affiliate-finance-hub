@@ -41,6 +41,7 @@ export interface PendingTransaction {
   destino_bookmaker_id: string | null;
   nome_investidor: string | null;
   operador_id: string | null;
+  projeto_id_snapshot: string | null;
 }
 
 export const PENDING_TRANSACTIONS_QUERY_KEY = "pending-transactions";
