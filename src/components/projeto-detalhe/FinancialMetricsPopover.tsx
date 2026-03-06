@@ -54,7 +54,7 @@ async function fetchFinancialMetricsRaw(projetoId: string) {
       .eq("tipo_transacao", "CASHBACK_ESTORNO").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId),
     supabase.from("cash_ledger").select("valor, moeda")
       .eq("tipo_transacao", "GIRO_GRATIS").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId),
-    supabase.from("cash_ledger").select("valor, moeda")
+    supabase.from("cash_ledger").select("valor, moeda, ajuste_direcao")
       .eq("tipo_transacao", "AJUSTE_SALDO").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId),
     supabase.from("cash_ledger").select("valor, moeda")
       .eq("tipo_transacao", "PERDA_OPERACIONAL").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId),
@@ -81,7 +81,7 @@ async function fetchFinancialMetricsRaw(projetoId: string) {
       cashbackManual: (cashbackM.data || []) as { valor: number; moeda: string }[],
       cashbackEstorno: (cashbackE.data || []) as { valor: number; moeda: string }[],
       girosGratis: (giros.data || []) as { valor: number; moeda: string }[],
-      ajusteSaldo: (ajustes.data || []) as { valor: number; moeda: string }[],
+      ajusteSaldo: (ajustes.data || []) as { valor: number; moeda: string; ajuste_direcao?: string | null }[],
       perdaOperacional: (perdasOp.data || []) as { valor: number; moeda: string }[],
       perdaCambial: (perdasFx.data || []) as { valor: number; moeda: string }[],
       ganhoCambial: (ganhosFx.data || []) as { valor: number; moeda: string }[],
@@ -217,7 +217,10 @@ export function FinancialMetricsPopover({ projetoId }: FinancialMetricsPopoverPr
 
     const cashbackLiquido = sumConvert(r.cashbackManual) - sumConvert(r.cashbackEstorno);
     const girosGratis = sumConvert(r.girosGratis);
-    const ajustes = sumConvert(r.ajusteSaldo);
+    const ajustes = r.ajusteSaldo.reduce((acc, e) => {
+      const sinal = e.ajuste_direcao === 'SAIDA' ? -1 : 1;
+      return acc + convertToConsolidationOficial(e.valor * sinal, e.moeda);
+    }, 0);
     const perdaOp = sumConvert(r.perdaOperacional);
     const perdaFx = sumConvert(r.perdaCambial);
     const ganhoFx = sumConvert(r.ganhoCambial);
