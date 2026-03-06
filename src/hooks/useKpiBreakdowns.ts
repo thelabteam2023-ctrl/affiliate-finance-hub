@@ -102,12 +102,14 @@ async function fetchBreakdownsData(
   // Fetch dados de todos os módulos em paralelo
   const [
     apostasData,
+    bonusBetsData,
     girosGratisData,
     perdasData,
     ajustesData,
     cashbackData,
   ] = await Promise.all([
     fetchApostasModuleData(projetoId, dataInicio, dataFim, moedaConsolidacao, safeConvert),
+    fetchBonusBetsModuleData(projetoId, dataInicio, dataFim, moedaConsolidacao, safeConvert),
     fetchGirosGratisModuleData(projetoId, dataInicio, dataFim),
     fetchPerdasModuleData(projetoId, dataInicio, dataFim),
     fetchAjustesModuleData(projetoId),
@@ -134,6 +136,7 @@ async function fetchBreakdownsData(
 
   // === BREAKDOWN VOLUME (stake) ===
   // NOTA: Giros Grátis NÃO entram no volume (apenas no lucro)
+  // Apostas de bônus entram como módulo separado
   const volumeBreakdown = createKpiBreakdown([
     createModuleContribution(
       'apostas',
@@ -142,10 +145,20 @@ async function fetchBreakdownsData(
       true,
       { icon: 'Target', color: 'default' }
     ),
+    createModuleContribution(
+      'bonus_bets',
+      'Bônus',
+      bonusBetsData.volume,
+      bonusBetsData.count > 0,
+      { icon: 'Gift', color: 'default' }
+    ),
   ], moedaConsolidacao);
 
-  // Adiciona breakdown por moeda ao volume (apenas apostas, sem giros)
-  volumeBreakdown.currencyBreakdown = apostasData.volumePorMoeda;
+  // Adiciona breakdown por moeda ao volume (apostas + bonus bets)
+  volumeBreakdown.currencyBreakdown = combinarBreakdownsMoeda(
+    apostasData.volumePorMoeda,
+    bonusBetsData.volumePorMoeda
+  );
 
   // === BREAKDOWN LUCRO ===
   const lucroBreakdown = createKpiBreakdown([
@@ -598,4 +611,75 @@ async function fetchCashbackModuleData(
   const lucroPorMoeda = agregarPorMoeda(lucroItems);
 
   return { count, volume: 0, lucro: 0, total, volumePorMoeda: [], lucroPorMoeda };
+}
+
+/**
+ * Fetch volume e lucro de apostas vinculadas a bônus (bonus_id != null OU estratégia EXTRACAO_BONUS)
+ * Estas são excluídas do módulo 'apostas' para isolamento operacional,
+ * mas devem aparecer no Volume KPI como módulo separado "Bônus".
+ */
+async function fetchBonusBetsModuleData(
+  projetoId: string,
+  dataInicio: Date | null,
+  dataFim: Date | null,
+  moedaConsolidacao: string,
+  convertToConsolidation: (valor: number, moedaOrigem: string) => number
+): Promise<ModuleDataWithCurrency> {
+  let query = supabase
+    .from('apostas_unificada')
+    .select('stake, stake_total, lucro_prejuizo, resultado, forma_registro, status, moeda_operacao, consolidation_currency, pl_consolidado, stake_consolidado, lucro_prejuizo_brl_referencia, valor_brl_referencia, bonus_id, estrategia')
+    .eq('projeto_id', projetoId)
+    .or('bonus_id.not.is.null,estrategia.eq.EXTRACAO_BONUS');
+
+  if (dataInicio && dataFim) {
+    const { startUTC, endUTC } = getOperationalDateRangeForQuery(dataInicio, dataFim);
+    query = query.gte('data_aposta', startUTC).lte('data_aposta', endUTC);
+  } else if (dataInicio) {
+    const { startUTC } = getOperationalDateRangeForQuery(dataInicio, dataInicio);
+    query = query.gte('data_aposta', startUTC);
+  } else if (dataFim) {
+    const { endUTC } = getOperationalDateRangeForQuery(dataFim, dataFim);
+    query = query.lte('data_aposta', endUTC);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('Erro ao buscar apostas de bônus:', error);
+    return { count: 0, volume: 0, lucro: 0, volumePorMoeda: [], lucroPorMoeda: [] };
+  }
+
+  const apostas = data || [];
+
+  const volume = apostas.reduce((acc, a) => {
+    return acc + getConsolidatedStake(a as any, convertToConsolidation, moedaConsolidacao);
+  }, 0);
+
+  const lucro = apostas
+    .filter(a => a.status === 'LIQUIDADA')
+    .reduce((acc, a) => {
+      return acc + getConsolidatedLucro(a as any, convertToConsolidation, moedaConsolidacao);
+    }, 0);
+
+  const volumeItems = apostas.map(a => ({
+    valor: a.forma_registro === 'ARBITRAGEM' ? Number(a.stake_total || 0) : Number(a.stake || 0),
+    moeda: a.moeda_operacao || 'BRL'
+  }));
+  const volumePorMoeda = agregarPorMoeda(volumeItems);
+
+  const lucroItems = apostas
+    .filter(a => a.status === 'LIQUIDADA')
+    .map(a => ({
+      valor: Number(a.lucro_prejuizo || 0),
+      moeda: a.moeda_operacao || 'BRL'
+    }));
+  const lucroPorMoeda = agregarPorMoeda(lucroItems);
+
+  return {
+    count: apostas.length,
+    volume,
+    lucro,
+    volumePorMoeda,
+    lucroPorMoeda,
+  };
 }
