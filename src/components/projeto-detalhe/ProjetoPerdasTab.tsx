@@ -177,6 +177,7 @@ export function ProjetoPerdasTab({ projetoId, onDataChange, formatCurrency: form
             descricao: `Perda operacional confirmada: ${perda.categoria}`,
             perdaId: perda.id,
             categoria: perda.categoria,
+            projetoIdSnapshot: projetoId,
           });
         }
       } else if (newStatus === 'REVERSA') {
@@ -193,6 +194,7 @@ export function ProjetoPerdasTab({ projetoId, onDataChange, formatCurrency: form
             userId: user.id,
             descricao: `Reversão de perda operacional: ${perda.categoria}`,
             perdaId: perda.id,
+            projetoIdSnapshot: projetoId,
           });
         }
       } else if (newStatus === 'PENDENTE') {
@@ -210,6 +212,7 @@ export function ProjetoPerdasTab({ projetoId, onDataChange, formatCurrency: form
             userId: user.id,
             descricao: `Perda voltou para pendente: ${perda.categoria}`,
             perdaId: perda.id,
+            projetoIdSnapshot: projetoId,
           });
         }
       }

@@ -58,7 +58,7 @@ export function RegistrarPerdaRapidaDialog({
 
       const { data: bkInfo } = await supabase
         .from("bookmakers")
-        .select("workspace_id, saldo_irrecuperavel")
+        .select("workspace_id, saldo_irrecuperavel, projeto_id")
         .eq("id", bookmakerId)
         .single();
 
@@ -73,6 +73,7 @@ export function RegistrarPerdaRapidaDialog({
         userId: userData.user.id,
         descricao: `Saldo irrecuperável: ${motivo}`,
         categoria: "saldo_irrecuperavel",
+        projetoIdSnapshot: bkInfo.projeto_id || undefined,
       });
 
       // 2. Acumular no campo saldo_irrecuperavel

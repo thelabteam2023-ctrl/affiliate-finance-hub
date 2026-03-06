@@ -106,6 +106,7 @@ export function ConciliacaoVinculoDialog({
         userId: user.id,
         descricao: `Ajuste de conciliação manual. Projeto: ${projetoNome || projetoId}`,
         motivo: observacoes.trim(),
+        projetoIdSnapshot: projetoId,
       });
 
       if (!result.success) {
@@ -166,6 +167,7 @@ export function ConciliacaoVinculoDialog({
           userId: user.id,
           descricao: `Conciliação na liberação do vínculo. Projeto: ${projetoNome || projetoId}`,
           motivo: observacoes.trim(),
+          projetoIdSnapshot: projetoId,
         });
 
         if (!result.success) {

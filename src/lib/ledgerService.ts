@@ -203,6 +203,7 @@ export async function registrarCashbackViaLedger(params: {
   dataCredito?: string;
   cotacao?: number;
   referenciaId?: string;
+  projetoIdSnapshot?: string;
 }): Promise<LedgerEntryResult> {
   return insertLedgerEntry({
     tipoTransacao: 'CASHBACK_MANUAL',
@@ -214,7 +215,8 @@ export async function registrarCashbackViaLedger(params: {
     descricao: params.descricao || 'Cashback manual',
     dataTransacao: params.dataCredito,
     cotacao: params.cotacao,
-    impactaCaixaOperacional: false, // Lucro operacional - NÃO é entrada de caixa real
+    impactaCaixaOperacional: false,
+    projetoIdSnapshot: params.projetoIdSnapshot,
     auditoriaMetadata: params.referenciaId ? { cashback_id: params.referenciaId } : undefined,
   });
 }
@@ -231,6 +233,7 @@ export async function estornarCashbackViaLedger(params: {
   userId: string;
   descricao?: string;
   referenciaId?: string;
+  projetoIdSnapshot?: string;
 }): Promise<LedgerEntryResult> {
   return insertLedgerEntry({
     tipoTransacao: 'CASHBACK_ESTORNO',
@@ -240,7 +243,8 @@ export async function estornarCashbackViaLedger(params: {
     userId: params.userId,
     origemBookmakerId: params.bookmakerId,
     descricao: params.descricao || 'Estorno de cashback',
-    impactaCaixaOperacional: false, // Evento operacional - NÃO impacta caixa real
+    impactaCaixaOperacional: false,
+    projetoIdSnapshot: params.projetoIdSnapshot,
     auditoriaMetadata: params.referenciaId ? { cashback_id: params.referenciaId } : undefined,
   });
 }
@@ -258,6 +262,7 @@ export async function registrarPerdaOperacionalViaLedger(params: {
   descricao?: string;
   perdaId?: string;
   categoria?: string;
+  projetoIdSnapshot?: string;
 }): Promise<LedgerEntryResult> {
   return insertLedgerEntry({
     tipoTransacao: 'PERDA_OPERACIONAL',
@@ -268,6 +273,7 @@ export async function registrarPerdaOperacionalViaLedger(params: {
     origemBookmakerId: params.bookmakerId,
     descricao: params.descricao || 'Perda operacional',
     impactaCaixaOperacional: true,
+    projetoIdSnapshot: params.projetoIdSnapshot,
     auditoriaMetadata: {
       perda_id: params.perdaId,
       categoria: params.categoria,
@@ -287,6 +293,7 @@ export async function reverterPerdaOperacionalViaLedger(params: {
   userId: string;
   descricao?: string;
   perdaId?: string;
+  projetoIdSnapshot?: string;
 }): Promise<LedgerEntryResult> {
   return insertLedgerEntry({
     tipoTransacao: 'PERDA_REVERSAO',
@@ -297,6 +304,7 @@ export async function reverterPerdaOperacionalViaLedger(params: {
     destinoBookmakerId: params.bookmakerId,
     descricao: params.descricao || 'Reversão de perda operacional',
     impactaCaixaOperacional: true,
+    projetoIdSnapshot: params.projetoIdSnapshot,
     auditoriaMetadata: params.perdaId ? { perda_id: params.perdaId } : undefined,
   });
 }
@@ -313,6 +321,7 @@ export async function registrarAjusteViaLedger(params: {
   userId: string;
   descricao?: string;
   motivo?: string;
+  projetoIdSnapshot?: string;
 }): Promise<LedgerEntryResult> {
   const isCredito = params.delta > 0;
   const motivoFinal = params.motivo || params.descricao || 'Ajuste de saldo';
@@ -327,6 +336,7 @@ export async function registrarAjusteViaLedger(params: {
     origemBookmakerId: isCredito ? undefined : params.bookmakerId,
     descricao: params.descricao || `Ajuste de saldo: ${motivoFinal}`,
     impactaCaixaOperacional: true,
+    projetoIdSnapshot: params.projetoIdSnapshot,
     ajusteMotivo: motivoFinal,
     ajusteDirecao: isCredito ? 'ENTRADA' : 'SAIDA',
     auditoriaMetadata: { 
@@ -357,6 +367,7 @@ export async function registrarBonusCreditadoViaLedger(params: {
   restricaoRollover?: number;
   /** Data do crédito real do bônus (credited_at). Se omitido, usa a data atual. */
   dataCredito?: string;
+  projetoIdSnapshot?: string;
 }): Promise<LedgerEntryResult> {
   return insertLedgerEntry({
     tipoTransacao: 'BONUS_CREDITADO',
@@ -365,13 +376,13 @@ export async function registrarBonusCreditadoViaLedger(params: {
     workspaceId: params.workspaceId,
     userId: params.userId,
     destinoBookmakerId: params.bookmakerId,
-    // NOVA ARQUITETURA: Bônus credita saldo_atual (normal), não pool separado
     descricao: params.descricao || 'Crédito de bônus (saldo normal)',
     dataTransacao: params.dataCredito,
-    impactaCaixaOperacional: false, // Evento promocional - NÃO impacta caixa real
+    impactaCaixaOperacional: false,
+    projetoIdSnapshot: params.projetoIdSnapshot,
     auditoriaMetadata: {
       bonus_id: params.bonusId,
-      origem: 'BONUS', // Tag para filtrar em KPIs
+      origem: 'BONUS',
       restricao_rollover: params.restricaoRollover,
     },
   });
@@ -389,6 +400,7 @@ export async function estornarBonusViaLedger(params: {
   userId: string;
   descricao?: string;
   bonusId?: string;
+  projetoIdSnapshot?: string;
 }): Promise<LedgerEntryResult> {
   return insertLedgerEntry({
     tipoTransacao: 'BONUS_ESTORNO',
@@ -398,7 +410,8 @@ export async function estornarBonusViaLedger(params: {
     userId: params.userId,
     origemBookmakerId: params.bookmakerId,
     descricao: params.descricao || 'Estorno de bônus',
-    impactaCaixaOperacional: false, // Evento promocional - NÃO impacta caixa real
+    impactaCaixaOperacional: false,
+    projetoIdSnapshot: params.projetoIdSnapshot,
     auditoriaMetadata: params.bonusId ? { bonus_id: params.bonusId } : undefined,
   });
 }
@@ -475,6 +488,7 @@ export async function estornarGiroGratisViaLedger(params: {
   userId: string;
   descricao?: string;
   giroGratisId?: string;
+  projetoIdSnapshot?: string;
 }): Promise<LedgerEntryResult> {
   return insertLedgerEntry({
     tipoTransacao: 'GIRO_GRATIS_ESTORNO',
@@ -484,7 +498,8 @@ export async function estornarGiroGratisViaLedger(params: {
     userId: params.userId,
     origemBookmakerId: params.bookmakerId,
     descricao: params.descricao || 'Estorno de giro grátis',
-    impactaCaixaOperacional: false, // Evento promocional - NÃO impacta caixa real
+    impactaCaixaOperacional: false,
+    projetoIdSnapshot: params.projetoIdSnapshot,
     auditoriaMetadata: params.giroGratisId ? { giro_gratis_id: params.giroGratisId } : undefined,
   });
 }
