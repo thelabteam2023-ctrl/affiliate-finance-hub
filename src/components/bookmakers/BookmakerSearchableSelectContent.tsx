@@ -126,7 +126,7 @@ export function BookmakerSearchableSelectContent({
                 ? { ...bk, saldo_freebet: freebetOverrides.get(bk.id)! }
                 : bk;
               return (
-                <SelectItem key={bk.id} value={bk.id} className={cn("py-2 pl-2 pr-2", itemClassName)}>
+                <SelectItem key={bk.id} value={bk.id} className={cn("py-2 pl-2 pr-2 justify-center", itemClassName)}>
                   <BookmakerSelectOption bookmaker={{ ...adjustedBk, parceiro_nome: adjustedBk.parceiro_nome ?? null }} />
                 </SelectItem>
               );
