@@ -1,5 +1,5 @@
 # Memory: finance/project-financial-scope-isolation
-Updated: 2026-03-04
+Updated: 2026-03-06
 
 ## Isolamento Financeiro entre Projetos
 
@@ -32,18 +32,22 @@ Para garantir resultado fidedigno quando uma bookmaker é transferida entre proj
 #### Race Condition (CORRIGIDO)
 - `hasRecentVirtualTransaction()` verifica se já existe SAQUE_VIRTUAL ou DEPOSITO_VIRTUAL nos últimos 10 segundos antes de criar um novo, evitando duplicatas por clique duplo ou operações simultâneas.
 
-#### Re-vinculação ao Mesmo Projeto (CORRIGIDO)
-- Se o último vínculo foi com o mesmo projeto e o saldo não mudou, transações virtuais são suprimidas para evitar ruído no ledger.
+#### Re-vinculação ao Mesmo Projeto (CORRIGIDO v2 - 2026-03-06)
+- Supressão de transações virtuais foi REMOVIDA. Sempre cria pares completos (SAQUE_VIRTUAL + DEPOSITO_VIRTUAL) para manter o ledger balanceado.
 
 #### Freebet (CORRIGIDO)
 - `preCheckUnlink()` agora inclui `saldoFreebet` e emite warning quando há saldo freebet, informando que freebets não são transferidas entre projetos.
+
+#### Atomicidade e Validação (CORRIGIDO - 2026-03-06)
+- SAQUE_VIRTUAL é criado ANTES de desvincular. Se falhar, desvinculação é abortada.
+- Retorno de `registrarSaqueVirtualViaLedger` e `registrarDepositoVirtualViaLedger` é validado. Exceção lançada em caso de falha.
 
 ### Serviço Centralizado
 
 `src/lib/projetoTransitionService.ts` encapsula toda a lógica:
 - `preCheckUnlink()` — verifica pendências, calcula saldo efetivo, gera warnings (inclui freebet)
-- `executeUnlink()` — idempotência + trava snapshots + desvincula + SAQUE_VIRTUAL + histórico
-- `executeLink()` — detecção de re-vínculo + idempotência + DEPOSITO_VIRTUAL
+- `executeUnlink()` — idempotência + trava snapshots + SAQUE_VIRTUAL + desvincula + histórico (nesta ordem)
+- `executeLink()` — idempotência + DEPOSITO_VIRTUAL (obrigatório, sem exceções)
 
 ### Frontend
 
