@@ -323,7 +323,7 @@ export function FinancialMetricsPopover({ projetoId }: FinancialMetricsPopoverPr
             <AlertCircle className="h-3 w-3 text-amber-500" />
           )}
           <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Retorno de Capital
+            Lucro Realizado
           </span>
         </div>
         
