@@ -5,14 +5,15 @@ import { getOperationalDateRangeForQuery } from '@/utils/dateUtils';
 
 // Fonte única de verdade para o resultado do projeto
 export interface ProjetoResultado {
-  // Métricas de apostas (NA MOEDA DE CONSOLIDAÇÃO DO PROJETO)
+  // === MÉTRICA PRINCIPAL: Lucro baseado em fluxo de caixa ===
+  // netProfit = (Saldo nas Casas + Saques Confirmados) - Depósitos Confirmados
+  netProfit: number;
+  roi: number | null;
+  
+  // === Métricas operacionais (secundárias) ===
   totalStaked: number;
   grossProfitFromBets: number;
-  
-  // Lucro de giros grátis (sempre positivo ou zero)
   lucroGirosGratis: number;
-  
-  // Lucro de cashback (valor recebido de cashback confirmado)
   lucroCashback: number;
   
   // Perdas operacionais
@@ -20,13 +21,9 @@ export interface ProjetoResultado {
   operationalLossesPending: number;
   operationalLossesReverted: number;
   
-  // Ajustes de conciliação
+  // Ajustes de conciliação (legado, mantido para compatibilidade)
   ajustesConciliacao: number;
   temAjustesConciliacao: boolean;
-  
-  // Resultado final
-  netProfit: number;
-  roi: number | null;
   
   // Métricas de capital
   saldoBookmakers: number;
@@ -152,12 +149,12 @@ export function useProjetoResultado({
       // 7. Fetch lucro de cashback (sempre >= 0) - inclui automático + manual
       const lucroCashback = await fetchLucroCashback(projetoId, dataInicio, dataFim, moedaConsolidacao, safeConvert);
       
-      // 8. Calcular lucro líquido (fonte única de verdade)
-      // net_profit = gross_profit_from_bets + lucro_giros_gratis + lucro_cashback - operational_losses_confirmed + ajustes_conciliacao
-      const netProfit = grossProfitFromBets + lucroGirosGratis + lucroCashback - operationalLosses.confirmed + ajustesConciliacao;
+      // LUCRO REAL = (Saldo nas Casas + Saques Confirmados) - Depósitos Confirmados
+      // Esta fórmula é agnóstica à estratégia: captura surebet, valuebet, bônus e ajustes automaticamente
+      const netProfit = (capitalData.saldoBookmakers + capitalData.totalSaques) - capitalData.totalDepositos;
       
-      // 9. Calcular ROI
-      const roi = totalStaked > 0 ? (netProfit / totalStaked) * 100 : null;
+      // ROI baseado em depósitos (capital investido)
+      const roi = capitalData.totalDepositos > 0 ? (netProfit / capitalData.totalDepositos) * 100 : null;
 
       return {
         totalStaked,
@@ -520,43 +517,29 @@ async function fetchCapitalData(
     return acc + convert(Number(b.saldo_irrecuperavel || 0), moedaOrigem);
   }, 0) || 0;
 
-  // Buscar histórico de bookmakers do projeto
-  const { data: historico } = await supabase
-    .from('projeto_bookmaker_historico')
-    .select('bookmaker_id')
-    .eq('projeto_id', projetoId);
-  
-  const historicalIds = new Set(historico?.map(h => h.bookmaker_id) || []);
-
-  // Depósitos - com moeda para conversão
+  // Depósitos (DEPOSITO + DEPOSITO_VIRTUAL) filtrados por projeto_id_snapshot
   const { data: depositos } = await supabase
     .from('cash_ledger')
-    .select('valor, destino_bookmaker_id, moeda')
-    .eq('tipo_transacao', 'DEPOSITO')
+    .select('valor, moeda')
+    .in('tipo_transacao', ['DEPOSITO', 'DEPOSITO_VIRTUAL'])
     .eq('status', 'CONFIRMADO')
-    .not('destino_bookmaker_id', 'is', null);
+    .eq('projeto_id_snapshot', projetoId);
 
-  const totalDepositos = depositos
-    ?.filter(d => historicalIds.has(d.destino_bookmaker_id))
-    .reduce((acc, d) => {
-      const moedaOrigem = d.moeda || 'BRL';
-      return acc + convert(Number(d.valor), moedaOrigem);
-    }, 0) || 0;
+  const totalDepositos = depositos?.reduce((acc, d) => {
+    return acc + convert(Number(d.valor), d.moeda || 'BRL');
+  }, 0) || 0;
 
-  // Saques - com moeda para conversão
+  // Saques (SAQUE + SAQUE_VIRTUAL) filtrados por projeto_id_snapshot
   const { data: saques } = await supabase
     .from('cash_ledger')
-    .select('valor, origem_bookmaker_id, moeda')
-    .eq('tipo_transacao', 'SAQUE')
+    .select('valor, valor_confirmado, moeda')
+    .in('tipo_transacao', ['SAQUE', 'SAQUE_VIRTUAL'])
     .eq('status', 'CONFIRMADO')
-    .not('origem_bookmaker_id', 'is', null);
+    .eq('projeto_id_snapshot', projetoId);
 
-  const totalSaques = saques
-    ?.filter(s => historicalIds.has(s.origem_bookmaker_id))
-    .reduce((acc, s) => {
-      const moedaOrigem = s.moeda || 'BRL';
-      return acc + convert(Number(s.valor), moedaOrigem);
-    }, 0) || 0;
+  const totalSaques = saques?.reduce((acc, s) => {
+    return acc + convert(Number(s.valor_confirmado ?? s.valor), s.moeda || 'BRL');
+  }, 0) || 0;
 
   return {
     saldoBookmakers,

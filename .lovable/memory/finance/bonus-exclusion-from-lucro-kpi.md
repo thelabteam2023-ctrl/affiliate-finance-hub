@@ -1,12 +1,25 @@
 # Memory: finance/bonus-exclusion-from-lucro-kpi
 Updated: 2026-03-06
 
-O KPI de "Lucro" na Visão Geral do projeto **exclui obrigatoriamente** apostas vinculadas a bônus (`bonus_id IS NOT NULL` ou `estrategia = 'EXTRACAO_BONUS'`). Isso se aplica tanto ao cálculo de lucro (`grossProfitFromBets`) quanto ao de volume (`totalStaked`) e aos breakdowns por módulo (`useKpiBreakdowns`).
+## KPI de Lucro: Baseado em Fluxo de Caixa (v2)
 
-**Justificativa**: Bônus são capital operacional, não lucro realizado. O resultado de bônus só se materializa como lucro quando sacado. As estratégias operacionais (Surebet, ValueBet, Duplo Green) representam lucro independente de saque, enquanto bônus dependem do fluxo de caixa para sua realização.
+O KPI principal de "Lucro" na Visão Geral usa **fluxo de caixa real**, não juice de apostas:
 
-**Regra**: O resultado de bônus é tratado exclusivamente na aba Bônus, com suas próprias métricas (ROI Operacional, Resultado Líquido, Performance vs Potencial). O KPI geral reflete apenas o lucro das estratégias puras.
+```
+LUCRO = (Saldo nas Casas + Saques Confirmados) - Depósitos Confirmados
+```
 
-**Filtros aplicados** em `useProjetoResultado`, `useKpiBreakdowns` e `fetchApostasResumo` (ProjetoDetalhe):
-- `.is('bonus_id', null)`
-- `.neq('estrategia', 'EXTRACAO_BONUS')`
+### Vantagens
+- **Agnóstico à estratégia**: Captura surebet, valuebet, bônus e qualquer operação automaticamente
+- **Inclui ajustes de saldo**: Qualquer ajuste manual já altera `saldo_atual`, entrando no cálculo
+- **Sem dupla contagem**: Não precisa decidir o que incluir/excluir por tipo de aposta
+- **Reflete realidade financeira**: Patrimônio real menos capital investido
+
+### Detalhes técnicos
+- Depósitos: `cash_ledger.tipo_transacao IN ('DEPOSITO', 'DEPOSITO_VIRTUAL') AND status = 'CONFIRMADO' AND projeto_id_snapshot = projetoId`
+- Saques: `cash_ledger.tipo_transacao IN ('SAQUE', 'SAQUE_VIRTUAL') AND status = 'CONFIRMADO' AND projeto_id_snapshot = projetoId` (usa `valor_confirmado` quando disponível)
+- Saldo: Via RPC `get_bookmaker_saldos` (saldo_operavel)
+- ROI: `(Lucro / Depósitos) * 100`
+
+### Métricas operacionais (secundárias)
+O `grossProfitFromBets` (juice) permanece como métrica operacional secundária, ainda excluindo apostas de bônus (`bonus_id IS NOT NULL` ou `estrategia = 'EXTRACAO_BONUS'`).
