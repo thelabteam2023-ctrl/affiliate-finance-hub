@@ -64,7 +64,7 @@ export function LucroCurrencyTooltip({
         >
           <div className="space-y-2">
             <p className="text-xs font-semibold text-foreground border-b border-border pb-1.5">
-              Lucro por Módulo
+              Resultado por Estratégia
             </p>
 
             {/* Linha única do módulo (Apostas) */}

@@ -307,10 +307,10 @@ export function FinancialMetricsPopover({ projetoId }: FinancialMetricsPopoverPr
         <span className="text-xs font-bold tracking-tight">Indicadores Financeiros</span>
       </div>
 
-      {/* ─── Seção 0: Lucro por Módulo ─── */}
+      {/* ─── Seção 0: Resultado por Estratégia ─── */}
       {metrics.strategyBreakdown.length > 0 && (
         <div className="space-y-1 pb-3">
-          <SectionHeader icon={Layers} label="Lucro por Módulo" />
+          <SectionHeader icon={Layers} label="Resultado por Estratégia" />
           {metrics.strategyBreakdown.map(({ estrategia, lucro }) => (
             <MetricRow
               key={estrategia}
