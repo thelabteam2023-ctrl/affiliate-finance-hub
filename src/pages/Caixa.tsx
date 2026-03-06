@@ -78,6 +78,7 @@ interface Transacao {
   projeto_id_snapshot: string | null;
   ajuste_direcao: string | null;
   ajuste_motivo: string | null;
+  data_confirmacao: string | null;
 }
 
 interface SaldoFiat {
