@@ -226,37 +226,11 @@ export async function executeLink(params: {
 }): Promise<void> {
   const { bookmakerId, projetoId, workspaceId, userId, saldoAtual, moeda } = params;
 
-  // 0. Detectar re-vinculação ao mesmo projeto
-  // Se o último vínculo foi com o mesmo projeto e o SAQUE_VIRTUAL se anularia com o DEPOSITO_VIRTUAL,
-  // podemos pular a criação de transações virtuais desnecessárias.
-  const { data: ultimoVinculo } = await supabase
-    .from("projeto_bookmaker_historico")
-    .select("projeto_id, data_desvinculacao")
-    .eq("bookmaker_id", bookmakerId)
-    .not("data_desvinculacao", "is", null)
-    .order("data_desvinculacao", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (ultimoVinculo?.projeto_id === projetoId) {
-    // Re-vinculação ao mesmo projeto — verificar se houve SAQUE_VIRTUAL recente
-    // Se sim, o DEPOSITO_VIRTUAL se anularia, gerando apenas ruído no ledger.
-    // Verificar se o saldo não mudou significativamente (tolerância de 0.01)
-    const { data: ultimoSaqueVirtual } = await supabase
-      .from("cash_ledger")
-      .select("valor")
-      .eq("origem_bookmaker_id", bookmakerId)
-      .eq("tipo_transacao", "SAQUE_VIRTUAL")
-      .eq("projeto_id_snapshot", projetoId)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (ultimoSaqueVirtual && Math.abs(ultimoSaqueVirtual.valor - saldoAtual) < 0.01) {
-      console.info(`[projetoTransitionService] Re-vinculação ao mesmo projeto ${projetoId} detectada. Saldo idêntico — transações virtuais suprimidas.`);
-      return;
-    }
-  }
+  // NOTA: A supressão de transações virtuais em re-vinculação ao mesmo projeto foi REMOVIDA.
+  // Motivo: O SAQUE_VIRTUAL já é criado durante o desvínculo. Se suprimirmos o DEPOSITO_VIRTUAL,
+  // o ledger fica desbalanceado (saques > depósitos), inflando artificialmente o lucro.
+  // É preferível ter pares completos (SAQUE_VIRTUAL + DEPOSITO_VIRTUAL) no ledger
+  // do que comprometer a integridade financeira.
 
   // 1. Proteção contra race condition
   const hasDuplicate = await hasRecentVirtualTransaction(bookmakerId, "DEPOSITO_VIRTUAL");
