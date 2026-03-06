@@ -474,13 +474,12 @@ export default function ProjetoDetalhe() {
     try {
       const { start, end } = getDateRangeFromFilter();
       
-      // Build query for apostas_unificada (all types combined)
+      // Build query for apostas_unificada (ALL strategies: Surebet, ValueBet, Bônus, etc.)
       let apostasQuery = supabase
         .from("apostas_unificada")
-        .select("id, stake, lucro_prejuizo, lucro_prejuizo_brl_referencia, moeda_operacao, status, resultado, forma_registro")
+        .select("id, stake, lucro_prejuizo, lucro_prejuizo_brl_referencia, moeda_operacao, status, resultado, forma_registro, estrategia")
         .eq("projeto_id", id)
-        .is("bonus_id", null)
-        .neq("estrategia", "EXTRACAO_BONUS");
+        .is("cancelled_at", null);
       
       // Build query for cashback_manual
       let cashbackQuery = supabase
