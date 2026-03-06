@@ -1,17 +1,18 @@
 import { useEffect, useRef, useCallback } from 'react';
 
 /**
- * Hook centralizado para sincronização cross-window via BroadcastChannel.
- * Elimina duplicação de ~650 linhas espalhadas em 12+ arquivos.
+ * Hook centralizado para sincronização cross-window.
  * 
- * @example
- * useCrossWindowSync({
- *   projetoId,
- *   onSync: () => {
- *     fetchData();
- *     onDataChange?.();
- *   }
- * });
+ * ESTRATÉGIA DEFINITIVA (4 camadas):
+ * 1. BroadcastChannel — instantâneo, same-origin
+ * 2. window.postMessage — cross-context (iframe ↔ popup)
+ * 3. localStorage StorageEvent — fallback universal
+ * 4. ✅ visibilitychange + focus — SAFETY NET GARANTIDO
+ *    Quando o usuário volta à janela principal, refetch automático.
+ *    Funciona independentemente de qualquer canal de mensagem.
+ * 
+ * A camada 4 elimina o problema de ambientes onde BroadcastChannel
+ * não funciona (iframe sandbox, cross-origin, etc).
  */
 
 export type SyncChannel = 'aposta' | 'multipla' | 'surebet';
@@ -25,6 +26,8 @@ export interface CrossWindowSyncOptions {
   channels?: SyncChannel[];
   /** Habilita logging de debug */
   debug?: boolean;
+  /** Desabilita refetch ao ganhar foco (default: false) */
+  disableFocusRefetch?: boolean;
 }
 
 // Mapeamento de canais para nomes reais e eventos válidos
@@ -52,16 +55,29 @@ const CHANNEL_CONFIG: Record<SyncChannel, {
 
 const ALL_CHANNELS: SyncChannel[] = ['aposta', 'multipla', 'surebet'];
 
+/** Debounce mínimo entre refetches por foco (ms) */
+const FOCUS_DEBOUNCE_MS = 2000;
+
 /**
  * Hook centralizado para sincronização entre janelas/abas do navegador.
- * Gerencia BroadcastChannel + fallback localStorage automaticamente.
+ * 
+ * Além dos canais de mensagem, implementa refetch automático ao ganhar
+ * foco como safety net definitivo — independente de BroadcastChannel.
  */
 export function useCrossWindowSync(options: CrossWindowSyncOptions): void {
-  const { projetoId, onSync, channels = ALL_CHANNELS, debug = false } = options;
+  const { 
+    projetoId, 
+    onSync, 
+    channels = ALL_CHANNELS, 
+    debug = false,
+    disableFocusRefetch = false,
+  } = options;
   
   // Refs para evitar re-criação desnecessária
   const onSyncRef = useRef(onSync);
   const debugRef = useRef(debug);
+  const lastFocusSyncRef = useRef<number>(0);
+  const wasHiddenRef = useRef(false);
   
   // Atualiza refs quando callbacks mudam
   useEffect(() => {
@@ -75,15 +91,16 @@ export function useCrossWindowSync(options: CrossWindowSyncOptions): void {
     }
   }, []);
 
+  // ================================================================
+  // CAMADAS 1-3: BroadcastChannel + postMessage + localStorage
+  // ================================================================
   useEffect(() => {
     if (typeof window === 'undefined') return;
     
     const broadcastChannels: BroadcastChannel[] = [];
     const storageKeys = new Set<string>();
     
-    // Tenta criar BroadcastChannels
-    let useBroadcastChannel = true;
-    
+    // Camada 1: BroadcastChannel (instantâneo, same-origin)
     try {
       channels.forEach((channel) => {
         const config = CHANNEL_CONFIG[channel];
@@ -92,37 +109,29 @@ export function useCrossWindowSync(options: CrossWindowSyncOptions): void {
         bc.onmessage = (event: MessageEvent) => {
           const { type, projetoId: eventProjetoId } = event.data || {};
           
-          // Valida se é um evento relevante para este projeto
           if (config.validEvents.includes(type) && eventProjetoId === projetoId) {
-            log(`Evento recebido: ${type} para projeto ${projetoId}`);
+            log(`[BC] Evento: ${type}`);
             onSyncRef.current();
           }
         };
         
         broadcastChannels.push(bc);
         storageKeys.add(config.storageKey);
-        
-        log(`Canal ${config.channelName} registrado`);
       });
-    } catch (err) {
-      // BroadcastChannel não suportado - usa fallback
-      useBroadcastChannel = false;
-      log('BroadcastChannel não suportado, usando fallback localStorage');
-      
-      // Configura storage keys para fallback
+    } catch {
       channels.forEach((channel) => {
         storageKeys.add(CHANNEL_CONFIG[channel].storageKey);
       });
     }
     
-    // Fallback 1: listener para localStorage (funciona em todos os browsers)
+    // Camada 3: localStorage StorageEvent (fallback universal)
     const handleStorage = (event: StorageEvent) => {
       if (!event.key || !storageKeys.has(event.key) || !event.newValue) return;
       
       try {
         const data = JSON.parse(event.newValue);
         if (data.projetoId === projetoId) {
-          log(`Evento localStorage recebido: ${event.key}`);
+          log(`[LS] Evento: ${event.key}`);
           onSyncRef.current();
         }
       } catch {
@@ -130,7 +139,7 @@ export function useCrossWindowSync(options: CrossWindowSyncOptions): void {
       }
     };
     
-    // Fallback 2: postMessage (cross-origin compatible, from window.opener)
+    // Camada 2: postMessage (cross-context, iframe ↔ popup)
     const VALID_SOURCES = new Set(['surebet_window', 'aposta_window', 'aposta_multipla_window']);
     const handleMessage = (event: MessageEvent) => {
       const data = event.data;
@@ -142,7 +151,7 @@ export function useCrossWindowSync(options: CrossWindowSyncOptions): void {
       });
       
       if (matchesChannel && data.projetoId === projetoId) {
-        log(`Evento postMessage recebido: ${data.type}`);
+        log(`[PM] Evento: ${data.type}`);
         onSyncRef.current();
       }
     };
@@ -150,20 +159,63 @@ export function useCrossWindowSync(options: CrossWindowSyncOptions): void {
     window.addEventListener('storage', handleStorage);
     window.addEventListener('message', handleMessage);
     
-    // Cleanup
     return () => {
       broadcastChannels.forEach((bc) => {
-        try {
-          bc.close();
-        } catch {
-          // Ignora erros ao fechar
-        }
+        try { bc.close(); } catch { /* ignore */ }
       });
       window.removeEventListener('storage', handleStorage);
       window.removeEventListener('message', handleMessage);
-      log('Canais fechados e listeners removidos');
     };
   }, [projetoId, channels, log]);
+
+  // ================================================================
+  // CAMADA 4: SAFETY NET — visibilitychange + focus
+  // Garante refetch quando o usuário volta à janela principal,
+  // independentemente de qualquer canal de mensagem funcionar.
+  // ================================================================
+  useEffect(() => {
+    if (typeof window === 'undefined' || disableFocusRefetch) return;
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        // Marca que a janela ficou oculta (potencialmente o usuário foi ao popup)
+        wasHiddenRef.current = true;
+        return;
+      }
+
+      // Voltou a ficar visível — refetch se ficou oculto antes
+      if (!wasHiddenRef.current) return;
+      wasHiddenRef.current = false;
+
+      const now = Date.now();
+      if (now - lastFocusSyncRef.current < FOCUS_DEBOUNCE_MS) return;
+      lastFocusSyncRef.current = now;
+
+      log('[FOCUS] Janela visível novamente — refetch');
+      onSyncRef.current();
+    };
+
+    const handleFocus = () => {
+      // focus complementa visibilitychange para janelas popup
+      if (!wasHiddenRef.current) return;
+      wasHiddenRef.current = false;
+
+      const now = Date.now();
+      if (now - lastFocusSyncRef.current < FOCUS_DEBOUNCE_MS) return;
+      lastFocusSyncRef.current = now;
+
+      log('[FOCUS] Window focus — refetch');
+      onSyncRef.current();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [disableFocusRefetch, log]);
 }
 
 /**
