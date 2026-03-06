@@ -217,10 +217,9 @@ export function ContasDisponiveisModule() {
   const totaisPorMoeda = useMemo(() => {
     const map = new Map<string, { saldo: number; freebet: number; count: number }>();
     filtered.forEach((c) => {
-      const saldo = c.moeda === "USD" || c.moeda === "USDT" ? c.saldo_usd : c.saldo_atual;
       const current = map.get(c.moeda) || { saldo: 0, freebet: 0, count: 0 };
       map.set(c.moeda, {
-        saldo: current.saldo + saldo,
+        saldo: current.saldo + c.saldo_atual,
         freebet: current.freebet + c.saldo_freebet,
         count: current.count + 1,
       });
