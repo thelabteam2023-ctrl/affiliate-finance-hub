@@ -1105,19 +1105,26 @@ export default function CentralOperacoes() {
   };
 
   // Cancelar liberação de saque - reverte bookmaker ao estado anterior
+  // Casa aparecerá em "Contas Disponíveis" para nova decisão
   const handleCancelarLiberacao = async (alerta: Alerta) => {
     try {
+      // Restaurar status anterior (salvo em status_pre_bloqueio) ou 'ativo' como fallback
+      const statusRestaurado = alerta.status_anterior || "ativo";
+      
       const { error } = await supabase
         .from("bookmakers")
         .update({
           aguardando_saque_at: null,
-          status: "ativo",
+          status: statusRestaurado,
+          status_pre_bloqueio: null,
         })
         .eq("id", alerta.entidade_id);
 
       if (error) throw error;
 
-      toast.success(`Liberação de "${alerta.titulo}" cancelada — casa devolvida ao status ativo`);
+      toast.success(`"${alerta.titulo}" devolvida para Contas Disponíveis`, {
+        description: "Você pode vincular a um projeto ou tomar outra decisão.",
+      });
       fetchData(true);
     } catch (err) {
       console.error("Erro ao cancelar liberação:", err);
