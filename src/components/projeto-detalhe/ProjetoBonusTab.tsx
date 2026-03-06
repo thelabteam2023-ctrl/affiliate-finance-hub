@@ -64,7 +64,7 @@ import { useProjectBonuses, ProjectBonus, BonusStatus, BonusFormData } from "@/h
 import { BonusDialog } from "./BonusDialog";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange as FilterDateRange } from "./StandardTimeFilter";
 import { useBookmakerSaldosQuery, BookmakerSaldo } from "@/hooks/useBookmakerSaldosQuery";
-import { FinancialSummaryCompact } from "./FinancialSummaryCompact";
+import { FinancialMetricsPopover } from "./FinancialMetricsPopover";
 
 interface ProjetoBonusTabProps {
   projetoId: string;
@@ -317,7 +317,19 @@ export function ProjetoBonusTab({ projetoId }: ProjetoBonusTabProps) {
     <div className="space-y-6">
       {/* KPIs - Faixa compacta */}
       <KpiSummaryBar
-        leading={<FinancialSummaryCompact projetoId={projetoId} />}
+        leading={
+          <Popover>
+            <PopoverTrigger asChild>
+              <button className="cursor-pointer hover:opacity-80 transition-opacity flex flex-col items-center text-center min-w-[80px]">
+                <span className="text-xs text-muted-foreground leading-tight">Patrimônio</span>
+                <span className="text-base md:text-lg font-bold leading-tight text-primary">▸</span>
+              </button>
+            </PopoverTrigger>
+            <PopoverContent side="bottom" align="center" className="w-auto p-0" sideOffset={8}>
+              <FinancialMetricsPopover projetoId={projetoId} />
+            </PopoverContent>
+          </Popover>
+        }
         items={[
           {
             label: "Bônus Creditados",
