@@ -160,6 +160,15 @@ export function useInvalidateProjectQueries() {
         invalidations.push(
           queryClient.invalidateQueries({ 
             queryKey: ["bonus", "project", projetoId] 
+          }),
+          queryClient.invalidateQueries({ 
+            queryKey: ["bonus-bets-summary", projetoId] 
+          }),
+          queryClient.invalidateQueries({ 
+            queryKey: ["bonus-analytics", projetoId] 
+          }),
+          queryClient.invalidateQueries({ 
+            queryKey: ["bonus-ajustes-pos-limitacao", projetoId] 
           })
         );
       }
