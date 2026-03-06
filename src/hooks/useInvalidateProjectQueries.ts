@@ -39,6 +39,7 @@ export function useInvalidateProjectQueries() {
         | "bonus" 
         | "giros" 
         | "cashback"
+        | "dashboard"
       )[];
     }) => {
       const { only } = options || {};
@@ -180,6 +181,22 @@ export function useInvalidateProjectQueries() {
         invalidations.push(
           queryClient.invalidateQueries({ 
             queryKey: ["cashback-manual", projetoId] 
+          })
+        );
+      }
+
+      // Dashboard (Evolução do Lucro, Calendário, Extras)
+      // CRÍTICO: Sempre invalidar quando qualquer dado financeiro muda
+      if (shouldInvalidate("dashboard") || !only || only.length === 0) {
+        invalidations.push(
+          queryClient.invalidateQueries({ 
+            queryKey: ["projeto-dashboard-extras", projetoId] 
+          }),
+          queryClient.invalidateQueries({ 
+            queryKey: ["projeto-dashboard-apostas", projetoId] 
+          }),
+          queryClient.invalidateQueries({ 
+            queryKey: ["projeto-dashboard-calendario", projetoId] 
           })
         );
       }
