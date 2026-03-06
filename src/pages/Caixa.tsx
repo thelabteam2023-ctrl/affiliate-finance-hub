@@ -78,6 +78,7 @@ interface Transacao {
   projeto_id_snapshot: string | null;
   ajuste_direcao: string | null;
   ajuste_motivo: string | null;
+  data_confirmacao: string | null;
 }
 
 interface SaldoFiat {
@@ -183,6 +184,7 @@ export default function Caixa() {
       // Eventos promocionais (GIRO_GRATIS, BONUS_CREDITADO, etc.) são filtrados
       // para manter a visão pura de "dinheiro que entra e sai do sistema"
       // Motor Financeiro v11: Exclui status de duplicidade para evitar confusão visual
+      // Busca principal: transações pela data_transacao no período
       const { data: transacoesData, error: transacoesError } = await supabase
         .from("cash_ledger")
         .select("*")
@@ -193,7 +195,28 @@ export default function Caixa() {
         .order("data_transacao", { ascending: false });
 
       if (transacoesError) throw transacoesError;
-      setTransacoes(transacoesData || []);
+
+      // Busca complementar: saques confirmados no período cujo pedido foi ANTES do período
+      // Isso garante que saques recebidos apareçam na cronologia correta
+      const { data: transacoesConfirmadas } = await supabase
+        .from("cash_ledger")
+        .select("*")
+        .in("tipo_transacao", [...CASH_REAL_TYPES])
+        .not("status", "in", "(DUPLICADO_CORRIGIDO,DUPLICADO_BLOQUEADO)")
+        .lt("data_transacao", queryStartDate)
+        .gte("data_confirmacao", queryStartDate)
+        .lte("data_confirmacao", `${queryEndDate}T23:59:59`);
+
+      // Merge e deduplicar
+      const allIds = new Set((transacoesData || []).map((t: any) => t.id));
+      const merged = [...(transacoesData || [])];
+      for (const t of (transacoesConfirmadas || [])) {
+        if (!allIds.has(t.id)) {
+          merged.push(t);
+        }
+      }
+
+      setTransacoes(merged);
 
       // Fetch reference data for names
       const { data: parceirosData } = await supabase
@@ -398,9 +421,12 @@ export default function Caixa() {
         return false;
       }
       
-      const dataTransacao = parseLocalDateTime(t.data_transacao);
-      const matchDataInicio = !dataInicio || dataTransacao >= startOfDay(dataInicio);
-      const matchDataFim = !dataFim || dataTransacao <= endOfDay(dataFim);
+      // Data efetiva: para saques confirmados, usar data_confirmacao como referência cronológica
+      const dataEfetiva = t.data_confirmacao 
+        ? parseLocalDateTime(t.data_confirmacao) 
+        : parseLocalDateTime(t.data_transacao);
+      const matchDataInicio = !dataInicio || dataEfetiva >= startOfDay(dataInicio);
+      const matchDataFim = !dataFim || dataEfetiva <= endOfDay(dataFim);
       
       // Include both APORTE and LIQUIDACAO when filter is APORTE_FINANCEIRO
       const knownTypes = ["TRANSFERENCIA", "DEPOSITO", "SAQUE", "APORTE_FINANCEIRO"];
@@ -451,6 +477,11 @@ export default function Caixa() {
       }
       
       return matchTipo && matchDataInicio && matchDataFim && matchProjeto && matchParceiro;
+    }).sort((a, b) => {
+      // Ordenar pela data efetiva (data_confirmacao para saques confirmados, senão data_transacao)
+      const dataA = a.data_confirmacao ? parseLocalDateTime(a.data_confirmacao) : parseLocalDateTime(a.data_transacao);
+      const dataB = b.data_confirmacao ? parseLocalDateTime(b.data_confirmacao) : parseLocalDateTime(b.data_transacao);
+      return dataB.getTime() - dataA.getTime(); // Mais recente primeiro
     });
   };
 
