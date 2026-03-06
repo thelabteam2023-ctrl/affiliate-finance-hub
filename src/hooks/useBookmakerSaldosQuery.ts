@@ -212,10 +212,11 @@ export function useInvalidateBookmakerSaldos() {
         queryClient.invalidateQueries({ queryKey: [KEYS.APOSTAS, projetoId] })
       );
       
-      // 5. Bonus bets (juice/performance) - CRÍTICO para refletir mudanças de data_aposta
+      // 5. Bonus bets (juice/performance/analytics) - CRÍTICO para refletir mudanças
       invalidations.push(
         queryClient.invalidateQueries({ queryKey: ["bonus-bets-juice", projetoId] }),
-        queryClient.invalidateQueries({ queryKey: ["bonus-bets-summary", projetoId] })
+        queryClient.invalidateQueries({ queryKey: ["bonus-bets-summary", projetoId] }),
+        queryClient.invalidateQueries({ queryKey: ["bonus-analytics", projetoId] })
       );
       
       // 5. Exposição
@@ -239,7 +240,8 @@ export function useInvalidateBookmakerSaldos() {
         queryClient.invalidateQueries({ queryKey: [KEYS.PARCEIRO_FINANCEIRO] }),
         queryClient.invalidateQueries({ queryKey: [KEYS.PARCEIRO_CONSOLIDADO] }),
         queryClient.invalidateQueries({ queryKey: ["bonus-bets-juice"] }),
-        queryClient.invalidateQueries({ queryKey: ["bonus-bets-summary"] })
+        queryClient.invalidateQueries({ queryKey: ["bonus-bets-summary"] }),
+        queryClient.invalidateQueries({ queryKey: ["bonus-analytics"] })
       );
     }
 
