@@ -272,49 +272,82 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
         </Badge>
       </div>
 
-      {/* Composição do Saldo — soma corretamente ao total */}
+      {/* Composição do Saldo */}
       <div className="space-y-2">
         <p className="text-xs font-medium text-foreground">Composição do Saldo</p>
-        <div className="space-y-1.5 text-xs">
-          {/* Saldo Disponível = saldo_real - saldo_em_aposta (inclui bônus creditados) */}
-          <div className="flex items-center justify-between p-2 rounded bg-muted/30">
-            <div>
-              <span className="text-muted-foreground">Saldo Disponível</span>
-              {hasBonus && (
-                <p className="text-[10px] text-muted-foreground/70">
-                  inclui {formatCurrency(saldoBonus)} de bônus creditados
-                </p>
-              )}
-            </div>
-            <p className="font-semibold">{formatCurrency(Math.max(0, saldoReal - saldoEmAposta))}</p>
-          </div>
-
-          {/* Freebet */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="p-2 rounded bg-muted/30 cursor-help">
+                  <span className="text-muted-foreground">Saldo Disponível</span>
+                  <p className="font-semibold">{formatCurrency(Math.max(0, saldoReal - saldoEmAposta))}</p>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="text-xs max-w-[240px]">
+                <p className="font-medium mb-1">Saldo Real − Apostas em Aberto</p>
+                <div className="space-y-0.5">
+                  <p>Saldo Real: {formatCurrency(saldoReal)}</p>
+                  {saldoEmAposta > 0 && <p>Em Aposta: -{formatCurrency(saldoEmAposta)}</p>}
+                  {hasBonus && <p className="text-primary">Inclui {formatCurrency(saldoBonus)} de bônus creditados</p>}
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          {hasBonus && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="p-2 rounded bg-muted/30 cursor-help">
+                    <span className="text-muted-foreground">Bônus Creditados</span>
+                    <p className="font-semibold text-primary">{formatCurrency(saldoBonus)}</p>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-xs max-w-[240px]">
+                  <p>Valor de bônus já creditados nas casas.</p>
+                  <p className="text-muted-foreground mt-1">Este valor já está incluído no Saldo Disponível — não é somado ao total.</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
           {hasFreebet && (
-            <div className="flex items-center justify-between p-2 rounded bg-muted/30">
-              <span className="text-muted-foreground flex items-center gap-1">
-                <Gift className="h-3 w-3 text-warning" />
-                Freebet
-              </span>
-              <p className="font-semibold text-warning">{formatCurrency(saldoFreebet)}</p>
-            </div>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="p-2 rounded bg-muted/30 cursor-help">
+                    <span className="text-muted-foreground">Freebet</span>
+                    <p className="font-semibold text-warning">{formatCurrency(saldoFreebet)}</p>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-xs max-w-[240px]">
+                  <p>Apostas gratuitas disponíveis.</p>
+                  <p className="text-muted-foreground mt-1">Somado ao saldo disponível para compor o Total Operável.</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           )}
-
-          {/* Apostas em aberto (informativo, já descontado) */}
           {saldoEmAposta > 0 && (
-            <div className="flex items-center justify-between p-2 rounded bg-amber-500/5 border border-amber-500/20">
-              <span className="text-muted-foreground">Apostas em Aberto</span>
-              <p className="font-semibold text-amber-500">- {formatCurrency(saldoEmAposta)}</p>
-            </div>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="p-2 rounded bg-muted/30 cursor-help">
+                    <span className="text-muted-foreground">Em Aposta</span>
+                    <p className="font-semibold text-amber-500">{formatCurrency(saldoEmAposta)}</p>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-xs max-w-[240px]">
+                  <p>Capital alocado em apostas pendentes.</p>
+                  <p className="text-muted-foreground mt-1">Já descontado do Saldo Disponível.</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           )}
-
-          {/* Total = saldo_operavel */}
-          <div className="flex items-center justify-between p-2 rounded bg-primary/10 border border-primary/20 mt-1">
-            <span className="text-xs font-medium text-primary">Total Operável</span>
-            <p className="font-bold text-primary">{formatCurrency(saldoOperavel)}</p>
-          </div>
         </div>
       </div>
+
+      <p className="text-[10px] text-muted-foreground bg-muted/20 p-2 rounded border border-border/30">
+        Total Operável = Saldo Disponível + Freebet. Bônus creditados já estão incluídos no saldo disponível.
+      </p>
 
       {/* Saldo por Casa — GRID RESPONSIVO */}
       <div className="space-y-2">
