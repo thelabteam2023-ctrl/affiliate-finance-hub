@@ -305,7 +305,8 @@ export function ContasDisponiveisModule() {
   };
 
   const getSaldoEfetivo = (c: ContaDisponivel) => {
-    return c.moeda === "USD" || c.moeda === "USDT" ? c.saldo_usd : c.saldo_atual;
+    // saldo_atual é a fonte de verdade para TODAS as moedas
+    return c.saldo_atual;
   };
 
   if (isLoading) {
