@@ -239,13 +239,12 @@ export function ProjetoFinancialMetricsCard({ projetoId }: ProjetoFinancialMetri
     );
   }
 
-    // Capital total na operação = Depósitos + Créditos que entraram sem depósito
+    // Créditos Extras são RECEITA (bônus, cashback), não capital investido
     const extrasPositivos = metrics.cashbackLiquido + metrics.girosGratis + metrics.ajustes + metrics.ganhoConfirmacao + metrics.ganhoFx;
-    const capitalTotal = metrics.depositosTotal + extrasPositivos;
-    // Fluxo Líquido Ajustado = desconta os créditos extras do fluxo de caixa
-    const fluxoLiquidoAjustado = metrics.saquesRecebidos - capitalTotal;
-    // Lucro Operacional Puro = Patrimônio - Capital Total (exclui extras)
-    const lucroOperacionalPuro = (metrics.saldoCasas + metrics.saquesRecebidos) - capitalTotal;
+    // Fluxo Líquido Ajustado = Lucro Real = Saques - Depósitos
+    const fluxoLiquidoAjustado = metrics.saquesRecebidos - metrics.depositosTotal;
+    // Lucro Operacional Puro = Patrimônio - Depósitos
+    const lucroOperacionalPuro = (metrics.saldoCasas + metrics.saquesRecebidos) - metrics.depositosTotal;
 
     const breakEvenReached = metrics.fluxoCaixaLiquido >= 0;
 
@@ -266,7 +265,7 @@ export function ProjetoFinancialMetricsCard({ projetoId }: ProjetoFinancialMetri
     },
     {
       label: "Capital na Operação",
-      value: capitalTotal,
+      value: metrics.depositosTotal,
       icon: ArrowDownCircle,
       richTooltip: true,
       neutral: true,
@@ -377,8 +376,8 @@ export function ProjetoFinancialMetricsCard({ projetoId }: ProjetoFinancialMetri
                         <span className="font-mono">{formatCurrency(metrics.saquesRecebidos)}</span>
                       </div>
                       <div className="flex justify-between gap-6">
-                        <span className="text-muted-foreground">Capital na Operação</span>
-                        <span className="font-mono">−{formatCurrency(capitalTotal)}</span>
+                        <span className="text-muted-foreground">Depósitos</span>
+                        <span className="font-mono">−{formatCurrency(metrics.depositosTotal)}</span>
                       </div>
                       <div className="border-t border-border/40 pt-1.5 mt-1">
                         <div className="flex justify-between gap-6 font-medium">

@@ -249,7 +249,9 @@ export function FinancialMetricsPopover({ projetoId }: FinancialMetricsPopoverPr
     const fluxoCaixaLiquido = saquesRecebidos - depositosTotal;
     const extrasPositivos = cashbackLiquido + girosGratis + ajustes + ganhoConfirmacao + ganhoFx + bonusGanhos;
     const capitalTotal = depositosTotal + extrasPositivos;
-    const fluxoLiquidoAjustado = saquesRecebidos - capitalTotal;
+    // Fluxo Líquido Ajustado = Lucro Real (Saques - Depósitos)
+    // Créditos Extras são RECEITA, não capital investido — não devem ser subtraídos
+    const fluxoLiquidoAjustado = fluxoCaixaLiquido;
     const patrimonio = saldoCasas + saquesRecebidos + saquesPendentes;
     const lucroFinanceiro = patrimonio - depositosTotal;
 
