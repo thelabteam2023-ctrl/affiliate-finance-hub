@@ -109,12 +109,14 @@ async function fetchBreakdownsData(
     perdasData,
     ajustesData,
     cashbackData,
+    bonusGanhosData,
   ] = await Promise.all([
     fetchApostasModuleData(projetoId, dataInicio, dataFim, moedaConsolidacao, safeConvert),
     fetchGirosGratisModuleData(projetoId, dataInicio, dataFim),
     fetchPerdasModuleData(projetoId, dataInicio, dataFim),
     fetchAjustesModuleData(projetoId),
     fetchCashbackModuleData(projetoId, dataInicio, dataFim, moedaConsolidacao, safeConvert),
+    fetchBonusGanhosModuleData(projetoId, moedaConsolidacao, safeConvert),
   ]);
 
   // === BREAKDOWN APOSTAS (quantidade) ===
@@ -168,7 +170,7 @@ async function fetchBreakdownsData(
       return createModuleContribution(
         mapping.moduleId,
         label,
-        lucro,
+        lucro as number,
         true,
         { icon: mapping.icon }
       );
@@ -177,6 +179,13 @@ async function fetchBreakdownsData(
 
   const lucroBreakdown = createKpiBreakdown([
     ...strategyContributions,
+    createModuleContribution(
+      'bonus_ganhos',
+      'Bônus Ganhos',
+      bonusGanhosData.total || 0,
+      (bonusGanhosData.count || 0) > 0,
+      { icon: 'Gift', color: 'positive' }
+    ),
     createModuleContribution(
       'giros_gratis',
       'Giros Grátis',
@@ -211,6 +220,7 @@ async function fetchBreakdownsData(
   lucroBreakdown.currencyBreakdown = combinarBreakdownsMoeda(
     apostasData.lucroPorMoeda,
     girosGratisData.lucroPorMoeda,
+    bonusGanhosData.lucroPorMoeda,
     cashbackData.lucroPorMoeda,
     // Perdas já em BRL normalmente
     perdasData.lucroPorMoeda.map(item => ({ ...item, valor: -item.valor })),
@@ -616,6 +626,41 @@ async function fetchCashbackModuleData(
   const lucroItems = cashbacks.map(cb => ({
     valor: Number(cb.valor || 0),
     moeda: cb.moeda_operacao || 'BRL'
+  }));
+  const lucroPorMoeda = agregarPorMoeda(lucroItems);
+
+  return { count, volume: 0, lucro: 0, total, volumePorMoeda: [], lucroPorMoeda };
+}
+
+async function fetchBonusGanhosModuleData(
+  projetoId: string,
+  moedaConsolidacao: string,
+  convertToConsolidation: (valor: number, moedaOrigem: string) => number
+): Promise<ModuleDataWithCurrency> {
+  const { data, error } = await supabase
+    .from('project_bookmaker_link_bonuses')
+    .select('bonus_amount, currency')
+    .eq('project_id', projetoId)
+    .eq('status', 'credited');
+
+  if (error) {
+    console.error('Erro ao buscar bônus ganhos:', error);
+    return { count: 0, volume: 0, lucro: 0, total: 0, volumePorMoeda: [], lucroPorMoeda: [] };
+  }
+
+  const bonuses = data || [];
+  const count = bonuses.length;
+
+  const total = bonuses.reduce((acc, b) => {
+    const moeda = b.currency || 'BRL';
+    const valor = Number(b.bonus_amount || 0);
+    if (moeda === moedaConsolidacao) return acc + valor;
+    return acc + convertToConsolidation(valor, moeda);
+  }, 0);
+
+  const lucroItems = bonuses.map(b => ({
+    valor: Number(b.bonus_amount || 0),
+    moeda: b.currency || 'BRL'
   }));
   const lucroPorMoeda = agregarPorMoeda(lucroItems);
 

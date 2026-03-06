@@ -82,6 +82,13 @@ async function fetchFinancialMetricsRaw(projetoId: string) {
     .in("status", ["LIQUIDADA", "GREEN", "RED", "MEIO_GREEN", "MEIO_RED"])
     .not("resultado", "is", null);
 
+  // Fetch bonus ganhos (credited)
+  const { data: bonusGanhosData } = await supabase
+    .from("project_bookmaker_link_bonuses")
+    .select("bonus_amount, currency")
+    .eq("project_id", projetoId)
+    .eq("status", "credited");
+
   return {
     bookmakerSaldos,
     depositos: (depositos.data || []) as LedgerEntry[],
@@ -98,6 +105,7 @@ async function fetchFinancialMetricsRaw(projetoId: string) {
     },
     breakEvenTimeline: (timelineData || []) as { valor: number; valor_confirmado?: number | null; moeda: string; data_transacao: string; tipo_transacao: string }[],
     strategyProfits: (strategyData || []) as { estrategia: string; pl_consolidado: number | null; lucro_prejuizo: number | null; lucro_prejuizo_brl_referencia: number | null; moeda_operacao: string | null }[],
+    bonusGanhos: (bonusGanhosData || []) as { bonus_amount: number; currency: string }[],
   };
 }
 
@@ -163,6 +171,9 @@ function ExtrasCollapsible({ metrics, formatCurrency }: { metrics: any; formatCu
       </button>
       {open && (
         <div className="mt-1 space-y-0.5 pl-2 border-l-2 border-border/30 ml-1">
+          {Math.abs(metrics.bonusGanhos) >= 0.01 && (
+            <MetricRow label="Bônus Ganhos" value={formatCurrency(metrics.bonusGanhos)} colorClass="text-emerald-500" indent tooltip="Valor total de bônus creditados nas casas de apostas. Representa o capital promocional recebido que contribui para o patrimônio do projeto." />
+          )}
           {Math.abs(metrics.cashbackLiquido) >= 0.01 && (
             <MetricRow label="Cashback Líquido" value={formatCurrency(metrics.cashbackLiquido)} colorClass="text-emerald-500" indent />
           )}
@@ -236,8 +247,13 @@ export function FinancialMetricsPopover({ projetoId }: FinancialMetricsPopoverPr
     const perdaFx = sumConvert(r.perdaCambial);
     const ganhoFx = sumConvert(r.ganhoCambial);
 
+    // Bônus ganhos (creditados)
+    const bonusGanhos = rawMetrics.bonusGanhos.reduce(
+      (acc, b) => acc + convertToConsolidationOficial(b.bonus_amount, b.currency || 'BRL'), 0
+    );
+
     const fluxoCaixaLiquido = saquesRecebidos - depositosTotal;
-    const extrasPositivos = cashbackLiquido + girosGratis + ajustes + ganhoConfirmacao + ganhoFx;
+    const extrasPositivos = cashbackLiquido + girosGratis + ajustes + ganhoConfirmacao + ganhoFx + bonusGanhos;
     const capitalTotal = depositosTotal + extrasPositivos;
     const fluxoLiquidoAjustado = saquesRecebidos - capitalTotal;
     const patrimonio = saldoCasas + saquesRecebidos + saquesPendentes;
@@ -277,6 +293,7 @@ export function FinancialMetricsPopover({ projetoId }: FinancialMetricsPopoverPr
       depositosTotal, saquesRecebidos, saquesPendentes, saldoCasas,
       fluxoCaixaLiquido, fluxoLiquidoAjustado, capitalTotal, extrasPositivos,
       cashbackLiquido, girosGratis, ajustes, ganhoConfirmacao, ganhoFx, perdaOp, perdaFx,
+      bonusGanhos,
       patrimonio, lucroFinanceiro,
       breakEvenDate, breakEvenDays,
       strategyBreakdown,
