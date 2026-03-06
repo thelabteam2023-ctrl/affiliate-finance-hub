@@ -94,6 +94,14 @@ function invalidateAllVinculoRelatedQueries(
   // 9. Rollover por casa (para SaldoOperavelCard)
   queryClient.invalidateQueries({ queryKey: ["rollover-por-casa", projetoId] });
 
+  // 10. CRÍTICO: Indicadores Financeiros (Fluxo Líquido, Break-Even, etc.)
+  queryClient.invalidateQueries({ queryKey: ["projeto-financial-metrics", projetoId] });
+
+  // 11. Dashboard (Evolução do Lucro, Calendário)
+  queryClient.invalidateQueries({ queryKey: ["projeto-dashboard-extras", projetoId] });
+  queryClient.invalidateQueries({ queryKey: ["projeto-dashboard-apostas", projetoId] });
+  queryClient.invalidateQueries({ queryKey: ["projeto-dashboard-calendario", projetoId] });
+
   console.log(`[useProjetoVinculos] Invalidated ALL vinculo-related queries for project ${projetoId}`);
 }
 
