@@ -152,19 +152,50 @@ export function useProjetoVinculos(projetoId: string | undefined) {
         }
 
         // Contar apostas por bookmaker
-        const { data: apostasData } = await supabase
+        // 1. Apostas simples: bookmaker_id está diretamente em apostas_unificada
+        const { data: apostasSimples } = await supabase
           .from("apostas_unificada")
           .select("bookmaker_id")
           .eq("projeto_id", projetoId)
           .not("bookmaker_id", "is", null)
           .in("bookmaker_id", bookmakerIds);
 
-        if (apostasData) {
-          apostasData.forEach((a: any) => {
+        if (apostasSimples) {
+          apostasSimples.forEach((a: any) => {
             if (a.bookmaker_id) {
               apostasCount[a.bookmaker_id] = (apostasCount[a.bookmaker_id] || 0) + 1;
             }
           });
+        }
+
+        // 2. Apostas em pernas (Surebets/Arbitragem e Múltiplas): bookmaker_id está em apostas_pernas
+        // Estas apostas têm bookmaker_id NULL no registro pai
+        const { data: apostasIds } = await supabase
+          .from("apostas_unificada")
+          .select("id")
+          .eq("projeto_id", projetoId)
+          .is("bookmaker_id", null);
+
+        if (apostasIds && apostasIds.length > 0) {
+          const parentIds = apostasIds.map((a: any) => a.id);
+          // Buscar pernas em batches para evitar limites de query
+          const BATCH_SIZE = 200;
+          for (let i = 0; i < parentIds.length; i += BATCH_SIZE) {
+            const batch = parentIds.slice(i, i + BATCH_SIZE);
+            const { data: pernasData } = await supabase
+              .from("apostas_pernas")
+              .select("bookmaker_id")
+              .in("aposta_id", batch)
+              .in("bookmaker_id", bookmakerIds);
+
+            if (pernasData) {
+              pernasData.forEach((p: any) => {
+                if (p.bookmaker_id) {
+                  apostasCount[p.bookmaker_id] = (apostasCount[p.bookmaker_id] || 0) + 1;
+                }
+              });
+            }
+          }
         }
       }
 
