@@ -361,15 +361,12 @@ export function ConfirmarSaqueDialog({
       if (saque.origem_bookmaker_id) {
         const { data: bookmaker } = await supabase
           .from("bookmakers")
-          .select("saldo_atual, saldo_usd, moeda, aguardando_saque_at")
+          .select("saldo_atual, moeda, aguardando_saque_at")
           .eq("id", saque.origem_bookmaker_id)
           .single();
 
         if (bookmaker) {
-          const moedaBk = bookmaker.moeda || "BRL";
-          const saldoAtual = moedaBk === "USD" || moedaBk === "USDT" 
-            ? (bookmaker.saldo_usd || 0) 
-            : (bookmaker.saldo_atual || 0);
+          const saldoAtual = bookmaker.saldo_atual || 0;
           
           if (saldoAtual <= 0.5 && bookmaker.aguardando_saque_at) {
             await supabase.rpc('confirmar_saque_concluido', {
