@@ -420,9 +420,12 @@ export default function Caixa() {
         return false;
       }
       
-      const dataTransacao = parseLocalDateTime(t.data_transacao);
-      const matchDataInicio = !dataInicio || dataTransacao >= startOfDay(dataInicio);
-      const matchDataFim = !dataFim || dataTransacao <= endOfDay(dataFim);
+      // Data efetiva: para saques confirmados, usar data_confirmacao como referência cronológica
+      const dataEfetiva = t.data_confirmacao 
+        ? parseLocalDateTime(t.data_confirmacao) 
+        : parseLocalDateTime(t.data_transacao);
+      const matchDataInicio = !dataInicio || dataEfetiva >= startOfDay(dataInicio);
+      const matchDataFim = !dataFim || dataEfetiva <= endOfDay(dataFim);
       
       // Include both APORTE and LIQUIDACAO when filter is APORTE_FINANCEIRO
       const knownTypes = ["TRANSFERENCIA", "DEPOSITO", "SAQUE", "APORTE_FINANCEIRO"];
@@ -473,6 +476,11 @@ export default function Caixa() {
       }
       
       return matchTipo && matchDataInicio && matchDataFim && matchProjeto && matchParceiro;
+    }).sort((a, b) => {
+      // Ordenar pela data efetiva (data_confirmacao para saques confirmados, senão data_transacao)
+      const dataA = a.data_confirmacao ? parseLocalDateTime(a.data_confirmacao) : parseLocalDateTime(a.data_transacao);
+      const dataB = b.data_confirmacao ? parseLocalDateTime(b.data_confirmacao) : parseLocalDateTime(b.data_transacao);
+      return dataB.getTime() - dataA.getTime(); // Mais recente primeiro
     });
   };
 
