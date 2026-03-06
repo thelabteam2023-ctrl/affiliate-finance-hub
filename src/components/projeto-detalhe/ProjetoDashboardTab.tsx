@@ -251,81 +251,80 @@ async function fetchExtrasLucroFn(projetoId: string): Promise<ExtraLucroEntry[]>
   const projectBookmakerIds = new Set(projectBookmakers?.map(b => b.id) || []);
   const projectBookmakerMoeda = new Map((projectBookmakers || []).map(b => [b.id, b.moeda || "BRL"]));
 
-  if (projectBookmakerIds.size === 0) {
-    return extras;
-  }
+  // Seções que dependem de bookmaker IDs — só executar se houver casas no projeto
+  if (projectBookmakerIds.size > 0) {
+    // CORREÇÃO: Buscar moeda para conversão
+    const { data: eventos } = await supabase
+      .from("cash_ledger")
+      .select("data_transacao, valor, tipo_transacao, evento_promocional_tipo, destino_bookmaker_id, moeda")
+      .eq("status", "CONFIRMADO")
+      .in("tipo_transacao", ["FREEBET_CONVERTIDA", "CREDITO_PROMOCIONAL", "GIRO_GRATIS_GANHO"]);
 
-  // CORREÇÃO: Buscar moeda para conversão
-  const { data: eventos } = await supabase
-    .from("cash_ledger")
-    .select("data_transacao, valor, tipo_transacao, evento_promocional_tipo, destino_bookmaker_id, moeda")
-    .eq("status", "CONFIRMADO")
-    .in("tipo_transacao", ["FREEBET_CONVERTIDA", "CREDITO_PROMOCIONAL", "GIRO_GRATIS_GANHO"]);
-
-  eventos?.forEach(ev => {
-    if (ev.destino_bookmaker_id && projectBookmakerIds.has(ev.destino_bookmaker_id)) {
-      const valor = ev.valor || 0;
-      if (valor > 0) {
-        let tipo: ExtraLucroEntry['tipo'] = 'promocional';
-        if (ev.tipo_transacao === 'FREEBET_CONVERTIDA') tipo = 'freebet';
-        else if (ev.tipo_transacao === 'GIRO_GRATIS_GANHO') tipo = 'giro_gratis';
-        extras.push({ data: extractCivilDateKey(ev.data_transacao), valor, moeda: ev.moeda || "BRL", tipo });
+    eventos?.forEach(ev => {
+      if (ev.destino_bookmaker_id && projectBookmakerIds.has(ev.destino_bookmaker_id)) {
+        const valor = ev.valor || 0;
+        if (valor > 0) {
+          let tipo: ExtraLucroEntry['tipo'] = 'promocional';
+          if (ev.tipo_transacao === 'FREEBET_CONVERTIDA') tipo = 'freebet';
+          else if (ev.tipo_transacao === 'GIRO_GRATIS_GANHO') tipo = 'giro_gratis';
+          extras.push({ data: extractCivilDateKey(ev.data_transacao), valor, moeda: ev.moeda || "BRL", tipo });
+        }
       }
-    }
-  });
+    });
 
-  // ALINHAMENTO COM ABA BÔNUS: incluir perdas por cancelamento de bônus
-  const { data: perdasCancelamento } = await supabase
-    .from("cash_ledger")
-    .select("valor, moeda, origem_bookmaker_id, data_transacao, auditoria_metadata")
-    .eq("ajuste_motivo", "BONUS_CANCELAMENTO")
-    .eq("ajuste_direcao", "SAIDA")
-    .in("origem_bookmaker_id", Array.from(projectBookmakerIds));
+    // ALINHAMENTO COM ABA BÔNUS: incluir perdas por cancelamento de bônus
+    const { data: perdasCancelamento } = await supabase
+      .from("cash_ledger")
+      .select("valor, moeda, origem_bookmaker_id, data_transacao, auditoria_metadata")
+      .eq("ajuste_motivo", "BONUS_CANCELAMENTO")
+      .eq("ajuste_direcao", "SAIDA")
+      .in("origem_bookmaker_id", Array.from(projectBookmakerIds));
 
-  perdasCancelamento?.forEach((entry: any) => {
-    const meta = typeof entry.auditoria_metadata === "string" ? JSON.parse(entry.auditoria_metadata) : entry.auditoria_metadata;
-    const valorPerdido = Number(meta?.valor_perdido ?? entry.valor) || 0;
-    if (valorPerdido > 0) {
-      extras.push({
-        data: extractCivilDateKey(entry.data_transacao),
-        valor: -valorPerdido,
-        moeda: entry.moeda || projectBookmakerMoeda.get(entry.origem_bookmaker_id || "") || "BRL",
-        tipo: 'promocional',
-      });
-    }
-  });
+    perdasCancelamento?.forEach((entry: any) => {
+      const meta = typeof entry.auditoria_metadata === "string" ? JSON.parse(entry.auditoria_metadata) : entry.auditoria_metadata;
+      const valorPerdido = Number(meta?.valor_perdido ?? entry.valor) || 0;
+      if (valorPerdido > 0) {
+        extras.push({
+          data: extractCivilDateKey(entry.data_transacao),
+          valor: -valorPerdido,
+          moeda: entry.moeda || projectBookmakerMoeda.get(entry.origem_bookmaker_id || "") || "BRL",
+          tipo: 'promocional',
+        });
+      }
+    });
+    // ALINHAMENTO COM ABA BÔNUS: incluir ajustes pós-limitação por data operacional
+    const { data: ajustesRaw } = await supabase
+      .from("financial_events")
+      .select("valor, moeda, bookmaker_id, metadata, created_at")
+      .eq("tipo_evento", "AJUSTE")
+      .in("bookmaker_id", Array.from(projectBookmakerIds))
+      .not("metadata", "is", null);
 
-  // ALINHAMENTO COM ABA BÔNUS: incluir ajustes pós-limitação por data operacional
-  const { data: ajustesRaw } = await supabase
-    .from("financial_events")
-    .select("valor, moeda, bookmaker_id, metadata, created_at")
-    .eq("tipo_evento", "AJUSTE")
-    .in("bookmaker_id", Array.from(projectBookmakerIds))
-    .not("metadata", "is", null);
+    ajustesRaw?.forEach((evt: any) => {
+      try {
+        const meta = typeof evt.metadata === "string" ? JSON.parse(evt.metadata) : evt.metadata;
+        if (meta?.tipo_ajuste !== "AJUSTE_POS_LIMITACAO") return;
 
-  ajustesRaw?.forEach((evt: any) => {
-    try {
-      const meta = typeof evt.metadata === "string" ? JSON.parse(evt.metadata) : evt.metadata;
-      if (meta?.tipo_ajuste !== "AJUSTE_POS_LIMITACAO") return;
+        const dataOperacional = meta?.data_encerramento || evt.created_at;
+        const valor = Number(evt.valor) || 0;
+        if (!valor) return;
 
-      const dataOperacional = meta?.data_encerramento || evt.created_at;
-      const valor = Number(evt.valor) || 0;
-      if (!valor) return;
-
-      extras.push({
-        data: extractCivilDateKey(dataOperacional),
-        valor,
-        moeda: evt.moeda || projectBookmakerMoeda.get(evt.bookmaker_id) || "BRL",
-        tipo: 'promocional',
-      });
-    } catch {
-      // metadata inválido: ignora registro
-    }
-  });
+        extras.push({
+          data: extractCivilDateKey(dataOperacional),
+          valor,
+          moeda: evt.moeda || projectBookmakerMoeda.get(evt.bookmaker_id) || "BRL",
+          tipo: 'promocional',
+        });
+      } catch {
+        // metadata inválido: ignora registro
+      }
+    });
+  }
 
   // ============================================================
   // BÔNUS CREDITADOS (impactam patrimônio via saldo_bonus/saldo_atual)
   // Exclui FREEBET pois o lucro SNR já está no P&L da aposta
+  // NÃO depende de bookmaker IDs — usa project_id diretamente
   // ============================================================
   const { data: bonusCreditados } = await supabase
     .from("project_bookmaker_link_bonuses")
