@@ -84,7 +84,7 @@ interface PerformanceMetrics {
 interface ExtraLucroEntry {
   data: string;
   valor: number;
-  tipo: 'cashback' | 'giro_gratis' | 'freebet' | 'bonus' | 'promocional';
+  tipo: 'cashback' | 'giro_gratis' | 'freebet' | 'bonus' | 'promocional' | 'ajuste_saldo' | 'resultado_cambial' | 'conciliacao';
   bookmaker_id?: string;
   bookmaker_nome?: string;
 }
@@ -118,6 +118,9 @@ const EXTRAS_LABELS: Record<string, string> = {
   "freebet": "Freebets",
   "bonus": "Bônus Creditados",
   "promocional": "Promoções",
+  "ajuste_saldo": "Ajustes de Saldo",
+  "resultado_cambial": "Resultado Cambial",
+  "conciliacao": "Conciliações",
 };
 
 export function PerformancePorCasaCard({

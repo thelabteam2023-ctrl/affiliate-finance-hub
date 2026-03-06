@@ -323,6 +323,74 @@ async function fetchExtrasLucroFn(projetoId: string): Promise<ExtraLucroEntry[]>
     }
   });
 
+  // ============================================================
+  // AJUSTES DE SALDO (impactam patrimônio via saldo_atual)
+  // ============================================================
+  const { data: ajustesSaldo } = await supabase
+    .from("cash_ledger")
+    .select("data_transacao, valor, moeda, ajuste_direcao, origem_bookmaker_id, destino_bookmaker_id")
+    .eq("status", "CONFIRMADO")
+    .eq("tipo_transacao", "AJUSTE_SALDO")
+    .eq("projeto_id_snapshot", projetoId);
+
+  ajustesSaldo?.forEach(aj => {
+    const valor = Number(aj.valor || 0);
+    if (!valor) return;
+    // CRÍTICO: Respeitar direção do ajuste (SAIDA = negativo, ENTRADA = positivo)
+    const valorSigned = aj.ajuste_direcao === 'SAIDA' ? -valor : valor;
+    extras.push({
+      data: extractCivilDateKey(aj.data_transacao),
+      valor: valorSigned,
+      moeda: aj.moeda || "BRL",
+      tipo: 'ajuste_saldo',
+    });
+  });
+
+  // ============================================================
+  // RESULTADO CAMBIAL (GANHO_CAMBIAL / PERDA_CAMBIAL)
+  // ============================================================
+  const { data: resultadosCambiais } = await supabase
+    .from("cash_ledger")
+    .select("data_transacao, valor, moeda, tipo_transacao")
+    .eq("status", "CONFIRMADO")
+    .in("tipo_transacao", ["GANHO_CAMBIAL", "PERDA_CAMBIAL"])
+    .eq("projeto_id_snapshot", projetoId);
+
+  resultadosCambiais?.forEach(fx => {
+    const valor = Number(fx.valor || 0);
+    if (!valor) return;
+    // GANHO = positivo, PERDA = negativo
+    const valorSigned = fx.tipo_transacao === 'PERDA_CAMBIAL' ? -valor : valor;
+    extras.push({
+      data: extractCivilDateKey(fx.data_transacao),
+      valor: valorSigned,
+      moeda: fx.moeda || "BRL",
+      tipo: 'resultado_cambial',
+    });
+  });
+
+  // ============================================================
+  // CONCILIAÇÕES (ajustes de auditoria de saldo)
+  // ============================================================
+  const { data: conciliacoes } = await supabase
+    .from("bookmaker_balance_audit")
+    .select("created_at, diferenca, bookmaker_id")
+    .eq("origem", "CONCILIACAO_VINCULO")
+    .eq("referencia_tipo", "projeto")
+    .eq("referencia_id", projetoId);
+
+  conciliacoes?.forEach(c => {
+    const diferenca = Number(c.diferenca || 0);
+    if (!diferenca) return;
+    const moeda = projectBookmakerMoeda.get(c.bookmaker_id) || "BRL";
+    extras.push({
+      data: extractCivilDateKey(c.created_at),
+      valor: diferenca,
+      moeda,
+      tipo: 'conciliacao',
+    });
+  });
+
   return extras;
 }
 

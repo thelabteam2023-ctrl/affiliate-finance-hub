@@ -99,7 +99,7 @@ export interface ExtraLucroEntry {
   data: string; // formato YYYY-MM-DD ou ISO
   valor: number;
   moeda?: string; // Moeda original do valor (para conversão multi-moeda)
-  tipo: 'cashback' | 'giro_gratis' | 'freebet' | 'bonus' | 'promocional';
+  tipo: 'cashback' | 'giro_gratis' | 'freebet' | 'bonus' | 'promocional' | 'ajuste_saldo' | 'resultado_cambial' | 'conciliacao';
 }
 
 interface VisaoGeralChartsProps {
