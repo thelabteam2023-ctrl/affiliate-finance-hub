@@ -793,24 +793,23 @@ export default function ProjetoDetalhe() {
             <div className="h-8 w-px bg-border/50 hidden sm:block flex-shrink-0" />
 
             {/* Lucro/Prejuízo */}
-            <Popover>
-              <PopoverTrigger asChild>
-                <button className="flex flex-col cursor-pointer hover:opacity-80 transition-opacity min-w-[80px]">
-                  <span className="text-xs text-muted-foreground leading-tight">
-                    {(projetoResultado?.netProfit || 0) >= 0 ? "Lucro" : "Prejuízo"}
-                  </span>
-                  <span className={cn(
-                    "text-base md:text-lg font-bold leading-tight truncate",
-                    (projetoResultado?.netProfit || 0) >= 0 ? 'text-emerald-500' : 'text-red-500'
-                  )}>
-                    {formatCurrency(Math.abs(projetoResultado?.netProfit || 0))}
-                  </span>
-                </button>
-              </PopoverTrigger>
-              <PopoverContent side="bottom" align="center" className="w-auto p-0" sideOffset={8}>
-                <FinancialMetricsPopover projetoId={id!} />
-              </PopoverContent>
-            </Popover>
+            <KpiBreakdownTooltip
+              breakdown={kpiBreakdowns?.lucro || null}
+              formatValue={formatCurrency}
+              title="Lucro por Módulo"
+            >
+              <div className="flex flex-col cursor-help min-w-[80px]">
+                <span className="text-xs text-muted-foreground leading-tight">
+                  {(projetoResultado?.netProfit || 0) >= 0 ? "Lucro" : "Prejuízo"}
+                </span>
+                <span className={cn(
+                  "text-base md:text-lg font-bold leading-tight truncate",
+                  (projetoResultado?.netProfit || 0) >= 0 ? 'text-emerald-500' : 'text-red-500'
+                )}>
+                  {formatCurrency(Math.abs(projetoResultado?.netProfit || 0))}
+                </span>
+              </div>
+            </KpiBreakdownTooltip>
 
             <div className="h-8 w-px bg-border/50 hidden sm:block flex-shrink-0" />
 
