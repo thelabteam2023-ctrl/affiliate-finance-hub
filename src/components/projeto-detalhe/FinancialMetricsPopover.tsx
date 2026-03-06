@@ -167,11 +167,11 @@ function ExtrasCollapsible({ metrics, formatCurrency }: { metrics: any; formatCu
           {(() => {
             const fxLiquido = metrics.ganhoFx - metrics.perdaFx;
             return Math.abs(fxLiquido) >= 0.01 ? (
-              <MetricRow label="Resultado Cambial" value={fxLiquido < 0 ? `−${formatCurrency(Math.abs(fxLiquido))}` : formatCurrency(fxLiquido)} colorClass={fxLiquido >= 0 ? "text-emerald-500" : "text-red-500"} indent />
+              <MetricRow label="Resultado Cambial" value={fxLiquido < 0 ? `−${formatCurrency(Math.abs(fxLiquido))}` : formatCurrency(fxLiquido)} colorClass={fxLiquido >= 0 ? "text-emerald-500" : "text-red-500"} indent tooltip="Diferença entre o valor solicitado no saque e o valor efetivamente recebido, causada por variação cambial entre a data do pedido e a data de confirmação. Ganhos e perdas são apurados automaticamente na conciliação." />
             ) : null;
           })()}
           {Math.abs(metrics.perdaOp) >= 0.01 && (
-            <MetricRow label="Perdas Operacionais" value={`−${formatCurrency(metrics.perdaOp)}`} colorClass="text-red-500" indent />
+            <MetricRow label="Perdas Operacionais" value={`−${formatCurrency(metrics.perdaOp)}`} colorClass="text-red-500" indent tooltip="Capital perdido por incidentes operacionais — como contas bloqueadas, saldos retidos ou fundos irrecuperáveis. Registrado via ocorrências ou ação rápida de perda." />
           )}
         </div>
       )}
