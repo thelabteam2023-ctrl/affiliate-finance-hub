@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { LucroCurrencyTooltip } from "@/components/ui/lucro-currency-tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { FinancialMetricsPopover } from "./FinancialMetricsPopover";
 import { Skeleton } from "@/components/ui/skeleton";
 import { KpiSummaryBar } from "@/components/ui/kpi-summary-bar";
 import { useCrossWindowSync } from "@/hooks/useCrossWindowSync";
@@ -69,7 +71,7 @@ import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateR
 import { OperationsSubTabHeader, type HistorySubTab } from "./operations";
 import { ExportMenu, transformSurebetToExport, transformApostaToExport } from "./ExportMenu";
 import { SaldoOperavelCard } from "./SaldoOperavelCard";
-import { FinancialSummaryCompact } from "./FinancialSummaryCompact";
+// FinancialSummaryCompact removed — now integrated into Lucro KPI popover
 import { useCalendarApostas, transformCalendarApostasForCharts } from "@/hooks/useCalendarApostas";
 import { ChartEmptyState } from "@/components/ui/chart-empty-state";
 
@@ -1005,7 +1007,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
       {/* KPIs - Faixa compacta horizontal */}
       <KpiSummaryBar
         actions={actionsSlot}
-        leading={<><SaldoOperavelCard projetoId={projetoId} variant="compact" /><FinancialSummaryCompact projetoId={projetoId} /></>}
+        leading={<SaldoOperavelCard projetoId={projetoId} variant="compact" />}
         items={[
           {
             label: "Surebets",
@@ -1065,17 +1067,45 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
             value: formatCurrency(kpis.lucroTotal),
             valueClassName: kpis.lucroTotal >= 0 ? "text-emerald-500" : "text-red-500",
             minWidth: "min-w-[80px]",
-            wrapper: (children) => (
-              <LucroCurrencyTooltip
-                lucroPorMoeda={kpis.lucroPorMoeda || []}
-                totalConsolidado={kpis.lucroTotal}
-                moedaConsolidacao={moedaConsolidacao || 'BRL'}
-                formatValue={formatCurrency}
-              >
-                {children}
-              </LucroCurrencyTooltip>
-            ),
-            cursorHelp: true,
+            wrapper: (children) => {
+              const lucroPorMoeda = kpis.lucroPorMoeda || [];
+              const hasMultiCurrency = lucroPorMoeda.length > 1 || lucroPorMoeda.some(c => c.moeda !== (moedaConsolidacao || 'BRL'));
+              return (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button className="cursor-pointer hover:opacity-80 transition-opacity">
+                      {children}
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent side="bottom" align="center" className="w-auto p-0" sideOffset={8}>
+                    <div>
+                      {hasMultiCurrency && (
+                        <div className="p-3 space-y-2 border-b border-border">
+                          <p className="text-xs font-semibold text-foreground">Lucro por Moeda</p>
+                          <div className="space-y-1">
+                            {lucroPorMoeda.map((item) => (
+                              <div key={item.moeda} className="flex items-center justify-between gap-4 text-xs">
+                                <span className="text-muted-foreground">{item.moeda}</span>
+                                <span className={cn("font-medium font-mono", item.valor >= 0 ? "text-emerald-500" : "text-red-500")}>
+                                  {item.valor >= 0 ? "+" : ""}{formatCurrency(Math.abs(item.valor))}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="flex justify-between items-center pt-1 border-t border-border/50">
+                            <span className="text-[10px] text-muted-foreground">Consolidado ({moedaConsolidacao || 'BRL'})</span>
+                            <span className={cn("text-xs font-bold font-mono", kpis.lucroTotal >= 0 ? "text-emerald-500" : "text-red-500")}>
+                              {formatCurrency(kpis.lucroTotal)}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                      <FinancialMetricsPopover projetoId={projetoId} />
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              );
+            },
           },
           {
             label: "ROI",
