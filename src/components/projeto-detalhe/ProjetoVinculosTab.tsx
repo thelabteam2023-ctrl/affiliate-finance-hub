@@ -90,6 +90,8 @@ import {
   Lock,
   TrendingDown,
   ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
   ArrowDownAZ,
   Clock,
 } from "lucide-react";
