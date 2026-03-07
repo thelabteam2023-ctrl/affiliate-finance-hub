@@ -649,7 +649,7 @@ async function fetchBonusGanhosModuleData(
     .from('project_bookmaker_link_bonuses')
     .select('bonus_amount, currency')
     .eq('project_id', projetoId)
-    .eq('status', 'credited');
+    .in('status', ['credited', 'finalized']);
 
   if (error) {
     console.error('Erro ao buscar bônus ganhos:', error);

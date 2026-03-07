@@ -105,12 +105,12 @@ async function fetchFinancialMetricsRaw(projetoId: string) {
 
 
 
-  // Fetch bonus ganhos (credited)
+  // Fetch bonus ganhos (credited + finalized)
   const { data: bonusGanhosData } = await supabase
     .from("project_bookmaker_link_bonuses")
     .select("bonus_amount, currency")
     .eq("project_id", projetoId)
-    .eq("status", "credited");
+    .in("status", ["credited", "finalized"]);
 
   return {
     bookmakerSaldos,
