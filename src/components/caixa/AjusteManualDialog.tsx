@@ -638,8 +638,10 @@ export function AjusteManualDialog({
       if (error) throw error;
 
       toast({
-        title: "Ajuste registrado",
-        description: `Ajuste de ${direcao === "ENTRADA" ? "entrada" : "saída"} de ${getCurrencySymbol(moeda)} ${valorDisplay} em ${getEntidadeNome()} registrado com sucesso.`,
+        title: modoReconciliacao ? "Reconciliação registrada" : "Ajuste registrado",
+        description: modoReconciliacao
+          ? `Saldo de ${getEntidadeNome()} reconciliado: ${getCurrencySymbol(moeda)} ${saldoSistemaAtual.toFixed(2)} → ${getCurrencySymbol(moeda)} ${(parseFloat(valor) || 0).toFixed(2)}`
+          : `Ajuste de ${direcaoFinal === "ENTRADA" ? "entrada" : "saída"} de ${getCurrencySymbol(moeda)} ${valorDisplay} em ${getEntidadeNome()} registrado com sucesso.`,
       });
 
       handleClose();
