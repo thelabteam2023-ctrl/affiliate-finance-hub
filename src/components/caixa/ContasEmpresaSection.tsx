@@ -7,12 +7,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Building2, Wallet, Plus, RefreshCw, Landmark, Bitcoin } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Building2, Plus, RefreshCw, Landmark, Bitcoin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrencyValue, getCurrencySymbol } from "@/types/currency";
-import { FIAT_CURRENCIES } from "@/types/currency";
 import { useExchangeRates } from "@/contexts/ExchangeRatesContext";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { BancoSelect } from "@/components/parceiros/BancoSelect";
+import { PixKeyInput } from "@/components/parceiros/PixKeyInput";
+import { ExchangeSelect } from "@/components/parceiros/ExchangeSelect";
+import { RedeSelect } from "@/components/parceiros/RedeSelect";
+import { MoedaMultiSelect } from "@/components/parceiros/MoedaMultiSelect";
 
 interface ContaBancaria {
   id: string;
@@ -41,6 +46,18 @@ interface ContasEmpresaSectionProps {
   onDataChanged?: () => void;
 }
 
+const formatAgencia = (value: string) => {
+  const digits = value.replace(/\D/g, "").slice(0, 5);
+  if (digits.length > 4) return `${digits.slice(0, 4)}-${digits.slice(4)}`;
+  return digits;
+};
+
+const formatConta = (value: string) => {
+  const digits = value.replace(/\D/g, "").slice(0, 6);
+  if (digits.length > 5) return `${digits.slice(0, 5)}-${digits.slice(5)}`;
+  return digits;
+};
+
 export function ContasEmpresaSection({ caixaParceiroId, onDataChanged }: ContasEmpresaSectionProps) {
   const { toast } = useToast();
   const { convertToBRL } = useExchangeRates();
@@ -50,35 +67,38 @@ export function ContasEmpresaSection({ caixaParceiroId, onDataChanged }: ContasE
   const [addContaOpen, setAddContaOpen] = useState(false);
   const [addWalletOpen, setAddWalletOpen] = useState(false);
 
-  // Form state - Conta Bancária
+  // Form state - Conta Bancária (same fields as ParceiroDialog)
   const [novaConta, setNovaConta] = useState({
-    banco: "",
+    banco_id: "",
+    banco_nome: "",
     agencia: "",
     conta: "",
-    tipo_conta: "CORRENTE",
+    tipo_conta: "corrente",
     titular: "",
-    pix_key: "",
+    pix_keys: [] as { tipo: string; chave: string }[],
     moeda: "BRL",
+    observacoes: "",
   });
 
-  // Form state - Wallet
+  // Form state - Wallet (same fields as ParceiroDialog)
   const [novaWallet, setNovaWallet] = useState({
     exchange: "",
     endereco: "",
+    rede_id: "",
     network: "TRC20",
+    moeda: [] as string[],
+    observacoes: "",
   });
 
   const fetchContas = async () => {
     if (!caixaParceiroId) return;
     setLoading(true);
     try {
-      // Fetch bank accounts
       const { data: contasData } = await supabase
         .from("v_saldo_parceiro_contas")
         .select("*")
         .eq("parceiro_id", caixaParceiroId);
 
-      // Fetch wallets
       const { data: walletsData } = await supabase
         .from("v_saldo_parceiro_wallets")
         .select("*")
@@ -98,28 +118,41 @@ export function ContasEmpresaSection({ caixaParceiroId, onDataChanged }: ContasE
   }, [caixaParceiroId]);
 
   const handleAddConta = async () => {
-    if (!caixaParceiroId || !novaConta.banco || !novaConta.titular) {
-      toast({ title: "Preencha banco e titular", variant: "destructive" });
+    if (!caixaParceiroId || !novaConta.titular) {
+      toast({ title: "Preencha os campos obrigatórios", variant: "destructive" });
       return;
     }
 
     try {
+      // Resolve banco name from banco_id if needed
+      let bancoNome = novaConta.banco_nome;
+      if (novaConta.banco_id && !bancoNome) {
+        const { data: bancoData } = await supabase
+          .from("bancos")
+          .select("nome")
+          .eq("id", novaConta.banco_id)
+          .single();
+        bancoNome = bancoData?.nome || "";
+      }
+
       const { error } = await supabase.from("contas_bancarias").insert({
         parceiro_id: caixaParceiroId,
-        banco: novaConta.banco,
+        banco: bancoNome,
+        banco_id: novaConta.banco_id || null,
         agencia: novaConta.agencia || null,
         conta: novaConta.conta || null,
         tipo_conta: novaConta.tipo_conta,
         titular: novaConta.titular,
-        pix_key: novaConta.pix_key || null,
+        pix_keys: novaConta.pix_keys.length > 0 ? novaConta.pix_keys : null,
         moeda: novaConta.moeda,
+        observacoes: novaConta.observacoes || null,
       });
 
       if (error) throw error;
 
       toast({ title: "Conta bancária adicionada" });
       setAddContaOpen(false);
-      setNovaConta({ banco: "", agencia: "", conta: "", tipo_conta: "CORRENTE", titular: "", pix_key: "", moeda: "BRL" });
+      resetContaForm();
       fetchContas();
       onDataChanged?.();
     } catch (err: any) {
@@ -127,30 +160,69 @@ export function ContasEmpresaSection({ caixaParceiroId, onDataChanged }: ContasE
     }
   };
 
+  const resetContaForm = () => {
+    setNovaConta({
+      banco_id: "",
+      banco_nome: "",
+      agencia: "",
+      conta: "",
+      tipo_conta: "corrente",
+      titular: "",
+      pix_keys: [],
+      moeda: "BRL",
+      observacoes: "",
+    });
+  };
+
   const handleAddWallet = async () => {
-    if (!caixaParceiroId || !novaWallet.endereco || !novaWallet.network) {
-      toast({ title: "Preencha endereço e rede", variant: "destructive" });
+    if (!caixaParceiroId || !novaWallet.endereco) {
+      toast({ title: "Preencha o endereço da wallet", variant: "destructive" });
       return;
     }
 
     try {
+      // Resolve network name from rede_id
+      let networkName = novaWallet.network;
+      if (novaWallet.rede_id) {
+        const { data: redeData } = await supabase
+          .from("redes_crypto")
+          .select("nome")
+          .eq("id", novaWallet.rede_id)
+          .single();
+        networkName = redeData?.nome || novaWallet.network;
+      }
+
       const { error } = await supabase.from("wallets_crypto").insert({
         parceiro_id: caixaParceiroId,
         endereco: novaWallet.endereco,
-        network: novaWallet.network,
+        network: networkName,
+        rede_id: novaWallet.rede_id || null,
         exchange: novaWallet.exchange || null,
+        moeda: novaWallet.moeda.length > 0 ? novaWallet.moeda : null,
+        observacoes_encrypted: novaWallet.observacoes || null,
       });
 
       if (error) throw error;
 
       toast({ title: "Wallet adicionada" });
       setAddWalletOpen(false);
-      setNovaWallet({ exchange: "", endereco: "", network: "TRC20" });
+      resetWalletForm();
       fetchContas();
       onDataChanged?.();
     } catch (err: any) {
       toast({ title: "Erro ao adicionar wallet", description: err.message, variant: "destructive" });
     }
+  };
+
+  const resetWalletForm = () => {
+    setNovaWallet({
+      exchange: "",
+      endereco: "",
+      rede_id: "",
+      network: "TRC20",
+      moeda: [],
+      observacoes: "",
+    });
   };
 
   if (!caixaParceiroId) return null;
@@ -295,8 +367,8 @@ export function ContasEmpresaSection({ caixaParceiroId, onDataChanged }: ContasE
       </CardContent>
 
       {/* Dialog: Adicionar Conta Bancária */}
-      <Dialog open={addContaOpen} onOpenChange={setAddContaOpen}>
-        <DialogContent className="sm:max-w-md bg-background">
+      <Dialog open={addContaOpen} onOpenChange={(open) => { setAddContaOpen(open); if (!open) resetContaForm(); }}>
+        <DialogContent className="sm:max-w-lg bg-background">
           <DialogHeader>
             <DialogTitle>Adicionar Conta Bancária da Empresa</DialogTitle>
             <DialogDescription>
@@ -307,58 +379,92 @@ export function ContasEmpresaSection({ caixaParceiroId, onDataChanged }: ContasE
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label className="text-xs">Banco *</Label>
-                <Input
-                  value={novaConta.banco}
-                  onChange={(e) => setNovaConta({ ...novaConta, banco: e.target.value })}
-                  placeholder="Ex: Nubank"
+                <BancoSelect
+                  value={novaConta.banco_id}
+                  onValueChange={(value) => setNovaConta({ ...novaConta, banco_id: value })}
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">Titular *</Label>
-                <Input
-                  value={novaConta.titular}
-                  onChange={(e) => setNovaConta({ ...novaConta, titular: e.target.value })}
-                  placeholder="Nome do titular"
-                />
+                <Label className="text-xs">Moeda *</Label>
+                <Select value={novaConta.moeda} onValueChange={(v) => setNovaConta({ ...novaConta, moeda: v })}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecione a moeda" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="BRL">BRL - Real Brasileiro</SelectItem>
+                    <SelectItem value="USD">USD - Dólar Americano</SelectItem>
+                    <SelectItem value="EUR">EUR - Euro</SelectItem>
+                    <SelectItem value="GBP">GBP - Libra Esterlina</SelectItem>
+                    <SelectItem value="MXN">MXN - Peso Mexicano</SelectItem>
+                    <SelectItem value="MYR">MYR - Ringgit Malaio</SelectItem>
+                    <SelectItem value="ARS">ARS - Peso Argentino</SelectItem>
+                    <SelectItem value="COP">COP - Peso Colombiano</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-xs">Agência</Label>
+                <Label className="text-xs">
+                  Agência
+                  <span className="text-muted-foreground/60 ml-1">(opcional)</span>
+                </Label>
                 <Input
-                  value={novaConta.agencia}
+                  value={formatAgencia(novaConta.agencia)}
                   onChange={(e) => setNovaConta({ ...novaConta, agencia: e.target.value })}
+                  placeholder="0000-0"
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">Conta</Label>
+                <Label className="text-xs">
+                  Conta
+                  <span className="text-muted-foreground/60 ml-1">(opcional)</span>
+                </Label>
                 <Input
-                  value={novaConta.conta}
+                  value={formatConta(novaConta.conta)}
                   onChange={(e) => setNovaConta({ ...novaConta, conta: e.target.value })}
+                  placeholder="00000-0"
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">Moeda</Label>
-                <Select value={novaConta.moeda} onValueChange={(v) => setNovaConta({ ...novaConta, moeda: v })}>
-                  <SelectTrigger className="h-9">
-                    <SelectValue />
+                <Label className="text-xs">Tipo *</Label>
+                <Select value={novaConta.tipo_conta} onValueChange={(v) => setNovaConta({ ...novaConta, tipo_conta: v })}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Tipo de conta" />
                   </SelectTrigger>
                   <SelectContent>
-                    {FIAT_CURRENCIES.map((c) => (
-                      <SelectItem key={c.value} value={c.value}>
-                        {c.value}
-                      </SelectItem>
-                    ))}
+                    <SelectItem value="corrente">Corrente</SelectItem>
+                    <SelectItem value="poupanca">Poupança</SelectItem>
+                    <SelectItem value="pagamento">Pagamento</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Chave PIX</Label>
+              <Label className="text-xs">Titular *</Label>
               <Input
-                value={novaConta.pix_key}
-                onChange={(e) => setNovaConta({ ...novaConta, pix_key: e.target.value })}
-                placeholder="CPF, e-mail, telefone ou chave aleatória"
+                value={novaConta.titular}
+                onChange={(e) => setNovaConta({ ...novaConta, titular: e.target.value.toUpperCase() })}
+                placeholder="Nome do titular"
+                className="uppercase"
+              />
+            </div>
+            <div>
+              <PixKeyInput
+                keys={novaConta.pix_keys}
+                onChange={(keys) => setNovaConta({ ...novaConta, pix_keys: keys })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">
+                Observações
+                <span className="text-muted-foreground/60 ml-1">(opcional)</span>
+              </Label>
+              <Textarea
+                value={novaConta.observacoes}
+                onChange={(e) => setNovaConta({ ...novaConta, observacoes: e.target.value })}
+                rows={2}
+                placeholder="Informações adicionais sobre esta conta"
               />
             </div>
           </div>
@@ -370,8 +476,8 @@ export function ContasEmpresaSection({ caixaParceiroId, onDataChanged }: ContasE
       </Dialog>
 
       {/* Dialog: Adicionar Wallet */}
-      <Dialog open={addWalletOpen} onOpenChange={setAddWalletOpen}>
-        <DialogContent className="sm:max-w-md bg-background">
+      <Dialog open={addWalletOpen} onOpenChange={(open) => { setAddWalletOpen(open); if (!open) resetWalletForm(); }}>
+        <DialogContent className="sm:max-w-lg bg-background">
           <DialogHeader>
             <DialogTitle>Adicionar Wallet da Empresa</DialogTitle>
             <DialogDescription>
@@ -379,12 +485,27 @@ export function ContasEmpresaSection({ caixaParceiroId, onDataChanged }: ContasE
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            <div>
+              <MoedaMultiSelect
+                moedas={novaWallet.moeda}
+                onChange={(moedas) => setNovaWallet({ ...novaWallet, moeda: moedas })}
+              />
+            </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Exchange</Label>
-              <Input
+              <Label className="text-xs">
+                Exchange/Wallet
+                <span className="text-muted-foreground/60 ml-1">(opcional)</span>
+              </Label>
+              <ExchangeSelect
                 value={novaWallet.exchange}
-                onChange={(e) => setNovaWallet({ ...novaWallet, exchange: e.target.value })}
-                placeholder="Ex: Binance, Bybit"
+                onValueChange={(value) => setNovaWallet({ ...novaWallet, exchange: value })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Network *</Label>
+              <RedeSelect
+                value={novaWallet.rede_id}
+                onValueChange={(value) => setNovaWallet({ ...novaWallet, rede_id: value })}
               />
             </div>
             <div className="space-y-1.5">
@@ -396,21 +517,16 @@ export function ContasEmpresaSection({ caixaParceiroId, onDataChanged }: ContasE
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Rede</Label>
-              <Select value={novaWallet.network} onValueChange={(v) => setNovaWallet({ ...novaWallet, network: v })}>
-                <SelectTrigger className="h-9">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="TRC20">TRC20</SelectItem>
-                  <SelectItem value="ERC20">ERC20</SelectItem>
-                  <SelectItem value="BEP20">BEP20</SelectItem>
-                  <SelectItem value="SOL">Solana</SelectItem>
-                  <SelectItem value="MATIC">Polygon</SelectItem>
-                  <SelectItem value="BTC">Bitcoin</SelectItem>
-                  <SelectItem value="ARBITRUM">Arbitrum</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label className="text-xs">
+                Observações
+                <span className="text-muted-foreground/60 ml-1">(opcional)</span>
+              </Label>
+              <Textarea
+                value={novaWallet.observacoes}
+                onChange={(e) => setNovaWallet({ ...novaWallet, observacoes: e.target.value })}
+                rows={2}
+                placeholder="Informações adicionais sobre esta wallet"
+              />
             </div>
           </div>
           <DialogFooter>
