@@ -781,7 +781,7 @@ export function AjusteManualDialog({
               <Select 
                 value={moeda} 
                 onValueChange={setMoeda}
-                disabled={moedasDisponiveis.length === 1 && tipoDestino !== "CAIXA_OPERACIONAL"}
+                disabled={moedasDisponiveis.length === 1 && (tipoDestino !== "CAIXA_OPERACIONAL" || subTipoCaixa !== "")}
               >
                 <SelectTrigger>
                   <SelectValue />
