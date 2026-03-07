@@ -202,6 +202,13 @@ export function ReconciliacaoDialog({
         reconciled_at: c.reconciled_at,
       })));
 
+      setWallets((walletsRes.data || []).map((w: any) => ({
+        id: w.id, exchange: w.exchange, endereco: w.endereco,
+        parceiro_id: w.parceiro_id, parceiro_nome: w.parceiros?.nome,
+        moeda: Array.isArray(w.moeda) ? w.moeda : ["USDT"],
+        reconciled_at: w.reconciled_at,
+      })));
+
       // Map saldos wallets (by wallet_id + coin)
       const walletsMap: Record<string, Record<string, number>> = {};
       const walletsList: WalletCoinBalance[] = [];
