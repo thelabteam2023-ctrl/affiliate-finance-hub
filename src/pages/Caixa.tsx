@@ -1140,8 +1140,9 @@ export default function Caixa() {
         onClose={() => setReconciliacaoDialogOpen(false)}
         onSuccess={async () => {
           setReconciliacaoDialogOpen(false);
-          await new Promise(resolve => setTimeout(resolve, 300));
-          fetchData();
+          await new Promise(resolve => setTimeout(resolve, 600));
+          await fetchData();
+          setTimeout(() => fetchData(), 2000);
         }}
       />
     </div>
