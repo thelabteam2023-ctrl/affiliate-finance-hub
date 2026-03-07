@@ -1575,6 +1575,17 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
           }}
         />
       )}
+
+      {/* Dialog Desvinculação em Massa */}
+      <DesvinculacaoEmMassaDialog
+        open={bulkUnlinkOpen}
+        onOpenChange={setBulkUnlinkOpen}
+        vinculos={vinculos}
+        projetoId={projetoId}
+        projetoNome={projetoNome}
+        workspaceId={workspaceId}
+        onConcluido={invalidateVinculos}
+      />
     </Tabs>
   );
 }
