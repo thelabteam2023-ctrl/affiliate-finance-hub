@@ -636,6 +636,10 @@ export function AjusteManualDialog({
       // Disparar evento para atualizar UI imediatamente
       dispatchCaixaDataChanged();
       
+      // Delayed refetch para garantir que as views agregadas processaram o novo registro
+      setTimeout(() => dispatchCaixaDataChanged(), 600);
+      setTimeout(() => dispatchCaixaDataChanged(), 2000);
+      
       onSuccess();
     } catch (error: any) {
       console.error("Erro ao registrar ajuste:", error);
