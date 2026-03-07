@@ -72,6 +72,7 @@ export function DesvinculacaoEmMassaDialog({
   onConcluido,
 }: DesvinculacaoEmMassaDialogProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const [parceiroFilter, setParceiroFilter] = useState<string>("__all__");
   const [selectedMap, setSelectedMap] = useState<Record<string, VinculoSelecionado>>({});
   const [processing, setProcessing] = useState(false);
   const [progressCount, setProgressCount] = useState(0);
