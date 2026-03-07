@@ -876,7 +876,7 @@ export function AjusteManualDialog({
 
             {/* Valor */}
             <div className="space-y-2">
-              <Label>{modoReconciliacao ? "Saldo Real Observado" : "Valor"}</Label>
+              <Label>Saldo Real Observado</Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                   {currencySymbol}
