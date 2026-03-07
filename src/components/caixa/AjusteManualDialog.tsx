@@ -242,7 +242,7 @@ export function AjusteManualDialog({
         return walletSaldos.length > 0 ? walletSaldos[0].saldo_coin : 0;
       }
       // Aggregate mode: no specific conta/wallet selected
-      if (!subTipoCaixa || subTipoCaixa === "") {
+      if (!subTipoCaixa) {
         return saldosCaixaFiat[moeda] ?? 0;
       }
     }
