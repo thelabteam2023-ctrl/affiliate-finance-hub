@@ -6,6 +6,7 @@ import { usePermissions } from "@/contexts/PermissionsContext";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useExchangeRates } from "@/contexts/ExchangeRatesContext";
 import { FIAT_CURRENCIES, CRYPTO_CURRENCIES, getCurrencySymbol } from "@/types/currency";
+import { getFirstLastName } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -37,7 +38,8 @@ interface ReconciliacaoDialogProps {
   onSuccess: () => void;
 }
 
-type TipoEntidade = "BOOKMAKER" | "CONTA_BANCARIA" | "WALLET";
+type TipoEntidade = "CAIXA_OPERACIONAL" | "BOOKMAKER" | "CONTA_BANCARIA" | "WALLET";
+type SubTipoCaixa = "FIAT" | "CRYPTO" | "";
 
 interface Bookmaker {
   id: string;
@@ -84,7 +86,10 @@ export function ReconciliacaoDialog({
   const [fetchingData, setFetchingData] = useState(false);
 
   const [tipoEntidade, setTipoEntidade] = useState<TipoEntidade>("BOOKMAKER");
+  const [subTipoCaixa, setSubTipoCaixa] = useState<SubTipoCaixa>("");
   const [entidadeId, setEntidadeId] = useState<string>("");
+  const [contaId, setContaId] = useState<string>("");
+  const [walletId, setWalletId] = useState<string>("");
   const [moeda, setMoeda] = useState<string>("BRL");
   const [saldoReal, setSaldoReal] = useState<string>("");
   const [saldoRealDisplay, setSaldoRealDisplay] = useState<string>("");
@@ -96,10 +101,35 @@ export function ReconciliacaoDialog({
   const [saldosContas, setSaldosContas] = useState<Record<string, number>>({});
   const [saldosWallets, setSaldosWallets] = useState<Record<string, Record<string, number>>>({});
   const [saldosWalletsList, setSaldosWalletsList] = useState<WalletCoinBalance[]>([]);
+  const [caixaParceiroId, setCaixaParceiroId] = useState<string | null>(null);
 
   const canAccess = isOwnerOrAdmin || isSystemOwner;
 
-  // Saldo atual do sistema para a entidade selecionada
+  // Contas/Wallets filtradas para o Caixa Operacional
+  const contasCaixa = useMemo(() => {
+    if (!caixaParceiroId) return [];
+    return contas.filter(c => c.parceiro_id === caixaParceiroId);
+  }, [contas, caixaParceiroId]);
+
+  const walletsCaixa = useMemo(() => {
+    if (!caixaParceiroId) return [];
+    return wallets.filter(w => w.parceiro_id === caixaParceiroId);
+  }, [wallets, caixaParceiroId]);
+
+  // ID efetivo da entidade selecionada
+  const effectiveId = useMemo(() => {
+    if (tipoEntidade === "CAIXA_OPERACIONAL") {
+      if (subTipoCaixa === "FIAT") return contaId;
+      if (subTipoCaixa === "CRYPTO") return walletId;
+      return "";
+    }
+    if (tipoEntidade === "BOOKMAKER") return entidadeId;
+    if (tipoEntidade === "CONTA_BANCARIA") return entidadeId;
+    if (tipoEntidade === "WALLET") return entidadeId;
+    return "";
+  }, [tipoEntidade, subTipoCaixa, entidadeId, contaId, walletId]);
+
+  // Saldo atual do sistema
   const saldoSistema = useMemo(() => {
     if (tipoEntidade === "BOOKMAKER" && entidadeId) {
       const bk = bookmakers.find(b => b.id === entidadeId);
@@ -111,8 +141,16 @@ export function ReconciliacaoDialog({
     if (tipoEntidade === "WALLET" && entidadeId && moeda) {
       return saldosWallets[entidadeId]?.[moeda] ?? 0;
     }
+    if (tipoEntidade === "CAIXA_OPERACIONAL") {
+      if (subTipoCaixa === "FIAT" && contaId) {
+        return saldosContas[contaId] ?? 0;
+      }
+      if (subTipoCaixa === "CRYPTO" && walletId && moeda) {
+        return saldosWallets[walletId]?.[moeda] ?? 0;
+      }
+    }
     return 0;
-  }, [tipoEntidade, entidadeId, moeda, bookmakers, saldosContas, saldosWallets]);
+  }, [tipoEntidade, entidadeId, moeda, subTipoCaixa, contaId, walletId, bookmakers, saldosContas, saldosWallets]);
 
   // Diferença calculada
   const diferenca = useMemo(() => {
@@ -145,8 +183,27 @@ export function ReconciliacaoDialog({
         });
       }
     }
+    if (tipoEntidade === "CAIXA_OPERACIONAL") {
+      if (subTipoCaixa === "FIAT" && contaId) {
+        const conta = contas.find(c => c.id === contaId);
+        if (conta) {
+          const info = FIAT_CURRENCIES.find(c => c.value === conta.moeda);
+          return [{ value: conta.moeda, label: info ? `${conta.moeda} - ${info.label}` : conta.moeda, symbol: getCurrencySymbol(conta.moeda) }];
+        }
+      }
+      if (subTipoCaixa === "CRYPTO" && walletId) {
+        const wallet = wallets.find(w => w.id === walletId);
+        if (wallet && wallet.moeda.length > 0) {
+          return wallet.moeda.map(m => {
+            const info = CRYPTO_CURRENCIES.find(c => c.value === m);
+            return { value: m, label: info ? `${m} - ${info.label}` : m, symbol: getCurrencySymbol(m) };
+          });
+        }
+      }
+      return FIAT_CURRENCIES.map(c => ({ value: c.value, label: `${c.value} - ${c.label}`, symbol: c.symbol }));
+    }
     return [{ value: "BRL", label: "BRL - Real Brasileiro", symbol: "R$" }];
-  }, [tipoEntidade, entidadeId, bookmakers, contas, wallets]);
+  }, [tipoEntidade, entidadeId, subTipoCaixa, contaId, walletId, bookmakers, contas, wallets]);
 
   useEffect(() => {
     if (moedasDisponiveis.length === 1 && moeda !== moedasDisponiveis[0].value) {
@@ -162,6 +219,9 @@ export function ReconciliacaoDialog({
 
   useEffect(() => {
     setEntidadeId("");
+    setContaId("");
+    setWalletId("");
+    setSubTipoCaixa("");
     setSaldoReal("");
     setSaldoRealDisplay("");
     setMoeda("BRL");
@@ -170,25 +230,27 @@ export function ReconciliacaoDialog({
   useEffect(() => {
     setSaldoReal("");
     setSaldoRealDisplay("");
-  }, [entidadeId]);
+  }, [entidadeId, contaId, walletId]);
 
   const fetchData = async () => {
     setFetchingData(true);
     try {
-      const [bookmakersRes, contasRes, walletsRes, saldosContasRes, saldosWalletsRes] = await Promise.all([
+      const [bookmakersRes, contasRes, walletsRes, saldosContasRes, saldosWalletsRes, caixaParceiroRes] = await Promise.all([
         supabase.from("bookmakers").select(`id, nome, saldo_atual, moeda, parceiro_id, reconciled_at, parceiros!inner(nome, status)`).in("status", ["ativo", "limitada"]).eq("parceiros.status", "ativo").order("nome"),
         supabase.from("contas_bancarias").select(`id, banco, titular, parceiro_id, moeda, reconciled_at, parceiros!inner(nome, status)`).eq("parceiros.status", "ativo").order("banco"),
         supabase.from("wallets_crypto").select(`id, exchange, endereco, parceiro_id, moeda, reconciled_at, parceiros!inner(nome, status)`).eq("parceiros.status", "ativo").order("exchange"),
         supabase.from("v_saldo_parceiro_contas").select("conta_id, saldo"),
         supabase.from("v_saldo_parceiro_wallets").select("wallet_id, coin, saldo_coin, saldo_usd"),
+        supabase.from("parceiros").select("id").eq("is_caixa_operacional", true).maybeSingle(),
       ]);
 
-      // Map saldos contas first (needed for conta mapping)
       const saldosMap: Record<string, number> = {};
       (saldosContasRes.data || []).forEach((s: any) => {
         saldosMap[s.conta_id] = s.saldo || 0;
       });
       setSaldosContas(saldosMap);
+
+      setCaixaParceiroId(caixaParceiroRes.data?.id ?? null);
 
       setBookmakers((bookmakersRes.data || []).map((bk: any) => ({
         id: bk.id, nome: bk.nome, saldo_atual: bk.saldo_atual || 0,
@@ -210,17 +272,14 @@ export function ReconciliacaoDialog({
         reconciled_at: w.reconciled_at,
       })));
 
-      // Map saldos wallets (by wallet_id + coin)
       const walletsMap: Record<string, Record<string, number>> = {};
       const walletsList: WalletCoinBalance[] = [];
       (saldosWalletsRes.data || []).forEach((s: any) => {
         if (!walletsMap[s.wallet_id]) walletsMap[s.wallet_id] = {};
         walletsMap[s.wallet_id][s.coin] = s.saldo_coin || 0;
         walletsList.push({
-          wallet_id: s.wallet_id,
-          coin: s.coin,
-          saldo_coin: s.saldo_coin || 0,
-          saldo_usd: s.saldo_usd || 0,
+          wallet_id: s.wallet_id, coin: s.coin,
+          saldo_coin: s.saldo_coin || 0, saldo_usd: s.saldo_usd || 0,
         });
       });
       setSaldosWallets(walletsMap);
@@ -247,6 +306,17 @@ export function ReconciliacaoDialog({
   };
 
   const getEntidadeNome = (): string => {
+    if (tipoEntidade === "CAIXA_OPERACIONAL") {
+      if (subTipoCaixa === "FIAT" && contaId) {
+        const conta = contas.find(c => c.id === contaId);
+        return conta ? `Caixa – ${conta.banco} (${getFirstLastName(conta.titular)})` : "Caixa Operacional";
+      }
+      if (subTipoCaixa === "CRYPTO" && walletId) {
+        const wallet = wallets.find(w => w.id === walletId);
+        return wallet ? `Caixa – ${wallet.exchange} (${wallet.endereco.slice(0, 8)}...)` : "Caixa Operacional";
+      }
+      return `Caixa Operacional (${moeda})`;
+    }
     if (tipoEntidade === "BOOKMAKER") {
       const bk = bookmakers.find(b => b.id === entidadeId);
       return bk ? `${bk.nome}${bk.parceiro_nome ? ` (${bk.parceiro_nome})` : ""}` : "";
@@ -262,8 +332,20 @@ export function ReconciliacaoDialog({
     return "";
   };
 
+  const entidadeSelecionada = useMemo(() => {
+    if (tipoEntidade === "BOOKMAKER") return !!entidadeId;
+    if (tipoEntidade === "CONTA_BANCARIA") return !!entidadeId;
+    if (tipoEntidade === "WALLET") return !!entidadeId;
+    if (tipoEntidade === "CAIXA_OPERACIONAL") {
+      if (subTipoCaixa === "FIAT") return !!contaId;
+      if (subTipoCaixa === "CRYPTO") return !!walletId;
+      return false;
+    }
+    return false;
+  }, [tipoEntidade, entidadeId, subTipoCaixa, contaId, walletId]);
+
   const canSubmit = (): boolean => {
-    if (!entidadeId) return false;
+    if (!entidadeSelecionada) return false;
     if (!saldoReal) return false;
     if (Math.abs(diferenca) < 0.01) return false;
     if (!motivo.trim()) return false;
@@ -279,7 +361,6 @@ export function ReconciliacaoDialog({
       if (!user) throw new Error("Usuário não autenticado");
       if (!workspaceId) throw new Error("Workspace não encontrado");
 
-      // CRITICAL: Arredondar para evitar drift de ponto flutuante
       const isCryptoMoeda = CRYPTO_CURRENCIES.some(c => c.value === moeda);
       const precision = isCryptoMoeda ? 8 : 2;
       const factor = Math.pow(10, precision);
@@ -289,6 +370,9 @@ export function ReconciliacaoDialog({
       const cotacaoSnapshot = moeda !== "BRL" ? getRate(moeda) : null;
       const cotacaoSnapshotAt = moeda !== "BRL" ? new Date().toISOString() : null;
       const valorBrlRef = moeda !== "BRL" ? valorAjuste * (getRate(moeda) || 1) : null;
+
+      const isCaixaWallet = tipoEntidade === "CAIXA_OPERACIONAL" && subTipoCaixa === "CRYPTO";
+      const isDirectWallet = tipoEntidade === "WALLET";
 
       const transactionData: Record<string, any> = {
         user_id: user.id,
@@ -302,21 +386,20 @@ export function ReconciliacaoDialog({
         status: "CONFIRMADO",
         transit_status: "CONFIRMED",
         data_transacao: new Date().toISOString().split("T")[0],
-        impacta_caixa_operacional: false,
+        impacta_caixa_operacional: tipoEntidade === "CAIXA_OPERACIONAL",
         ajuste_motivo: motivo.trim(),
         ajuste_direcao: direcao,
         cotacao: cotacaoSnapshot,
         cotacao_snapshot_at: cotacaoSnapshotAt,
         valor_usd_referencia: valorBrlRef,
-        // Para wallets crypto: preencher coin e qtd_coin (exigido pela view v_saldo_parceiro_wallets)
-        ...(tipoEntidade === "WALLET" && isCrypto ? { coin: moeda, qtd_coin: valorAjuste } : {}),
+        ...((isDirectWallet || isCaixaWallet) && isCrypto ? { coin: moeda, qtd_coin: valorAjuste } : {}),
         auditoria_metadata: {
           tipo_reconciliacao: "RECONCILIACAO_DESENVOLVIMENTO",
           saldo_sistema_anterior: saldoSistema,
           saldo_real_informado: parseFloat(saldoReal) || 0,
           diferenca,
           entidade_tipo: tipoEntidade,
-          entidade_id: entidadeId,
+          entidade_id: effectiveId,
           entidade_nome: getEntidadeNome(),
           moeda,
           registrado_em: new Date().toISOString(),
@@ -325,10 +408,22 @@ export function ReconciliacaoDialog({
       };
 
       // Definir origem/destino baseado na direção
-      // ENTRADA: só destino (crédito na entidade)
-      // SAÍDA: só origem (débito na entidade)
       if (direcao === "ENTRADA") {
         switch (tipoEntidade) {
+          case "CAIXA_OPERACIONAL":
+            transactionData.origem_tipo = "AJUSTE";
+            transactionData.destino_tipo = "CAIXA_OPERACIONAL";
+            if (subTipoCaixa === "FIAT" && contaId) {
+              transactionData.destino_conta_bancaria_id = contaId;
+              transactionData.moeda_destino = moeda;
+              transactionData.valor_destino = valorAjuste;
+            }
+            if (subTipoCaixa === "CRYPTO" && walletId) {
+              transactionData.destino_wallet_id = walletId;
+              transactionData.moeda_destino = moeda;
+              transactionData.valor_destino = valorAjuste;
+            }
+            break;
           case "BOOKMAKER":
             transactionData.destino_tipo = "BOOKMAKER";
             transactionData.destino_bookmaker_id = entidadeId;
@@ -350,6 +445,20 @@ export function ReconciliacaoDialog({
         }
       } else {
         switch (tipoEntidade) {
+          case "CAIXA_OPERACIONAL":
+            transactionData.origem_tipo = "CAIXA_OPERACIONAL";
+            transactionData.destino_tipo = "AJUSTE";
+            if (subTipoCaixa === "FIAT" && contaId) {
+              transactionData.origem_conta_bancaria_id = contaId;
+              transactionData.moeda_origem = moeda;
+              transactionData.valor_origem = valorAjuste;
+            }
+            if (subTipoCaixa === "CRYPTO" && walletId) {
+              transactionData.origem_wallet_id = walletId;
+              transactionData.moeda_origem = moeda;
+              transactionData.valor_origem = valorAjuste;
+            }
+            break;
           case "BOOKMAKER":
             transactionData.origem_tipo = "BOOKMAKER";
             transactionData.origem_bookmaker_id = entidadeId;
@@ -396,7 +505,10 @@ export function ReconciliacaoDialog({
 
   const handleClose = () => {
     setTipoEntidade("BOOKMAKER");
+    setSubTipoCaixa("");
     setEntidadeId("");
+    setContaId("");
+    setWalletId("");
     setMoeda("BRL");
     setSaldoReal("");
     setSaldoRealDisplay("");
@@ -423,7 +535,18 @@ export function ReconciliacaoDialog({
     if (tipoEntidade === "BOOKMAKER") return bookmakers.find(b => b.id === entidadeId)?.reconciled_at;
     if (tipoEntidade === "CONTA_BANCARIA") return contas.find(c => c.id === entidadeId)?.reconciled_at;
     if (tipoEntidade === "WALLET") return wallets.find(w => w.id === entidadeId)?.reconciled_at;
+    if (tipoEntidade === "CAIXA_OPERACIONAL") {
+      if (subTipoCaixa === "FIAT") return contas.find(c => c.id === contaId)?.reconciled_at;
+      if (subTipoCaixa === "CRYPTO") return wallets.find(w => w.id === walletId)?.reconciled_at;
+    }
     return null;
+  })();
+
+  // Show moeda selector for wallets with multiple currencies
+  const showMoedaSelector = (() => {
+    if (tipoEntidade === "WALLET" && entidadeId) return moedasDisponiveis.length > 1;
+    if (tipoEntidade === "CAIXA_OPERACIONAL" && subTipoCaixa === "CRYPTO" && walletId) return moedasDisponiveis.length > 1;
+    return false;
   })();
 
   return (
@@ -461,6 +584,7 @@ export function ReconciliacaoDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="CAIXA_OPERACIONAL">Caixa Operacional</SelectItem>
                   <SelectItem value="BOOKMAKER">Bookmaker</SelectItem>
                   <SelectItem value="CONTA_BANCARIA">Conta Bancária</SelectItem>
                   <SelectItem value="WALLET">Wallet Crypto</SelectItem>
@@ -468,39 +592,99 @@ export function ReconciliacaoDialog({
               </Select>
             </div>
 
-            {/* Seleção de entidade */}
-            <div className="space-y-2">
-              <Label>
-                {tipoEntidade === "BOOKMAKER" ? "Bookmaker" : tipoEntidade === "CONTA_BANCARIA" ? "Conta Bancária" : "Wallet"}
-              </Label>
-              {tipoEntidade === "WALLET" ? (
+            {/* Sub-seleção Caixa Operacional */}
+            {tipoEntidade === "CAIXA_OPERACIONAL" && (
+              <div className="space-y-2">
+                <Label>Vincular a</Label>
+                <Select value={subTipoCaixa || ""} onValueChange={(v) => {
+                  setSubTipoCaixa(v as SubTipoCaixa);
+                  setContaId("");
+                  setWalletId("");
+                  setSaldoReal("");
+                  setSaldoRealDisplay("");
+                }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o tipo de ativo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="FIAT">Conta Bancária</SelectItem>
+                    <SelectItem value="CRYPTO">Wallet Crypto</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Sub-seleção Caixa: Conta Bancária */}
+            {tipoEntidade === "CAIXA_OPERACIONAL" && subTipoCaixa === "FIAT" && (
+              <div className="space-y-2">
+                <Label>Conta Bancária</Label>
+                <ContaBancariaSearchSelect
+                  contas={contasCaixa}
+                  value={contaId}
+                  onValueChange={(v) => { setContaId(v); setSaldoReal(""); setSaldoRealDisplay(""); }}
+                  placeholder="Selecione a conta"
+                />
+              </div>
+            )}
+
+            {/* Sub-seleção Caixa: Wallet Crypto */}
+            {tipoEntidade === "CAIXA_OPERACIONAL" && subTipoCaixa === "CRYPTO" && (
+              <div className="space-y-2">
+                <Label>Wallet Crypto</Label>
                 <WalletSearchSelect
-                  wallets={wallets}
-                  value={entidadeId}
-                  onValueChange={setEntidadeId}
-                  placeholder="Selecione..."
+                  wallets={walletsCaixa}
+                  value={walletId}
+                  onValueChange={(v) => { setWalletId(v); setSaldoReal(""); setSaldoRealDisplay(""); }}
+                  placeholder="Selecione a wallet"
                   saldos={saldosWalletsList}
                   usdToBrlRate={getRate("USD")}
                 />
-              ) : tipoEntidade === "CONTA_BANCARIA" ? (
-                <ContaBancariaSearchSelect
-                  contas={contas}
-                  value={entidadeId}
-                  onValueChange={setEntidadeId}
-                  placeholder="Selecione a conta"
-                />
-              ) : tipoEntidade === "BOOKMAKER" ? (
+              </div>
+            )}
+
+            {/* Seleção: Bookmaker */}
+            {tipoEntidade === "BOOKMAKER" && (
+              <div className="space-y-2">
+                <Label>Bookmaker</Label>
                 <BookmakerSearchSelect
                   bookmakers={bookmakers}
                   value={entidadeId}
                   onValueChange={setEntidadeId}
                   placeholder="Selecione o bookmaker"
                 />
-              ) : null}
-            </div>
+              </div>
+            )}
+
+            {/* Seleção: Conta Bancária */}
+            {tipoEntidade === "CONTA_BANCARIA" && (
+              <div className="space-y-2">
+                <Label>Conta Bancária</Label>
+                <ContaBancariaSearchSelect
+                  contas={contas}
+                  value={entidadeId}
+                  onValueChange={setEntidadeId}
+                  placeholder="Selecione a conta"
+                />
+              </div>
+            )}
+
+            {/* Seleção: Wallet */}
+            {tipoEntidade === "WALLET" && (
+              <div className="space-y-2">
+                <Label>Wallet</Label>
+                <WalletSearchSelect
+                  wallets={wallets}
+                  value={entidadeId}
+                  onValueChange={setEntidadeId}
+                  placeholder="Selecione a wallet"
+                  saldos={saldosWalletsList}
+                  usdToBrlRate={getRate("USD")}
+                />
+              </div>
+            )}
 
             {/* Moeda (para wallets com múltiplas) */}
-            {tipoEntidade === "WALLET" && moedasDisponiveis.length > 1 && (
+            {showMoedaSelector && (
               <div className="space-y-2">
                 <Label>Moeda</Label>
                 <Select value={moeda} onValueChange={setMoeda}>
@@ -515,7 +699,7 @@ export function ReconciliacaoDialog({
             )}
 
             {/* Saldo atual do sistema */}
-            {entidadeId && (
+            {entidadeSelecionada && (
               <div className="rounded-lg border border-border/50 bg-muted/30 p-3 space-y-2">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">Saldo no Sistema</span>
@@ -550,7 +734,7 @@ export function ReconciliacaoDialog({
             </div>
 
             {/* Diferença calculada */}
-            {saldoReal && entidadeId && (
+            {saldoReal && entidadeSelecionada && (
               <div className={`rounded-lg border p-3 ${
                 Math.abs(diferenca) < 0.01
                   ? "border-muted bg-muted/20"
