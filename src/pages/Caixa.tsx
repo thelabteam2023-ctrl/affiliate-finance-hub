@@ -31,6 +31,7 @@ import { PosicaoCapital } from "@/components/caixa/PosicaoCapital";
 import { ConfirmarSaqueDialog } from "@/components/caixa/ConfirmarSaqueDialog";
 import { AjusteManualDialog } from "@/components/caixa/AjusteManualDialog";
 import { ReconciliacaoDialog } from "@/components/caixa/ReconciliacaoDialog";
+import { ContasEmpresaSection } from "@/components/caixa/ContasEmpresaSection";
 // TransacoesEmTransito removido - lógica unificada na Conciliação
 import { subDays, startOfDay, endOfDay, format } from "date-fns";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
