@@ -361,7 +361,7 @@ export function DesvinculacaoEmMassaDialog({
                         {/* Checkbox */}
                         <Checkbox
                           checked={isSelected}
-                          disabled={hasPending}
+                          disabled={isBlocked}
                           onCheckedChange={() => toggleSelect(vinculo)}
                         />
 
