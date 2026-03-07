@@ -929,9 +929,21 @@ export function AjusteManualDialog({
               </Select>
             </div>
 
+            {/* Saldo atual do sistema (modo reconciliação) */}
+            {modoReconciliacao && entidadeSelecionada && (
+              <div className="rounded-lg border border-border/50 bg-muted/30 p-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Saldo no Sistema</span>
+                  <span className={`font-mono font-semibold ${saldoSistemaAtual < 0 ? "text-destructive" : ""}`}>
+                    {currencySymbol} {saldoSistemaAtual.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 6 })}
+                  </span>
+                </div>
+              </div>
+            )}
+
             {/* Valor */}
             <div className="space-y-2">
-              <Label>Valor</Label>
+              <Label>{modoReconciliacao ? "Saldo Real Observado" : "Valor"}</Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                   {currencySymbol}
@@ -944,7 +956,7 @@ export function AjusteManualDialog({
                 />
               </div>
               {/* Referência em BRL para moedas estrangeiras */}
-              {valorBRLReferencia !== null && valorBRLReferencia > 0 && (
+              {!modoReconciliacao && valorBRLReferencia !== null && valorBRLReferencia > 0 && (
                 <div className="text-xs text-muted-foreground flex items-center gap-1">
                   <Info className="h-3 w-3" />
                   ≈ R$ {valorBRLReferencia.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} 
@@ -955,19 +967,57 @@ export function AjusteManualDialog({
               )}
             </div>
 
+            {/* Diferença calculada (modo reconciliação) */}
+            {modoReconciliacao && valor && entidadeSelecionada && reconciliacaoCalc && (
+              <div className={`rounded-lg border p-3 ${
+                Math.abs(reconciliacaoCalc.diferenca) < 0.01
+                  ? "border-muted bg-muted/20"
+                  : reconciliacaoCalc.diferenca > 0
+                    ? "border-primary/30 bg-primary/5"
+                    : "border-destructive/30 bg-destructive/5"
+              }`}>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">Diferença Calculada</span>
+                  <div className="flex items-center gap-2">
+                    {Math.abs(reconciliacaoCalc.diferenca) < 0.01 ? (
+                      <Minus className="h-4 w-4 text-muted-foreground" />
+                    ) : reconciliacaoCalc.diferenca > 0 ? (
+                      <TrendingUp className="h-4 w-4 text-primary" />
+                    ) : (
+                      <TrendingDown className="h-4 w-4 text-destructive" />
+                    )}
+                    <span className={`font-mono font-bold ${
+                      Math.abs(reconciliacaoCalc.diferenca) < 0.01 ? "text-muted-foreground" : reconciliacaoCalc.diferenca > 0 ? "text-primary" : "text-destructive"
+                    }`}>
+                      {reconciliacaoCalc.diferenca > 0 ? "+" : ""}{currencySymbol} {reconciliacaoCalc.diferenca.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                </div>
+                {Math.abs(reconciliacaoCalc.diferenca) >= 0.01 && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Será criado um lançamento de <strong>{reconciliacaoCalc.direcaoCalculada === "ENTRADA" ? "ENTRADA" : "SAÍDA"}</strong> de{" "}
+                    <strong>{currencySymbol} {reconciliacaoCalc.valorAjuste.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                  </p>
+                )}
+                {Math.abs(reconciliacaoCalc.diferenca) < 0.01 && (
+                  <p className="text-xs text-muted-foreground mt-1">Saldo já está correto. Nenhum ajuste necessário.</p>
+                )}
+              </div>
+            )}
+
             {/* Motivo */}
             <div className="space-y-2">
               <Label>Motivo do Ajuste *</Label>
               <Textarea
                 value={motivo}
                 onChange={(e) => setMotivo(e.target.value)}
-                placeholder="Descreva o motivo da correção contábil..."
-                rows={3}
+                placeholder={modoReconciliacao ? "Descreva o motivo da reconciliação..." : "Descreva o motivo da correção contábil..."}
+                rows={2}
               />
             </div>
 
-            {/* Preview */}
-            {valor && parseFloat(valor) > 0 && (
+            {/* Preview (modo ajuste direto) */}
+            {!modoReconciliacao && valor && parseFloat(valor) > 0 && (
               <Alert className={direcao === "ENTRADA" ? "border-primary/30 bg-primary/10" : "border-destructive/30 bg-destructive/10"}>
                 <AlertDescription className="flex items-center gap-2">
                   {direcao === "ENTRADA" ? (
