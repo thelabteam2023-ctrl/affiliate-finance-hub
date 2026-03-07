@@ -291,7 +291,14 @@ export function ReconciliacaoDialog({
     }
   };
 
-  const formatCurrencyInput = (value: string): string => {
+  const isCryptoMoedaSelected = CRYPTO_CURRENCIES.some(c => c.value === moeda);
+
+  const formatCurrencyInput = (value: string, isCrypto: boolean): string => {
+    if (isCrypto) {
+      // For crypto, allow free-form decimal input with up to 8 decimals
+      const cleaned = value.replace(/[^\d,]/g, "");
+      return cleaned;
+    }
     const numericValue = value.replace(/[^\d]/g, "");
     if (!numericValue) return "";
     const numberValue = parseInt(numericValue, 10) / 100;
@@ -299,10 +306,18 @@ export function ReconciliacaoDialog({
   };
 
   const handleSaldoRealChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatCurrencyInput(e.target.value);
-    setSaldoRealDisplay(formatted);
-    const numericValue = formatted.replace(/\./g, "").replace(",", ".");
-    setSaldoReal(numericValue);
+    if (isCryptoMoedaSelected) {
+      // Crypto: allow direct decimal input (e.g., "0,00004700")
+      const raw = e.target.value.replace(/[^\d,]/g, "");
+      setSaldoRealDisplay(raw);
+      const numericValue = raw.replace(",", ".");
+      setSaldoReal(numericValue);
+    } else {
+      const formatted = formatCurrencyInput(e.target.value, false);
+      setSaldoRealDisplay(formatted);
+      const numericValue = formatted.replace(/\./g, "").replace(",", ".");
+      setSaldoReal(numericValue);
+    }
   };
 
   const getEntidadeNome = (): string => {
