@@ -380,20 +380,47 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
   // Aplicar ordenação
   const sortedVinculos = useMemo(() => {
     const sorted = [...filteredVinculos];
-    if (sortMode === "newest") {
-      sorted.sort((a, b) => {
-        const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
-        const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
-        return dateB - dateA;
-      });
-    } else if (sortMode === "oldest") {
-      sorted.sort((a, b) => {
-        const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
-        const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
-        return dateA - dateB;
-      });
-    } else {
-      sorted.sort((a, b) => a.nome.localeCompare(b.nome));
+    switch (sortMode) {
+      case "newest":
+        sorted.sort((a, b) => {
+          const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+          const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+          return dateB - dateA;
+        });
+        break;
+      case "oldest":
+        sorted.sort((a, b) => {
+          const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+          const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+          return dateA - dateB;
+        });
+        break;
+      case "apostas_desc":
+        sorted.sort((a, b) => b.totalApostas - a.totalApostas || a.nome.localeCompare(b.nome));
+        break;
+      case "apostas_asc":
+        sorted.sort((a, b) => a.totalApostas - b.totalApostas || a.nome.localeCompare(b.nome));
+        break;
+      case "saldo_desc":
+        sorted.sort((a, b) => b.saldo_operavel - a.saldo_operavel || a.nome.localeCompare(b.nome));
+        break;
+      case "saldo_asc":
+        sorted.sort((a, b) => a.saldo_operavel - b.saldo_operavel || a.nome.localeCompare(b.nome));
+        break;
+      case "em_aposta_desc":
+        sorted.sort((a, b) => b.saldo_em_aposta - a.saldo_em_aposta || a.nome.localeCompare(b.nome));
+        break;
+      case "em_aposta_asc":
+        sorted.sort((a, b) => a.saldo_em_aposta - b.saldo_em_aposta || a.nome.localeCompare(b.nome));
+        break;
+      case "disponivel_desc":
+        sorted.sort((a, b) => b.saldo_disponivel - a.saldo_disponivel || a.nome.localeCompare(b.nome));
+        break;
+      case "disponivel_asc":
+        sorted.sort((a, b) => a.saldo_disponivel - b.saldo_disponivel || a.nome.localeCompare(b.nome));
+        break;
+      default:
+        sorted.sort((a, b) => a.nome.localeCompare(b.nome));
     }
     return sorted;
   }, [filteredVinculos, sortMode]);
