@@ -85,6 +85,7 @@ export function AjusteManualDialog({
   // Form state
   const [direcao, setDirecao] = useState<"ENTRADA" | "SAIDA">("ENTRADA");
   const [tipoDestino, setTipoDestino] = useState<TipoDestino>("CAIXA_OPERACIONAL");
+  const [subTipoCaixa, setSubTipoCaixa] = useState<SubTipoCaixa>("");
   const [moeda, setMoeda] = useState<string>("BRL");
   const [valor, setValor] = useState<string>("");
   const [valorDisplay, setValorDisplay] = useState<string>("");
@@ -99,6 +100,7 @@ export function AjusteManualDialog({
   const [bookmakers, setBookmakers] = useState<Bookmaker[]>([]);
   const [contas, setContas] = useState<ContaBancaria[]>([]);
   const [wallets, setWallets] = useState<WalletCrypto[]>([]);
+  const [saldosContas, setSaldosContas] = useState<Record<string, number>>({});
 
   // Verificar permissão
   const canAccess = isOwnerOrAdmin || isSystemOwner;
