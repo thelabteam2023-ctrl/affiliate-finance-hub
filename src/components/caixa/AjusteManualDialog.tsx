@@ -29,7 +29,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, AlertTriangle, TrendingDown, TrendingUp, Wrench, Info } from "lucide-react";
-import { WalletSearchSelect } from "./WalletSearchSelect";
+import { WalletSearchSelect, type WalletCoinBalance } from "./WalletSearchSelect";
 import { ContaBancariaSearchSelect, type ContaBancariaOption } from "./ContaBancariaSearchSelect";
 
 interface AjusteManualDialogProps {
@@ -102,6 +102,7 @@ export function AjusteManualDialog({
   const [contas, setContas] = useState<ContaBancaria[]>([]);
   const [wallets, setWallets] = useState<WalletCrypto[]>([]);
   const [saldosContas, setSaldosContas] = useState<Record<string, number>>({});
+  const [saldosWallets, setSaldosWallets] = useState<WalletCoinBalance[]>([]);
   const [caixaParceiroId, setCaixaParceiroId] = useState<string | null>(null);
 
   // Verificar permissão
@@ -241,7 +242,7 @@ export function AjusteManualDialog({
       // PROTEÇÃO DE PARCEIROS INATIVOS:
       // Buscar bookmakers, contas e wallets apenas de PARCEIROS ATIVOS
       // O banco de dados também valida via trigger, mas a UI deve prevenir a seleção
-      const [bookmakersRes, contasRes, walletsRes, saldosContasRes, caixaParceiroRes] = await Promise.all([
+      const [bookmakersRes, contasRes, walletsRes, saldosContasRes, saldosWalletsRes, caixaParceiroRes] = await Promise.all([
         supabase
           .from("bookmakers")
           .select(`
@@ -283,6 +284,9 @@ export function AjusteManualDialog({
           .from("v_saldo_parceiro_contas")
           .select("conta_id, saldo"),
         supabase
+          .from("v_saldo_parceiro_wallets")
+          .select("wallet_id, coin, saldo_coin"),
+        supabase
           .from("parceiros")
           .select("id")
           .eq("is_caixa_operacional", true)
@@ -295,6 +299,11 @@ export function AjusteManualDialog({
         if (s.conta_id) saldoMap[s.conta_id] = s.saldo ?? 0;
       });
       setSaldosContas(saldoMap);
+      setSaldosWallets((saldosWalletsRes.data || []).map((s: any) => ({
+        wallet_id: s.wallet_id,
+        coin: s.coin,
+        saldo_coin: s.saldo_coin ?? 0,
+      })));
       setCaixaParceiroId(caixaParceiroRes.data?.id ?? null);
 
       const mappedBookmakers: Bookmaker[] = (bookmakersRes.data || []).map((bk: any) => ({
@@ -725,6 +734,7 @@ export function AjusteManualDialog({
                   value={walletId}
                   onValueChange={setWalletId}
                   placeholder="Selecione a wallet"
+                  saldos={saldosWallets}
                 />
               </div>
             )}
@@ -781,6 +791,7 @@ export function AjusteManualDialog({
                   value={walletId}
                   onValueChange={setWalletId}
                   placeholder="Selecione a wallet"
+                  saldos={saldosWallets}
                 />
               </div>
             )}
