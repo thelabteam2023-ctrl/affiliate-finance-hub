@@ -2579,6 +2579,16 @@ export function CaixaTransacaoDialog({
             transactionData.origem_parceiro_id = origemParceiroId;
           } else if (origemTipo === "BOOKMAKER") {
             transactionData.origem_bookmaker_id = origemBookmakerId;
+          } else if (origemTipo === "CAIXA_OPERACIONAL") {
+            // Wire optional company account for CAIXA origin
+            if (caixaContaId && caixaContaId !== "none") {
+              transactionData.origem_conta_bancaria_id = caixaContaId;
+              transactionData.origem_parceiro_id = caixaParceiroId;
+            }
+            if (caixaWalletId && caixaWalletId !== "none") {
+              transactionData.origem_wallet_id = caixaWalletId;
+              transactionData.origem_parceiro_id = caixaParceiroId;
+            }
           }
         }
 
