@@ -43,6 +43,7 @@ import {
   Puzzle,
   Plus,
   RotateCcw,
+} from "lucide-react";
   Plus,
 } from "lucide-react";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
