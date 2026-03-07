@@ -162,7 +162,7 @@ export function ExposicaoCryptoCard({
       <Card className="bg-card/50 backdrop-blur border-border/50">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <div className="flex items-center gap-2">
-            <CardTitle className="text-sm font-medium">Exposição Crypto (USD)</CardTitle>
+            <CardTitle className="text-sm font-medium">Caixa Crypto (USD)</CardTitle>
             {wallets.length > 0 && (
               <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">
                 {wallets.length}
