@@ -67,6 +67,18 @@ export function ContasEmpresaSection({ caixaParceiroId, onDataChanged }: ContasE
   const [loading, setLoading] = useState(false);
   const [addContaOpen, setAddContaOpen] = useState(false);
   const [addWalletOpen, setAddWalletOpen] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const copyToClipboard = async (text: string, id: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedId(id);
+      toast({ title: "Copiado!", description: "Copiado para a área de transferência." });
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch {
+      toast({ title: "Erro ao copiar", variant: "destructive" });
+    }
+  };
 
   // Form state - Conta Bancária (same fields as ParceiroDialog)
   const [novaConta, setNovaConta] = useState({
