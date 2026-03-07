@@ -271,6 +271,11 @@ export function AjusteManualDialog({
         supabase
           .from("v_saldo_parceiro_contas")
           .select("conta_id, saldo"),
+        supabase
+          .from("parceiros")
+          .select("id")
+          .eq("is_caixa_operacional", true)
+          .maybeSingle(),
       ]);
 
       // Build saldo map for contas
