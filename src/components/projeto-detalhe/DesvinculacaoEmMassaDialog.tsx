@@ -344,7 +344,7 @@ export function DesvinculacaoEmMassaDialog({
             </div>
 
             {/* List */}
-            <ScrollArea className="flex-1 min-h-0" style={{ maxHeight: "calc(85vh - 220px)" }}>
+            <div className="flex-1 min-h-0 overflow-y-auto" style={{ maxHeight: "calc(85vh - 220px)" }}>
               <div className="divide-y divide-border/50">
                 {filteredVinculos.map(vinculo => {
                   const isSelected = !!selectedMap[vinculo.id];
@@ -469,7 +469,7 @@ export function DesvinculacaoEmMassaDialog({
                   );
                 })}
               </div>
-            </ScrollArea>
+            </div>
 
             {/* Footer */}
             <div className="p-3 border-t border-border/50 flex items-center justify-between">
