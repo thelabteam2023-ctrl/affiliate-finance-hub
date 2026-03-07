@@ -723,30 +723,59 @@ export function AjusteManualDialog({
           </div>
         ) : (
           <div className="space-y-4">
-            {/* Direção */}
+            {/* Modo de operação */}
             <div className="space-y-2">
-              <Label>Direção do Ajuste</Label>
-              <RadioGroup
-                value={direcao}
-                onValueChange={(value) => setDirecao(value as "ENTRADA" | "SAIDA")}
-                className="flex gap-4"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="ENTRADA" id="entrada" />
-                  <Label htmlFor="entrada" className="flex items-center gap-1 cursor-pointer">
-                    <TrendingUp className="h-4 w-4 text-primary" />
-                    Entrada (+)
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="SAIDA" id="saida" />
-                  <Label htmlFor="saida" className="flex items-center gap-1 cursor-pointer">
-                    <TrendingDown className="h-4 w-4 text-destructive" />
-                    Saída (-)
-                  </Label>
-                </div>
-              </RadioGroup>
+              <Label>Modo de Operação</Label>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant={!modoReconciliacao ? "default" : "outline"}
+                  size="sm"
+                  className="flex-1 gap-1.5"
+                  onClick={() => { setModoReconciliacao(false); setValor(""); setValorDisplay(""); }}
+                >
+                  <Wrench className="h-3.5 w-3.5" />
+                  Ajuste Direto
+                </Button>
+                <Button
+                  type="button"
+                  variant={modoReconciliacao ? "default" : "outline"}
+                  size="sm"
+                  className="flex-1 gap-1.5"
+                  onClick={() => { setModoReconciliacao(true); setValor(""); setValorDisplay(""); }}
+                >
+                  <Scale className="h-3.5 w-3.5" />
+                  Informar Saldo Real
+                </Button>
+              </div>
             </div>
+
+            {/* Direção (apenas no modo ajuste direto) */}
+            {!modoReconciliacao && (
+              <div className="space-y-2">
+                <Label>Direção do Ajuste</Label>
+                <RadioGroup
+                  value={direcao}
+                  onValueChange={(value) => setDirecao(value as "ENTRADA" | "SAIDA")}
+                  className="flex gap-4"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="ENTRADA" id="entrada" />
+                    <Label htmlFor="entrada" className="flex items-center gap-1 cursor-pointer">
+                      <TrendingUp className="h-4 w-4 text-primary" />
+                      Entrada (+)
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="SAIDA" id="saida" />
+                    <Label htmlFor="saida" className="flex items-center gap-1 cursor-pointer">
+                      <TrendingDown className="h-4 w-4 text-destructive" />
+                      Saída (-)
+                    </Label>
+                  </div>
+                </RadioGroup>
+              </div>
+            )}
 
             {/* Destino do Ajuste */}
             <div className="space-y-2">
