@@ -366,14 +366,14 @@ export function DesvinculacaoEmMassaDialog({
                 />
               </div>
               <Select value={parceiroFilter} onValueChange={setParceiroFilter}>
-                <SelectTrigger className="h-9 w-[180px] text-xs">
-                  <User className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
+                <SelectTrigger className="h-9 w-[200px] text-xs flex items-center gap-1.5">
+                  <User className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                   <SelectValue placeholder="Parceiro" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__all__">Todos os parceiros</SelectItem>
                   {parceirosUnicos.map(([key, label]) => (
-                    <SelectItem key={key} value={key}>{label}</SelectItem>
+                    <SelectItem key={key} value={key}>{abbreviateName(label)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
