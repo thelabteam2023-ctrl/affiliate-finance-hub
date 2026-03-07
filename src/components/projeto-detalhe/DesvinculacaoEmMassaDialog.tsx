@@ -466,8 +466,10 @@ export function DesvinculacaoEmMassaDialog({
                             placeholder="0.00"
                             value={sel?.saldoRealInput || ""}
                             onChange={e => updateField(vinculo.id, "saldoRealInput", e.target.value)}
+                            onKeyDown={e => handleSaldoKeyDown(e as any, idx)}
                             disabled={!isSelected || isBlocked}
                             className="h-7 text-sm tabular-nums"
+                            data-saldo-index={idx}
                           />
                         </div>
 
