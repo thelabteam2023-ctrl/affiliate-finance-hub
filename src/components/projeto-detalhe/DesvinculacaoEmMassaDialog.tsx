@@ -295,12 +295,23 @@ export function DesvinculacaoEmMassaDialog({
         // 2. Pre-check (recalcular saldo efetivo após ajuste)
         const check = await preCheckUnlink(vinculo.id);
 
-        // 3. Determinar status
-        const isLimitada = sel.statusFinal === "limitada";
+        // 3. Determinar status e flag de saque
         const saldoFinal = temDiferenca ? saldoRealNum : saldoSistema;
-        const statusFinalDB = (isLimitada || sel.statusFinal === "aguardando_saque") && saldoFinal > 0
-          ? "aguardando_saque"
-          : sel.statusFinal;
+        const temSaldo = saldoFinal > 0;
+
+        // Bug fix: Casas limitadas MANTÊM status "limitada" mesmo com saldo.
+        // O flag marcarParaSaque controla a fila de saque separadamente.
+        // Antes, casas limitadas com saldo tinham status sobrescrito para "aguardando_saque",
+        // perdendo a informação de limitação quando o saque era processado.
+        const isLimitada = sel.statusFinal === "limitada";
+        const isAguardandoSaque = sel.statusFinal === "aguardando_saque";
+        
+        // Status final preserva o status original (limitada, bloqueada, etc.)
+        // Só usa "aguardando_saque" se foi escolhido explicitamente pelo usuário
+        const statusFinalDB = isAguardandoSaque ? "aguardando_saque" : sel.statusFinal;
+        
+        // Marcar para saque se: tem saldo E (é limitada OU explicitamente aguardando_saque)
+        const deveMarcarParaSaque = temSaldo && (isLimitada || isAguardandoSaque);
 
         // 4. Executar unlink atômico
         await executeUnlink({
@@ -311,7 +322,7 @@ export function DesvinculacaoEmMassaDialog({
           statusFinal: statusFinalDB,
           saldoVirtualEfetivo: check.saldoVirtualEfetivo,
           moeda: vinculo.moeda,
-          marcarParaSaque: statusFinalDB === "aguardando_saque",
+          marcarParaSaque: deveMarcarParaSaque,
         });
 
         resultados.push({ id, nome: vinculo.nome, success: true });
