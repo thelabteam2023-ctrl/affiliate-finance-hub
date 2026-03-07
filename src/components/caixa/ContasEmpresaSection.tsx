@@ -244,7 +244,7 @@ export function ContasEmpresaSection({ caixaParceiroId, onDataChanged }: ContasE
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-semibold">
-                          {getCurrencySymbol(conta.moeda)} {formatCurrencyValue(conta.saldo || 0)}
+                          {getCurrencySymbol(conta.moeda)} {formatCurrencyValue(conta.saldo || 0, conta.moeda as any)}
                         </p>
                         <p className="text-[10px] text-muted-foreground">{conta.moeda}</p>
                       </div>
