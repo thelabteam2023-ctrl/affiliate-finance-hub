@@ -32,8 +32,6 @@ interface WalletInfo {
 
 interface ExposicaoCryptoCardProps {
   caixaParceiroId: string | null;
-  saldosCrypto: SaldoCrypto[];
-  totalCryptoUSD: number;
   cryptoPrices: Record<string, number>;
   getCryptoUSDValue: (coin: string, saldoCoin: number, saldoUsd: number) => number;
   formatCurrency: (value: number, currency: string) => string;
