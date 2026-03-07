@@ -29,6 +29,7 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, AlertTriangle, Scale, TrendingUp, TrendingDown, Minus, Info } from "lucide-react";
 import { WalletSearchSelect, type WalletCoinBalance } from "./WalletSearchSelect";
 import { ContaBancariaSearchSelect, type ContaBancariaOption } from "./ContaBancariaSearchSelect";
+import { BookmakerSearchSelect } from "./BookmakerSearchSelect";
 
 interface ReconciliacaoDialogProps {
   open: boolean;
@@ -488,27 +489,14 @@ export function ReconciliacaoDialog({
                   onValueChange={setEntidadeId}
                   placeholder="Selecione a conta"
                 />
-              ) : (
-                <Select value={entidadeId} onValueChange={setEntidadeId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {tipoEntidade === "BOOKMAKER" && bookmakers.map((bk) => (
-                      <SelectItem key={bk.id} value={bk.id}>
-                        <div className="flex items-center gap-2">
-                          <span>{bk.nome}</span>
-                          <Badge variant="secondary" className="text-xs">{bk.moeda}</Badge>
-                          <span className="text-muted-foreground text-xs">
-                            ({getCurrencySymbol(bk.moeda)} {bk.saldo_atual.toFixed(2)})
-                          </span>
-                          {bk.parceiro_nome && <span className="text-muted-foreground text-xs">• {bk.parceiro_nome}</span>}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
+              ) : tipoEntidade === "BOOKMAKER" ? (
+                <BookmakerSearchSelect
+                  bookmakers={bookmakers}
+                  value={entidadeId}
+                  onValueChange={setEntidadeId}
+                  placeholder="Selecione o bookmaker"
+                />
+              ) : null}
             </div>
 
             {/* Moeda (para wallets com múltiplas) */}

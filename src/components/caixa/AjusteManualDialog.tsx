@@ -30,6 +30,7 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, AlertTriangle, TrendingDown, TrendingUp, Wrench, Info, Minus } from "lucide-react";
 import { WalletSearchSelect, type WalletCoinBalance } from "./WalletSearchSelect";
 import { ContaBancariaSearchSelect, type ContaBancariaOption } from "./ContaBancariaSearchSelect";
+import { BookmakerSearchSelect } from "./BookmakerSearchSelect";
 
 interface AjusteManualDialogProps {
   open: boolean;
@@ -792,29 +793,12 @@ export function AjusteManualDialog({
             {tipoDestino === "BOOKMAKER" && (
               <div className="space-y-2">
                 <Label>Bookmaker</Label>
-                <Select value={bookmakerId} onValueChange={setBookmakerId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o bookmaker" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {bookmakers.map((bk) => (
-                      <SelectItem key={bk.id} value={bk.id}>
-                        <div className="flex items-center gap-2">
-                          <span>{bk.nome}</span>
-                          <Badge variant="secondary" className="text-xs">
-                            {bk.moeda}
-                          </Badge>
-                          <span className="text-muted-foreground text-xs">
-                            ({getCurrencySymbol(bk.moeda)} {bk.saldo_atual.toFixed(2)})
-                          </span>
-                          {bk.parceiro_nome && (
-                            <span className="text-muted-foreground text-xs">• {bk.parceiro_nome}</span>
-                          )}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <BookmakerSearchSelect
+                  bookmakers={bookmakers}
+                  value={bookmakerId}
+                  onValueChange={setBookmakerId}
+                  placeholder="Selecione o bookmaker"
+                />
               </div>
             )}
 
