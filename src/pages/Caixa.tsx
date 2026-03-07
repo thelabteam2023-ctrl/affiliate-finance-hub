@@ -31,7 +31,8 @@ import { PosicaoCapital } from "@/components/caixa/PosicaoCapital";
 import { ConfirmarSaqueDialog } from "@/components/caixa/ConfirmarSaqueDialog";
 import { AjusteManualDialog } from "@/components/caixa/AjusteManualDialog";
 import { ReconciliacaoDialog } from "@/components/caixa/ReconciliacaoDialog";
-import { ContasEmpresaSection } from "@/components/caixa/ContasEmpresaSection";
+import { SaldosFiatCard } from "@/components/caixa/SaldosFiatCard";
+import { ExposicaoCryptoCard } from "@/components/caixa/ExposicaoCryptoCard";
 // TransacoesEmTransito removido - lógica unificada na Conciliação
 import { subDays, startOfDay, endOfDay, format } from "date-fns";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -921,101 +922,21 @@ export default function Caixa() {
       {/* PageContent - ÚNICO scroll vertical */}
       <div className="flex-1 min-h-0 overflow-y-auto">
         <div className="px-6 pb-6 space-y-6">
-          {/* KPIs + Contas da Empresa na mesma linha */}
-          <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
-            {/* KPI Cards lado a lado */}
-            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:w-[480px]">
-              {/* Saldos FIAT consolidados */}
-              <Card className="bg-card/50 backdrop-blur border-border/50">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Saldos FIAT</CardTitle>
-                  <Wallet className="h-4 w-4 text-emerald-500" />
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {saldosFiat
-                      .filter(s => s.saldo !== 0)
-                      .map((saldoFiat) => (
-                        <div key={saldoFiat.moeda} className="flex items-center justify-between">
-                          <span className="text-sm text-muted-foreground">{saldoFiat.moeda}</span>
-                          <span className="text-lg font-bold text-emerald-400">
-                            {formatCurrency(saldoFiat.saldo, saldoFiat.moeda)}
-                          </span>
-                        </div>
-                      ))}
-                    {saldosFiat.filter(s => s.saldo !== 0).length === 0 && (
-                      <div className="text-sm text-muted-foreground italic">Nenhum saldo FIAT</div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Exposição Crypto com Popover */}
-              <Card className="bg-card/50 backdrop-blur border-border/50">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Exposição Crypto (USD)</CardTitle>
-                  <TrendingUp className="h-4 w-4 text-blue-500" />
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl font-bold text-blue-400">
-                      {formatCurrency(getTotalCryptoUSD(), "USD")}
-                    </span>
-                    {saldosCrypto.length > 0 && (
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 rounded-full hover:bg-blue-500/20"
-                          >
-                            <Info className="h-4 w-4 text-muted-foreground hover:text-blue-400 transition-colors" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent 
-                          className="w-auto min-w-[240px] z-50 bg-popover" 
-                          align="start"
-                          side="right"
-                          sideOffset={8}
-                        >
-                          <div className="space-y-2">
-                            <p className="text-xs text-muted-foreground mb-2">Cotações em tempo real (Binance)</p>
-                            <div className="grid gap-3 grid-cols-1">
-                              {saldosCrypto.map((saldo) => {
-                                const price = cryptoPrices[saldo.coin];
-                                const usdValue = getCryptoUSDValue(saldo.coin, saldo.saldo_coin, saldo.saldo_usd);
-                                return (
-                                  <div key={saldo.coin} className="flex items-center justify-between gap-4 text-sm">
-                                    <div>
-                                      <span className="font-medium">{saldo.coin}</span>
-                                      {price && (
-                                        <div className="text-[10px] text-blue-400">
-                                          ${price.toFixed(price < 1 ? 6 : 2)}
-                                        </div>
-                                      )}
-                                    </div>
-                                    <div className="text-right">
-                                      <div className="font-mono text-xs">{saldo.saldo_coin.toFixed(saldo.saldo_coin < 1 ? 8 : 2)}</div>
-                                      <div className="text-xs text-muted-foreground">
-                                        ≈ {formatCurrency(usdValue, "USD")}
-                                      </div>
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        </PopoverContent>
-                      </Popover>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Contas da Empresa */}
-            <ContasEmpresaSection
+          {/* KPI Cards */}
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 max-w-[960px]">
+            {/* Saldos FIAT - Interactive Card */}
+            <SaldosFiatCard
               caixaParceiroId={caixaParceiroId}
+              formatCurrency={formatCurrency}
+              onDataChanged={fetchData}
+            />
+
+            {/* Exposição Crypto - Interactive Card */}
+            <ExposicaoCryptoCard
+              caixaParceiroId={caixaParceiroId}
+              cryptoPrices={cryptoPrices}
+              getCryptoUSDValue={getCryptoUSDValue}
+              formatCurrency={formatCurrency}
               onDataChanged={fetchData}
             />
           </div>
