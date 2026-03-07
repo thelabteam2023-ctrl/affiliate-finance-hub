@@ -25,7 +25,6 @@ interface ContaFiat {
 
 interface SaldosFiatCardProps {
   caixaParceiroId: string | null;
-  saldosFiat: Array<{ moeda: string; saldo: number }>;
   formatCurrency: (value: number, currency: string) => string;
   onDataChanged: () => void;
 }
