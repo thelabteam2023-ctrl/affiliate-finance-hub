@@ -469,7 +469,7 @@ export function DesvinculacaoEmMassaDialog({
                   );
                 })}
               </div>
-            </ScrollArea>
+            </div>
 
             {/* Footer */}
             <div className="p-3 border-t border-border/50 flex items-center justify-between">
