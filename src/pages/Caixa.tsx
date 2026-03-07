@@ -311,13 +311,31 @@ export default function Caixa() {
         setSaldosFiat([]);
       }
 
-      // Fetch CRYPTO balances (view já filtra por workspace via get_current_workspace())
-      const { data: saldosCryptoData, error: cryptoError } = await supabase
-        .from("v_saldo_caixa_crypto")
-        .select("*");
+      // Fetch CRYPTO balances from wallets linked to Caixa Operacional partner
+      if (caixaParceiro?.id) {
+        const { data: walletsSaldoData, error: cryptoError } = await supabase
+          .from("v_saldo_parceiro_wallets")
+          .select("coin, saldo_coin, saldo_usd")
+          .eq("parceiro_id", caixaParceiro.id);
 
-      if (cryptoError) throw cryptoError;
-      setSaldosCrypto((saldosCryptoData || []) as unknown as SaldoCrypto[]);
+        if (cryptoError) throw cryptoError;
+
+        // Agrupar por coin (pode ter múltiplas wallets com a mesma coin)
+        const cryptoMap: Record<string, { saldo_coin: number; saldo_usd: number }> = {};
+        (walletsSaldoData || []).forEach((row: any) => {
+          const c = row.coin || "USDT";
+          if (!cryptoMap[c]) cryptoMap[c] = { saldo_coin: 0, saldo_usd: 0 };
+          cryptoMap[c].saldo_coin += (row.saldo_coin || 0);
+          cryptoMap[c].saldo_usd += (row.saldo_usd || 0);
+        });
+        setSaldosCrypto(Object.entries(cryptoMap).map(([coin, vals]) => ({ 
+          coin, 
+          saldo_coin: vals.saldo_coin, 
+          saldo_usd: vals.saldo_usd 
+        })));
+      } else {
+        setSaldosCrypto([]);
+      }
 
       // Fetch total bookmaker balance - agregar por moeda
       // Inclui status 'ativo' e 'limitada' (casas com saldo mas operacionalmente limitadas)
