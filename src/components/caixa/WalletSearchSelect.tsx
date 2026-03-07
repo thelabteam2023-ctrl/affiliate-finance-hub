@@ -30,6 +30,7 @@ interface WalletSearchSelectProps {
   onValueChange: (value: string) => void;
   placeholder?: string;
   saldos?: WalletCoinBalance[];
+  usdToBrlRate?: number;
 }
 
 export function WalletSearchSelect({
@@ -38,6 +39,7 @@ export function WalletSearchSelect({
   onValueChange,
   placeholder = "Selecione a wallet",
   saldos = [],
+  usdToBrlRate = 0,
 }: WalletSearchSelectProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
