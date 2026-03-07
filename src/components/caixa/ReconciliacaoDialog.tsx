@@ -471,6 +471,8 @@ export function ReconciliacaoDialog({
                   value={entidadeId}
                   onValueChange={setEntidadeId}
                   placeholder="Selecione..."
+                  saldos={saldosWalletsList}
+                  usdToBrlRate={getRate("USD")}
                 />
               ) : (
                 <Select value={entidadeId} onValueChange={setEntidadeId}>
