@@ -314,12 +314,14 @@ export function getCurrencySymbol(moeda: string): string {
 export function formatCurrency(value: number, moeda: string = "BRL"): string {
   const currencyCode = moeda === "USDT" ? "USD" : moeda;
   const locale = currencyCode === "BRL" ? "pt-BR" : "en-US";
+  // Normalize -0 to 0 to avoid displaying "-R$ 0,00"
+  const safeValue = Object.is(value, -0) ? 0 : value;
   
   try {
     return new Intl.NumberFormat(locale, {
       style: "currency",
       currency: currencyCode,
-    }).format(value);
+    }).format(safeValue);
   } catch {
     // Fallback para moedas não suportadas pelo Intl
     return `${getCurrencySymbol(moeda)} ${value.toFixed(2)}`;
