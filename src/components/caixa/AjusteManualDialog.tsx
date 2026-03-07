@@ -529,7 +529,7 @@ export function AjusteManualDialog({
         impacta_caixa_operacional: tipoDestino === "CAIXA_OPERACIONAL",
         // Campos obrigatórios de auditoria para ajustes
         ajuste_motivo: motivo.trim(),
-        ajuste_direcao: direcao,
+        ajuste_direcao: direcaoFinal,
         // Campos de snapshot multi-moeda
         cotacao: cotacaoSnapshot,
         cotacao_snapshot_at: cotacaoSnapshotAt,
