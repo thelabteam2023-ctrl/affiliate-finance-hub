@@ -126,8 +126,13 @@ export function SaldosFiatCard({ caixaParceiroId, formatCurrency, onDataChanged 
     }
   };
 
-  const totalFiat = saldosFiat.reduce((acc, s) => acc + s.saldo, 0);
-  const mainCurrency = saldosFiat.length > 0 ? saldosFiat[0].moeda : "BRL";
+  // Compute totals from own data
+  const saldosPorMoeda = contas.reduce<Record<string, number>>((acc, c) => {
+    const m = c.moeda || "BRL";
+    acc[m] = (acc[m] || 0) + (c.saldo || 0);
+    return acc;
+  }, {});
+  const saldosFiatComputed = Object.entries(saldosPorMoeda).map(([moeda, saldo]) => ({ moeda, saldo }));
 
   return (
     <>
