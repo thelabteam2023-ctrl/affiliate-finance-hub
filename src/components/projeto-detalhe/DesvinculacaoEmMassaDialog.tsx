@@ -459,7 +459,12 @@ export function DesvinculacaoEmMassaDialog({
                           </Select>
                         </div>
 
-                        {/* Pending warning */}
+                        {/* Blocking warnings */}
+                        {hasTransit && (
+                          <Badge variant="outline" className="text-[10px] flex-shrink-0 border-amber-500/50 text-amber-400">
+                            🔒 Em Trânsito
+                          </Badge>
+                        )}
                         {hasPending && (
                           <Badge variant="destructive" className="text-[10px] flex-shrink-0">
                             <AlertTriangle className="h-3 w-3 mr-1" />
