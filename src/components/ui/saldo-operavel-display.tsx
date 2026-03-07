@@ -110,6 +110,12 @@ export function SaldoOperavelDisplay({
   moeda = "BRL",
   variant = "card",
   className,
+  onSortSaldo,
+  onSortEmAposta,
+  onSortDisponivel,
+  sortSaldo,
+  sortEmAposta,
+  sortDisponivel,
 }: SaldoOperavelDisplayProps) {
   const hasComposition = saldoFreebet > 0 || saldoBonus > 0;
 
