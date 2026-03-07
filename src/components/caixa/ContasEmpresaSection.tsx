@@ -36,6 +36,7 @@ interface WalletCrypto {
   exchange: string | null;
   endereco: string;
   network: string;
+  moedas: string[];
   coin: string;
   saldo_coin: number;
   saldo_usd: number;
@@ -94,18 +95,37 @@ export function ContasEmpresaSection({ caixaParceiroId, onDataChanged }: ContasE
     if (!caixaParceiroId) return;
     setLoading(true);
     try {
-      const { data: contasData } = await supabase
-        .from("v_saldo_parceiro_contas")
-        .select("*")
-        .eq("parceiro_id", caixaParceiroId);
+      const [contasRes, walletsViewRes, walletsDetailRes] = await Promise.all([
+        supabase
+          .from("v_saldo_parceiro_contas")
+          .select("*")
+          .eq("parceiro_id", caixaParceiroId),
+        supabase
+          .from("v_saldo_parceiro_wallets")
+          .select("*")
+          .eq("parceiro_id", caixaParceiroId),
+        supabase
+          .from("wallets_crypto")
+          .select("id, network, moeda")
+          .eq("parceiro_id", caixaParceiroId),
+      ]);
 
-      const { data: walletsData } = await supabase
-        .from("v_saldo_parceiro_wallets")
-        .select("*")
-        .eq("parceiro_id", caixaParceiroId);
+      setContas((contasRes.data || []) as unknown as ContaBancaria[]);
 
-      setContas((contasData || []) as unknown as ContaBancaria[]);
-      setWallets((walletsData || []) as unknown as WalletCrypto[]);
+      // Merge wallet view (saldos) with wallet details (network, moedas)
+      const detailMap = new Map(
+        (walletsDetailRes.data || []).map((d: any) => [d.id, d])
+      );
+      const mergedWallets = (walletsViewRes.data || []).map((w: any) => {
+        const detail = detailMap.get(w.wallet_id);
+        return {
+          ...w,
+          id: w.wallet_id,
+          network: detail?.network || '',
+          moedas: Array.isArray(detail?.moeda) ? detail.moeda : [],
+        };
+      });
+      setWallets(mergedWallets as unknown as WalletCrypto[]);
     } catch (err: any) {
       console.error("Erro ao buscar contas da empresa:", err);
     } finally {
@@ -337,16 +357,28 @@ export function ContasEmpresaSection({ caixaParceiroId, onDataChanged }: ContasE
                       className="flex items-center justify-between p-2.5 rounded-lg bg-muted/30 border border-border/30"
                     >
                       <div className="flex items-center gap-2.5">
-                        <div className="h-8 w-8 rounded-md bg-orange-500/10 flex items-center justify-center">
-                          <Bitcoin className="h-4 w-4 text-orange-500" />
+                        <div className="h-8 w-8 rounded-md bg-primary/10 flex items-center justify-center">
+                          <Bitcoin className="h-4 w-4 text-primary" />
                         </div>
                         <div>
                           <p className="text-sm font-medium">
                             {wallet.exchange?.replace(/-/g, " ").toUpperCase() || "Wallet"}
                           </p>
                           <p className="text-[11px] text-muted-foreground font-mono">
-                            {wallet.endereco.slice(0, 8)}...{wallet.endereco.slice(-6)} ({wallet.network})
+                            {wallet.endereco.slice(0, 8)}...{wallet.endereco.slice(-6)}
                           </p>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            {wallet.network && (
+                              <Badge variant="outline" className="text-[9px] px-1 py-0 h-3.5 uppercase">
+                                {wallet.network}
+                              </Badge>
+                            )}
+                            {wallet.moedas?.map((m: string) => (
+                              <Badge key={m} className="text-[9px] px-1 py-0 h-3.5 bg-primary/20 text-primary border-primary/30">
+                                {m}
+                              </Badge>
+                            ))}
+                          </div>
                         </div>
                       </div>
                       <div className="text-right">
