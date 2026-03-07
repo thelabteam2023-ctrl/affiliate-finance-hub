@@ -107,6 +107,17 @@ export function AjusteManualDialog({
   // Verificar permissão
   const canAccess = isOwnerOrAdmin || isSystemOwner;
 
+  // Contas/Wallets filtradas para o Caixa Operacional (parceiro virtual)
+  const contasCaixa = useMemo(() => {
+    if (!caixaParceiroId) return [];
+    return contas.filter(c => c.parceiro_id === caixaParceiroId);
+  }, [contas, caixaParceiroId]);
+
+  const walletsCaixa = useMemo(() => {
+    if (!caixaParceiroId) return [];
+    return wallets.filter(w => w.parceiro_id === caixaParceiroId);
+  }, [wallets, caixaParceiroId]);
+
   // Moedas disponíveis baseadas na entidade selecionada
   const moedasDisponiveis = useMemo(() => {
     if (tipoDestino === "CAIXA_OPERACIONAL") {
