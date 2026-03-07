@@ -108,7 +108,32 @@ export function AjusteManualDialog({
   // Moedas disponíveis baseadas na entidade selecionada
   const moedasDisponiveis = useMemo(() => {
     if (tipoDestino === "CAIXA_OPERACIONAL") {
-      // Caixa Operacional: todas as moedas FIAT do sistema
+      // If a sub-entity is selected, derive currency from it
+      if (subTipoCaixa === "FIAT" && contaId) {
+        const conta = contas.find(c => c.id === contaId);
+        if (conta) {
+          const currencyInfo = FIAT_CURRENCIES.find(c => c.value === conta.moeda);
+          return [{
+            value: conta.moeda,
+            label: currencyInfo ? `${conta.moeda} - ${currencyInfo.label}` : conta.moeda,
+            symbol: getCurrencySymbol(conta.moeda)
+          }];
+        }
+      }
+      if (subTipoCaixa === "CRYPTO" && walletId) {
+        const wallet = wallets.find(w => w.id === walletId);
+        if (wallet && wallet.moeda.length > 0) {
+          return wallet.moeda.map(m => {
+            const currencyInfo = CRYPTO_CURRENCIES.find(c => c.value === m);
+            return {
+              value: m,
+              label: currencyInfo ? `${m} - ${currencyInfo.label}` : m,
+              symbol: getCurrencySymbol(m)
+            };
+          });
+        }
+      }
+      // Default: all FIAT currencies when no sub-entity selected
       return FIAT_CURRENCIES.map(c => ({ value: c.value, label: `${c.value} - ${c.label}`, symbol: c.symbol }));
     }
     
