@@ -29,6 +29,7 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, AlertTriangle, Scale, TrendingUp, TrendingDown, Minus, Info } from "lucide-react";
 import { WalletSearchSelect, type WalletCoinBalance } from "./WalletSearchSelect";
 import { ContaBancariaSearchSelect, type ContaBancariaOption } from "./ContaBancariaSearchSelect";
+import { BookmakerSearchSelect } from "./BookmakerSearchSelect";
 
 interface ReconciliacaoDialogProps {
   open: boolean;
