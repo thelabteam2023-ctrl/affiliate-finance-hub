@@ -149,6 +149,13 @@ export function ContasEmpresaSection({ caixaParceiroId, onDataChanged }: ContasE
     fetchContas();
   }, [caixaParceiroId]);
 
+  // Auto-refresh when caixa data changes (e.g., after reconciliation adjustments)
+  useEffect(() => {
+    const handler = () => fetchContas();
+    window.addEventListener("lovable:caixa-data-changed", handler);
+    return () => window.removeEventListener("lovable:caixa-data-changed", handler);
+  }, [caixaParceiroId]);
+
   const handleAddConta = async () => {
     if (!caixaParceiroId || !novaConta.titular) {
       toast({ title: "Preencha os campos obrigatórios", variant: "destructive" });
