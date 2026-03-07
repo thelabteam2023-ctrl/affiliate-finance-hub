@@ -376,6 +376,7 @@ export function AjusteManualDialog({
         valor: valorNumerico,
         descricao: `[AJUSTE ${direcao}] ${motivo}`,
         status: "CONFIRMADO",
+        transit_status: "CONFIRMED",
         data_transacao: new Date().toISOString().split("T")[0],
         impacta_caixa_operacional: tipoDestino === "CAIXA_OPERACIONAL",
         // Campos obrigatórios de auditoria para ajustes
@@ -385,6 +386,8 @@ export function AjusteManualDialog({
         cotacao: cotacaoSnapshot,
         cotacao_snapshot_at: cotacaoSnapshotAt,
         valor_usd_referencia: valorBrlRef,
+        // Para wallets crypto: preencher coin e qtd_coin (exigido pela view v_saldo_parceiro_wallets)
+        ...(tipoDestino === "WALLET" && isCrypto ? { coin: moeda, qtd_coin: valorNumerico } : {}),
         auditoria_metadata: {
           registrado_em: new Date().toISOString(),
           tipo_destino: tipoDestino,
