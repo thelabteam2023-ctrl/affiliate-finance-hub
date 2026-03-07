@@ -299,6 +299,7 @@ export function AjusteManualDialog({
   const resetForm = () => {
     setDirecao("ENTRADA");
     setTipoDestino("CAIXA_OPERACIONAL");
+    setSubTipoCaixa("");
     setMoeda("BRL");
     setValor("");
     setValorDisplay("");
