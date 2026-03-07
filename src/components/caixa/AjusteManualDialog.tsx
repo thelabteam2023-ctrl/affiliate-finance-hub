@@ -29,6 +29,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, AlertTriangle, TrendingDown, TrendingUp, Wrench, Info } from "lucide-react";
 import { WalletSearchSelect } from "./WalletSearchSelect";
+import { ContaBancariaSearchSelect, type ContaBancariaOption } from "./ContaBancariaSearchSelect";
 
 interface AjusteManualDialogProps {
   open: boolean;
@@ -50,7 +51,9 @@ interface ContaBancaria {
   banco: string;
   titular: string;
   parceiro_id: string;
+  parceiro_nome: string;
   moeda: string;
+  saldo: number | null;
 }
 
 interface WalletCrypto {
@@ -63,6 +66,8 @@ interface WalletCrypto {
 }
 
 type TipoDestino = "CAIXA_OPERACIONAL" | "BOOKMAKER" | "CONTA_BANCARIA" | "WALLET";
+type SubTipoCaixa = "FIAT" | "CRYPTO" | "";
+
 
 export function AjusteManualDialog({
   open,
