@@ -90,7 +90,7 @@ import { SaldoOperavelDisplay } from "@/components/ui/saldo-operavel-display";
 import { usePasswordDecryption } from "@/hooks/usePasswordDecryption";
 import { LazyPasswordField } from "@/components/parceiros/LazyPasswordField";
 
-type VinculoSortMode = "alpha" | "newest" | "oldest";
+type VinculoSortMode = "alpha" | "newest" | "oldest" | "apostas_desc" | "apostas_asc" | "saldo_desc" | "saldo_asc" | "em_aposta_desc" | "em_aposta_asc" | "disponivel_desc" | "disponivel_asc";
 
 interface ProjetoVinculosTabProps {
   projetoId: string;
