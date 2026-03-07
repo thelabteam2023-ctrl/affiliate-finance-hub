@@ -100,6 +100,7 @@ export function DesvinculacaoEmMassaDialog({
   const selectedCount = selectedIds.length;
 
   const toggleSelect = (vinculo: Vinculo) => {
+    if (vinculo.has_pending_transactions) return; // Block transit houses
     setSelectedMap(prev => {
       const copy = { ...prev };
       if (copy[vinculo.id]) {
@@ -109,7 +110,7 @@ export function DesvinculacaoEmMassaDialog({
           id: vinculo.id,
           saldoRealInput: "",
           statusFinal: "ativo",
-          hasPendingBets: false, // will be checked on confirm
+          hasPendingBets: false,
         };
       }
       return copy;
