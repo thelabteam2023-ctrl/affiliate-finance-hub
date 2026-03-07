@@ -102,6 +102,8 @@ export function AjusteManualDialog({
   const [wallets, setWallets] = useState<WalletCrypto[]>([]);
   const [saldosContas, setSaldosContas] = useState<Record<string, number>>({});
   const [saldosWallets, setSaldosWallets] = useState<WalletCoinBalance[]>([]);
+  const [saldosCaixaFiat, setSaldosCaixaFiat] = useState<Record<string, number>>({});
+  const [saldosCaixaCrypto, setSaldosCaixaCrypto] = useState<number>(0);
   const [caixaParceiroId, setCaixaParceiroId] = useState<string | null>(null);
 
   // Verificar permissão
@@ -239,9 +241,13 @@ export function AjusteManualDialog({
         const walletSaldos = saldosWallets.filter(s => s.wallet_id === walletId && s.coin === moeda);
         return walletSaldos.length > 0 ? walletSaldos[0].saldo_coin : 0;
       }
+      // Aggregate mode: no specific conta/wallet selected
+      if (!subTipoCaixa) {
+        return saldosCaixaFiat[moeda] ?? 0;
+      }
     }
     return 0;
-  }, [tipoDestino, bookmakerId, contaId, walletId, moeda, subTipoCaixa, bookmakers, saldosContas, saldosWallets]);
+  }, [tipoDestino, bookmakerId, contaId, walletId, moeda, subTipoCaixa, bookmakers, saldosContas, saldosWallets, saldosCaixaFiat]);
 
   // Calcular diferença e direção automaticamente baseado no saldo informado
   const reconciliacaoCalc = useMemo(() => {
@@ -262,9 +268,11 @@ export function AjusteManualDialog({
     if (tipoDestino === "CAIXA_OPERACIONAL") {
       if (subTipoCaixa === "FIAT") return !!contaId;
       if (subTipoCaixa === "CRYPTO") return !!walletId;
+      // Aggregate mode: always ready when moeda is selected
+      return !!moeda;
     }
     return false;
-  }, [tipoDestino, bookmakerId, contaId, walletId, subTipoCaixa]);
+  }, [tipoDestino, bookmakerId, contaId, walletId, subTipoCaixa, moeda]);
 
   useEffect(() => {
     if (open) {
@@ -353,6 +361,18 @@ export function AjusteManualDialog({
         saldo_usd: s.saldo_usd ?? 0,
       })));
       setCaixaParceiroId(caixaParceiroRes.data?.id ?? null);
+
+      // Fetch aggregate caixa saldos (FIAT by currency, CRYPTO total USD)
+      const [fiatRes, cryptoRes] = await Promise.all([
+        supabase.from("v_saldo_caixa_fiat").select("moeda, saldo"),
+        supabase.from("v_saldo_caixa_crypto").select("saldo_usd"),
+      ]);
+      const fiatMap: Record<string, number> = {};
+      (fiatRes.data || []).forEach((s: any) => {
+        if (s.moeda) fiatMap[s.moeda] = s.saldo ?? 0;
+      });
+      setSaldosCaixaFiat(fiatMap);
+      setSaldosCaixaCrypto((cryptoRes.data || []).reduce((sum: number, s: any) => sum + (s.saldo_usd ?? 0), 0));
 
       const mappedBookmakers: Bookmaker[] = (bookmakersRes.data || []).map((bk: any) => ({
         id: bk.id,
@@ -445,7 +465,7 @@ export function AjusteManualDialog({
         const wallet = wallets.find(w => w.id === walletId);
         return wallet ? `Caixa – ${wallet.exchange} (${wallet.endereco.slice(0, 8)}...)` : "Caixa Operacional";
       }
-      return "Caixa Operacional";
+      return `Caixa Operacional (${moeda})`;
     }
     if (tipoDestino === "BOOKMAKER") {
       const bk = bookmakers.find(b => b.id === bookmakerId);
