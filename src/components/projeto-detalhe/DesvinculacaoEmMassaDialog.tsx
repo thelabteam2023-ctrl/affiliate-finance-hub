@@ -347,8 +347,8 @@ export function DesvinculacaoEmMassaDialog({
         {step === "select" && (
           <div className="flex flex-col flex-1 overflow-hidden">
             {/* Search + Actions */}
-            <div className="p-3 border-b border-border/50 flex items-center gap-2">
-              <div className="relative flex-1">
+            <div className="p-3 border-b border-border/50 flex items-center gap-2 flex-wrap">
+              <div className="relative flex-1 min-w-[160px]">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Buscar casa ou parceiro..."
@@ -357,6 +357,18 @@ export function DesvinculacaoEmMassaDialog({
                   className="pl-9 h-9"
                 />
               </div>
+              <Select value={parceiroFilter} onValueChange={setParceiroFilter}>
+                <SelectTrigger className="h-9 w-[180px] text-xs">
+                  <User className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
+                  <SelectValue placeholder="Parceiro" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">Todos os parceiros</SelectItem>
+                  {parceirosUnicos.map(([key, label]) => (
+                    <SelectItem key={key} value={key}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Button variant="outline" size="sm" onClick={selectedCount === filteredVinculos.length ? deselectAll : selectAll}>
                 {selectedCount === filteredVinculos.length ? "Desmarcar" : "Selecionar"} Todos
               </Button>
