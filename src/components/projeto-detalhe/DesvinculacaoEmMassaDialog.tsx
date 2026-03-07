@@ -316,6 +316,7 @@ export function DesvinculacaoEmMassaDialog({
   const handleClose = () => {
     if (processing) return;
     setSearchTerm("");
+    setParceiroFilter("__all__");
     setSelectedMap({});
     setStep("select");
     setResults([]);
