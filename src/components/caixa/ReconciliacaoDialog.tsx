@@ -498,9 +498,29 @@ export function ReconciliacaoDialog({
       const { error } = await supabase.from("cash_ledger").insert([transactionData] as any);
       if (error) throw error;
 
+      // Update reconciled_at on the target entity
+      const now = new Date().toISOString();
+      try {
+        if (tipoEntidade === "BOOKMAKER" && entidadeId) {
+          await supabase.from("bookmakers").update({ reconciled_at: now } as any).eq("id", entidadeId);
+        } else if (tipoEntidade === "CONTA_BANCARIA" && entidadeId) {
+          await supabase.from("contas_bancarias").update({ reconciled_at: now } as any).eq("id", entidadeId);
+        } else if (tipoEntidade === "WALLET" && entidadeId) {
+          await supabase.from("wallets_crypto").update({ reconciled_at: now } as any).eq("id", entidadeId);
+        } else if (tipoEntidade === "CAIXA_OPERACIONAL") {
+          if (subTipoCaixa === "FIAT" && contaId) {
+            await supabase.from("contas_bancarias").update({ reconciled_at: now } as any).eq("id", contaId);
+          } else if (subTipoCaixa === "CRYPTO" && walletId) {
+            await supabase.from("wallets_crypto").update({ reconciled_at: now } as any).eq("id", walletId);
+          }
+        }
+      } catch (reconciledErr) {
+        console.warn("[Reconciliação] Falha ao atualizar reconciled_at:", reconciledErr);
+      }
+
       toast({
         title: "Reconciliação registrada",
-        description: `Ajuste de ${getCurrencySymbol(moeda)} ${valorAjuste.toFixed(2)} (${direcao === "ENTRADA" ? "+" : "-"}) em ${getEntidadeNome()} registrado com sucesso.`,
+        description: `Ajuste de ${getCurrencySymbol(moeda)} ${valorAjuste.toFixed(isCryptoMoedaSelected ? 8 : 2)} (${direcao === "ENTRADA" ? "+" : "-"}) em ${getEntidadeNome()} registrado com sucesso.`,
       });
 
       handleClose();
