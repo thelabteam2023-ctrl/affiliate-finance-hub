@@ -545,6 +545,12 @@ export function AjusteManualDialog({
           cotacao_fonte: moeda !== "BRL" ? "ExchangeRatesContext" : null,
           cotacao_timestamp: lastUpdate?.toISOString(),
           user_agent: navigator.userAgent,
+          ...(modoReconciliacao ? {
+            tipo_reconciliacao: "RECONCILIACAO_VIA_AJUSTE",
+            saldo_sistema_anterior: saldoSistemaAtual,
+            saldo_real_informado: parseFloat(valor) || 0,
+            diferenca: reconciliacaoCalc?.diferenca,
+          } : {}),
         },
       };
 
