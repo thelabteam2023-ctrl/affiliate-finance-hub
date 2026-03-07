@@ -797,7 +797,7 @@ export function ReconciliacaoDialog({
                 {Math.abs(diferenca) >= 0.01 && (
                   <p className="text-xs text-muted-foreground mt-1">
                     Será criado um lançamento de <strong>{diferenca > 0 ? "ENTRADA" : "SAÍDA"}</strong> de{" "}
-                    <strong>{currencySymbol} {Math.abs(diferenca).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                    <strong>{currencySymbol} {Math.abs(diferenca).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: isCryptoMoedaSelected ? 8 : 2 })}</strong>
                   </p>
                 )}
                 {Math.abs(diferenca) < 0.01 && (
