@@ -220,6 +220,55 @@ export function AjusteManualDialog({
     return getRate(moeda);
   }, [moeda, getRate]);
 
+  // Saldo atual no sistema para a entidade+moeda selecionada (usado no modo reconciliação)
+  const saldoSistemaAtual = useMemo(() => {
+    if (tipoDestino === "BOOKMAKER" && bookmakerId) {
+      const bk = bookmakers.find(b => b.id === bookmakerId);
+      return bk?.saldo_atual ?? 0;
+    }
+    if (tipoDestino === "CONTA_BANCARIA" && contaId) {
+      return saldosContas[contaId] ?? 0;
+    }
+    if (tipoDestino === "WALLET" && walletId && moeda) {
+      const walletSaldos = saldosWallets.filter(s => s.wallet_id === walletId && s.coin === moeda);
+      return walletSaldos.length > 0 ? walletSaldos[0].saldo_coin : 0;
+    }
+    if (tipoDestino === "CAIXA_OPERACIONAL") {
+      if (subTipoCaixa === "FIAT" && contaId) {
+        return saldosContas[contaId] ?? 0;
+      }
+      if (subTipoCaixa === "CRYPTO" && walletId && moeda) {
+        const walletSaldos = saldosWallets.filter(s => s.wallet_id === walletId && s.coin === moeda);
+        return walletSaldos.length > 0 ? walletSaldos[0].saldo_coin : 0;
+      }
+    }
+    return 0;
+  }, [tipoDestino, bookmakerId, contaId, walletId, moeda, subTipoCaixa, bookmakers, saldosContas, saldosWallets]);
+
+  // No modo reconciliação: calcular diferença e direção automaticamente
+  const reconciliacaoCalc = useMemo(() => {
+    if (!modoReconciliacao) return null;
+    const saldoInformado = parseFloat(valor) || 0;
+    const diff = saldoInformado - saldoSistemaAtual;
+    return {
+      diferenca: diff,
+      direcaoCalculada: diff >= 0 ? "ENTRADA" as const : "SAIDA" as const,
+      valorAjuste: Math.abs(diff),
+    };
+  }, [modoReconciliacao, valor, saldoSistemaAtual]);
+
+  // Verificar se a entidade selecionada permite modo reconciliação
+  const entidadeSelecionada = useMemo(() => {
+    if (tipoDestino === "BOOKMAKER") return !!bookmakerId;
+    if (tipoDestino === "CONTA_BANCARIA") return !!contaId;
+    if (tipoDestino === "WALLET") return !!walletId;
+    if (tipoDestino === "CAIXA_OPERACIONAL") {
+      if (subTipoCaixa === "FIAT") return !!contaId;
+      if (subTipoCaixa === "CRYPTO") return !!walletId;
+    }
+    return false;
+  }, [tipoDestino, bookmakerId, contaId, walletId, subTipoCaixa]);
+
   useEffect(() => {
     if (open) {
       fetchData();
