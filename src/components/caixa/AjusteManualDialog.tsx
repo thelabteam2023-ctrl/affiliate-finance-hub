@@ -203,7 +203,7 @@ export function AjusteManualDialog({
       // PROTEÇÃO DE PARCEIROS INATIVOS:
       // Buscar bookmakers, contas e wallets apenas de PARCEIROS ATIVOS
       // O banco de dados também valida via trigger, mas a UI deve prevenir a seleção
-      const [bookmakersRes, contasRes, walletsRes] = await Promise.all([
+      const [bookmakersRes, contasRes, walletsRes, saldosContasRes] = await Promise.all([
         supabase
           .from("bookmakers")
           .select(`
@@ -215,7 +215,6 @@ export function AjusteManualDialog({
             parceiros!inner(nome, status)
           `)
           .in("status", ["ativo", "limitada"])
-          // CRÍTICO: Apenas bookmakers de parceiros ATIVOS
           .eq("parceiros.status", "ativo")
           .order("nome"),
         supabase
@@ -226,9 +225,8 @@ export function AjusteManualDialog({
             titular, 
             parceiro_id, 
             moeda,
-            parceiros!inner(status)
+            parceiros!inner(nome, status)
           `)
-          // CRÍTICO: Apenas contas de parceiros ATIVOS
           .eq("parceiros.status", "ativo")
           .order("banco"),
         supabase
@@ -241,10 +239,19 @@ export function AjusteManualDialog({
             moeda,
             parceiros!inner(nome, status)
           `)
-          // CRÍTICO: Apenas wallets de parceiros ATIVOS
           .eq("parceiros.status", "ativo")
           .order("exchange"),
+        supabase
+          .from("v_saldo_parceiro_contas")
+          .select("conta_id, saldo"),
       ]);
+
+      // Build saldo map for contas
+      const saldoMap: Record<string, number> = {};
+      (saldosContasRes.data || []).forEach((s: any) => {
+        if (s.conta_id) saldoMap[s.conta_id] = s.saldo ?? 0;
+      });
+      setSaldosContas(saldoMap);
 
       const mappedBookmakers: Bookmaker[] = (bookmakersRes.data || []).map((bk: any) => ({
         id: bk.id,
@@ -260,7 +267,9 @@ export function AjusteManualDialog({
         banco: c.banco,
         titular: c.titular,
         parceiro_id: c.parceiro_id,
+        parceiro_nome: c.parceiros?.nome || "",
         moeda: c.moeda || "BRL",
+        saldo: saldoMap[c.id] ?? null,
       }));
 
       const mappedWallets: WalletCrypto[] = (walletsRes.data || []).map((w: any) => ({
