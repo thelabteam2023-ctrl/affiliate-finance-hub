@@ -1655,6 +1655,17 @@ export function CaixaTransacaoDialog({
         parceiro_id: w.parceiro_id,
         moeda: w.moeda
       })));
+      
+      // Fetch caixa operacional partner ID
+      const { data: caixaParceiro } = await supabase
+        .from("parceiros")
+        .select("id")
+        .eq("is_caixa_operacional", true)
+        .maybeSingle();
+      
+      if (caixaParceiro) {
+        setCaixaParceiroId(caixaParceiro.id);
+      }
     } catch (error) {
       console.error("Erro ao carregar contas e wallets:", error);
     }
