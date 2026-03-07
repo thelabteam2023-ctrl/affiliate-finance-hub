@@ -311,7 +311,7 @@ export function DesvinculacaoEmMassaDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-2xl max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
+      <DialogContent className="sm:max-w-4xl max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
         <DialogHeader className="p-4 pb-3 border-b border-border/50">
           <DialogTitle className="flex items-center gap-2 text-base">
             <Link2Off className="h-5 w-5 text-destructive" />
