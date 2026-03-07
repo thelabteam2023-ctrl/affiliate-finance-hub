@@ -285,7 +285,7 @@ export function AjusteManualDialog({
           .select("conta_id, saldo"),
         supabase
           .from("v_saldo_parceiro_wallets")
-          .select("wallet_id, coin, saldo_coin"),
+          .select("wallet_id, coin, saldo_coin, saldo_usd"),
         supabase
           .from("parceiros")
           .select("id")
