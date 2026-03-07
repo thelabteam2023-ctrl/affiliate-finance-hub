@@ -540,14 +540,15 @@ export function AjusteManualDialog({
       };
 
       // Definir origem/destino baseado na direção e tipo
+      // CRITICAL: Para CAIXA_OPERACIONAL, NÃO definir ambos origem_tipo e destino_tipo
+      // como CAIXA_OPERACIONAL, pois a view v_saldo_caixa_fiat usa CASE WHEN e
+      // sempre pegaria o primeiro match (destino_tipo), ignorando a direção.
       if (direcaoFinal === "ENTRADA") {
-        // Entrada: origem é CAIXA_OPERACIONAL (ajuste), destino é a entidade
-        transactionData.origem_tipo = "CAIXA_OPERACIONAL";
-        
+        // Entrada: dinheiro ENTRA no caixa/entidade → destino_tipo = entidade
         switch (tipoDestino) {
           case "CAIXA_OPERACIONAL":
+            transactionData.origem_tipo = "AJUSTE";
             transactionData.destino_tipo = "CAIXA_OPERACIONAL";
-            // Sub-entity: link specific account/wallet
             if (subTipoCaixa === "FIAT" && contaId) {
               transactionData.destino_conta_bancaria_id = contaId;
               transactionData.moeda_destino = moeda;
@@ -560,19 +561,21 @@ export function AjusteManualDialog({
             }
             break;
           case "BOOKMAKER":
+            transactionData.origem_tipo = "CAIXA_OPERACIONAL";
             transactionData.destino_tipo = "BOOKMAKER";
             transactionData.destino_bookmaker_id = bookmakerId;
-            // Valor na moeda da casa
             transactionData.valor_destino = valorNumerico;
             transactionData.moeda_destino = moeda;
             break;
           case "CONTA_BANCARIA":
+            transactionData.origem_tipo = "CAIXA_OPERACIONAL";
             transactionData.destino_tipo = "PARCEIRO_CONTA";
             transactionData.destino_conta_bancaria_id = contaId;
             transactionData.valor_destino = valorNumerico;
             transactionData.moeda_destino = moeda;
             break;
           case "WALLET":
+            transactionData.origem_tipo = "CAIXA_OPERACIONAL";
             transactionData.destino_tipo = "PARCEIRO_WALLET";
             transactionData.destino_wallet_id = walletId;
             transactionData.valor_destino = valorNumerico;
@@ -580,13 +583,11 @@ export function AjusteManualDialog({
             break;
         }
       } else {
-        // Saída: origem é a entidade, destino é CAIXA_OPERACIONAL (ajuste)
-        transactionData.destino_tipo = "CAIXA_OPERACIONAL";
-        
+        // Saída: dinheiro SAI do caixa/entidade → origem_tipo = entidade
         switch (tipoDestino) {
           case "CAIXA_OPERACIONAL":
             transactionData.origem_tipo = "CAIXA_OPERACIONAL";
-            // Sub-entity: link specific account/wallet
+            transactionData.destino_tipo = "AJUSTE";
             if (subTipoCaixa === "FIAT" && contaId) {
               transactionData.origem_conta_bancaria_id = contaId;
               transactionData.moeda_origem = moeda;
@@ -599,18 +600,21 @@ export function AjusteManualDialog({
             }
             break;
           case "BOOKMAKER":
+            transactionData.destino_tipo = "CAIXA_OPERACIONAL";
             transactionData.origem_tipo = "BOOKMAKER";
             transactionData.origem_bookmaker_id = bookmakerId;
             transactionData.valor_origem = valorNumerico;
             transactionData.moeda_origem = moeda;
             break;
           case "CONTA_BANCARIA":
+            transactionData.destino_tipo = "CAIXA_OPERACIONAL";
             transactionData.origem_tipo = "PARCEIRO_CONTA";
             transactionData.origem_conta_bancaria_id = contaId;
             transactionData.valor_origem = valorNumerico;
             transactionData.moeda_origem = moeda;
             break;
           case "WALLET":
+            transactionData.destino_tipo = "CAIXA_OPERACIONAL";
             transactionData.origem_tipo = "PARCEIRO_WALLET";
             transactionData.origem_wallet_id = walletId;
             transactionData.valor_origem = valorNumerico;
@@ -631,6 +635,10 @@ export function AjusteManualDialog({
       
       // Disparar evento para atualizar UI imediatamente
       dispatchCaixaDataChanged();
+      
+      // Delayed refetch para garantir que as views agregadas processaram o novo registro
+      setTimeout(() => dispatchCaixaDataChanged(), 600);
+      setTimeout(() => dispatchCaixaDataChanged(), 2000);
       
       onSuccess();
     } catch (error: any) {

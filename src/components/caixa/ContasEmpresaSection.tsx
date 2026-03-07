@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -147,6 +147,13 @@ export function ContasEmpresaSection({ caixaParceiroId, onDataChanged }: ContasE
 
   useEffect(() => {
     fetchContas();
+  }, [caixaParceiroId]);
+
+  // Auto-refresh when caixa data changes (e.g., after reconciliation adjustments)
+  useEffect(() => {
+    const handler = () => fetchContas();
+    window.addEventListener("lovable:caixa-data-changed", handler);
+    return () => window.removeEventListener("lovable:caixa-data-changed", handler);
   }, [caixaParceiroId]);
 
   const handleAddConta = async () => {
@@ -358,8 +365,8 @@ export function ContasEmpresaSection({ caixaParceiroId, onDataChanged }: ContasE
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-semibold">
-                          {getCurrencySymbol(conta.moeda)} {formatCurrencyValue(conta.saldo || 0, conta.moeda as any)}
-                        </p>
+                           {formatCurrencyValue(conta.saldo || 0, conta.moeda as any)}
+                         </p>
                         <p className="text-[10px] text-muted-foreground">{conta.moeda}</p>
                       </div>
                     </div>
