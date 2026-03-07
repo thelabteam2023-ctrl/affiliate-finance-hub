@@ -182,6 +182,13 @@ export function ReconciliacaoDialog({
         supabase.from("v_saldo_parceiro_wallets").select("wallet_id, coin, saldo_coin, saldo_usd"),
       ]);
 
+      // Map saldos contas first (needed for conta mapping)
+      const saldosMap: Record<string, number> = {};
+      (saldosContasRes.data || []).forEach((s: any) => {
+        saldosMap[s.conta_id] = s.saldo || 0;
+      });
+      setSaldosContas(saldosMap);
+
       setBookmakers((bookmakersRes.data || []).map((bk: any) => ({
         id: bk.id, nome: bk.nome, saldo_atual: bk.saldo_atual || 0,
         moeda: bk.moeda || "BRL", parceiro_id: bk.parceiro_id,
@@ -194,20 +201,6 @@ export function ReconciliacaoDialog({
         moeda: c.moeda || "BRL", saldo: saldosMap[c.id] ?? null,
         reconciled_at: c.reconciled_at,
       })));
-
-      setWallets((walletsRes.data || []).map((w: any) => ({
-        id: w.id, exchange: w.exchange, endereco: w.endereco,
-        parceiro_id: w.parceiro_id, parceiro_nome: w.parceiros?.nome,
-        moeda: Array.isArray(w.moeda) ? w.moeda : ["USDT"],
-        reconciled_at: w.reconciled_at,
-      })));
-
-      // Map saldos contas
-      const saldosMap: Record<string, number> = {};
-      (saldosContasRes.data || []).forEach((s: any) => {
-        saldosMap[s.conta_id] = s.saldo || 0;
-      });
-      setSaldosContas(saldosMap);
 
       // Map saldos wallets (by wallet_id + coin)
       const walletsMap: Record<string, Record<string, number>> = {};
