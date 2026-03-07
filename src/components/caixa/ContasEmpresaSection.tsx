@@ -95,18 +95,37 @@ export function ContasEmpresaSection({ caixaParceiroId, onDataChanged }: ContasE
     if (!caixaParceiroId) return;
     setLoading(true);
     try {
-      const { data: contasData } = await supabase
-        .from("v_saldo_parceiro_contas")
-        .select("*")
-        .eq("parceiro_id", caixaParceiroId);
+      const [contasRes, walletsViewRes, walletsDetailRes] = await Promise.all([
+        supabase
+          .from("v_saldo_parceiro_contas")
+          .select("*")
+          .eq("parceiro_id", caixaParceiroId),
+        supabase
+          .from("v_saldo_parceiro_wallets")
+          .select("*")
+          .eq("parceiro_id", caixaParceiroId),
+        supabase
+          .from("wallets_crypto")
+          .select("id, network, moeda")
+          .eq("parceiro_id", caixaParceiroId),
+      ]);
 
-      const { data: walletsData } = await supabase
-        .from("v_saldo_parceiro_wallets")
-        .select("*")
-        .eq("parceiro_id", caixaParceiroId);
+      setContas((contasRes.data || []) as unknown as ContaBancaria[]);
 
-      setContas((contasData || []) as unknown as ContaBancaria[]);
-      setWallets((walletsData || []) as unknown as WalletCrypto[]);
+      // Merge wallet view (saldos) with wallet details (network, moedas)
+      const detailMap = new Map(
+        (walletsDetailRes.data || []).map((d: any) => [d.id, d])
+      );
+      const mergedWallets = (walletsViewRes.data || []).map((w: any) => {
+        const detail = detailMap.get(w.wallet_id);
+        return {
+          ...w,
+          id: w.wallet_id,
+          network: detail?.network || '',
+          moedas: Array.isArray(detail?.moeda) ? detail.moeda : [],
+        };
+      });
+      setWallets(mergedWallets as unknown as WalletCrypto[]);
     } catch (err: any) {
       console.error("Erro ao buscar contas da empresa:", err);
     } finally {
