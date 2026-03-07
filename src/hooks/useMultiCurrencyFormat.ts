@@ -50,6 +50,8 @@ export function formatCurrencyDynamic(
   options?: CurrencyFormatOptions
 ): string {
   const { showSymbol = true, decimals = 2, compact = false } = options || {};
+  // Normalize floating-point noise
+  const safeValor = Math.abs(valor) < 0.005 ? 0 : valor;
   
   const symbol = CURRENCY_SYMBOLS[moeda as SupportedCurrency] || moeda;
   

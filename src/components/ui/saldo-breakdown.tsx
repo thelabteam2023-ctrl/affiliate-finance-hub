@@ -25,7 +25,8 @@ const CURRENCY_SYMBOLS: Record<string, string> = {
 
 export function formatCurrencyWithSymbol(value: number, moeda: string = "BRL"): string {
   const symbol = CURRENCY_SYMBOLS[moeda] || moeda;
-  return `${symbol} ${value.toFixed(2)}`;
+  const safeValue = Math.abs(value) < 0.005 ? 0 : value;
+  return `${symbol} ${safeValue.toFixed(2)}`;
 }
 
 export function SaldoBreakdown({
