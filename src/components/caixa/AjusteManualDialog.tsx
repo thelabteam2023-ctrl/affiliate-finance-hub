@@ -760,17 +760,16 @@ export function AjusteManualDialog({
             {/* Sub-seleção Caixa Operacional: tipo de ativo */}
             {tipoDestino === "CAIXA_OPERACIONAL" && (
               <div className="space-y-2">
-                <Label>Vincular a (opcional)</Label>
-                <Select value={subTipoCaixa || "NONE"} onValueChange={(v) => {
-                  setSubTipoCaixa(v === "NONE" ? "" : v as SubTipoCaixa);
+                <Label>Vincular a</Label>
+                <Select value={subTipoCaixa || ""} onValueChange={(v) => {
+                  setSubTipoCaixa(v as SubTipoCaixa);
                   setContaId("");
                   setWalletId("");
                 }}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Nenhum (ajuste geral)" />
+                    <SelectValue placeholder="Selecione o tipo de ativo" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="NONE">Nenhum (ajuste geral)</SelectItem>
                     <SelectItem value="FIAT">Conta Bancária</SelectItem>
                     <SelectItem value="CRYPTO">Wallet Crypto</SelectItem>
                   </SelectContent>
