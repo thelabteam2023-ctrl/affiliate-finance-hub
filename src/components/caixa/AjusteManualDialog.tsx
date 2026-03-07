@@ -500,9 +500,7 @@ export function AjusteManualDialog({
       const cotacaoSnapshotAt = moeda !== "BRL" ? new Date().toISOString() : null;
       const valorBrlRef = moeda !== "BRL" ? valorNumerico * cotacaoAtual : null;
 
-      const descricao = modoReconciliacao
-        ? `[RECONCILIAÇÃO ${direcaoFinal}] ${motivo} | Saldo sistema: ${saldoSistemaAtual.toFixed(2)} → Saldo real: ${(parseFloat(valor) || 0).toFixed(2)} | Diferença: ${reconciliacaoCalc?.diferenca.toFixed(2)}`
-        : `[AJUSTE ${direcaoFinal}] ${motivo}`;
+      const descricao = `[RECONCILIAÇÃO ${direcaoFinal}] ${motivo} | Saldo sistema: ${saldoSistemaAtual.toFixed(2)} → Saldo real: ${(parseFloat(valor) || 0).toFixed(2)} | Diferença: ${reconciliacaoCalc.diferenca.toFixed(2)}`;
 
       // Construir dados da transação com campos de auditoria completos
       const transactionData: Record<string, any> = {
