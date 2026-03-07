@@ -356,6 +356,18 @@ export function AjusteManualDialog({
       })));
       setCaixaParceiroId(caixaParceiroRes.data?.id ?? null);
 
+      // Fetch aggregate caixa saldos (FIAT by currency, CRYPTO total USD)
+      const [fiatRes, cryptoRes] = await Promise.all([
+        supabase.from("v_saldo_caixa_fiat").select("moeda, saldo"),
+        supabase.from("v_saldo_caixa_crypto").select("saldo_usd"),
+      ]);
+      const fiatMap: Record<string, number> = {};
+      (fiatRes.data || []).forEach((s: any) => {
+        if (s.moeda) fiatMap[s.moeda] = s.saldo ?? 0;
+      });
+      setSaldosCaixaFiat(fiatMap);
+      setSaldosCaixaCrypto((cryptoRes.data || []).reduce((sum: number, s: any) => sum + (s.saldo_usd ?? 0), 0));
+
       const mappedBookmakers: Bookmaker[] = (bookmakersRes.data || []).map((bk: any) => ({
         id: bk.id,
         nome: bk.nome,
