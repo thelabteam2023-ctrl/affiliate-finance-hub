@@ -491,6 +491,7 @@ export function AjusteManualDialog({
   // Validar se pode submeter
   const canSubmit = (): boolean => {
     if (!motivo.trim()) return false;
+    if (tipoDestino === "CAIXA_OPERACIONAL" && !subTipoCaixa) return false;
     if (tipoDestino === "CAIXA_OPERACIONAL" && subTipoCaixa === "FIAT" && !contaId) return false;
     if (tipoDestino === "CAIXA_OPERACIONAL" && subTipoCaixa === "CRYPTO" && !walletId) return false;
     if (tipoDestino === "BOOKMAKER" && !bookmakerId) return false;
