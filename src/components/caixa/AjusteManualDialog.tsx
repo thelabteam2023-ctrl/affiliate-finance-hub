@@ -863,7 +863,7 @@ export function AjusteManualDialog({
             </div>
 
             {/* Saldo atual do sistema (modo reconciliação) */}
-            {modoReconciliacao && entidadeSelecionada && (
+            {entidadeSelecionada && (
               <div className="rounded-lg border border-border/50 bg-muted/30 p-3">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">Saldo no Sistema</span>
