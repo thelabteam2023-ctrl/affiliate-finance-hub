@@ -29,7 +29,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, AlertTriangle, TrendingDown, TrendingUp, Wrench, Info } from "lucide-react";
-import { WalletSearchSelect } from "./WalletSearchSelect";
+import { WalletSearchSelect, type WalletCoinBalance } from "./WalletSearchSelect";
 import { ContaBancariaSearchSelect, type ContaBancariaOption } from "./ContaBancariaSearchSelect";
 
 interface AjusteManualDialogProps {
