@@ -465,7 +465,7 @@ export function AjusteManualDialog({
         const wallet = wallets.find(w => w.id === walletId);
         return wallet ? `Caixa – ${wallet.exchange} (${wallet.endereco.slice(0, 8)}...)` : "Caixa Operacional";
       }
-      return "Caixa Operacional";
+      return `Caixa Operacional (${moeda})`;
     }
     if (tipoDestino === "BOOKMAKER") {
       const bk = bookmakers.find(b => b.id === bookmakerId);
