@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Building2, Plus, RefreshCw, Landmark, Bitcoin } from "lucide-react";
+import { Building2, Plus, RefreshCw, Landmark, Bitcoin, Copy, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrencyValue, getCurrencySymbol } from "@/types/currency";
 import { useExchangeRates } from "@/contexts/ExchangeRatesContext";
@@ -67,6 +67,18 @@ export function ContasEmpresaSection({ caixaParceiroId, onDataChanged }: ContasE
   const [loading, setLoading] = useState(false);
   const [addContaOpen, setAddContaOpen] = useState(false);
   const [addWalletOpen, setAddWalletOpen] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const copyToClipboard = async (text: string, id: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedId(id);
+      toast({ title: "Copiado!", description: "Copiado para a área de transferência." });
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch {
+      toast({ title: "Erro ao copiar", variant: "destructive" });
+    }
+  };
 
   // Form state - Conta Bancária (same fields as ParceiroDialog)
   const [novaConta, setNovaConta] = useState({
@@ -332,6 +344,16 @@ export function ContasEmpresaSection({ caixaParceiroId, onDataChanged }: ContasE
                         <div>
                           <p className="text-sm font-medium">{conta.banco}</p>
                           <p className="text-[11px] text-muted-foreground">{conta.titular}</p>
+                          {conta.pix_key && (
+                            <p
+                              className="text-[11px] text-muted-foreground font-mono cursor-pointer hover:text-primary transition-colors flex items-center gap-1 mt-0.5"
+                              onClick={() => copyToClipboard(conta.pix_key!, `pix-${conta.id}`)}
+                              title="Clique para copiar PIX"
+                            >
+                              PIX: {conta.pix_key.length > 20 ? `${conta.pix_key.slice(0, 10)}...${conta.pix_key.slice(-6)}` : conta.pix_key}
+                              {copiedId === `pix-${conta.id}` ? <Check className="h-2.5 w-2.5 text-primary" /> : <Copy className="h-2.5 w-2.5 opacity-50" />}
+                            </p>
+                          )}
                         </div>
                       </div>
                       <div className="text-right">
@@ -364,8 +386,13 @@ export function ContasEmpresaSection({ caixaParceiroId, onDataChanged }: ContasE
                           <p className="text-sm font-medium">
                             {wallet.exchange?.replace(/-/g, " ").toUpperCase() || "Wallet"}
                           </p>
-                          <p className="text-[11px] text-muted-foreground font-mono">
+                          <p
+                            className="text-[11px] text-muted-foreground font-mono cursor-pointer hover:text-primary transition-colors flex items-center gap-1"
+                            onClick={() => copyToClipboard(wallet.endereco, `wallet-${wallet.id}`)}
+                            title="Clique para copiar endereço"
+                          >
                             {wallet.endereco.slice(0, 8)}...{wallet.endereco.slice(-6)}
+                            {copiedId === `wallet-${wallet.id}` ? <Check className="h-2.5 w-2.5 text-primary" /> : <Copy className="h-2.5 w-2.5 opacity-50" />}
                           </p>
                           <div className="flex items-center gap-1.5 mt-0.5">
                             {wallet.network && (
