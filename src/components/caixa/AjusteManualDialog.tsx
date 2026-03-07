@@ -500,7 +500,9 @@ export function AjusteManualDialog({
       if (!user) throw new Error("Usuário não autenticado");
       if (!workspaceId) throw new Error("Workspace não encontrado");
 
-      const valorNumerico = parseFloat(valor);
+      // No modo reconciliação, usar valores calculados automaticamente
+      const direcaoFinal = modoReconciliacao && reconciliacaoCalc ? reconciliacaoCalc.direcaoCalculada : direcao;
+      const valorNumerico = modoReconciliacao && reconciliacaoCalc ? reconciliacaoCalc.valorAjuste : parseFloat(valor);
       const isCrypto = CRYPTO_CURRENCIES.some(c => c.value === moeda);
       
       // Snapshot de cotação para moedas estrangeiras
@@ -508,15 +510,19 @@ export function AjusteManualDialog({
       const cotacaoSnapshotAt = moeda !== "BRL" ? new Date().toISOString() : null;
       const valorBrlRef = moeda !== "BRL" ? valorNumerico * cotacaoAtual : null;
 
+      const descricao = modoReconciliacao
+        ? `[RECONCILIAÇÃO ${direcaoFinal}] ${motivo} | Saldo sistema: ${saldoSistemaAtual.toFixed(2)} → Saldo real: ${(parseFloat(valor) || 0).toFixed(2)} | Diferença: ${reconciliacaoCalc?.diferenca.toFixed(2)}`
+        : `[AJUSTE ${direcaoFinal}] ${motivo}`;
+
       // Construir dados da transação com campos de auditoria completos
       const transactionData: Record<string, any> = {
         user_id: user.id,
         workspace_id: workspaceId,
-        tipo_transacao: "AJUSTE_MANUAL",
+        tipo_transacao: modoReconciliacao ? "AJUSTE_RECONCILIACAO" : "AJUSTE_MANUAL",
         tipo_moeda: isCrypto ? "CRYPTO" : "FIAT",
         moeda: moeda,
         valor: valorNumerico,
-        descricao: `[AJUSTE ${direcao}] ${motivo}`,
+        descricao,
         status: "CONFIRMADO",
         transit_status: "CONFIRMED",
         data_transacao: new Date().toISOString().split("T")[0],
