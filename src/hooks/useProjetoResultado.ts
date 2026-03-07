@@ -488,7 +488,8 @@ async function fetchLucroCashback(
 async function fetchCapitalData(
   projetoId: string,
   moedaConsolidacao: string,
-  convert: ConvertFn
+  convert: ConvertFn,
+  marcoZeroAt: string | null = null
 ): Promise<{
   saldoBookmakers: number;
   saldoIrrecuperavel: number;
@@ -503,15 +504,11 @@ async function fetchCapitalData(
     console.error("[fetchCapitalData] Erro na RPC get_bookmaker_saldos:", rpcError);
   }
 
-  // CRÍTICO: Usar saldo_real (saldo_atual) para a fórmula de equity patrimonial.
-  // saldo_operavel subtrai stakes em apostas pendentes, mas esse dinheiro ainda EXISTE
-  // e faz parte do patrimônio do projeto. Usar saldo_operavel deflaciona o lucro.
   const saldoBookmakers = rpcData?.reduce((acc: number, b: any) => {
     const moedaOrigem = b.moeda || 'BRL';
     return acc + convert(Number(b.saldo_real || 0), moedaOrigem);
   }, 0) || 0;
   
-  // Buscar saldo irrecuperável separadamente (não está na RPC)
   const { data: bookmarkersIrrec } = await supabase
     .from('bookmakers')
     .select('saldo_irrecuperavel, moeda')
@@ -522,20 +519,29 @@ async function fetchCapitalData(
     return acc + convert(Number(b.saldo_irrecuperavel || 0), moedaOrigem);
   }, 0) || 0;
 
-  // Depósitos (DEPOSITO + DEPOSITO_VIRTUAL) filtrados por projeto_id_snapshot
-  const { data: depositos } = await supabase
+  // === MARCO ZERO: Se ativo, capital = DEPOSITO_BASELINE + depósitos pós-marco ===
+  const tiposDeposito = marcoZeroAt 
+    ? ['DEPOSITO', 'DEPOSITO_VIRTUAL', 'DEPOSITO_BASELINE'] 
+    : ['DEPOSITO', 'DEPOSITO_VIRTUAL'];
+
+  let depositoQuery = supabase
     .from('cash_ledger')
     .select('valor, moeda')
-    .in('tipo_transacao', ['DEPOSITO', 'DEPOSITO_VIRTUAL'])
+    .in('tipo_transacao', tiposDeposito)
     .eq('status', 'CONFIRMADO')
     .eq('projeto_id_snapshot', projetoId);
 
-  // SAFETY NET: Também capturar depósitos órfãos (sem projeto_id_snapshot)
-  // para bookmakers ATUALMENTE vinculados ao projeto.
-  // Isso evita que depósitos feitos antes do sistema de snapshot distorçam o lucro.
+  if (marcoZeroAt) {
+    // Pós-marco: só transações após o marco zero
+    depositoQuery = depositoQuery.gte('created_at', marcoZeroAt);
+  }
+
+  const { data: depositos } = await depositoQuery;
+
+  // SAFETY NET para depósitos órfãos (sem snapshot) — só se NÃO tiver marco zero
   const currentBookmakerIds = rpcData?.map((b: any) => b.id) || [];
   let depositosOrfaos: typeof depositos = [];
-  if (currentBookmakerIds.length > 0) {
+  if (!marcoZeroAt && currentBookmakerIds.length > 0) {
     const { data: orfaos } = await supabase
       .from('cash_ledger')
       .select('valor, moeda')
@@ -550,13 +556,19 @@ async function fetchCapitalData(
     return acc + convert(Number(d.valor), d.moeda || 'BRL');
   }, 0);
 
-  // Saques (SAQUE + SAQUE_VIRTUAL) filtrados por projeto_id_snapshot
-  const { data: saques } = await supabase
+  // Saques filtrados por marco zero se ativo
+  let saqueQuery = supabase
     .from('cash_ledger')
     .select('valor, valor_confirmado, moeda')
     .in('tipo_transacao', ['SAQUE', 'SAQUE_VIRTUAL'])
     .eq('status', 'CONFIRMADO')
     .eq('projeto_id_snapshot', projetoId);
+
+  if (marcoZeroAt) {
+    saqueQuery = saqueQuery.gte('created_at', marcoZeroAt);
+  }
+
+  const { data: saques } = await saqueQuery;
 
   const totalSaques = saques?.reduce((acc, s) => {
     return acc + convert(Number(s.valor_confirmado ?? s.valor), s.moeda || 'BRL');
