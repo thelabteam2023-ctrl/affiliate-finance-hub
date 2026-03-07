@@ -2237,14 +2237,37 @@ export function CaixaTransacaoDialog({
         }
       }
 
-      if (destinoTipo === "BOOKMAKER" && !destinoBookmakerId) {
-        toast({
-          title: "Erro",
-          description: "Selecione a bookmaker de destino",
-          variant: "destructive",
-        });
-        return;
+      // Validar conta/wallet da empresa obrigatória quando Caixa Operacional é origem ou destino
+      const caixaIsInvolved = 
+        origemTipo === "CAIXA_OPERACIONAL" || 
+        destinoTipo === "CAIXA_OPERACIONAL" || 
+        tipoTransacao === "APORTE_FINANCEIRO";
+      
+      if (caixaIsInvolved && caixaParceiroId) {
+        if (tipoMoeda === "FIAT" && (!caixaContaId || caixaContaId === "none")) {
+          const contasEmpresa = contasBancarias.filter(c => c.parceiro_id === caixaParceiroId && c.moeda === moeda);
+          if (contasEmpresa.length > 0) {
+            toast({
+              title: "Erro",
+              description: "Selecione a conta bancária da empresa",
+              variant: "destructive",
+            });
+            return;
+          }
+        }
+        if (tipoMoeda === "CRYPTO" && (!caixaWalletId || caixaWalletId === "none")) {
+          const walletsEmpresa = walletsCrypto.filter(w => w.parceiro_id === caixaParceiroId && w.moeda?.includes(coin));
+          if (walletsEmpresa.length > 0) {
+            toast({
+              title: "Erro",
+              description: "Selecione a wallet da empresa",
+              variant: "destructive",
+            });
+            return;
+          }
+        }
       }
+
 
       // Validar transferência para mesma conta/wallet
       if (tipoTransacao === "TRANSFERENCIA" && fluxoTransferencia === "PARCEIRO_PARCEIRO") {
@@ -2909,7 +2932,7 @@ export function CaixaTransacaoDialog({
     }
   };
 
-  // Helper: renders optional company bank/wallet selector under "Caixa Operacional"
+  // Helper: renders REQUIRED company bank/wallet selector under "Caixa Operacional"
   const renderCaixaAccountSelector = () => {
     if (!caixaParceiroId) return null;
     
@@ -2918,25 +2941,33 @@ export function CaixaTransacaoDialog({
     
     if (contasEmpresa.length === 0 && walletsEmpresa.length === 0) {
       return (
-        <div className="text-[11px] text-muted-foreground/60 text-center mt-1">
-          Nenhuma conta/wallet da empresa cadastrada
+        <div className="text-[11px] text-destructive text-center mt-1">
+          ⚠ Cadastre uma conta/wallet da empresa antes de registrar transações
         </div>
       );
     }
 
     if (tipoMoeda === "FIAT") {
       const contasCompativeis = contasEmpresa.filter(c => c.moeda === moeda);
-      if (contasCompativeis.length === 0) return null;
+      if (contasCompativeis.length === 0) return (
+        <div className="text-[11px] text-destructive text-center mt-1">
+          ⚠ Nenhuma conta da empresa na moeda {moeda}
+        </div>
+      );
+      
+      // Auto-select if only 1 compatible account
+      if (contasCompativeis.length === 1 && (!caixaContaId || caixaContaId === "none")) {
+        setTimeout(() => setCaixaContaId(contasCompativeis[0].id), 0);
+      }
       
       return (
         <div className="space-y-1.5 mt-2">
-          <Label className="text-[11px] text-muted-foreground">Conta da Empresa (opcional)</Label>
+          <Label className="text-[11px] text-muted-foreground">Conta da Empresa *</Label>
           <Select value={caixaContaId} onValueChange={setCaixaContaId}>
-            <SelectTrigger className="h-8 text-xs">
+            <SelectTrigger className={`h-8 text-xs ${!caixaContaId || caixaContaId === "none" ? "border-destructive" : ""}`}>
               <SelectValue placeholder="Selecionar conta..." />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="none">Sem especificar</SelectItem>
               {contasCompativeis.map(conta => (
                 <SelectItem key={conta.id} value={conta.id}>
                   {conta.banco} - {conta.titular}
@@ -2950,17 +2981,25 @@ export function CaixaTransacaoDialog({
 
     if (tipoMoeda === "CRYPTO") {
       const walletsCompativeis = walletsEmpresa.filter(w => w.moeda?.includes(coin));
-      if (walletsCompativeis.length === 0) return null;
+      if (walletsCompativeis.length === 0) return (
+        <div className="text-[11px] text-destructive text-center mt-1">
+          ⚠ Nenhuma wallet da empresa compatível com {coin}
+        </div>
+      );
+      
+      // Auto-select if only 1 compatible wallet
+      if (walletsCompativeis.length === 1 && (!caixaWalletId || caixaWalletId === "none")) {
+        setTimeout(() => setCaixaWalletId(walletsCompativeis[0].id), 0);
+      }
       
       return (
         <div className="space-y-1.5 mt-2">
-          <Label className="text-[11px] text-muted-foreground">Wallet da Empresa (opcional)</Label>
+          <Label className="text-[11px] text-muted-foreground">Wallet da Empresa *</Label>
           <Select value={caixaWalletId} onValueChange={setCaixaWalletId}>
-            <SelectTrigger className="h-8 text-xs">
+            <SelectTrigger className={`h-8 text-xs ${!caixaWalletId || caixaWalletId === "none" ? "border-destructive" : ""}`}>
               <SelectValue placeholder="Selecionar wallet..." />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="none">Sem especificar</SelectItem>
               {walletsCompativeis.map(wallet => {
                 const walletName = wallet.exchange?.replace(/-/g, ' ').toUpperCase() || 'WALLET';
                 const shortAddr = wallet.endereco ? `${wallet.endereco.slice(0, 5)}...${wallet.endereco.slice(-4)}` : '';
