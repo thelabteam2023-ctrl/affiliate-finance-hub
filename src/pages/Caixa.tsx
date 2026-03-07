@@ -449,8 +449,9 @@ export default function Caixa() {
 
   const getTransacoesFiltradas = () => {
     return transacoes.filter((t) => {
-      // Ocultar ajustes cambiais do histórico (são detalhes de conciliação, não operações principais)
-      if (t.tipo_transacao === 'GANHO_CAMBIAL' || t.tipo_transacao === 'PERDA_CAMBIAL') {
+      // Ocultar tipos internos/reconciliação do histórico (não são operações principais)
+      const HIDDEN_TYPES = ['GANHO_CAMBIAL', 'PERDA_CAMBIAL', 'AJUSTE_RECONCILIACAO', 'AJUSTE_SALDO', 'AJUSTE_MANUAL', 'CONCILIACAO'];
+      if (HIDDEN_TYPES.includes(t.tipo_transacao)) {
         return false;
       }
       
