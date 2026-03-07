@@ -995,6 +995,12 @@ export default function Caixa() {
             cotacaoUSD={cotacaoUSD}
           />
 
+          {/* Contas da Empresa */}
+          <ContasEmpresaSection
+            caixaParceiroId={caixaParceiroId}
+            onDataChanged={fetchData}
+          />
+
           {/* Container com Abas */}
           <CaixaTabsContainer
             transacoes={transacoes}
