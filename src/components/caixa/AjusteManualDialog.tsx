@@ -102,8 +102,6 @@ export function AjusteManualDialog({
   const [wallets, setWallets] = useState<WalletCrypto[]>([]);
   const [saldosContas, setSaldosContas] = useState<Record<string, number>>({});
   const [saldosWallets, setSaldosWallets] = useState<WalletCoinBalance[]>([]);
-  const [saldosCaixaFiat, setSaldosCaixaFiat] = useState<Record<string, number>>({});
-  const [saldosCaixaCrypto, setSaldosCaixaCrypto] = useState<number>(0);
   const [caixaParceiroId, setCaixaParceiroId] = useState<string | null>(null);
 
   // Verificar permissão
@@ -241,13 +239,10 @@ export function AjusteManualDialog({
         const walletSaldos = saldosWallets.filter(s => s.wallet_id === walletId && s.coin === moeda);
         return walletSaldos.length > 0 ? walletSaldos[0].saldo_coin : 0;
       }
-      // Aggregate mode: no specific conta/wallet selected
-      if (!subTipoCaixa) {
-        return saldosCaixaFiat[moeda] ?? 0;
-      }
+      return 0;
     }
     return 0;
-  }, [tipoDestino, bookmakerId, contaId, walletId, moeda, subTipoCaixa, bookmakers, saldosContas, saldosWallets, saldosCaixaFiat]);
+  }, [tipoDestino, bookmakerId, contaId, walletId, moeda, subTipoCaixa, bookmakers, saldosContas, saldosWallets]);
 
   // Calcular diferença e direção automaticamente baseado no saldo informado
   // CRITICAL: Arredondar valorAjuste para evitar drift de ponto flutuante.
@@ -274,11 +269,10 @@ export function AjusteManualDialog({
     if (tipoDestino === "CAIXA_OPERACIONAL") {
       if (subTipoCaixa === "FIAT") return !!contaId;
       if (subTipoCaixa === "CRYPTO") return !!walletId;
-      // Aggregate mode: always ready when moeda is selected
-      return !!moeda;
+      return false;
     }
     return false;
-  }, [tipoDestino, bookmakerId, contaId, walletId, subTipoCaixa, moeda]);
+  }, [tipoDestino, bookmakerId, contaId, walletId, subTipoCaixa]);
 
   useEffect(() => {
     if (open) {
@@ -367,18 +361,6 @@ export function AjusteManualDialog({
         saldo_usd: s.saldo_usd ?? 0,
       })));
       setCaixaParceiroId(caixaParceiroRes.data?.id ?? null);
-
-      // Fetch aggregate caixa saldos (FIAT by currency, CRYPTO total USD)
-      const [fiatRes, cryptoRes] = await Promise.all([
-        supabase.from("v_saldo_caixa_fiat").select("moeda, saldo"),
-        supabase.from("v_saldo_caixa_crypto").select("saldo_usd"),
-      ]);
-      const fiatMap: Record<string, number> = {};
-      (fiatRes.data || []).forEach((s: any) => {
-        if (s.moeda) fiatMap[s.moeda] = s.saldo ?? 0;
-      });
-      setSaldosCaixaFiat(fiatMap);
-      setSaldosCaixaCrypto((cryptoRes.data || []).reduce((sum: number, s: any) => sum + (s.saldo_usd ?? 0), 0));
 
       const mappedBookmakers: Bookmaker[] = (bookmakersRes.data || []).map((bk: any) => ({
         id: bk.id,
@@ -491,6 +473,7 @@ export function AjusteManualDialog({
   // Validar se pode submeter
   const canSubmit = (): boolean => {
     if (!motivo.trim()) return false;
+    if (tipoDestino === "CAIXA_OPERACIONAL" && !subTipoCaixa) return false;
     if (tipoDestino === "CAIXA_OPERACIONAL" && subTipoCaixa === "FIAT" && !contaId) return false;
     if (tipoDestino === "CAIXA_OPERACIONAL" && subTipoCaixa === "CRYPTO" && !walletId) return false;
     if (tipoDestino === "BOOKMAKER" && !bookmakerId) return false;
@@ -760,17 +743,16 @@ export function AjusteManualDialog({
             {/* Sub-seleção Caixa Operacional: tipo de ativo */}
             {tipoDestino === "CAIXA_OPERACIONAL" && (
               <div className="space-y-2">
-                <Label>Vincular a (opcional)</Label>
-                <Select value={subTipoCaixa || "NONE"} onValueChange={(v) => {
-                  setSubTipoCaixa(v === "NONE" ? "" : v as SubTipoCaixa);
+                <Label>Vincular a</Label>
+                <Select value={subTipoCaixa || ""} onValueChange={(v) => {
+                  setSubTipoCaixa(v as SubTipoCaixa);
                   setContaId("");
                   setWalletId("");
                 }}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Nenhum (ajuste geral)" />
+                    <SelectValue placeholder="Selecione o tipo de ativo" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="NONE">Nenhum (ajuste geral)</SelectItem>
                     <SelectItem value="FIAT">Conta Bancária</SelectItem>
                     <SelectItem value="CRYPTO">Wallet Crypto</SelectItem>
                   </SelectContent>
