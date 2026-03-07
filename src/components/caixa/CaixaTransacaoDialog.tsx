@@ -2616,6 +2616,11 @@ export function CaixaTransacaoDialog({
           }
         }
       }
+      // =========================================================================
+      // DINHEIRO EM TRÂNSITO: O lock de saldo é feito AUTOMATICAMENTE pelo
+      // trigger tr_cash_ledger_lock_pending (AFTER INSERT) no banco de dados.
+      // IMPORTANTE: NÃO fazer lock manual aqui para evitar duplicação!
+      // REGRA DE TRANSIT_STATUS:
       // - PENDING: Transações que saem para blockchain externa (depósito em bookmaker, saque externo)
       // - CONFIRMED: Transferências internas WALLET→WALLET (instantâneas, sem blockchain)
       // =========================================================================
