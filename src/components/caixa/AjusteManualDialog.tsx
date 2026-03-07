@@ -284,6 +284,7 @@ export function AjusteManualDialog({
         if (s.conta_id) saldoMap[s.conta_id] = s.saldo ?? 0;
       });
       setSaldosContas(saldoMap);
+      setCaixaParceiroId(caixaParceiroRes.data?.id ?? null);
 
       const mappedBookmakers: Bookmaker[] = (bookmakersRes.data || []).map((bk: any) => ({
         id: bk.id,
