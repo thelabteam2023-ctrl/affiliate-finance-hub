@@ -80,6 +80,13 @@ export function DesvinculacaoEmMassaDialog({
   const [results, setResults] = useState<{ id: string; nome: string; success: boolean; error?: string }[]>([]);
   const [step, setStep] = useState<"select" | "confirm" | "result">("select");
 
+  // Abbreviate name: first + last
+  const abbreviateName = (name: string) => {
+    const parts = name.trim().split(/\s+/);
+    if (parts.length <= 2) return name;
+    return `${parts[0]} ${parts[parts.length - 1]}`;
+  };
+
   // Unique parceiros for filter dropdown
   const parceirosUnicos = useMemo(() => {
     const map = new Map<string, string>();
