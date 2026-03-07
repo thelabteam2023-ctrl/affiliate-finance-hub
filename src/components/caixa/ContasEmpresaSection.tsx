@@ -53,8 +53,8 @@ const formatAgencia = (value: string) => {
 };
 
 const formatConta = (value: string) => {
-  const digits = value.replace(/\D/g, "").slice(0, 6);
-  if (digits.length > 5) return `${digits.slice(0, 5)}-${digits.slice(5)}`;
+  const digits = value.replace(/\D/g, "").slice(0, 15);
+  if (digits.length > 1) return `${digits.slice(0, -1)}-${digits.slice(-1)}`;
   return digits;
 };
 
