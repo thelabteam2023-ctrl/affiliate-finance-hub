@@ -791,6 +791,7 @@ export function AjusteManualDialog({
                   value={walletId}
                   onValueChange={setWalletId}
                   placeholder="Selecione a wallet"
+                  saldos={saldosWallets}
                 />
               </div>
             )}
