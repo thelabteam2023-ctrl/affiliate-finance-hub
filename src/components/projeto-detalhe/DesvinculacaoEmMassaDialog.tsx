@@ -164,7 +164,7 @@ export function DesvinculacaoEmMassaDialog({
       newMap[v.id] = selectedMap[v.id] || {
         id: v.id,
         saldoRealInput: "",
-        statusFinal: "ativo",
+        statusFinal: v.bookmaker_status?.toLowerCase() || "ativo",
         hasPendingBets: false,
       };
     });
