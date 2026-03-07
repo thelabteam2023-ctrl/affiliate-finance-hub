@@ -271,11 +271,10 @@ export function AjusteManualDialog({
     if (tipoDestino === "CAIXA_OPERACIONAL") {
       if (subTipoCaixa === "FIAT") return !!contaId;
       if (subTipoCaixa === "CRYPTO") return !!walletId;
-      // Aggregate mode: always ready when moeda is selected
-      return !!moeda;
+      return false;
     }
     return false;
-  }, [tipoDestino, bookmakerId, contaId, walletId, subTipoCaixa, moeda]);
+  }, [tipoDestino, bookmakerId, contaId, walletId, subTipoCaixa]);
 
   useEffect(() => {
     if (open) {
