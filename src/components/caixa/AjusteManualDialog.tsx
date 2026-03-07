@@ -241,10 +241,7 @@ export function AjusteManualDialog({
         const walletSaldos = saldosWallets.filter(s => s.wallet_id === walletId && s.coin === moeda);
         return walletSaldos.length > 0 ? walletSaldos[0].saldo_coin : 0;
       }
-      // Aggregate mode: no specific conta/wallet selected
-      if (!subTipoCaixa) {
-        return saldosCaixaFiat[moeda] ?? 0;
-      }
+      return 0;
     }
     return 0;
   }, [tipoDestino, bookmakerId, contaId, walletId, moeda, subTipoCaixa, bookmakers, saldosContas, saldosWallets, saldosCaixaFiat]);
