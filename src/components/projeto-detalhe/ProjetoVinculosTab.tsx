@@ -671,7 +671,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                   {uniqueParceiros.map((parceiro) => (
                     <div
                       key={parceiro}
-                      className="flex items-center space-x-2 px-2 py-1.5 hover:bg-accent rounded cursor-pointer"
+                      className="flex items-center justify-center gap-2 px-2 py-1.5 hover:bg-accent rounded cursor-pointer"
                       onClick={() => {
                         setSelectedParceiros(prev =>
                           prev.includes(parceiro)
@@ -684,7 +684,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                         checked={selectedParceiros.includes(parceiro)}
                         className="pointer-events-none"
                       />
-                      <span className="text-sm truncate">{parceiro}</span>
+                      <span className="text-sm truncate flex-1 text-center">{parceiro}</span>
                     </div>
                   ))}
                   {uniqueParceiros.length === 0 && (
