@@ -179,7 +179,7 @@ export function AjusteManualDialog({
     
     // Fallback: BRL para casos não cobertos
     return [{ value: "BRL", label: "BRL - Real Brasileiro", symbol: "R$" }];
-  }, [tipoDestino, bookmakerId, contaId, walletId, bookmakers, contas, wallets]);
+  }, [tipoDestino, subTipoCaixa, bookmakerId, contaId, walletId, bookmakers, contas, wallets]);
 
   // Auto-selecionar moeda quando há apenas uma opção
   useEffect(() => {
