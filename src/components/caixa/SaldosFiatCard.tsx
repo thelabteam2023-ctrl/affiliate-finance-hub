@@ -175,43 +175,43 @@ export function SaldosFiatCard({ caixaParceiroId, formatCurrency, onDataChanged 
                   </span>
                 </button>
               </PopoverTrigger>
-              <PopoverContent side="bottom" align="end" className="w-80 p-0">
-                <div className="p-3 border-b border-border">
-                  <p className="text-sm font-medium">Contas em {moeda}</p>
-                  <p className="text-xs text-muted-foreground">{contasMoeda.length} conta(s) bancária(s)</p>
+              <PopoverContent side="bottom" align="end" className="w-96 p-0">
+                <div className="p-4 border-b border-border">
+                  <p className="text-base font-semibold">Contas em {moeda}</p>
+                  <p className="text-sm text-muted-foreground">{contasMoeda.length} conta(s) bancária(s)</p>
                 </div>
-                <div className="p-2 space-y-1.5 max-h-60 overflow-y-auto">
+                <div className="p-3 space-y-2.5 max-h-72 overflow-y-auto">
                   {contasMoeda.map((conta) => (
-                    <div key={conta.id} className="p-2 rounded-md bg-muted/20 space-y-1">
+                    <div key={conta.id} className="p-3 rounded-lg bg-muted/20 space-y-1.5">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <Landmark className="h-3 w-3 text-muted-foreground shrink-0" />
-                          <span className="text-xs font-medium truncate">{conta.banco}</span>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Landmark className="h-4 w-4 text-muted-foreground shrink-0" />
+                          <span className="text-sm font-medium truncate">{conta.banco}</span>
                         </div>
-                        <span className="text-xs font-semibold shrink-0">
+                        <span className="text-sm font-semibold shrink-0">
                           {formatCurrencyValue(conta.saldo || 0, conta.moeda as any)}
                         </span>
                       </div>
-                      <p className="text-[10px] text-muted-foreground truncate pl-4.5">{conta.titular}</p>
+                      <p className="text-xs text-muted-foreground truncate pl-6">{conta.titular}</p>
                       {/* PIX keys from pix_keys array */}
                       {conta.pix_keys && conta.pix_keys.length > 0 && conta.pix_keys.map((pk, idx) => (
                         <p
                           key={`pix-arr-${conta.id}-${idx}`}
-                          className="text-[10px] text-muted-foreground font-mono cursor-pointer hover:text-primary transition-colors flex items-center gap-0.5 pl-4.5"
+                          className="text-xs text-muted-foreground font-mono cursor-pointer hover:text-primary transition-colors flex items-center gap-1 pl-6"
                           onClick={(e) => { e.stopPropagation(); copyToClipboard(pk.chave, `pix-${conta.id}-${idx}`); }}
                         >
-                          PIX ({pk.tipo}): {pk.chave.length > 20 ? `${pk.chave.slice(0, 10)}...${pk.chave.slice(-4)}` : pk.chave}
-                          {copiedId === `pix-${conta.id}-${idx}` ? <Check className="h-2.5 w-2.5 text-primary" /> : <Copy className="h-2.5 w-2.5 opacity-40" />}
+                          PIX ({pk.tipo}): {pk.chave.length > 24 ? `${pk.chave.slice(0, 12)}...${pk.chave.slice(-4)}` : pk.chave}
+                          {copiedId === `pix-${conta.id}-${idx}` ? <Check className="h-3 w-3 text-primary" /> : <Copy className="h-3 w-3 opacity-40" />}
                         </p>
                       ))}
                       {/* Fallback: legacy single pix_key */}
                       {(!conta.pix_keys || conta.pix_keys.length === 0) && conta.pix_key && (
                         <p
-                          className="text-[10px] text-muted-foreground font-mono cursor-pointer hover:text-primary transition-colors flex items-center gap-0.5 pl-4.5"
+                          className="text-xs text-muted-foreground font-mono cursor-pointer hover:text-primary transition-colors flex items-center gap-1 pl-6"
                           onClick={(e) => { e.stopPropagation(); copyToClipboard(conta.pix_key!, `pix-${conta.id}`); }}
                         >
-                          PIX: {conta.pix_key.length > 20 ? `${conta.pix_key.slice(0, 10)}...${conta.pix_key.slice(-4)}` : conta.pix_key}
-                          {copiedId === `pix-${conta.id}` ? <Check className="h-2.5 w-2.5 text-primary" /> : <Copy className="h-2.5 w-2.5 opacity-40" />}
+                          PIX: {conta.pix_key.length > 24 ? `${conta.pix_key.slice(0, 12)}...${conta.pix_key.slice(-4)}` : conta.pix_key}
+                          {copiedId === `pix-${conta.id}` ? <Check className="h-3 w-3 text-primary" /> : <Copy className="h-3 w-3 opacity-40" />}
                         </p>
                       )}
                     </div>
