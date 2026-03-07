@@ -214,41 +214,54 @@ export function ExposicaoCryptoCard({
                         </div>
                       </button>
                     </PopoverTrigger>
-                    <PopoverContent side="bottom" align="end" className="w-96 p-0">
-                      <div className="p-4 border-b border-border">
+                    <PopoverContent side="bottom" align="end" className="w-[420px] p-0">
+                      <div className="px-5 py-4 border-b border-border">
                         <p className="text-base font-semibold">Wallets com {coin}</p>
                         <p className="text-sm text-muted-foreground">{coinWallets.length} wallet(s)</p>
                       </div>
-                      <div className="p-3 space-y-2.5 max-h-72 overflow-y-auto">
-                        {coinWallets.map((wallet) => {
+                      <div className="p-4 space-y-4 max-h-80 overflow-y-auto">
+                        {coinWallets.map((wallet, wIdx) => {
                           const walletCoin = wallet.coins.find(c => c.coin === coin);
                           return (
-                            <div key={wallet.wallet_id} className="p-3 rounded-lg bg-muted/20 space-y-1.5">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2 min-w-0">
-                                  <Bitcoin className="h-4 w-4 text-muted-foreground shrink-0" />
-                                  <span className="text-sm font-medium truncate">
-                                    {wallet.exchange?.replace(/-/g, " ").toUpperCase() || "Wallet"}
-                                  </span>
+                            <div key={wallet.wallet_id} className="space-y-3">
+                              {/* Header: exchange + saldo */}
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex items-start gap-2.5 min-w-0">
+                                  <Bitcoin className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                                  <div className="min-w-0">
+                                    <p className="text-sm font-semibold">
+                                      {wallet.exchange?.replace(/-/g, " ").toUpperCase() || "Wallet"}
+                                    </p>
+                                    {wallet.network && (
+                                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 uppercase font-medium mt-1">
+                                        {wallet.network}
+                                      </Badge>
+                                    )}
+                                  </div>
                                 </div>
-                                <span className="text-sm font-semibold font-mono shrink-0">
+                                <span className="text-base font-bold text-blue-400 font-mono shrink-0">
                                   {walletCoin ? walletCoin.saldo_coin.toFixed(walletCoin.saldo_coin < 1 ? 8 : 2) : "0"} {coin}
                                 </span>
                               </div>
-                              <div className="flex items-center gap-1.5 pl-6">
-                                {wallet.network && (
-                                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 uppercase">
-                                    {wallet.network}
-                                  </Badge>
-                                )}
-                              </div>
-                              <p
-                                className="text-xs text-muted-foreground font-mono cursor-pointer hover:text-primary transition-colors flex items-center gap-1 pl-6"
+
+                              {/* Address as mini-card */}
+                              <div
+                                className="ml-7 flex items-center justify-between px-3 py-2 rounded-md bg-muted/30 border border-border/40 cursor-pointer hover:bg-muted/50 transition-colors group"
                                 onClick={(e) => { e.stopPropagation(); copyToClipboard(wallet.endereco, `w-${wallet.wallet_id}-${coin}`); }}
                               >
-                                {wallet.endereco.slice(0, 12)}...{wallet.endereco.slice(-6)}
-                                {copiedId === `w-${wallet.wallet_id}-${coin}` ? <Check className="h-3 w-3 text-primary" /> : <Copy className="h-3 w-3 opacity-40" />}
-                              </p>
+                                <span className="text-sm font-mono text-muted-foreground group-hover:text-foreground transition-colors truncate">
+                                  {wallet.endereco}
+                                </span>
+                                {copiedId === `w-${wallet.wallet_id}-${coin}`
+                                  ? <Check className="h-3.5 w-3.5 text-primary shrink-0 ml-2" />
+                                  : <Copy className="h-3.5 w-3.5 text-muted-foreground/50 group-hover:text-muted-foreground shrink-0 ml-2 transition-colors" />
+                                }
+                              </div>
+
+                              {/* Divider */}
+                              {wIdx < coinWallets.length - 1 && (
+                                <div className="border-b border-border/30" />
+                              )}
                             </div>
                           );
                         })}

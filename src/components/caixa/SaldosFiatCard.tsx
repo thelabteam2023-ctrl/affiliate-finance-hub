@@ -175,44 +175,76 @@ export function SaldosFiatCard({ caixaParceiroId, formatCurrency, onDataChanged 
                   </span>
                 </button>
               </PopoverTrigger>
-              <PopoverContent side="bottom" align="end" className="w-96 p-0">
-                <div className="p-4 border-b border-border">
+              <PopoverContent side="bottom" align="end" className="w-[420px] p-0">
+                <div className="px-5 py-4 border-b border-border">
                   <p className="text-base font-semibold">Contas em {moeda}</p>
                   <p className="text-sm text-muted-foreground">{contasMoeda.length} conta(s) bancária(s)</p>
                 </div>
-                <div className="p-3 space-y-2.5 max-h-72 overflow-y-auto">
+                <div className="p-4 space-y-4 max-h-80 overflow-y-auto">
                   {contasMoeda.map((conta) => (
-                    <div key={conta.id} className="p-3 rounded-lg bg-muted/20 space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <Landmark className="h-4 w-4 text-muted-foreground shrink-0" />
-                          <span className="text-sm font-medium truncate">{conta.banco}</span>
+                    <div key={conta.id} className="space-y-3">
+                      {/* Header: banco + saldo */}
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start gap-2.5 min-w-0">
+                          <Landmark className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold truncate">{conta.banco}</p>
+                            <p className="text-xs text-muted-foreground">{conta.titular}</p>
+                          </div>
                         </div>
-                        <span className="text-sm font-semibold shrink-0">
+                        <span className="text-base font-bold text-emerald-400 shrink-0">
                           {formatCurrencyValue(conta.saldo || 0, conta.moeda as any)}
                         </span>
                       </div>
-                      <p className="text-xs text-muted-foreground truncate pl-6">{conta.titular}</p>
-                      {/* PIX keys from pix_keys array */}
-                      {conta.pix_keys && conta.pix_keys.length > 0 && conta.pix_keys.map((pk, idx) => (
-                        <p
-                          key={`pix-arr-${conta.id}-${idx}`}
-                          className="text-xs text-muted-foreground font-mono cursor-pointer hover:text-primary transition-colors flex items-center gap-1 pl-6"
-                          onClick={(e) => { e.stopPropagation(); copyToClipboard(pk.chave, `pix-${conta.id}-${idx}`); }}
-                        >
-                          PIX ({pk.tipo}): {pk.chave.length > 24 ? `${pk.chave.slice(0, 12)}...${pk.chave.slice(-4)}` : pk.chave}
-                          {copiedId === `pix-${conta.id}-${idx}` ? <Check className="h-3 w-3 text-primary" /> : <Copy className="h-3 w-3 opacity-40" />}
-                        </p>
-                      ))}
-                      {/* Fallback: legacy single pix_key */}
-                      {(!conta.pix_keys || conta.pix_keys.length === 0) && conta.pix_key && (
-                        <p
-                          className="text-xs text-muted-foreground font-mono cursor-pointer hover:text-primary transition-colors flex items-center gap-1 pl-6"
-                          onClick={(e) => { e.stopPropagation(); copyToClipboard(conta.pix_key!, `pix-${conta.id}`); }}
-                        >
-                          PIX: {conta.pix_key.length > 24 ? `${conta.pix_key.slice(0, 12)}...${conta.pix_key.slice(-4)}` : conta.pix_key}
-                          {copiedId === `pix-${conta.id}` ? <Check className="h-3 w-3 text-primary" /> : <Copy className="h-3 w-3 opacity-40" />}
-                        </p>
+
+                      {/* PIX keys as mini-cards */}
+                      {((conta.pix_keys && conta.pix_keys.length > 0) || conta.pix_key) && (
+                        <div className="ml-7 space-y-1.5">
+                          {conta.pix_keys && conta.pix_keys.length > 0 && conta.pix_keys.map((pk, idx) => (
+                            <div
+                              key={`pix-arr-${conta.id}-${idx}`}
+                              className="flex items-center justify-between px-3 py-2 rounded-md bg-muted/30 border border-border/40 cursor-pointer hover:bg-muted/50 transition-colors group"
+                              onClick={(e) => { e.stopPropagation(); copyToClipboard(pk.chave, `pix-${conta.id}-${idx}`); }}
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 shrink-0 uppercase font-medium">
+                                  {pk.tipo}
+                                </Badge>
+                                <span className="text-sm font-mono text-muted-foreground group-hover:text-foreground transition-colors truncate">
+                                  {pk.chave}
+                                </span>
+                              </div>
+                              {copiedId === `pix-${conta.id}-${idx}`
+                                ? <Check className="h-3.5 w-3.5 text-primary shrink-0" />
+                                : <Copy className="h-3.5 w-3.5 text-muted-foreground/50 group-hover:text-muted-foreground shrink-0 transition-colors" />
+                              }
+                            </div>
+                          ))}
+                          {(!conta.pix_keys || conta.pix_keys.length === 0) && conta.pix_key && (
+                            <div
+                              className="flex items-center justify-between px-3 py-2 rounded-md bg-muted/30 border border-border/40 cursor-pointer hover:bg-muted/50 transition-colors group"
+                              onClick={(e) => { e.stopPropagation(); copyToClipboard(conta.pix_key!, `pix-${conta.id}`); }}
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 shrink-0 uppercase font-medium">
+                                  PIX
+                                </Badge>
+                                <span className="text-sm font-mono text-muted-foreground group-hover:text-foreground transition-colors truncate">
+                                  {conta.pix_key}
+                                </span>
+                              </div>
+                              {copiedId === `pix-${conta.id}`
+                                ? <Check className="h-3.5 w-3.5 text-primary shrink-0" />
+                                : <Copy className="h-3.5 w-3.5 text-muted-foreground/50 group-hover:text-muted-foreground shrink-0 transition-colors" />
+                              }
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Divider between accounts */}
+                      {contasMoeda.indexOf(conta) < contasMoeda.length - 1 && (
+                        <div className="border-b border-border/30" />
                       )}
                     </div>
                   ))}
