@@ -26,9 +26,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, AlertTriangle, TrendingDown, TrendingUp, Wrench, Info, Scale, Minus } from "lucide-react";
+import { Loader2, AlertTriangle, TrendingDown, TrendingUp, Wrench, Info, Minus } from "lucide-react";
 import { WalletSearchSelect, type WalletCoinBalance } from "./WalletSearchSelect";
 import { ContaBancariaSearchSelect, type ContaBancariaOption } from "./ContaBancariaSearchSelect";
 
