@@ -102,6 +102,7 @@ export function AjusteManualDialog({
   const [contas, setContas] = useState<ContaBancaria[]>([]);
   const [wallets, setWallets] = useState<WalletCrypto[]>([]);
   const [saldosContas, setSaldosContas] = useState<Record<string, number>>({});
+  const [caixaParceiroId, setCaixaParceiroId] = useState<string | null>(null);
 
   // Verificar permissão
   const canAccess = isOwnerOrAdmin || isSystemOwner;
