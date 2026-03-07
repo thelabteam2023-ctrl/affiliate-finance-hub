@@ -293,6 +293,7 @@ export default function ProjetoDetalhe() {
       "modulos": "Módulos",
       "ciclos": "Ciclos",
       "incidentes": "Incidentes",
+      "marco-zero": "Marco Zero",
     };
     return tabLabels[tabKey] || tabKey;
   };
