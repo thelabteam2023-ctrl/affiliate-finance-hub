@@ -934,7 +934,7 @@ export function AjusteManualDialog({
               <Textarea
                 value={motivo}
                 onChange={(e) => setMotivo(e.target.value)}
-                placeholder={modoReconciliacao ? "Descreva o motivo da reconciliação..." : "Descreva o motivo da correção contábil..."}
+                placeholder="Descreva o motivo da reconciliação..."
                 rows={2}
               />
             </div>
