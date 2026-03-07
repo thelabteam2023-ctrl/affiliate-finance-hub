@@ -352,6 +352,8 @@ export function DesvinculacaoEmMassaDialog({
                   const saldoRealNum = sel ? parseFloat(sel.saldoRealInput.replace(",", ".")) || 0 : 0;
                   const diferenca = sel && sel.saldoRealInput !== "" ? saldoRealNum - vinculo.saldo_real : null;
                   const hasPending = sel?.hasPendingBets;
+                  const hasTransit = vinculo.has_pending_transactions;
+                  const isBlocked = hasPending || hasTransit;
 
                   return (
                     <div key={vinculo.id} className={`p-3 transition-colors ${isSelected ? "bg-accent/30" : "hover:bg-muted/30"} ${hasPending ? "opacity-60" : ""}`}>
