@@ -28,6 +28,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, AlertTriangle, Scale, TrendingUp, TrendingDown, Minus, Info } from "lucide-react";
 import { WalletSearchSelect, type WalletCoinBalance } from "./WalletSearchSelect";
+import { ContaBancariaSearchSelect, type ContaBancariaOption } from "./ContaBancariaSearchSelect";
 
 interface ReconciliacaoDialogProps {
   open: boolean;
@@ -52,8 +53,9 @@ interface ContaBancaria {
   banco: string;
   titular: string;
   parceiro_id: string;
+  parceiro_nome: string;
   moeda: string;
-  saldo_sistema?: number;
+  saldo: number | null;
   reconciled_at?: string | null;
 }
 
@@ -174,11 +176,18 @@ export function ReconciliacaoDialog({
     try {
       const [bookmakersRes, contasRes, walletsRes, saldosContasRes, saldosWalletsRes] = await Promise.all([
         supabase.from("bookmakers").select(`id, nome, saldo_atual, moeda, parceiro_id, reconciled_at, parceiros!inner(nome, status)`).in("status", ["ativo", "limitada"]).eq("parceiros.status", "ativo").order("nome"),
-        supabase.from("contas_bancarias").select(`id, banco, titular, parceiro_id, moeda, reconciled_at, parceiros!inner(status)`).eq("parceiros.status", "ativo").order("banco"),
+        supabase.from("contas_bancarias").select(`id, banco, titular, parceiro_id, moeda, reconciled_at, parceiros!inner(nome, status)`).eq("parceiros.status", "ativo").order("banco"),
         supabase.from("wallets_crypto").select(`id, exchange, endereco, parceiro_id, moeda, reconciled_at, parceiros!inner(nome, status)`).eq("parceiros.status", "ativo").order("exchange"),
         supabase.from("v_saldo_parceiro_contas").select("conta_id, saldo"),
         supabase.from("v_saldo_parceiro_wallets").select("wallet_id, coin, saldo_coin, saldo_usd"),
       ]);
+
+      // Map saldos contas first (needed for conta mapping)
+      const saldosMap: Record<string, number> = {};
+      (saldosContasRes.data || []).forEach((s: any) => {
+        saldosMap[s.conta_id] = s.saldo || 0;
+      });
+      setSaldosContas(saldosMap);
 
       setBookmakers((bookmakersRes.data || []).map((bk: any) => ({
         id: bk.id, nome: bk.nome, saldo_atual: bk.saldo_atual || 0,
@@ -188,7 +197,8 @@ export function ReconciliacaoDialog({
 
       setContas((contasRes.data || []).map((c: any) => ({
         id: c.id, banco: c.banco, titular: c.titular,
-        parceiro_id: c.parceiro_id, moeda: c.moeda || "BRL",
+        parceiro_id: c.parceiro_id, parceiro_nome: c.parceiros?.nome || "",
+        moeda: c.moeda || "BRL", saldo: saldosMap[c.id] ?? null,
         reconciled_at: c.reconciled_at,
       })));
 
@@ -198,13 +208,6 @@ export function ReconciliacaoDialog({
         moeda: Array.isArray(w.moeda) ? w.moeda : ["USDT"],
         reconciled_at: w.reconciled_at,
       })));
-
-      // Map saldos contas
-      const saldosMap: Record<string, number> = {};
-      (saldosContasRes.data || []).forEach((s: any) => {
-        saldosMap[s.conta_id] = s.saldo || 0;
-      });
-      setSaldosContas(saldosMap);
 
       // Map saldos wallets (by wallet_id + coin)
       const walletsMap: Record<string, Record<string, number>> = {};
@@ -478,6 +481,13 @@ export function ReconciliacaoDialog({
                   saldos={saldosWalletsList}
                   usdToBrlRate={getRate("USD")}
                 />
+              ) : tipoEntidade === "CONTA_BANCARIA" ? (
+                <ContaBancariaSearchSelect
+                  contas={contas}
+                  value={entidadeId}
+                  onValueChange={setEntidadeId}
+                  placeholder="Selecione a conta"
+                />
               ) : (
                 <Select value={entidadeId} onValueChange={setEntidadeId}>
                   <SelectTrigger>
@@ -493,17 +503,6 @@ export function ReconciliacaoDialog({
                             ({getCurrencySymbol(bk.moeda)} {bk.saldo_atual.toFixed(2)})
                           </span>
                           {bk.parceiro_nome && <span className="text-muted-foreground text-xs">• {bk.parceiro_nome}</span>}
-                        </div>
-                      </SelectItem>
-                    ))}
-                    {tipoEntidade === "CONTA_BANCARIA" && contas.map((conta) => (
-                      <SelectItem key={conta.id} value={conta.id}>
-                        <div className="flex items-center gap-2">
-                          <span>{conta.banco} - {conta.titular}</span>
-                          <Badge variant="secondary" className="text-xs">{conta.moeda}</Badge>
-                          <span className="text-muted-foreground text-xs">
-                            ({getCurrencySymbol(conta.moeda)} {(saldosContas[conta.id] || 0).toFixed(2)})
-                          </span>
                         </div>
                       </SelectItem>
                     ))}
