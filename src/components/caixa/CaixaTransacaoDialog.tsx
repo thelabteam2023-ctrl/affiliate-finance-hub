@@ -4024,8 +4024,11 @@ export function CaixaTransacaoDialog({
       // PARCEIRO → CAIXA OPERACIONAL flow (destino = caixa)
       if (fluxoTransferencia === "PARCEIRO_CAIXA") {
         return (
-          <div className="text-sm text-muted-foreground italic text-center">
-            Caixa Operacional
+          <div className="text-center">
+            <div className="text-sm text-muted-foreground italic">
+              Caixa Operacional
+            </div>
+            {renderCaixaAccountSelector()}
           </div>
         );
       }
