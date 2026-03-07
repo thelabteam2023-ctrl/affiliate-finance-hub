@@ -314,12 +314,15 @@ export function getCurrencySymbol(moeda: string): string {
 export function formatCurrency(value: number, moeda: string = "BRL"): string {
   const currencyCode = moeda === "USDT" ? "USD" : moeda;
   const locale = currencyCode === "BRL" ? "pt-BR" : "en-US";
+  // Normalize floating-point noise: treat values with absolute < 0.005 as zero
+  // This prevents displaying "-R$ 0,00" due to precision errors like -0.000000000000364
+  const safeValue = Math.abs(value) < 0.005 ? 0 : value;
   
   try {
     return new Intl.NumberFormat(locale, {
       style: "currency",
       currency: currencyCode,
-    }).format(value);
+    }).format(safeValue);
   } catch {
     // Fallback para moedas não suportadas pelo Intl
     return `${getCurrencySymbol(moeda)} ${value.toFixed(2)}`;
