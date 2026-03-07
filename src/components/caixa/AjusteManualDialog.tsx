@@ -506,7 +506,7 @@ export function AjusteManualDialog({
       const transactionData: Record<string, any> = {
         user_id: user.id,
         workspace_id: workspaceId,
-        tipo_transacao: modoReconciliacao ? "AJUSTE_RECONCILIACAO" : "AJUSTE_MANUAL",
+        tipo_transacao: "AJUSTE_RECONCILIACAO",
         tipo_moeda: isCrypto ? "CRYPTO" : "FIAT",
         moeda: moeda,
         valor: valorNumerico,
