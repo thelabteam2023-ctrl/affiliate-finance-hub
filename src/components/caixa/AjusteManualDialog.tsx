@@ -102,9 +102,8 @@ export function AjusteManualDialog({
   const [wallets, setWallets] = useState<WalletCrypto[]>([]);
   const [saldosContas, setSaldosContas] = useState<Record<string, number>>({});
   const [saldosWallets, setSaldosWallets] = useState<WalletCoinBalance[]>([]);
-  const [saldosCaixaFiat, setSaldosCaixaFiat] = useState<Record<string, number>>({});
-  const [saldosCaixaCrypto, setSaldosCaixaCrypto] = useState<number>(0);
-  const [caixaParceiroId, setCaixaParceiroId] = useState<string | null>(null);
+  // Removed: saldosCaixaFiat and saldosCaixaCrypto (aggregate views) - no longer needed
+  // All adjustments must be linked to a specific conta/wallet
 
   // Verificar permissão
   const canAccess = isOwnerOrAdmin || isSystemOwner;
