@@ -398,9 +398,9 @@ export function DesvinculacaoEmMassaDialog({
             </div>
 
             {/* List */}
-            <div className="flex-1 min-h-0 overflow-y-auto" style={{ maxHeight: "calc(85vh - 220px)" }}>
+            <div ref={listRef} className="flex-1 min-h-0 overflow-y-auto" style={{ maxHeight: "calc(85vh - 220px)" }}>
               <div className="divide-y divide-border/50">
-                {filteredVinculos.map(vinculo => {
+                {filteredVinculos.map((vinculo, idx) => {
                   const isSelected = !!selectedMap[vinculo.id];
                   const sel = selectedMap[vinculo.id];
                   const saldoRealNum = sel ? parseFloat(sel.saldoRealInput.replace(",", ".")) || 0 : 0;
