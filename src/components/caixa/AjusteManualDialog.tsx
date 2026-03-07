@@ -664,6 +664,53 @@ export function AjusteManualDialog({
               </Select>
             </div>
 
+            {/* Sub-seleção Caixa Operacional: tipo de ativo */}
+            {tipoDestino === "CAIXA_OPERACIONAL" && (
+              <div className="space-y-2">
+                <Label>Vincular a (opcional)</Label>
+                <Select value={subTipoCaixa} onValueChange={(v) => {
+                  setSubTipoCaixa(v as SubTipoCaixa);
+                  setContaId("");
+                  setWalletId("");
+                }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Nenhum (ajuste geral)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Nenhum (ajuste geral)</SelectItem>
+                    <SelectItem value="FIAT">Conta Bancária</SelectItem>
+                    <SelectItem value="CRYPTO">Wallet Crypto</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Sub-seleção Caixa: Conta Bancária */}
+            {tipoDestino === "CAIXA_OPERACIONAL" && subTipoCaixa === "FIAT" && (
+              <div className="space-y-2">
+                <Label>Conta Bancária</Label>
+                <ContaBancariaSearchSelect
+                  contas={contas}
+                  value={contaId}
+                  onValueChange={setContaId}
+                  placeholder="Selecione a conta"
+                />
+              </div>
+            )}
+
+            {/* Sub-seleção Caixa: Wallet Crypto */}
+            {tipoDestino === "CAIXA_OPERACIONAL" && subTipoCaixa === "CRYPTO" && (
+              <div className="space-y-2">
+                <Label>Wallet Crypto</Label>
+                <WalletSearchSelect
+                  wallets={wallets}
+                  value={walletId}
+                  onValueChange={setWalletId}
+                  placeholder="Selecione a wallet"
+                />
+              </div>
+            )}
+
             {/* Seleção específica: Bookmaker */}
             {tipoDestino === "BOOKMAKER" && (
               <div className="space-y-2">
@@ -698,23 +745,12 @@ export function AjusteManualDialog({
             {tipoDestino === "CONTA_BANCARIA" && (
               <div className="space-y-2">
                 <Label>Conta Bancária</Label>
-                <Select value={contaId} onValueChange={setContaId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione a conta" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {contas.map((conta) => (
-                      <SelectItem key={conta.id} value={conta.id}>
-                        <div className="flex items-center gap-2">
-                          <span>{conta.banco} - {conta.titular}</span>
-                          <Badge variant="secondary" className="text-xs">
-                            {conta.moeda}
-                          </Badge>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <ContaBancariaSearchSelect
+                  contas={contas}
+                  value={contaId}
+                  onValueChange={setContaId}
+                  placeholder="Selecione a conta"
+                />
               </div>
             )}
 
