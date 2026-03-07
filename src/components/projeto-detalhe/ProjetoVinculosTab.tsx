@@ -31,6 +31,7 @@ import { VinculoBonusDrawer } from "./VinculoBonusDrawer";
 import { BalanceDiscrepancyAlert } from "./BalanceDiscrepancyAlert";
 import { DeltaCambialCard } from "./DeltaCambialCard";
 import { ConciliacaoVinculoDialog } from "./ConciliacaoVinculoDialog";
+import { DesvinculacaoEmMassaDialog } from "./DesvinculacaoEmMassaDialog";
 import { useProjectBonuses } from "@/hooks/useProjectBonuses";
 import {
   Dialog,
@@ -173,6 +174,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
   const [cotacaoTrabalhoCop, setCotacaoTrabalhoCop] = useState<number | null>(null);
   const [conciliacaoDialogOpen, setConciliacaoDialogOpen] = useState(false);
   const [vinculoParaConciliar, setVinculoParaConciliar] = useState<Vinculo | null>(null);
+  const [bulkUnlinkOpen, setBulkUnlinkOpen] = useState(false);
   const [selectedCasas, setSelectedCasas] = useState<string[]>([]);
   const [casasSearchTerm, setCasasSearchTerm] = useState("");
   const [selectedParceiros, setSelectedParceiros] = useState<string[]>([]);
@@ -557,6 +559,18 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
             )}
           </Tooltip>
         </TooltipProvider>
+        {/* Botão Desvinculação em Massa */}
+        {canManageVinculos && vinculos.length > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-xs text-destructive border-destructive/30 hover:bg-destructive/10"
+            onClick={() => setBulkUnlinkOpen(true)}
+          >
+            <Link2Off className="mr-1.5 h-3.5 w-3.5" />
+            Desvincular em Massa
+          </Button>
+        )}
         <Toggle
           pressed={viewMode === "list"}
           onPressedChange={(pressed) => setViewMode(pressed ? "list" : "cards")}
@@ -1561,6 +1575,17 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
           }}
         />
       )}
+
+      {/* Dialog Desvinculação em Massa */}
+      <DesvinculacaoEmMassaDialog
+        open={bulkUnlinkOpen}
+        onOpenChange={setBulkUnlinkOpen}
+        vinculos={vinculos}
+        projetoId={projetoId}
+        projetoNome={projetoNome}
+        workspaceId={workspaceId}
+        onConcluido={invalidateVinculos}
+      />
     </Tabs>
   );
 }
