@@ -100,6 +100,7 @@ export function DesvinculacaoEmMassaDialog({
   const selectedCount = selectedIds.length;
 
   const toggleSelect = (vinculo: Vinculo) => {
+    if (vinculo.has_pending_transactions) return; // Block transit houses
     setSelectedMap(prev => {
       const copy = { ...prev };
       if (copy[vinculo.id]) {
@@ -109,7 +110,7 @@ export function DesvinculacaoEmMassaDialog({
           id: vinculo.id,
           saldoRealInput: "",
           statusFinal: "ativo",
-          hasPendingBets: false, // will be checked on confirm
+          hasPendingBets: false,
         };
       }
       return copy;
@@ -119,6 +120,8 @@ export function DesvinculacaoEmMassaDialog({
   const selectAll = () => {
     const newMap: Record<string, VinculoSelecionado> = {};
     filteredVinculos.forEach(v => {
+      // Skip houses with pending transactions (in transit)
+      if (v.has_pending_transactions) return;
       newMap[v.id] = selectedMap[v.id] || {
         id: v.id,
         saldoRealInput: "",
@@ -352,14 +355,16 @@ export function DesvinculacaoEmMassaDialog({
                   const saldoRealNum = sel ? parseFloat(sel.saldoRealInput.replace(",", ".")) || 0 : 0;
                   const diferenca = sel && sel.saldoRealInput !== "" ? saldoRealNum - vinculo.saldo_real : null;
                   const hasPending = sel?.hasPendingBets;
+                  const hasTransit = vinculo.has_pending_transactions;
+                  const isBlocked = hasPending || hasTransit;
 
                   return (
-                    <div key={vinculo.id} className={`p-3 transition-colors ${isSelected ? "bg-accent/30" : "hover:bg-muted/30"} ${hasPending ? "opacity-60" : ""}`}>
+                    <div key={vinculo.id} className={`p-3 transition-colors ${isSelected ? "bg-accent/30" : "hover:bg-muted/30"} ${isBlocked ? "opacity-60" : ""}`}>
                       <div className="flex items-center gap-3">
                         {/* Checkbox */}
                         <Checkbox
                           checked={isSelected}
-                          disabled={hasPending}
+                          disabled={isBlocked}
                           onCheckedChange={() => toggleSelect(vinculo)}
                         />
 
@@ -410,7 +415,7 @@ export function DesvinculacaoEmMassaDialog({
                             placeholder="0.00"
                             value={sel?.saldoRealInput || ""}
                             onChange={e => updateField(vinculo.id, "saldoRealInput", e.target.value)}
-                            disabled={!isSelected || hasPending}
+                            disabled={!isSelected || isBlocked}
                             className="h-7 text-sm tabular-nums"
                           />
                         </div>
@@ -442,7 +447,7 @@ export function DesvinculacaoEmMassaDialog({
                           <Select
                             value={sel?.statusFinal || "ativo"}
                             onValueChange={val => updateField(vinculo.id, "statusFinal", val)}
-                            disabled={!isSelected || hasPending}
+                            disabled={!isSelected || isBlocked}
                           >
                             <SelectTrigger className="h-7 text-xs">
                               <SelectValue />
@@ -457,7 +462,12 @@ export function DesvinculacaoEmMassaDialog({
                           </Select>
                         </div>
 
-                        {/* Pending warning */}
+                        {/* Blocking warnings */}
+                        {hasTransit && (
+                          <Badge variant="outline" className="text-[10px] flex-shrink-0 border-amber-500/50 text-amber-400">
+                            🔒 Em Trânsito
+                          </Badge>
+                        )}
                         {hasPending && (
                           <Badge variant="destructive" className="text-[10px] flex-shrink-0">
                             <AlertTriangle className="h-3 w-3 mr-1" />
