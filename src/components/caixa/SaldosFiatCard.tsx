@@ -41,7 +41,7 @@ const formatConta = (value: string) => {
   return digits;
 };
 
-export function SaldosFiatCard({ caixaParceiroId, saldosFiat, formatCurrency, onDataChanged }: SaldosFiatCardProps) {
+export function SaldosFiatCard({ caixaParceiroId, formatCurrency, onDataChanged }: SaldosFiatCardProps) {
   const { toast } = useToast();
   const [contas, setContas] = useState<ContaFiat[]>([]);
   const [addContaOpen, setAddContaOpen] = useState(false);
