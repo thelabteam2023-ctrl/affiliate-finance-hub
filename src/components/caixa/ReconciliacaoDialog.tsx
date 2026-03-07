@@ -27,7 +27,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, AlertTriangle, Scale, TrendingUp, TrendingDown, Minus, Info } from "lucide-react";
-import { WalletSearchSelect } from "./WalletSearchSelect";
+import { WalletSearchSelect, type WalletCoinBalance } from "./WalletSearchSelect";
 
 interface ReconciliacaoDialogProps {
   open: boolean;
@@ -92,6 +92,7 @@ export function ReconciliacaoDialog({
   const [wallets, setWallets] = useState<WalletCrypto[]>([]);
   const [saldosContas, setSaldosContas] = useState<Record<string, number>>({});
   const [saldosWallets, setSaldosWallets] = useState<Record<string, Record<string, number>>>({});
+  const [saldosWalletsList, setSaldosWalletsList] = useState<WalletCoinBalance[]>([]);
 
   const canAccess = isOwnerOrAdmin || isSystemOwner;
 
@@ -176,7 +177,7 @@ export function ReconciliacaoDialog({
         supabase.from("contas_bancarias").select(`id, banco, titular, parceiro_id, moeda, reconciled_at, parceiros!inner(status)`).eq("parceiros.status", "ativo").order("banco"),
         supabase.from("wallets_crypto").select(`id, exchange, endereco, parceiro_id, moeda, reconciled_at, parceiros!inner(nome, status)`).eq("parceiros.status", "ativo").order("exchange"),
         supabase.from("v_saldo_parceiro_contas").select("conta_id, saldo"),
-        supabase.from("v_saldo_parceiro_wallets").select("wallet_id, coin, saldo_coin"),
+        supabase.from("v_saldo_parceiro_wallets").select("wallet_id, coin, saldo_coin, saldo_usd"),
       ]);
 
       setBookmakers((bookmakersRes.data || []).map((bk: any) => ({
@@ -207,11 +208,19 @@ export function ReconciliacaoDialog({
 
       // Map saldos wallets (by wallet_id + coin)
       const walletsMap: Record<string, Record<string, number>> = {};
+      const walletsList: WalletCoinBalance[] = [];
       (saldosWalletsRes.data || []).forEach((s: any) => {
         if (!walletsMap[s.wallet_id]) walletsMap[s.wallet_id] = {};
         walletsMap[s.wallet_id][s.coin] = s.saldo_coin || 0;
+        walletsList.push({
+          wallet_id: s.wallet_id,
+          coin: s.coin,
+          saldo_coin: s.saldo_coin || 0,
+          saldo_usd: s.saldo_usd || 0,
+        });
       });
       setSaldosWallets(walletsMap);
+      setSaldosWalletsList(walletsList);
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
     } finally {
@@ -462,6 +471,8 @@ export function ReconciliacaoDialog({
                   value={entidadeId}
                   onValueChange={setEntidadeId}
                   placeholder="Selecione..."
+                  saldos={saldosWalletsList}
+                  usdToBrlRate={getRate("USD")}
                 />
               ) : (
                 <Select value={entidadeId} onValueChange={setEntidadeId}>
