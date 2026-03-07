@@ -1013,7 +1013,7 @@ export default function Caixa() {
             filtroParceiro={filtroParceiro}
             setFiltroParceiro={setFiltroParceiro}
             projetos={projetos}
-            parceirosLista={Object.entries(parceiros).map(([id, nome]) => ({ id, nome }))}
+            parceirosLista={Object.entries(parceiros).filter(([id]) => id !== caixaParceiroId).map(([id, nome]) => ({ id, nome }))}
             dataInicio={dataInicio}
             setDataInicio={setDataInicio}
             dataFim={dataFim}
