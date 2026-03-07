@@ -2860,7 +2860,7 @@ export function CaixaTransacaoDialog({
         const taxaData: any = {
           user_id: userData.user.id,
           workspace_id: workspaceId,
-          tipo_transacao: "AJUSTE",
+          tipo_transacao: "AJUSTE_MANUAL",
           tipo_moeda: "FIAT",
           moeda: taxaBancariaInfo.moeda,
           valor: taxaBancariaInfo.valorCalculado,
