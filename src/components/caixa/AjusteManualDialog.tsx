@@ -708,7 +708,7 @@ export function AjusteManualDialog({
               <div className="space-y-2">
                 <Label>Conta Bancária</Label>
                 <ContaBancariaSearchSelect
-                  contas={contas}
+                  contas={contasCaixa}
                   value={contaId}
                   onValueChange={setContaId}
                   placeholder="Selecione a conta"
