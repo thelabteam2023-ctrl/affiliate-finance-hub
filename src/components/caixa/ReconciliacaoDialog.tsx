@@ -773,7 +773,7 @@ export function ReconciliacaoDialog({
             {/* Diferença calculada */}
             {saldoReal && entidadeSelecionada && (
               <div className={`rounded-lg border p-3 ${
-                Math.abs(diferenca) < 0.01
+                Math.abs(diferenca) < minDiferenca
                   ? "border-muted bg-muted/20"
                   : diferenca > 0
                     ? "border-primary/30 bg-primary/5"
@@ -782,7 +782,7 @@ export function ReconciliacaoDialog({
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-medium">Diferença Calculada</span>
                   <div className="flex items-center gap-2">
-                    {Math.abs(diferenca) < 0.01 ? (
+                    {Math.abs(diferenca) < minDiferenca ? (
                       <Minus className="h-4 w-4 text-muted-foreground" />
                     ) : diferenca > 0 ? (
                       <TrendingUp className="h-4 w-4 text-primary" />
@@ -790,19 +790,19 @@ export function ReconciliacaoDialog({
                       <TrendingDown className="h-4 w-4 text-destructive" />
                     )}
                     <span className={`font-mono font-bold ${
-                      Math.abs(diferenca) < 0.01 ? "text-muted-foreground" : diferenca > 0 ? "text-primary" : "text-destructive"
+                      Math.abs(diferenca) < minDiferenca ? "text-muted-foreground" : diferenca > 0 ? "text-primary" : "text-destructive"
                     }`}>
                       {diferenca > 0 ? "+" : ""}{currencySymbol} {diferenca.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: isCryptoMoedaSelected ? 8 : 2 })}
                     </span>
                   </div>
                 </div>
-                {Math.abs(diferenca) >= 0.01 && (
+                {Math.abs(diferenca) >= minDiferenca && (
                   <p className="text-xs text-muted-foreground mt-1">
                     Será criado um lançamento de <strong>{diferenca > 0 ? "ENTRADA" : "SAÍDA"}</strong> de{" "}
                     <strong>{currencySymbol} {Math.abs(diferenca).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: isCryptoMoedaSelected ? 8 : 2 })}</strong>
                   </p>
                 )}
-                {Math.abs(diferenca) < 0.01 && (
+                {Math.abs(diferenca) < minDiferenca && (
                   <p className="text-xs text-muted-foreground mt-1">Saldo já está correto. Nenhum ajuste necessário.</p>
                 )}
               </div>
