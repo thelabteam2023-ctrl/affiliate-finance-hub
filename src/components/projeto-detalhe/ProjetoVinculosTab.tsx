@@ -596,12 +596,22 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                   </Button>
                 )}
               </div>
+              <div className="px-1">
+                <Input
+                  placeholder="Buscar casa..."
+                  value={casasSearchTerm}
+                  onChange={(e) => setCasasSearchTerm(e.target.value)}
+                  className="h-8 text-sm"
+                />
+              </div>
               <ScrollArea className="h-48">
                 <div className="space-y-1">
-                  {uniqueCasas.map((casa) => (
+                  {uniqueCasas
+                    .filter(casa => casa.toLowerCase().includes(casasSearchTerm.toLowerCase()))
+                    .map((casa) => (
                     <div
                       key={casa}
-                      className="flex items-center space-x-2 px-2 py-1.5 hover:bg-accent rounded cursor-pointer"
+                      className="flex items-center justify-center gap-2 px-2 py-1.5 hover:bg-accent rounded cursor-pointer"
                       onClick={() => {
                         setSelectedCasas(prev =>
                           prev.includes(casa)
@@ -614,12 +624,12 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                         checked={selectedCasas.includes(casa)}
                         className="pointer-events-none"
                       />
-                      <span className="text-sm truncate">{casa}</span>
+                      <span className="text-sm truncate flex-1 text-center">{casa}</span>
                     </div>
                   ))}
-                  {uniqueCasas.length === 0 && (
+                  {uniqueCasas.filter(casa => casa.toLowerCase().includes(casasSearchTerm.toLowerCase())).length === 0 && (
                     <p className="text-xs text-muted-foreground text-center py-4">
-                      Nenhuma casa vinculada
+                      Nenhuma casa encontrada
                     </p>
                   )}
                 </div>
