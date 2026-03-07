@@ -386,8 +386,13 @@ export function ContasEmpresaSection({ caixaParceiroId, onDataChanged }: ContasE
                           <p className="text-sm font-medium">
                             {wallet.exchange?.replace(/-/g, " ").toUpperCase() || "Wallet"}
                           </p>
-                          <p className="text-[11px] text-muted-foreground font-mono">
+                          <p
+                            className="text-[11px] text-muted-foreground font-mono cursor-pointer hover:text-primary transition-colors flex items-center gap-1"
+                            onClick={() => copyToClipboard(wallet.endereco, `wallet-${wallet.id}`)}
+                            title="Clique para copiar endereço"
+                          >
                             {wallet.endereco.slice(0, 8)}...{wallet.endereco.slice(-6)}
+                            {copiedId === `wallet-${wallet.id}` ? <Check className="h-2.5 w-2.5 text-primary" /> : <Copy className="h-2.5 w-2.5 opacity-50" />}
                           </p>
                           <div className="flex items-center gap-1.5 mt-0.5">
                             {wallet.network && (
