@@ -1128,8 +1128,9 @@ export default function Caixa() {
         onClose={() => setAjusteDialogOpen(false)}
         onSuccess={async () => {
           setAjusteDialogOpen(false);
-          await new Promise(resolve => setTimeout(resolve, 300));
-          fetchData();
+          await new Promise(resolve => setTimeout(resolve, 600));
+          await fetchData();
+          setTimeout(() => fetchData(), 2000);
         }}
       />
 
