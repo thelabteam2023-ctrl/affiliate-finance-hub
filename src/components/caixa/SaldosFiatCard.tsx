@@ -57,11 +57,16 @@ export function SaldosFiatCard({ caixaParceiroId, formatCurrency, onDataChanged 
 
   const fetchContas = useCallback(async () => {
     if (!caixaParceiroId) return;
-    const { data } = await supabase
-      .from("v_saldo_parceiro_contas")
-      .select("*")
-      .eq("parceiro_id", caixaParceiroId);
-    setContas((data || []) as unknown as ContaFiat[]);
+    const [viewRes, detailRes] = await Promise.all([
+      supabase.from("v_saldo_parceiro_contas").select("*").eq("parceiro_id", caixaParceiroId),
+      supabase.from("contas_bancarias").select("id, pix_key, pix_keys").eq("parceiro_id", caixaParceiroId),
+    ]);
+    const pixMap = new Map((detailRes.data || []).map((d: any) => [d.id, d]));
+    const merged = (viewRes.data || []).map((c: any) => {
+      const pix = pixMap.get(c.conta_id);
+      return { ...c, id: c.conta_id, pix_key: pix?.pix_key || null, pix_keys: pix?.pix_keys || null };
+    });
+    setContas(merged as ContaFiat[]);
   }, [caixaParceiroId]);
 
   useEffect(() => { fetchContas(); }, [fetchContas]);
