@@ -646,6 +646,10 @@ export function CaixaTransacaoDialog({
   const [investidores, setInvestidores] = useState<Array<{ id: string; nome: string }>>([]);
   const [saquesPendentes, setSaquesPendentes] = useState<Record<string, number>>({});
   
+  // Caixa Operacional company account (optional physical destination/origin)
+  const [caixaParceiroId, setCaixaParceiroId] = useState<string>("");
+  const [caixaContaId, setCaixaContaId] = useState<string>("");
+  const [caixaWalletId, setCaixaWalletId] = useState<string>("");
   // Transfer flow type for TRANSFERENCIA
   const [fluxoTransferencia, setFluxoTransferencia] = useState<"CAIXA_PARCEIRO" | "PARCEIRO_PARCEIRO" | "PARCEIRO_CAIXA">("CAIXA_PARCEIRO");
   
@@ -1651,6 +1655,17 @@ export function CaixaTransacaoDialog({
         parceiro_id: w.parceiro_id,
         moeda: w.moeda
       })));
+      
+      // Fetch caixa operacional partner ID
+      const { data: caixaParceiro } = await supabase
+        .from("parceiros")
+        .select("id")
+        .eq("is_caixa_operacional", true)
+        .maybeSingle();
+      
+      if (caixaParceiro) {
+        setCaixaParceiroId(caixaParceiro.id);
+      }
     } catch (error) {
       console.error("Erro ao carregar contas e wallets:", error);
     }
@@ -2529,10 +2544,28 @@ export function CaixaTransacaoDialog({
           // Aporte: Investidor → Caixa
           transactionData.origem_tipo = "INVESTIDOR";
           transactionData.destino_tipo = "CAIXA_OPERACIONAL";
+          // Wire optional company account as physical destination
+          if (caixaContaId && caixaContaId !== "none") {
+            transactionData.destino_conta_bancaria_id = caixaContaId;
+            transactionData.destino_parceiro_id = caixaParceiroId;
+          }
+          if (caixaWalletId && caixaWalletId !== "none") {
+            transactionData.destino_wallet_id = caixaWalletId;
+            transactionData.destino_parceiro_id = caixaParceiroId;
+          }
         } else {
           // Liquidação: Caixa → Investidor
           transactionData.origem_tipo = "CAIXA_OPERACIONAL";
           transactionData.destino_tipo = "INVESTIDOR";
+          // Wire optional company account as physical origin
+          if (caixaContaId && caixaContaId !== "none") {
+            transactionData.origem_conta_bancaria_id = caixaContaId;
+            transactionData.origem_parceiro_id = caixaParceiroId;
+          }
+          if (caixaWalletId && caixaWalletId !== "none") {
+            transactionData.origem_wallet_id = caixaWalletId;
+            transactionData.origem_parceiro_id = caixaParceiroId;
+          }
         }
       } else {
         // Add origin fields for other types
@@ -2546,6 +2579,16 @@ export function CaixaTransacaoDialog({
             transactionData.origem_parceiro_id = origemParceiroId;
           } else if (origemTipo === "BOOKMAKER") {
             transactionData.origem_bookmaker_id = origemBookmakerId;
+          } else if (origemTipo === "CAIXA_OPERACIONAL") {
+            // Wire optional company account for CAIXA origin
+            if (caixaContaId && caixaContaId !== "none") {
+              transactionData.origem_conta_bancaria_id = caixaContaId;
+              transactionData.origem_parceiro_id = caixaParceiroId;
+            }
+            if (caixaWalletId && caixaWalletId !== "none") {
+              transactionData.origem_wallet_id = caixaWalletId;
+              transactionData.origem_parceiro_id = caixaParceiroId;
+            }
           }
         }
 
@@ -2560,18 +2603,23 @@ export function CaixaTransacaoDialog({
             transactionData.destino_parceiro_id = destinoParceiroId;
           } else if (destinoTipo === "BOOKMAKER") {
             transactionData.destino_bookmaker_id = destinoBookmakerId;
+          } else if (destinoTipo === "CAIXA_OPERACIONAL") {
+            // Wire optional company account for CAIXA destination
+            if (caixaContaId && caixaContaId !== "none") {
+              transactionData.destino_conta_bancaria_id = caixaContaId;
+              transactionData.destino_parceiro_id = caixaParceiroId;
+            }
+            if (caixaWalletId && caixaWalletId !== "none") {
+              transactionData.destino_wallet_id = caixaWalletId;
+              transactionData.destino_parceiro_id = caixaParceiroId;
+            }
           }
         }
       }
-
       // =========================================================================
       // DINHEIRO EM TRÂNSITO: O lock de saldo é feito AUTOMATICAMENTE pelo
       // trigger tr_cash_ledger_lock_pending (AFTER INSERT) no banco de dados.
-      // 
       // IMPORTANTE: NÃO fazer lock manual aqui para evitar duplicação!
-      // O trigger fn_cash_ledger_lock_pending_on_insert() já incrementa
-      // balance_locked quando status = 'PENDENTE' e origem_wallet_id existe.
-      //
       // REGRA DE TRANSIT_STATUS:
       // - PENDING: Transações que saem para blockchain externa (depósito em bookmaker, saque externo)
       // - CONFIRMED: Transferências internas WALLET→WALLET (instantâneas, sem blockchain)
@@ -2861,14 +2909,87 @@ export function CaixaTransacaoDialog({
     }
   };
 
+  // Helper: renders optional company bank/wallet selector under "Caixa Operacional"
+  const renderCaixaAccountSelector = () => {
+    if (!caixaParceiroId) return null;
+    
+    const contasEmpresa = contasBancarias.filter(c => c.parceiro_id === caixaParceiroId);
+    const walletsEmpresa = walletsCrypto.filter(w => w.parceiro_id === caixaParceiroId);
+    
+    if (contasEmpresa.length === 0 && walletsEmpresa.length === 0) {
+      return (
+        <div className="text-[11px] text-muted-foreground/60 text-center mt-1">
+          Nenhuma conta/wallet da empresa cadastrada
+        </div>
+      );
+    }
+
+    if (tipoMoeda === "FIAT") {
+      const contasCompativeis = contasEmpresa.filter(c => c.moeda === moeda);
+      if (contasCompativeis.length === 0) return null;
+      
+      return (
+        <div className="space-y-1.5 mt-2">
+          <Label className="text-[11px] text-muted-foreground">Conta da Empresa (opcional)</Label>
+          <Select value={caixaContaId} onValueChange={setCaixaContaId}>
+            <SelectTrigger className="h-8 text-xs">
+              <SelectValue placeholder="Selecionar conta..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Sem especificar</SelectItem>
+              {contasCompativeis.map(conta => (
+                <SelectItem key={conta.id} value={conta.id}>
+                  {conta.banco} - {conta.titular}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      );
+    }
+
+    if (tipoMoeda === "CRYPTO") {
+      const walletsCompativeis = walletsEmpresa.filter(w => w.moeda?.includes(coin));
+      if (walletsCompativeis.length === 0) return null;
+      
+      return (
+        <div className="space-y-1.5 mt-2">
+          <Label className="text-[11px] text-muted-foreground">Wallet da Empresa (opcional)</Label>
+          <Select value={caixaWalletId} onValueChange={setCaixaWalletId}>
+            <SelectTrigger className="h-8 text-xs">
+              <SelectValue placeholder="Selecionar wallet..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Sem especificar</SelectItem>
+              {walletsCompativeis.map(wallet => {
+                const walletName = wallet.exchange?.replace(/-/g, ' ').toUpperCase() || 'WALLET';
+                const shortAddr = wallet.endereco ? `${wallet.endereco.slice(0, 5)}...${wallet.endereco.slice(-4)}` : '';
+                return (
+                  <SelectItem key={wallet.id} value={wallet.id}>
+                    {walletName} - {shortAddr}
+                  </SelectItem>
+                );
+              })}
+            </SelectContent>
+          </Select>
+        </div>
+      );
+    }
+
+    return null;
+  };
+
   const renderOrigemFields = () => {
     if (tipoTransacao === "APORTE_FINANCEIRO") {
       const investidor = investidores.find(inv => inv.id === investidorId);
       return (
-        <div className="text-sm text-muted-foreground italic text-center">
-          {fluxoAporte === "APORTE" 
-            ? (investidor ? `Investidor: ${investidor.nome}` : "Investidor Externo")
-            : "Caixa Operacional"}
+        <div className="text-center">
+          <div className="text-sm text-muted-foreground italic">
+            {fluxoAporte === "APORTE" 
+              ? (investidor ? `Investidor: ${investidor.nome}` : "Investidor Externo")
+              : "Caixa Operacional"}
+          </div>
+          {fluxoAporte === "LIQUIDACAO" && renderCaixaAccountSelector()}
         </div>
       );
     }
@@ -3130,8 +3251,11 @@ export function CaixaTransacaoDialog({
     if (tipoTransacao === "TRANSFERENCIA") {
       if (fluxoTransferencia === "CAIXA_PARCEIRO") {
         return (
-          <div className="text-sm text-muted-foreground italic text-center">
-            Caixa Operacional
+          <div className="text-center">
+            <div className="text-sm text-muted-foreground italic">
+              Caixa Operacional
+            </div>
+            {renderCaixaAccountSelector()}
           </div>
         );
       }
@@ -3561,10 +3685,13 @@ export function CaixaTransacaoDialog({
     if (tipoTransacao === "APORTE_FINANCEIRO") {
       const investidor = investidores.find(inv => inv.id === investidorId);
       return (
-        <div className="text-sm text-muted-foreground italic text-center">
-          {fluxoAporte === "APORTE" 
-            ? "Caixa Operacional"
-            : (investidor ? `Investidor: ${investidor.nome}` : "Investidor Externo")}
+        <div className="text-center">
+          <div className="text-sm text-muted-foreground italic">
+            {fluxoAporte === "APORTE" 
+              ? "Caixa Operacional"
+              : (investidor ? `Investidor: ${investidor.nome}` : "Investidor Externo")}
+          </div>
+          {fluxoAporte === "APORTE" && renderCaixaAccountSelector()}
         </div>
       );
     }
@@ -3929,8 +4056,11 @@ export function CaixaTransacaoDialog({
       // PARCEIRO → CAIXA OPERACIONAL flow (destino = caixa)
       if (fluxoTransferencia === "PARCEIRO_CAIXA") {
         return (
-          <div className="text-sm text-muted-foreground italic text-center">
-            Caixa Operacional
+          <div className="text-center">
+            <div className="text-sm text-muted-foreground italic">
+              Caixa Operacional
+            </div>
+            {renderCaixaAccountSelector()}
           </div>
         );
       }
