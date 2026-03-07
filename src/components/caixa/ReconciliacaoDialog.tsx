@@ -790,7 +790,7 @@ export function ReconciliacaoDialog({
                     <span className={`font-mono font-bold ${
                       Math.abs(diferenca) < 0.01 ? "text-muted-foreground" : diferenca > 0 ? "text-primary" : "text-destructive"
                     }`}>
-                      {diferenca > 0 ? "+" : ""}{currencySymbol} {diferenca.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      {diferenca > 0 ? "+" : ""}{currencySymbol} {diferenca.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: isCryptoMoedaSelected ? 8 : 2 })}
                     </span>
                   </div>
                 </div>
