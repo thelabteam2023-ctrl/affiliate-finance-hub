@@ -44,8 +44,6 @@ import {
   Plus,
   RotateCcw,
 } from "lucide-react";
-  Plus,
-} from "lucide-react";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { useCotacoes } from "@/hooks/useCotacoes";
 import { VolumeKPI } from "@/components/kpis/VolumeKPI"; // kept for potential future use
