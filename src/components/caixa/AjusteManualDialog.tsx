@@ -303,6 +303,7 @@ export function AjusteManualDialog({
         wallet_id: s.wallet_id,
         coin: s.coin,
         saldo_coin: s.saldo_coin ?? 0,
+        saldo_usd: s.saldo_usd ?? 0,
       })));
       setCaixaParceiroId(caixaParceiroRes.data?.id ?? null);
 

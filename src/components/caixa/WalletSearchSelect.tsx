@@ -69,14 +69,23 @@ export function WalletSearchSelect({
   const renderCoinBalances = (walletId: string) => {
     const balances = saldosByWallet[walletId];
     if (!balances || balances.length === 0) return null;
+    
+    // Calculate total BRL for this wallet
+    const totalBrl = balances.reduce((sum, b) => sum + (b.saldo_usd ?? 0), 0);
+    
     return (
-      <div className="flex flex-wrap gap-x-2 gap-y-0.5 mt-0.5">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
         {balances.map((b) => (
           <span key={b.coin} className="text-[10px] text-muted-foreground">
             <span className="font-medium text-foreground/70">{b.coin}</span>{" "}
             {b.saldo_coin.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 6 })}
           </span>
         ))}
+        {totalBrl !== 0 && (
+          <span className="text-[10px] text-primary font-medium ml-1">
+            ≈ R$ {totalBrl.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </span>
+        )}
       </div>
     );
   };
