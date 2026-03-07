@@ -739,7 +739,7 @@ export function ReconciliacaoDialog({
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">Saldo no Sistema</span>
                   <span className="font-mono font-semibold">
-                    {currencySymbol} {saldoSistema.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {currencySymbol} {saldoSistema.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: isCryptoMoedaSelected ? 8 : 2 })}
                   </span>
                 </div>
                 {entidadeReconciledAt && (
