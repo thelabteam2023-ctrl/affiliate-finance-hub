@@ -344,6 +344,16 @@ export function ContasEmpresaSection({ caixaParceiroId, onDataChanged }: ContasE
                         <div>
                           <p className="text-sm font-medium">{conta.banco}</p>
                           <p className="text-[11px] text-muted-foreground">{conta.titular}</p>
+                          {conta.pix_key && (
+                            <p
+                              className="text-[11px] text-muted-foreground font-mono cursor-pointer hover:text-primary transition-colors flex items-center gap-1 mt-0.5"
+                              onClick={() => copyToClipboard(conta.pix_key!, `pix-${conta.id}`)}
+                              title="Clique para copiar PIX"
+                            >
+                              PIX: {conta.pix_key.length > 20 ? `${conta.pix_key.slice(0, 10)}...${conta.pix_key.slice(-6)}` : conta.pix_key}
+                              {copiedId === `pix-${conta.id}` ? <Check className="h-2.5 w-2.5 text-primary" /> : <Copy className="h-2.5 w-2.5 opacity-50" />}
+                            </p>
+                          )}
                         </div>
                       </div>
                       <div className="text-right">
