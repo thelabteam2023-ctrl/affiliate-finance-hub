@@ -191,6 +191,7 @@ export function AjusteManualDialog({
     setBookmakerId("");
     setContaId("");
     setWalletId("");
+    setSubTipoCaixa("");
     setMoeda("BRL");
     setValor("");
     setValorDisplay("");
