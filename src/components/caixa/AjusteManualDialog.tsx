@@ -467,13 +467,20 @@ export function AjusteManualDialog({
 
   // Validar se pode submeter
   const canSubmit = (): boolean => {
-    if (!valor || parseFloat(valor) <= 0) return false;
     if (!motivo.trim()) return false;
     if (tipoDestino === "CAIXA_OPERACIONAL" && subTipoCaixa === "FIAT" && !contaId) return false;
     if (tipoDestino === "CAIXA_OPERACIONAL" && subTipoCaixa === "CRYPTO" && !walletId) return false;
     if (tipoDestino === "BOOKMAKER" && !bookmakerId) return false;
     if (tipoDestino === "CONTA_BANCARIA" && !contaId) return false;
     if (tipoDestino === "WALLET" && !walletId) return false;
+    
+    if (modoReconciliacao) {
+      // No modo reconciliação, precisa ter valor informado e diferença não-zero
+      if (!valor) return false;
+      return reconciliacaoCalc ? Math.abs(reconciliacaoCalc.diferenca) >= 0.01 : false;
+    } else {
+      if (!valor || parseFloat(valor) <= 0) return false;
+    }
     return true;
   };
 
