@@ -244,9 +244,8 @@ export function AjusteManualDialog({
     return 0;
   }, [tipoDestino, bookmakerId, contaId, walletId, moeda, subTipoCaixa, bookmakers, saldosContas, saldosWallets]);
 
-  // No modo reconciliação: calcular diferença e direção automaticamente
+  // Calcular diferença e direção automaticamente baseado no saldo informado
   const reconciliacaoCalc = useMemo(() => {
-    if (!modoReconciliacao) return null;
     const saldoInformado = parseFloat(valor) || 0;
     const diff = saldoInformado - saldoSistemaAtual;
     return {
@@ -254,7 +253,7 @@ export function AjusteManualDialog({
       direcaoCalculada: diff >= 0 ? "ENTRADA" as const : "SAIDA" as const,
       valorAjuste: Math.abs(diff),
     };
-  }, [modoReconciliacao, valor, saldoSistemaAtual]);
+  }, [valor, saldoSistemaAtual]);
 
   // Verificar se a entidade selecionada permite modo reconciliação
   const entidadeSelecionada = useMemo(() => {
