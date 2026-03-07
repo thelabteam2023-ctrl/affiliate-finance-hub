@@ -1056,8 +1056,10 @@ export default function Caixa() {
         onSuccess={async () => {
           setDialogOpen(false);
           setDialogDefaultData(null);
-          await new Promise(resolve => setTimeout(resolve, 300));
-          fetchData();
+          await new Promise(resolve => setTimeout(resolve, 600));
+          await fetchData();
+          // Safety re-fetch: views may lag behind
+          setTimeout(() => fetchData(), 2000);
         }}
         defaultTipoTransacao={dialogDefaultData?.tipoTransacao}
         defaultOrigemBookmakerId={dialogDefaultData?.origemBookmakerId}
@@ -1075,8 +1077,9 @@ export default function Caixa() {
           setSaqueParaConfirmar(null);
         }}
         onSuccess={async () => {
-          await new Promise(resolve => setTimeout(resolve, 300));
-          fetchData();
+          await new Promise(resolve => setTimeout(resolve, 600));
+          await fetchData();
+          setTimeout(() => fetchData(), 2000);
         }}
         saque={saqueParaConfirmar ? (() => {
           const walletDetail = saqueParaConfirmar.destino_wallet_id
@@ -1125,8 +1128,9 @@ export default function Caixa() {
         onClose={() => setAjusteDialogOpen(false)}
         onSuccess={async () => {
           setAjusteDialogOpen(false);
-          await new Promise(resolve => setTimeout(resolve, 300));
-          fetchData();
+          await new Promise(resolve => setTimeout(resolve, 600));
+          await fetchData();
+          setTimeout(() => fetchData(), 2000);
         }}
       />
 
@@ -1136,8 +1140,9 @@ export default function Caixa() {
         onClose={() => setReconciliacaoDialogOpen(false)}
         onSuccess={async () => {
           setReconciliacaoDialogOpen(false);
-          await new Promise(resolve => setTimeout(resolve, 300));
-          fetchData();
+          await new Promise(resolve => setTimeout(resolve, 600));
+          await fetchData();
+          setTimeout(() => fetchData(), 2000);
         }}
       />
     </div>
