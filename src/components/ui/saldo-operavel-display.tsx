@@ -75,6 +75,14 @@ interface SaldoOperavelDisplayProps {
   variant?: "card" | "list" | "compact";
   /** Classes adicionais */
   className?: string;
+  /** Sort callbacks for list variant column headers */
+  onSortSaldo?: () => void;
+  onSortEmAposta?: () => void;
+  onSortDisponivel?: () => void;
+  /** Current sort direction for visual indicator */
+  sortSaldo?: "asc" | "desc" | null;
+  sortEmAposta?: "asc" | "desc" | null;
+  sortDisponivel?: "asc" | "desc" | null;
 }
 
 /**
