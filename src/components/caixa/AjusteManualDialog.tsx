@@ -6,6 +6,7 @@ import { usePermissions } from "@/contexts/PermissionsContext";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useExchangeRates } from "@/contexts/ExchangeRatesContext";
 import { FIAT_CURRENCIES, CRYPTO_CURRENCIES, getCurrencySymbol, type SupportedCurrency } from "@/types/currency";
+import { getFirstLastName } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
