@@ -31,6 +31,7 @@ import {
   Building2,
   User,
   CheckCircle2,
+  LockKeyhole,
 } from "lucide-react";
 import { registrarAjusteViaLedger } from "@/lib/ledgerService";
 import { preCheckUnlink, executeUnlink } from "@/lib/projetoTransitionService";
@@ -497,22 +498,29 @@ export function DesvinculacaoEmMassaDialog({
                         {/* Status Final */}
                         <div className="w-[150px] flex-shrink-0">
                           <p className="text-[10px] text-muted-foreground mb-0.5">Status Final</p>
-                          <Select
-                            value={sel?.statusFinal || "ativo"}
-                            onValueChange={val => updateField(vinculo.id, "statusFinal", val)}
-                            disabled={!isSelected || isBlocked}
-                          >
-                            <SelectTrigger className="h-7 text-xs">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {STATUS_OPTIONS.map(opt => (
-                                <SelectItem key={opt.value} value={opt.value} className="text-xs">
-                                  {opt.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          {vinculo.bookmaker_status?.toLowerCase() === "limitada" ? (
+                            <div className="h-7 flex items-center px-2 rounded-md border border-destructive/30 bg-destructive/10">
+                              <span className="text-xs text-destructive font-medium">Limitada</span>
+                              <LockKeyhole className="h-3 w-3 ml-auto text-destructive/60" />
+                            </div>
+                          ) : (
+                            <Select
+                              value={sel?.statusFinal || "ativo"}
+                              onValueChange={val => updateField(vinculo.id, "statusFinal", val)}
+                              disabled={!isSelected || isBlocked}
+                            >
+                              <SelectTrigger className="h-7 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {STATUS_OPTIONS.map(opt => (
+                                  <SelectItem key={opt.value} value={opt.value} className="text-xs">
+                                    {opt.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
                         </div>
 
                         {/* Blocking warnings */}
