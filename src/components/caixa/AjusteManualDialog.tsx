@@ -102,9 +102,21 @@ export function AjusteManualDialog({
   const [contas, setContas] = useState<ContaBancaria[]>([]);
   const [wallets, setWallets] = useState<WalletCrypto[]>([]);
   const [saldosContas, setSaldosContas] = useState<Record<string, number>>({});
+  const [caixaParceiroId, setCaixaParceiroId] = useState<string | null>(null);
 
   // Verificar permissão
   const canAccess = isOwnerOrAdmin || isSystemOwner;
+
+  // Contas/Wallets filtradas para o Caixa Operacional (parceiro virtual)
+  const contasCaixa = useMemo(() => {
+    if (!caixaParceiroId) return [];
+    return contas.filter(c => c.parceiro_id === caixaParceiroId);
+  }, [contas, caixaParceiroId]);
+
+  const walletsCaixa = useMemo(() => {
+    if (!caixaParceiroId) return [];
+    return wallets.filter(w => w.parceiro_id === caixaParceiroId);
+  }, [wallets, caixaParceiroId]);
 
   // Moedas disponíveis baseadas na entidade selecionada
   const moedasDisponiveis = useMemo(() => {
@@ -229,7 +241,7 @@ export function AjusteManualDialog({
       // PROTEÇÃO DE PARCEIROS INATIVOS:
       // Buscar bookmakers, contas e wallets apenas de PARCEIROS ATIVOS
       // O banco de dados também valida via trigger, mas a UI deve prevenir a seleção
-      const [bookmakersRes, contasRes, walletsRes, saldosContasRes] = await Promise.all([
+      const [bookmakersRes, contasRes, walletsRes, saldosContasRes, caixaParceiroRes] = await Promise.all([
         supabase
           .from("bookmakers")
           .select(`
@@ -270,6 +282,11 @@ export function AjusteManualDialog({
         supabase
           .from("v_saldo_parceiro_contas")
           .select("conta_id, saldo"),
+        supabase
+          .from("parceiros")
+          .select("id")
+          .eq("is_caixa_operacional", true)
+          .maybeSingle(),
       ]);
 
       // Build saldo map for contas
@@ -278,6 +295,7 @@ export function AjusteManualDialog({
         if (s.conta_id) saldoMap[s.conta_id] = s.saldo ?? 0;
       });
       setSaldosContas(saldoMap);
+      setCaixaParceiroId(caixaParceiroRes.data?.id ?? null);
 
       const mappedBookmakers: Bookmaker[] = (bookmakersRes.data || []).map((bk: any) => ({
         id: bk.id,
@@ -690,7 +708,7 @@ export function AjusteManualDialog({
               <div className="space-y-2">
                 <Label>Conta Bancária</Label>
                 <ContaBancariaSearchSelect
-                  contas={contas}
+                  contas={contasCaixa}
                   value={contaId}
                   onValueChange={setContaId}
                   placeholder="Selecione a conta"
@@ -703,7 +721,7 @@ export function AjusteManualDialog({
               <div className="space-y-2">
                 <Label>Wallet Crypto</Label>
                 <WalletSearchSelect
-                  wallets={wallets}
+                  wallets={walletsCaixa}
                   value={walletId}
                   onValueChange={setWalletId}
                   placeholder="Selecione a wallet"
