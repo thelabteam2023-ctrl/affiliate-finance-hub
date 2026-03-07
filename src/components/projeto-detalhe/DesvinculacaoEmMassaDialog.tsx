@@ -119,6 +119,8 @@ export function DesvinculacaoEmMassaDialog({
   const selectAll = () => {
     const newMap: Record<string, VinculoSelecionado> = {};
     filteredVinculos.forEach(v => {
+      // Skip houses with pending transactions (in transit)
+      if (v.has_pending_transactions) return;
       newMap[v.id] = selectedMap[v.id] || {
         id: v.id,
         saldoRealInput: "",
