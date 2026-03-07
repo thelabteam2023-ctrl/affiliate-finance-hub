@@ -1,5 +1,8 @@
 import { ProjectModulesManager } from "@/components/projeto-detalhe/ProjectModulesManager";
+import { MarcoZeroCard } from "@/components/projeto-detalhe/MarcoZeroDialog";
 import { useActionAccess } from "@/hooks/useModuleAccess";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { Settings2 } from "lucide-react";
 
 interface ProjetoGestaoTabProps {
@@ -8,6 +11,18 @@ interface ProjetoGestaoTabProps {
 
 export function ProjetoGestaoTab({ projetoId }: ProjetoGestaoTabProps) {
   const { canEdit } = useActionAccess();
+
+  const { data: projetoData } = useQuery({
+    queryKey: ["projeto-data", projetoId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("projetos")
+        .select("marco_zero_at")
+        .eq("id", projetoId)
+        .single();
+      return data;
+    },
+  });
   
   return (
     <div className="h-full overflow-y-auto">
@@ -24,6 +39,14 @@ export function ProjetoGestaoTab({ projetoId }: ProjetoGestaoTabProps) {
             </p>
           </div>
         </div>
+
+        {/* Marco Zero Section */}
+        {canEdit && (
+          <MarcoZeroCard 
+            projetoId={projetoId} 
+            marcoZeroAt={projetoData?.marco_zero_at || null} 
+          />
+        )}
 
         {/* Modules Section */}
         <ProjectModulesManager projetoId={projetoId} />

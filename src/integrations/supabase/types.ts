@@ -7685,6 +7685,7 @@ export type Database = {
           fonte_cotacao: string | null
           id: string
           investidor_id: string | null
+          marco_zero_at: string | null
           modelo_absorcao_taxas: string
           moeda_consolidacao: string | null
           nome: string
@@ -7719,6 +7720,7 @@ export type Database = {
           fonte_cotacao?: string | null
           id?: string
           investidor_id?: string | null
+          marco_zero_at?: string | null
           modelo_absorcao_taxas?: string
           moeda_consolidacao?: string | null
           nome: string
@@ -7753,6 +7755,7 @@ export type Database = {
           fonte_cotacao?: string | null
           id?: string
           investidor_id?: string | null
+          marco_zero_at?: string | null
           modelo_absorcao_taxas?: string
           moeda_consolidacao?: string | null
           nome?: string
@@ -12580,6 +12583,10 @@ export type Database = {
           p_workspace_id?: string
         }
         Returns: string
+      }
+      executar_marco_zero: {
+        Args: { p_projeto_id: string; p_user_id: string }
+        Returns: Json
       }
       expirar_freebet: {
         Args: {
