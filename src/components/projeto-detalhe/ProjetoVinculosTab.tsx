@@ -172,6 +172,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
   const [conciliacaoDialogOpen, setConciliacaoDialogOpen] = useState(false);
   const [vinculoParaConciliar, setVinculoParaConciliar] = useState<Vinculo | null>(null);
   const [selectedCasas, setSelectedCasas] = useState<string[]>([]);
+  const [casasSearchTerm, setCasasSearchTerm] = useState("");
   const [selectedParceiros, setSelectedParceiros] = useState<string[]>([]);
   const [ajusteVinculo, setAjusteVinculo] = useState<Vinculo | null>(null);
   const [sortMode, setSortMode] = useState<VinculoSortMode>("alpha");
@@ -595,12 +596,22 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                   </Button>
                 )}
               </div>
+              <div className="px-1">
+                <Input
+                  placeholder="Buscar casa..."
+                  value={casasSearchTerm}
+                  onChange={(e) => setCasasSearchTerm(e.target.value)}
+                  className="h-8 text-sm"
+                />
+              </div>
               <ScrollArea className="h-48">
                 <div className="space-y-1">
-                  {uniqueCasas.map((casa) => (
+                  {uniqueCasas
+                    .filter(casa => casa.toLowerCase().includes(casasSearchTerm.toLowerCase()))
+                    .map((casa) => (
                     <div
                       key={casa}
-                      className="flex items-center space-x-2 px-2 py-1.5 hover:bg-accent rounded cursor-pointer"
+                      className="flex items-center justify-center gap-2 px-2 py-1.5 hover:bg-accent rounded cursor-pointer"
                       onClick={() => {
                         setSelectedCasas(prev =>
                           prev.includes(casa)
@@ -613,12 +624,12 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                         checked={selectedCasas.includes(casa)}
                         className="pointer-events-none"
                       />
-                      <span className="text-sm truncate">{casa}</span>
+                      <span className="text-sm truncate flex-1 text-center">{casa}</span>
                     </div>
                   ))}
-                  {uniqueCasas.length === 0 && (
+                  {uniqueCasas.filter(casa => casa.toLowerCase().includes(casasSearchTerm.toLowerCase())).length === 0 && (
                     <p className="text-xs text-muted-foreground text-center py-4">
-                      Nenhuma casa vinculada
+                      Nenhuma casa encontrada
                     </p>
                   )}
                 </div>
@@ -660,7 +671,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                   {uniqueParceiros.map((parceiro) => (
                     <div
                       key={parceiro}
-                      className="flex items-center space-x-2 px-2 py-1.5 hover:bg-accent rounded cursor-pointer"
+                      className="flex items-center justify-center gap-2 px-2 py-1.5 hover:bg-accent rounded cursor-pointer"
                       onClick={() => {
                         setSelectedParceiros(prev =>
                           prev.includes(parceiro)
@@ -673,7 +684,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                         checked={selectedParceiros.includes(parceiro)}
                         className="pointer-events-none"
                       />
-                      <span className="text-sm truncate">{parceiro}</span>
+                      <span className="text-sm truncate flex-1 text-center">{parceiro}</span>
                     </div>
                   ))}
                   {uniqueParceiros.length === 0 && (
@@ -719,26 +730,26 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem onClick={() => setSortMode("alpha")} className={sortMode === "alpha" ? "bg-accent" : ""}>
+            <DropdownMenuItem onClick={() => setSortMode("alpha")} className={`justify-center ${sortMode === "alpha" ? "bg-accent" : ""}`}>
               <ArrowDownAZ className="h-4 w-4 mr-2" /> Nome A-Z
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setSortMode("newest")} className={sortMode === "newest" ? "bg-accent" : ""}>
+            <DropdownMenuItem onClick={() => setSortMode("newest")} className={`justify-center ${sortMode === "newest" ? "bg-accent" : ""}`}>
               <Clock className="h-4 w-4 mr-2" /> Mais recentes
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setSortMode("oldest")} className={sortMode === "oldest" ? "bg-accent" : ""}>
+            <DropdownMenuItem onClick={() => setSortMode("oldest")} className={`justify-center ${sortMode === "oldest" ? "bg-accent" : ""}`}>
               <Clock className="h-4 w-4 mr-2" /> Mais antigos
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => setSortMode(prev => prev === "apostas_desc" ? "apostas_asc" : "apostas_desc")} className={sortMode.startsWith("apostas") ? "bg-accent" : ""}>
+            <DropdownMenuItem onClick={() => setSortMode(prev => prev === "apostas_desc" ? "apostas_asc" : "apostas_desc")} className={`justify-center ${sortMode.startsWith("apostas") ? "bg-accent" : ""}`}>
               <Target className="h-4 w-4 mr-2" /> Apostas {sortMode === "apostas_asc" ? "↑" : "↓"}
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setSortMode(prev => prev === "saldo_desc" ? "saldo_asc" : "saldo_desc")} className={sortMode.startsWith("saldo") ? "bg-accent" : ""}>
+            <DropdownMenuItem onClick={() => setSortMode(prev => prev === "saldo_desc" ? "saldo_asc" : "saldo_desc")} className={`justify-center ${sortMode.startsWith("saldo") ? "bg-accent" : ""}`}>
               <Wallet className="h-4 w-4 mr-2" /> Saldo Operável {sortMode === "saldo_asc" ? "↑" : "↓"}
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setSortMode(prev => prev === "em_aposta_desc" ? "em_aposta_asc" : "em_aposta_desc")} className={sortMode.startsWith("em_aposta") ? "bg-accent" : ""}>
+            <DropdownMenuItem onClick={() => setSortMode(prev => prev === "em_aposta_desc" ? "em_aposta_asc" : "em_aposta_desc")} className={`justify-center ${sortMode.startsWith("em_aposta") ? "bg-accent" : ""}`}>
               <Target className="h-4 w-4 mr-2" /> Em Aposta {sortMode === "em_aposta_asc" ? "↑" : "↓"}
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setSortMode(prev => prev === "disponivel_desc" ? "disponivel_asc" : "disponivel_desc")} className={sortMode.startsWith("disponivel") ? "bg-accent" : ""}>
+            <DropdownMenuItem onClick={() => setSortMode(prev => prev === "disponivel_desc" ? "disponivel_asc" : "disponivel_desc")} className={`justify-center ${sortMode.startsWith("disponivel") ? "bg-accent" : ""}`}>
               <Coins className="h-4 w-4 mr-2" /> Disponível {sortMode === "disponivel_asc" ? "↑" : "↓"}
             </DropdownMenuItem>
           </DropdownMenuContent>
