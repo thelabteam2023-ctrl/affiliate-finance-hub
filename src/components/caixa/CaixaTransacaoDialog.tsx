@@ -2869,7 +2869,8 @@ export function CaixaTransacaoDialog({
           ajuste_direcao: "SAIDA",
           ajuste_motivo: "taxa_bancaria",
           data_transacao: transactionData.data_transacao,
-          impacta_caixa_operacional: true,
+          data_confirmacao: transactionData.data_transacao,
+          impacta_caixa_operacional: false,
           referencia_transacao_id: insertedData?.id ?? null,
           // Sempre debitado da conta bancária envolvida
           origem_tipo: contaNoDestino ? transactionData.destino_tipo : transactionData.origem_tipo,
@@ -2883,15 +2884,18 @@ export function CaixaTransacaoDialog({
           valor_origem: taxaBancariaInfo.valorCalculado,
         };
 
+        console.log("[TAXA BANCÁRIA] Payload para insert:", JSON.stringify(taxaData, null, 2));
+
         const { error: taxaError } = await supabase
           .from("cash_ledger")
           .insert([taxaData]);
 
         if (taxaError) {
-          console.error("Erro ao registrar taxa bancária:", taxaError);
+          console.error("[TAXA BANCÁRIA] Erro completo:", JSON.stringify(taxaError, null, 2));
+          console.error("[TAXA BANCÁRIA] Payload enviado:", JSON.stringify(taxaData, null, 2));
           toast({
             title: "Transação registrada, mas erro na taxa",
-            description: "A transação foi salva, porém o lançamento automático da taxa falhou. Registre manualmente.",
+            description: `Erro: ${taxaError.message || taxaError.code || "Falha desconhecida"}. Registre manualmente.`,
             variant: "destructive",
           });
         } else {
