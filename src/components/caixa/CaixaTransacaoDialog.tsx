@@ -2876,6 +2876,76 @@ export function CaixaTransacaoDialog({
     }
   };
 
+  // Helper: renders optional company bank/wallet selector under "Caixa Operacional"
+  const renderCaixaAccountSelector = () => {
+    if (!caixaParceiroId) return null;
+    
+    const contasEmpresa = contasBancarias.filter(c => c.parceiro_id === caixaParceiroId);
+    const walletsEmpresa = walletsCrypto.filter(w => w.parceiro_id === caixaParceiroId);
+    
+    if (contasEmpresa.length === 0 && walletsEmpresa.length === 0) {
+      return (
+        <div className="text-[11px] text-muted-foreground/60 text-center mt-1">
+          Nenhuma conta/wallet da empresa cadastrada
+        </div>
+      );
+    }
+
+    if (tipoMoeda === "FIAT") {
+      const contasCompativeis = contasEmpresa.filter(c => c.moeda === moeda);
+      if (contasCompativeis.length === 0) return null;
+      
+      return (
+        <div className="space-y-1.5 mt-2">
+          <Label className="text-[11px] text-muted-foreground">Conta da Empresa (opcional)</Label>
+          <Select value={caixaContaId} onValueChange={setCaixaContaId}>
+            <SelectTrigger className="h-8 text-xs">
+              <SelectValue placeholder="Selecionar conta..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Sem especificar</SelectItem>
+              {contasCompativeis.map(conta => (
+                <SelectItem key={conta.id} value={conta.id}>
+                  {conta.banco} - {conta.titular}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      );
+    }
+
+    if (tipoMoeda === "CRYPTO") {
+      const walletsCompativeis = walletsEmpresa.filter(w => w.moeda?.includes(coin));
+      if (walletsCompativeis.length === 0) return null;
+      
+      return (
+        <div className="space-y-1.5 mt-2">
+          <Label className="text-[11px] text-muted-foreground">Wallet da Empresa (opcional)</Label>
+          <Select value={caixaWalletId} onValueChange={setCaixaWalletId}>
+            <SelectTrigger className="h-8 text-xs">
+              <SelectValue placeholder="Selecionar wallet..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Sem especificar</SelectItem>
+              {walletsCompativeis.map(wallet => {
+                const walletName = wallet.exchange?.replace(/-/g, ' ').toUpperCase() || 'WALLET';
+                const shortAddr = wallet.endereco ? `${wallet.endereco.slice(0, 5)}...${wallet.endereco.slice(-4)}` : '';
+                return (
+                  <SelectItem key={wallet.id} value={wallet.id}>
+                    {walletName} - {shortAddr}
+                  </SelectItem>
+                );
+              })}
+            </SelectContent>
+          </Select>
+        </div>
+      );
+    }
+
+    return null;
+  };
+
   const renderOrigemFields = () => {
     if (tipoTransacao === "APORTE_FINANCEIRO") {
       const investidor = investidores.find(inv => inv.id === investidorId);
