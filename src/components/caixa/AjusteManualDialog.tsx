@@ -242,7 +242,7 @@ export function AjusteManualDialog({
       return 0;
     }
     return 0;
-  }, [tipoDestino, bookmakerId, contaId, walletId, moeda, subTipoCaixa, bookmakers, saldosContas, saldosWallets, saldosCaixaFiat]);
+  }, [tipoDestino, bookmakerId, contaId, walletId, moeda, subTipoCaixa, bookmakers, saldosContas, saldosWallets]);
 
   // Calcular diferença e direção automaticamente baseado no saldo informado
   // CRITICAL: Arredondar valorAjuste para evitar drift de ponto flutuante.
