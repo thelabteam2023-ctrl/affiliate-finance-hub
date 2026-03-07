@@ -193,7 +193,19 @@ export function SaldosFiatCard({ caixaParceiroId, formatCurrency, onDataChanged 
                         </span>
                       </div>
                       <p className="text-[10px] text-muted-foreground truncate pl-4.5">{conta.titular}</p>
-                      {conta.pix_key && (
+                      {/* PIX keys from pix_keys array */}
+                      {conta.pix_keys && conta.pix_keys.length > 0 && conta.pix_keys.map((pk, idx) => (
+                        <p
+                          key={`pix-arr-${conta.id}-${idx}`}
+                          className="text-[10px] text-muted-foreground font-mono cursor-pointer hover:text-primary transition-colors flex items-center gap-0.5 pl-4.5"
+                          onClick={(e) => { e.stopPropagation(); copyToClipboard(pk.chave, `pix-${conta.id}-${idx}`); }}
+                        >
+                          PIX ({pk.tipo}): {pk.chave.length > 20 ? `${pk.chave.slice(0, 10)}...${pk.chave.slice(-4)}` : pk.chave}
+                          {copiedId === `pix-${conta.id}-${idx}` ? <Check className="h-2.5 w-2.5 text-primary" /> : <Copy className="h-2.5 w-2.5 opacity-40" />}
+                        </p>
+                      ))}
+                      {/* Fallback: legacy single pix_key */}
+                      {(!conta.pix_keys || conta.pix_keys.length === 0) && conta.pix_key && (
                         <p
                           className="text-[10px] text-muted-foreground font-mono cursor-pointer hover:text-primary transition-colors flex items-center gap-0.5 pl-4.5"
                           onClick={(e) => { e.stopPropagation(); copyToClipboard(conta.pix_key!, `pix-${conta.id}`); }}
