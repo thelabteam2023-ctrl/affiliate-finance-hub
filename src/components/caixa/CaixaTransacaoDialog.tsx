@@ -3218,8 +3218,11 @@ export function CaixaTransacaoDialog({
     if (tipoTransacao === "TRANSFERENCIA") {
       if (fluxoTransferencia === "CAIXA_PARCEIRO") {
         return (
-          <div className="text-sm text-muted-foreground italic text-center">
-            Caixa Operacional
+          <div className="text-center">
+            <div className="text-sm text-muted-foreground italic">
+              Caixa Operacional
+            </div>
+            {renderCaixaAccountSelector()}
           </div>
         );
       }
