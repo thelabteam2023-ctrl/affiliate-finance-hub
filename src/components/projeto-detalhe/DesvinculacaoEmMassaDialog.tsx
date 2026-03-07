@@ -31,6 +31,7 @@ import {
   Building2,
   User,
   CheckCircle2,
+  LockKeyhole,
 } from "lucide-react";
 import { registrarAjusteViaLedger } from "@/lib/ledgerService";
 import { preCheckUnlink, executeUnlink } from "@/lib/projetoTransitionService";
