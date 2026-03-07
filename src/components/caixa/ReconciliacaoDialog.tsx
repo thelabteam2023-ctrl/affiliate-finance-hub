@@ -474,6 +474,13 @@ export function ReconciliacaoDialog({
                   saldos={saldosWalletsList}
                   usdToBrlRate={getRate("USD")}
                 />
+              ) : tipoEntidade === "CONTA_BANCARIA" ? (
+                <ContaBancariaSearchSelect
+                  contas={contas}
+                  value={entidadeId}
+                  onValueChange={setEntidadeId}
+                  placeholder="Selecione a conta"
+                />
               ) : (
                 <Select value={entidadeId} onValueChange={setEntidadeId}>
                   <SelectTrigger>
@@ -489,17 +496,6 @@ export function ReconciliacaoDialog({
                             ({getCurrencySymbol(bk.moeda)} {bk.saldo_atual.toFixed(2)})
                           </span>
                           {bk.parceiro_nome && <span className="text-muted-foreground text-xs">• {bk.parceiro_nome}</span>}
-                        </div>
-                      </SelectItem>
-                    ))}
-                    {tipoEntidade === "CONTA_BANCARIA" && contas.map((conta) => (
-                      <SelectItem key={conta.id} value={conta.id}>
-                        <div className="flex items-center gap-2">
-                          <span>{conta.banco} - {conta.titular}</span>
-                          <Badge variant="secondary" className="text-xs">{conta.moeda}</Badge>
-                          <span className="text-muted-foreground text-xs">
-                            ({getCurrencySymbol(conta.moeda)} {(saldosContas[conta.id] || 0).toFixed(2)})
-                          </span>
                         </div>
                       </SelectItem>
                     ))}
