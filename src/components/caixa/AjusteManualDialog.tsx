@@ -359,14 +359,24 @@ export function AjusteManualDialog({
 
   // Obter nome da entidade selecionada
   const getEntidadeNome = (): string => {
-    if (tipoDestino === "CAIXA_OPERACIONAL") return "Caixa Operacional";
+    if (tipoDestino === "CAIXA_OPERACIONAL") {
+      if (subTipoCaixa === "FIAT" && contaId) {
+        const conta = contas.find(c => c.id === contaId);
+        return conta ? `Caixa – ${conta.banco} (${getFirstLastName(conta.titular)})` : "Caixa Operacional";
+      }
+      if (subTipoCaixa === "CRYPTO" && walletId) {
+        const wallet = wallets.find(w => w.id === walletId);
+        return wallet ? `Caixa – ${wallet.exchange} (${wallet.endereco.slice(0, 8)}...)` : "Caixa Operacional";
+      }
+      return "Caixa Operacional";
+    }
     if (tipoDestino === "BOOKMAKER") {
       const bk = bookmakers.find(b => b.id === bookmakerId);
       return bk ? `${bk.nome}${bk.parceiro_nome ? ` (${bk.parceiro_nome})` : ""}` : "Bookmaker";
     }
     if (tipoDestino === "CONTA_BANCARIA") {
       const conta = contas.find(c => c.id === contaId);
-      return conta ? `${conta.banco} - ${conta.titular}` : "Conta Bancária";
+      return conta ? `${conta.banco} - ${getFirstLastName(conta.titular)}` : "Conta Bancária";
     }
     if (tipoDestino === "WALLET") {
       const wallet = wallets.find(w => w.id === walletId);
@@ -379,6 +389,8 @@ export function AjusteManualDialog({
   const canSubmit = (): boolean => {
     if (!valor || parseFloat(valor) <= 0) return false;
     if (!motivo.trim()) return false;
+    if (tipoDestino === "CAIXA_OPERACIONAL" && subTipoCaixa === "FIAT" && !contaId) return false;
+    if (tipoDestino === "CAIXA_OPERACIONAL" && subTipoCaixa === "CRYPTO" && !walletId) return false;
     if (tipoDestino === "BOOKMAKER" && !bookmakerId) return false;
     if (tipoDestino === "CONTA_BANCARIA" && !contaId) return false;
     if (tipoDestino === "WALLET" && !walletId) return false;
