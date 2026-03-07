@@ -79,6 +79,22 @@ export function DesvinculacaoEmMassaDialog({
   const [progressTotal, setProgressTotal] = useState(0);
   const [results, setResults] = useState<{ id: string; nome: string; success: boolean; error?: string }[]>([]);
   const [step, setStep] = useState<"select" | "confirm" | "result">("select");
+  const listRef = useRef<HTMLDivElement>(null);
+
+  // Handle Tab on saldo inputs: jump to the next saldo input in the list
+  const handleSaldoKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>, currentIndex: number) => {
+    if (e.key === "Tab" && !e.shiftKey && listRef.current) {
+      const allInputs = listRef.current.querySelectorAll<HTMLInputElement>('input[data-saldo-index]');
+      const sorted = Array.from(allInputs).sort((a, b) => 
+        Number(a.dataset.saldoIndex) - Number(b.dataset.saldoIndex)
+      );
+      const currentPos = sorted.findIndex(inp => Number(inp.dataset.saldoIndex) === currentIndex);
+      if (currentPos >= 0 && currentPos < sorted.length - 1) {
+        e.preventDefault();
+        sorted[currentPos + 1].focus();
+      }
+    }
+  }, []);
 
   // Abbreviate name: first + last
   const abbreviateName = (name: string) => {
