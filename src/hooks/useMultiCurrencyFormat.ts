@@ -57,20 +57,20 @@ export function formatCurrencyDynamic(
   
   let formatted: string;
   
-  if (compact && Math.abs(valor) >= 1000) {
-    if (Math.abs(valor) >= 1000000) {
-      formatted = (valor / 1000000).toLocaleString("pt-BR", {
+  if (compact && Math.abs(safeValor) >= 1000) {
+    if (Math.abs(safeValor) >= 1000000) {
+      formatted = (safeValor / 1000000).toLocaleString("pt-BR", {
         minimumFractionDigits: 1,
         maximumFractionDigits: 1,
       }) + "M";
     } else {
-      formatted = (valor / 1000).toLocaleString("pt-BR", {
+      formatted = (safeValor / 1000).toLocaleString("pt-BR", {
         minimumFractionDigits: 1,
         maximumFractionDigits: 1,
       }) + "K";
     }
   } else {
-    formatted = valor.toLocaleString("pt-BR", {
+    formatted = safeValor.toLocaleString("pt-BR", {
       minimumFractionDigits: decimals,
       maximumFractionDigits: decimals,
     });
