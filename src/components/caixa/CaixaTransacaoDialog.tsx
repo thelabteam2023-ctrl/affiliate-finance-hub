@@ -3652,7 +3652,6 @@ export function CaixaTransacaoDialog({
     if (tipoTransacao === "APORTE_FINANCEIRO") {
       const investidor = investidores.find(inv => inv.id === investidorId);
       return (
-      return (
         <div className="text-center">
           <div className="text-sm text-muted-foreground italic">
             {fluxoAporte === "APORTE" 
