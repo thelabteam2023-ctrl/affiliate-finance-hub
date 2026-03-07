@@ -208,11 +208,19 @@ export function ReconciliacaoDialog({
 
       // Map saldos wallets (by wallet_id + coin)
       const walletsMap: Record<string, Record<string, number>> = {};
+      const walletsList: WalletCoinBalance[] = [];
       (saldosWalletsRes.data || []).forEach((s: any) => {
         if (!walletsMap[s.wallet_id]) walletsMap[s.wallet_id] = {};
         walletsMap[s.wallet_id][s.coin] = s.saldo_coin || 0;
+        walletsList.push({
+          wallet_id: s.wallet_id,
+          coin: s.coin,
+          saldo_coin: s.saldo_coin || 0,
+          saldo_usd: s.saldo_usd || 0,
+        });
       });
       setSaldosWallets(walletsMap);
+      setSaldosWalletsList(walletsList);
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
     } finally {
