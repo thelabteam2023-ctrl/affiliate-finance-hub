@@ -118,11 +118,12 @@ export function useProjetoResultado({
       // 0. Buscar configuração de moeda do projeto
       const { data: projetoData } = await supabase
         .from('projetos')
-        .select('moeda_consolidacao')
+        .select('moeda_consolidacao, marco_zero_at')
         .eq('id', projetoId)
         .single();
       
       const moedaConsolidacao = projetoData?.moeda_consolidacao || 'BRL';
+      const marcoZeroAt = projetoData?.marco_zero_at || null;
       
       // PADRONIZADO: Usar exclusivamente a função oficial de conversão passada pelo caller.
       // Isso garante paridade com todas as outras abas (Bônus, Breakdowns, etc.)
