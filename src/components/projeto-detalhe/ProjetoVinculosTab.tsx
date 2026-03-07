@@ -90,6 +90,8 @@ import {
   Lock,
   TrendingDown,
   ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
   ArrowDownAZ,
   Clock,
 } from "lucide-react";
@@ -1139,7 +1141,14 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
 
                   {/* Apostas */}
                   <div className="text-center w-[70px] flex-shrink-0">
-                    <p className="text-xs text-muted-foreground">Apostas</p>
+                    <p 
+                      className="text-xs text-muted-foreground flex items-center justify-center gap-1 cursor-pointer hover:text-foreground transition-colors"
+                      onClick={() => setSortMode(prev => prev === "apostas_desc" ? "apostas_asc" : "apostas_desc")}
+                    >
+                      Apostas
+                      {sortMode === "apostas_desc" && <ArrowDown className="h-3 w-3 text-primary" />}
+                      {sortMode === "apostas_asc" && <ArrowUp className="h-3 w-3 text-primary" />}
+                    </p>
                     <p className="font-medium tabular-nums flex items-center justify-center gap-1">
                       <Target className="h-3 w-3 text-primary" />
                       {vinculo.totalApostas}
@@ -1157,6 +1166,12 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                     formatCurrency={(val, moeda) => formatCurrency(val, moeda || vinculo.moeda)}
                     moeda={vinculo.moeda}
                     variant="list"
+                    onSortSaldo={() => setSortMode(prev => prev === "saldo_desc" ? "saldo_asc" : "saldo_desc")}
+                    onSortEmAposta={() => setSortMode(prev => prev === "em_aposta_desc" ? "em_aposta_asc" : "em_aposta_desc")}
+                    onSortDisponivel={() => setSortMode(prev => prev === "disponivel_desc" ? "disponivel_asc" : "disponivel_desc")}
+                    sortSaldo={sortMode === "saldo_desc" ? "desc" : sortMode === "saldo_asc" ? "asc" : null}
+                    sortEmAposta={sortMode === "em_aposta_desc" ? "desc" : sortMode === "em_aposta_asc" ? "asc" : null}
+                    sortDisponivel={sortMode === "disponivel_desc" ? "desc" : sortMode === "disponivel_asc" ? "asc" : null}
                   />
 
                   {/* Status Badge */}

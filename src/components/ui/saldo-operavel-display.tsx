@@ -1,4 +1,4 @@
-import { Info } from "lucide-react";
+import { Info, ArrowUp, ArrowDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Tooltip,
@@ -75,6 +75,14 @@ interface SaldoOperavelDisplayProps {
   variant?: "card" | "list" | "compact";
   /** Classes adicionais */
   className?: string;
+  /** Sort callbacks for list variant column headers */
+  onSortSaldo?: () => void;
+  onSortEmAposta?: () => void;
+  onSortDisponivel?: () => void;
+  /** Current sort direction for visual indicator */
+  sortSaldo?: "asc" | "desc" | null;
+  sortEmAposta?: "asc" | "desc" | null;
+  sortDisponivel?: "asc" | "desc" | null;
 }
 
 /**
@@ -102,6 +110,12 @@ export function SaldoOperavelDisplay({
   moeda = "BRL",
   variant = "card",
   className,
+  onSortSaldo,
+  onSortEmAposta,
+  onSortDisponivel,
+  sortSaldo,
+  sortEmAposta,
+  sortDisponivel,
 }: SaldoOperavelDisplayProps) {
   const hasComposition = saldoFreebet > 0 || saldoBonus > 0;
 
@@ -140,8 +154,16 @@ export function SaldoOperavelDisplay({
       <div className={cn("flex items-center gap-4", className)}>
         {/* Saldo Operável - Dominante */}
         <div className="text-right w-[110px] flex-shrink-0">
-          <p className="text-xs text-muted-foreground flex items-center justify-end gap-1">
+          <p 
+            className={cn(
+              "text-xs text-muted-foreground flex items-center justify-end gap-1",
+              onSortSaldo && "cursor-pointer hover:text-foreground transition-colors"
+            )}
+            onClick={onSortSaldo}
+          >
             Saldo Operável
+            {sortSaldo === "desc" && <ArrowDown className="h-3 w-3 text-primary" />}
+            {sortSaldo === "asc" && <ArrowUp className="h-3 w-3 text-primary" />}
             {hasComposition && (
               <TooltipProvider>
                 <Tooltip>
@@ -160,13 +182,33 @@ export function SaldoOperavelDisplay({
 
         {/* Em Aposta - Informativo */}
         <div className="text-right w-[90px] flex-shrink-0">
-          <p className="text-xs text-muted-foreground">Em Aposta</p>
+          <p 
+            className={cn(
+              "text-xs text-muted-foreground flex items-center justify-end gap-1",
+              onSortEmAposta && "cursor-pointer hover:text-foreground transition-colors"
+            )}
+            onClick={onSortEmAposta}
+          >
+            Em Aposta
+            {sortEmAposta === "desc" && <ArrowDown className="h-3 w-3 text-primary" />}
+            {sortEmAposta === "asc" && <ArrowUp className="h-3 w-3 text-primary" />}
+          </p>
           <CompactCurrencyValue value={saldoEmAposta} formatCurrency={formatCurrency} moeda={moeda} className="font-medium text-warning tabular-nums text-xs" />
         </div>
 
         {/* Disponível - Destaque secundário */}
         <div className="text-right w-[100px] flex-shrink-0">
-          <p className="text-xs text-muted-foreground">Disponível</p>
+          <p 
+            className={cn(
+              "text-xs text-muted-foreground flex items-center justify-end gap-1",
+              onSortDisponivel && "cursor-pointer hover:text-foreground transition-colors"
+            )}
+            onClick={onSortDisponivel}
+          >
+            Disponível
+            {sortDisponivel === "desc" && <ArrowDown className="h-3 w-3 text-primary" />}
+            {sortDisponivel === "asc" && <ArrowUp className="h-3 w-3 text-primary" />}
+          </p>
           <CompactCurrencyValue value={saldoDisponivel} formatCurrency={formatCurrency} moeda={moeda} className="font-semibold text-accent-foreground tabular-nums text-xs" />
         </div>
       </div>
