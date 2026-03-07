@@ -443,7 +443,8 @@ export function AjusteManualDialog({
         cotacao_snapshot_at: cotacaoSnapshotAt,
         valor_usd_referencia: valorBrlRef,
         // Para wallets crypto: preencher coin e qtd_coin (exigido pela view v_saldo_parceiro_wallets)
-        ...(tipoDestino === "WALLET" && isCrypto ? { coin: moeda, qtd_coin: valorNumerico } : {}),
+        ...((tipoDestino === "WALLET" || (tipoDestino === "CAIXA_OPERACIONAL" && subTipoCaixa === "CRYPTO")) && isCrypto
+          ? { coin: moeda, qtd_coin: valorNumerico } : {}),
         auditoria_metadata: {
           registrado_em: new Date().toISOString(),
           tipo_destino: tipoDestino,
