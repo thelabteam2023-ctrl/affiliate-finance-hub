@@ -939,27 +939,6 @@ export function AjusteManualDialog({
               />
             </div>
 
-            {/* Preview (modo ajuste direto) */}
-            {!modoReconciliacao && valor && parseFloat(valor) > 0 && (
-              <Alert className={direcao === "ENTRADA" ? "border-primary/30 bg-primary/10" : "border-destructive/30 bg-destructive/10"}>
-                <AlertDescription className="flex items-center gap-2">
-                  {direcao === "ENTRADA" ? (
-                    <TrendingUp className="h-4 w-4 text-primary shrink-0" />
-                  ) : (
-                    <TrendingDown className="h-4 w-4 text-destructive shrink-0" />
-                  )}
-                  <span>
-                    {direcao === "ENTRADA" ? "Adicionar" : "Subtrair"}{" "}
-                    <strong>{currencySymbol} {valorDisplay}</strong> em{" "}
-                    <strong>{getEntidadeNome()}</strong>
-                    {valorBRLReferencia !== null && (
-                      <span className="text-muted-foreground"> (≈ R$ {valorBRLReferencia.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })})</span>
-                    )}
-                  </span>
-                </AlertDescription>
-              </Alert>
-            )}
-
             {/* Actions */}
             <div className="flex justify-end gap-2 pt-4">
               <Button variant="outline" onClick={handleClose} disabled={loading}>
@@ -967,7 +946,7 @@ export function AjusteManualDialog({
               </Button>
               <Button onClick={handleSubmit} disabled={loading || !canSubmit()}>
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {modoReconciliacao ? "Registrar Reconciliação" : "Registrar Ajuste"}
+                Registrar Ajuste
               </Button>
             </div>
           </div>
