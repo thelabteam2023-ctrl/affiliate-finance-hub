@@ -275,7 +275,11 @@ export function ReconciliacaoDialog({
       if (!user) throw new Error("Usuário não autenticado");
       if (!workspaceId) throw new Error("Workspace não encontrado");
 
-      const valorAjuste = Math.abs(diferenca);
+      // CRITICAL: Arredondar para evitar drift de ponto flutuante
+      const isCryptoMoeda = CRYPTO_CURRENCIES.some(c => c.value === moeda);
+      const precision = isCryptoMoeda ? 8 : 2;
+      const factor = Math.pow(10, precision);
+      const valorAjuste = Math.round(Math.abs(diferenca) * factor) / factor;
       const direcao = diferenca > 0 ? "ENTRADA" : "SAIDA";
       const isCrypto = CRYPTO_CURRENCIES.some(c => c.value === moeda);
       const cotacaoSnapshot = moeda !== "BRL" ? getRate(moeda) : null;

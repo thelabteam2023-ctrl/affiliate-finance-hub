@@ -250,15 +250,21 @@ export function AjusteManualDialog({
   }, [tipoDestino, bookmakerId, contaId, walletId, moeda, subTipoCaixa, bookmakers, saldosContas, saldosWallets, saldosCaixaFiat]);
 
   // Calcular diferença e direção automaticamente baseado no saldo informado
+  // CRITICAL: Arredondar valorAjuste para evitar drift de ponto flutuante.
+  // Sem arredondamento: saldo_sistema(16.9358) + ajuste(11434.3641) = 11451.2999 ≠ 11451.30
   const reconciliacaoCalc = useMemo(() => {
     const saldoInformado = parseFloat(valor) || 0;
     const diff = saldoInformado - saldoSistemaAtual;
+    const isCryptoMoeda = CRYPTO_CURRENCIES.some(c => c.value === moeda);
+    const precision = isCryptoMoeda ? 8 : 2;
+    const factor = Math.pow(10, precision);
+    const valorAjusteRounded = Math.round(Math.abs(diff) * factor) / factor;
     return {
       diferenca: diff,
       direcaoCalculada: diff >= 0 ? "ENTRADA" as const : "SAIDA" as const,
-      valorAjuste: Math.abs(diff),
+      valorAjuste: valorAjusteRounded,
     };
-  }, [valor, saldoSistemaAtual]);
+  }, [valor, saldoSistemaAtual, moeda]);
 
   // Verificar se a entidade selecionada permite modo reconciliação
   const entidadeSelecionada = useMemo(() => {
