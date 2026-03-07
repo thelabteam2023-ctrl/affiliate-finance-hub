@@ -1044,7 +1044,7 @@ export function AjusteManualDialog({
               </Button>
               <Button onClick={handleSubmit} disabled={loading || !canSubmit()}>
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Registrar Ajuste
+                {modoReconciliacao ? "Registrar Reconciliação" : "Registrar Ajuste"}
               </Button>
             </div>
           </div>
