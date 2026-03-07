@@ -501,7 +501,7 @@ export function DesvinculacaoEmMassaDialog({
                           {vinculo.bookmaker_status?.toLowerCase() === "limitada" ? (
                             <div className="h-7 flex items-center px-2 rounded-md border border-destructive/30 bg-destructive/10">
                               <span className="text-xs text-destructive font-medium">Limitada</span>
-                              <Lock className="h-3 w-3 ml-auto text-destructive/60" />
+                              <LockKeyhole className="h-3 w-3 ml-auto text-destructive/60" />
                             </div>
                           ) : (
                             <Select
