@@ -471,15 +471,8 @@ export function AjusteManualDialog({
     if (tipoDestino === "BOOKMAKER" && !bookmakerId) return false;
     if (tipoDestino === "CONTA_BANCARIA" && !contaId) return false;
     if (tipoDestino === "WALLET" && !walletId) return false;
-    
-    if (modoReconciliacao) {
-      // No modo reconciliação, precisa ter valor informado e diferença não-zero
-      if (!valor) return false;
-      return reconciliacaoCalc ? Math.abs(reconciliacaoCalc.diferenca) >= 0.01 : false;
-    } else {
-      if (!valor || parseFloat(valor) <= 0) return false;
-    }
-    return true;
+    if (!valor) return false;
+    return Math.abs(reconciliacaoCalc.diferenca) >= 0.01;
   };
 
   const handleSubmit = async () => {
