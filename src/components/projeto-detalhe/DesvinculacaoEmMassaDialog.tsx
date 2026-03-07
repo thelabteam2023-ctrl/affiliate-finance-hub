@@ -444,7 +444,7 @@ export function DesvinculacaoEmMassaDialog({
                           <Select
                             value={sel?.statusFinal || "ativo"}
                             onValueChange={val => updateField(vinculo.id, "statusFinal", val)}
-                            disabled={!isSelected || hasPending}
+                            disabled={!isSelected || isBlocked}
                           >
                             <SelectTrigger className="h-7 text-xs">
                               <SelectValue />
