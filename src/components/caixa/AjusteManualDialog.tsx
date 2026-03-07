@@ -399,7 +399,7 @@ export function AjusteManualDialog({
   };
 
   const resetForm = () => {
-    setModoReconciliacao(false);
+    setDirecao("ENTRADA");
     setDirecao("ENTRADA");
     setTipoDestino("CAIXA_OPERACIONAL");
     setSubTipoCaixa("");
