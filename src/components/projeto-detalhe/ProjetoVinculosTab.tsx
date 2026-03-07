@@ -697,24 +697,52 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
           />
         </div>
 
-        {/* Sort toggle */}
-        <div className="flex items-center gap-1.5 shrink-0">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9"
-            onClick={() => {
-              setSortMode(prev => 
-                prev === "alpha" ? "newest" : prev === "newest" ? "oldest" : "alpha"
-              );
-            }}
-          >
-            <ArrowUpDown className="h-4 w-4" />
-          </Button>
-          <span className="text-[11px] text-muted-foreground whitespace-nowrap">
-            {sortMode === "alpha" ? "A-Z" : sortMode === "newest" ? "Recentes" : "Antigos"}
-          </span>
-        </div>
+        {/* Sort dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm" className="h-9 gap-1.5 shrink-0">
+              <ArrowUpDown className="h-4 w-4" />
+              <span className="text-[11px] text-muted-foreground whitespace-nowrap">
+                {sortMode === "alpha" ? "A-Z" 
+                  : sortMode === "newest" ? "Recentes" 
+                  : sortMode === "oldest" ? "Antigos"
+                  : sortMode === "apostas_desc" ? "Apostas ↓"
+                  : sortMode === "apostas_asc" ? "Apostas ↑"
+                  : sortMode === "saldo_desc" ? "Saldo ↓"
+                  : sortMode === "saldo_asc" ? "Saldo ↑"
+                  : sortMode === "em_aposta_desc" ? "Em Aposta ↓"
+                  : sortMode === "em_aposta_asc" ? "Em Aposta ↑"
+                  : sortMode === "disponivel_desc" ? "Disponível ↓"
+                  : sortMode === "disponivel_asc" ? "Disponível ↑"
+                  : "A-Z"}
+              </span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem onClick={() => setSortMode("alpha")} className={sortMode === "alpha" ? "bg-accent" : ""}>
+              <ArrowDownAZ className="h-4 w-4 mr-2" /> Nome A-Z
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setSortMode("newest")} className={sortMode === "newest" ? "bg-accent" : ""}>
+              <Clock className="h-4 w-4 mr-2" /> Mais recentes
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setSortMode("oldest")} className={sortMode === "oldest" ? "bg-accent" : ""}>
+              <Clock className="h-4 w-4 mr-2" /> Mais antigos
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => setSortMode(prev => prev === "apostas_desc" ? "apostas_asc" : "apostas_desc")} className={sortMode.startsWith("apostas") ? "bg-accent" : ""}>
+              <Target className="h-4 w-4 mr-2" /> Apostas {sortMode === "apostas_asc" ? "↑" : "↓"}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setSortMode(prev => prev === "saldo_desc" ? "saldo_asc" : "saldo_desc")} className={sortMode.startsWith("saldo") ? "bg-accent" : ""}>
+              <Wallet className="h-4 w-4 mr-2" /> Saldo Operável {sortMode === "saldo_asc" ? "↑" : "↓"}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setSortMode(prev => prev === "em_aposta_desc" ? "em_aposta_asc" : "em_aposta_desc")} className={sortMode.startsWith("em_aposta") ? "bg-accent" : ""}>
+              <Target className="h-4 w-4 mr-2" /> Em Aposta {sortMode === "em_aposta_asc" ? "↑" : "↓"}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setSortMode(prev => prev === "disponivel_desc" ? "disponivel_asc" : "disponivel_desc")} className={sortMode.startsWith("disponivel") ? "bg-accent" : ""}>
+              <Coins className="h-4 w-4 mr-2" /> Disponível {sortMode === "disponivel_asc" ? "↑" : "↓"}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Lista de Vínculos Ativos — scroll interno (anti-regressão) */}
