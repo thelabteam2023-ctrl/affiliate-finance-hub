@@ -125,6 +125,7 @@ export default function Caixa() {
   // Estado para ajuste manual
   const [ajusteDialogOpen, setAjusteDialogOpen] = useState(false);
   const [reconciliacaoDialogOpen, setReconciliacaoDialogOpen] = useState(false);
+  const [caixaParceiroId, setCaixaParceiroId] = useState<string | null>(null);
 
   // Estado para pré-preenchimento do dialog de transação (vindo de navegação)
   const [dialogDefaultData, setDialogDefaultData] = useState<{
