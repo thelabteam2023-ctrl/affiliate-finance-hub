@@ -80,6 +80,13 @@ export function DesvinculacaoEmMassaDialog({
   const [results, setResults] = useState<{ id: string; nome: string; success: boolean; error?: string }[]>([]);
   const [step, setStep] = useState<"select" | "confirm" | "result">("select");
 
+  // Abbreviate name: first + last
+  const abbreviateName = (name: string) => {
+    const parts = name.trim().split(/\s+/);
+    if (parts.length <= 2) return name;
+    return `${parts[0]} ${parts[parts.length - 1]}`;
+  };
+
   // Unique parceiros for filter dropdown
   const parceirosUnicos = useMemo(() => {
     const map = new Map<string, string>();
@@ -359,14 +366,13 @@ export function DesvinculacaoEmMassaDialog({
                 />
               </div>
               <Select value={parceiroFilter} onValueChange={setParceiroFilter}>
-                <SelectTrigger className="h-9 w-[180px] text-xs">
-                  <User className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
+                <SelectTrigger className="h-9 w-[200px] text-xs" icon={<User className="h-3.5 w-3.5" />}>
                   <SelectValue placeholder="Parceiro" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__all__">Todos os parceiros</SelectItem>
                   {parceirosUnicos.map(([key, label]) => (
-                    <SelectItem key={key} value={key}>{label}</SelectItem>
+                    <SelectItem key={key} value={key}>{abbreviateName(label)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
