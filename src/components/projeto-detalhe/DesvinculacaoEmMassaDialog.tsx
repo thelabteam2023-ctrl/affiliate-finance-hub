@@ -389,11 +389,16 @@ export function DesvinculacaoEmMassaDialog({
                         </div>
 
                         {/* Saldo Sistema */}
-                        <div className="text-right w-[100px] flex-shrink-0">
+                        <div className="text-right w-[120px] flex-shrink-0">
                           <p className="text-[10px] text-muted-foreground">Saldo Sistema</p>
                           <p className="text-sm font-medium tabular-nums">
                             {formatCurrency(vinculo.saldo_real, vinculo.moeda)}
                           </p>
+                          {vinculo.saldo_freebet > 0 && (
+                            <p className="text-[10px] tabular-nums text-amber-400">
+                              🎁 FB: {formatCurrency(vinculo.saldo_freebet, vinculo.moeda)}
+                            </p>
+                          )}
                         </div>
 
                         {/* Saldo Real Input */}
