@@ -491,9 +491,8 @@ export function AjusteManualDialog({
       if (!user) throw new Error("Usuário não autenticado");
       if (!workspaceId) throw new Error("Workspace não encontrado");
 
-      // No modo reconciliação, usar valores calculados automaticamente
-      const direcaoFinal = modoReconciliacao && reconciliacaoCalc ? reconciliacaoCalc.direcaoCalculada : direcao;
-      const valorNumerico = modoReconciliacao && reconciliacaoCalc ? reconciliacaoCalc.valorAjuste : parseFloat(valor);
+      const direcaoFinal = reconciliacaoCalc.direcaoCalculada;
+      const valorNumerico = reconciliacaoCalc.valorAjuste;
       const isCrypto = CRYPTO_CURRENCIES.some(c => c.value === moeda);
       
       // Snapshot de cotação para moedas estrangeiras
