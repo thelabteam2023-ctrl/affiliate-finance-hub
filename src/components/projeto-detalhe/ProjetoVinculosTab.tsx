@@ -1146,8 +1146,8 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                       onClick={() => setSortMode(prev => prev === "apostas_desc" ? "apostas_asc" : "apostas_desc")}
                     >
                       Apostas
-                      {sortMode === "apostas_desc" && <ArrowUpDown className="h-3 w-3 text-primary" />}
-                      {sortMode === "apostas_asc" && <ArrowUpDown className="h-3 w-3 text-primary" />}
+                      {sortMode === "apostas_desc" && <ArrowDown className="h-3 w-3 text-primary" />}
+                      {sortMode === "apostas_asc" && <ArrowUp className="h-3 w-3 text-primary" />}
                     </p>
                     <p className="font-medium tabular-nums flex items-center justify-center gap-1">
                       <Target className="h-3 w-3 text-primary" />
