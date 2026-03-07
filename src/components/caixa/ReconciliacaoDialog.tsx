@@ -190,7 +190,8 @@ export function ReconciliacaoDialog({
 
       setContas((contasRes.data || []).map((c: any) => ({
         id: c.id, banco: c.banco, titular: c.titular,
-        parceiro_id: c.parceiro_id, moeda: c.moeda || "BRL",
+        parceiro_id: c.parceiro_id, parceiro_nome: c.parceiros?.nome || "",
+        moeda: c.moeda || "BRL", saldo: saldosMap[c.id] ?? null,
         reconciled_at: c.reconciled_at,
       })));
 
