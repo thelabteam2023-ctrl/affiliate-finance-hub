@@ -721,7 +721,7 @@ export function AjusteManualDialog({
               <div className="space-y-2">
                 <Label>Wallet Crypto</Label>
                 <WalletSearchSelect
-                  wallets={wallets}
+                  wallets={walletsCaixa}
                   value={walletId}
                   onValueChange={setWalletId}
                   placeholder="Selecione a wallet"
