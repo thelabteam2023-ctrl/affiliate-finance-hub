@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Check, ChevronsUpDown, Search } from "lucide-react";
+import { Check, ChevronsUpDown, Search, User } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,6 +13,7 @@ interface WalletOption {
   id: string;
   exchange: string;
   endereco: string;
+  parceiro_id?: string;
   parceiro_nome?: string;
   moeda: string[];
 }
@@ -68,11 +69,25 @@ export function WalletSearchSelect({
     return map;
   }, [saldos]);
 
+  // Group wallets by parceiro
+  const grouped = useMemo(() => {
+    const groups: Record<string, { parceiro_nome: string; wallets: WalletOption[] }> = {};
+    for (const w of filtered) {
+      const key = w.parceiro_id || "__sem_parceiro__";
+      if (!groups[key]) {
+        groups[key] = { parceiro_nome: w.parceiro_nome || "Sem parceiro", wallets: [] };
+      }
+      groups[key].wallets.push(w);
+    }
+    return Object.entries(groups).sort((a, b) =>
+      a[1].parceiro_nome.localeCompare(b[1].parceiro_nome)
+    );
+  }, [filtered]);
+
   const renderCoinBalances = (walletId: string) => {
     const balances = saldosByWallet[walletId];
     if (!balances || balances.length === 0) return null;
     
-    // Calculate total USD for this wallet, then convert to BRL
     const totalUsd = balances.reduce((sum, b) => sum + (b.saldo_usd ?? 0), 0);
     const totalBrl = usdToBrlRate > 0 ? totalUsd * usdToBrlRate : 0;
     
@@ -139,62 +154,68 @@ export function WalletSearchSelect({
           <Search className="h-4 w-4 text-muted-foreground shrink-0" />
           <input
             className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-            placeholder="Buscar por nome, parceiro ou endereço..."
+            placeholder="Buscar por exchange, parceiro ou endereço..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <div className="max-h-[280px] overflow-y-auto p-1">
-          {filtered.length === 0 && (
+        <div className="max-h-[320px] overflow-y-auto p-1">
+          {grouped.length === 0 && (
             <p className="text-sm text-muted-foreground text-center py-4">
               Nenhuma wallet encontrada.
             </p>
           )}
-          {filtered.map((wallet) => (
-            <button
-              key={wallet.id}
-              onClick={() => {
-                onValueChange(wallet.id);
-                setOpen(false);
-                setSearch("");
-              }}
-              className={cn(
-                "w-full flex items-start gap-2 rounded-sm px-2 py-2 text-left text-sm hover:bg-accent/50 cursor-pointer transition-colors",
-                value === wallet.id && "bg-accent"
-              )}
-            >
-              <Check
-                className={cn(
-                  "h-4 w-4 mt-0.5 shrink-0",
-                  value === wallet.id ? "opacity-100" : "opacity-0"
-                )}
-              />
-              <div className="flex flex-col gap-0.5 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-medium uppercase">{wallet.exchange}</span>
-                  <div className="flex gap-1">
-                    {wallet.moeda.slice(0, 3).map((m) => (
-                      <Badge key={m} variant="secondary" className="text-[10px] px-1.5 py-0">
-                        {m}
-                      </Badge>
-                    ))}
-                    {wallet.moeda.length > 3 && (
-                      <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                        +{wallet.moeda.length - 3}
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                  {wallet.parceiro_nome && <span>{wallet.parceiro_nome}</span>}
-                  {wallet.parceiro_nome && <span>•</span>}
-                  <span className="font-mono">
-                    {wallet.endereco.slice(0, 6)}...{wallet.endereco.slice(-4)}
-                  </span>
-                </div>
-                {renderCoinBalances(wallet.id)}
+          {grouped.map(([parceiroId, group]) => (
+            <div key={parceiroId}>
+              <div className="px-2 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5 sticky top-0 bg-popover z-10">
+                <User className="h-3 w-3" />
+                {group.parceiro_nome}
               </div>
-            </button>
+              {group.wallets.map((wallet) => (
+                <button
+                  key={wallet.id}
+                  onClick={() => {
+                    onValueChange(wallet.id);
+                    setOpen(false);
+                    setSearch("");
+                  }}
+                  className={cn(
+                    "w-full flex items-start gap-2 rounded-sm px-2 py-2 text-left text-sm hover:bg-accent/50 cursor-pointer transition-colors",
+                    value === wallet.id && "bg-accent"
+                  )}
+                >
+                  <Check
+                    className={cn(
+                      "h-4 w-4 mt-0.5 shrink-0",
+                      value === wallet.id ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                  <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-medium uppercase">{wallet.exchange}</span>
+                      <div className="flex gap-1">
+                        {wallet.moeda.slice(0, 3).map((m) => (
+                          <Badge key={m} variant="secondary" className="text-[10px] px-1.5 py-0">
+                            {m}
+                          </Badge>
+                        ))}
+                        {wallet.moeda.length > 3 && (
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                            +{wallet.moeda.length - 3}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                      <span className="font-mono">
+                        {wallet.endereco.slice(0, 6)}...{wallet.endereco.slice(-4)}
+                      </span>
+                    </div>
+                    {renderCoinBalances(wallet.id)}
+                  </div>
+                </button>
+              ))}
+            </div>
           ))}
         </div>
       </PopoverContent>
