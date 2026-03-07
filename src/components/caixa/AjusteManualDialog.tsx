@@ -84,7 +84,6 @@ export function AjusteManualDialog({
   const [fetchingData, setFetchingData] = useState(false);
 
   // Form state
-  const [modoReconciliacao, setModoReconciliacao] = useState(false);
   const [direcao, setDirecao] = useState<"ENTRADA" | "SAIDA">("ENTRADA");
   const [tipoDestino, setTipoDestino] = useState<TipoDestino>("CAIXA_OPERACIONAL");
   const [subTipoCaixa, setSubTipoCaixa] = useState<SubTipoCaixa>("");
