@@ -282,7 +282,7 @@ export function ContasEmpresaSection({ caixaParceiroId, onDataChanged }: ContasE
                           {(wallet.saldo_coin || 0).toFixed(2)} {wallet.coin}
                         </p>
                         <p className="text-[10px] text-muted-foreground">
-                          ≈ ${formatCurrencyValue(wallet.saldo_usd || 0)}
+                          ≈ ${formatCurrencyValue(wallet.saldo_usd || 0, "USD" as any)}
                         </p>
                       </div>
                     </div>
