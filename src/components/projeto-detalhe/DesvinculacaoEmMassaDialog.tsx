@@ -356,7 +356,7 @@ export function DesvinculacaoEmMassaDialog({
                   const isBlocked = hasPending || hasTransit;
 
                   return (
-                    <div key={vinculo.id} className={`p-3 transition-colors ${isSelected ? "bg-accent/30" : "hover:bg-muted/30"} ${hasPending ? "opacity-60" : ""}`}>
+                    <div key={vinculo.id} className={`p-3 transition-colors ${isSelected ? "bg-accent/30" : "hover:bg-muted/30"} ${isBlocked ? "opacity-60" : ""}`}>
                       <div className="flex items-center gap-3">
                         {/* Checkbox */}
                         <Checkbox
