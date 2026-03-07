@@ -22,6 +22,7 @@ interface ContaFiat {
   moeda: string;
   saldo: number;
   pix_key?: string | null;
+  pix_keys?: Array<{ tipo: string; chave: string }> | null;
 }
 
 interface SaldosFiatCardProps {
