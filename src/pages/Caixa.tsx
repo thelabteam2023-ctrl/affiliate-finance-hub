@@ -934,8 +934,6 @@ export default function Caixa() {
             {/* Exposição Crypto - Interactive Card */}
             <ExposicaoCryptoCard
               caixaParceiroId={caixaParceiroId}
-              saldosCrypto={saldosCrypto}
-              totalCryptoUSD={getTotalCryptoUSD()}
               cryptoPrices={cryptoPrices}
               getCryptoUSDValue={getCryptoUSDValue}
               formatCurrency={formatCurrency}

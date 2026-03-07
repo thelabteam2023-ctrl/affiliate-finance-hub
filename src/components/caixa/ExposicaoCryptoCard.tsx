@@ -189,38 +189,52 @@ export function ExposicaoCryptoCard({
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
-          {/* Total */}
-          <div className="flex items-center gap-2">
-            <span className="text-2xl font-bold text-blue-400">
-              {formatCurrency(totalCryptoUSD, "USD")}
-            </span>
-          </div>
+          {/* Total computed from wallets */}
+          {(() => {
+            // Aggregate coins across all wallets
+            const coinMap: Record<string, { saldo_coin: number; saldo_usd: number }> = {};
+            wallets.forEach(w => w.coins.forEach(c => {
+              if (!coinMap[c.coin]) coinMap[c.coin] = { saldo_coin: 0, saldo_usd: 0 };
+              coinMap[c.coin].saldo_coin += c.saldo_coin;
+              coinMap[c.coin].saldo_usd += c.saldo_usd;
+            }));
+            const saldosCryptoComputed = Object.entries(coinMap).map(([coin, v]) => ({ coin, ...v }));
+            const totalUSD = saldosCryptoComputed.reduce((acc, s) => acc + getCryptoUSDValue(s.coin, s.saldo_coin, s.saldo_usd), 0);
 
-          {/* Breakdown por coin */}
-          {saldosCrypto.length > 0 && (
-            <div className="space-y-1">
-              {saldosCrypto.map((saldo) => {
-                const price = cryptoPrices[saldo.coin];
-                const usdValue = getCryptoUSDValue(saldo.coin, saldo.saldo_coin, saldo.saldo_usd);
-                return (
-                  <div key={saldo.coin} className="flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-medium">{saldo.coin}</span>
-                      {price && (
-                        <span className="text-[10px] text-blue-400/70">
-                          ${price.toFixed(price < 1 ? 6 : 2)}
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-right">
-                      <span className="font-mono">{saldo.saldo_coin.toFixed(saldo.saldo_coin < 1 ? 8 : 2)}</span>
-                      <span className="text-muted-foreground ml-1.5">≈ {formatCurrency(usdValue, "USD")}</span>
-                    </div>
+            return (
+              <>
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl font-bold text-blue-400">
+                    {formatCurrency(totalUSD, "USD")}
+                  </span>
+                </div>
+                {saldosCryptoComputed.length > 0 && (
+                  <div className="space-y-1">
+                    {saldosCryptoComputed.map((saldo) => {
+                      const price = cryptoPrices[saldo.coin];
+                      const usdValue = getCryptoUSDValue(saldo.coin, saldo.saldo_coin, saldo.saldo_usd);
+                      return (
+                        <div key={saldo.coin} className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-medium">{saldo.coin}</span>
+                            {price && (
+                              <span className="text-[10px] text-blue-400/70">
+                                ${price.toFixed(price < 1 ? 6 : 2)}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-right">
+                            <span className="font-mono">{saldo.saldo_coin.toFixed(saldo.saldo_coin < 1 ? 8 : 2)}</span>
+                            <span className="text-muted-foreground ml-1.5">≈ {formatCurrency(usdValue, "USD")}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                );
-              })}
-            </div>
-          )}
+                )}
+              </>
+            );
+          })()}
 
           {/* Wallets list */}
           {wallets.length > 0 && (
