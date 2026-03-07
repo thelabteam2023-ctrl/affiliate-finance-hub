@@ -214,40 +214,40 @@ export function ExposicaoCryptoCard({
                         </div>
                       </button>
                     </PopoverTrigger>
-                    <PopoverContent side="bottom" align="end" className="w-80 p-0">
-                      <div className="p-3 border-b border-border">
-                        <p className="text-sm font-medium">Wallets com {coin}</p>
-                        <p className="text-xs text-muted-foreground">{coinWallets.length} wallet(s)</p>
+                    <PopoverContent side="bottom" align="end" className="w-96 p-0">
+                      <div className="p-4 border-b border-border">
+                        <p className="text-base font-semibold">Wallets com {coin}</p>
+                        <p className="text-sm text-muted-foreground">{coinWallets.length} wallet(s)</p>
                       </div>
-                      <div className="p-2 space-y-1.5 max-h-60 overflow-y-auto">
+                      <div className="p-3 space-y-2.5 max-h-72 overflow-y-auto">
                         {coinWallets.map((wallet) => {
                           const walletCoin = wallet.coins.find(c => c.coin === coin);
                           return (
-                            <div key={wallet.wallet_id} className="p-2 rounded-md bg-muted/20 space-y-1">
+                            <div key={wallet.wallet_id} className="p-3 rounded-lg bg-muted/20 space-y-1.5">
                               <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-1.5 min-w-0">
-                                  <Bitcoin className="h-3 w-3 text-muted-foreground shrink-0" />
-                                  <span className="text-xs font-medium truncate">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <Bitcoin className="h-4 w-4 text-muted-foreground shrink-0" />
+                                  <span className="text-sm font-medium truncate">
                                     {wallet.exchange?.replace(/-/g, " ").toUpperCase() || "Wallet"}
                                   </span>
                                 </div>
-                                <span className="text-xs font-semibold font-mono shrink-0">
+                                <span className="text-sm font-semibold font-mono shrink-0">
                                   {walletCoin ? walletCoin.saldo_coin.toFixed(walletCoin.saldo_coin < 1 ? 8 : 2) : "0"} {coin}
                                 </span>
                               </div>
-                              <div className="flex items-center gap-1 pl-4">
+                              <div className="flex items-center gap-1.5 pl-6">
                                 {wallet.network && (
-                                  <Badge variant="outline" className="text-[9px] px-1 py-0 h-3.5 uppercase">
+                                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 uppercase">
                                     {wallet.network}
                                   </Badge>
                                 )}
                               </div>
                               <p
-                                className="text-[10px] text-muted-foreground font-mono cursor-pointer hover:text-primary transition-colors flex items-center gap-0.5 pl-4"
+                                className="text-xs text-muted-foreground font-mono cursor-pointer hover:text-primary transition-colors flex items-center gap-1 pl-6"
                                 onClick={(e) => { e.stopPropagation(); copyToClipboard(wallet.endereco, `w-${wallet.wallet_id}-${coin}`); }}
                               >
-                                {wallet.endereco.slice(0, 10)}...{wallet.endereco.slice(-6)}
-                                {copiedId === `w-${wallet.wallet_id}-${coin}` ? <Check className="h-2.5 w-2.5 text-primary" /> : <Copy className="h-2.5 w-2.5 opacity-40" />}
+                                {wallet.endereco.slice(0, 12)}...{wallet.endereco.slice(-6)}
+                                {copiedId === `w-${wallet.wallet_id}-${coin}` ? <Check className="h-3 w-3 text-primary" /> : <Copy className="h-3 w-3 opacity-40" />}
                               </p>
                             </div>
                           );
