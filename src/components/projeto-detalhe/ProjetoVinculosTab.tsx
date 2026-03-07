@@ -31,6 +31,7 @@ import { VinculoBonusDrawer } from "./VinculoBonusDrawer";
 import { BalanceDiscrepancyAlert } from "./BalanceDiscrepancyAlert";
 import { DeltaCambialCard } from "./DeltaCambialCard";
 import { ConciliacaoVinculoDialog } from "./ConciliacaoVinculoDialog";
+import { DesvinculacaoEmMassaDialog } from "./DesvinculacaoEmMassaDialog";
 import { useProjectBonuses } from "@/hooks/useProjectBonuses";
 import {
   Dialog,
