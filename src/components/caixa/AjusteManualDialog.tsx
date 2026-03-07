@@ -464,6 +464,17 @@ export function AjusteManualDialog({
         switch (tipoDestino) {
           case "CAIXA_OPERACIONAL":
             transactionData.destino_tipo = "CAIXA_OPERACIONAL";
+            // Sub-entity: link specific account/wallet
+            if (subTipoCaixa === "FIAT" && contaId) {
+              transactionData.destino_conta_bancaria_id = contaId;
+              transactionData.moeda_destino = moeda;
+              transactionData.valor_destino = valorNumerico;
+            }
+            if (subTipoCaixa === "CRYPTO" && walletId) {
+              transactionData.destino_wallet_id = walletId;
+              transactionData.moeda_destino = moeda;
+              transactionData.valor_destino = valorNumerico;
+            }
             break;
           case "BOOKMAKER":
             transactionData.destino_tipo = "BOOKMAKER";
