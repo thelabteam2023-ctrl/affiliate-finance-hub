@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,12 +14,6 @@ import { formatCurrencyValue } from "@/types/currency";
 import { ExchangeSelect } from "@/components/parceiros/ExchangeSelect";
 import { RedeSelect } from "@/components/parceiros/RedeSelect";
 import { MoedaMultiSelect } from "@/components/parceiros/MoedaMultiSelect";
-
-interface SaldoCrypto {
-  coin: string;
-  saldo_coin: number;
-  saldo_usd: number;
-}
 
 interface WalletInfo {
   wallet_id: string;
@@ -51,12 +46,7 @@ export function ExposicaoCryptoCard({
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const [novaWallet, setNovaWallet] = useState({
-    exchange: "",
-    endereco: "",
-    rede_id: "",
-    network: "TRC20",
-    moeda: [] as string[],
-    observacoes: "",
+    exchange: "", endereco: "", rede_id: "", network: "TRC20", moeda: [] as string[], observacoes: "",
   });
 
   const fetchWallets = useCallback(async () => {
@@ -67,9 +57,8 @@ export function ExposicaoCryptoCard({
     ]);
 
     const detailMap = new Map((walletsDetailRes.data || []).map((d: any) => [d.id, d]));
-
-    // Group by wallet_id
     const grouped: Record<string, WalletInfo> = {};
+
     (walletsViewRes.data || []).forEach((w: any) => {
       const detail = detailMap.get(w.wallet_id);
       if (!grouped[w.wallet_id]) {
@@ -84,26 +73,17 @@ export function ExposicaoCryptoCard({
         };
       }
       if (w.coin) {
-        grouped[w.wallet_id].coins.push({
-          coin: w.coin,
-          saldo_coin: w.saldo_coin || 0,
-          saldo_usd: w.saldo_usd || 0,
-        });
+        grouped[w.wallet_id].coins.push({ coin: w.coin, saldo_coin: w.saldo_coin || 0, saldo_usd: w.saldo_usd || 0 });
         grouped[w.wallet_id].totalUsd += (w.saldo_usd || 0);
       }
     });
 
-    // Also add wallets with no balance entries
     (walletsDetailRes.data || []).forEach((d: any) => {
       if (!grouped[d.id]) {
         grouped[d.id] = {
-          wallet_id: d.id,
-          exchange: d.exchange,
-          endereco: d.endereco,
-          network: d.network || "",
-          moedas: Array.isArray(d.moeda) ? d.moeda : [],
-          coins: [],
-          totalUsd: 0,
+          wallet_id: d.id, exchange: d.exchange, endereco: d.endereco,
+          network: d.network || "", moedas: Array.isArray(d.moeda) ? d.moeda : [],
+          coins: [], totalUsd: 0,
         };
       }
     });
@@ -163,6 +143,20 @@ export function ExposicaoCryptoCard({
     }
   };
 
+  // Aggregate coins across all wallets
+  const coinMap: Record<string, { saldo_coin: number; saldo_usd: number; wallets: WalletInfo[] }> = {};
+  wallets.forEach(w => w.coins.forEach(c => {
+    if (!coinMap[c.coin]) coinMap[c.coin] = { saldo_coin: 0, saldo_usd: 0, wallets: [] };
+    coinMap[c.coin].saldo_coin += c.saldo_coin;
+    coinMap[c.coin].saldo_usd += c.saldo_usd;
+    if (!coinMap[c.coin].wallets.find(ww => ww.wallet_id === w.wallet_id)) {
+      coinMap[c.coin].wallets.push(w);
+    }
+  }));
+
+  const coinEntries = Object.entries(coinMap);
+  const totalUSD = coinEntries.reduce((acc, [coin, v]) => acc + getCryptoUSDValue(coin, v.saldo_coin, v.saldo_usd), 0);
+
   return (
     <>
       <Card className="bg-card/50 backdrop-blur border-border/50">
@@ -188,110 +182,89 @@ export function ExposicaoCryptoCard({
             <TrendingUp className="h-4 w-4 text-blue-500" />
           </div>
         </CardHeader>
-        <CardContent className="space-y-3">
-          {/* Total computed from wallets */}
-          {(() => {
-            // Aggregate coins across all wallets
-            const coinMap: Record<string, { saldo_coin: number; saldo_usd: number }> = {};
-            wallets.forEach(w => w.coins.forEach(c => {
-              if (!coinMap[c.coin]) coinMap[c.coin] = { saldo_coin: 0, saldo_usd: 0 };
-              coinMap[c.coin].saldo_coin += c.saldo_coin;
-              coinMap[c.coin].saldo_usd += c.saldo_usd;
-            }));
-            const saldosCryptoComputed = Object.entries(coinMap).map(([coin, v]) => ({ coin, ...v }));
-            const totalUSD = saldosCryptoComputed.reduce((acc, s) => acc + getCryptoUSDValue(s.coin, s.saldo_coin, s.saldo_usd), 0);
+        <CardContent className="space-y-2">
+          {/* Total */}
+          <div className="flex items-center gap-2">
+            <span className="text-2xl font-bold text-blue-400">
+              {formatCurrency(totalUSD, "USD")}
+            </span>
+          </div>
 
-            return (
-              <>
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl font-bold text-blue-400">
-                    {formatCurrency(totalUSD, "USD")}
-                  </span>
-                </div>
-                {saldosCryptoComputed.length > 0 && (
-                  <div className="space-y-1">
-                    {saldosCryptoComputed.map((saldo) => {
-                      const price = cryptoPrices[saldo.coin];
-                      const usdValue = getCryptoUSDValue(saldo.coin, saldo.saldo_coin, saldo.saldo_usd);
-                      return (
-                        <div key={saldo.coin} className="flex items-center justify-between text-xs">
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-medium">{saldo.coin}</span>
-                            {price && (
-                              <span className="text-[10px] text-blue-400/70">
-                                ${price.toFixed(price < 1 ? 6 : 2)}
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-right">
-                            <span className="font-mono">{saldo.saldo_coin.toFixed(saldo.saldo_coin < 1 ? 8 : 2)}</span>
-                            <span className="text-muted-foreground ml-1.5">≈ {formatCurrency(usdValue, "USD")}</span>
-                          </div>
+          {/* Per-coin rows — clickable to see wallet details */}
+          {coinEntries.length > 0 && (
+            <div className="space-y-0.5">
+              {coinEntries.map(([coin, { saldo_coin, saldo_usd, wallets: coinWallets }]) => {
+                const price = cryptoPrices[coin];
+                const usdValue = getCryptoUSDValue(coin, saldo_coin, saldo_usd);
+                return (
+                  <Popover key={coin}>
+                    <PopoverTrigger asChild>
+                      <button className="w-full flex items-center justify-between text-xs p-1.5 rounded-md hover:bg-muted/30 transition-colors cursor-pointer group">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-medium group-hover:text-foreground transition-colors">{coin}</span>
+                          {price && (
+                            <span className="text-[10px] text-blue-400/70">
+                              ${price.toFixed(price < 1 ? 6 : 2)}
+                            </span>
+                          )}
                         </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </>
-            );
-          })()}
-
-          {/* Wallets list */}
-          {wallets.length > 0 && (
-            <div className="border-t border-border/30 pt-2 space-y-1.5">
-              {wallets.map((wallet) => (
-                <div
-                  key={wallet.wallet_id}
-                  className="flex items-center justify-between p-2 rounded-md bg-muted/20 hover:bg-muted/40 transition-colors"
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Bitcoin className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                    <div className="min-w-0">
-                      <p className="text-xs font-medium">
-                        {wallet.exchange?.replace(/-/g, " ").toUpperCase() || "Wallet"}
-                      </p>
-                      <p
-                        className="text-[10px] text-muted-foreground font-mono cursor-pointer hover:text-primary transition-colors flex items-center gap-0.5"
-                        onClick={() => copyToClipboard(wallet.endereco, `w-${wallet.wallet_id}`)}
-                      >
-                        {wallet.endereco.slice(0, 8)}...{wallet.endereco.slice(-4)}
-                        {copiedId === `w-${wallet.wallet_id}` ? <Check className="h-2.5 w-2.5 text-primary" /> : <Copy className="h-2.5 w-2.5 opacity-40" />}
-                      </p>
-                      <div className="flex items-center gap-1 mt-0.5">
-                        {wallet.network && (
-                          <Badge variant="outline" className="text-[9px] px-1 py-0 h-3.5 uppercase">
-                            {wallet.network}
-                          </Badge>
-                        )}
-                        {wallet.moedas.map((m) => (
-                          <Badge key={m} className="text-[9px] px-1 py-0 h-3.5 bg-primary/20 text-primary border-primary/30">
-                            {m}
-                          </Badge>
-                        ))}
+                        <div className="text-right">
+                          <span className="font-mono">{saldo_coin.toFixed(saldo_coin < 1 ? 8 : 2)}</span>
+                          <span className="text-muted-foreground ml-1.5">≈ {formatCurrency(usdValue, "USD")}</span>
+                        </div>
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent side="bottom" align="end" className="w-80 p-0">
+                      <div className="p-3 border-b border-border">
+                        <p className="text-sm font-medium">Wallets com {coin}</p>
+                        <p className="text-xs text-muted-foreground">{coinWallets.length} wallet(s)</p>
                       </div>
-                    </div>
-                  </div>
-                  <div className="text-right shrink-0 space-y-0.5">
-                    {wallet.coins.map((c) => (
-                      <p key={c.coin} className="text-xs font-semibold font-mono">
-                        {c.saldo_coin.toFixed(2)} <span className="text-[10px] text-muted-foreground">{c.coin}</span>
-                      </p>
-                    ))}
-                    {wallet.coins.length > 0 && (
-                      <p className="text-[10px] text-muted-foreground">
-                        ≈ {formatCurrencyValue(wallet.totalUsd, "USD" as any)}
-                      </p>
-                    )}
-                    {wallet.coins.length === 0 && (
-                      <p className="text-[10px] text-muted-foreground italic">Sem saldo</p>
-                    )}
-                  </div>
-                </div>
-              ))}
+                      <div className="p-2 space-y-1.5 max-h-60 overflow-y-auto">
+                        {coinWallets.map((wallet) => {
+                          const walletCoin = wallet.coins.find(c => c.coin === coin);
+                          return (
+                            <div key={wallet.wallet_id} className="p-2 rounded-md bg-muted/20 space-y-1">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                  <Bitcoin className="h-3 w-3 text-muted-foreground shrink-0" />
+                                  <span className="text-xs font-medium truncate">
+                                    {wallet.exchange?.replace(/-/g, " ").toUpperCase() || "Wallet"}
+                                  </span>
+                                </div>
+                                <span className="text-xs font-semibold font-mono shrink-0">
+                                  {walletCoin ? walletCoin.saldo_coin.toFixed(walletCoin.saldo_coin < 1 ? 8 : 2) : "0"} {coin}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1 pl-4">
+                                {wallet.network && (
+                                  <Badge variant="outline" className="text-[9px] px-1 py-0 h-3.5 uppercase">
+                                    {wallet.network}
+                                  </Badge>
+                                )}
+                              </div>
+                              <p
+                                className="text-[10px] text-muted-foreground font-mono cursor-pointer hover:text-primary transition-colors flex items-center gap-0.5 pl-4"
+                                onClick={(e) => { e.stopPropagation(); copyToClipboard(wallet.endereco, `w-${wallet.wallet_id}-${coin}`); }}
+                              >
+                                {wallet.endereco.slice(0, 10)}...{wallet.endereco.slice(-6)}
+                                {copiedId === `w-${wallet.wallet_id}-${coin}` ? <Check className="h-2.5 w-2.5 text-primary" /> : <Copy className="h-2.5 w-2.5 opacity-40" />}
+                              </p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                );
+              })}
             </div>
           )}
 
           {/* Empty state */}
+          {wallets.length === 0 && coinEntries.length === 0 && (
+            <div className="text-sm text-muted-foreground italic">Nenhuma exposição crypto</div>
+          )}
+
           {wallets.length === 0 && caixaParceiroId && (
             <Button
               variant="ghost"

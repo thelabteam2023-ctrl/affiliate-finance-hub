@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -48,15 +49,9 @@ export function SaldosFiatCard({ caixaParceiroId, formatCurrency, onDataChanged 
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const [novaConta, setNovaConta] = useState({
-    banco_id: "",
-    banco_nome: "",
-    agencia: "",
-    conta: "",
-    tipo_conta: "corrente",
-    titular: "",
-    pix_keys: [] as { tipo: string; chave: string }[],
-    moeda: "BRL",
-    observacoes: "",
+    banco_id: "", banco_nome: "", agencia: "", conta: "",
+    tipo_conta: "corrente", titular: "", pix_keys: [] as { tipo: string; chave: string }[],
+    moeda: "BRL", observacoes: "",
   });
 
   const fetchContas = useCallback(async () => {
@@ -126,13 +121,16 @@ export function SaldosFiatCard({ caixaParceiroId, formatCurrency, onDataChanged 
     }
   };
 
-  // Compute totals from own data
-  const saldosPorMoeda = contas.reduce<Record<string, number>>((acc, c) => {
+  // Aggregate totals by currency
+  const saldosPorMoeda = contas.reduce<Record<string, { saldo: number; contas: ContaFiat[] }>>((acc, c) => {
     const m = c.moeda || "BRL";
-    acc[m] = (acc[m] || 0) + (c.saldo || 0);
+    if (!acc[m]) acc[m] = { saldo: 0, contas: [] };
+    acc[m].saldo += (c.saldo || 0);
+    acc[m].contas.push(c);
     return acc;
   }, {});
-  const saldosFiatComputed = Object.entries(saldosPorMoeda).map(([moeda, saldo]) => ({ moeda, saldo }));
+
+  const saldoEntries = Object.entries(saldosPorMoeda);
 
   return (
     <>
@@ -159,55 +157,54 @@ export function SaldosFiatCard({ caixaParceiroId, formatCurrency, onDataChanged 
             <Wallet className="h-4 w-4 text-emerald-500" />
           </div>
         </CardHeader>
-        <CardContent className="space-y-3">
-          {/* Total agregado */}
-          <div className="space-y-1">
-            {saldosFiatComputed.filter(s => s.saldo !== 0).map((saldoFiat) => (
-              <div key={saldoFiat.moeda} className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">{saldoFiat.moeda}</span>
-                <span className="text-lg font-bold text-emerald-400">
-                  {formatCurrency(saldoFiat.saldo, saldoFiat.moeda)}
-                </span>
-              </div>
-            ))}
-            {saldosFiatComputed.filter(s => s.saldo !== 0).length === 0 && (
-              <div className="text-sm text-muted-foreground italic">Nenhum saldo FIAT</div>
-            )}
-          </div>
-
-          {/* Separator */}
-          {contas.length > 0 && (
-            <div className="border-t border-border/30 pt-2 space-y-1.5">
-              {contas.map((conta) => (
-                <div
-                  key={conta.id}
-                  className="flex items-center justify-between p-2 rounded-md bg-muted/20 hover:bg-muted/40 transition-colors"
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Landmark className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                    <div className="min-w-0">
-                      <p className="text-xs font-medium truncate">{conta.banco}</p>
-                      <p className="text-[10px] text-muted-foreground truncate">{conta.titular}</p>
+        <CardContent className="space-y-2">
+          {/* Totals by currency — clickable to see bank details */}
+          {saldoEntries.filter(([, v]) => v.saldo !== 0 || v.contas.length > 0).map(([moeda, { saldo, contas: contasMoeda }]) => (
+            <Popover key={moeda}>
+              <PopoverTrigger asChild>
+                <button className="w-full flex items-center justify-between p-2 rounded-md hover:bg-muted/30 transition-colors cursor-pointer group">
+                  <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">{moeda}</span>
+                  <span className="text-lg font-bold text-emerald-400">
+                    {formatCurrency(saldo, moeda)}
+                  </span>
+                </button>
+              </PopoverTrigger>
+              <PopoverContent side="bottom" align="end" className="w-80 p-0">
+                <div className="p-3 border-b border-border">
+                  <p className="text-sm font-medium">Contas em {moeda}</p>
+                  <p className="text-xs text-muted-foreground">{contasMoeda.length} conta(s) bancária(s)</p>
+                </div>
+                <div className="p-2 space-y-1.5 max-h-60 overflow-y-auto">
+                  {contasMoeda.map((conta) => (
+                    <div key={conta.id} className="p-2 rounded-md bg-muted/20 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <Landmark className="h-3 w-3 text-muted-foreground shrink-0" />
+                          <span className="text-xs font-medium truncate">{conta.banco}</span>
+                        </div>
+                        <span className="text-xs font-semibold shrink-0">
+                          {formatCurrencyValue(conta.saldo || 0, conta.moeda as any)}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground truncate pl-4.5">{conta.titular}</p>
                       {conta.pix_key && (
                         <p
-                          className="text-[10px] text-muted-foreground font-mono cursor-pointer hover:text-primary transition-colors flex items-center gap-0.5"
-                          onClick={() => copyToClipboard(conta.pix_key!, `pix-${conta.id}`)}
+                          className="text-[10px] text-muted-foreground font-mono cursor-pointer hover:text-primary transition-colors flex items-center gap-0.5 pl-4.5"
+                          onClick={(e) => { e.stopPropagation(); copyToClipboard(conta.pix_key!, `pix-${conta.id}`); }}
                         >
-                          PIX: {conta.pix_key.length > 16 ? `${conta.pix_key.slice(0, 8)}...${conta.pix_key.slice(-4)}` : conta.pix_key}
+                          PIX: {conta.pix_key.length > 20 ? `${conta.pix_key.slice(0, 10)}...${conta.pix_key.slice(-4)}` : conta.pix_key}
                           {copiedId === `pix-${conta.id}` ? <Check className="h-2.5 w-2.5 text-primary" /> : <Copy className="h-2.5 w-2.5 opacity-40" />}
                         </p>
                       )}
                     </div>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-xs font-semibold">
-                      {formatCurrencyValue(conta.saldo || 0, conta.moeda as any)}
-                    </p>
-                    <p className="text-[10px] text-muted-foreground">{conta.moeda}</p>
-                  </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </PopoverContent>
+            </Popover>
+          ))}
+
+          {saldoEntries.length === 0 && (
+            <div className="text-sm text-muted-foreground italic">Nenhum saldo FIAT</div>
           )}
 
           {/* Empty state with create CTA */}
