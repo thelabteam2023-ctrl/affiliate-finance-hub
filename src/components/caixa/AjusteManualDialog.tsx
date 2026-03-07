@@ -695,8 +695,8 @@ export function AjusteManualDialog({
         <Alert className="border-warning/30 bg-warning/5">
           <AlertTriangle className="h-4 w-4 text-warning" />
           <AlertDescription className="text-xs text-muted-foreground">
-            Este lançamento é contábil, auditável e <strong>não poderá ser editado ou removido</strong>. 
-            A moeda é derivada automaticamente da entidade selecionada.
+            Informe o <strong>saldo real observado</strong> e o sistema calculará automaticamente o ajuste necessário. 
+            Este lançamento é contábil, auditável e <strong>não poderá ser editado ou removido</strong>.
           </AlertDescription>
         </Alert>
 
