@@ -325,17 +325,25 @@ export function SaldosParceirosSheet() {
       const parceirosIds = Array.from(parceirosMap.keys());
       const { data: parceirosData } = await supabase
         .from("parceiros")
-        .select("id, nome")
+        .select("id, nome, is_caixa_operacional")
         .in("id", parceirosIds);
 
+      // Collect caixa operacional IDs to filter them out
+      const caixaIds = new Set<string>();
       if (parceirosData) {
-        parceirosData.forEach((p) => {
+        parceirosData.forEach((p: any) => {
+          if (p.is_caixa_operacional) {
+            caixaIds.add(p.id);
+          }
           const parceiro = parceirosMap.get(p.id);
           if (parceiro && parceiro.parceiro_nome === "Parceiro") {
             parceiro.parceiro_nome = p.nome;
           }
         });
       }
+
+      // Remove caixa operacional entries from the map
+      caixaIds.forEach(id => parceirosMap.delete(id));
 
       // Helper to get total from multi-currency object
       const getTotalFromCurrencies = (saldos: SaldosPorMoeda): number => {
