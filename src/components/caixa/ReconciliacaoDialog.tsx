@@ -177,7 +177,7 @@ export function ReconciliacaoDialog({
         supabase.from("contas_bancarias").select(`id, banco, titular, parceiro_id, moeda, reconciled_at, parceiros!inner(status)`).eq("parceiros.status", "ativo").order("banco"),
         supabase.from("wallets_crypto").select(`id, exchange, endereco, parceiro_id, moeda, reconciled_at, parceiros!inner(nome, status)`).eq("parceiros.status", "ativo").order("exchange"),
         supabase.from("v_saldo_parceiro_contas").select("conta_id, saldo"),
-        supabase.from("v_saldo_parceiro_wallets").select("wallet_id, coin, saldo_coin"),
+        supabase.from("v_saldo_parceiro_wallets").select("wallet_id, coin, saldo_coin, saldo_usd"),
       ]);
 
       setBookmakers((bookmakersRes.data || []).map((bk: any) => ({
