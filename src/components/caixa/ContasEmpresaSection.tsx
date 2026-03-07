@@ -36,6 +36,7 @@ interface WalletCrypto {
   exchange: string | null;
   endereco: string;
   network: string;
+  moedas: string[];
   coin: string;
   saldo_coin: number;
   saldo_usd: number;
