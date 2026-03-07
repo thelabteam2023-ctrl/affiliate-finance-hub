@@ -31,6 +31,7 @@ import { PosicaoCapital } from "@/components/caixa/PosicaoCapital";
 import { ConfirmarSaqueDialog } from "@/components/caixa/ConfirmarSaqueDialog";
 import { AjusteManualDialog } from "@/components/caixa/AjusteManualDialog";
 import { ReconciliacaoDialog } from "@/components/caixa/ReconciliacaoDialog";
+import { ContasEmpresaSection } from "@/components/caixa/ContasEmpresaSection";
 // TransacoesEmTransito removido - lógica unificada na Conciliação
 import { subDays, startOfDay, endOfDay, format } from "date-fns";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -124,6 +125,7 @@ export default function Caixa() {
   // Estado para ajuste manual
   const [ajusteDialogOpen, setAjusteDialogOpen] = useState(false);
   const [reconciliacaoDialogOpen, setReconciliacaoDialogOpen] = useState(false);
+  const [caixaParceiroId, setCaixaParceiroId] = useState<string | null>(null);
 
   // Estado para pré-preenchimento do dialog de transação (vindo de navegação)
   const [dialogDefaultData, setDialogDefaultData] = useState<{
@@ -221,7 +223,11 @@ export default function Caixa() {
       // Fetch reference data for names
       const { data: parceirosData } = await supabase
         .from("parceiros")
-        .select("id, nome");
+        .select("id, nome, is_caixa_operacional");
+      
+      // Identify the caixa operacional partner and filter it from regular partners
+      const caixaParceiro = parceirosData?.find((p: any) => p.is_caixa_operacional === true);
+      setCaixaParceiroId(caixaParceiro?.id || null);
       
       const { data: contasData } = await supabase
         .from("contas_bancarias")
@@ -246,9 +252,9 @@ export default function Caixa() {
         .select("id, nome")
         .order("nome");
 
-      // Create lookup maps
+      // Create lookup maps (include caixa parceiro in map for label resolution, but filter from lists)
       const parceirosMap: { [key: string]: string } = {};
-      parceirosData?.forEach(p => parceirosMap[p.id] = p.nome);
+      parceirosData?.forEach((p: any) => parceirosMap[p.id] = p.nome);
       setParceiros(parceirosMap);
 
       const contasMap: { [key: string]: string } = {};
@@ -989,6 +995,12 @@ export default function Caixa() {
             cotacaoUSD={cotacaoUSD}
           />
 
+          {/* Contas da Empresa */}
+          <ContasEmpresaSection
+            caixaParceiroId={caixaParceiroId}
+            onDataChanged={fetchData}
+          />
+
           {/* Container com Abas */}
           <CaixaTabsContainer
             transacoes={transacoes}
@@ -1007,7 +1019,7 @@ export default function Caixa() {
             filtroParceiro={filtroParceiro}
             setFiltroParceiro={setFiltroParceiro}
             projetos={projetos}
-            parceirosLista={Object.entries(parceiros).map(([id, nome]) => ({ id, nome }))}
+            parceirosLista={Object.entries(parceiros).filter(([id]) => id !== caixaParceiroId).map(([id, nome]) => ({ id, nome }))}
             dataInicio={dataInicio}
             setDataInicio={setDataInicio}
             dataFim={dataFim}

@@ -6114,6 +6114,7 @@ export type Database = {
           email: string | null
           endereco: string | null
           id: string
+          is_caixa_operacional: boolean
           nome: string
           observacoes: string | null
           status: string
@@ -6131,6 +6132,7 @@ export type Database = {
           email?: string | null
           endereco?: string | null
           id?: string
+          is_caixa_operacional?: boolean
           nome: string
           observacoes?: string | null
           status?: string
@@ -6148,6 +6150,7 @@ export type Database = {
           email?: string | null
           endereco?: string | null
           id?: string
+          is_caixa_operacional?: boolean
           nome?: string
           observacoes?: string | null
           status?: string
