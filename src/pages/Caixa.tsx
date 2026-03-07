@@ -289,13 +289,27 @@ export default function Caixa() {
       });
       setDespesasAdminGrupoMap(despAdminMap);
 
-      // Fetch FIAT balances (view já filtra por workspace via get_current_workspace())
-      const { data: saldosFiatData, error: fiatError } = await supabase
-        .from("v_saldo_caixa_fiat")
-        .select("*");
+      // Fetch FIAT balances = soma das contas bancárias da Caixa Operacional
+      // Usa v_saldo_parceiro_contas (que filtra por moeda da conta) para garantir
+      // paridade exata com os saldos exibidos em "Contas da Empresa"
+      if (caixaParceiro?.id) {
+        const { data: contasSaldoData, error: fiatError } = await supabase
+          .from("v_saldo_parceiro_contas")
+          .select("moeda, saldo")
+          .eq("parceiro_id", caixaParceiro.id);
 
-      if (fiatError) throw fiatError;
-      setSaldosFiat((saldosFiatData || []) as unknown as SaldoFiat[]);
+        if (fiatError) throw fiatError;
+
+        // Agrupar por moeda (pode ter múltiplas contas na mesma moeda)
+        const fiatMap: Record<string, number> = {};
+        (contasSaldoData || []).forEach((row: any) => {
+          const m = row.moeda || "BRL";
+          fiatMap[m] = (fiatMap[m] || 0) + (row.saldo || 0);
+        });
+        setSaldosFiat(Object.entries(fiatMap).map(([moeda, saldo]) => ({ moeda, saldo })));
+      } else {
+        setSaldosFiat([]);
+      }
 
       // Fetch CRYPTO balances (view já filtra por workspace via get_current_workspace())
       const { data: saldosCryptoData, error: cryptoError } = await supabase
