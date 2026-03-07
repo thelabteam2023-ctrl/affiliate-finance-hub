@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
@@ -79,6 +79,22 @@ export function DesvinculacaoEmMassaDialog({
   const [progressTotal, setProgressTotal] = useState(0);
   const [results, setResults] = useState<{ id: string; nome: string; success: boolean; error?: string }[]>([]);
   const [step, setStep] = useState<"select" | "confirm" | "result">("select");
+  const listRef = useRef<HTMLDivElement>(null);
+
+  // Handle Tab on saldo inputs: jump to the next saldo input in the list
+  const handleSaldoKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>, currentIndex: number) => {
+    if (e.key === "Tab" && !e.shiftKey && listRef.current) {
+      const allInputs = listRef.current.querySelectorAll<HTMLInputElement>('input[data-saldo-index]');
+      const sorted = Array.from(allInputs).sort((a, b) => 
+        Number(a.dataset.saldoIndex) - Number(b.dataset.saldoIndex)
+      );
+      const currentPos = sorted.findIndex(inp => Number(inp.dataset.saldoIndex) === currentIndex);
+      if (currentPos >= 0 && currentPos < sorted.length - 1) {
+        e.preventDefault();
+        sorted[currentPos + 1].focus();
+      }
+    }
+  }, []);
 
   // Abbreviate name: first + last
   const abbreviateName = (name: string) => {
@@ -382,9 +398,9 @@ export function DesvinculacaoEmMassaDialog({
             </div>
 
             {/* List */}
-            <div className="flex-1 min-h-0 overflow-y-auto" style={{ maxHeight: "calc(85vh - 220px)" }}>
+            <div ref={listRef} className="flex-1 min-h-0 overflow-y-auto" style={{ maxHeight: "calc(85vh - 220px)" }}>
               <div className="divide-y divide-border/50">
-                {filteredVinculos.map(vinculo => {
+                {filteredVinculos.map((vinculo, idx) => {
                   const isSelected = !!selectedMap[vinculo.id];
                   const sel = selectedMap[vinculo.id];
                   const saldoRealNum = sel ? parseFloat(sel.saldoRealInput.replace(",", ".")) || 0 : 0;
@@ -450,8 +466,10 @@ export function DesvinculacaoEmMassaDialog({
                             placeholder="0.00"
                             value={sel?.saldoRealInput || ""}
                             onChange={e => updateField(vinculo.id, "saldoRealInput", e.target.value)}
+                            onKeyDown={e => handleSaldoKeyDown(e as any, idx)}
                             disabled={!isSelected || isBlocked}
                             className="h-7 text-sm tabular-nums"
+                            data-saldo-index={idx}
                           />
                         </div>
 
