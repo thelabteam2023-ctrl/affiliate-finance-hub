@@ -92,6 +92,7 @@ export function ReconciliacaoDialog({
   const [wallets, setWallets] = useState<WalletCrypto[]>([]);
   const [saldosContas, setSaldosContas] = useState<Record<string, number>>({});
   const [saldosWallets, setSaldosWallets] = useState<Record<string, Record<string, number>>>({});
+  const [saldosWalletsList, setSaldosWalletsList] = useState<WalletCoinBalance[]>([]);
 
   const canAccess = isOwnerOrAdmin || isSystemOwner;
 
