@@ -927,7 +927,6 @@ export default function Caixa() {
             {/* Saldos FIAT - Interactive Card */}
             <SaldosFiatCard
               caixaParceiroId={caixaParceiroId}
-              saldosFiat={saldosFiat}
               formatCurrency={formatCurrency}
               onDataChanged={fetchData}
             />
