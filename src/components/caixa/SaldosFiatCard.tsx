@@ -162,7 +162,7 @@ export function SaldosFiatCard({ caixaParceiroId, formatCurrency, onDataChanged 
         <CardContent className="space-y-3">
           {/* Total agregado */}
           <div className="space-y-1">
-            {saldosFiat.filter(s => s.saldo !== 0).map((saldoFiat) => (
+            {saldosFiatComputed.filter(s => s.saldo !== 0).map((saldoFiat) => (
               <div key={saldoFiat.moeda} className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">{saldoFiat.moeda}</span>
                 <span className="text-lg font-bold text-emerald-400">
@@ -170,7 +170,7 @@ export function SaldosFiatCard({ caixaParceiroId, formatCurrency, onDataChanged 
                 </span>
               </div>
             ))}
-            {saldosFiat.filter(s => s.saldo !== 0).length === 0 && (
+            {saldosFiatComputed.filter(s => s.saldo !== 0).length === 0 && (
               <div className="text-sm text-muted-foreground italic">Nenhum saldo FIAT</div>
             )}
           </div>
