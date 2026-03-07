@@ -21,6 +21,7 @@ export interface WalletCoinBalance {
   wallet_id: string;
   coin: string;
   saldo_coin: number;
+  saldo_usd?: number;
 }
 
 interface WalletSearchSelectProps {
@@ -29,6 +30,7 @@ interface WalletSearchSelectProps {
   onValueChange: (value: string) => void;
   placeholder?: string;
   saldos?: WalletCoinBalance[];
+  usdToBrlRate?: number;
 }
 
 export function WalletSearchSelect({
@@ -37,6 +39,7 @@ export function WalletSearchSelect({
   onValueChange,
   placeholder = "Selecione a wallet",
   saldos = [],
+  usdToBrlRate = 0,
 }: WalletSearchSelectProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -68,14 +71,24 @@ export function WalletSearchSelect({
   const renderCoinBalances = (walletId: string) => {
     const balances = saldosByWallet[walletId];
     if (!balances || balances.length === 0) return null;
+    
+    // Calculate total USD for this wallet, then convert to BRL
+    const totalUsd = balances.reduce((sum, b) => sum + (b.saldo_usd ?? 0), 0);
+    const totalBrl = usdToBrlRate > 0 ? totalUsd * usdToBrlRate : 0;
+    
     return (
-      <div className="flex flex-wrap gap-x-2 gap-y-0.5 mt-0.5">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
         {balances.map((b) => (
           <span key={b.coin} className="text-[10px] text-muted-foreground">
             <span className="font-medium text-foreground/70">{b.coin}</span>{" "}
             {b.saldo_coin.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 6 })}
           </span>
         ))}
+        {totalBrl !== 0 && (
+          <span className="text-[10px] text-primary font-medium ml-1">
+            ≈ R$ {totalBrl.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </span>
+        )}
       </div>
     );
   };

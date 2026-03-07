@@ -285,7 +285,7 @@ export function AjusteManualDialog({
           .select("conta_id, saldo"),
         supabase
           .from("v_saldo_parceiro_wallets")
-          .select("wallet_id, coin, saldo_coin"),
+          .select("wallet_id, coin, saldo_coin, saldo_usd"),
         supabase
           .from("parceiros")
           .select("id")
@@ -303,6 +303,7 @@ export function AjusteManualDialog({
         wallet_id: s.wallet_id,
         coin: s.coin,
         saldo_coin: s.saldo_coin ?? 0,
+        saldo_usd: s.saldo_usd ?? 0,
       })));
       setCaixaParceiroId(caixaParceiroRes.data?.id ?? null);
 
@@ -733,9 +734,10 @@ export function AjusteManualDialog({
                   wallets={walletsCaixa}
                   value={walletId}
                   onValueChange={setWalletId}
-                  placeholder="Selecione a wallet"
-                  saldos={saldosWallets}
-                />
+                   placeholder="Selecione a wallet"
+                   saldos={saldosWallets}
+                   usdToBrlRate={getRate("USD")}
+                 />
               </div>
             )}
 
@@ -790,9 +792,10 @@ export function AjusteManualDialog({
                   wallets={wallets}
                   value={walletId}
                   onValueChange={setWalletId}
-                  placeholder="Selecione a wallet"
-                  saldos={saldosWallets}
-                />
+                   placeholder="Selecione a wallet"
+                   saldos={saldosWallets}
+                   usdToBrlRate={getRate("USD")}
+                 />
               </div>
             )}
 
