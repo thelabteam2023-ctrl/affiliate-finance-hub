@@ -454,6 +454,10 @@ export default function Caixa() {
       if (HIDDEN_TYPES.includes(t.tipo_transacao)) {
         return false;
       }
+      // Ocultar transações canceladas
+      if (t.status === 'CANCELADO') {
+        return false;
+      }
       
       // Data efetiva: para saques confirmados, usar data_confirmacao como referência cronológica
       const dataEfetiva = t.data_confirmacao 
