@@ -6,6 +6,7 @@ import { usePermissions } from "@/contexts/PermissionsContext";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useExchangeRates } from "@/contexts/ExchangeRatesContext";
 import { FIAT_CURRENCIES, CRYPTO_CURRENCIES, getCurrencySymbol, type SupportedCurrency } from "@/types/currency";
+import { getFirstLastName } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -29,6 +30,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, AlertTriangle, TrendingDown, TrendingUp, Wrench, Info } from "lucide-react";
 import { WalletSearchSelect } from "./WalletSearchSelect";
+import { ContaBancariaSearchSelect, type ContaBancariaOption } from "./ContaBancariaSearchSelect";
 
 interface AjusteManualDialogProps {
   open: boolean;
@@ -50,7 +52,9 @@ interface ContaBancaria {
   banco: string;
   titular: string;
   parceiro_id: string;
+  parceiro_nome: string;
   moeda: string;
+  saldo: number | null;
 }
 
 interface WalletCrypto {
@@ -63,6 +67,8 @@ interface WalletCrypto {
 }
 
 type TipoDestino = "CAIXA_OPERACIONAL" | "BOOKMAKER" | "CONTA_BANCARIA" | "WALLET";
+type SubTipoCaixa = "FIAT" | "CRYPTO" | "";
+
 
 export function AjusteManualDialog({
   open,
@@ -80,6 +86,7 @@ export function AjusteManualDialog({
   // Form state
   const [direcao, setDirecao] = useState<"ENTRADA" | "SAIDA">("ENTRADA");
   const [tipoDestino, setTipoDestino] = useState<TipoDestino>("CAIXA_OPERACIONAL");
+  const [subTipoCaixa, setSubTipoCaixa] = useState<SubTipoCaixa>("");
   const [moeda, setMoeda] = useState<string>("BRL");
   const [valor, setValor] = useState<string>("");
   const [valorDisplay, setValorDisplay] = useState<string>("");
@@ -94,6 +101,7 @@ export function AjusteManualDialog({
   const [bookmakers, setBookmakers] = useState<Bookmaker[]>([]);
   const [contas, setContas] = useState<ContaBancaria[]>([]);
   const [wallets, setWallets] = useState<WalletCrypto[]>([]);
+  const [saldosContas, setSaldosContas] = useState<Record<string, number>>({});
 
   // Verificar permissão
   const canAccess = isOwnerOrAdmin || isSystemOwner;
@@ -101,7 +109,32 @@ export function AjusteManualDialog({
   // Moedas disponíveis baseadas na entidade selecionada
   const moedasDisponiveis = useMemo(() => {
     if (tipoDestino === "CAIXA_OPERACIONAL") {
-      // Caixa Operacional: todas as moedas FIAT do sistema
+      // If a sub-entity is selected, derive currency from it
+      if (subTipoCaixa === "FIAT" && contaId) {
+        const conta = contas.find(c => c.id === contaId);
+        if (conta) {
+          const currencyInfo = FIAT_CURRENCIES.find(c => c.value === conta.moeda);
+          return [{
+            value: conta.moeda,
+            label: currencyInfo ? `${conta.moeda} - ${currencyInfo.label}` : conta.moeda,
+            symbol: getCurrencySymbol(conta.moeda)
+          }];
+        }
+      }
+      if (subTipoCaixa === "CRYPTO" && walletId) {
+        const wallet = wallets.find(w => w.id === walletId);
+        if (wallet && wallet.moeda.length > 0) {
+          return wallet.moeda.map(m => {
+            const currencyInfo = CRYPTO_CURRENCIES.find(c => c.value === m);
+            return {
+              value: m,
+              label: currencyInfo ? `${m} - ${currencyInfo.label}` : m,
+              symbol: getCurrencySymbol(m)
+            };
+          });
+        }
+      }
+      // Default: all FIAT currencies when no sub-entity selected
       return FIAT_CURRENCIES.map(c => ({ value: c.value, label: `${c.value} - ${c.label}`, symbol: c.symbol }));
     }
     
@@ -147,7 +180,7 @@ export function AjusteManualDialog({
     
     // Fallback: BRL para casos não cobertos
     return [{ value: "BRL", label: "BRL - Real Brasileiro", symbol: "R$" }];
-  }, [tipoDestino, bookmakerId, contaId, walletId, bookmakers, contas, wallets]);
+  }, [tipoDestino, subTipoCaixa, bookmakerId, contaId, walletId, bookmakers, contas, wallets]);
 
   // Auto-selecionar moeda quando há apenas uma opção
   useEffect(() => {
@@ -184,6 +217,7 @@ export function AjusteManualDialog({
     setBookmakerId("");
     setContaId("");
     setWalletId("");
+    setSubTipoCaixa("");
     setMoeda("BRL");
     setValor("");
     setValorDisplay("");
@@ -195,7 +229,7 @@ export function AjusteManualDialog({
       // PROTEÇÃO DE PARCEIROS INATIVOS:
       // Buscar bookmakers, contas e wallets apenas de PARCEIROS ATIVOS
       // O banco de dados também valida via trigger, mas a UI deve prevenir a seleção
-      const [bookmakersRes, contasRes, walletsRes] = await Promise.all([
+      const [bookmakersRes, contasRes, walletsRes, saldosContasRes] = await Promise.all([
         supabase
           .from("bookmakers")
           .select(`
@@ -207,7 +241,6 @@ export function AjusteManualDialog({
             parceiros!inner(nome, status)
           `)
           .in("status", ["ativo", "limitada"])
-          // CRÍTICO: Apenas bookmakers de parceiros ATIVOS
           .eq("parceiros.status", "ativo")
           .order("nome"),
         supabase
@@ -218,9 +251,8 @@ export function AjusteManualDialog({
             titular, 
             parceiro_id, 
             moeda,
-            parceiros!inner(status)
+            parceiros!inner(nome, status)
           `)
-          // CRÍTICO: Apenas contas de parceiros ATIVOS
           .eq("parceiros.status", "ativo")
           .order("banco"),
         supabase
@@ -233,10 +265,19 @@ export function AjusteManualDialog({
             moeda,
             parceiros!inner(nome, status)
           `)
-          // CRÍTICO: Apenas wallets de parceiros ATIVOS
           .eq("parceiros.status", "ativo")
           .order("exchange"),
+        supabase
+          .from("v_saldo_parceiro_contas")
+          .select("conta_id, saldo"),
       ]);
+
+      // Build saldo map for contas
+      const saldoMap: Record<string, number> = {};
+      (saldosContasRes.data || []).forEach((s: any) => {
+        if (s.conta_id) saldoMap[s.conta_id] = s.saldo ?? 0;
+      });
+      setSaldosContas(saldoMap);
 
       const mappedBookmakers: Bookmaker[] = (bookmakersRes.data || []).map((bk: any) => ({
         id: bk.id,
@@ -252,7 +293,9 @@ export function AjusteManualDialog({
         banco: c.banco,
         titular: c.titular,
         parceiro_id: c.parceiro_id,
+        parceiro_nome: c.parceiros?.nome || "",
         moeda: c.moeda || "BRL",
+        saldo: saldoMap[c.id] ?? null,
       }));
 
       const mappedWallets: WalletCrypto[] = (walletsRes.data || []).map((w: any) => ({
@@ -282,6 +325,7 @@ export function AjusteManualDialog({
   const resetForm = () => {
     setDirecao("ENTRADA");
     setTipoDestino("CAIXA_OPERACIONAL");
+    setSubTipoCaixa("");
     setMoeda("BRL");
     setValor("");
     setValorDisplay("");
@@ -316,14 +360,24 @@ export function AjusteManualDialog({
 
   // Obter nome da entidade selecionada
   const getEntidadeNome = (): string => {
-    if (tipoDestino === "CAIXA_OPERACIONAL") return "Caixa Operacional";
+    if (tipoDestino === "CAIXA_OPERACIONAL") {
+      if (subTipoCaixa === "FIAT" && contaId) {
+        const conta = contas.find(c => c.id === contaId);
+        return conta ? `Caixa – ${conta.banco} (${getFirstLastName(conta.titular)})` : "Caixa Operacional";
+      }
+      if (subTipoCaixa === "CRYPTO" && walletId) {
+        const wallet = wallets.find(w => w.id === walletId);
+        return wallet ? `Caixa – ${wallet.exchange} (${wallet.endereco.slice(0, 8)}...)` : "Caixa Operacional";
+      }
+      return "Caixa Operacional";
+    }
     if (tipoDestino === "BOOKMAKER") {
       const bk = bookmakers.find(b => b.id === bookmakerId);
       return bk ? `${bk.nome}${bk.parceiro_nome ? ` (${bk.parceiro_nome})` : ""}` : "Bookmaker";
     }
     if (tipoDestino === "CONTA_BANCARIA") {
       const conta = contas.find(c => c.id === contaId);
-      return conta ? `${conta.banco} - ${conta.titular}` : "Conta Bancária";
+      return conta ? `${conta.banco} - ${getFirstLastName(conta.titular)}` : "Conta Bancária";
     }
     if (tipoDestino === "WALLET") {
       const wallet = wallets.find(w => w.id === walletId);
@@ -336,6 +390,8 @@ export function AjusteManualDialog({
   const canSubmit = (): boolean => {
     if (!valor || parseFloat(valor) <= 0) return false;
     if (!motivo.trim()) return false;
+    if (tipoDestino === "CAIXA_OPERACIONAL" && subTipoCaixa === "FIAT" && !contaId) return false;
+    if (tipoDestino === "CAIXA_OPERACIONAL" && subTipoCaixa === "CRYPTO" && !walletId) return false;
     if (tipoDestino === "BOOKMAKER" && !bookmakerId) return false;
     if (tipoDestino === "CONTA_BANCARIA" && !contaId) return false;
     if (tipoDestino === "WALLET" && !walletId) return false;
@@ -387,7 +443,8 @@ export function AjusteManualDialog({
         cotacao_snapshot_at: cotacaoSnapshotAt,
         valor_usd_referencia: valorBrlRef,
         // Para wallets crypto: preencher coin e qtd_coin (exigido pela view v_saldo_parceiro_wallets)
-        ...(tipoDestino === "WALLET" && isCrypto ? { coin: moeda, qtd_coin: valorNumerico } : {}),
+        ...((tipoDestino === "WALLET" || (tipoDestino === "CAIXA_OPERACIONAL" && subTipoCaixa === "CRYPTO")) && isCrypto
+          ? { coin: moeda, qtd_coin: valorNumerico } : {}),
         auditoria_metadata: {
           registrado_em: new Date().toISOString(),
           tipo_destino: tipoDestino,
@@ -407,6 +464,17 @@ export function AjusteManualDialog({
         switch (tipoDestino) {
           case "CAIXA_OPERACIONAL":
             transactionData.destino_tipo = "CAIXA_OPERACIONAL";
+            // Sub-entity: link specific account/wallet
+            if (subTipoCaixa === "FIAT" && contaId) {
+              transactionData.destino_conta_bancaria_id = contaId;
+              transactionData.moeda_destino = moeda;
+              transactionData.valor_destino = valorNumerico;
+            }
+            if (subTipoCaixa === "CRYPTO" && walletId) {
+              transactionData.destino_wallet_id = walletId;
+              transactionData.moeda_destino = moeda;
+              transactionData.valor_destino = valorNumerico;
+            }
             break;
           case "BOOKMAKER":
             transactionData.destino_tipo = "BOOKMAKER";
@@ -435,6 +503,17 @@ export function AjusteManualDialog({
         switch (tipoDestino) {
           case "CAIXA_OPERACIONAL":
             transactionData.origem_tipo = "CAIXA_OPERACIONAL";
+            // Sub-entity: link specific account/wallet
+            if (subTipoCaixa === "FIAT" && contaId) {
+              transactionData.origem_conta_bancaria_id = contaId;
+              transactionData.moeda_origem = moeda;
+              transactionData.valor_origem = valorNumerico;
+            }
+            if (subTipoCaixa === "CRYPTO" && walletId) {
+              transactionData.origem_wallet_id = walletId;
+              transactionData.moeda_origem = moeda;
+              transactionData.valor_origem = valorNumerico;
+            }
             break;
           case "BOOKMAKER":
             transactionData.origem_tipo = "BOOKMAKER";
@@ -585,6 +664,53 @@ export function AjusteManualDialog({
               </Select>
             </div>
 
+            {/* Sub-seleção Caixa Operacional: tipo de ativo */}
+            {tipoDestino === "CAIXA_OPERACIONAL" && (
+              <div className="space-y-2">
+                <Label>Vincular a (opcional)</Label>
+                <Select value={subTipoCaixa || "NONE"} onValueChange={(v) => {
+                  setSubTipoCaixa(v === "NONE" ? "" : v as SubTipoCaixa);
+                  setContaId("");
+                  setWalletId("");
+                }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Nenhum (ajuste geral)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="NONE">Nenhum (ajuste geral)</SelectItem>
+                    <SelectItem value="FIAT">Conta Bancária</SelectItem>
+                    <SelectItem value="CRYPTO">Wallet Crypto</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Sub-seleção Caixa: Conta Bancária */}
+            {tipoDestino === "CAIXA_OPERACIONAL" && subTipoCaixa === "FIAT" && (
+              <div className="space-y-2">
+                <Label>Conta Bancária</Label>
+                <ContaBancariaSearchSelect
+                  contas={contas}
+                  value={contaId}
+                  onValueChange={setContaId}
+                  placeholder="Selecione a conta"
+                />
+              </div>
+            )}
+
+            {/* Sub-seleção Caixa: Wallet Crypto */}
+            {tipoDestino === "CAIXA_OPERACIONAL" && subTipoCaixa === "CRYPTO" && (
+              <div className="space-y-2">
+                <Label>Wallet Crypto</Label>
+                <WalletSearchSelect
+                  wallets={wallets}
+                  value={walletId}
+                  onValueChange={setWalletId}
+                  placeholder="Selecione a wallet"
+                />
+              </div>
+            )}
+
             {/* Seleção específica: Bookmaker */}
             {tipoDestino === "BOOKMAKER" && (
               <div className="space-y-2">
@@ -619,23 +745,12 @@ export function AjusteManualDialog({
             {tipoDestino === "CONTA_BANCARIA" && (
               <div className="space-y-2">
                 <Label>Conta Bancária</Label>
-                <Select value={contaId} onValueChange={setContaId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione a conta" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {contas.map((conta) => (
-                      <SelectItem key={conta.id} value={conta.id}>
-                        <div className="flex items-center gap-2">
-                          <span>{conta.banco} - {conta.titular}</span>
-                          <Badge variant="secondary" className="text-xs">
-                            {conta.moeda}
-                          </Badge>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <ContaBancariaSearchSelect
+                  contas={contas}
+                  value={contaId}
+                  onValueChange={setContaId}
+                  placeholder="Selecione a conta"
+                />
               </div>
             )}
 
@@ -666,7 +781,7 @@ export function AjusteManualDialog({
               <Select 
                 value={moeda} 
                 onValueChange={setMoeda}
-                disabled={moedasDisponiveis.length === 1 && tipoDestino !== "CAIXA_OPERACIONAL"}
+                disabled={moedasDisponiveis.length === 1 && (tipoDestino !== "CAIXA_OPERACIONAL" || subTipoCaixa !== "")}
               >
                 <SelectTrigger>
                   <SelectValue />
