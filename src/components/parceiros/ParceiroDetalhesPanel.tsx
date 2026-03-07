@@ -170,12 +170,14 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
         return;
       }
 
+      // Bug fix: Use "ativo" as default status for unlink from partner panel
+      // The RPC will handle estado_conta preservation
       await executeUnlink({
         bookmakerId,
         projetoId: check.projetoId,
         workspaceId: check.workspaceId,
         userId: userData.user.id,
-        statusFinal: "disponivel",
+        statusFinal: "ativo",
         saldoVirtualEfetivo: check.saldoVirtualEfetivo,
         moeda: check.moeda,
       });

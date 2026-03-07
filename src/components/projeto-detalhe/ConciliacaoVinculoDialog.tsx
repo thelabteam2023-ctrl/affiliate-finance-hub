@@ -182,12 +182,13 @@ export function ConciliacaoVinculoDialog({
 
       const saldoFinalReal = temDiferenca ? saldoRealNum : saldoSistema;
       const isLimitada = vinculo.bookmaker_status.toUpperCase() === "LIMITADA";
-      const deveMarcarParaSaque = isLimitada || marcarParaSaque;
+      const deveMarcarParaSaque = (isLimitada || marcarParaSaque) && saldoFinalReal > 0;
 
       // 2. Determinar status final
-      const statusFinal = deveMarcarParaSaque && saldoFinalReal > 0 
-        ? "aguardando_saque" 
-        : "ativo";
+      // Bug fix: Casas limitadas mantêm status "limitada" — marcarParaSaque controla a fila separadamente
+      const statusFinal = isLimitada 
+        ? "limitada"
+        : (marcarParaSaque && saldoFinalReal > 0 ? "aguardando_saque" : "ativo");
 
       // 3. CRÍTICO: Usar executeUnlink ATÔMICO para gerar SAQUE_VIRTUAL + unlink na mesma transação
       // Recalcular saldo efetivo com preCheckUnlink (pois pode ter mudado após ajuste)
@@ -201,7 +202,7 @@ export function ConciliacaoVinculoDialog({
         statusFinal,
         saldoVirtualEfetivo: check.saldoVirtualEfetivo,
         moeda: vinculo.moeda,
-        marcarParaSaque: deveMarcarParaSaque && saldoFinalReal > 0,
+        marcarParaSaque: deveMarcarParaSaque,
       });
 
       if (isLimitada) {
