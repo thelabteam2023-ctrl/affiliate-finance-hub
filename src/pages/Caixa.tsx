@@ -896,7 +896,7 @@ export default function Caixa() {
       <div className="flex-1 min-h-0 overflow-y-auto">
         <div className="px-6 pb-6 space-y-6">
           {/* KPIs + Contas da Empresa na mesma linha */}
-          <div className="grid gap-4 grid-cols-1 lg:grid-cols-[auto_1fr]">
+          <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
             {/* KPI Cards lado a lado */}
             <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:w-[480px]">
               {/* Saldos FIAT consolidados */}
