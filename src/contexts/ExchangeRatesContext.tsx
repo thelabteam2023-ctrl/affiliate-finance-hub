@@ -514,7 +514,7 @@ export function ExchangeRatesProvider({ children }: ExchangeRatesProviderProps) 
   const getCryptoUSDValue = useCallback((coin: string, quantity: number, fallbackUSD?: number): number => {
     const price = cryptoPrices[coin.toUpperCase()];
     if (price) return quantity * price;
-    if (fallbackUSD) return quantity * fallbackUSD;
+    if (fallbackUSD) return fallbackUSD;
     // Stablecoins
     if (["USDT", "USDC"].includes(coin.toUpperCase())) return quantity;
     return 0;

@@ -138,7 +138,7 @@ export function useCotacoes(cryptoSymbols: string[] = []) {
     if (context?.getCryptoUSDValue) return context.getCryptoUSDValue(coin, quantity, fallbackUSD);
     const price = cryptoPrices[coin.toUpperCase()];
     if (price) return quantity * price;
-    if (fallbackUSD) return quantity * fallbackUSD;
+    if (fallbackUSD) return fallbackUSD;
     if (["USDT", "USDC"].includes(coin.toUpperCase())) return quantity;
     return 0;
   }, [context, cryptoPrices]);
