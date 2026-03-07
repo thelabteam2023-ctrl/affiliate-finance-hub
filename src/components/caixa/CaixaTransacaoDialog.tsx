@@ -2237,14 +2237,37 @@ export function CaixaTransacaoDialog({
         }
       }
 
-      if (destinoTipo === "BOOKMAKER" && !destinoBookmakerId) {
-        toast({
-          title: "Erro",
-          description: "Selecione a bookmaker de destino",
-          variant: "destructive",
-        });
-        return;
+      // Validar conta/wallet da empresa obrigatória quando Caixa Operacional é origem ou destino
+      const caixaIsInvolved = 
+        origemTipo === "CAIXA_OPERACIONAL" || 
+        destinoTipo === "CAIXA_OPERACIONAL" || 
+        tipoTransacao === "APORTE_FINANCEIRO";
+      
+      if (caixaIsInvolved && caixaParceiroId) {
+        if (tipoMoeda === "FIAT" && (!caixaContaId || caixaContaId === "none")) {
+          const contasEmpresa = contasBancarias.filter(c => c.parceiro_id === caixaParceiroId && c.moeda === moeda);
+          if (contasEmpresa.length > 0) {
+            toast({
+              title: "Erro",
+              description: "Selecione a conta bancária da empresa",
+              variant: "destructive",
+            });
+            return;
+          }
+        }
+        if (tipoMoeda === "CRYPTO" && (!caixaWalletId || caixaWalletId === "none")) {
+          const walletsEmpresa = walletsCrypto.filter(w => w.parceiro_id === caixaParceiroId && w.moeda?.includes(coin));
+          if (walletsEmpresa.length > 0) {
+            toast({
+              title: "Erro",
+              description: "Selecione a wallet da empresa",
+              variant: "destructive",
+            });
+            return;
+          }
+        }
       }
+
 
       // Validar transferência para mesma conta/wallet
       if (tipoTransacao === "TRANSFERENCIA" && fluxoTransferencia === "PARCEIRO_PARCEIRO") {
