@@ -27,7 +27,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, AlertTriangle, Scale, TrendingUp, TrendingDown, Minus, Info } from "lucide-react";
-import { WalletSearchSelect } from "./WalletSearchSelect";
+import { WalletSearchSelect, type WalletCoinBalance } from "./WalletSearchSelect";
 
 interface ReconciliacaoDialogProps {
   open: boolean;
