@@ -172,6 +172,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
   const [conciliacaoDialogOpen, setConciliacaoDialogOpen] = useState(false);
   const [vinculoParaConciliar, setVinculoParaConciliar] = useState<Vinculo | null>(null);
   const [selectedCasas, setSelectedCasas] = useState<string[]>([]);
+  const [casasSearchTerm, setCasasSearchTerm] = useState("");
   const [selectedParceiros, setSelectedParceiros] = useState<string[]>([]);
   const [ajusteVinculo, setAjusteVinculo] = useState<Vinculo | null>(null);
   const [sortMode, setSortMode] = useState<VinculoSortMode>("alpha");
