@@ -668,8 +668,8 @@ export function AjusteManualDialog({
             {tipoDestino === "CAIXA_OPERACIONAL" && (
               <div className="space-y-2">
                 <Label>Vincular a (opcional)</Label>
-                <Select value={subTipoCaixa} onValueChange={(v) => {
-                  setSubTipoCaixa(v as SubTipoCaixa);
+                <Select value={subTipoCaixa || "NONE"} onValueChange={(v) => {
+                  setSubTipoCaixa(v === "NONE" ? "" : v as SubTipoCaixa);
                   setContaId("");
                   setWalletId("");
                 }}>
@@ -677,7 +677,7 @@ export function AjusteManualDialog({
                     <SelectValue placeholder="Nenhum (ajuste geral)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Nenhum (ajuste geral)</SelectItem>
+                    <SelectItem value="NONE">Nenhum (ajuste geral)</SelectItem>
                     <SelectItem value="FIAT">Conta Bancária</SelectItem>
                     <SelectItem value="CRYPTO">Wallet Crypto</SelectItem>
                   </SelectContent>
