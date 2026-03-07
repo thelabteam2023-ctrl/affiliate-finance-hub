@@ -223,7 +223,11 @@ export default function Caixa() {
       // Fetch reference data for names
       const { data: parceirosData } = await supabase
         .from("parceiros")
-        .select("id, nome");
+        .select("id, nome, is_caixa_operacional");
+      
+      // Identify the caixa operacional partner and filter it from regular partners
+      const caixaParceiro = parceirosData?.find((p: any) => p.is_caixa_operacional === true);
+      setCaixaParceiroId(caixaParceiro?.id || null);
       
       const { data: contasData } = await supabase
         .from("contas_bancarias")
@@ -248,9 +252,9 @@ export default function Caixa() {
         .select("id, nome")
         .order("nome");
 
-      // Create lookup maps
+      // Create lookup maps (include caixa parceiro in map for label resolution, but filter from lists)
       const parceirosMap: { [key: string]: string } = {};
-      parceirosData?.forEach(p => parceirosMap[p.id] = p.nome);
+      parceirosData?.forEach((p: any) => parceirosMap[p.id] = p.nome);
       setParceiros(parceirosMap);
 
       const contasMap: { [key: string]: string } = {};
