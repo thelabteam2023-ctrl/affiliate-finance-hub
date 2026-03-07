@@ -17,11 +17,18 @@ interface WalletOption {
   moeda: string[];
 }
 
+export interface WalletCoinBalance {
+  wallet_id: string;
+  coin: string;
+  saldo_coin: number;
+}
+
 interface WalletSearchSelectProps {
   wallets: WalletOption[];
   value: string;
   onValueChange: (value: string) => void;
   placeholder?: string;
+  saldos?: WalletCoinBalance[];
 }
 
 export function WalletSearchSelect({
@@ -29,6 +36,7 @@ export function WalletSearchSelect({
   value,
   onValueChange,
   placeholder = "Selecione a wallet",
+  saldos = [],
 }: WalletSearchSelectProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -46,6 +54,31 @@ export function WalletSearchSelect({
         w.moeda?.some((m) => m.toLowerCase().includes(q))
     );
   }, [wallets, search]);
+
+  // Group saldos by wallet_id
+  const saldosByWallet = useMemo(() => {
+    const map: Record<string, WalletCoinBalance[]> = {};
+    for (const s of saldos) {
+      if (!map[s.wallet_id]) map[s.wallet_id] = [];
+      map[s.wallet_id].push(s);
+    }
+    return map;
+  }, [saldos]);
+
+  const renderCoinBalances = (walletId: string) => {
+    const balances = saldosByWallet[walletId];
+    if (!balances || balances.length === 0) return null;
+    return (
+      <div className="flex flex-wrap gap-x-2 gap-y-0.5 mt-0.5">
+        {balances.map((b) => (
+          <span key={b.coin} className="text-[10px] text-muted-foreground">
+            <span className="font-medium text-foreground/70">{b.coin}</span>{" "}
+            {b.saldo_coin.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 6 })}
+          </span>
+        ))}
+      </div>
+    );
+  };
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -80,6 +113,7 @@ export function WalletSearchSelect({
                   {selected.endereco.slice(0, 6)}...{selected.endereco.slice(-4)}
                 </span>
               </div>
+              {renderCoinBalances(selected.id)}
             </div>
           ) : (
             <span className="text-muted-foreground">{placeholder}</span>
@@ -145,6 +179,7 @@ export function WalletSearchSelect({
                     {wallet.endereco.slice(0, 6)}...{wallet.endereco.slice(-4)}
                   </span>
                 </div>
+                {renderCoinBalances(wallet.id)}
               </div>
             </button>
           ))}
