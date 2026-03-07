@@ -432,7 +432,7 @@ export function DesvinculacaoEmMassaDialog({
                         </div>
 
                         {/* Status Final */}
-                        <div className="w-[120px] flex-shrink-0">
+                        <div className="w-[150px] flex-shrink-0">
                           <p className="text-[10px] text-muted-foreground mb-0.5">Status Final</p>
                           <Select
                             value={sel?.statusFinal || "ativo"}
