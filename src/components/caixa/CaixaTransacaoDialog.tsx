@@ -646,6 +646,10 @@ export function CaixaTransacaoDialog({
   const [investidores, setInvestidores] = useState<Array<{ id: string; nome: string }>>([]);
   const [saquesPendentes, setSaquesPendentes] = useState<Record<string, number>>({});
   
+  // Caixa Operacional company account (optional physical destination/origin)
+  const [caixaParceiroId, setCaixaParceiroId] = useState<string>("");
+  const [caixaContaId, setCaixaContaId] = useState<string>("");
+  const [caixaWalletId, setCaixaWalletId] = useState<string>("");
   // Transfer flow type for TRANSFERENCIA
   const [fluxoTransferencia, setFluxoTransferencia] = useState<"CAIXA_PARCEIRO" | "PARCEIRO_PARCEIRO" | "PARCEIRO_CAIXA">("CAIXA_PARCEIRO");
   
