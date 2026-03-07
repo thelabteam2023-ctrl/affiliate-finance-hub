@@ -379,17 +379,11 @@ export default function Caixa() {
   }, [dataInicio, dataFim, workspaceId]);
 
   // Listener para evento global de troca de workspace
-  // Garante reset completo de estados locais não cobertos pelo React Query
+  // O refetch é garantido pelo useEffect com workspaceId como dependência.
+  // NÃO resetar estados aqui para evitar race condition onde o reset
+  // ocorre APÓS o fetchData já ter completado com dados válidos.
   useWorkspaceChangeListener(useCallback(() => {
-    console.log("[Caixa] Workspace changed - resetting local state");
-    setTransacoes([]);
-    setSaldosFiat([]);
-    setSaldosCrypto([]);
-    setSaldosBookmakersPorMoeda([]);
-    setSaldoBookmakers(0);
-    setSaldoContasParceiros(0);
-    setSaldoWalletsParceiros(0);
-    setLoading(true);
+    console.log("[Caixa] Workspace changed - refetch will be triggered by workspaceId dependency");
   }, []));
 
   // Listener para evento de mudança de dados do Caixa (reatividade pós-transação)
