@@ -888,20 +888,10 @@ export function AjusteManualDialog({
                   className="pl-10"
                 />
               </div>
-              {/* Referência em BRL para moedas estrangeiras */}
-              {!modoReconciliacao && valorBRLReferencia !== null && valorBRLReferencia > 0 && (
-                <div className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Info className="h-3 w-3" />
-                  ≈ R$ {valorBRLReferencia.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} 
-                  <span className="text-muted-foreground/70">
-                    (cotação: {cotacaoAtual.toFixed(4)})
-                  </span>
-                </div>
-              )}
             </div>
 
-            {/* Diferença calculada (modo reconciliação) */}
-            {modoReconciliacao && valor && entidadeSelecionada && reconciliacaoCalc && (
+            {/* Diferença calculada */}
+            {valor && entidadeSelecionada && (
               <div className={`rounded-lg border p-3 ${
                 Math.abs(reconciliacaoCalc.diferenca) < 0.01
                   ? "border-muted bg-muted/20"
