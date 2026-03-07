@@ -366,8 +366,7 @@ export function DesvinculacaoEmMassaDialog({
                 />
               </div>
               <Select value={parceiroFilter} onValueChange={setParceiroFilter}>
-                <SelectTrigger className="h-9 w-[200px] text-xs flex items-center gap-1.5">
-                  <User className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                <SelectTrigger className="h-9 w-[200px] text-xs" icon={<User className="h-3.5 w-3.5" />}>
                   <SelectValue placeholder="Parceiro" />
                 </SelectTrigger>
                 <SelectContent>
