@@ -291,7 +291,14 @@ export function ReconciliacaoDialog({
     }
   };
 
-  const formatCurrencyInput = (value: string): string => {
+  const isCryptoMoedaSelected = CRYPTO_CURRENCIES.some(c => c.value === moeda);
+
+  const formatCurrencyInput = (value: string, isCrypto: boolean): string => {
+    if (isCrypto) {
+      // For crypto, allow free-form decimal input with up to 8 decimals
+      const cleaned = value.replace(/[^\d,]/g, "");
+      return cleaned;
+    }
     const numericValue = value.replace(/[^\d]/g, "");
     if (!numericValue) return "";
     const numberValue = parseInt(numericValue, 10) / 100;
@@ -299,10 +306,18 @@ export function ReconciliacaoDialog({
   };
 
   const handleSaldoRealChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatCurrencyInput(e.target.value);
-    setSaldoRealDisplay(formatted);
-    const numericValue = formatted.replace(/\./g, "").replace(",", ".");
-    setSaldoReal(numericValue);
+    if (isCryptoMoedaSelected) {
+      // Crypto: allow direct decimal input (e.g., "0,00004700")
+      const raw = e.target.value.replace(/[^\d,]/g, "");
+      setSaldoRealDisplay(raw);
+      const numericValue = raw.replace(",", ".");
+      setSaldoReal(numericValue);
+    } else {
+      const formatted = formatCurrencyInput(e.target.value, false);
+      setSaldoRealDisplay(formatted);
+      const numericValue = formatted.replace(/\./g, "").replace(",", ".");
+      setSaldoReal(numericValue);
+    }
   };
 
   const getEntidadeNome = (): string => {
@@ -344,10 +359,12 @@ export function ReconciliacaoDialog({
     return false;
   }, [tipoEntidade, entidadeId, subTipoCaixa, contaId, walletId]);
 
+  const minDiferenca = isCryptoMoedaSelected ? 0.00000001 : 0.01;
+
   const canSubmit = (): boolean => {
     if (!entidadeSelecionada) return false;
     if (!saldoReal) return false;
-    if (Math.abs(diferenca) < 0.01) return false;
+    if (Math.abs(diferenca) < minDiferenca) return false;
     if (!motivo.trim()) return false;
     return true;
   };
@@ -483,9 +500,29 @@ export function ReconciliacaoDialog({
       const { error } = await supabase.from("cash_ledger").insert([transactionData] as any);
       if (error) throw error;
 
+      // Update reconciled_at on the target entity
+      const now = new Date().toISOString();
+      try {
+        if (tipoEntidade === "BOOKMAKER" && entidadeId) {
+          await supabase.from("bookmakers").update({ reconciled_at: now } as any).eq("id", entidadeId);
+        } else if (tipoEntidade === "CONTA_BANCARIA" && entidadeId) {
+          await supabase.from("contas_bancarias").update({ reconciled_at: now } as any).eq("id", entidadeId);
+        } else if (tipoEntidade === "WALLET" && entidadeId) {
+          await supabase.from("wallets_crypto").update({ reconciled_at: now } as any).eq("id", entidadeId);
+        } else if (tipoEntidade === "CAIXA_OPERACIONAL") {
+          if (subTipoCaixa === "FIAT" && contaId) {
+            await supabase.from("contas_bancarias").update({ reconciled_at: now } as any).eq("id", contaId);
+          } else if (subTipoCaixa === "CRYPTO" && walletId) {
+            await supabase.from("wallets_crypto").update({ reconciled_at: now } as any).eq("id", walletId);
+          }
+        }
+      } catch (reconciledErr) {
+        console.warn("[Reconciliação] Falha ao atualizar reconciled_at:", reconciledErr);
+      }
+
       toast({
         title: "Reconciliação registrada",
-        description: `Ajuste de ${getCurrencySymbol(moeda)} ${valorAjuste.toFixed(2)} (${direcao === "ENTRADA" ? "+" : "-"}) em ${getEntidadeNome()} registrado com sucesso.`,
+        description: `Ajuste de ${getCurrencySymbol(moeda)} ${valorAjuste.toFixed(isCryptoMoedaSelected ? 8 : 2)} (${direcao === "ENTRADA" ? "+" : "-"}) em ${getEntidadeNome()} registrado com sucesso.`,
       });
 
       handleClose();
@@ -704,7 +741,7 @@ export function ReconciliacaoDialog({
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">Saldo no Sistema</span>
                   <span className="font-mono font-semibold">
-                    {currencySymbol} {saldoSistema.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {currencySymbol} {saldoSistema.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: isCryptoMoedaSelected ? 8 : 2 })}
                   </span>
                 </div>
                 {entidadeReconciledAt && (
@@ -736,7 +773,7 @@ export function ReconciliacaoDialog({
             {/* Diferença calculada */}
             {saldoReal && entidadeSelecionada && (
               <div className={`rounded-lg border p-3 ${
-                Math.abs(diferenca) < 0.01
+                Math.abs(diferenca) < minDiferenca
                   ? "border-muted bg-muted/20"
                   : diferenca > 0
                     ? "border-primary/30 bg-primary/5"
@@ -745,7 +782,7 @@ export function ReconciliacaoDialog({
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-medium">Diferença Calculada</span>
                   <div className="flex items-center gap-2">
-                    {Math.abs(diferenca) < 0.01 ? (
+                    {Math.abs(diferenca) < minDiferenca ? (
                       <Minus className="h-4 w-4 text-muted-foreground" />
                     ) : diferenca > 0 ? (
                       <TrendingUp className="h-4 w-4 text-primary" />
@@ -753,19 +790,19 @@ export function ReconciliacaoDialog({
                       <TrendingDown className="h-4 w-4 text-destructive" />
                     )}
                     <span className={`font-mono font-bold ${
-                      Math.abs(diferenca) < 0.01 ? "text-muted-foreground" : diferenca > 0 ? "text-primary" : "text-destructive"
+                      Math.abs(diferenca) < minDiferenca ? "text-muted-foreground" : diferenca > 0 ? "text-primary" : "text-destructive"
                     }`}>
-                      {diferenca > 0 ? "+" : ""}{currencySymbol} {diferenca.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      {diferenca > 0 ? "+" : ""}{currencySymbol} {diferenca.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: isCryptoMoedaSelected ? 8 : 2 })}
                     </span>
                   </div>
                 </div>
-                {Math.abs(diferenca) >= 0.01 && (
+                {Math.abs(diferenca) >= minDiferenca && (
                   <p className="text-xs text-muted-foreground mt-1">
                     Será criado um lançamento de <strong>{diferenca > 0 ? "ENTRADA" : "SAÍDA"}</strong> de{" "}
-                    <strong>{currencySymbol} {Math.abs(diferenca).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                    <strong>{currencySymbol} {Math.abs(diferenca).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: isCryptoMoedaSelected ? 8 : 2 })}</strong>
                   </p>
                 )}
-                {Math.abs(diferenca) < 0.01 && (
+                {Math.abs(diferenca) < minDiferenca && (
                   <p className="text-xs text-muted-foreground mt-1">Saldo já está correto. Nenhum ajuste necessário.</p>
                 )}
               </div>
