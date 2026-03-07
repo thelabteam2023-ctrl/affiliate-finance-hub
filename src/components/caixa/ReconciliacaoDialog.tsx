@@ -53,8 +53,9 @@ interface ContaBancaria {
   banco: string;
   titular: string;
   parceiro_id: string;
+  parceiro_nome: string;
   moeda: string;
-  saldo_sistema?: number;
+  saldo: number | null;
   reconciled_at?: string | null;
 }
 
