@@ -730,26 +730,26 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem onClick={() => setSortMode("alpha")} className={sortMode === "alpha" ? "bg-accent" : ""}>
+            <DropdownMenuItem onClick={() => setSortMode("alpha")} className={`justify-center ${sortMode === "alpha" ? "bg-accent" : ""}`}>
               <ArrowDownAZ className="h-4 w-4 mr-2" /> Nome A-Z
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setSortMode("newest")} className={sortMode === "newest" ? "bg-accent" : ""}>
+            <DropdownMenuItem onClick={() => setSortMode("newest")} className={`justify-center ${sortMode === "newest" ? "bg-accent" : ""}`}>
               <Clock className="h-4 w-4 mr-2" /> Mais recentes
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setSortMode("oldest")} className={sortMode === "oldest" ? "bg-accent" : ""}>
+            <DropdownMenuItem onClick={() => setSortMode("oldest")} className={`justify-center ${sortMode === "oldest" ? "bg-accent" : ""}`}>
               <Clock className="h-4 w-4 mr-2" /> Mais antigos
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => setSortMode(prev => prev === "apostas_desc" ? "apostas_asc" : "apostas_desc")} className={sortMode.startsWith("apostas") ? "bg-accent" : ""}>
+            <DropdownMenuItem onClick={() => setSortMode(prev => prev === "apostas_desc" ? "apostas_asc" : "apostas_desc")} className={`justify-center ${sortMode.startsWith("apostas") ? "bg-accent" : ""}`}>
               <Target className="h-4 w-4 mr-2" /> Apostas {sortMode === "apostas_asc" ? "↑" : "↓"}
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setSortMode(prev => prev === "saldo_desc" ? "saldo_asc" : "saldo_desc")} className={sortMode.startsWith("saldo") ? "bg-accent" : ""}>
+            <DropdownMenuItem onClick={() => setSortMode(prev => prev === "saldo_desc" ? "saldo_asc" : "saldo_desc")} className={`justify-center ${sortMode.startsWith("saldo") ? "bg-accent" : ""}`}>
               <Wallet className="h-4 w-4 mr-2" /> Saldo Operável {sortMode === "saldo_asc" ? "↑" : "↓"}
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setSortMode(prev => prev === "em_aposta_desc" ? "em_aposta_asc" : "em_aposta_desc")} className={sortMode.startsWith("em_aposta") ? "bg-accent" : ""}>
+            <DropdownMenuItem onClick={() => setSortMode(prev => prev === "em_aposta_desc" ? "em_aposta_asc" : "em_aposta_desc")} className={`justify-center ${sortMode.startsWith("em_aposta") ? "bg-accent" : ""}`}>
               <Target className="h-4 w-4 mr-2" /> Em Aposta {sortMode === "em_aposta_asc" ? "↑" : "↓"}
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setSortMode(prev => prev === "disponivel_desc" ? "disponivel_asc" : "disponivel_desc")} className={sortMode.startsWith("disponivel") ? "bg-accent" : ""}>
+            <DropdownMenuItem onClick={() => setSortMode(prev => prev === "disponivel_desc" ? "disponivel_asc" : "disponivel_desc")} className={`justify-center ${sortMode.startsWith("disponivel") ? "bg-accent" : ""}`}>
               <Coins className="h-4 w-4 mr-2" /> Disponível {sortMode === "disponivel_asc" ? "↑" : "↓"}
             </DropdownMenuItem>
           </DropdownMenuContent>
