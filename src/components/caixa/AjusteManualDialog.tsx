@@ -230,7 +230,7 @@ export function AjusteManualDialog({
       // PROTEÇÃO DE PARCEIROS INATIVOS:
       // Buscar bookmakers, contas e wallets apenas de PARCEIROS ATIVOS
       // O banco de dados também valida via trigger, mas a UI deve prevenir a seleção
-      const [bookmakersRes, contasRes, walletsRes, saldosContasRes] = await Promise.all([
+      const [bookmakersRes, contasRes, walletsRes, saldosContasRes, caixaParceiroRes] = await Promise.all([
         supabase
           .from("bookmakers")
           .select(`
