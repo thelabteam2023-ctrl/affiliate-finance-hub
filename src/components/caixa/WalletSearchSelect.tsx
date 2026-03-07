@@ -21,6 +21,7 @@ export interface WalletCoinBalance {
   wallet_id: string;
   coin: string;
   saldo_coin: number;
+  saldo_usd?: number;
 }
 
 interface WalletSearchSelectProps {
