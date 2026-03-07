@@ -952,7 +952,7 @@ export default function Caixa() {
                       >
                         <div className="space-y-2">
                           <p className="text-xs text-muted-foreground mb-2">Cotações em tempo real (Binance)</p>
-                          <div className={`grid gap-3 ${saldosCrypto.length > 3 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                          <div className="grid gap-3 grid-cols-1">
                             {saldosCrypto.map((saldo) => {
                               const price = cryptoPrices[saldo.coin];
                               const usdValue = getCryptoUSDValue(saldo.coin, saldo.saldo_coin, saldo.saldo_usd);
