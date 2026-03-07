@@ -555,7 +555,7 @@ export function AjusteManualDialog({
       };
 
       // Definir origem/destino baseado na direção e tipo
-      if (direcao === "ENTRADA") {
+      if (direcaoFinal === "ENTRADA") {
         // Entrada: origem é CAIXA_OPERACIONAL (ajuste), destino é a entidade
         transactionData.origem_tipo = "CAIXA_OPERACIONAL";
         
