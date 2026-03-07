@@ -28,7 +28,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, AlertTriangle, TrendingDown, TrendingUp, Wrench, Info } from "lucide-react";
+import { Loader2, AlertTriangle, TrendingDown, TrendingUp, Wrench, Info, Scale, Minus } from "lucide-react";
 import { WalletSearchSelect, type WalletCoinBalance } from "./WalletSearchSelect";
 import { ContaBancariaSearchSelect, type ContaBancariaOption } from "./ContaBancariaSearchSelect";
 
@@ -84,6 +84,7 @@ export function AjusteManualDialog({
   const [fetchingData, setFetchingData] = useState(false);
 
   // Form state
+  const [modoReconciliacao, setModoReconciliacao] = useState(false);
   const [direcao, setDirecao] = useState<"ENTRADA" | "SAIDA">("ENTRADA");
   const [tipoDestino, setTipoDestino] = useState<TipoDestino>("CAIXA_OPERACIONAL");
   const [subTipoCaixa, setSubTipoCaixa] = useState<SubTipoCaixa>("");
@@ -219,6 +220,55 @@ export function AjusteManualDialog({
     return getRate(moeda);
   }, [moeda, getRate]);
 
+  // Saldo atual no sistema para a entidade+moeda selecionada (usado no modo reconciliação)
+  const saldoSistemaAtual = useMemo(() => {
+    if (tipoDestino === "BOOKMAKER" && bookmakerId) {
+      const bk = bookmakers.find(b => b.id === bookmakerId);
+      return bk?.saldo_atual ?? 0;
+    }
+    if (tipoDestino === "CONTA_BANCARIA" && contaId) {
+      return saldosContas[contaId] ?? 0;
+    }
+    if (tipoDestino === "WALLET" && walletId && moeda) {
+      const walletSaldos = saldosWallets.filter(s => s.wallet_id === walletId && s.coin === moeda);
+      return walletSaldos.length > 0 ? walletSaldos[0].saldo_coin : 0;
+    }
+    if (tipoDestino === "CAIXA_OPERACIONAL") {
+      if (subTipoCaixa === "FIAT" && contaId) {
+        return saldosContas[contaId] ?? 0;
+      }
+      if (subTipoCaixa === "CRYPTO" && walletId && moeda) {
+        const walletSaldos = saldosWallets.filter(s => s.wallet_id === walletId && s.coin === moeda);
+        return walletSaldos.length > 0 ? walletSaldos[0].saldo_coin : 0;
+      }
+    }
+    return 0;
+  }, [tipoDestino, bookmakerId, contaId, walletId, moeda, subTipoCaixa, bookmakers, saldosContas, saldosWallets]);
+
+  // No modo reconciliação: calcular diferença e direção automaticamente
+  const reconciliacaoCalc = useMemo(() => {
+    if (!modoReconciliacao) return null;
+    const saldoInformado = parseFloat(valor) || 0;
+    const diff = saldoInformado - saldoSistemaAtual;
+    return {
+      diferenca: diff,
+      direcaoCalculada: diff >= 0 ? "ENTRADA" as const : "SAIDA" as const,
+      valorAjuste: Math.abs(diff),
+    };
+  }, [modoReconciliacao, valor, saldoSistemaAtual]);
+
+  // Verificar se a entidade selecionada permite modo reconciliação
+  const entidadeSelecionada = useMemo(() => {
+    if (tipoDestino === "BOOKMAKER") return !!bookmakerId;
+    if (tipoDestino === "CONTA_BANCARIA") return !!contaId;
+    if (tipoDestino === "WALLET") return !!walletId;
+    if (tipoDestino === "CAIXA_OPERACIONAL") {
+      if (subTipoCaixa === "FIAT") return !!contaId;
+      if (subTipoCaixa === "CRYPTO") return !!walletId;
+    }
+    return false;
+  }, [tipoDestino, bookmakerId, contaId, walletId, subTipoCaixa]);
+
   useEffect(() => {
     if (open) {
       fetchData();
@@ -351,6 +401,7 @@ export function AjusteManualDialog({
   };
 
   const resetForm = () => {
+    setModoReconciliacao(false);
     setDirecao("ENTRADA");
     setTipoDestino("CAIXA_OPERACIONAL");
     setSubTipoCaixa("");
@@ -416,13 +467,20 @@ export function AjusteManualDialog({
 
   // Validar se pode submeter
   const canSubmit = (): boolean => {
-    if (!valor || parseFloat(valor) <= 0) return false;
     if (!motivo.trim()) return false;
     if (tipoDestino === "CAIXA_OPERACIONAL" && subTipoCaixa === "FIAT" && !contaId) return false;
     if (tipoDestino === "CAIXA_OPERACIONAL" && subTipoCaixa === "CRYPTO" && !walletId) return false;
     if (tipoDestino === "BOOKMAKER" && !bookmakerId) return false;
     if (tipoDestino === "CONTA_BANCARIA" && !contaId) return false;
     if (tipoDestino === "WALLET" && !walletId) return false;
+    
+    if (modoReconciliacao) {
+      // No modo reconciliação, precisa ter valor informado e diferença não-zero
+      if (!valor) return false;
+      return reconciliacaoCalc ? Math.abs(reconciliacaoCalc.diferenca) >= 0.01 : false;
+    } else {
+      if (!valor || parseFloat(valor) <= 0) return false;
+    }
     return true;
   };
 
@@ -442,7 +500,9 @@ export function AjusteManualDialog({
       if (!user) throw new Error("Usuário não autenticado");
       if (!workspaceId) throw new Error("Workspace não encontrado");
 
-      const valorNumerico = parseFloat(valor);
+      // No modo reconciliação, usar valores calculados automaticamente
+      const direcaoFinal = modoReconciliacao && reconciliacaoCalc ? reconciliacaoCalc.direcaoCalculada : direcao;
+      const valorNumerico = modoReconciliacao && reconciliacaoCalc ? reconciliacaoCalc.valorAjuste : parseFloat(valor);
       const isCrypto = CRYPTO_CURRENCIES.some(c => c.value === moeda);
       
       // Snapshot de cotação para moedas estrangeiras
@@ -450,22 +510,26 @@ export function AjusteManualDialog({
       const cotacaoSnapshotAt = moeda !== "BRL" ? new Date().toISOString() : null;
       const valorBrlRef = moeda !== "BRL" ? valorNumerico * cotacaoAtual : null;
 
+      const descricao = modoReconciliacao
+        ? `[RECONCILIAÇÃO ${direcaoFinal}] ${motivo} | Saldo sistema: ${saldoSistemaAtual.toFixed(2)} → Saldo real: ${(parseFloat(valor) || 0).toFixed(2)} | Diferença: ${reconciliacaoCalc?.diferenca.toFixed(2)}`
+        : `[AJUSTE ${direcaoFinal}] ${motivo}`;
+
       // Construir dados da transação com campos de auditoria completos
       const transactionData: Record<string, any> = {
         user_id: user.id,
         workspace_id: workspaceId,
-        tipo_transacao: "AJUSTE_MANUAL",
+        tipo_transacao: modoReconciliacao ? "AJUSTE_RECONCILIACAO" : "AJUSTE_MANUAL",
         tipo_moeda: isCrypto ? "CRYPTO" : "FIAT",
         moeda: moeda,
         valor: valorNumerico,
-        descricao: `[AJUSTE ${direcao}] ${motivo}`,
+        descricao,
         status: "CONFIRMADO",
         transit_status: "CONFIRMED",
         data_transacao: new Date().toISOString().split("T")[0],
         impacta_caixa_operacional: tipoDestino === "CAIXA_OPERACIONAL",
         // Campos obrigatórios de auditoria para ajustes
         ajuste_motivo: motivo.trim(),
-        ajuste_direcao: direcao,
+        ajuste_direcao: direcaoFinal,
         // Campos de snapshot multi-moeda
         cotacao: cotacaoSnapshot,
         cotacao_snapshot_at: cotacaoSnapshotAt,
@@ -481,11 +545,17 @@ export function AjusteManualDialog({
           cotacao_fonte: moeda !== "BRL" ? "ExchangeRatesContext" : null,
           cotacao_timestamp: lastUpdate?.toISOString(),
           user_agent: navigator.userAgent,
+          ...(modoReconciliacao ? {
+            tipo_reconciliacao: "RECONCILIACAO_VIA_AJUSTE",
+            saldo_sistema_anterior: saldoSistemaAtual,
+            saldo_real_informado: parseFloat(valor) || 0,
+            diferenca: reconciliacaoCalc?.diferenca,
+          } : {}),
         },
       };
 
       // Definir origem/destino baseado na direção e tipo
-      if (direcao === "ENTRADA") {
+      if (direcaoFinal === "ENTRADA") {
         // Entrada: origem é CAIXA_OPERACIONAL (ajuste), destino é a entidade
         transactionData.origem_tipo = "CAIXA_OPERACIONAL";
         
@@ -568,8 +638,10 @@ export function AjusteManualDialog({
       if (error) throw error;
 
       toast({
-        title: "Ajuste registrado",
-        description: `Ajuste de ${direcao === "ENTRADA" ? "entrada" : "saída"} de ${getCurrencySymbol(moeda)} ${valorDisplay} em ${getEntidadeNome()} registrado com sucesso.`,
+        title: modoReconciliacao ? "Reconciliação registrada" : "Ajuste registrado",
+        description: modoReconciliacao
+          ? `Saldo de ${getEntidadeNome()} reconciliado: ${getCurrencySymbol(moeda)} ${saldoSistemaAtual.toFixed(2)} → ${getCurrencySymbol(moeda)} ${(parseFloat(valor) || 0).toFixed(2)}`
+          : `Ajuste de ${direcaoFinal === "ENTRADA" ? "entrada" : "saída"} de ${getCurrencySymbol(moeda)} ${valorDisplay} em ${getEntidadeNome()} registrado com sucesso.`,
       });
 
       handleClose();
@@ -651,30 +723,59 @@ export function AjusteManualDialog({
           </div>
         ) : (
           <div className="space-y-4">
-            {/* Direção */}
+            {/* Modo de operação */}
             <div className="space-y-2">
-              <Label>Direção do Ajuste</Label>
-              <RadioGroup
-                value={direcao}
-                onValueChange={(value) => setDirecao(value as "ENTRADA" | "SAIDA")}
-                className="flex gap-4"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="ENTRADA" id="entrada" />
-                  <Label htmlFor="entrada" className="flex items-center gap-1 cursor-pointer">
-                    <TrendingUp className="h-4 w-4 text-primary" />
-                    Entrada (+)
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="SAIDA" id="saida" />
-                  <Label htmlFor="saida" className="flex items-center gap-1 cursor-pointer">
-                    <TrendingDown className="h-4 w-4 text-destructive" />
-                    Saída (-)
-                  </Label>
-                </div>
-              </RadioGroup>
+              <Label>Modo de Operação</Label>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant={!modoReconciliacao ? "default" : "outline"}
+                  size="sm"
+                  className="flex-1 gap-1.5"
+                  onClick={() => { setModoReconciliacao(false); setValor(""); setValorDisplay(""); }}
+                >
+                  <Wrench className="h-3.5 w-3.5" />
+                  Ajuste Direto
+                </Button>
+                <Button
+                  type="button"
+                  variant={modoReconciliacao ? "default" : "outline"}
+                  size="sm"
+                  className="flex-1 gap-1.5"
+                  onClick={() => { setModoReconciliacao(true); setValor(""); setValorDisplay(""); }}
+                >
+                  <Scale className="h-3.5 w-3.5" />
+                  Informar Saldo Real
+                </Button>
+              </div>
             </div>
+
+            {/* Direção (apenas no modo ajuste direto) */}
+            {!modoReconciliacao && (
+              <div className="space-y-2">
+                <Label>Direção do Ajuste</Label>
+                <RadioGroup
+                  value={direcao}
+                  onValueChange={(value) => setDirecao(value as "ENTRADA" | "SAIDA")}
+                  className="flex gap-4"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="ENTRADA" id="entrada" />
+                    <Label htmlFor="entrada" className="flex items-center gap-1 cursor-pointer">
+                      <TrendingUp className="h-4 w-4 text-primary" />
+                      Entrada (+)
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="SAIDA" id="saida" />
+                    <Label htmlFor="saida" className="flex items-center gap-1 cursor-pointer">
+                      <TrendingDown className="h-4 w-4 text-destructive" />
+                      Saída (-)
+                    </Label>
+                  </div>
+                </RadioGroup>
+              </div>
+            )}
 
             {/* Destino do Ajuste */}
             <div className="space-y-2">
@@ -828,9 +929,21 @@ export function AjusteManualDialog({
               </Select>
             </div>
 
+            {/* Saldo atual do sistema (modo reconciliação) */}
+            {modoReconciliacao && entidadeSelecionada && (
+              <div className="rounded-lg border border-border/50 bg-muted/30 p-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Saldo no Sistema</span>
+                  <span className={`font-mono font-semibold ${saldoSistemaAtual < 0 ? "text-destructive" : ""}`}>
+                    {currencySymbol} {saldoSistemaAtual.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 6 })}
+                  </span>
+                </div>
+              </div>
+            )}
+
             {/* Valor */}
             <div className="space-y-2">
-              <Label>Valor</Label>
+              <Label>{modoReconciliacao ? "Saldo Real Observado" : "Valor"}</Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                   {currencySymbol}
@@ -843,7 +956,7 @@ export function AjusteManualDialog({
                 />
               </div>
               {/* Referência em BRL para moedas estrangeiras */}
-              {valorBRLReferencia !== null && valorBRLReferencia > 0 && (
+              {!modoReconciliacao && valorBRLReferencia !== null && valorBRLReferencia > 0 && (
                 <div className="text-xs text-muted-foreground flex items-center gap-1">
                   <Info className="h-3 w-3" />
                   ≈ R$ {valorBRLReferencia.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} 
@@ -854,19 +967,57 @@ export function AjusteManualDialog({
               )}
             </div>
 
+            {/* Diferença calculada (modo reconciliação) */}
+            {modoReconciliacao && valor && entidadeSelecionada && reconciliacaoCalc && (
+              <div className={`rounded-lg border p-3 ${
+                Math.abs(reconciliacaoCalc.diferenca) < 0.01
+                  ? "border-muted bg-muted/20"
+                  : reconciliacaoCalc.diferenca > 0
+                    ? "border-primary/30 bg-primary/5"
+                    : "border-destructive/30 bg-destructive/5"
+              }`}>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">Diferença Calculada</span>
+                  <div className="flex items-center gap-2">
+                    {Math.abs(reconciliacaoCalc.diferenca) < 0.01 ? (
+                      <Minus className="h-4 w-4 text-muted-foreground" />
+                    ) : reconciliacaoCalc.diferenca > 0 ? (
+                      <TrendingUp className="h-4 w-4 text-primary" />
+                    ) : (
+                      <TrendingDown className="h-4 w-4 text-destructive" />
+                    )}
+                    <span className={`font-mono font-bold ${
+                      Math.abs(reconciliacaoCalc.diferenca) < 0.01 ? "text-muted-foreground" : reconciliacaoCalc.diferenca > 0 ? "text-primary" : "text-destructive"
+                    }`}>
+                      {reconciliacaoCalc.diferenca > 0 ? "+" : ""}{currencySymbol} {reconciliacaoCalc.diferenca.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                </div>
+                {Math.abs(reconciliacaoCalc.diferenca) >= 0.01 && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Será criado um lançamento de <strong>{reconciliacaoCalc.direcaoCalculada === "ENTRADA" ? "ENTRADA" : "SAÍDA"}</strong> de{" "}
+                    <strong>{currencySymbol} {reconciliacaoCalc.valorAjuste.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                  </p>
+                )}
+                {Math.abs(reconciliacaoCalc.diferenca) < 0.01 && (
+                  <p className="text-xs text-muted-foreground mt-1">Saldo já está correto. Nenhum ajuste necessário.</p>
+                )}
+              </div>
+            )}
+
             {/* Motivo */}
             <div className="space-y-2">
               <Label>Motivo do Ajuste *</Label>
               <Textarea
                 value={motivo}
                 onChange={(e) => setMotivo(e.target.value)}
-                placeholder="Descreva o motivo da correção contábil..."
-                rows={3}
+                placeholder={modoReconciliacao ? "Descreva o motivo da reconciliação..." : "Descreva o motivo da correção contábil..."}
+                rows={2}
               />
             </div>
 
-            {/* Preview */}
-            {valor && parseFloat(valor) > 0 && (
+            {/* Preview (modo ajuste direto) */}
+            {!modoReconciliacao && valor && parseFloat(valor) > 0 && (
               <Alert className={direcao === "ENTRADA" ? "border-primary/30 bg-primary/10" : "border-destructive/30 bg-destructive/10"}>
                 <AlertDescription className="flex items-center gap-2">
                   {direcao === "ENTRADA" ? (
@@ -893,7 +1044,7 @@ export function AjusteManualDialog({
               </Button>
               <Button onClick={handleSubmit} disabled={loading || !canSubmit()}>
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Registrar Ajuste
+                {modoReconciliacao ? "Registrar Reconciliação" : "Registrar Ajuste"}
               </Button>
             </div>
           </div>
