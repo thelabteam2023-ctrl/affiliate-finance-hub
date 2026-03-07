@@ -72,6 +72,7 @@ export function DesvinculacaoEmMassaDialog({
   onConcluido,
 }: DesvinculacaoEmMassaDialogProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const [parceiroFilter, setParceiroFilter] = useState<string>("__all__");
   const [selectedMap, setSelectedMap] = useState<Record<string, VinculoSelecionado>>({});
   const [processing, setProcessing] = useState(false);
   const [progressCount, setProgressCount] = useState(0);
@@ -79,22 +80,37 @@ export function DesvinculacaoEmMassaDialog({
   const [results, setResults] = useState<{ id: string; nome: string; success: boolean; error?: string }[]>([]);
   const [step, setStep] = useState<"select" | "confirm" | "result">("select");
 
+  // Unique parceiros for filter dropdown
+  const parceirosUnicos = useMemo(() => {
+    const map = new Map<string, string>();
+    vinculos.forEach(v => {
+      const key = v.parceiro_nome || "__sem_parceiro__";
+      if (!map.has(key)) map.set(key, v.parceiro_nome || "Sem parceiro");
+    });
+    return Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1]));
+  }, [vinculos]);
+
   // Filter vinculos with pending bets
   const vinculosComPendentes = useMemo(() => {
     return new Set(vinculos.filter(v => v.totalApostas > 0).map(v => v.id));
-    // Note: totalApostas includes all bets, but for pending check we need to check status
-    // For simplicity, we'll check during pre-check
   }, [vinculos]);
 
   const filteredVinculos = useMemo(() => {
     return vinculos.filter(v => {
+      // Partner filter
+      if (parceiroFilter !== "__all__") {
+        const pNome = v.parceiro_nome || "__sem_parceiro__";
+        if (pNome !== parceiroFilter) return false;
+      }
+      // Text search
       const term = searchTerm.toLowerCase();
+      if (!term) return true;
       return (
         v.nome.toLowerCase().includes(term) ||
         (v.parceiro_nome?.toLowerCase().includes(term) ?? false)
       );
     });
-  }, [vinculos, searchTerm]);
+  }, [vinculos, searchTerm, parceiroFilter]);
 
   const selectedIds = Object.keys(selectedMap);
   const selectedCount = selectedIds.length;
@@ -300,6 +316,7 @@ export function DesvinculacaoEmMassaDialog({
   const handleClose = () => {
     if (processing) return;
     setSearchTerm("");
+    setParceiroFilter("__all__");
     setSelectedMap({});
     setStep("select");
     setResults([]);
@@ -331,8 +348,8 @@ export function DesvinculacaoEmMassaDialog({
         {step === "select" && (
           <div className="flex flex-col flex-1 overflow-hidden">
             {/* Search + Actions */}
-            <div className="p-3 border-b border-border/50 flex items-center gap-2">
-              <div className="relative flex-1">
+            <div className="p-3 border-b border-border/50 flex items-center gap-2 flex-wrap">
+              <div className="relative flex-1 min-w-[160px]">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Buscar casa ou parceiro..."
@@ -341,6 +358,18 @@ export function DesvinculacaoEmMassaDialog({
                   className="pl-9 h-9"
                 />
               </div>
+              <Select value={parceiroFilter} onValueChange={setParceiroFilter}>
+                <SelectTrigger className="h-9 w-[180px] text-xs">
+                  <User className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
+                  <SelectValue placeholder="Parceiro" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">Todos os parceiros</SelectItem>
+                  {parceirosUnicos.map(([key, label]) => (
+                    <SelectItem key={key} value={key}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Button variant="outline" size="sm" onClick={selectedCount === filteredVinculos.length ? deselectAll : selectAll}>
                 {selectedCount === filteredVinculos.length ? "Desmarcar" : "Selecionar"} Todos
               </Button>
