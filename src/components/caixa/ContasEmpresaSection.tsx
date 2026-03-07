@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Building2, Plus, RefreshCw, Landmark, Bitcoin } from "lucide-react";
+import { Building2, Plus, RefreshCw, Landmark, Bitcoin, Copy, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrencyValue, getCurrencySymbol } from "@/types/currency";
 import { useExchangeRates } from "@/contexts/ExchangeRatesContext";
