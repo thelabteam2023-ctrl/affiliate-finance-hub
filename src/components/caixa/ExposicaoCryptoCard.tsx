@@ -40,8 +40,6 @@ interface ExposicaoCryptoCardProps {
 
 export function ExposicaoCryptoCard({
   caixaParceiroId,
-  saldosCrypto,
-  totalCryptoUSD,
   cryptoPrices,
   getCryptoUSDValue,
   formatCurrency,
