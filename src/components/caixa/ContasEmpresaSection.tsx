@@ -380,51 +380,71 @@ export function ContasEmpresaSection({ caixaParceiroId, onDataChanged }: ContasE
                 <p className="text-xs text-muted-foreground text-center py-4">Nenhuma wallet cadastrada</p>
               ) : (
                 <div className="space-y-2">
-                  {wallets.map((wallet) => (
-                    <div
-                      key={wallet.id}
-                      className="flex items-center justify-between p-2.5 rounded-lg bg-muted/30 border border-border/30"
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <div className="h-8 w-8 rounded-md bg-primary/10 flex items-center justify-center">
-                          <Bitcoin className="h-4 w-4 text-primary" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">
-                            {wallet.exchange?.replace(/-/g, " ").toUpperCase() || "Wallet"}
-                          </p>
-                          <p
-                            className="text-[11px] text-muted-foreground font-mono cursor-pointer hover:text-primary transition-colors flex items-center gap-1"
-                            onClick={() => copyToClipboard(wallet.endereco, `wallet-${wallet.id}`)}
-                            title="Clique para copiar endereço"
-                          >
-                            {wallet.endereco.slice(0, 8)}...{wallet.endereco.slice(-6)}
-                            {copiedId === `wallet-${wallet.id}` ? <Check className="h-2.5 w-2.5 text-primary" /> : <Copy className="h-2.5 w-2.5 opacity-50" />}
-                          </p>
-                          <div className="flex items-center gap-1.5 mt-0.5">
-                            {wallet.network && (
-                              <Badge variant="outline" className="text-[9px] px-1 py-0 h-3.5 uppercase">
-                                {wallet.network}
-                              </Badge>
-                            )}
-                            {wallet.moedas?.map((m: string) => (
-                              <Badge key={m} className="text-[9px] px-1 py-0 h-3.5 bg-primary/20 text-primary border-primary/30">
-                                {m}
-                              </Badge>
+                  {(() => {
+                    // Agrupar wallets pelo endereço para mostrar múltiplos saldos na mesma linha
+                    const grouped = wallets.reduce<Record<string, WalletCrypto[]>>((acc, w) => {
+                      const key = w.endereco;
+                      if (!acc[key]) acc[key] = [];
+                      acc[key].push(w);
+                      return acc;
+                    }, {});
+
+                    return Object.entries(grouped).map(([endereco, group]) => {
+                      const first = group[0];
+                      // Collect all unique moedas from the group
+                      const allMoedas = [...new Set(group.flatMap(w => w.moedas || []))];
+                      // Sum total USD across all coins in this wallet
+                      const totalUsd = group.reduce((sum, w) => sum + (w.saldo_usd || 0), 0);
+
+                      return (
+                        <div
+                          key={endereco}
+                          className="flex items-center justify-between p-2.5 rounded-lg bg-muted/30 border border-border/30"
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <div className="h-8 w-8 rounded-md bg-primary/10 flex items-center justify-center">
+                              <Bitcoin className="h-4 w-4 text-primary" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium">
+                                {first.exchange?.replace(/-/g, " ").toUpperCase() || "Wallet"}
+                              </p>
+                              <p
+                                className="text-[11px] text-muted-foreground font-mono cursor-pointer hover:text-primary transition-colors flex items-center gap-1"
+                                onClick={() => copyToClipboard(first.endereco, `wallet-${endereco}`)}
+                                title="Clique para copiar endereço"
+                              >
+                                {endereco.slice(0, 8)}...{endereco.slice(-6)}
+                                {copiedId === `wallet-${endereco}` ? <Check className="h-2.5 w-2.5 text-primary" /> : <Copy className="h-2.5 w-2.5 opacity-50" />}
+                              </p>
+                              <div className="flex items-center gap-1.5 mt-0.5">
+                                {first.network && (
+                                  <Badge variant="outline" className="text-[9px] px-1 py-0 h-3.5 uppercase">
+                                    {first.network}
+                                  </Badge>
+                                )}
+                                {allMoedas.map((m: string) => (
+                                  <Badge key={m} className="text-[9px] px-1 py-0 h-3.5 bg-primary/20 text-primary border-primary/30">
+                                    {m}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right space-y-0.5">
+                            {group.map((w) => (
+                              <p key={w.id} className="text-sm font-semibold font-mono">
+                                {(w.saldo_coin || 0).toFixed(2)} <span className="text-xs text-muted-foreground">{w.coin}</span>
+                              </p>
                             ))}
+                            <p className="text-[10px] text-muted-foreground">
+                              ≈ {formatCurrencyValue(totalUsd, "USD" as any)}
+                            </p>
                           </div>
                         </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-semibold">
-                          {(wallet.saldo_coin || 0).toFixed(2)} {wallet.coin}
-                        </p>
-                        <p className="text-[10px] text-muted-foreground">
-                          ≈ {formatCurrencyValue(wallet.saldo_usd || 0, "USD" as any)}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+                      );
+                    });
+                  })()}
                 </div>
               )}
             </TabsContent>
