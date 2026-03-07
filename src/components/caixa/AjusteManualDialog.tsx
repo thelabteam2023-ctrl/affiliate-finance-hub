@@ -30,6 +30,7 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, AlertTriangle, TrendingDown, TrendingUp, Wrench, Info, Minus } from "lucide-react";
 import { WalletSearchSelect, type WalletCoinBalance } from "./WalletSearchSelect";
 import { ContaBancariaSearchSelect, type ContaBancariaOption } from "./ContaBancariaSearchSelect";
+import { BookmakerSearchSelect } from "./BookmakerSearchSelect";
 
 interface AjusteManualDialogProps {
   open: boolean;
