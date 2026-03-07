@@ -1,4 +1,4 @@
-import { Info } from "lucide-react";
+import { Info, ArrowUp, ArrowDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Tooltip,
