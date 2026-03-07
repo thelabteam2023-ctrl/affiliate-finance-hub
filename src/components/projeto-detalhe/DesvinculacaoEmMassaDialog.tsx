@@ -148,7 +148,7 @@ export function DesvinculacaoEmMassaDialog({
         copy[vinculo.id] = {
           id: vinculo.id,
           saldoRealInput: "",
-          statusFinal: "ativo",
+          statusFinal: vinculo.bookmaker_status?.toLowerCase() || "ativo",
           hasPendingBets: false,
         };
       }
@@ -164,7 +164,7 @@ export function DesvinculacaoEmMassaDialog({
       newMap[v.id] = selectedMap[v.id] || {
         id: v.id,
         saldoRealInput: "",
-        statusFinal: "ativo",
+        statusFinal: v.bookmaker_status?.toLowerCase() || "ativo",
         hasPendingBets: false,
       };
     });
