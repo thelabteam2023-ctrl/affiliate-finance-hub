@@ -792,9 +792,10 @@ export function AjusteManualDialog({
                   wallets={wallets}
                   value={walletId}
                   onValueChange={setWalletId}
-                  placeholder="Selecione a wallet"
-                  saldos={saldosWallets}
-                />
+                   placeholder="Selecione a wallet"
+                   saldos={saldosWallets}
+                   usdToBrlRate={getRate("USD")}
+                 />
               </div>
             )}
 

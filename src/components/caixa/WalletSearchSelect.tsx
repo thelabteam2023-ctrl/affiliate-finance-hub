@@ -72,8 +72,9 @@ export function WalletSearchSelect({
     const balances = saldosByWallet[walletId];
     if (!balances || balances.length === 0) return null;
     
-    // Calculate total BRL for this wallet
-    const totalBrl = balances.reduce((sum, b) => sum + (b.saldo_usd ?? 0), 0);
+    // Calculate total USD for this wallet, then convert to BRL
+    const totalUsd = balances.reduce((sum, b) => sum + (b.saldo_usd ?? 0), 0);
+    const totalBrl = usdToBrlRate > 0 ? totalUsd * usdToBrlRate : 0;
     
     return (
       <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
