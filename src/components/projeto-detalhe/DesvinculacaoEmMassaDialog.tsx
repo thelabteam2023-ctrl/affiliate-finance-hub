@@ -80,22 +80,37 @@ export function DesvinculacaoEmMassaDialog({
   const [results, setResults] = useState<{ id: string; nome: string; success: boolean; error?: string }[]>([]);
   const [step, setStep] = useState<"select" | "confirm" | "result">("select");
 
+  // Unique parceiros for filter dropdown
+  const parceirosUnicos = useMemo(() => {
+    const map = new Map<string, string>();
+    vinculos.forEach(v => {
+      const key = v.parceiro_nome || "__sem_parceiro__";
+      if (!map.has(key)) map.set(key, v.parceiro_nome || "Sem parceiro");
+    });
+    return Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1]));
+  }, [vinculos]);
+
   // Filter vinculos with pending bets
   const vinculosComPendentes = useMemo(() => {
     return new Set(vinculos.filter(v => v.totalApostas > 0).map(v => v.id));
-    // Note: totalApostas includes all bets, but for pending check we need to check status
-    // For simplicity, we'll check during pre-check
   }, [vinculos]);
 
   const filteredVinculos = useMemo(() => {
     return vinculos.filter(v => {
+      // Partner filter
+      if (parceiroFilter !== "__all__") {
+        const pNome = v.parceiro_nome || "__sem_parceiro__";
+        if (pNome !== parceiroFilter) return false;
+      }
+      // Text search
       const term = searchTerm.toLowerCase();
+      if (!term) return true;
       return (
         v.nome.toLowerCase().includes(term) ||
         (v.parceiro_nome?.toLowerCase().includes(term) ?? false)
       );
     });
-  }, [vinculos, searchTerm]);
+  }, [vinculos, searchTerm, parceiroFilter]);
 
   const selectedIds = Object.keys(selectedMap);
   const selectedCount = selectedIds.length;
