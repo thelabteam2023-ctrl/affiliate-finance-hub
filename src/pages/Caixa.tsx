@@ -305,7 +305,7 @@ export default function Caixa() {
         const fiatMap: Record<string, number> = {};
         (contasSaldoData || []).forEach((row: any) => {
           const m = row.moeda || "BRL";
-          fiatMap[m] = (fiatMap[m] || 0) + (row.saldo || 0);
+          fiatMap[m] = (fiatMap[m] || 0) + Math.max(0, row.saldo || 0);
         });
         setSaldosFiat(Object.entries(fiatMap).map(([moeda, saldo]) => ({ moeda, saldo })));
       } else {
