@@ -32,14 +32,6 @@ interface LedgerEntry {
 }
 
 async function fetchFinancialMetricsRaw(projetoId: string) {
-  // Fetch marco_zero_at to filter transactions
-  const { data: projetoInfo } = await supabase
-    .from("projetos")
-    .select("marco_zero_at")
-    .eq("id", projetoId)
-    .single();
-  const marcoZeroAt = projetoInfo?.marco_zero_at || null;
-
   const { data: bookmakers } = await supabase
     .from("bookmakers")
     .select("id, saldo_atual, moeda")
@@ -47,25 +39,17 @@ async function fetchFinancialMetricsRaw(projetoId: string) {
 
   const bookmakerSaldos = (bookmakers || []).map(b => ({ saldo_atual: b.saldo_atual || 0, moeda: b.moeda || "BRL" }));
 
-  // Build deposit query with marco zero support
-  const tiposDeposito = marcoZeroAt 
-    ? ["DEPOSITO", "DEPOSITO_VIRTUAL", "DEPOSITO_BASELINE"] 
-    : ["DEPOSITO", "DEPOSITO_VIRTUAL"];
-
-  let depositoQ = supabase.from("cash_ledger").select("valor, moeda")
-    .in("tipo_transacao", tiposDeposito)
+  const depositoQ = supabase.from("cash_ledger").select("valor, moeda")
+    .in("tipo_transacao", ["DEPOSITO", "DEPOSITO_VIRTUAL"])
     .eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId);
-  if (marcoZeroAt) depositoQ = depositoQ.gte("created_at", marcoZeroAt);
 
-  let saqueQ = supabase.from("cash_ledger").select("valor, valor_confirmado, moeda")
+  const saqueQ = supabase.from("cash_ledger").select("valor, valor_confirmado, moeda")
     .in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])
     .eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId);
-  if (marcoZeroAt) saqueQ = saqueQ.gte("created_at", marcoZeroAt);
 
-  let saquePendQ = supabase.from("cash_ledger").select("valor, moeda")
+  const saquePendQ = supabase.from("cash_ledger").select("valor, moeda")
     .in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])
     .eq("status", "PENDENTE").eq("projeto_id_snapshot", projetoId);
-  if (marcoZeroAt) saquePendQ = saquePendQ.gte("created_at", marcoZeroAt);
 
   const [depositos, saques, saquesPend, cashbackM, cashbackE, giros, ajustes, perdasOp, perdasFx, ganhosFx] = await Promise.all([
     depositoQ,
@@ -87,18 +71,13 @@ async function fetchFinancialMetricsRaw(projetoId: string) {
       .eq("tipo_transacao", "GANHO_CAMBIAL").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId),
   ]);
 
-  const timelineTypes = marcoZeroAt 
-    ? ["DEPOSITO", "DEPOSITO_VIRTUAL", "DEPOSITO_BASELINE", "SAQUE", "SAQUE_VIRTUAL"]
-    : ["DEPOSITO", "DEPOSITO_VIRTUAL", "SAQUE", "SAQUE_VIRTUAL"];
-
-  let timelineQ = supabase
+  const timelineQ = supabase
     .from("cash_ledger")
     .select("valor, valor_confirmado, moeda, data_transacao, tipo_transacao")
-    .in("tipo_transacao", timelineTypes)
+    .in("tipo_transacao", ["DEPOSITO", "DEPOSITO_VIRTUAL", "SAQUE", "SAQUE_VIRTUAL"])
     .eq("status", "CONFIRMADO")
     .eq("projeto_id_snapshot", projetoId)
     .order("data_transacao", { ascending: true });
-  if (marcoZeroAt) timelineQ = timelineQ.gte("created_at", marcoZeroAt);
 
   const { data: timelineData } = await timelineQ;
 

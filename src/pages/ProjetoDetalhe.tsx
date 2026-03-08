@@ -42,7 +42,7 @@ import {
   Zap,
   Puzzle,
   Plus,
-  RotateCcw,
+  
 } from "lucide-react";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { useCotacoes } from "@/hooks/useCotacoes";
@@ -68,7 +68,7 @@ import { ProjetoBonusArea } from "@/components/projeto-detalhe/bonus";
 import { ProjetoCashbackTab } from "@/components/projeto-detalhe/ProjetoCashbackTab";
 import { SaldoOperavelCard } from "@/components/projeto-detalhe/SaldoOperavelCard";
 import { ProjetoGestaoTab } from "@/components/projeto-detalhe/ProjetoGestaoTab";
-import { MarcoZeroTab } from "@/components/projeto-detalhe/MarcoZeroTab";
+
 import { ProjetoDialog } from "@/components/projetos/ProjetoDialog";
 import { GlobalActionsBar } from "@/components/projeto-detalhe/GlobalActionsBar";
 import { ModuleActivationDialog } from "@/components/projeto-detalhe/ModuleActivationDialog";
@@ -243,7 +243,7 @@ export default function ProjetoDetalhe() {
   // Handle tab change with module activation prompt
   const handleTabChange = (tabValue: string) => {
     // Base tabs that are always available (don't need module activation)
-    const baseTabs = ["visao-geral", "apostas", "vinculos", "gestao", "modulos", "ciclos", "incidentes", "marco-zero"];
+    const baseTabs = ["visao-geral", "apostas", "vinculos", "gestao", "modulos", "ciclos", "incidentes"];
     
     if (baseTabs.includes(tabValue)) {
       setActiveTab(tabValue);
@@ -293,14 +293,13 @@ export default function ProjetoDetalhe() {
       "modulos": "Módulos",
       "ciclos": "Ciclos",
       "incidentes": "Incidentes",
-      "marco-zero": "Marco Zero",
     };
     return tabLabels[tabKey] || tabKey;
   };
 
   // Check if a tab is valid (exists in dynamicTabs or tabGroups)
   const isValidTab = (tabKey: string): boolean => {
-    const baseTabs = ["visao-geral", "apostas", "vinculos", "modulos", "ciclos", "incidentes", "marco-zero"];
+    const baseTabs = ["visao-geral", "apostas", "vinculos", "modulos", "ciclos", "incidentes"];
     if (baseTabs.includes(tabKey)) return true;
     
     // Check module tabs
@@ -888,7 +887,6 @@ export default function ProjetoDetalhe() {
                   { value: "modulos", label: "Módulos", icon: <Puzzle className="h-4 w-4" /> },
                   { value: "incidentes", label: "Incidentes", icon: <AlertTriangle className="h-4 w-4" /> },
                   { value: "ciclos", label: "Ciclos", icon: <Clock className="h-4 w-4" /> },
-                  { value: "marco-zero", label: "Marco Zero", icon: <RotateCcw className="h-4 w-4" /> },
                 ],
               },
             ]}
@@ -1030,9 +1028,6 @@ export default function ProjetoDetalhe() {
             <ProjetoCiclosTab projetoId={id!} formatCurrency={formatCurrency} convertToConsolidation={convertToConsolidationOficial} moedaConsolidacao={projetoResultado?.moedaConsolidacao || 'BRL'} />
           </TabsContent>
 
-          <TabsContent value="marco-zero" className="h-full m-0">
-            <MarcoZeroTab projetoId={id!} />
-          </TabsContent>
         </div>
 
       </Tabs>

@@ -118,12 +118,11 @@ export function useProjetoResultado({
       // 0. Buscar configuração de moeda do projeto
       const { data: projetoData } = await supabase
         .from('projetos')
-        .select('moeda_consolidacao, marco_zero_at')
+        .select('moeda_consolidacao')
         .eq('id', projetoId)
         .single();
       
       const moedaConsolidacao = projetoData?.moeda_consolidacao || 'BRL';
-      const marcoZeroAt = projetoData?.marco_zero_at || null;
       
       // PADRONIZADO: Usar exclusivamente a função oficial de conversão passada pelo caller.
       // Isso garante paridade com todas as outras abas (Bônus, Breakdowns, etc.)
@@ -139,8 +138,7 @@ export function useProjetoResultado({
       const operationalLosses = await fetchOperationalLosses(projetoId, dataInicio, dataFim);
       
       // 4. Fetch dados de capital (saldo bookmakers, depósitos, saques)
-      // MARCO ZERO: Se definido, filtra apenas transações pós-marco e usa DEPOSITO_BASELINE como capital inicial
-      const capitalData = await fetchCapitalData(projetoId, moedaConsolidacao, safeConvert, marcoZeroAt);
+      const capitalData = await fetchCapitalData(projetoId, moedaConsolidacao, safeConvert);
       
       // 5. Fetch ajustes de conciliação
       const ajustesConciliacao = await fetchConciliacaoAdjustments(projetoId);
@@ -489,7 +487,6 @@ async function fetchCapitalData(
   projetoId: string,
   moedaConsolidacao: string,
   convert: ConvertFn,
-  marcoZeroAt: string | null = null
 ): Promise<{
   saldoBookmakers: number;
   saldoIrrecuperavel: number;
@@ -519,29 +516,17 @@ async function fetchCapitalData(
     return acc + convert(Number(b.saldo_irrecuperavel || 0), moedaOrigem);
   }, 0) || 0;
 
-  // === MARCO ZERO: Se ativo, capital = DEPOSITO_BASELINE + depósitos pós-marco ===
-  const tiposDeposito = marcoZeroAt 
-    ? ['DEPOSITO', 'DEPOSITO_VIRTUAL', 'DEPOSITO_BASELINE'] 
-    : ['DEPOSITO', 'DEPOSITO_VIRTUAL'];
-
-  let depositoQuery = supabase
+  const { data: depositos } = await supabase
     .from('cash_ledger')
     .select('valor, moeda')
-    .in('tipo_transacao', tiposDeposito)
+    .in('tipo_transacao', ['DEPOSITO', 'DEPOSITO_VIRTUAL'])
     .eq('status', 'CONFIRMADO')
     .eq('projeto_id_snapshot', projetoId);
 
-  if (marcoZeroAt) {
-    // Pós-marco: só transações após o marco zero
-    depositoQuery = depositoQuery.gte('created_at', marcoZeroAt);
-  }
-
-  const { data: depositos } = await depositoQuery;
-
-  // SAFETY NET para depósitos órfãos (sem snapshot) — só se NÃO tiver marco zero
+  // SAFETY NET para depósitos órfãos (sem snapshot)
   const currentBookmakerIds = rpcData?.map((b: any) => b.id) || [];
   let depositosOrfaos: typeof depositos = [];
-  if (!marcoZeroAt && currentBookmakerIds.length > 0) {
+  if (currentBookmakerIds.length > 0) {
     const { data: orfaos } = await supabase
       .from('cash_ledger')
       .select('valor, moeda')
@@ -556,19 +541,12 @@ async function fetchCapitalData(
     return acc + convert(Number(d.valor), d.moeda || 'BRL');
   }, 0);
 
-  // Saques filtrados por marco zero se ativo
-  let saqueQuery = supabase
+  const { data: saques } = await supabase
     .from('cash_ledger')
     .select('valor, valor_confirmado, moeda')
     .in('tipo_transacao', ['SAQUE', 'SAQUE_VIRTUAL'])
     .eq('status', 'CONFIRMADO')
     .eq('projeto_id_snapshot', projetoId);
-
-  if (marcoZeroAt) {
-    saqueQuery = saqueQuery.gte('created_at', marcoZeroAt);
-  }
-
-  const { data: saques } = await saqueQuery;
 
   const totalSaques = saques?.reduce((acc, s) => {
     return acc + convert(Number(s.valor_confirmado ?? s.valor), s.moeda || 'BRL');
