@@ -67,10 +67,15 @@ export function CryptoWalletCard({ wallet, parceiroId }: CryptoWalletCardProps) 
             <div className="flex items-center gap-2">
               {parceiroId && (
                 <Button
+                  type="button"
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8"
-                  onClick={() => setSwapOpen(true)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setSwapOpen(true);
+                  }}
                   title="Swap Crypto"
                 >
                   <ArrowRightLeft className="h-4 w-4" />
