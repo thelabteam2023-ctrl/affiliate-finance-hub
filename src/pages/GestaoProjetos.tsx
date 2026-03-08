@@ -49,9 +49,9 @@ import { ptBR } from "date-fns/locale";
 import { useActionAccess } from "@/hooks/useModuleAccess";
 import { useCotacoes } from "@/hooks/useCotacoes";
 import { ProjetosKanbanView } from "@/components/projetos/kanban";
-import { ProjectFinancialDisplay } from "@/components/projetos/ProjectFinancialDisplay";
 import { TIPO_PROJETO_CONFIG, TipoProjeto } from "@/types/projeto";
 import { TipoProjetoIcon } from "@/components/projetos/TipoProjetoIcon";
+import { fetchProjetoExtras } from "@/services/fetchProjetoExtras";
 
 interface SaldoByMoeda {
   BRL: number;
@@ -204,14 +204,14 @@ export default function GestaoProjetos() {
       const finalProjetoIds = projetosData.map(p => p.id);
       
       // Buscar dados agregados em paralelo
-      const [saldosRpcResult, apostasResult, operadoresResult, perdasResult, girosGratisResult, cashbackManualResult, bookmakersCountResult, depositosResult, saquesResult] = await Promise.all([
+      const [saldosRpcResult, apostasResult, operadoresResult, bookmakersCountResult, depositosResult, saquesResult] = await Promise.all([
         // USAR RPC CANÔNICA para saldo operável (inclui real + freebet + bonus - em_aposta)
         supabase.rpc("get_saldo_operavel_por_projeto", { p_projeto_ids: finalProjetoIds }),
         
-        // Apostas liquidadas por projeto (incluindo referência BRL para multi-moeda)
+        // Apostas liquidadas por projeto (base canônica do lucro operacional)
         supabase
           .from("apostas_unificada")
-          .select("projeto_id, lucro_prejuizo, lucro_prejuizo_brl_referencia, moeda_operacao")
+          .select("projeto_id, lucro_prejuizo, pl_consolidado, lucro_prejuizo_brl_referencia, moeda_operacao")
           .in("projeto_id", finalProjetoIds)
           .eq("status", "LIQUIDADA"),
         
@@ -221,27 +221,6 @@ export default function GestaoProjetos() {
           .select("projeto_id, id")
           .in("projeto_id", finalProjetoIds)
           .eq("status", "ATIVO"),
-        
-        // Perdas confirmadas por projeto
-        supabase
-          .from("projeto_perdas")
-          .select("projeto_id, valor")
-          .in("projeto_id", finalProjetoIds)
-          .eq("status", "CONFIRMADA"),
-        
-        // Giros grátis confirmados por projeto (valor_retorno é o lucro do giro)
-        // Inclui dados da bookmaker para saber a moeda correta
-        supabase
-          .from("giros_gratis")
-          .select("projeto_id, valor_retorno, bookmaker_id, bookmakers!inner(moeda)")
-          .in("projeto_id", finalProjetoIds)
-          .eq("status", "confirmado"),
-        
-        // Cashback manual por projeto (lançamentos manuais)
-        supabase
-          .from("cashback_manual")
-          .select("projeto_id, valor, moeda_operacao, valor_brl_referencia")
-          .in("projeto_id", finalProjetoIds),
         
         // Contagem de bookmakers e saldo irrecuperável por projeto
         supabase
@@ -323,66 +302,65 @@ export default function GestaoProjetos() {
         }
       });
       
-      // Criar mapa de moeda por bookmaker_id para conversão dos giros grátis
-      const bookmakerMoedaMap: Record<string, string> = {};
-      (bookmakersCountResult.data || []).forEach((bk: any) => {
-        if (bk.id) {
-          bookmakerMoedaMap[bk.id] = bk.moeda || 'BRL';
-        }
-      });
-
-      // Agregar lucro de apostas por projeto - APENAS DADOS BRUTOS POR MOEDA
-      // O campo 'total' será calculado no render usando cotação atual
+      // Agregar lucro operacional por projeto (CANÔNICO):
+      // base = apostas liquidadas + extras centralizados (cashback, giros, bônus, ajustes, FX, perdas)
       const lucroByProjeto: Record<string, { BRL: number; USD: number }> = {};
+      const lucroConsolidadoByProjeto: Record<string, number> = {};
+
+      // 1) Base de apostas liquidadas
       (apostasResult.data || []).forEach((ap: any) => {
         if (!ap.projeto_id) return;
         if (!lucroByProjeto[ap.projeto_id]) {
           lucroByProjeto[ap.projeto_id] = { BRL: 0, USD: 0 };
         }
-        
-        const lucroOriginal = ap.lucro_prejuizo || 0;
-        const moeda = ap.moeda_operacao || 'BRL';
-        
-        // Acumular por moeda original - SEM conversão
+
+        const lucroOriginal = Number(ap.lucro_prejuizo ?? 0);
+        const moeda = (ap.moeda_operacao || 'BRL').toUpperCase();
+
         if (moeda === 'USD' || moeda === 'USDT' || moeda === 'USDC') {
           lucroByProjeto[ap.projeto_id].USD += lucroOriginal;
         } else {
           lucroByProjeto[ap.projeto_id].BRL += lucroOriginal;
         }
-      });
-      
-      // Agregar lucro de giros grátis confirmados por projeto - SEM conversão
-      (girosGratisResult.data || []).forEach((giro: any) => {
-        if (!giro.projeto_id) return;
-        if (!lucroByProjeto[giro.projeto_id]) {
-          lucroByProjeto[giro.projeto_id] = { BRL: 0, USD: 0 };
-        }
-        
-        const valorRetorno = giro.valor_retorno || 0;
-        const moedaBookmaker = giro.bookmakers?.moeda || bookmakerMoedaMap[giro.bookmaker_id] || 'BRL';
-        
-        if (moedaBookmaker === 'USD' || moedaBookmaker === 'USDT' || moedaBookmaker === 'USDC') {
-          lucroByProjeto[giro.projeto_id].USD += valorRetorno;
+
+        // Total consolidado para exibição principal (prioridade alinhada ao motor financeiro)
+        if (ap.pl_consolidado != null) {
+          lucroConsolidadoByProjeto[ap.projeto_id] = (lucroConsolidadoByProjeto[ap.projeto_id] || 0) + Number(ap.pl_consolidado);
+        } else if (ap.lucro_prejuizo_brl_referencia != null) {
+          lucroConsolidadoByProjeto[ap.projeto_id] = (lucroConsolidadoByProjeto[ap.projeto_id] || 0) + Number(ap.lucro_prejuizo_brl_referencia);
         } else {
-          lucroByProjeto[giro.projeto_id].BRL += valorRetorno;
+          const fallback = (moeda === 'USD' || moeda === 'USDT' || moeda === 'USDC')
+            ? lucroOriginal * USD_TO_BRL_DISPLAY
+            : lucroOriginal;
+          lucroConsolidadoByProjeto[ap.projeto_id] = (lucroConsolidadoByProjeto[ap.projeto_id] || 0) + fallback;
         }
       });
-      
-      // Agregar lucro de cashback manual por projeto - SEM conversão
-      (cashbackManualResult.data || []).forEach((cb: any) => {
-        if (!cb.projeto_id) return;
-        if (!lucroByProjeto[cb.projeto_id]) {
-          lucroByProjeto[cb.projeto_id] = { BRL: 0, USD: 0 };
+
+      // 2) Extras canônicos (mesma fonte do KPI/gráfico de evolução)
+      const extrasByProjeto = await Promise.all(
+        finalProjetoIds.map(async (projetoId) => ({
+          projetoId,
+          extras: await fetchProjetoExtras(projetoId),
+        }))
+      );
+
+      extrasByProjeto.forEach(({ projetoId, extras }) => {
+        if (!lucroByProjeto[projetoId]) {
+          lucroByProjeto[projetoId] = { BRL: 0, USD: 0 };
         }
-        
-        const valor = cb.valor || 0;
-        const moeda = cb.moeda_operacao || 'BRL';
-        
-        if (moeda === 'USD' || moeda === 'USDT' || moeda === 'USDC') {
-          lucroByProjeto[cb.projeto_id].USD += valor;
-        } else {
-          lucroByProjeto[cb.projeto_id].BRL += valor;
-        }
+
+        extras.forEach((extra) => {
+          const moeda = (extra.moeda || 'BRL').toUpperCase();
+          const valor = Number(extra.valor || 0);
+
+          if (moeda === 'USD' || moeda === 'USDT' || moeda === 'USDC') {
+            lucroByProjeto[projetoId].USD += valor;
+            lucroConsolidadoByProjeto[projetoId] = (lucroConsolidadoByProjeto[projetoId] || 0) + (valor * USD_TO_BRL_DISPLAY);
+          } else {
+            lucroByProjeto[projetoId].BRL += valor;
+            lucroConsolidadoByProjeto[projetoId] = (lucroConsolidadoByProjeto[projetoId] || 0) + valor;
+          }
+        });
       });
       
       // Agregar operadores ativos por projeto
@@ -390,13 +368,6 @@ export default function GestaoProjetos() {
       (operadoresResult.data || []).forEach((op: any) => {
         if (!op.projeto_id) return;
         operadoresByProjeto[op.projeto_id] = (operadoresByProjeto[op.projeto_id] || 0) + 1;
-      });
-      
-      // Agregar perdas confirmadas por projeto
-      const perdasByProjeto: Record<string, number> = {};
-      (perdasResult.data || []).forEach((pd: any) => {
-        if (!pd.projeto_id) return;
-        perdasByProjeto[pd.projeto_id] = (perdasByProjeto[pd.projeto_id] || 0) + (pd.valor || 0);
       });
       
       // Agregar Lucro Realizado por projeto: Saques - Depósitos (fluxo de caixa)
@@ -438,14 +409,14 @@ export default function GestaoProjetos() {
             USD: bkData?.irrecuperavelUSD || 0,
           },
           total_bookmakers: bkData?.count || 0,
-          lucro_operacional: 0,
+          lucro_operacional: lucroConsolidadoByProjeto[proj.id] || 0,
           lucro_by_moeda: {
             BRL: lucroData?.BRL || 0,
             USD: lucroData?.USD || 0,
           },
           lucro_realizado: lucroRealizadoByProjeto[proj.id] || 0,
           operadores_ativos: operadoresByProjeto[proj.id] || 0,
-          perdas_confirmadas: perdasByProjeto[proj.id] || 0,
+          perdas_confirmadas: 0,
           display_order: proj.display_order || 0,
           tipo_projeto: proj.tipo_projeto || 'INTERNO',
           investidor_id: proj.investidor_id || null,
@@ -748,8 +719,7 @@ export default function GestaoProjetos() {
                       {(() => {
                         const lucroBRL = projeto.lucro_by_moeda?.BRL || 0;
                         const lucroUSD = projeto.lucro_by_moeda?.USD || 0;
-                        const perdas = projeto.perdas_confirmadas || 0;
-                        const lucroOperacional = lucroBRL + (lucroUSD * USD_TO_BRL_DISPLAY) - perdas;
+                        const lucroOperacional = projeto.lucro_operacional ?? (lucroBRL + (lucroUSD * USD_TO_BRL_DISPLAY));
                         const isPositive = lucroOperacional >= 0;
                         return (
                           <p className={`text-sm font-semibold ${isPositive ? 'text-emerald-500' : 'text-red-500'}`}>

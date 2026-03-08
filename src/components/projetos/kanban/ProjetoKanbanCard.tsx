@@ -40,6 +40,7 @@ interface Projeto {
   total_bookmakers?: number;
   saldo_bookmakers_by_moeda?: SaldoByMoeda;
   lucro_by_moeda?: SaldoByMoeda;
+  lucro_operacional?: number;
   perdas_confirmadas?: number;
   lucro_realizado?: number;
   display_order?: number;
@@ -114,15 +115,14 @@ export function ProjetoKanbanCard({
 
   const lucroBRL = projeto.lucro_by_moeda?.BRL || 0;
   const lucroUSD = projeto.lucro_by_moeda?.USD || 0;
-  const perdas = projeto.perdas_confirmadas || 0;
-  const lucroOperacional = lucroBRL + (lucroUSD * cotacaoUSD) - perdas;
+  const lucroOperacional = projeto.lucro_operacional ?? (lucroBRL + (lucroUSD * cotacaoUSD));
   const lucroRealizado = projeto.lucro_realizado || 0;
 
   const lucroOpDisplay = getFinancialDisplay(lucroOperacional);
   const lucroRealizadoDisplay = getFinancialDisplay(lucroRealizado);
 
   const hasUSD = lucroUSD !== 0;
-  const hasBRL = lucroBRL !== 0 || perdas !== 0;
+  const hasBRL = lucroBRL !== 0;
 
   const handleDragStart = (e: React.DragEvent) => {
     e.dataTransfer.setData("projetoId", projeto.id);
@@ -247,13 +247,13 @@ export function ProjetoKanbanCard({
                   <Badge 
                     variant="outline" 
                     className={`text-[11px] px-2 py-0.5 ${
-                      lucroBRL - perdas < 0 
+                      lucroBRL < 0 
                         ? 'border-red-500/40 text-red-400 bg-red-500/10' 
                         : 'border-emerald-500/40 text-emerald-400 bg-emerald-500/10'
                     }`}
                   >
                     <CircleDollarSign className="h-3 w-3 mr-1" />
-                    BRL: {lucroBRL - perdas > 0 ? '+' : ''}{formatBRL(lucroBRL - perdas)}
+                    BRL: {lucroBRL > 0 ? '+' : ''}{formatBRL(lucroBRL)}
                   </Badge>
                 )}
                 {hasUSD && (
