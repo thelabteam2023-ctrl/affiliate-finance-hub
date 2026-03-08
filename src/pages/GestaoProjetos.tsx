@@ -405,16 +405,30 @@ export default function GestaoProjetos() {
     setLoading(true);
   }, []));
 
-  const filteredProjetos = projetos.filter((proj) => {
+  // Projetos filtrados por seção (antes do filtro de tipo, para calcular badges)
+  const sectionFilteredProjetos = projetos.filter((proj) => {
     const matchesSearch = proj.nome.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || proj.status === statusFilter;
-    const matchesTipo = tipoFilter === "all" || proj.tipo_projeto === tipoFilter;
-    // Separar projetos BROKER dos demais
     const projTipo = (proj as any).tipo_projeto;
     const matchesSection = isBrokerSection 
       ? projTipo === "BROKER" 
       : projTipo !== "BROKER";
-    return matchesSearch && matchesStatus && matchesTipo && matchesSection;
+    return matchesSearch && matchesStatus && matchesSection;
+  });
+
+  // Agrupar por tipo para gerar badges dinâmicos
+  const tipoCountMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    sectionFilteredProjetos.forEach((proj) => {
+      const tipo = (proj as any).tipo_projeto || 'OUTROS';
+      map[tipo] = (map[tipo] || 0) + 1;
+    });
+    return map;
+  }, [sectionFilteredProjetos]);
+
+  const filteredProjetos = sectionFilteredProjetos.filter((proj) => {
+    const matchesTipo = tipoFilter === "all" || (proj as any).tipo_projeto === tipoFilter;
+    return matchesTipo;
   });
 
   const handleOpenDialog = (projeto: Projeto | null, mode: "view" | "edit" | "create", initialTab?: string) => {
