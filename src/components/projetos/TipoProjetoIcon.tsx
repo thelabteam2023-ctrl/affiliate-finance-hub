@@ -8,6 +8,7 @@ import {
   Handshake,
   TrendingUp,
   FolderOpen,
+  Tag,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -20,6 +21,7 @@ const ICON_MAP: Record<string, { component: React.ComponentType<{ className?: st
   CircleDollarSign: { component: CircleDollarSign, color: "text-blue-400" },
   Handshake: { component: Handshake, color: "text-orange-400" },
   TrendingUp: { component: TrendingUp, color: "text-indigo-400" },
+  Tag: { component: Tag, color: "text-pink-400" },
   FolderOpen: { component: FolderOpen, color: "text-gray-400" },
 };
 
