@@ -372,6 +372,7 @@ export function HistoricoMovimentacoes({
                   <SelectItem value="DEPOSITO">Depósito</SelectItem>
                   <SelectItem value="SAQUE">Saque</SelectItem>
                   <SelectItem value="APORTE_FINANCEIRO">Aporte & Liquidação</SelectItem>
+                  <SelectItem value="SWAP">Swap Crypto</SelectItem>
                   <SelectItem value="OUTROS">Outros</SelectItem>
                 </SelectContent>
               </Select>
