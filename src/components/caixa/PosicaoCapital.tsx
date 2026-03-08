@@ -165,6 +165,30 @@ export function PosicaoCapital({
       ? `R$ ${bookmakersBRLValue.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}${bookmakersOtherCount > 0 ? ` + ${bookmakersOtherCount} ${bookmakersOtherCount === 1 ? 'moeda' : 'moedas'}` : ''}`
       : 'Em operação';
 
+    // Consolidar contas de parceiros para BRL (multi-moeda)
+    let contasParcBRL = 0;
+    let contasParcBRLValue = 0;
+    const contasParcDetails: Array<{ moeda: string; valorOriginal: number; valorBRL: number; symbol: string }> = [];
+    let contasParcOtherCount = 0;
+    
+    saldosContasParceiros.forEach(sc => {
+      if (sc.saldo === 0) return;
+      if (sc.moeda === 'BRL') {
+        contasParcBRL += sc.saldo;
+        contasParcBRLValue = sc.saldo;
+        contasParcDetails.push({ moeda: 'BRL', valorOriginal: sc.saldo, valorBRL: sc.saldo, symbol: 'R$' });
+      } else {
+        const valorBRL = convert(sc.saldo, sc.moeda, 'BRL');
+        contasParcBRL += valorBRL;
+        contasParcDetails.push({ moeda: sc.moeda, valorOriginal: sc.saldo, valorBRL, symbol: getCurrencySymbol(sc.moeda) });
+        contasParcOtherCount++;
+      }
+    });
+    
+    const contasParcDetailStr = contasParcDetails.length > 0
+      ? `R$ ${contasParcBRLValue.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}${contasParcOtherCount > 0 ? ` + ${contasParcOtherCount} ${contasParcOtherCount === 1 ? 'moeda' : 'moedas'}` : ''}`
+      : 'Bancos';
+
     // Wallets parceiros (já em USD → converter para BRL)
     const walletsTotal = saldoWalletsParceiros * cotacaoUSD;
 
@@ -187,10 +211,10 @@ export function PosicaoCapital({
       },
       { 
         name: "Contas Parceiros", 
-        value: saldoContasParceiros, 
+        value: contasParcBRL, 
         icon: CreditCard,
-        detail: "Bancos",
-        detailItems: [] as Array<{ moeda: string; valorOriginal: number; valorBRL: number; symbol: string }>,
+        detail: contasParcDetailStr,
+        detailItems: contasParcDetails,
         help: "Saldo em contas bancárias de parceiros disponível para movimentação"
       },
       { 
