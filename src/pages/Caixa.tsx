@@ -362,18 +362,26 @@ export default function Caixa() {
       // Legacy: manter compatibilidade com saldoBookmakers (BRL total para CaixaTabsContainer)
       setSaldoBookmakers(saldosPorMoeda['BRL'] || 0);
 
-      // Fetch partner bank accounts balance
-      const { data: contasSaldoData } = await supabase
+      // Fetch partner bank accounts balance (EXCLUDING caixa operacional to avoid double-counting)
+      const contasQuery = supabase
         .from("v_saldo_parceiro_contas")
         .select("saldo");
+      if (caixaParceiro?.id) {
+        contasQuery.neq("parceiro_id", caixaParceiro.id);
+      }
+      const { data: contasSaldoData } = await contasQuery;
       
       const totalContas = contasSaldoData?.reduce((sum, c) => sum + (c.saldo || 0), 0) || 0;
       setSaldoContasParceiros(totalContas);
 
-      // Fetch partner wallets balance (in USD)
-      const { data: walletsSaldoData } = await supabase
+      // Fetch partner wallets balance in USD (EXCLUDING caixa operacional to avoid double-counting)
+      const walletsQuery = supabase
         .from("v_saldo_parceiro_wallets")
         .select("saldo_usd");
+      if (caixaParceiro?.id) {
+        walletsQuery.neq("parceiro_id", caixaParceiro.id);
+      }
+      const { data: walletsSaldoData } = await walletsQuery;
       
       const totalWallets = walletsSaldoData?.reduce((sum, w) => sum + (w.saldo_usd || 0), 0) || 0;
       setSaldoWalletsParceiros(totalWallets);
