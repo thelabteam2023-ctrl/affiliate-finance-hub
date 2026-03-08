@@ -138,8 +138,7 @@ export function useProjetoResultado({
       const operationalLosses = await fetchOperationalLosses(projetoId, dataInicio, dataFim);
       
       // 4. Fetch dados de capital (saldo bookmakers, depósitos, saques)
-      // MARCO ZERO: Se definido, filtra apenas transações pós-marco e usa DEPOSITO_BASELINE como capital inicial
-      const capitalData = await fetchCapitalData(projetoId, moedaConsolidacao, safeConvert, marcoZeroAt);
+      const capitalData = await fetchCapitalData(projetoId, moedaConsolidacao, safeConvert);
       
       // 5. Fetch ajustes de conciliação
       const ajustesConciliacao = await fetchConciliacaoAdjustments(projetoId);
