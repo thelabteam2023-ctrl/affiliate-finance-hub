@@ -340,10 +340,11 @@ export default function Caixa() {
 
       // Fetch total bookmaker balance - agregar por moeda
       // Inclui status 'ativo' e 'limitada' (casas com saldo mas operacionalmente limitadas)
+      // FIX: Incluir AGUARDANDO_SAQUE - essas casas ainda têm saldo real
       const { data: bookmakersBalanceData } = await supabase
         .from("bookmakers")
         .select("saldo_atual, moeda")
-        .in("status", ["ativo", "ATIVO", "limitada", "LIMITADA"]);
+        .in("status", ["ativo", "limitada", "AGUARDANDO_SAQUE"]);
       
       // Agregar saldos por moeda
       const saldosPorMoeda: Record<string, number> = {};
