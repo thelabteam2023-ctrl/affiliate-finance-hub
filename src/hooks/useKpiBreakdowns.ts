@@ -104,6 +104,7 @@ async function fetchBreakdownsData(
 
 
   // Fetch dados de todos os módulos em paralelo
+  // CANÔNICO: Extras (ajustes_saldo, resultado_cambial, etc.) vêm do serviço centralizado
   const [
     apostasData,
     girosGratisData,
@@ -111,6 +112,7 @@ async function fetchBreakdownsData(
     ajustesData,
     cashbackData,
     bonusGanhosData,
+    projetoExtras,
   ] = await Promise.all([
     fetchApostasModuleData(projetoId, dataInicio, dataFim, moedaConsolidacao, safeConvert),
     fetchGirosGratisModuleData(projetoId, dataInicio, dataFim, moedaConsolidacao, safeConvert),
@@ -118,7 +120,19 @@ async function fetchBreakdownsData(
     fetchAjustesModuleData(projetoId),
     fetchCashbackModuleData(projetoId, dataInicio, dataFim, moedaConsolidacao, safeConvert),
     fetchBonusGanhosModuleData(projetoId, moedaConsolidacao, safeConvert),
+    fetchProjetoExtras(projetoId),
   ]);
+
+  // Agregar extras canônicos por tipo, com filtro de data e conversão
+  const extrasAgrupados = agruparExtrasPorTipo(
+    projetoExtras,
+    safeConvert,
+    moedaConsolidacao,
+    {
+      inicio: dataInicio || undefined,
+      fim: dataFim || undefined,
+    }
+  );
 
   // === BREAKDOWN APOSTAS (quantidade) ===
   const apostasBreakdown = createKpiBreakdown([
