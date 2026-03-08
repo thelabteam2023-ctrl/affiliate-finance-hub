@@ -487,7 +487,6 @@ async function fetchCapitalData(
   projetoId: string,
   moedaConsolidacao: string,
   convert: ConvertFn,
-  marcoZeroAt: string | null = null
 ): Promise<{
   saldoBookmakers: number;
   saldoIrrecuperavel: number;
