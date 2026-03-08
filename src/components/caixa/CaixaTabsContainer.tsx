@@ -113,11 +113,6 @@ export function CaixaTabsContainer({
                   {pendingCount}
                 </span>
               )}
-            </TabsTrigger>
-            <TabsTrigger value="broker" className="gap-2">
-              <Briefcase className="h-4 w-4" />
-              Broker
-            </TabsTrigger>
           </TabsList>
         </div>
 
