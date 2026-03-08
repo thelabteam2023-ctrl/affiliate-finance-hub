@@ -431,9 +431,8 @@ export function SaldosParceirosSheet() {
     );
   };
 
-  const CryptoHoverContent = ({ saldos, totalLocked, parceiroId, onSwapSuccess }: { saldos: ParceiroSaldoAgrupado["saldos_crypto"]; totalLocked: number; parceiroId: string; onSwapSuccess?: () => void }) => {
+  const CryptoHoverContent = ({ saldos, totalLocked, onOpenSwap }: { saldos: ParceiroSaldoAgrupado["saldos_crypto"]; totalLocked: number; onOpenSwap: () => void }) => {
     const [ascending, setAscending] = useState(false);
-    const [swapOpen, setSwapOpen] = useState(false);
 
     const truncateAddr = (addr: string) => {
       if (!addr || addr.length <= 12) return addr || "—";
