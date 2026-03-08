@@ -444,7 +444,12 @@ export default function GestaoProjetos() {
   const filteredProjetos = projetos.filter((proj) => {
     const matchesSearch = proj.nome.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || proj.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    // Separar projetos BROKER dos demais
+    const projTipo = (proj as any).tipo_projeto;
+    const matchesSection = isBrokerSection 
+      ? projTipo === "BROKER" 
+      : projTipo !== "BROKER";
+    return matchesSearch && matchesStatus && matchesSection;
   });
 
   const handleOpenDialog = (projeto: Projeto | null, mode: "view" | "edit" | "create", initialTab?: string) => {
