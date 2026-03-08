@@ -113,7 +113,7 @@ export default function Caixa() {
   const [saldosCrypto, setSaldosCrypto] = useState<SaldoCrypto[]>([]);
   const [saldosBookmakersPorMoeda, setSaldosBookmakersPorMoeda] = useState<Array<{ moeda: string; saldo: number }>>([]);
   const [saldoBookmakers, setSaldoBookmakers] = useState(0); // Legacy: BRL total (para CaixaTabsContainer)
-  const [saldoContasParceiros, setSaldoContasParceiros] = useState(0);
+  const [saldosContasParceiros, setSaldosContasParceiros] = useState<Array<{ moeda: string; saldo: number }>>([]);
   const [saldoWalletsParceiros, setSaldoWalletsParceiros] = useState(0);
   const [loading, setLoading] = useState(true);
   const { canCreate } = useActionAccess();
@@ -340,10 +340,11 @@ export default function Caixa() {
 
       // Fetch total bookmaker balance - agregar por moeda
       // Inclui status 'ativo' e 'limitada' (casas com saldo mas operacionalmente limitadas)
+      // FIX: Incluir AGUARDANDO_SAQUE - essas casas ainda têm saldo real
       const { data: bookmakersBalanceData } = await supabase
         .from("bookmakers")
         .select("saldo_atual, moeda")
-        .in("status", ["ativo", "ATIVO", "limitada", "LIMITADA"]);
+        .in("status", ["ativo", "limitada", "AGUARDANDO_SAQUE"]);
       
       // Agregar saldos por moeda
       const saldosPorMoeda: Record<string, number> = {};
@@ -362,17 +363,26 @@ export default function Caixa() {
       // Legacy: manter compatibilidade com saldoBookmakers (BRL total para CaixaTabsContainer)
       setSaldoBookmakers(saldosPorMoeda['BRL'] || 0);
 
-      // Fetch partner bank accounts balance (EXCLUDING caixa operacional to avoid double-counting)
+      // Fetch partner bank accounts balance BY CURRENCY (EXCLUDING caixa operacional to avoid double-counting)
+      // FIX: Agrupar por moeda ao invés de somar cegamente BRL + USD + EUR
       const contasQuery = supabase
         .from("v_saldo_parceiro_contas")
-        .select("saldo");
+        .select("moeda, saldo");
       if (caixaParceiro?.id) {
         contasQuery.neq("parceiro_id", caixaParceiro.id);
       }
       const { data: contasSaldoData } = await contasQuery;
       
-      const totalContas = contasSaldoData?.reduce((sum, c) => sum + (c.saldo || 0), 0) || 0;
-      setSaldoContasParceiros(totalContas);
+      const contasPorMoeda: Record<string, number> = {};
+      (contasSaldoData || []).forEach((row: any) => {
+        const m = row.moeda || "BRL";
+        contasPorMoeda[m] = (contasPorMoeda[m] || 0) + (row.saldo || 0);
+      });
+      setSaldosContasParceiros(
+        Object.entries(contasPorMoeda)
+          .filter(([_, saldo]) => saldo !== 0)
+          .map(([moeda, saldo]) => ({ moeda, saldo }))
+      );
 
       // Fetch partner wallets balance in USD (EXCLUDING caixa operacional to avoid double-counting)
       const walletsQuery = supabase
@@ -964,7 +974,7 @@ export default function Caixa() {
             saldosFiat={saldosFiat}
             saldoCaixaCrypto={getTotalCryptoUSD()}
             saldosBookmakers={saldosBookmakersPorMoeda}
-            saldoContasParceiros={saldoContasParceiros}
+            saldosContasParceiros={saldosContasParceiros}
             saldoWalletsParceiros={saldoWalletsParceiros}
             cotacaoUSD={cotacaoUSD}
           />
@@ -1026,8 +1036,6 @@ export default function Caixa() {
           setDialogDefaultData(null);
           await new Promise(resolve => setTimeout(resolve, 600));
           await fetchData();
-          // Safety re-fetch: views may lag behind
-          setTimeout(() => fetchData(), 2000);
         }}
         defaultTipoTransacao={dialogDefaultData?.tipoTransacao}
         defaultOrigemBookmakerId={dialogDefaultData?.origemBookmakerId}
@@ -1047,7 +1055,6 @@ export default function Caixa() {
         onSuccess={async () => {
           await new Promise(resolve => setTimeout(resolve, 600));
           await fetchData();
-          setTimeout(() => fetchData(), 2000);
         }}
         saque={saqueParaConfirmar ? (() => {
           const walletDetail = saqueParaConfirmar.destino_wallet_id
@@ -1098,7 +1105,6 @@ export default function Caixa() {
           setAjusteDialogOpen(false);
           await new Promise(resolve => setTimeout(resolve, 600));
           await fetchData();
-          setTimeout(() => fetchData(), 2000);
         }}
       />
 
@@ -1110,7 +1116,6 @@ export default function Caixa() {
           setReconciliacaoDialogOpen(false);
           await new Promise(resolve => setTimeout(resolve, 600));
           await fetchData();
-          setTimeout(() => fetchData(), 2000);
         }}
       />
     </div>
