@@ -399,6 +399,20 @@ export default function GestaoProjetos() {
         perdasByProjeto[pd.projeto_id] = (perdasByProjeto[pd.projeto_id] || 0) + (pd.valor || 0);
       });
       
+      // Agregar Lucro Realizado por projeto: Saques - Depósitos (fluxo de caixa)
+      const lucroRealizadoByProjeto: Record<string, number> = {};
+      (depositosResult.data || []).forEach((dep: any) => {
+        const pid = dep.projeto_id_snapshot;
+        if (!pid) return;
+        lucroRealizadoByProjeto[pid] = (lucroRealizadoByProjeto[pid] || 0) - (Number(dep.valor) || 0);
+      });
+      (saquesResult.data || []).forEach((saq: any) => {
+        const pid = saq.projeto_id_snapshot;
+        if (!pid) return;
+        const valorSaque = Number(saq.valor_confirmado ?? saq.valor) || 0;
+        lucroRealizadoByProjeto[pid] = (lucroRealizadoByProjeto[pid] || 0) + valorSaque;
+      });
+      
       // Map to Projeto interface com dados agregados - APENAS DADOS BRUTOS
       // Campos consolidados (saldo_bookmakers, lucro_operacional) serão calculados no render
       const mapped = projetosData.map((proj: any) => {
@@ -413,25 +427,23 @@ export default function GestaoProjetos() {
           data_inicio: proj.data_inicio,
           data_fim_prevista: proj.data_fim_prevista,
           orcamento_inicial: proj.orcamento_inicial || 0,
-          // Saldo será calculado no render
-          saldo_bookmakers: 0, // Placeholder - calculado no render
+          saldo_bookmakers: 0,
           saldo_bookmakers_by_moeda: {
             BRL: bkData?.saldoBRL || 0,
             USD: bkData?.saldoUSD || 0,
           },
-          // Irrecuperável também por moeda
-          saldo_irrecuperavel: 0, // Placeholder - calculado no render
+          saldo_irrecuperavel: 0,
           saldo_irrecuperavel_by_moeda: {
             BRL: bkData?.irrecuperavelBRL || 0,
             USD: bkData?.irrecuperavelUSD || 0,
           },
           total_bookmakers: bkData?.count || 0,
-          // Lucro será calculado no render
-          lucro_operacional: 0, // Placeholder - calculado no render
+          lucro_operacional: 0,
           lucro_by_moeda: {
             BRL: lucroData?.BRL || 0,
             USD: lucroData?.USD || 0,
           },
+          lucro_realizado: lucroRealizadoByProjeto[proj.id] || 0,
           operadores_ativos: operadoresByProjeto[proj.id] || 0,
           perdas_confirmadas: perdasByProjeto[proj.id] || 0,
           display_order: proj.display_order || 0,
