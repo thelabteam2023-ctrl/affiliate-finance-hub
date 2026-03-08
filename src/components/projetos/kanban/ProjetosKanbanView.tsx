@@ -24,6 +24,7 @@ interface Projeto {
   lucro_operacional?: number;
   perdas_confirmadas?: number;
   lucro_realizado?: number;
+  display_order?: number;
 }
 
 interface ProjetosKanbanViewProps {
