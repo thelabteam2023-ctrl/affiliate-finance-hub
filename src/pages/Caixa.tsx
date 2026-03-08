@@ -326,8 +326,8 @@ export default function Caixa() {
         (walletsSaldoData || []).forEach((row: any) => {
           const c = row.coin || "USDT";
           if (!cryptoMap[c]) cryptoMap[c] = { saldo_coin: 0, saldo_usd: 0 };
-          cryptoMap[c].saldo_coin += (row.saldo_coin || 0);
-          cryptoMap[c].saldo_usd += (row.saldo_usd || 0);
+          cryptoMap[c].saldo_coin += Math.max(0, row.saldo_coin || 0);
+          cryptoMap[c].saldo_usd += Math.max(0, row.saldo_usd || 0);
         });
         setSaldosCrypto(Object.entries(cryptoMap).map(([coin, vals]) => ({ 
           coin, 
