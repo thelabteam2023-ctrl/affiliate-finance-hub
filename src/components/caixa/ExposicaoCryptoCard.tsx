@@ -8,7 +8,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { TrendingUp, Plus, Bitcoin, Copy, Check } from "lucide-react";
+import { TrendingUp, Plus, Bitcoin, Copy, Check, ArrowRightLeft } from "lucide-react";
+import { SwapCryptoDialog } from "./SwapCryptoDialog";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrencyValue } from "@/types/currency";
 import { ExchangeSelect } from "@/components/parceiros/ExchangeSelect";
