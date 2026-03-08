@@ -14,6 +14,7 @@ export type TipoProjeto =
   | 'CASHBACK' 
   | 'CPA'
   | 'REVENUE_SHARE'
+  | 'PROMOCOES'
   | 'OUTROS';
 
 export const TIPO_PROJETO_CONFIG: Record<TipoProjeto, { 
@@ -78,6 +79,13 @@ export const TIPO_PROJETO_CONFIG: Record<TipoProjeto, {
     icon: '📈',
     lucideIcon: 'TrendingUp',
     description: 'Compartilhamento de receita',
+  },
+  PROMOCOES: {
+    label: 'Promoções',
+    color: 'bg-pink-500/20 text-pink-400 border-pink-500/30',
+    icon: '🏷️',
+    lucideIcon: 'Tag',
+    description: 'Promoções e ofertas especiais',
   },
   OUTROS: { 
     label: 'Outros', 
