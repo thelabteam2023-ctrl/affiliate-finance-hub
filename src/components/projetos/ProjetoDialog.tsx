@@ -129,6 +129,7 @@ export function ProjetoDialog({
   onSuccess,
   onCreatedOpenEdit,
   initialTab,
+  defaultTipoProjeto = "INTERNO",
 }: ProjetoDialogProps) {
   const { workspaceId } = useWorkspace();
   const [loading, setLoading] = useState(false);
