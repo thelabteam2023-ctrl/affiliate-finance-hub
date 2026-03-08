@@ -305,8 +305,9 @@ export default function GestaoProjetos() {
       // Agregar lucro operacional por projeto (CANÔNICO):
       // base = apostas liquidadas + extras centralizados (cashback, giros, bônus, ajustes, FX, perdas)
       const lucroByProjeto: Record<string, { BRL: number; USD: number }> = {};
+      const lucroConsolidadoByProjeto: Record<string, number> = {};
 
-      // 1) Base de apostas liquidadas (dados brutos por moeda)
+      // 1) Base de apostas liquidadas
       (apostasResult.data || []).forEach((ap: any) => {
         if (!ap.projeto_id) return;
         if (!lucroByProjeto[ap.projeto_id]) {
@@ -320,6 +321,18 @@ export default function GestaoProjetos() {
           lucroByProjeto[ap.projeto_id].USD += lucroOriginal;
         } else {
           lucroByProjeto[ap.projeto_id].BRL += lucroOriginal;
+        }
+
+        // Total consolidado para exibição principal (prioridade alinhada ao motor financeiro)
+        if (ap.pl_consolidado != null) {
+          lucroConsolidadoByProjeto[ap.projeto_id] = (lucroConsolidadoByProjeto[ap.projeto_id] || 0) + Number(ap.pl_consolidado);
+        } else if (ap.lucro_prejuizo_brl_referencia != null) {
+          lucroConsolidadoByProjeto[ap.projeto_id] = (lucroConsolidadoByProjeto[ap.projeto_id] || 0) + Number(ap.lucro_prejuizo_brl_referencia);
+        } else {
+          const fallback = (moeda === 'USD' || moeda === 'USDT' || moeda === 'USDC')
+            ? lucroOriginal * USD_TO_BRL_DISPLAY
+            : lucroOriginal;
+          lucroConsolidadoByProjeto[ap.projeto_id] = (lucroConsolidadoByProjeto[ap.projeto_id] || 0) + fallback;
         }
       });
 
