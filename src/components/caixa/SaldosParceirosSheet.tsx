@@ -113,6 +113,10 @@ export function SaldosParceirosSheet() {
   const [cryptoPrices, setCryptoPrices] = useState<Record<string, number>>({});
   const [pricesLoading, setPricesLoading] = useState(false);
   const [lastPriceUpdate, setLastPriceUpdate] = useState<Date | null>(null);
+  const [swapDialog, setSwapDialog] = useState<{ open: boolean; parceiroId: string | null }>({
+    open: false,
+    parceiroId: null,
+  });
   const { convertToBRL } = useExchangeRates();
 
   const fetchCryptoPrices = async (coins: string[]) => {
@@ -427,9 +431,8 @@ export function SaldosParceirosSheet() {
     );
   };
 
-  const CryptoHoverContent = ({ saldos, totalLocked, parceiroId, onSwapSuccess }: { saldos: ParceiroSaldoAgrupado["saldos_crypto"]; totalLocked: number; parceiroId: string; onSwapSuccess?: () => void }) => {
+  const CryptoHoverContent = ({ saldos, totalLocked, onOpenSwap }: { saldos: ParceiroSaldoAgrupado["saldos_crypto"]; totalLocked: number; onOpenSwap: () => void }) => {
     const [ascending, setAscending] = useState(false);
-    const [swapOpen, setSwapOpen] = useState(false);
 
     const truncateAddr = (addr: string) => {
       if (!addr || addr.length <= 12) return addr || "—";
@@ -458,7 +461,7 @@ export function SaldosParceirosSheet() {
           </button>
         </div>
         <button
-          onClick={(e) => { e.stopPropagation(); setSwapOpen(true); }}
+          onClick={(e) => { e.stopPropagation(); onOpenSwap(); }}
           className="flex items-center gap-1.5 text-[10px] text-muted-foreground/60 hover:text-primary transition-colors mb-1"
           title="Swap entre moedas"
         >
@@ -515,12 +518,6 @@ export function SaldosParceirosSheet() {
           </div>
         )}
       </div>
-      <SwapCryptoDialog
-        open={swapOpen}
-        onClose={() => setSwapOpen(false)}
-        onSuccess={() => { setSwapOpen(false); onSwapSuccess?.(); }}
-        caixaParceiroId={parceiroId}
-      />
       </>
     );
   };
@@ -891,8 +888,7 @@ export function SaldosParceirosSheet() {
                                   <CryptoHoverContent 
                                     saldos={parceiro.saldos_crypto} 
                                     totalLocked={parceiro.total_crypto_locked_usd}
-                                    parceiroId={parceiro.parceiro_id}
-                                    onSwapSuccess={() => fetchSaldosParceiros()}
+                                    onOpenSwap={() => setSwapDialog({ open: true, parceiroId: parceiro.parceiro_id })}
                                   />
                                 </HoverCardContent>
                               </HoverCard>
@@ -944,6 +940,15 @@ export function SaldosParceirosSheet() {
                   </TableBody>
                 </Table>
               </ScrollArea>
+              <SwapCryptoDialog
+                open={swapDialog.open}
+                onClose={() => setSwapDialog({ open: false, parceiroId: null })}
+                onSuccess={() => {
+                  setSwapDialog({ open: false, parceiroId: null });
+                  fetchSaldosParceiros();
+                }}
+                caixaParceiroId={swapDialog.parceiroId}
+              />
             </>
           )}
         </div>
