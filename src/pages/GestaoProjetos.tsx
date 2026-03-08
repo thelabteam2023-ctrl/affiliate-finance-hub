@@ -80,6 +80,8 @@ interface Projeto {
   perdas_confirmadas?: number;
   lucro_operacional?: number;
   lucro_by_moeda?: SaldoByMoeda;
+  /** Lucro Realizado = Saques Confirmados - Depósitos Confirmados */
+  lucro_realizado?: number;
   display_order?: number;
   investidor_id?: string | null;
 }
