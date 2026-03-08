@@ -18,7 +18,8 @@ import {
 import { ModernBarChart } from "@/components/ui/modern-bar-chart";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
-import { VisaoGeralCharts, ExtraLucroEntry } from "./VisaoGeralCharts";
+import { VisaoGeralCharts } from "./VisaoGeralCharts";
+import { fetchProjetoExtras, type ProjetoExtraEntry } from "@/services/fetchProjetoExtras";
 
 import { PerformancePorCasaCard } from "./PerformancePorCasaCard";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod } from "./StandardTimeFilter";
