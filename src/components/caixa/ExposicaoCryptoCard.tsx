@@ -176,6 +176,15 @@ export function ExposicaoCryptoCard({
               variant="ghost"
               size="icon"
               className="h-6 w-6 rounded-full hover:bg-blue-500/20"
+              onClick={() => setSwapOpen(true)}
+              title="Swap entre moedas"
+            >
+              <ArrowRightLeft className="h-3.5 w-3.5 text-muted-foreground hover:text-blue-400 transition-colors" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 rounded-full hover:bg-blue-500/20"
               onClick={() => setAddWalletOpen(true)}
               title="Adicionar wallet"
             >
