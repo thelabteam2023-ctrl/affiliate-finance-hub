@@ -52,6 +52,7 @@ import { ProjetosKanbanView } from "@/components/projetos/kanban";
 import { TIPO_PROJETO_CONFIG, TipoProjeto } from "@/types/projeto";
 import { TipoProjetoIcon } from "@/components/projetos/TipoProjetoIcon";
 import { fetchProjetoExtras } from "@/services/fetchProjetoExtras";
+import { getConsolidatedLucro } from "@/utils/consolidatedValues";
 
 interface SaldoByMoeda {
   BRL: number;
@@ -211,7 +212,7 @@ export default function GestaoProjetos() {
         // Apostas liquidadas por projeto (base canônica do lucro operacional)
         supabase
           .from("apostas_unificada")
-          .select("projeto_id, lucro_prejuizo, pl_consolidado, lucro_prejuizo_brl_referencia, moeda_operacao")
+          .select("projeto_id, lucro_prejuizo, pl_consolidado, lucro_prejuizo_brl_referencia, moeda_operacao, consolidation_currency, status")
           .in("projeto_id", finalProjetoIds)
           .eq("status", "LIQUIDADA"),
         
@@ -303,37 +304,42 @@ export default function GestaoProjetos() {
       });
       
       // Agregar lucro operacional por projeto (CANÔNICO):
+      // PADRONIZADO: Usa getConsolidatedLucro (mesma lógica do KPI do dashboard)
       // base = apostas liquidadas + extras centralizados (cashback, giros, bônus, ajustes, FX, perdas)
       const lucroByProjeto: Record<string, { BRL: number; USD: number }> = {};
       const lucroConsolidadoByProjeto: Record<string, number> = {};
 
-      // 1) Base de apostas liquidadas
+      // Função de conversão para consolidação (mesma lógica do dashboard)
+      const convertToConsolidation = (valor: number, moedaOrigem: string): number => {
+        const moeda = (moedaOrigem || 'BRL').toUpperCase();
+        if (moeda === 'BRL') return valor;
+        if (moeda === 'USD' || moeda === 'USDT' || moeda === 'USDC') return valor * USD_TO_BRL_DISPLAY;
+        return valor;
+      };
+
+      // 1) Base de apostas liquidadas — CANÔNICO: usa getConsolidatedLucro
       (apostasResult.data || []).forEach((ap: any) => {
         if (!ap.projeto_id) return;
         if (!lucroByProjeto[ap.projeto_id]) {
           lucroByProjeto[ap.projeto_id] = { BRL: 0, USD: 0 };
         }
 
+        // Breakdown por moeda (valores nominais para tooltip)
         const lucroOriginal = Number(ap.lucro_prejuizo ?? 0);
         const moeda = (ap.moeda_operacao || 'BRL').toUpperCase();
-
         if (moeda === 'USD' || moeda === 'USDT' || moeda === 'USDC') {
           lucroByProjeto[ap.projeto_id].USD += lucroOriginal;
         } else {
           lucroByProjeto[ap.projeto_id].BRL += lucroOriginal;
         }
 
-        // Total consolidado para exibição principal (prioridade alinhada ao motor financeiro)
-        if (ap.pl_consolidado != null) {
-          lucroConsolidadoByProjeto[ap.projeto_id] = (lucroConsolidadoByProjeto[ap.projeto_id] || 0) + Number(ap.pl_consolidado);
-        } else if (ap.lucro_prejuizo_brl_referencia != null) {
-          lucroConsolidadoByProjeto[ap.projeto_id] = (lucroConsolidadoByProjeto[ap.projeto_id] || 0) + Number(ap.lucro_prejuizo_brl_referencia);
-        } else {
-          const fallback = (moeda === 'USD' || moeda === 'USDT' || moeda === 'USDC')
-            ? lucroOriginal * USD_TO_BRL_DISPLAY
-            : lucroOriginal;
-          lucroConsolidadoByProjeto[ap.projeto_id] = (lucroConsolidadoByProjeto[ap.projeto_id] || 0) + fallback;
-        }
+        // Total consolidado: usa getConsolidatedLucro (MESMA FUNÇÃO do KPI)
+        const plConsolidado = getConsolidatedLucro(
+          ap as any,
+          convertToConsolidation,
+          'BRL' // Consolidação sempre em BRL para a lista de projetos
+        );
+        lucroConsolidadoByProjeto[ap.projeto_id] = (lucroConsolidadoByProjeto[ap.projeto_id] || 0) + plConsolidado;
       });
 
       // 2) Extras canônicos (mesma fonte do KPI/gráfico de evolução)
@@ -353,13 +359,16 @@ export default function GestaoProjetos() {
           const moeda = (extra.moeda || 'BRL').toUpperCase();
           const valor = Number(extra.valor || 0);
 
+          // Breakdown por moeda (nominal)
           if (moeda === 'USD' || moeda === 'USDT' || moeda === 'USDC') {
             lucroByProjeto[projetoId].USD += valor;
-            lucroConsolidadoByProjeto[projetoId] = (lucroConsolidadoByProjeto[projetoId] || 0) + (valor * USD_TO_BRL_DISPLAY);
           } else {
             lucroByProjeto[projetoId].BRL += valor;
-            lucroConsolidadoByProjeto[projetoId] = (lucroConsolidadoByProjeto[projetoId] || 0) + valor;
           }
+
+          // Consolidado: usar mesma função de conversão
+          const valorConsolidado = convertToConsolidation(valor, moeda);
+          lucroConsolidadoByProjeto[projetoId] = (lucroConsolidadoByProjeto[projetoId] || 0) + valorConsolidado;
         });
       });
       
