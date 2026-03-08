@@ -184,7 +184,8 @@ export default function ProjetoDetalhe() {
   
   // Refresh trigger - incrementado toda vez que uma aposta/bonus é criado
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  
+  const [financialMetricsOpen, setFinancialMetricsOpen] = useState(false);
+
   // KPIs should only show on performance tabs
   const showKpis = ["visao-geral", "apostas", "ciclos"].includes(activeTab);
   
