@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useTabWorkspace } from "@/hooks/useTabWorkspace";
 import { useWorkspaceChangeListener } from "@/hooks/useWorkspaceCacheClear";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
 import { 
@@ -28,7 +29,8 @@ import {
   Trash2,
   Eye,
   Star,
-  Kanban
+  Kanban,
+  Briefcase
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useProjectFavorites } from "@/hooks/useProjectFavorites";
@@ -60,6 +62,7 @@ interface Projeto {
   nome: string;
   descricao?: string | null;
   status: string;
+  tipo_projeto?: string;
   data_inicio: string | null;
   data_fim_prevista: string | null;
   orcamento_inicial: number;
@@ -76,14 +79,27 @@ interface Projeto {
   lucro_operacional?: number;
   lucro_by_moeda?: SaldoByMoeda;
   display_order?: number;
+  investidor_id?: string | null;
 }
 
 export default function GestaoProjetos() {
   const navigate = useNavigate();
   const { user, role } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   
   // SEGURANÇA: workspaceId como dependência para isolamento multi-tenant
   const { workspaceId } = useTabWorkspace();
+  
+  // Aba ativa: projetos ou broker
+  const activeSection = searchParams.get("section") || "projetos";
+  const isBrokerSection = activeSection === "broker";
+  
+  const setActiveSection = (section: string) => {
+    setSearchParams(prev => {
+      prev.set("section", section);
+      return prev;
+    });
+  };
   
   const [projetos, setProjetos] = useState<Projeto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -398,6 +414,8 @@ export default function GestaoProjetos() {
           operadores_ativos: operadoresByProjeto[proj.id] || 0,
           perdas_confirmadas: perdasByProjeto[proj.id] || 0,
           display_order: proj.display_order || 0,
+          tipo_projeto: proj.tipo_projeto || 'INTERNO',
+          investidor_id: proj.investidor_id || null,
         };
       });
       
@@ -430,7 +448,12 @@ export default function GestaoProjetos() {
   const filteredProjetos = projetos.filter((proj) => {
     const matchesSearch = proj.nome.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || proj.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    // Separar projetos BROKER dos demais
+    const projTipo = (proj as any).tipo_projeto;
+    const matchesSection = isBrokerSection 
+      ? projTipo === "BROKER" 
+      : projTipo !== "BROKER";
+    return matchesSearch && matchesStatus && matchesSection;
   });
 
   const handleOpenDialog = (projeto: Projeto | null, mode: "view" | "edit" | "create", initialTab?: string) => {
@@ -500,20 +523,39 @@ export default function GestaoProjetos() {
   return (
     <div className="flex-1 flex flex-col min-h-0 w-full max-w-full overflow-x-hidden p-4 md:p-6 lg:p-8 space-y-4">
       <PageHeader
-        title="Projetos"
-        description="Gerencie seus projetos e acompanhe o progresso"
+        title={isBrokerSection ? "Broker" : "Projetos"}
+        description={isBrokerSection 
+          ? "Gerencie projetos de contas recebidas de investidores"
+          : "Gerencie seus projetos e acompanhe o progresso"
+        }
         pagePath="/projetos"
-        pageIcon="FolderKanban"
+        pageIcon={isBrokerSection ? "Briefcase" : "FolderKanban"}
         actions={
           canCreate('projetos', 'projetos.create') && (
             <Button onClick={() => handleOpenDialog(null, "create")}>
               <Plus className="mr-2 h-4 w-4" />
-              <span className="hidden sm:inline">Novo Projeto</span>
+              <span className="hidden sm:inline">{isBrokerSection ? "Novo Projeto Broker" : "Novo Projeto"}</span>
               <span className="sm:hidden">Novo</span>
             </Button>
           )
         }
       />
+
+      {/* Section Tabs: Projetos | Broker */}
+      <div className="flex-shrink-0">
+        <Tabs value={activeSection} onValueChange={setActiveSection}>
+          <TabsList className="bg-muted/30">
+            <TabsTrigger value="projetos" className="gap-2">
+              <FolderKanban className="h-4 w-4" />
+              Projetos
+            </TabsTrigger>
+            <TabsTrigger value="broker" className="gap-2">
+              <Briefcase className="h-4 w-4" />
+              Broker
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
 
       {/* Filtros - Card com contenção */}
       <Card className="flex-shrink-0 overflow-hidden">
@@ -777,6 +819,7 @@ export default function GestaoProjetos() {
         onSuccess={fetchProjetos}
         onCreatedOpenEdit={handleCreatedOpenEdit}
         initialTab={dialogInitialTab}
+        defaultTipoProjeto={isBrokerSection ? "BROKER" : "INTERNO"}
       />
 
       <ProjetoDeleteDialog
