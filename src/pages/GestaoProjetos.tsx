@@ -212,7 +212,7 @@ export default function GestaoProjetos() {
         // Apostas liquidadas por projeto (base canônica do lucro operacional)
         supabase
           .from("apostas_unificada")
-          .select("projeto_id, lucro_prejuizo, pl_consolidado, lucro_prejuizo_brl_referencia, moeda_operacao")
+          .select("projeto_id, lucro_prejuizo, pl_consolidado, lucro_prejuizo_brl_referencia, moeda_operacao, consolidation_currency, status")
           .in("projeto_id", finalProjetoIds)
           .eq("status", "LIQUIDADA"),
         
