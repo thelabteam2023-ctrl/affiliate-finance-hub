@@ -455,7 +455,7 @@ export function SaldosParceirosSheet() {
           <div className="flex items-center gap-1">
             <button
               onClick={(e) => { e.stopPropagation(); setSwapOpen(true); }}
-              className="text-muted-foreground/60 hover:text-blue-400 transition-colors"
+              className="text-muted-foreground/60 hover:text-primary transition-colors"
               title="Swap entre moedas"
             >
               <ArrowRightLeft className="h-3 w-3" />
