@@ -247,13 +247,13 @@ export function ProjetoKanbanCard({
                   <Badge 
                     variant="outline" 
                     className={`text-[11px] px-2 py-0.5 ${
-                      lucroBRL - perdas < 0 
+                      lucroBRL < 0 
                         ? 'border-red-500/40 text-red-400 bg-red-500/10' 
                         : 'border-emerald-500/40 text-emerald-400 bg-emerald-500/10'
                     }`}
                   >
                     <CircleDollarSign className="h-3 w-3 mr-1" />
-                    BRL: {lucroBRL - perdas > 0 ? '+' : ''}{formatBRL(lucroBRL - perdas)}
+                    BRL: {lucroBRL > 0 ? '+' : ''}{formatBRL(lucroBRL)}
                   </Badge>
                 )}
                 {hasUSD && (
