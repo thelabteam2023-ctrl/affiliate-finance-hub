@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { cn } from "@/lib/utils";
 import { useTabWorkspace } from "@/hooks/useTabWorkspace";
 import { useWorkspaceChangeListener } from "@/hooks/useWorkspaceCacheClear";
 import { useNavigate, useSearchParams } from "react-router-dom";
