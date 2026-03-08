@@ -662,8 +662,6 @@ export default function GestaoProjetos() {
                     <div className="text-right">
                       <p className="text-xs text-muted-foreground">Lucro Operacional</p>
                       {(() => {
-                        const lucroBRL = projeto.lucro_by_moeda?.BRL || 0;
-                        const lucroUSD = projeto.lucro_by_moeda?.USD || 0;
                         const lucroOperacional = projeto.lucro_operacional || 0;
                         const isPositive = lucroOperacional >= 0;
                         return (
