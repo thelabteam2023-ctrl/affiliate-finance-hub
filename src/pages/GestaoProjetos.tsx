@@ -401,7 +401,7 @@ export default function GestaoProjetos() {
           },
           lucro_realizado: lucroRealizadoByProjeto[proj.id] || 0,
           operadores_ativos: operadoresByProjeto[proj.id] || 0,
-          perdas_confirmadas: perdasByProjeto[proj.id] || 0,
+          perdas_confirmadas: 0,
           display_order: proj.display_order || 0,
           tipo_projeto: proj.tipo_projeto || 'INTERNO',
           investidor_id: proj.investidor_id || null,
