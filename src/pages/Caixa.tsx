@@ -350,7 +350,7 @@ export default function Caixa() {
       const saldosPorMoeda: Record<string, number> = {};
       bookmakersBalanceData?.forEach(b => {
         const moeda = b.moeda || 'BRL';
-        saldosPorMoeda[moeda] = (saldosPorMoeda[moeda] || 0) + (b.saldo_atual || 0);
+        saldosPorMoeda[moeda] = (saldosPorMoeda[moeda] || 0) + Math.max(0, b.saldo_atual || 0);
       });
       
       // Converter para array
