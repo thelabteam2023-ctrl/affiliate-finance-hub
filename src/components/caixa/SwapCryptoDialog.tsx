@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useCotacoes } from "@/hooks/useCotacoes";
 import { useToast } from "@/hooks/use-toast";
-import { dispatchCaixaDataChanged } from "@/hooks/useInvalidateCaixaData";
+import { useInvalidateCaixaData, dispatchCaixaDataChanged } from "@/hooks/useInvalidateCaixaData";
 import {
   Dialog,
   DialogContent,
@@ -72,6 +72,7 @@ export function SwapCryptoDialog({ open, onClose, onSuccess, caixaParceiroId }: 
   const { toast } = useToast();
   const { workspaceId } = useWorkspace();
   const { cotacaoUSD, cryptoPrices } = useCotacoes(["USDT", "USDC", "BTC", "ETH", "BNB", "TRX", "SOL"]);
+  const invalidateCaixa = useInvalidateCaixaData();
 
   const [loading, setLoading] = useState(false);
   const [wallets, setWallets] = useState<WalletOption[]>([]);
@@ -322,8 +323,8 @@ export function SwapCryptoDialog({ open, onClose, onSuccess, caixaParceiroId }: 
         description: `${qtdEnviadaNum} ${coinOrigem} → ${qtdRecebidaNum} ${coinDestino}`,
       });
 
+      await invalidateCaixa({ only: ["saldosCrypto", "saldoWalletsParceiros"] });
       dispatchCaixaDataChanged();
-      setTimeout(() => dispatchCaixaDataChanged(), 600);
       onSuccess();
       onClose();
     } catch (error: any) {
