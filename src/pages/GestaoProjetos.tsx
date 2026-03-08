@@ -409,7 +409,7 @@ export default function GestaoProjetos() {
             USD: bkData?.irrecuperavelUSD || 0,
           },
           total_bookmakers: bkData?.count || 0,
-          lucro_operacional: 0,
+          lucro_operacional: lucroConsolidadoByProjeto[proj.id] || 0,
           lucro_by_moeda: {
             BRL: lucroData?.BRL || 0,
             USD: lucroData?.USD || 0,
