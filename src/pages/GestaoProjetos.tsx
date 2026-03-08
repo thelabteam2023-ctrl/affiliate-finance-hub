@@ -667,7 +667,7 @@ export default function GestaoProjetos() {
                       {(() => {
                         const lucroBRL = projeto.lucro_by_moeda?.BRL || 0;
                         const lucroUSD = projeto.lucro_by_moeda?.USD || 0;
-                        const lucroOperacional = projeto.lucro_operacional ?? (lucroBRL + (lucroUSD * USD_TO_BRL_DISPLAY));
+                        const lucroOperacional = projeto.lucro_operacional || 0;
                         const isPositive = lucroOperacional >= 0;
                         return (
                           <p className={`text-sm font-semibold ${isPositive ? 'text-emerald-500' : 'text-red-500'}`}>
