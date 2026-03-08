@@ -467,10 +467,11 @@ export default function Caixa() {
       const matchDataFim = !dataFim || dataEfetiva <= endOfDay(dataFim);
       
       // Include both APORTE and LIQUIDACAO when filter is APORTE_FINANCEIRO
-      const knownTypes = ["TRANSFERENCIA", "DEPOSITO", "SAQUE", "APORTE_FINANCEIRO"];
+      const knownTypes = ["TRANSFERENCIA", "DEPOSITO", "SAQUE", "APORTE_FINANCEIRO", "SWAP"];
       const matchTipo = filtroTipo === "TODOS" || 
         (filtroTipo === "APORTE_FINANCEIRO" && t.tipo_transacao === "APORTE_FINANCEIRO") ||
-        (filtroTipo === "OUTROS" && !knownTypes.includes(t.tipo_transacao)) ||
+        (filtroTipo === "SWAP" && (t.tipo_transacao === "SWAP_OUT" || t.tipo_transacao === "SWAP_IN")) ||
+        (filtroTipo === "OUTROS" && !knownTypes.includes(t.tipo_transacao) && t.tipo_transacao !== "SWAP_OUT" && t.tipo_transacao !== "SWAP_IN") ||
         t.tipo_transacao === filtroTipo;
       
       // Filtro por projeto usando projeto_id_snapshot (imutável, gravado no momento da transação)
