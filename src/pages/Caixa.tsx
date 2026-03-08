@@ -113,7 +113,7 @@ export default function Caixa() {
   const [saldosCrypto, setSaldosCrypto] = useState<SaldoCrypto[]>([]);
   const [saldosBookmakersPorMoeda, setSaldosBookmakersPorMoeda] = useState<Array<{ moeda: string; saldo: number }>>([]);
   const [saldoBookmakers, setSaldoBookmakers] = useState(0); // Legacy: BRL total (para CaixaTabsContainer)
-  const [saldoContasParceiros, setSaldoContasParceiros] = useState(0);
+  const [saldosContasParceiros, setSaldosContasParceiros] = useState<Array<{ moeda: string; saldo: number }>>([]);
   const [saldoWalletsParceiros, setSaldoWalletsParceiros] = useState(0);
   const [loading, setLoading] = useState(true);
   const { canCreate } = useActionAccess();
