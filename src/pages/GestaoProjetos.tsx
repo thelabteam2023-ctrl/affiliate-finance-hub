@@ -586,6 +586,8 @@ export default function GestaoProjetos() {
                   <SelectItem value="PUNTER">🎯 Punter</SelectItem>
                   <SelectItem value="BONUS">🎁 Bônus</SelectItem>
                   <SelectItem value="CASHBACK">💰 Cashback</SelectItem>
+                  <SelectItem value="CPA">🤝 CPA</SelectItem>
+                  <SelectItem value="REVENUE_SHARE">📈 Revenue Share</SelectItem>
                   <SelectItem value="OUTROS">📁 Outros</SelectItem>
                 </SelectContent>
               </Select>
