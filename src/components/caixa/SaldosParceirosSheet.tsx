@@ -426,8 +426,9 @@ export function SaldosParceirosSheet() {
     );
   };
 
-  const CryptoHoverContent = ({ saldos, totalLocked }: { saldos: ParceiroSaldoAgrupado["saldos_crypto"]; totalLocked: number }) => {
+  const CryptoHoverContent = ({ saldos, totalLocked, parceiroId, onSwapSuccess }: { saldos: ParceiroSaldoAgrupado["saldos_crypto"]; totalLocked: number; parceiroId: string; onSwapSuccess?: () => void }) => {
     const [ascending, setAscending] = useState(false);
+    const [swapOpen, setSwapOpen] = useState(false);
 
     const truncateAddr = (addr: string) => {
       if (!addr || addr.length <= 12) return addr || "—";
@@ -445,14 +446,24 @@ export function SaldosParceirosSheet() {
     const walletKeys = Object.keys(grouped).sort();
 
     return (
+      <>
       <div className="space-y-1.5">
         <div className="flex items-center justify-between pb-1 mb-0.5 border-b border-border/30">
           <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">
             Saldo por Carteira
           </p>
-          <button onClick={() => setAscending(!ascending)} className="text-muted-foreground/60 hover:text-foreground transition-colors">
-            <ArrowUpDown className="h-3 w-3" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={(e) => { e.stopPropagation(); setSwapOpen(true); }}
+              className="text-muted-foreground/60 hover:text-blue-400 transition-colors"
+              title="Swap entre moedas"
+            >
+              <ArrowRightLeft className="h-3 w-3" />
+            </button>
+            <button onClick={() => setAscending(!ascending)} className="text-muted-foreground/60 hover:text-foreground transition-colors">
+              <ArrowUpDown className="h-3 w-3" />
+            </button>
+          </div>
         </div>
         {walletKeys.map((wKey, wIdx) => {
           const wallet = grouped[wKey];
