@@ -178,6 +178,10 @@ export function CaixaTabsContainer({
             onRefresh={onRefresh}
           />
         </TabsContent>
+
+        <TabsContent value="broker" className="mt-0 p-4">
+          <BrokerTab />
+        </TabsContent>
       </Tabs>
     </Card>
   );
