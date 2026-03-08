@@ -301,8 +301,8 @@ export function SaldosParceirosSheet() {
         if (!bk.parceiro_id) return;
 
         const parceiro = getOrCreateParceiro(bk.parceiro_id, "Parceiro");
-        const saldoReal = bk.saldo_atual || 0;
-        const saldoFreebet = bk.saldo_freebet || 0;
+        const saldoReal = Math.max(0, bk.saldo_atual || 0);
+        const saldoFreebet = Math.max(0, bk.saldo_freebet || 0);
         const moeda = bk.moeda || "BRL";
         
         // Calculate operable balance in native currency
