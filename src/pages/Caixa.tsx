@@ -1055,7 +1055,6 @@ export default function Caixa() {
         onSuccess={async () => {
           await new Promise(resolve => setTimeout(resolve, 600));
           await fetchData();
-          setTimeout(() => fetchData(), 2000);
         }}
         saque={saqueParaConfirmar ? (() => {
           const walletDetail = saqueParaConfirmar.destino_wallet_id
