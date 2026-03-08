@@ -136,14 +136,12 @@ export default function GestaoProjetos() {
   const { isFavorite, toggleFavorite } = useProjectFavorites();
   const { canCreate, canEdit, canDelete } = useActionAccess();
   
-  // COTAÇÃO CENTRALIZADA - Usado APENAS para DISPLAY, não para fetch
+  // COTAÇÃO CENTRALIZADA — usada no cálculo consolidado do lucro operacional e no display
   const { cotacaoUSD, loading: loadingCotacao } = useCotacoes();
   
   // Check if user is operator (should only see linked projects)
   const isOperator = role === 'operator';
   
-  // CRITICAL: Cotação usada APENAS no render, não no fetch
-  // Isso evita o loop de dependência cotação → fetch → cotação
   const USD_TO_BRL_DISPLAY = cotacaoUSD || 5.37;
 
   const fetchProjetos = useCallback(async () => {
