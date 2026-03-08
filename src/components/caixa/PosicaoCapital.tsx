@@ -24,8 +24,8 @@ interface PosicaoCapitalProps {
   saldoCaixaCrypto: number;
   /** Saldos de bookmakers por moeda */
   saldosBookmakers: SaldoBookmakerPorMoeda[];
-  /** Saldo em contas bancárias de parceiros (BRL) */
-  saldoContasParceiros: number;
+  /** Saldos em contas bancárias de parceiros (por moeda) */
+  saldosContasParceiros: Array<{ moeda: string; saldo: number }>;
   /** Saldo em wallets de parceiros (USD) */
   saldoWalletsParceiros: number;
   /** Cotação USD/BRL atual */
