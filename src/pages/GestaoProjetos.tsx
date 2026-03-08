@@ -204,14 +204,14 @@ export default function GestaoProjetos() {
       const finalProjetoIds = projetosData.map(p => p.id);
       
       // Buscar dados agregados em paralelo
-      const [saldosRpcResult, apostasResult, operadoresResult, perdasResult, girosGratisResult, cashbackManualResult, bookmakersCountResult, depositosResult, saquesResult] = await Promise.all([
+      const [saldosRpcResult, apostasResult, operadoresResult, bookmakersCountResult, depositosResult, saquesResult] = await Promise.all([
         // USAR RPC CANÔNICA para saldo operável (inclui real + freebet + bonus - em_aposta)
         supabase.rpc("get_saldo_operavel_por_projeto", { p_projeto_ids: finalProjetoIds }),
         
-        // Apostas liquidadas por projeto (incluindo referência BRL para multi-moeda)
+        // Apostas liquidadas por projeto (base canônica do lucro operacional)
         supabase
           .from("apostas_unificada")
-          .select("projeto_id, lucro_prejuizo, lucro_prejuizo_brl_referencia, moeda_operacao")
+          .select("projeto_id, lucro_prejuizo, pl_consolidado, lucro_prejuizo_brl_referencia, moeda_operacao")
           .in("projeto_id", finalProjetoIds)
           .eq("status", "LIQUIDADA"),
         
@@ -221,27 +221,6 @@ export default function GestaoProjetos() {
           .select("projeto_id, id")
           .in("projeto_id", finalProjetoIds)
           .eq("status", "ATIVO"),
-        
-        // Perdas confirmadas por projeto
-        supabase
-          .from("projeto_perdas")
-          .select("projeto_id, valor")
-          .in("projeto_id", finalProjetoIds)
-          .eq("status", "CONFIRMADA"),
-        
-        // Giros grátis confirmados por projeto (valor_retorno é o lucro do giro)
-        // Inclui dados da bookmaker para saber a moeda correta
-        supabase
-          .from("giros_gratis")
-          .select("projeto_id, valor_retorno, bookmaker_id, bookmakers!inner(moeda)")
-          .in("projeto_id", finalProjetoIds)
-          .eq("status", "confirmado"),
-        
-        // Cashback manual por projeto (lançamentos manuais)
-        supabase
-          .from("cashback_manual")
-          .select("projeto_id, valor, moeda_operacao, valor_brl_referencia")
-          .in("projeto_id", finalProjetoIds),
         
         // Contagem de bookmakers e saldo irrecuperável por projeto
         supabase
