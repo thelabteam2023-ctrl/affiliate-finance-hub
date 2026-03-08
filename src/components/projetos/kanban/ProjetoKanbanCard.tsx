@@ -236,7 +236,7 @@ export function ProjetoKanbanCard({
                 <span>Lucro Operacional</span>
               </div>
               <span className={`text-lg font-semibold ${lucroOpDisplay?.colorClass}`}>
-                {lucroOperacional > 0 ? '+' : lucroOperacional < 0 ? '−' : ''}{formatBRL(lucroOperacional)}
+                {lucroOpDisplay?.isPositive ? '+' : ''}{formatBRL(lucroOperacional)}
               </span>
               
               {/* Breakdown por moeda */}
@@ -251,7 +251,7 @@ export function ProjetoKanbanCard({
                     }`}
                   >
                     <CircleDollarSign className="h-3 w-3 mr-1" />
-                    BRL: {lucroBRL > 0 ? '+' : lucroBRL < 0 ? '−' : ''}{formatBRL(lucroBRL)}
+                    BRL: {lucroBRL > 0 ? '+' : ''}{formatBRL(lucroBRL)}
                   </Badge>
                 )}
                 {hasUSD && (
@@ -264,7 +264,7 @@ export function ProjetoKanbanCard({
                     }`}
                   >
                     <DollarSign className="h-3 w-3 mr-1" />
-                    USD: {lucroUSD > 0 ? '+' : lucroUSD < 0 ? '−' : ''}{formatUSD(lucroUSD)}
+                    USD: {lucroUSD > 0 ? '+' : ''}{formatUSD(lucroUSD)}
                   </Badge>
                 )}
               </div>
@@ -276,7 +276,7 @@ export function ProjetoKanbanCard({
               <div className="flex items-center gap-1.5">
                 <span className="text-xs text-muted-foreground">Realizado:</span>
                 <span className={`text-sm font-medium ${lucroRealizadoDisplay?.colorClass}`}>
-                  {lucroRealizado > 0 ? '+' : lucroRealizado < 0 ? '−' : ''}{formatBRL(lucroRealizado)}
+                  {lucroRealizado > 0 ? '+' : ''}{formatBRL(lucroRealizado)}
                 </span>
               </div>
               <Tooltip>
