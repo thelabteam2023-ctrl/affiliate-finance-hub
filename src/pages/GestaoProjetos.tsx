@@ -86,6 +86,27 @@ interface Projeto {
   investidor_id?: string | null;
 }
 
+async function fetchAllRows<T>(
+  buildQuery: () => any,
+  pageSize = 1000
+): Promise<T[]> {
+  const rows: T[] = [];
+  let from = 0;
+
+  while (true) {
+    const { data, error } = await buildQuery().range(from, from + pageSize - 1);
+    if (error) throw error;
+
+    const page = (data || []) as T[];
+    rows.push(...page);
+
+    if (page.length < pageSize) break;
+    from += pageSize;
+  }
+
+  return rows;
+}
+
 export default function GestaoProjetos() {
   const navigate = useNavigate();
   const { user, role } = useAuth();
@@ -201,40 +222,43 @@ export default function GestaoProjetos() {
       
       const finalProjetoIds = projetosData.map(p => p.id);
       
-      // Buscar dados agregados em paralelo
-      const [saldosRpcResult, operadoresResult, bookmakersCountResult, depositosResult, saquesResult] = await Promise.all([
+      const [saldosRpcResult, operadoresResult, bookmakersCountResult, depositosRows, saquesRows] = await Promise.all([
         // USAR RPC CANÔNICA para saldo operável (inclui real + freebet + bonus - em_aposta)
         supabase.rpc("get_saldo_operavel_por_projeto", { p_projeto_ids: finalProjetoIds }),
-        
+
         // Operadores ativos por projeto
         supabase
           .from("operador_projetos")
           .select("projeto_id, id")
           .in("projeto_id", finalProjetoIds)
           .eq("status", "ATIVO"),
-        
+
         // Contagem de bookmakers e saldo irrecuperável por projeto
         supabase
           .from("bookmakers")
           .select("id, projeto_id, saldo_irrecuperavel, moeda")
           .in("projeto_id", finalProjetoIds)
           .eq("status", "ativo"),
-        
-        // Depósitos confirmados por projeto (para Lucro Realizado)
-        supabase
-          .from("cash_ledger")
-          .select("projeto_id_snapshot, valor")
-          .eq("status", "CONFIRMADO")
-          .eq("tipo_transacao", "DEPOSITO")
-          .in("projeto_id_snapshot", finalProjetoIds),
-        
-        // Saques confirmados por projeto (para Lucro Realizado)
-        supabase
-          .from("cash_ledger")
-          .select("projeto_id_snapshot, valor_confirmado, valor")
-          .eq("status", "CONFIRMADO")
-          .eq("tipo_transacao", "SAQUE")
-          .in("projeto_id_snapshot", finalProjetoIds),
+
+        // Depósitos confirmados por projeto (paginação + inclui virtuais)
+        fetchAllRows<any>(() =>
+          supabase
+            .from("cash_ledger")
+            .select("projeto_id_snapshot, valor")
+            .eq("status", "CONFIRMADO")
+            .in("tipo_transacao", ["DEPOSITO", "DEPOSITO_VIRTUAL"])
+            .in("projeto_id_snapshot", finalProjetoIds)
+        ),
+
+        // Saques confirmados por projeto (paginação + inclui virtuais)
+        fetchAllRows<any>(() =>
+          supabase
+            .from("cash_ledger")
+            .select("projeto_id_snapshot, valor_confirmado, valor")
+            .eq("status", "CONFIRMADO")
+            .in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])
+            .in("projeto_id_snapshot", finalProjetoIds)
+        ),
       ]);
       
       // ARQUITETURA DAG: Fetch armazena dados BRUTOS por moeda
@@ -321,12 +345,12 @@ export default function GestaoProjetos() {
       
       // Agregar Lucro Realizado por projeto: Saques - Depósitos (fluxo de caixa)
       const lucroRealizadoByProjeto: Record<string, number> = {};
-      (depositosResult.data || []).forEach((dep: any) => {
+      depositosRows.forEach((dep: any) => {
         const pid = dep.projeto_id_snapshot;
         if (!pid) return;
         lucroRealizadoByProjeto[pid] = (lucroRealizadoByProjeto[pid] || 0) - (Number(dep.valor) || 0);
       });
-      (saquesResult.data || []).forEach((saq: any) => {
+      saquesRows.forEach((saq: any) => {
         const pid = saq.projeto_id_snapshot;
         if (!pid) return;
         const valorSaque = Number(saq.valor_confirmado ?? saq.valor) || 0;
