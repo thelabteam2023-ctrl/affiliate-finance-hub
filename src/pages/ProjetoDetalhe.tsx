@@ -4,7 +4,7 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { ResponsiveTabsList, TabItem } from "@/components/ui/responsive-tabs";
@@ -18,9 +18,9 @@ import { useKpiBreakdowns } from "@/hooks/useKpiBreakdowns";
 import { useProjectFavorites } from "@/hooks/useProjectFavorites";
 import { useProjectModules } from "@/hooks/useProjectModules";
 import { useProjectTabPreference } from "@/hooks/useProjectTabPreference";
-import { 
-  ArrowLeft, 
-  FolderKanban, 
+import {
+  ArrowLeft,
+  FolderKanban,
   LayoutDashboard,
   Target,
   Link2,
@@ -41,8 +41,6 @@ import {
   Sparkles,
   Zap,
   Puzzle,
-  Plus,
-  
 } from "lucide-react";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { useCotacoes } from "@/hooks/useCotacoes";
@@ -55,7 +53,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { differenceInDays } from "date-fns";
 import { ProjetoDashboardTab } from "@/components/projeto-detalhe/ProjetoDashboardTab";
-import { FinancialMetricsPopover } from "@/components/projeto-detalhe/FinancialMetricsPopover";
+import { FinancialMetricsPanel } from "@/components/projeto-detalhe/financial-metrics/FinancialMetricsPanel";
 import { ProjetoApostasTab } from "@/components/projeto-detalhe/ProjetoApostasTab";
 import { ProjetoVinculosTab } from "@/components/projeto-detalhe/ProjetoVinculosTab";
 import { ProjetoIncidentesTab } from "@/components/projeto-detalhe/ProjetoIncidentesTab";
