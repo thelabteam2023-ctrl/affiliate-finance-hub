@@ -302,73 +302,23 @@ export default function GestaoProjetos() {
         }
       });
       
-      // Agregar lucro operacional por projeto (CANÔNICO):
-      // PADRONIZADO: Usa getConsolidatedLucro (mesma lógica do KPI do dashboard)
-      // base = apostas liquidadas + extras centralizados (cashback, giros, bônus, ajustes, FX, perdas)
+      // Agregar lucro operacional por projeto (KPI-COMPATÍVEL):
+      // FONTE ÚNICA desta tela: mesmo conjunto de módulos do KPI de Lucro do dashboard
+      const lucroKpiByProjeto = await fetchProjetosLucroOperacionalKpi({
+        projetoIds: finalProjetoIds,
+        cotacaoUSD: USD_TO_BRL_DISPLAY,
+      });
+
       const lucroByProjeto: Record<string, { BRL: number; USD: number }> = {};
       const lucroConsolidadoByProjeto: Record<string, number> = {};
 
-      // Função de conversão para consolidação (mesma lógica do dashboard)
-      const convertToConsolidation = (valor: number, moedaOrigem: string): number => {
-        const moeda = (moedaOrigem || 'BRL').toUpperCase();
-        if (moeda === 'BRL') return valor;
-        if (moeda === 'USD' || moeda === 'USDT' || moeda === 'USDC') return valor * USD_TO_BRL_DISPLAY;
-        return valor;
-      };
-
-      // 1) Base de apostas liquidadas — CANÔNICO: usa getConsolidatedLucro
-      (apostasResult.data || []).forEach((ap: any) => {
-        if (!ap.projeto_id) return;
-        if (!lucroByProjeto[ap.projeto_id]) {
-          lucroByProjeto[ap.projeto_id] = { BRL: 0, USD: 0 };
-        }
-
-        // Breakdown por moeda (valores nominais para tooltip)
-        const lucroOriginal = Number(ap.lucro_prejuizo ?? 0);
-        const moeda = (ap.moeda_operacao || 'BRL').toUpperCase();
-        if (moeda === 'USD' || moeda === 'USDT' || moeda === 'USDC') {
-          lucroByProjeto[ap.projeto_id].USD += lucroOriginal;
-        } else {
-          lucroByProjeto[ap.projeto_id].BRL += lucroOriginal;
-        }
-
-        // Total consolidado: usa getConsolidatedLucro (MESMA FUNÇÃO do KPI)
-        const plConsolidado = getConsolidatedLucro(
-          ap as any,
-          convertToConsolidation,
-          'BRL' // Consolidação sempre em BRL para a lista de projetos
-        );
-        lucroConsolidadoByProjeto[ap.projeto_id] = (lucroConsolidadoByProjeto[ap.projeto_id] || 0) + plConsolidado;
-      });
-
-      // 2) Extras canônicos (mesma fonte do KPI/gráfico de evolução)
-      const extrasByProjeto = await Promise.all(
-        finalProjetoIds.map(async (projetoId) => ({
-          projetoId,
-          extras: await fetchProjetoExtras(projetoId),
-        }))
-      );
-
-      extrasByProjeto.forEach(({ projetoId, extras }) => {
-        if (!lucroByProjeto[projetoId]) {
-          lucroByProjeto[projetoId] = { BRL: 0, USD: 0 };
-        }
-
-        extras.forEach((extra) => {
-          const moeda = (extra.moeda || 'BRL').toUpperCase();
-          const valor = Number(extra.valor || 0);
-
-          // Breakdown por moeda (nominal)
-          if (moeda === 'USD' || moeda === 'USDT' || moeda === 'USDC') {
-            lucroByProjeto[projetoId].USD += valor;
-          } else {
-            lucroByProjeto[projetoId].BRL += valor;
-          }
-
-          // Consolidado: usar mesma função de conversão
-          const valorConsolidado = convertToConsolidation(valor, moeda);
-          lucroConsolidadoByProjeto[projetoId] = (lucroConsolidadoByProjeto[projetoId] || 0) + valorConsolidado;
-        });
+      finalProjetoIds.forEach((projetoId) => {
+        const lucroData = lucroKpiByProjeto[projetoId];
+        lucroByProjeto[projetoId] = {
+          BRL: lucroData?.porMoeda.BRL || 0,
+          USD: lucroData?.porMoeda.USD || 0,
+        };
+        lucroConsolidadoByProjeto[projetoId] = lucroData?.consolidado || 0;
       });
       
       // Agregar operadores ativos por projeto
