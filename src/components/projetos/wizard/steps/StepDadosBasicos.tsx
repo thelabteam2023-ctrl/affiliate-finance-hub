@@ -22,6 +22,7 @@ import { InvestidorSelect } from "@/components/investidores/InvestidorSelect";
 import { ProjectFormData } from "../ProjectCreationWizardTypes";
 import { cn } from "@/lib/utils";
 import { TIPO_PROJETO_CONFIG, TipoProjeto } from "@/types/projeto";
+import { TipoProjetoIcon } from "@/components/projetos/TipoProjetoIcon";
 
 interface StepDadosBasicosProps {
   formData: ProjectFormData;
