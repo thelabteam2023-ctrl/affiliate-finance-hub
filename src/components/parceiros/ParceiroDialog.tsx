@@ -1710,7 +1710,8 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                         wallet={{
                           ...wallet,
                           network: rede?.nome || ""
-                        }} 
+                        }}
+                        parceiroId={parceiroId || parceiro?.id}
                       />
                     );
                   })}
