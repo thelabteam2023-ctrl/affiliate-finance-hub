@@ -376,7 +376,7 @@ export default function Caixa() {
       const contasPorMoeda: Record<string, number> = {};
       (contasSaldoData || []).forEach((row: any) => {
         const m = row.moeda || "BRL";
-        contasPorMoeda[m] = (contasPorMoeda[m] || 0) + (row.saldo || 0);
+        contasPorMoeda[m] = (contasPorMoeda[m] || 0) + Math.max(0, row.saldo || 0);
       });
       setSaldosContasParceiros(
         Object.entries(contasPorMoeda)
