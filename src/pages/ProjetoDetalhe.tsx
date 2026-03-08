@@ -801,13 +801,13 @@ export default function ProjetoDetalhe() {
             >
               <div className="flex flex-col cursor-help min-w-[80px]">
                 <span className="text-xs text-muted-foreground leading-tight">
-                  {(projetoResultado?.netProfit || 0) >= 0 ? "Lucro" : "Prejuízo"}
+                  {(kpiBreakdowns?.lucro?.total || 0) >= 0 ? "Lucro" : "Prejuízo"}
                 </span>
                 <span className={cn(
                   "text-base md:text-lg font-bold leading-tight truncate",
-                  (projetoResultado?.netProfit || 0) >= 0 ? 'text-emerald-500' : 'text-red-500'
+                  (kpiBreakdowns?.lucro?.total || 0) >= 0 ? 'text-emerald-500' : 'text-red-500'
                 )}>
-                  {formatCurrency(Math.abs(projetoResultado?.netProfit || 0))}
+                  {formatCurrency(Math.abs(kpiBreakdowns?.lucro?.total || 0))}
                 </span>
               </div>
             </KpiBreakdownTooltip>
