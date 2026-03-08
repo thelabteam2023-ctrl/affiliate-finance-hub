@@ -44,6 +44,7 @@ export function ExposicaoCryptoCard({
   const { toast } = useToast();
   const [wallets, setWallets] = useState<WalletInfo[]>([]);
   const [addWalletOpen, setAddWalletOpen] = useState(false);
+  const [swapOpen, setSwapOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const [novaWallet, setNovaWallet] = useState({
