@@ -240,9 +240,10 @@ export function SaldosParceirosSheet() {
         const parceiro = getOrCreateParceiro(conta.parceiro_id, conta.parceiro_nome);
         const moeda = conta.moeda || "BRL";
         
+        const saldoClamped = Math.max(0, conta.saldo);
         parceiro.saldos_fiat.push({
           moeda: moeda,
-          saldo: conta.saldo,
+          saldo: saldoClamped,
           banco: conta.banco,
         });
         
@@ -258,8 +259,8 @@ export function SaldosParceirosSheet() {
         
         // Calcular USD com preço atual da Binance
         const currentPrice = prices[wallet.coin] || 0;
-        const saldoUsdAtualizado = wallet.saldo_coin * currentPrice;
-        const saldoLockedUsd = (wallet.saldo_locked || 0);
+        const saldoUsdAtualizado = Math.max(0, wallet.saldo_coin * currentPrice);
+        const saldoLockedUsd = Math.max(0, wallet.saldo_locked || 0);
 
         parceiro.saldos_crypto.push({
           coin: wallet.coin,
@@ -300,8 +301,8 @@ export function SaldosParceirosSheet() {
         if (!bk.parceiro_id) return;
 
         const parceiro = getOrCreateParceiro(bk.parceiro_id, "Parceiro");
-        const saldoReal = bk.saldo_atual || 0;
-        const saldoFreebet = bk.saldo_freebet || 0;
+        const saldoReal = Math.max(0, bk.saldo_atual || 0);
+        const saldoFreebet = Math.max(0, bk.saldo_freebet || 0);
         const moeda = bk.moeda || "BRL";
         
         // Calculate operable balance in native currency

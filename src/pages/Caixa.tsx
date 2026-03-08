@@ -305,7 +305,7 @@ export default function Caixa() {
         const fiatMap: Record<string, number> = {};
         (contasSaldoData || []).forEach((row: any) => {
           const m = row.moeda || "BRL";
-          fiatMap[m] = (fiatMap[m] || 0) + (row.saldo || 0);
+          fiatMap[m] = (fiatMap[m] || 0) + Math.max(0, row.saldo || 0);
         });
         setSaldosFiat(Object.entries(fiatMap).map(([moeda, saldo]) => ({ moeda, saldo })));
       } else {
@@ -326,8 +326,8 @@ export default function Caixa() {
         (walletsSaldoData || []).forEach((row: any) => {
           const c = row.coin || "USDT";
           if (!cryptoMap[c]) cryptoMap[c] = { saldo_coin: 0, saldo_usd: 0 };
-          cryptoMap[c].saldo_coin += (row.saldo_coin || 0);
-          cryptoMap[c].saldo_usd += (row.saldo_usd || 0);
+          cryptoMap[c].saldo_coin += Math.max(0, row.saldo_coin || 0);
+          cryptoMap[c].saldo_usd += Math.max(0, row.saldo_usd || 0);
         });
         setSaldosCrypto(Object.entries(cryptoMap).map(([coin, vals]) => ({ 
           coin, 
@@ -350,7 +350,7 @@ export default function Caixa() {
       const saldosPorMoeda: Record<string, number> = {};
       bookmakersBalanceData?.forEach(b => {
         const moeda = b.moeda || 'BRL';
-        saldosPorMoeda[moeda] = (saldosPorMoeda[moeda] || 0) + (b.saldo_atual || 0);
+        saldosPorMoeda[moeda] = (saldosPorMoeda[moeda] || 0) + Math.max(0, b.saldo_atual || 0);
       });
       
       // Converter para array
@@ -376,7 +376,7 @@ export default function Caixa() {
       const contasPorMoeda: Record<string, number> = {};
       (contasSaldoData || []).forEach((row: any) => {
         const m = row.moeda || "BRL";
-        contasPorMoeda[m] = (contasPorMoeda[m] || 0) + (row.saldo || 0);
+        contasPorMoeda[m] = (contasPorMoeda[m] || 0) + Math.max(0, row.saldo || 0);
       });
       setSaldosContasParceiros(
         Object.entries(contasPorMoeda)
@@ -393,7 +393,7 @@ export default function Caixa() {
       }
       const { data: walletsSaldoData } = await walletsQuery;
       
-      const totalWallets = walletsSaldoData?.reduce((sum, w) => sum + (w.saldo_usd || 0), 0) || 0;
+      const totalWallets = walletsSaldoData?.reduce((sum, w) => sum + Math.max(0, w.saldo_usd || 0), 0) || 0;
       setSaldoWalletsParceiros(totalWallets);
 
     } catch (error: any) {
