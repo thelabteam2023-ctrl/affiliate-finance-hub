@@ -1,9 +1,10 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
-import { BarChart3, History, RefreshCcw } from "lucide-react";
+import { BarChart3, History, RefreshCcw, Briefcase } from "lucide-react";
 import { FluxoFinanceiroOperacional } from "./FluxoFinanceiroOperacional";
 import { HistoricoMovimentacoes } from "./HistoricoMovimentacoes";
 import { ConciliacaoSaldos } from "./ConciliacaoSaldos";
+import { BrokerTab } from "@/components/broker/BrokerTab";
 import type { PendingTransaction } from "@/hooks/usePendingTransactions";
 
 interface LabelInfo {
@@ -114,6 +115,10 @@ export function CaixaTabsContainer({
                 </span>
               )}
             </TabsTrigger>
+            <TabsTrigger value="broker" className="gap-2">
+              <Briefcase className="h-4 w-4" />
+              Broker
+            </TabsTrigger>
           </TabsList>
         </div>
 
@@ -172,6 +177,10 @@ export function CaixaTabsContainer({
             contasBancarias={contasBancarias}
             onRefresh={onRefresh}
           />
+        </TabsContent>
+
+        <TabsContent value="broker" className="mt-0 p-4">
+          <BrokerTab />
         </TabsContent>
       </Tabs>
     </Card>
