@@ -322,17 +322,25 @@ export default function GestaoProjetos() {
       });
       
       // Agregar Lucro Realizado por projeto: Saques - Depósitos (fluxo de caixa)
+      // COM conversão de moeda para paridade com Indicadores Financeiros
+      const convertToConsolidation = (valor: number, moeda: string) => {
+        if (moeda === 'USD') return valor * USD_TO_BRL_DISPLAY;
+        return valor;
+      };
+      
       const lucroRealizadoByProjeto: Record<string, number> = {};
       (depositosResult.data || []).forEach((dep: any) => {
         const pid = dep.projeto_id_snapshot;
         if (!pid) return;
-        lucroRealizadoByProjeto[pid] = (lucroRealizadoByProjeto[pid] || 0) - (Number(dep.valor) || 0);
+        const valorConvertido = convertToConsolidation(Number(dep.valor) || 0, dep.moeda || 'BRL');
+        lucroRealizadoByProjeto[pid] = (lucroRealizadoByProjeto[pid] || 0) - valorConvertido;
       });
       (saquesResult.data || []).forEach((saq: any) => {
         const pid = saq.projeto_id_snapshot;
         if (!pid) return;
         const valorSaque = Number(saq.valor_confirmado ?? saq.valor) || 0;
-        lucroRealizadoByProjeto[pid] = (lucroRealizadoByProjeto[pid] || 0) + valorSaque;
+        const valorConvertido = convertToConsolidation(valorSaque, saq.moeda || 'BRL');
+        lucroRealizadoByProjeto[pid] = (lucroRealizadoByProjeto[pid] || 0) + valorConvertido;
       });
       
       // Map to Projeto interface com dados agregados - APENAS DADOS BRUTOS
