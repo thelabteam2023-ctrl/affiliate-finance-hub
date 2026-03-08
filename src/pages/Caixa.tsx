@@ -1036,8 +1036,6 @@ export default function Caixa() {
           setDialogDefaultData(null);
           await new Promise(resolve => setTimeout(resolve, 600));
           await fetchData();
-          // Safety re-fetch: views may lag behind
-          setTimeout(() => fetchData(), 2000);
         }}
         defaultTipoTransacao={dialogDefaultData?.tipoTransacao}
         defaultOrigemBookmakerId={dialogDefaultData?.origemBookmakerId}
