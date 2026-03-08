@@ -25,6 +25,7 @@ import { ProjectFormData } from "../ProjectCreationWizardTypes";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { TIPO_PROJETO_CONFIG, TipoProjeto } from "@/types/projeto";
+import { TipoProjetoIcon } from "@/components/projetos/TipoProjetoIcon";
 
 interface OperadorVinculado {
   operador_id: string;
