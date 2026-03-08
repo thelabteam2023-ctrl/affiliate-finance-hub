@@ -243,7 +243,7 @@ export default function ProjetoDetalhe() {
   // Handle tab change with module activation prompt
   const handleTabChange = (tabValue: string) => {
     // Base tabs that are always available (don't need module activation)
-    const baseTabs = ["visao-geral", "apostas", "vinculos", "gestao", "modulos", "ciclos", "incidentes", "marco-zero"];
+    const baseTabs = ["visao-geral", "apostas", "vinculos", "gestao", "modulos", "ciclos", "incidentes"];
     
     if (baseTabs.includes(tabValue)) {
       setActiveTab(tabValue);
