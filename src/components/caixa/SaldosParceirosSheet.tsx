@@ -888,8 +888,7 @@ export function SaldosParceirosSheet() {
                                   <CryptoHoverContent 
                                     saldos={parceiro.saldos_crypto} 
                                     totalLocked={parceiro.total_crypto_locked_usd}
-                                    parceiroId={parceiro.parceiro_id}
-                                    onSwapSuccess={() => fetchSaldosParceiros()}
+                                    onOpenSwap={() => setSwapDialog({ open: true, parceiroId: parceiro.parceiro_id })}
                                   />
                                 </HoverCardContent>
                               </HoverCard>
