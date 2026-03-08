@@ -88,7 +88,7 @@ interface ExtraLucroEntry {
   data: string;
   valor: number;
   moeda?: string;
-  tipo: 'cashback' | 'giro_gratis' | 'freebet' | 'bonus' | 'promocional' | 'ajuste_saldo' | 'resultado_cambial' | 'conciliacao';
+  tipo: string;
   bookmaker_id?: string;
   bookmaker_nome?: string;
 }
