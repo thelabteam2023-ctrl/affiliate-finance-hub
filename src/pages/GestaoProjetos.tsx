@@ -380,10 +380,7 @@ export default function GestaoProjetos() {
     } finally {
       setLoading(false);
     }
-  // CRITICAL FIX: Removed cotacaoUSD from dependencies to break the refresh cycle
-  // cotacaoUSD is only used for DISPLAY conversion, not for data fetching
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, isOperator, workspaceId]);
+  }, [user, isOperator, workspaceId, USD_TO_BRL_DISPLAY]);
 
   // SEGURANÇA: Refetch quando workspace muda
   useEffect(() => {
