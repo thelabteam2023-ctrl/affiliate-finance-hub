@@ -240,9 +240,10 @@ export function SaldosParceirosSheet() {
         const parceiro = getOrCreateParceiro(conta.parceiro_id, conta.parceiro_nome);
         const moeda = conta.moeda || "BRL";
         
+        const saldoClamped = Math.max(0, conta.saldo);
         parceiro.saldos_fiat.push({
           moeda: moeda,
-          saldo: conta.saldo,
+          saldo: saldoClamped,
           banco: conta.banco,
         });
         
