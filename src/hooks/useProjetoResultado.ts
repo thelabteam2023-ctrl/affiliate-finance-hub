@@ -123,7 +123,6 @@ export function useProjetoResultado({
         .single();
       
       const moedaConsolidacao = projetoData?.moeda_consolidacao || 'BRL';
-      const marcoZeroAt = projetoData?.marco_zero_at || null;
       
       // PADRONIZADO: Usar exclusivamente a função oficial de conversão passada pelo caller.
       // Isso garante paridade com todas as outras abas (Bônus, Breakdowns, etc.)
