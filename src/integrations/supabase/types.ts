@@ -1269,6 +1269,7 @@ export type Database = {
           estado_conta: string | null
           id: string
           instance_identifier: string | null
+          investidor_id: string | null
           link_origem: string | null
           login_password_encrypted: string
           login_username: string
@@ -1298,6 +1299,7 @@ export type Database = {
           estado_conta?: string | null
           id?: string
           instance_identifier?: string | null
+          investidor_id?: string | null
           link_origem?: string | null
           login_password_encrypted: string
           login_username: string
@@ -1327,6 +1329,7 @@ export type Database = {
           estado_conta?: string | null
           id?: string
           instance_identifier?: string | null
+          investidor_id?: string | null
           link_origem?: string | null
           login_password_encrypted?: string
           login_username?: string
@@ -1363,6 +1366,27 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_community_bookmaker_stats"
             referencedColumns: ["bookmaker_catalogo_id"]
+          },
+          {
+            foreignKeyName: "bookmakers_investidor_id_fkey"
+            columns: ["investidor_id"]
+            isOneToOne: false
+            referencedRelation: "investidores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookmakers_investidor_id_fkey"
+            columns: ["investidor_id"]
+            isOneToOne: false
+            referencedRelation: "v_roi_investidores"
+            referencedColumns: ["investidor_id"]
+          },
+          {
+            foreignKeyName: "bookmakers_investidor_id_fkey"
+            columns: ["investidor_id"]
+            isOneToOne: false
+            referencedRelation: "v_roi_investidores_multimoeda"
+            referencedColumns: ["investidor_id"]
           },
           {
             foreignKeyName: "bookmakers_parceiro_id_fkey"
