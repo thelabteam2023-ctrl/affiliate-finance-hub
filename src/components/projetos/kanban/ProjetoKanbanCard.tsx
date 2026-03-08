@@ -276,7 +276,10 @@ export function ProjetoKanbanCard({
             <Popover>
               <PopoverTrigger asChild>
                 <button className="flex items-center justify-center gap-2 py-1.5 bg-muted/30 rounded-md w-full hover:bg-muted/50 transition-colors cursor-pointer">
-                  <ArrowDownUp className={`h-3.5 w-3.5 ${lucroRealizadoDisplay?.colorClass || 'text-muted-foreground'}`} />
+                  {lucroRealizadoDisplay?.isPositive || lucroRealizadoDisplay?.isZero
+                    ? <TrendingUp className={`h-3.5 w-3.5 ${lucroRealizadoDisplay?.colorClass || 'text-muted-foreground'}`} />
+                    : <TrendingDown className={`h-3.5 w-3.5 ${lucroRealizadoDisplay?.colorClass || 'text-muted-foreground'}`} />
+                  }
                   <div className="flex items-center gap-1.5">
                     <span className="text-xs text-muted-foreground">Realizado:</span>
                     <span className={`text-sm font-medium ${lucroRealizadoDisplay?.colorClass}`}>
