@@ -573,9 +573,24 @@ export default function GestaoProjetos() {
               />
             </div>
             
-            <div className="flex gap-2 flex-shrink-0">
+            <div className="flex gap-2 flex-shrink-0 flex-wrap">
+              <Select value={tipoFilter} onValueChange={setTipoFilter}>
+                <SelectTrigger className="w-full sm:w-[140px] md:w-[160px]">
+                  <SelectValue placeholder="Tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos Tipos</SelectItem>
+                  <SelectItem value="SUREBET">⚡ Surebet</SelectItem>
+                  <SelectItem value="DUPLO_GREEN">🍀 Duplo Green</SelectItem>
+                  <SelectItem value="VALUEBET">📊 Valuebet</SelectItem>
+                  <SelectItem value="PUNTER">🎯 Punter</SelectItem>
+                  <SelectItem value="BONUS">🎁 Bônus</SelectItem>
+                  <SelectItem value="CASHBACK">💰 Cashback</SelectItem>
+                  <SelectItem value="OUTROS">📁 Outros</SelectItem>
+                </SelectContent>
+              </Select>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-full sm:w-[140px] md:w-[180px]">
+                <SelectTrigger className="w-full sm:w-[140px] md:w-[160px]">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
