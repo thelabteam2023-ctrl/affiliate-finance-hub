@@ -105,6 +105,7 @@ export default function GestaoProjetos() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [tipoFilter, setTipoFilter] = useState<string>("all");
   
   // Recuperar preferência de visualização do localStorage
   const [viewMode, setViewMode] = useState<"list" | "kanban">(() => {
@@ -448,12 +449,13 @@ export default function GestaoProjetos() {
   const filteredProjetos = projetos.filter((proj) => {
     const matchesSearch = proj.nome.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || proj.status === statusFilter;
+    const matchesTipo = tipoFilter === "all" || proj.tipo_projeto === tipoFilter;
     // Separar projetos BROKER dos demais
     const projTipo = (proj as any).tipo_projeto;
     const matchesSection = isBrokerSection 
       ? projTipo === "BROKER" 
       : projTipo !== "BROKER";
-    return matchesSearch && matchesStatus && matchesSection;
+    return matchesSearch && matchesStatus && matchesTipo && matchesSection;
   });
 
   const handleOpenDialog = (projeto: Projeto | null, mode: "view" | "edit" | "create", initialTab?: string) => {
@@ -571,9 +573,24 @@ export default function GestaoProjetos() {
               />
             </div>
             
-            <div className="flex gap-2 flex-shrink-0">
+            <div className="flex gap-2 flex-shrink-0 flex-wrap">
+              <Select value={tipoFilter} onValueChange={setTipoFilter}>
+                <SelectTrigger className="w-full sm:w-[140px] md:w-[160px]">
+                  <SelectValue placeholder="Tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos Tipos</SelectItem>
+                  <SelectItem value="SUREBET">⚡ Surebet</SelectItem>
+                  <SelectItem value="DUPLO_GREEN">🍀 Duplo Green</SelectItem>
+                  <SelectItem value="VALUEBET">📊 Valuebet</SelectItem>
+                  <SelectItem value="PUNTER">🎯 Punter</SelectItem>
+                  <SelectItem value="BONUS">🎁 Bônus</SelectItem>
+                  <SelectItem value="CASHBACK">💰 Cashback</SelectItem>
+                  <SelectItem value="OUTROS">📁 Outros</SelectItem>
+                </SelectContent>
+              </Select>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-full sm:w-[140px] md:w-[180px]">
+                <SelectTrigger className="w-full sm:w-[140px] md:w-[160px]">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
