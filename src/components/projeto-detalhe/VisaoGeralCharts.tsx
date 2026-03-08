@@ -94,13 +94,9 @@ interface EvolucaoData {
   incluiExtras?: boolean;
 }
 
-// Interface para entradas de lucro extra (cashback, giros grátis, freebets, etc.)
-export interface ExtraLucroEntry {
-  data: string; // formato YYYY-MM-DD ou ISO
-  valor: number;
-  moeda?: string; // Moeda original do valor (para conversão multi-moeda)
-  tipo: 'cashback' | 'giro_gratis' | 'freebet' | 'bonus' | 'promocional' | 'ajuste_saldo' | 'resultado_cambial' | 'conciliacao';
-}
+// Re-exporta o tipo canônico para compatibilidade com consumidores existentes
+export type { ProjetoExtraEntry as ExtraLucroEntry } from '@/services/fetchProjetoExtras';
+import type { ProjetoExtraEntry as ExtraLucroEntry } from '@/services/fetchProjetoExtras';
 
 interface VisaoGeralChartsProps {
   apostas: ApostaBase[];
