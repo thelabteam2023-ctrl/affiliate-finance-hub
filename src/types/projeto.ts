@@ -20,60 +20,70 @@ export const TIPO_PROJETO_CONFIG: Record<TipoProjeto, {
   label: string; 
   color: string; 
   icon: string;
+  lucideIcon: string;
   description: string;
 }> = {
   SUREBET: { 
     label: 'Surebet', 
     color: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30',
     icon: '⚡',
+    lucideIcon: 'Zap',
     description: 'Arbitragem entre casas',
   },
   DUPLO_GREEN: { 
     label: 'Duplo Green', 
     color: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
     icon: '🍀',
+    lucideIcon: 'Clover',
     description: 'Operações de duplo green',
   },
   VALUEBET: { 
     label: 'Valuebet', 
     color: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
     icon: '📊',
+    lucideIcon: 'BarChart3',
     description: 'Apostas de valor esperado positivo',
   },
   PUNTER: { 
     label: 'Punter', 
     color: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
     icon: '🎯',
+    lucideIcon: 'Target',
     description: 'Apostas tradicionais',
   },
   BONUS: { 
     label: 'Bônus', 
     color: 'bg-rose-500/20 text-rose-400 border-rose-500/30',
     icon: '🎁',
+    lucideIcon: 'Gift',
     description: 'Extração de bônus',
   },
   CASHBACK: { 
     label: 'Cashback', 
     color: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
     icon: '💰',
+    lucideIcon: 'CircleDollarSign',
     description: 'Operações de cashback',
   },
   CPA: {
     label: 'CPA',
     color: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
     icon: '🤝',
+    lucideIcon: 'Handshake',
     description: 'Custo por aquisição',
   },
   REVENUE_SHARE: {
     label: 'Revenue Share',
     color: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30',
     icon: '📈',
+    lucideIcon: 'TrendingUp',
     description: 'Compartilhamento de receita',
   },
   OUTROS: { 
     label: 'Outros', 
     color: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
     icon: '📁',
+    lucideIcon: 'FolderOpen',
     description: 'Outros tipos de operação',
   },
 };

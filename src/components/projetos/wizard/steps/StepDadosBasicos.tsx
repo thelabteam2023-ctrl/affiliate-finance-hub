@@ -22,6 +22,7 @@ import { InvestidorSelect } from "@/components/investidores/InvestidorSelect";
 import { ProjectFormData } from "../ProjectCreationWizardTypes";
 import { cn } from "@/lib/utils";
 import { TIPO_PROJETO_CONFIG, TipoProjeto } from "@/types/projeto";
+import { TipoProjetoIcon } from "@/components/projetos/TipoProjetoIcon";
 
 interface StepDadosBasicosProps {
   formData: ProjectFormData;
@@ -79,7 +80,7 @@ export function StepDadosBasicos({ formData, onChange }: StepDadosBasicosProps) 
               {Object.entries(TIPO_PROJETO_CONFIG).map(([key, config]) => (
                 <SelectItem key={key} value={key}>
                   <div className="flex items-center gap-2">
-                    <span>{config.icon}</span>
+                    <TipoProjetoIcon lucideIcon={config.lucideIcon} className="h-3.5 w-3.5" />
                     <span>{config.label}</span>
                   </div>
                 </SelectItem>
