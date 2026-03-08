@@ -252,7 +252,7 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
   // ---- useQuery: Extras lucro ----
   const { data: extrasLucro = [] } = useQuery({
     queryKey: ["projeto-dashboard-extras", projetoId],
-    queryFn: () => fetchExtrasLucroFn(projetoId),
+    queryFn: () => fetchProjetoExtras(projetoId),
     staleTime: STALE_TIME,
     gcTime: GC_TIME,
   });
