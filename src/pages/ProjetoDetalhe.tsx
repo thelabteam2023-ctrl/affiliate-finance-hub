@@ -747,129 +747,133 @@ export default function ProjetoDetalhe() {
 
       {/* Summary Bar - KPIs compactos em faixa horizontal */}
       {showKpis && (
-        <div className="flex-shrink-0 rounded-lg border border-border/60 bg-card/60 backdrop-blur px-4 py-2.5" style={{ maxHeight: "100px" }}>
-          <div className="flex items-center justify-center gap-4 md:gap-6 flex-wrap">
-            {/* Saldo Operável — destaque principal */}
-            <SaldoOperavelCard projetoId={id!} variant="compact" />
+        <div className="flex-shrink-0 rounded-lg border border-border/60 bg-card/60 backdrop-blur px-4 py-2.5">
+          <Collapsible open={financialMetricsOpen} onOpenChange={setFinancialMetricsOpen}>
+            <div className="flex items-center justify-center gap-4 md:gap-6 flex-wrap">
+              {/* Saldo Operável — destaque principal */}
+              <SaldoOperavelCard projetoId={id!} variant="compact" />
 
-            <div className="h-8 w-px bg-border/50 hidden sm:block flex-shrink-0" />
+              <div className="h-8 w-px bg-border/50 hidden sm:block flex-shrink-0" />
 
-            {/* Apostas */}
-            <CountBreakdownTooltip
-              breakdown={kpiBreakdowns?.apostas || null}
-              title="Entradas por Módulo"
-            >
-              <div className="flex flex-col cursor-help min-w-[70px]">
-                <span className="text-xs text-muted-foreground leading-tight">Apostas</span>
-                <span className="text-base md:text-lg font-bold leading-tight">{apostasResumo?.total_apostas || 0}</span>
-                <div className="flex items-center gap-2 text-xs leading-tight mt-0.5">
-                  <span className="inline-flex items-center gap-0.5 text-emerald-500 font-semibold">
-                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                    {apostasResumo?.greens || 0}
-                  </span>
-                  <span className="inline-flex items-center gap-0.5 text-red-500 font-semibold">
-                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500" />
-                    {apostasResumo?.reds || 0}
-                  </span>
-                  <span className="inline-flex items-center gap-0.5 text-muted-foreground font-semibold">
-                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-muted-foreground/60" />
-                    {apostasResumo?.voids || 0}
-                  </span>
-                </div>
-              </div>
-            </CountBreakdownTooltip>
-
-            <div className="h-8 w-px bg-border/50 hidden sm:block flex-shrink-0" />
-
-            {/* Volume */}
-            {/* Volume — usar .total já consolidado pelo useKpiBreakdowns (getConsolidatedStake) */}
-            <div className="flex flex-col min-w-[80px]">
-              <span className="text-xs text-muted-foreground leading-tight">Volume</span>
-              <span className="text-base md:text-lg font-bold leading-tight truncate">
-                {formatCurrency(kpiBreakdowns?.volume?.total || 0)}
-              </span>
-            </div>
-
-            <div className="h-8 w-px bg-border/50 hidden sm:block flex-shrink-0" />
-
-            {/* Lucro/Prejuízo */}
-            <KpiBreakdownTooltip
-              breakdown={kpiBreakdowns?.lucro || null}
-              formatValue={formatCurrency}
-              title="Resultado por Estratégia"
-            >
-              <div className="flex flex-col cursor-help min-w-[80px]">
-                <span className="text-xs text-muted-foreground leading-tight">
-                  {(kpiBreakdowns?.lucro?.total || 0) >= 0 ? "Lucro" : "Prejuízo"}
-                </span>
-                <span className={cn(
-                  "text-base md:text-lg font-bold leading-tight truncate",
-                  (kpiBreakdowns?.lucro?.total || 0) >= 0 ? 'text-emerald-500' : 'text-red-500'
-                )}>
-                  {formatCurrency(Math.abs(kpiBreakdowns?.lucro?.total || 0))}
-                </span>
-              </div>
-            </KpiBreakdownTooltip>
-
-            <div className="h-8 w-px bg-border/50 hidden sm:block flex-shrink-0" />
-
-            {/* ROI */}
-            <TooltipProvider>
-              <Tooltip delayDuration={200}>
-                <TooltipTrigger asChild>
-                  <div className="flex flex-col cursor-help min-w-[50px]">
-                    <span className="text-xs text-muted-foreground leading-tight">ROI</span>
-                    <span className={cn(
-                      "text-base md:text-lg font-bold leading-tight",
-                      (kpiBreakdowns?.roi?.total || 0) >= 0 ? 'text-emerald-500' : 'text-red-500'
-                    )}>
-                      {(kpiBreakdowns?.roi?.total || 0).toFixed(2)}%
+              {/* Apostas */}
+              <CountBreakdownTooltip
+                breakdown={kpiBreakdowns?.apostas || null}
+                title="Entradas por Módulo"
+              >
+                <div className="flex flex-col cursor-help min-w-[70px]">
+                  <span className="text-xs text-muted-foreground leading-tight">Apostas</span>
+                  <span className="text-base md:text-lg font-bold leading-tight">{apostasResumo?.total_apostas || 0}</span>
+                  <div className="flex items-center gap-2 text-xs leading-tight mt-0.5">
+                    <span className="inline-flex items-center gap-0.5 text-emerald-500 font-semibold">
+                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                      {apostasResumo?.greens || 0}
+                    </span>
+                    <span className="inline-flex items-center gap-0.5 text-red-500 font-semibold">
+                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500" />
+                      {apostasResumo?.reds || 0}
+                    </span>
+                    <span className="inline-flex items-center gap-0.5 text-muted-foreground font-semibold">
+                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-muted-foreground/60" />
+                      {apostasResumo?.voids || 0}
                     </span>
                   </div>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="max-w-[240px] p-3" sideOffset={8}>
-                  <div className="space-y-2">
-                    <p className="text-xs font-semibold border-b border-border pb-1.5">Cálculo do ROI</p>
-                    <div className="space-y-1 text-xs">
-                      <div className="flex justify-between gap-3">
-                        <span className="text-muted-foreground">Lucro Total:</span>
-                        <span className={(kpiBreakdowns?.roi?.lucroTotal || 0) >= 0 ? "text-emerald-500" : "text-red-500"}>
-                          {formatCurrency(kpiBreakdowns?.roi?.lucroTotal || 0)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between gap-3">
-                        <span className="text-muted-foreground">Volume Total:</span>
-                        <span>{formatCurrency(kpiBreakdowns?.roi?.volumeTotal || 0)}</span>
-                      </div>
-                    </div>
-                    <div className="border-t border-border pt-1.5 text-xs">
-                      <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">ROI = Lucro ÷ Volume</span>
-                        <span className={cn(
-                          "font-bold",
-                          (kpiBreakdowns?.roi?.total || 0) >= 0 ? "text-emerald-500" : "text-red-500"
-                        )}>
-                          {(kpiBreakdowns?.roi?.total || 0).toFixed(2)}%
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+                </div>
+              </CountBreakdownTooltip>
 
-            {/* + Mais Indicadores */}
-            <Popover>
-              <PopoverTrigger asChild>
+              <div className="h-8 w-px bg-border/50 hidden sm:block flex-shrink-0" />
+
+              {/* Volume */}
+              {/* Volume — usar .total já consolidado pelo useKpiBreakdowns (getConsolidatedStake) */}
+              <div className="flex flex-col min-w-[80px]">
+                <span className="text-xs text-muted-foreground leading-tight">Volume</span>
+                <span className="text-base md:text-lg font-bold leading-tight truncate">
+                  {formatCurrency(kpiBreakdowns?.volume?.total || 0)}
+                </span>
+              </div>
+
+              <div className="h-8 w-px bg-border/50 hidden sm:block flex-shrink-0" />
+
+              {/* Lucro/Prejuízo */}
+              <KpiBreakdownTooltip
+                breakdown={kpiBreakdowns?.lucro || null}
+                formatValue={formatCurrency}
+                title="Resultado por Estratégia"
+              >
+                <div className="flex flex-col cursor-help min-w-[80px]">
+                  <span className="text-xs text-muted-foreground leading-tight">
+                    {(kpiBreakdowns?.lucro?.total || 0) >= 0 ? "Lucro" : "Prejuízo"}
+                  </span>
+                  <span className={cn(
+                    "text-base md:text-lg font-bold leading-tight truncate",
+                    (kpiBreakdowns?.lucro?.total || 0) >= 0 ? 'text-emerald-500' : 'text-red-500'
+                  )}>
+                    {formatCurrency(Math.abs(kpiBreakdowns?.lucro?.total || 0))}
+                  </span>
+                </div>
+              </KpiBreakdownTooltip>
+
+              <div className="h-8 w-px bg-border/50 hidden sm:block flex-shrink-0" />
+
+              {/* ROI */}
+              <TooltipProvider>
+                <Tooltip delayDuration={200}>
+                  <TooltipTrigger asChild>
+                    <div className="flex flex-col cursor-help min-w-[50px]">
+                      <span className="text-xs text-muted-foreground leading-tight">ROI</span>
+                      <span className={cn(
+                        "text-base md:text-lg font-bold leading-tight",
+                        (kpiBreakdowns?.roi?.total || 0) >= 0 ? 'text-emerald-500' : 'text-red-500'
+                      )}>
+                        {(kpiBreakdowns?.roi?.total || 0).toFixed(2)}%
+                      </span>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-[240px] p-3" sideOffset={8}>
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold border-b border-border pb-1.5">Cálculo do ROI</p>
+                      <div className="space-y-1 text-xs">
+                        <div className="flex justify-between gap-3">
+                          <span className="text-muted-foreground">Lucro Total:</span>
+                          <span className={(kpiBreakdowns?.roi?.lucroTotal || 0) >= 0 ? "text-emerald-500" : "text-red-500"}>
+                            {formatCurrency(kpiBreakdowns?.roi?.lucroTotal || 0)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between gap-3">
+                          <span className="text-muted-foreground">Volume Total:</span>
+                          <span>{formatCurrency(kpiBreakdowns?.roi?.volumeTotal || 0)}</span>
+                        </div>
+                      </div>
+                      <div className="border-t border-border pt-1.5 text-xs">
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground">ROI = Lucro ÷ Volume</span>
+                          <span className={cn(
+                            "font-bold",
+                            (kpiBreakdowns?.roi?.total || 0) >= 0 ? "text-emerald-500" : "text-red-500"
+                          )}>
+                            {(kpiBreakdowns?.roi?.total || 0).toFixed(2)}%
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
+              <CollapsibleTrigger asChild>
                 <button className="flex items-center justify-center h-7 w-7 rounded-md border border-border/50 bg-muted/40 hover:bg-accent transition-colors flex-shrink-0">
-                  <Plus className="h-3.5 w-3.5 text-muted-foreground" />
+                  <ChevronDown className={cn("h-3.5 w-3.5 text-muted-foreground transition-transform", financialMetricsOpen && "rotate-180")} />
                 </button>
-              </PopoverTrigger>
-              <PopoverContent side="bottom" align="end" className="p-0 w-auto" sideOffset={8}>
-                <FinancialMetricsPopover projetoId={id!} />
-              </PopoverContent>
-            </Popover>
-          </div>
+              </CollapsibleTrigger>
+            </div>
+
+            <CollapsibleContent className="pt-3">
+              <div className="flex justify-end">
+                <div className="rounded-lg border border-border/50 bg-background/70">
+                  <FinancialMetricsPanel projetoId={id!} className="p-4 w-[340px] space-y-0" />
+                </div>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
         </div>
       )}
 
