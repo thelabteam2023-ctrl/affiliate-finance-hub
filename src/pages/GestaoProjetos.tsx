@@ -345,12 +345,12 @@ export default function GestaoProjetos() {
       
       // Agregar Lucro Realizado por projeto: Saques - Depósitos (fluxo de caixa)
       const lucroRealizadoByProjeto: Record<string, number> = {};
-      (depositosResult.data || []).forEach((dep: any) => {
+      depositosRows.forEach((dep: any) => {
         const pid = dep.projeto_id_snapshot;
         if (!pid) return;
         lucroRealizadoByProjeto[pid] = (lucroRealizadoByProjeto[pid] || 0) - (Number(dep.valor) || 0);
       });
-      (saquesResult.data || []).forEach((saq: any) => {
+      saquesRows.forEach((saq: any) => {
         const pid = saq.projeto_id_snapshot;
         if (!pid) return;
         const valorSaque = Number(saq.valor_confirmado ?? saq.valor) || 0;
