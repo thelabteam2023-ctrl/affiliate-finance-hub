@@ -12,12 +12,18 @@ import {
   Trash2, 
   Eye, 
   Star,
-  GripVertical
+  GripVertical,
+  TrendingUp,
+  TrendingDown,
+  ArrowDownUp,
+  CircleDollarSign,
+  DollarSign,
+  Info,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ProjectFinancialDisplay } from "@/components/projetos/ProjectFinancialDisplay";
 import { cn } from "@/lib/utils";
+import { getFinancialDisplay } from "@/lib/financial-display";
 
 interface SaldoByMoeda {
   BRL: number;
@@ -35,6 +41,7 @@ interface Projeto {
   saldo_bookmakers_by_moeda?: SaldoByMoeda;
   lucro_by_moeda?: SaldoByMoeda;
   perdas_confirmadas?: number;
+  lucro_realizado?: number;
   display_order?: number;
 }
 
@@ -75,6 +82,19 @@ const getStatusLabel = (status: string) => {
   }
 };
 
+const formatBRL = (value: number) => {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Math.abs(value));
+};
+
+const formatUSD = (value: number) => {
+  return `$ ${Math.abs(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
+
 export function ProjetoKanbanCard({
   projeto,
   cotacaoUSD,
@@ -92,14 +112,17 @@ export function ProjetoKanbanCard({
   const navigate = useNavigate();
   const cardRef = useRef<HTMLDivElement>(null);
 
-  const saldoBRL = projeto.saldo_bookmakers_by_moeda?.BRL || 0;
-  const saldoUSD = projeto.saldo_bookmakers_by_moeda?.USD || 0;
-  const totalSaldoConsolidado = saldoBRL + (saldoUSD * cotacaoUSD);
-  
   const lucroBRL = projeto.lucro_by_moeda?.BRL || 0;
   const lucroUSD = projeto.lucro_by_moeda?.USD || 0;
   const perdas = projeto.perdas_confirmadas || 0;
-  const lucroConsolidado = lucroBRL + (lucroUSD * cotacaoUSD) - perdas;
+  const lucroOperacional = lucroBRL + (lucroUSD * cotacaoUSD) - perdas;
+  const lucroRealizado = projeto.lucro_realizado || 0;
+
+  const lucroOpDisplay = getFinancialDisplay(lucroOperacional);
+  const lucroRealizadoDisplay = getFinancialDisplay(lucroRealizado);
+
+  const hasUSD = lucroUSD !== 0;
+  const hasBRL = lucroBRL !== 0 || perdas !== 0;
 
   const handleDragStart = (e: React.DragEvent) => {
     e.dataTransfer.setData("projetoId", projeto.id);
@@ -204,22 +227,72 @@ export function ProjetoKanbanCard({
             <span>{projeto.operadores_ativos || 0} operador(es) • {projeto.total_bookmakers || 0} bookmaker(s)</span>
           </div>
         
-          <div className="pt-2 border-t space-y-2">
-            <ProjectFinancialDisplay
-              type="saldo"
-              breakdown={{ BRL: saldoBRL, USD: saldoUSD }}
-              totalConsolidado={totalSaldoConsolidado}
-              cotacaoPTAX={cotacaoUSD}
-              isMultiCurrency={saldoUSD > 0}
-            />
+          {/* LUCRO OPERACIONAL - Destaque Principal */}
+          <div className="pt-2 border-t space-y-1">
+            <div className="flex flex-col items-center gap-1 py-1">
+              <div className="flex items-center gap-2 text-muted-foreground text-xs">
+                {lucroOpDisplay?.isPositive || lucroOpDisplay?.isZero 
+                  ? <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
+                  : <TrendingDown className="h-3.5 w-3.5 text-red-500" />
+                }
+                <span>Lucro Operacional</span>
+              </div>
+              <span className={`text-lg font-semibold ${lucroOpDisplay?.colorClass}`}>
+                {lucroOpDisplay?.isPositive ? '+' : ''}{formatBRL(lucroOperacional)}
+              </span>
+              
+              {/* Breakdown por moeda */}
+              <div className="flex flex-wrap items-center justify-center gap-1.5">
+                {hasBRL && (
+                  <Badge 
+                    variant="outline" 
+                    className={`text-[11px] px-2 py-0.5 ${
+                      lucroBRL - perdas < 0 
+                        ? 'border-red-500/40 text-red-400 bg-red-500/10' 
+                        : 'border-emerald-500/40 text-emerald-400 bg-emerald-500/10'
+                    }`}
+                  >
+                    <CircleDollarSign className="h-3 w-3 mr-1" />
+                    BRL: {lucroBRL - perdas > 0 ? '+' : ''}{formatBRL(lucroBRL - perdas)}
+                  </Badge>
+                )}
+                {hasUSD && (
+                  <Badge 
+                    variant="outline" 
+                    className={`text-[11px] px-2 py-0.5 ${
+                      lucroUSD < 0 
+                        ? 'border-red-500/40 text-red-400 bg-red-500/10' 
+                        : 'border-emerald-500/40 text-emerald-400 bg-emerald-500/10'
+                    }`}
+                  >
+                    <DollarSign className="h-3 w-3 mr-1" />
+                    USD: {lucroUSD > 0 ? '+' : ''}{formatUSD(lucroUSD)}
+                  </Badge>
+                )}
+              </div>
+            </div>
             
-            <ProjectFinancialDisplay
-              type="lucro"
-              breakdown={{ BRL: lucroBRL, USD: lucroUSD }}
-              totalConsolidado={lucroConsolidado}
-              cotacaoPTAX={cotacaoUSD}
-              isMultiCurrency={lucroUSD !== 0}
-            />
+            {/* LUCRO REALIZADO - Indicador Secundário */}
+            <div className="flex items-center justify-center gap-2 py-1.5 bg-muted/30 rounded-md">
+              <ArrowDownUp className={`h-3.5 w-3.5 ${lucroRealizadoDisplay?.colorClass || 'text-muted-foreground'}`} />
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-muted-foreground">Realizado:</span>
+                <span className={`text-sm font-medium ${lucroRealizadoDisplay?.colorClass}`}>
+                  {lucroRealizado > 0 ? '+' : ''}{formatBRL(lucroRealizado)}
+                </span>
+              </div>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-3 w-3 text-muted-foreground/50 cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-[220px] z-[100]">
+                  <p className="text-xs">
+                    <strong>Lucro Realizado</strong> = Saques Confirmados - Depósitos Confirmados.
+                    Representa o dinheiro que efetivamente retornou ao caixa.
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
           </div>
         </div>
         
@@ -248,13 +321,13 @@ export function ProjetoKanbanCard({
                 <Button 
                   variant="ghost" 
                   size="icon"
-                  className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                  className="h-7 w-7"
                   onClick={(e) => {
                     e.stopPropagation();
                     onDelete();
                   }}
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
+                  <Trash2 className="h-3.5 w-3.5 text-destructive" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Excluir Projeto</TooltipContent>

@@ -22,6 +22,7 @@ interface Projeto {
   saldo_bookmakers_by_moeda?: SaldoByMoeda;
   lucro_by_moeda?: SaldoByMoeda;
   perdas_confirmadas?: number;
+  lucro_realizado?: number;
   display_order?: number;
 }
 

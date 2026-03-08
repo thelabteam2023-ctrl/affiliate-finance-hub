@@ -80,6 +80,8 @@ interface Projeto {
   perdas_confirmadas?: number;
   lucro_operacional?: number;
   lucro_by_moeda?: SaldoByMoeda;
+  /** Lucro Realizado = Saques Confirmados - Depósitos Confirmados */
+  lucro_realizado?: number;
   display_order?: number;
   investidor_id?: string | null;
 }
@@ -202,7 +204,7 @@ export default function GestaoProjetos() {
       const finalProjetoIds = projetosData.map(p => p.id);
       
       // Buscar dados agregados em paralelo
-      const [saldosRpcResult, apostasResult, operadoresResult, perdasResult, girosGratisResult, cashbackManualResult, bookmakersCountResult] = await Promise.all([
+      const [saldosRpcResult, apostasResult, operadoresResult, perdasResult, girosGratisResult, cashbackManualResult, bookmakersCountResult, depositosResult, saquesResult] = await Promise.all([
         // USAR RPC CANÔNICA para saldo operável (inclui real + freebet + bonus - em_aposta)
         supabase.rpc("get_saldo_operavel_por_projeto", { p_projeto_ids: finalProjetoIds }),
         
@@ -246,7 +248,23 @@ export default function GestaoProjetos() {
           .from("bookmakers")
           .select("id, projeto_id, saldo_irrecuperavel, moeda")
           .in("projeto_id", finalProjetoIds)
-          .eq("status", "ativo")
+          .eq("status", "ativo"),
+        
+        // Depósitos confirmados por projeto (para Lucro Realizado)
+        supabase
+          .from("cash_ledger")
+          .select("projeto_id_snapshot, valor")
+          .eq("status", "CONFIRMADO")
+          .eq("tipo_transacao", "DEPOSITO")
+          .in("projeto_id_snapshot", finalProjetoIds),
+        
+        // Saques confirmados por projeto (para Lucro Realizado)
+        supabase
+          .from("cash_ledger")
+          .select("projeto_id_snapshot, valor_confirmado, valor")
+          .eq("status", "CONFIRMADO")
+          .eq("tipo_transacao", "SAQUE")
+          .in("projeto_id_snapshot", finalProjetoIds),
       ]);
       
       // ARQUITETURA DAG: Fetch armazena dados BRUTOS por moeda
@@ -381,6 +399,20 @@ export default function GestaoProjetos() {
         perdasByProjeto[pd.projeto_id] = (perdasByProjeto[pd.projeto_id] || 0) + (pd.valor || 0);
       });
       
+      // Agregar Lucro Realizado por projeto: Saques - Depósitos (fluxo de caixa)
+      const lucroRealizadoByProjeto: Record<string, number> = {};
+      (depositosResult.data || []).forEach((dep: any) => {
+        const pid = dep.projeto_id_snapshot;
+        if (!pid) return;
+        lucroRealizadoByProjeto[pid] = (lucroRealizadoByProjeto[pid] || 0) - (Number(dep.valor) || 0);
+      });
+      (saquesResult.data || []).forEach((saq: any) => {
+        const pid = saq.projeto_id_snapshot;
+        if (!pid) return;
+        const valorSaque = Number(saq.valor_confirmado ?? saq.valor) || 0;
+        lucroRealizadoByProjeto[pid] = (lucroRealizadoByProjeto[pid] || 0) + valorSaque;
+      });
+      
       // Map to Projeto interface com dados agregados - APENAS DADOS BRUTOS
       // Campos consolidados (saldo_bookmakers, lucro_operacional) serão calculados no render
       const mapped = projetosData.map((proj: any) => {
@@ -395,25 +427,23 @@ export default function GestaoProjetos() {
           data_inicio: proj.data_inicio,
           data_fim_prevista: proj.data_fim_prevista,
           orcamento_inicial: proj.orcamento_inicial || 0,
-          // Saldo será calculado no render
-          saldo_bookmakers: 0, // Placeholder - calculado no render
+          saldo_bookmakers: 0,
           saldo_bookmakers_by_moeda: {
             BRL: bkData?.saldoBRL || 0,
             USD: bkData?.saldoUSD || 0,
           },
-          // Irrecuperável também por moeda
-          saldo_irrecuperavel: 0, // Placeholder - calculado no render
+          saldo_irrecuperavel: 0,
           saldo_irrecuperavel_by_moeda: {
             BRL: bkData?.irrecuperavelBRL || 0,
             USD: bkData?.irrecuperavelUSD || 0,
           },
           total_bookmakers: bkData?.count || 0,
-          // Lucro será calculado no render
-          lucro_operacional: 0, // Placeholder - calculado no render
+          lucro_operacional: 0,
           lucro_by_moeda: {
             BRL: lucroData?.BRL || 0,
             USD: lucroData?.USD || 0,
           },
+          lucro_realizado: lucroRealizadoByProjeto[proj.id] || 0,
           operadores_ativos: operadoresByProjeto[proj.id] || 0,
           perdas_confirmadas: perdasByProjeto[proj.id] || 0,
           display_order: proj.display_order || 0,
@@ -714,27 +744,28 @@ export default function GestaoProjetos() {
                   </div>
                   <div className="flex items-center gap-6">
                     <div className="text-right">
-                      <p className="text-xs text-muted-foreground">Saldo Bookmakers</p>
-                      {/* CONVERSÃO NO RENDER - usando cotação atual */}
-                      <p className="text-sm font-medium">
-                        {formatCurrency(
-                          (projeto.saldo_bookmakers_by_moeda?.BRL || 0) + 
-                          ((projeto.saldo_bookmakers_by_moeda?.USD || 0) * USD_TO_BRL_DISPLAY)
-                        )}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs text-muted-foreground">Lucro</p>
+                      <p className="text-xs text-muted-foreground">Lucro Operacional</p>
                       {(() => {
-                        // CONVERSÃO NO RENDER - usando cotação atual
                         const lucroBRL = projeto.lucro_by_moeda?.BRL || 0;
                         const lucroUSD = projeto.lucro_by_moeda?.USD || 0;
                         const perdas = projeto.perdas_confirmadas || 0;
                         const lucroOperacional = lucroBRL + (lucroUSD * USD_TO_BRL_DISPLAY) - perdas;
                         const isPositive = lucroOperacional >= 0;
                         return (
-                          <p className={`text-sm font-medium ${isPositive ? 'text-emerald-500' : 'text-red-500'}`}>
+                          <p className={`text-sm font-semibold ${isPositive ? 'text-emerald-500' : 'text-red-500'}`}>
                             {isPositive ? '+' : ''}{formatCurrency(lucroOperacional)}
+                          </p>
+                        );
+                      })()}
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-muted-foreground">Lucro Realizado</p>
+                      {(() => {
+                        const lr = projeto.lucro_realizado || 0;
+                        const isPositive = lr >= 0;
+                        return (
+                          <p className={`text-sm font-medium ${isPositive ? 'text-emerald-500' : 'text-red-500'}`}>
+                            {isPositive ? '+' : ''}{formatCurrency(lr)}
                           </p>
                         );
                       })()}
