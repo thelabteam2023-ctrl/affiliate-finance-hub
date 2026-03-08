@@ -14,6 +14,7 @@ export type TipoProjeto =
   | 'CASHBACK' 
   | 'CPA'
   | 'REVENUE_SHARE'
+  | 'PROMOCOES'
   | 'OUTROS';
 
 export const TIPO_PROJETO_CONFIG: Record<TipoProjeto, { 
