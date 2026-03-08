@@ -48,7 +48,6 @@ interface Projeto {
 
 interface ProjetoKanbanCardProps {
   projeto: Projeto;
-  cotacaoUSD: number;
   isFavorite: boolean;
   onToggleFavorite: () => void;
   onVisualizarOperadores: () => void;
