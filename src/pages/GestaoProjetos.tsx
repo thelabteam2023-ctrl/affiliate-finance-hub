@@ -607,6 +607,45 @@ export default function GestaoProjetos() {
         </CardContent>
       </Card>
 
+      {/* Badges dinâmicos de tipo de projeto */}
+      {Object.keys(tipoCountMap).length > 0 && (
+        <div className="flex flex-wrap gap-2 flex-shrink-0">
+          {Object.entries(tipoCountMap)
+            .sort(([, a], [, b]) => b - a)
+            .map(([tipo, count]) => {
+              const config = TIPO_PROJETO_CONFIG[tipo as TipoProjeto];
+              if (!config) return null;
+              const isActive = tipoFilter === tipo;
+              return (
+                <button
+                  key={tipo}
+                  onClick={() => setTipoFilter(isActive ? "all" : tipo)}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200",
+                    isActive
+                      ? `${config.color} ring-2 ring-offset-1 ring-offset-background ring-current`
+                      : `${config.color} opacity-70 hover:opacity-100`
+                  )}
+                >
+                  <TipoProjetoIcon lucideIcon={config.lucideIcon} className="h-3 w-3" />
+                  <span>{config.label}</span>
+                  <span className="ml-0.5 px-1.5 py-0.5 rounded-full bg-background/30 text-[10px] font-bold leading-none">
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          {tipoFilter !== "all" && (
+            <button
+              onClick={() => setTipoFilter("all")}
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border border-border/50 text-muted-foreground hover:text-foreground hover:border-border transition-colors"
+            >
+              Limpar filtro
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Lista de Projetos - Área flexível */}
       <div className="flex-1 min-h-0">
         {loading ? (
