@@ -940,6 +940,15 @@ export function SaldosParceirosSheet() {
                   </TableBody>
                 </Table>
               </ScrollArea>
+              <SwapCryptoDialog
+                open={swapDialog.open}
+                onClose={() => setSwapDialog({ open: false, parceiroId: null })}
+                onSuccess={() => {
+                  setSwapDialog({ open: false, parceiroId: null });
+                  fetchSaldosParceiros();
+                }}
+                caixaParceiroId={swapDialog.parceiroId}
+              />
             </>
           )}
         </div>
