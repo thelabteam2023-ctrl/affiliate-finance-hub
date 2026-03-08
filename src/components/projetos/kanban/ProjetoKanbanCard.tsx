@@ -1,9 +1,10 @@
-import { useState, useRef } from "react";
+import { useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { 
   FolderKanban, 
   Calendar, 
@@ -24,6 +25,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { getFinancialDisplay } from "@/lib/financial-display";
+import { FinancialMetricsPopover } from "@/components/projeto-detalhe/FinancialMetricsPopover";
 
 interface SaldoByMoeda {
   BRL: number;
@@ -270,27 +272,24 @@ export function ProjetoKanbanCard({
               </div>
             </div>
             
-            {/* LUCRO REALIZADO - Indicador Secundário */}
-            <div className="flex items-center justify-center gap-2 py-1.5 bg-muted/30 rounded-md">
-              <ArrowDownUp className={`h-3.5 w-3.5 ${lucroRealizadoDisplay?.colorClass || 'text-muted-foreground'}`} />
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs text-muted-foreground">Realizado:</span>
-                <span className={`text-sm font-medium ${lucroRealizadoDisplay?.colorClass}`}>
-                  {lucroRealizado > 0 ? '+' : ''}{formatBRL(lucroRealizado)}
-                </span>
-              </div>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Info className="h-3 w-3 text-muted-foreground/50 cursor-help" />
-                </TooltipTrigger>
-                <TooltipContent side="top" className="max-w-[220px] z-[100]">
-                  <p className="text-xs">
-                    <strong>Lucro Realizado</strong> = Saques Confirmados - Depósitos Confirmados.
-                    Representa o dinheiro que efetivamente retornou ao caixa.
-                  </p>
-                </TooltipContent>
-              </Tooltip>
-            </div>
+            {/* LUCRO REALIZADO - Clicável para abrir detalhes financeiros */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <button className="flex items-center justify-center gap-2 py-1.5 bg-muted/30 rounded-md w-full hover:bg-muted/50 transition-colors cursor-pointer">
+                  <ArrowDownUp className={`h-3.5 w-3.5 ${lucroRealizadoDisplay?.colorClass || 'text-muted-foreground'}`} />
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-muted-foreground">Realizado:</span>
+                    <span className={`text-sm font-medium ${lucroRealizadoDisplay?.colorClass}`}>
+                      {lucroRealizado > 0 ? '+' : ''}{formatBRL(lucroRealizado)}
+                    </span>
+                  </div>
+                  <Info className="h-3 w-3 text-muted-foreground/50" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent side="bottom" align="center" className="p-0 w-auto z-[100]" sideOffset={8}>
+                <FinancialMetricsPopover projetoId={projeto.id} />
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
         
