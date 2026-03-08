@@ -80,6 +80,13 @@ export const TIPO_PROJETO_CONFIG: Record<TipoProjeto, {
     lucideIcon: 'TrendingUp',
     description: 'Compartilhamento de receita',
   },
+  PROMOCOES: {
+    label: 'Promoções',
+    color: 'bg-pink-500/20 text-pink-400 border-pink-500/30',
+    icon: '🏷️',
+    lucideIcon: 'Tag',
+    description: 'Promoções e ofertas especiais',
+  },
   OUTROS: { 
     label: 'Outros', 
     color: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
