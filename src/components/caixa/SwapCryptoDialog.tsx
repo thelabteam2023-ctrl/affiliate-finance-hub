@@ -49,6 +49,7 @@ interface WalletOption {
   endereco: string;
   parceiro_id: string;
   moedas: string[];
+  network: string | null;
 }
 
 interface CoinBalance {
