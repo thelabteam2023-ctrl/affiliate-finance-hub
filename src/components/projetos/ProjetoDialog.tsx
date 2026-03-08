@@ -336,7 +336,7 @@ export function ProjetoDialog({
         observacoes: formData.observacoes || null,
         tem_investimento_crypto: formData.tem_investimento_crypto || false,
         modelo_absorcao_taxas: formData.tem_investimento_crypto ? formData.modelo_absorcao_taxas : "EMPRESA_100",
-        tipo_projeto: "INTERNO",
+        tipo_projeto: defaultTipoProjeto,
         user_id: session.session.user.id,
         workspace_id: workspaceId!,
         investidor_id: formData.investidor_id || null,
