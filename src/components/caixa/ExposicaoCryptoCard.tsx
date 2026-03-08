@@ -335,6 +335,14 @@ export function ExposicaoCryptoCard({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Swap Dialog */}
+      <SwapCryptoDialog
+        open={swapOpen}
+        onClose={() => setSwapOpen(false)}
+        onSuccess={() => { fetchWallets(); onDataChanged(); }}
+        caixaParceiroId={caixaParceiroId}
+      />
     </>
   );
 }
