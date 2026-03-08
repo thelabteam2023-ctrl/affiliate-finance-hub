@@ -323,8 +323,8 @@ export function SwapCryptoDialog({ open, onClose, onSuccess, caixaParceiroId }: 
         description: `${qtdEnviadaNum} ${coinOrigem} → ${qtdRecebidaNum} ${coinDestino}`,
       });
 
+      await invalidateCaixa({ only: ["saldosCrypto", "saldoWalletsParceiros"] });
       dispatchCaixaDataChanged();
-      setTimeout(() => dispatchCaixaDataChanged(), 600);
       onSuccess();
       onClose();
     } catch (error: any) {
