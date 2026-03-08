@@ -41,7 +41,6 @@ interface ProjetosKanbanViewProps {
 
 export function ProjetosKanbanView({
   projetos,
-  cotacaoUSD,
   isFavorite,
   toggleFavorite,
   onVisualizarOperadores,
