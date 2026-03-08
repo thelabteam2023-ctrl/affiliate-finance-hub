@@ -58,7 +58,7 @@ function MetricRow({
   );
 }
 
-function SectionHeader({ icon: Icon, label }: { icon: React.ElementType; label: string }) {
+function SectionHeader({ icon: Icon, label }: { icon: ElementType; label: string }) {
   return (
     <div className="flex items-center gap-1.5 mb-1.5">
       <Icon className="h-3 w-3 text-muted-foreground" />
