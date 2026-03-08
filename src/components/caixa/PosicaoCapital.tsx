@@ -44,7 +44,7 @@ export function PosicaoCapital({
   saldosFiat,
   saldoCaixaCrypto,
   saldosBookmakers,
-  saldoContasParceiros,
+  saldosContasParceiros,
   saldoWalletsParceiros,
   cotacaoUSD,
 }: PosicaoCapitalProps) {
