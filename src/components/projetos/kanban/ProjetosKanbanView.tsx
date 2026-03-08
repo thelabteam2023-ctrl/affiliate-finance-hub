@@ -143,7 +143,6 @@ export function ProjetosKanbanView({
           >
             <ProjetoKanbanCard
               projeto={projeto}
-              cotacaoUSD={cotacaoUSD}
               isFavorite={isFavorite(projeto.id)}
               onToggleFavorite={() => toggleFavorite(projeto.id)}
               onVisualizarOperadores={() => onVisualizarOperadores(projeto)}

@@ -614,7 +614,6 @@ export default function GestaoProjetos() {
         ) : viewMode === "kanban" ? (
           <ProjetosKanbanView
             projetos={filteredProjetos}
-            cotacaoUSD={USD_TO_BRL_DISPLAY}
             isFavorite={isFavorite}
             toggleFavorite={toggleFavorite}
             onVisualizarOperadores={(projeto) => {
