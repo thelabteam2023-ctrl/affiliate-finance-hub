@@ -582,15 +582,14 @@ export default function GestaoProjetos() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos Tipos</SelectItem>
-                  <SelectItem value="SUREBET">⚡ Surebet</SelectItem>
-                  <SelectItem value="DUPLO_GREEN">🍀 Duplo Green</SelectItem>
-                  <SelectItem value="VALUEBET">📊 Valuebet</SelectItem>
-                  <SelectItem value="PUNTER">🎯 Punter</SelectItem>
-                  <SelectItem value="BONUS">🎁 Bônus</SelectItem>
-                  <SelectItem value="CASHBACK">💰 Cashback</SelectItem>
-                  <SelectItem value="CPA">🤝 CPA</SelectItem>
-                  <SelectItem value="REVENUE_SHARE">📈 Revenue Share</SelectItem>
-                  <SelectItem value="OUTROS">📁 Outros</SelectItem>
+                  {Object.entries(TIPO_PROJETO_CONFIG).map(([key, config]) => (
+                    <SelectItem key={key} value={key}>
+                      <div className="flex items-center gap-2">
+                        <TipoProjetoIcon lucideIcon={config.lucideIcon} className="h-3.5 w-3.5" />
+                        <span>{config.label}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
