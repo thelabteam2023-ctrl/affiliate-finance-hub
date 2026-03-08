@@ -118,7 +118,7 @@ export function useProjetoResultado({
       // 0. Buscar configuração de moeda do projeto
       const { data: projetoData } = await supabase
         .from('projetos')
-        .select('moeda_consolidacao, marco_zero_at')
+        .select('moeda_consolidacao')
         .eq('id', projetoId)
         .single();
       
