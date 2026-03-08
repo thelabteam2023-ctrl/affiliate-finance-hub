@@ -83,9 +83,21 @@ interface Projeto {
 export default function GestaoProjetos() {
   const navigate = useNavigate();
   const { user, role } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   
   // SEGURANÇA: workspaceId como dependência para isolamento multi-tenant
   const { workspaceId } = useTabWorkspace();
+  
+  // Aba ativa: projetos ou broker
+  const activeSection = searchParams.get("section") || "projetos";
+  const isBrokerSection = activeSection === "broker";
+  
+  const setActiveSection = (section: string) => {
+    setSearchParams(prev => {
+      prev.set("section", section);
+      return prev;
+    });
+  };
   
   const [projetos, setProjetos] = useState<Projeto[]>([]);
   const [loading, setLoading] = useState(true);
