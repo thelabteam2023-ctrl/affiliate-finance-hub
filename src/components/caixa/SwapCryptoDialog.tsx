@@ -74,6 +74,7 @@ export function SwapCryptoDialog({ open, onClose, onSuccess, caixaParceiroId }: 
   const [loading, setLoading] = useState(false);
   const [wallets, setWallets] = useState<WalletOption[]>([]);
   const [balances, setBalances] = useState<CoinBalance[]>([]);
+  const [parceiroNome, setParceiroNome] = useState<string>("");
 
   // Form state
   const [walletId, setWalletId] = useState("");
@@ -89,16 +90,19 @@ export function SwapCryptoDialog({ open, onClose, onSuccess, caixaParceiroId }: 
 
   const fetchWalletsAndBalances = useCallback(async () => {
     if (!caixaParceiroId) return;
-    const [walletsRes, balancesRes] = await Promise.all([
-      supabase.from("wallets_crypto").select("id, exchange, endereco, parceiro_id, moeda").eq("parceiro_id", caixaParceiroId),
+    const [walletsRes, balancesRes, parceiroRes] = await Promise.all([
+      supabase.from("wallets_crypto").select("id, exchange, endereco, parceiro_id, moeda, network").eq("parceiro_id", caixaParceiroId),
       supabase.from("v_saldo_parceiro_wallets").select("wallet_id, coin, saldo_coin, saldo_usd").eq("parceiro_id", caixaParceiroId),
+      supabase.from("parceiros").select("nome").eq("id", caixaParceiroId).single(),
     ]);
+    setParceiroNome(parceiroRes.data?.nome || "");
     setWallets((walletsRes.data || []).map((w: any) => ({
       id: w.id,
       exchange: w.exchange,
       endereco: w.endereco,
       parceiro_id: w.parceiro_id,
       moedas: Array.isArray(w.moeda) ? w.moeda : [],
+      network: w.network,
     })));
     setBalances((balancesRes.data || []).map((b: any) => ({
       wallet_id: b.wallet_id,
