@@ -2,6 +2,7 @@ import { useCallback, useMemo } from 'react';
 import { PERIOD_STALE_TIME, PERIOD_GC_TIME } from '@/lib/query-cache-config';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { fetchProjetoExtras, agruparExtrasPorTipo, type ProjetoExtraEntry } from '@/services/fetchProjetoExtras';
 import { 
   ProjetoKpiBreakdowns, 
   KpiBreakdown, 
@@ -103,6 +104,7 @@ async function fetchBreakdownsData(
 
 
   // Fetch dados de todos os módulos em paralelo
+  // CANÔNICO: Extras (ajustes_saldo, resultado_cambial, etc.) vêm do serviço centralizado
   const [
     apostasData,
     girosGratisData,
@@ -110,6 +112,7 @@ async function fetchBreakdownsData(
     ajustesData,
     cashbackData,
     bonusGanhosData,
+    projetoExtras,
   ] = await Promise.all([
     fetchApostasModuleData(projetoId, dataInicio, dataFim, moedaConsolidacao, safeConvert),
     fetchGirosGratisModuleData(projetoId, dataInicio, dataFim, moedaConsolidacao, safeConvert),
@@ -117,7 +120,19 @@ async function fetchBreakdownsData(
     fetchAjustesModuleData(projetoId),
     fetchCashbackModuleData(projetoId, dataInicio, dataFim, moedaConsolidacao, safeConvert),
     fetchBonusGanhosModuleData(projetoId, moedaConsolidacao, safeConvert),
+    fetchProjetoExtras(projetoId),
   ]);
+
+  // Agregar extras canônicos por tipo, com filtro de data e conversão
+  const extrasAgrupados = agruparExtrasPorTipo(
+    projetoExtras,
+    safeConvert,
+    moedaConsolidacao,
+    {
+      inicio: dataInicio || undefined,
+      fim: dataFim || undefined,
+    }
+  );
 
   // === BREAKDOWN APOSTAS (quantidade) ===
   const apostasBreakdown = createKpiBreakdown([
@@ -214,6 +229,23 @@ async function fetchBreakdownsData(
       (ajustesData.total || 0) !== 0,
       { icon: 'Minus', color: (ajustesData.total || 0) >= 0 ? 'positive' : 'negative' }
     ),
+    // CANÔNICO: Módulos do serviço centralizado (fetchProjetoExtras)
+    // Ajustes de Saldo (refinamento de odds, arredondamentos)
+    createModuleContribution(
+      'ajuste_saldo',
+      'Ajustes de Saldo/FX',
+      extrasAgrupados.ajuste_saldo?.total || 0,
+      (extrasAgrupados.ajuste_saldo?.count || 0) > 0,
+      { icon: 'Settings', color: (extrasAgrupados.ajuste_saldo?.total || 0) >= 0 ? 'positive' : 'negative' }
+    ),
+    // Resultado Cambial (ganho/perda FX)
+    createModuleContribution(
+      'resultado_cambial',
+      'Resultado Cambial',
+      extrasAgrupados.resultado_cambial?.total || 0,
+      (extrasAgrupados.resultado_cambial?.count || 0) > 0,
+      { icon: 'Globe', color: (extrasAgrupados.resultado_cambial?.total || 0) >= 0 ? 'positive' : 'negative' }
+    ),
   ], moedaConsolidacao);
 
   // Adiciona breakdown por moeda ao lucro
@@ -224,7 +256,10 @@ async function fetchBreakdownsData(
     cashbackData.lucroPorMoeda,
     // Perdas já em BRL normalmente
     perdasData.lucroPorMoeda.map(item => ({ ...item, valor: -item.valor })),
-    ajustesData.lucroPorMoeda
+    ajustesData.lucroPorMoeda,
+    // Extras canônicos por moeda
+    extrasAgrupados.ajuste_saldo?.porMoeda || [],
+    extrasAgrupados.resultado_cambial?.porMoeda || [],
   );
 
   // === ROI (calculado a partir do lucro e volume) ===
