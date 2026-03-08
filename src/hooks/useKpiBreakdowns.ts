@@ -2,6 +2,7 @@ import { useCallback, useMemo } from 'react';
 import { PERIOD_STALE_TIME, PERIOD_GC_TIME } from '@/lib/query-cache-config';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { fetchProjetoExtras, agruparExtrasPorTipo, type ProjetoExtraEntry } from '@/services/fetchProjetoExtras';
 import { 
   ProjetoKpiBreakdowns, 
   KpiBreakdown, 
