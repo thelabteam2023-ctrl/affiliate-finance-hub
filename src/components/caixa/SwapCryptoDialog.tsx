@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useCotacoes } from "@/hooks/useCotacoes";
 import { useToast } from "@/hooks/use-toast";
-import { dispatchCaixaDataChanged } from "@/hooks/useInvalidateCaixaData";
+import { useInvalidateCaixaData, dispatchCaixaDataChanged } from "@/hooks/useInvalidateCaixaData";
 import {
   Dialog,
   DialogContent,
