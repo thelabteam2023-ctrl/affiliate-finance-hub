@@ -71,18 +71,13 @@ async function fetchFinancialMetricsRaw(projetoId: string) {
       .eq("tipo_transacao", "GANHO_CAMBIAL").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId),
   ]);
 
-  const timelineTypes = marcoZeroAt 
-    ? ["DEPOSITO", "DEPOSITO_VIRTUAL", "DEPOSITO_BASELINE", "SAQUE", "SAQUE_VIRTUAL"]
-    : ["DEPOSITO", "DEPOSITO_VIRTUAL", "SAQUE", "SAQUE_VIRTUAL"];
-
-  let timelineQ = supabase
+  const timelineQ = supabase
     .from("cash_ledger")
     .select("valor, valor_confirmado, moeda, data_transacao, tipo_transacao")
-    .in("tipo_transacao", timelineTypes)
+    .in("tipo_transacao", ["DEPOSITO", "DEPOSITO_VIRTUAL", "SAQUE", "SAQUE_VIRTUAL"])
     .eq("status", "CONFIRMADO")
     .eq("projeto_id_snapshot", projetoId)
     .order("data_transacao", { ascending: true });
-  if (marcoZeroAt) timelineQ = timelineQ.gte("created_at", marcoZeroAt);
 
   const { data: timelineData } = await timelineQ;
 

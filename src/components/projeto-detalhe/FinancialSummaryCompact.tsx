@@ -12,32 +12,17 @@ interface FinancialSummaryCompactProps {
 }
 
 async function fetchCompactMetrics(projetoId: string) {
-  // Fetch marco_zero_at
-  const { data: projetoInfo } = await supabase
-    .from("projetos")
-    .select("marco_zero_at")
-    .eq("id", projetoId)
-    .single();
-  const marcoZeroAt = projetoInfo?.marco_zero_at || null;
-
-  const tiposDeposito = marcoZeroAt 
-    ? ["DEPOSITO", "DEPOSITO_VIRTUAL", "DEPOSITO_BASELINE"] 
-    : ["DEPOSITO", "DEPOSITO_VIRTUAL"];
-
-  let depositoQ = supabase.from("cash_ledger").select("valor, moeda")
-    .in("tipo_transacao", tiposDeposito)
+  const depositoQ = supabase.from("cash_ledger").select("valor, moeda")
+    .in("tipo_transacao", ["DEPOSITO", "DEPOSITO_VIRTUAL"])
     .eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId);
-  if (marcoZeroAt) depositoQ = depositoQ.gte("created_at", marcoZeroAt);
 
-  let saqueQ = supabase.from("cash_ledger").select("valor, valor_confirmado, moeda")
+  const saqueQ = supabase.from("cash_ledger").select("valor, valor_confirmado, moeda")
     .in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])
     .eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId);
-  if (marcoZeroAt) saqueQ = saqueQ.gte("created_at", marcoZeroAt);
 
-  let saquePendQ = supabase.from("cash_ledger").select("valor, moeda")
+  const saquePendQ = supabase.from("cash_ledger").select("valor, moeda")
     .in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])
     .eq("status", "PENDENTE").eq("projeto_id_snapshot", projetoId);
-  if (marcoZeroAt) saquePendQ = saquePendQ.gte("created_at", marcoZeroAt);
 
   const [bookmakers, depositos, saques, saquesPend] = await Promise.all([
     supabase.from("bookmakers").select("saldo_atual, moeda").eq("projeto_id", projetoId),

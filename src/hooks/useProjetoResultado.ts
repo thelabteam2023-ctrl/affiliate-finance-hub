@@ -541,19 +541,12 @@ async function fetchCapitalData(
     return acc + convert(Number(d.valor), d.moeda || 'BRL');
   }, 0);
 
-  // Saques filtrados por marco zero se ativo
-  let saqueQuery = supabase
+  const { data: saques } = await supabase
     .from('cash_ledger')
     .select('valor, valor_confirmado, moeda')
     .in('tipo_transacao', ['SAQUE', 'SAQUE_VIRTUAL'])
     .eq('status', 'CONFIRMADO')
     .eq('projeto_id_snapshot', projetoId);
-
-  if (marcoZeroAt) {
-    saqueQuery = saqueQuery.gte('created_at', marcoZeroAt);
-  }
-
-  const { data: saques } = await saqueQuery;
 
   const totalSaques = saques?.reduce((acc, s) => {
     return acc + convert(Number(s.valor_confirmado ?? s.valor), s.moeda || 'BRL');
