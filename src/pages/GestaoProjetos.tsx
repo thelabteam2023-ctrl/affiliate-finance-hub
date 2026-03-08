@@ -52,6 +52,7 @@ import { ProjetosKanbanView } from "@/components/projetos/kanban";
 import { TIPO_PROJETO_CONFIG, TipoProjeto } from "@/types/projeto";
 import { TipoProjetoIcon } from "@/components/projetos/TipoProjetoIcon";
 import { fetchProjetoExtras } from "@/services/fetchProjetoExtras";
+import { getConsolidatedLucro } from "@/utils/consolidatedValues";
 
 interface SaldoByMoeda {
   BRL: number;
