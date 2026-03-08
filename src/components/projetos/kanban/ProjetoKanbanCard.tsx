@@ -48,7 +48,6 @@ interface Projeto {
 
 interface ProjetoKanbanCardProps {
   projeto: Projeto;
-  cotacaoUSD: number;
   isFavorite: boolean;
   onToggleFavorite: () => void;
   onVisualizarOperadores: () => void;
@@ -98,7 +97,6 @@ const formatUSD = (value: number) => {
 
 export function ProjetoKanbanCard({
   projeto,
-  cotacaoUSD,
   isFavorite,
   onToggleFavorite,
   onVisualizarOperadores,
@@ -115,7 +113,7 @@ export function ProjetoKanbanCard({
 
   const lucroBRL = projeto.lucro_by_moeda?.BRL || 0;
   const lucroUSD = projeto.lucro_by_moeda?.USD || 0;
-  const lucroOperacional = projeto.lucro_operacional ?? (lucroBRL + (lucroUSD * cotacaoUSD));
+  const lucroOperacional = projeto.lucro_operacional || 0;
   const lucroRealizado = projeto.lucro_realizado || 0;
 
   const lucroOpDisplay = getFinancialDisplay(lucroOperacional);

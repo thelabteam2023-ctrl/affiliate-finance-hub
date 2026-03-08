@@ -29,7 +29,6 @@ interface Projeto {
 
 interface ProjetosKanbanViewProps {
   projetos: Projeto[];
-  cotacaoUSD: number;
   isFavorite: (id: string) => boolean;
   toggleFavorite: (id: string) => void;
   onVisualizarOperadores: (projeto: Projeto) => void;
@@ -42,7 +41,6 @@ interface ProjetosKanbanViewProps {
 
 export function ProjetosKanbanView({
   projetos,
-  cotacaoUSD,
   isFavorite,
   toggleFavorite,
   onVisualizarOperadores,
@@ -145,7 +143,6 @@ export function ProjetosKanbanView({
           >
             <ProjetoKanbanCard
               projeto={projeto}
-              cotacaoUSD={cotacaoUSD}
               isFavorite={isFavorite(projeto.id)}
               onToggleFavorite={() => toggleFavorite(projeto.id)}
               onVisualizarOperadores={() => onVisualizarOperadores(projeto)}
