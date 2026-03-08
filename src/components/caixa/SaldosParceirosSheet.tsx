@@ -452,19 +452,18 @@ export function SaldosParceirosSheet() {
           <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">
             Saldo por Carteira
           </p>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={(e) => { e.stopPropagation(); setSwapOpen(true); }}
-              className="text-muted-foreground/60 hover:text-primary transition-colors"
-              title="Swap entre moedas"
-            >
-              <ArrowRightLeft className="h-3 w-3" />
-            </button>
-            <button onClick={() => setAscending(!ascending)} className="text-muted-foreground/60 hover:text-foreground transition-colors">
-              <ArrowUpDown className="h-3 w-3" />
-            </button>
-          </div>
+          <button onClick={() => setAscending(!ascending)} className="text-muted-foreground/60 hover:text-foreground transition-colors" title="Ordenar por valor">
+            <ArrowUpDown className="h-3 w-3" />
+          </button>
         </div>
+        <button
+          onClick={(e) => { e.stopPropagation(); setSwapOpen(true); }}
+          className="flex items-center gap-1.5 text-[10px] text-muted-foreground/60 hover:text-primary transition-colors mb-1"
+          title="Swap entre moedas"
+        >
+          <ArrowRightLeft className="h-3 w-3" />
+          <span>Swap</span>
+        </button>
         {walletKeys.map((wKey, wIdx) => {
           const wallet = grouped[wKey];
           const items = [...wallet.items].sort((a, b) => ascending ? a.saldo_usd - b.saldo_usd : b.saldo_usd - a.saldo_usd);
