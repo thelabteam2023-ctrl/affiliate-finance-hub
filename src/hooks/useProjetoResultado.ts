@@ -516,29 +516,17 @@ async function fetchCapitalData(
     return acc + convert(Number(b.saldo_irrecuperavel || 0), moedaOrigem);
   }, 0) || 0;
 
-  // === MARCO ZERO: Se ativo, capital = DEPOSITO_BASELINE + depósitos pós-marco ===
-  const tiposDeposito = marcoZeroAt 
-    ? ['DEPOSITO', 'DEPOSITO_VIRTUAL', 'DEPOSITO_BASELINE'] 
-    : ['DEPOSITO', 'DEPOSITO_VIRTUAL'];
-
-  let depositoQuery = supabase
+  const { data: depositos } = await supabase
     .from('cash_ledger')
     .select('valor, moeda')
-    .in('tipo_transacao', tiposDeposito)
+    .in('tipo_transacao', ['DEPOSITO', 'DEPOSITO_VIRTUAL'])
     .eq('status', 'CONFIRMADO')
     .eq('projeto_id_snapshot', projetoId);
 
-  if (marcoZeroAt) {
-    // Pós-marco: só transações após o marco zero
-    depositoQuery = depositoQuery.gte('created_at', marcoZeroAt);
-  }
-
-  const { data: depositos } = await depositoQuery;
-
-  // SAFETY NET para depósitos órfãos (sem snapshot) — só se NÃO tiver marco zero
+  // SAFETY NET para depósitos órfãos (sem snapshot)
   const currentBookmakerIds = rpcData?.map((b: any) => b.id) || [];
   let depositosOrfaos: typeof depositos = [];
-  if (!marcoZeroAt && currentBookmakerIds.length > 0) {
+  if (currentBookmakerIds.length > 0) {
     const { data: orfaos } = await supabase
       .from('cash_ledger')
       .select('valor, moeda')
