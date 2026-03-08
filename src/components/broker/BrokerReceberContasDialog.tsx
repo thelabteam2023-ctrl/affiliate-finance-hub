@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useTabWorkspace } from "@/hooks/useTabWorkspace";
 import { toast } from "sonner";
@@ -14,17 +14,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, Loader2 } from "lucide-react";
+import { Plus, Trash2, Loader2, Search, ArrowLeft } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
 
 interface ContaEntry {
   id: string;
-  bookmaker_catalogo_id: string;
-  bookmaker_nome: string;
   instance_identifier: string;
   login_username: string;
   login_password: string;
-  moeda: string;
   saldo_inicial: string;
 }
 
@@ -39,27 +37,34 @@ const MOEDAS = ["BRL", "USD", "EUR", "GBP", "MXN", "MYR", "ARS", "COP", "USDT"];
 function createEmptyEntry(): ContaEntry {
   return {
     id: crypto.randomUUID(),
-    bookmaker_catalogo_id: "",
-    bookmaker_nome: "",
     instance_identifier: "",
     login_username: "",
     login_password: "",
-    moeda: "BRL",
     saldo_inicial: "",
   };
 }
 
+type Step = "select-investor" | "select-house" | "add-accounts";
+
 export function BrokerReceberContasDialog({ open, onClose, onSuccess }: BrokerReceberContasDialogProps) {
   const { workspaceId } = useTabWorkspace();
+  const [step, setStep] = useState<Step>("select-investor");
   const [investidorId, setInvestidorId] = useState("");
   const [investidores, setInvestidores] = useState<Array<{ id: string; nome: string }>>([]);
   const [catalogoBookmakers, setCatalogoBookmakers] = useState<Array<{ id: string; nome: string; moeda_padrao: string }>>([]);
+  
+  // Casa selecionada
+  const [selectedCasaId, setSelectedCasaId] = useState("");
+  const [selectedCasaNome, setSelectedCasaNome] = useState("");
+  const [moeda, setMoeda] = useState("BRL");
+  const [searchQuery, setSearchQuery] = useState("");
+  
+  // Contas da casa selecionada
   const [contas, setContas] = useState<ContaEntry[]>([createEmptyEntry()]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!open || !workspaceId) return;
-
     const loadData = async () => {
       const [invRes, catRes] = await Promise.all([
         supabase.from("investidores").select("id, nome").eq("workspace_id", workspaceId).order("nome"),
@@ -71,6 +76,12 @@ export function BrokerReceberContasDialog({ open, onClose, onSuccess }: BrokerRe
     loadData();
   }, [open, workspaceId]);
 
+  const filteredCasas = useMemo(() => {
+    if (!searchQuery.trim()) return catalogoBookmakers;
+    const q = searchQuery.toLowerCase();
+    return catalogoBookmakers.filter(b => b.nome.toLowerCase().includes(q));
+  }, [catalogoBookmakers, searchQuery]);
+
   const addEntry = () => setContas(prev => [...prev, createEmptyEntry()]);
 
   const removeEntry = (id: string) => {
@@ -79,31 +90,23 @@ export function BrokerReceberContasDialog({ open, onClose, onSuccess }: BrokerRe
   };
 
   const updateEntry = (id: string, field: keyof ContaEntry, value: string) => {
-    setContas(prev => prev.map(c => {
-      if (c.id !== id) return c;
-      const updated = { ...c, [field]: value };
-      // Auto-fill moeda when selecting bookmaker
-      if (field === "bookmaker_catalogo_id") {
-        const cat = catalogoBookmakers.find(b => b.id === value);
-        if (cat) {
-          updated.bookmaker_nome = cat.nome;
-          updated.moeda = cat.moeda_padrao;
-        }
-      }
-      return updated;
-    }));
+    setContas(prev => prev.map(c => c.id === id ? { ...c, [field]: value } : c));
+  };
+
+  const selectCasa = (casa: { id: string; nome: string; moeda_padrao: string }) => {
+    setSelectedCasaId(casa.id);
+    setSelectedCasaNome(casa.nome);
+    setMoeda(casa.moeda_padrao);
+    setContas([createEmptyEntry()]);
+    setStep("add-accounts");
   };
 
   const handleSave = async () => {
-    if (!workspaceId || !investidorId) {
-      toast.error("Selecione um investidor");
-      return;
-    }
+    if (!workspaceId || !investidorId || !selectedCasaId) return;
 
-    // Validar entradas
-    const invalidEntries = contas.filter(c => !c.bookmaker_catalogo_id || !c.login_username);
+    const invalidEntries = contas.filter(c => !c.login_username.trim());
     if (invalidEntries.length > 0) {
-      toast.error("Preencha pelo menos a casa e o login de cada conta");
+      toast.error("Preencha o login de cada conta");
       return;
     }
 
@@ -116,24 +119,20 @@ export function BrokerReceberContasDialog({ open, onClose, onSuccess }: BrokerRe
 
       for (const conta of contas) {
         const saldoInicial = parseFloat(conta.saldo_inicial) || 0;
-
-        // 1. Encriptar senha (placeholder - usa valor direto por enquanto, 
-        //    o edge function crypto-password será chamado depois)
         const passwordToStore = conta.login_password || "***";
 
-        // 2. Criar bookmaker com investidor_id
         const { data: newBookmaker, error: bmError } = await supabase
           .from("bookmakers")
           .insert({
             workspace_id: workspaceId,
             user_id: user.id,
-            nome: conta.bookmaker_nome,
-            bookmaker_catalogo_id: conta.bookmaker_catalogo_id,
+            nome: selectedCasaNome,
+            bookmaker_catalogo_id: selectedCasaId,
             instance_identifier: conta.instance_identifier || null,
             login_username: conta.login_username,
             login_password_encrypted: passwordToStore,
-            moeda: conta.moeda,
-            saldo_atual: 0, // Será atualizado pelo financial_events
+            moeda,
+            saldo_atual: 0,
             saldo_freebet: 0,
             saldo_irrecuperavel: 0,
             saldo_usd: 0,
@@ -145,7 +144,6 @@ export function BrokerReceberContasDialog({ open, onClose, onSuccess }: BrokerRe
 
         if (bmError) throw bmError;
 
-        // 3. Criar APORTE_DIRETO no ledger (se tem saldo inicial)
         if (saldoInicial > 0 && newBookmaker) {
           const { error: ledgerError } = await supabase
             .from("cash_ledger")
@@ -154,7 +152,7 @@ export function BrokerReceberContasDialog({ open, onClose, onSuccess }: BrokerRe
               user_id: user.id,
               tipo_transacao: "APORTE_DIRETO",
               tipo_moeda: "FIAT",
-              moeda: conta.moeda,
+              moeda,
               valor: saldoInicial,
               data_transacao: new Date().toISOString().split("T")[0],
               investidor_id: investidorId,
@@ -164,20 +162,18 @@ export function BrokerReceberContasDialog({ open, onClose, onSuccess }: BrokerRe
               destino_bookmaker_id: newBookmaker.id,
               status: "CONFIRMADO",
               impacta_caixa_operacional: false,
-              descricao: `Aporte direto - ${investidor?.nome} → ${conta.bookmaker_nome}${conta.instance_identifier ? ` (${conta.instance_identifier})` : ""}`,
+              descricao: `Aporte direto - ${investidor?.nome} → ${selectedCasaNome}${conta.instance_identifier ? ` (${conta.instance_identifier})` : ""}`,
             });
 
           if (ledgerError) throw ledgerError;
         }
       }
 
-      toast.success(`${contas.length} conta(s) recebida(s) com sucesso`, {
+      toast.success(`${contas.length} conta(s) de ${selectedCasaNome} cadastrada(s)`, {
         description: `Investidor: ${investidor?.nome}`,
       });
-      
-      // Reset form
-      setContas([createEmptyEntry()]);
-      setInvestidorId("");
+
+      resetForm();
       onSuccess();
     } catch (err: any) {
       toast.error("Erro ao cadastrar contas", { description: err.message });
@@ -186,28 +182,41 @@ export function BrokerReceberContasDialog({ open, onClose, onSuccess }: BrokerRe
     }
   };
 
-  const handleClose = () => {
+  const resetForm = () => {
+    setStep("select-investor");
     setContas([createEmptyEntry()]);
     setInvestidorId("");
+    setSelectedCasaId("");
+    setSelectedCasaNome("");
+    setSearchQuery("");
+    setMoeda("BRL");
+  };
+
+  const handleClose = () => {
+    resetForm();
     onClose();
   };
 
+  const investidorNome = investidores.find(i => i.id === investidorId)?.nome;
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh]">
+      <DialogContent className="max-w-3xl max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>Receber Contas do Investidor</DialogTitle>
           <DialogDescription>
-            Cadastre em lote as contas de bookmaker que o investidor já possui e traz com capital depositado.
+            {step === "select-investor" && "Selecione o investidor que está trazendo as contas."}
+            {step === "select-house" && "Pesquise e selecione a casa de apostas."}
+            {step === "add-accounts" && `Adicione as contas de ${selectedCasaNome} do investidor ${investidorNome}.`}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          {/* Seletor de Investidor */}
-          <div className="space-y-2">
-            <Label>Investidor *</Label>
-            <Select value={investidorId} onValueChange={setInvestidorId}>
-              <SelectTrigger>
+        {/* ========== STEP 1: Selecionar Investidor ========== */}
+        {step === "select-investor" && (
+          <div className="space-y-4 py-4">
+            <Label className="text-sm font-medium">Investidor *</Label>
+            <Select value={investidorId} onValueChange={(v) => { setInvestidorId(v); setStep("select-house"); }}>
+              <SelectTrigger className="h-11">
                 <SelectValue placeholder="Selecione o investidor" />
               </SelectTrigger>
               <SelectContent>
@@ -217,74 +226,117 @@ export function BrokerReceberContasDialog({ open, onClose, onSuccess }: BrokerRe
               </SelectContent>
             </Select>
           </div>
+        )}
 
-          {/* Lista de contas */}
-          <div className="space-y-2">
+        {/* ========== STEP 2: Selecionar Casa ========== */}
+        {step === "select-house" && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" onClick={() => setStep("select-investor")} className="h-8 w-8 p-0">
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <Badge variant="outline" className="text-xs">{investidorNome}</Badge>
+            </div>
+
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Pesquisar casa de apostas..."
+                className="pl-10 h-11"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                autoFocus
+              />
+            </div>
+
+            <ScrollArea className="h-[350px]">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2 pr-4">
+                {filteredCasas.map(casa => (
+                  <button
+                    key={casa.id}
+                    onClick={() => selectCasa(casa)}
+                    className="flex items-center justify-between p-3 rounded-lg border border-border/50 bg-card/50 hover:bg-primary/5 hover:border-primary/30 transition-all text-left group"
+                  >
+                    <span className="text-sm font-medium truncate">{casa.nome}</span>
+                    <Badge variant="outline" className="text-[10px] ml-2 shrink-0 opacity-60 group-hover:opacity-100">
+                      {casa.moeda_padrao}
+                    </Badge>
+                  </button>
+                ))}
+                {filteredCasas.length === 0 && (
+                  <div className="col-span-full text-center py-8 text-muted-foreground text-sm">
+                    Nenhuma casa encontrada para "{searchQuery}"
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+          </div>
+        )}
+
+        {/* ========== STEP 3: Adicionar Contas ========== */}
+        {step === "add-accounts" && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" onClick={() => setStep("select-house")} className="h-8 w-8 p-0">
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <Badge variant="outline" className="text-xs">{investidorNome}</Badge>
+              <span className="text-muted-foreground text-xs">→</span>
+              <Badge className="text-xs bg-primary/10 text-primary border-primary/20">{selectedCasaNome}</Badge>
+              <div className="ml-auto flex items-center gap-2">
+                <Label className="text-xs text-muted-foreground">Moeda:</Label>
+                <Select value={moeda} onValueChange={setMoeda}>
+                  <SelectTrigger className="h-7 w-20 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MOEDAS.map(m => (
+                      <SelectItem key={m} value={m} className="text-xs">{m}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
             <div className="flex items-center justify-between">
-              <Label>Contas ({contas.length})</Label>
-              <Button type="button" variant="outline" size="sm" onClick={addEntry} className="gap-1">
+              <Label className="text-sm">{contas.length} conta(s)</Label>
+              <Button type="button" variant="outline" size="sm" onClick={addEntry} className="gap-1 h-7 text-xs">
                 <Plus className="h-3 w-3" />
                 Adicionar conta
               </Button>
             </div>
 
-            <ScrollArea className="max-h-[400px]">
-              <div className="space-y-3 pr-4">
+            <ScrollArea className="max-h-[350px]">
+              <div className="space-y-2 pr-4">
                 {contas.map((conta, index) => (
-                  <div key={conta.id} className="rounded-lg border border-border/50 bg-muted/10 p-3">
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-xs font-semibold text-muted-foreground">
-                        Conta #{index + 1}
-                      </span>
+                  <div key={conta.id} className="rounded-lg border border-border/40 bg-muted/10 p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-semibold text-muted-foreground">#{index + 1}</span>
                       {contas.length > 1 && (
                         <Button
                           type="button"
                           variant="ghost"
                           size="sm"
                           onClick={() => removeEntry(conta.id)}
-                          className="h-6 w-6 p-0 text-destructive/70 hover:text-destructive"
+                          className="h-5 w-5 p-0 text-destructive/60 hover:text-destructive"
                         >
                           <Trash2 className="h-3 w-3" />
                         </Button>
                       )}
                     </div>
-
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                      {/* Casa */}
+                    <div className="grid grid-cols-4 gap-3">
                       <div className="space-y-1">
-                        <Label className="text-xs">Casa *</Label>
-                        <Select
-                          value={conta.bookmaker_catalogo_id}
-                          onValueChange={(v) => updateEntry(conta.id, "bookmaker_catalogo_id", v)}
-                        >
-                          <SelectTrigger className="h-8 text-xs">
-                            <SelectValue placeholder="Selecione" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {catalogoBookmakers.map(bm => (
-                              <SelectItem key={bm.id} value={bm.id} className="text-xs">
-                                {bm.nome}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      {/* Identificador */}
-                      <div className="space-y-1">
-                        <Label className="text-xs">Identificador</Label>
+                        <Label className="text-[11px] text-muted-foreground">Identificador</Label>
                         <Input
                           className="h-8 text-xs"
-                          placeholder="Ex: Batch 3501"
+                          placeholder="Batch 3501"
                           value={conta.instance_identifier}
                           onChange={(e) => updateEntry(conta.id, "instance_identifier", e.target.value)}
                           maxLength={100}
                         />
                       </div>
-
-                      {/* Login */}
                       <div className="space-y-1">
-                        <Label className="text-xs">Login *</Label>
+                        <Label className="text-[11px] text-muted-foreground">Login *</Label>
                         <Input
                           className="h-8 text-xs"
                           placeholder="usuário ou e-mail"
@@ -293,10 +345,8 @@ export function BrokerReceberContasDialog({ open, onClose, onSuccess }: BrokerRe
                           maxLength={200}
                         />
                       </div>
-
-                      {/* Senha */}
                       <div className="space-y-1">
-                        <Label className="text-xs">Senha</Label>
+                        <Label className="text-[11px] text-muted-foreground">Senha</Label>
                         <Input
                           className="h-8 text-xs"
                           type="password"
@@ -306,28 +356,8 @@ export function BrokerReceberContasDialog({ open, onClose, onSuccess }: BrokerRe
                           maxLength={200}
                         />
                       </div>
-
-                      {/* Moeda */}
                       <div className="space-y-1">
-                        <Label className="text-xs">Moeda</Label>
-                        <Select
-                          value={conta.moeda}
-                          onValueChange={(v) => updateEntry(conta.id, "moeda", v)}
-                        >
-                          <SelectTrigger className="h-8 text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {MOEDAS.map(m => (
-                              <SelectItem key={m} value={m} className="text-xs">{m}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      {/* Saldo Inicial */}
-                      <div className="space-y-1">
-                        <Label className="text-xs">Saldo Inicial</Label>
+                        <Label className="text-[11px] text-muted-foreground">Saldo Inicial</Label>
                         <Input
                           className="h-8 text-xs"
                           type="number"
@@ -344,22 +374,24 @@ export function BrokerReceberContasDialog({ open, onClose, onSuccess }: BrokerRe
               </div>
             </ScrollArea>
           </div>
-        </div>
+        )}
 
         <DialogFooter>
           <Button variant="outline" onClick={handleClose} disabled={saving}>
             Cancelar
           </Button>
-          <Button onClick={handleSave} disabled={saving || !investidorId}>
-            {saving ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Salvando...
-              </>
-            ) : (
-              `Cadastrar ${contas.length} conta(s)`
-            )}
-          </Button>
+          {step === "add-accounts" && (
+            <Button onClick={handleSave} disabled={saving || !investidorId || !selectedCasaId}>
+              {saving ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Salvando...
+                </>
+              ) : (
+                `Cadastrar ${contas.length} conta(s)`
+              )}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
