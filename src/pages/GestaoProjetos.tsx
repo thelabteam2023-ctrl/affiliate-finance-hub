@@ -86,6 +86,27 @@ interface Projeto {
   investidor_id?: string | null;
 }
 
+async function fetchAllRows<T>(
+  buildQuery: () => any,
+  pageSize = 1000
+): Promise<T[]> {
+  const rows: T[] = [];
+  let from = 0;
+
+  while (true) {
+    const { data, error } = await buildQuery().range(from, from + pageSize - 1);
+    if (error) throw error;
+
+    const page = (data || []) as T[];
+    rows.push(...page);
+
+    if (page.length < pageSize) break;
+    from += pageSize;
+  }
+
+  return rows;
+}
+
 export default function GestaoProjetos() {
   const navigate = useNavigate();
   const { user, role } = useAuth();
