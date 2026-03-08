@@ -27,6 +27,7 @@ export const CASH_REAL_TYPES = [
   'APORTE',
   'LIQUIDACAO',
   'APORTE_FINANCEIRO',
+  'APORTE_DIRETO',       // Aporte direto do investidor em bookmakers (Broker)
   
   // Movimentações de Caixa
   'DEPOSITO',
