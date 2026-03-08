@@ -355,8 +355,10 @@ export default function GestaoProjetos() {
 
           if (moeda === 'USD' || moeda === 'USDT' || moeda === 'USDC') {
             lucroByProjeto[projetoId].USD += valor;
+            lucroConsolidadoByProjeto[projetoId] = (lucroConsolidadoByProjeto[projetoId] || 0) + (valor * USD_TO_BRL_DISPLAY);
           } else {
             lucroByProjeto[projetoId].BRL += valor;
+            lucroConsolidadoByProjeto[projetoId] = (lucroConsolidadoByProjeto[projetoId] || 0) + valor;
           }
         });
       });
