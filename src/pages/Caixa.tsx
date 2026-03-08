@@ -974,7 +974,7 @@ export default function Caixa() {
             saldosFiat={saldosFiat}
             saldoCaixaCrypto={getTotalCryptoUSD()}
             saldosBookmakers={saldosBookmakersPorMoeda}
-            saldoContasParceiros={saldoContasParceiros}
+            saldosContasParceiros={saldosContasParceiros}
             saldoWalletsParceiros={saldoWalletsParceiros}
             cotacaoUSD={cotacaoUSD}
           />
