@@ -112,7 +112,8 @@ export function CaixaTabsContainer({
                 <span className="absolute -top-1 -right-1 bg-amber-500 text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center">
                   {pendingCount}
                 </span>
-              )}
+               )}
+            </TabsTrigger>
           </TabsList>
         </div>
 
