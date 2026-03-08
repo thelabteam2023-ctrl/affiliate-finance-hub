@@ -115,15 +115,14 @@ export function ProjetoKanbanCard({
 
   const lucroBRL = projeto.lucro_by_moeda?.BRL || 0;
   const lucroUSD = projeto.lucro_by_moeda?.USD || 0;
-  const perdas = projeto.perdas_confirmadas || 0;
-  const lucroOperacional = lucroBRL + (lucroUSD * cotacaoUSD) - perdas;
+  const lucroOperacional = projeto.lucro_operacional ?? (lucroBRL + (lucroUSD * cotacaoUSD));
   const lucroRealizado = projeto.lucro_realizado || 0;
 
   const lucroOpDisplay = getFinancialDisplay(lucroOperacional);
   const lucroRealizadoDisplay = getFinancialDisplay(lucroRealizado);
 
   const hasUSD = lucroUSD !== 0;
-  const hasBRL = lucroBRL !== 0 || perdas !== 0;
+  const hasBRL = lucroBRL !== 0;
 
   const handleDragStart = (e: React.DragEvent) => {
     e.dataTransfer.setData("projetoId", projeto.id);
