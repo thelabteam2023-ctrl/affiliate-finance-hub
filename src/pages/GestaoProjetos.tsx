@@ -523,20 +523,39 @@ export default function GestaoProjetos() {
   return (
     <div className="flex-1 flex flex-col min-h-0 w-full max-w-full overflow-x-hidden p-4 md:p-6 lg:p-8 space-y-4">
       <PageHeader
-        title="Projetos"
-        description="Gerencie seus projetos e acompanhe o progresso"
+        title={isBrokerSection ? "Broker" : "Projetos"}
+        description={isBrokerSection 
+          ? "Gerencie projetos de contas recebidas de investidores"
+          : "Gerencie seus projetos e acompanhe o progresso"
+        }
         pagePath="/projetos"
-        pageIcon="FolderKanban"
+        pageIcon={isBrokerSection ? "Briefcase" : "FolderKanban"}
         actions={
           canCreate('projetos', 'projetos.create') && (
             <Button onClick={() => handleOpenDialog(null, "create")}>
               <Plus className="mr-2 h-4 w-4" />
-              <span className="hidden sm:inline">Novo Projeto</span>
+              <span className="hidden sm:inline">{isBrokerSection ? "Novo Projeto Broker" : "Novo Projeto"}</span>
               <span className="sm:hidden">Novo</span>
             </Button>
           )
         }
       />
+
+      {/* Section Tabs: Projetos | Broker */}
+      <div className="flex-shrink-0">
+        <Tabs value={activeSection} onValueChange={setActiveSection}>
+          <TabsList className="bg-muted/30">
+            <TabsTrigger value="projetos" className="gap-2">
+              <FolderKanban className="h-4 w-4" />
+              Projetos
+            </TabsTrigger>
+            <TabsTrigger value="broker" className="gap-2">
+              <Briefcase className="h-4 w-4" />
+              Broker
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
 
       {/* Filtros - Card com contenção */}
       <Card className="flex-shrink-0 overflow-hidden">
