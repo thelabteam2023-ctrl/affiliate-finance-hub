@@ -49,6 +49,7 @@ interface WalletOption {
   endereco: string;
   parceiro_id: string;
   moedas: string[];
+  network: string | null;
 }
 
 interface CoinBalance {
@@ -73,6 +74,7 @@ export function SwapCryptoDialog({ open, onClose, onSuccess, caixaParceiroId }: 
   const [loading, setLoading] = useState(false);
   const [wallets, setWallets] = useState<WalletOption[]>([]);
   const [balances, setBalances] = useState<CoinBalance[]>([]);
+  const [parceiroNome, setParceiroNome] = useState<string>("");
 
   // Form state
   const [walletId, setWalletId] = useState("");
@@ -88,16 +90,19 @@ export function SwapCryptoDialog({ open, onClose, onSuccess, caixaParceiroId }: 
 
   const fetchWalletsAndBalances = useCallback(async () => {
     if (!caixaParceiroId) return;
-    const [walletsRes, balancesRes] = await Promise.all([
-      supabase.from("wallets_crypto").select("id, exchange, endereco, parceiro_id, moeda").eq("parceiro_id", caixaParceiroId),
+    const [walletsRes, balancesRes, parceiroRes] = await Promise.all([
+      supabase.from("wallets_crypto").select("id, exchange, endereco, parceiro_id, moeda, network").eq("parceiro_id", caixaParceiroId),
       supabase.from("v_saldo_parceiro_wallets").select("wallet_id, coin, saldo_coin, saldo_usd").eq("parceiro_id", caixaParceiroId),
+      supabase.from("parceiros").select("nome").eq("id", caixaParceiroId).single(),
     ]);
+    setParceiroNome(parceiroRes.data?.nome || "");
     setWallets((walletsRes.data || []).map((w: any) => ({
       id: w.id,
       exchange: w.exchange,
       endereco: w.endereco,
       parceiro_id: w.parceiro_id,
       moedas: Array.isArray(w.moeda) ? w.moeda : [],
+      network: w.network,
     })));
     setBalances((balancesRes.data || []).map((b: any) => ({
       wallet_id: b.wallet_id,
@@ -255,21 +260,60 @@ export function SwapCryptoDialog({ open, onClose, onSuccess, caixaParceiroId }: 
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Wallet */}
+          {/* Wallet Selection - Rich cards */}
           <div className="space-y-1.5">
             <Label className="text-xs">Wallet</Label>
-            <Select value={walletId} onValueChange={(v) => { setWalletId(v); setCoinOrigem(""); setCoinDestino(""); }}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione a wallet" />
-              </SelectTrigger>
-              <SelectContent>
-                {wallets.map(w => (
-                  <SelectItem key={w.id} value={w.id}>
-                    {w.exchange || "Wallet"} — {w.endereco.slice(0, 12)}...
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {parceiroNome && (
+              <p className="text-[11px] text-primary uppercase tracking-wider mb-1">
+                {parceiroNome}
+              </p>
+            )}
+            <div className="space-y-2 max-h-[200px] overflow-y-auto">
+              {wallets.map(w => {
+                const walletBalances = balances.filter(b => b.wallet_id === w.id);
+                const isSelected = walletId === w.id;
+                const exchangeName = (w.exchange || w.network || "Wallet").split(/[-\s]/).map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ').toUpperCase();
+                const truncAddr = `${w.endereco.slice(0, 6)}...${w.endereco.slice(-4)}`;
+
+                return (
+                  <button
+                    key={w.id}
+                    type="button"
+                    onClick={() => { setWalletId(w.id); setCoinOrigem(""); setCoinDestino(""); }}
+                    className={`w-full text-left rounded-lg border p-3 transition-colors ${
+                      isSelected 
+                        ? "border-primary bg-primary/10" 
+                        : "border-border/50 bg-muted/20 hover:border-border hover:bg-muted/40"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="font-semibold text-sm text-foreground">{exchangeName}</span>
+                      <div className="flex gap-1">
+                        {w.moedas.map(coin => (
+                          <Badge key={coin} variant="outline" className="text-[10px] px-1.5 py-0 h-5">
+                            {coin}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                    <p className="text-xs font-mono text-muted-foreground">{truncAddr}</p>
+                    {walletBalances.length > 0 && (
+                      <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5">
+                        {walletBalances.map(b => (
+                          <span key={b.coin} className="text-[11px] text-foreground">
+                            {b.coin} {b.saldo_coin.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            <span className="text-muted-foreground ml-1">≈ R$ {(b.saldo_usd * (cotacaoUSD || 1)).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+              {wallets.length === 0 && (
+                <p className="text-xs text-muted-foreground text-center py-4">Nenhuma wallet encontrada</p>
+              )}
+            </div>
           </div>
 
           {/* Moeda Origem */}
