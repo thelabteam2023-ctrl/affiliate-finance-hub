@@ -62,6 +62,7 @@ interface Projeto {
   nome: string;
   descricao?: string | null;
   status: string;
+  tipo_projeto?: string;
   data_inicio: string | null;
   data_fim_prevista: string | null;
   orcamento_inicial: number;
@@ -78,6 +79,7 @@ interface Projeto {
   lucro_operacional?: number;
   lucro_by_moeda?: SaldoByMoeda;
   display_order?: number;
+  investidor_id?: string | null;
 }
 
 export default function GestaoProjetos() {
