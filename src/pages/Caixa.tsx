@@ -557,6 +557,8 @@ export default function Caixa() {
       RENOVACAO_PARCERIA: "Renovação Parceria",
       BONIFICACAO_ESTRATEGICA: "Bonif. Estratégica",
       ESTORNO_COMISSAO_INDICADOR: "Estorno Comissão",
+      SWAP_OUT: "Swap (Saída)",
+      SWAP_IN: "Swap (Entrada)",
     };
     const base = labels[tipo] || tipo;
     
