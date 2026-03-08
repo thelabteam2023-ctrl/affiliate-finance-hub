@@ -229,6 +229,23 @@ async function fetchBreakdownsData(
       (ajustesData.total || 0) !== 0,
       { icon: 'Minus', color: (ajustesData.total || 0) >= 0 ? 'positive' : 'negative' }
     ),
+    // CANÔNICO: Módulos do serviço centralizado (fetchProjetoExtras)
+    // Ajustes de Saldo (refinamento de odds, arredondamentos)
+    createModuleContribution(
+      'ajuste_saldo',
+      'Ajustes de Saldo/FX',
+      extrasAgrupados.ajuste_saldo?.total || 0,
+      (extrasAgrupados.ajuste_saldo?.count || 0) > 0,
+      { icon: 'Settings', color: (extrasAgrupados.ajuste_saldo?.total || 0) >= 0 ? 'positive' : 'negative' }
+    ),
+    // Resultado Cambial (ganho/perda FX)
+    createModuleContribution(
+      'resultado_cambial',
+      'Resultado Cambial',
+      extrasAgrupados.resultado_cambial?.total || 0,
+      (extrasAgrupados.resultado_cambial?.count || 0) > 0,
+      { icon: 'Globe', color: (extrasAgrupados.resultado_cambial?.total || 0) >= 0 ? 'positive' : 'negative' }
+    ),
   ], moedaConsolidacao);
 
   // Adiciona breakdown por moeda ao lucro
@@ -239,7 +256,10 @@ async function fetchBreakdownsData(
     cashbackData.lucroPorMoeda,
     // Perdas já em BRL normalmente
     perdasData.lucroPorMoeda.map(item => ({ ...item, valor: -item.valor })),
-    ajustesData.lucroPorMoeda
+    ajustesData.lucroPorMoeda,
+    // Extras canônicos por moeda
+    extrasAgrupados.ajuste_saldo?.porMoeda || [],
+    extrasAgrupados.resultado_cambial?.porMoeda || [],
   );
 
   // === ROI (calculado a partir do lucro e volume) ===
