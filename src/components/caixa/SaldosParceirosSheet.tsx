@@ -518,12 +518,6 @@ export function SaldosParceirosSheet() {
           </div>
         )}
       </div>
-      <SwapCryptoDialog
-        open={swapOpen}
-        onClose={() => setSwapOpen(false)}
-        onSuccess={() => { setSwapOpen(false); onSwapSuccess?.(); }}
-        caixaParceiroId={parceiroId}
-      />
       </>
     );
   };
