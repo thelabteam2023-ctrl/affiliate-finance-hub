@@ -113,6 +113,10 @@ export function SaldosParceirosSheet() {
   const [cryptoPrices, setCryptoPrices] = useState<Record<string, number>>({});
   const [pricesLoading, setPricesLoading] = useState(false);
   const [lastPriceUpdate, setLastPriceUpdate] = useState<Date | null>(null);
+  const [swapDialog, setSwapDialog] = useState<{ open: boolean; parceiroId: string | null }>({
+    open: false,
+    parceiroId: null,
+  });
   const { convertToBRL } = useExchangeRates();
 
   const fetchCryptoPrices = async (coins: string[]) => {
