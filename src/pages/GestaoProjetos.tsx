@@ -204,16 +204,9 @@ export default function GestaoProjetos() {
       const finalProjetoIds = projetosData.map(p => p.id);
       
       // Buscar dados agregados em paralelo
-      const [saldosRpcResult, apostasResult, operadoresResult, bookmakersCountResult, depositosResult, saquesResult] = await Promise.all([
+      const [saldosRpcResult, operadoresResult, bookmakersCountResult, depositosResult, saquesResult] = await Promise.all([
         // USAR RPC CANÔNICA para saldo operável (inclui real + freebet + bonus - em_aposta)
         supabase.rpc("get_saldo_operavel_por_projeto", { p_projeto_ids: finalProjetoIds }),
-        
-        // Apostas liquidadas por projeto (base canônica do lucro operacional)
-        supabase
-          .from("apostas_unificada")
-          .select("projeto_id, lucro_prejuizo, pl_consolidado, lucro_prejuizo_brl_referencia, moeda_operacao, consolidation_currency, status")
-          .in("projeto_id", finalProjetoIds)
-          .eq("status", "LIQUIDADA"),
         
         // Operadores ativos por projeto
         supabase
