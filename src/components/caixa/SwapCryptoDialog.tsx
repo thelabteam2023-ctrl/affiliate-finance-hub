@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useCotacoes } from "@/hooks/useCotacoes";
@@ -23,7 +23,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowRightLeft, Loader2, ArrowDown } from "lucide-react";
+import { ArrowRightLeft, Loader2, ArrowDown, AlertTriangle, Plus } from "lucide-react";
+import { RedeSelect } from "@/components/parceiros/RedeSelect";
 
 const MOEDAS_CRYPTO = [
   { value: "USDT", label: "Tether (USDT)" },
@@ -50,6 +51,7 @@ interface WalletOption {
   parceiro_id: string;
   moedas: string[];
   network: string | null;
+  rede_id: string | null;
 }
 
 interface CoinBalance {
@@ -76,22 +78,38 @@ export function SwapCryptoDialog({ open, onClose, onSuccess, caixaParceiroId }: 
   const [balances, setBalances] = useState<CoinBalance[]>([]);
   const [parceiroNome, setParceiroNome] = useState<string>("");
 
-  // Form state
-  const [walletId, setWalletId] = useState("");
+  // Form state - Origem
+  const [walletOrigemId, setWalletOrigemId] = useState("");
   const [coinOrigem, setCoinOrigem] = useState("");
-  const [coinDestino, setCoinDestino] = useState("");
   const [qtdEnviada, setQtdEnviada] = useState("");
+
+  // Form state - Destino
+  const [destinoMode, setDestinoMode] = useState<"same" | "other">("same");
+  const [walletDestinoId, setWalletDestinoId] = useState("");
+  const [coinDestino, setCoinDestino] = useState("");
   const [qtdRecebida, setQtdRecebida] = useState("");
+  
+  // Auto-create destination wallet fields
+  const [novaRedeId, setNovaRedeId] = useState("");
+  const [novaRedeName, setNovaRedeName] = useState("");
 
   // Derived
-  const selectedWallet = wallets.find(w => w.id === walletId);
-  const availableCoins = selectedWallet?.moedas || [];
-  const saldoOrigem = balances.find(b => b.wallet_id === walletId && b.coin === coinOrigem);
+  const selectedOrigemWallet = wallets.find(w => w.id === walletOrigemId);
+  const availableCoinsOrigem = selectedOrigemWallet?.moedas || [];
+  const saldoOrigem = balances.find(b => b.wallet_id === walletOrigemId && b.coin === coinOrigem);
+
+  // Wallets available for destination (exclude origin wallet)
+  const destinoWallets = useMemo(() => 
+    wallets.filter(w => w.id !== walletOrigemId), 
+    [wallets, walletOrigemId]
+  );
+
+  const selectedDestinoWallet = wallets.find(w => w.id === walletDestinoId);
 
   const fetchWalletsAndBalances = useCallback(async () => {
     if (!caixaParceiroId) return;
     const [walletsRes, balancesRes, parceiroRes] = await Promise.all([
-      supabase.from("wallets_crypto").select("id, exchange, endereco, parceiro_id, moeda, network").eq("parceiro_id", caixaParceiroId),
+      supabase.from("wallets_crypto").select("id, exchange, endereco, parceiro_id, moeda, network, rede_id").eq("parceiro_id", caixaParceiroId),
       supabase.from("v_saldo_parceiro_wallets").select("wallet_id, coin, saldo_coin, saldo_usd").eq("parceiro_id", caixaParceiroId),
       supabase.from("parceiros").select("nome").eq("id", caixaParceiroId).single(),
     ]);
@@ -103,6 +121,7 @@ export function SwapCryptoDialog({ open, onClose, onSuccess, caixaParceiroId }: 
       parceiro_id: w.parceiro_id,
       moedas: Array.isArray(w.moeda) ? w.moeda : [],
       network: w.network,
+      rede_id: w.rede_id,
     })));
     setBalances((balancesRes.data || []).map((b: any) => ({
       wallet_id: b.wallet_id,
@@ -120,11 +139,15 @@ export function SwapCryptoDialog({ open, onClose, onSuccess, caixaParceiroId }: 
   }, [open, fetchWalletsAndBalances]);
 
   const resetForm = () => {
-    setWalletId("");
+    setWalletOrigemId("");
     setCoinOrigem("");
     setCoinDestino("");
     setQtdEnviada("");
     setQtdRecebida("");
+    setDestinoMode("same");
+    setWalletDestinoId("");
+    setNovaRedeId("");
+    setNovaRedeName("");
   };
 
   // Calculate USD estimates
@@ -137,9 +160,15 @@ export function SwapCryptoDialog({ open, onClose, onSuccess, caixaParceiroId }: 
   const spreadUsd = usdRecebido - usdEnviado;
   const spreadPct = usdEnviado > 0 ? ((spreadUsd / usdEnviado) * 100) : 0;
 
-  const canSubmit = walletId && coinOrigem && coinDestino && coinOrigem !== coinDestino
+  // Determine effective destination wallet
+  const effectiveDestinoWalletId = destinoMode === "same" ? walletOrigemId : walletDestinoId;
+  const needsNewWallet = destinoMode === "other" && walletDestinoId === "__new__";
+
+  const canSubmit = walletOrigemId && coinOrigem && coinDestino
     && qtdEnviadaNum > 0 && qtdRecebidaNum > 0
-    && (saldoOrigem ? qtdEnviadaNum <= saldoOrigem.saldo_coin : true);
+    && (saldoOrigem ? qtdEnviadaNum <= saldoOrigem.saldo_coin : true)
+    && (destinoMode === "same" || walletDestinoId)
+    && (!needsNewWallet || novaRedeId);
 
   const handleSwap = async () => {
     if (!canSubmit || !workspaceId || !caixaParceiroId) return;
@@ -151,6 +180,69 @@ export function SwapCryptoDialog({ open, onClose, onSuccess, caixaParceiroId }: 
 
       const now = new Date().toISOString();
       const dataTransacao = now.split("T")[0];
+
+      // Resolve destination wallet ID
+      let finalDestinoWalletId = effectiveDestinoWalletId;
+
+      if (needsNewWallet) {
+        // Auto-create destination wallet
+        // Get rede name
+        let networkName = novaRedeName;
+        if (!networkName && novaRedeId) {
+          const { data: redeData } = await supabase
+            .from("redes_crypto")
+            .select("nome")
+            .eq("id", novaRedeId)
+            .single();
+          networkName = redeData?.nome || "";
+        }
+
+        // Use same exchange/address from origin wallet
+        const origemWallet = selectedOrigemWallet;
+        if (!origemWallet) throw new Error("Wallet de origem não encontrada");
+
+        const { data: newWallet, error: walletError } = await supabase
+          .from("wallets_crypto")
+          .insert({
+            parceiro_id: caixaParceiroId,
+            exchange: origemWallet.exchange,
+            endereco: origemWallet.endereco,
+            network: networkName,
+            rede_id: novaRedeId,
+            moeda: [coinDestino],
+            workspace_id: workspaceId,
+            user_id: userData.user.id,
+          })
+          .select("id")
+          .single();
+
+        if (walletError) throw walletError;
+        finalDestinoWalletId = newWallet.id;
+
+        toast({
+          title: "Wallet criada",
+          description: `Nova wallet ${networkName} criada automaticamente para receber ${coinDestino}.`,
+        });
+      } else if (destinoMode === "other" && selectedDestinoWallet) {
+        // Ensure the destination wallet has the coin in its moeda array
+        const destWallet = selectedDestinoWallet;
+        if (!destWallet.moedas.includes(coinDestino)) {
+          const updatedMoedas = [...destWallet.moedas, coinDestino];
+          await supabase
+            .from("wallets_crypto")
+            .update({ moeda: updatedMoedas })
+            .eq("id", destWallet.id);
+        }
+      } else if (destinoMode === "same" && selectedOrigemWallet) {
+        // Ensure origin wallet has the destination coin
+        if (!selectedOrigemWallet.moedas.includes(coinDestino)) {
+          const updatedMoedas = [...selectedOrigemWallet.moedas, coinDestino];
+          await supabase
+            .from("wallets_crypto")
+            .update({ moeda: updatedMoedas })
+            .eq("id", selectedOrigemWallet.id);
+        }
+      }
 
       // SWAP_OUT: Débito da moeda origem
       const swapOutData: any = {
@@ -172,7 +264,7 @@ export function SwapCryptoDialog({ open, onClose, onSuccess, caixaParceiroId }: 
         transit_status: "CONFIRMED",
         impacta_caixa_operacional: true,
         descricao: `Swap ${coinOrigem} → ${coinDestino}`,
-        origem_wallet_id: walletId,
+        origem_wallet_id: walletOrigemId,
         origem_parceiro_id: caixaParceiroId,
         moeda_origem: coinOrigem,
         valor_origem: qtdEnviadaNum,
@@ -189,7 +281,7 @@ export function SwapCryptoDialog({ open, onClose, onSuccess, caixaParceiroId }: 
 
       if (outError) throw outError;
 
-      // SWAP_IN: Crédito da moeda destino (vinculado ao SWAP_OUT)
+      // SWAP_IN: Crédito da moeda destino (na wallet de destino)
       const swapInData: any = {
         user_id: userData.user.id,
         workspace_id: workspaceId,
@@ -209,7 +301,7 @@ export function SwapCryptoDialog({ open, onClose, onSuccess, caixaParceiroId }: 
         transit_status: "CONFIRMED",
         impacta_caixa_operacional: true,
         descricao: `Swap ${coinOrigem} → ${coinDestino}`,
-        destino_wallet_id: walletId,
+        destino_wallet_id: finalDestinoWalletId,
         destino_parceiro_id: caixaParceiroId,
         referencia_transacao_id: outResult.id,
         moeda_origem: coinOrigem,
@@ -246,48 +338,61 @@ export function SwapCryptoDialog({ open, onClose, onSuccess, caixaParceiroId }: 
     }
   };
 
+  const formatExchangeName = (w: WalletOption) => {
+    return (w.exchange || w.network || "Wallet")
+      .split(/[-\s]/)
+      .map(s => s.charAt(0).toUpperCase() + s.slice(1))
+      .join(' ')
+      .toUpperCase();
+  };
+
+  const truncAddr = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="sm:max-w-md bg-background">
+      <DialogContent className="sm:max-w-lg bg-background max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <ArrowRightLeft className="h-5 w-5 text-blue-400" />
+            <ArrowRightLeft className="h-5 w-5 text-primary" />
             Swap Crypto
           </DialogTitle>
           <DialogDescription>
-            Troque entre moedas na mesma wallet. Informe o valor enviado e o valor recebido.
+            Troque entre moedas e redes. Informe o valor enviado e o valor recebido.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Wallet Selection - Rich cards */}
+          {/* ═══ ORIGEM ═══ */}
           <div className="space-y-1.5">
-            <Label className="text-xs">Wallet</Label>
+            <Label className="text-xs font-semibold uppercase tracking-wider">Wallet de Origem</Label>
             {parceiroNome && (
-              <p className="text-[11px] text-primary uppercase tracking-wider mb-1">
+              <p className="text-[11px] text-primary uppercase tracking-wider">
                 {parceiroNome}
               </p>
             )}
-            <div className="space-y-2 max-h-[200px] overflow-y-auto">
+            <div className="space-y-2 max-h-[180px] overflow-y-auto">
               {wallets.map(w => {
                 const walletBalances = balances.filter(b => b.wallet_id === w.id);
-                const isSelected = walletId === w.id;
-                const exchangeName = (w.exchange || w.network || "Wallet").split(/[-\s]/).map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ').toUpperCase();
-                const truncAddr = `${w.endereco.slice(0, 6)}...${w.endereco.slice(-4)}`;
+                const isSelected = walletOrigemId === w.id;
 
                 return (
                   <button
                     key={w.id}
                     type="button"
-                    onClick={() => { setWalletId(w.id); setCoinOrigem(""); setCoinDestino(""); }}
+                    onClick={() => {
+                      setWalletOrigemId(w.id);
+                      setCoinOrigem("");
+                      setCoinDestino("");
+                      setWalletDestinoId("");
+                    }}
                     className={`w-full text-left rounded-lg border p-3 transition-colors ${
                       isSelected 
                         ? "border-primary bg-primary/10" 
                         : "border-border/50 bg-muted/20 hover:border-border hover:bg-muted/40"
                     }`}
                   >
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="font-semibold text-sm text-foreground">{exchangeName}</span>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-semibold text-sm text-foreground">{formatExchangeName(w)}</span>
                       <div className="flex gap-1">
                         {w.moedas.map(coin => (
                           <Badge key={coin} variant="outline" className="text-[10px] px-1.5 py-0 h-5">
@@ -296,13 +401,18 @@ export function SwapCryptoDialog({ open, onClose, onSuccess, caixaParceiroId }: 
                         ))}
                       </div>
                     </div>
-                    <p className="text-xs font-mono text-muted-foreground">{truncAddr}</p>
+                    <p className="text-xs font-mono text-muted-foreground">
+                      {truncAddr(w.endereco)}
+                      {w.network && <span className="ml-2 text-[10px] uppercase text-muted-foreground/70">({w.network})</span>}
+                    </p>
                     {walletBalances.length > 0 && (
                       <div className="flex flex-col gap-0.5 mt-1.5">
                         {walletBalances.map(b => (
                           <span key={b.coin} className="text-[11px] text-foreground">
                             {b.coin} {b.saldo_coin.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            <span className="text-muted-foreground ml-1">≈ R$ {(b.saldo_usd * (cotacaoUSD || 1)).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            <span className="text-muted-foreground ml-1">
+                              ≈ R$ {(b.saldo_usd * (cotacaoUSD || 1)).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
                           </span>
                         ))}
                       </div>
@@ -316,8 +426,8 @@ export function SwapCryptoDialog({ open, onClose, onSuccess, caixaParceiroId }: 
             </div>
           </div>
 
-          {/* Moeda Origem */}
-          {walletId && (
+          {/* ═══ ENVIO ═══ */}
+          {walletOrigemId && (
             <div className="space-y-3 rounded-lg border border-border/50 p-3 bg-muted/20">
               <div className="flex items-center gap-2">
                 <Badge variant="outline" className="text-[10px] uppercase">Envio</Badge>
@@ -331,7 +441,7 @@ export function SwapCryptoDialog({ open, onClose, onSuccess, caixaParceiroId }: 
                       <SelectValue placeholder="Moeda" />
                     </SelectTrigger>
                     <SelectContent>
-                      {availableCoins.map(c => {
+                      {availableCoinsOrigem.map(c => {
                         const info = MOEDAS_CRYPTO.find(m => m.value === c);
                         return (
                           <SelectItem key={c} value={c}>
@@ -373,18 +483,95 @@ export function SwapCryptoDialog({ open, onClose, onSuccess, caixaParceiroId }: 
           {coinOrigem && (
             <div className="flex justify-center">
               <div className="rounded-full border border-border/50 bg-muted/30 p-1.5">
-                <ArrowDown className="h-4 w-4 text-blue-400" />
+                <ArrowDown className="h-4 w-4 text-primary" />
               </div>
             </div>
           )}
 
-          {/* Moeda Destino */}
+          {/* ═══ DESTINO ═══ */}
           {coinOrigem && (
             <div className="space-y-3 rounded-lg border border-border/50 p-3 bg-muted/20">
               <div className="flex items-center gap-2">
-                <Badge variant="outline" className="text-[10px] uppercase text-emerald-400 border-emerald-400/30">Recebido</Badge>
+                <Badge variant="outline" className="text-[10px] uppercase text-emerald-500 border-emerald-500/30">Recebido</Badge>
                 <span className="text-xs text-muted-foreground">O que você recebeu</span>
               </div>
+
+              {/* Destino: mesma wallet ou outra */}
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant={destinoMode === "same" ? "default" : "outline"}
+                  size="sm"
+                  className="text-xs h-7"
+                  onClick={() => { setDestinoMode("same"); setWalletDestinoId(""); }}
+                >
+                  Mesma wallet
+                </Button>
+                <Button
+                  type="button"
+                  variant={destinoMode === "other" ? "default" : "outline"}
+                  size="sm"
+                  className="text-xs h-7"
+                  onClick={() => setDestinoMode("other")}
+                >
+                  Outra wallet/rede
+                </Button>
+              </div>
+
+              {/* Select destination wallet */}
+              {destinoMode === "other" && (
+                <div className="space-y-2">
+                  <Label className="text-xs">Wallet de destino</Label>
+                  <Select value={walletDestinoId} onValueChange={setWalletDestinoId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a wallet de destino" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {destinoWallets.map(w => (
+                        <SelectItem key={w.id} value={w.id}>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{formatExchangeName(w)}</span>
+                            <span className="text-muted-foreground text-xs font-mono">{truncAddr(w.endereco)}</span>
+                            {w.network && (
+                              <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 uppercase">
+                                {w.network}
+                              </Badge>
+                            )}
+                          </div>
+                        </SelectItem>
+                      ))}
+                      <SelectItem value="__new__">
+                        <div className="flex items-center gap-2 text-primary">
+                          <Plus className="h-3 w-3" />
+                          <span>Criar nova wallet (outra rede)</span>
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  {/* New wallet: select network */}
+                  {needsNewWallet && (
+                    <div className="space-y-2 p-2 rounded-md border border-dashed border-primary/30 bg-primary/5">
+                      <div className="flex items-center gap-2">
+                        <AlertTriangle className="h-3.5 w-3.5 text-primary" />
+                        <span className="text-xs text-foreground">
+                          Nova wallet será criada com o mesmo endereço da origem
+                        </span>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Rede de destino *</Label>
+                        <RedeSelect
+                          value={novaRedeId}
+                          onValueChange={(v) => {
+                            setNovaRedeId(v);
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label className="text-xs">Moeda</Label>
@@ -393,16 +580,8 @@ export function SwapCryptoDialog({ open, onClose, onSuccess, caixaParceiroId }: 
                       <SelectValue placeholder="Moeda" />
                     </SelectTrigger>
                     <SelectContent>
-                      {availableCoins.filter(c => c !== coinOrigem).map(c => {
-                        const info = MOEDAS_CRYPTO.find(m => m.value === c);
-                        return (
-                          <SelectItem key={c} value={c}>
-                            {info?.label || c}
-                          </SelectItem>
-                        );
-                      })}
-                      {/* Allow any crypto, not just wallet's registered coins */}
-                      {MOEDAS_CRYPTO.filter(m => m.value !== coinOrigem && !availableCoins.includes(m.value)).map(m => (
+                      {/* All crypto options except origin coin */}
+                      {MOEDAS_CRYPTO.filter(m => m.value !== coinOrigem).map(m => (
                         <SelectItem key={m.value} value={m.value}>
                           {m.label}
                         </SelectItem>
@@ -424,7 +603,7 @@ export function SwapCryptoDialog({ open, onClose, onSuccess, caixaParceiroId }: 
               {coinDestino && qtdRecebidaNum > 0 && (
                 <div className="flex items-center justify-between text-[11px] text-muted-foreground px-1">
                   <span>≈ ${usdRecebido.toFixed(2)} USD</span>
-                  <span className={spreadUsd >= 0 ? "text-emerald-400" : "text-destructive"}>
+                  <span className={spreadUsd >= 0 ? "text-emerald-500" : "text-destructive"}>
                     Spread: {spreadPct >= 0 ? "+" : ""}{spreadPct.toFixed(2)}% ({spreadUsd >= 0 ? "+" : ""}${spreadUsd.toFixed(2)})
                   </span>
                 </div>
@@ -432,15 +611,23 @@ export function SwapCryptoDialog({ open, onClose, onSuccess, caixaParceiroId }: 
             </div>
           )}
 
-          {/* Resumo */}
+          {/* ═══ RESUMO ═══ */}
           {canSubmit && (
-            <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-3 text-center space-y-1">
+            <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-center space-y-1">
               <div className="text-sm font-medium">
                 {qtdEnviadaNum} {coinOrigem} → {qtdRecebidaNum} {coinDestino}
               </div>
               <div className="text-[11px] text-muted-foreground">
                 Taxa implícita: 1 {coinOrigem} = {(qtdRecebidaNum / qtdEnviadaNum).toFixed(6)} {coinDestino}
               </div>
+              {destinoMode === "other" && (
+                <div className="text-[11px] text-muted-foreground">
+                  {needsNewWallet
+                    ? `↗ Nova wallet será criada na rede selecionada`
+                    : `↗ Destino: ${selectedDestinoWallet ? formatExchangeName(selectedDestinoWallet) : ""} (${selectedDestinoWallet?.network || ""})`
+                  }
+                </div>
+              )}
             </div>
           )}
         </div>
