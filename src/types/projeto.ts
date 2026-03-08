@@ -58,6 +58,18 @@ export const TIPO_PROJETO_CONFIG: Record<TipoProjeto, {
     icon: '💰',
     description: 'Operações de cashback',
   },
+  CPA: {
+    label: 'CPA',
+    color: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
+    icon: '🤝',
+    description: 'Custo por aquisição',
+  },
+  REVENUE_SHARE: {
+    label: 'Revenue Share',
+    color: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30',
+    icon: '📈',
+    description: 'Compartilhamento de receita',
+  },
   OUTROS: { 
     label: 'Outros', 
     color: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
