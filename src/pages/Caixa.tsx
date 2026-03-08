@@ -393,7 +393,7 @@ export default function Caixa() {
       }
       const { data: walletsSaldoData } = await walletsQuery;
       
-      const totalWallets = walletsSaldoData?.reduce((sum, w) => sum + (w.saldo_usd || 0), 0) || 0;
+      const totalWallets = walletsSaldoData?.reduce((sum, w) => sum + Math.max(0, w.saldo_usd || 0), 0) || 0;
       setSaldoWalletsParceiros(totalWallets);
 
     } catch (error: any) {
