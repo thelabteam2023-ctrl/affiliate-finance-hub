@@ -40,6 +40,7 @@ interface Projeto {
   total_bookmakers?: number;
   saldo_bookmakers_by_moeda?: SaldoByMoeda;
   lucro_by_moeda?: SaldoByMoeda;
+  lucro_operacional?: number;
   perdas_confirmadas?: number;
   lucro_realizado?: number;
   display_order?: number;
