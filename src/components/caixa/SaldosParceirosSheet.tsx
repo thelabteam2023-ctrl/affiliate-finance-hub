@@ -892,7 +892,7 @@ export function SaldosParceirosSheet() {
                                     saldos={parceiro.saldos_crypto} 
                                     totalLocked={parceiro.total_crypto_locked_usd}
                                     parceiroId={parceiro.parceiro_id}
-                                    onSwapSuccess={() => fetchData()}
+                                    onSwapSuccess={() => fetchSaldosParceiros()}
                                   />
                                 </HoverCardContent>
                               </HoverCard>
