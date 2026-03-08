@@ -204,7 +204,7 @@ export default function GestaoProjetos() {
       const finalProjetoIds = projetosData.map(p => p.id);
       
       // Buscar dados agregados em paralelo
-      const [saldosRpcResult, apostasResult, operadoresResult, perdasResult, girosGratisResult, cashbackManualResult, bookmakersCountResult] = await Promise.all([
+      const [saldosRpcResult, apostasResult, operadoresResult, perdasResult, girosGratisResult, cashbackManualResult, bookmakersCountResult, depositosResult, saquesResult] = await Promise.all([
         // USAR RPC CANÔNICA para saldo operável (inclui real + freebet + bonus - em_aposta)
         supabase.rpc("get_saldo_operavel_por_projeto", { p_projeto_ids: finalProjetoIds }),
         
@@ -248,7 +248,23 @@ export default function GestaoProjetos() {
           .from("bookmakers")
           .select("id, projeto_id, saldo_irrecuperavel, moeda")
           .in("projeto_id", finalProjetoIds)
-          .eq("status", "ativo")
+          .eq("status", "ativo"),
+        
+        // Depósitos confirmados por projeto (para Lucro Realizado)
+        supabase
+          .from("cash_ledger")
+          .select("projeto_id_snapshot, valor")
+          .eq("status", "CONFIRMADO")
+          .eq("tipo_transacao", "DEPOSITO")
+          .in("projeto_id_snapshot", finalProjetoIds),
+        
+        // Saques confirmados por projeto (para Lucro Realizado)
+        supabase
+          .from("cash_ledger")
+          .select("projeto_id_snapshot, valor_confirmado, valor")
+          .eq("status", "CONFIRMADO")
+          .eq("tipo_transacao", "SAQUE")
+          .in("projeto_id_snapshot", finalProjetoIds),
       ]);
       
       // ARQUITETURA DAG: Fetch armazena dados BRUTOS por moeda
