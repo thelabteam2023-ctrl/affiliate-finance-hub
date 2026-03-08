@@ -230,7 +230,7 @@ export function PosicaoCapital({
     const total = dados.reduce((sum, item) => sum + item.value, 0);
     
     return { dados, total };
-  }, [saldosFiat, saldoCaixaCrypto, saldosBookmakers, saldoContasParceiros, saldoWalletsParceiros, cotacaoUSD, convert]);
+  }, [saldosFiat, saldoCaixaCrypto, saldosBookmakers, saldosContasParceiros, saldoWalletsParceiros, cotacaoUSD, convert]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
