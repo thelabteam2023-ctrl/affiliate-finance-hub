@@ -72,6 +72,7 @@ export function SwapCryptoDialog({ open, onClose, onSuccess, caixaParceiroId }: 
   const { toast } = useToast();
   const { workspaceId } = useWorkspace();
   const { cotacaoUSD, cryptoPrices } = useCotacoes(["USDT", "USDC", "BTC", "ETH", "BNB", "TRX", "SOL"]);
+  const invalidateCaixa = useInvalidateCaixaData();
 
   const [loading, setLoading] = useState(false);
   const [wallets, setWallets] = useState<WalletOption[]>([]);
