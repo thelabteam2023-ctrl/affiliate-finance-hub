@@ -12,6 +12,8 @@ export type TipoProjeto =
   | 'PUNTER' 
   | 'BONUS' 
   | 'CASHBACK' 
+  | 'CPA'
+  | 'REVENUE_SHARE'
   | 'OUTROS';
 
 export const TIPO_PROJETO_CONFIG: Record<TipoProjeto, { 
@@ -55,6 +57,18 @@ export const TIPO_PROJETO_CONFIG: Record<TipoProjeto, {
     color: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
     icon: '💰',
     description: 'Operações de cashback',
+  },
+  CPA: {
+    label: 'CPA',
+    color: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
+    icon: '🤝',
+    description: 'Custo por aquisição',
+  },
+  REVENUE_SHARE: {
+    label: 'Revenue Share',
+    color: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30',
+    icon: '📈',
+    description: 'Compartilhamento de receita',
   },
   OUTROS: { 
     label: 'Outros', 
