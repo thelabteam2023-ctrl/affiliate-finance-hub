@@ -29,7 +29,6 @@ interface Projeto {
 
 interface ProjetosKanbanViewProps {
   projetos: Projeto[];
-  cotacaoUSD: number;
   isFavorite: (id: string) => boolean;
   toggleFavorite: (id: string) => void;
   onVisualizarOperadores: (projeto: Projeto) => void;

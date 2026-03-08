@@ -97,7 +97,6 @@ const formatUSD = (value: number) => {
 
 export function ProjetoKanbanCard({
   projeto,
-  cotacaoUSD,
   isFavorite,
   onToggleFavorite,
   onVisualizarOperadores,
