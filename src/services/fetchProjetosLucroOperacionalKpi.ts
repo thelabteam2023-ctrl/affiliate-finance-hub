@@ -30,6 +30,54 @@ const createEmpty = (): LucroProjetoResumo => ({
   porMoeda: { BRL: 0, USD: 0 },
 });
 
+/**
+ * Busca paginada para contornar o limite de 1000 linhas do Supabase.
+ * Faz fetches de PAGE_SIZE em PAGE_SIZE e concatena os resultados.
+ */
+async function fetchAllRows<T>(
+  buildQuery: () => any,
+  pageSize = 1000
+): Promise<T[]> {
+  const allRows: T[] = [];
+  let offset = 0;
+  let hasMore = true;
+
+  while (hasMore) {
+    const { data, error } = await buildQuery()
+      .range(offset, offset + pageSize - 1);
+
+    if (error) {
+      console.error("Erro em fetchAllRows:", error);
+      break;
+    }
+
+    const rows = (data || []) as T[];
+    allRows.push(...rows);
+
+    if (rows.length < pageSize) {
+      hasMore = false;
+    } else {
+      offset += pageSize;
+    }
+  }
+
+  return allRows;
+}
+
+/**
+ * Serviço KPI-compatível para cálculo do Lucro Operacional de múltiplos projetos.
+ * 
+ * PARIDADE GARANTIDA com useKpiBreakdowns:
+ * - Apostas LIQUIDADAS (via getConsolidatedLucro)
+ * - Cashback manual
+ * - Giros grátis confirmados
+ * - Bônus ganhos (exceto FREEBET)
+ * - Perdas operacionais confirmadas
+ * - Ajustes de conciliação
+ * - Ajustes de saldo + Resultado cambial (via fetchProjetoExtras canônico)
+ * 
+ * PROTEÇÃO: Paginação automática para >1000 linhas (limite Supabase).
+ */
 export async function fetchProjetosLucroOperacionalKpi({
   projetoIds,
   cotacaoUSD,
@@ -41,19 +89,23 @@ export async function fetchProjetosLucroOperacionalKpi({
     return valor;
   };
 
+  // Apostas: query paginada (pode exceder 1000 linhas em workspaces com muitos projetos)
+  const apostasData = await fetchAllRows<any>(
+    () => supabase
+      .from("apostas_unificada")
+      .select("projeto_id, lucro_prejuizo, pl_consolidado, lucro_prejuizo_brl_referencia, moeda_operacao, consolidation_currency, status")
+      .in("projeto_id", projetoIds)
+      .eq("status", "LIQUIDADA")
+  );
+
+  // Demais queries: volume menor, busca direta
   const [
-    apostasResult,
     cashbackResult,
     girosResult,
     bonusResult,
     perdasResult,
     ajustesResult,
   ] = await Promise.all([
-    supabase
-      .from("apostas_unificada")
-      .select("projeto_id, lucro_prejuizo, pl_consolidado, lucro_prejuizo_brl_referencia, moeda_operacao, status")
-      .in("projeto_id", projetoIds)
-      .eq("status", "LIQUIDADA"),
     supabase
       .from("cashback_manual")
       .select("projeto_id, valor, valor_brl_referencia, moeda_operacao")
@@ -81,6 +133,7 @@ export async function fetchProjetosLucroOperacionalKpi({
       .in("referencia_id", projetoIds),
   ]);
 
+  // Resolver moedas dos bookmakers referenciados
   const allBookmakerIds = new Set<string>();
   (girosResult.data || []).forEach((g: any) => g?.bookmaker_id && allBookmakerIds.add(g.bookmaker_id));
   (perdasResult.data || []).forEach((p: any) => p?.bookmaker_id && allBookmakerIds.add(p.bookmaker_id));
@@ -96,13 +149,14 @@ export async function fetchProjetosLucroOperacionalKpi({
     (bms || []).forEach((bm) => bookmakerMoedas.set(bm.id, bm.moeda || "BRL"));
   }
 
+  // Inicializar resultado
   const result: Record<string, LucroProjetoResumo> = {};
   projetoIds.forEach((id) => {
     result[id] = createEmpty();
   });
 
-  // 1) Apostas LIQUIDADAS (mesma base do KPI)
-  (apostasResult.data || []).forEach((ap: any) => {
+  // 1) Apostas LIQUIDADAS (mesma lógica getConsolidatedLucro do KPI)
+  apostasData.forEach((ap: any) => {
     const projetoId = ap.projeto_id;
     if (!projetoId || !result[projetoId]) return;
 
@@ -129,7 +183,6 @@ export async function fetchProjetosLucroOperacionalKpi({
         ? Number(cb.valor_brl_referencia)
         : convertToConsolidation(valor, moeda);
     }
-
     result[projetoId].consolidado += consolidado;
   });
 
@@ -145,7 +198,7 @@ export async function fetchProjetosLucroOperacionalKpi({
     result[projetoId].consolidado += convertToConsolidation(valor, moeda);
   });
 
-  // 4) Bônus ganhos (exclui FREEBET)
+  // 4) Bônus ganhos (exclui FREEBET — lucro SNR já no P&L)
   (bonusResult.data || [])
     .filter((b: any) => b.tipo_bonus !== "FREEBET")
     .forEach((b: any) => {
@@ -171,7 +224,7 @@ export async function fetchProjetosLucroOperacionalKpi({
     result[projetoId].consolidado -= convertToConsolidation(valor, moeda);
   });
 
-  // 6) Ajustes de conciliação do vínculo (saldo_novo - saldo_anterior)
+  // 6) Ajustes de conciliação de vínculo
   (ajustesResult.data || []).forEach((a: any) => {
     const projetoId = a.referencia_id;
     if (!projetoId || !result[projetoId]) return;
@@ -180,10 +233,10 @@ export async function fetchProjetosLucroOperacionalKpi({
     const moeda = bookmakerMoedas.get(a.bookmaker_id) || "BRL";
 
     result[projetoId].porMoeda[toBucketMoeda(moeda)] += delta;
-    result[projetoId].consolidado += delta;
+    result[projetoId].consolidado += convertToConsolidation(delta, moeda);
   });
 
-  // 7) Extras canônicos usados pelo KPI (somente ajuste_saldo + resultado_cambial)
+  // 7) Extras canônicos (ajuste_saldo + resultado_cambial)
   const extrasByProjeto = await Promise.all(
     projetoIds.map(async (projetoId) => {
       const extras = await fetchProjetoExtras(projetoId);
