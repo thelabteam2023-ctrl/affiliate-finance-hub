@@ -744,27 +744,28 @@ export default function GestaoProjetos() {
                   </div>
                   <div className="flex items-center gap-6">
                     <div className="text-right">
-                      <p className="text-xs text-muted-foreground">Saldo Bookmakers</p>
-                      {/* CONVERSÃO NO RENDER - usando cotação atual */}
-                      <p className="text-sm font-medium">
-                        {formatCurrency(
-                          (projeto.saldo_bookmakers_by_moeda?.BRL || 0) + 
-                          ((projeto.saldo_bookmakers_by_moeda?.USD || 0) * USD_TO_BRL_DISPLAY)
-                        )}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs text-muted-foreground">Lucro</p>
+                      <p className="text-xs text-muted-foreground">Lucro Operacional</p>
                       {(() => {
-                        // CONVERSÃO NO RENDER - usando cotação atual
                         const lucroBRL = projeto.lucro_by_moeda?.BRL || 0;
                         const lucroUSD = projeto.lucro_by_moeda?.USD || 0;
                         const perdas = projeto.perdas_confirmadas || 0;
                         const lucroOperacional = lucroBRL + (lucroUSD * USD_TO_BRL_DISPLAY) - perdas;
                         const isPositive = lucroOperacional >= 0;
                         return (
-                          <p className={`text-sm font-medium ${isPositive ? 'text-emerald-500' : 'text-red-500'}`}>
+                          <p className={`text-sm font-semibold ${isPositive ? 'text-emerald-500' : 'text-red-500'}`}>
                             {isPositive ? '+' : ''}{formatCurrency(lucroOperacional)}
+                          </p>
+                        );
+                      })()}
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-muted-foreground">Lucro Realizado</p>
+                      {(() => {
+                        const lr = projeto.lucro_realizado || 0;
+                        const isPositive = lr >= 0;
+                        return (
+                          <p className={`text-sm font-medium ${isPositive ? 'text-emerald-500' : 'text-red-500'}`}>
+                            {isPositive ? '+' : ''}{formatCurrency(lr)}
                           </p>
                         );
                       })()}
