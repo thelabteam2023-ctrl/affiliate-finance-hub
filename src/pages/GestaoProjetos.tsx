@@ -105,6 +105,7 @@ export default function GestaoProjetos() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [tipoFilter, setTipoFilter] = useState<string>("all");
   
   // Recuperar preferência de visualização do localStorage
   const [viewMode, setViewMode] = useState<"list" | "kanban">(() => {
