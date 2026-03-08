@@ -221,19 +221,21 @@ export default function GestaoProjetos() {
           .eq("status", "ativo"),
         
         // Depósitos confirmados por projeto (para Lucro Realizado)
+        // INCLUI DEPOSITO_VIRTUAL para paridade com Indicadores Financeiros
         supabase
           .from("cash_ledger")
-          .select("projeto_id_snapshot, valor")
+          .select("projeto_id_snapshot, valor, moeda")
           .eq("status", "CONFIRMADO")
-          .eq("tipo_transacao", "DEPOSITO")
+          .in("tipo_transacao", ["DEPOSITO", "DEPOSITO_VIRTUAL"])
           .in("projeto_id_snapshot", finalProjetoIds),
         
         // Saques confirmados por projeto (para Lucro Realizado)
+        // INCLUI SAQUE_VIRTUAL para paridade com Indicadores Financeiros
         supabase
           .from("cash_ledger")
-          .select("projeto_id_snapshot, valor_confirmado, valor")
+          .select("projeto_id_snapshot, valor_confirmado, valor, moeda")
           .eq("status", "CONFIRMADO")
-          .eq("tipo_transacao", "SAQUE")
+          .in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])
           .in("projeto_id_snapshot", finalProjetoIds),
       ]);
       
