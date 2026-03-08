@@ -298,7 +298,7 @@ export function SwapCryptoDialog({ open, onClose, onSuccess, caixaParceiroId }: 
                     </div>
                     <p className="text-xs font-mono text-muted-foreground">{truncAddr}</p>
                     {walletBalances.length > 0 && (
-                      <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5">
+                      <div className="flex flex-col gap-0.5 mt-1.5">
                         {walletBalances.map(b => (
                           <span key={b.coin} className="text-[11px] text-foreground">
                             {b.coin} {b.saldo_coin.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
