@@ -467,10 +467,11 @@ export default function Caixa() {
       const matchDataFim = !dataFim || dataEfetiva <= endOfDay(dataFim);
       
       // Include both APORTE and LIQUIDACAO when filter is APORTE_FINANCEIRO
-      const knownTypes = ["TRANSFERENCIA", "DEPOSITO", "SAQUE", "APORTE_FINANCEIRO"];
+      const knownTypes = ["TRANSFERENCIA", "DEPOSITO", "SAQUE", "APORTE_FINANCEIRO", "SWAP"];
       const matchTipo = filtroTipo === "TODOS" || 
         (filtroTipo === "APORTE_FINANCEIRO" && t.tipo_transacao === "APORTE_FINANCEIRO") ||
-        (filtroTipo === "OUTROS" && !knownTypes.includes(t.tipo_transacao)) ||
+        (filtroTipo === "SWAP" && (t.tipo_transacao === "SWAP_OUT" || t.tipo_transacao === "SWAP_IN")) ||
+        (filtroTipo === "OUTROS" && !knownTypes.includes(t.tipo_transacao) && t.tipo_transacao !== "SWAP_OUT" && t.tipo_transacao !== "SWAP_IN") ||
         t.tipo_transacao === filtroTipo;
       
       // Filtro por projeto usando projeto_id_snapshot (imutável, gravado no momento da transação)
@@ -557,6 +558,8 @@ export default function Caixa() {
       RENOVACAO_PARCERIA: "Renovação Parceria",
       BONIFICACAO_ESTRATEGICA: "Bonif. Estratégica",
       ESTORNO_COMISSAO_INDICADOR: "Estorno Comissão",
+      SWAP_OUT: "Swap (Saída)",
+      SWAP_IN: "Swap (Entrada)",
     };
     const base = labels[tipo] || tipo;
     
@@ -603,6 +606,8 @@ export default function Caixa() {
       RENOVACAO_PARCERIA: "bg-teal-500/20 text-teal-400 border-teal-500/30",
       BONIFICACAO_ESTRATEGICA: "bg-violet-500/20 text-violet-400 border-violet-500/30",
       ESTORNO_COMISSAO_INDICADOR: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
+      SWAP_OUT: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30",
+      SWAP_IN: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30",
     };
     return colors[tipo] || "bg-muted text-muted-foreground";
   };

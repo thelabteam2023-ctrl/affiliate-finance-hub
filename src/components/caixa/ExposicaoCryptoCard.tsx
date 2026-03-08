@@ -8,7 +8,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { TrendingUp, Plus, Bitcoin, Copy, Check } from "lucide-react";
+import { TrendingUp, Plus, Bitcoin, Copy, Check, ArrowRightLeft } from "lucide-react";
+import { SwapCryptoDialog } from "./SwapCryptoDialog";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrencyValue } from "@/types/currency";
 import { ExchangeSelect } from "@/components/parceiros/ExchangeSelect";
@@ -43,6 +44,7 @@ export function ExposicaoCryptoCard({
   const { toast } = useToast();
   const [wallets, setWallets] = useState<WalletInfo[]>([]);
   const [addWalletOpen, setAddWalletOpen] = useState(false);
+  const [swapOpen, setSwapOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const [novaWallet, setNovaWallet] = useState({
@@ -170,6 +172,15 @@ export function ExposicaoCryptoCard({
             )}
           </div>
           <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 rounded-full hover:bg-blue-500/20"
+              onClick={() => setSwapOpen(true)}
+              title="Swap entre moedas"
+            >
+              <ArrowRightLeft className="h-3.5 w-3.5 text-muted-foreground hover:text-blue-400 transition-colors" />
+            </Button>
             <Button
               variant="ghost"
               size="icon"
@@ -324,6 +335,14 @@ export function ExposicaoCryptoCard({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Swap Dialog */}
+      <SwapCryptoDialog
+        open={swapOpen}
+        onClose={() => setSwapOpen(false)}
+        onSuccess={() => { fetchWallets(); onDataChanged(); }}
+        caixaParceiroId={caixaParceiroId}
+      />
     </>
   );
 }
