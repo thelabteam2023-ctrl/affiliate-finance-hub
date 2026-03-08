@@ -259,8 +259,8 @@ export function SaldosParceirosSheet() {
         
         // Calcular USD com preço atual da Binance
         const currentPrice = prices[wallet.coin] || 0;
-        const saldoUsdAtualizado = wallet.saldo_coin * currentPrice;
-        const saldoLockedUsd = (wallet.saldo_locked || 0);
+        const saldoUsdAtualizado = Math.max(0, wallet.saldo_coin * currentPrice);
+        const saldoLockedUsd = Math.max(0, wallet.saldo_locked || 0);
 
         parceiro.saldos_crypto.push({
           coin: wallet.coin,
