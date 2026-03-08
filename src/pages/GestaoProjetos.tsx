@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useTabWorkspace } from "@/hooks/useTabWorkspace";
 import { useWorkspaceChangeListener } from "@/hooks/useWorkspaceCacheClear";
 import { useNavigate, useSearchParams } from "react-router-dom";
