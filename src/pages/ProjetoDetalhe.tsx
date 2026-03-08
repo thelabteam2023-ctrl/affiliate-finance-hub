@@ -887,7 +887,6 @@ export default function ProjetoDetalhe() {
                   { value: "modulos", label: "Módulos", icon: <Puzzle className="h-4 w-4" /> },
                   { value: "incidentes", label: "Incidentes", icon: <AlertTriangle className="h-4 w-4" /> },
                   { value: "ciclos", label: "Ciclos", icon: <Clock className="h-4 w-4" /> },
-                  { value: "marco-zero", label: "Marco Zero", icon: <RotateCcw className="h-4 w-4" /> },
                 ],
               },
             ]}
