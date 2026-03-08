@@ -647,7 +647,7 @@ async function fetchBonusGanhosModuleData(
 ): Promise<ModuleDataWithCurrency> {
   const { data, error } = await supabase
     .from('project_bookmaker_link_bonuses')
-    .select('bonus_amount, currency')
+    .select('bonus_amount, currency, tipo_bonus')
     .eq('project_id', projetoId)
     .in('status', ['credited', 'finalized']);
 
@@ -656,7 +656,10 @@ async function fetchBonusGanhosModuleData(
     return { count: 0, volume: 0, lucro: 0, total: 0, volumePorMoeda: [], lucroPorMoeda: [] };
   }
 
-  const bonuses = data || [];
+  // REGRA CANÔNICA (src/services/fetchProjetoExtras.ts):
+  // FREEBET excluído — lucro SNR já contabilizado no P&L da aposta.
+  // Incluir bonus_amount de FREEBET geraria dupla contagem (~R$9 divergência).
+  const bonuses = (data || []).filter(b => b.tipo_bonus !== 'FREEBET');
   const count = bonuses.length;
 
   const total = bonuses.reduce((acc, b) => {
