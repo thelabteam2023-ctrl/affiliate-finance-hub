@@ -1,9 +1,10 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
-import { BarChart3, History, RefreshCcw } from "lucide-react";
+import { BarChart3, History, RefreshCcw, Briefcase } from "lucide-react";
 import { FluxoFinanceiroOperacional } from "./FluxoFinanceiroOperacional";
 import { HistoricoMovimentacoes } from "./HistoricoMovimentacoes";
 import { ConciliacaoSaldos } from "./ConciliacaoSaldos";
+import { BrokerTab } from "@/components/broker/BrokerTab";
 import type { PendingTransaction } from "@/hooks/usePendingTransactions";
 
 interface LabelInfo {
