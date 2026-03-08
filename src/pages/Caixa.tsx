@@ -605,6 +605,8 @@ export default function Caixa() {
       RENOVACAO_PARCERIA: "bg-teal-500/20 text-teal-400 border-teal-500/30",
       BONIFICACAO_ESTRATEGICA: "bg-violet-500/20 text-violet-400 border-violet-500/30",
       ESTORNO_COMISSAO_INDICADOR: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
+      SWAP_OUT: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30",
+      SWAP_IN: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30",
     };
     return colors[tipo] || "bg-muted text-muted-foreground";
   };

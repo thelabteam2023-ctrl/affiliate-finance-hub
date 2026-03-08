@@ -54,6 +54,10 @@ export const CASH_REAL_TYPES = [
   // CRÍTICO: Creditam/debitam wallets, DEVEM aparecer para trilha de auditoria
   'GANHO_CAMBIAL',
   'PERDA_CAMBIAL',
+  
+  // Swap Crypto (troca entre moedas na mesma wallet)
+  'SWAP_OUT',
+  'SWAP_IN',
 ] as const;
 
 /**
