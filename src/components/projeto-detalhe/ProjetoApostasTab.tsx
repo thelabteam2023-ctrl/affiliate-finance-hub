@@ -656,12 +656,40 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
       }
 
       const { data, error } = await query;
-
       if (error) throw error;
+
+      // Query separada para PENDENTES sem filtro de data (garantir que abertas sempre apareçam)
+      let allSurebetData = (data || []) as any[];
+      if (dateRange) {
+        const { data: pendentesData } = await supabase
+          .from("apostas_unificada")
+          .select(`
+            id, evento, esporte, modelo, stake_total, spread_calculado,
+            roi_esperado, roi_real, lucro_esperado, lucro_prejuizo,
+            status, resultado, data_aposta, observacoes, created_at, pernas, estrategia,
+            contexto_operacional,
+            workspace_id, moeda_operacao, stake_consolidado, pl_consolidado,
+            valor_brl_referencia, lucro_prejuizo_brl_referencia,
+            apostas_pernas (
+              id, selecao, selecao_livre, odd, stake, resultado, lucro_prejuizo, bookmaker_id, moeda, ordem
+            )
+          `)
+          .eq("projeto_id", projetoId)
+          .eq("forma_registro", "ARBITRAGEM")
+          .eq("status", "PENDENTE")
+          .is("cancelled_at", null)
+          .order("data_aposta", { ascending: false });
+
+        if (pendentesData && pendentesData.length > 0) {
+          const existingIds = new Set(allSurebetData.map((a: any) => a.id));
+          const newPendentes = pendentesData.filter((p: any) => !existingIds.has(p.id));
+          allSurebetData = [...allSurebetData, ...newPendentes];
+        }
+      }
       
       // Determinar pernas reais: usar apostas_pernas (tabela relacional) se existirem, senão fallback para JSON
       const allBookmakerIds = new Set<string>();
-      (data || []).forEach((sb: any) => {
+      allSurebetData.forEach((sb: any) => {
         const pernasRelacionais = Array.isArray(sb.apostas_pernas) ? sb.apostas_pernas : [];
         const pernasJson = Array.isArray(sb.pernas) ? sb.pernas : [];
         const pernasEfetivas = pernasRelacionais.length > 0 ? pernasRelacionais : pernasJson;
