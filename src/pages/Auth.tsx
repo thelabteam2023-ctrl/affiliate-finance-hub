@@ -38,6 +38,8 @@ export default function Auth() {
   const { user, loading: authLoading, initialized } = useAuth();
 
   const [activeTab, setActiveTab] = useState<"login" | "signup">("login");
+  const [signupComplete, setSignupComplete] = useState(false);
+  const [signupCompletedEmail, setSignupCompletedEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPasswordReset, setShowPasswordReset] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
