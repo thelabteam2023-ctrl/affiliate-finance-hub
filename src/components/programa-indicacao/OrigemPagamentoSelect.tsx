@@ -150,53 +150,83 @@ export function OrigemPagamentoSelect({
     setLoading(true);
     debugLog("fetchData:start");
     try {
+      // STEP 1: Identify Caixa Operacional partner
+      const { data: caixaParceiro } = await supabase
+        .from("parceiros")
+        .select("id")
+        .eq("is_caixa_operacional", true)
+        .maybeSingle();
+      const caixaParceiroId = caixaParceiro?.id || null;
+
       const [
         parceirosRes,
         contasRes,
         walletsRes,
-        saldoFiatRes,
-        saldoCryptoRes,
-        saldoContasRes,
-        saldoWalletsRes,
+        // UNIFIED SOURCE: Use v_saldo_parceiro_contas/wallets for ALL balances
+        allContasSaldoRes,
+        allWalletsSaldoRes,
       ] = await Promise.all([
         supabase.from("parceiros").select("id, nome").eq("status", "ativo").order("nome"),
         supabase.from("contas_bancarias").select("id, banco, titular, parceiro_id").order("banco"),
         supabase.from("wallets_crypto").select("id, exchange, endereco, parceiro_id, moeda").order("exchange"),
-        supabase.from("v_saldo_caixa_fiat").select("moeda, saldo"),
-        supabase.from("v_saldo_caixa_crypto").select("coin, saldo_usd, saldo_coin"),
         supabase.from("v_saldo_parceiro_contas").select("conta_id, parceiro_id, saldo, moeda"),
         supabase.from("v_saldo_parceiro_wallets").select("wallet_id, parceiro_id, coin, saldo_usd, saldo_coin"),
       ]);
 
-      if (parceirosRes.error || contasRes.error || walletsRes.error || saldoFiatRes.error || saldoCryptoRes.error || saldoContasRes.error || saldoWalletsRes.error) {
+      if (parceirosRes.error || contasRes.error || walletsRes.error || allContasSaldoRes.error || allWalletsSaldoRes.error) {
         debugLog("fetchData:query-errors", {
           parceirosError: parceirosRes.error,
           contasError: contasRes.error,
           walletsError: walletsRes.error,
-          saldoFiatError: saldoFiatRes.error,
-          saldoCryptoError: saldoCryptoRes.error,
-          saldoContasError: saldoContasRes.error,
-          saldoWalletsError: saldoWalletsRes.error,
+          contasSaldoError: allContasSaldoRes.error,
+          walletsSaldoError: allWalletsSaldoRes.error,
         });
       }
+
+      const allContas = allContasSaldoRes.data || [];
+      const allWallets = allWalletsSaldoRes.data || [];
+
+      // Caixa FIAT = contas do parceiro caixa operacional, agrupadas por moeda
+      const caixaFiatMap: Record<string, number> = {};
+      allContas.forEach((row: any) => {
+        if (caixaParceiroId && row.parceiro_id === caixaParceiroId) {
+          const m = row.moeda || "BRL";
+          caixaFiatMap[m] = (caixaFiatMap[m] || 0) + (row.saldo || 0);
+        }
+      });
+
+      // Caixa CRYPTO = wallets do parceiro caixa operacional, agrupadas por coin
+      const caixaCryptoMap: Record<string, { saldo_coin: number; saldo_usd: number }> = {};
+      allWallets.forEach((row: any) => {
+        if (caixaParceiroId && row.parceiro_id === caixaParceiroId) {
+          const c = row.coin || "USDT";
+          if (!caixaCryptoMap[c]) caixaCryptoMap[c] = { saldo_coin: 0, saldo_usd: 0 };
+          caixaCryptoMap[c].saldo_coin += (row.saldo_coin || 0);
+          caixaCryptoMap[c].saldo_usd += (row.saldo_usd || 0);
+        }
+      });
+
+      // Parceiros = EXCLUINDO caixa operacional
+      const parceirosContasSaldo = allContas.filter((row: any) => !caixaParceiroId || row.parceiro_id !== caixaParceiroId);
+      const parceirosWalletsSaldo = allWallets.filter((row: any) => !caixaParceiroId || row.parceiro_id !== caixaParceiroId);
 
       setParceiros(parceirosRes.data || []);
       setContasBancarias(contasRes.data || []);
       setWalletsCrypto(walletsRes.data || []);
-      setSaldosCaixaFiat(saldoFiatRes.data || []);
-      setSaldosCaixaCrypto(saldoCryptoRes.data || []);
-      setSaldosParceirosContas(saldoContasRes.data || []);
-      setSaldosParceirosWallets(saldoWalletsRes.data || []);
+      setSaldosCaixaFiat(Object.entries(caixaFiatMap).map(([moeda, saldo]) => ({ moeda, saldo })));
+      setSaldosCaixaCrypto(Object.entries(caixaCryptoMap).map(([coin, vals]) => ({ coin, ...vals })));
+      setSaldosParceirosContas(parceirosContasSaldo);
+      setSaldosParceirosWallets(parceirosWalletsSaldo);
       setDataLoaded(true);
 
       debugLog("fetchData:success", {
         parceiros: (parceirosRes.data || []).length,
         contas: (contasRes.data || []).length,
         wallets: (walletsRes.data || []).length,
-        saldoCaixaFiat: (saldoFiatRes.data || []).length,
-        saldoCaixaCrypto: (saldoCryptoRes.data || []).length,
-        saldoParceirosContas: (saldoContasRes.data || []).length,
-        saldoParceirosWallets: (saldoWalletsRes.data || []).length,
+        saldoCaixaFiat: Object.keys(caixaFiatMap).length,
+        saldoCaixaCrypto: Object.keys(caixaCryptoMap).length,
+        saldoParceirosContas: parceirosContasSaldo.length,
+        saldoParceirosWallets: parceirosWalletsSaldo.length,
       });
     } catch (error) {
       console.error("[OrigemPagamentoSelect][fetchData:catch]", error);

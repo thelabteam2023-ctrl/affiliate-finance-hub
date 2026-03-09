@@ -1690,18 +1690,39 @@ export function CaixaTransacaoDialog({
   const fetchSaldosCaixa = async () => {
     if (!workspaceId) return;
     
+    // Fetch caixa parceiro ID if not yet available
+    let effectiveCaixaId = caixaParceiroId;
+    if (!effectiveCaixaId) {
+      const { data: cp } = await supabase.from("parceiros").select("id").eq("is_caixa_operacional", true).maybeSingle();
+      effectiveCaixaId = cp?.id || null;
+    }
+    if (!effectiveCaixaId) return;
+    
     try {
-      // Views já filtram por workspace internamente via get_current_workspace()
-      const { data: fiat } = await supabase
-        .from("v_saldo_caixa_fiat")
-        .select("moeda, saldo");
+      // UNIFIED SOURCE: Use v_saldo_parceiro_contas/wallets filtered by caixa parceiro
+      // This ensures parity with the Caixa Operacional page
+      const [contasRes, walletsRes] = await Promise.all([
+        supabase.from("v_saldo_parceiro_contas").select("moeda, saldo").eq("parceiro_id", effectiveCaixaId),
+        supabase.from("v_saldo_parceiro_wallets").select("coin, saldo_coin, saldo_usd").eq("parceiro_id", effectiveCaixaId),
+      ]);
 
-      const { data: crypto } = await supabase
-        .from("v_saldo_caixa_crypto")
-        .select("coin, saldo_usd, saldo_coin");
+      // Aggregate FIAT by currency
+      const fiatMap: Record<string, number> = {};
+      (contasRes.data || []).forEach((row: any) => {
+        const m = row.moeda || "BRL";
+        fiatMap[m] = (fiatMap[m] || 0) + (row.saldo || 0);
+      });
+      setSaldosCaixaFiat(Object.entries(fiatMap).map(([moeda, saldo]) => ({ moeda, saldo })));
 
-      setSaldosCaixaFiat(fiat || []);
-      setSaldosCaixaCrypto(crypto || []);
+      // Aggregate CRYPTO by coin
+      const cryptoMap: Record<string, { saldo_coin: number; saldo_usd: number }> = {};
+      (walletsRes.data || []).forEach((row: any) => {
+        const c = row.coin || "USDT";
+        if (!cryptoMap[c]) cryptoMap[c] = { saldo_coin: 0, saldo_usd: 0 };
+        cryptoMap[c].saldo_coin += (row.saldo_coin || 0);
+        cryptoMap[c].saldo_usd += (row.saldo_usd || 0);
+      });
+      setSaldosCaixaCrypto(Object.entries(cryptoMap).map(([coin, vals]) => ({ coin, ...vals })));
     } catch (error) {
       console.error("Erro ao carregar saldos caixa:", error);
     }
