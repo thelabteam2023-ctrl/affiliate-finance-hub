@@ -595,14 +595,14 @@ export function OrigemPagamentoSelect({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cotacaoUSD, dataLoaded]);
 
-  // 🔒 CORREÇÃO: Resolver conta/wallet da Caixa Operacional para propagar no onChange
+  // 🔒 Resolver conta/wallet da Caixa Operacional para propagar no onChange
+  // Auto-seleciona APENAS se houver uma única conta/wallet; se múltiplas, retorna undefined (user escolhe)
   const resolveCaixaIds = useCallback((tipoMoeda: "FIAT" | "CRYPTO", moeda?: string, coin?: string) => {
     if (tipoMoeda === "FIAT") {
       const m = moeda || "BRL";
       const contas = caixaContasByMoeda[m] || [];
-      // Se existe apenas uma conta na moeda, auto-selecionar
       return {
-        origemContaBancariaId: contas.length > 0 ? contas[0] : undefined,
+        origemContaBancariaId: contas.length === 1 ? contas[0].id : undefined,
         origemWalletId: undefined,
         origemParceiroId: caixaParceiroIdRef || undefined,
       };
@@ -611,7 +611,7 @@ export function OrigemPagamentoSelect({
       const wallets = caixaWalletsByCoin[c] || [];
       return {
         origemContaBancariaId: undefined,
-        origemWalletId: wallets.length > 0 ? wallets[0] : undefined,
+        origemWalletId: wallets.length === 1 ? wallets[0].id : undefined,
         origemParceiroId: caixaParceiroIdRef || undefined,
       };
     }
