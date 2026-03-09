@@ -1283,7 +1283,7 @@ export function SurebetDialogTable({
           status: "PENDENTE",
           resultado: "PENDENTE",
           pernas: pernasToSave as any,
-          data_aposta: new Date().toISOString()
+          data_aposta: toLocalTimestamp("")
         })
         .select("id")
         .single();
