@@ -1395,6 +1395,15 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
         </div>
       )}
 
+      {/* Filtro de período padronizado com suporte a Ciclos */}
+      <StandardTimeFilter
+        period={tabFilters.period}
+        onPeriodChange={tabFilters.setPeriod}
+        customDateRange={tabFilters.customDateRange}
+        onCustomDateRangeChange={tabFilters.setCustomDateRange}
+        projetoId={projetoId}
+      />
+
       {/* Card de Histórico com Filtros */}
       <Card>
         <CardHeader className="pb-3">
