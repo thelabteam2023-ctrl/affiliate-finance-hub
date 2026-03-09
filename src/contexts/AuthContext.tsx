@@ -156,12 +156,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // ── Helpers ────────────────────────────────────────────────
 
+  // Retry helper for network resilience
+  const retryQuery = useCallback(async <T,>(
+    fn: () => Promise<T>,
+    retries = 3,
+    delayMs = 500
+  ): Promise<T> => {
+    let lastError: unknown;
+    for (let i = 0; i < retries; i++) {
+      try {
+        return await fn();
+      } catch (error) {
+        lastError = error;
+        console.warn(`[Auth][${tabId}] Query attempt ${i + 1}/${retries} failed, retrying...`);
+        if (i < retries - 1) {
+          await new Promise(r => setTimeout(r, delayMs * (i + 1)));
+        }
+      }
+    }
+    throw lastError;
+  }, [tabId]);
+
   const fetchWorkspaceAndRole = useCallback(async (userId: string, targetWorkspaceId: string): Promise<{ workspace: Workspace | null; role: AppRole | null }> => {
     try {
-      const [wsResult, roleResult] = await Promise.all([
-        supabase.from('workspaces').select('id, name, slug, plan').eq('id', targetWorkspaceId).single(),
-        supabase.rpc('get_user_role', { _user_id: userId, _workspace_id: targetWorkspaceId }),
-      ]);
+      const fetchData = async () => {
+        const [wsResult, roleResult] = await Promise.all([
+          supabase.from('workspaces').select('id, name, slug, plan').eq('id', targetWorkspaceId).single(),
+          supabase.rpc('get_user_role', { _user_id: userId, _workspace_id: targetWorkspaceId }),
+        ]);
+        
+        if (wsResult.error && wsResult.error.message?.includes('fetch')) {
+          throw new Error('Network error');
+        }
+        
+        return { wsResult, roleResult };
+      };
+
+      const { wsResult, roleResult } = await retryQuery(fetchData);
 
       const workspace = (!wsResult.error && wsResult.data) ? wsResult.data : null;
       const role = (!roleResult.error && roleResult.data) ? roleResult.data as AppRole : null;
@@ -173,10 +204,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log(`[Auth][${tabId}] Workspace/role fetched:`, targetWorkspaceId, role);
       return { workspace, role };
     } catch (error) {
-      console.error(`[Auth][${tabId}] Error fetching workspace details:`, error);
+      console.error(`[Auth][${tabId}] Error fetching workspace details after retries:`, error);
       return { workspace: null, role: null };
     }
-  }, [tabId]);
+  }, [tabId, retryQuery]);
 
   const resolveWorkspaceId = useCallback(async (userId: string, profileData: { default_workspace_id: string | null }): Promise<string | null> => {
     // Priority 1: this tab's sessionStorage
