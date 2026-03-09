@@ -1486,6 +1486,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
           <TabFiltersBar
             projetoId={projetoId}
             filters={tabFilters}
+            showPeriodFilter={false}
             showEstrategiaFilter={true}
             showResultadoFilter={true}
           />
