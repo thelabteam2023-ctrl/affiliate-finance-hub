@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { agruparExtrasPorTipo, fetchProjetoExtras } from "@/services/fetchProjetoExtras";
 import { getConsolidatedLucro } from "@/utils/consolidatedValues";
+import { getOperationalDateRangeFromStrings } from "@/utils/dateUtils";
 
 interface SaldoByMoeda {
   BRL: number;
@@ -15,6 +16,10 @@ interface LucroProjetoResumo {
 interface Params {
   projetoIds: string[];
   cotacaoUSD: number;
+  /** Filtro de data início (YYYY-MM-DD). Se omitido, sem limite inferior. */
+  dataInicio?: string | null;
+  /** Filtro de data fim (YYYY-MM-DD). Se omitido, sem limite superior. */
+  dataFim?: string | null;
 }
 
 const isUsdLike = (moeda?: string | null) => {
@@ -65,6 +70,44 @@ async function fetchAllRows<T>(
 }
 
 /**
+ * Calcula os limites UTC para filtros de período no timezone operacional (São Paulo).
+ * Retorna null se nenhum filtro deve ser aplicado.
+ */
+function getDateFilters(dataInicio?: string | null, dataFim?: string | null) {
+  if (!dataInicio && !dataFim) return null;
+  
+  // Para queries com apenas início ou apenas fim, criamos um range amplo
+  const startStr = dataInicio || "2020-01-01";
+  const endStr = dataFim || "2099-12-31";
+  
+  const { startUTC, endUTC } = getOperationalDateRangeFromStrings(startStr, endStr);
+  
+  return {
+    startUTC: dataInicio ? startUTC : null,
+    endUTC: dataFim ? endUTC : null,
+  };
+}
+
+/**
+ * Aplica filtros de data a uma query do Supabase em um campo timestamp.
+ */
+function applyDateFilter(query: any, dateFilters: ReturnType<typeof getDateFilters>, field: string) {
+  if (!dateFilters) return query;
+  if (dateFilters.startUTC) query = query.gte(field, dateFilters.startUTC);
+  if (dateFilters.endUTC) query = query.lte(field, dateFilters.endUTC);
+  return query;
+}
+
+/**
+ * Aplica filtros de data a uma query do Supabase em um campo date (YYYY-MM-DD, sem timezone).
+ */
+function applyDateFilterSimple(query: any, dataInicio?: string | null, dataFim?: string | null, field = "data_credito") {
+  if (dataInicio) query = query.gte(field, dataInicio);
+  if (dataFim) query = query.lte(field, dataFim);
+  return query;
+}
+
+/**
  * Serviço KPI-compatível para cálculo do Lucro Operacional de múltiplos projetos.
  * 
  * PARIDADE GARANTIDA com useKpiBreakdowns:
@@ -77,10 +120,13 @@ async function fetchAllRows<T>(
  * - Ajustes de saldo + Resultado cambial (via fetchProjetoExtras canônico)
  * 
  * PROTEÇÃO: Paginação automática para >1000 linhas (limite Supabase).
+ * FILTROS: Suporta filtro de período opcional (dataInicio/dataFim) no timezone operacional.
  */
 export async function fetchProjetosLucroOperacionalKpi({
   projetoIds,
   cotacaoUSD,
+  dataInicio,
+  dataFim,
 }: Params): Promise<Record<string, LucroProjetoResumo>> {
   if (projetoIds.length === 0) return {};
 
@@ -89,13 +135,19 @@ export async function fetchProjetosLucroOperacionalKpi({
     return valor;
   };
 
+  const dateFilters = getDateFilters(dataInicio, dataFim);
+
   // Apostas: query paginada (pode exceder 1000 linhas em workspaces com muitos projetos)
   const apostasData = await fetchAllRows<any>(
-    () => supabase
-      .from("apostas_unificada")
-      .select("projeto_id, lucro_prejuizo, pl_consolidado, lucro_prejuizo_brl_referencia, moeda_operacao, consolidation_currency, status")
-      .in("projeto_id", projetoIds)
-      .eq("status", "LIQUIDADA")
+    () => {
+      let q = supabase
+        .from("apostas_unificada")
+        .select("projeto_id, lucro_prejuizo, pl_consolidado, lucro_prejuizo_brl_referencia, moeda_operacao, consolidation_currency, status")
+        .in("projeto_id", projetoIds)
+        .eq("status", "LIQUIDADA");
+      q = applyDateFilter(q, dateFilters, "data_aposta");
+      return q;
+    }
   );
 
   // Demais queries: volume menor, busca direta
@@ -106,31 +158,51 @@ export async function fetchProjetosLucroOperacionalKpi({
     perdasResult,
     ajustesResult,
   ] = await Promise.all([
-    supabase
-      .from("cashback_manual")
-      .select("projeto_id, valor, valor_brl_referencia, moeda_operacao")
-      .in("projeto_id", projetoIds),
-    supabase
-      .from("giros_gratis" as any)
-      .select("projeto_id, valor_retorno, status, bookmaker_id")
-      .in("projeto_id", projetoIds)
-      .eq("status", "confirmado"),
-    supabase
-      .from("project_bookmaker_link_bonuses")
-      .select("project_id, bonus_amount, currency, tipo_bonus")
-      .in("project_id", projetoIds)
-      .in("status", ["credited", "finalized"]),
-    supabase
-      .from("projeto_perdas")
-      .select("projeto_id, valor, status, bookmaker_id")
-      .in("projeto_id", projetoIds)
-      .eq("status", "CONFIRMADA"),
-    supabase
-      .from("bookmaker_balance_audit")
-      .select("referencia_id, saldo_anterior, saldo_novo, bookmaker_id")
-      .eq("origem", "CONCILIACAO_VINCULO")
-      .eq("referencia_tipo", "projeto")
-      .in("referencia_id", projetoIds),
+    (() => {
+      let q = supabase
+        .from("cashback_manual")
+        .select("projeto_id, valor, valor_brl_referencia, moeda_operacao")
+        .in("projeto_id", projetoIds);
+      q = applyDateFilterSimple(q, dataInicio, dataFim, "data_credito");
+      return q;
+    })(),
+    (() => {
+      let q = supabase
+        .from("giros_gratis" as any)
+        .select("projeto_id, valor_retorno, status, bookmaker_id")
+        .in("projeto_id", projetoIds)
+        .eq("status", "confirmado");
+      q = applyDateFilter(q, dateFilters, "data_registro");
+      return q;
+    })(),
+    (() => {
+      let q = supabase
+        .from("project_bookmaker_link_bonuses")
+        .select("project_id, bonus_amount, currency, tipo_bonus")
+        .in("project_id", projetoIds)
+        .in("status", ["credited", "finalized"]);
+      q = applyDateFilter(q, dateFilters, "created_at");
+      return q;
+    })(),
+    (() => {
+      let q = supabase
+        .from("projeto_perdas")
+        .select("projeto_id, valor, status, bookmaker_id")
+        .in("projeto_id", projetoIds)
+        .eq("status", "CONFIRMADA");
+      q = applyDateFilter(q, dateFilters, "created_at");
+      return q;
+    })(),
+    (() => {
+      let q = supabase
+        .from("bookmaker_balance_audit")
+        .select("referencia_id, saldo_anterior, saldo_novo, bookmaker_id")
+        .eq("origem", "CONCILIACAO_VINCULO")
+        .eq("referencia_tipo", "projeto")
+        .in("referencia_id", projetoIds);
+      q = applyDateFilter(q, dateFilters, "created_at");
+      return q;
+    })(),
   ]);
 
   // Resolver moedas dos bookmakers referenciados
@@ -237,6 +309,8 @@ export async function fetchProjetosLucroOperacionalKpi({
   });
 
   // 7) Extras canônicos (ajuste_saldo + resultado_cambial)
+  // NOTA: Extras não suportam filtro de data nativo, são agregados all-time por projeto.
+  // Para filtros de período, os extras são incluídos integralmente (são eventos pontuais).
   const extrasByProjeto = await Promise.all(
     projetoIds.map(async (projetoId) => {
       const extras = await fetchProjetoExtras(projetoId);
