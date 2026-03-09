@@ -360,15 +360,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     /**
      * Shared: given a valid session, resolve profile + workspace + role
+     * With retry for network resilience
      */
     const resolveSession = async (session: Session) => {
       const userId = session.user.id;
 
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('is_system_owner, is_blocked, public_id, default_workspace_id')
-        .eq('id', userId)
-        .single();
+      // Retry helper inline for profile fetch
+      const fetchProfileWithRetry = async (retries = 3) => {
+        for (let i = 0; i < retries; i++) {
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('is_system_owner, is_blocked, public_id, default_workspace_id')
+            .eq('id', userId)
+            .single();
+          
+          if (!error || !error.message?.includes('fetch')) {
+            return data;
+          }
+          
+          console.warn(`[Auth][${tabId}] Profile fetch attempt ${i + 1}/${retries} failed, retrying...`);
+          if (i < retries - 1) {
+            await new Promise(r => setTimeout(r, 500 * (i + 1)));
+          }
+        }
+        return null;
+      };
+
+      const profileData = await fetchProfileWithRetry();
 
       const wsId = await resolveWorkspaceId(userId, {
         default_workspace_id: profileData?.default_workspace_id ?? null,
