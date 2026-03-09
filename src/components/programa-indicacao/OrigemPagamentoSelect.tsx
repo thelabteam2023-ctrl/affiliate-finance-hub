@@ -21,6 +21,21 @@ interface ContaBancaria {
   banco: string;
   titular: string;
   parceiro_id: string;
+  moeda?: string;
+}
+
+interface CaixaContaInfo {
+  id: string;
+  banco: string;
+  saldo: number;
+}
+
+interface CaixaWalletInfo {
+  id: string;
+  exchange: string;
+  endereco: string;
+  saldo_coin: number;
+  saldo_usd: number;
 }
 
 interface WalletCrypto {
@@ -119,8 +134,8 @@ export function OrigemPagamentoSelect({
   // 🔒 CORREÇÃO: Mapeamentos de contas/wallets da Caixa Operacional para resolver IDs
   // Quando origem = CAIXA_OPERACIONAL, precisamos propagar o conta_bancaria_id/wallet_id
   // para que as views de saldo (v_saldo_parceiro_contas) contabilizem o débito.
-  const [caixaContasByMoeda, setCaixaContasByMoeda] = useState<Record<string, string[]>>({});
-  const [caixaWalletsByCoin, setCaixaWalletsByCoin] = useState<Record<string, string[]>>({});
+  const [caixaContasByMoeda, setCaixaContasByMoeda] = useState<Record<string, CaixaContaInfo[]>>({});
+  const [caixaWalletsByCoin, setCaixaWalletsByCoin] = useState<Record<string, CaixaWalletInfo[]>>({});
   const [caixaParceiroIdRef, setCaixaParceiroIdRef] = useState<string | null>(null);
 
   // Flag para indicar que os dados foram carregados
@@ -196,18 +211,22 @@ export function OrigemPagamentoSelect({
       // Caixa FIAT = contas do parceiro caixa operacional, agrupadas por moeda
       const caixaFiatMap: Record<string, number> = {};
       // 🔒 CORREÇÃO: Mapear contas bancárias da Caixa por moeda
-      const contasByMoeda: Record<string, string[]> = {};
+      const contasByMoeda: Record<string, CaixaContaInfo[]> = {};
       const contasData = contasRes.data || [];
       
       allContas.forEach((row: any) => {
         if (caixaParceiroId && row.parceiro_id === caixaParceiroId) {
           const m = row.moeda || "BRL";
           caixaFiatMap[m] = (caixaFiatMap[m] || 0) + (row.saldo || 0);
-          // Mapear conta_id por moeda
           if (row.conta_id) {
             if (!contasByMoeda[m]) contasByMoeda[m] = [];
-            if (!contasByMoeda[m].includes(row.conta_id)) {
-              contasByMoeda[m].push(row.conta_id);
+            if (!contasByMoeda[m].find(c => c.id === row.conta_id)) {
+              const contaInfo = contasData.find((c: any) => c.id === row.conta_id);
+              contasByMoeda[m].push({
+                id: row.conta_id,
+                banco: contaInfo?.banco || "Conta",
+                saldo: row.saldo || 0,
+              });
             }
           }
         }
@@ -215,8 +234,8 @@ export function OrigemPagamentoSelect({
 
       // Caixa CRYPTO = wallets do parceiro caixa operacional, agrupadas por coin
       const caixaCryptoMap: Record<string, { saldo_coin: number; saldo_usd: number }> = {};
-      // 🔒 CORREÇÃO: Mapear wallets da Caixa por coin
-      const walletsByCoin: Record<string, string[]> = {};
+      const walletsByCoin: Record<string, CaixaWalletInfo[]> = {};
+      const walletsData = walletsRes.data || [];
       
       allWallets.forEach((row: any) => {
         if (caixaParceiroId && row.parceiro_id === caixaParceiroId) {
@@ -224,11 +243,17 @@ export function OrigemPagamentoSelect({
           if (!caixaCryptoMap[c]) caixaCryptoMap[c] = { saldo_coin: 0, saldo_usd: 0 };
           caixaCryptoMap[c].saldo_coin += (row.saldo_coin || 0);
           caixaCryptoMap[c].saldo_usd += (row.saldo_usd || 0);
-          // Mapear wallet_id por coin
           if (row.wallet_id) {
             if (!walletsByCoin[c]) walletsByCoin[c] = [];
-            if (!walletsByCoin[c].includes(row.wallet_id)) {
-              walletsByCoin[c].push(row.wallet_id);
+            if (!walletsByCoin[c].find(w => w.id === row.wallet_id)) {
+              const walletInfo = walletsData.find((w: any) => w.id === row.wallet_id);
+              walletsByCoin[c].push({
+                id: row.wallet_id,
+                exchange: walletInfo?.exchange || "Wallet",
+                endereco: walletInfo?.endereco || "",
+                saldo_coin: row.saldo_coin || 0,
+                saldo_usd: row.saldo_usd || 0,
+              });
             }
           }
         }
@@ -483,20 +508,25 @@ export function OrigemPagamentoSelect({
         tipoMoeda: currentValue.tipoMoeda,
       });
 
-      // 🔒 CORREÇÃO: Auto-resolver IDs da Caixa Operacional no efeito inicial
+      // 🔒 Auto-resolver IDs da Caixa Operacional (apenas se há UMA conta, senão o user escolhe)
       let resolvedIds: Partial<OrigemPagamentoData> = {};
       if (currentValue.origemTipo === "CAIXA_OPERACIONAL" && !currentValue.origemContaBancariaId && !currentValue.origemWalletId) {
         if (currentValue.tipoMoeda === "FIAT") {
           const m = currentValue.moeda || "BRL";
           const contas = caixaContasByMoeda[m] || [];
-          if (contas.length > 0) {
-            resolvedIds = { origemContaBancariaId: contas[0], origemParceiroId: caixaParceiroIdRef || undefined };
+          if (contas.length === 1) {
+            resolvedIds = { origemContaBancariaId: contas[0].id, origemParceiroId: caixaParceiroIdRef || undefined };
+          } else if (contas.length > 1) {
+            // Múltiplas contas: não auto-selecionar, user precisa escolher
+            resolvedIds = { origemParceiroId: caixaParceiroIdRef || undefined };
           }
         } else {
           const c = currentValue.coin || "USDT";
           const wallets = caixaWalletsByCoin[c] || [];
-          if (wallets.length > 0) {
-            resolvedIds = { origemWalletId: wallets[0], origemParceiroId: caixaParceiroIdRef || undefined };
+          if (wallets.length === 1) {
+            resolvedIds = { origemWalletId: wallets[0].id, origemParceiroId: caixaParceiroIdRef || undefined };
+          } else if (wallets.length > 1) {
+            resolvedIds = { origemParceiroId: caixaParceiroIdRef || undefined };
           }
         }
       }
@@ -575,14 +605,14 @@ export function OrigemPagamentoSelect({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cotacaoUSD, dataLoaded]);
 
-  // 🔒 CORREÇÃO: Resolver conta/wallet da Caixa Operacional para propagar no onChange
+  // 🔒 Resolver conta/wallet da Caixa Operacional para propagar no onChange
+  // Auto-seleciona APENAS se houver uma única conta/wallet; se múltiplas, retorna undefined (user escolhe)
   const resolveCaixaIds = useCallback((tipoMoeda: "FIAT" | "CRYPTO", moeda?: string, coin?: string) => {
     if (tipoMoeda === "FIAT") {
       const m = moeda || "BRL";
       const contas = caixaContasByMoeda[m] || [];
-      // Se existe apenas uma conta na moeda, auto-selecionar
       return {
-        origemContaBancariaId: contas.length > 0 ? contas[0] : undefined,
+        origemContaBancariaId: contas.length === 1 ? contas[0].id : undefined,
         origemWalletId: undefined,
         origemParceiroId: caixaParceiroIdRef || undefined,
       };
@@ -591,7 +621,7 @@ export function OrigemPagamentoSelect({
       const wallets = caixaWalletsByCoin[c] || [];
       return {
         origemContaBancariaId: undefined,
-        origemWalletId: wallets.length > 0 ? wallets[0] : undefined,
+        origemWalletId: wallets.length === 1 ? wallets[0].id : undefined,
         origemParceiroId: caixaParceiroIdRef || undefined,
       };
     }
@@ -1117,25 +1147,141 @@ export function OrigemPagamentoSelect({
             </div>
           )}
 
-          {/* Show selected balance for Caixa */}
-          {value.tipoMoeda === "FIAT" && (
-            <div className={`p-3 rounded-lg text-sm flex items-center gap-2 ${
-              saldoCaixaFiat < valorEfetivo && valorEfetivo > 0
-                ? "bg-destructive/10 border border-destructive/30 text-destructive" 
-                : "bg-muted/50 text-muted-foreground"
-            }`}>
-              {saldoCaixaFiat < valorEfetivo && valorEfetivo > 0 && (
-                <AlertTriangle className="h-4 w-4 shrink-0" />
-              )}
-              <span>
-                Saldo disponível: {formatCurrency(saldoCaixaFiat)}
-                {valorCreditoEdicao > 0 && <span className="ml-1">(+ {formatCurrency(valorCreditoEdicao)} crédito edição)</span>}
-                {saldoCaixaFiat < valorEfetivo && valorEfetivo > 0 && (
-                  <span className="ml-2 font-semibold">— Saldo insuficiente!</span>
+          {/* FIAT: Seletor de conta específica quando há múltiplas contas */}
+          {value.tipoMoeda === "FIAT" && (() => {
+            const contasCaixa = caixaContasByMoeda["BRL"] || [];
+            if (contasCaixa.length > 1) {
+              return (
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">Selecione a Conta</Label>
+                  <Select
+                    value={value.origemContaBancariaId || ""}
+                    onValueChange={(contaId) => {
+                      const contaInfo = contasCaixa.find(c => c.id === contaId);
+                      onChange({
+                        ...value,
+                        origemContaBancariaId: contaId,
+                        saldoDisponivel: contaInfo?.saldo || 0,
+                        saldoInsuficiente: valorEfetivo > 0 && (contaInfo?.saldo || 0) < valorEfetivo,
+                      });
+                    }}
+                    disabled={disabled}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Escolha a conta..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {contasCaixa.map((conta) => {
+                        const insuficiente = conta.saldo < valorEfetivo;
+                        return (
+                          <SelectItem key={conta.id} value={conta.id}>
+                            <div className="flex items-center justify-between w-full gap-4">
+                              <span className="font-medium">{conta.banco}</span>
+                              <span className={`text-xs font-medium ${insuficiente ? "text-destructive" : "text-muted-foreground"}`}>
+                                {formatCurrency(conta.saldo)}
+                              </span>
+                            </div>
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                </div>
+              );
+            }
+            return null;
+          })()}
+
+          {/* CRYPTO: Seletor de wallet específica quando há múltiplas wallets */}
+          {value.tipoMoeda === "CRYPTO" && value.coin && (() => {
+            const walletsCaixa = caixaWalletsByCoin[value.coin] || [];
+            if (walletsCaixa.length > 1) {
+              return (
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">Selecione a Wallet</Label>
+                  <Select
+                    value={value.origemWalletId || ""}
+                    onValueChange={(walletId) => {
+                      const walletInfo = walletsCaixa.find(w => w.id === walletId);
+                      const saldoBRL = (walletInfo?.saldo_usd || 0) * cotacaoUSD;
+                      onChange({
+                        ...value,
+                        origemWalletId: walletId,
+                        saldoDisponivel: saldoBRL,
+                        saldoInsuficiente: valorEfetivo > 0 && saldoBRL < valorEfetivo,
+                      });
+                    }}
+                    disabled={disabled}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Escolha a wallet..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {walletsCaixa.map((wallet) => {
+                        const saldoBRL = wallet.saldo_usd * cotacaoUSD;
+                        const insuficiente = saldoBRL < valorEfetivo;
+                        const enderecoShort = wallet.endereco 
+                          ? `${wallet.endereco.slice(0, 6)}...${wallet.endereco.slice(-4)}`
+                          : "";
+                        return (
+                          <SelectItem key={wallet.id} value={wallet.id}>
+                            <div className="flex items-center justify-between w-full gap-4">
+                              <div className="flex flex-col">
+                                <span className="font-medium text-sm">{wallet.exchange}</span>
+                                <span className="text-xs text-muted-foreground">{enderecoShort}</span>
+                              </div>
+                              <span className={`text-xs font-medium ${insuficiente ? "text-destructive" : "text-muted-foreground"}`}>
+                                {formatCoin(wallet.saldo_coin, value.coin!)} ≈ {formatCurrency(saldoBRL)}
+                              </span>
+                            </div>
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                </div>
+              );
+            }
+            return null;
+          })()}
+
+          {value.tipoMoeda === "FIAT" && (() => {
+            const contasCaixa = caixaContasByMoeda["BRL"] || [];
+            const hasMultiple = contasCaixa.length > 1;
+            // Se múltiplas contas: mostrar saldo da conta selecionada; senão: saldo total
+            const saldoExibido = hasMultiple && value.origemContaBancariaId
+              ? (contasCaixa.find(c => c.id === value.origemContaBancariaId)?.saldo || 0)
+              : saldoCaixaFiat;
+            const needsSelection = hasMultiple && !value.origemContaBancariaId;
+            
+            if (needsSelection) {
+              return (
+                <div className="p-3 rounded-lg text-sm flex items-center gap-2 bg-muted/50 text-muted-foreground">
+                  <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500" />
+                  <span>Selecione a conta para continuar</span>
+                </div>
+              );
+            }
+            
+            return (
+              <div className={`p-3 rounded-lg text-sm flex items-center gap-2 ${
+                saldoExibido < valorEfetivo && valorEfetivo > 0
+                  ? "bg-destructive/10 border border-destructive/30 text-destructive" 
+                  : "bg-muted/50 text-muted-foreground"
+              }`}>
+                {saldoExibido < valorEfetivo && valorEfetivo > 0 && (
+                  <AlertTriangle className="h-4 w-4 shrink-0" />
                 )}
-              </span>
-            </div>
-          )}
+                <span>
+                  Saldo disponível: {formatCurrency(saldoExibido)}
+                  {valorCreditoEdicao > 0 && <span className="ml-1">(+ {formatCurrency(valorCreditoEdicao)} crédito edição)</span>}
+                  {saldoExibido < valorEfetivo && valorEfetivo > 0 && (
+                    <span className="ml-2 font-semibold">— Saldo insuficiente!</span>
+                  )}
+                </span>
+              </div>
+            );
+          })()}
 
           {value.tipoMoeda === "CRYPTO" && value.coin && (
             <div className="space-y-2">
