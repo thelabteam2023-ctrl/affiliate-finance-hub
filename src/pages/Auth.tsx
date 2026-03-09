@@ -223,6 +223,7 @@ export default function Auth() {
         <div className="w-full max-w-md">
           <div className="bg-card border border-border rounded-2xl p-8 shadow-lg">
             <div className="text-center mb-8">
+              <img src={labbetLogo} alt="LABBET" className="h-10 mx-auto mb-4 object-contain" />
               <h1 className="text-2xl font-bold text-foreground">Recuperar senha</h1>
               <p className="text-muted-foreground text-sm mt-2">
                 Digite seu email para receber o link de recuperação
