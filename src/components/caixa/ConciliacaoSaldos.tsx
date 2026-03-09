@@ -682,7 +682,12 @@ export function ConciliacaoSaldos({
                         </div>
 
                         <div className="text-xs text-muted-foreground">
-                          {format(parseLocalDateTime(t.data_transacao), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                          {(() => {
+                            const dk = extractCivilDateKey(t.data_transacao);
+                            if (!dk) return '-';
+                            const [y, m, d] = dk.split('-');
+                            return `${d}/${m}/${y}`;
+                          })()}
                         </div>
                       </div>
 
