@@ -556,6 +556,28 @@ export function OrigemPagamentoSelect({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cotacaoUSD, dataLoaded]);
 
+  // 🔒 CORREÇÃO: Resolver conta/wallet da Caixa Operacional para propagar no onChange
+  const resolveCaixaIds = useCallback((tipoMoeda: "FIAT" | "CRYPTO", moeda?: string, coin?: string) => {
+    if (tipoMoeda === "FIAT") {
+      const m = moeda || "BRL";
+      const contas = caixaContasByMoeda[m] || [];
+      // Se existe apenas uma conta na moeda, auto-selecionar
+      return {
+        origemContaBancariaId: contas.length > 0 ? contas[0] : undefined,
+        origemWalletId: undefined,
+        origemParceiroId: caixaParceiroIdRef || undefined,
+      };
+    } else {
+      const c = coin || "USDT";
+      const wallets = caixaWalletsByCoin[c] || [];
+      return {
+        origemContaBancariaId: undefined,
+        origemWalletId: wallets.length > 0 ? wallets[0] : undefined,
+        origemParceiroId: caixaParceiroIdRef || undefined,
+      };
+    }
+  }, [caixaContasByMoeda, caixaWalletsByCoin, caixaParceiroIdRef]);
+
   // Handle origem type change
   const handleOrigemTipoChange = (tipo: "CAIXA_OPERACIONAL" | "PARCEIRO_CONTA" | "PARCEIRO_WALLET") => {
     debugLog("handler:origemTipo:before-click", {
@@ -581,12 +603,17 @@ export function OrigemPagamentoSelect({
       coinSelecionada
     );
 
+    // 🔒 CORREÇÃO: Resolver IDs da conta/wallet da Caixa quando selecionada
+    const caixaIds = tipo === "CAIXA_OPERACIONAL" 
+      ? resolveCaixaIds(tipoMoeda, moeda, coinSelecionada) 
+      : { origemContaBancariaId: undefined, origemWalletId: undefined, origemParceiroId: undefined };
+
     const newData: OrigemPagamentoData = {
       ...value,
       origemTipo: tipo,
-      origemParceiroId: undefined,
-      origemContaBancariaId: undefined,
-      origemWalletId: undefined,
+      origemParceiroId: caixaIds.origemParceiroId,
+      origemContaBancariaId: caixaIds.origemContaBancariaId,
+      origemWalletId: caixaIds.origemWalletId,
       tipoMoeda,
       moeda,
       coin: coinSelecionada,
