@@ -211,18 +211,22 @@ export function OrigemPagamentoSelect({
       // Caixa FIAT = contas do parceiro caixa operacional, agrupadas por moeda
       const caixaFiatMap: Record<string, number> = {};
       // 🔒 CORREÇÃO: Mapear contas bancárias da Caixa por moeda
-      const contasByMoeda: Record<string, string[]> = {};
+      const contasByMoeda: Record<string, CaixaContaInfo[]> = {};
       const contasData = contasRes.data || [];
       
       allContas.forEach((row: any) => {
         if (caixaParceiroId && row.parceiro_id === caixaParceiroId) {
           const m = row.moeda || "BRL";
           caixaFiatMap[m] = (caixaFiatMap[m] || 0) + (row.saldo || 0);
-          // Mapear conta_id por moeda
           if (row.conta_id) {
             if (!contasByMoeda[m]) contasByMoeda[m] = [];
-            if (!contasByMoeda[m].includes(row.conta_id)) {
-              contasByMoeda[m].push(row.conta_id);
+            if (!contasByMoeda[m].find(c => c.id === row.conta_id)) {
+              const contaInfo = contasData.find((c: any) => c.id === row.conta_id);
+              contasByMoeda[m].push({
+                id: row.conta_id,
+                banco: contaInfo?.banco || "Conta",
+                saldo: row.saldo || 0,
+              });
             }
           }
         }
@@ -230,8 +234,8 @@ export function OrigemPagamentoSelect({
 
       // Caixa CRYPTO = wallets do parceiro caixa operacional, agrupadas por coin
       const caixaCryptoMap: Record<string, { saldo_coin: number; saldo_usd: number }> = {};
-      // 🔒 CORREÇÃO: Mapear wallets da Caixa por coin
-      const walletsByCoin: Record<string, string[]> = {};
+      const walletsByCoin: Record<string, CaixaWalletInfo[]> = {};
+      const walletsData = walletsRes.data || [];
       
       allWallets.forEach((row: any) => {
         if (caixaParceiroId && row.parceiro_id === caixaParceiroId) {
@@ -239,11 +243,17 @@ export function OrigemPagamentoSelect({
           if (!caixaCryptoMap[c]) caixaCryptoMap[c] = { saldo_coin: 0, saldo_usd: 0 };
           caixaCryptoMap[c].saldo_coin += (row.saldo_coin || 0);
           caixaCryptoMap[c].saldo_usd += (row.saldo_usd || 0);
-          // Mapear wallet_id por coin
           if (row.wallet_id) {
             if (!walletsByCoin[c]) walletsByCoin[c] = [];
-            if (!walletsByCoin[c].includes(row.wallet_id)) {
-              walletsByCoin[c].push(row.wallet_id);
+            if (!walletsByCoin[c].find(w => w.id === row.wallet_id)) {
+              const walletInfo = walletsData.find((w: any) => w.id === row.wallet_id);
+              walletsByCoin[c].push({
+                id: row.wallet_id,
+                exchange: walletInfo?.exchange || "Wallet",
+                endereco: walletInfo?.endereco || "",
+                saldo_coin: row.saldo_coin || 0,
+                saldo_usd: row.saldo_usd || 0,
+              });
             }
           }
         }
