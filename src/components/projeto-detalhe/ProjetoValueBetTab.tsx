@@ -355,7 +355,7 @@ export function ProjetoValueBetTab({
         );
       }
 
-      const mappedApostas: Aposta[] = (data || []).map((a: any) => {
+      const mappedApostas: Aposta[] = allData.map((a: any) => {
         const bkInfo = a.bookmaker_id ? bookmakerMap.get(a.bookmaker_id) : null;
         // Construir nome completo: "CASA - PARCEIRO" se parceiroNome existir
         let bookmakerNomeCompleto = bkInfo?.nome ?? "Desconhecida";

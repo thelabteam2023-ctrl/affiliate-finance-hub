@@ -334,7 +334,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
         );
       }
 
-      const mapped = (data || []).map((a: any) => {
+      const mapped = allData.map((a: any) => {
           const bkInfo = a.bookmaker_id ? bookmakerMap.get(a.bookmaker_id) : null;
           return {
             ...a,
