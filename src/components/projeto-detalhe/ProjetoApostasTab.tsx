@@ -50,6 +50,7 @@ import { useProjectBonuses } from "@/hooks/useProjectBonuses";
 import { ESTRATEGIAS_LIST, inferEstrategiaLegado, type ApostaEstrategia } from "@/lib/apostaConstants";
 // VisaoGeralCharts removido - agora está em ProjetoDashboardTab
 import { TabFiltersBar } from "./TabFiltersBar";
+import { StandardTimeFilter } from "./StandardTimeFilter";
 import { useTabFilters } from "@/hooks/useTabFilters";
 import { cn, getFirstLastName } from "@/lib/utils";
 import { parsePernaFromJson } from "@/types/apostasUnificada";
