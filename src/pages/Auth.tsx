@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, AlertTriangle, Eye, EyeOff, Mail, Lock, User, CreditCard, Phone } from "lucide-react";
+import { Loader2, AlertTriangle, Eye, EyeOff, Mail, Lock, User, CreditCard, Phone, MailCheck, ArrowLeft } from "lucide-react";
 import { z } from "zod";
 import labbetLogo from "@/assets/labbet-logo-horizontal.png";
 import { validateCPF, formatCPF } from "@/lib/validators";
@@ -38,6 +38,8 @@ export default function Auth() {
   const { user, loading: authLoading, initialized } = useAuth();
 
   const [activeTab, setActiveTab] = useState<"login" | "signup">("login");
+  const [signupComplete, setSignupComplete] = useState(false);
+  const [signupCompletedEmail, setSignupCompletedEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPasswordReset, setShowPasswordReset] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
@@ -181,11 +183,8 @@ export default function Auth() {
         }
       }
 
-      toast({
-        title: "Cadastro realizado!",
-        description: "Verifique seu email para confirmar a conta.",
-      });
-      setActiveTab("login");
+      setSignupCompletedEmail(validation.data.email);
+      setSignupComplete(true);
     } catch (error: any) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
     } finally {
@@ -283,6 +282,43 @@ export default function Auth() {
             </p>
           </div>
 
+          {/* Email confirmation screen after signup */}
+          {signupComplete ? (
+            <div className="text-center space-y-5 py-4">
+              <div className="mx-auto w-16 h-16 rounded-full bg-emerald-500/15 flex items-center justify-center">
+                <MailCheck className="h-8 w-8 text-emerald-400" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-lg font-semibold text-foreground">Verifique seu email</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Enviamos um link de confirmação para:
+                </p>
+                <p className="text-sm font-medium text-primary break-all">
+                  {signupCompletedEmail}
+                </p>
+              </div>
+              <div className="bg-muted/50 border border-border rounded-lg p-4 text-left space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  📩 Abra seu email e clique no link de confirmação para ativar sua conta.
+                </p>
+                <p className="text-xs text-muted-foreground/70">
+                  Não encontrou? Verifique a pasta de spam ou lixo eletrônico.
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => {
+                  setSignupComplete(false);
+                  setActiveTab("login");
+                }}
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Voltar para o login
+              </Button>
+            </div>
+          ) : (
+          <>
           {/* Blocked warning */}
           {isBlocked && blockedUntil && (
             <div className="flex items-start gap-3 p-4 bg-destructive/10 border border-destructive/20 rounded-lg mb-6">
@@ -519,6 +555,8 @@ export default function Auth() {
                 Criar conta
               </Button>
             </form>
+          )}
+          </>
           )}
         </div>
       </div>
