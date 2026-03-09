@@ -479,7 +479,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
       }
 
       // Buscar lay_bookmaker para apostas com cobertura
-      const apostasComLayInfo = await Promise.all((data || []).map(async (aposta: any) => {
+      const apostasComLayInfo = await Promise.all(allData.map(async (aposta: any) => {
         const bookmaker = aposta.bookmaker_id ? bookmakerMap.get(aposta.bookmaker_id) : null;
         let lay_bookmaker = null;
         
