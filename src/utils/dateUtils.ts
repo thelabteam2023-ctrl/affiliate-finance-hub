@@ -256,20 +256,28 @@ export const validarDataAposta = (dateString: string): { valid: boolean; error?:
 };
 
 /**
- * Converte uma string de data/hora para timestamp local literal
- * SEM conversão de timezone - preserva exatamente o que o usuário escolheu.
+ * Converte uma string de data/hora local (São Paulo) para timestamp com offset.
  * 
- * Esta função garante que não haja shift de dia causado por conversão UTC.
- * Se o usuário escolhe "25/01/2026 23:59", o banco deve salvar "2026-01-25 23:59:00".
+ * REGRA CRÍTICA: O usuário digita a hora em São Paulo (UTC-3).
+ * Esta função adiciona o offset -03:00 para que o Postgres interprete corretamente.
+ * 
+ * Exemplo:
+ * - Usuário digita: 07/03 00:34 (São Paulo)
+ * - Esta função retorna: 2026-03-07T00:34:00-03:00
+ * - Postgres interpreta como: 2026-03-07 03:34:00 UTC
+ * - Na exibição com parseLocalDateTime: converte UTC → São Paulo = 07/03 00:34 ✓
  * 
  * IMPORTANTE: Esta função NÃO valida o ano. Use validarDataAposta() antes de salvar.
  * 
  * @param dateTimeString - String no formato "YYYY-MM-DDTHH:mm" (datetime-local)
- * @returns String no formato "YYYY-MM-DDTHH:mm:ss" (sem Z, sem offset)
+ * @returns String no formato ISO com offset de São Paulo (-03:00)
  */
 export const toLocalTimestamp = (dateTimeString: string): string => {
+  // Offset de São Paulo: UTC-3 (horário de verão foi abolido no Brasil em 2019)
+  const SAO_PAULO_OFFSET = '-03:00';
+  
   if (!dateTimeString) {
-    // Se vazio, retornar timestamp atual no formato local
+    // Se vazio, retornar timestamp atual no formato com offset
     const now = new Date();
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -277,21 +285,27 @@ export const toLocalTimestamp = (dateTimeString: string): string => {
     const hours = String(now.getHours()).padStart(2, '0');
     const minutes = String(now.getMinutes()).padStart(2, '0');
     const seconds = String(now.getSeconds()).padStart(2, '0');
-    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}${SAO_PAULO_OFFSET}`;
   }
   
-  // Se já tem timezone info, remover
+  // Remover qualquer timezone info existente para normalizar
   const cleanDate = dateTimeString
     .replace(/\+00:00$/, '')
     .replace(/Z$/, '')
-    .replace(/\+\d{2}:\d{2}$/, '')
-    .replace(/-\d{2}:\d{2}$/, '');
+    .replace(/[+-]\d{2}:\d{2}$/, '')
+    .replace(/[+-]\d{2}$/, '');
   
-  // Garantir formato completo com segundos
+  // Garantir formato completo com segundos e adicionar offset de São Paulo
   if (cleanDate.length === 16) {
     // Formato: YYYY-MM-DDTHH:mm
-    return `${cleanDate}:00`;
+    return `${cleanDate}:00${SAO_PAULO_OFFSET}`;
   }
   
-  return cleanDate;
+  // Se já tem segundos, apenas adicionar offset
+  if (cleanDate.length === 19) {
+    return `${cleanDate}${SAO_PAULO_OFFSET}`;
+  }
+  
+  // Fallback: adicionar offset ao que temos
+  return `${cleanDate}${SAO_PAULO_OFFSET}`;
 };
