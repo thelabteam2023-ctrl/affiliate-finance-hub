@@ -1147,7 +1147,104 @@ export function OrigemPagamentoSelect({
             </div>
           )}
 
-          {/* Show selected balance for Caixa */}
+          {/* FIAT: Seletor de conta específica quando há múltiplas contas */}
+          {value.tipoMoeda === "FIAT" && (() => {
+            const contasCaixa = caixaContasByMoeda["BRL"] || [];
+            if (contasCaixa.length > 1) {
+              return (
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">Selecione a Conta</Label>
+                  <Select
+                    value={value.origemContaBancariaId || ""}
+                    onValueChange={(contaId) => {
+                      const contaInfo = contasCaixa.find(c => c.id === contaId);
+                      onChange({
+                        ...value,
+                        origemContaBancariaId: contaId,
+                        saldoDisponivel: contaInfo?.saldo || 0,
+                        saldoInsuficiente: valorEfetivo > 0 && (contaInfo?.saldo || 0) < valorEfetivo,
+                      });
+                    }}
+                    disabled={disabled}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Escolha a conta..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {contasCaixa.map((conta) => {
+                        const insuficiente = conta.saldo < valorEfetivo;
+                        return (
+                          <SelectItem key={conta.id} value={conta.id}>
+                            <div className="flex items-center justify-between w-full gap-4">
+                              <span className="font-medium">{conta.banco}</span>
+                              <span className={`text-xs font-medium ${insuficiente ? "text-destructive" : "text-muted-foreground"}`}>
+                                {formatCurrency(conta.saldo)}
+                              </span>
+                            </div>
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                </div>
+              );
+            }
+            return null;
+          })()}
+
+          {/* CRYPTO: Seletor de wallet específica quando há múltiplas wallets */}
+          {value.tipoMoeda === "CRYPTO" && value.coin && (() => {
+            const walletsCaixa = caixaWalletsByCoin[value.coin] || [];
+            if (walletsCaixa.length > 1) {
+              return (
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">Selecione a Wallet</Label>
+                  <Select
+                    value={value.origemWalletId || ""}
+                    onValueChange={(walletId) => {
+                      const walletInfo = walletsCaixa.find(w => w.id === walletId);
+                      const saldoBRL = (walletInfo?.saldo_usd || 0) * cotacaoUSD;
+                      onChange({
+                        ...value,
+                        origemWalletId: walletId,
+                        saldoDisponivel: saldoBRL,
+                        saldoInsuficiente: valorEfetivo > 0 && saldoBRL < valorEfetivo,
+                      });
+                    }}
+                    disabled={disabled}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Escolha a wallet..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {walletsCaixa.map((wallet) => {
+                        const saldoBRL = wallet.saldo_usd * cotacaoUSD;
+                        const insuficiente = saldoBRL < valorEfetivo;
+                        const enderecoShort = wallet.endereco 
+                          ? `${wallet.endereco.slice(0, 6)}...${wallet.endereco.slice(-4)}`
+                          : "";
+                        return (
+                          <SelectItem key={wallet.id} value={wallet.id}>
+                            <div className="flex items-center justify-between w-full gap-4">
+                              <div className="flex flex-col">
+                                <span className="font-medium text-sm">{wallet.exchange}</span>
+                                <span className="text-xs text-muted-foreground">{enderecoShort}</span>
+                              </div>
+                              <span className={`text-xs font-medium ${insuficiente ? "text-destructive" : "text-muted-foreground"}`}>
+                                {formatCoin(wallet.saldo_coin, value.coin!)} ≈ {formatCurrency(saldoBRL)}
+                              </span>
+                            </div>
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                </div>
+              );
+            }
+            return null;
+          })()}
+
           {value.tipoMoeda === "FIAT" && (
             <div className={`p-3 rounded-lg text-sm flex items-center gap-2 ${
               saldoCaixaFiat < valorEfetivo && valorEfetivo > 0
