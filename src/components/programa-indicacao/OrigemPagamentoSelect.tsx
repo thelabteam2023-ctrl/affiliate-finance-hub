@@ -116,6 +116,13 @@ export function OrigemPagamentoSelect({
   const [saldosParceirosContas, setSaldosParceirosContas] = useState<SaldoParceiroContas[]>([]);
   const [saldosParceirosWallets, setSaldosParceirosWallets] = useState<SaldoParceiroWallets[]>([]);
 
+  // 🔒 CORREÇÃO: Mapeamentos de contas/wallets da Caixa Operacional para resolver IDs
+  // Quando origem = CAIXA_OPERACIONAL, precisamos propagar o conta_bancaria_id/wallet_id
+  // para que as views de saldo (v_saldo_parceiro_contas) contabilizem o débito.
+  const [caixaContasByMoeda, setCaixaContasByMoeda] = useState<Record<string, string[]>>({});
+  const [caixaWalletsByCoin, setCaixaWalletsByCoin] = useState<Record<string, string[]>>({});
+  const [caixaParceiroIdRef, setCaixaParceiroIdRef] = useState<string | null>(null);
+
   // Flag para indicar que os dados foram carregados
   const [dataLoaded, setDataLoaded] = useState(false);
   const [parceiroContaOpen, setParceiroContaOpen] = useState(false);
