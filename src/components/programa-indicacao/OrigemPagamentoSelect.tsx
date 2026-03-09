@@ -483,8 +483,27 @@ export function OrigemPagamentoSelect({
         tipoMoeda: currentValue.tipoMoeda,
       });
 
+      // 🔒 CORREÇÃO: Auto-resolver IDs da Caixa Operacional no efeito inicial
+      let resolvedIds: Partial<OrigemPagamentoData> = {};
+      if (currentValue.origemTipo === "CAIXA_OPERACIONAL" && !currentValue.origemContaBancariaId && !currentValue.origemWalletId) {
+        if (currentValue.tipoMoeda === "FIAT") {
+          const m = currentValue.moeda || "BRL";
+          const contas = caixaContasByMoeda[m] || [];
+          if (contas.length > 0) {
+            resolvedIds = { origemContaBancariaId: contas[0], origemParceiroId: caixaParceiroIdRef || undefined };
+          }
+        } else {
+          const c = currentValue.coin || "USDT";
+          const wallets = caixaWalletsByCoin[c] || [];
+          if (wallets.length > 0) {
+            resolvedIds = { origemWalletId: wallets[0], origemParceiroId: caixaParceiroIdRef || undefined };
+          }
+        }
+      }
+
       onChangeRef.current({
         ...currentValue,
+        ...resolvedIds,
         saldoDisponivel,
         saldoInsuficiente,
         cotacao: currentValue.tipoMoeda === "CRYPTO" ? newCotacao : currentValue.cotacao,
