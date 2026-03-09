@@ -643,11 +643,18 @@ export function OrigemPagamentoSelect({
       coinSelecionada
     );
 
+    // 🔒 CORREÇÃO: Resolver IDs da conta/wallet da Caixa
+    const moeda = tipoMoeda === "FIAT" ? "BRL" : "USD";
+    const caixaIds = resolveCaixaIds(tipoMoeda, moeda, coinSelecionada);
+
     onChange({
       ...value,
       tipoMoeda,
-      moeda: tipoMoeda === "FIAT" ? "BRL" : "USD",
+      moeda,
       coin: coinSelecionada,
+      origemParceiroId: caixaIds.origemParceiroId,
+      origemContaBancariaId: caixaIds.origemContaBancariaId,
+      origemWalletId: caixaIds.origemWalletId,
       // 🔒 PROPAGAR cotação e preço da crypto quando CRYPTO é selecionado
       cotacao: tipoMoeda === "CRYPTO" ? cotacaoUSD : undefined,
       coinPriceUSD: saldoCrypto?.priceUSD || 1,
@@ -661,6 +668,9 @@ export function OrigemPagamentoSelect({
     const saldoCrypto = getSaldoCaixaCryptoByCoin(coin);
     const saldoInsuficiente = valorEfetivo > 0 && saldoCrypto.saldoBRL < valorEfetivo;
 
+    // 🔒 CORREÇÃO: Resolver wallet_id da Caixa para a coin selecionada
+    const caixaIds = resolveCaixaIds("CRYPTO", "USD", coin);
+
     onChange({
       ...value,
       coin,
@@ -668,6 +678,8 @@ export function OrigemPagamentoSelect({
       coinPriceUSD: saldoCrypto.priceUSD,
       saldoDisponivel: saldoCrypto.saldoBRL,
       saldoInsuficiente,
+      origemWalletId: caixaIds.origemWalletId,
+      origemParceiroId: caixaIds.origemParceiroId,
     });
   };
 
