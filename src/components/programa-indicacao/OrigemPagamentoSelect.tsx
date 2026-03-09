@@ -21,6 +21,21 @@ interface ContaBancaria {
   banco: string;
   titular: string;
   parceiro_id: string;
+  moeda?: string;
+}
+
+interface CaixaContaInfo {
+  id: string;
+  banco: string;
+  saldo: number;
+}
+
+interface CaixaWalletInfo {
+  id: string;
+  exchange: string;
+  endereco: string;
+  saldo_coin: number;
+  saldo_usd: number;
 }
 
 interface WalletCrypto {
