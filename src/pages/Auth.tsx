@@ -273,7 +273,7 @@ export default function Auth() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-md">
-        <div className="bg-card border border-border rounded-2xl p-8 shadow-lg">
+        <div className="border border-border rounded-2xl p-8 shadow-lg" style={{ backgroundColor: '#001a33' }}>
           {/* Header */}
           <div className="text-center mb-6">
             <h1 className="text-2xl font-bold text-foreground mb-4">Bem-vindo</h1>
