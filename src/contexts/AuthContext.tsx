@@ -134,7 +134,7 @@ interface AuthContextType {
   publicId: string | null;
   tabId: string;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string, fullName: string, extra?: { cpf?: string; telefone?: string }) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   refreshWorkspace: () => Promise<void>;
   setWorkspaceForTab: (workspaceId: string) => Promise<void>;
@@ -469,9 +469,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const signUp = async (email: string, password: string, fullName: string) => {
+  const signUp = async (email: string, password: string, fullName: string, extra?: { cpf?: string; telefone?: string }) => {
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -479,7 +479,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           emailRedirectTo: `${window.location.origin}/`,
         },
       });
-      return { error: error ? new Error(error.message) : null };
+      if (error) return { error: new Error(error.message) };
+
+      // Save extra fields (cpf, telefone) to profiles if provided
+      if (data?.user?.id && extra) {
+        const updates: Record<string, string | null> = {};
+        if (extra.cpf) updates.cpf = extra.cpf.replace(/\D/g, '');
+        if (extra.telefone) updates.telefone = extra.telefone;
+        if (Object.keys(updates).length > 0) {
+          await supabase.from('profiles').update(updates).eq('id', data.user.id);
+        }
+      }
+
+      return { error: null };
     } catch (error) {
       return { error: error as Error };
     }
