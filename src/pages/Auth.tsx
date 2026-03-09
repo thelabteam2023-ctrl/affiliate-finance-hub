@@ -221,7 +221,7 @@ export default function Auth() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <div className="w-full max-w-md">
-          <div className="bg-card border border-border rounded-2xl p-8 shadow-lg">
+          <div className="border border-border rounded-2xl p-8 shadow-lg" style={{ backgroundColor: 'hsl(215, 80%, 10%)' }}>
             <div className="text-center mb-8">
               <h1 className="text-2xl font-bold text-foreground mb-4">Recuperar senha</h1>
               <img src={labbetLogo} alt="LABBET" className="h-10 mx-auto mb-4 object-contain" />
