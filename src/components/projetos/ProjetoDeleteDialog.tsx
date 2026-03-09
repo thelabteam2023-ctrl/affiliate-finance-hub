@@ -114,7 +114,13 @@ export function ProjetoDeleteDialog({
         }
       }
 
-      // 2. Deletar dados relacionados em ordem
+      // 2. Limpar referências no cash_ledger (projeto_id_snapshot)
+      await supabase
+        .from("cash_ledger")
+        .update({ projeto_id_snapshot: null })
+        .eq("projeto_id_snapshot", projeto.id);
+
+      // 3. Deletar dados relacionados em ordem
       // Apostas
       await supabase.from("apostas_unificada").delete().eq("projeto_id", projeto.id);
       
