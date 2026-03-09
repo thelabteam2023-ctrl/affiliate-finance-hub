@@ -498,20 +498,25 @@ export function OrigemPagamentoSelect({
         tipoMoeda: currentValue.tipoMoeda,
       });
 
-      // 🔒 CORREÇÃO: Auto-resolver IDs da Caixa Operacional no efeito inicial
+      // 🔒 Auto-resolver IDs da Caixa Operacional (apenas se há UMA conta, senão o user escolhe)
       let resolvedIds: Partial<OrigemPagamentoData> = {};
       if (currentValue.origemTipo === "CAIXA_OPERACIONAL" && !currentValue.origemContaBancariaId && !currentValue.origemWalletId) {
         if (currentValue.tipoMoeda === "FIAT") {
           const m = currentValue.moeda || "BRL";
           const contas = caixaContasByMoeda[m] || [];
-          if (contas.length > 0) {
-            resolvedIds = { origemContaBancariaId: contas[0], origemParceiroId: caixaParceiroIdRef || undefined };
+          if (contas.length === 1) {
+            resolvedIds = { origemContaBancariaId: contas[0].id, origemParceiroId: caixaParceiroIdRef || undefined };
+          } else if (contas.length > 1) {
+            // Múltiplas contas: não auto-selecionar, user precisa escolher
+            resolvedIds = { origemParceiroId: caixaParceiroIdRef || undefined };
           }
         } else {
           const c = currentValue.coin || "USDT";
           const wallets = caixaWalletsByCoin[c] || [];
-          if (wallets.length > 0) {
-            resolvedIds = { origemWalletId: wallets[0], origemParceiroId: caixaParceiroIdRef || undefined };
+          if (wallets.length === 1) {
+            resolvedIds = { origemWalletId: wallets[0].id, origemParceiroId: caixaParceiroIdRef || undefined };
+          } else if (wallets.length > 1) {
+            resolvedIds = { origemParceiroId: caixaParceiroIdRef || undefined };
           }
         }
       }
