@@ -1688,7 +1688,15 @@ export function CaixaTransacaoDialog({
   };
 
   const fetchSaldosCaixa = async () => {
-    if (!workspaceId || !caixaParceiroId) return;
+    if (!workspaceId) return;
+    
+    // Fetch caixa parceiro ID if not yet available
+    let effectiveCaixaId = caixaParceiroId;
+    if (!effectiveCaixaId) {
+      const { data: cp } = await supabase.from("parceiros").select("id").eq("is_caixa_operacional", true).maybeSingle();
+      effectiveCaixaId = cp?.id || null;
+    }
+    if (!effectiveCaixaId) return;
     
     try {
       // UNIFIED SOURCE: Use v_saldo_parceiro_contas/wallets filtered by caixa parceiro
