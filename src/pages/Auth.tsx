@@ -153,12 +153,14 @@ export default function Auth() {
       if (!validation.success) throw new Error(validation.error.errors[0].message);
 
       const fullName = validation.data.displayName || validation.data.email.split("@")[0];
+      const cleanCpf = validation.data.cpf.replace(/\D/g, "");
+      const cleanTelefone = validation.data.telefone || null;
 
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email: validation.data.email,
         password: validation.data.password,
         options: {
-          data: { full_name: fullName.toUpperCase() },
+          data: { full_name: fullName.toUpperCase(), cpf: cleanCpf, telefone: cleanTelefone },
           emailRedirectTo: `${window.location.origin}/`,
         },
       });
@@ -168,9 +170,16 @@ export default function Auth() {
         throw error;
       }
 
-      // Save CPF/telefone to profile (trigger creates profile on signup)
-      // We'll do this via a separate update since the profile might not exist yet
-      // The trigger should handle it; we store in user_metadata as backup
+      // Try to save CPF/telefone to profile immediately
+      if (data?.user?.id) {
+        const updates: Record<string, string | null> = {};
+        if (cleanCpf) updates.cpf = cleanCpf;
+        if (cleanTelefone) updates.telefone = cleanTelefone;
+        if (Object.keys(updates).length > 0) {
+          await supabase.from('profiles').update(updates).eq('id', data.user.id);
+        }
+      }
+
       toast({
         title: "Cadastro realizado!",
         description: "Verifique seu email para confirmar a conta.",
