@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Zap, TrendingUp, TrendingDown, HelpCircle, Target, Globe } from "lucide-react";
+import { Zap, TrendingUp, TrendingDown, HelpCircle, Target, Globe, BarChart3, RefreshCw, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -13,11 +13,17 @@ interface EficienciaCapitalCardProps {
   lucroOperacional: number;
   capitalEmBookmakers: number;
   formatCurrency: (value: number) => string;
-  // Novos props para multimoeda
+  // Multi-moeda
   hasMultiCurrency?: boolean;
   capitalBRL?: number;
   capitalUSD?: number;
   cotacaoUSD?: number;
+  // Capital médio do período (novo)
+  capitalMedio?: number;
+  capitalMedioIsFallback?: boolean;
+  snapshotsCount?: number;
+  // Volume apostado no período (para Yield e Turnover)
+  volumeApostado?: number;
 }
 
 export function EficienciaCapitalCard({
@@ -28,9 +34,22 @@ export function EficienciaCapitalCard({
   capitalBRL = 0,
   capitalUSD = 0,
   cotacaoUSD = 1,
+  capitalMedio,
+  capitalMedioIsFallback = true,
+  snapshotsCount = 0,
+  volumeApostado = 0,
 }: EficienciaCapitalCardProps) {
-  const eficiencia = capitalEmBookmakers > 0 ? (lucroOperacional / capitalEmBookmakers) * 100 : 0;
-  const roiMensal = eficiencia; // ROI sobre capital alocado
+  // Use capital médio do período quando disponível, senão capital atual
+  const capitalReferencia = capitalMedio && capitalMedio > 0 ? capitalMedio : capitalEmBookmakers;
+  const usandoCapitalMedio = capitalMedio && capitalMedio > 0 && !capitalMedioIsFallback;
+
+  const eficiencia = capitalReferencia > 0 ? (lucroOperacional / capitalReferencia) * 100 : 0;
+
+  // Yield = Lucro / Volume apostado
+  const yieldPct = volumeApostado > 0 ? (lucroOperacional / volumeApostado) * 100 : null;
+
+  // Turnover = Volume apostado / Capital médio
+  const turnover = capitalReferencia > 0 ? volumeApostado / capitalReferencia : null;
 
   const getStatus = () => {
     if (eficiencia >= 25) return { 
@@ -90,10 +109,17 @@ export function EficienciaCapitalCard({
                     <HelpCircle className="h-3.5 w-3.5" />
                   </button>
                 </TooltipTrigger>
-                <TooltipContent side="top" className="max-w-[320px] text-xs">
-                  <p className="font-medium mb-1">Eficiência do Capital</p>
-                  <p className="mb-2">ROI sobre capital alocado em bookmakers.</p>
-                  <p><strong>Cálculo:</strong> Lucro Operacional ÷ Capital em Bookmakers</p>
+                <TooltipContent side="top" className="max-w-[360px] text-xs">
+                  <p className="font-medium mb-1">Eficiência do Capital (ROI)</p>
+                  <p className="mb-2">ROI sobre capital médio alocado no período.</p>
+                  <p><strong>Cálculo:</strong> Lucro Operacional ÷ Capital Médio do Período</p>
+                  {yieldPct !== null && turnover !== null && (
+                    <div className="mt-2 pt-2 border-t border-border/50 space-y-1">
+                      <p><strong>Yield:</strong> Lucro ÷ Volume apostado = {yieldPct.toFixed(2)}%</p>
+                      <p><strong>Turnover:</strong> Volume ÷ Capital médio = {turnover.toFixed(2)}x</p>
+                      <p className="text-muted-foreground italic">ROI = Yield × Turnover</p>
+                    </div>
+                  )}
                   <p className="mt-2 text-muted-foreground italic">Responde: "Vale mais alocar mais capital ou otimizar execução?"</p>
                 </TooltipContent>
               </UITooltip>
@@ -140,7 +166,25 @@ export function EficienciaCapitalCard({
             </p>
             <p className="text-lg text-muted-foreground">%</p>
           </div>
-          <p className="text-xs text-muted-foreground mt-1">ROI sobre capital alocado</p>
+          <p className="text-xs text-muted-foreground mt-1">ROI sobre capital {usandoCapitalMedio ? "médio do período" : "alocado"}</p>
+          
+          {/* Fallback warning */}
+          {capitalMedioIsFallback && capitalEmBookmakers > 0 && (
+            <TooltipProvider>
+              <UITooltip delayDuration={200}>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center justify-center gap-1 mt-1.5">
+                    <AlertTriangle className="h-3 w-3 text-yellow-500" />
+                    <p className="text-[10px] text-yellow-500">Usando capital atual (sem histórico)</p>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-[280px] text-xs">
+                  <p>O sistema ainda não possui snapshots diários suficientes para calcular o capital médio do período.</p>
+                  <p className="mt-1">Os snapshots são gravados automaticamente a cada dia. Em poucos dias o cálculo será temporalmente preciso.</p>
+                </TooltipContent>
+              </UITooltip>
+            </TooltipProvider>
+          )}
         </div>
 
         {/* Details */}
@@ -161,11 +205,51 @@ export function EficienciaCapitalCard({
           <div className="p-3 bg-muted/30 rounded-lg">
             <div className="flex items-center gap-1.5 mb-1">
               <Target className="h-3.5 w-3.5 text-primary" />
-              <p className="text-[10px] text-muted-foreground uppercase">Capital Alocado</p>
+              <p className="text-[10px] text-muted-foreground uppercase">
+                Capital {usandoCapitalMedio ? "Médio" : "Alocado"}
+              </p>
             </div>
-            <p className="text-sm font-semibold text-primary">{formatCurrency(capitalEmBookmakers)}</p>
+            <p className="text-sm font-semibold text-primary">{formatCurrency(capitalReferencia)}</p>
+            {usandoCapitalMedio && (
+              <p className="text-[10px] text-muted-foreground mt-0.5">{snapshotsCount} dias de amostra</p>
+            )}
           </div>
         </div>
+
+        {/* Yield & Turnover (quando há volume) */}
+        {volumeApostado > 0 && (
+          <div className="grid grid-cols-3 gap-2">
+            <div className="p-2.5 bg-muted/30 rounded-lg text-center">
+              <p className="text-[10px] text-muted-foreground uppercase mb-0.5">Yield</p>
+              <p className={cn("text-sm font-bold", yieldPct && yieldPct >= 0 ? "text-success" : "text-destructive")}>
+                {yieldPct !== null ? `${yieldPct.toFixed(2)}%` : "—"}
+              </p>
+            </div>
+            <div className="p-2.5 bg-muted/30 rounded-lg text-center">
+              <p className="text-[10px] text-muted-foreground uppercase mb-0.5">Turnover</p>
+              <p className="text-sm font-bold text-primary">
+                {turnover !== null ? `${turnover.toFixed(1)}x` : "—"}
+              </p>
+            </div>
+            <div className="p-2.5 bg-muted/30 rounded-lg text-center">
+              <TooltipProvider>
+                <UITooltip delayDuration={200}>
+                  <TooltipTrigger asChild>
+                    <div>
+                      <p className="text-[10px] text-muted-foreground uppercase mb-0.5">Volume</p>
+                      <p className="text-sm font-bold text-foreground">
+                        {formatCurrency(volumeApostado)}
+                      </p>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent className="text-xs">
+                    Volume total apostado no período (stakes liquidadas)
+                  </TooltipContent>
+                </UITooltip>
+              </TooltipProvider>
+            </div>
+          </div>
+        )}
 
         {/* Recommendation */}
         <div className="p-3 bg-muted/30 rounded-lg">
