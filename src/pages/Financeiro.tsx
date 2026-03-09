@@ -358,8 +358,8 @@ export default function Financeiro() {
         supabase.from("pagamentos_operador").select("tipo_pagamento, valor, data_pagamento, status, operador_id, operadores(nome)").eq("status", "CONFIRMADO"),
         supabase.from("pagamentos_operador").select("tipo_pagamento, valor, data_pagamento, status, operador_id, operadores(nome)").eq("status", "PENDENTE"),
         supabase.from("movimentacoes_indicacao").select("tipo, valor, data_movimentacao, parceria_id, indicador_id, indicadores_referral(nome)"),
-        supabase.from("bookmakers").select("saldo_atual, saldo_freebet, status, estado_conta, aguardando_saque_at, projeto_id, moeda").in("status", ["ativo", "ATIVO", "EM_USO", "limitada", "LIMITADA"]),
-        supabase.from("bookmakers").select("saldo_atual, projeto_id, moeda, projetos(nome)").in("status", ["ativo", "ATIVO", "EM_USO", "limitada", "LIMITADA"]),
+        supabase.from("bookmakers").select("saldo_atual, saldo_freebet, status, estado_conta, aguardando_saque_at, projeto_id, moeda").in("status", ["ativo", "ATIVO", "EM_USO", "limitada", "LIMITADA", "AGUARDANDO_SAQUE"]),
+        supabase.from("bookmakers").select("saldo_atual, projeto_id, moeda, projetos(nome)").in("status", ["ativo", "ATIVO", "EM_USO", "limitada", "LIMITADA", "AGUARDANDO_SAQUE"]),
         supabase.from("parceiros").select("id", { count: "exact", head: true }).eq("status", "ativo"),
         supabase
           .from("parcerias")
@@ -571,12 +571,16 @@ export default function Financeiro() {
     .reduce((acc, b) => acc + (b.saldo_atual || 0), 0);
   
   const saldoBookmakersUSD = bookmakersSaldos
-    .filter(b => b.moeda === "USD")
+    .filter(b => b.moeda === "USD" || b.moeda === "USDT")
     .reduce((acc, b) => acc + (b.saldo_atual || 0), 0);
   
-  // Total em BRL para referência (USD convertido)
-  const saldoBookmakers = saldoBookmakersBRL + (saldoBookmakersUSD * cotacaoUSD);
-  const hasBookmakersUSD = saldoBookmakersUSD > 0;
+  const saldoBookmakersEUR = bookmakersSaldos
+    .filter(b => b.moeda === "EUR")
+    .reduce((acc, b) => acc + (b.saldo_atual || 0), 0);
+  
+  // Total em BRL para referência (USD e EUR convertidos)
+  const saldoBookmakers = saldoBookmakersBRL + (saldoBookmakersUSD * cotacaoUSD) + (saldoBookmakersEUR * cotacaoUSD * 1.08);
+  const hasBookmakersUSD = saldoBookmakersUSD > 0 || saldoBookmakersEUR > 0;
 
   // Saldos em contas de parceiros e wallets
   const totalContasParceiros = contasParceiros.reduce((acc, c) => acc + (c.saldo || 0), 0);

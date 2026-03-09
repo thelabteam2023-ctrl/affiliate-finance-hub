@@ -165,8 +165,8 @@ async function fetchApostasModulo(
 ): Promise<ModuloResult> {
   let query = supabase
     .from('apostas_unificada')
-    .select('lucro_prejuizo, lucro_prejuizo_brl_referencia, pl_consolidado, moeda_operacao')
-    .not('resultado', 'is', null);
+    .select('lucro_prejuizo, lucro_prejuizo_brl_referencia, pl_consolidado, consolidation_currency, moeda_operacao')
+    .eq('status', 'LIQUIDADA');
 
   // Aplicar filtro de período
   // CRÍTICO: Usar getOperationalDateRangeFromStrings para garantir timezone operacional (São Paulo)
@@ -194,11 +194,13 @@ async function fetchApostasModulo(
   let total = 0;
   let hasMulti = false;
 
-  (data || []).forEach(a => {
+  (data || []).forEach((a: any) => {
     const moeda = a.moeda_operacao || 'BRL';
+    const consolidationCurrency = a.consolidation_currency || null;
 
-    // Prioridade 1: pl_consolidado (já convertido no registro)
-    if (a.pl_consolidado != null) {
+    // Prioridade 1: pl_consolidado - MAS SOMENTE se consolidado em BRL
+    // Se consolidation_currency é USD/EUR, o pl_consolidado está em outra moeda!
+    if (a.pl_consolidado != null && consolidationCurrency === 'BRL') {
       total += a.pl_consolidado;
       if (moeda !== 'BRL') hasMulti = true;
       return;
@@ -211,10 +213,27 @@ async function fetchApostasModulo(
       return;
     }
 
-    // Fallback: converter on-the-fly
+    // Prioridade 3: pl_consolidado em outra moeda - converter para BRL
+    if (a.pl_consolidado != null && consolidationCurrency) {
+      const plValue = a.pl_consolidado;
+      if (consolidationCurrency === 'USD' || consolidationCurrency === 'USDT') {
+        total += plValue * cotacaoUSD;
+      } else if (consolidationCurrency === 'EUR') {
+        total += plValue * cotacaoUSD * 1.08; // EUR→USD→BRL approx
+      } else {
+        total += plValue; // Assume BRL
+      }
+      hasMulti = true;
+      return;
+    }
+
+    // Fallback: converter on-the-fly pelo moeda_operacao
     const lucro = a.lucro_prejuizo || 0;
     if (moeda === 'USD' || moeda === 'USDT') {
       total += lucro * cotacaoUSD;
+      hasMulti = true;
+    } else if (moeda === 'EUR') {
+      total += lucro * cotacaoUSD * 1.08;
       hasMulti = true;
     } else {
       total += lucro;
@@ -269,9 +288,12 @@ async function fetchCashbackModulo(
       return;
     }
 
-    // Converter se USD/USDT
+    // Converter se USD/USDT/EUR
     if (moeda === 'USD' || moeda === 'USDT') {
       total += cb.valor * cotacaoUSD;
+      hasMulti = true;
+    } else if (moeda === 'EUR') {
+      total += cb.valor * cotacaoUSD * 1.08;
       hasMulti = true;
     } else {
       total += cb.valor;
