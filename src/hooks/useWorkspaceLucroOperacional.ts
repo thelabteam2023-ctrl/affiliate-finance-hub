@@ -288,9 +288,12 @@ async function fetchCashbackModulo(
       return;
     }
 
-    // Converter se USD/USDT
+    // Converter se USD/USDT/EUR
     if (moeda === 'USD' || moeda === 'USDT') {
       total += cb.valor * cotacaoUSD;
+      hasMulti = true;
+    } else if (moeda === 'EUR') {
+      total += cb.valor * cotacaoUSD * 1.08;
       hasMulti = true;
     } else {
       total += cb.valor;
