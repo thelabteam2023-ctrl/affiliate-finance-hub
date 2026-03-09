@@ -1229,6 +1229,10 @@ export default function Financeiro() {
               capitalBRL={saldoBookmakersBRL}
               capitalUSD={saldoBookmakersUSD}
               cotacaoUSD={cotacaoUSD}
+              capitalMedio={capitalMedioPeriodo.capitalMedio}
+              capitalMedioIsFallback={capitalMedioPeriodo.isFallback}
+              snapshotsCount={capitalMedioPeriodo.snapshotsCount}
+              volumeApostado={capitalMedioPeriodo.volumeApostado}
             />
             <MovimentacaoCapitalCard
               depositosBookmakers={depositosBookmakersPeriodo}
