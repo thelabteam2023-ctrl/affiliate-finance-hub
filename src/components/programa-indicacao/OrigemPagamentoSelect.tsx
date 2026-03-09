@@ -116,6 +116,13 @@ export function OrigemPagamentoSelect({
   const [saldosParceirosContas, setSaldosParceirosContas] = useState<SaldoParceiroContas[]>([]);
   const [saldosParceirosWallets, setSaldosParceirosWallets] = useState<SaldoParceiroWallets[]>([]);
 
+  // 🔒 CORREÇÃO: Mapeamentos de contas/wallets da Caixa Operacional para resolver IDs
+  // Quando origem = CAIXA_OPERACIONAL, precisamos propagar o conta_bancaria_id/wallet_id
+  // para que as views de saldo (v_saldo_parceiro_contas) contabilizem o débito.
+  const [caixaContasByMoeda, setCaixaContasByMoeda] = useState<Record<string, string[]>>({});
+  const [caixaWalletsByCoin, setCaixaWalletsByCoin] = useState<Record<string, string[]>>({});
+  const [caixaParceiroIdRef, setCaixaParceiroIdRef] = useState<string | null>(null);
+
   // Flag para indicar que os dados foram carregados
   const [dataLoaded, setDataLoaded] = useState(false);
   const [parceiroContaOpen, setParceiroContaOpen] = useState(false);
@@ -188,21 +195,42 @@ export function OrigemPagamentoSelect({
 
       // Caixa FIAT = contas do parceiro caixa operacional, agrupadas por moeda
       const caixaFiatMap: Record<string, number> = {};
+      // 🔒 CORREÇÃO: Mapear contas bancárias da Caixa por moeda
+      const contasByMoeda: Record<string, string[]> = {};
+      const contasData = contasRes.data || [];
+      
       allContas.forEach((row: any) => {
         if (caixaParceiroId && row.parceiro_id === caixaParceiroId) {
           const m = row.moeda || "BRL";
           caixaFiatMap[m] = (caixaFiatMap[m] || 0) + (row.saldo || 0);
+          // Mapear conta_id por moeda
+          if (row.conta_id) {
+            if (!contasByMoeda[m]) contasByMoeda[m] = [];
+            if (!contasByMoeda[m].includes(row.conta_id)) {
+              contasByMoeda[m].push(row.conta_id);
+            }
+          }
         }
       });
 
       // Caixa CRYPTO = wallets do parceiro caixa operacional, agrupadas por coin
       const caixaCryptoMap: Record<string, { saldo_coin: number; saldo_usd: number }> = {};
+      // 🔒 CORREÇÃO: Mapear wallets da Caixa por coin
+      const walletsByCoin: Record<string, string[]> = {};
+      
       allWallets.forEach((row: any) => {
         if (caixaParceiroId && row.parceiro_id === caixaParceiroId) {
           const c = row.coin || "USDT";
           if (!caixaCryptoMap[c]) caixaCryptoMap[c] = { saldo_coin: 0, saldo_usd: 0 };
           caixaCryptoMap[c].saldo_coin += (row.saldo_coin || 0);
           caixaCryptoMap[c].saldo_usd += (row.saldo_usd || 0);
+          // Mapear wallet_id por coin
+          if (row.wallet_id) {
+            if (!walletsByCoin[c]) walletsByCoin[c] = [];
+            if (!walletsByCoin[c].includes(row.wallet_id)) {
+              walletsByCoin[c].push(row.wallet_id);
+            }
+          }
         }
       });
 
@@ -211,12 +239,18 @@ export function OrigemPagamentoSelect({
       const parceirosWalletsSaldo = allWallets.filter((row: any) => !caixaParceiroId || row.parceiro_id !== caixaParceiroId);
 
       setParceiros(parceirosRes.data || []);
-      setContasBancarias(contasRes.data || []);
+      setContasBancarias(contasData);
       setWalletsCrypto(walletsRes.data || []);
       setSaldosCaixaFiat(Object.entries(caixaFiatMap).map(([moeda, saldo]) => ({ moeda, saldo })));
       setSaldosCaixaCrypto(Object.entries(caixaCryptoMap).map(([coin, vals]) => ({ coin, ...vals })));
       setSaldosParceirosContas(parceirosContasSaldo);
       setSaldosParceirosWallets(parceirosWalletsSaldo);
+      
+      // 🔒 CORREÇÃO: Salvar mapeamentos da Caixa
+      setCaixaContasByMoeda(contasByMoeda);
+      setCaixaWalletsByCoin(walletsByCoin);
+      setCaixaParceiroIdRef(caixaParceiroId);
+      
       setDataLoaded(true);
 
       debugLog("fetchData:success", {
@@ -449,8 +483,27 @@ export function OrigemPagamentoSelect({
         tipoMoeda: currentValue.tipoMoeda,
       });
 
+      // 🔒 CORREÇÃO: Auto-resolver IDs da Caixa Operacional no efeito inicial
+      let resolvedIds: Partial<OrigemPagamentoData> = {};
+      if (currentValue.origemTipo === "CAIXA_OPERACIONAL" && !currentValue.origemContaBancariaId && !currentValue.origemWalletId) {
+        if (currentValue.tipoMoeda === "FIAT") {
+          const m = currentValue.moeda || "BRL";
+          const contas = caixaContasByMoeda[m] || [];
+          if (contas.length > 0) {
+            resolvedIds = { origemContaBancariaId: contas[0], origemParceiroId: caixaParceiroIdRef || undefined };
+          }
+        } else {
+          const c = currentValue.coin || "USDT";
+          const wallets = caixaWalletsByCoin[c] || [];
+          if (wallets.length > 0) {
+            resolvedIds = { origemWalletId: wallets[0], origemParceiroId: caixaParceiroIdRef || undefined };
+          }
+        }
+      }
+
       onChangeRef.current({
         ...currentValue,
+        ...resolvedIds,
         saldoDisponivel,
         saldoInsuficiente,
         cotacao: currentValue.tipoMoeda === "CRYPTO" ? newCotacao : currentValue.cotacao,
@@ -522,6 +575,28 @@ export function OrigemPagamentoSelect({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cotacaoUSD, dataLoaded]);
 
+  // 🔒 CORREÇÃO: Resolver conta/wallet da Caixa Operacional para propagar no onChange
+  const resolveCaixaIds = useCallback((tipoMoeda: "FIAT" | "CRYPTO", moeda?: string, coin?: string) => {
+    if (tipoMoeda === "FIAT") {
+      const m = moeda || "BRL";
+      const contas = caixaContasByMoeda[m] || [];
+      // Se existe apenas uma conta na moeda, auto-selecionar
+      return {
+        origemContaBancariaId: contas.length > 0 ? contas[0] : undefined,
+        origemWalletId: undefined,
+        origemParceiroId: caixaParceiroIdRef || undefined,
+      };
+    } else {
+      const c = coin || "USDT";
+      const wallets = caixaWalletsByCoin[c] || [];
+      return {
+        origemContaBancariaId: undefined,
+        origemWalletId: wallets.length > 0 ? wallets[0] : undefined,
+        origemParceiroId: caixaParceiroIdRef || undefined,
+      };
+    }
+  }, [caixaContasByMoeda, caixaWalletsByCoin, caixaParceiroIdRef]);
+
   // Handle origem type change
   const handleOrigemTipoChange = (tipo: "CAIXA_OPERACIONAL" | "PARCEIRO_CONTA" | "PARCEIRO_WALLET") => {
     debugLog("handler:origemTipo:before-click", {
@@ -547,12 +622,17 @@ export function OrigemPagamentoSelect({
       coinSelecionada
     );
 
+    // 🔒 CORREÇÃO: Resolver IDs da conta/wallet da Caixa quando selecionada
+    const caixaIds = tipo === "CAIXA_OPERACIONAL" 
+      ? resolveCaixaIds(tipoMoeda, moeda, coinSelecionada) 
+      : { origemContaBancariaId: undefined, origemWalletId: undefined, origemParceiroId: undefined };
+
     const newData: OrigemPagamentoData = {
       ...value,
       origemTipo: tipo,
-      origemParceiroId: undefined,
-      origemContaBancariaId: undefined,
-      origemWalletId: undefined,
+      origemParceiroId: caixaIds.origemParceiroId,
+      origemContaBancariaId: caixaIds.origemContaBancariaId,
+      origemWalletId: caixaIds.origemWalletId,
       tipoMoeda,
       moeda,
       coin: coinSelecionada,
@@ -582,11 +662,18 @@ export function OrigemPagamentoSelect({
       coinSelecionada
     );
 
+    // 🔒 CORREÇÃO: Resolver IDs da conta/wallet da Caixa
+    const moeda = tipoMoeda === "FIAT" ? "BRL" : "USD";
+    const caixaIds = resolveCaixaIds(tipoMoeda, moeda, coinSelecionada);
+
     onChange({
       ...value,
       tipoMoeda,
-      moeda: tipoMoeda === "FIAT" ? "BRL" : "USD",
+      moeda,
       coin: coinSelecionada,
+      origemParceiroId: caixaIds.origemParceiroId,
+      origemContaBancariaId: caixaIds.origemContaBancariaId,
+      origemWalletId: caixaIds.origemWalletId,
       // 🔒 PROPAGAR cotação e preço da crypto quando CRYPTO é selecionado
       cotacao: tipoMoeda === "CRYPTO" ? cotacaoUSD : undefined,
       coinPriceUSD: saldoCrypto?.priceUSD || 1,
@@ -600,6 +687,9 @@ export function OrigemPagamentoSelect({
     const saldoCrypto = getSaldoCaixaCryptoByCoin(coin);
     const saldoInsuficiente = valorEfetivo > 0 && saldoCrypto.saldoBRL < valorEfetivo;
 
+    // 🔒 CORREÇÃO: Resolver wallet_id da Caixa para a coin selecionada
+    const caixaIds = resolveCaixaIds("CRYPTO", "USD", coin);
+
     onChange({
       ...value,
       coin,
@@ -607,6 +697,8 @@ export function OrigemPagamentoSelect({
       coinPriceUSD: saldoCrypto.priceUSD,
       saldoDisponivel: saldoCrypto.saldoBRL,
       saldoInsuficiente,
+      origemWalletId: caixaIds.origemWalletId,
+      origemParceiroId: caixaIds.origemParceiroId,
     });
   };
 
