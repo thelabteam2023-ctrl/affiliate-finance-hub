@@ -277,7 +277,7 @@ export default function Auth() {
           {/* Header */}
           <div className="text-center mb-6">
             <h1 className="text-2xl font-bold text-foreground mb-4">Bem-vindo</h1>
-            <img src={labbetLogo} alt="LABBET" className="h-10 mx-auto mb-4 object-contain" />
+            <img src={labbetLogo} alt="LABBET" className="h-10 mx-auto mb-4 object-contain rounded-lg" />
             <p className="text-muted-foreground text-sm">
               Entre ou crie uma conta para gerenciar suas apostas
             </p>
