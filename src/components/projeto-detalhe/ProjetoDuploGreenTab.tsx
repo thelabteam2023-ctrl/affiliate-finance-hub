@@ -294,8 +294,27 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
 
       const { data, error } = await query;
       if (error) throw error;
+
+      // Query separada para PENDENTES sem filtro de data (garantir que abertas sempre apareçam)
+      let allData = data || [];
+      if (dateRange) {
+        const { data: pendentesData } = await supabase
+          .from("apostas_unificada")
+          .select(`id, data_aposta, esporte, evento, mercado, selecao, odd, stake, estrategia, status, resultado, lucro_prejuizo, valor_retorno, observacoes, bookmaker_id, modo_entrada, gerou_freebet, valor_freebet_gerada, tipo_freebet, forma_registro, contexto_operacional, lay_exchange, lay_odd, lay_stake, lay_liability, lay_comissao, back_em_exchange, back_comissao, pernas, stake_total, spread_calculado, roi_esperado, roi_real, lucro_esperado, modelo, moeda_operacao, stake_consolidado, pl_consolidado, valor_brl_referencia, lucro_prejuizo_brl_referencia`)
+          .eq("projeto_id", projetoId)
+          .eq("estrategia", APOSTA_ESTRATEGIA.DUPLO_GREEN)
+          .eq("status", "PENDENTE")
+          .is("cancelled_at", null)
+          .order("data_aposta", { ascending: false });
+
+        if (pendentesData && pendentesData.length > 0) {
+          const existingIds = new Set(allData.map((a: any) => a.id));
+          const newPendentes = pendentesData.filter((p: any) => !existingIds.has(p.id));
+          allData = [...allData, ...newPendentes];
+        }
+      }
       
-      const bookmakerIds = [...new Set((data || []).map((a: any) => a.bookmaker_id).filter(Boolean))];
+      const bookmakerIds = [...new Set(allData.map((a: any) => a.bookmaker_id).filter(Boolean))];
       let bookmakerMap = new Map<string, { nome: string; parceiroNome: string | null; logoUrl: string | null }>();
       if (bookmakerIds.length > 0) {
         const { data: bks } = await supabase
@@ -315,7 +334,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
         );
       }
 
-      const mapped = (data || []).map((a: any) => {
+      const mapped = allData.map((a: any) => {
           const bkInfo = a.bookmaker_id ? bookmakerMap.get(a.bookmaker_id) : null;
           return {
             ...a,
