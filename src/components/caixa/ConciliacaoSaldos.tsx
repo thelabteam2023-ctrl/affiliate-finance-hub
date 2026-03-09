@@ -40,7 +40,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { parseLocalDateTime } from "@/utils/dateUtils";
+import { parseLocalDateTime, extractCivilDateKey } from "@/utils/dateUtils";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { useWorkspace } from "@/hooks/useWorkspace";
