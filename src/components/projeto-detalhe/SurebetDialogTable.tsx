@@ -48,6 +48,7 @@ import {
 import { BookmakerSearchableSelectContent } from "@/components/bookmakers/BookmakerSearchableSelectContent";
 import { useProjetoConsolidacao } from "@/hooks/useProjetoConsolidacao";
 import { useCotacoes } from "@/hooks/useCotacoes";
+import { toLocalTimestamp } from "@/utils/dateUtils";
 import { pernasToInserts } from "@/types/apostasPernas";
 import { type MoedaOperacao } from "@/types/apostasUnificada";
 import { convertCurrency, calcularStakesMultiCurrency, type GetEffectiveRateFn } from "@/utils/convertCurrency";

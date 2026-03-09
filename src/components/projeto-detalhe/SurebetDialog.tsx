@@ -58,6 +58,7 @@ import { detectarMoedaOperacao, calcularValorBRLReferencia, type MoedaOperacao }
 import { pernasToInserts } from "@/types/apostasPernas";
 import { useSurebetService, type SurebetPerna as SurebetPernaService } from "@/hooks/useSurebetService";
 import { useApostaRascunho, type RascunhoPernaData, type ApostaRascunho } from "@/hooks/useApostaRascunho";
+import { toLocalTimestamp } from "@/utils/dateUtils";
 import { convertCurrency, calcularStakesMultiCurrency, type GetEffectiveRateFn } from "@/utils/convertCurrency";
 import { useCotacoes } from "@/hooks/useCotacoes";
 import { useQuery } from "@tanstack/react-query";
