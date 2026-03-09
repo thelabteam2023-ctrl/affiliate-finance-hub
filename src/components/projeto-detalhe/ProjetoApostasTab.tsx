@@ -616,7 +616,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
         bookmakerMap = new Map((bookmakers || []).map((b: any) => [b.id, b]));
       }
       
-      setApostasMultiplas((data || []).map((am: any) => ({
+      setApostasMultiplas(allData.map((am: any) => ({
         ...am,
         odd_final: am.odd_final ?? 0,
         stake: am.stake ?? 0,
