@@ -462,7 +462,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
       }
       
       // Buscar bookmakers para montar informações
-      const bookmakerIds = [...new Set((data || []).map((a: any) => a.bookmaker_id).filter(Boolean))];
+      const bookmakerIds = [...new Set(allData.map((a: any) => a.bookmaker_id).filter(Boolean))];
       let bookmakerMap = new Map<string, any>();
       
       if (bookmakerIds.length > 0) {
