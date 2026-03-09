@@ -40,7 +40,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { parseLocalDateTime } from "@/utils/dateUtils";
+import { parseLocalDateTime, extractCivilDateKey } from "@/utils/dateUtils";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { useWorkspace } from "@/hooks/useWorkspace";
@@ -682,7 +682,12 @@ export function ConciliacaoSaldos({
                         </div>
 
                         <div className="text-xs text-muted-foreground">
-                          {format(parseLocalDateTime(t.data_transacao), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                          {(() => {
+                            const dk = extractCivilDateKey(t.data_transacao);
+                            if (!dk) return '-';
+                            const [y, m, d] = dk.split('-');
+                            return `${d}/${m}/${y}`;
+                          })()}
                         </div>
                       </div>
 

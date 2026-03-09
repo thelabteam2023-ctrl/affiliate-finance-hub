@@ -20,7 +20,7 @@ import { usePagination } from "@/hooks/usePagination";
 import { SimplePagination } from "@/components/ui/simple-pagination";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
-import { parseLocalDateTime } from "@/utils/dateUtils";
+import { parseLocalDateTime, extractCivilDateKey } from "@/utils/dateUtils";
 import { DashboardPeriodFilterBar } from "@/components/shared/DashboardPeriodFilterBar";
 import { DashboardPeriodFilter, getDashboardDateRange } from "@/types/dashboardFilters";
 import { EditarDataTransacaoDialog } from "./EditarDataTransacaoDialog";
@@ -665,24 +665,35 @@ export function HistoricoMovimentacoes({
                    {transacao.tipo_transacao === "SAQUE" && transacao.status === "CONFIRMADO" && transacao.data_confirmacao ? (
                       <div className="space-y-0.5">
                         <div className="text-xs text-muted-foreground">
-                          Solicitado: {format(parseLocalDateTime(transacao.data_transacao), "dd/MM")}
+                          Solicitado: {(() => {
+                            const dk = extractCivilDateKey(transacao.data_transacao);
+                            if (!dk) return '-';
+                            const [y, m, d] = dk.split('-');
+                            return `${d}/${m}`;
+                          })()}
                         </div>
                         <div className="text-sm font-medium text-emerald-400">
-                          Recebido: {format(parseLocalDateTime(transacao.data_confirmacao), "dd/MM")}
+                          Recebido: {(() => {
+                            const dk = extractCivilDateKey(transacao.data_confirmacao);
+                            if (!dk) return '-';
+                            const [y, m, d] = dk.split('-');
+                            return `${d}/${m}`;
+                          })()}
                         </div>
                         {(() => {
-                          const solicitacao = parseLocalDateTime(transacao.data_transacao);
-                          const confirmacao = parseLocalDateTime(transacao.data_confirmacao);
+                          const solicitacaoKey = extractCivilDateKey(transacao.data_transacao);
+                          const confirmacaoKey = extractCivilDateKey(transacao.data_confirmacao);
+                          if (!solicitacaoKey || !confirmacaoKey) return null;
+                          const [sy, sm, sd] = solicitacaoKey.split('-').map(Number);
+                          const [cy, cm, cd] = confirmacaoKey.split('-').map(Number);
+                          const solicitacao = new Date(sy, sm - 1, sd);
+                          const confirmacao = new Date(cy, cm - 1, cd);
                           const diffMs = confirmacao.getTime() - solicitacao.getTime();
                           const diffDias = Math.round(diffMs / (1000 * 60 * 60 * 24));
                           if (diffDias > 0) {
-                            // Count business days (exclude Sat=6, Sun=0)
                             let diasUteis = 0;
                             const cur = new Date(solicitacao);
-                            cur.setHours(0,0,0,0);
-                            const fim = new Date(confirmacao);
-                            fim.setHours(0,0,0,0);
-                            while (cur < fim) {
+                            while (cur < confirmacao) {
                               cur.setDate(cur.getDate() + 1);
                               const dow = cur.getDay();
                               if (dow !== 0 && dow !== 6) diasUteis++;
@@ -698,8 +709,12 @@ export function HistoricoMovimentacoes({
                       </div>
                     ) : (
                       <>
-                        <div className="text-sm font-medium">{format(parseLocalDateTime(transacao.data_transacao), "dd/MM/yyyy")}</div>
-                        <div className="text-xs text-muted-foreground">{format(parseLocalDateTime(transacao.data_transacao), "HH:mm")}</div>
+                        {(() => {
+                          const dk = extractCivilDateKey(transacao.data_transacao);
+                          if (!dk) return <div className="text-sm font-medium">-</div>;
+                          const [y, m, d] = dk.split('-');
+                          return <div className="text-sm font-medium">{d}/{m}/{y}</div>;
+                        })()}
                       </>
                     )}
                     </div>

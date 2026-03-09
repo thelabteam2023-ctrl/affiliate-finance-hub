@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { parseLocalDateTime } from "@/utils/dateUtils";
+import { extractCivilDateKey } from "@/utils/dateUtils";
 import { Loader2 } from "lucide-react";
 
 interface EditarSaqueConfirmadoDialogProps {
@@ -42,9 +42,13 @@ export function EditarSaqueConfirmadoDialog({
   onSuccess,
 }: EditarSaqueConfirmadoDialogProps) {
   const { toast } = useToast();
-  const dataAtualParsed = parseLocalDateTime(dataConfirmacaoAtual);
+  // Parse civil date (YYYY-MM-DD) without timezone conversion
+  const civilDateKey = extractCivilDateKey(dataConfirmacaoAtual);
+  const dataAtualParsed = civilDateKey 
+    ? (() => { const [y, m, d] = civilDateKey.split('-').map(Number); return new Date(y, m - 1, d); })()
+    : new Date();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(dataAtualParsed);
-  const [hora, setHora] = useState(format(dataAtualParsed, "HH:mm"));
+  const [hora, setHora] = useState("00:00");
   const [valorConfirmado, setValorConfirmado] = useState(
     valorConfirmadoAtual?.toString() || ""
   );
@@ -147,7 +151,7 @@ export function EditarSaqueConfirmadoDialog({
           <div className="text-sm text-muted-foreground">
             Data de recebimento atual:{" "}
             <span className="font-medium text-foreground">
-              {format(dataAtualParsed, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+              {civilDateKey ? (() => { const [y, m, d] = civilDateKey.split('-'); return `${d}/${m}/${y}`; })() : '-'}
             </span>
           </div>
 
