@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, AlertTriangle, Eye, EyeOff, Mail, Lock, User, CreditCard, Phone } from "lucide-react";
 import { z } from "zod";
-import labbetLogo from "@/assets/labbet-logo-nofund.png";
+import labbetLogo from "@/assets/labbet-logo-horizontal.png";
 import { validateCPF, formatCPF } from "@/lib/validators";
 import { PhoneInput } from "@/components/parceiros/PhoneInput";
 
@@ -221,7 +221,7 @@ export default function Auth() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <div className="w-full max-w-md">
-          <div className="bg-card border border-border rounded-2xl p-8 shadow-lg">
+          <div className="border border-border rounded-2xl p-8 shadow-lg" style={{ backgroundColor: '#001a33' }}>
             <div className="text-center mb-8">
               <h1 className="text-2xl font-bold text-foreground mb-4">Recuperar senha</h1>
               <img src={labbetLogo} alt="LABBET" className="h-10 mx-auto mb-4 object-contain" />
@@ -273,7 +273,7 @@ export default function Auth() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-md">
-        <div className="bg-card border border-border rounded-2xl p-8 shadow-lg">
+        <div className="border border-border rounded-2xl p-8 shadow-lg" style={{ backgroundColor: '#001a33' }}>
           {/* Header */}
           <div className="text-center mb-6">
             <h1 className="text-2xl font-bold text-foreground mb-4">Bem-vindo</h1>
