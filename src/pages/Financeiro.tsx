@@ -571,12 +571,16 @@ export default function Financeiro() {
     .reduce((acc, b) => acc + (b.saldo_atual || 0), 0);
   
   const saldoBookmakersUSD = bookmakersSaldos
-    .filter(b => b.moeda === "USD")
+    .filter(b => b.moeda === "USD" || b.moeda === "USDT")
     .reduce((acc, b) => acc + (b.saldo_atual || 0), 0);
   
-  // Total em BRL para referência (USD convertido)
-  const saldoBookmakers = saldoBookmakersBRL + (saldoBookmakersUSD * cotacaoUSD);
-  const hasBookmakersUSD = saldoBookmakersUSD > 0;
+  const saldoBookmakersEUR = bookmakersSaldos
+    .filter(b => b.moeda === "EUR")
+    .reduce((acc, b) => acc + (b.saldo_atual || 0), 0);
+  
+  // Total em BRL para referência (USD e EUR convertidos)
+  const saldoBookmakers = saldoBookmakersBRL + (saldoBookmakersUSD * cotacaoUSD) + (saldoBookmakersEUR * cotacaoUSD * 1.08);
+  const hasBookmakersUSD = saldoBookmakersUSD > 0 || saldoBookmakersEUR > 0;
 
   // Saldos em contas de parceiros e wallets
   const totalContasParceiros = contasParceiros.reduce((acc, c) => acc + (c.saldo || 0), 0);
