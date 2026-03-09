@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, AlertTriangle, Eye, EyeOff, Mail, Lock, User, CreditCard, Phone } from "lucide-react";
 import { z } from "zod";
+import labbetLogo from "@/assets/labbet-logo-horizontal.png";
 import { validateCPF, formatCPF } from "@/lib/validators";
 import { PhoneInput } from "@/components/parceiros/PhoneInput";
 
