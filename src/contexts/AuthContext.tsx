@@ -156,12 +156,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // ── Helpers ────────────────────────────────────────────────
 
+  // Retry helper for network resilience
+  const retryQuery = useCallback(async <T,>(
+    fn: () => Promise<T>,
+    retries = 3,
+    delayMs = 500
+  ): Promise<T> => {
+    let lastError: unknown;
+    for (let i = 0; i < retries; i++) {
+      try {
+        return await fn();
+      } catch (error) {
+        lastError = error;
+        console.warn(`[Auth][${tabId}] Query attempt ${i + 1}/${retries} failed, retrying...`);
+        if (i < retries - 1) {
+          await new Promise(r => setTimeout(r, delayMs * (i + 1)));
+        }
+      }
+    }
+    throw lastError;
+  }, [tabId]);
+
   const fetchWorkspaceAndRole = useCallback(async (userId: string, targetWorkspaceId: string): Promise<{ workspace: Workspace | null; role: AppRole | null }> => {
     try {
-      const [wsResult, roleResult] = await Promise.all([
-        supabase.from('workspaces').select('id, name, slug, plan').eq('id', targetWorkspaceId).single(),
-        supabase.rpc('get_user_role', { _user_id: userId, _workspace_id: targetWorkspaceId }),
-      ]);
+      const fetchData = async () => {
+        const [wsResult, roleResult] = await Promise.all([
+          supabase.from('workspaces').select('id, name, slug, plan').eq('id', targetWorkspaceId).single(),
+          supabase.rpc('get_user_role', { _user_id: userId, _workspace_id: targetWorkspaceId }),
+        ]);
+        
+        if (wsResult.error && wsResult.error.message?.includes('fetch')) {
+          throw new Error('Network error');
+        }
+        
+        return { wsResult, roleResult };
+      };
+
+      const { wsResult, roleResult } = await retryQuery(fetchData);
 
       const workspace = (!wsResult.error && wsResult.data) ? wsResult.data : null;
       const role = (!roleResult.error && roleResult.data) ? roleResult.data as AppRole : null;
@@ -173,10 +204,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log(`[Auth][${tabId}] Workspace/role fetched:`, targetWorkspaceId, role);
       return { workspace, role };
     } catch (error) {
-      console.error(`[Auth][${tabId}] Error fetching workspace details:`, error);
+      console.error(`[Auth][${tabId}] Error fetching workspace details after retries:`, error);
       return { workspace: null, role: null };
     }
-  }, [tabId]);
+  }, [tabId, retryQuery]);
 
   const resolveWorkspaceId = useCallback(async (userId: string, profileData: { default_workspace_id: string | null }): Promise<string | null> => {
     // Priority 1: this tab's sessionStorage
@@ -194,27 +225,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return profileData.default_workspace_id;
     }
 
-    // Priority 3: first membership
-    const { data: firstMembership } = await supabase
-      .from('workspace_members')
-      .select('workspace_id')
-      .eq('user_id', userId)
-      .eq('is_active', true)
-      .order('created_at', { ascending: true })
-      .limit(1)
-      .single();
+    // Priority 3: first membership (with retry for network resilience)
+    try {
+      const fetchMembership = async () => {
+        const result = await supabase
+          .from('workspace_members')
+          .select('workspace_id')
+          .eq('user_id', userId)
+          .eq('is_active', true)
+          .order('created_at', { ascending: true })
+          .limit(1)
+          .single();
+        
+        if (result.error && result.error.message?.includes('fetch')) {
+          throw new Error('Network error');
+        }
+        return result;
+      };
 
-    if (firstMembership?.workspace_id) {
-      console.log(`[Auth][${tabId}] Using first workspace:`, firstMembership.workspace_id);
-      setTabWorkspaceId(firstMembership.workspace_id);
-      markTabAsInitialized();
-      return firstMembership.workspace_id;
+      const { data: firstMembership } = await retryQuery(fetchMembership);
+
+      if (firstMembership?.workspace_id) {
+        console.log(`[Auth][${tabId}] Using first workspace:`, firstMembership.workspace_id);
+        setTabWorkspaceId(firstMembership.workspace_id);
+        markTabAsInitialized();
+        return firstMembership.workspace_id;
+      }
+    } catch (error) {
+      console.error(`[Auth][${tabId}] Error fetching workspace membership after retries:`, error);
+      // Don't mark as initialized on network error - allow retry on next attempt
+      return null;
     }
 
     console.log(`[Auth][${tabId}] User has no workspace`);
     markTabAsInitialized();
     return null;
-  }, [tabId]);
+  }, [tabId, retryQuery]);
 
   const secureLoginRecord = useCallback(async (userId: string, email: string, userName?: string) => {
     try {
@@ -314,15 +360,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     /**
      * Shared: given a valid session, resolve profile + workspace + role
+     * With retry for network resilience
      */
     const resolveSession = async (session: Session) => {
       const userId = session.user.id;
 
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('is_system_owner, is_blocked, public_id, default_workspace_id')
-        .eq('id', userId)
-        .single();
+      // Retry helper inline for profile fetch
+      const fetchProfileWithRetry = async (retries = 3) => {
+        for (let i = 0; i < retries; i++) {
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('is_system_owner, is_blocked, public_id, default_workspace_id')
+            .eq('id', userId)
+            .single();
+          
+          if (!error || !error.message?.includes('fetch')) {
+            return data;
+          }
+          
+          console.warn(`[Auth][${tabId}] Profile fetch attempt ${i + 1}/${retries} failed, retrying...`);
+          if (i < retries - 1) {
+            await new Promise(r => setTimeout(r, 500 * (i + 1)));
+          }
+        }
+        return null;
+      };
+
+      const profileData = await fetchProfileWithRetry();
 
       const wsId = await resolveWorkspaceId(userId, {
         default_workspace_id: profileData?.default_workspace_id ?? null,
