@@ -1702,8 +1702,8 @@ export function CaixaTransacaoDialog({
       // UNIFIED SOURCE: Use v_saldo_parceiro_contas/wallets filtered by caixa parceiro
       // This ensures parity with the Caixa Operacional page
       const [contasRes, walletsRes] = await Promise.all([
-        supabase.from("v_saldo_parceiro_contas").select("moeda, saldo").eq("parceiro_id", caixaParceiroId),
-        supabase.from("v_saldo_parceiro_wallets").select("coin, saldo_coin, saldo_usd").eq("parceiro_id", caixaParceiroId),
+        supabase.from("v_saldo_parceiro_contas").select("moeda, saldo").eq("parceiro_id", effectiveCaixaId),
+        supabase.from("v_saldo_parceiro_wallets").select("coin, saldo_coin, saldo_usd").eq("parceiro_id", effectiveCaixaId),
       ]);
 
       // Aggregate FIAT by currency
