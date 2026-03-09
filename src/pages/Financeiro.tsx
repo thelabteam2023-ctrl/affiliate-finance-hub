@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useCotacoes } from "@/hooks/useCotacoes";
 import { useCurrencySnapshot } from "@/hooks/useCurrencySnapshot";
 import { useWorkspaceLucroOperacional } from "@/hooks/useWorkspaceLucroOperacional";
+import { useCapitalMedioPeriodo } from "@/hooks/useCapitalMedioPeriodo";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
