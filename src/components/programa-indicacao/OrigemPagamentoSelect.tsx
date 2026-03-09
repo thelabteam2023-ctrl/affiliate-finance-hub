@@ -195,21 +195,42 @@ export function OrigemPagamentoSelect({
 
       // Caixa FIAT = contas do parceiro caixa operacional, agrupadas por moeda
       const caixaFiatMap: Record<string, number> = {};
+      // 🔒 CORREÇÃO: Mapear contas bancárias da Caixa por moeda
+      const contasByMoeda: Record<string, string[]> = {};
+      const contasData = contasRes.data || [];
+      
       allContas.forEach((row: any) => {
         if (caixaParceiroId && row.parceiro_id === caixaParceiroId) {
           const m = row.moeda || "BRL";
           caixaFiatMap[m] = (caixaFiatMap[m] || 0) + (row.saldo || 0);
+          // Mapear conta_id por moeda
+          if (row.conta_id) {
+            if (!contasByMoeda[m]) contasByMoeda[m] = [];
+            if (!contasByMoeda[m].includes(row.conta_id)) {
+              contasByMoeda[m].push(row.conta_id);
+            }
+          }
         }
       });
 
       // Caixa CRYPTO = wallets do parceiro caixa operacional, agrupadas por coin
       const caixaCryptoMap: Record<string, { saldo_coin: number; saldo_usd: number }> = {};
+      // 🔒 CORREÇÃO: Mapear wallets da Caixa por coin
+      const walletsByCoin: Record<string, string[]> = {};
+      
       allWallets.forEach((row: any) => {
         if (caixaParceiroId && row.parceiro_id === caixaParceiroId) {
           const c = row.coin || "USDT";
           if (!caixaCryptoMap[c]) caixaCryptoMap[c] = { saldo_coin: 0, saldo_usd: 0 };
           caixaCryptoMap[c].saldo_coin += (row.saldo_coin || 0);
           caixaCryptoMap[c].saldo_usd += (row.saldo_usd || 0);
+          // Mapear wallet_id por coin
+          if (row.wallet_id) {
+            if (!walletsByCoin[c]) walletsByCoin[c] = [];
+            if (!walletsByCoin[c].includes(row.wallet_id)) {
+              walletsByCoin[c].push(row.wallet_id);
+            }
+          }
         }
       });
 
@@ -218,12 +239,18 @@ export function OrigemPagamentoSelect({
       const parceirosWalletsSaldo = allWallets.filter((row: any) => !caixaParceiroId || row.parceiro_id !== caixaParceiroId);
 
       setParceiros(parceirosRes.data || []);
-      setContasBancarias(contasRes.data || []);
+      setContasBancarias(contasData);
       setWalletsCrypto(walletsRes.data || []);
       setSaldosCaixaFiat(Object.entries(caixaFiatMap).map(([moeda, saldo]) => ({ moeda, saldo })));
       setSaldosCaixaCrypto(Object.entries(caixaCryptoMap).map(([coin, vals]) => ({ coin, ...vals })));
       setSaldosParceirosContas(parceirosContasSaldo);
       setSaldosParceirosWallets(parceirosWalletsSaldo);
+      
+      // 🔒 CORREÇÃO: Salvar mapeamentos da Caixa
+      setCaixaContasByMoeda(contasByMoeda);
+      setCaixaWalletsByCoin(walletsByCoin);
+      setCaixaParceiroIdRef(caixaParceiroId);
+      
       setDataLoaded(true);
 
       debugLog("fetchData:success", {
