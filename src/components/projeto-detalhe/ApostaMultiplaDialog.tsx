@@ -347,7 +347,7 @@ export function ApostaMultiplaDialog({
       setTipoMultipla(aposta.tipo_multipla as "DUPLA" | "TRIPLA");
       setStake(aposta.stake.toString());
       setStatusResultado(aposta.resultado || "PENDENTE");
-      setDataAposta(aposta.data_aposta.slice(0, 16));
+      setDataAposta(dbTimestampToDatetimeLocal(aposta.data_aposta));
       setObservacoes(aposta.observacoes || "");
 
       // Restaurar campos de registro (incluindo fonte_saldo)

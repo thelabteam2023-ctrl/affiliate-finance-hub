@@ -1359,7 +1359,7 @@ export function SurebetDialogTable({
           cotacao_snapshot_at: snapshotFields.cotacao_snapshot_at,
           status: "PENDENTE",
           resultado: "PENDENTE",
-          data_aposta: new Date().toISOString(),
+          data_aposta: toLocalTimestamp(""),
           observacoes: `Convertida de operação parcial (grupo: ${operationGroupId.slice(0, 8)})`
         };
       });

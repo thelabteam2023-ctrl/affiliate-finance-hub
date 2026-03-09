@@ -880,7 +880,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
       refetchSaldos();
       
       if (aposta) {
-        setDataAposta(aposta.data_aposta.slice(0, 16));
+        setDataAposta(dbTimestampToDatetimeLocal(aposta.data_aposta));
         setEsporte(aposta.esporte);
         // Usar evento direto (campo já unificado no banco)
         setEvento(aposta.evento || "");
