@@ -318,9 +318,16 @@ export default function Financeiro() {
     try {
       setLoading(true);
 
+      // STEP 1: Identify the Caixa Operacional partner to use as filter
+      const { data: caixaParceiro } = await supabase
+        .from("parceiros")
+        .select("id")
+        .eq("is_caixa_operacional", true)
+        .maybeSingle();
+      
+      const caixaParceiroId = caixaParceiro?.id || null;
+
       const [
-        fiatResult, 
-        cryptoResult, 
         despesasResult, 
         custosResult, 
         ledgerResult, 
@@ -335,16 +342,14 @@ export default function Financeiro() {
         parceriasParceiroResult,
         parceriasComissaoResult,
         acordosIndicadorResult,
-        contasParceirosResult,
-        walletsParceirosResult,
+        // Saldos de contas e wallets (ALL parceiros - filtraremos depois)
+        allContasSaldoResult,
+        allWalletsSaldoResult,
         contasDetalhadasResult,
         walletsDetalhadasResult,
         participacoesResult,
-        // Para histórico mensal - fetch simplificado
         apostasHistoricoResult,
       ] = await Promise.all([
-        supabase.from("v_saldo_caixa_fiat").select("*"),
-        supabase.from("v_saldo_caixa_crypto").select("*"),
         supabase.from("movimentacoes_indicacao").select("tipo, valor, data_movimentacao, parceria_id, indicador_id, indicadores_referral(nome)").eq("status", "CONFIRMADO"),
         supabase.from("v_custos_aquisicao").select("custo_total, valor_indicador, valor_parceiro, valor_fornecedor, data_inicio, indicador_id, indicador_nome"),
         supabase.from("cash_ledger").select("tipo_transacao, valor, data_transacao, moeda").eq("status", "CONFIRMADO"),
@@ -372,17 +377,16 @@ export default function Financeiro() {
           .from("indicador_acordos")
           .select("indicador_id, meta_parceiros, valor_bonus")
           .eq("ativo", true),
-        supabase.from("v_saldo_parceiro_contas").select("saldo"),
-        supabase.from("v_saldo_parceiro_wallets").select("saldo_usd"),
-        supabase.from("v_saldo_parceiro_contas").select("saldo, banco, parceiro_nome, moeda"),
-        supabase.from("v_saldo_parceiro_wallets").select("saldo_usd, exchange"),
+        // UNIFIED SOURCE: Use v_saldo_parceiro_contas/wallets for ALL saldos
+        // Then split into caixa vs parceiros client-side
+        supabase.from("v_saldo_parceiro_contas").select("parceiro_id, conta_id, saldo, banco, parceiro_nome, moeda"),
+        supabase.from("v_saldo_parceiro_wallets").select("parceiro_id, wallet_id, coin, saldo_coin, saldo_usd, exchange"),
+        supabase.from("v_saldo_parceiro_contas").select("saldo, banco, parceiro_nome, moeda, parceiro_id"),
+        supabase.from("v_saldo_parceiro_wallets").select("saldo_usd, exchange, parceiro_id"),
         supabase.from("participacao_ciclos").select("valor_participacao, data_pagamento").eq("status", "PAGO"),
-        // Apenas para histórico mensal (lucro_prejuizo + data_aposta)
         supabase.from("apostas_unificada").select("lucro_prejuizo, data_aposta").not("resultado", "is", null),
       ]);
 
-      if (fiatResult.error) throw fiatResult.error;
-      if (cryptoResult.error) throw cryptoResult.error;
       if (despesasResult.error) throw despesasResult.error;
       if (custosResult.error) throw custosResult.error;
       if (ledgerResult.error) throw ledgerResult.error;
@@ -393,8 +397,38 @@ export default function Financeiro() {
       if (movIndicacaoResult.error) throw movIndicacaoResult.error;
       if (bookmakersResult.error) throw bookmakersResult.error;
 
-      setCaixaFiat(fiatResult.data || []);
-      setCaixaCrypto(cryptoResult.data || []);
+      const allContas = allContasSaldoResult.data || [];
+      const allWallets = allWalletsSaldoResult.data || [];
+
+      // STEP 2: Split contas/wallets into Caixa Operacional vs Parceiros
+      // This ensures IDENTICAL logic to the Caixa page (v_saldo_parceiro_contas filtered by caixa parceiro)
+      
+      // Caixa FIAT = contas do parceiro caixa operacional, agrupadas por moeda
+      const caixaFiatMap: Record<string, number> = {};
+      allContas.forEach((row: any) => {
+        if (caixaParceiroId && row.parceiro_id === caixaParceiroId) {
+          const m = row.moeda || "BRL";
+          caixaFiatMap[m] = (caixaFiatMap[m] || 0) + (row.saldo || 0);
+        }
+      });
+      setCaixaFiat(Object.entries(caixaFiatMap).map(([moeda, saldo]) => ({ moeda, saldo })));
+
+      // Caixa CRYPTO = wallets do parceiro caixa operacional, agrupadas por coin
+      const caixaCryptoMap: Record<string, { saldo_coin: number; saldo_usd: number }> = {};
+      allWallets.forEach((row: any) => {
+        if (caixaParceiroId && row.parceiro_id === caixaParceiroId) {
+          const c = row.coin || "USDT";
+          if (!caixaCryptoMap[c]) caixaCryptoMap[c] = { saldo_coin: 0, saldo_usd: 0 };
+          caixaCryptoMap[c].saldo_coin += (row.saldo_coin || 0);
+          caixaCryptoMap[c].saldo_usd += (row.saldo_usd || 0);
+        }
+      });
+      setCaixaCrypto(Object.entries(caixaCryptoMap).map(([coin, vals]) => ({ coin, ...vals })));
+
+      // Parceiros contas/wallets = EXCLUINDO caixa operacional (evita double-counting)
+      const parceirosContas = allContas.filter((row: any) => !caixaParceiroId || row.parceiro_id !== caixaParceiroId);
+      const parceirosWallets = allWallets.filter((row: any) => !caixaParceiroId || row.parceiro_id !== caixaParceiroId);
+
       setDespesas(despesasResult.data || []);
       setCustos(custosResult.data || []);
       setCashLedger(ledgerResult.data || []);
@@ -405,10 +439,11 @@ export default function Financeiro() {
       setMovimentacoesIndicacao(movIndicacaoResult.data || []);
       setBookmakersSaldos(bookmakersResult.data || []);
       setBookmakersDetalhados(bookmakersDetalhadosResult.data || []);
-      setContasParceiros(contasParceirosResult.data || []);
-      setWalletsParceiros(walletsParceirosResult.data || []);
-      setContasDetalhadas(contasDetalhadasResult.data || []);
-      setWalletsDetalhadas(walletsDetalhadasResult.data || []);
+      setContasParceiros(parceirosContas);
+      setWalletsParceiros(parceirosWallets);
+      // Detalhadas also exclude caixa
+      setContasDetalhadas((contasDetalhadasResult.data || []).filter((c: any) => !caixaParceiroId || c.parceiro_id !== caixaParceiroId));
+      setWalletsDetalhadas((walletsDetalhadasResult.data || []).filter((w: any) => !caixaParceiroId || w.parceiro_id !== caixaParceiroId));
       setParticipacoesPagas(participacoesResult.data || []);
       
       // Armazenar apostas para histórico mensal (não mais usado para lucro operacional)
