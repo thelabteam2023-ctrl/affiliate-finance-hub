@@ -314,7 +314,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
         }
       }
       
-      const bookmakerIds = [...new Set((data || []).map((a: any) => a.bookmaker_id).filter(Boolean))];
+      const bookmakerIds = [...new Set(allData.map((a: any) => a.bookmaker_id).filter(Boolean))];
       let bookmakerMap = new Map<string, { nome: string; parceiroNome: string | null; logoUrl: string | null }>();
       if (bookmakerIds.length > 0) {
         const { data: bks } = await supabase
