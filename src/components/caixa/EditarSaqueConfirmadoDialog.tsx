@@ -151,7 +151,7 @@ export function EditarSaqueConfirmadoDialog({
           <div className="text-sm text-muted-foreground">
             Data de recebimento atual:{" "}
             <span className="font-medium text-foreground">
-              {format(dataAtualParsed, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+              {civilDateKey ? (() => { const [y, m, d] = civilDateKey.split('-'); return `${d}/${m}/${y}`; })() : '-'}
             </span>
           </div>
 
