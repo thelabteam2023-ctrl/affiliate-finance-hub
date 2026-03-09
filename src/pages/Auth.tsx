@@ -183,11 +183,8 @@ export default function Auth() {
         }
       }
 
-      toast({
-        title: "Cadastro realizado!",
-        description: "Verifique seu email para confirmar a conta.",
-      });
-      setActiveTab("login");
+      setSignupCompletedEmail(validation.data.email);
+      setSignupComplete(true);
     } catch (error: any) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
     } finally {
