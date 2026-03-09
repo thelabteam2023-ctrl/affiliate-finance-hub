@@ -225,27 +225,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return profileData.default_workspace_id;
     }
 
-    // Priority 3: first membership
-    const { data: firstMembership } = await supabase
-      .from('workspace_members')
-      .select('workspace_id')
-      .eq('user_id', userId)
-      .eq('is_active', true)
-      .order('created_at', { ascending: true })
-      .limit(1)
-      .single();
+    // Priority 3: first membership (with retry for network resilience)
+    try {
+      const fetchMembership = async () => {
+        const result = await supabase
+          .from('workspace_members')
+          .select('workspace_id')
+          .eq('user_id', userId)
+          .eq('is_active', true)
+          .order('created_at', { ascending: true })
+          .limit(1)
+          .single();
+        
+        if (result.error && result.error.message?.includes('fetch')) {
+          throw new Error('Network error');
+        }
+        return result;
+      };
 
-    if (firstMembership?.workspace_id) {
-      console.log(`[Auth][${tabId}] Using first workspace:`, firstMembership.workspace_id);
-      setTabWorkspaceId(firstMembership.workspace_id);
-      markTabAsInitialized();
-      return firstMembership.workspace_id;
+      const { data: firstMembership } = await retryQuery(fetchMembership);
+
+      if (firstMembership?.workspace_id) {
+        console.log(`[Auth][${tabId}] Using first workspace:`, firstMembership.workspace_id);
+        setTabWorkspaceId(firstMembership.workspace_id);
+        markTabAsInitialized();
+        return firstMembership.workspace_id;
+      }
+    } catch (error) {
+      console.error(`[Auth][${tabId}] Error fetching workspace membership after retries:`, error);
+      // Don't mark as initialized on network error - allow retry on next attempt
+      return null;
     }
 
     console.log(`[Auth][${tabId}] User has no workspace`);
     markTabAsInitialized();
     return null;
-  }, [tabId]);
+  }, [tabId, retryQuery]);
 
   const secureLoginRecord = useCallback(async (userId: string, email: string, userName?: string) => {
     try {
