@@ -9,11 +9,12 @@ Lançamentos no `cash_ledger` com `origem_tipo = CAIXA_OPERACIONAL` eram criados
 ### Causa Raiz
 O componente `OrigemPagamentoSelect` exibia saldos agregados por moeda para a Caixa Operacional, mas não resolvia o `conta_bancaria_id` específico do parceiro caixa. Todos os diálogos que usavam este componente (Despesas, Comissões, Pagamentos) tinham o mesmo bug.
 
-### Correção Aplicada
+### Correção Aplicada (v2 - Suporte Multi-Conta)
 O `OrigemPagamentoSelect` agora:
-1. Mapeia contas bancárias e wallets do parceiro Caixa Operacional por moeda/coin durante o `fetchData`
-2. Auto-resolve e propaga `origemContaBancariaId`/`origemWalletId` quando `CAIXA_OPERACIONAL` é selecionado
-3. Também resolve no efeito de recálculo inicial (quando o componente monta com CAIXA_OPERACIONAL como default)
+1. Mapeia contas bancárias e wallets do parceiro Caixa Operacional por moeda/coin com informações enriquecidas (id, banco, saldo)
+2. **Se UMA conta/wallet**: Auto-resolve e propaga `origemContaBancariaId`/`origemWalletId` automaticamente
+3. **Se MÚLTIPLAS contas/wallets**: Exibe um seletor dropdown para o usuário escolher qual conta/wallet debitar, mostrando nome do banco e saldo individual
+4. Resolve no efeito de recálculo inicial (quando o componente monta com CAIXA_OPERACIONAL como default)
 
 ### Regra de Ouro
 **TODO** lançamento no `cash_ledger` DEVE ter `origem_conta_bancaria_id` ou `origem_wallet_id` preenchido quando a origem é CAIXA_OPERACIONAL. Sem isso, o débito não será contabilizado nas views de saldo.
