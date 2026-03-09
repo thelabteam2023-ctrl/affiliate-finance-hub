@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, AlertTriangle, Eye, EyeOff, Mail, Lock, User, CreditCard, Phone } from "lucide-react";
+import { Loader2, AlertTriangle, Eye, EyeOff, Mail, Lock, User, CreditCard, Phone, MailCheck, ArrowLeft } from "lucide-react";
 import { z } from "zod";
 import labbetLogo from "@/assets/labbet-logo-horizontal.png";
 import { validateCPF, formatCPF } from "@/lib/validators";
