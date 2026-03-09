@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { getOperationalDateRangeFromStrings } from '@/utils/dateUtils';
+import { fetchProjetosLucroOperacionalKpi } from '@/services/fetchProjetosLucroOperacionalKpi';
 
 /**
  * Interface de retorno do lucro por módulo
- * Cada módulo pode contribuir independentemente para o lucro operacional
+ * Mantida para retrocompatibilidade com componentes que consomem breakdown por módulo.
  */
 export interface ModuloLucro {
   moduleId: string;
@@ -18,10 +18,10 @@ export interface ModuloLucro {
  * Interface principal de resultado consolidado do workspace
  */
 export interface WorkspaceLucroConsolidado {
-  // Lucro total consolidado (soma de todos os módulos)
+  // Lucro total consolidado (soma de todos os projetos)
   lucroTotal: number;
   
-  // Breakdown por módulo (para tooltips e detalhamento)
+  // Breakdown por módulo (simplificado — agora é lucro por projeto)
   modulos: ModuloLucro[];
   
   // Flags de consolidação
@@ -49,11 +49,17 @@ interface UseWorkspaceLucroOperacionalReturn {
  * 
  * FONTE ÚNICA DE VERDADE para lucro operacional consolidado.
  * 
- * Módulos incluídos:
+ * DELEGA INTEGRALMENTE para fetchProjetosLucroOperacionalKpi (engine dos projetos),
+ * garantindo paridade absoluta entre a visão por projeto e o dashboard financeiro.
+ * 
+ * Módulos incluídos (via engine canônica):
  * - Apostas liquidadas (apostas_unificada)
  * - Cashback manual (cashback_manual)
- * - [Futuro] Giros grátis
- * - [Futuro] Freebets
+ * - Giros grátis confirmados
+ * - Bônus ganhos (exceto FREEBET)
+ * - Perdas operacionais confirmadas
+ * - Ajustes de conciliação
+ * - Ajustes de saldo + Resultado cambial
  * 
  * Este hook deve ser usado por:
  * - Dashboard Financeiro (Financeiro.tsx)
@@ -75,56 +81,63 @@ export function useWorkspaceLucroOperacional({
     setError(null);
 
     try {
-      // Fetch todos os módulos em paralelo
-      const [apostasResult, cashbackResult, girosGratisResult] = await Promise.all([
-        fetchApostasModulo(dataInicio, dataFim, cotacaoUSD),
-        fetchCashbackModulo(dataInicio, dataFim, cotacaoUSD),
-        fetchGirosGratisModulo(dataInicio, dataFim),
-      ]);
+      // 1) Buscar todos os projetos do workspace do usuário
+      const { data: projetos, error: projError } = await supabase
+        .from('projetos')
+        .select('id');
 
-      // Consolidar módulos
-      const modulos: ModuloLucro[] = [
-        {
-          moduleId: 'apostas',
-          moduleName: 'Apostas',
-          valor: apostasResult.lucro,
-          count: apostasResult.count,
-          isActive: true, // Apostas sempre ativo
-        },
-        {
-          moduleId: 'cashback',
-          moduleName: 'Cashback',
-          valor: cashbackResult.lucro,
-          count: cashbackResult.count,
-          isActive: cashbackResult.count > 0,
-        },
-        {
-          moduleId: 'giros_gratis',
-          moduleName: 'Giros Grátis',
-          valor: girosGratisResult.lucro,
-          count: girosGratisResult.count,
-          isActive: girosGratisResult.count > 0,
-        },
-      ];
+      if (projError) throw projError;
 
-      // Calcular lucro total
-      const lucroTotal = modulos
-        .filter(m => m.isActive)
-        .reduce((acc, m) => acc + m.valor, 0);
+      const projetoIds = (projetos || []).map((p) => p.id);
 
-      // Calcular total de operações
-      const totalOperacoes = modulos
-        .filter(m => m.isActive)
-        .reduce((acc, m) => acc + m.count, 0);
+      if (projetoIds.length === 0) {
+        setResultado({
+          lucroTotal: 0,
+          modulos: [],
+          hasMultiCurrency: false,
+          totalOperacoes: 0,
+        });
+        return;
+      }
 
-      // Verificar se há múltiplas moedas
-      const hasMultiCurrency = apostasResult.hasMultiCurrency || cashbackResult.hasMultiCurrency;
+      // 2) Delegar para a engine canônica dos projetos
+      const lucroPorProjeto = await fetchProjetosLucroOperacionalKpi({
+        projetoIds,
+        cotacaoUSD,
+        dataInicio: dataInicio || undefined,
+        dataFim: dataFim || undefined,
+      });
+
+      // 3) Agregar resultados
+      let lucroTotal = 0;
+      let hasMultiCurrency = false;
+      const modulos: ModuloLucro[] = [];
+
+      for (const projetoId of projetoIds) {
+        const resumo = lucroPorProjeto[projetoId];
+        if (!resumo) continue;
+
+        lucroTotal += resumo.consolidado;
+
+        // Detectar multi-moeda
+        if (resumo.porMoeda.USD !== 0) {
+          hasMultiCurrency = true;
+        }
+
+        modulos.push({
+          moduleId: projetoId,
+          moduleName: `Projeto ${projetoId.slice(0, 8)}`,
+          valor: resumo.consolidado,
+          count: 1,
+          isActive: true,
+        });
+      }
 
       setResultado({
         lucroTotal,
         modulos,
         hasMultiCurrency,
-        totalOperacoes,
+        totalOperacoes: modulos.length,
       });
     } catch (err: any) {
       console.error('Erro ao calcular lucro operacional do workspace:', err);
@@ -143,212 +156,6 @@ export function useWorkspaceLucroOperacional({
     loading,
     error,
     refresh: calculateLucro,
-  };
-}
-
-// ==================== FUNÇÕES DE FETCH POR MÓDULO ====================
-
-interface ModuloResult {
-  lucro: number;
-  count: number;
-  hasMultiCurrency: boolean;
-}
-
-/**
- * Módulo: Apostas Liquidadas
- * Fonte: apostas_unificada
- */
-async function fetchApostasModulo(
-  dataInicio: string | null,
-  dataFim: string | null,
-  cotacaoUSD: number
-): Promise<ModuloResult> {
-  let query = supabase
-    .from('apostas_unificada')
-    .select('lucro_prejuizo, lucro_prejuizo_brl_referencia, pl_consolidado, consolidation_currency, moeda_operacao')
-    .eq('status', 'LIQUIDADA');
-
-  // Aplicar filtro de período
-  // CRÍTICO: Usar getOperationalDateRangeFromStrings para garantir timezone operacional (São Paulo)
-  if (dataInicio && dataFim) {
-    const { startUTC, endUTC } = getOperationalDateRangeFromStrings(dataInicio, dataFim);
-    query = query.gte('data_aposta', startUTC);
-    query = query.lte('data_aposta', endUTC);
-  } else if (dataInicio) {
-    // Apenas início definido - usar início do dia no timezone operacional
-    const { startUTC } = getOperationalDateRangeFromStrings(dataInicio, dataInicio);
-    query = query.gte('data_aposta', startUTC);
-  } else if (dataFim) {
-    // Apenas fim definido - usar fim do dia no timezone operacional
-    const { endUTC } = getOperationalDateRangeFromStrings(dataFim, dataFim);
-    query = query.lte('data_aposta', endUTC);
-  }
-
-  const { data, error } = await query;
-
-  if (error) {
-    console.error('Erro ao buscar apostas:', error);
-    return { lucro: 0, count: 0, hasMultiCurrency: false };
-  }
-
-  let total = 0;
-  let hasMulti = false;
-
-  (data || []).forEach((a: any) => {
-    const moeda = a.moeda_operacao || 'BRL';
-    const consolidationCurrency = a.consolidation_currency || null;
-
-    // Prioridade 1: pl_consolidado - MAS SOMENTE se consolidado em BRL
-    // Se consolidation_currency é USD/EUR, o pl_consolidado está em outra moeda!
-    if (a.pl_consolidado != null && consolidationCurrency === 'BRL') {
-      total += a.pl_consolidado;
-      if (moeda !== 'BRL') hasMulti = true;
-      return;
-    }
-
-    // Prioridade 2: lucro_prejuizo_brl_referencia (snapshot BRL)
-    if (a.lucro_prejuizo_brl_referencia != null) {
-      total += a.lucro_prejuizo_brl_referencia;
-      if (moeda !== 'BRL') hasMulti = true;
-      return;
-    }
-
-    // Prioridade 3: pl_consolidado em outra moeda - converter para BRL
-    if (a.pl_consolidado != null && consolidationCurrency) {
-      const plValue = a.pl_consolidado;
-      if (consolidationCurrency === 'USD' || consolidationCurrency === 'USDT') {
-        total += plValue * cotacaoUSD;
-      } else if (consolidationCurrency === 'EUR') {
-        total += plValue * cotacaoUSD * 1.08; // EUR→USD→BRL approx
-      } else {
-        total += plValue; // Assume BRL
-      }
-      hasMulti = true;
-      return;
-    }
-
-    // Fallback: converter on-the-fly pelo moeda_operacao
-    const lucro = a.lucro_prejuizo || 0;
-    if (moeda === 'USD' || moeda === 'USDT') {
-      total += lucro * cotacaoUSD;
-      hasMulti = true;
-    } else if (moeda === 'EUR') {
-      total += lucro * cotacaoUSD * 1.08;
-      hasMulti = true;
-    } else {
-      total += lucro;
-    }
-  });
-
-  return {
-    lucro: total,
-    count: data?.length || 0,
-    hasMultiCurrency: hasMulti,
-  };
-}
-
-/**
- * Módulo: Cashback Manual
- * Fonte: cashback_manual
- */
-async function fetchCashbackModulo(
-  dataInicio: string | null,
-  dataFim: string | null,
-  cotacaoUSD: number
-): Promise<ModuloResult> {
-  let query = supabase
-    .from('cashback_manual')
-    .select('valor, valor_brl_referencia, moeda_operacao');
-
-  // Aplicar filtro de período (data_credito é date, não timestamp)
-  if (dataInicio) {
-    query = query.gte('data_credito', dataInicio);
-  }
-  if (dataFim) {
-    query = query.lte('data_credito', dataFim);
-  }
-
-  const { data, error } = await query;
-
-  if (error) {
-    console.error('Erro ao buscar cashback:', error);
-    return { lucro: 0, count: 0, hasMultiCurrency: false };
-  }
-
-  let total = 0;
-  let hasMulti = false;
-
-  (data || []).forEach(cb => {
-    const moeda = cb.moeda_operacao || 'BRL';
-
-    // Usar valor_brl_referencia se disponível
-    if (cb.valor_brl_referencia != null) {
-      total += cb.valor_brl_referencia;
-      if (moeda !== 'BRL') hasMulti = true;
-      return;
-    }
-
-    // Converter se USD/USDT/EUR
-    if (moeda === 'USD' || moeda === 'USDT') {
-      total += cb.valor * cotacaoUSD;
-      hasMulti = true;
-    } else if (moeda === 'EUR') {
-      total += cb.valor * cotacaoUSD * 1.08;
-      hasMulti = true;
-    } else {
-      total += cb.valor;
-    }
-  });
-
-  return {
-    lucro: total,
-    count: data?.length || 0,
-    hasMultiCurrency: hasMulti,
-  };
-}
-
-/**
- * Módulo: Giros Grátis
- * Fonte: giros_gratis
- * Giros grátis são sempre >= 0 (não há prejuízo)
- */
-async function fetchGirosGratisModulo(
-  dataInicio: string | null,
-  dataFim: string | null
-): Promise<ModuloResult> {
-  let query = supabase
-    .from('giros_gratis' as any)
-    .select('valor_retorno')
-    .eq('status', 'confirmado');
-
-  // Aplicar filtro de período
-  // CRÍTICO: Usar getOperationalDateRangeFromStrings para garantir timezone operacional (São Paulo)
-  if (dataInicio && dataFim) {
-    const { startUTC, endUTC } = getOperationalDateRangeFromStrings(dataInicio, dataFim);
-    query = query.gte('data_registro', startUTC);
-    query = query.lte('data_registro', endUTC);
-  } else if (dataInicio) {
-    const { startUTC } = getOperationalDateRangeFromStrings(dataInicio, dataInicio);
-    query = query.gte('data_registro', startUTC);
-  } else if (dataFim) {
-    const { endUTC } = getOperationalDateRangeFromStrings(dataFim, dataFim);
-    query = query.lte('data_registro', endUTC);
-  }
-
-  const { data, error } = await query;
-
-  if (error) {
-    console.error('Erro ao buscar giros grátis:', error);
-    return { lucro: 0, count: 0, hasMultiCurrency: false };
-  }
-
-  const giros = (data || []) as any[];
-  const lucro = giros.reduce((acc, g) => acc + Math.max(0, Number(g.valor_retorno || 0)), 0);
-
-  return {
-    lucro,
-    count: giros.length,
-    hasMultiCurrency: false, // Giros são sempre em BRL por enquanto
   };
 }
 
