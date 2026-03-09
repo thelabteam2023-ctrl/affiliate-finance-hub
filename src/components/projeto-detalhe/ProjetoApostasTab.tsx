@@ -50,6 +50,7 @@ import { useProjectBonuses } from "@/hooks/useProjectBonuses";
 import { ESTRATEGIAS_LIST, inferEstrategiaLegado, type ApostaEstrategia } from "@/lib/apostaConstants";
 // VisaoGeralCharts removido - agora está em ProjetoDashboardTab
 import { TabFiltersBar } from "./TabFiltersBar";
+import { StandardTimeFilter } from "./StandardTimeFilter";
 import { useTabFilters } from "@/hooks/useTabFilters";
 import { cn, getFirstLastName } from "@/lib/utils";
 import { parsePernaFromJson } from "@/types/apostasUnificada";
@@ -1394,6 +1395,15 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
         </div>
       )}
 
+      {/* Filtro de período padronizado com suporte a Ciclos */}
+      <StandardTimeFilter
+        period={tabFilters.period}
+        onPeriodChange={tabFilters.setPeriod}
+        customDateRange={tabFilters.customDateRange}
+        onCustomDateRangeChange={tabFilters.setCustomDateRange}
+        projetoId={projetoId}
+      />
+
       {/* Card de Histórico com Filtros */}
       <Card>
         <CardHeader className="pb-3">
@@ -1476,6 +1486,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
           <TabFiltersBar
             projetoId={projetoId}
             filters={tabFilters}
+            showPeriodFilter={false}
             showEstrategiaFilter={true}
             showResultadoFilter={true}
           />
