@@ -39,7 +39,7 @@ export function SurebetCompactHeader({
 }: SurebetCompactHeaderProps) {
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" translate="no">
       {/* Linha 1: Esporte + Evento */}
       <div className="flex items-center gap-3">
         <Select value={esporte} onValueChange={setEsporte}>

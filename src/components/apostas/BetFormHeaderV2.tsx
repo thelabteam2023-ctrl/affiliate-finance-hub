@@ -149,7 +149,7 @@ export function BetFormHeaderV2({
   const review = gameFields.fieldsNeedingReview || {};
 
   return (
-    <div className="border-b border-border/50 bg-muted/20 shrink-0">
+    <div className="border-b border-border/50 bg-muted/20 shrink-0" translate="no">
       {/* ========== LINHA 1: Título + Estratégia inline + Importar ========== */}
       <div className="flex items-center justify-between px-4 py-2.5 border-b border-border/30">
         <div className="flex items-center gap-3 min-w-0 flex-1">
