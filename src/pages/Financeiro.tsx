@@ -259,6 +259,12 @@ export default function Financeiro() {
   const lucroOperacionalApostas = lucroOperacionalData?.lucroTotal ?? 0;
   const hasMultiCurrencyApostas = lucroOperacionalData?.hasMultiCurrency ?? false;
 
+  // Hook de capital médio do período (para ROI temporalmente consistente)
+  const capitalMedioPeriodo = useCapitalMedioPeriodo({
+    dataInicio: dataInicio || null,
+    dataFim: dataFim || null,
+    capitalAtual: 0, // Will be set after bookmakers load
+  });
 
   // Dialog states
   const [kpiDialogOpen, setKpiDialogOpen] = useState(false);
