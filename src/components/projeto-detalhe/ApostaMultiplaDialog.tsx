@@ -54,7 +54,7 @@ import { RegistroApostaValues, getSuggestionsForTab } from "./RegistroApostaFiel
 import { isAbaEstrategiaFixa, getEstrategiaFromTab, getContextoFromTab, isAbaContextoFixo, type FormaRegistro, type ApostaEstrategia, type ContextoOperacional, type FonteSaldo } from "@/lib/apostaConstants";
 import { BetFormHeader } from "@/components/apostas/BetFormHeader";
 import { getFirstLastName } from "@/lib/utils";
-import { toLocalTimestamp, validarDataAposta } from "@/utils/dateUtils";
+import { toLocalTimestamp, validarDataAposta, dbTimestampToDatetimeLocal } from "@/utils/dateUtils";
 import { 
   BookmakerSelectOption, 
   SaldoBreakdownDisplay, 
@@ -347,7 +347,7 @@ export function ApostaMultiplaDialog({
       setTipoMultipla(aposta.tipo_multipla as "DUPLA" | "TRIPLA");
       setStake(aposta.stake.toString());
       setStatusResultado(aposta.resultado || "PENDENTE");
-      setDataAposta(aposta.data_aposta.slice(0, 16));
+      setDataAposta(dbTimestampToDatetimeLocal(aposta.data_aposta));
       setObservacoes(aposta.observacoes || "");
 
       // Restaurar campos de registro (incluindo fonte_saldo)

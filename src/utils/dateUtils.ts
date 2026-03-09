@@ -309,3 +309,44 @@ export const toLocalTimestamp = (dateTimeString: string): string => {
   // Fallback: adicionar offset ao que temos
   return `${cleanDate}${SAO_PAULO_OFFSET}`;
 };
+
+/**
+ * Converte um timestamp do banco (UTC) para o formato datetime-local (YYYY-MM-DDTHH:mm)
+ * no timezone operacional (São Paulo).
+ * 
+ * QUANDO USAR: Para preencher inputs datetime-local com dados vindos do banco.
+ * 
+ * BUG CORRIGIDO: Antes, usávamos aposta.data_aposta.slice(0, 16) que pegava
+ * o valor UTC bruto. Ex: DB tem "2026-03-07T03:34:00+00" (UTC), slice dava
+ * "2026-03-07T03:34" (errado!), deveria ser "2026-03-07T00:34" (São Paulo).
+ * 
+ * @param dbTimestamp - String de timestamp do banco (geralmente UTC)
+ * @returns String no formato "YYYY-MM-DDTHH:mm" em horário de São Paulo
+ */
+export const dbTimestampToDatetimeLocal = (dbTimestamp: string | null | undefined): string => {
+  if (!dbTimestamp) return getLocalDateTimeString();
+  
+  const localDate = parseLocalDateTime(dbTimestamp);
+  
+  const year = localDate.getFullYear();
+  const month = String(localDate.getMonth() + 1).padStart(2, '0');
+  const day = String(localDate.getDate()).padStart(2, '0');
+  const hours = String(localDate.getHours()).padStart(2, '0');
+  const minutes = String(localDate.getMinutes()).padStart(2, '0');
+  
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
+/**
+ * Retorna a data/hora atual no formato datetime-local (YYYY-MM-DDTHH:mm)
+ * para uso como valor padrão em inputs.
+ */
+export const getLocalDateTimeString = (): string => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};

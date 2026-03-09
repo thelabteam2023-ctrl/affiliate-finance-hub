@@ -48,6 +48,7 @@ import {
 import { BookmakerSearchableSelectContent } from "@/components/bookmakers/BookmakerSearchableSelectContent";
 import { useProjetoConsolidacao } from "@/hooks/useProjetoConsolidacao";
 import { useCotacoes } from "@/hooks/useCotacoes";
+import { toLocalTimestamp } from "@/utils/dateUtils";
 import { pernasToInserts } from "@/types/apostasPernas";
 import { type MoedaOperacao } from "@/types/apostasUnificada";
 import { convertCurrency, calcularStakesMultiCurrency, type GetEffectiveRateFn } from "@/utils/convertCurrency";
@@ -1283,7 +1284,7 @@ export function SurebetDialogTable({
           status: "PENDENTE",
           resultado: "PENDENTE",
           pernas: pernasToSave as any,
-          data_aposta: new Date().toISOString()
+          data_aposta: toLocalTimestamp("")
         })
         .select("id")
         .single();
@@ -1359,7 +1360,7 @@ export function SurebetDialogTable({
           cotacao_snapshot_at: snapshotFields.cotacao_snapshot_at,
           status: "PENDENTE",
           resultado: "PENDENTE",
-          data_aposta: new Date().toISOString(),
+          data_aposta: toLocalTimestamp(""),
           observacoes: `Convertida de operação parcial (grupo: ${operationGroupId.slice(0, 8)})`
         };
       });

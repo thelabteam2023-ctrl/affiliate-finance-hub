@@ -55,7 +55,7 @@ import { RegistroApostaValues, validateRegistroAposta, getSuggestionsForTab } fr
 import { BetFormHeaderV2 } from "@/components/apostas/BetFormHeaderV2";
 import { FORMA_REGISTRO, APOSTA_ESTRATEGIA, CONTEXTO_OPERACIONAL, FONTE_SALDO, isAbaEstrategiaFixa, getEstrategiaFromTab, getContextoFromTab, isAbaContextoFixo, type FormaRegistro, type ApostaEstrategia, type ContextoOperacional, type FonteSaldo } from "@/lib/apostaConstants";
 import { useFonteSaldoDefault } from "@/components/apostas/FonteSaldoSelector";
-import { toLocalTimestamp, validarDataAposta } from "@/utils/dateUtils";
+import { toLocalTimestamp, validarDataAposta, dbTimestampToDatetimeLocal } from "@/utils/dateUtils";
 import { 
   BookmakerSelectOption,
   BookmakerSelectTrigger,
@@ -880,7 +880,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
       refetchSaldos();
       
       if (aposta) {
-        setDataAposta(aposta.data_aposta.slice(0, 16));
+        setDataAposta(dbTimestampToDatetimeLocal(aposta.data_aposta));
         setEsporte(aposta.esporte);
         // Usar evento direto (campo já unificado no banco)
         setEvento(aposta.evento || "");
