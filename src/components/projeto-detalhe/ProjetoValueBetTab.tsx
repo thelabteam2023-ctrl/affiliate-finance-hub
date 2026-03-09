@@ -333,7 +333,7 @@ export function ProjetoValueBetTab({
         }
       }
       
-      const bookmakerIds = [...new Set((data || []).map((a: { bookmaker_id: string | null }) => a.bookmaker_id).filter(Boolean))];
+      const bookmakerIds = [...new Set(allData.map((a: { bookmaker_id: string | null }) => a.bookmaker_id).filter(Boolean))];
       
       let bookmakerMap = new Map<string, { nome: string; loginUsername: string | null; parceiroNome: string | null; logoUrl: string | null }>();
       if (bookmakerIds.length > 0) {
