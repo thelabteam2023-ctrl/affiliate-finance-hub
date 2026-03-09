@@ -54,22 +54,51 @@ export function useValidacaoFinanceira() {
   const fetchSaldos = useCallback(async () => {
     setLoading(true);
     try {
+      // STEP 1: Identify Caixa Operacional partner
+      const { data: caixaParceiro } = await supabase
+        .from("parceiros")
+        .select("id")
+        .eq("is_caixa_operacional", true)
+        .maybeSingle();
+      const caixaParceiroId = caixaParceiro?.id || null;
+
+      // UNIFIED SOURCE: Use v_saldo_parceiro_contas/wallets for ALL balances
       const [
-        saldoFiatRes,
-        saldoCryptoRes,
-        saldoContasRes,
-        saldoWalletsRes,
+        allContasRes,
+        allWalletsRes,
       ] = await Promise.all([
-        supabase.from("v_saldo_caixa_fiat").select("moeda, saldo"),
-        supabase.from("v_saldo_caixa_crypto").select("coin, saldo_usd, saldo_coin"),
         supabase.from("v_saldo_parceiro_contas").select("conta_id, parceiro_id, saldo, moeda"),
         supabase.from("v_saldo_parceiro_wallets").select("wallet_id, parceiro_id, coin, saldo_usd, saldo_coin"),
       ]);
 
-      setSaldosCaixaFiat(saldoFiatRes.data || []);
-      setSaldosCaixaCrypto(saldoCryptoRes.data || []);
-      setSaldosParceirosContas(saldoContasRes.data || []);
-      setSaldosParceirosWallets(saldoWalletsRes.data || []);
+      const allContas = allContasRes.data || [];
+      const allWallets = allWalletsRes.data || [];
+
+      // Caixa FIAT = contas do parceiro caixa operacional, agrupadas por moeda
+      const caixaFiatMap: Record<string, number> = {};
+      allContas.forEach((row: any) => {
+        if (caixaParceiroId && row.parceiro_id === caixaParceiroId) {
+          const m = row.moeda || "BRL";
+          caixaFiatMap[m] = (caixaFiatMap[m] || 0) + (row.saldo || 0);
+        }
+      });
+      setSaldosCaixaFiat(Object.entries(caixaFiatMap).map(([moeda, saldo]) => ({ moeda, saldo })));
+
+      // Caixa CRYPTO = wallets do parceiro caixa operacional, agrupadas por coin
+      const caixaCryptoMap: Record<string, { saldo_coin: number; saldo_usd: number }> = {};
+      allWallets.forEach((row: any) => {
+        if (caixaParceiroId && row.parceiro_id === caixaParceiroId) {
+          const c = row.coin || "USDT";
+          if (!caixaCryptoMap[c]) caixaCryptoMap[c] = { saldo_coin: 0, saldo_usd: 0 };
+          caixaCryptoMap[c].saldo_coin += (row.saldo_coin || 0);
+          caixaCryptoMap[c].saldo_usd += (row.saldo_usd || 0);
+        }
+      });
+      setSaldosCaixaCrypto(Object.entries(caixaCryptoMap).map(([coin, vals]) => ({ coin, ...vals })));
+
+      // Parceiros = EXCLUINDO caixa operacional
+      setSaldosParceirosContas(allContas.filter((row: any) => !caixaParceiroId || row.parceiro_id !== caixaParceiroId));
+      setSaldosParceirosWallets(allWallets.filter((row: any) => !caixaParceiroId || row.parceiro_id !== caixaParceiroId));
     } catch (error) {
       console.error("Erro ao carregar saldos para validação:", error);
     } finally {
