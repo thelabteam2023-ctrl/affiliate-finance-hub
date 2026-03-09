@@ -54,7 +54,7 @@ import { RegistroApostaValues, getSuggestionsForTab } from "./RegistroApostaFiel
 import { isAbaEstrategiaFixa, getEstrategiaFromTab, getContextoFromTab, isAbaContextoFixo, type FormaRegistro, type ApostaEstrategia, type ContextoOperacional, type FonteSaldo } from "@/lib/apostaConstants";
 import { BetFormHeader } from "@/components/apostas/BetFormHeader";
 import { getFirstLastName } from "@/lib/utils";
-import { toLocalTimestamp, validarDataAposta } from "@/utils/dateUtils";
+import { toLocalTimestamp, validarDataAposta, dbTimestampToDatetimeLocal } from "@/utils/dateUtils";
 import { 
   BookmakerSelectOption, 
   SaldoBreakdownDisplay, 
