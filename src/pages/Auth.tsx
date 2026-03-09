@@ -276,7 +276,8 @@ export default function Auth() {
         <div className="bg-card border border-border rounded-2xl p-8 shadow-lg">
           {/* Header */}
           <div className="text-center mb-6">
-            <h1 className="text-2xl font-bold text-foreground">Bem-vindo ao StakeSync</h1>
+            <img src={labbetLogo} alt="LABBET" className="h-10 mx-auto mb-4 object-contain" />
+            <h1 className="text-2xl font-bold text-foreground">Bem-vindo ao LABBET</h1>
             <p className="text-muted-foreground text-sm mt-2">
               Entre ou crie uma conta para gerenciar suas apostas
             </p>
