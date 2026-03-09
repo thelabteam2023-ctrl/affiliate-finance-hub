@@ -34,9 +34,13 @@ export function EditarDataTransacaoDialog({
   onSuccess,
 }: EditarDataTransacaoDialogProps) {
   const { toast } = useToast();
-  const dataAtualParsed = parseLocalDateTime(dataAtual);
+  // Parse civil date (YYYY-MM-DD) without timezone conversion
+  const civilDateKey = extractCivilDateKey(dataAtual);
+  const dataAtualParsed = civilDateKey 
+    ? (() => { const [y, m, d] = civilDateKey.split('-').map(Number); return new Date(y, m - 1, d); })()
+    : new Date();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(dataAtualParsed);
-  const [hora, setHora] = useState(format(dataAtualParsed, "HH:mm"));
+  const [hora, setHora] = useState("00:00");
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
