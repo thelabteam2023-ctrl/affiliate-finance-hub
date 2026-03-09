@@ -556,6 +556,8 @@ export default function Auth() {
               </Button>
             </form>
           )}
+          </>
+          )}
         </div>
       </div>
     </div>
