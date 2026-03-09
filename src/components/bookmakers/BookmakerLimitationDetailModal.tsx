@@ -161,7 +161,7 @@ export function BookmakerLimitationDetailModal({
         }
       }
 
-      // Aggregate bets per bookmaker
+      // Aggregate bets per bookmaker (direct bookmaker_id)
       const betsMap = new Map<string, { count: number; pl: number; volume: number }>();
       if (!betsResult.error && betsResult.data) {
         for (const bet of betsResult.data) {
@@ -171,6 +171,40 @@ export function BookmakerLimitationDetailModal({
           existing.pl += (bet.lucro_prejuizo as number) || 0;
           existing.volume += Math.abs((bet.stake as number) || 0);
           betsMap.set(key, existing);
+        }
+      }
+
+      // Also count bets from apostas_pernas (Surebets/Múltiplas have bookmaker_id=null on parent)
+      // This ensures parity with the project Vínculos tab counting logic
+      const { data: parentIds } = await supabase
+        .from("apostas_unificada")
+        .select("id")
+        .eq("workspace_id", workspaceId)
+        .is("bookmaker_id", null)
+        .not("resultado", "is", null);
+
+      if (parentIds && parentIds.length > 0) {
+        const BATCH_SIZE = 200;
+        const ids = parentIds.map((a: any) => a.id);
+        for (let i = 0; i < ids.length; i += BATCH_SIZE) {
+          const batch = ids.slice(i, i + BATCH_SIZE);
+          const { data: pernasData } = await supabase
+            .from("apostas_pernas")
+            .select("bookmaker_id, stake, lucro_prejuizo")
+            .in("aposta_id", batch)
+            .in("bookmaker_id", bookmakerIds);
+
+          if (pernasData) {
+            for (const p of pernasData as any[]) {
+              if (p.bookmaker_id) {
+                const existing = betsMap.get(p.bookmaker_id) || { count: 0, pl: 0, volume: 0 };
+                existing.count++;
+                existing.pl += (Number(p.lucro_prejuizo) || 0);
+                existing.volume += Math.abs(Number(p.stake) || 0);
+                betsMap.set(p.bookmaker_id, existing);
+              }
+            }
+          }
         }
       }
 
