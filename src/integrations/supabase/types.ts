@@ -1544,6 +1544,56 @@ export type Database = {
         }
         Relationships: []
       }
+      capital_snapshots: {
+        Row: {
+          capital_bookmakers_brl: number
+          capital_bookmakers_eur: number
+          capital_bookmakers_total_brl: number
+          capital_bookmakers_usd: number
+          cotacao_eur: number
+          cotacao_usd: number
+          created_at: string
+          id: string
+          snapshot_date: string
+          volume_apostado_periodo: number
+          workspace_id: string
+        }
+        Insert: {
+          capital_bookmakers_brl?: number
+          capital_bookmakers_eur?: number
+          capital_bookmakers_total_brl?: number
+          capital_bookmakers_usd?: number
+          cotacao_eur?: number
+          cotacao_usd?: number
+          created_at?: string
+          id?: string
+          snapshot_date: string
+          volume_apostado_periodo?: number
+          workspace_id: string
+        }
+        Update: {
+          capital_bookmakers_brl?: number
+          capital_bookmakers_eur?: number
+          capital_bookmakers_total_brl?: number
+          capital_bookmakers_usd?: number
+          cotacao_eur?: number
+          cotacao_usd?: number
+          created_at?: string
+          id?: string
+          snapshot_date?: string
+          volume_apostado_periodo?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "capital_snapshots_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cash_ledger: {
         Row: {
           ajuste_direcao: string | null

@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useCotacoes } from "@/hooks/useCotacoes";
 import { useCurrencySnapshot } from "@/hooks/useCurrencySnapshot";
 import { useWorkspaceLucroOperacional } from "@/hooks/useWorkspaceLucroOperacional";
+import { useCapitalMedioPeriodo } from "@/hooks/useCapitalMedioPeriodo";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -258,6 +259,12 @@ export default function Financeiro() {
   const lucroOperacionalApostas = lucroOperacionalData?.lucroTotal ?? 0;
   const hasMultiCurrencyApostas = lucroOperacionalData?.hasMultiCurrency ?? false;
 
+  // Hook de capital médio do período (para ROI temporalmente consistente)
+  const capitalMedioPeriodo = useCapitalMedioPeriodo({
+    dataInicio: dataInicio || null,
+    dataFim: dataFim || null,
+    capitalAtual: 0, // Will be set after bookmakers load
+  });
 
   // Dialog states
   const [kpiDialogOpen, setKpiDialogOpen] = useState(false);
@@ -1229,6 +1236,10 @@ export default function Financeiro() {
               capitalBRL={saldoBookmakersBRL}
               capitalUSD={saldoBookmakersUSD}
               cotacaoUSD={cotacaoUSD}
+              capitalMedio={capitalMedioPeriodo.capitalMedio}
+              capitalMedioIsFallback={capitalMedioPeriodo.isFallback}
+              snapshotsCount={capitalMedioPeriodo.snapshotsCount}
+              volumeApostado={capitalMedioPeriodo.volumeApostado}
             />
             <MovimentacaoCapitalCard
               depositosBookmakers={depositosBookmakersPeriodo}
