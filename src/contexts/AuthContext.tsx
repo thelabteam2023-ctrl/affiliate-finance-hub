@@ -134,7 +134,7 @@ interface AuthContextType {
   publicId: string | null;
   tabId: string;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string, fullName: string, extra?: { cpf?: string; telefone?: string }) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   refreshWorkspace: () => Promise<void>;
   setWorkspaceForTab: (workspaceId: string) => Promise<void>;
