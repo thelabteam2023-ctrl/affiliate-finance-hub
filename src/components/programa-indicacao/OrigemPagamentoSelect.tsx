@@ -1245,24 +1245,43 @@ export function OrigemPagamentoSelect({
             return null;
           })()}
 
-          {value.tipoMoeda === "FIAT" && (
-            <div className={`p-3 rounded-lg text-sm flex items-center gap-2 ${
-              saldoCaixaFiat < valorEfetivo && valorEfetivo > 0
-                ? "bg-destructive/10 border border-destructive/30 text-destructive" 
-                : "bg-muted/50 text-muted-foreground"
-            }`}>
-              {saldoCaixaFiat < valorEfetivo && valorEfetivo > 0 && (
-                <AlertTriangle className="h-4 w-4 shrink-0" />
-              )}
-              <span>
-                Saldo disponível: {formatCurrency(saldoCaixaFiat)}
-                {valorCreditoEdicao > 0 && <span className="ml-1">(+ {formatCurrency(valorCreditoEdicao)} crédito edição)</span>}
-                {saldoCaixaFiat < valorEfetivo && valorEfetivo > 0 && (
-                  <span className="ml-2 font-semibold">— Saldo insuficiente!</span>
+          {value.tipoMoeda === "FIAT" && (() => {
+            const contasCaixa = caixaContasByMoeda["BRL"] || [];
+            const hasMultiple = contasCaixa.length > 1;
+            // Se múltiplas contas: mostrar saldo da conta selecionada; senão: saldo total
+            const saldoExibido = hasMultiple && value.origemContaBancariaId
+              ? (contasCaixa.find(c => c.id === value.origemContaBancariaId)?.saldo || 0)
+              : saldoCaixaFiat;
+            const needsSelection = hasMultiple && !value.origemContaBancariaId;
+            
+            if (needsSelection) {
+              return (
+                <div className="p-3 rounded-lg text-sm flex items-center gap-2 bg-muted/50 text-muted-foreground">
+                  <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500" />
+                  <span>Selecione a conta para continuar</span>
+                </div>
+              );
+            }
+            
+            return (
+              <div className={`p-3 rounded-lg text-sm flex items-center gap-2 ${
+                saldoExibido < valorEfetivo && valorEfetivo > 0
+                  ? "bg-destructive/10 border border-destructive/30 text-destructive" 
+                  : "bg-muted/50 text-muted-foreground"
+              }`}>
+                {saldoExibido < valorEfetivo && valorEfetivo > 0 && (
+                  <AlertTriangle className="h-4 w-4 shrink-0" />
                 )}
-              </span>
-            </div>
-          )}
+                <span>
+                  Saldo disponível: {formatCurrency(saldoExibido)}
+                  {valorCreditoEdicao > 0 && <span className="ml-1">(+ {formatCurrency(valorCreditoEdicao)} crédito edição)</span>}
+                  {saldoExibido < valorEfetivo && valorEfetivo > 0 && (
+                    <span className="ml-2 font-semibold">— Saldo insuficiente!</span>
+                  )}
+                </span>
+              </div>
+            );
+          })()}
 
           {value.tipoMoeda === "CRYPTO" && value.coin && (
             <div className="space-y-2">
