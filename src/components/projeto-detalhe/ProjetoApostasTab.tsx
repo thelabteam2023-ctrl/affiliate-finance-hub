@@ -708,7 +708,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
         bookmakerMap = new Map((bookmakers || []).map((b: any) => [b.id, { nome: b.nome, parceiro: b.parceiro }]));
       }
       
-      const surebetsFormatadas = (data || []).map((sb: any) => {
+      const surebetsFormatadas = allSurebetData.map((sb: any) => {
         const pernasRelacionais = Array.isArray(sb.apostas_pernas) ? sb.apostas_pernas : [];
         const pernasJson = Array.isArray(sb.pernas) ? sb.pernas : [];
         // Priorizar pernas da tabela relacional (source of truth)
