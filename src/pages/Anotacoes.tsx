@@ -24,12 +24,19 @@ export default function Anotacoes() {
 
   useEffect(() => {
     setTopBarContent(
-      <div className="flex items-center gap-2">
-        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
-          <StickyNote className="h-4 w-4 text-primary" />
-        </div>
-        <span className="font-semibold text-sm">Anotações</span>
-      </div>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="flex items-center gap-2 cursor-default">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
+              <StickyNote className="h-4 w-4 text-primary" />
+            </div>
+            <span className="font-semibold text-sm">Anotações</span>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">
+          Organize suas ideias e pensamentos
+        </TooltipContent>
+      </Tooltip>
     );
     return () => setTopBarContent(null);
   }, [setTopBarContent]);

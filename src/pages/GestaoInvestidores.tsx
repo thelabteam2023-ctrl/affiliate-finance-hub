@@ -288,12 +288,19 @@ export default function GestaoInvestidores() {
   // Inject title into global TopBar
   useEffect(() => {
     setTopBarContent(
-      <div className="flex items-center gap-2">
-        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
-          <User className="h-4 w-4 text-primary" />
-        </div>
-        <span className="font-semibold text-sm">Gestão de Investidores</span>
-      </div>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="flex items-center gap-2 cursor-default">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
+              <User className="h-4 w-4 text-primary" />
+            </div>
+            <span className="font-semibold text-sm">Gestão de Investidores</span>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">
+          Gerencie seus investidores, acordos e acompanhe ROI
+        </TooltipContent>
+      </Tooltip>
     );
     return () => setTopBarContent(null);
   }, [setTopBarContent]);
