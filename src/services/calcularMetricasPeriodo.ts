@@ -152,7 +152,7 @@ export async function calcularMetricasPeriodo({
     supabase
       .from("cash_ledger")
       .select("valor, valor_confirmado")
-      .eq("tipo_transacao", "SAQUE")
+      .in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])
       .eq("status", "CONFIRMADO")
       .eq("projeto_id_snapshot", projetoId)
       .gte("data_transacao", startUTC)
