@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { PerformanceMetrics, PeriodoAnalise } from '@/types/performance';
 import { useWorkspace } from './useWorkspace';

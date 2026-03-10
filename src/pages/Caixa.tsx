@@ -194,8 +194,8 @@ export default function Caixa() {
         .select("*")
         .in("tipo_transacao", [...CASH_REAL_TYPES])
         .not("status", "in", "(DUPLICADO_CORRIGIDO,DUPLICADO_BLOQUEADO)")
-        .gte("data_transacao", queryStartDate)
-        .lte("data_transacao", `${queryEndDate}T23:59:59`)
+        .gte("data_transacao", `${queryStartDate}T00:00:00.000Z`)
+        .lte("data_transacao", `${queryEndDate}T23:59:59.999Z`)
         .order("data_transacao", { ascending: false });
 
       if (transacoesError) throw transacoesError;
