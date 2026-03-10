@@ -17,6 +17,9 @@ interface Params {
   /** Mapa de cotações adicionais (ex: { EUR: 6.2 }) para moedas além de USD/BRL.
    *  Cada valor representa quanto vale 1 unidade da moeda na moeda de consolidação. */
   cotacoes?: Record<string, number>;
+  /** Moeda de consolidação do projeto (default: "BRL").
+   *  Determina qual moeda é tratada como identidade na conversão. */
+  moedaConsolidacao?: string;
   /** Filtro de data início (YYYY-MM-DD). Se omitido, sem limite inferior. */
   dataInicio?: string | null;
   /** Filtro de data fim (YYYY-MM-DD). Se omitido, sem limite superior. */
@@ -28,8 +31,8 @@ const isUsdLike = (moeda?: string | null) => {
   return m === "USD" || m === "USDT" || m === "USDC";
 };
 
-/** Moedas FIAT suportadas pelo sistema (além de BRL e USD-like) */
-const ALL_FIAT_CURRENCIES = ["EUR", "GBP", "MYR", "MXN", "ARS", "COP"] as const;
+/** Moedas FIAT suportadas pelo sistema (inclui BRL para projetos com consolidação não-BRL) */
+const ALL_FIAT_CURRENCIES = ["BRL", "EUR", "GBP", "MYR", "MXN", "ARS", "COP"] as const;
 
 /**
  * Deriva um mapa de cotações para TODAS as moedas suportadas a partir de uma função de conversão.
@@ -152,6 +155,7 @@ export async function fetchProjetosLucroOperacionalKpi({
   projetoIds,
   cotacaoUSD,
   cotacoes = {},
+  moedaConsolidacao = "BRL",
   dataInicio,
   dataFim,
 }: Params): Promise<Record<string, LucroProjetoResumo>> {
@@ -160,9 +164,9 @@ export async function fetchProjetosLucroOperacionalKpi({
   const convertToConsolidation = (valor: number, moedaOrigem: string) => {
     const m = (moedaOrigem || "BRL").toUpperCase();
     if (isUsdLike(m)) return valor * cotacaoUSD;
-    // Checar mapa de cotações adicionais (EUR, GBP, etc.)
+    // Checar mapa de cotações (inclui BRL quando consolidação != BRL)
     if (cotacoes[m] != null) return valor * cotacoes[m];
-    // BRL ou moeda desconhecida — retorna como está
+    // Moeda é a mesma da consolidação ou desconhecida — identidade
     return valor;
   };
 
@@ -272,7 +276,7 @@ export async function fetchProjetosLucroOperacionalKpi({
     const bruto = Number(ap.lucro_prejuizo || 0);
     addToMoeda(result[projetoId].porMoeda, moeda, bruto);
 
-    const consolidado = getConsolidatedLucro(ap, convertToConsolidation, "BRL");
+    const consolidado = getConsolidatedLucro(ap, convertToConsolidation, moedaConsolidacao);
     result[projetoId].consolidado += consolidado;
   });
 
@@ -369,7 +373,7 @@ export async function fetchProjetosLucroOperacionalKpi({
         });
       }
       
-      const agrupados = agruparExtrasPorTipo(extras, convertToConsolidation, "BRL");
+      const agrupados = agruparExtrasPorTipo(extras, convertToConsolidation, moedaConsolidacao);
       return { projetoId, agrupados };
     })
   );

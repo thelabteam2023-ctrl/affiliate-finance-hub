@@ -133,6 +133,7 @@ async function fetchBreakdownsData(
       projetoIds: [projetoId],
       cotacaoUSD,
       cotacoes,
+      moedaConsolidacao,
       dataInicio: dataInicioStr,
       dataFim: dataFimStr,
     }),
