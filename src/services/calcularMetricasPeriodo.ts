@@ -107,7 +107,7 @@ export async function calcularMetricasPeriodo({
   const { startUTC, endUTC } = getOperationalDateRangeForQuery(dataInicioParsed, dataFimParsed);
 
   // Buscar todos os dados em paralelo
-  const [apostasResult, cashbackResult, girosResult, perdasResult, bookmakersResult] = await Promise.all([
+  const [apostasResult, cashbackResult, girosResult, perdasResult, bookmakersResult, saquesResult, depositosResult] = await Promise.all([
     // 1. Apostas com campos consolidados + moeda para conversão
     supabase
       .from("apostas_unificada")
@@ -145,6 +145,26 @@ export async function calcularMetricasPeriodo({
     incluirDetalhePerdas
       ? supabase.from("bookmakers").select("id, nome")
       : Promise.resolve({ data: null, error: null }),
+    
+    // 6. Saques confirmados no período (por data_transacao, atribuído ao projeto)
+    supabase
+      .from("cash_ledger")
+      .select("valor, valor_confirmado")
+      .eq("tipo_transacao", "SAQUE")
+      .eq("status", "CONFIRMADO")
+      .eq("projeto_id_snapshot", projetoId)
+      .gte("data_transacao", startUTC)
+      .lte("data_transacao", endUTC),
+    
+    // 7. Depósitos confirmados no período (por data_transacao, atribuído ao projeto)
+    supabase
+      .from("cash_ledger")
+      .select("valor")
+      .eq("tipo_transacao", "DEPOSITO")
+      .eq("status", "CONFIRMADO")
+      .eq("projeto_id_snapshot", projetoId)
+      .gte("data_transacao", startUTC)
+      .lte("data_transacao", endUTC),
   ]);
 
   // Processar erros silenciosamente (melhor UX)
