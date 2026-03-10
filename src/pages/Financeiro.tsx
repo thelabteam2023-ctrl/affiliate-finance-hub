@@ -266,6 +266,7 @@ export default function Financeiro() {
     dataInicio: dataInicio || null,
     dataFim: dataFim || null,
     cotacaoUSD,
+    cotacoes: cotacoesMap,
   });
 
   // Valores derivados do hook centralizado
