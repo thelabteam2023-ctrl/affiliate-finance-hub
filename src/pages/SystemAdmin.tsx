@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTopBar } from "@/contexts/TopBarContext";
 import { useAuth } from '@/hooks/useAuth';
 import { useSystemAdmin, isDeletedUser, AdminUserGrouped, AdminDeletedUser } from '@/hooks/useSystemAdmin';
 import { CleanupTab } from '@/components/system-admin/CleanupTab';
