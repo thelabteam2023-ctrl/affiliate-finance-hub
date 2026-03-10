@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DashboardPeriodFilterBar } from "@/components/shared/DashboardPeriodFilterBar";
 import { DashboardPeriodFilter, getDashboardDateRangeAsStrings } from "@/types/dashboardFilters";
-import { PageHeader } from "@/components/PageHeader";
+import { useTopBar } from "@/contexts/TopBarContext";
 import {
   Loader2,
   BarChart3,

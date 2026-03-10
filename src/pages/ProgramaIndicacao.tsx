@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PageHeader } from "@/components/PageHeader";
+import { useTopBar } from "@/contexts/TopBarContext";
 import { DashboardTab } from "@/components/programa-indicacao/DashboardTab";
 import { FontesCaptacaoTab } from "@/components/programa-indicacao/FontesCaptacaoTab";
 import { ParceriasTab } from "@/components/programa-indicacao/ParceriasTab";
