@@ -276,6 +276,8 @@ async function fetchBreakdownsData(
     // Extras canônicos por moeda
     extrasAgrupados.ajuste_saldo?.porMoeda || [],
     extrasAgrupados.resultado_cambial?.porMoeda || [],
+    extrasAgrupados.promocional?.porMoeda || [],
+    extrasAgrupados.freebet?.porMoeda || [],
   );
 
   // === ROI (calculado a partir do lucro e volume) ===
