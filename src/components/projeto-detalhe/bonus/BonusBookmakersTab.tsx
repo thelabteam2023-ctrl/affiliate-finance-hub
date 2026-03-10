@@ -232,11 +232,13 @@ function FinalizedBonusHistory({
   const filteredBonuses = finalizedBonuses.filter(b => {
     if (filterParceiro !== "all" && b.parceiro_nome !== filterParceiro) return false;
     if (filterCasa !== "all" && b.bookmaker_nome !== filterCasa) return false;
+    if (filterTipo !== "all" && filterTipo !== "ajuste_pos_limitacao" && b.finalize_reason !== filterTipo) return false;
     return true;
   });
 
   const filteredAjustes = ajustesData.filter(a => {
     if (filterCasa !== "all" && a.bookmaker_nome !== filterCasa) return false;
+    if (filterTipo !== "all" && filterTipo !== "ajuste_pos_limitacao") return false;
     return true;
   });
 
