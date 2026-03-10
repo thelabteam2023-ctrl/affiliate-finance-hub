@@ -619,7 +619,7 @@ export async function registrarDepositoVirtualViaLedger(params: {
       destino_bookmaker_id: params.bookmakerId,
       valor_destino: params.saldoAtual,
       descricao: params.descricao || `Depósito virtual – vinculação ao projeto`,
-      data_transacao: new Date().toISOString().split('T')[0],
+      data_transacao: getTodayCivilDate(),
       impacta_caixa_operacional: false,
       tipo_moeda: 'FIAT' as const,
       status: 'CONFIRMADO',

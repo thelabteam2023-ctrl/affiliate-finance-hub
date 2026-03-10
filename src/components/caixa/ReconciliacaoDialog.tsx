@@ -403,7 +403,7 @@ export function ReconciliacaoDialog({
         descricao: `[RECONCILIAÇÃO ${direcao}] ${motivo} | Saldo sistema: ${saldoSistema.toFixed(2)} → Saldo real: ${(parseFloat(saldoReal) || 0).toFixed(2)} | Diferença: ${diferenca.toFixed(2)}`,
         status: "CONFIRMADO",
         transit_status: "CONFIRMED",
-        data_transacao: new Date().toISOString().split("T")[0],
+        data_transacao: getTodayCivilDate(),
         impacta_caixa_operacional: tipoEntidade === "CAIXA_OPERACIONAL",
         ajuste_motivo: motivo.trim(),
         ajuste_direcao: direcao,

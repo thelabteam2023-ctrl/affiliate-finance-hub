@@ -1,4 +1,5 @@
 import { useCallback, useMemo } from "react";
+import { getTodayCivilDate } from "@/utils/dateUtils";
 import { PERIOD_STALE_TIME, PERIOD_GC_TIME } from "@/lib/query-cache-config";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
