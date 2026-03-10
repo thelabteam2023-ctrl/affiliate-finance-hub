@@ -16,11 +16,24 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    // Buscar todas as bookmakers do catálogo que têm logo_url externa
+    // Parâmetros opcionais: limit e offset para processar em lotes
+    let limit = 20;
+    let offset = 0;
+    try {
+      const body = await req.json();
+      if (body.limit) limit = Math.min(body.limit, 50);
+      if (body.offset) offset = body.offset;
+    } catch {
+      // sem body, usa defaults
+    }
+
+    // Buscar bookmakers com logo_url externa (não do nosso storage)
     const { data: bookmakers, error: fetchError } = await supabase
       .from("bookmakers_catalogo")
       .select("id, nome, logo_url")
-      .not("logo_url", "is", null);
+      .not("logo_url", "is", null)
+      .not("logo_url", "ilike", `%${supabaseUrl}%`)
+      .range(offset, offset + limit - 1);
 
     if (fetchError) throw fetchError;
 
@@ -30,19 +43,18 @@ Deno.serve(async (req) => {
     for (const bk of bookmakers || []) {
       const logoUrl = bk.logo_url as string;
 
-      // Skip se já é uma URL do nosso storage
-      if (logoUrl.includes(supabaseUrl)) {
-        results.push({ nome: bk.nome, status: "skipped", newUrl: logoUrl });
-        continue;
-      }
-
       try {
         // Baixar a imagem externa
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
+
         const response = await fetch(logoUrl, {
           headers: {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
           },
+          signal: controller.signal,
         });
+        clearTimeout(timeoutId);
 
         if (!response.ok) {
           results.push({
@@ -124,12 +136,12 @@ Deno.serve(async (req) => {
     }
 
     const synced = results.filter((r) => r.status === "synced").length;
-    const skipped = results.filter((r) => r.status === "skipped").length;
-    const failed = results.filter((r) => !["synced", "skipped"].includes(r.status)).length;
+    const failed = results.filter((r) => r.status !== "synced").length;
+    const hasMore = (bookmakers || []).length === limit;
 
     return new Response(
       JSON.stringify({
-        summary: { total: results.length, synced, skipped, failed },
+        summary: { total: results.length, synced, failed, offset, limit, hasMore, nextOffset: hasMore ? offset + limit : null },
         details: results,
       }),
       {
