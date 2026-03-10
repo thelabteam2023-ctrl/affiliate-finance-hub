@@ -54,6 +54,7 @@ interface InvestidorDeal {
 export default function GestaoInvestidores() {
   // SEGURANÇA: workspaceId como dependência para isolamento multi-tenant
   const { workspaceId } = useTabWorkspace();
+  const { setContent: setTopBarContent } = useTopBar();
   
   const [investidores, setInvestidores] = useState<Investidor[]>([]);
   const [roiData, setRoiData] = useState<Map<string, InvestidorROIMultiMoeda>>(new Map());
