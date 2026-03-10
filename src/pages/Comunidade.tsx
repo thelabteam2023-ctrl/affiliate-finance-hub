@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useCommunityAccess } from '@/hooks/useCommunityAccess';
-import { PageHeader } from '@/components/PageHeader';
+import { useTopBar } from "@/contexts/TopBarContext";
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
