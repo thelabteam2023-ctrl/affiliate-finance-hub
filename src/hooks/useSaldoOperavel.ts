@@ -241,7 +241,7 @@ export function useSaldoOperavel(projetoId: string) {
       })
       .filter((casa) => casa.saldoOperavel > 0 || casa.saldoEmAposta > 0)
       .sort((a, b) => b.saldoOperavel - a.saldoOperavel);
-  }, [bookmakers, convertToConsolidationOficial, rolloverPorCasa]);
+  }, [bookmakers, convertToConsolidationOficial, rolloverPorCasa, statusMap]);
 
   return {
     // Valor principal do KPI

@@ -369,7 +369,12 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
           {filteredCasas.map((casa) => (
             <div 
               key={casa.id} 
-              className="p-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
+              className={cn(
+                "p-2 rounded-lg transition-colors",
+                casa.aguardandoSaque 
+                  ? "bg-orange-500/10 border border-orange-500/20 hover:bg-orange-500/15" 
+                  : "bg-muted/30 hover:bg-muted/50"
+              )}
             >
               <div className="flex items-center justify-between gap-1.5 min-w-0">
                 <div className="flex items-center gap-1 min-w-0 flex-1">
@@ -383,6 +388,24 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
                     <span className="text-[10px] text-primary/80 truncate flex-shrink-0">
                       {casa.parceiroPrimeiroNome}
                     </span>
+                  )}
+                  {casa.aguardandoSaque && (
+                    <TooltipProvider delayDuration={0}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Badge 
+                            variant="outline" 
+                            className="text-[8px] px-1.5 py-0 bg-orange-500/15 border-orange-500/30 text-orange-400 font-medium leading-tight gap-0.5 flex-shrink-0"
+                          >
+                            <Clock className="h-2.5 w-2.5" />
+                            Saque
+                          </Badge>
+                        </TooltipTrigger>
+                        <TooltipContent className="z-[10000]">
+                          <p className="text-xs">Aguardando processamento de saque</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   )}
                 </div>
                 <div className="flex items-center gap-1.5 flex-shrink-0">
