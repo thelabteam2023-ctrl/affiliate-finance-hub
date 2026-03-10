@@ -432,6 +432,19 @@ export default function GestaoBookmakers() {
     }, 0),
   };
 
+  // Inject title into global TopBar
+  useEffect(() => {
+    setTopBarContent(
+      <div className="flex items-center gap-2">
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
+          <Building2 className="h-4 w-4 text-primary" />
+        </div>
+        <span className="font-semibold text-sm">Gestão de Bookmakers</span>
+      </div>
+    );
+    return () => setTopBarContent(null);
+  }, [setTopBarContent]);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -442,14 +455,7 @@ export default function GestaoBookmakers() {
 
   return (
     <div className="h-screen flex flex-col bg-background">
-      <div className="container mx-auto px-4 py-8 flex flex-col flex-1 min-h-0">
-        <PageHeader
-          title="Gestão de Bookmakers"
-          description="Bookmakers disponíveis e vínculos gerenciados"
-          pagePath="/bookmakers"
-          pageIcon="Building2"
-          className="mb-8 shrink-0"
-        />
+      <div className="container mx-auto px-4 pt-4 pb-8 flex flex-col flex-1 min-h-0">
 
         <Tabs defaultValue="contas" className="flex flex-col flex-1 min-h-0">
           <TabsList className={`grid w-full max-w-lg shrink-0 ${isSystemOwner ? 'grid-cols-4' : 'grid-cols-3'}`}>

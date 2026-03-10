@@ -163,22 +163,29 @@ export default function GestaoOperadores() {
     }
   };
 
+  // Inject title into global TopBar
+  useEffect(() => {
+    setTopBarContent(
+      <div className="flex items-center gap-2">
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
+          <Briefcase className="h-4 w-4 text-primary" />
+        </div>
+        <span className="font-semibold text-sm">Operadores</span>
+      </div>
+    );
+    return () => setTopBarContent(null);
+  }, [setTopBarContent]);
+
   return (
-    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-      <PageHeader
-        title="Operadores"
-        description="Gerencie os operadores vinculados ao workspace"
-        pagePath="/operadores"
-        pageIcon="Briefcase"
-        actions={
-          canCreate('operadores', 'operadores.create') && (
-            <Button onClick={() => setInviteDialogOpen(true)}>
-              <UserPlus className="mr-2 h-4 w-4" />
-              Convidar Operador
-            </Button>
-          )
-        }
-      />
+    <div className="flex-1 space-y-4 p-4 md:p-8 pt-4">
+      {canCreate('operadores', 'operadores.create') && (
+        <div className="flex justify-end">
+          <Button onClick={() => setInviteDialogOpen(true)}>
+            <UserPlus className="mr-2 h-4 w-4" />
+            Convidar Operador
+          </Button>
+        </div>
+      )}
 
       {/* Alerta de operadores legados pendentes de migração */}
       {legacyOperadores.length > 0 && (
