@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Edit, Trash2, LogOut, LayoutGrid, List, Percent, DollarSign } from "lucide-react";
+import { Plus, Search, Edit, Trash2, LogOut, LayoutGrid, List, Percent, DollarSign, Landmark } from "lucide-react";
 import {
   Dialog,
   DialogContent,
