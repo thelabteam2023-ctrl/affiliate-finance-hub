@@ -85,6 +85,7 @@ interface Projeto {
   lucro_realizado?: number;
   display_order?: number;
   investidor_id?: string | null;
+  moeda_consolidacao?: string;
 }
 
 export default function GestaoProjetos() {
