@@ -194,6 +194,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
   const hasFreebet = saldoFreebet > 0;
   const hasBonus = saldoBonus > 0;
   const casasComRollover = casasComSaldo.filter(c => c.hasRollover).length;
+  const casasAguardandoSaque = casasComSaldo.filter(c => c.aguardandoSaque).length;
 
   // Inline trigger for compact variant
   const compactTrigger = (
