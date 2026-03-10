@@ -192,10 +192,13 @@ export function ProjetoCiclosTab({ projetoId, formatCurrency: formatCurrencyProp
   const fetchProjetoNome = async () => {
     const { data } = await supabase
       .from("projetos")
-      .select("nome")
+      .select("nome, metrica_lucro_ciclo")
       .eq("id", projetoId)
       .single();
-    if (data) setProjetoNome(data.nome);
+    if (data) {
+      setProjetoNome(data.nome);
+      setMetricaLucroCiclo(((data as any).metrica_lucro_ciclo as "operacional" | "realizado") || "operacional");
+    }
   };
 
   const fetchCiclos = async () => {
