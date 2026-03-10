@@ -383,7 +383,7 @@ export async function fetchProjetosLucroOperacionalKpi({
       if (!grupo) continue;
       target.consolidado += Number(grupo.total || 0);
       (grupo.porMoeda || []).forEach((item: { moeda: string; valor: number }) => {
-        target.porMoeda[toBucketMoeda(item.moeda)] += Number(item.valor || 0);
+        addToMoeda(target.porMoeda, item.moeda, Number(item.valor || 0));
       });
     }
   });
