@@ -28,8 +28,8 @@ const isUsdLike = (moeda?: string | null) => {
   return m === "USD" || m === "USDT" || m === "USDC";
 };
 
-/** Moedas FIAT suportadas pelo sistema (além de BRL e USD-like) */
-const ALL_FIAT_CURRENCIES = ["EUR", "GBP", "MYR", "MXN", "ARS", "COP"] as const;
+/** Moedas FIAT suportadas pelo sistema (inclui BRL para projetos com consolidação não-BRL) */
+const ALL_FIAT_CURRENCIES = ["BRL", "EUR", "GBP", "MYR", "MXN", "ARS", "COP"] as const;
 
 /**
  * Deriva um mapa de cotações para TODAS as moedas suportadas a partir de uma função de conversão.
