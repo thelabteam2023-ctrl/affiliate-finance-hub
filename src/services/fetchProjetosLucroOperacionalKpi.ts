@@ -128,13 +128,18 @@ function applyDateFilterSimple(query: any, dataInicio?: string | null, dataFim?:
 export async function fetchProjetosLucroOperacionalKpi({
   projetoIds,
   cotacaoUSD,
+  cotacoes = {},
   dataInicio,
   dataFim,
 }: Params): Promise<Record<string, LucroProjetoResumo>> {
   if (projetoIds.length === 0) return {};
 
   const convertToConsolidation = (valor: number, moedaOrigem: string) => {
-    if (isUsdLike(moedaOrigem)) return valor * cotacaoUSD;
+    const m = (moedaOrigem || "BRL").toUpperCase();
+    if (isUsdLike(m)) return valor * cotacaoUSD;
+    // Checar mapa de cotações adicionais (EUR, GBP, etc.)
+    if (cotacoes[m] != null) return valor * cotacoes[m];
+    // BRL ou moeda desconhecida — retorna como está
     return valor;
   };
 
