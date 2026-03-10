@@ -376,8 +376,8 @@ export function ProjectPostCreateWizard({
       // Sequential dates based on last cycle
       const novaDataInicio = addDays(new Date(lastCycle.data_fim_prevista), 1);
       const novaDataFim = addMonths(novaDataInicio, 1);
-      setCicloDataInicio(novaDataInicio.toISOString().split("T")[0]);
-      setCicloDataFimPrevista(novaDataFim.toISOString().split("T")[0]);
+      setCicloDataInicio(dateToCivilDateString(novaDataInicio));
+      setCicloDataFimPrevista(dateToCivilDateString(novaDataFim));
     } else {
       // First cycle: default to TODAY (not project start date)
       const today = new Date();
