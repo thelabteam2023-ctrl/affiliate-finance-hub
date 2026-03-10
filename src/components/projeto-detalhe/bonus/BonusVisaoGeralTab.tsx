@@ -656,25 +656,38 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
             };
           })(),
           (() => {
-            // Média de depósito de bônus por dia (calendário completo)
-            const eligibleForAvg = bonuses.filter(b => 
+            // Média de depósito de bônus por dia - FILTRADA por dateRange
+            let eligibleForAvg = bonuses.filter(b => 
               (b.status === "credited" || b.status === "finalized") && b.credited_at
             );
+            
+            // Filtrar por período selecionado (dateRange / ciclo)
+            if (dateRange?.start || dateRange?.end) {
+              eligibleForAvg = eligibleForAvg.filter(b => {
+                const creditDate = new Date(b.credited_at!);
+                if (dateRange.start && creditDate < startOfDay(dateRange.start)) return false;
+                if (dateRange.end && creditDate > dateRange.end) return false;
+                return true;
+              });
+            }
+            
             const totalCredited = eligibleForAvg.reduce(
               (acc, b) => acc + convertToConsolidation(b.bonus_amount || 0, b.currency), 0
             );
             
-            // Dias corridos: período selecionado ou primeiro bônus até hoje
+            // Dias corridos: período selecionado (cap no dia atual) ou primeiro bônus até hoje
             let calendarDays = 1;
             if (dateRange?.start && dateRange?.end) {
-              calendarDays = Math.max(1, differenceInDays(dateRange.end, dateRange.start) + 1);
+              const today = new Date();
+              const effectiveEnd = dateRange.end > today ? today : dateRange.end;
+              calendarDays = Math.max(1, differenceInDays(effectiveEnd, dateRange.start) + 1);
             } else if (eligibleForAvg.length > 0) {
               const dates = eligibleForAvg.map(b => new Date(b.credited_at!));
               const earliest = new Date(Math.min(...dates.map(d => d.getTime())));
               calendarDays = Math.max(1, differenceInDays(new Date(), earliest) + 1);
             }
             
-            // Dias com depósito (distintos)
+            // Dias com depósito (distintos) - já filtrados pelo período
             const depositDays = new Set(
               eligibleForAvg.map(b => b.credited_at!.split('T')[0])
             ).size;
