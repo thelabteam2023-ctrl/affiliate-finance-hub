@@ -105,7 +105,9 @@ interface CicloMetrics {
   volume: number;
   ticketMedio: number;
   lucroBruto: number;  // Lucro das apostas antes das perdas
-  lucroReal: number;   // Lucro líquido = lucroBruto - perdasConfirmadas
+  lucroReal: number;   // Lucro principal conforme metrica_lucro_ciclo do projeto
+  lucroOperacional: number; // Lucro operacional (apostas+extras-perdas) - sempre disponível
+  lucroRealizado: number;  // Lucro realizado (saques-depósitos) - sempre disponível
   roi: number;
   perdas: PerdasCiclo;
 }
