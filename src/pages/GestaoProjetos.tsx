@@ -54,10 +54,7 @@ import { TIPO_PROJETO_CONFIG, TipoProjeto } from "@/types/projeto";
 import { TipoProjetoIcon } from "@/components/projetos/TipoProjetoIcon";
 import { fetchProjetosLucroOperacionalKpi } from "@/services/fetchProjetosLucroOperacionalKpi";
 
-interface SaldoByMoeda {
-  BRL: number;
-  USD: number;
-}
+type SaldoByMoeda = Record<string, number>;
 
 interface Projeto {
   id: string;
@@ -315,15 +312,12 @@ export default function GestaoProjetos() {
         cotacoes: cotacoesExtra,
       });
 
-      const lucroByProjeto: Record<string, { BRL: number; USD: number }> = {};
+      const lucroByProjeto: Record<string, Record<string, number>> = {};
       const lucroConsolidadoByProjeto: Record<string, number> = {};
 
       finalProjetoIds.forEach((projetoId) => {
         const lucroData = lucroKpiByProjeto[projetoId];
-        lucroByProjeto[projetoId] = {
-          BRL: lucroData?.porMoeda.BRL || 0,
-          USD: lucroData?.porMoeda.USD || 0,
-        };
+        lucroByProjeto[projetoId] = lucroData?.porMoeda || {};
         lucroConsolidadoByProjeto[projetoId] = lucroData?.consolidado || 0;
       });
       
@@ -395,10 +389,7 @@ export default function GestaoProjetos() {
           },
           total_bookmakers: bkData?.count || 0,
           lucro_operacional: lucroOpFinal,
-          lucro_by_moeda: {
-            BRL: lucroData?.BRL || 0,
-            USD: lucroData?.USD || 0,
-          },
+          lucro_by_moeda: lucroData || {},
           lucro_realizado: lucroRealFinal,
           operadores_ativos: operadoresByProjeto[proj.id] || 0,
           perdas_confirmadas: 0,

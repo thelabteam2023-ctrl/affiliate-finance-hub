@@ -3,10 +3,8 @@ import { agruparExtrasPorTipo, fetchProjetoExtras } from "@/services/fetchProjet
 import { getConsolidatedLucro } from "@/utils/consolidatedValues";
 import { getOperationalDateRangeFromStrings } from "@/utils/dateUtils";
 
-interface SaldoByMoeda {
-  BRL: number;
-  USD: number;
-}
+/** Breakdown de lucro por moeda original (dinâmico — suporta todas as moedas) */
+type SaldoByMoeda = Record<string, number>;
 
 interface LucroProjetoResumo {
   consolidado: number;
@@ -51,12 +49,16 @@ export function derivarCotacoesFromConvertFn(
   return cotacoes;
 }
 
-const toBucketMoeda = (moeda?: string | null): keyof SaldoByMoeda =>
-  isUsdLike(moeda) ? "USD" : "BRL";
+/** Normaliza moeda para bucket (stablecoins → USD) */
+const normalizeMoeda = (moeda?: string | null): string => {
+  const m = (moeda || "BRL").toUpperCase();
+  if (m === "USDT" || m === "USDC") return "USD";
+  return m;
+};
 
 const createEmpty = (): LucroProjetoResumo => ({
   consolidado: 0,
-  porMoeda: { BRL: 0, USD: 0 },
+  porMoeda: {},
 });
 
 /**
@@ -256,6 +258,11 @@ export async function fetchProjetosLucroOperacionalKpi({
     result[id] = createEmpty();
   });
 
+  const addToMoeda = (target: SaldoByMoeda, moeda: string, valor: number) => {
+    const key = normalizeMoeda(moeda);
+    target[key] = (target[key] || 0) + valor;
+  };
+
   // 1) Apostas LIQUIDADAS (mesma lógica getConsolidatedLucro do KPI)
   apostasData.forEach((ap: any) => {
     const projetoId = ap.projeto_id;
@@ -263,7 +270,7 @@ export async function fetchProjetosLucroOperacionalKpi({
 
     const moeda = (ap.moeda_operacao || "BRL").toUpperCase();
     const bruto = Number(ap.lucro_prejuizo || 0);
-    result[projetoId].porMoeda[toBucketMoeda(moeda)] += bruto;
+    addToMoeda(result[projetoId].porMoeda, moeda, bruto);
 
     const consolidado = getConsolidatedLucro(ap, convertToConsolidation, "BRL");
     result[projetoId].consolidado += consolidado;
@@ -276,7 +283,7 @@ export async function fetchProjetosLucroOperacionalKpi({
 
     const moeda = (cb.moeda_operacao || "BRL").toUpperCase();
     const valor = Number(cb.valor || 0);
-    result[projetoId].porMoeda[toBucketMoeda(moeda)] += valor;
+    addToMoeda(result[projetoId].porMoeda, moeda, valor);
 
     let consolidado = valor;
     if (moeda !== "BRL") {
@@ -295,7 +302,7 @@ export async function fetchProjetosLucroOperacionalKpi({
     const valor = Math.max(0, Number(gg.valor_retorno || 0));
     const moeda = bookmakerMoedas.get(gg.bookmaker_id) || "BRL";
 
-    result[projetoId].porMoeda[toBucketMoeda(moeda)] += valor;
+    addToMoeda(result[projetoId].porMoeda, moeda, valor);
     result[projetoId].consolidado += convertToConsolidation(valor, moeda);
   });
 
@@ -309,7 +316,7 @@ export async function fetchProjetosLucroOperacionalKpi({
       const moeda = (b.currency || "BRL").toUpperCase();
       const valor = Number(b.bonus_amount || 0);
 
-      result[projetoId].porMoeda[toBucketMoeda(moeda)] += valor;
+      addToMoeda(result[projetoId].porMoeda, moeda, valor);
       result[projetoId].consolidado += convertToConsolidation(valor, moeda);
     });
 
@@ -321,7 +328,7 @@ export async function fetchProjetosLucroOperacionalKpi({
     const valor = Number(p.valor || 0);
     const moeda = bookmakerMoedas.get(p.bookmaker_id) || "BRL";
 
-    result[projetoId].porMoeda[toBucketMoeda(moeda)] -= valor;
+    addToMoeda(result[projetoId].porMoeda, moeda, -valor);
     result[projetoId].consolidado -= convertToConsolidation(valor, moeda);
   });
 
@@ -333,7 +340,7 @@ export async function fetchProjetosLucroOperacionalKpi({
     const delta = Number(a.saldo_novo || 0) - Number(a.saldo_anterior || 0);
     const moeda = bookmakerMoedas.get(a.bookmaker_id) || "BRL";
 
-    result[projetoId].porMoeda[toBucketMoeda(moeda)] += delta;
+    addToMoeda(result[projetoId].porMoeda, moeda, delta);
     result[projetoId].consolidado += convertToConsolidation(delta, moeda);
   });
 
@@ -376,7 +383,7 @@ export async function fetchProjetosLucroOperacionalKpi({
       if (!grupo) continue;
       target.consolidado += Number(grupo.total || 0);
       (grupo.porMoeda || []).forEach((item: { moeda: string; valor: number }) => {
-        target.porMoeda[toBucketMoeda(item.moeda)] += Number(item.valor || 0);
+        addToMoeda(target.porMoeda, item.moeda, Number(item.valor || 0));
       });
     }
   });
