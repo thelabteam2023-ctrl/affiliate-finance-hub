@@ -1542,25 +1542,6 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
         }}
       />
 
-      {/* Dialog Ajuste Pós-Limitação */}
-      {ajusteVinculo && workspaceId && (
-        <AjustePostLimitacaoVinculoDialog
-          open={!!ajusteVinculo}
-          onClose={() => setAjusteVinculo(null)}
-          vinculo={{
-            id: ajusteVinculo.id,
-            nome: ajusteVinculo.nome,
-            moeda: ajusteVinculo.moeda,
-            saldo_real: ajusteVinculo.saldo_real,
-          }}
-          projetoId={projetoId}
-          workspaceId={workspaceId}
-          onSuccess={() => {
-            invalidateVinculos();
-            setAjusteVinculo(null);
-          }}
-        />
-      )}
 
       {/* Dialog Desvinculação em Massa */}
       <DesvinculacaoEmMassaDialog
