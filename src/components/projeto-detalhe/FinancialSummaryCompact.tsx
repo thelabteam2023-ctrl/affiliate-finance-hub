@@ -48,7 +48,7 @@ async function fetchCompactMetrics(projetoId: string) {
 }
 
 export function FinancialSummaryCompact({ projetoId, dateRange }: FinancialSummaryCompactProps) {
-  const { formatCurrency, convertToConsolidationOficial, cotacaoOficialUSD, convertToConsolidationTrabalho, moedaConsolidacao } = useProjetoCurrency(projetoId);
+  const { formatCurrency, convertToConsolidationOficial, cotacaoOficialUSD, convertToConsolidation, moedaConsolidacao } = useProjetoCurrency(projetoId);
 
   const { data: raw, isLoading } = useQuery({
     queryKey: ["projeto-financial-compact", projetoId],
