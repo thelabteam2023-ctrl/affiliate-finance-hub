@@ -867,7 +867,7 @@ export default function ProjetoDetalhe() {
                 </button>
               </PopoverTrigger>
               <PopoverContent side="bottom" align="end" className="p-0 w-auto" sideOffset={8}>
-                <FinancialMetricsPopover projetoId={id!} dateRange={entregaAtiva?.data_inicio && entregaAtiva?.data_fim_prevista ? { from: entregaAtiva.data_inicio, to: entregaAtiva.data_fim_prevista } : null} />
+                <FinancialMetricsPopover projetoId={id!} />
               </PopoverContent>
             </Popover>
           </div>
