@@ -1258,7 +1258,7 @@ export default function CentralOperacoes() {
               valor: valorEstorno,
               origem_tipo: "PARCEIRO",
               destino_tipo: "CAIXA_OPERACIONAL",
-              data_transacao: new Date().toISOString().split("T")[0],
+              data_transacao: getTodayCivilDate(),
               descricao: `Estorno comissão - parceria dispensada (${dispensaParceiroNome})`,
               status: "CONFIRMADO",
             });
