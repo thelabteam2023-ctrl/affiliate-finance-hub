@@ -389,10 +389,7 @@ export default function GestaoProjetos() {
           },
           total_bookmakers: bkData?.count || 0,
           lucro_operacional: lucroOpFinal,
-          lucro_by_moeda: {
-            BRL: lucroData?.BRL || 0,
-            USD: lucroData?.USD || 0,
-          },
+          lucro_by_moeda: lucroData || {},
           lucro_realizado: lucroRealFinal,
           operadores_ativos: operadoresByProjeto[proj.id] || 0,
           perdas_confirmadas: 0,
