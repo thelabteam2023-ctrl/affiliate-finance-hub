@@ -492,7 +492,7 @@ export function FinanceiroTab() {
           parceria_id: dispensaParceriaId,
           parceiro_id: parceria.parceiro_id,
           descricao: `Pagamento dispensado: ${dispensaMotivo.trim()}`,
-          data_movimentacao: new Date().toISOString().split("T")[0],
+          data_movimentacao: getTodayCivilDate(),
         },
       ];
 
