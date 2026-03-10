@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useWorkspaceResetKey } from "@/hooks/useWorkspaceCacheClear";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StickyNote, GitBranch } from "lucide-react";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { FluxoTab } from "@/components/anotacoes/FluxoTab";
 import { LivreTab } from "@/components/anotacoes/LivreTab";
 import { useTopBar } from "@/contexts/TopBarContext";
