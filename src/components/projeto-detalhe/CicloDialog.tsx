@@ -186,7 +186,7 @@ export function CicloDialog({
         tipo_gatilho: op.tipo_gatilho || "TEMPO",
         meta_volume: op.meta_volume?.toString() || "",
         metrica_acumuladora: op.metrica_acumuladora || "LUCRO",
-        data_fim_prevista: dataFim.toISOString().split("T")[0],
+        data_fim_prevista: dateToCivilDateString(dataFim),
       });
     } else {
       setFormData({ ...formData, operador_projeto_id: operadorProjetoId });
