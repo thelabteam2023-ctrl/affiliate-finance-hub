@@ -686,9 +686,15 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
             // Filtrar por período selecionado (dateRange / ciclo)
             if (dateRange?.start || dateRange?.end) {
               eligibleForAvg = eligibleForAvg.filter(b => {
-                const creditDate = new Date(b.credited_at!);
-                if (dateRange.start && creditDate < startOfDay(dateRange.start)) return false;
-                if (dateRange.end && creditDate > dateRange.end) return false;
+                const creditDateStr = b.credited_at!.substring(0, 10);
+                if (dateRange.start) {
+                  const startStr = dateRange.start.toISOString().substring(0, 10);
+                  if (creditDateStr < startStr) return false;
+                }
+                if (dateRange.end) {
+                  const endStr = dateRange.end.toISOString().substring(0, 10);
+                  if (creditDateStr > endStr) return false;
+                }
                 return true;
               });
             }
