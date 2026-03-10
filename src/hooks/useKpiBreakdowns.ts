@@ -103,10 +103,23 @@ async function fetchBreakdownsData(
   // Isso garante paridade com todas as outras abas (Bônus, Surebet, etc.)
   const safeConvert = convertToConsolidation || ((valor: number, _moeda: string) => valor);
 
+  // Derivar cotacaoUSD da função de conversão (para delegar ao KPI canônico)
+  const cotacaoUSD = safeConvert(1, 'USD');
+
+  // Preparar filtros de data no formato string YYYY-MM-DD para o KPI canônico
+  const dataInicioStr = dataInicio
+    ? `${dataInicio.getFullYear()}-${String(dataInicio.getMonth() + 1).padStart(2, '0')}-${String(dataInicio.getDate()).padStart(2, '0')}`
+    : null;
+  const dataFimStr = dataFim
+    ? `${dataFim.getFullYear()}-${String(dataFim.getMonth() + 1).padStart(2, '0')}-${String(dataFim.getDate()).padStart(2, '0')}`
+    : null;
 
   // Fetch dados de todos os módulos em paralelo
-  // CANÔNICO: Extras (ajustes_saldo, resultado_cambial, etc.) vêm do serviço centralizado
+  // CANÔNICO: O total de lucro é delegado ao fetchProjetosLucroOperacionalKpi
+  // Os módulos individuais servem apenas para breakdown visual (tooltip)
   const [
+    // ENGINE CANÔNICA: fonte única de verdade para o total
+    lucroCanonicoResult,
     apostasData,
     girosGratisData,
     perdasData,
@@ -115,6 +128,12 @@ async function fetchBreakdownsData(
     bonusGanhosData,
     projetoExtras,
   ] = await Promise.all([
+    fetchProjetosLucroOperacionalKpi({
+      projetoIds: [projetoId],
+      cotacaoUSD,
+      dataInicio: dataInicioStr,
+      dataFim: dataFimStr,
+    }),
     fetchApostasModuleData(projetoId, dataInicio, dataFim, moedaConsolidacao, safeConvert),
     fetchGirosGratisModuleData(projetoId, dataInicio, dataFim, moedaConsolidacao, safeConvert),
     fetchPerdasModuleData(projetoId, dataInicio, dataFim),
@@ -123,6 +142,10 @@ async function fetchBreakdownsData(
     fetchBonusGanhosModuleData(projetoId, moedaConsolidacao, safeConvert),
     fetchProjetoExtras(projetoId),
   ]);
+
+  // Total canônico = mesma engine usada pelos ciclos
+  const lucroCanonicoTotal = lucroCanonicoResult[projetoId]?.consolidado || 0;
+  const lucroCanonicoMoeda = lucroCanonicoResult[projetoId]?.porMoeda || { BRL: 0, USD: 0 };
 
   // Agregar extras canônicos por tipo, com filtro de data e conversão
   const extrasAgrupados = agruparExtrasPorTipo(
