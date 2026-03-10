@@ -96,8 +96,21 @@ function FinalizedBonusHistory({
   const [editingBonus, setEditingBonus] = useState<ProjectBonus | null>(null);
   const [filterParceiro, setFilterParceiro] = useState<string>("all");
   const [filterCasa, setFilterCasa] = useState<string>("all");
+  const [parceiroSearch, setParceiroSearch] = useState("");
+  const [casaSearch, setCasaSearch] = useState("");
+  const [parceiroOpen, setParceiroOpen] = useState(false);
+  const [casaOpen, setCasaOpen] = useState(false);
   
   const finalizedBonuses = bonuses.filter(b => b.status === 'finalized');
+
+  // Helper: "NOME SOBRENOME" -> "Nome Sobrenome" (primeiro e último)
+  const shortName = (fullName: string) => {
+    const parts = fullName.trim().split(/\s+/);
+    if (parts.length <= 2) return parts.map(p => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()).join(" ");
+    const first = parts[0];
+    const last = parts[parts.length - 1];
+    return [first, last].map(p => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()).join(" ");
+  };
 
   // Extract unique parceiros and casas for filters
   const parceiros = useMemo(() => {
