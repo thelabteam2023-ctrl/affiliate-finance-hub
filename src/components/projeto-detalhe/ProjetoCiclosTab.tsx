@@ -286,8 +286,7 @@ export function ProjetoCiclosTab({ projetoId, formatCurrency: formatCurrencyProp
         volume: metricas.volume,
         ticketMedio: metricas.ticketMedio,
         lucroBruto: metricas.lucroBruto,
-        // lucroReal é resolvido no render via metricaLucroCiclo (evita race condition)
-        get lucroReal() { return metricaLucroCiclo === "realizado" ? this.lucroRealizado : this.lucroOperacional; },
+        lucroReal: 0, // Resolvido no render via getLucroReal()
         lucroOperacional: metricas.lucroLiquido,
         lucroRealizado: metricas.lucroRealizado,
         roi: metricas.roi,
