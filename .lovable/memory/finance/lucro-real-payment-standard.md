@@ -1,0 +1,4 @@
+# Memory: finance/lucro-real-payment-standard
+Updated: now
+
+O 'Lucro Realizado' (ou Fluxo Líquido Ajustado) é definido pela fórmula canônica: **Saques - (Depósitos + Créditos Extras)**. Os Créditos Extras representam capital recebido gratuitamente que inflou o saldo das casas sem sair do caixa da empresa, incluindo: bônus creditados (credited + finalized), cashback líquido, giros grátis confirmados, ajustes de saldo/reconciliação e resultados cambiais (ganho - perda FX). Esta fórmula é utilizada uniformemente em: (1) Indicadores Financeiros do projeto (FinancialMetricsPopover e ProjetoFinancialMetricsCard); (2) Serviço canônico de métricas por período (calcularMetricasPeriodo.ts) para ciclos e alertas; (3) Qualquer futuro componente que reporte lucro realizado. A uniformidade garante que não haja divergência entre indicadores e ciclos.
