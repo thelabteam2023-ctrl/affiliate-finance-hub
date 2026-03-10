@@ -388,3 +388,43 @@ export const getLocalDateTimeString = (): string => {
   const minutes = String(now.getMinutes()).padStart(2, '0');
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
+
+/**
+ * Retorna a data civil de HOJE no timezone operacional (São Paulo) como "YYYY-MM-DD".
+ * 
+ * BUG CORRIGIDO: `new Date().toISOString().split('T')[0]` retorna a data UTC.
+ * Após 21:00 BRT (00:00 UTC), isso retorna o dia SEGUINTE.
+ * Ex: 09/03 às 22:00 BRT → toISOString() = "2026-03-10T01:00:00Z" → split = "2026-03-10" (ERRADO!)
+ * 
+ * Esta função garante que retorna "2026-03-09" independente do horário UTC.
+ * 
+ * QUANDO USAR: Sempre que precisar da data de "hoje" para campos de data civil
+ * (data_transacao, data_credito, data_entrada, etc.)
+ * 
+ * QUANDO NÃO USAR: Para timestamps reais com hora (use toLocalTimestamp).
+ */
+export const getTodayCivilDate = (): string => {
+  const now = new Date();
+  // Usar toZonedTime para obter a data no timezone operacional
+  const zonedNow = toZonedTime(now, TIMEZONE_OPERACIONAL);
+  const year = zonedNow.getFullYear();
+  const month = String(zonedNow.getMonth() + 1).padStart(2, '0');
+  const day = String(zonedNow.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+/**
+ * Converte um Date object para string "YYYY-MM-DD" no timezone operacional (São Paulo).
+ * 
+ * Mesma lógica do getTodayCivilDate mas para qualquer Date, não apenas "agora".
+ * 
+ * QUANDO USAR: Para converter Date objects (ex: de addMonths, subDays) para
+ * strings de data civil sem o bug do toISOString().
+ */
+export const dateToCivilDateString = (date: Date): string => {
+  const zonedDate = toZonedTime(date, TIMEZONE_OPERACIONAL);
+  const year = zonedDate.getFullYear();
+  const month = String(zonedDate.getMonth() + 1).padStart(2, '0');
+  const day = String(zonedDate.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { getTodayCivilDate } from "@/utils/dateUtils";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useCotacoes } from "@/hooks/useCotacoes";
@@ -2447,7 +2448,7 @@ export function CaixaTransacaoDialog({
         investidor_id: tipoTransacao === "APORTE_FINANCEIRO" ? investidorId : null,
         nome_investidor: tipoTransacao === "APORTE_FINANCEIRO" && investidor ? investidor.nome : null,
         // DATA RETROATIVA: Permite registrar transações em datas passadas
-        data_transacao: dataTransacao || new Date().toISOString().split('T')[0],
+        data_transacao: dataTransacao || getTodayCivilDate(),
         
         // CAMADA ORIGEM (Transporte)
         moeda_origem: moedaOrigem,

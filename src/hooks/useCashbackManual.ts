@@ -1,4 +1,5 @@
 import { useCallback, useMemo } from "react";
+import { getTodayCivilDate } from "@/utils/dateUtils";
 import { PERIOD_STALE_TIME, PERIOD_GC_TIME } from "@/lib/query-cache-config";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -223,7 +224,7 @@ export function useCashbackManual({ projetoId, dataInicio, dataFim }: UseCashbac
         }
 
         // 2. PROTEÇÃO ANTI-DUPLICIDADE: Verificar se já existe cashback igual recente
-        const dataCredito = data.data_credito || new Date().toISOString().split("T")[0];
+        const dataCredito = data.data_credito || getTodayCivilDate();
         const { data: existingCashback, error: checkError } = await supabase
           .from("cashback_manual")
           .select("id, created_at")
@@ -479,7 +480,7 @@ export function useCashbackManual({ projetoId, dataInicio, dataFim }: UseCashbac
         }
 
         const moedaOperacao = bookmakerNova.moeda || "BRL";
-        const dataCredito = data.data_credito || new Date().toISOString().split("T")[0];
+        const dataCredito = data.data_credito || getTodayCivilDate();
 
         // 5. Calcular cotação
         let valorBRLReferencia: number | null = null;

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { getTodayCivilDate } from "@/utils/dateUtils";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
@@ -126,7 +127,7 @@ export function PagamentoParticipacaoDialog({
           valor: participacao.valor_participacao,
           moeda: "BRL",
           tipo_moeda: origemData.tipoMoeda,
-          data_transacao: new Date().toISOString(),
+          data_transacao: getTodayCivilDate(),
           status: "CONFIRMADO",
           descricao: `Participação ${participacao.investidor_nome} - ${participacao.projeto_nome} Ciclo ${participacao.ciclo_numero}`,
           investidor_id: participacao.investidor_id,
@@ -150,7 +151,7 @@ export function PagamentoParticipacaoDialog({
         .from("participacao_ciclos")
         .update({
           status: "PAGO",
-          data_pagamento: new Date().toISOString(),
+          data_pagamento: getTodayCivilDate(),
           pagamento_ledger_id: ledgerEntry.id,
           observacoes: observacoes || null,
         })

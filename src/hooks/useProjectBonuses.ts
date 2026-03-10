@@ -1,4 +1,5 @@
 import { useCallback, useMemo } from "react";
+import { getTodayCivilDate } from "@/utils/dateUtils";
 import { PERIOD_STALE_TIME, PERIOD_GC_TIME } from "@/lib/query-cache-config";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -650,7 +651,7 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
               moeda: currentBonus.currency || "BRL",
               valor: debitAmount!,
               status: "CONFIRMADO",
-              data_transacao: new Date().toISOString().split("T")[0],
+              data_transacao: getTodayCivilDate(),
               data_confirmacao: new Date().toISOString(),
               impacta_caixa_operacional: false,
               user_id: userData.user.id,

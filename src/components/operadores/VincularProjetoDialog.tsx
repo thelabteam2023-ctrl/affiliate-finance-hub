@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { getTodayCivilDate } from "@/utils/dateUtils";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import {
@@ -75,7 +76,7 @@ export function VincularProjetoDialog({
   const [formData, setFormData] = useState({
     projeto_id: "",
     funcao: "",
-    data_entrada: new Date().toISOString().split("T")[0],
+    data_entrada: getTodayCivilDate(),
     frequencia_conciliacao: "MENSAL",
     resumo_acordo: "",
     // Campos de referência do acordo (opcionais)
@@ -92,7 +93,7 @@ export function VincularProjetoDialog({
       setFormData({
         projeto_id: "",
         funcao: "",
-        data_entrada: new Date().toISOString().split("T")[0],
+        data_entrada: getTodayCivilDate(),
         frequencia_conciliacao: "MENSAL",
         resumo_acordo: "",
         modelo_pagamento: "FIXO_MENSAL",

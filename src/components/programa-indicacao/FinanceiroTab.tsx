@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { getTodayCivilDate } from "@/utils/dateUtils";
 import { parseLocalDate } from "@/lib/dateUtils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -491,7 +492,7 @@ export function FinanceiroTab() {
           parceria_id: dispensaParceriaId,
           parceiro_id: parceria.parceiro_id,
           descricao: `Pagamento dispensado: ${dispensaMotivo.trim()}`,
-          data_movimentacao: new Date().toISOString().split("T")[0],
+          data_movimentacao: getTodayCivilDate(),
         },
       ];
 
@@ -511,7 +512,7 @@ export function FinanceiroTab() {
             valor: valorEstorno,
             origem_tipo: "PARCEIRO",
             destino_tipo: "CAIXA_OPERACIONAL",
-            data_transacao: new Date().toISOString().split("T")[0],
+            data_transacao: getTodayCivilDate(),
             descricao: `Estorno comissão - parceria dispensada (${dispensaParceiroNome})`,
             status: "CONFIRMADO",
           });
@@ -528,7 +529,7 @@ export function FinanceiroTab() {
           parceiro_id: parceria.parceiro_id,
           indicador_id: indicadorId,
           descricao: `Estorno comissão: parceria dispensada - ${dispensaMotivo.trim()}`,
-          data_movimentacao: new Date().toISOString().split("T")[0],
+          data_movimentacao: getTodayCivilDate(),
         });
       } 
       // Cenário: comissão já paga + sem estorno → registrar nota de sobrepagamento
@@ -544,7 +545,7 @@ export function FinanceiroTab() {
           parceiro_id: parceria.parceiro_id,
           indicador_id: indicadorId,
           descricao: `⚠️ Comissão de R$ ${dispensaValorComissao.toFixed(2)} já paga ao indicador. Sobrepagamento mantido sem estorno. Motivo dispensa: ${dispensaMotivo.trim()}`,
-          data_movimentacao: new Date().toISOString().split("T")[0],
+          data_movimentacao: getTodayCivilDate(),
         });
       }
       // Cenário: comissão nunca paga → dispensar normalmente
@@ -560,7 +561,7 @@ export function FinanceiroTab() {
           parceiro_id: parceria.parceiro_id,
           indicador_id: indicadorId,
           descricao: `Comissão dispensada: parceria não efetivada`,
-          data_movimentacao: new Date().toISOString().split("T")[0],
+          data_movimentacao: getTodayCivilDate(),
         });
       }
 

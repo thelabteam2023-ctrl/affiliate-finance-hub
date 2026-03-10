@@ -31,6 +31,7 @@
  */
 
 import { supabase } from "@/integrations/supabase/client";
+import { getTodayCivilDate } from "@/utils/dateUtils";
 
 export type LedgerTransactionType = 
   | 'CASHBACK_MANUAL'
@@ -122,7 +123,7 @@ export async function insertLedgerEntry(
   input: LedgerEntryInput
 ): Promise<LedgerEntryResult> {
   try {
-    const dataTransacao = input.dataTransacao || new Date().toISOString().split('T')[0];
+    const dataTransacao = input.dataTransacao || getTodayCivilDate();
     
     // Build insert payload - using type assertion since trigger handles custom tipos
     // CRÍTICO: valor_destino DEVE ser preenchido para créditos (destino_bookmaker_id)
@@ -553,7 +554,7 @@ export async function registrarSaqueVirtualViaLedger(params: {
       origem_bookmaker_id: params.bookmakerId,
       valor_origem: params.saldoAtual,
       descricao: params.descricao || `Saque virtual – desvinculação do projeto`,
-      data_transacao: new Date().toISOString().split('T')[0],
+      data_transacao: getTodayCivilDate(),
       impacta_caixa_operacional: false,
       tipo_moeda: 'FIAT' as const,
       status: 'CONFIRMADO',
@@ -618,7 +619,7 @@ export async function registrarDepositoVirtualViaLedger(params: {
       destino_bookmaker_id: params.bookmakerId,
       valor_destino: params.saldoAtual,
       descricao: params.descricao || `Depósito virtual – vinculação ao projeto`,
-      data_transacao: new Date().toISOString().split('T')[0],
+      data_transacao: getTodayCivilDate(),
       impacta_caixa_operacional: false,
       tipo_moeda: 'FIAT' as const,
       status: 'CONFIRMADO',

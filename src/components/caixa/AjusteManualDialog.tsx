@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { getTodayCivilDate } from "@/utils/dateUtils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { dispatchCaixaDataChanged } from "@/hooks/useInvalidateCaixaData";
@@ -522,7 +523,7 @@ export function AjusteManualDialog({
         descricao,
         status: "CONFIRMADO",
         transit_status: "CONFIRMED",
-        data_transacao: new Date().toISOString().split("T")[0],
+        data_transacao: getTodayCivilDate(),
         impacta_caixa_operacional: tipoDestino === "CAIXA_OPERACIONAL",
         // Campos obrigatórios de auditoria para ajustes
         ajuste_motivo: motivo.trim(),

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { getTodayCivilDate } from "@/utils/dateUtils";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
@@ -87,7 +88,7 @@ export function PagamentoOperadorDialog({
     tipo_pagamento: "SALARIO",
     valor: 0,
     moeda: "BRL",
-    data_pagamento: new Date().toISOString().split("T")[0],
+    data_pagamento: getTodayCivilDate(),
     data_competencia: null,
     descricao: null,
     status: "CONFIRMADO",
@@ -126,7 +127,7 @@ export function PagamentoOperadorDialog({
           tipo_pagamento: "SALARIO",
           valor: 0,
           moeda: "BRL",
-          data_pagamento: new Date().toISOString().split("T")[0],
+          data_pagamento: getTodayCivilDate(),
           data_competencia: null,
           descricao: null,
           status: "CONFIRMADO",

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { getTodayCivilDate } from "@/utils/dateUtils";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -134,7 +135,7 @@ export function PropostasPagamentoCard() {
           valor: valorFinal,
           tipo_pagamento: "COMISSAO",
           status: "PENDENTE", // Ainda precisa ser efetivamente pago
-          data_pagamento: new Date().toISOString().split("T")[0],
+          data_pagamento: getTodayCivilDate(),
           descricao: `Pagamento do Ciclo ${selectedProposta.ciclo_numero || "N/A"} - ${selectedProposta.modelo_pagamento}`,
         })
         .select()

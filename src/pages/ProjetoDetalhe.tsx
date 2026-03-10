@@ -75,7 +75,7 @@ import { ModuleActivationDialog } from "@/components/projeto-detalhe/ModuleActiv
 // LimitationSection now rendered inside ProjetoIncidentesTab
 import { SetDefaultTabButton } from "@/components/projeto-detalhe/SetDefaultTabButton";
 import { useActionAccess } from "@/hooks/useModuleAccess";
-import { getOperationalDateRangeForQuery } from "@/utils/dateUtils";
+import { getOperationalDateRangeForQuery, getTodayCivilDate } from "@/utils/dateUtils";
 // REMOVIDO: OperationalFiltersProvider - filtros agora são isolados por aba
 
 // Icon map for dynamic modules
@@ -670,7 +670,7 @@ export default function ProjetoDetalhe() {
       await fetchApostasResumo();
 
       // Fetch ciclo ativo (vigente - com data_inicio <= hoje e data_fim_prevista >= hoje)
-      const hoje = new Date().toISOString().split('T')[0];
+      const hoje = getTodayCivilDate();
       const { data: cicloData } = await supabase
         .from("projeto_ciclos")
         .select("data_inicio, data_fim_prevista")

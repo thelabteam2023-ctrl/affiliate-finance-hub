@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { extractCivilDateKey } from "@/utils/dateUtils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -306,7 +307,7 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
     const dailyData: Record<string, number> = {};
     
     confirmados.forEach(g => {
-      const date = new Date(g.data_registro).toISOString().split('T')[0];
+      const date = extractCivilDateKey(g.data_registro) || '';
       const moedaOrigem = g.bookmaker_moeda || "BRL";
       const valorConvertido = converterValor(
         Number(g.valor_retorno), 

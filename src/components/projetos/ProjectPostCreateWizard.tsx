@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { getTodayCivilDate, dateToCivilDateString } from "@/utils/dateUtils";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { getMoedaSymbol, type MoedaConsolidacao } from "@/types/projeto";
@@ -214,8 +215,8 @@ export function ProjectPostCreateWizard({
   const { workspaceId } = useWorkspace();
   
   // Stable "today" value to avoid re-renders - computed once on mount
-  const todayRef = useRef(new Date().toISOString().split("T")[0]);
-  const defaultEndDateRef = useRef(addMonths(new Date(), 1).toISOString().split("T")[0]);
+  const todayRef = useRef(getTodayCivilDate());
+  const defaultEndDateRef = useRef(dateToCivilDateString(addMonths(new Date(), 1)));
   
   // Wizard state
   const [step, setStep] = useState<WizardStep>("choose");
@@ -358,8 +359,8 @@ export function ProjectPostCreateWizard({
     if (forceToday) {
       const today = new Date();
       const endDate = addMonths(today, 1);
-      setCicloDataInicio(today.toISOString().split("T")[0]);
-      setCicloDataFimPrevista(endDate.toISOString().split("T")[0]);
+      setCicloDataInicio(getTodayCivilDate());
+      setCicloDataFimPrevista(dateToCivilDateString(endDate));
       return;
     }
     
@@ -375,14 +376,14 @@ export function ProjectPostCreateWizard({
       // Sequential dates based on last cycle
       const novaDataInicio = addDays(new Date(lastCycle.data_fim_prevista), 1);
       const novaDataFim = addMonths(novaDataInicio, 1);
-      setCicloDataInicio(novaDataInicio.toISOString().split("T")[0]);
-      setCicloDataFimPrevista(novaDataFim.toISOString().split("T")[0]);
+      setCicloDataInicio(dateToCivilDateString(novaDataInicio));
+      setCicloDataFimPrevista(dateToCivilDateString(novaDataFim));
     } else {
       // First cycle: default to TODAY (not project start date)
       const today = new Date();
       const dataFim = addMonths(today, 1);
-      setCicloDataInicio(today.toISOString().split("T")[0]);
-      setCicloDataFimPrevista(dataFim.toISOString().split("T")[0]);
+      setCicloDataInicio(getTodayCivilDate());
+      setCicloDataFimPrevista(dateToCivilDateString(dataFim));
     }
   }, [projectId]);
 
@@ -531,7 +532,7 @@ export function ProjectPostCreateWizard({
       setCicloTipoGatilho(op.tipo_gatilho || "TEMPO");
       setCicloMetaVolume(op.meta_volume?.toString() || "");
       setCicloMetricaAcumuladora(op.metrica_acumuladora || "LUCRO");
-      setCicloDataFimPrevista(dataFim.toISOString().split("T")[0]);
+      setCicloDataFimPrevista(dateToCivilDateString(dataFim));
     } else {
       setCicloOperadorProjetoId(operadorProjetoId);
     }

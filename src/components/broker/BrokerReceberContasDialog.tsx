@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { getTodayCivilDate } from "@/utils/dateUtils";
 import { supabase } from "@/integrations/supabase/client";
 import { useTabWorkspace } from "@/hooks/useTabWorkspace";
 import { toast } from "sonner";
@@ -154,7 +155,7 @@ export function BrokerReceberContasDialog({ open, onClose, onSuccess }: BrokerRe
               tipo_moeda: "FIAT",
               moeda,
               valor: saldoInicial,
-              data_transacao: new Date().toISOString().split("T")[0],
+              data_transacao: getTodayCivilDate(),
               investidor_id: investidorId,
               nome_investidor: investidor?.nome || "",
               origem_tipo: "INVESTIDOR",

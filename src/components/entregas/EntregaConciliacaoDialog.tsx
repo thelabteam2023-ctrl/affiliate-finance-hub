@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { getTodayCivilDate } from "@/utils/dateUtils";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import {
@@ -193,7 +194,7 @@ export function EntregaConciliacaoDialog({
           valor: valorPagamento,
           moeda: origemData.tipoMoeda === "CRYPTO" ? "USD" : "BRL",
           tipo_moeda: origemData.tipoMoeda,
-          data_transacao: new Date().toISOString(),
+          data_transacao: getTodayCivilDate(),
           descricao: `Pagamento conciliação período #${entrega.numero_entrega}${operadorNome ? ` - ${operadorNome}` : ""}`,
           status: "CONFIRMADO",
         };
@@ -237,7 +238,7 @@ export function EntregaConciliacaoDialog({
             tipo_pagamento: "COMISSAO",
             valor: valorPagamento,
             moeda: "BRL",
-            data_pagamento: new Date().toISOString().split("T")[0],
+            data_pagamento: getTodayCivilDate(),
             descricao: `Pagamento referente ao período #${entrega.numero_entrega}`,
             status: "CONFIRMADO",
             cash_ledger_id: cashLedgerId,
@@ -258,7 +259,7 @@ export function EntregaConciliacaoDialog({
           conciliado: true,
           pagamento_realizado: registrarPagamento && valorPagamento > 0,
           data_conciliacao: new Date().toISOString(),
-          data_fim_real: new Date().toISOString().split("T")[0],
+          data_fim_real: getTodayCivilDate(),
           status: "CONCLUIDA",
         })
         .eq("id", entrega.id);
@@ -270,7 +271,7 @@ export function EntregaConciliacaoDialog({
         await supabase
           .from("operador_projetos")
           .update({
-            ultima_conciliacao: new Date().toISOString().split("T")[0],
+            ultima_conciliacao: getTodayCivilDate(),
           })
           .eq("id", entrega.operador_projeto_id);
       }

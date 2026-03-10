@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { getTodayCivilDate } from "@/utils/dateUtils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { dispatchCaixaDataChanged } from "@/hooks/useInvalidateCaixaData";
@@ -121,7 +122,7 @@ export function ConfirmarSaqueDialog({
       setObservacoes("");
       setParceiroInativo(null);
       // Data de confirmação padrão = hoje
-      setDataConfirmacao(new Date().toISOString().split("T")[0]);
+      setDataConfirmacao(getTodayCivilDate());
       
       if (isCryptoWithdrawal) {
         // Pré-preencher com estimativa
@@ -281,7 +282,7 @@ export function ConfirmarSaqueDialog({
               valor: Math.abs(diferencaCoin),
               moeda: coinMoeda,
               status: "CONFIRMADO",
-              data_transacao: new Date().toISOString().split("T")[0],
+              data_transacao: getTodayCivilDate(),
               descricao: `${tipoAjuste === "GANHO_CAMBIAL" ? "Ganho" : "Perda"} na liquidação cripto - ${saque.bookmaker_nome || "Saque"} (diferença: ${Math.abs(diferencaCoin).toFixed(6)} ${coinMoeda})`,
               workspace_id: bookmaker.workspace_id,
               user_id: userData.user.id,
@@ -342,7 +343,7 @@ export function ConfirmarSaqueDialog({
               valor: Math.abs(diferencaFiat),
               moeda: moedaDestinoFiat,
               status: "CONFIRMADO",
-              data_transacao: new Date().toISOString().split("T")[0],
+              data_transacao: getTodayCivilDate(),
               descricao: `Ajuste cambial - Saque ${saque.bookmaker_nome || "Bookmaker"}`,
               workspace_id: bookmaker.workspace_id,
               user_id: userData.user.id,

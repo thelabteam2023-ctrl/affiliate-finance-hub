@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { getTodayCivilDate, dateToCivilDateString } from "@/utils/dateUtils";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useProjetoConsolidacao } from "@/hooks/useProjetoConsolidacao";
@@ -88,8 +89,8 @@ export function CicloDialog({
   const [operadoresProjeto, setOperadoresProjeto] = useState<OperadorProjeto[]>([]);
   const [formData, setFormData] = useState({
     operador_projeto_id: "",
-    data_inicio: new Date().toISOString().split("T")[0],
-    data_fim_prevista: addMonths(new Date(), 1).toISOString().split("T")[0],
+    data_inicio: getTodayCivilDate(),
+    data_fim_prevista: dateToCivilDateString(addMonths(new Date(), 1)),
     tipo_gatilho: "TEMPO",
     meta_volume: "",
     metrica_acumuladora: "LUCRO",
@@ -152,8 +153,8 @@ export function CicloDialog({
       
       setFormData(prev => ({
         ...prev,
-        data_inicio: novaDataInicio.toISOString().split("T")[0],
-        data_fim_prevista: novaDataFim.toISOString().split("T")[0],
+        data_inicio: dateToCivilDateString(novaDataInicio),
+        data_fim_prevista: dateToCivilDateString(novaDataFim),
       }));
     } else {
       const { data: projeto } = await supabase
@@ -168,7 +169,7 @@ export function CicloDialog({
         setFormData(prev => ({
           ...prev,
           data_inicio: projeto.data_inicio,
-          data_fim_prevista: dataFim.toISOString().split("T")[0],
+          data_fim_prevista: dateToCivilDateString(dataFim),
         }));
       }
     }
@@ -185,7 +186,7 @@ export function CicloDialog({
         tipo_gatilho: op.tipo_gatilho || "TEMPO",
         meta_volume: op.meta_volume?.toString() || "",
         metrica_acumuladora: op.metrica_acumuladora || "LUCRO",
-        data_fim_prevista: dataFim.toISOString().split("T")[0],
+        data_fim_prevista: dateToCivilDateString(dataFim),
       });
     } else {
       setFormData({ ...formData, operador_projeto_id: operadorProjetoId });
