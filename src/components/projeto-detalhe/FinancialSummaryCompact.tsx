@@ -68,7 +68,7 @@ export function FinancialSummaryCompact({ projetoId, dateRange }: FinancialSumma
         projetoId,
         dataInicio: format(dateRange.start, "yyyy-MM-dd"),
         dataFim: format(dateRange.end, "yyyy-MM-dd"),
-        convertToConsolidation: convertToConsolidation,
+        convertToConsolidation: convertToConsolidationOficial,
         moedaConsolidacao: moedaConsolidacao || "BRL",
       });
     },

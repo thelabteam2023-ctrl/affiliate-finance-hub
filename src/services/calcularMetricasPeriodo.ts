@@ -151,7 +151,7 @@ export async function calcularMetricasPeriodo({
     // 6. Saques confirmados no período (por data_transacao, atribuído ao projeto)
     supabase
       .from("cash_ledger")
-      .select("valor, valor_confirmado")
+      .select("valor, valor_confirmado, moeda")
       .in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])
       .eq("status", "CONFIRMADO")
       .eq("projeto_id_snapshot", projetoId)
@@ -161,7 +161,7 @@ export async function calcularMetricasPeriodo({
     // 7. Depósitos confirmados no período (por data_transacao, atribuído ao projeto)
     supabase
       .from("cash_ledger")
-      .select("valor")
+      .select("valor, moeda")
       .in("tipo_transacao", ["DEPOSITO", "DEPOSITO_VIRTUAL"])
       .eq("status", "CONFIRMADO")
       .eq("projeto_id_snapshot", projetoId)
@@ -263,8 +263,23 @@ export async function calcularMetricasPeriodo({
 
   const saques = saquesResult.data || [];
   const depositos = depositosResult.data || [];
-  const totalSaques = saques.reduce((acc, s: any) => acc + Number(s.valor_confirmado ?? s.valor ?? 0), 0);
-  const totalDepositos = depositos.reduce((acc, d: any) => acc + Number(d.valor ?? 0), 0);
+  
+  // CRÍTICO: Converter cada transação para a moeda de consolidação do projeto
+  // O cash_ledger contém transações em múltiplas moedas (BRL, USD, EUR, USDT, USDC, ETH)
+  const totalSaques = saques.reduce((acc, s: any) => {
+    const valor = Number(s.valor_confirmado ?? s.valor ?? 0);
+    const moeda = s.moeda || 'BRL';
+    // Crypto stablecoins (USDT, USDC) são ~1:1 com USD
+    const moedaNormalizada = ['USDT', 'USDC'].includes(moeda) ? 'USD' : moeda;
+    return acc + convert(valor, moedaNormalizada);
+  }, 0);
+  
+  const totalDepositos = depositos.reduce((acc, d: any) => {
+    const valor = Number(d.valor ?? 0);
+    const moeda = d.moeda || 'BRL';
+    const moedaNormalizada = ['USDT', 'USDC'].includes(moeda) ? 'USD' : moeda;
+    return acc + convert(valor, moedaNormalizada);
+  }, 0);
 
   // Créditos Extras totais (para exibição informativa)
   const totalBonus = (bonusResult.data || []).reduce((acc, b: any) => {
@@ -272,7 +287,7 @@ export async function calcularMetricasPeriodo({
   }, 0);
   const creditosExtras = lucroCashback + lucroGiros + totalBonus;
 
-  // Fórmula canônica: Saques - Depósitos (fluxo de caixa puro)
+  // Fórmula canônica: Saques - Depósitos (fluxo de caixa puro, convertido para moeda do projeto)
   const lucroRealizado = totalSaques - totalDepositos;
 
   return {
