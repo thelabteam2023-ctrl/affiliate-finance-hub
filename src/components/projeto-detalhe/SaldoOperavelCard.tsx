@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Wallet, ChevronDown, AlertTriangle, RefreshCw, Gift, Search, X } from "lucide-react";
+import { Wallet, ChevronDown, AlertTriangle, RefreshCw, Gift, Search, X, Clock } from "lucide-react";
 import { useSaldoOperavel } from "@/hooks/useSaldoOperavel";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { useCotacoes } from "@/hooks/useCotacoes";
