@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Wallet, ChevronDown, AlertTriangle, RefreshCw, Gift, Search, X } from "lucide-react";
+import { Wallet, ChevronDown, AlertTriangle, RefreshCw, Gift, Search, X, Clock } from "lucide-react";
 import { useSaldoOperavel } from "@/hooks/useSaldoOperavel";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { useCotacoes } from "@/hooks/useCotacoes";
@@ -194,6 +194,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
   const hasFreebet = saldoFreebet > 0;
   const hasBonus = saldoBonus > 0;
   const casasComRollover = casasComSaldo.filter(c => c.hasRollover).length;
+  const casasAguardandoSaque = casasComSaldo.filter(c => c.aguardandoSaque).length;
 
   // Inline trigger for compact variant
   const compactTrigger = (
@@ -369,7 +370,12 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
           {filteredCasas.map((casa) => (
             <div 
               key={casa.id} 
-              className="p-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
+              className={cn(
+                "p-2 rounded-lg transition-colors",
+                casa.aguardandoSaque 
+                  ? "bg-orange-500/10 border border-orange-500/20 hover:bg-orange-500/15" 
+                  : "bg-muted/30 hover:bg-muted/50"
+              )}
             >
               <div className="flex items-center justify-between gap-1.5 min-w-0">
                 <div className="flex items-center gap-1 min-w-0 flex-1">
@@ -383,6 +389,24 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
                     <span className="text-[10px] text-primary/80 truncate flex-shrink-0">
                       {casa.parceiroPrimeiroNome}
                     </span>
+                  )}
+                  {casa.aguardandoSaque && (
+                    <TooltipProvider delayDuration={0}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Badge 
+                            variant="outline" 
+                            className="text-[8px] px-1.5 py-0 bg-orange-500/15 border-orange-500/30 text-orange-400 font-medium leading-tight gap-0.5 flex-shrink-0"
+                          >
+                            <Clock className="h-2.5 w-2.5" />
+                            Saque
+                          </Badge>
+                        </TooltipTrigger>
+                        <TooltipContent className="z-[10000]">
+                          <p className="text-xs">Aguardando processamento de saque</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   )}
                 </div>
                 <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -427,6 +451,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
       <p className="text-xs text-muted-foreground pt-1.5 border-t border-border">
         {casasComSaldo.length} casa{casasComSaldo.length !== 1 ? 's' : ''} com saldo
         {casasComRollover > 0 && ` • ${casasComRollover} com rollover`}
+        {casasAguardandoSaque > 0 && ` • ${casasAguardandoSaque} em saque`}
       </p>
     </div>
   );

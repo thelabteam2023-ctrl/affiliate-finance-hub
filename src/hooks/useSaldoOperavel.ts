@@ -81,6 +81,28 @@ export function useSaldoOperavel(projetoId: string) {
     refetchOnWindowFocus: false,
   });
 
+  // Query para buscar status de saque das bookmakers do projeto
+  const { data: statusMap } = useQuery({
+    queryKey: ["bookmaker-status-saque", projetoId, bookmakers.map(b => b.id).join(",")],
+    queryFn: async () => {
+      const ids = bookmakers.map(b => b.id);
+      if (!ids.length) return new Map<string, boolean>();
+      
+      const { data } = await supabase
+        .from("bookmakers")
+        .select("id, status, aguardando_saque_at")
+        .in("id", ids);
+      
+      const map = new Map<string, boolean>();
+      (data || []).forEach(bk => {
+        map.set(bk.id, bk.status === "aguardando_saque" || bk.status === "AGUARDANDO_SAQUE" || !!bk.aguardando_saque_at);
+      });
+      return map;
+    },
+    enabled: bookmakers.length > 0,
+    staleTime: 5000,
+  });
+
   // Query separada para rollover por casa (individual)
   const { data: rolloverData } = useQuery({
     queryKey: ["rollover-por-casa", projetoId],
@@ -213,11 +235,13 @@ export function useSaldoOperavel(projetoId: string) {
           rolloverProgress: rolloverInfo?.progress || 0,
           rolloverTarget: rolloverInfo?.target || 0,
           rolloverPercentual: rolloverInfo?.percentual || 0,
+          // Status de saque
+          aguardandoSaque: statusMap?.get(bk.id) || false,
         };
       })
       .filter((casa) => casa.saldoOperavel > 0 || casa.saldoEmAposta > 0)
       .sort((a, b) => b.saldoOperavel - a.saldoOperavel);
-  }, [bookmakers, convertToConsolidationOficial, rolloverPorCasa]);
+  }, [bookmakers, convertToConsolidationOficial, rolloverPorCasa, statusMap]);
 
   return {
     // Valor principal do KPI
