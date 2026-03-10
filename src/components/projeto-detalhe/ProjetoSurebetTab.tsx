@@ -250,26 +250,34 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
   // dateRange derivado dos filtros locais
   const dateRange = tabFilters.dateRange;
 
-  // Ciclo ativo para comparativo de meta diária
-  const { data: cicloAtivo } = useQuery({
-    queryKey: ["ciclo-ativo-meta", projetoId],
+  // Todos os ciclos do projeto para matching dinâmico com o filtro de período
+  const { data: todosCiclos = [] } = useQuery({
+    queryKey: ["projeto-ciclos-meta", projetoId],
     queryFn: async () => {
-      const hoje = new Date().toISOString().split("T")[0];
       const { data } = await supabase
         .from("projeto_ciclos")
-        .select("id, meta_volume, data_inicio, data_fim_prevista, metrica_acumuladora, tipo_gatilho")
+        .select("id, meta_volume, data_inicio, data_fim_prevista, metrica_acumuladora, tipo_gatilho, numero_ciclo")
         .eq("projeto_id", projetoId)
-        .eq("status", "EM_ANDAMENTO")
-        .lte("data_inicio", hoje)
-        .gte("data_fim_prevista", hoje)
-        .order("numero_ciclo", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      return data;
+        .in("status", ["EM_ANDAMENTO", "FECHADO"])
+        .order("numero_ciclo", { ascending: false });
+      return data || [];
     },
     staleTime: PERIOD_STALE_TIME,
     gcTime: PERIOD_GC_TIME,
   });
+
+  // Encontrar o ciclo que cobre o período filtrado (dateRange)
+  const cicloAtivo = useMemo(() => {
+    if (!dateRange || todosCiclos.length === 0) return null;
+    const filterStart = dateRange.start;
+    const filterEnd = dateRange.end;
+    // Priorizar ciclo que contém o meio do período filtrado
+    const filterMid = new Date((filterStart.getTime() + filterEnd.getTime()) / 2);
+    const midStr = filterMid.toISOString().split("T")[0];
+    return todosCiclos.find(c => {
+      return c.data_inicio <= midStr && c.data_fim_prevista >= midStr;
+    }) || null;
+  }, [todosCiclos, dateRange]);
 
   // React Query para surebets - com cache e transição suave
   const surebetsQueryKey = useMemo(() => [
