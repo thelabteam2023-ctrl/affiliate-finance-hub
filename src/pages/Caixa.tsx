@@ -38,7 +38,7 @@ import { subDays, startOfDay, endOfDay, format } from "date-fns";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
-import { parseLocalDateTime } from "@/utils/dateUtils";
+import { parseLocalDateTime, extractCivilDateKey } from "@/utils/dateUtils";
 
 interface LocationState {
   openDialog?: boolean;
