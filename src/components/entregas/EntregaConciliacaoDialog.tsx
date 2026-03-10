@@ -238,7 +238,7 @@ export function EntregaConciliacaoDialog({
             tipo_pagamento: "COMISSAO",
             valor: valorPagamento,
             moeda: "BRL",
-            data_pagamento: new Date().toISOString().split("T")[0],
+            data_pagamento: getTodayCivilDate(),
             descricao: `Pagamento referente ao período #${entrega.numero_entrega}`,
             status: "CONFIRMADO",
             cash_ledger_id: cashLedgerId,

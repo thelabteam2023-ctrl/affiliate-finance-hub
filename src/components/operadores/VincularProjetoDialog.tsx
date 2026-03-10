@@ -93,7 +93,7 @@ export function VincularProjetoDialog({
       setFormData({
         projeto_id: "",
         funcao: "",
-        data_entrada: new Date().toISOString().split("T")[0],
+        data_entrada: getTodayCivilDate(),
         frequencia_conciliacao: "MENSAL",
         resumo_acordo: "",
         modelo_pagamento: "FIXO_MENSAL",
