@@ -333,7 +333,7 @@ export function useBookmakerAnalise({ projetoId, dataInicio, dataFim }: UseBookm
       const saquesQuery = supabase
         .from("cash_ledger")
         .select("origem_bookmaker_id, valor")
-        .eq("tipo_transacao", "SAQUE")
+        .in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])
         .eq("status", "CONFIRMADO")
         .in("origem_bookmaker_id", bookmakerIds);
 
