@@ -717,23 +717,6 @@ export default function GestaoParceiros() {
     });
   }, [parceiros, roiData, parceriasData]);
 
-  if (loading) {
-    return (
-      <div className="h-full flex items-center justify-center">
-        <div className="text-muted-foreground">Carregando...</div>
-      </div>
-    );
-  }
-
-  /*
-   * ARQUITETURA CONTAINER-FIRST
-   * 
-   * PageRoot (h-full = 100% da viewport disponível)
-   * ├─ PageHeader (shrink-0 = altura fixa)
-   * └─ PageBody (flex-1 = preenche espaço restante)
-   *     ├─ SidebarParceiros (w-fixo, scroll próprio)
-   *     └─ MainPanel (flex-1, organiza header + tabs + viewport)
-   */
   // Inject title into global TopBar
   useEffect(() => {
     setTopBarContent(
@@ -746,6 +729,23 @@ export default function GestaoParceiros() {
     );
     return () => setTopBarContent(null);
   }, [setTopBarContent]);
+
+  if (loading) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="text-muted-foreground">Carregando...</div>
+      </div>
+    );
+  }
+
+  /*
+   * ARQUITETURA CONTAINER-FIRST
+   * 
+   * PageRoot (h-full = 100% da viewport disponível)
+   * └─ PageBody (flex-1 = preenche espaço restante)
+   *     ├─ SidebarParceiros (w-fixo, scroll próprio)
+   *     └─ MainPanel (flex-1, organiza header + tabs + viewport)
+   */
 
   return (
     <TooltipProvider>
