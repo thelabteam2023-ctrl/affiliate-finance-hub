@@ -283,7 +283,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
               <TooltipTrigger asChild>
                 <div className="flex items-center justify-between px-3 py-2 bg-muted/20 cursor-help">
                   <span className="text-muted-foreground">Saldo Total</span>
-                  <span className="font-semibold">{formatCurrency(Math.max(0, saldoReal - saldoEmAposta))}</span>
+                  <span className="font-semibold">{formatCurrency(Math.max(0, saldoReal))}</span>
                 </div>
               </TooltipTrigger>
               <TooltipContent side="left" className="z-[10000] p-0 overflow-hidden rounded-lg border border-border/50 bg-background shadow-xl min-w-[220px]">
