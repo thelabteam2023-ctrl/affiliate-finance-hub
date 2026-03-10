@@ -259,7 +259,7 @@ export function EntregaConciliacaoDialog({
           conciliado: true,
           pagamento_realizado: registrarPagamento && valorPagamento > 0,
           data_conciliacao: new Date().toISOString(),
-          data_fim_real: new Date().toISOString().split("T")[0],
+          data_fim_real: getTodayCivilDate(),
           status: "CONCLUIDA",
         })
         .eq("id", entrega.id);
