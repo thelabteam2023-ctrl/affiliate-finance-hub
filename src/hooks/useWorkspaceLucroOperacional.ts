@@ -35,6 +35,7 @@ interface UseWorkspaceLucroOperacionalProps {
   dataInicio?: string | null;
   dataFim?: string | null;
   cotacaoUSD?: number;
+  cotacaoEUR?: number;
 }
 
 interface UseWorkspaceLucroOperacionalReturn {
