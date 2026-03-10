@@ -66,12 +66,18 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 
 const REASON_LABELS: Record<FinalizeReason, { label: string; icon: React.ElementType; color: string }> = {
   rollover_completed: { label: "Rollover Concluído (Saque)", icon: CheckCircle2, color: "text-emerald-400 bg-emerald-500/20 border-emerald-500/30" },
@@ -96,8 +102,21 @@ function FinalizedBonusHistory({
   const [editingBonus, setEditingBonus] = useState<ProjectBonus | null>(null);
   const [filterParceiro, setFilterParceiro] = useState<string>("all");
   const [filterCasa, setFilterCasa] = useState<string>("all");
+  const [parceiroSearch, setParceiroSearch] = useState("");
+  const [casaSearch, setCasaSearch] = useState("");
+  const [parceiroOpen, setParceiroOpen] = useState(false);
+  const [casaOpen, setCasaOpen] = useState(false);
   
   const finalizedBonuses = bonuses.filter(b => b.status === 'finalized');
+
+  // Helper: "NOME SOBRENOME" -> "Nome Sobrenome" (primeiro e último)
+  const shortName = (fullName: string) => {
+    const parts = fullName.trim().split(/\s+/);
+    if (parts.length <= 2) return parts.map(p => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()).join(" ");
+    const first = parts[0];
+    const last = parts[parts.length - 1];
+    return [first, last].map(p => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()).join(" ");
+  };
 
   // Extract unique parceiros and casas for filters
   const parceiros = useMemo(() => {
@@ -271,32 +290,74 @@ function FinalizedBonusHistory({
             {/* Filtros */}
             <div className="flex items-center gap-2 mb-3">
               {parceiros.length > 0 && (
-                <Select value={filterParceiro} onValueChange={setFilterParceiro}>
-                  <SelectTrigger className="w-[180px] h-8 text-xs">
-                    <User className="h-3 w-3 mr-1.5 text-muted-foreground" />
-                    <SelectValue placeholder="Parceiro" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos os parceiros</SelectItem>
-                    {parceiros.map(p => (
-                      <SelectItem key={p} value={p}>{p}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Popover open={parceiroOpen} onOpenChange={setParceiroOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 w-[180px] justify-start">
+                      <User className="h-3 w-3 text-muted-foreground" />
+                      <span className="truncate">
+                        {filterParceiro === "all" ? "Parceiro" : shortName(filterParceiro)}
+                      </span>
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-56 p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Buscar parceiro..." />
+                      <CommandList>
+                        <CommandEmpty>Nenhum parceiro encontrado.</CommandEmpty>
+                        <CommandGroup>
+                          <CommandItem
+                            onSelect={() => { setFilterParceiro("all"); setParceiroOpen(false); }}
+                          >
+                            Todos os parceiros
+                          </CommandItem>
+                          {parceiros.map(p => (
+                            <CommandItem
+                              key={p}
+                              onSelect={() => { setFilterParceiro(p); setParceiroOpen(false); }}
+                            >
+                              {shortName(p)}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               )}
               {casas.length > 1 && (
-                <Select value={filterCasa} onValueChange={setFilterCasa}>
-                  <SelectTrigger className="w-[180px] h-8 text-xs">
-                    <Building2 className="h-3 w-3 mr-1.5 text-muted-foreground" />
-                    <SelectValue placeholder="Casa" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas as casas</SelectItem>
-                    {casas.map(c => (
-                      <SelectItem key={c} value={c}>{c}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Popover open={casaOpen} onOpenChange={setCasaOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 w-[180px] justify-start">
+                      <Building2 className="h-3 w-3 text-muted-foreground" />
+                      <span className="truncate">
+                        {filterCasa === "all" ? "Casa" : filterCasa}
+                      </span>
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-56 p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Buscar casa..." />
+                      <CommandList>
+                        <CommandEmpty>Nenhuma casa encontrada.</CommandEmpty>
+                        <CommandGroup>
+                          <CommandItem
+                            onSelect={() => { setFilterCasa("all"); setCasaOpen(false); }}
+                          >
+                            Todas as casas
+                          </CommandItem>
+                          {casas.map(c => (
+                            <CommandItem
+                              key={c}
+                              onSelect={() => { setFilterCasa(c); setCasaOpen(false); }}
+                            >
+                              {c}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               )}
               {(filterParceiro !== "all" || filterCasa !== "all") && (
                 <Badge variant="outline" className="text-xs text-muted-foreground">
