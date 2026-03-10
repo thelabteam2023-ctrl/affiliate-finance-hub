@@ -336,7 +336,9 @@ export default function GestaoProjetos() {
       // Agregar Lucro Realizado por projeto: Saques - Depósitos (fluxo de caixa)
       // COM conversão de moeda para paridade com Indicadores Financeiros
       const convertToConsolidation = (valor: number, moeda: string) => {
-        if (moeda === 'USD') return valor * USD_TO_BRL_DISPLAY;
+        const m = (moeda || 'BRL').toUpperCase();
+        if (m === 'USD' || m === 'USDT' || m === 'USDC') return valor * USD_TO_BRL_DISPLAY;
+        if (cotacoesExtra[m]) return valor * cotacoesExtra[m];
         return valor;
       };
       
