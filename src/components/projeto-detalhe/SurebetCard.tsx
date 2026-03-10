@@ -275,7 +275,7 @@ function PernaItem({
         <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0 overflow-hidden">
           {/* Logo */}
           <div className="shrink-0">
-            <BookmakerLogo nome={perna.bookmaker_nome} getLogoUrl={getLogoUrl} />
+            <SurebetBookmakerLogo nome={perna.bookmaker_nome} getLogoUrl={getLogoUrl} />
           </div>
           
           {/* Nome da casa + vínculo abreviado - com tooltip */}
