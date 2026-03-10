@@ -561,7 +561,7 @@ export function FinanceiroTab() {
           parceiro_id: parceria.parceiro_id,
           indicador_id: indicadorId,
           descricao: `Comissão dispensada: parceria não efetivada`,
-          data_movimentacao: new Date().toISOString().split("T")[0],
+          data_movimentacao: getTodayCivilDate(),
         });
       }
 

@@ -271,7 +271,7 @@ export function EntregaConciliacaoDialog({
         await supabase
           .from("operador_projetos")
           .update({
-            ultima_conciliacao: new Date().toISOString().split("T")[0],
+            ultima_conciliacao: getTodayCivilDate(),
           })
           .eq("id", entrega.operador_projeto_id);
       }
