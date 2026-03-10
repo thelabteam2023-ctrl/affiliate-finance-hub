@@ -14,7 +14,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { getOperationalDateRangeForQuery } from "@/utils/dateUtils";
-import { fetchProjetosLucroOperacionalKpi } from "@/services/fetchProjetosLucroOperacionalKpi";
+import { fetchProjetosLucroOperacionalKpi, derivarCotacoesFromConvertFn } from "@/services/fetchProjetosLucroOperacionalKpi";
 import { parseISO } from "date-fns";
 
 /** Função de conversão de moeda (valor, moedaOrigem) => valorConvertido */
