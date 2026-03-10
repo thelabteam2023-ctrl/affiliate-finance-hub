@@ -373,7 +373,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
           />
           {hasExtras && (
             <p className="text-[9px] text-muted-foreground/70 mt-0.5">
-              Saques − (Depósitos + Créditos Extras)
+              Saques − Depósitos
             </p>
           )}
         </div>
