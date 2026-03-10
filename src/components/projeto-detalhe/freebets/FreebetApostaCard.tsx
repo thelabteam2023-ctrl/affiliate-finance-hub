@@ -2,6 +2,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
 import { Gift, Target, TrendingUp, Shield, CheckCircle2, BarChart3, Layers } from "lucide-react";
+import { BookmakerLogo } from "@/components/ui/bookmaker-logo";
 import { ApostaOperacionalFreebet } from "./types";
 import { ResultadoPill } from "../ResultadoPill";
 import { parseLocalDateTime } from "@/utils/dateUtils";
@@ -232,18 +233,7 @@ export function FreebetApostaCard({
               )}
               
               {/* Logo */}
-              {aposta.logo_url ? (
-                <img 
-                  src={aposta.logo_url} 
-                  alt={aposta.bookmaker_nome || ''} 
-                  className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg object-contain logo-blend p-1 shrink-0"
-                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                />
-              ) : (
-                <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-muted/30 flex items-center justify-center shrink-0">
-                  <Target className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
-                </div>
-              )}
+              <BookmakerLogo logoUrl={aposta.logo_url} alt={aposta.bookmaker_nome || ''} />
               
               {/* Nome da casa + Vínculo abreviado */}
               <span className="text-xs sm:text-sm text-muted-foreground truncate flex-1 min-w-0 uppercase">
@@ -376,18 +366,7 @@ export function FreebetApostaCard({
             )}
             
             {/* Logo */}
-            {aposta.logo_url ? (
-              <img 
-                src={aposta.logo_url} 
-                alt={aposta.bookmaker_nome || ''} 
-                className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg object-contain logo-blend p-1 shrink-0"
-                onError={(e) => { e.currentTarget.style.display = 'none'; }}
-              />
-            ) : (
-              <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-muted/30 flex items-center justify-center shrink-0">
-                <Target className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
-              </div>
-            )}
+            <BookmakerLogo logoUrl={aposta.logo_url} alt={aposta.bookmaker_nome || ''} />
             
             {/* Nome da casa + Vínculo abreviado */}
             <span className="text-xs sm:text-sm text-muted-foreground truncate flex-1 min-w-0 uppercase">

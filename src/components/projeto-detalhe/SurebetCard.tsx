@@ -147,7 +147,7 @@ function ResultadoBadge({ resultado }: { resultado: string | null | undefined })
 const LOGO_SIZE = "h-10 w-10";
 
 // Componente helper para exibir logo da casa com tamanho padronizado
-function BookmakerLogo({ 
+function SurebetBookmakerLogo({ 
   nome, 
   getLogoUrl 
 }: { 
@@ -155,14 +155,15 @@ function BookmakerLogo({
   getLogoUrl: (name: string) => string | null;
 }) {
   const logoUrl = getLogoUrl(nome);
+  const [hasError, setHasError] = useState(false);
   
-  if (logoUrl) {
+  if (logoUrl && !hasError) {
     return (
       <img 
         src={logoUrl} 
         alt={nome} 
         className={cn(LOGO_SIZE, "rounded-lg object-contain logo-blend p-1")}
-        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+        onError={() => setHasError(true)}
       />
     );
   }
@@ -274,7 +275,7 @@ function PernaItem({
         <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0 overflow-hidden">
           {/* Logo */}
           <div className="shrink-0">
-            <BookmakerLogo nome={perna.bookmaker_nome} getLogoUrl={getLogoUrl} />
+            <SurebetBookmakerLogo nome={perna.bookmaker_nome} getLogoUrl={getLogoUrl} />
           </div>
           
           {/* Nome da casa + vínculo abreviado - com tooltip */}
@@ -392,7 +393,7 @@ function PernaItem({
             <div key={idx} className="flex items-center gap-3 text-xs">
               {/* Logo menor */}
               <div className="h-8 w-8 shrink-0">
-                <BookmakerLogo nome={entry.bookmaker_nome} getLogoUrl={getLogoUrl} />
+                <SurebetBookmakerLogo nome={entry.bookmaker_nome} getLogoUrl={getLogoUrl} />
               </div>
               
               {/* Nome + linha opcional - com vínculo abreviado */}

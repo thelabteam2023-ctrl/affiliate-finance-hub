@@ -3,6 +3,7 @@ import { Badge, SelectionBadge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Zap, TrendingUp, Target, ArrowLeftRight, Coins, Gift, CheckCircle2, Clock, Layers, X, CircleSlash, Loader2, ChevronDown, ChevronUp, Building2 } from "lucide-react";
+import { BookmakerLogo } from "@/components/ui/bookmaker-logo";
 import { ApostaPernasResumo, ApostaPernasInline, getModeloOperacao, Perna } from "./ApostaPernasResumo";
 import { cn, getFirstLastName } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -494,18 +495,7 @@ export function ApostaCard({
               )}
               
               {/* Logo */}
-              {aposta.logo_url ? (
-                <img 
-                  src={aposta.logo_url} 
-                  alt={bookmakerDisplay || ''} 
-                  className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg object-contain logo-blend p-1 shrink-0"
-                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                />
-              ) : (
-                <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-muted/30 flex items-center justify-center shrink-0">
-                  <Target className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
-                </div>
-              )}
+              <BookmakerLogo logoUrl={aposta.logo_url} alt={bookmakerDisplay || ''} />
               
               {/* Nome da casa + Parceiro - com tooltip */}
               <TooltipProvider delayDuration={300}>
@@ -787,18 +777,7 @@ export function ApostaCard({
               )}
               
               {/* Logo da bookmaker */}
-              {aposta.logo_url ? (
-                <img 
-                  src={aposta.logo_url} 
-                  alt={bookmakerDisplayCard || ''} 
-                  className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg object-contain logo-blend p-1 shrink-0"
-                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                />
-              ) : (
-                <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-muted/30 flex items-center justify-center shrink-0">
-                  <Target className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
-                </div>
-              )}
+              <BookmakerLogo logoUrl={aposta.logo_url} alt={bookmakerDisplayCard || ''} />
               
               {/* Nome da casa + Vínculo/Parceiro - com tooltip */}
               <TooltipProvider delayDuration={300}>
@@ -858,13 +837,7 @@ export function ApostaCard({
                 className="w-full flex items-center gap-2 hover:bg-muted/30 rounded-md py-1.5 px-1 transition-colors text-xs text-muted-foreground mb-2"
                 onClick={(e) => e.stopPropagation()}
               >
-                {aposta.logo_url ? (
-                  <img src={aposta.logo_url} alt="" className="h-7 w-7 rounded-lg object-contain logo-blend shrink-0" />
-                ) : (
-                  <div className="h-7 w-7 rounded-lg bg-muted/30 flex items-center justify-center shrink-0">
-                    <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
-                  </div>
-                )}
+                <BookmakerLogo logoUrl={aposta.logo_url} size="h-7 w-7" iconSize="h-3.5 w-3.5" />
                 <span className="truncate flex-1 uppercase text-left">
                   {aposta.bookmaker_nome}{aposta.parceiro_nome ? ` - ${getFirstLastName(aposta.parceiro_nome)}` : ''}
                 </span>
@@ -881,13 +854,7 @@ export function ApostaCard({
               <div className="mt-1 space-y-1.5 ml-4 pl-4 border-l-2 border-primary/20 mb-3">
                 {aposta.sub_entries!.map((entry, idx) => (
                   <div key={idx} className="flex items-center gap-2 text-xs text-muted-foreground py-0.5">
-                    {entry.logo_url ? (
-                      <img src={entry.logo_url} alt="" className="h-6 w-6 rounded object-contain logo-blend shrink-0" />
-                    ) : (
-                      <div className="h-6 w-6 rounded bg-muted/30 flex items-center justify-center shrink-0">
-                        <Building2 className="h-3 w-3 text-muted-foreground" />
-                      </div>
-                    )}
+                    <BookmakerLogo logoUrl={entry.logo_url} size="h-6 w-6" iconSize="h-3 w-3" />
                     <span className="truncate flex-1 uppercase">
                       {entry.bookmaker_nome}{entry.parceiro_nome ? ` - ${getFirstLastName(entry.parceiro_nome)}` : ''}
                     </span>
