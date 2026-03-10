@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { useTabWorkspace } from "@/hooks/useTabWorkspace";
 import { useWorkspaceChangeListener } from "@/hooks/useWorkspaceCacheClear";
 import { Plus, Search, LayoutGrid, List, ChartBar, User } from "lucide-react";
+import { useTopBar } from "@/contexts/TopBarContext";
 import { useActionAccess } from "@/hooks/useModuleAccess";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
