@@ -309,11 +309,20 @@ export async function fetchProjetosLucroOperacionalKpi({
   });
 
   // 7) Extras canônicos (ajuste_saldo + resultado_cambial)
-  // NOTA: Extras não suportam filtro de data nativo, são agregados all-time por projeto.
-  // Para filtros de período, os extras são incluídos integralmente (são eventos pontuais).
+  // Quando há filtro de data, filtra os extras pela data civil (YYYY-MM-DD) antes de agregar.
   const extrasByProjeto = await Promise.all(
     projetoIds.map(async (projetoId) => {
-      const extras = await fetchProjetoExtras(projetoId);
+      let extras = await fetchProjetoExtras(projetoId);
+      
+      // Filtrar extras por período quando há filtro de data ativo
+      if (dataInicio || dataFim) {
+        extras = extras.filter(e => {
+          if (dataInicio && e.data < dataInicio) return false;
+          if (dataFim && e.data > dataFim) return false;
+          return true;
+        });
+      }
+      
       const agrupados = agruparExtrasPorTipo(extras, convertToConsolidation, "BRL");
       return { projetoId, agrupados };
     })
