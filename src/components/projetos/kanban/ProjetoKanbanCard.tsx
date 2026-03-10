@@ -46,6 +46,7 @@ interface Projeto {
   perdas_confirmadas?: number;
   lucro_realizado?: number;
   display_order?: number;
+  moeda_consolidacao?: string;
 }
 
 interface ProjetoKanbanCardProps {
@@ -97,6 +98,11 @@ const formatUSD = (value: number) => {
   return `$ ${Math.abs(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
+const formatByMoeda = (value: number, moeda: string) => {
+  const m = (moeda || 'BRL').toUpperCase();
+  return m === 'USD' ? formatUSD(value) : formatBRL(value);
+};
+
 export function ProjetoKanbanCard({
   projeto,
   isFavorite,
@@ -117,6 +123,7 @@ export function ProjetoKanbanCard({
   const lucroUSD = projeto.lucro_by_moeda?.USD || 0;
   const lucroOperacional = projeto.lucro_operacional || 0;
   const lucroRealizado = projeto.lucro_realizado || 0;
+  const moedaConsolidacao = projeto.moeda_consolidacao || 'BRL';
 
   const lucroOpDisplay = getFinancialDisplay(lucroOperacional);
   const lucroRealizadoDisplay = getFinancialDisplay(lucroRealizado);
@@ -238,7 +245,7 @@ export function ProjetoKanbanCard({
                 <span>Lucro Operacional</span>
               </div>
               <span className={`text-lg font-semibold ${lucroOpDisplay?.colorClass}`}>
-                {lucroOpDisplay?.isPositive ? '+' : ''}{formatBRL(lucroOperacional)}
+                {lucroOpDisplay?.isPositive ? '+' : '-'}{formatByMoeda(lucroOperacional, moedaConsolidacao)}
               </span>
               
               {/* Breakdown por moeda */}
@@ -283,7 +290,7 @@ export function ProjetoKanbanCard({
                   <div className="flex items-center gap-1.5">
                     <span className="text-xs text-muted-foreground">Realizado:</span>
                     <span className={`text-sm font-medium ${lucroRealizadoDisplay?.colorClass}`}>
-                      {lucroRealizado > 0 ? '+' : ''}{formatBRL(lucroRealizado)}
+                      {lucroRealizado > 0 ? '+' : ''}{formatByMoeda(lucroRealizado, moedaConsolidacao)}
                     </span>
                   </div>
                   <Info className="h-3 w-3 text-muted-foreground/50" />
