@@ -75,7 +75,7 @@ import { ModuleActivationDialog } from "@/components/projeto-detalhe/ModuleActiv
 // LimitationSection now rendered inside ProjetoIncidentesTab
 import { SetDefaultTabButton } from "@/components/projeto-detalhe/SetDefaultTabButton";
 import { useActionAccess } from "@/hooks/useModuleAccess";
-import { getOperationalDateRangeForQuery } from "@/utils/dateUtils";
+import { getOperationalDateRangeForQuery, getTodayCivilDate } from "@/utils/dateUtils";
 // REMOVIDO: OperationalFiltersProvider - filtros agora são isolados por aba
 
 // Icon map for dynamic modules
