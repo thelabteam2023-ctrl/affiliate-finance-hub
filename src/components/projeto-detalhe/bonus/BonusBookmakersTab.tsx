@@ -268,6 +268,42 @@ function FinalizedBonusHistory({
         </CollapsibleTrigger>
         <CollapsibleContent>
           <CardContent className="pt-0">
+            {/* Filtros */}
+            <div className="flex items-center gap-2 mb-3">
+              {parceiros.length > 0 && (
+                <Select value={filterParceiro} onValueChange={setFilterParceiro}>
+                  <SelectTrigger className="w-[180px] h-8 text-xs">
+                    <User className="h-3 w-3 mr-1.5 text-muted-foreground" />
+                    <SelectValue placeholder="Parceiro" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os parceiros</SelectItem>
+                    {parceiros.map(p => (
+                      <SelectItem key={p} value={p}>{p}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              {casas.length > 1 && (
+                <Select value={filterCasa} onValueChange={setFilterCasa}>
+                  <SelectTrigger className="w-[180px] h-8 text-xs">
+                    <Building2 className="h-3 w-3 mr-1.5 text-muted-foreground" />
+                    <SelectValue placeholder="Casa" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas as casas</SelectItem>
+                    {casas.map(c => (
+                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              {(filterParceiro !== "all" || filterCasa !== "all") && (
+                <Badge variant="outline" className="text-xs text-muted-foreground">
+                  {entries.length} de {totalEntries}
+                </Badge>
+              )}
+            </div>
             <ScrollArea className="h-[400px]">
               <div className="space-y-2 pr-4">
                 {entries.map(entry => {
