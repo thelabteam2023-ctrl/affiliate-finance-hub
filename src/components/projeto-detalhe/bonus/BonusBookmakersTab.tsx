@@ -66,12 +66,18 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 
 const REASON_LABELS: Record<FinalizeReason, { label: string; icon: React.ElementType; color: string }> = {
   rollover_completed: { label: "Rollover Concluído (Saque)", icon: CheckCircle2, color: "text-emerald-400 bg-emerald-500/20 border-emerald-500/30" },
