@@ -241,12 +241,19 @@ export async function calcularMetricasPeriodo({
       }))
     : [];
 
-  // Fórmula canônica
+  // Fórmula canônica operacional
   const lucroBruto = lucroApostas + lucroCashback + lucroGiros;
   const lucroLiquido = lucroBruto - perdasConfirmadas;
   const ticketMedio = qtdApostas > 0 ? volume / qtdApostas : 0;
   const roi = volume > 0 ? (lucroLiquido / volume) * 100 : 0;
   const lucroPorAposta = qtdApostas > 0 ? lucroLiquido / qtdApostas : 0;
+
+  // Lucro Realizado = Saques Confirmados - Depósitos Confirmados
+  const saques = saquesResult.data || [];
+  const depositos = depositosResult.data || [];
+  const totalSaques = saques.reduce((acc, s: any) => acc + Number(s.valor_confirmado ?? s.valor ?? 0), 0);
+  const totalDepositos = depositos.reduce((acc, d: any) => acc + Number(d.valor ?? 0), 0);
+  const lucroRealizado = totalSaques - totalDepositos;
 
   return {
     qtdApostas,
@@ -258,6 +265,7 @@ export async function calcularMetricasPeriodo({
     perdasConfirmadas,
     perdasDetalhes,
     lucroLiquido,
+    lucroRealizado,
     ticketMedio,
     roi,
     lucroPorAposta,
