@@ -1622,6 +1622,28 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
         workspaceId={workspaceId}
         onConcluido={invalidateVinculos}
       />
+
+      {/* Dialog Ajuste de Saldo */}
+      <AjusteSaldoDialog
+        open={ajusteSaldoDialogOpen}
+        onOpenChange={(open) => {
+          setAjusteSaldoDialogOpen(open);
+          if (!open) setVinculoParaAjuste(null);
+        }}
+        vinculo={vinculoParaAjuste ? {
+          id: vinculoParaAjuste.id,
+          nome: vinculoParaAjuste.nome,
+          parceiro_nome: vinculoParaAjuste.parceiro_nome,
+          saldo_atual: vinculoParaAjuste.saldo_real,
+          moeda: vinculoParaAjuste.moeda,
+        } : null}
+        projetoId={projetoId}
+        projetoNome={projetoNome}
+        workspaceId={workspaceId}
+        onAjustado={() => {
+          invalidateVinculos();
+        }}
+      />
     </Tabs>
   );
 }
