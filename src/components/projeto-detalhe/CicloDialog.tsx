@@ -153,8 +153,8 @@ export function CicloDialog({
       
       setFormData(prev => ({
         ...prev,
-        data_inicio: novaDataInicio.toISOString().split("T")[0],
-        data_fim_prevista: novaDataFim.toISOString().split("T")[0],
+        data_inicio: dateToCivilDateString(novaDataInicio),
+        data_fim_prevista: dateToCivilDateString(novaDataFim),
       }));
     } else {
       const { data: projeto } = await supabase
