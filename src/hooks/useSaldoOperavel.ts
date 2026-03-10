@@ -81,23 +81,21 @@ export function useSaldoOperavel(projetoId: string) {
     refetchOnWindowFocus: false,
   });
 
-  // Query para buscar status de saque das bookmakers do projeto
-  const { data: statusMap } = useQuery({
-    queryKey: ["bookmaker-status-saque", projetoId, bookmakers.map(b => b.id).join(",")],
+  // Query para buscar casas com saques pendentes de confirmação
+  const { data: casasComSaquePendente } = useQuery({
+    queryKey: ["bookmaker-saque-pendente", projetoId, bookmakers.map(b => b.id).join(",")],
     queryFn: async () => {
       const ids = bookmakers.map(b => b.id);
-      if (!ids.length) return new Map<string, boolean>();
+      if (!ids.length) return new Set<string>();
       
       const { data } = await supabase
-        .from("bookmakers")
-        .select("id, status, aguardando_saque_at")
-        .in("id", ids);
+        .from("cash_ledger")
+        .select("origem_bookmaker_id")
+        .in("origem_bookmaker_id", ids)
+        .eq("tipo_transacao", "SAQUE")
+        .eq("transit_status", "PENDING");
       
-      const map = new Map<string, boolean>();
-      (data || []).forEach(bk => {
-        map.set(bk.id, bk.status === "aguardando_saque" || bk.status === "AGUARDANDO_SAQUE" || !!bk.aguardando_saque_at);
-      });
-      return map;
+      return new Set((data || []).map(r => r.origem_bookmaker_id).filter(Boolean));
     },
     enabled: bookmakers.length > 0,
     staleTime: 5000,
@@ -236,12 +234,12 @@ export function useSaldoOperavel(projetoId: string) {
           rolloverTarget: rolloverInfo?.target || 0,
           rolloverPercentual: rolloverInfo?.percentual || 0,
           // Status de saque
-          aguardandoSaque: statusMap?.get(bk.id) || false,
+          aguardandoSaque: casasComSaquePendente?.has(bk.id) || false,
         };
       })
       .filter((casa) => casa.saldoOperavel > 0 || casa.saldoEmAposta > 0)
       .sort((a, b) => b.saldoOperavel - a.saldoOperavel);
-  }, [bookmakers, convertToConsolidationOficial, rolloverPorCasa, statusMap]);
+  }, [bookmakers, convertToConsolidationOficial, rolloverPorCasa, casasComSaquePendente]);
 
   return {
     // Valor principal do KPI
