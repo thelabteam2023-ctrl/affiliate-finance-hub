@@ -3,29 +3,18 @@
  * 
  * FONTE ÚNICA DE VERDADE para cálculos de lucro/volume/ROI de ciclos e períodos.
  * 
- * Toda aba, hook ou componente que precise calcular métricas financeiras
- * para um período (ciclo, mês, custom) DEVE usar esta função.
+ * ARQUITETURA: Este serviço DELEGA para os módulos canônicos existentes,
+ * aplicando apenas filtros de data. NÃO reimplementa lógica já existente.
  * 
- * PROIBIDO: Reimplementar esta lógica manualmente em qualquer componente.
- * 
- * Fórmula Canônica (PARIDADE com fetchProjetosLucroOperacionalKpi):
- *   LUCRO_OPERACIONAL = 
- *     Σ apostas_liquidadas (P&L consolidado)
- *     + Σ extras (cashback, giros, bônus, ajustes, FX, conciliações, promocionais)
- *     - Σ perdas_operacionais
- * 
- * Contagem de Apostas (PARIDADE com dashboard):
- *   - Apostas simples/múltiplas: 1 por registro
- *   - Arbitragem (Surebet): 1 por perna (apostas_pernas)
- * 
- * Campos de consolidação (hierarquia de fallback):
- *   Lucro: pl_consolidado ?? lucro_prejuizo_brl_referencia ?? lucro_prejuizo
- *   Volume: stake_consolidado ?? stake/stake_total
+ * - Lucro Operacional → fetchProjetosLucroOperacionalKpi (com dataInicio/dataFim)
+ * - Contagem + Volume  → mesma lógica do dashboard (apostas + pernas de arbitragem)
+ * - Lucro Realizado    → cash_ledger (saques - depósitos) com filtro de período
+ * - Perdas             → projeto_perdas com filtro de período
  */
 
 import { supabase } from "@/integrations/supabase/client";
 import { getOperationalDateRangeForQuery } from "@/utils/dateUtils";
-import { fetchProjetoExtras, agruparExtrasPorTipo } from "@/services/fetchProjetoExtras";
+import { fetchProjetosLucroOperacionalKpi } from "@/services/fetchProjetosLucroOperacionalKpi";
 import { parseISO } from "date-fns";
 
 /** Função de conversão de moeda (valor, moedaOrigem) => valorConvertido */
@@ -40,9 +29,9 @@ export interface MetricasPeriodo {
   volume: number;
   /** Lucro bruto de apostas liquidadas (consolidado) */
   lucroApostas: number;
-  /** Lucro de cashback recebido (sempre >= 0) */
+  /** Lucro de cashback recebido */
   lucroCashback: number;
-  /** Lucro de giros grátis confirmados (sempre >= 0) */
+  /** Lucro de giros grátis confirmados */
   lucroGiros: number;
   /** Lucro bruto total = apostas + cashback + giros */
   lucroBruto: number;
@@ -50,7 +39,7 @@ export interface MetricasPeriodo {
   perdasConfirmadas: number;
   /** Detalhes individuais das perdas */
   perdasDetalhes: PerdaDetalhe[];
-  /** Lucro líquido operacional = apostas + ALL extras (bônus, cashback, giros, ajustes, FX, conciliações) - perdas */
+  /** Lucro líquido operacional (delegado ao KPI canônico, com todos os extras) */
   lucroLiquido: number;
   /** Lucro realizado = Saques - Depósitos */
   lucroRealizado: number;
@@ -100,26 +89,50 @@ export async function calcularMetricasPeriodo({
   moedaConsolidacao = 'BRL',
 }: MetricasPeriodoInput): Promise<MetricasPeriodo> {
   const convert = convertToConsolidation || ((valor: number, _moeda: string) => valor);
+  
+  // Derivar cotacaoUSD da função de conversão (para delegar ao KPI)
+  const cotacaoUSD = convert(1, 'USD');
 
-  // Converter datas do ciclo para UTC usando timezone operacional
+  // Converter datas para UTC no timezone operacional
   const dataInicioParsed = parseISO(dataInicio);
   const dataFimParsed = parseISO(dataFim);
   const { startUTC, endUTC } = getOperationalDateRangeForQuery(dataInicioParsed, dataFimParsed);
 
-  // Buscar dados principais em paralelo
-  const [apostasResult, extrasResult, perdasResult, bookmakersResult, saquesResult, depositosResult] = await Promise.all([
-    // 1. Apostas com campos consolidados + moeda + forma_registro para contagem
+  // ═══════════════════════════════════════════════════════════════════
+  // BUSCAR TUDO EM PARALELO — delegando aos módulos canônicos
+  // ═══════════════════════════════════════════════════════════════════
+  const [
+    // 1. Lucro Operacional (DELEGADO ao KPI canônico com filtro de data)
+    lucroKpiResult,
+    // 2. Apostas (para contagem, volume e lucro bruto)
+    apostasResult,
+    // 3. Perdas (para detalhes na UI)
+    perdasResult,
+    // 4. Bookmakers (nomes para perdas)
+    bookmakersResult,
+    // 5. Saques no período
+    saquesResult,
+    // 6. Depósitos no período
+    depositosResult,
+  ] = await Promise.all([
+    // DELEGAÇÃO: Mesmo serviço usado pelo dashboard financeiro
+    fetchProjetosLucroOperacionalKpi({
+      projetoIds: [projetoId],
+      cotacaoUSD,
+      dataInicio,
+      dataFim,
+    }),
+
+    // Apostas: para contagem e volume (mesma query do dashboard ProjetoDetalhe)
     supabase
       .from("apostas_unificada")
       .select("id, lucro_prejuizo, pl_consolidado, lucro_prejuizo_brl_referencia, stake, stake_total, stake_consolidado, status, forma_registro, moeda_operacao, consolidation_currency")
       .eq("projeto_id", projetoId)
+      .is("cancelled_at", null)
       .gte("data_aposta", startUTC)
       .lte("data_aposta", endUTC),
-    
-    // 2. Extras canônicos (cashback, giros, bônus, ajustes, FX, conciliações, perdas)
-    fetchProjetoExtras(projetoId),
-    
-    // 3. Perdas (para detalhes na UI)
+
+    // Perdas (detalhes para UI)
     incluirDetalhePerdas
       ? supabase
           .from("projeto_perdas")
@@ -128,13 +141,12 @@ export async function calcularMetricasPeriodo({
           .gte("data_registro", startUTC)
           .lte("data_registro", endUTC)
       : Promise.resolve({ data: null, error: null }),
-    
-    // 4. Bookmakers (para nomes nas perdas)
+
     incluirDetalhePerdas
       ? supabase.from("bookmakers").select("id, nome")
       : Promise.resolve({ data: null, error: null }),
-    
-    // 5. Saques confirmados no período
+
+    // Saques confirmados no período
     supabase
       .from("cash_ledger")
       .select("valor, valor_confirmado, moeda")
@@ -143,8 +155,8 @@ export async function calcularMetricasPeriodo({
       .eq("projeto_id_snapshot", projetoId)
       .gte("data_transacao", startUTC)
       .lte("data_transacao", endUTC),
-    
-    // 6. Depósitos confirmados no período
+
+    // Depósitos confirmados no período
     supabase
       .from("cash_ledger")
       .select("valor, moeda")
@@ -158,12 +170,12 @@ export async function calcularMetricasPeriodo({
   if (apostasResult.error) console.error("[calcularMetricasPeriodo] Erro apostas:", apostasResult.error);
 
   const apostas = apostasResult.data || [];
-  const perdas = perdasResult.data || [];
   const bookmakerMap = new Map((bookmakersResult.data || []).map((b: any) => [b.id, b.nome]));
 
-  // ─── Contagem de Apostas (PARIDADE com dashboard) ─────────────────
-  // Apostas simples/múltiplas: 1 por registro
-  // Arbitragem (Surebet): contar pernas individuais
+  // ═══════════════════════════════════════════════════════════════════
+  // CONTAGEM DE APOSTAS (mesma lógica do dashboard ProjetoDetalhe.tsx)
+  // Simples/Múltiplas: 1 por registro | Arbitragem: 1 por perna
+  // ═══════════════════════════════════════════════════════════════════
   const arbitragemIds = apostas
     .filter(a => a.forma_registro === "ARBITRAGEM")
     .map(a => a.id);
@@ -179,61 +191,53 @@ export async function calcularMetricasPeriodo({
   }
   const qtdApostas = apostasNaoArbitragem + pernasCount;
 
-  // ─── Volume (consolidado) ─────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════════
+  // VOLUME (mesma lógica: stake_consolidado ou fallback com conversão)
+  // ═══════════════════════════════════════════════════════════════════
   const volume = apostas.reduce((acc, a: any) => {
-    if (a.stake_consolidado !== null && a.stake_consolidado !== undefined && a.consolidation_currency === moedaConsolidacao) {
+    if (a.stake_consolidado != null && a.consolidation_currency === moedaConsolidacao) {
       return acc + Number(a.stake_consolidado);
     }
-    let valorOriginal: number;
-    if (a.forma_registro === "ARBITRAGEM") {
-      valorOriginal = Number(a.stake_total || 0);
-    } else {
-      valorOriginal = Number(a.stake || 0);
-    }
-    const moedaOrigem = a.moeda_operacao || 'BRL';
-    return acc + convert(valorOriginal, moedaOrigem);
+    const valorOriginal = a.forma_registro === "ARBITRAGEM"
+      ? Number(a.stake_total || 0)
+      : Number(a.stake || 0);
+    return acc + convert(valorOriginal, a.moeda_operacao || 'BRL');
   }, 0);
 
-  // ─── Lucro de apostas liquidadas ──────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════════
+  // LUCRO OPERACIONAL (DELEGADO ao KPI — já inclui TODOS os extras)
+  // ═══════════════════════════════════════════════════════════════════
+  const lucroLiquido = lucroKpiResult[projetoId]?.consolidado || 0;
+
+  // Lucro bruto das apostas (para exibição separada)
   const lucroApostas = apostas
     .filter(a => a.status === "LIQUIDADA")
     .reduce((acc, a: any) => {
-      if (a.pl_consolidado !== null && a.pl_consolidado !== undefined && a.consolidation_currency === moedaConsolidacao) {
+      if (a.pl_consolidado != null && a.consolidation_currency === moedaConsolidacao) {
         return acc + Number(a.pl_consolidado);
       }
-      const valorOriginal = Number(a.lucro_prejuizo || 0);
-      const moedaOrigem = a.moeda_operacao || 'BRL';
-      return acc + convert(valorOriginal, moedaOrigem);
+      if (a.lucro_prejuizo_brl_referencia != null) {
+        return acc + Number(a.lucro_prejuizo_brl_referencia);
+      }
+      return acc + convert(Number(a.lucro_prejuizo || 0), a.moeda_operacao || 'BRL');
     }, 0);
 
-  // ─── Extras canônicos (com filtro de data do período) ─────────────
-  const dataInicioParsedForFilter = parseISO(dataInicio);
-  const dataFimParsedForFilter = parseISO(dataFim);
-  // Extend fim by 1 day for inclusive filtering
-  const dataFimExtended = new Date(dataFimParsedForFilter);
-  dataFimExtended.setDate(dataFimExtended.getDate() + 1);
+  // Cashback e giros (para exibição informativa — já inclusos no KPI)
+  const lucroCashback = 0; // Incluído no lucroLiquido via KPI
+  const lucroGiros = 0;    // Incluído no lucroLiquido via KPI
+  const lucroBruto = lucroApostas; // Apenas apostas, extras já no KPI
+  const creditosExtras = lucroLiquido - lucroApostas; // Diferença = todos os extras
 
-  const extrasAgrupados = agruparExtrasPorTipo(
-    extrasResult,
-    convert,
-    moedaConsolidacao,
-    { inicio: dataInicioParsedForFilter, fim: dataFimExtended }
-  );
+  // ═══════════════════════════════════════════════════════════════════
+  // PERDAS (detalhes para UI de ciclos)
+  // ═══════════════════════════════════════════════════════════════════
+  const perdas = perdasResult.data || [];
+  const perdasConfirmadas = perdas
+    .filter((p: any) => p.status === "CONFIRMADA")
+    .reduce((acc, p: any) => acc + (p.valor || 0), 0);
 
-  // Extract individual extras for the period
-  const lucroCashback = extrasAgrupados.cashback?.total || 0;
-  const lucroGiros = extrasAgrupados.giro_gratis?.total || 0;
-  const lucroBonus = extrasAgrupados.bonus?.total || 0;
-  const lucroPromocional = extrasAgrupados.promocional?.total || 0;
-  const lucroFreebet = extrasAgrupados.freebet?.total || 0;
-  const lucroAjusteSaldo = extrasAgrupados.ajuste_saldo?.total || 0;
-  const lucroResultadoCambial = extrasAgrupados.resultado_cambial?.total || 0;
-  const lucroConciliacao = extrasAgrupados.conciliacao?.total || 0;
-  const perdasOperacionais = Math.abs(extrasAgrupados.perda_operacional?.total || 0); // extras retorna negativo
-
-  // Detalhes das perdas (quando solicitado - via query direta, não extras)
   const perdasDetalhes: PerdaDetalhe[] = incluirDetalhePerdas
-    ? (perdas || []).map((p: any) => ({
+    ? perdas.map((p: any) => ({
         id: p.id,
         valor: p.valor,
         categoria: p.categoria,
@@ -245,40 +249,28 @@ export async function calcularMetricasPeriodo({
       }))
     : [];
 
-  // Perdas confirmadas (do extras, que já filtra por data e status)
-  const perdasConfirmadas = perdasOperacionais;
+  // ═══════════════════════════════════════════════════════════════════
+  // LUCRO REALIZADO (Saques - Depósitos, com conversão de moeda)
+  // ═══════════════════════════════════════════════════════════════════
+  const normalizeMoeda = (moeda: string) => ['USDT', 'USDC'].includes(moeda) ? 'USD' : moeda;
 
-  // ─── Fórmula Canônica Operacional (PARIDADE com dashboard) ────────
-  // Inclui TODOS os componentes: apostas + extras completos
-  const lucroBruto = lucroApostas + lucroCashback + lucroGiros;
-  const totalExtras = lucroBonus + lucroPromocional + lucroFreebet + lucroAjusteSaldo + lucroResultadoCambial + lucroConciliacao;
-  const lucroLiquido = lucroApostas + lucroCashback + lucroGiros + totalExtras + (extrasAgrupados.perda_operacional?.total || 0);
-  // Note: perda_operacional.total is already negative from fetchProjetoExtras
+  const totalSaques = (saquesResult.data || []).reduce((acc, s: any) => {
+    const valor = Number(s.valor_confirmado ?? s.valor ?? 0);
+    return acc + convert(valor, normalizeMoeda(s.moeda || 'BRL'));
+  }, 0);
 
+  const totalDepositos = (depositosResult.data || []).reduce((acc, d: any) => {
+    return acc + convert(Number(d.valor ?? 0), normalizeMoeda(d.moeda || 'BRL'));
+  }, 0);
+
+  const lucroRealizado = totalSaques - totalDepositos;
+
+  // ═══════════════════════════════════════════════════════════════════
+  // MÉTRICAS DERIVADAS
+  // ═══════════════════════════════════════════════════════════════════
   const ticketMedio = qtdApostas > 0 ? volume / qtdApostas : 0;
   const roi = volume > 0 ? (lucroLiquido / volume) * 100 : 0;
   const lucroPorAposta = qtdApostas > 0 ? lucroLiquido / qtdApostas : 0;
-
-  // ─── Lucro Realizado (Saques - Depósitos) ─────────────────────────
-  const saques = saquesResult.data || [];
-  const depositos = depositosResult.data || [];
-  
-  const totalSaques = saques.reduce((acc, s: any) => {
-    const valor = Number(s.valor_confirmado ?? s.valor ?? 0);
-    const moeda = s.moeda || 'BRL';
-    const moedaNormalizada = ['USDT', 'USDC'].includes(moeda) ? 'USD' : moeda;
-    return acc + convert(valor, moedaNormalizada);
-  }, 0);
-  
-  const totalDepositos = depositos.reduce((acc, d: any) => {
-    const valor = Number(d.valor ?? 0);
-    const moeda = d.moeda || 'BRL';
-    const moedaNormalizada = ['USDT', 'USDC'].includes(moeda) ? 'USD' : moeda;
-    return acc + convert(valor, moedaNormalizada);
-  }, 0);
-
-  const creditosExtras = lucroCashback + lucroGiros + lucroBonus + lucroPromocional + lucroFreebet;
-  const lucroRealizado = totalSaques - totalDepositos;
 
   return {
     qtdApostas,
