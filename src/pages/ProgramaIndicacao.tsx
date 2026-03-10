@@ -13,6 +13,7 @@ export default function ProgramaIndicacao() {
   const navigate = useNavigate();
   const location = useLocation();
   const [activeTab, setActiveTab] = useState("dashboard");
+  const { setContent: setTopBarContent } = useTopBar();
 
   useEffect(() => {
     checkAuth();
