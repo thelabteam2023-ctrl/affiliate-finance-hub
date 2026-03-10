@@ -895,7 +895,7 @@ export function ProjetoValueBetTab({
                           </div>
                         </div>
                       )}
-                      <FinancialMetricsPopover projetoId={projetoId} />
+                      <FinancialMetricsPopover projetoId={projetoId} dateRange={dateRange ? { from: dateRange.start.toISOString().split('T')[0], to: dateRange.end.toISOString().split('T')[0] } : null} />
                     </div>
                   </PopoverContent>
                 </Popover>

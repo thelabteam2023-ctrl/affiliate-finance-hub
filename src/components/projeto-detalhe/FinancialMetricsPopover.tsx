@@ -23,6 +23,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 
 interface FinancialMetricsPopoverProps {
   projetoId: string;
+  dateRange?: { from: string; to: string } | null;
 }
 
 interface LedgerEntry {
@@ -31,7 +32,16 @@ interface LedgerEntry {
   moeda: string;
 }
 
-async function fetchFinancialMetricsRaw(projetoId: string) {
+function applyDateFilter<T extends { gte: (col: string, val: string) => T; lte: (col: string, val: string) => T }>(
+  query: T,
+  dateRange?: { from: string; to: string } | null,
+  dateColumn = "data_transacao"
+): T {
+  if (!dateRange) return query;
+  return query.gte(dateColumn, dateRange.from).lte(dateColumn, dateRange.to);
+}
+
+async function fetchFinancialMetricsRaw(projetoId: string, dateRange?: { from: string; to: string } | null) {
   const { data: bookmakers } = await supabase
     .from("bookmakers")
     .select("id, saldo_atual, moeda")
@@ -39,57 +49,72 @@ async function fetchFinancialMetricsRaw(projetoId: string) {
 
   const bookmakerSaldos = (bookmakers || []).map(b => ({ saldo_atual: b.saldo_atual || 0, moeda: b.moeda || "BRL" }));
 
-  const depositoQ = supabase.from("cash_ledger").select("valor, moeda")
-    .in("tipo_transacao", ["DEPOSITO", "DEPOSITO_VIRTUAL"])
-    .eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId);
+  const depositoQ = applyDateFilter(
+    supabase.from("cash_ledger").select("valor, moeda")
+      .in("tipo_transacao", ["DEPOSITO", "DEPOSITO_VIRTUAL"])
+      .eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId),
+    dateRange
+  );
 
-  const saqueQ = supabase.from("cash_ledger").select("valor, valor_confirmado, moeda")
-    .in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])
-    .eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId);
+  const saqueQ = applyDateFilter(
+    supabase.from("cash_ledger").select("valor, valor_confirmado, moeda")
+      .in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])
+      .eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId),
+    dateRange
+  );
 
-  const saquePendQ = supabase.from("cash_ledger").select("valor, moeda")
-    .in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])
-    .eq("status", "PENDENTE").eq("projeto_id_snapshot", projetoId);
+  const saquePendQ = applyDateFilter(
+    supabase.from("cash_ledger").select("valor, moeda")
+      .in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])
+      .eq("status", "PENDENTE").eq("projeto_id_snapshot", projetoId),
+    dateRange
+  );
 
   const [depositos, saques, saquesPend, cashbackM, cashbackE, giros, ajustes, perdasOp, perdasFx, ganhosFx] = await Promise.all([
     depositoQ,
     saqueQ,
     saquePendQ,
-    supabase.from("cash_ledger").select("valor, moeda")
-      .eq("tipo_transacao", "CASHBACK_MANUAL").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId),
-    supabase.from("cash_ledger").select("valor, moeda")
-      .eq("tipo_transacao", "CASHBACK_ESTORNO").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId),
-    supabase.from("cash_ledger").select("valor, moeda")
-      .eq("tipo_transacao", "GIRO_GRATIS").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId),
-    supabase.from("cash_ledger").select("valor, moeda, ajuste_direcao")
-      .eq("tipo_transacao", "AJUSTE_SALDO").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId),
-    supabase.from("cash_ledger").select("valor, moeda")
-      .eq("tipo_transacao", "PERDA_OPERACIONAL").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId),
-    supabase.from("cash_ledger").select("valor, moeda")
-      .eq("tipo_transacao", "PERDA_CAMBIAL").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId),
-    supabase.from("cash_ledger").select("valor, moeda")
-      .eq("tipo_transacao", "GANHO_CAMBIAL").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId),
+    applyDateFilter(supabase.from("cash_ledger").select("valor, moeda")
+      .eq("tipo_transacao", "CASHBACK_MANUAL").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId), dateRange),
+    applyDateFilter(supabase.from("cash_ledger").select("valor, moeda")
+      .eq("tipo_transacao", "CASHBACK_ESTORNO").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId), dateRange),
+    applyDateFilter(supabase.from("cash_ledger").select("valor, moeda")
+      .eq("tipo_transacao", "GIRO_GRATIS").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId), dateRange),
+    applyDateFilter(supabase.from("cash_ledger").select("valor, moeda, ajuste_direcao")
+      .eq("tipo_transacao", "AJUSTE_SALDO").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId), dateRange),
+    applyDateFilter(supabase.from("cash_ledger").select("valor, moeda")
+      .eq("tipo_transacao", "PERDA_OPERACIONAL").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId), dateRange),
+    applyDateFilter(supabase.from("cash_ledger").select("valor, moeda")
+      .eq("tipo_transacao", "PERDA_CAMBIAL").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId), dateRange),
+    applyDateFilter(supabase.from("cash_ledger").select("valor, moeda")
+      .eq("tipo_transacao", "GANHO_CAMBIAL").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId), dateRange),
   ]);
 
-  const timelineQ = supabase
-    .from("cash_ledger")
-    .select("valor, valor_confirmado, moeda, data_transacao, tipo_transacao")
-    .in("tipo_transacao", ["DEPOSITO", "DEPOSITO_VIRTUAL", "SAQUE", "SAQUE_VIRTUAL"])
-    .eq("status", "CONFIRMADO")
-    .eq("projeto_id_snapshot", projetoId)
-    .order("data_transacao", { ascending: true });
+  const timelineQ = applyDateFilter(
+    supabase
+      .from("cash_ledger")
+      .select("valor, valor_confirmado, moeda, data_transacao, tipo_transacao")
+      .in("tipo_transacao", ["DEPOSITO", "DEPOSITO_VIRTUAL", "SAQUE", "SAQUE_VIRTUAL"])
+      .eq("status", "CONFIRMADO")
+      .eq("projeto_id_snapshot", projetoId)
+      .order("data_transacao", { ascending: true }),
+    dateRange
+  );
 
   const { data: timelineData } = await timelineQ;
 
-
-
-
-  // Fetch bonus ganhos (credited + finalized)
-  const { data: bonusGanhosData } = await supabase
+  // Fetch bonus ganhos (credited + finalized) - filter by credited_at if dateRange
+  let bonusQuery = supabase
     .from("project_bookmaker_link_bonuses")
     .select("bonus_amount, currency")
     .eq("project_id", projetoId)
     .in("status", ["credited", "finalized"]);
+  
+  if (dateRange) {
+    bonusQuery = bonusQuery.gte("credited_at", dateRange.from).lte("credited_at", dateRange.to);
+  }
+  
+  const { data: bonusGanhosData } = await bonusQuery;
 
   return {
     bookmakerSaldos,
@@ -106,7 +131,6 @@ async function fetchFinancialMetricsRaw(projetoId: string) {
       ganhoCambial: (ganhosFx.data || []) as { valor: number; moeda: string }[],
     },
     breakEvenTimeline: (timelineData || []) as { valor: number; valor_confirmado?: number | null; moeda: string; data_transacao: string; tipo_transacao: string }[],
-    
     bonusGanhos: (bonusGanhosData || []) as { bonus_amount: number; currency: string }[],
   };
 }
@@ -203,12 +227,12 @@ function ExtrasCollapsible({ metrics, formatCurrency }: { metrics: any; formatCu
   );
 }
 
-export function FinancialMetricsPopover({ projetoId }: FinancialMetricsPopoverProps) {
+export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetricsPopoverProps) {
   const { formatCurrency, convertToConsolidationOficial, cotacaoOficialUSD } = useProjetoCurrency(projetoId);
 
   const { data: rawMetrics, isLoading } = useQuery({
-    queryKey: ["projeto-financial-metrics", projetoId],
-    queryFn: () => fetchFinancialMetricsRaw(projetoId),
+    queryKey: ["projeto-financial-metrics", projetoId, dateRange?.from, dateRange?.to],
+    queryFn: () => fetchFinancialMetricsRaw(projetoId, dateRange),
     staleTime: 30_000,
     gcTime: 60_000,
   });
@@ -312,11 +336,18 @@ export function FinancialMetricsPopover({ projetoId }: FinancialMetricsPopoverPr
   return (
     <div className="p-4 w-[340px] space-y-0">
       {/* Header */}
-      <div className="flex items-center gap-2 mb-4">
-        <div className="p-1.5 rounded-md bg-primary/10">
-          <DollarSign className="h-3.5 w-3.5 text-primary" />
+      <div className="flex items-center justify-between gap-2 mb-4">
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 rounded-md bg-primary/10">
+            <DollarSign className="h-3.5 w-3.5 text-primary" />
+          </div>
+          <span className="text-xs font-bold tracking-tight">Indicadores Financeiros</span>
         </div>
-        <span className="text-xs font-bold tracking-tight">Indicadores Financeiros</span>
+        {dateRange && (
+          <span className="text-[9px] text-muted-foreground bg-muted/60 px-1.5 py-0.5 rounded">
+            {format(parseISO(dateRange.from), "dd/MM")} – {format(parseISO(dateRange.to), "dd/MM")}
+          </span>
+        )}
       </div>
 
       {/* ─── Seção 1: Fluxo de Caixa ─── */}

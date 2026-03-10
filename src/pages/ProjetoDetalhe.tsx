@@ -130,7 +130,7 @@ export default function ProjetoDetalhe() {
   const [resumo, setResumo] = useState<ProjetoResumo | null>(null);
   const [apostasResumo, setApostasResumo] = useState<ApostasResumo | null>(null);
   const [loading, setLoading] = useState(true);
-  const [entregaAtiva, setEntregaAtiva] = useState<{ data_fim_prevista: string | null } | null>(null);
+  const [entregaAtiva, setEntregaAtiva] = useState<{ data_inicio: string | null; data_fim_prevista: string | null } | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   
   // Project favorites
@@ -673,7 +673,7 @@ export default function ProjetoDetalhe() {
       const hoje = new Date().toISOString().split('T')[0];
       const { data: cicloData } = await supabase
         .from("projeto_ciclos")
-        .select("data_fim_prevista")
+        .select("data_inicio, data_fim_prevista")
         .eq("projeto_id", id)
         .eq("status", "EM_ANDAMENTO")
         .lte("data_inicio", hoje)
@@ -867,7 +867,7 @@ export default function ProjetoDetalhe() {
                 </button>
               </PopoverTrigger>
               <PopoverContent side="bottom" align="end" className="p-0 w-auto" sideOffset={8}>
-                <FinancialMetricsPopover projetoId={id!} />
+                <FinancialMetricsPopover projetoId={id!} dateRange={entregaAtiva?.data_inicio && entregaAtiva?.data_fim_prevista ? { from: entregaAtiva.data_inicio, to: entregaAtiva.data_fim_prevista } : null} />
               </PopoverContent>
             </Popover>
           </div>
