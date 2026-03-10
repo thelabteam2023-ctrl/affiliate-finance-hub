@@ -170,11 +170,11 @@ export async function calcularMetricasPeriodo({
   ]);
 
   // Buscar créditos extras em paralelo separado (evita TS2589 com muitos generics)
-  const bonusQuery = supabase
+  // Use type assertion to avoid TS2589 with deeply nested generic types
+  const bonusResult: { data: any[] | null; error: any } = await (supabase as any)
     .from("project_bookmaker_link_bonuses")
     .select("bonus_amount")
-    .eq("projeto_id", projetoId);
-  const bonusResult = await (bonusQuery as any)
+    .eq("projeto_id", projetoId)
     .or("status.eq.credited,status.eq.finalized")
     .gte("credited_at", startUTC)
     .lte("credited_at", endUTC);
