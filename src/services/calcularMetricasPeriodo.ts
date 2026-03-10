@@ -266,17 +266,14 @@ export async function calcularMetricasPeriodo({
   const totalSaques = saques.reduce((acc, s: any) => acc + Number(s.valor_confirmado ?? s.valor ?? 0), 0);
   const totalDepositos = depositos.reduce((acc, d: any) => acc + Number(d.valor ?? 0), 0);
 
-  // Bônus creditados
+  // Créditos Extras totais (para exibição informativa)
   const totalBonus = (bonusResult.data || []).reduce((acc, b: any) => {
     return acc + Number(b.bonus_amount || 0);
   }, 0);
-
-  // Créditos Extras = capital que entrou na casa sem depósito (bônus, cashback, giros)
-  // NÃO inclui: ajustes (correções contábeis), FX (resultado cambial já refletido nos saques via valor_confirmado)
   const creditosExtras = lucroCashback + lucroGiros + totalBonus;
 
-  // Fórmula canônica: Saques - (Depósitos + Créditos Extras)
-  const lucroRealizado = totalSaques - (totalDepositos + creditosExtras);
+  // Fórmula canônica: Saques - Depósitos (fluxo de caixa puro)
+  const lucroRealizado = totalSaques - totalDepositos;
 
   return {
     qtdApostas,

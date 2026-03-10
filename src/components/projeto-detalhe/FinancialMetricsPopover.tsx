@@ -279,13 +279,10 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
     );
 
     const fluxoCaixaLiquido = saquesRecebidos - depositosTotal;
-    // Créditos Extras = capital que ENTROU na casa sem depósito (bônus, cashback, giros)
-    // NÃO inclui: ganhoConfirmacao (já está em saquesRecebidos via valor_confirmado),
-    // ganhoFx (resultado cambial, não capital gratuito), ajustes (correções contábeis)
-    const extrasPositivos = cashbackLiquido + girosGratis + bonusGanhos;
+    const extrasPositivos = cashbackLiquido + girosGratis + ajustes + ganhoConfirmacao + ganhoFx + bonusGanhos;
     const capitalTotal = depositosTotal + extrasPositivos;
-    // Fluxo Líquido Ajustado = Saques - (Depósitos + Créditos Extras)
-    const fluxoLiquidoAjustado = saquesRecebidos - capitalTotal;
+    // Fluxo Líquido Ajustado = Saques - Depósitos (fórmula canônica de fluxo de caixa)
+    const fluxoLiquidoAjustado = fluxoCaixaLiquido;
     const patrimonio = saldoCasas + saquesRecebidos + saquesPendentes;
     const lucroFinanceiro = patrimonio - depositosTotal;
 
@@ -376,7 +373,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
           />
           {hasExtras && (
             <p className="text-[9px] text-muted-foreground/70 mt-0.5">
-              Saques − (Depósitos + Créditos Extras)
+              Saques − Depósitos
             </p>
           )}
         </div>
