@@ -1,9 +1,11 @@
-import { useState, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useWorkspaceResetKey } from "@/hooks/useWorkspaceCacheClear";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StickyNote, GitBranch } from "lucide-react";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { FluxoTab } from "@/components/anotacoes/FluxoTab";
 import { LivreTab } from "@/components/anotacoes/LivreTab";
+import { useTopBar } from "@/contexts/TopBarContext";
 
 /**
  * Página Anotações - Sistema pessoal de notas e organização de ideias
@@ -15,21 +17,32 @@ import { LivreTab } from "@/components/anotacoes/LivreTab";
  */
 export default function Anotacoes() {
   const [activeTab, setActiveTab] = useState<string>("fluxo");
+  const { setContent: setTopBarContent } = useTopBar();
   
   // SEGURANÇA: resetKey incrementa quando workspace muda, forçando remount dos componentes filhos
   const resetKey = useWorkspaceResetKey();
 
+  useEffect(() => {
+    setTopBarContent(
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="flex items-center gap-2 cursor-default">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
+              <StickyNote className="h-4 w-4 text-primary" />
+            </div>
+            <span className="font-semibold text-sm">Anotações</span>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">
+          Organize suas ideias e pensamentos
+        </TooltipContent>
+      </Tooltip>
+    );
+    return () => setTopBarContent(null);
+  }, [setTopBarContent]);
+
   return (
     <div className="h-full flex flex-col bg-background">
-      {/* Header minimalista */}
-      <div className="shrink-0 px-6 pt-6 pb-4">
-        <h1 className="text-xl font-semibold text-foreground tracking-tight">
-          Anotações
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Organize suas ideias e pensamentos
-        </p>
-      </div>
 
       {/* Tabs */}
       <Tabs 

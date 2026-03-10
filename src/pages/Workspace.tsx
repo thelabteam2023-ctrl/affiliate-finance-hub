@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Users, Settings, UserPlus, Shield, DollarSign, Gamepad2, Eye, Check, X, Info, Mail, Inbox } from "lucide-react";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { MemberList } from "@/components/workspace/MemberList";
 import { InviteMemberDialog } from "@/components/workspace/InviteMemberDialog";
 import { PendingInvitesList } from "@/components/workspace/PendingInvitesList";
@@ -261,12 +262,19 @@ export default function Workspace() {
   // Inject title into global TopBar
   useEffect(() => {
     setTopBarContent(
-      <div className="flex items-center gap-2">
-        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
-          <Settings className="h-4 w-4 text-primary" />
-        </div>
-        <span className="font-semibold text-sm">Configurações do Workspace</span>
-      </div>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="flex items-center gap-2 cursor-default">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
+              <Settings className="h-4 w-4 text-primary" />
+            </div>
+            <span className="font-semibold text-sm">Configurações do Workspace</span>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">
+          Gerencie seu workspace e membros da equipe
+        </TooltipContent>
+      </Tooltip>
     );
     return () => setTopBarContent(null);
   }, [setTopBarContent]);

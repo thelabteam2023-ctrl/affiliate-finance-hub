@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useCotacoes } from "@/hooks/useCotacoes";
 import { useTopBar } from "@/contexts/TopBarContext";
 import { Users } from "lucide-react";
-import { Tooltip, TooltipProvider } from "@/components/ui/tooltip";
+import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -720,12 +720,19 @@ export default function GestaoParceiros() {
   // Inject title into global TopBar
   useEffect(() => {
     setTopBarContent(
-      <div className="flex items-center gap-2">
-        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
-          <Users className="h-4 w-4 text-primary" />
-        </div>
-        <span className="font-semibold text-sm">Gestão de Parceiros ⭐</span>
-      </div>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="flex items-center gap-2 cursor-default">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
+              <Users className="h-4 w-4 text-primary" />
+            </div>
+            <span className="font-semibold text-sm">Gestão de Parceiros ⭐</span>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">
+          Gerencie seus parceiros e analise performance financeira
+        </TooltipContent>
+      </Tooltip>
     );
     return () => setTopBarContent(null);
   }, [setTopBarContent]);

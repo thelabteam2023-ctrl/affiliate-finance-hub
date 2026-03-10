@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { useTopBar } from "@/contexts/TopBarContext";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { 
   Search, 
   User, 
@@ -166,12 +167,19 @@ export default function GestaoOperadores() {
   // Inject title into global TopBar
   useEffect(() => {
     setTopBarContent(
-      <div className="flex items-center gap-2">
-        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
-          <Briefcase className="h-4 w-4 text-primary" />
-        </div>
-        <span className="font-semibold text-sm">Operadores</span>
-      </div>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="flex items-center gap-2 cursor-default">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
+              <Briefcase className="h-4 w-4 text-primary" />
+            </div>
+            <span className="font-semibold text-sm">Operadores</span>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">
+          Gerencie os operadores vinculados ao workspace
+        </TooltipContent>
+      </Tooltip>
     );
     return () => setTopBarContent(null);
   }, [setTopBarContent]);

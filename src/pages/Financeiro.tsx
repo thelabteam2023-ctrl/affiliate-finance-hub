@@ -1138,12 +1138,19 @@ export default function Financeiro() {
   // Inject title into global TopBar
   useEffect(() => {
     setTopBarContent(
-      <div className="flex items-center gap-2">
-        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
-          <BarChart3 className="h-4 w-4 text-primary" />
-        </div>
-        <span className="font-semibold text-sm">Dashboard Financeiro</span>
-      </div>
+      <ShadcnTooltip>
+        <TooltipTrigger asChild>
+          <div className="flex items-center gap-2 cursor-default">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
+              <BarChart3 className="h-4 w-4 text-primary" />
+            </div>
+            <span className="font-semibold text-sm">Dashboard Financeiro</span>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">
+          Visão financeira estratégica: Liquidez, Custos e Sustentabilidade
+        </TooltipContent>
+      </ShadcnTooltip>
     );
     return () => setTopBarContent(null);
   }, [setTopBarContent]);
