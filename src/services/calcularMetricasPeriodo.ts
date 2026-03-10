@@ -13,7 +13,7 @@
  */
 
 import { supabase } from "@/integrations/supabase/client";
-import { getOperationalDateRangeForQuery } from "@/utils/dateUtils";
+import { getOperationalDateRangeForQuery, getCivilDateRangeForQuery } from "@/utils/dateUtils";
 import { fetchProjetosLucroOperacionalKpi, derivarCotacoesFromConvertFn } from "@/services/fetchProjetosLucroOperacionalKpi";
 import { parseISO } from "date-fns";
 
