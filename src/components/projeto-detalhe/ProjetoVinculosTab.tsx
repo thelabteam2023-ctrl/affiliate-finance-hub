@@ -91,6 +91,7 @@ import {
   Globe,
   Lock,
   TrendingDown,
+  Scale,
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
