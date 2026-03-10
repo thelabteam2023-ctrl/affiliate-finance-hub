@@ -127,7 +127,7 @@ export function PagamentoParticipacaoDialog({
           valor: participacao.valor_participacao,
           moeda: "BRL",
           tipo_moeda: origemData.tipoMoeda,
-          data_transacao: new Date().toISOString(),
+          data_transacao: getTodayCivilDate(),
           status: "CONFIRMADO",
           descricao: `Participação ${participacao.investidor_nome} - ${participacao.projeto_nome} Ciclo ${participacao.ciclo_numero}`,
           investidor_id: participacao.investidor_id,
