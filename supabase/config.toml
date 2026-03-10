@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.polish-topic]
 verify_jwt = false
+
+[functions.sync-bookmaker-logos]
+verify_jwt = false
