@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { PerformanceMetrics, PeriodoAnalise } from '@/types/performance';
 import { useWorkspace } from './useWorkspace';
@@ -63,6 +64,13 @@ export function useProjetoPerformance({
   const fetchCashFlow = useCallback(async (historicalBookmakerIds?: Set<string>): Promise<{ depositos: number; saques: number }> => {
     const { dataInicio, dataFim } = periodo;
 
+    // CRÍTICO: data_transacao é "data civil" (meia-noite UTC)
+    // Usar format para extrair YYYY-MM-DD e evitar offset de timezone
+    const startStr = dataInicio ? format(dataInicio, 'yyyy-MM-dd') : null;
+    const endStr = dataFim ? format(dataFim, 'yyyy-MM-dd') : null;
+    const civilStart = startStr ? `${startStr}T00:00:00.000Z` : null;
+    const civilEnd = endStr ? `${endStr}T23:59:59.999Z` : null;
+
     // Depósitos para bookmakers
     let queryDepositos = supabase
       .from('cash_ledger')
@@ -70,8 +78,8 @@ export function useProjetoPerformance({
       .in('tipo_transacao', ['DEPOSITO', 'DEPOSITO_VIRTUAL'])
       .eq('status', 'CONFIRMADO')
       .not('destino_bookmaker_id', 'is', null);
-    if (dataInicio) queryDepositos = queryDepositos.gte('data_transacao', dataInicio.toISOString());
-    if (dataFim) queryDepositos = queryDepositos.lte('data_transacao', dataFim.toISOString());
+    if (civilStart) queryDepositos = queryDepositos.gte('data_transacao', civilStart);
+    if (civilEnd) queryDepositos = queryDepositos.lte('data_transacao', civilEnd);
 
     // Saques de bookmakers
     let querySaques = supabase
@@ -80,8 +88,8 @@ export function useProjetoPerformance({
       .in('tipo_transacao', ['SAQUE', 'SAQUE_VIRTUAL'])
       .eq('status', 'CONFIRMADO')
       .not('origem_bookmaker_id', 'is', null);
-    if (dataInicio) querySaques = querySaques.gte('data_transacao', dataInicio.toISOString());
-    if (dataFim) querySaques = querySaques.lte('data_transacao', dataFim.toISOString());
+    if (civilStart) querySaques = querySaques.gte('data_transacao', civilStart);
+    if (civilEnd) querySaques = querySaques.lte('data_transacao', civilEnd);
 
     const [depositosResult, saquesResult] = await Promise.all([queryDepositos, querySaques]);
 

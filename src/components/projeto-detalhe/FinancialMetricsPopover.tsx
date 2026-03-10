@@ -38,7 +38,11 @@ function applyDateFilter<T extends { gte: (col: string, val: string) => T; lte: 
   dateColumn = "data_transacao"
 ): T {
   if (!dateRange) return query;
-  return query.gte(dateColumn, dateRange.from).lte(dateColumn, dateRange.to);
+  // CRÍTICO: data_transacao e credited_at são "datas civis" (meia-noite UTC)
+  // Usar range UTC puro (00:00Z → 23:59Z) para não excluir registros pelo offset de 3h
+  const startUTC = `${dateRange.from}T00:00:00.000Z`;
+  const endUTC = `${dateRange.to}T23:59:59.999Z`;
+  return query.gte(dateColumn, startUTC).lte(dateColumn, endUTC);
 }
 
 async function fetchFinancialMetricsRaw(projetoId: string, dateRange?: { from: string; to: string } | null) {

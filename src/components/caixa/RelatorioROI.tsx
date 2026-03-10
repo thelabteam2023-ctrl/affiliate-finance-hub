@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TrendingUp, TrendingDown } from "lucide-react";
-import { subMonths, startOfMonth, endOfMonth } from "date-fns";
+import { subMonths, startOfMonth, endOfMonth, format } from "date-fns";
 
 interface ROIData {
   investidor: string;
@@ -38,8 +38,8 @@ export function RelatorioROI() {
         .from("cash_ledger")
         .select("*")
         .eq("tipo_transacao", "APORTE_FINANCEIRO")
-        .gte("data_transacao", dataInicio.toISOString())
-        .lte("data_transacao", dataFim.toISOString())
+        .gte("data_transacao", `${format(dataInicio, "yyyy-MM-dd")}T00:00:00.000Z`)
+        .lte("data_transacao", `${format(dataFim, "yyyy-MM-dd")}T23:59:59.999Z`)
         .eq("status", "CONFIRMADO");
 
       if (error) throw error;

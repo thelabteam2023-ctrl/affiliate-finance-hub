@@ -63,10 +63,11 @@ export function InvestidorFinanceiroTab({
         .order("data_transacao", { ascending: false });
 
       if (dataInicio) {
-        query = query.gte("data_transacao", dataInicio.toISOString());
+        // CRÍTICO: data_transacao é "data civil" (meia-noite UTC) — usar YYYY-MM-DD puro
+        query = query.gte("data_transacao", `${format(dataInicio, "yyyy-MM-dd")}T00:00:00.000Z`);
       }
       if (dataFim) {
-        query = query.lte("data_transacao", dataFim.toISOString());
+        query = query.lte("data_transacao", `${format(dataFim, "yyyy-MM-dd")}T23:59:59.999Z`);
       }
 
       const { data, error } = await query;
