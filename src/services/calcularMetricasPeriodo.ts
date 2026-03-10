@@ -170,13 +170,14 @@ export async function calcularMetricasPeriodo({
   ]);
 
   // Buscar créditos extras em paralelo separado (evita TS2589 com muitos generics)
-  const bonusResult = await (supabase
+  const bonusQuery = supabase
     .from("project_bookmaker_link_bonuses")
     .select("bonus_amount")
-    .eq("projeto_id", projetoId)
+    .eq("projeto_id", projetoId);
+  const bonusResult = await (bonusQuery as any)
     .or("status.eq.credited,status.eq.finalized")
     .gte("credited_at", startUTC)
-    .lte("credited_at", endUTC) as any) as { data: { bonus_amount: number }[] | null; error: any };
+    .lte("credited_at", endUTC);
 
   const ajustesResult = await supabase
     .from("cash_ledger")
