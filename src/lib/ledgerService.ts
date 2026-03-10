@@ -554,7 +554,7 @@ export async function registrarSaqueVirtualViaLedger(params: {
       origem_bookmaker_id: params.bookmakerId,
       valor_origem: params.saldoAtual,
       descricao: params.descricao || `Saque virtual – desvinculação do projeto`,
-      data_transacao: new Date().toISOString().split('T')[0],
+      data_transacao: getTodayCivilDate(),
       impacta_caixa_operacional: false,
       tipo_moeda: 'FIAT' as const,
       status: 'CONFIRMADO',
