@@ -196,6 +196,7 @@ export default function Financeiro() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
+  const { setContent: setTopBarContent } = useTopBar();
   
   // SEGURANÇA: workspaceId como dependência para isolamento multi-tenant
   const { workspaceId } = useTabWorkspace();
