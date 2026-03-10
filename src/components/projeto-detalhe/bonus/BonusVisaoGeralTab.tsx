@@ -63,6 +63,29 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
   const [loading, setLoading] = useState(true);
 
   const summary = getSummary();
+
+  // Buscar ciclos do projeto para comparar meta vs realizado
+  const { data: todosCiclos = [] } = useQuery({
+    queryKey: ["bonus-ciclos", projetoId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("projeto_ciclos")
+        .select("id, numero_ciclo, meta_volume, data_inicio, data_fim_prevista, data_fim_real, status, tipo_gatilho, metrica_acumuladora")
+        .eq("projeto_id", projetoId)
+        .order("data_inicio", { ascending: false });
+      return data || [];
+    },
+    staleTime: PERIOD_STALE_TIME,
+    gcTime: PERIOD_GC_TIME,
+  });
+
+  // Encontrar ciclo que cobre o período filtrado
+  const cicloAtivo = useMemo(() => {
+    if (!dateRange || todosCiclos.length === 0) return null;
+    const filterMid = new Date((dateRange.start.getTime() + dateRange.end.getTime()) / 2);
+    const midStr = filterMid.toISOString().split("T")[0];
+    return todosCiclos.find(c => c.data_inicio <= midStr && c.data_fim_prevista >= midStr) || null;
+  }, [todosCiclos, dateRange]);
   
   // Memoize to prevent infinite loops
   const bookmakersInBonusMode = useMemo(() => getBookmakersWithActiveBonus(), [bonuses]);
