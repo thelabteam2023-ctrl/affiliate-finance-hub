@@ -167,36 +167,34 @@ export async function calcularMetricasPeriodo({
       .eq("projeto_id_snapshot", projetoId)
       .gte("data_transacao", startUTC)
       .lte("data_transacao", endUTC),
-
-    // 8. Bônus creditados no período (credited + finalized)
-    supabase
-      .from("project_bookmaker_link_bonuses")
-      .select("bonus_amount, currency, status, projeto_id")
-      .eq("projeto_id", projetoId)
-      .or("status.eq.credited,status.eq.finalized")
-      .gte("credited_at", startUTC)
-      .lte("credited_at", endUTC),
-
-    // 9. Ajustes de saldo no período (via cash_ledger)
-    supabase
-      .from("cash_ledger")
-      .select("valor, ajuste_direcao")
-      .or("tipo_transacao.eq.AJUSTE_SALDO,tipo_transacao.eq.AJUSTE_RECONCILIACAO")
-      .eq("status", "CONFIRMADO")
-      .eq("projeto_id_snapshot", projetoId)
-      .gte("data_transacao", startUTC)
-      .lte("data_transacao", endUTC),
-
-    // 10. Resultados cambiais no período (ganho e perda FX)
-    supabase
-      .from("cash_ledger")
-      .select("valor, tipo_transacao")
-      .or("tipo_transacao.eq.GANHO_CAMBIAL,tipo_transacao.eq.PERDA_CAMBIAL")
-      .eq("status", "CONFIRMADO")
-      .eq("projeto_id_snapshot", projetoId)
-      .gte("data_transacao", startUTC)
-      .lte("data_transacao", endUTC),
   ]);
+
+  // Buscar créditos extras em paralelo separado (evita TS2589 com muitos generics)
+  const bonusResult = await supabase
+    .from("project_bookmaker_link_bonuses")
+    .select("bonus_amount")
+    .eq("projeto_id", projetoId)
+    .or("status.eq.credited,status.eq.finalized")
+    .gte("credited_at", startUTC)
+    .lte("credited_at", endUTC);
+
+  const ajustesResult = await supabase
+    .from("cash_ledger")
+    .select("valor, ajuste_direcao")
+    .or("tipo_transacao.eq.AJUSTE_SALDO,tipo_transacao.eq.AJUSTE_RECONCILIACAO")
+    .eq("status", "CONFIRMADO")
+    .eq("projeto_id_snapshot", projetoId)
+    .gte("data_transacao", startUTC)
+    .lte("data_transacao", endUTC);
+
+  const fxResult = await supabase
+    .from("cash_ledger")
+    .select("valor, tipo_transacao")
+    .or("tipo_transacao.eq.GANHO_CAMBIAL,tipo_transacao.eq.PERDA_CAMBIAL")
+    .eq("status", "CONFIRMADO")
+    .eq("projeto_id_snapshot", projetoId)
+    .gte("data_transacao", startUTC)
+    .lte("data_transacao", endUTC);
 
   // Processar erros silenciosamente (melhor UX)
   if (apostasResult.error) console.error("[calcularMetricasPeriodo] Erro apostas:", apostasResult.error);
