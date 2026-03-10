@@ -123,8 +123,9 @@ export function useWorkspaceLucroOperacional({
 
         lucroTotal += resumo.consolidado;
 
-        // Detectar multi-moeda
-        if (resumo.porMoeda.USD !== 0) {
+        // Detectar multi-moeda: se há qualquer moeda diferente de BRL
+        const moedas = Object.keys(resumo.porMoeda).filter(m => Math.abs(resumo.porMoeda[m]) > 0.01);
+        if (moedas.some(m => m !== 'BRL')) {
           hasMultiCurrency = true;
         }
 
