@@ -1583,6 +1583,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                  id: aposta.id,
                  evento: aposta.evento,
                  esporte: aposta.esporte,
+                 mercado: aposta.mercado,
                  selecao: aposta.selecao,
                  odd: aposta.odd,
                  stake: aposta.stake,
