@@ -363,7 +363,43 @@ function FinalizedBonusHistory({
                   </PopoverContent>
                 </Popover>
               )}
-              {(filterParceiro !== "all" || filterCasa !== "all") && (
+              <Popover open={tipoOpen} onOpenChange={setTipoOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 w-[200px] justify-start">
+                    <ArrowDownUp className="h-3 w-3 text-muted-foreground" />
+                    <span className="truncate">
+                      {filterTipo === "all" ? "Tipo" : filterTipo === "ajuste_pos_limitacao" ? "Ajuste Pós-Limitação" : REASON_LABELS[filterTipo as FinalizeReason]?.label || filterTipo}
+                    </span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-60 p-0" align="start">
+                  <Command>
+                    <CommandList>
+                      <CommandGroup>
+                        <CommandItem onSelect={() => { setFilterTipo("all"); setTipoOpen(false); }}>
+                          Todos os tipos
+                        </CommandItem>
+                        <CommandItem onSelect={() => { setFilterTipo("rollover_completed"); setTipoOpen(false); }}>
+                          <CheckCircle2 className="h-3 w-3 mr-1.5 text-emerald-400" /> Rollover Concluído (Saque)
+                        </CommandItem>
+                        <CommandItem onSelect={() => { setFilterTipo("cycle_completed"); setTipoOpen(false); }}>
+                          <CheckCircle2 className="h-3 w-3 mr-1.5 text-blue-400" /> Ciclo Encerrado
+                        </CommandItem>
+                        <CommandItem onSelect={() => { setFilterTipo("expired"); setTipoOpen(false); }}>
+                          <XCircle className="h-3 w-3 mr-1.5 text-red-400" /> Expirado
+                        </CommandItem>
+                        <CommandItem onSelect={() => { setFilterTipo("cancelled_reversed"); setTipoOpen(false); }}>
+                          <RotateCcw className="h-3 w-3 mr-1.5 text-muted-foreground" /> Cancelado / Revertido
+                        </CommandItem>
+                        <CommandItem onSelect={() => { setFilterTipo("ajuste_pos_limitacao"); setTipoOpen(false); }}>
+                          <AlertTriangle className="h-3 w-3 mr-1.5 text-orange-400" /> Ajuste Pós-Limitação
+                        </CommandItem>
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+              {(filterParceiro !== "all" || filterCasa !== "all" || filterTipo !== "all") && (
                 <Badge variant="outline" className="text-xs text-muted-foreground">
                   {entries.length} de {totalEntries}
                 </Badge>
