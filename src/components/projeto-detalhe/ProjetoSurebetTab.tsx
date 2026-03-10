@@ -1102,7 +1102,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
                               <div key={item.moeda} className="flex items-center justify-between gap-4 text-xs">
                                 <span className="text-muted-foreground">{item.moeda}</span>
                                 <span className={cn("font-medium font-mono", item.valor >= 0 ? "text-emerald-500" : "text-red-500")}>
-                                  {item.valor >= 0 ? "+" : ""}{formatCurrency(Math.abs(item.valor))}
+                                  {item.valor >= 0 ? "+" : "-"}{item.moeda === 'USD' ? `$ ${Math.abs(item.valor).toFixed(2)}` : formatCurrency(Math.abs(item.valor))}
                                 </span>
                               </div>
                             ))}
