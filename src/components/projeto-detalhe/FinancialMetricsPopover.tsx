@@ -23,6 +23,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 
 interface FinancialMetricsPopoverProps {
   projetoId: string;
+  dateRange?: { from: string; to: string } | null;
 }
 
 interface LedgerEntry {
