@@ -169,7 +169,7 @@ export function CicloDialog({
         setFormData(prev => ({
           ...prev,
           data_inicio: projeto.data_inicio,
-          data_fim_prevista: dataFim.toISOString().split("T")[0],
+          data_fim_prevista: dateToCivilDateString(dataFim),
         }));
       }
     }
