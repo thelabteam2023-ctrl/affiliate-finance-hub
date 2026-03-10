@@ -213,6 +213,44 @@ export const getOperationalDateRangeFromStrings = (
   };
 };
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// FILTRO DE DATA CIVIL — Para campos armazenados como meia-noite UTC
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Gera range de filtragem para campos de "Data Civil" — campos que armazenam
+ * datas como meia-noite UTC (ex: data_transacao no cash_ledger, credited_at em bônus).
+ * 
+ * DIFERENÇA CRÍTICA vs getOperationalDateRangeForQuery:
+ * - getOperationalDateRangeForQuery: Para timestamps reais (data_aposta) que possuem
+ *   horário significativo. Usa offset São Paulo (03:00Z → 02:59Z).
+ * - getCivilDateRangeForQuery: Para datas civis salvas como YYYY-MM-DD 00:00:00 UTC.
+ *   Usa meia-noite UTC pura (00:00Z → 23:59Z) para não excluir registros.
+ * 
+ * Exemplo:
+ * - data_transacao = 2026-03-10 00:00:00+00 (data civil)
+ * - getCivilDateRangeForQuery("2026-03-10", "2026-05-05")
+ *   → { startUTC: "2026-03-10T00:00:00.000Z", endUTC: "2026-05-05T23:59:59.999Z" }
+ * 
+ * QUANDO USAR:
+ * - cash_ledger.data_transacao (depósitos, saques, ajustes)
+ * - project_bookmaker_link_bonuses.credited_at
+ * - Qualquer campo que use toLocalTimestamp com meia-noite
+ * 
+ * QUANDO NÃO USAR:
+ * - apostas_unificada.data_aposta (timestamp real → usar getOperationalDateRangeForQuery)
+ * - created_at, updated_at (timestamps reais)
+ */
+export const getCivilDateRangeForQuery = (
+  startDateStr: string,
+  endDateStr: string
+): { startUTC: string; endUTC: string } => {
+  return {
+    startUTC: `${startDateStr}T00:00:00.000Z`,
+    endUTC: `${endDateStr}T23:59:59.999Z`,
+  };
+};
+
 // Ano mínimo permitido para apostas (proteção contra datas inválidas)
 const ANO_MINIMO_APOSTAS = 2025;
 
