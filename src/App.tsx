@@ -85,9 +85,11 @@ function TopBarHeader() {
   const { content } = useTopBar();
   return (
     <header className="shrink-0 z-40 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-      <div className="flex h-12 items-center gap-2 px-3">
-        <SidebarTrigger className="text-muted-foreground/70 hover:text-muted-foreground hover:bg-accent/50 flex-shrink-0" />
-        {content}
+      <div className="relative flex h-12 items-center px-3">
+        <SidebarTrigger className="text-muted-foreground/70 hover:text-muted-foreground hover:bg-accent/50 flex-shrink-0 z-10" />
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="pointer-events-auto">{content}</div>
+        </div>
       </div>
     </header>
   );
