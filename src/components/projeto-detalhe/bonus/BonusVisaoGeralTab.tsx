@@ -11,6 +11,7 @@ import { Building2, Coins, TrendingUp, TrendingDown, AlertTriangle, Timer, Recei
 import { SaldoOperavelCard } from "../SaldoOperavelCard";
 import { FinancialSummaryCompact } from "../FinancialSummaryCompact";
 import { differenceInDays, parseISO, format, subDays, isWithinInterval, startOfDay } from "date-fns";
+import { parseLocalDate } from "@/lib/dateUtils";
 import { useCrossWindowSync } from "@/hooks/useCrossWindowSync";
 import { BonusAnalyticsCard } from "./BonusAnalyticsCard";
 import { BonusContaminationAlert } from "./BonusContaminationAlert";
