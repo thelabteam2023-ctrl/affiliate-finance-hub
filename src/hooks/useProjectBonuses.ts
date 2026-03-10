@@ -657,6 +657,7 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
               workspace_id: currentBonus.workspace_id || "",
               origem_tipo: "BOOKMAKER",
               origem_bookmaker_id: currentBonus.bookmaker_id,
+              projeto_id_snapshot: currentBonus.project_id,
               ajuste_direcao: "SAIDA",
               ajuste_motivo: `BONUS_CANCELAMENTO`,
               descricao: `Débito por cancelamento de bônus: ${currentBonus.title || "Bônus"} — valor perdido`,
