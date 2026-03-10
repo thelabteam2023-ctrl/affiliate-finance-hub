@@ -139,7 +139,7 @@ export default function GestaoProjetos() {
   const { canCreate, canEdit, canDelete } = useActionAccess();
   
   // COTAÇÃO CENTRALIZADA — usada no cálculo consolidado do lucro operacional e no display
-  const { cotacaoUSD, loading: loadingCotacao } = useCotacoes();
+  const { cotacaoUSD, cotacaoEUR, cotacaoGBP, cotacaoMYR, cotacaoMXN, cotacaoARS, cotacaoCOP, loading: loadingCotacao } = useCotacoes();
   
   // Check if user is operator (should only see linked projects)
   const isOperator = role === 'operator';
