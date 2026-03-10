@@ -373,7 +373,7 @@ export async function fetchProjetosLucroOperacionalKpi({
         });
       }
       
-      const agrupados = agruparExtrasPorTipo(extras, convertToConsolidation, "BRL");
+      const agrupados = agruparExtrasPorTipo(extras, convertToConsolidation, moedaConsolidacao);
       return { projetoId, agrupados };
     })
   );
