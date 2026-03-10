@@ -130,7 +130,7 @@ export default function ProjetoDetalhe() {
   const [resumo, setResumo] = useState<ProjetoResumo | null>(null);
   const [apostasResumo, setApostasResumo] = useState<ApostasResumo | null>(null);
   const [loading, setLoading] = useState(true);
-  const [entregaAtiva, setEntregaAtiva] = useState<{ data_fim_prevista: string | null } | null>(null);
+  const [entregaAtiva, setEntregaAtiva] = useState<{ data_inicio: string | null; data_fim_prevista: string | null } | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   
   // Project favorites
