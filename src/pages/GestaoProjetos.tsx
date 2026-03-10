@@ -139,7 +139,7 @@ export default function GestaoProjetos() {
   const { canCreate, canEdit, canDelete } = useActionAccess();
   
   // COTAÇÃO CENTRALIZADA — usada no cálculo consolidado do lucro operacional e no display
-  const { cotacaoUSD, loading: loadingCotacao } = useCotacoes();
+  const { cotacaoUSD, cotacaoEUR, cotacaoGBP, cotacaoMYR, cotacaoMXN, cotacaoARS, cotacaoCOP, loading: loadingCotacao } = useCotacoes();
   
   // Check if user is operator (should only see linked projects)
   const isOperator = role === 'operator';
@@ -299,9 +299,19 @@ export default function GestaoProjetos() {
       
       // Agregar lucro operacional por projeto (KPI-COMPATÍVEL):
       // FONTE ÚNICA desta tela: mesmo conjunto de módulos do KPI de Lucro do dashboard
+      // Mapa de cotações para moedas não-USD/BRL
+      const cotacoesExtra: Record<string, number> = {};
+      if (cotacaoEUR > 0.001) cotacoesExtra['EUR'] = cotacaoEUR;
+      if (cotacaoGBP > 0.001) cotacoesExtra['GBP'] = cotacaoGBP;
+      if (cotacaoMYR > 0.001) cotacoesExtra['MYR'] = cotacaoMYR;
+      if (cotacaoMXN > 0.001) cotacoesExtra['MXN'] = cotacaoMXN;
+      if (cotacaoARS > 0.001) cotacoesExtra['ARS'] = cotacaoARS;
+      if (cotacaoCOP > 0.001) cotacoesExtra['COP'] = cotacaoCOP;
+
       const lucroKpiByProjeto = await fetchProjetosLucroOperacionalKpi({
         projetoIds: finalProjetoIds,
         cotacaoUSD: USD_TO_BRL_DISPLAY,
+        cotacoes: cotacoesExtra,
       });
 
       const lucroByProjeto: Record<string, { BRL: number; USD: number }> = {};
@@ -326,7 +336,9 @@ export default function GestaoProjetos() {
       // Agregar Lucro Realizado por projeto: Saques - Depósitos (fluxo de caixa)
       // COM conversão de moeda para paridade com Indicadores Financeiros
       const convertToConsolidation = (valor: number, moeda: string) => {
-        if (moeda === 'USD') return valor * USD_TO_BRL_DISPLAY;
+        const m = (moeda || 'BRL').toUpperCase();
+        if (m === 'USD' || m === 'USDT' || m === 'USDC') return valor * USD_TO_BRL_DISPLAY;
+        if (cotacoesExtra[m]) return valor * cotacoesExtra[m];
         return valor;
       };
       
@@ -390,7 +402,7 @@ export default function GestaoProjetos() {
     } finally {
       setLoading(false);
     }
-  }, [user, isOperator, workspaceId, USD_TO_BRL_DISPLAY]);
+  }, [user, isOperator, workspaceId, USD_TO_BRL_DISPLAY, cotacaoEUR, cotacaoGBP, cotacaoMYR, cotacaoMXN, cotacaoARS, cotacaoCOP]);
 
   // SEGURANÇA: Refetch quando workspace muda
   useEffect(() => {
