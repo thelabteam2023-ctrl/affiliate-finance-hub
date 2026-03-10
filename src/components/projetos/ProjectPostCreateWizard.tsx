@@ -359,8 +359,8 @@ export function ProjectPostCreateWizard({
     if (forceToday) {
       const today = new Date();
       const endDate = addMonths(today, 1);
-      setCicloDataInicio(today.toISOString().split("T")[0]);
-      setCicloDataFimPrevista(endDate.toISOString().split("T")[0]);
+      setCicloDataInicio(getTodayCivilDate());
+      setCicloDataFimPrevista(dateToCivilDateString(endDate));
       return;
     }
     
