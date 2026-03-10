@@ -94,15 +94,14 @@ export async function calcularMetricasPeriodo({
   const cotacaoUSD = convert(1, 'USD');
   const cotacoes = derivarCotacoesFromConvertFn(convert);
 
-  // Converter datas para UTC no timezone operacional (para apostas)
+  // Converter datas para UTC no timezone operacional (para apostas — timestamps reais)
   const dataInicioParsed = parseISO(dataInicio);
   const dataFimParsed = parseISO(dataFim);
   const { startUTC, endUTC } = getOperationalDateRangeForQuery(dataInicioParsed, dataFimParsed);
 
-  // Para cash_ledger: data_transacao é armazenado como UTC midnight (ex: 2026-03-10T00:00:00Z)
-  // Usar comparação direta por data para não excluir transações no dia de início
-  const cashLedgerStart = `${dataInicio}T00:00:00.000Z`;
-  const cashLedgerEnd = `${dataFim}T23:59:59.999Z`;
+  // Para cash_ledger: data_transacao é "data civil" (meia-noite UTC)
+  // DEVE usar getCivilDateRangeForQuery para não excluir registros pelo offset de 3h
+  const { startUTC: cashLedgerStart, endUTC: cashLedgerEnd } = getCivilDateRangeForQuery(dataInicio, dataFim);
 
   // ═══════════════════════════════════════════════════════════════════
   // BUSCAR TUDO EM PARALELO — delegando aos módulos canônicos
