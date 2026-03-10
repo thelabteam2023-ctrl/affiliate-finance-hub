@@ -102,10 +102,12 @@ function FinalizedBonusHistory({
   const [editingBonus, setEditingBonus] = useState<ProjectBonus | null>(null);
   const [filterParceiro, setFilterParceiro] = useState<string>("all");
   const [filterCasa, setFilterCasa] = useState<string>("all");
+  const [filterTipo, setFilterTipo] = useState<string>("all");
   const [parceiroSearch, setParceiroSearch] = useState("");
   const [casaSearch, setCasaSearch] = useState("");
   const [parceiroOpen, setParceiroOpen] = useState(false);
   const [casaOpen, setCasaOpen] = useState(false);
+  const [tipoOpen, setTipoOpen] = useState(false);
   
   const finalizedBonuses = bonuses.filter(b => b.status === 'finalized');
 
@@ -230,11 +232,14 @@ function FinalizedBonusHistory({
   const filteredBonuses = finalizedBonuses.filter(b => {
     if (filterParceiro !== "all" && b.parceiro_nome !== filterParceiro) return false;
     if (filterCasa !== "all" && b.bookmaker_nome !== filterCasa) return false;
+    if (filterTipo === "ajuste_pos_limitacao") return false; // Only ajustes match this type
+    if (filterTipo !== "all" && b.finalize_reason !== filterTipo) return false;
     return true;
   });
 
   const filteredAjustes = ajustesData.filter(a => {
     if (filterCasa !== "all" && a.bookmaker_nome !== filterCasa) return false;
+    if (filterTipo !== "all" && filterTipo !== "ajuste_pos_limitacao") return false;
     return true;
   });
 
@@ -359,7 +364,43 @@ function FinalizedBonusHistory({
                   </PopoverContent>
                 </Popover>
               )}
-              {(filterParceiro !== "all" || filterCasa !== "all") && (
+              <Popover open={tipoOpen} onOpenChange={setTipoOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 w-[200px] justify-start">
+                    <ArrowDownUp className="h-3 w-3 text-muted-foreground" />
+                    <span className="truncate">
+                      {filterTipo === "all" ? "Tipo" : filterTipo === "ajuste_pos_limitacao" ? "Ajuste Pós-Limitação" : REASON_LABELS[filterTipo as FinalizeReason]?.label || filterTipo}
+                    </span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-60 p-0" align="start">
+                  <Command>
+                    <CommandList>
+                      <CommandGroup>
+                        <CommandItem onSelect={() => { setFilterTipo("all"); setTipoOpen(false); }}>
+                          Todos os tipos
+                        </CommandItem>
+                        <CommandItem onSelect={() => { setFilterTipo("rollover_completed"); setTipoOpen(false); }}>
+                          <CheckCircle2 className="h-3 w-3 mr-1.5 text-emerald-400" /> Rollover Concluído (Saque)
+                        </CommandItem>
+                        <CommandItem onSelect={() => { setFilterTipo("cycle_completed"); setTipoOpen(false); }}>
+                          <CheckCircle2 className="h-3 w-3 mr-1.5 text-blue-400" /> Ciclo Encerrado
+                        </CommandItem>
+                        <CommandItem onSelect={() => { setFilterTipo("expired"); setTipoOpen(false); }}>
+                          <XCircle className="h-3 w-3 mr-1.5 text-red-400" /> Expirado
+                        </CommandItem>
+                        <CommandItem onSelect={() => { setFilterTipo("cancelled_reversed"); setTipoOpen(false); }}>
+                          <RotateCcw className="h-3 w-3 mr-1.5 text-muted-foreground" /> Cancelado / Revertido
+                        </CommandItem>
+                        <CommandItem onSelect={() => { setFilterTipo("ajuste_pos_limitacao"); setTipoOpen(false); }}>
+                          <AlertTriangle className="h-3 w-3 mr-1.5 text-orange-400" /> Ajuste Pós-Limitação
+                        </CommandItem>
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+              {(filterParceiro !== "all" || filterCasa !== "all" || filterTipo !== "all") && (
                 <Badge variant="outline" className="text-xs text-muted-foreground">
                   {entries.length} de {totalEntries}
                 </Badge>
