@@ -88,7 +88,7 @@ export function PagamentoOperadorDialog({
     tipo_pagamento: "SALARIO",
     valor: 0,
     moeda: "BRL",
-    data_pagamento: new Date().toISOString().split("T")[0],
+    data_pagamento: getTodayCivilDate(),
     data_competencia: null,
     descricao: null,
     status: "CONFIRMADO",
