@@ -3,10 +3,8 @@ import { agruparExtrasPorTipo, fetchProjetoExtras } from "@/services/fetchProjet
 import { getConsolidatedLucro } from "@/utils/consolidatedValues";
 import { getOperationalDateRangeFromStrings } from "@/utils/dateUtils";
 
-interface SaldoByMoeda {
-  BRL: number;
-  USD: number;
-}
+/** Breakdown de lucro por moeda original (dinâmico — suporta todas as moedas) */
+type SaldoByMoeda = Record<string, number>;
 
 interface LucroProjetoResumo {
   consolidado: number;
