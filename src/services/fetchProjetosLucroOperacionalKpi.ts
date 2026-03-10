@@ -30,6 +30,27 @@ const isUsdLike = (moeda?: string | null) => {
   return m === "USD" || m === "USDT" || m === "USDC";
 };
 
+/** Moedas FIAT suportadas pelo sistema (além de BRL e USD-like) */
+const ALL_FIAT_CURRENCIES = ["EUR", "GBP", "MYR", "MXN", "ARS", "COP"] as const;
+
+/**
+ * Deriva um mapa de cotações para TODAS as moedas suportadas a partir de uma função de conversão.
+ * Útil para callers que possuem uma convertFn mas precisam passar cotações ao KPI canônico.
+ */
+export function derivarCotacoesFromConvertFn(
+  convertFn: (valor: number, moedaOrigem: string) => number
+): Record<string, number> {
+  const cotacoes: Record<string, number> = {};
+  for (const moeda of ALL_FIAT_CURRENCIES) {
+    const rate = convertFn(1, moeda);
+    // Só incluir se a conversão retorna um valor diferente de 1 (identidade = sem conversão)
+    if (Math.abs(rate - 1) > 0.001 && Math.abs(rate) > 0.001) {
+      cotacoes[moeda] = rate;
+    }
+  }
+  return cotacoes;
+}
+
 const toBucketMoeda = (moeda?: string | null): keyof SaldoByMoeda =>
   isUsdLike(moeda) ? "USD" : "BRL";
 
