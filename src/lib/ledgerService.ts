@@ -123,7 +123,7 @@ export async function insertLedgerEntry(
   input: LedgerEntryInput
 ): Promise<LedgerEntryResult> {
   try {
-    const dataTransacao = input.dataTransacao || new Date().toISOString().split('T')[0];
+    const dataTransacao = input.dataTransacao || getTodayCivilDate();
     
     // Build insert payload - using type assertion since trigger handles custom tipos
     // CRÍTICO: valor_destino DEVE ser preenchido para créditos (destino_bookmaker_id)
