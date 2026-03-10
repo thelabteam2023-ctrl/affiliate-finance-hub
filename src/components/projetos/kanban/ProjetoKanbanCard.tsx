@@ -245,7 +245,7 @@ export function ProjetoKanbanCard({
                 <span>Lucro Operacional</span>
               </div>
               <span className={`text-lg font-semibold ${lucroOpDisplay?.colorClass}`}>
-                {lucroOpDisplay?.isPositive ? '+' : ''}{formatBRL(lucroOperacional)}
+                {lucroOpDisplay?.isPositive ? '+' : '-'}{formatByMoeda(lucroOperacional, moedaConsolidacao)}
               </span>
               
               {/* Breakdown por moeda */}
