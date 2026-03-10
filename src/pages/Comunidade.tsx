@@ -49,16 +49,23 @@ export default function Comunidade() {
     setSearchParams(searchParams);
   };
 
+  // Inject title into global TopBar
+  useEffect(() => {
+    setTopBarContent(
+      <div className="flex items-center gap-2">
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
+          <MessageSquare className="h-4 w-4 text-primary" />
+        </div>
+        <span className="font-semibold text-sm">Comunidade</span>
+      </div>
+    );
+    return () => setTopBarContent(null);
+  }, [setTopBarContent]);
+
   // Upgrade prompt for Free/Starter users
   if (!accessLoading && !hasFullAccess) {
     return (
       <div className="container mx-auto p-6 max-w-6xl">
-        <PageHeader 
-          title="Comunidade" 
-          description="Hub de discussões para operadores"
-          pagePath="/comunidade"
-          pageIcon="Users"
-        />
         <Card className="mt-8 border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
             <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
