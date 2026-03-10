@@ -147,7 +147,7 @@ function ResultadoBadge({ resultado }: { resultado: string | null | undefined })
 const LOGO_SIZE = "h-10 w-10";
 
 // Componente helper para exibir logo da casa com tamanho padronizado
-function BookmakerLogo({ 
+function SurebetBookmakerLogo({ 
   nome, 
   getLogoUrl 
 }: { 
@@ -155,14 +155,15 @@ function BookmakerLogo({
   getLogoUrl: (name: string) => string | null;
 }) {
   const logoUrl = getLogoUrl(nome);
+  const [hasError, setHasError] = useState(false);
   
-  if (logoUrl) {
+  if (logoUrl && !hasError) {
     return (
       <img 
         src={logoUrl} 
         alt={nome} 
         className={cn(LOGO_SIZE, "rounded-lg object-contain logo-blend p-1")}
-        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+        onError={() => setHasError(true)}
       />
     );
   }
