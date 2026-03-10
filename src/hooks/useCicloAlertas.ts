@@ -39,7 +39,7 @@ export function useCicloAlertas() {
           id, projeto_id, numero_ciclo, tipo_gatilho,
           data_inicio, data_fim_prevista, meta_volume,
           valor_acumulado, metrica_acumuladora,
-          projeto:projetos(nome)
+          projeto:projetos(nome, metrica_lucro_ciclo)
         `)
         .eq("status", "EM_ANDAMENTO");
 
@@ -59,9 +59,10 @@ export function useCicloAlertas() {
           dataFim: ciclo.data_fim_prevista,
         });
 
+        const metricaLucro = ((ciclo.projeto as any)?.metrica_lucro_ciclo as string) || "operacional";
         let valorAcumuladoReal = ciclo.metrica_acumuladora === "VOLUME_APOSTADO"
           ? metricas.volume
-          : metricas.lucroLiquido;
+          : (metricaLucro === "realizado" ? metricas.lucroRealizado : metricas.lucroLiquido);
 
         const dataFim = new Date(ciclo.data_fim_prevista);
         dataFim.setHours(0, 0, 0, 0);
