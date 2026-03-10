@@ -31,6 +31,7 @@
  */
 
 import { supabase } from "@/integrations/supabase/client";
+import { getTodayCivilDate } from "@/utils/dateUtils";
 
 export type LedgerTransactionType = 
   | 'CASHBACK_MANUAL'
