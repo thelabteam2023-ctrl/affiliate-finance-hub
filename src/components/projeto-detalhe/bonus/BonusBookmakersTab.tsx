@@ -65,6 +65,13 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const REASON_LABELS: Record<FinalizeReason, { label: string; icon: React.ElementType; color: string }> = {
   rollover_completed: { label: "Rollover Concluído (Saque)", icon: CheckCircle2, color: "text-emerald-400 bg-emerald-500/20 border-emerald-500/30" },
@@ -87,8 +94,23 @@ function FinalizedBonusHistory({
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [editingBonus, setEditingBonus] = useState<ProjectBonus | null>(null);
+  const [filterParceiro, setFilterParceiro] = useState<string>("all");
+  const [filterCasa, setFilterCasa] = useState<string>("all");
   
   const finalizedBonuses = bonuses.filter(b => b.status === 'finalized');
+
+  // Extract unique parceiros and casas for filters
+  const parceiros = useMemo(() => {
+    const set = new Set<string>();
+    finalizedBonuses.forEach(b => { if (b.parceiro_nome) set.add(b.parceiro_nome); });
+    return Array.from(set).sort();
+  }, [finalizedBonuses]);
+
+  const casas = useMemo(() => {
+    const set = new Set<string>();
+    finalizedBonuses.forEach(b => { if (b.bookmaker_nome) set.add(b.bookmaker_nome); });
+    return Array.from(set).sort();
+  }, [finalizedBonuses]);
   
   // Fetch debit amounts for cancelled bonuses from cash_ledger
   const finalizedBonusIds = finalizedBonuses.map(b => b.id);
@@ -185,13 +207,25 @@ function FinalizedBonusHistory({
     | { type: "bonus"; data: ProjectBonus; sortDate: string }
     | { type: "ajuste"; data: typeof ajustesData[0]; sortDate: string };
 
+  // Apply filters to bonuses
+  const filteredBonuses = finalizedBonuses.filter(b => {
+    if (filterParceiro !== "all" && b.parceiro_nome !== filterParceiro) return false;
+    if (filterCasa !== "all" && b.bookmaker_nome !== filterCasa) return false;
+    return true;
+  });
+
+  const filteredAjustes = ajustesData.filter(a => {
+    if (filterCasa !== "all" && a.bookmaker_nome !== filterCasa) return false;
+    return true;
+  });
+
   const entries: HistoryEntry[] = [
-    ...finalizedBonuses.map(b => ({
+    ...filteredBonuses.map(b => ({
       type: "bonus" as const,
       data: b,
       sortDate: b.finalized_at || b.created_at,
     })),
-    ...ajustesData.map(a => ({
+    ...filteredAjustes.map(a => ({
       type: "ajuste" as const,
       data: a,
       sortDate: a.created_at,
@@ -234,6 +268,42 @@ function FinalizedBonusHistory({
         </CollapsibleTrigger>
         <CollapsibleContent>
           <CardContent className="pt-0">
+            {/* Filtros */}
+            <div className="flex items-center gap-2 mb-3">
+              {parceiros.length > 0 && (
+                <Select value={filterParceiro} onValueChange={setFilterParceiro}>
+                  <SelectTrigger className="w-[180px] h-8 text-xs">
+                    <User className="h-3 w-3 mr-1.5 text-muted-foreground" />
+                    <SelectValue placeholder="Parceiro" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os parceiros</SelectItem>
+                    {parceiros.map(p => (
+                      <SelectItem key={p} value={p}>{p}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              {casas.length > 1 && (
+                <Select value={filterCasa} onValueChange={setFilterCasa}>
+                  <SelectTrigger className="w-[180px] h-8 text-xs">
+                    <Building2 className="h-3 w-3 mr-1.5 text-muted-foreground" />
+                    <SelectValue placeholder="Casa" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas as casas</SelectItem>
+                    {casas.map(c => (
+                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              {(filterParceiro !== "all" || filterCasa !== "all") && (
+                <Badge variant="outline" className="text-xs text-muted-foreground">
+                  {entries.length} de {totalEntries}
+                </Badge>
+              )}
+            </div>
             <ScrollArea className="h-[400px]">
               <div className="space-y-2 pr-4">
                 {entries.map(entry => {
