@@ -94,8 +94,23 @@ function FinalizedBonusHistory({
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [editingBonus, setEditingBonus] = useState<ProjectBonus | null>(null);
+  const [filterParceiro, setFilterParceiro] = useState<string>("all");
+  const [filterCasa, setFilterCasa] = useState<string>("all");
   
   const finalizedBonuses = bonuses.filter(b => b.status === 'finalized');
+
+  // Extract unique parceiros and casas for filters
+  const parceiros = useMemo(() => {
+    const set = new Set<string>();
+    finalizedBonuses.forEach(b => { if (b.parceiro_nome) set.add(b.parceiro_nome); });
+    return Array.from(set).sort();
+  }, [finalizedBonuses]);
+
+  const casas = useMemo(() => {
+    const set = new Set<string>();
+    finalizedBonuses.forEach(b => { if (b.bookmaker_nome) set.add(b.bookmaker_nome); });
+    return Array.from(set).sort();
+  }, [finalizedBonuses]);
   
   // Fetch debit amounts for cancelled bonuses from cash_ledger
   const finalizedBonusIds = finalizedBonuses.map(b => b.id);
