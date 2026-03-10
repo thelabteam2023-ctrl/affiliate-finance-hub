@@ -102,6 +102,7 @@ const rolePermissions = [
 export default function Workspace() {
   const { user } = useAuth();
   const { workspace, workspaceId, refreshWorkspace } = useWorkspace();
+  const { setContent: setTopBarContent } = useTopBar();
   const { canManageWorkspace, isOwner, isSystemOwner } = useRole();
   const { toast } = useToast();
   const { pendingInvites, loading: invitesLoading, acceptInvite, declineInvite, refresh: refreshInvites } = useUserWorkspaces();

@@ -347,6 +347,7 @@ const PRIORITY = {
 } as const;
 
 export default function CentralOperacoes() {
+  const { setContent: setTopBarContent } = useTopBar();
   const [alertas, setAlertas] = useState<Alerta[]>([]);
   const [entregasPendentes, setEntregasPendentes] = useState<EntregaPendente[]>([]);
   const [pagamentosParceiros, setPagamentosParceiros] = useState<PagamentoParceiroPendente[]>([]);
