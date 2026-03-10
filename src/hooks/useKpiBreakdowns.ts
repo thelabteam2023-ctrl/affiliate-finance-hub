@@ -3,7 +3,7 @@ import { PERIOD_STALE_TIME, PERIOD_GC_TIME } from '@/lib/query-cache-config';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchProjetoExtras, agruparExtrasPorTipo, type ProjetoExtraEntry } from '@/services/fetchProjetoExtras';
-import { fetchProjetosLucroOperacionalKpi } from '@/services/fetchProjetosLucroOperacionalKpi';
+import { fetchProjetosLucroOperacionalKpi, derivarCotacoesFromConvertFn } from '@/services/fetchProjetosLucroOperacionalKpi';
 import { 
   ProjetoKpiBreakdowns, 
   KpiBreakdown, 
