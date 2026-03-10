@@ -155,6 +155,7 @@ export async function fetchProjetosLucroOperacionalKpi({
   projetoIds,
   cotacaoUSD,
   cotacoes = {},
+  moedaConsolidacao = "BRL",
   dataInicio,
   dataFim,
 }: Params): Promise<Record<string, LucroProjetoResumo>> {
