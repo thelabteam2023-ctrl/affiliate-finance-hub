@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { getTodayCivilDate, dateToCivilDateString } from "@/utils/dateUtils";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { getMoedaSymbol, type MoedaConsolidacao } from "@/types/projeto";
