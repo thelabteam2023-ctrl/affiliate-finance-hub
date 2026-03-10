@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Badge } from "@/components/ui/badge";
-import { Coins, Briefcase, Percent, Info, Target } from "lucide-react";
+import { Coins, Briefcase, Percent, Info, Target, TrendingUp } from "lucide-react";
 import {
   Select,
   SelectContent,

@@ -125,6 +125,7 @@ export const DEFAULT_FORM_DATA: ProjectFormData = {
   investidor_id: null,
   percentual_investidor: 0,
   base_calculo_investidor: "LUCRO_LIQUIDO",
+  metrica_lucro_ciclo: "operacional",
   
   // Etapa 2
   moeda_consolidacao: "BRL",
