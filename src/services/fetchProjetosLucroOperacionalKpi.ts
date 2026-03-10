@@ -16,6 +16,9 @@ interface LucroProjetoResumo {
 interface Params {
   projetoIds: string[];
   cotacaoUSD: number;
+  /** Mapa de cotações adicionais (ex: { EUR: 6.2 }) para moedas além de USD/BRL.
+   *  Cada valor representa quanto vale 1 unidade da moeda na moeda de consolidação. */
+  cotacoes?: Record<string, number>;
   /** Filtro de data início (YYYY-MM-DD). Se omitido, sem limite inferior. */
   dataInicio?: string | null;
   /** Filtro de data fim (YYYY-MM-DD). Se omitido, sem limite superior. */
