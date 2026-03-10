@@ -126,6 +126,7 @@ export default function GestaoParceiros() {
   const parceiroCache = useParceiroFinanceiroCache();
   
   // SEGURANÇA: workspaceId como dependência para isolamento multi-tenant
+  const { setContent: setTopBarContent } = useTopBar();
   const { workspaceId } = useTabWorkspace();
 
   // Persistência: Salva no localStorage ao selecionar parceiro
