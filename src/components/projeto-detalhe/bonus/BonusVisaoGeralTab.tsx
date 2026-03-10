@@ -751,7 +751,40 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
                       <span>Média por dia depositado</span>
                       <span className="font-semibold text-emerald-500">{formatCurrency(avgPerDepositDay)}</span>
                     </div>
-                  </div>
+                   </div>
+                  {/* Seção de comparação com Meta do Ciclo */}
+                  {(() => {
+                    if (!cicloAtivo?.meta_volume || !cicloAtivo.data_inicio || !cicloAtivo.data_fim_prevista) return null;
+                    const inicio = parseLocalDate(cicloAtivo.data_inicio);
+                    const fim = parseLocalDate(cicloAtivo.data_fim_prevista);
+                    const diasCiclo = Math.max(1, Math.round((fim.getTime() - inicio.getTime()) / (24 * 60 * 60 * 1000)) + 1);
+                    const metaDiaria = cicloAtivo.meta_volume / diasCiclo;
+                    const diff = avgPerDay - metaDiaria;
+                    const isAbove = diff >= 0;
+                    return (
+                      <div className="border-t border-border/50 pt-1 space-y-0.5">
+                        <p className="text-muted-foreground text-xs">Meta do Ciclo #{cicloAtivo.numero_ciclo}:</p>
+                        <div className="flex justify-between gap-4">
+                          <span>Meta total</span>
+                          <span className="font-semibold text-foreground">{formatCurrency(cicloAtivo.meta_volume)}</span>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <span>Duração do ciclo</span>
+                          <span className="font-semibold text-foreground">{diasCiclo} dias</span>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <span>Meta diária necessária</span>
+                          <span className="font-semibold text-foreground">{formatCurrency(metaDiaria)}/dia</span>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <span>Diferença</span>
+                          <span className={`font-semibold ${isAbove ? "text-emerald-500" : "text-red-500"}`}>
+                            {isAbove ? "+" : ""}{formatCurrency(diff)}/dia
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               ),
               subtitle: <span className="text-muted-foreground">{calendarDays} {calendarDays === 1 ? "dia" : "dias"} corridos</span>,
