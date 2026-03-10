@@ -123,6 +123,7 @@ export function ProjetoKanbanCard({
   const lucroUSD = projeto.lucro_by_moeda?.USD || 0;
   const lucroOperacional = projeto.lucro_operacional || 0;
   const lucroRealizado = projeto.lucro_realizado || 0;
+  const moedaConsolidacao = projeto.moeda_consolidacao || 'BRL';
 
   const lucroOpDisplay = getFinancialDisplay(lucroOperacional);
   const lucroRealizadoDisplay = getFinancialDisplay(lucroRealizado);
