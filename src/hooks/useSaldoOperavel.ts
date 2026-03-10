@@ -235,6 +235,8 @@ export function useSaldoOperavel(projetoId: string) {
           rolloverProgress: rolloverInfo?.progress || 0,
           rolloverTarget: rolloverInfo?.target || 0,
           rolloverPercentual: rolloverInfo?.percentual || 0,
+          // Status de saque
+          aguardandoSaque: statusMap?.get(bk.id) || false,
         };
       })
       .filter((casa) => casa.saldoOperavel > 0 || casa.saldoEmAposta > 0)
