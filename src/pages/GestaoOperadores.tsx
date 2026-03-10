@@ -76,6 +76,7 @@ interface LegacyOperador {
 export default function GestaoOperadores() {
   const { workspace } = useWorkspace();
   const { canCreate, canEdit } = useActionAccess();
+  const { setContent: setTopBarContent } = useTopBar();
   const [operadores, setOperadores] = useState<OperadorWorkspace[]>([]);
   const [legacyOperadores, setLegacyOperadores] = useState<LegacyOperador[]>([]);
   const [loading, setLoading] = useState(true);
