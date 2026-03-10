@@ -6,9 +6,17 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { FinancialMetricsPopover } from "./FinancialMetricsPopover";
 import { DollarSign } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { calcularMetricasPeriodo } from "@/services/calcularMetricasPeriodo";
+import { format } from "date-fns";
+
+interface DateRangeResult {
+  start: Date;
+  end: Date;
+}
 
 interface FinancialSummaryCompactProps {
   projetoId: string;
+  dateRange?: DateRangeResult | null;
 }
 
 async function fetchCompactMetrics(projetoId: string) {
@@ -39,8 +47,8 @@ async function fetchCompactMetrics(projetoId: string) {
   };
 }
 
-export function FinancialSummaryCompact({ projetoId }: FinancialSummaryCompactProps) {
-  const { formatCurrency, convertToConsolidationOficial, cotacaoOficialUSD } = useProjetoCurrency(projetoId);
+export function FinancialSummaryCompact({ projetoId, dateRange }: FinancialSummaryCompactProps) {
+  const { formatCurrency, convertToConsolidationOficial, cotacaoOficialUSD, convertToConsolidationTrabalho, moedaConsolidacao } = useProjetoCurrency(projetoId);
 
   const { data: raw, isLoading } = useQuery({
     queryKey: ["projeto-financial-compact", projetoId],
@@ -49,11 +57,29 @@ export function FinancialSummaryCompact({ projetoId }: FinancialSummaryCompactPr
     gcTime: 60_000,
   });
 
+  // Métricas do período selecionado (ciclo/filtro)
+  const dateRangeKey = dateRange ? `${format(dateRange.start, "yyyy-MM-dd")}_${format(dateRange.end, "yyyy-MM-dd")}` : null;
+  
+  const { data: periodMetrics } = useQuery({
+    queryKey: ["projeto-financial-compact-period", projetoId, dateRangeKey],
+    queryFn: async () => {
+      if (!dateRange) return null;
+      return calcularMetricasPeriodo({
+        projetoId,
+        dataInicio: format(dateRange.start, "yyyy-MM-dd"),
+        dataFim: format(dateRange.end, "yyyy-MM-dd"),
+        convertToConsolidation: convertToConsolidationTrabalho,
+        moedaConsolidacao: moedaConsolidacao || "BRL",
+      });
+    },
+    enabled: !!dateRange && !!dateRangeKey,
+    staleTime: 30_000,
+    gcTime: 60_000,
+  });
+
   const metrics = useMemo(() => {
     if (!raw) return null;
 
-    // LUCRO REAL = Saques Confirmados - Depósitos Confirmados
-    // Nenhum outro evento (bônus, apostas, cashback) entra neste cálculo
     const depositosTotal = raw.depositos.reduce(
       (acc, d) => acc + convertToConsolidationOficial(d.valor, d.moeda), 0
     );
@@ -73,6 +99,11 @@ export function FinancialSummaryCompact({ projetoId }: FinancialSummaryCompactPr
 
   const lucroColor = metrics.lucro >= 0 ? "text-emerald-500" : "text-red-500";
   const roiColor = metrics.roi >= 0 ? "text-emerald-500" : "text-red-500";
+  
+  // Lucro do período (operacional)
+  const hasPeriod = !!periodMetrics && !!dateRange;
+  const periodLucro = periodMetrics?.lucroLiquido ?? 0;
+  const periodColor = periodLucro >= 0 ? "text-emerald-500" : "text-red-500";
 
   return (
     <Popover>
@@ -86,6 +117,11 @@ export function FinancialSummaryCompact({ projetoId }: FinancialSummaryCompactPr
             <span className={`text-[10px] leading-tight tabular-nums ${roiColor}`}>
               ROI {metrics.roi.toFixed(2)}%
             </span>
+            {hasPeriod && (
+              <span className={`text-[9px] leading-tight tabular-nums ${periodColor} border-t border-border/40 pt-0.5 mt-0.5`}>
+                Período: {formatCurrency(periodLucro)}
+              </span>
+            )}
           </div>
           <div className="h-6 w-6 rounded-full bg-muted/60 flex items-center justify-center group-hover:bg-muted transition-colors">
             <DollarSign className="h-3 w-3 text-muted-foreground" />
