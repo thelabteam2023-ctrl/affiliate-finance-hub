@@ -72,6 +72,7 @@ export function useWorkspaceLucroOperacional({
   dataInicio = null,
   dataFim = null,
   cotacaoUSD = 5.0,
+  cotacaoEUR,
 }: UseWorkspaceLucroOperacionalProps = {}): UseWorkspaceLucroOperacionalReturn {
   const [resultado, setResultado] = useState<WorkspaceLucroConsolidado | null>(null);
   const [loading, setLoading] = useState(true);
