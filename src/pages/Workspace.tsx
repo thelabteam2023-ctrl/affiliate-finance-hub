@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useTopBar } from "@/contexts/TopBarContext";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useRole } from "@/hooks/useRole";
 import { useUserWorkspaces } from "@/hooks/useUserWorkspaces";
