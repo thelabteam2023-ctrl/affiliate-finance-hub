@@ -169,8 +169,7 @@ export async function calcularMetricasPeriodo({
       .lte("data_transacao", endUTC),
   ]);
 
-  // Buscar créditos extras em paralelo separado (evita TS2589 com muitos generics)
-  // Use type assertion to avoid TS2589 with deeply nested generic types
+  // Buscar bônus creditados (evita TS2589 com type assertion)
   const bonusResult: { data: any[] | null; error: any } = await (supabase as any)
     .from("project_bookmaker_link_bonuses")
     .select("bonus_amount")
@@ -178,24 +177,6 @@ export async function calcularMetricasPeriodo({
     .or("status.eq.credited,status.eq.finalized")
     .gte("credited_at", startUTC)
     .lte("credited_at", endUTC);
-
-  const ajustesResult = await supabase
-    .from("cash_ledger")
-    .select("valor, ajuste_direcao")
-    .or("tipo_transacao.eq.AJUSTE_SALDO,tipo_transacao.eq.AJUSTE_RECONCILIACAO")
-    .eq("status", "CONFIRMADO")
-    .eq("projeto_id_snapshot", projetoId)
-    .gte("data_transacao", startUTC)
-    .lte("data_transacao", endUTC);
-
-  const fxResult = await supabase
-    .from("cash_ledger")
-    .select("valor, tipo_transacao")
-    .or("tipo_transacao.eq.GANHO_CAMBIAL,tipo_transacao.eq.PERDA_CAMBIAL")
-    .eq("status", "CONFIRMADO")
-    .eq("projeto_id_snapshot", projetoId)
-    .gte("data_transacao", startUTC)
-    .lte("data_transacao", endUTC);
 
   // Processar erros silenciosamente (melhor UX)
   if (apostasResult.error) console.error("[calcularMetricasPeriodo] Erro apostas:", apostasResult.error);
