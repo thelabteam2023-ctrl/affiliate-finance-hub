@@ -670,7 +670,7 @@ export default function ProjetoDetalhe() {
       await fetchApostasResumo();
 
       // Fetch ciclo ativo (vigente - com data_inicio <= hoje e data_fim_prevista >= hoje)
-      const hoje = new Date().toISOString().split('T')[0];
+      const hoje = getTodayCivilDate();
       const { data: cicloData } = await supabase
         .from("projeto_ciclos")
         .select("data_inicio, data_fim_prevista")
