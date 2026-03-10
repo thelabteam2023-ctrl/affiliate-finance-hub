@@ -305,25 +305,16 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
   });
 
   // Fetch perdas por cancelamento de bônus (cash_ledger com ajuste_motivo = BONUS_CANCELAMENTO)
+  // CORREÇÃO: Usar projeto_id_snapshot para capturar perdas de bookmakers já desvinculadas
   const { data: perdasCancelamento = [] } = useQuery({
     queryKey: ["bonus-perdas-cancelamento", projetoId],
     queryFn: async () => {
-      const { data: bookmakers } = await supabase
-        .from("bookmakers")
-        .select("id, moeda")
-        .eq("projeto_id", projetoId);
-
-      if (!bookmakers || bookmakers.length === 0) return [];
-
-      const bookmakerIds = bookmakers.map(b => b.id);
-      const moedaMap = new Map(bookmakers.map(b => [b.id, b.moeda || "BRL"]));
-
       const { data, error } = await supabase
         .from("cash_ledger")
         .select("id, valor, moeda, origem_bookmaker_id, data_transacao, auditoria_metadata")
         .eq("ajuste_motivo", "BONUS_CANCELAMENTO")
         .eq("ajuste_direcao", "SAIDA")
-        .in("origem_bookmaker_id", bookmakerIds);
+        .eq("projeto_id_snapshot", projetoId);
 
       if (error) throw error;
 
@@ -333,7 +324,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
 
         return {
           valor: -valorPerdido, // Negativo pois é perda
-          moeda: entry.moeda || moedaMap.get(entry.origem_bookmaker_id || "") || "BRL",
+          moeda: entry.moeda || "BRL",
           bookmaker_id: entry.origem_bookmaker_id || "",
           data_operacional: entry.data_transacao,
         };

@@ -584,7 +584,7 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
       // GUARD: Check current status in DB to prevent double finalization
       const { data: currentBonus, error: fetchError } = await supabase
         .from("project_bookmaker_link_bonuses")
-        .select("status, bookmaker_id, workspace_id, currency, title, tipo_bonus, valor_creditado_no_saldo, bonus_amount, saldo_atual, finalize_reason")
+        .select("status, bookmaker_id, workspace_id, currency, title, tipo_bonus, valor_creditado_no_saldo, bonus_amount, saldo_atual, finalize_reason, project_id")
         .eq("id", id)
         .single();
 
@@ -657,6 +657,7 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
               workspace_id: currentBonus.workspace_id || "",
               origem_tipo: "BOOKMAKER",
               origem_bookmaker_id: currentBonus.bookmaker_id,
+              projeto_id_snapshot: currentBonus.project_id,
               ajuste_direcao: "SAIDA",
               ajuste_motivo: `BONUS_CANCELAMENTO`,
               descricao: `Débito por cancelamento de bônus: ${currentBonus.title || "Bônus"} — valor perdido`,
