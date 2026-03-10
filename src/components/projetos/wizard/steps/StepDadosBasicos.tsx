@@ -104,6 +104,61 @@ export function StepDadosBasicos({ formData, onChange }: StepDadosBasicosProps) 
         </div>
       </div>
 
+      {/* Métrica de Lucro do Ciclo */}
+      <Card className="border-border">
+        <CardContent className="pt-4">
+          <div className="space-y-3">
+            <Label className="flex items-center gap-2">
+              <TrendingUp className="h-3.5 w-3.5" />
+              Métrica de Lucro do Ciclo
+            </Label>
+            <p className="text-xs text-muted-foreground">
+              Define como o lucro será calculado nos ciclos de apuração deste projeto.
+            </p>
+            <RadioGroup
+              value={formData.metrica_lucro_ciclo || "operacional"}
+              onValueChange={(value) => onChange({ metrica_lucro_ciclo: value as "operacional" | "realizado" })}
+              className="grid grid-cols-1 md:grid-cols-2 gap-3"
+            >
+              <label
+                htmlFor="metrica_operacional"
+                className={cn(
+                  "flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors",
+                  formData.metrica_lucro_ciclo === "operacional"
+                    ? "border-primary bg-primary/5"
+                    : "border-border hover:border-muted-foreground/30"
+                )}
+              >
+                <RadioGroupItem value="operacional" id="metrica_operacional" className="mt-0.5" />
+                <div className="space-y-1">
+                  <span className="text-sm font-medium">Operacional</span>
+                  <p className="text-xs text-muted-foreground">
+                    Apostas + Cashback + Giros − Perdas. Mede a produção, independente de saques.
+                  </p>
+                </div>
+              </label>
+              <label
+                htmlFor="metrica_realizado"
+                className={cn(
+                  "flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors",
+                  formData.metrica_lucro_ciclo === "realizado"
+                    ? "border-primary bg-primary/5"
+                    : "border-border hover:border-muted-foreground/30"
+                )}
+              >
+                <RadioGroupItem value="realizado" id="metrica_realizado" className="mt-0.5" />
+                <div className="space-y-1">
+                  <span className="text-sm font-medium">Realizado (Saques − Depósitos)</span>
+                  <p className="text-xs text-muted-foreground">
+                    Fluxo de caixa efetivo. O lucro só é contabilizado quando o capital é sacado.
+                  </p>
+                </div>
+              </label>
+            </RadioGroup>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Cards opcionais em grid 2 colunas (desktop) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Participação de Investidor - Card com expansão interna */}
