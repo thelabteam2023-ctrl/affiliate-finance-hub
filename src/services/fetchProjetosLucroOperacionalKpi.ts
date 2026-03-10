@@ -308,11 +308,21 @@ export async function fetchProjetosLucroOperacionalKpi({
     result[projetoId].consolidado += convertToConsolidation(delta, moeda);
   });
 
-  // 7) Extras canônicos (ajuste_saldo + resultado_cambial)
-  // Quando há filtro de data, filtra os extras pela data civil (YYYY-MM-DD) antes de agregar.
+  // 7) Extras canônicos NÃO cobertos pelas seções 2-6:
+  //    - ajuste_saldo (cash_ledger AJUSTE_SALDO + financial_events AJUSTE_POS_LIMITACAO)
+  //    - resultado_cambial (cash_ledger GANHO/PERDA_CAMBIAL)
+  //    - promocional (cash_ledger FREEBET_CONVERTIDA, CREDITO_PROMOCIONAL, GIRO_GRATIS_GANHO)
+  //    - freebet (mapeado de FREEBET_CONVERTIDA)
+  //
+  // Tipos JÁ cobertos (seções 2-6): cashback, giro_gratis, bonus, perda_operacional, conciliacao
+  const EXTRAS_JA_COBERTOS = new Set(['cashback', 'giro_gratis', 'bonus', 'perda_operacional', 'conciliacao']);
+
   const extrasByProjeto = await Promise.all(
     projetoIds.map(async (projetoId) => {
       let extras = await fetchProjetoExtras(projetoId);
+      
+      // Excluir tipos já cobertos pelas seções 2-6
+      extras = extras.filter(e => !EXTRAS_JA_COBERTOS.has(e.tipo));
       
       // Filtrar extras por período quando há filtro de data ativo
       if (dataInicio || dataFim) {
@@ -332,19 +342,11 @@ export async function fetchProjetosLucroOperacionalKpi({
     const target = result[projetoId];
     if (!target) return;
 
-    const ajusteSaldo = agrupados.ajuste_saldo;
-    const resultadoCambial = agrupados.resultado_cambial;
-
-    if (ajusteSaldo) {
-      target.consolidado += Number(ajusteSaldo.total || 0);
-      (ajusteSaldo.porMoeda || []).forEach((item) => {
-        target.porMoeda[toBucketMoeda(item.moeda)] += Number(item.valor || 0);
-      });
-    }
-
-    if (resultadoCambial) {
-      target.consolidado += Number(resultadoCambial.total || 0);
-      (resultadoCambial.porMoeda || []).forEach((item) => {
+    // Iterar TODOS os tipos restantes (ajuste_saldo, resultado_cambial, promocional, freebet)
+    for (const [_tipo, grupo] of Object.entries(agrupados)) {
+      if (!grupo) continue;
+      target.consolidado += Number(grupo.total || 0);
+      (grupo.porMoeda || []).forEach((item: { moeda: string; valor: number }) => {
         target.porMoeda[toBucketMoeda(item.moeda)] += Number(item.valor || 0);
       });
     }
