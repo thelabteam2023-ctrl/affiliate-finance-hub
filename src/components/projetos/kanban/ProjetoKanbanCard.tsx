@@ -98,6 +98,11 @@ const formatUSD = (value: number) => {
   return `$ ${Math.abs(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
+const formatByMoeda = (value: number, moeda: string) => {
+  const m = (moeda || 'BRL').toUpperCase();
+  return m === 'USD' ? formatUSD(value) : formatBRL(value);
+};
+
 export function ProjetoKanbanCard({
   projeto,
   isFavorite,
