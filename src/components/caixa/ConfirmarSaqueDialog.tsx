@@ -122,7 +122,7 @@ export function ConfirmarSaqueDialog({
       setObservacoes("");
       setParceiroInativo(null);
       // Data de confirmação padrão = hoje
-      setDataConfirmacao(new Date().toISOString().split("T")[0]);
+      setDataConfirmacao(getTodayCivilDate());
       
       if (isCryptoWithdrawal) {
         // Pré-preencher com estimativa
