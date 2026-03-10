@@ -2,6 +2,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
 import { Gift, Target, TrendingUp, Shield, CheckCircle2, BarChart3, Layers } from "lucide-react";
+import { BookmakerLogo } from "@/components/ui/bookmaker-logo";
 import { ApostaOperacionalFreebet } from "./types";
 import { ResultadoPill } from "../ResultadoPill";
 import { parseLocalDateTime } from "@/utils/dateUtils";
