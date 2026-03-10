@@ -12,6 +12,7 @@
  */
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useTopBar } from "@/contexts/TopBarContext";
 import { useQuery } from "@tanstack/react-query";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { OcorrenciasModule } from "@/components/ocorrencias/OcorrenciasModule";
