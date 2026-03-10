@@ -493,11 +493,15 @@ export default function GestaoProjetos() {
     setProjetoToDelete(null);
   };
 
-  const formatCurrency = (value: number) => {
+  const formatCurrencyValue = (value: number, moeda: string = "BRL") => {
+    const m = (moeda || "BRL").toUpperCase();
+    if (m === "USD") {
+      return `$ ${Math.abs(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
       currency: "BRL",
-    }).format(value);
+    }).format(Math.abs(value));
   };
 
   const getStatusColor = (status: string) => {
