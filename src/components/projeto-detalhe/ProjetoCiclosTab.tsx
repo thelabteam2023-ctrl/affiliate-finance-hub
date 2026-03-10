@@ -25,7 +25,8 @@ import {
   ChevronDown,
   Ban,
   Lock,
-  ChevronUp
+  ChevronUp,
+  Wallet
 } from "lucide-react";
 import { format, differenceInDays, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
