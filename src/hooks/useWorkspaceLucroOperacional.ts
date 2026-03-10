@@ -35,7 +35,8 @@ interface UseWorkspaceLucroOperacionalProps {
   dataInicio?: string | null;
   dataFim?: string | null;
   cotacaoUSD?: number;
-  cotacaoEUR?: number;
+  /** Mapa de cotações adicionais para moedas não-USD/BRL (ex: { EUR: 6.2 }) */
+  cotacoes?: Record<string, number>;
 }
 
 interface UseWorkspaceLucroOperacionalReturn {
