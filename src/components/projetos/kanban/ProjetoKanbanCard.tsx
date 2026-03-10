@@ -244,32 +244,20 @@ export function ProjetoKanbanCard({
               
               {/* Breakdown por moeda */}
               <div className="flex flex-wrap items-center justify-center gap-1.5">
-                {hasBRL && (
+                {moedaEntries.map(([moeda, valor]) => (
                   <Badge 
+                    key={moeda}
                     variant="outline" 
                     className={`text-[11px] px-2 py-0.5 ${
-                      lucroBRL < 0 
+                      valor < 0 
                         ? 'border-red-500/40 text-red-400 bg-red-500/10' 
                         : 'border-emerald-500/40 text-emerald-400 bg-emerald-500/10'
                     }`}
                   >
                     <CircleDollarSign className="h-3 w-3 mr-1" />
-                    BRL: {lucroBRL > 0 ? '+' : ''}{formatBRL(lucroBRL)}
+                    {moeda}: {valor > 0 ? '+' : ''}{formatByMoeda(valor, moeda)}
                   </Badge>
-                )}
-                {hasUSD && (
-                  <Badge 
-                    variant="outline" 
-                    className={`text-[11px] px-2 py-0.5 ${
-                      lucroUSD < 0 
-                        ? 'border-red-500/40 text-red-400 bg-red-500/10' 
-                        : 'border-emerald-500/40 text-emerald-400 bg-emerald-500/10'
-                    }`}
-                  >
-                    <DollarSign className="h-3 w-3 mr-1" />
-                    USD: {lucroUSD > 0 ? '+' : ''}{formatUSD(lucroUSD)}
-                  </Badge>
-                )}
+                ))}
               </div>
             </div>
             
