@@ -120,6 +120,7 @@ export function ProjetoCiclosTab({ projetoId, formatCurrency: formatCurrencyProp
   const [fecharConfirmOpen, setFecharConfirmOpen] = useState(false);
   const [cicloParaFechar, setCicloParaFechar] = useState<Ciclo | null>(null);
   const [projetoNome, setProjetoNome] = useState("");
+  const [metricaLucroCiclo, setMetricaLucroCiclo] = useState<"operacional" | "realizado">("operacional");
   const [encerrandoPorMeta, setEncerrandoPorMeta] = useState<string | null>(null);
   const { encerrarPorMeta } = useCicloActions();
   
