@@ -854,13 +854,7 @@ export function ApostaCard({
               <div className="mt-1 space-y-1.5 ml-4 pl-4 border-l-2 border-primary/20 mb-3">
                 {aposta.sub_entries!.map((entry, idx) => (
                   <div key={idx} className="flex items-center gap-2 text-xs text-muted-foreground py-0.5">
-                    {entry.logo_url ? (
-                      <img src={entry.logo_url} alt="" className="h-6 w-6 rounded object-contain logo-blend shrink-0" />
-                    ) : (
-                      <div className="h-6 w-6 rounded bg-muted/30 flex items-center justify-center shrink-0">
-                        <Building2 className="h-3 w-3 text-muted-foreground" />
-                      </div>
-                    )}
+                    <BookmakerLogo logoUrl={entry.logo_url} size="h-6 w-6" iconSize="h-3 w-3" />
                     <span className="truncate flex-1 uppercase">
                       {entry.bookmaker_nome}{entry.parceiro_nome ? ` - ${getFirstLastName(entry.parceiro_nome)}` : ''}
                     </span>
