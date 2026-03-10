@@ -18,6 +18,7 @@ export default function Comunidade() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { hasFullAccess, loading: accessLoading, plan } = useCommunityAccess();
+  const { setContent: setTopBarContent } = useTopBar();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<'recent' | 'trending'>('recent');
