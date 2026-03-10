@@ -8,6 +8,7 @@ import { FontesCaptacaoTab } from "@/components/programa-indicacao/FontesCaptaca
 import { ParceriasTab } from "@/components/programa-indicacao/ParceriasTab";
 import { FinanceiroTab } from "@/components/programa-indicacao/FinanceiroTab";
 import { BarChart3, Users, Handshake, Wallet } from "lucide-react";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 export default function ProgramaIndicacao() {
   const navigate = useNavigate();

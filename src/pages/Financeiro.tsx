@@ -1138,7 +1138,7 @@ export default function Financeiro() {
   // Inject title into global TopBar
   useEffect(() => {
     setTopBarContent(
-      <Tooltip>
+      <ShadcnTooltip>
         <TooltipTrigger asChild>
           <div className="flex items-center gap-2 cursor-default">
             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
@@ -1150,7 +1150,7 @@ export default function Financeiro() {
         <TooltipContent side="bottom">
           Visão financeira estratégica: Liquidez, Custos e Sustentabilidade
         </TooltipContent>
-      </Tooltip>
+      </ShadcnTooltip>
     );
     return () => setTopBarContent(null);
   }, [setTopBarContent]);

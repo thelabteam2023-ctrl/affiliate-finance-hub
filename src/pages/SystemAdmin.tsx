@@ -28,6 +28,7 @@ import {
   Users, Building2, Shield, Ban, Check, Plus, UserPlus, Settings2, 
   Eye, RefreshCw, Crown, AlertTriangle, Trash2, Archive, MessagesSquare, DollarSign, CreditCard, History, BarChart3, ArrowUpDown
 } from 'lucide-react';
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { format, differenceInDays } from 'date-fns';
 import { parseLocalDateTime } from '@/utils/dateUtils';
 import { ptBR } from 'date-fns/locale';

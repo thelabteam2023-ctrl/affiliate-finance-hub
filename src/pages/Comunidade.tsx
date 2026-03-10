@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Lock, Star, MessageSquare, Search, Plus, TrendingUp, Clock } from 'lucide-react';
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { CategorySidebar } from '@/components/comunidade/CategorySidebar';
 import { TopicFeed } from '@/components/comunidade/TopicFeed';
 import { CommunityRadar } from '@/components/comunidade/CommunityRadar';
