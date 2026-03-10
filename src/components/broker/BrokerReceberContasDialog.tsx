@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { getTodayCivilDate } from "@/utils/dateUtils";
 import { supabase } from "@/integrations/supabase/client";
 import { useTabWorkspace } from "@/hooks/useTabWorkspace";
 import { toast } from "sonner";
