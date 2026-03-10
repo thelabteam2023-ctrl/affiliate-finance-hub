@@ -431,7 +431,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
       <TooltipProvider>
       <KpiSummaryBar
         actions={actionsSlot}
-        leading={<><SaldoOperavelCard projetoId={projetoId} variant="compact" /><FinancialSummaryCompact projetoId={projetoId} /></>}
+        leading={<><SaldoOperavelCard projetoId={projetoId} variant="compact" /><FinancialSummaryCompact projetoId={projetoId} dateRange={dateRange} /></>}
         items={[
           {
             label: "Histórico de Casas",
