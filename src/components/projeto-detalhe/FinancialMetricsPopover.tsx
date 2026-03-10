@@ -336,11 +336,18 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
   return (
     <div className="p-4 w-[340px] space-y-0">
       {/* Header */}
-      <div className="flex items-center gap-2 mb-4">
-        <div className="p-1.5 rounded-md bg-primary/10">
-          <DollarSign className="h-3.5 w-3.5 text-primary" />
+      <div className="flex items-center justify-between gap-2 mb-4">
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 rounded-md bg-primary/10">
+            <DollarSign className="h-3.5 w-3.5 text-primary" />
+          </div>
+          <span className="text-xs font-bold tracking-tight">Indicadores Financeiros</span>
         </div>
-        <span className="text-xs font-bold tracking-tight">Indicadores Financeiros</span>
+        {dateRange && (
+          <span className="text-[9px] text-muted-foreground bg-muted/60 px-1.5 py-0.5 rounded">
+            {format(parseISO(dateRange.from), "dd/MM")} – {format(parseISO(dateRange.to), "dd/MM")}
+          </span>
+        )}
       </div>
 
       {/* ─── Seção 1: Fluxo de Caixa ─── */}
