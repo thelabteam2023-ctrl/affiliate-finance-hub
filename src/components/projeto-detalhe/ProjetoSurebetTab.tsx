@@ -739,8 +739,12 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
       }
     });
     const diasTrabalhados = datasUnicas.size;
+    // Usar o range do filtro de período para dias corridos (se disponível)
     let diasCorridos = 0;
-    if (dataMin && dataMax) {
+    if (dateRange?.start && dateRange?.end) {
+      const diffMs = dateRange.end.getTime() - dateRange.start.getTime();
+      diasCorridos = Math.max(1, Math.round(diffMs / (24 * 60 * 60 * 1000)) + 1);
+    } else if (dataMin && dataMax) {
       const diffMs = new Date(dataMax).getTime() - new Date(dataMin).getTime();
       diasCorridos = Math.max(1, Math.round(diffMs / (24 * 60 * 60 * 1000)) + 1);
     } else if (diasTrabalhados > 0) {
