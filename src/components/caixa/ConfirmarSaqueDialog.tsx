@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { getTodayCivilDate } from "@/utils/dateUtils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { dispatchCaixaDataChanged } from "@/hooks/useInvalidateCaixaData";
