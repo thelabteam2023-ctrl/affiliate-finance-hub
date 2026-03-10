@@ -759,7 +759,8 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
                     const fim = parseLocalDate(cicloAtivo.data_fim_prevista);
                     const diasCiclo = Math.max(1, Math.round((fim.getTime() - inicio.getTime()) / (24 * 60 * 60 * 1000)) + 1);
                     const metaDiaria = cicloAtivo.meta_volume / diasCiclo;
-                    const diff = avgPerDay - metaDiaria;
+                    const performanceDiaria = calendarDays > 0 ? bonusPerformance.total / calendarDays : 0;
+                    const diff = performanceDiaria - metaDiaria;
                     const isAbove = diff >= 0;
                     return (
                       <div className="border-t border-border/50 pt-1 space-y-0.5">
