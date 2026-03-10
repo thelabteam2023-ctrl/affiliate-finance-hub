@@ -121,6 +121,7 @@ export async function calcularMetricasPeriodo({
       projetoIds: [projetoId],
       cotacaoUSD,
       cotacoes,
+      moedaConsolidacao,
       dataInicio,
       dataFim,
     }),
