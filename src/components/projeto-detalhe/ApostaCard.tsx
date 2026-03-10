@@ -54,6 +54,7 @@ export interface ApostaCardData {
   id: string;
   evento: string;
   esporte: string;
+  mercado?: string | null;
   selecao?: string;
   odd?: number;
   odd_final?: number;
