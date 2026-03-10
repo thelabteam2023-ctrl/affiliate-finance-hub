@@ -54,6 +54,7 @@ const ROLES = [
 export default function SystemAdmin() {
   const { user } = useAuth();
   const { isUserOnline } = usePresence();
+  const { setContent: setTopBarContent } = useTopBar();
   const {
     loading,
     users,
