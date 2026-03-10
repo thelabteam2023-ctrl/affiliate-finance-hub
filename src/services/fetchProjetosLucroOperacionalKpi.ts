@@ -276,7 +276,7 @@ export async function fetchProjetosLucroOperacionalKpi({
     const bruto = Number(ap.lucro_prejuizo || 0);
     addToMoeda(result[projetoId].porMoeda, moeda, bruto);
 
-    const consolidado = getConsolidatedLucro(ap, convertToConsolidation, "BRL");
+    const consolidado = getConsolidatedLucro(ap, convertToConsolidation, moedaConsolidacao);
     result[projetoId].consolidado += consolidado;
   });
 
