@@ -239,11 +239,10 @@ export function ProjetoFinancialMetricsCard({ projetoId }: ProjetoFinancialMetri
     );
   }
 
-    // Créditos Extras = capital que entrou na casa sem depósito (bônus, cashback, giros)
-    // Nota: bonusGanhos não é buscado neste componente, mas cashback e giros já representam o grosso dos extras
-    const extrasPositivos = metrics.cashbackLiquido + metrics.girosGratis;
-    // Fluxo Líquido Ajustado = Saques - (Depósitos + Créditos Extras) — fórmula canônica
-    const fluxoLiquidoAjustado = metrics.saquesRecebidos - (metrics.depositosTotal + extrasPositivos);
+    // Créditos Extras = receita operacional (bônus, cashback, giros, ajustes, FX)
+    const extrasPositivos = metrics.cashbackLiquido + metrics.girosGratis + metrics.ajustes + metrics.ganhoConfirmacao + metrics.ganhoFx;
+    // Fluxo Líquido Ajustado = Saques - Depósitos (fórmula canônica de fluxo de caixa)
+    const fluxoLiquidoAjustado = metrics.saquesRecebidos - metrics.depositosTotal;
     // Lucro Operacional Puro = Patrimônio - Depósitos
     const lucroOperacionalPuro = (metrics.saldoCasas + metrics.saquesRecebidos) - metrics.depositosTotal;
 
