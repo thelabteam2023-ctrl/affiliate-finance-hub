@@ -290,7 +290,7 @@ export function ProjetoKanbanCard({
                   <div className="flex items-center gap-1.5">
                     <span className="text-xs text-muted-foreground">Realizado:</span>
                     <span className={`text-sm font-medium ${lucroRealizadoDisplay?.colorClass}`}>
-                      {lucroRealizado > 0 ? '+' : ''}{formatBRL(lucroRealizado)}
+                      {lucroRealizado > 0 ? '+' : ''}{formatByMoeda(lucroRealizado, moedaConsolidacao)}
                     </span>
                   </div>
                   <Info className="h-3 w-3 text-muted-foreground/50" />
