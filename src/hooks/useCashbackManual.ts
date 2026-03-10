@@ -480,7 +480,7 @@ export function useCashbackManual({ projetoId, dataInicio, dataFim }: UseCashbac
         }
 
         const moedaOperacao = bookmakerNova.moeda || "BRL";
-        const dataCredito = data.data_credito || new Date().toISOString().split("T")[0];
+        const dataCredito = data.data_credito || getTodayCivilDate();
 
         // 5. Calcular cotação
         let valorBRLReferencia: number | null = null;
