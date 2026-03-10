@@ -81,6 +81,7 @@ interface Transacao {
   ajuste_direcao: string | null;
   ajuste_motivo: string | null;
   data_confirmacao: string | null;
+  created_at: string;
 }
 
 interface SaldoFiat {
