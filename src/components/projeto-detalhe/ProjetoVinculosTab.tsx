@@ -1308,27 +1308,6 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                       <Link2Off className="h-4 w-4" />
                     </Button>
                     {/* Botão Ajuste Pós-Limitação na lista */}
-                    {ajusteEligibility[vinculo.id]?.eligible && canManageVinculos && (
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 text-warning hover:text-warning hover:bg-warning/10"
-                              onClick={() => setAjusteVinculo(vinculo)}
-                              title="Registrar Ajuste Pós-Limitação"
-                            >
-                              <TrendingDown className="h-4 w-4 mr-1" />
-                              <span className="text-xs">Ajuste</span>
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p className="text-sm max-w-xs">Registrar a variação de saldo após a limitação da conta. Impacta juice e saldo, sem afetar métricas de apostas.</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    )}
                   </div>
                 </div>
               ))}
