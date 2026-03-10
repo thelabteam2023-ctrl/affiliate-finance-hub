@@ -364,6 +364,17 @@ export default function GestaoProjetos() {
         const bkData = bookmakersByProjeto[proj.id];
         const lucroData = lucroByProjeto[proj.id];
         
+        const moedaConsolidacao = (proj.moeda_consolidacao || 'BRL').toUpperCase();
+        // Valores consolidados vêm em BRL do KPI; converter para moeda do projeto
+        const lucroOpBRL = lucroConsolidadoByProjeto[proj.id] || 0;
+        const lucroRealBRL = lucroRealizadoByProjeto[proj.id] || 0;
+        const lucroOpFinal = moedaConsolidacao === 'USD' && USD_TO_BRL_DISPLAY > 0
+          ? lucroOpBRL / USD_TO_BRL_DISPLAY
+          : lucroOpBRL;
+        const lucroRealFinal = moedaConsolidacao === 'USD' && USD_TO_BRL_DISPLAY > 0
+          ? lucroRealBRL / USD_TO_BRL_DISPLAY
+          : lucroRealBRL;
+
         return {
           id: proj.id,
           nome: proj.nome,
@@ -383,17 +394,18 @@ export default function GestaoProjetos() {
             USD: bkData?.irrecuperavelUSD || 0,
           },
           total_bookmakers: bkData?.count || 0,
-          lucro_operacional: lucroConsolidadoByProjeto[proj.id] || 0,
+          lucro_operacional: lucroOpFinal,
           lucro_by_moeda: {
             BRL: lucroData?.BRL || 0,
             USD: lucroData?.USD || 0,
           },
-          lucro_realizado: lucroRealizadoByProjeto[proj.id] || 0,
+          lucro_realizado: lucroRealFinal,
           operadores_ativos: operadoresByProjeto[proj.id] || 0,
           perdas_confirmadas: 0,
           display_order: proj.display_order || 0,
           tipo_projeto: proj.tipo_projeto || 'INTERNO',
           investidor_id: proj.investidor_id || null,
+          moeda_consolidacao: moedaConsolidacao,
         };
       });
       
