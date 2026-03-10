@@ -173,7 +173,7 @@ export async function calcularMetricasPeriodo({
       .from("project_bookmaker_link_bonuses")
       .select("bonus_amount, currency, status, projeto_id")
       .eq("projeto_id", projetoId)
-      .in("status", ["credited", "finalized"])
+      .or("status.eq.credited,status.eq.finalized")
       .gte("credited_at", startUTC)
       .lte("credited_at", endUTC),
 
@@ -181,7 +181,7 @@ export async function calcularMetricasPeriodo({
     supabase
       .from("cash_ledger")
       .select("valor, ajuste_direcao")
-      .in("tipo_transacao", ["AJUSTE_SALDO", "AJUSTE_RECONCILIACAO"])
+      .or("tipo_transacao.eq.AJUSTE_SALDO,tipo_transacao.eq.AJUSTE_RECONCILIACAO")
       .eq("status", "CONFIRMADO")
       .eq("projeto_id_snapshot", projetoId)
       .gte("data_transacao", startUTC)
@@ -191,7 +191,7 @@ export async function calcularMetricasPeriodo({
     supabase
       .from("cash_ledger")
       .select("valor, tipo_transacao")
-      .in("tipo_transacao", ["GANHO_CAMBIAL", "PERDA_CAMBIAL"])
+      .or("tipo_transacao.eq.GANHO_CAMBIAL,tipo_transacao.eq.PERDA_CAMBIAL")
       .eq("status", "CONFIRMADO")
       .eq("projeto_id_snapshot", projetoId)
       .gte("data_transacao", startUTC)
