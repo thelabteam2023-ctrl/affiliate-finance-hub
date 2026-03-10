@@ -673,7 +673,7 @@ export default function ProjetoDetalhe() {
       const hoje = new Date().toISOString().split('T')[0];
       const { data: cicloData } = await supabase
         .from("projeto_ciclos")
-        .select("data_fim_prevista")
+        .select("data_inicio, data_fim_prevista")
         .eq("projeto_id", id)
         .eq("status", "EM_ANDAMENTO")
         .lte("data_inicio", hoje)
