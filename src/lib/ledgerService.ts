@@ -1,4 +1,5 @@
 /**
+import { getTodayCivilDate } from "@/utils/dateUtils";
  * Serviço de Ledger Financeiro
  * 
  * ESTE É O PONTO CENTRAL PARA TODAS AS MOVIMENTAÇÕES FINANCEIRAS.
