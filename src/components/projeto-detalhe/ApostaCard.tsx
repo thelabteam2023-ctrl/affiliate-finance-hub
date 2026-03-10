@@ -4,6 +4,8 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Zap, TrendingUp, Target, ArrowLeftRight, Coins, Gift, CheckCircle2, Clock, Layers, X, CircleSlash, Loader2, ChevronDown, ChevronUp, Building2 } from "lucide-react";
 import { BookmakerLogo } from "@/components/ui/bookmaker-logo";
+import { DateAnomalyBadge } from "@/components/ui/date-anomaly-alert";
+import { detectDateAnomaly } from "@/lib/dateAnomalyDetection";
 import { ApostaPernasResumo, ApostaPernasInline, getModeloOperacao, Perna } from "./ApostaPernasResumo";
 import { cn, getFirstLastName } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -628,10 +630,14 @@ export function ApostaCard({
           
           {/* LINHA 3: Data/Hora + Lucro/ROI */}
           <div className="flex items-center justify-between pt-2 border-t border-border/50 gap-2">
-            <div className="flex items-center gap-1 sm:gap-2 min-w-0">
+            <div className="flex items-center gap-1 sm:gap-2 min-w-0 flex-wrap">
               <span className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap">
                 {format(parseLocalDateTime(aposta.data_aposta), "dd/MM HH:mm", { locale: ptBR })}
               </span>
+              <DateAnomalyBadge
+                anomaly={detectDateAnomaly(aposta.data_aposta)}
+                onClick={() => onEdit?.(aposta.id)}
+              />
               {(isForeignCurrency || isMultiCurrency) && (
                 <Badge variant="outline" className="text-[9px] px-1 py-0 bg-blue-500/10 text-blue-400 border-blue-500/30">
                   {displayCurrency}
@@ -869,10 +875,14 @@ export function ApostaCard({
         
         {/* LINHA 3: Data/Hora + Stake + Lucro/ROI - NUNCA CORTAR */}
         <div className="flex items-center justify-between pt-3 border-t border-border/50 gap-3">
-          <div className="flex items-center gap-2 min-w-0">
+          <div className="flex items-center gap-2 min-w-0 flex-wrap">
             <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
               {format(parseLocalDateTime(aposta.data_aposta), "dd/MM HH:mm", { locale: ptBR })}
             </span>
+            <DateAnomalyBadge
+              anomaly={detectDateAnomaly(aposta.data_aposta)}
+              onClick={() => onEdit?.(aposta.id)}
+            />
             {(isForeignCurrency || isMultiCurrency) && (
               <Badge variant="outline" className="text-[9px] sm:text-[10px] px-1 py-0 bg-blue-500/10 text-blue-400 border-blue-500/30">
                 {displayCurrency}

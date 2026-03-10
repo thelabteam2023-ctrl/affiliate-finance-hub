@@ -32,9 +32,9 @@ export interface DateAnomalyLogEntry {
 // Configuração de thresholds (configurável)
 export const ANOMALY_THRESHOLDS = {
   /** Dias de diferença para considerar anomalia de WARNING */
-  WARNING_DAYS: 30,
+  WARNING_DAYS: 15,
   /** Dias de diferença para considerar anomalia CRÍTICA */
-  CRITICAL_DAYS: 90,
+  CRITICAL_DAYS: 60,
   /** Ano mínimo operacional (não permite anos anteriores) */
   MIN_OPERATIONAL_YEAR: 2025,
 } as const;
