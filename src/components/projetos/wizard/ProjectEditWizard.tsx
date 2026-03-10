@@ -208,6 +208,7 @@ export function ProjectEditWizard({
         investidor_id: formData.investidor_id,
         percentual_investidor: formData.percentual_investidor,
         base_calculo_investidor: formData.base_calculo_investidor,
+        metrica_lucro_ciclo: formData.metrica_lucro_ciclo || "operacional",
       };
 
       const { error } = await supabase
