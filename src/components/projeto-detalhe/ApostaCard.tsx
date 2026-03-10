@@ -495,18 +495,7 @@ export function ApostaCard({
               )}
               
               {/* Logo */}
-              {aposta.logo_url ? (
-                <img 
-                  src={aposta.logo_url} 
-                  alt={bookmakerDisplay || ''} 
-                  className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg object-contain logo-blend p-1 shrink-0"
-                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                />
-              ) : (
-                <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-muted/30 flex items-center justify-center shrink-0">
-                  <Target className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
-                </div>
-              )}
+              <BookmakerLogo logoUrl={aposta.logo_url} alt={bookmakerDisplay || ''} />
               
               {/* Nome da casa + Parceiro - com tooltip */}
               <TooltipProvider delayDuration={300}>
