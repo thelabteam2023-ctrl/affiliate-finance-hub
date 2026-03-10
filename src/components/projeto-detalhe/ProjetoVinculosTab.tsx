@@ -180,7 +180,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
   const [selectedParceiros, setSelectedParceiros] = useState<string[]>([]);
   const [ajusteSaldoDialogOpen, setAjusteSaldoDialogOpen] = useState(false);
   const [vinculoParaAjuste, setVinculoParaAjuste] = useState<Vinculo | null>(null);
-  const [ajusteVinculo, setAjusteVinculo] = useState<Vinculo | null>(null);
+  
   const [sortMode, setSortMode] = useState<VinculoSortMode>("alpha");
 
   const { bonuses, fetchBonuses: refetchBonuses, getSummary, getActiveBonusByBookmaker, getBookmakersWithActiveBonus } = useProjectBonuses({ projectId: projetoId });
