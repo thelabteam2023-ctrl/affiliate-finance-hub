@@ -194,7 +194,7 @@ export function EntregaConciliacaoDialog({
           valor: valorPagamento,
           moeda: origemData.tipoMoeda === "CRYPTO" ? "USD" : "BRL",
           tipo_moeda: origemData.tipoMoeda,
-          data_transacao: new Date().toISOString(),
+          data_transacao: getTodayCivilDate(),
           descricao: `Pagamento conciliação período #${entrega.numero_entrega}${operadorNome ? ` - ${operadorNome}` : ""}`,
           status: "CONFIRMADO",
         };
