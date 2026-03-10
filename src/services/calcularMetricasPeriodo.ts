@@ -151,7 +151,7 @@ export async function calcularMetricasPeriodo({
     // 6. Saques confirmados no período (por data_transacao, atribuído ao projeto)
     supabase
       .from("cash_ledger")
-      .select("valor, valor_confirmado")
+      .select("valor, valor_confirmado, moeda")
       .in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])
       .eq("status", "CONFIRMADO")
       .eq("projeto_id_snapshot", projetoId)
@@ -161,7 +161,7 @@ export async function calcularMetricasPeriodo({
     // 7. Depósitos confirmados no período (por data_transacao, atribuído ao projeto)
     supabase
       .from("cash_ledger")
-      .select("valor")
+      .select("valor, moeda")
       .in("tipo_transacao", ["DEPOSITO", "DEPOSITO_VIRTUAL"])
       .eq("status", "CONFIRMADO")
       .eq("projeto_id_snapshot", projetoId)
