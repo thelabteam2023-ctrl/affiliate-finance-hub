@@ -67,7 +67,7 @@ export function useProjetoPerformance({
     let queryDepositos = supabase
       .from('cash_ledger')
       .select('valor, destino_bookmaker_id')
-      .eq('tipo_transacao', 'DEPOSITO')
+      .in('tipo_transacao', ['DEPOSITO', 'DEPOSITO_VIRTUAL'])
       .eq('status', 'CONFIRMADO')
       .not('destino_bookmaker_id', 'is', null);
     if (dataInicio) queryDepositos = queryDepositos.gte('data_transacao', dataInicio.toISOString());
@@ -77,7 +77,7 @@ export function useProjetoPerformance({
     let querySaques = supabase
       .from('cash_ledger')
       .select('valor, origem_bookmaker_id')
-      .eq('tipo_transacao', 'SAQUE')
+      .in('tipo_transacao', ['SAQUE', 'SAQUE_VIRTUAL'])
       .eq('status', 'CONFIRMADO')
       .not('origem_bookmaker_id', 'is', null);
     if (dataInicio) querySaques = querySaques.gte('data_transacao', dataInicio.toISOString());

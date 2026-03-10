@@ -1,4 +1,31 @@
 # Memory: finance/lucro-real-payment-standard
-Updated: now
+Updated: 2026-03-10
 
-O 'Lucro Realizado' (ou Fluxo Líquido Ajustado) é definido pela fórmula canônica: **Saques Confirmados - Depósitos Confirmados**. Créditos Extras (bônus, cashback, giros, ajustes, FX) são tratados como RECEITA OPERACIONAL exibida separadamente, e NÃO são subtraídos do fluxo de caixa — eles representam valor que já está capturado nos saques quando extraído. Esta fórmula é utilizada uniformemente em: (1) Indicadores Financeiros do projeto (FinancialMetricsPopover e ProjetoFinancialMetricsCard); (2) FinancialSummaryCompact (KPI de Lucro compacto); (3) Serviço canônico de métricas por período (calcularMetricasPeriodo.ts) para ciclos e alertas. O campo 'creditosExtras' é retornado pelo serviço para fins informativos mas não participa do cálculo do lucro realizado.
+## Lucro Realizado (Fluxo Líquido Ajustado) — Fórmula Canônica
+
+```
+LUCRO_REALIZADO = (Saques + Saques Virtuais) - (Depósitos + Depósitos Virtuais)
+```
+
+### Regra Absoluta
+**TODOS** os locais que calculam Lucro Realizado / Fluxo Líquido devem usar:
+- `.in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])` para saques
+- `.in("tipo_transacao", ["DEPOSITO", "DEPOSITO_VIRTUAL"])` para depósitos
+
+**PROIBIDO** usar `.eq("tipo_transacao", "SAQUE")` ou `.eq("tipo_transacao", "DEPOSITO")` isoladamente para cálculo de lucro realizado.
+
+### Transações Virtuais
+- `SAQUE_VIRTUAL`: Criado ao desvincular bookmaker de um projeto (extrai saldo contábil)
+- `DEPOSITO_VIRTUAL`: Criado ao vincular bookmaker a um projeto (estabelece baseline de capital)
+- Ambos possuem `projeto_id_snapshot` e `origem/destino_bookmaker_id`
+
+### Locais Padronizados ✅
+- `calcularMetricasPeriodo.ts` — serviço canônico de métricas por período
+- `FinancialMetricsPopover.tsx` — popover de indicadores financeiros
+- `FinancialSummaryCompact.tsx` — resumo compacto no header
+- `GestaoProjetos.tsx` — listagem/kanban de projetos
+- `useProjetoPerformance.ts` — hook de performance por projeto
+- `useBookmakerAnalise.ts` — análise financeira por casa
+
+### Créditos Extras (informacional apenas)
+Cashback + Giros + Bônus + Ajustes + FX são exibidos como informação complementar mas **NÃO** são subtraídos da fórmula de lucro realizado.
