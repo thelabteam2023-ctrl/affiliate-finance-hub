@@ -18,7 +18,6 @@ import {
   TrendingDown,
   ArrowDownUp,
   CircleDollarSign,
-  DollarSign,
   Info,
 } from "lucide-react";
 import { format } from "date-fns";
