@@ -307,7 +307,7 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
     const dailyData: Record<string, number> = {};
     
     confirmados.forEach(g => {
-      const date = new Date(g.data_registro).toISOString().split('T')[0];
+      const date = extractCivilDateKey(g.data_registro) || '';
       const moedaOrigem = g.bookmaker_moeda || "BRL";
       const valorConvertido = converterValor(
         Number(g.valor_retorno), 
