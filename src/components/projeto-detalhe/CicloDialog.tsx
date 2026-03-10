@@ -89,8 +89,8 @@ export function CicloDialog({
   const [operadoresProjeto, setOperadoresProjeto] = useState<OperadorProjeto[]>([]);
   const [formData, setFormData] = useState({
     operador_projeto_id: "",
-    data_inicio: new Date().toISOString().split("T")[0],
-    data_fim_prevista: addMonths(new Date(), 1).toISOString().split("T")[0],
+    data_inicio: getTodayCivilDate(),
+    data_fim_prevista: dateToCivilDateString(addMonths(new Date(), 1)),
     tipo_gatilho: "TEMPO",
     meta_volume: "",
     metrica_acumuladora: "LUCRO",

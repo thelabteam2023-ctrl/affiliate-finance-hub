@@ -523,7 +523,7 @@ export function AjusteManualDialog({
         descricao,
         status: "CONFIRMADO",
         transit_status: "CONFIRMED",
-        data_transacao: new Date().toISOString().split("T")[0],
+        data_transacao: getTodayCivilDate(),
         impacta_caixa_operacional: tipoDestino === "CAIXA_OPERACIONAL",
         // Campos obrigatórios de auditoria para ajustes
         ajuste_motivo: motivo.trim(),
