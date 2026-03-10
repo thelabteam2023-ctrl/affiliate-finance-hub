@@ -54,10 +54,7 @@ import { TIPO_PROJETO_CONFIG, TipoProjeto } from "@/types/projeto";
 import { TipoProjetoIcon } from "@/components/projetos/TipoProjetoIcon";
 import { fetchProjetosLucroOperacionalKpi } from "@/services/fetchProjetosLucroOperacionalKpi";
 
-interface SaldoByMoeda {
-  BRL: number;
-  USD: number;
-}
+type SaldoByMoeda = Record<string, number>;
 
 interface Projeto {
   id: string;

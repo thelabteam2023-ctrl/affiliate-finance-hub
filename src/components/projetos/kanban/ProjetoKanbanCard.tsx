@@ -27,10 +27,7 @@ import { cn } from "@/lib/utils";
 import { getFinancialDisplay } from "@/lib/financial-display";
 import { FinancialMetricsPopover } from "@/components/projeto-detalhe/FinancialMetricsPopover";
 
-interface SaldoByMoeda {
-  BRL: number;
-  USD: number;
-}
+type SaldoByMoeda = Record<string, number>;
 
 interface Projeto {
   id: string;

@@ -4,10 +4,7 @@ import { toast } from "sonner";
 import { ProjetoKanbanCard } from "./ProjetoKanbanCard";
 import { cn } from "@/lib/utils";
 
-interface SaldoByMoeda {
-  BRL: number;
-  USD: number;
-}
+type SaldoByMoeda = Record<string, number>;
 
 interface Projeto {
   id: string;
