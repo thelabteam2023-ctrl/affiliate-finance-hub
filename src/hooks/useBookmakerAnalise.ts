@@ -326,7 +326,7 @@ export function useBookmakerAnalise({ projetoId, dataInicio, dataFim }: UseBookm
       const depositosQuery = supabase
         .from("cash_ledger")
         .select("destino_bookmaker_id, valor")
-        .eq("tipo_transacao", "DEPOSITO")
+        .in("tipo_transacao", ["DEPOSITO", "DEPOSITO_VIRTUAL"])
         .eq("status", "CONFIRMADO")
         .in("destino_bookmaker_id", bookmakerIds);
 
