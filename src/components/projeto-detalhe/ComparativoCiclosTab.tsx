@@ -88,23 +88,33 @@ export function ComparativoCiclosTab({ projetoId, formatCurrency: formatCurrency
     try {
       if (!loadedOnceRef.current) setLoading(true);
       
-      const { data: ciclosData, error } = await supabase
-        .from("projeto_ciclos")
-        .select("*")
-        .eq("projeto_id", projetoId)
-        .order("numero_ciclo", { ascending: true });
+      // Fetch ciclos and project metric in parallel
+      const [ciclosResponse, projetoResponse] = await Promise.all([
+        supabase
+          .from("projeto_ciclos")
+          .select("*")
+          .eq("projeto_id", projetoId)
+          .order("numero_ciclo", { ascending: true }),
+        supabase
+          .from("projetos")
+          .select("metrica_lucro_ciclo")
+          .eq("id", projetoId)
+          .single(),
+      ]);
 
-      if (error) throw error;
-      if (!ciclosData || ciclosData.length === 0) {
+      if (ciclosResponse.error) throw ciclosResponse.error;
+      if (!ciclosResponse.data || ciclosResponse.data.length === 0) {
         setCiclos([]);
         return;
       }
+
+      const metricaLucro = ((projetoResponse.data as any)?.metrica_lucro_ciclo as string) || "operacional";
 
       const { calcularMetricasPeriodo } = await import("@/services/calcularMetricasPeriodo");
 
       // Calcular métricas para cada ciclo usando serviço canônico
       const ciclosComMetricas: CicloData[] = await Promise.all(
-        ciclosData.map(async (ciclo) => {
+        ciclosResponse.data.map(async (ciclo) => {
           const dataFim = ciclo.data_fim_real || ciclo.data_fim_prevista;
           
           // Usar serviço canônico para métricas financeiras
@@ -117,10 +127,10 @@ export function ComparativoCiclosTab({ projetoId, formatCurrency: formatCurrency
             moedaConsolidacao,
           });
           
-          // Para ciclos fechados, usar lucro_liquido do banco; para em andamento, calcular
+          // Usar métrica conforme configuração do projeto
           const lucroReal = ciclo.status === "FECHADO" 
             ? (ciclo.lucro_liquido ?? ciclo.lucro_bruto) 
-            : metricas.lucroLiquido;
+            : (metricaLucro === "realizado" ? metricas.lucroRealizado : metricas.lucroLiquido);
 
           return {
             ...ciclo,

@@ -7760,6 +7760,7 @@ export type Database = {
           id: string
           investidor_id: string | null
           marco_zero_at: string | null
+          metrica_lucro_ciclo: string
           modelo_absorcao_taxas: string
           moeda_consolidacao: string | null
           nome: string
@@ -7795,6 +7796,7 @@ export type Database = {
           id?: string
           investidor_id?: string | null
           marco_zero_at?: string | null
+          metrica_lucro_ciclo?: string
           modelo_absorcao_taxas?: string
           moeda_consolidacao?: string | null
           nome: string
@@ -7830,6 +7832,7 @@ export type Database = {
           id?: string
           investidor_id?: string | null
           marco_zero_at?: string | null
+          metrica_lucro_ciclo?: string
           modelo_absorcao_taxas?: string
           moeda_consolidacao?: string | null
           nome?: string

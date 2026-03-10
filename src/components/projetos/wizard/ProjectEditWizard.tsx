@@ -110,6 +110,7 @@ export function ProjectEditWizard({
           investidor_id: data.investidor_id || null,
           percentual_investidor: data.percentual_investidor || 0,
           base_calculo_investidor: data.base_calculo_investidor || "LUCRO_LIQUIDO",
+          metrica_lucro_ciclo: (data as any).metrica_lucro_ciclo || "operacional",
           moeda_consolidacao: (data.moeda_consolidacao as "BRL" | "USD") || "BRL",
           fonte_cotacao: (data.fonte_cotacao as "TRABALHO" | "PTAX") || "TRABALHO",
           cotacao_trabalho: data.cotacao_trabalho || null,
@@ -207,6 +208,7 @@ export function ProjectEditWizard({
         investidor_id: formData.investidor_id,
         percentual_investidor: formData.percentual_investidor,
         base_calculo_investidor: formData.base_calculo_investidor,
+        metrica_lucro_ciclo: formData.metrica_lucro_ciclo || "operacional",
       };
 
       const { error } = await supabase

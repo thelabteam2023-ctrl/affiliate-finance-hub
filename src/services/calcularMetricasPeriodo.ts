@@ -43,8 +43,10 @@ export interface MetricasPeriodo {
   perdasConfirmadas: number;
   /** Detalhes individuais das perdas */
   perdasDetalhes: PerdaDetalhe[];
-  /** Lucro líquido = bruto - perdas */
+  /** Lucro líquido operacional = bruto - perdas */
   lucroLiquido: number;
+  /** Lucro realizado = saques confirmados - depósitos confirmados (no período, por data_transacao) */
+  lucroRealizado: number;
   /** Ticket médio (volume / qtdApostas) */
   ticketMedio: number;
   /** ROI = (lucroLiquido / volume) * 100 */
@@ -105,7 +107,7 @@ export async function calcularMetricasPeriodo({
   const { startUTC, endUTC } = getOperationalDateRangeForQuery(dataInicioParsed, dataFimParsed);
 
   // Buscar todos os dados em paralelo
-  const [apostasResult, cashbackResult, girosResult, perdasResult, bookmakersResult] = await Promise.all([
+  const [apostasResult, cashbackResult, girosResult, perdasResult, bookmakersResult, saquesResult, depositosResult] = await Promise.all([
     // 1. Apostas com campos consolidados + moeda para conversão
     supabase
       .from("apostas_unificada")
@@ -143,6 +145,26 @@ export async function calcularMetricasPeriodo({
     incluirDetalhePerdas
       ? supabase.from("bookmakers").select("id, nome")
       : Promise.resolve({ data: null, error: null }),
+    
+    // 6. Saques confirmados no período (por data_transacao, atribuído ao projeto)
+    supabase
+      .from("cash_ledger")
+      .select("valor, valor_confirmado")
+      .eq("tipo_transacao", "SAQUE")
+      .eq("status", "CONFIRMADO")
+      .eq("projeto_id_snapshot", projetoId)
+      .gte("data_transacao", startUTC)
+      .lte("data_transacao", endUTC),
+    
+    // 7. Depósitos confirmados no período (por data_transacao, atribuído ao projeto)
+    supabase
+      .from("cash_ledger")
+      .select("valor")
+      .eq("tipo_transacao", "DEPOSITO")
+      .eq("status", "CONFIRMADO")
+      .eq("projeto_id_snapshot", projetoId)
+      .gte("data_transacao", startUTC)
+      .lte("data_transacao", endUTC),
   ]);
 
   // Processar erros silenciosamente (melhor UX)
@@ -219,12 +241,19 @@ export async function calcularMetricasPeriodo({
       }))
     : [];
 
-  // Fórmula canônica
+  // Fórmula canônica operacional
   const lucroBruto = lucroApostas + lucroCashback + lucroGiros;
   const lucroLiquido = lucroBruto - perdasConfirmadas;
   const ticketMedio = qtdApostas > 0 ? volume / qtdApostas : 0;
   const roi = volume > 0 ? (lucroLiquido / volume) * 100 : 0;
   const lucroPorAposta = qtdApostas > 0 ? lucroLiquido / qtdApostas : 0;
+
+  // Lucro Realizado = Saques Confirmados - Depósitos Confirmados
+  const saques = saquesResult.data || [];
+  const depositos = depositosResult.data || [];
+  const totalSaques = saques.reduce((acc, s: any) => acc + Number(s.valor_confirmado ?? s.valor ?? 0), 0);
+  const totalDepositos = depositos.reduce((acc, d: any) => acc + Number(d.valor ?? 0), 0);
+  const lucroRealizado = totalSaques - totalDepositos;
 
   return {
     qtdApostas,
@@ -236,6 +265,7 @@ export async function calcularMetricasPeriodo({
     perdasConfirmadas,
     perdasDetalhes,
     lucroLiquido,
+    lucroRealizado,
     ticketMedio,
     roi,
     lucroPorAposta,

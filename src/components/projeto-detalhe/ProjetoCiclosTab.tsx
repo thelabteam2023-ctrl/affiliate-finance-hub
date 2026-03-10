@@ -105,7 +105,9 @@ interface CicloMetrics {
   volume: number;
   ticketMedio: number;
   lucroBruto: number;  // Lucro das apostas antes das perdas
-  lucroReal: number;   // Lucro líquido = lucroBruto - perdasConfirmadas
+  lucroReal: number;   // Lucro principal conforme metrica_lucro_ciclo do projeto
+  lucroOperacional: number; // Lucro operacional (apostas+extras-perdas) - sempre disponível
+  lucroRealizado: number;  // Lucro realizado (saques-depósitos) - sempre disponível
   roi: number;
   perdas: PerdasCiclo;
 }
@@ -120,6 +122,7 @@ export function ProjetoCiclosTab({ projetoId, formatCurrency: formatCurrencyProp
   const [fecharConfirmOpen, setFecharConfirmOpen] = useState(false);
   const [cicloParaFechar, setCicloParaFechar] = useState<Ciclo | null>(null);
   const [projetoNome, setProjetoNome] = useState("");
+  const [metricaLucroCiclo, setMetricaLucroCiclo] = useState<"operacional" | "realizado">("operacional");
   const [encerrandoPorMeta, setEncerrandoPorMeta] = useState<string | null>(null);
   const { encerrarPorMeta } = useCicloActions();
   
@@ -191,10 +194,13 @@ export function ProjetoCiclosTab({ projetoId, formatCurrency: formatCurrencyProp
   const fetchProjetoNome = async () => {
     const { data } = await supabase
       .from("projetos")
-      .select("nome")
+      .select("nome, metrica_lucro_ciclo")
       .eq("id", projetoId)
       .single();
-    if (data) setProjetoNome(data.nome);
+    if (data) {
+      setProjetoNome(data.nome);
+      setMetricaLucroCiclo(((data as any).metrica_lucro_ciclo as "operacional" | "realizado") || "operacional");
+    }
   };
 
   const fetchCiclos = async () => {
@@ -279,7 +285,9 @@ export function ProjetoCiclosTab({ projetoId, formatCurrency: formatCurrencyProp
         volume: metricas.volume,
         ticketMedio: metricas.ticketMedio,
         lucroBruto: metricas.lucroBruto,
-        lucroReal: metricas.lucroLiquido,
+        lucroReal: metricaLucroCiclo === "realizado" ? metricas.lucroRealizado : metricas.lucroLiquido,
+        lucroOperacional: metricas.lucroLiquido,
+        lucroRealizado: metricas.lucroRealizado,
         roi: metricas.roi,
         perdas,
       };
@@ -435,7 +443,10 @@ export function ProjetoCiclosTab({ projetoId, formatCurrency: formatCurrencyProp
   };
 
   const getMetricaLabel = (metrica: string) => {
-    return metrica === "LUCRO" ? "Lucro Realizado" : "Volume Apostado";
+    if (metrica === "LUCRO") {
+      return metricaLucroCiclo === "realizado" ? "Lucro Realizado (Saques − Depósitos)" : "Lucro Operacional";
+    }
+    return "Volume Apostado";
   };
 
   if (loading) {

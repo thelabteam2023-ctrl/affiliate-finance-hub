@@ -75,6 +75,7 @@ export interface ProjectFormData {
   investidor_id: string | null;
   percentual_investidor: number;
   base_calculo_investidor: string;
+  metrica_lucro_ciclo: "operacional" | "realizado";
   
   // Etapa 2 - Moeda
   moeda_consolidacao: "BRL" | "USD";
@@ -124,6 +125,7 @@ export const DEFAULT_FORM_DATA: ProjectFormData = {
   investidor_id: null,
   percentual_investidor: 0,
   base_calculo_investidor: "LUCRO_LIQUIDO",
+  metrica_lucro_ciclo: "operacional",
   
   // Etapa 2
   moeda_consolidacao: "BRL",
