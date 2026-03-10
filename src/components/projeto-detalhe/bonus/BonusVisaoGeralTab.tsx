@@ -759,7 +759,8 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
                     const fim = parseLocalDate(cicloAtivo.data_fim_prevista);
                     const diasCiclo = Math.max(1, Math.round((fim.getTime() - inicio.getTime()) / (24 * 60 * 60 * 1000)) + 1);
                     const metaDiaria = cicloAtivo.meta_volume / diasCiclo;
-                    const diff = avgPerDay - metaDiaria;
+                    const performanceDiaria = calendarDays > 0 ? bonusPerformance.total / calendarDays : 0;
+                    const diff = performanceDiaria - metaDiaria;
                     const isAbove = diff >= 0;
                     return (
                       <div className="border-t border-border/50 pt-1 space-y-0.5">
@@ -775,6 +776,10 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
                         <div className="flex justify-between gap-4">
                           <span>Meta diária necessária</span>
                           <span className="font-semibold text-foreground">{formatCurrency(metaDiaria)}/dia</span>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <span>Performance/dia</span>
+                          <span className={`font-semibold ${performanceDiaria >= 0 ? "text-emerald-500" : "text-red-500"}`}>{formatCurrency(performanceDiaria)}/dia</span>
                         </div>
                         <div className="flex justify-between gap-4">
                           <span>Diferença</span>
