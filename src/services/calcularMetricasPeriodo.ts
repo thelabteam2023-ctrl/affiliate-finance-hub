@@ -94,10 +94,15 @@ export async function calcularMetricasPeriodo({
   const cotacaoUSD = convert(1, 'USD');
   const cotacoes = derivarCotacoesFromConvertFn(convert);
 
-  // Converter datas para UTC no timezone operacional
+  // Converter datas para UTC no timezone operacional (para apostas)
   const dataInicioParsed = parseISO(dataInicio);
   const dataFimParsed = parseISO(dataFim);
   const { startUTC, endUTC } = getOperationalDateRangeForQuery(dataInicioParsed, dataFimParsed);
+
+  // Para cash_ledger: data_transacao é armazenado como UTC midnight (ex: 2026-03-10T00:00:00Z)
+  // Usar comparação direta por data para não excluir transações no dia de início
+  const cashLedgerStart = `${dataInicio}T00:00:00.000Z`;
+  const cashLedgerEnd = `${dataFim}T23:59:59.999Z`;
 
   // ═══════════════════════════════════════════════════════════════════
   // BUSCAR TUDO EM PARALELO — delegando aos módulos canônicos
@@ -149,25 +154,25 @@ export async function calcularMetricasPeriodo({
       ? supabase.from("bookmakers").select("id, nome")
       : Promise.resolve({ data: null, error: null }),
 
-    // Saques confirmados no período
+    // Saques confirmados no período (cash_ledger usa UTC midnight)
     supabase
       .from("cash_ledger")
       .select("valor, valor_confirmado, moeda")
       .in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])
       .eq("status", "CONFIRMADO")
       .eq("projeto_id_snapshot", projetoId)
-      .gte("data_transacao", startUTC)
-      .lte("data_transacao", endUTC),
+      .gte("data_transacao", cashLedgerStart)
+      .lte("data_transacao", cashLedgerEnd),
 
-    // Depósitos confirmados no período
+    // Depósitos confirmados no período (cash_ledger usa UTC midnight)
     supabase
       .from("cash_ledger")
       .select("valor, moeda")
       .in("tipo_transacao", ["DEPOSITO", "DEPOSITO_VIRTUAL"])
       .eq("status", "CONFIRMADO")
       .eq("projeto_id_snapshot", projetoId)
-      .gte("data_transacao", startUTC)
-      .lte("data_transacao", endUTC),
+      .gte("data_transacao", cashLedgerStart)
+      .lte("data_transacao", cashLedgerEnd),
   ]);
 
   if (apostasResult.error) console.error("[calcularMetricasPeriodo] Erro apostas:", apostasResult.error);
