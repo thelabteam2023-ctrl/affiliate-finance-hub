@@ -382,8 +382,8 @@ export function ProjectPostCreateWizard({
       // First cycle: default to TODAY (not project start date)
       const today = new Date();
       const dataFim = addMonths(today, 1);
-      setCicloDataInicio(today.toISOString().split("T")[0]);
-      setCicloDataFimPrevista(dataFim.toISOString().split("T")[0]);
+      setCicloDataInicio(getTodayCivilDate());
+      setCicloDataFimPrevista(dateToCivilDateString(dataFim));
     }
   }, [projectId]);
 
