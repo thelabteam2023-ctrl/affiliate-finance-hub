@@ -770,12 +770,19 @@ export function ApostaCard({
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-3 overflow-hidden">
             {/* Top row: Logo + Casa */}
             <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1 overflow-hidden">
-              {/* Badge de seleção - hidden on very small */}
-              {aposta.selecao && (
-                <div className="shrink-0 hidden sm:block">
-                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary/30 text-primary bg-primary/10 truncate max-w-[80px]">
-                    {aposta.selecao}
-                  </Badge>
+              {/* Badges de mercado + seleção - hidden on very small */}
+              {(aposta.mercado || aposta.selecao) && (
+                <div className="shrink-0 hidden sm:flex items-center gap-1">
+                  {aposta.mercado && (
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary/30 text-primary bg-primary/10 truncate max-w-[80px]">
+                      {aposta.mercado}
+                    </Badge>
+                  )}
+                  {aposta.selecao && (
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary/30 text-primary bg-primary/10 truncate max-w-[80px]">
+                      {aposta.selecao}
+                    </Badge>
+                  )}
                 </div>
               )}
               
