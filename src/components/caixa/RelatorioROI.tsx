@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TrendingUp, TrendingDown } from "lucide-react";
-import { subMonths, startOfMonth, endOfMonth } from "date-fns";
+import { subMonths, startOfMonth, endOfMonth, format } from "date-fns";
 
 interface ROIData {
   investidor: string;
