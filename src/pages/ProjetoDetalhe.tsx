@@ -401,9 +401,9 @@ export default function ProjetoDetalhe() {
       return;
     }
     setTopBarContent(
-      <div className="relative flex items-center justify-center flex-1 min-w-0 py-1">
-        {/* CENTER: Project context */}
-        <div className="flex items-center gap-2 min-w-0 max-w-[calc(100%-140px)]">
+      <div className="flex items-center justify-between flex-1 min-w-0 py-1 gap-2">
+        {/* LEFT: Project context */}
+        <div className="flex items-center gap-2 min-w-0">
           <Button variant="ghost" size="icon" className="flex-shrink-0 h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => navigate("/projetos")}>
             <ArrowLeft className="h-3.5 w-3.5" />
           </Button>
@@ -433,8 +433,8 @@ export default function ProjetoDetalhe() {
           </div>
         </div>
 
-        {/* RIGHT: Actions (absolute to not affect centering) */}
-        <div className="absolute right-0 flex items-center gap-1 flex-shrink-0">
+        {/* RIGHT: Actions */}
+        <div className="flex items-center gap-1 flex-shrink-0">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
