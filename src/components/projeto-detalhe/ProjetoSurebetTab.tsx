@@ -754,7 +754,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
     const lucroPorDiaTrabalhado = diasTrabalhados > 0 ? lucroTotal / diasTrabalhados : 0;
     
     return { total, pendentes, liquidadas, greens, reds, lucroTotal, stakeTotal, roi, currencyBreakdown, lucroPorMoeda, lucroPorDia, lucroPorDiaTrabalhado, diasCorridos, diasTrabalhados };
-  }, [surebets, convertFnOficial, moedaConsolidacao]);
+  }, [surebets, convertFnOficial, moedaConsolidacao, dateRange]);
 
   // KPIs FILTRADOS (para Operações) - Aplicam filtros dimensionais
   const kpisOperacoes = useMemo(() => {
