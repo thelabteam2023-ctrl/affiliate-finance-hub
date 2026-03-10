@@ -1027,6 +1027,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
              evento: aposta.evento,
               esporte: aposta.esporte,
               mercado: aposta.mercado,
+              selecao: aposta.selecao,
              odd: aposta.odd,
              stake: aposta.stake,
              data_aposta: aposta.data_aposta,
