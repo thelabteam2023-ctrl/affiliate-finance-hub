@@ -1444,6 +1444,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
                   id: operacao.id,
                   evento: operacao.evento,
                   esporte: operacao.esporte,
+                  mercado: operacao.mercado,
                   selecao: operacao.selecao,
                   odd: operacao.odd,
                   stake: operacao.stake || operacao.stake_total,
