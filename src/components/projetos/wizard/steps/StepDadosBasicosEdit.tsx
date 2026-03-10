@@ -12,7 +12,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Coins, Briefcase, Percent, Info, Users, Target } from "lucide-react";
+import { Coins, Briefcase, Percent, Info, Users, Target, TrendingUp } from "lucide-react";
 import {
   Select,
   SelectContent,
