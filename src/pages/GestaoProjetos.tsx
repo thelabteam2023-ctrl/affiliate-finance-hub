@@ -484,15 +484,14 @@ export default function GestaoProjetos() {
     setProjetoToDelete(null);
   };
 
+  const MOEDA_SYMBOLS: Record<string, string> = {
+    BRL: 'R$', USD: '$', EUR: '€', GBP: '£', MYR: 'RM', MXN: 'MX$', ARS: 'AR$', COP: 'COL$',
+  };
+
   const formatCurrencyValue = (value: number, moeda: string = "BRL") => {
     const m = (moeda || "BRL").toUpperCase();
-    if (m === "USD") {
-      return `$ ${Math.abs(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    }
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(Math.abs(value));
+    const symbol = MOEDA_SYMBOLS[m] || m;
+    return `${symbol} ${Math.abs(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   const getStatusColor = (status: string) => {

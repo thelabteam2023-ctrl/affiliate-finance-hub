@@ -94,9 +94,14 @@ const formatUSD = (value: number) => {
   return `$ ${Math.abs(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
+const MOEDA_SYMBOLS: Record<string, string> = {
+  BRL: 'R$', USD: '$', EUR: '€', GBP: '£', MYR: 'RM', MXN: 'MX$', ARS: 'AR$', COP: 'COL$',
+};
+
 const formatByMoeda = (value: number, moeda: string) => {
   const m = (moeda || 'BRL').toUpperCase();
-  return m === 'USD' ? formatUSD(value) : formatBRL(value);
+  const symbol = MOEDA_SYMBOLS[m] || m;
+  return `${symbol} ${Math.abs(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
 export function ProjetoKanbanCard({
