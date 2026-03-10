@@ -102,10 +102,12 @@ function FinalizedBonusHistory({
   const [editingBonus, setEditingBonus] = useState<ProjectBonus | null>(null);
   const [filterParceiro, setFilterParceiro] = useState<string>("all");
   const [filterCasa, setFilterCasa] = useState<string>("all");
+  const [filterTipo, setFilterTipo] = useState<string>("all");
   const [parceiroSearch, setParceiroSearch] = useState("");
   const [casaSearch, setCasaSearch] = useState("");
   const [parceiroOpen, setParceiroOpen] = useState(false);
   const [casaOpen, setCasaOpen] = useState(false);
+  const [tipoOpen, setTipoOpen] = useState(false);
   
   const finalizedBonuses = bonuses.filter(b => b.status === 'finalized');
 
