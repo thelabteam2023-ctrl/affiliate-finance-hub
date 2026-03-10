@@ -180,6 +180,8 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
   const [selectedCasas, setSelectedCasas] = useState<string[]>([]);
   const [casasSearchTerm, setCasasSearchTerm] = useState("");
   const [selectedParceiros, setSelectedParceiros] = useState<string[]>([]);
+  const [ajusteSaldoDialogOpen, setAjusteSaldoDialogOpen] = useState(false);
+  const [vinculoParaAjuste, setVinculoParaAjuste] = useState<Vinculo | null>(null);
   const [ajusteVinculo, setAjusteVinculo] = useState<Vinculo | null>(null);
   const [sortMode, setSortMode] = useState<VinculoSortMode>("alpha");
 
