@@ -117,11 +117,6 @@ export function FinancialSummaryCompact({ projetoId, dateRange }: FinancialSumma
             <span className={`text-[10px] leading-tight tabular-nums ${roiColor}`}>
               ROI {metrics.roi.toFixed(2)}%
             </span>
-            {hasPeriod && (
-              <span className={`text-[9px] leading-tight tabular-nums ${periodColor} border-t border-border/40 pt-0.5 mt-0.5`}>
-                Período: {formatCurrency(periodLucro)}
-              </span>
-            )}
           </div>
           <div className="h-6 w-6 rounded-full bg-muted/60 flex items-center justify-center group-hover:bg-muted transition-colors">
             <DollarSign className="h-3 w-3 text-muted-foreground" />
