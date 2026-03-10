@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { getTodayCivilDate } from "@/utils/dateUtils";
 import { parseLocalDate } from "@/lib/dateUtils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
