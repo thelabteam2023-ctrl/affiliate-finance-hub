@@ -207,13 +207,25 @@ function FinalizedBonusHistory({
     | { type: "bonus"; data: ProjectBonus; sortDate: string }
     | { type: "ajuste"; data: typeof ajustesData[0]; sortDate: string };
 
+  // Apply filters to bonuses
+  const filteredBonuses = finalizedBonuses.filter(b => {
+    if (filterParceiro !== "all" && b.parceiro_nome !== filterParceiro) return false;
+    if (filterCasa !== "all" && b.bookmaker_nome !== filterCasa) return false;
+    return true;
+  });
+
+  const filteredAjustes = ajustesData.filter(a => {
+    if (filterCasa !== "all" && a.bookmaker_nome !== filterCasa) return false;
+    return true;
+  });
+
   const entries: HistoryEntry[] = [
-    ...finalizedBonuses.map(b => ({
+    ...filteredBonuses.map(b => ({
       type: "bonus" as const,
       data: b,
       sortDate: b.finalized_at || b.created_at,
     })),
-    ...ajustesData.map(a => ({
+    ...filteredAjustes.map(a => ({
       type: "ajuste" as const,
       data: a,
       sortDate: a.created_at,
