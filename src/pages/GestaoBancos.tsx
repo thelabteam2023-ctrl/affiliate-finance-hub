@@ -54,6 +54,7 @@ export default function GestaoBancos() {
   const [bancos, setBancos] = useState<Banco[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
+  const { setContent: setTopBarContent } = useTopBar();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingBanco, setEditingBanco] = useState<Banco | null>(null);
   const [codigo, setCodigo] = useState("");
