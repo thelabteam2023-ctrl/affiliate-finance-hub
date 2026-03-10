@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useCotacoes } from "@/hooks/useCotacoes";
 import { useTopBar } from "@/contexts/TopBarContext";
 import { Users } from "lucide-react";
-import { Tooltip, TooltipProvider } from "@/components/ui/tooltip";
+import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import {
   AlertDialog,
   AlertDialogAction,
