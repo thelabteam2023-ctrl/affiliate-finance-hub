@@ -815,12 +815,19 @@ export function ApostaCard({
               </TooltipProvider>
             </div>
             
-            {/* Mobile: Selection badge on separate row */}
-            {aposta.selecao && (
-              <div className="sm:hidden">
-                <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary/30 text-primary bg-primary/10 truncate max-w-[100px]">
-                  {aposta.selecao}
-                </Badge>
+            {/* Mobile: Selection badges on separate row */}
+            {(aposta.mercado || aposta.selecao) && (
+              <div className="sm:hidden flex items-center gap-1">
+                {aposta.mercado && (
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary/30 text-primary bg-primary/10 truncate max-w-[100px]">
+                    {aposta.mercado}
+                  </Badge>
+                )}
+                {aposta.selecao && (
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary/30 text-primary bg-primary/10 truncate max-w-[100px]">
+                    {aposta.selecao}
+                  </Badge>
+                )}
               </div>
             )}
             
