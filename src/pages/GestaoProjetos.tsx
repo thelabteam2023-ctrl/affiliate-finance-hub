@@ -299,9 +299,19 @@ export default function GestaoProjetos() {
       
       // Agregar lucro operacional por projeto (KPI-COMPATÍVEL):
       // FONTE ÚNICA desta tela: mesmo conjunto de módulos do KPI de Lucro do dashboard
+      // Mapa de cotações para moedas não-USD/BRL
+      const cotacoesExtra: Record<string, number> = {};
+      if (cotacaoEUR > 0.001) cotacoesExtra['EUR'] = cotacaoEUR;
+      if (cotacaoGBP > 0.001) cotacoesExtra['GBP'] = cotacaoGBP;
+      if (cotacaoMYR > 0.001) cotacoesExtra['MYR'] = cotacaoMYR;
+      if (cotacaoMXN > 0.001) cotacoesExtra['MXN'] = cotacaoMXN;
+      if (cotacaoARS > 0.001) cotacoesExtra['ARS'] = cotacaoARS;
+      if (cotacaoCOP > 0.001) cotacoesExtra['COP'] = cotacaoCOP;
+
       const lucroKpiByProjeto = await fetchProjetosLucroOperacionalKpi({
         projetoIds: finalProjetoIds,
         cotacaoUSD: USD_TO_BRL_DISPLAY,
+        cotacoes: cotacoesExtra,
       });
 
       const lucroByProjeto: Record<string, { BRL: number; USD: number }> = {};
