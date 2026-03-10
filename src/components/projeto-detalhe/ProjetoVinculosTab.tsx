@@ -1005,6 +1005,17 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                       <Button
                         variant="outline"
                         size="sm"
+                        onClick={() => {
+                          setVinculoParaAjuste(vinculo);
+                          setAjusteSaldoDialogOpen(true);
+                        }}
+                        title="Ajustar Saldo"
+                      >
+                        <Scale className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
                         className="text-destructive hover:text-destructive"
                         onClick={() => {
                           setVinculoParaConciliar(vinculo);
