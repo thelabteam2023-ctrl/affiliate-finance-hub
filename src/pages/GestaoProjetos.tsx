@@ -91,6 +91,7 @@ export default function GestaoProjetos() {
   const navigate = useNavigate();
   const { user, role } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { setContent: setTopBarContent } = useTopBar();
   
   // SEGURANÇA: workspaceId como dependência para isolamento multi-tenant
   const { workspaceId } = useTabWorkspace();
