@@ -395,13 +395,18 @@ export function ProjetoCiclosTab({ projetoId, formatCurrency: formatCurrencyProp
     return differenceInDays(fim, hoje);
   };
 
+  /** Resolve lucroReal no render com base no metricaLucroCiclo atual (evita race condition) */
+  const resolveLucroReal = (metrics: CicloMetrics) => {
+    return metricaLucroCiclo === "realizado" ? metrics.lucroRealizado : metrics.lucroOperacional;
+  };
+
   const getProgressoVolume = (ciclo: Ciclo, realTimeMetrics?: CicloMetrics) => {
     if (!ciclo.meta_volume || ciclo.meta_volume === 0) return { progresso: 0, valorAtual: 0 };
     
     // Para ciclos em andamento, usar métricas em tempo real
     if (ciclo.status === "EM_ANDAMENTO" && realTimeMetrics) {
       const valorAtual = ciclo.metrica_acumuladora === "LUCRO" 
-        ? realTimeMetrics.lucroReal 
+        ? resolveLucroReal(realTimeMetrics)
         : realTimeMetrics.volume;
       return {
         progresso: Math.min(100, (valorAtual / ciclo.meta_volume) * 100),
