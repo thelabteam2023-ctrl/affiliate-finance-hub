@@ -227,12 +227,12 @@ function ExtrasCollapsible({ metrics, formatCurrency }: { metrics: any; formatCu
   );
 }
 
-export function FinancialMetricsPopover({ projetoId }: FinancialMetricsPopoverProps) {
+export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetricsPopoverProps) {
   const { formatCurrency, convertToConsolidationOficial, cotacaoOficialUSD } = useProjetoCurrency(projetoId);
 
   const { data: rawMetrics, isLoading } = useQuery({
-    queryKey: ["projeto-financial-metrics", projetoId],
-    queryFn: () => fetchFinancialMetricsRaw(projetoId),
+    queryKey: ["projeto-financial-metrics", projetoId, dateRange?.from, dateRange?.to],
+    queryFn: () => fetchFinancialMetricsRaw(projetoId, dateRange),
     staleTime: 30_000,
     gcTime: 60_000,
   });
