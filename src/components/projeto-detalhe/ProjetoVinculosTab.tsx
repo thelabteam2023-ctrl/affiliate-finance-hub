@@ -5,6 +5,7 @@ import { useProjectCurrencyFormat } from "@/hooks/useProjectCurrencyFormat";
 import { useProjectResponsibilities } from "@/hooks/useProjectResponsibilities";
 import { useAjustePostLimitacaoEligibility } from "@/hooks/useAjustePostLimitacao";
 import { AjustePostLimitacaoVinculoDialog } from "./AjustePostLimitacaoVinculoDialog";
+import { AjusteSaldoDialog } from "./AjusteSaldoDialog";
 import { useBookmakerSaldosQuery, useInvalidateBookmakerSaldos, type BookmakerSaldo } from "@/hooks/useBookmakerSaldosQuery";
 import { 
   useProjetoVinculos, 
@@ -90,6 +91,7 @@ import {
   Globe,
   Lock,
   TrendingDown,
+  Scale,
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
@@ -178,6 +180,8 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
   const [selectedCasas, setSelectedCasas] = useState<string[]>([]);
   const [casasSearchTerm, setCasasSearchTerm] = useState("");
   const [selectedParceiros, setSelectedParceiros] = useState<string[]>([]);
+  const [ajusteSaldoDialogOpen, setAjusteSaldoDialogOpen] = useState(false);
+  const [vinculoParaAjuste, setVinculoParaAjuste] = useState<Vinculo | null>(null);
   const [ajusteVinculo, setAjusteVinculo] = useState<Vinculo | null>(null);
   const [sortMode, setSortMode] = useState<VinculoSortMode>("alpha");
 
@@ -1001,6 +1005,17 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                       <Button
                         variant="outline"
                         size="sm"
+                        onClick={() => {
+                          setVinculoParaAjuste(vinculo);
+                          setAjusteSaldoDialogOpen(true);
+                        }}
+                        title="Ajustar Saldo"
+                      >
+                        <Scale className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
                         className="text-destructive hover:text-destructive"
                         onClick={() => {
                           setVinculoParaConciliar(vinculo);
@@ -1288,6 +1303,27 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                         </div>
                       </PopoverContent>
                     </Popover>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            title="Ajustar Saldo"
+                            onClick={() => {
+                              setVinculoParaAjuste(vinculo);
+                              setAjusteSaldoDialogOpen(true);
+                            }}
+                          >
+                            <Scale className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Ajustar Saldo</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                     <Button
                       variant="ghost"
                       size="icon"
@@ -1585,6 +1621,28 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
         projetoNome={projetoNome}
         workspaceId={workspaceId}
         onConcluido={invalidateVinculos}
+      />
+
+      {/* Dialog Ajuste de Saldo */}
+      <AjusteSaldoDialog
+        open={ajusteSaldoDialogOpen}
+        onOpenChange={(open) => {
+          setAjusteSaldoDialogOpen(open);
+          if (!open) setVinculoParaAjuste(null);
+        }}
+        vinculo={vinculoParaAjuste ? {
+          id: vinculoParaAjuste.id,
+          nome: vinculoParaAjuste.nome,
+          parceiro_nome: vinculoParaAjuste.parceiro_nome,
+          saldo_atual: vinculoParaAjuste.saldo_real,
+          moeda: vinculoParaAjuste.moeda,
+        } : null}
+        projetoId={projetoId}
+        projetoNome={projetoNome}
+        workspaceId={workspaceId}
+        onAjustado={() => {
+          invalidateVinculos();
+        }}
       />
     </Tabs>
   );
