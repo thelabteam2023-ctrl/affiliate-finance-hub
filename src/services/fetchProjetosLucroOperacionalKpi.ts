@@ -160,9 +160,9 @@ export async function fetchProjetosLucroOperacionalKpi({
   const convertToConsolidation = (valor: number, moedaOrigem: string) => {
     const m = (moedaOrigem || "BRL").toUpperCase();
     if (isUsdLike(m)) return valor * cotacaoUSD;
-    // Checar mapa de cotações adicionais (EUR, GBP, etc.)
+    // Checar mapa de cotações (inclui BRL quando consolidação != BRL)
     if (cotacoes[m] != null) return valor * cotacoes[m];
-    // BRL ou moeda desconhecida — retorna como está
+    // Moeda é a mesma da consolidação ou desconhecida — identidade
     return valor;
   };
 
