@@ -99,12 +99,6 @@ export default function Comunidade() {
 
   return (
     <div className="container mx-auto p-6 max-w-7xl">
-      <PageHeader 
-        title="Comunidade" 
-        description="Hub de discussões e inteligência coletiva"
-        pagePath="/comunidade"
-        pageIcon="Users"
-      />
 
       {/* Legal Disclaimer */}
       <div className="bg-muted/50 border border-border rounded-lg p-3 mb-6 text-xs text-muted-foreground mt-6">
