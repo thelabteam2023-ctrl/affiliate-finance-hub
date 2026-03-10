@@ -3,6 +3,7 @@ import { PERIOD_STALE_TIME, PERIOD_GC_TIME } from '@/lib/query-cache-config';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchProjetoExtras, agruparExtrasPorTipo, type ProjetoExtraEntry } from '@/services/fetchProjetoExtras';
+import { fetchProjetosLucroOperacionalKpi } from '@/services/fetchProjetosLucroOperacionalKpi';
 import { 
   ProjetoKpiBreakdowns, 
   KpiBreakdown, 
@@ -102,10 +103,23 @@ async function fetchBreakdownsData(
   // Isso garante paridade com todas as outras abas (Bônus, Surebet, etc.)
   const safeConvert = convertToConsolidation || ((valor: number, _moeda: string) => valor);
 
+  // Derivar cotacaoUSD da função de conversão (para delegar ao KPI canônico)
+  const cotacaoUSD = safeConvert(1, 'USD');
+
+  // Preparar filtros de data no formato string YYYY-MM-DD para o KPI canônico
+  const dataInicioStr = dataInicio
+    ? `${dataInicio.getFullYear()}-${String(dataInicio.getMonth() + 1).padStart(2, '0')}-${String(dataInicio.getDate()).padStart(2, '0')}`
+    : null;
+  const dataFimStr = dataFim
+    ? `${dataFim.getFullYear()}-${String(dataFim.getMonth() + 1).padStart(2, '0')}-${String(dataFim.getDate()).padStart(2, '0')}`
+    : null;
 
   // Fetch dados de todos os módulos em paralelo
-  // CANÔNICO: Extras (ajustes_saldo, resultado_cambial, etc.) vêm do serviço centralizado
+  // CANÔNICO: O total de lucro é delegado ao fetchProjetosLucroOperacionalKpi
+  // Os módulos individuais servem apenas para breakdown visual (tooltip)
   const [
+    // ENGINE CANÔNICA: fonte única de verdade para o total
+    lucroCanonicoResult,
     apostasData,
     girosGratisData,
     perdasData,
@@ -114,6 +128,12 @@ async function fetchBreakdownsData(
     bonusGanhosData,
     projetoExtras,
   ] = await Promise.all([
+    fetchProjetosLucroOperacionalKpi({
+      projetoIds: [projetoId],
+      cotacaoUSD,
+      dataInicio: dataInicioStr,
+      dataFim: dataFimStr,
+    }),
     fetchApostasModuleData(projetoId, dataInicio, dataFim, moedaConsolidacao, safeConvert),
     fetchGirosGratisModuleData(projetoId, dataInicio, dataFim, moedaConsolidacao, safeConvert),
     fetchPerdasModuleData(projetoId, dataInicio, dataFim),
@@ -122,6 +142,10 @@ async function fetchBreakdownsData(
     fetchBonusGanhosModuleData(projetoId, moedaConsolidacao, safeConvert),
     fetchProjetoExtras(projetoId),
   ]);
+
+  // Total canônico = mesma engine usada pelos ciclos
+  const lucroCanonicoTotal = lucroCanonicoResult[projetoId]?.consolidado || 0;
+  const lucroCanonicoMoeda = lucroCanonicoResult[projetoId]?.porMoeda || { BRL: 0, USD: 0 };
 
   // Agregar extras canônicos por tipo, com filtro de data e conversão
   const extrasAgrupados = agruparExtrasPorTipo(
@@ -264,7 +288,28 @@ async function fetchBreakdownsData(
     ),
   ], moedaConsolidacao);
 
-  // Adiciona breakdown por moeda ao lucro
+  // Calcular a soma dos módulos individuais (antes de aplicar o total canônico)
+  const somaModulos = lucroBreakdown.total;
+
+  // RECONCILIAÇÃO: Se houver diferença entre a soma dos módulos e o total canônico,
+  // adicionar um item de reconciliação para manter paridade exata com ciclos.
+  const deltaReconciliacao = lucroCanonicoTotal - somaModulos;
+  if (Math.abs(deltaReconciliacao) > 0.01) {
+    lucroBreakdown.contributions.push(
+      createModuleContribution(
+        'reconciliacao',
+        'Reconciliação',
+        deltaReconciliacao,
+        true,
+        { icon: 'Scale', color: deltaReconciliacao >= 0 ? 'positive' : 'negative' }
+      )
+    );
+  }
+
+  // CRÍTICO: Sobrescrever o total com o valor canônico para paridade exata com ciclos
+  lucroBreakdown.total = lucroCanonicoTotal;
+
+  // Adiciona breakdown por moeda ao lucro (usar dados canônicos quando disponível)
   lucroBreakdown.currencyBreakdown = combinarBreakdownsMoeda(
     apostasData.lucroPorMoeda,
     girosGratisData.lucroPorMoeda,
@@ -280,8 +325,8 @@ async function fetchBreakdownsData(
     extrasAgrupados.freebet?.porMoeda || [],
   );
 
-  // === ROI (calculado a partir do lucro e volume) ===
-  const lucroTotal = lucroBreakdown.total;
+  // === ROI (calculado a partir do lucro CANÔNICO e volume) ===
+  const lucroTotal = lucroCanonicoTotal;
   const volumeTotal = volumeBreakdown.total;
   const roiTotal = volumeTotal > 0 ? (lucroTotal / volumeTotal) * 100 : null;
 
