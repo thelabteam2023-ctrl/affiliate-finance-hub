@@ -32,7 +32,16 @@ interface LedgerEntry {
   moeda: string;
 }
 
-async function fetchFinancialMetricsRaw(projetoId: string) {
+function applyDateFilter<T extends { gte: (col: string, val: string) => T; lte: (col: string, val: string) => T }>(
+  query: T,
+  dateRange?: { from: string; to: string } | null,
+  dateColumn = "data_transacao"
+): T {
+  if (!dateRange) return query;
+  return query.gte(dateColumn, dateRange.from).lte(dateColumn, dateRange.to);
+}
+
+async function fetchFinancialMetricsRaw(projetoId: string, dateRange?: { from: string; to: string } | null) {
   const { data: bookmakers } = await supabase
     .from("bookmakers")
     .select("id, saldo_atual, moeda")
@@ -40,57 +49,72 @@ async function fetchFinancialMetricsRaw(projetoId: string) {
 
   const bookmakerSaldos = (bookmakers || []).map(b => ({ saldo_atual: b.saldo_atual || 0, moeda: b.moeda || "BRL" }));
 
-  const depositoQ = supabase.from("cash_ledger").select("valor, moeda")
-    .in("tipo_transacao", ["DEPOSITO", "DEPOSITO_VIRTUAL"])
-    .eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId);
+  const depositoQ = applyDateFilter(
+    supabase.from("cash_ledger").select("valor, moeda")
+      .in("tipo_transacao", ["DEPOSITO", "DEPOSITO_VIRTUAL"])
+      .eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId),
+    dateRange
+  );
 
-  const saqueQ = supabase.from("cash_ledger").select("valor, valor_confirmado, moeda")
-    .in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])
-    .eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId);
+  const saqueQ = applyDateFilter(
+    supabase.from("cash_ledger").select("valor, valor_confirmado, moeda")
+      .in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])
+      .eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId),
+    dateRange
+  );
 
-  const saquePendQ = supabase.from("cash_ledger").select("valor, moeda")
-    .in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])
-    .eq("status", "PENDENTE").eq("projeto_id_snapshot", projetoId);
+  const saquePendQ = applyDateFilter(
+    supabase.from("cash_ledger").select("valor, moeda")
+      .in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])
+      .eq("status", "PENDENTE").eq("projeto_id_snapshot", projetoId),
+    dateRange
+  );
 
   const [depositos, saques, saquesPend, cashbackM, cashbackE, giros, ajustes, perdasOp, perdasFx, ganhosFx] = await Promise.all([
     depositoQ,
     saqueQ,
     saquePendQ,
-    supabase.from("cash_ledger").select("valor, moeda")
-      .eq("tipo_transacao", "CASHBACK_MANUAL").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId),
-    supabase.from("cash_ledger").select("valor, moeda")
-      .eq("tipo_transacao", "CASHBACK_ESTORNO").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId),
-    supabase.from("cash_ledger").select("valor, moeda")
-      .eq("tipo_transacao", "GIRO_GRATIS").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId),
-    supabase.from("cash_ledger").select("valor, moeda, ajuste_direcao")
-      .eq("tipo_transacao", "AJUSTE_SALDO").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId),
-    supabase.from("cash_ledger").select("valor, moeda")
-      .eq("tipo_transacao", "PERDA_OPERACIONAL").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId),
-    supabase.from("cash_ledger").select("valor, moeda")
-      .eq("tipo_transacao", "PERDA_CAMBIAL").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId),
-    supabase.from("cash_ledger").select("valor, moeda")
-      .eq("tipo_transacao", "GANHO_CAMBIAL").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId),
+    applyDateFilter(supabase.from("cash_ledger").select("valor, moeda")
+      .eq("tipo_transacao", "CASHBACK_MANUAL").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId), dateRange),
+    applyDateFilter(supabase.from("cash_ledger").select("valor, moeda")
+      .eq("tipo_transacao", "CASHBACK_ESTORNO").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId), dateRange),
+    applyDateFilter(supabase.from("cash_ledger").select("valor, moeda")
+      .eq("tipo_transacao", "GIRO_GRATIS").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId), dateRange),
+    applyDateFilter(supabase.from("cash_ledger").select("valor, moeda, ajuste_direcao")
+      .eq("tipo_transacao", "AJUSTE_SALDO").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId), dateRange),
+    applyDateFilter(supabase.from("cash_ledger").select("valor, moeda")
+      .eq("tipo_transacao", "PERDA_OPERACIONAL").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId), dateRange),
+    applyDateFilter(supabase.from("cash_ledger").select("valor, moeda")
+      .eq("tipo_transacao", "PERDA_CAMBIAL").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId), dateRange),
+    applyDateFilter(supabase.from("cash_ledger").select("valor, moeda")
+      .eq("tipo_transacao", "GANHO_CAMBIAL").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId), dateRange),
   ]);
 
-  const timelineQ = supabase
-    .from("cash_ledger")
-    .select("valor, valor_confirmado, moeda, data_transacao, tipo_transacao")
-    .in("tipo_transacao", ["DEPOSITO", "DEPOSITO_VIRTUAL", "SAQUE", "SAQUE_VIRTUAL"])
-    .eq("status", "CONFIRMADO")
-    .eq("projeto_id_snapshot", projetoId)
-    .order("data_transacao", { ascending: true });
+  const timelineQ = applyDateFilter(
+    supabase
+      .from("cash_ledger")
+      .select("valor, valor_confirmado, moeda, data_transacao, tipo_transacao")
+      .in("tipo_transacao", ["DEPOSITO", "DEPOSITO_VIRTUAL", "SAQUE", "SAQUE_VIRTUAL"])
+      .eq("status", "CONFIRMADO")
+      .eq("projeto_id_snapshot", projetoId)
+      .order("data_transacao", { ascending: true }),
+    dateRange
+  );
 
   const { data: timelineData } = await timelineQ;
 
-
-
-
-  // Fetch bonus ganhos (credited + finalized)
-  const { data: bonusGanhosData } = await supabase
+  // Fetch bonus ganhos (credited + finalized) - filter by credited_at if dateRange
+  let bonusQuery = supabase
     .from("project_bookmaker_link_bonuses")
     .select("bonus_amount, currency")
     .eq("project_id", projetoId)
     .in("status", ["credited", "finalized"]);
+  
+  if (dateRange) {
+    bonusQuery = bonusQuery.gte("credited_at", dateRange.from).lte("credited_at", dateRange.to);
+  }
+  
+  const { data: bonusGanhosData } = await bonusQuery;
 
   return {
     bookmakerSaldos,
@@ -107,7 +131,6 @@ async function fetchFinancialMetricsRaw(projetoId: string) {
       ganhoCambial: (ganhosFx.data || []) as { valor: number; moeda: string }[],
     },
     breakEvenTimeline: (timelineData || []) as { valor: number; valor_confirmado?: number | null; moeda: string; data_transacao: string; tipo_transacao: string }[],
-    
     bonusGanhos: (bonusGanhosData || []) as { bonus_amount: number; currency: string }[],
   };
 }
