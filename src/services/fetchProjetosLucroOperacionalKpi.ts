@@ -49,12 +49,16 @@ export function derivarCotacoesFromConvertFn(
   return cotacoes;
 }
 
-const toBucketMoeda = (moeda?: string | null): keyof SaldoByMoeda =>
-  isUsdLike(moeda) ? "USD" : "BRL";
+/** Normaliza moeda para bucket (stablecoins → USD) */
+const normalizeMoeda = (moeda?: string | null): string => {
+  const m = (moeda || "BRL").toUpperCase();
+  if (m === "USDT" || m === "USDC") return "USD";
+  return m;
+};
 
 const createEmpty = (): LucroProjetoResumo => ({
   consolidado: 0,
-  porMoeda: { BRL: 0, USD: 0 },
+  porMoeda: {},
 });
 
 /**
