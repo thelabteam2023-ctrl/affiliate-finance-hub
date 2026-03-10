@@ -136,6 +136,7 @@ async function fetchBreakdownsData(
     fetchProjetosLucroOperacionalKpi({
       projetoIds: [projetoId],
       cotacaoUSD,
+      cotacoes,
       dataInicio: dataInicioStr,
       dataFim: dataFimStr,
     }),

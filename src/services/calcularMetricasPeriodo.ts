@@ -124,6 +124,7 @@ export async function calcularMetricasPeriodo({
     fetchProjetosLucroOperacionalKpi({
       projetoIds: [projetoId],
       cotacaoUSD,
+      cotacoes,
       dataInicio,
       dataFim,
     }),
