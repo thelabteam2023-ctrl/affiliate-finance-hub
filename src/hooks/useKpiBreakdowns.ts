@@ -103,13 +103,9 @@ async function fetchBreakdownsData(
   // Isso garante paridade com todas as outras abas (Bônus, Surebet, etc.)
   const safeConvert = convertToConsolidation || ((valor: number, _moeda: string) => valor);
 
-  // Derivar cotações de todas as moedas relevantes da função de conversão
+  // Derivar cotações de TODAS as moedas suportadas a partir da função de conversão
   const cotacaoUSD = safeConvert(1, 'USD');
-  const cotacaoEUR = safeConvert(1, 'EUR');
-  const cotacaoGBP = safeConvert(1, 'GBP');
-  const cotacoes: Record<string, number> = {};
-  if (Math.abs(cotacaoEUR - 1) > 0.001) cotacoes['EUR'] = cotacaoEUR;
-  if (Math.abs(cotacaoGBP - 1) > 0.001) cotacoes['GBP'] = cotacaoGBP;
+  const cotacoes = derivarCotacoesFromConvertFn(safeConvert);
 
   // Preparar filtros de data no formato string YYYY-MM-DD para o KPI canônico
   const dataInicioStr = dataInicio
