@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useCotacoes } from "@/hooks/useCotacoes";
-import { PageHeader } from "@/components/PageHeader";
+import { useTopBar } from "@/contexts/TopBarContext";
 import { Users } from "lucide-react";
 import { Tooltip, TooltipProvider } from "@/components/ui/tooltip";
 import {
