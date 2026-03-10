@@ -772,9 +772,10 @@ export default function GestaoProjetos() {
                       {(() => {
                         const lucroOperacional = projeto.lucro_operacional || 0;
                         const isPositive = lucroOperacional >= 0;
+                        const moeda = projeto.moeda_consolidacao || 'BRL';
                         return (
                           <p className={`text-sm font-semibold ${isPositive ? 'text-emerald-500' : 'text-red-500'}`}>
-                            {isPositive ? '+' : ''}{formatCurrency(lucroOperacional)}
+                            {isPositive ? '+' : '-'}{formatCurrencyValue(lucroOperacional, moeda)}
                           </p>
                         );
                       })()}
@@ -784,9 +785,10 @@ export default function GestaoProjetos() {
                       {(() => {
                         const lr = projeto.lucro_realizado || 0;
                         const isPositive = lr >= 0;
+                        const moeda = projeto.moeda_consolidacao || 'BRL';
                         return (
                           <p className={`text-sm font-medium ${isPositive ? 'text-emerald-500' : 'text-red-500'}`}>
-                            {isPositive ? '+' : ''}{formatCurrency(lr)}
+                            {isPositive ? '+' : '-'}{formatCurrencyValue(lr, moeda)}
                           </p>
                         );
                       })()}

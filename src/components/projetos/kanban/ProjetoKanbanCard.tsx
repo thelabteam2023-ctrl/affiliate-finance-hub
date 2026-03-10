@@ -46,6 +46,7 @@ interface Projeto {
   perdas_confirmadas?: number;
   lucro_realizado?: number;
   display_order?: number;
+  moeda_consolidacao?: string;
 }
 
 interface ProjetoKanbanCardProps {
