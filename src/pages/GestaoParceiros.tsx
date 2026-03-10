@@ -753,7 +753,7 @@ export default function GestaoParceiros() {
       <div className="h-full flex flex-col bg-background">
 
         {/* PageBody: flex-1 ocupa espaço restante, min-h-0 permite shrink */}
-        <div className="flex-1 min-h-0 px-4 pb-6">
+        <div className="flex-1 min-h-0 px-4 pt-2 pb-4">
           <Card className="h-full border-border bg-gradient-surface overflow-hidden">
             {/* Layout Grid: duas colunas com altura 100% */}
             <div className="h-full grid grid-cols-[340px_1fr] lg:grid-cols-[360px_1fr]">
