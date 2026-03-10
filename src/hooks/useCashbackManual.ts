@@ -224,7 +224,7 @@ export function useCashbackManual({ projetoId, dataInicio, dataFim }: UseCashbac
         }
 
         // 2. PROTEÇÃO ANTI-DUPLICIDADE: Verificar se já existe cashback igual recente
-        const dataCredito = data.data_credito || new Date().toISOString().split("T")[0];
+        const dataCredito = data.data_credito || getTodayCivilDate();
         const { data: existingCashback, error: checkError } = await supabase
           .from("cashback_manual")
           .select("id, created_at")
