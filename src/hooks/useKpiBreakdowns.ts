@@ -246,6 +246,22 @@ async function fetchBreakdownsData(
       (extrasAgrupados.resultado_cambial?.count || 0) > 0,
       { icon: 'Globe', color: (extrasAgrupados.resultado_cambial?.total || 0) >= 0 ? 'positive' : 'negative' }
     ),
+    // Eventos Promocionais (FREEBET_CONVERTIDA, CREDITO_PROMOCIONAL, GIRO_GRATIS_GANHO)
+    createModuleContribution(
+      'promocional',
+      'Eventos Promocionais',
+      extrasAgrupados.promocional?.total || 0,
+      (extrasAgrupados.promocional?.count || 0) > 0,
+      { icon: 'Megaphone', color: (extrasAgrupados.promocional?.total || 0) >= 0 ? 'positive' : 'negative' }
+    ),
+    // Freebet convertida (mapeado de FREEBET_CONVERTIDA no cash_ledger)
+    createModuleContribution(
+      'freebet',
+      'Freebet Convertida',
+      extrasAgrupados.freebet?.total || 0,
+      (extrasAgrupados.freebet?.count || 0) > 0,
+      { icon: 'Gift', color: (extrasAgrupados.freebet?.total || 0) >= 0 ? 'positive' : 'negative' }
+    ),
   ], moedaConsolidacao);
 
   // Adiciona breakdown por moeda ao lucro
