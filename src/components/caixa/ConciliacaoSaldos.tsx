@@ -369,6 +369,20 @@ export function ConciliacaoSaldos({
         if (bookmakerId) {
           const moeda = await getBookmakerMoeda(bookmakerId);
           
+          // CRÍTICO: Herdar o projeto_id_snapshot da transação original (saque/depósito)
+          // para garantir que o resultado cambial fique no projeto correto,
+          // mesmo que a bookmaker já tenha sido transferida para outro projeto.
+          let fxProjetoSnapshot = selectedTransaction.projeto_id_snapshot;
+          if (!fxProjetoSnapshot) {
+            // Fallback: buscar projeto_id atual da bookmaker
+            const { data: bmData } = await supabase
+              .from("bookmakers")
+              .select("projeto_id")
+              .eq("id", bookmakerId)
+              .single();
+            fxProjetoSnapshot = bmData?.projeto_id || null;
+          }
+          
           if (diferenca > 0) {
             // Ganho cambial - crédito
             const result = await registrarGanhoCambialViaLedger({
@@ -379,14 +393,14 @@ export function ConciliacaoSaldos({
               userId: user.id,
               descricao: `Ganho cambial em conciliação: ${formatCurrency(valorNominal)} nominal → ${formatCurrency(valorReal)} confirmado`,
               transacaoOrigemId: selectedTransaction.id,
-              projetoIdSnapshot: selectedTransaction.projeto_id_snapshot || undefined,
+              projetoIdSnapshot: fxProjetoSnapshot || undefined,
             });
             
             if (!result.success) {
               console.error("[Conciliação] Erro ao registrar ganho cambial:", result.error);
               toast.error("Erro ao registrar ganho cambial");
             } else {
-              console.log(`[Conciliação] Ganho cambial registrado via ledger: ${diferenca}`);
+              console.log(`[Conciliação] Ganho cambial registrado via ledger: ${diferenca} (projeto: ${fxProjetoSnapshot || 'sem projeto'})`);
             }
           } else {
             // Perda cambial - débito
@@ -398,14 +412,14 @@ export function ConciliacaoSaldos({
               userId: user.id,
               descricao: `Perda cambial em conciliação: ${formatCurrency(valorNominal)} nominal → ${formatCurrency(valorReal)} confirmado`,
               transacaoOrigemId: selectedTransaction.id,
-              projetoIdSnapshot: selectedTransaction.projeto_id_snapshot || undefined,
+              projetoIdSnapshot: fxProjetoSnapshot || undefined,
             });
             
             if (!result.success) {
               console.error("[Conciliação] Erro ao registrar perda cambial:", result.error);
               toast.error("Erro ao registrar perda cambial");
             } else {
-              console.log(`[Conciliação] Perda cambial registrada via ledger: ${Math.abs(diferenca)}`);
+              console.log(`[Conciliação] Perda cambial registrada via ledger: ${Math.abs(diferenca)} (projeto: ${fxProjetoSnapshot || 'sem projeto'})`);
             }
           }
         }
