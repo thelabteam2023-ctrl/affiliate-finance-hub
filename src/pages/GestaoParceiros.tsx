@@ -734,26 +734,23 @@ export default function GestaoParceiros() {
    *     ├─ SidebarParceiros (w-fixo, scroll próprio)
    *     └─ MainPanel (flex-1, organiza header + tabs + viewport)
    */
+  // Inject title into global TopBar
+  useEffect(() => {
+    setTopBarContent(
+      <div className="flex items-center gap-2">
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
+          <Users className="h-4 w-4 text-primary" />
+        </div>
+        <span className="font-semibold text-sm">Gestão de Parceiros ⭐</span>
+      </div>
+    );
+    return () => setTopBarContent(null);
+  }, [setTopBarContent]);
+
   return (
     <TooltipProvider>
       {/* PageRoot: altura total, flex-col, sem overflow */}
       <div className="h-full flex flex-col bg-background">
-        
-        {/* PageHeader: altura fixa, nunca comprime */}
-        <div className="shrink-0 px-4 pt-6 pb-4">
-          <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-              <Users className="h-6 w-6 text-primary" />
-            </div>
-            <PageHeader
-              title="Gestão de Parceiros"
-              description="Gerencie seus parceiros e analise performance financeira"
-              pagePath="/parceiros"
-              pageIcon="Users"
-              className="flex-1"
-            />
-          </div>
-        </div>
 
         {/* PageBody: flex-1 ocupa espaço restante, min-h-0 permite shrink */}
         <div className="flex-1 min-h-0 px-4 pb-6">
