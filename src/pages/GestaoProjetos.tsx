@@ -402,7 +402,7 @@ export default function GestaoProjetos() {
     } finally {
       setLoading(false);
     }
-  }, [user, isOperator, workspaceId, USD_TO_BRL_DISPLAY]);
+  }, [user, isOperator, workspaceId, USD_TO_BRL_DISPLAY, cotacaoEUR, cotacaoGBP, cotacaoMYR, cotacaoMXN, cotacaoARS, cotacaoCOP]);
 
   // SEGURANÇA: Refetch quando workspace muda
   useEffect(() => {
