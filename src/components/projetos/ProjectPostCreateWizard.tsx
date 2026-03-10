@@ -215,8 +215,8 @@ export function ProjectPostCreateWizard({
   const { workspaceId } = useWorkspace();
   
   // Stable "today" value to avoid re-renders - computed once on mount
-  const todayRef = useRef(new Date().toISOString().split("T")[0]);
-  const defaultEndDateRef = useRef(addMonths(new Date(), 1).toISOString().split("T")[0]);
+  const todayRef = useRef(getTodayCivilDate());
+  const defaultEndDateRef = useRef(dateToCivilDateString(addMonths(new Date(), 1)));
   
   // Wizard state
   const [step, setStep] = useState<WizardStep>("choose");
