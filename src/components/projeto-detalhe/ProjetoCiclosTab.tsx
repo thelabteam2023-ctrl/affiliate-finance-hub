@@ -25,7 +25,8 @@ import {
   ChevronDown,
   Ban,
   Lock,
-  ChevronUp
+  ChevronUp,
+  Wallet
 } from "lucide-react";
 import { format, differenceInDays, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -664,25 +665,40 @@ export function ProjetoCiclosTab({ projetoId, formatCurrency: formatCurrencyProp
                     <div>
                       {/* Para ciclos EM_ANDAMENTO com métricas em tempo real */}
                       {ciclo.status === "EM_ANDAMENTO" && realTimeMetrics ? (
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm text-muted-foreground">Lucro Real</p>
+                        <div className="space-y-3">
+                          {/* Lucro Operacional */}
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm text-muted-foreground">Lucro Operacional</p>
+                              {realTimeMetrics.perdas.totalConfirmadas > 0 && (
+                                <Badge variant="outline" className="text-xs text-red-400 border-red-500/30">
+                                  <ShieldAlert className="h-3 w-3 mr-1" />
+                                  -{formatCurrency(realTimeMetrics.perdas.totalConfirmadas)}
+                                </Badge>
+                              )}
+                            </div>
+                            <p className={`text-lg font-semibold ${realTimeMetrics.lucroOperacional >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                              {realTimeMetrics.lucroOperacional >= 0 ? <TrendingUp className="h-4 w-4 inline mr-1" /> : <TrendingDown className="h-4 w-4 inline mr-1" />}
+                              {formatCurrency(realTimeMetrics.lucroOperacional)}
+                            </p>
                             {realTimeMetrics.perdas.totalConfirmadas > 0 && (
-                              <Badge variant="outline" className="text-xs text-red-400 border-red-500/30">
-                                <ShieldAlert className="h-3 w-3 mr-1" />
-                                -{formatCurrency(realTimeMetrics.perdas.totalConfirmadas)}
-                              </Badge>
+                              <p className="text-xs text-muted-foreground">
+                                Bruto: {formatCurrency(realTimeMetrics.lucroBruto)}
+                              </p>
                             )}
                           </div>
-                          <p className={`text-lg font-semibold ${realTimeMetrics.lucroReal >= 0 ? "text-emerald-500" : "text-red-500"}`}>
-                            {realTimeMetrics.lucroReal >= 0 ? <TrendingUp className="h-4 w-4 inline mr-1" /> : <TrendingDown className="h-4 w-4 inline mr-1" />}
-                            {formatCurrency(realTimeMetrics.lucroReal)}
-                          </p>
-                          {realTimeMetrics.perdas.totalConfirmadas > 0 && (
-                            <p className="text-xs text-muted-foreground">
-                              Bruto: {formatCurrency(realTimeMetrics.lucroBruto)}
+                          {/* Lucro Realizado (Saques - Depósitos) */}
+                          <div className="space-y-1 pt-2 border-t border-border/40">
+                            <p className="text-sm text-muted-foreground flex items-center gap-1">
+                              <Wallet className="h-3 w-3" />
+                              Lucro Realizado
+                              <span className="text-[10px] text-muted-foreground/60">(Saques − Depósitos)</span>
                             </p>
-                          )}
+                            <p className={`text-base font-semibold ${realTimeMetrics.lucroRealizado >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                              {realTimeMetrics.lucroRealizado >= 0 ? <TrendingUp className="h-3.5 w-3.5 inline mr-1" /> : <TrendingDown className="h-3.5 w-3.5 inline mr-1" />}
+                              {formatCurrency(realTimeMetrics.lucroRealizado)}
+                            </p>
+                          </div>
                         </div>
                       ) : (
                         <div>
