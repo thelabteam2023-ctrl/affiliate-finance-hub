@@ -169,8 +169,7 @@ export async function calcularMetricasPeriodo({
       .lte("data_transacao", endUTC),
   ]);
 
-  // Buscar créditos extras em paralelo separado (evita TS2589 com muitos generics)
-  // Use type assertion to avoid TS2589 with deeply nested generic types
+  // Buscar bônus creditados (evita TS2589 com type assertion)
   const bonusResult: { data: any[] | null; error: any } = await (supabase as any)
     .from("project_bookmaker_link_bonuses")
     .select("bonus_amount")
@@ -178,24 +177,6 @@ export async function calcularMetricasPeriodo({
     .or("status.eq.credited,status.eq.finalized")
     .gte("credited_at", startUTC)
     .lte("credited_at", endUTC);
-
-  const ajustesResult = await supabase
-    .from("cash_ledger")
-    .select("valor, ajuste_direcao")
-    .or("tipo_transacao.eq.AJUSTE_SALDO,tipo_transacao.eq.AJUSTE_RECONCILIACAO")
-    .eq("status", "CONFIRMADO")
-    .eq("projeto_id_snapshot", projetoId)
-    .gte("data_transacao", startUTC)
-    .lte("data_transacao", endUTC);
-
-  const fxResult = await supabase
-    .from("cash_ledger")
-    .select("valor, tipo_transacao")
-    .or("tipo_transacao.eq.GANHO_CAMBIAL,tipo_transacao.eq.PERDA_CAMBIAL")
-    .eq("status", "CONFIRMADO")
-    .eq("projeto_id_snapshot", projetoId)
-    .gte("data_transacao", startUTC)
-    .lte("data_transacao", endUTC);
 
   // Processar erros silenciosamente (melhor UX)
   if (apostasResult.error) console.error("[calcularMetricasPeriodo] Erro apostas:", apostasResult.error);
@@ -290,20 +271,9 @@ export async function calcularMetricasPeriodo({
     return acc + Number(b.bonus_amount || 0);
   }, 0);
 
-  // Ajustes de saldo (considerar direção)
-  const totalAjustes = (ajustesResult.data || []).reduce((acc, a: any) => {
-    const sinal = a.ajuste_direcao === 'SAIDA' ? -1 : 1;
-    return acc + Number(a.valor || 0) * sinal;
-  }, 0);
-
-  // Resultados cambiais (ganho - perda)
-  const totalFx = (fxResult.data || []).reduce((acc, fx: any) => {
-    const sinal = fx.tipo_transacao === 'GANHO_CAMBIAL' ? 1 : -1;
-    return acc + Number(fx.valor || 0) * sinal;
-  }, 0);
-
-  // Créditos Extras totais
-  const creditosExtras = lucroCashback + lucroGiros + totalBonus + totalAjustes + totalFx;
+  // Créditos Extras = capital que entrou na casa sem depósito (bônus, cashback, giros)
+  // NÃO inclui: ajustes (correções contábeis), FX (resultado cambial já refletido nos saques via valor_confirmado)
+  const creditosExtras = lucroCashback + lucroGiros + totalBonus;
 
   // Fórmula canônica: Saques - (Depósitos + Créditos Extras)
   const lucroRealizado = totalSaques - (totalDepositos + creditosExtras);
