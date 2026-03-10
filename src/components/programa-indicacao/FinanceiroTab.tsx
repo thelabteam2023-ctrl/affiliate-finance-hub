@@ -529,7 +529,7 @@ export function FinanceiroTab() {
           parceiro_id: parceria.parceiro_id,
           indicador_id: indicadorId,
           descricao: `Estorno comissão: parceria dispensada - ${dispensaMotivo.trim()}`,
-          data_movimentacao: new Date().toISOString().split("T")[0],
+          data_movimentacao: getTodayCivilDate(),
         });
       } 
       // Cenário: comissão já paga + sem estorno → registrar nota de sobrepagamento
