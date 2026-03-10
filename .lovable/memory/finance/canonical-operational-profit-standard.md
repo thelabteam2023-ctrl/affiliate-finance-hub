@@ -1,5 +1,5 @@
 # Memory: finance/canonical-operational-profit-standard
-Updated: 2026-03-09
+Updated: 2026-03-10
 
 A métrica 'Lucro Operacional' segue uma fórmula canônica centralizada no serviço 'fetchProjetosLucroOperacionalKpi':
 
@@ -15,18 +15,25 @@ LUCRO_OPERACIONAL =
   + Resultado Cambial (extras canônicos)
 ```
 
-## Fonte Única de Verdade
+## Fonte Única de Verdade — UNIFICAÇÃO COMPLETA
 
-O hook 'useWorkspaceLucroOperacional' (Dashboard Financeiro) agora **delega integralmente** para 'fetchProjetosLucroOperacionalKpi', eliminando a engine duplicada que causava divergências (~R$ 143 de diferença).
+**TODOS** os consumidores de lucro operacional agora delegam para `fetchProjetosLucroOperacionalKpi`:
 
-### Antes (duas engines)
-- **Projetos**: fetchProjetosLucroOperacionalKpi (7 módulos, paginação, getConsolidatedLucro)
-- **Dashboard**: useWorkspaceLucroOperacional (3 módulos inline, sem paginação, conversão EUR ad-hoc)
+| Consumidor | Arquivo | Status |
+|---|---|---|
+| Dashboard Financeiro | `useWorkspaceLucroOperacional` | ✅ Delegado |
+| Ciclos / Períodos | `calcularMetricasPeriodo.ts` | ✅ Delegado |
+| **KPI Projeto (Visão Geral)** | **`useKpiBreakdowns.ts`** | **✅ Delegado (v2)** |
 
-### Depois (engine única)
-- **fetchProjetosLucroOperacionalKpi** é a única engine de cálculo
-- **useWorkspaceLucroOperacional** busca projeto IDs → delega ao serviço → agrega
-- Suporta filtros de período (dataInicio/dataFim) no timezone operacional (São Paulo)
+### Arquitetura do useKpiBreakdowns (v2)
+- O **total de lucro** vem exclusivamente do `fetchProjetosLucroOperacionalKpi`
+- Os módulos individuais (apostas, cashback, giros, etc.) são buscados separadamente apenas para **breakdown visual** (tooltip)
+- Se houver delta entre a soma dos módulos e o total canônico, uma linha de **Reconciliação** é exibida
+- O ROI usa o total canônico como numerador
+
+### Divergência eliminada
+Antes: useKpiBreakdowns tinha queries próprias com filtros divergentes (sem filtro de data em bônus/ajustes, campo `data_perda` vs `created_at`, sem conversão multimoeda em perdas).
+Depois: Total vem da engine canônica, garantindo paridade exata com ciclos.
 
 ## Proteções
 - Paginação automática para >1000 linhas (apostas)
