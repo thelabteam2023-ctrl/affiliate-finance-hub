@@ -282,7 +282,7 @@ export function ConfirmarSaqueDialog({
               valor: Math.abs(diferencaCoin),
               moeda: coinMoeda,
               status: "CONFIRMADO",
-              data_transacao: new Date().toISOString().split("T")[0],
+              data_transacao: getTodayCivilDate(),
               descricao: `${tipoAjuste === "GANHO_CAMBIAL" ? "Ganho" : "Perda"} na liquidação cripto - ${saque.bookmaker_nome || "Saque"} (diferença: ${Math.abs(diferencaCoin).toFixed(6)} ${coinMoeda})`,
               workspace_id: bookmaker.workspace_id,
               user_id: userData.user.id,
