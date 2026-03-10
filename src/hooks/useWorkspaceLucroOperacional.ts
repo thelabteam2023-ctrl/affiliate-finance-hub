@@ -35,6 +35,7 @@ interface UseWorkspaceLucroOperacionalProps {
   dataInicio?: string | null;
   dataFim?: string | null;
   cotacaoUSD?: number;
+  cotacaoEUR?: number;
 }
 
 interface UseWorkspaceLucroOperacionalReturn {
@@ -71,6 +72,7 @@ export function useWorkspaceLucroOperacional({
   dataInicio = null,
   dataFim = null,
   cotacaoUSD = 5.0,
+  cotacaoEUR,
 }: UseWorkspaceLucroOperacionalProps = {}): UseWorkspaceLucroOperacionalReturn {
   const [resultado, setResultado] = useState<WorkspaceLucroConsolidado | null>(null);
   const [loading, setLoading] = useState(true);
@@ -100,10 +102,14 @@ export function useWorkspaceLucroOperacional({
         return;
       }
 
+      const cotacoes: Record<string, number> = {};
+      if (cotacaoEUR && Math.abs(cotacaoEUR - 1) > 0.001) cotacoes['EUR'] = cotacaoEUR;
+
       // 2) Delegar para a engine canônica dos projetos
       const lucroPorProjeto = await fetchProjetosLucroOperacionalKpi({
         projetoIds,
         cotacaoUSD,
+        cotacoes,
         dataInicio: dataInicio || undefined,
         dataFim: dataFim || undefined,
       });

@@ -103,8 +103,13 @@ async function fetchBreakdownsData(
   // Isso garante paridade com todas as outras abas (Bônus, Surebet, etc.)
   const safeConvert = convertToConsolidation || ((valor: number, _moeda: string) => valor);
 
-  // Derivar cotacaoUSD da função de conversão (para delegar ao KPI canônico)
+  // Derivar cotações de todas as moedas relevantes da função de conversão
   const cotacaoUSD = safeConvert(1, 'USD');
+  const cotacaoEUR = safeConvert(1, 'EUR');
+  const cotacaoGBP = safeConvert(1, 'GBP');
+  const cotacoes: Record<string, number> = {};
+  if (Math.abs(cotacaoEUR - 1) > 0.001) cotacoes['EUR'] = cotacaoEUR;
+  if (Math.abs(cotacaoGBP - 1) > 0.001) cotacoes['GBP'] = cotacaoGBP;
 
   // Preparar filtros de data no formato string YYYY-MM-DD para o KPI canônico
   const dataInicioStr = dataInicio
@@ -131,6 +136,7 @@ async function fetchBreakdownsData(
     fetchProjetosLucroOperacionalKpi({
       projetoIds: [projetoId],
       cotacaoUSD,
+      cotacoes,
       dataInicio: dataInicioStr,
       dataFim: dataFimStr,
     }),

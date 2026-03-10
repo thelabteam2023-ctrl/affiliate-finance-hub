@@ -90,8 +90,13 @@ export async function calcularMetricasPeriodo({
 }: MetricasPeriodoInput): Promise<MetricasPeriodo> {
   const convert = convertToConsolidation || ((valor: number, _moeda: string) => valor);
   
-  // Derivar cotacaoUSD da função de conversão (para delegar ao KPI)
+  // Derivar cotações de todas as moedas relevantes
   const cotacaoUSD = convert(1, 'USD');
+  const cotacaoEUR = convert(1, 'EUR');
+  const cotacaoGBP = convert(1, 'GBP');
+  const cotacoes: Record<string, number> = {};
+  if (Math.abs(cotacaoEUR - 1) > 0.001) cotacoes['EUR'] = cotacaoEUR;
+  if (Math.abs(cotacaoGBP - 1) > 0.001) cotacoes['GBP'] = cotacaoGBP;
 
   // Converter datas para UTC no timezone operacional
   const dataInicioParsed = parseISO(dataInicio);
@@ -119,6 +124,7 @@ export async function calcularMetricasPeriodo({
     fetchProjetosLucroOperacionalKpi({
       projetoIds: [projetoId],
       cotacaoUSD,
+      cotacoes,
       dataInicio,
       dataFim,
     }),
