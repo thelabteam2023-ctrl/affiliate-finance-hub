@@ -76,7 +76,7 @@ export function VincularProjetoDialog({
   const [formData, setFormData] = useState({
     projeto_id: "",
     funcao: "",
-    data_entrada: new Date().toISOString().split("T")[0],
+    data_entrada: getTodayCivilDate(),
     frequencia_conciliacao: "MENSAL",
     resumo_acordo: "",
     // Campos de referência do acordo (opcionais)
