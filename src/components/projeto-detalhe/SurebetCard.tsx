@@ -393,7 +393,7 @@ function PernaItem({
             <div key={idx} className="flex items-center gap-3 text-xs">
               {/* Logo menor */}
               <div className="h-8 w-8 shrink-0">
-                <BookmakerLogo nome={entry.bookmaker_nome} getLogoUrl={getLogoUrl} />
+                <SurebetBookmakerLogo nome={entry.bookmaker_nome} getLogoUrl={getLogoUrl} />
               </div>
               
               {/* Nome + linha opcional - com vínculo abreviado */}
