@@ -875,10 +875,14 @@ export function ApostaCard({
         
         {/* LINHA 3: Data/Hora + Stake + Lucro/ROI - NUNCA CORTAR */}
         <div className="flex items-center justify-between pt-3 border-t border-border/50 gap-3">
-          <div className="flex items-center gap-2 min-w-0">
+          <div className="flex items-center gap-2 min-w-0 flex-wrap">
             <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
               {format(parseLocalDateTime(aposta.data_aposta), "dd/MM HH:mm", { locale: ptBR })}
             </span>
+            <DateAnomalyBadge
+              anomaly={detectDateAnomaly(aposta.data_aposta)}
+              onClick={() => onEdit?.(aposta.id)}
+            />
             {(isForeignCurrency || isMultiCurrency) && (
               <Badge variant="outline" className="text-[9px] sm:text-[10px] px-1 py-0 bg-blue-500/10 text-blue-400 border-blue-500/30">
                 {displayCurrency}
