@@ -283,7 +283,9 @@ export function ProjetoCiclosTab({ projetoId, formatCurrency: formatCurrencyProp
         volume: metricas.volume,
         ticketMedio: metricas.ticketMedio,
         lucroBruto: metricas.lucroBruto,
-        lucroReal: metricas.lucroLiquido,
+        lucroReal: metricaLucroCiclo === "realizado" ? metricas.lucroRealizado : metricas.lucroLiquido,
+        lucroOperacional: metricas.lucroLiquido,
+        lucroRealizado: metricas.lucroRealizado,
         roi: metricas.roi,
         perdas,
       };
