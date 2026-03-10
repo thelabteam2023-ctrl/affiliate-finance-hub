@@ -108,8 +108,8 @@ export async function calcularMetricasPeriodo({
   const dataFimParsed = parseISO(dataFim);
   const { startUTC, endUTC } = getOperationalDateRangeForQuery(dataInicioParsed, dataFimParsed);
 
-  // Buscar todos os dados em paralelo
-  const [apostasResult, cashbackResult, girosResult, perdasResult, bookmakersResult, saquesResult, depositosResult, bonusResult, ajustesResult, fxResult] = await Promise.all([
+  // Buscar dados principais em paralelo
+  const [apostasResult, cashbackResult, girosResult, perdasResult, bookmakersResult, saquesResult, depositosResult] = await Promise.all([
     // 1. Apostas com campos consolidados + moeda para conversão
     supabase
       .from("apostas_unificada")
