@@ -312,15 +312,12 @@ export default function GestaoProjetos() {
         cotacoes: cotacoesExtra,
       });
 
-      const lucroByProjeto: Record<string, { BRL: number; USD: number }> = {};
+      const lucroByProjeto: Record<string, Record<string, number>> = {};
       const lucroConsolidadoByProjeto: Record<string, number> = {};
 
       finalProjetoIds.forEach((projetoId) => {
         const lucroData = lucroKpiByProjeto[projetoId];
-        lucroByProjeto[projetoId] = {
-          BRL: lucroData?.porMoeda.BRL || 0,
-          USD: lucroData?.porMoeda.USD || 0,
-        };
+        lucroByProjeto[projetoId] = lucroData?.porMoeda || {};
         lucroConsolidadoByProjeto[projetoId] = lucroData?.consolidado || 0;
       });
       
