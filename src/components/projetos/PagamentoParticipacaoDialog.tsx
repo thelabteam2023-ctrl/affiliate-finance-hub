@@ -151,7 +151,7 @@ export function PagamentoParticipacaoDialog({
         .from("participacao_ciclos")
         .update({
           status: "PAGO",
-          data_pagamento: new Date().toISOString(),
+          data_pagamento: getTodayCivilDate(),
           pagamento_ledger_id: ledgerEntry.id,
           observacoes: observacoes || null,
         })
