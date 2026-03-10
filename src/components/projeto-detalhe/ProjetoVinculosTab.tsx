@@ -5,6 +5,7 @@ import { useProjectCurrencyFormat } from "@/hooks/useProjectCurrencyFormat";
 import { useProjectResponsibilities } from "@/hooks/useProjectResponsibilities";
 import { useAjustePostLimitacaoEligibility } from "@/hooks/useAjustePostLimitacao";
 import { AjustePostLimitacaoVinculoDialog } from "./AjustePostLimitacaoVinculoDialog";
+import { AjusteSaldoDialog } from "./AjusteSaldoDialog";
 import { useBookmakerSaldosQuery, useInvalidateBookmakerSaldos, type BookmakerSaldo } from "@/hooks/useBookmakerSaldosQuery";
 import { 
   useProjetoVinculos, 
