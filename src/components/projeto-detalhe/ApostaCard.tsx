@@ -3,6 +3,7 @@ import { Badge, SelectionBadge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Zap, TrendingUp, Target, ArrowLeftRight, Coins, Gift, CheckCircle2, Clock, Layers, X, CircleSlash, Loader2, ChevronDown, ChevronUp, Building2 } from "lucide-react";
+import { BookmakerLogo } from "@/components/ui/bookmaker-logo";
 import { ApostaPernasResumo, ApostaPernasInline, getModeloOperacao, Perna } from "./ApostaPernasResumo";
 import { cn, getFirstLastName } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
