@@ -45,8 +45,10 @@ export interface MetricasPeriodo {
   perdasDetalhes: PerdaDetalhe[];
   /** Lucro líquido operacional = bruto - perdas */
   lucroLiquido: number;
-  /** Lucro realizado = saques confirmados - depósitos confirmados (no período, por data_transacao) */
+  /** Lucro realizado = Saques - (Depósitos + Créditos Extras) — fórmula canônica */
   lucroRealizado: number;
+  /** Total de créditos extras no período (cashback, giros, bônus, ajustes, FX) */
+  creditosExtras: number;
   /** Ticket médio (volume / qtdApostas) */
   ticketMedio: number;
   /** ROI = (lucroLiquido / volume) * 100 */
