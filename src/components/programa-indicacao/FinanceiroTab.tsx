@@ -545,7 +545,7 @@ export function FinanceiroTab() {
           parceiro_id: parceria.parceiro_id,
           indicador_id: indicadorId,
           descricao: `⚠️ Comissão de R$ ${dispensaValorComissao.toFixed(2)} já paga ao indicador. Sobrepagamento mantido sem estorno. Motivo dispensa: ${dispensaMotivo.trim()}`,
-          data_movimentacao: new Date().toISOString().split("T")[0],
+          data_movimentacao: getTodayCivilDate(),
         });
       }
       // Cenário: comissão nunca paga → dispensar normalmente
