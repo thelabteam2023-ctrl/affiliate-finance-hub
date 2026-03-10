@@ -133,7 +133,7 @@ export function WorkspaceSwitcher({
         <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/10 shrink-0">
           <Building2 className="h-4 w-4 text-primary" />
         </div>
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 text-center">
           <p className="text-sm font-medium break-words">
             {currentWorkspace?.workspace_name || "Workspace"}
           </p>
