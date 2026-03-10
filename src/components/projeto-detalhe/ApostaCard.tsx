@@ -837,13 +837,7 @@ export function ApostaCard({
                 className="w-full flex items-center gap-2 hover:bg-muted/30 rounded-md py-1.5 px-1 transition-colors text-xs text-muted-foreground mb-2"
                 onClick={(e) => e.stopPropagation()}
               >
-                {aposta.logo_url ? (
-                  <img src={aposta.logo_url} alt="" className="h-7 w-7 rounded-lg object-contain logo-blend shrink-0" />
-                ) : (
-                  <div className="h-7 w-7 rounded-lg bg-muted/30 flex items-center justify-center shrink-0">
-                    <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
-                  </div>
-                )}
+                <BookmakerLogo logoUrl={aposta.logo_url} size="h-7 w-7" iconSize="h-3.5 w-3.5" />
                 <span className="truncate flex-1 uppercase text-left">
                   {aposta.bookmaker_nome}{aposta.parceiro_nome ? ` - ${getFirstLastName(aposta.parceiro_nome)}` : ''}
                 </span>
