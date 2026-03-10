@@ -229,7 +229,19 @@ export default function Financeiro() {
   
   // Hook centralizado de cotações
   const cryptoSymbols = useMemo(() => caixaCrypto.map(c => c.coin), [caixaCrypto]);
-  const { cotacaoUSD, getCryptoUSDValue, getCryptoPrice, refreshAll: refreshCotacoes, loading: loadingCotacoes, lastUpdate, source } = useCotacoes(cryptoSymbols);
+  const { cotacaoUSD, cotacaoEUR, cotacaoGBP, cotacaoMYR, cotacaoMXN, cotacaoARS, cotacaoCOP, getCryptoUSDValue, getCryptoPrice, refreshAll: refreshCotacoes, loading: loadingCotacoes, lastUpdate, source } = useCotacoes(cryptoSymbols);
+  
+  // Mapa de cotações para moedas não-USD/BRL (para o KPI canônico)
+  const cotacoesMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    if (cotacaoEUR > 0.001) map['EUR'] = cotacaoEUR;
+    if (cotacaoGBP > 0.001) map['GBP'] = cotacaoGBP;
+    if (cotacaoMYR > 0.001) map['MYR'] = cotacaoMYR;
+    if (cotacaoMXN > 0.001) map['MXN'] = cotacaoMXN;
+    if (cotacaoARS > 0.001) map['ARS'] = cotacaoARS;
+    if (cotacaoCOP > 0.001) map['COP'] = cotacaoCOP;
+    return map;
+  }, [cotacaoEUR, cotacaoGBP, cotacaoMYR, cotacaoMXN, cotacaoARS, cotacaoCOP]);
   
   // Hook para conversão de moedas (usa a API centralizada)
   const { convertFromBRL } = useCurrencySnapshot({ cryptoSymbols });
