@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useCommunityAccess } from '@/hooks/useCommunityAccess';
-import { PageHeader } from '@/components/PageHeader';
+import { useTopBar } from "@/contexts/TopBarContext";
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -18,6 +18,7 @@ export default function Comunidade() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { hasFullAccess, loading: accessLoading, plan } = useCommunityAccess();
+  const { setContent: setTopBarContent } = useTopBar();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<'recent' | 'trending'>('recent');
@@ -48,16 +49,23 @@ export default function Comunidade() {
     setSearchParams(searchParams);
   };
 
+  // Inject title into global TopBar
+  useEffect(() => {
+    setTopBarContent(
+      <div className="flex items-center gap-2">
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
+          <MessageSquare className="h-4 w-4 text-primary" />
+        </div>
+        <span className="font-semibold text-sm">Comunidade</span>
+      </div>
+    );
+    return () => setTopBarContent(null);
+  }, [setTopBarContent]);
+
   // Upgrade prompt for Free/Starter users
   if (!accessLoading && !hasFullAccess) {
     return (
       <div className="container mx-auto p-6 max-w-6xl">
-        <PageHeader 
-          title="Comunidade" 
-          description="Hub de discussões para operadores"
-          pagePath="/comunidade"
-          pageIcon="Users"
-        />
         <Card className="mt-8 border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
             <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
@@ -91,12 +99,6 @@ export default function Comunidade() {
 
   return (
     <div className="container mx-auto p-6 max-w-7xl">
-      <PageHeader 
-        title="Comunidade" 
-        description="Hub de discussões e inteligência coletiva"
-        pagePath="/comunidade"
-        pageIcon="Users"
-      />
 
       {/* Legal Disclaimer */}
       <div className="bg-muted/50 border border-border rounded-lg p-3 mb-6 text-xs text-muted-foreground mt-6">

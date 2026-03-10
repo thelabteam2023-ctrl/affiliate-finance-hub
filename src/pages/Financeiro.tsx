@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DashboardPeriodFilterBar } from "@/components/shared/DashboardPeriodFilterBar";
 import { DashboardPeriodFilter, getDashboardDateRangeAsStrings } from "@/types/dashboardFilters";
-import { PageHeader } from "@/components/PageHeader";
+import { useTopBar } from "@/contexts/TopBarContext";
 import {
   Loader2,
   BarChart3,
@@ -196,6 +196,7 @@ export default function Financeiro() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
+  const { setContent: setTopBarContent } = useTopBar();
   
   // SEGURANÇA: workspaceId como dependência para isolamento multi-tenant
   const { workspaceId } = useTabWorkspace();
@@ -1134,6 +1135,19 @@ export default function Financeiro() {
 
   const historicoMensal = getHistoricoMensal();
 
+  // Inject title into global TopBar
+  useEffect(() => {
+    setTopBarContent(
+      <div className="flex items-center gap-2">
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
+          <BarChart3 className="h-4 w-4 text-primary" />
+        </div>
+        <span className="font-semibold text-sm">Dashboard Financeiro</span>
+      </div>
+    );
+    return () => setTopBarContent(null);
+  }, [setTopBarContent]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -1144,13 +1158,6 @@ export default function Financeiro() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      {/* Header */}
-      <PageHeader
-        title="Dashboard Financeiro"
-        description="Visão financeira estratégica: Liquidez, Custos e Sustentabilidade"
-        pagePath="/financeiro"
-        pageIcon="PieChart"
-      />
 
       {/* Banner de Consolidação Multimoeda */}
       <MultiCurrencyWarningBanner

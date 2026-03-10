@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { useTabWorkspace } from "@/hooks/useTabWorkspace";
 import { useWorkspaceChangeListener } from "@/hooks/useWorkspaceCacheClear";
 import { Plus, Search, LayoutGrid, List, ChartBar, User } from "lucide-react";
+import { useTopBar } from "@/contexts/TopBarContext";
 import { useActionAccess } from "@/hooks/useModuleAccess";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,6 +54,7 @@ interface InvestidorDeal {
 export default function GestaoInvestidores() {
   // SEGURANÇA: workspaceId como dependência para isolamento multi-tenant
   const { workspaceId } = useTabWorkspace();
+  const { setContent: setTopBarContent } = useTopBar();
   
   const [investidores, setInvestidores] = useState<Investidor[]>([]);
   const [roiData, setRoiData] = useState<Map<string, InvestidorROIMultiMoeda>>(new Map());
@@ -283,18 +285,23 @@ export default function GestaoInvestidores() {
     return [{ currency: "USDT", value: total }];
   }, [roiData]);
 
+  // Inject title into global TopBar
+  useEffect(() => {
+    setTopBarContent(
+      <div className="flex items-center gap-2">
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
+          <User className="h-4 w-4 text-primary" />
+        </div>
+        <span className="font-semibold text-sm">Gestão de Investidores</span>
+      </div>
+    );
+    return () => setTopBarContent(null);
+  }, [setTopBarContent]);
+
   return (
     <TooltipProvider>
       <div className="min-h-screen bg-background">
-        <div className="container mx-auto px-4 py-8">
-          <div className="flex justify-between items-center mb-8">
-            <div>
-              <h1 className="text-4xl font-bold">Gestão de Investidores</h1>
-              <p className="text-muted-foreground mt-2">
-                Gerencie seus investidores, acordos e acompanhe ROI
-              </p>
-            </div>
-          </div>
+        <div className="container mx-auto px-4 py-4">
 
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">

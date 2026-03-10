@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useTopBar } from "@/contexts/TopBarContext";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useRole } from "@/hooks/useRole";
 import { useUserWorkspaces } from "@/hooks/useUserWorkspaces";
@@ -101,6 +102,7 @@ const rolePermissions = [
 export default function Workspace() {
   const { user } = useAuth();
   const { workspace, workspaceId, refreshWorkspace } = useWorkspace();
+  const { setContent: setTopBarContent } = useTopBar();
   const { canManageWorkspace, isOwner, isSystemOwner } = useRole();
   const { toast } = useToast();
   const { pendingInvites, loading: invitesLoading, acceptInvite, declineInvite, refresh: refreshInvites } = useUserWorkspaces();
@@ -256,15 +258,21 @@ export default function Workspace() {
     refreshInvites();
   };
 
+  // Inject title into global TopBar
+  useEffect(() => {
+    setTopBarContent(
+      <div className="flex items-center gap-2">
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
+          <Settings className="h-4 w-4 text-primary" />
+        </div>
+        <span className="font-semibold text-sm">Configurações do Workspace</span>
+      </div>
+    );
+    return () => setTopBarContent(null);
+  }, [setTopBarContent]);
+
   return (
     <div className="container mx-auto p-6 space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Configurações do Workspace</h1>
-        <p className="text-muted-foreground">
-          Gerencie seu workspace e membros da equipe.
-        </p>
-      </div>
 
       {/* Received Invites - Show for all users */}
       {(receivedInvites.length > 0 || invitesLoading) && (

@@ -12,6 +12,7 @@
  */
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useTopBar } from "@/contexts/TopBarContext";
 import { useQuery } from "@tanstack/react-query";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { OcorrenciasModule } from "@/components/ocorrencias/OcorrenciasModule";
@@ -346,6 +347,7 @@ const PRIORITY = {
 } as const;
 
 export default function CentralOperacoes() {
+  const { setContent: setTopBarContent } = useTopBar();
   const [alertas, setAlertas] = useState<Alerta[]>([]);
   const [entregasPendentes, setEntregasPendentes] = useState<EntregaPendente[]>([]);
   const [pagamentosParceiros, setPagamentosParceiros] = useState<PagamentoParceiroPendente[]>([]);
@@ -2396,6 +2398,21 @@ export default function CentralOperacoes() {
 
   const hasAnyAlerts = alertCards.length > 0;
 
+  // Inject title into global TopBar
+  useEffect(() => {
+    setTopBarContent(
+      <div className="flex items-center gap-2">
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
+          <Bell className="h-4 w-4 text-primary" />
+        </div>
+        <span className="font-semibold text-sm">
+          {isOperator ? "Central de Ações de Projetos" : "Central de Operações"}
+        </span>
+      </div>
+    );
+    return () => setTopBarContent(null);
+  }, [setTopBarContent, isOperator]);
+
   if (loading) {
     return (
       <div className="p-6 space-y-6">
@@ -2410,27 +2427,9 @@ export default function CentralOperacoes() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            {isOperator ? "Central de Ações de Projetos" : "Central de Operações"}
-          </h1>
-          <p className="text-muted-foreground">
-          {mainTab === 'financeiro'
-            ? (hasAnyAlerts
-                ? (isOperator ? "Ações pendentes nos seus projetos" : "Ações que demandam atenção imediata")
-                : "Todas as operações estão em dia")
-            : mainTab === 'contas'
-            ? 'Bookmakers sem vínculo a projeto com saldo disponível'
-            : mainTab === 'ocorrencias'
-            ? 'Incidentes e problemas operacionais'
-            : mainTab === 'solicitacoes'
-            ? 'Tarefas delegadas e solicitações'
-            : 'Alertas automáticos do sistema'}
-          </p>
-        </div>
+    <div className="p-6 space-y-4">
+      {/* Actions bar */}
+      <div className="flex items-center justify-end">
         {(mainTab === 'financeiro' || mainTab === 'contas') && (
           <Button variant="outline" onClick={() => { fetchData(true); refetchCiclos(); }} disabled={refreshing}>
             {refreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}

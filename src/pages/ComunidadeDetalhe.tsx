@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useCommunityAccess } from '@/hooks/useCommunityAccess';
 import { useChatPresence } from '@/hooks/useChatPresence';
-import { PageHeader } from '@/components/PageHeader';
+// PageHeader removed - detail page uses inline header
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';

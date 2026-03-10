@@ -13,7 +13,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { PageHeader } from "@/components/PageHeader";
+import { useTopBar } from "@/contexts/TopBarContext";
 import { 
   Plus, 
   Search, 
@@ -91,6 +91,7 @@ export default function GestaoProjetos() {
   const navigate = useNavigate();
   const { user, role } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { setContent: setTopBarContent } = useTopBar();
   
   // SEGURANÇA: workspaceId como dependência para isolamento multi-tenant
   const { workspaceId } = useTabWorkspace();
@@ -496,26 +497,30 @@ export default function GestaoProjetos() {
     }
   };
 
+  // Inject title into global TopBar
+  useEffect(() => {
+    setTopBarContent(
+      <div className="flex items-center gap-2">
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
+          <FolderKanban className="h-4 w-4 text-primary" />
+        </div>
+        <span className="font-semibold text-sm">{isBrokerSection ? "Broker" : "Projetos"}</span>
+      </div>
+    );
+    return () => setTopBarContent(null);
+  }, [setTopBarContent, isBrokerSection]);
+
   return (
     <div className="flex-1 flex flex-col min-h-0 w-full max-w-full overflow-x-hidden p-4 md:p-6 lg:p-8 space-y-4">
-      <PageHeader
-        title={isBrokerSection ? "Broker" : "Projetos"}
-        description={isBrokerSection 
-          ? "Gerencie projetos de contas recebidas de investidores"
-          : "Gerencie seus projetos e acompanhe o progresso"
-        }
-        pagePath="/projetos"
-        pageIcon={isBrokerSection ? "Briefcase" : "FolderKanban"}
-        actions={
-          canCreate('projetos', 'projetos.create') && (
-            <Button onClick={() => handleOpenDialog(null, "create")}>
-              <Plus className="mr-2 h-4 w-4" />
-              <span className="hidden sm:inline">{isBrokerSection ? "Novo Projeto Broker" : "Novo Projeto"}</span>
-              <span className="sm:hidden">Novo</span>
-            </Button>
-          )
-        }
-      />
+      {canCreate('projetos', 'projetos.create') && (
+        <div className="flex justify-end">
+          <Button onClick={() => handleOpenDialog(null, "create")}>
+            <Plus className="mr-2 h-4 w-4" />
+            <span className="hidden sm:inline">{isBrokerSection ? "Novo Projeto Broker" : "Novo Projeto"}</span>
+            <span className="sm:hidden">Novo</span>
+          </Button>
+        </div>
+      )}
 
       {/* Section Tabs: Projetos | Broker */}
       <div className="flex-shrink-0">

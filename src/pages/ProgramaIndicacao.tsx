@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PageHeader } from "@/components/PageHeader";
+import { useTopBar } from "@/contexts/TopBarContext";
 import { DashboardTab } from "@/components/programa-indicacao/DashboardTab";
 import { FontesCaptacaoTab } from "@/components/programa-indicacao/FontesCaptacaoTab";
 import { ParceriasTab } from "@/components/programa-indicacao/ParceriasTab";
@@ -13,6 +13,7 @@ export default function ProgramaIndicacao() {
   const navigate = useNavigate();
   const location = useLocation();
   const [activeTab, setActiveTab] = useState("dashboard");
+  const { setContent: setTopBarContent } = useTopBar();
 
   useEffect(() => {
     checkAuth();
@@ -48,15 +49,21 @@ export default function ProgramaIndicacao() {
     }
   };
 
+  // Inject title into global TopBar
+  useEffect(() => {
+    setTopBarContent(
+      <div className="flex items-center gap-2">
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
+          <Users className="h-4 w-4 text-primary" />
+        </div>
+        <span className="font-semibold text-sm">Captação de Parceiros</span>
+      </div>
+    );
+    return () => setTopBarContent(null);
+  }, [setTopBarContent]);
+
   return (
     <div className="container mx-auto p-6 space-y-6">
-      {/* Header */}
-      <PageHeader
-        title="Captação de Parceiros"
-        description="Gerencie fontes de captação, parcerias e financeiro"
-        pagePath="/programa-indicacao"
-        pageIcon="UserPlus"
-      />
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">

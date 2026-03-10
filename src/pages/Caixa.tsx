@@ -10,7 +10,7 @@ import { CAIXA_DATA_CHANGED_EVENT } from "@/hooks/useInvalidateCaixaData";
 import { CASH_REAL_TYPES } from "@/lib/cashOperationalTypes";
 import { getGrupoFromCategoria, getGrupoInfo } from "@/lib/despesaGrupos";
 import { Button } from "@/components/ui/button";
-import { PageHeader } from "@/components/PageHeader";
+import { useTopBar } from "@/contexts/TopBarContext";
 import { Plus, TrendingUp, TrendingDown, Wallet, AlertCircle, ArrowRight, Calendar, Filter, Info, Wrench, MoreHorizontal, HelpCircle } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import {
@@ -98,6 +98,7 @@ export default function Caixa() {
   const { toast } = useToast();
   const location = useLocation();
   const navigate = useNavigate();
+  const { setContent: setTopBarContent } = useTopBar();
   const [searchParams] = useSearchParams();
   const locationState = location.state as LocationState | null;
   
@@ -869,82 +870,77 @@ export default function Caixa() {
     return { primary: "Destino" };
   };
 
+  // Inject title into global TopBar
+  useEffect(() => {
+    setTopBarContent(
+      <div className="flex items-center gap-2">
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
+          <Wallet className="h-4 w-4 text-primary" />
+        </div>
+        <span className="font-semibold text-sm">Caixa Operacional</span>
+      </div>
+    );
+    return () => setTopBarContent(null);
+  }, [setTopBarContent]);
+
   return (
     <div className="flex flex-col min-h-0 h-full">
-      {/* PageHeader - altura fixa no topo */}
-      <div className="flex-shrink-0 px-6 pt-6">
-        <PageHeader
-          title="Caixa Operacional"
-          description="Gestão centralizada de movimentações financeiras"
-          pagePath="/caixa"
-          pageIcon="Wallet"
-          actions={
-            <div className="flex items-center gap-2">
-              <SaldosParceirosSheet />
-              
-              {/* Botão primário - Nova Transação */}
-              {canCreate('caixa', 'caixa.transactions.create') && (
-                <Button onClick={() => setDialogOpen(true)} className="gap-2">
-                  <Plus className="h-4 w-4" />
-                  Nova Transação
-                </Button>
-              )}
-
-              {/* Menu overflow - ações sensíveis */}
-              {(isOwnerOrAdmin || isSystemOwner) && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button 
-                      variant="ghost" 
-                      size="icon"
-                      className="h-9 w-9"
-                    >
-                      <MoreHorizontal className="h-4 w-4" />
-                      <span className="sr-only">Mais ações</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56 bg-popover">
-                    <DropdownMenuSeparator />
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <DropdownMenuItem 
-                          onClick={() => setAjusteDialogOpen(true)}
-                          className="flex items-center gap-2 text-muted-foreground cursor-pointer"
-                        >
-                          <Wrench className="h-4 w-4" />
-                          <span>Ajuste Manual</span>
-                          <HelpCircle className="h-3 w-3 ml-auto opacity-50" />
-                        </DropdownMenuItem>
-                      </TooltipTrigger>
-                      <TooltipContent side="left" className="max-w-[280px] text-xs space-y-1.5 p-3">
-                        <p className="font-semibold">Use quando souber o valor e o motivo</p>
-                        <p className="text-muted-foreground">Ex: "A bookmaker cobrou R$15 de taxa que não registrei" → Ajuste de -15</p>
-                        <p className="text-muted-foreground">Ex: "Recebi R$50 de cashback que esqueci de lançar" → Ajuste de +50</p>
-                      </TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <DropdownMenuItem 
-                          onClick={() => setReconciliacaoDialogOpen(true)}
-                          className="flex items-center gap-2 text-muted-foreground cursor-pointer"
-                        >
-                          <TrendingUp className="h-4 w-4" />
-                          <span>Reconciliação de Saldo</span>
-                          <HelpCircle className="h-3 w-3 ml-auto opacity-50" />
-                        </DropdownMenuItem>
-                      </TooltipTrigger>
-                      <TooltipContent side="left" className="max-w-[280px] text-xs space-y-1.5 p-3">
-                        <p className="font-semibold">Use quando souber apenas o saldo real</p>
-                        <p className="text-muted-foreground">Ex: "O sistema diz R$1.200, mas na conta real tem R$1.350. Não sei por quê."</p>
-                        <p className="text-muted-foreground">Você informa o saldo real e o sistema calcula o ajuste automaticamente. Uso raro — é um "ponto zero".</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-            </div>
-          }
-        />
+      {/* Actions bar */}
+      <div className="flex-shrink-0 px-6 pt-3 pb-2 flex items-center justify-end gap-2">
+        <SaldosParceirosSheet />
+        {canCreate('caixa', 'caixa.transactions.create') && (
+          <Button onClick={() => setDialogOpen(true)} className="gap-2">
+            <Plus className="h-4 w-4" />
+            Nova Transação
+          </Button>
+        )}
+        {(isOwnerOrAdmin || isSystemOwner) && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-9 w-9">
+                <MoreHorizontal className="h-4 w-4" />
+                <span className="sr-only">Mais ações</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56 bg-popover">
+              <DropdownMenuSeparator />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <DropdownMenuItem 
+                    onClick={() => setAjusteDialogOpen(true)}
+                    className="flex items-center gap-2 text-muted-foreground cursor-pointer"
+                  >
+                    <Wrench className="h-4 w-4" />
+                    <span>Ajuste Manual</span>
+                    <HelpCircle className="h-3 w-3 ml-auto opacity-50" />
+                  </DropdownMenuItem>
+                </TooltipTrigger>
+                <TooltipContent side="left" className="max-w-[280px] text-xs space-y-1.5 p-3">
+                  <p className="font-semibold">Use quando souber o valor e o motivo</p>
+                  <p className="text-muted-foreground">Ex: "A bookmaker cobrou R$15 de taxa que não registrei" → Ajuste de -15</p>
+                  <p className="text-muted-foreground">Ex: "Recebi R$50 de cashback que esqueci de lançar" → Ajuste de +50</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <DropdownMenuItem 
+                    onClick={() => setReconciliacaoDialogOpen(true)}
+                    className="flex items-center gap-2 text-muted-foreground cursor-pointer"
+                  >
+                    <TrendingUp className="h-4 w-4" />
+                    <span>Reconciliação de Saldo</span>
+                    <HelpCircle className="h-3 w-3 ml-auto opacity-50" />
+                  </DropdownMenuItem>
+                </TooltipTrigger>
+                <TooltipContent side="left" className="max-w-[280px] text-xs space-y-1.5 p-3">
+                  <p className="font-semibold">Use quando souber apenas o saldo real</p>
+                  <p className="text-muted-foreground">Ex: "O sistema diz R$1.200, mas na conta real tem R$1.350. Não sei por quê."</p>
+                  <p className="text-muted-foreground">Você informa o saldo real e o sistema calcula o ajuste automaticamente. Uso raro — é um "ponto zero".</p>
+                </TooltipContent>
+              </Tooltip>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
 
       {/* PageContent - ÚNICO scroll vertical */}

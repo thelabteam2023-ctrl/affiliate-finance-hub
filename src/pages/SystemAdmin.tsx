@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTopBar } from "@/contexts/TopBarContext";
 import { useAuth } from '@/hooks/useAuth';
 import { useSystemAdmin, isDeletedUser, AdminUserGrouped, AdminDeletedUser } from '@/hooks/useSystemAdmin';
 import { CleanupTab } from '@/components/system-admin/CleanupTab';
@@ -53,6 +54,7 @@ const ROLES = [
 export default function SystemAdmin() {
   const { user } = useAuth();
   const { isUserOnline } = usePresence();
+  const { setContent: setTopBarContent } = useTopBar();
   const {
     loading,
     users,
@@ -219,17 +221,21 @@ export default function SystemAdmin() {
     return <Badge variant="secondary" className="gap-1 bg-emerald-500/20 text-emerald-400"><Check className="h-3 w-3" /> Ativo</Badge>;
   };
 
+  // Inject title into global TopBar
+  useEffect(() => {
+    setTopBarContent(
+      <div className="flex items-center gap-2">
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
+          <Shield className="h-4 w-4 text-primary" />
+        </div>
+        <span className="font-semibold text-sm">Administração do Sistema</span>
+      </div>
+    );
+    return () => setTopBarContent(null);
+  }, [setTopBarContent]);
+
   return (
     <div className="container py-6 space-y-6">
-      <div className="flex items-start justify-between">
-        <div>
-          <div className="flex items-center gap-3">
-            <Shield className="h-8 w-8 text-primary" />
-            <h1 className="text-3xl font-bold tracking-tight">Administração do Sistema</h1>
-          </div>
-          <p className="text-muted-foreground mt-1">Gerencie usuários, workspaces e planos da plataforma</p>
-        </div>
-      </div>
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-5">

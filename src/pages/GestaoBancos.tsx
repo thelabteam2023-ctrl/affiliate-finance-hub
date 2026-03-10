@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTopBar } from "@/contexts/TopBarContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useWorkspace } from "@/hooks/useWorkspace";
@@ -8,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Edit, Trash2, LogOut, LayoutGrid, List, Percent, DollarSign } from "lucide-react";
+import { Plus, Search, Edit, Trash2, LogOut, LayoutGrid, List, Percent, DollarSign, Landmark } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -53,6 +54,7 @@ export default function GestaoBancos() {
   const [bancos, setBancos] = useState<Banco[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
+  const { setContent: setTopBarContent } = useTopBar();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingBanco, setEditingBanco] = useState<Banco | null>(null);
   const [codigo, setCodigo] = useState("");
@@ -301,6 +303,19 @@ export default function GestaoBancos() {
 
   const hasFixo = taxaDepositoTipo === "fixo" || taxaSaqueTipo === "fixo";
 
+  // Inject title into global TopBar
+  useEffect(() => {
+    setTopBarContent(
+      <div className="flex items-center gap-2">
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
+          <Landmark className="h-4 w-4 text-primary" />
+        </div>
+        <span className="font-semibold text-sm">Gestão de Bancos</span>
+      </div>
+    );
+    return () => setTopBarContent(null);
+  }, [setTopBarContent]);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -311,14 +326,8 @@ export default function GestaoBancos() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-4xl font-bold">Gestão de Bancos</h1>
-            <p className="text-muted-foreground mt-2">
-              Gerencie os bancos disponíveis no sistema
-            </p>
-          </div>
+      <div className="container mx-auto px-4 py-4">
+        <div className="flex justify-end items-center mb-6">
           <Button onClick={handleLogout} variant="outline">
             <LogOut className="mr-2 h-4 w-4" />
             Sair
