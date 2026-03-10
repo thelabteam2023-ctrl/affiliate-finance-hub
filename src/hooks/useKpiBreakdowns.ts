@@ -288,7 +288,28 @@ async function fetchBreakdownsData(
     ),
   ], moedaConsolidacao);
 
-  // Adiciona breakdown por moeda ao lucro
+  // Calcular a soma dos módulos individuais (antes de aplicar o total canônico)
+  const somaModulos = lucroBreakdown.total;
+
+  // RECONCILIAÇÃO: Se houver diferença entre a soma dos módulos e o total canônico,
+  // adicionar um item de reconciliação para manter paridade exata com ciclos.
+  const deltaReconciliacao = lucroCanonicoTotal - somaModulos;
+  if (Math.abs(deltaReconciliacao) > 0.01) {
+    lucroBreakdown.contributions.push(
+      createModuleContribution(
+        'reconciliacao',
+        'Reconciliação',
+        deltaReconciliacao,
+        true,
+        { icon: 'Scale', color: deltaReconciliacao >= 0 ? 'positive' : 'negative' }
+      )
+    );
+  }
+
+  // CRÍTICO: Sobrescrever o total com o valor canônico para paridade exata com ciclos
+  lucroBreakdown.total = lucroCanonicoTotal;
+
+  // Adiciona breakdown por moeda ao lucro (usar dados canônicos quando disponível)
   lucroBreakdown.currencyBreakdown = combinarBreakdownsMoeda(
     apostasData.lucroPorMoeda,
     girosGratisData.lucroPorMoeda,
@@ -304,8 +325,8 @@ async function fetchBreakdownsData(
     extrasAgrupados.freebet?.porMoeda || [],
   );
 
-  // === ROI (calculado a partir do lucro e volume) ===
-  const lucroTotal = lucroBreakdown.total;
+  // === ROI (calculado a partir do lucro CANÔNICO e volume) ===
+  const lucroTotal = lucroCanonicoTotal;
   const volumeTotal = volumeBreakdown.total;
   const roiTotal = volumeTotal > 0 ? (lucroTotal / volumeTotal) * 100 : null;
 
