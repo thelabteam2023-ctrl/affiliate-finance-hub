@@ -164,15 +164,15 @@ export async function calcularMetricasPeriodo({
       .gte("data_transacao", cashLedgerStart)
       .lte("data_transacao", cashLedgerEnd),
 
-    // Depósitos confirmados no período
+    // Depósitos confirmados no período (cash_ledger usa UTC midnight)
     supabase
       .from("cash_ledger")
       .select("valor, moeda")
       .in("tipo_transacao", ["DEPOSITO", "DEPOSITO_VIRTUAL"])
       .eq("status", "CONFIRMADO")
       .eq("projeto_id_snapshot", projetoId)
-      .gte("data_transacao", startUTC)
-      .lte("data_transacao", endUTC),
+      .gte("data_transacao", cashLedgerStart)
+      .lte("data_transacao", cashLedgerEnd),
   ]);
 
   if (apostasResult.error) console.error("[calcularMetricasPeriodo] Erro apostas:", apostasResult.error);
