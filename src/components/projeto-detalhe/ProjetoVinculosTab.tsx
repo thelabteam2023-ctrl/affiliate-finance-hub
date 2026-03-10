@@ -188,12 +188,6 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
   const bonusSummary = getSummary();
   const bookmakersWithBonus = getBookmakersWithActiveBonus();
 
-  // Ajuste Pós-Limitação: verificar elegibilidade dos vínculos limitados
-  const limitedBookmakerIds = useMemo(
-    () => vinculos.filter(v => v.bookmaker_status.toUpperCase() === "LIMITADA").map(v => v.id),
-    [vinculos]
-  );
-  const { data: ajusteEligibility = {} } = useAjustePostLimitacaoEligibility(projetoId, limitedBookmakerIds);
 
   // Calculate bonus totals per bookmaker (only credited/active bonuses)
   const bonusTotalsByBookmaker = bonuses.reduce((acc, bonus) => {
