@@ -3,8 +3,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useProjectCurrencyFormat } from "@/hooks/useProjectCurrencyFormat";
 import { useProjectResponsibilities } from "@/hooks/useProjectResponsibilities";
-import { useAjustePostLimitacaoEligibility } from "@/hooks/useAjustePostLimitacao";
-import { AjustePostLimitacaoVinculoDialog } from "./AjustePostLimitacaoVinculoDialog";
 import { AjusteSaldoDialog } from "./AjusteSaldoDialog";
 import { useBookmakerSaldosQuery, useInvalidateBookmakerSaldos, type BookmakerSaldo } from "@/hooks/useBookmakerSaldosQuery";
 import { 
@@ -182,7 +180,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
   const [selectedParceiros, setSelectedParceiros] = useState<string[]>([]);
   const [ajusteSaldoDialogOpen, setAjusteSaldoDialogOpen] = useState(false);
   const [vinculoParaAjuste, setVinculoParaAjuste] = useState<Vinculo | null>(null);
-  const [ajusteVinculo, setAjusteVinculo] = useState<Vinculo | null>(null);
+  
   const [sortMode, setSortMode] = useState<VinculoSortMode>("alpha");
 
   const { bonuses, fetchBonuses: refetchBonuses, getSummary, getActiveBonusByBookmaker, getBookmakersWithActiveBonus } = useProjectBonuses({ projectId: projetoId });
@@ -190,12 +188,6 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
   const bonusSummary = getSummary();
   const bookmakersWithBonus = getBookmakersWithActiveBonus();
 
-  // Ajuste Pós-Limitação: verificar elegibilidade dos vínculos limitados
-  const limitedBookmakerIds = useMemo(
-    () => vinculos.filter(v => v.bookmaker_status.toUpperCase() === "LIMITADA").map(v => v.id),
-    [vinculos]
-  );
-  const { data: ajusteEligibility = {} } = useAjustePostLimitacaoEligibility(projetoId, limitedBookmakerIds);
 
   // Calculate bonus totals per bookmaker (only credited/active bonuses)
   const bonusTotalsByBookmaker = bonuses.reduce((acc, bonus) => {
@@ -1025,27 +1017,6 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                         <Link2Off className="h-4 w-4" />
                       </Button>
                     </div>
-                    {/* Botão Ajuste Pós-Limitação — só para limitadas + com bônus + sem ajuste prévio */}
-                    {ajusteEligibility[vinculo.id]?.eligible && canManageVinculos && (
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="w-full text-warning border-warning/30 hover:bg-warning/10"
-                              onClick={() => setAjusteVinculo(vinculo)}
-                            >
-                              <TrendingDown className="mr-2 h-4 w-4" />
-                              Registrar Ajuste Pós-Limitação
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent side="bottom">
-                            <p className="text-sm max-w-xs">Registrar a variação de saldo após a limitação da conta. Impacta juice e saldo, sem afetar métricas de apostas.</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    )}
                   </div>
                 </div>
               </CardContent>
@@ -1337,27 +1308,6 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                       <Link2Off className="h-4 w-4" />
                     </Button>
                     {/* Botão Ajuste Pós-Limitação na lista */}
-                    {ajusteEligibility[vinculo.id]?.eligible && canManageVinculos && (
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 text-warning hover:text-warning hover:bg-warning/10"
-                              onClick={() => setAjusteVinculo(vinculo)}
-                              title="Registrar Ajuste Pós-Limitação"
-                            >
-                              <TrendingDown className="h-4 w-4 mr-1" />
-                              <span className="text-xs">Ajuste</span>
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p className="text-sm max-w-xs">Registrar a variação de saldo após a limitação da conta. Impacta juice e saldo, sem afetar métricas de apostas.</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    )}
                   </div>
                 </div>
               ))}
@@ -1592,25 +1542,6 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
         }}
       />
 
-      {/* Dialog Ajuste Pós-Limitação */}
-      {ajusteVinculo && workspaceId && (
-        <AjustePostLimitacaoVinculoDialog
-          open={!!ajusteVinculo}
-          onClose={() => setAjusteVinculo(null)}
-          vinculo={{
-            id: ajusteVinculo.id,
-            nome: ajusteVinculo.nome,
-            moeda: ajusteVinculo.moeda,
-            saldo_real: ajusteVinculo.saldo_real,
-          }}
-          projetoId={projetoId}
-          workspaceId={workspaceId}
-          onSuccess={() => {
-            invalidateVinculos();
-            setAjusteVinculo(null);
-          }}
-        />
-      )}
 
       {/* Dialog Desvinculação em Massa */}
       <DesvinculacaoEmMassaDialog
