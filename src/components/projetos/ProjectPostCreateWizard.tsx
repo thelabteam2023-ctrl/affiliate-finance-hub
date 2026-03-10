@@ -532,7 +532,7 @@ export function ProjectPostCreateWizard({
       setCicloTipoGatilho(op.tipo_gatilho || "TEMPO");
       setCicloMetaVolume(op.meta_volume?.toString() || "");
       setCicloMetricaAcumuladora(op.metrica_acumuladora || "LUCRO");
-      setCicloDataFimPrevista(dataFim.toISOString().split("T")[0]);
+      setCicloDataFimPrevista(dateToCivilDateString(dataFim));
     } else {
       setCicloOperadorProjetoId(operadorProjetoId);
     }
