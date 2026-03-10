@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useCotacoes } from "@/hooks/useCotacoes";
-import { PageHeader } from "@/components/PageHeader";
+import { useTopBar } from "@/contexts/TopBarContext";
 import { Users } from "lucide-react";
 import { Tooltip, TooltipProvider } from "@/components/ui/tooltip";
 import {
@@ -126,6 +126,7 @@ export default function GestaoParceiros() {
   const parceiroCache = useParceiroFinanceiroCache();
   
   // SEGURANÇA: workspaceId como dependência para isolamento multi-tenant
+  const { setContent: setTopBarContent } = useTopBar();
   const { workspaceId } = useTabWorkspace();
 
   // Persistência: Salva no localStorage ao selecionar parceiro
@@ -716,6 +717,19 @@ export default function GestaoParceiros() {
     });
   }, [parceiros, roiData, parceriasData]);
 
+  // Inject title into global TopBar
+  useEffect(() => {
+    setTopBarContent(
+      <div className="flex items-center gap-2">
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
+          <Users className="h-4 w-4 text-primary" />
+        </div>
+        <span className="font-semibold text-sm">Gestão de Parceiros ⭐</span>
+      </div>
+    );
+    return () => setTopBarContent(null);
+  }, [setTopBarContent]);
+
   if (loading) {
     return (
       <div className="h-full flex items-center justify-center">
@@ -728,34 +742,18 @@ export default function GestaoParceiros() {
    * ARQUITETURA CONTAINER-FIRST
    * 
    * PageRoot (h-full = 100% da viewport disponível)
-   * ├─ PageHeader (shrink-0 = altura fixa)
    * └─ PageBody (flex-1 = preenche espaço restante)
    *     ├─ SidebarParceiros (w-fixo, scroll próprio)
    *     └─ MainPanel (flex-1, organiza header + tabs + viewport)
    */
+
   return (
     <TooltipProvider>
       {/* PageRoot: altura total, flex-col, sem overflow */}
       <div className="h-full flex flex-col bg-background">
-        
-        {/* PageHeader: altura fixa, nunca comprime */}
-        <div className="shrink-0 px-4 pt-6 pb-4">
-          <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-              <Users className="h-6 w-6 text-primary" />
-            </div>
-            <PageHeader
-              title="Gestão de Parceiros"
-              description="Gerencie seus parceiros e analise performance financeira"
-              pagePath="/parceiros"
-              pageIcon="Users"
-              className="flex-1"
-            />
-          </div>
-        </div>
 
         {/* PageBody: flex-1 ocupa espaço restante, min-h-0 permite shrink */}
-        <div className="flex-1 min-h-0 px-4 pb-6">
+        <div className="flex-1 min-h-0 px-4 pt-2 pb-4">
           <Card className="h-full border-border bg-gradient-surface overflow-hidden">
             {/* Layout Grid: duas colunas com altura 100% */}
             <div className="h-full grid grid-cols-[340px_1fr] lg:grid-cols-[360px_1fr]">
