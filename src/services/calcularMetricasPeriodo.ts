@@ -109,7 +109,7 @@ export async function calcularMetricasPeriodo({
   const { startUTC, endUTC } = getOperationalDateRangeForQuery(dataInicioParsed, dataFimParsed);
 
   // Buscar todos os dados em paralelo
-  const [apostasResult, cashbackResult, girosResult, perdasResult, bookmakersResult, saquesResult, depositosResult] = await Promise.all([
+  const [apostasResult, cashbackResult, girosResult, perdasResult, bookmakersResult, saquesResult, depositosResult, bonusResult, ajustesResult, fxResult] = await Promise.all([
     // 1. Apostas com campos consolidados + moeda para conversão
     supabase
       .from("apostas_unificada")
@@ -167,6 +167,35 @@ export async function calcularMetricasPeriodo({
       .eq("projeto_id_snapshot", projetoId)
       .gte("data_transacao", startUTC)
       .lte("data_transacao", endUTC),
+
+    // 8. Bônus creditados no período (credited + finalized)
+    supabase
+      .from("project_bookmaker_link_bonuses")
+      .select("bonus_amount, currency, status, projeto_id")
+      .eq("projeto_id", projetoId)
+      .in("status", ["credited", "finalized"])
+      .gte("credited_at", startUTC)
+      .lte("credited_at", endUTC),
+
+    // 9. Ajustes de saldo no período (via cash_ledger)
+    supabase
+      .from("cash_ledger")
+      .select("valor, ajuste_direcao")
+      .in("tipo_transacao", ["AJUSTE_SALDO", "AJUSTE_RECONCILIACAO"])
+      .eq("status", "CONFIRMADO")
+      .eq("projeto_id_snapshot", projetoId)
+      .gte("data_transacao", startUTC)
+      .lte("data_transacao", endUTC),
+
+    // 10. Resultados cambiais no período (ganho e perda FX)
+    supabase
+      .from("cash_ledger")
+      .select("valor, tipo_transacao")
+      .in("tipo_transacao", ["GANHO_CAMBIAL", "PERDA_CAMBIAL"])
+      .eq("status", "CONFIRMADO")
+      .eq("projeto_id_snapshot", projetoId)
+      .gte("data_transacao", startUTC)
+      .lte("data_transacao", endUTC),
   ]);
 
   // Processar erros silenciosamente (melhor UX)
@@ -216,9 +245,7 @@ export async function calcularMetricasPeriodo({
   // Cashback: sempre >= 0, com conversão de moeda
   const lucroCashback = cashbacks.reduce((acc, cb: any) => {
     const valor = Math.max(0, Number(cb.valor || 0));
-    // cashback_manual não tem consolidation_currency, converter via moeda_operacao se disponível
-    // Nota: cashback_manual usa date-only, então não precisa de conversão UTC
-    return acc + valor; // cashback_manual já está em BRL tipicamente
+    return acc + valor;
   }, 0);
 
   // Giros grátis: sempre >= 0
@@ -250,12 +277,37 @@ export async function calcularMetricasPeriodo({
   const roi = volume > 0 ? (lucroLiquido / volume) * 100 : 0;
   const lucroPorAposta = qtdApostas > 0 ? lucroLiquido / qtdApostas : 0;
 
-  // Lucro Realizado = Saques Confirmados - Depósitos Confirmados
+  // ─── Lucro Realizado (Fórmula Canônica) ───────────────────────────
+  // Saques - (Depósitos + Créditos Extras)
+  // Créditos Extras = Cashback + Giros + Bônus + Ajustes + FX
+
   const saques = saquesResult.data || [];
   const depositos = depositosResult.data || [];
   const totalSaques = saques.reduce((acc, s: any) => acc + Number(s.valor_confirmado ?? s.valor ?? 0), 0);
   const totalDepositos = depositos.reduce((acc, d: any) => acc + Number(d.valor ?? 0), 0);
-  const lucroRealizado = totalSaques - totalDepositos;
+
+  // Bônus creditados
+  const totalBonus = (bonusResult.data || []).reduce((acc, b: any) => {
+    return acc + Number(b.bonus_amount || 0);
+  }, 0);
+
+  // Ajustes de saldo (considerar direção)
+  const totalAjustes = (ajustesResult.data || []).reduce((acc, a: any) => {
+    const sinal = a.ajuste_direcao === 'SAIDA' ? -1 : 1;
+    return acc + Number(a.valor || 0) * sinal;
+  }, 0);
+
+  // Resultados cambiais (ganho - perda)
+  const totalFx = (fxResult.data || []).reduce((acc, fx: any) => {
+    const sinal = fx.tipo_transacao === 'GANHO_CAMBIAL' ? 1 : -1;
+    return acc + Number(fx.valor || 0) * sinal;
+  }, 0);
+
+  // Créditos Extras totais
+  const creditosExtras = lucroCashback + lucroGiros + totalBonus + totalAjustes + totalFx;
+
+  // Fórmula canônica: Saques - (Depósitos + Créditos Extras)
+  const lucroRealizado = totalSaques - (totalDepositos + creditosExtras);
 
   return {
     qtdApostas,
@@ -268,6 +320,7 @@ export async function calcularMetricasPeriodo({
     perdasDetalhes,
     lucroLiquido,
     lucroRealizado,
+    creditosExtras,
     ticketMedio,
     roi,
     lucroPorAposta,
