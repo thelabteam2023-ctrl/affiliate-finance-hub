@@ -778,6 +778,10 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
                           <span className="font-semibold text-foreground">{formatCurrency(metaDiaria)}/dia</span>
                         </div>
                         <div className="flex justify-between gap-4">
+                          <span>Performance/dia</span>
+                          <span className={`font-semibold ${performanceDiaria >= 0 ? "text-emerald-500" : "text-red-500"}`}>{formatCurrency(performanceDiaria)}/dia</span>
+                        </div>
+                        <div className="flex justify-between gap-4">
                           <span>Diferença</span>
                           <span className={`font-semibold ${isAbove ? "text-emerald-500" : "text-red-500"}`}>
                             {isAbove ? "+" : ""}{formatCurrency(diff)}/dia
