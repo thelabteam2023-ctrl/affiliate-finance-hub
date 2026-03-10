@@ -477,15 +477,19 @@ export function ApostaCard({
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 overflow-hidden">
             {/* Top row on mobile: Logo + Casa */}
             <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 overflow-hidden">
-              {/* Para apostas simples: Badge de seleção antes do logo - hidden on very small screens */}
-              {isSimples && aposta.selecao && (
-                <div className="hidden sm:block w-[100px] md:w-[120px] shrink-0">
-                  <SelectionBadge 
-                    minWidth={80}
-                    maxWidth={116}
-                  >
-                    {aposta.selecao}
-                  </SelectionBadge>
+              {/* Para apostas simples: Badge de mercado + seleção antes do logo - hidden on very small screens */}
+              {isSimples && (aposta.mercado || aposta.selecao) && (
+                <div className="hidden sm:flex items-center gap-1 shrink-0">
+                  {aposta.mercado && (
+                    <SelectionBadge minWidth={60} maxWidth={116}>
+                      {aposta.mercado}
+                    </SelectionBadge>
+                  )}
+                  {aposta.selecao && (
+                    <SelectionBadge minWidth={60} maxWidth={116}>
+                      {aposta.selecao}
+                    </SelectionBadge>
+                  )}
                 </div>
               )}
               
