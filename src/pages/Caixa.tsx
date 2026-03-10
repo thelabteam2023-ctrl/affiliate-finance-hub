@@ -537,10 +537,26 @@ export default function Caixa() {
       
       return matchTipo && matchDataInicio && matchDataFim && matchProjeto && matchParceiro;
     }).sort((a, b) => {
-      // Ordenar pela data efetiva (data_confirmacao para saques confirmados, senão data_transacao)
-      const dataA = a.data_confirmacao ? parseLocalDateTime(a.data_confirmacao) : parseLocalDateTime(a.data_transacao);
-      const dataB = b.data_confirmacao ? parseLocalDateTime(b.data_confirmacao) : parseLocalDateTime(b.data_transacao);
-      return dataB.getTime() - dataA.getTime(); // Mais recente primeiro
+      // Ordenar pela data civil (YYYY-MM-DD), depois por created_at como desempate
+      // CORREÇÃO: Usar extractCivilDateKey em vez de parseLocalDateTime para datas civis
+      // parseLocalDateTime aplica offset -3h, fazendo datas civis (meia-noite UTC) 
+      // parecerem do dia anterior, quebrando a ordenação relativa
+      const dateKeyA = a.data_confirmacao 
+        ? extractCivilDateKey(a.data_confirmacao) 
+        : extractCivilDateKey(a.data_transacao);
+      const dateKeyB = b.data_confirmacao 
+        ? extractCivilDateKey(b.data_confirmacao) 
+        : extractCivilDateKey(b.data_transacao);
+      
+      // Comparar datas como strings (YYYY-MM-DD é lexicograficamente ordenável)
+      if (dateKeyA !== dateKeyB) {
+        return dateKeyB.localeCompare(dateKeyA); // Mais recente primeiro
+      }
+      
+      // Mesmo dia: ordenar por created_at (timestamp real de inserção)
+      const createdA = new Date(a.created_at).getTime();
+      const createdB = new Date(b.created_at).getTime();
+      return createdB - createdA; // Mais recente primeiro
     });
   };
 
