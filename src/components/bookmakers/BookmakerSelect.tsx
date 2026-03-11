@@ -357,7 +357,7 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
           if (excludeVinculosDoParceiro) {
             // Antes: filtrava casas já vinculadas
             // Agora: permite criar múltiplas instâncias da mesma casa
-            console.log("[BookmakerSelect] Multi-conta habilitado - não filtrando por vínculos existentes");
+            // Multi-conta habilitado - não filtrando por vínculos existentes
           }
           
           setItems(catalogoItems);
@@ -478,9 +478,14 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
   }, [open, value, items]);
 
   // Filtrar itens pela busca
-  const filteredItems = items.filter((item) => 
+  const MAX_VISIBLE_ITEMS = 50;
+  const allFilteredItems = items.filter((item) => 
     item.nome.toLowerCase().includes(searchTerm.toLowerCase())
   );
+  const hasMoreItems = allFilteredItems.length > MAX_VISIBLE_ITEMS;
+  const filteredItems = hasMoreItems && !searchTerm 
+    ? allFilteredItems.slice(0, MAX_VISIBLE_ITEMS) 
+    : allFilteredItems;
 
   const handleSelect = (itemId: string) => {
     onValueChange(itemId);
@@ -677,6 +682,11 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
                     </CommandItem>
                   );
                 })}
+                {hasMoreItems && !searchTerm && (
+                  <div className="py-2 px-3 text-xs text-center text-muted-foreground">
+                    Mostrando {MAX_VISIBLE_ITEMS} de {allFilteredItems.length} — digite para filtrar
+                  </div>
+                )}
               </CommandGroup>
             </CommandList>
           </Command>
