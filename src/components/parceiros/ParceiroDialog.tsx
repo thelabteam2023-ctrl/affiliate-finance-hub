@@ -1206,7 +1206,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} autoComplete="off" data-form-type="other">
+        <form onSubmit={handleSubmit} autoComplete="off" data-form-type="other" noValidate>
           <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "dados" | "bancos" | "crypto")} className="w-full">
             <TabsList className="w-full">
               <TabsTrigger value="dados">
