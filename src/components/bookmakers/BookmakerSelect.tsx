@@ -478,9 +478,14 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
   }, [open, value, items]);
 
   // Filtrar itens pela busca
-  const filteredItems = items.filter((item) => 
+  const MAX_VISIBLE_ITEMS = 50;
+  const allFilteredItems = items.filter((item) => 
     item.nome.toLowerCase().includes(searchTerm.toLowerCase())
   );
+  const hasMoreItems = allFilteredItems.length > MAX_VISIBLE_ITEMS;
+  const filteredItems = hasMoreItems && !searchTerm 
+    ? allFilteredItems.slice(0, MAX_VISIBLE_ITEMS) 
+    : allFilteredItems;
 
   const handleSelect = (itemId: string) => {
     onValueChange(itemId);
