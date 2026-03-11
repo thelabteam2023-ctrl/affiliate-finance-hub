@@ -263,12 +263,18 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
     return Array.from(moedas).sort();
   }, [data?.bookmakers]);
 
-  // Bookmakers filtrados por moeda e busca
+  // Bookmakers filtrados por moeda, status e busca
   const bookmakersFiltradosMoeda = useMemo(() => {
     if (!data?.bookmakers) return [];
-    if (filtroMoeda === "todas") return data.bookmakers;
-    return data.bookmakers.filter(b => (b.moeda || "BRL") === filtroMoeda);
-  }, [data?.bookmakers, filtroMoeda]);
+    let filtered = data.bookmakers;
+    if (filtroMoeda !== "todas") {
+      filtered = filtered.filter(b => (b.moeda || "BRL") === filtroMoeda);
+    }
+    if (filtroStatus) {
+      filtered = filtered.filter(b => b.status === filtroStatus);
+    }
+    return filtered;
+  }, [data?.bookmakers, filtroMoeda, filtroStatus]);
 
   const bookmakersFiltrados = useMemo(() => {
     if (!buscaCasa.trim()) return bookmakersFiltradosMoeda;
