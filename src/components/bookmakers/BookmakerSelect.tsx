@@ -357,7 +357,7 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
           if (excludeVinculosDoParceiro) {
             // Antes: filtrava casas já vinculadas
             // Agora: permite criar múltiplas instâncias da mesma casa
-            console.log("[BookmakerSelect] Multi-conta habilitado - não filtrando por vínculos existentes");
+            // Multi-conta habilitado - não filtrando por vínculos existentes
           }
           
           setItems(catalogoItems);
