@@ -92,6 +92,7 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
   const [historicoDialog, setHistoricoDialog] = useState<{ open: boolean; bookmakerId: string; bookmakerNome: string; logoUrl: string | null }>({ open: false, bookmakerId: "", bookmakerNome: "", logoUrl: null });
   const [filtroMoeda, setFiltroMoeda] = useState<string>("todas");
   const [buscaCasa, setBuscaCasa] = useState("");
+  const [filtroStatus, setFiltroStatus] = useState<string | null>(null);
   const [perdaDialog, setPerdaDialog] = useState<{ open: boolean; bookmakerId: string; bookmakerNome: string; moeda: string; saldoAtual: number } | null>(null);
   const { canEdit, canDelete } = useActionAccess();
   const { convertToBRL, dataSource, isUsingFallback, rates } = useCotacoes();
@@ -262,12 +263,18 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
     return Array.from(moedas).sort();
   }, [data?.bookmakers]);
 
-  // Bookmakers filtrados por moeda e busca
+  // Bookmakers filtrados por moeda, status e busca
   const bookmakersFiltradosMoeda = useMemo(() => {
     if (!data?.bookmakers) return [];
-    if (filtroMoeda === "todas") return data.bookmakers;
-    return data.bookmakers.filter(b => (b.moeda || "BRL") === filtroMoeda);
-  }, [data?.bookmakers, filtroMoeda]);
+    let filtered = data.bookmakers;
+    if (filtroMoeda !== "todas") {
+      filtered = filtered.filter(b => (b.moeda || "BRL") === filtroMoeda);
+    }
+    if (filtroStatus) {
+      filtered = filtered.filter(b => b.status === filtroStatus);
+    }
+    return filtered;
+  }, [data?.bookmakers, filtroMoeda, filtroStatus]);
 
   const bookmakersFiltrados = useMemo(() => {
     if (!buscaCasa.trim()) return bookmakersFiltradosMoeda;
@@ -657,16 +664,55 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
 
                 {/* Info secundária: apenas casas ativas/limitadas */}
                 <div className="flex flex-wrap gap-3 text-xs">
-                  <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-muted/30">
+                  <button
+                    onClick={() => setFiltroStatus(filtroStatus === "ativo" ? null : "ativo")}
+                    className={cn(
+                      "flex items-center gap-1.5 px-2 py-1 rounded transition-colors",
+                      filtroStatus === "ativo" 
+                        ? "bg-success/20 ring-1 ring-success/50" 
+                        : "bg-muted/30 hover:bg-muted/50"
+                    )}
+                  >
                     <Building2 className="h-3 w-3 text-success" />
                     <span className="text-muted-foreground">Ativas:</span>
                     <span className="font-medium text-success">{bookmarkersAtivos}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-muted/30">
+                  </button>
+                  <button
+                    onClick={() => setFiltroStatus(filtroStatus === "limitada" ? null : "limitada")}
+                    className={cn(
+                      "flex items-center gap-1.5 px-2 py-1 rounded transition-colors",
+                      filtroStatus === "limitada" 
+                        ? "bg-warning/20 ring-1 ring-warning/50" 
+                        : "bg-muted/30 hover:bg-muted/50"
+                    )}
+                  >
                     <AlertCircle className="h-3 w-3 text-warning" />
                     <span className="text-muted-foreground">Limitadas:</span>
                     <span className="font-medium text-warning">{bookmakersLimitados}</span>
-                  </div>
+                  </button>
+                  {bookmakersEncerrados > 0 && (
+                    <button
+                      onClick={() => setFiltroStatus(filtroStatus === "encerrada" ? null : "encerrada")}
+                      className={cn(
+                        "flex items-center gap-1.5 px-2 py-1 rounded transition-colors",
+                        filtroStatus === "encerrada" 
+                          ? "bg-destructive/20 ring-1 ring-destructive/50" 
+                          : "bg-muted/30 hover:bg-muted/50"
+                      )}
+                    >
+                      <AlertCircle className="h-3 w-3 text-destructive" />
+                      <span className="text-muted-foreground">Encerradas:</span>
+                      <span className="font-medium text-destructive">{bookmakersEncerrados}</span>
+                    </button>
+                  )}
+                  {filtroStatus && (
+                    <button
+                      onClick={() => setFiltroStatus(null)}
+                      className="flex items-center gap-1 px-2 py-1 rounded bg-muted/30 hover:bg-muted/50 transition-colors text-muted-foreground"
+                    >
+                      <span className="text-[10px]">✕ Limpar filtro</span>
+                    </button>
+                  )}
                 </div>
               </div>
 

@@ -113,11 +113,12 @@ export function useBookmakerUsageStatus(bookmakerIds: string[]) {
         const hasOperations = operacoesSet.has(id);
         const isActiveInProject = projetosAtivos > 0;
 
-        // Categoria baseada APENAS em vínculos a projetos (não operações)
+        // Categoria baseada em vínculos a projetos E operações
+        // Se tem operações (apostas/ledger) mas sem historico formal, ainda é "JA_USADA"
         let category: BookmakerUsageCategory;
         if (isActiveInProject) {
           category = "ATIVA";
-        } else if (hasHistory) {
+        } else if (hasHistory || hasOperations) {
           category = "JA_USADA";
         } else {
           category = "VIRGEM";
