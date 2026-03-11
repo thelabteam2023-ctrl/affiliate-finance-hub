@@ -682,6 +682,11 @@ const BookmakerSelect = forwardRef<BookmakerSelectRef, BookmakerSelectProps>(({
                     </CommandItem>
                   );
                 })}
+                {hasMoreItems && !searchTerm && (
+                  <div className="py-2 px-3 text-xs text-center text-muted-foreground">
+                    Mostrando {MAX_VISIBLE_ITEMS} de {allFilteredItems.length} — digite para filtrar
+                  </div>
+                )}
               </CommandGroup>
             </CommandList>
           </Command>
