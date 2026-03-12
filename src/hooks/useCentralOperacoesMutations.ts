@@ -46,6 +46,7 @@ export interface PerdaLimitadaState {
 export function useCentralOperacoesMutations(fetchData: (isRefresh?: boolean) => void) {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { optimisticUpdate, removeFromList, fullRefetch } = useCentralOperacoesCache();
 
   const handleSaqueAction = useCallback((alerta: Alerta) => {
     const moedaAlerta = alerta.moeda || "BRL";
