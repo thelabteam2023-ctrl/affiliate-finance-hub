@@ -398,7 +398,7 @@ export default function GestaoParceiros() {
         cpf: p.cpf,
         status: p.status,
         created_at: p.created_at,
-        resultado_por_moeda: roi?.resultado_por_moeda || createEmptySaldos(),
+        resultado_por_moeda: roi?.resultado_por_moeda || ({} as Record<string, number>),
         moedas_utilizadas: roi?.moedas_utilizadas || [],
         has_parceria: parceriasData.has(p.id),
       };
