@@ -382,7 +382,7 @@ async function fetchPerdasOperacionais(projetoId: string): Promise<ProjetoExtraE
   return (data || [])
     .filter((p: any) => Number(p.valor || 0) > 0)
     .map((p: any) => ({
-      data: extractCivilDateKey(p.data_perda),
+      data: extractCivilDateKey(p.data_registro),
       valor: -Number(p.valor), // Perdas são negativas
       moeda: bookmakerMoedas[p.bookmaker_id] || 'BRL',
       tipo: 'perda_operacional' as ExtraTipo,
