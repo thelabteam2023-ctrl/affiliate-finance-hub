@@ -168,7 +168,7 @@ export function BookmakerHistoricoDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
               {logoUrl ? (
                 <img
                   src={logoUrl}
@@ -180,9 +180,22 @@ export function BookmakerHistoricoDialog({
                   <Building2 className="h-4 w-4 text-muted-foreground" />
                 </div>
               )}
-              <span className="text-base font-semibold">{bookmakerNome}</span>
+              <span className="text-base font-semibold truncate">{bookmakerNome}</span>
+              <Badge
+                variant="outline"
+                className={cn(
+                  "text-[10px] px-1.5 py-0 h-5 shrink-0",
+                  bookmakerStatus === "ativo"
+                    ? "border-success/50 text-success"
+                    : bookmakerStatus === "limitada"
+                      ? "border-warning/50 text-warning"
+                      : "border-destructive/50 text-destructive"
+                )}
+              >
+                {bookmakerStatus === "ativo" ? "Ativo" : bookmakerStatus === "limitada" ? "Limitada" : "Encerrada"}
+              </Badge>
             </div>
-            <Badge variant="outline" className="ml-auto gap-1 text-xs">
+            <Badge variant="outline" className="ml-auto gap-1 text-xs shrink-0">
               <History className="h-3 w-3" />
               Histórico
             </Badge>

@@ -1418,6 +1418,7 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
         bookmakerId={historicoDialog.bookmakerId}
         bookmakerNome={historicoDialog.bookmakerNome}
         logoUrl={historicoDialog.logoUrl}
+        bookmakerStatus={historicoDialog.status}
       />
 
       {/* Dialog de Perda Rápida */}
