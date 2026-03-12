@@ -43,6 +43,7 @@ async function fetchFinanceiroData(workspaceId: string): Promise<FinanceiroData>
   const { data: caixaParceiro } = await supabase
     .from("parceiros")
     .select("id")
+    .eq("workspace_id", workspaceId)
     .eq("is_caixa_operacional", true)
     .maybeSingle();
 
@@ -72,36 +73,39 @@ async function fetchFinanceiroData(workspaceId: string): Promise<FinanceiroData>
     // UNIFICADA: Uma única query com workspace_id (substitui Q1+Q2 que eram 2 full scans)
     supabase.from("movimentacoes_indicacao").select("tipo, valor, data_movimentacao, parceria_id, indicador_id, status, indicadores_referral(nome)").eq("workspace_id", workspaceId),
     supabase.from("v_custos_aquisicao").select("custo_total, valor_indicador, valor_parceiro, valor_fornecedor, data_inicio, indicador_id, indicador_nome"),
-    supabase.from("cash_ledger").select("tipo_transacao, valor, data_transacao, moeda").eq("status", "CONFIRMADO"),
-    supabase.from("despesas_administrativas").select("*").eq("status", "CONFIRMADO"),
-    supabase.from("despesas_administrativas").select("*").eq("status", "PENDENTE"),
-    supabase.from("pagamentos_operador").select("tipo_pagamento, valor, data_pagamento, status, operador_id, operadores(nome)").eq("status", "CONFIRMADO"),
-    supabase.from("pagamentos_operador").select("tipo_pagamento, valor, data_pagamento, status, operador_id, operadores(nome)").eq("status", "PENDENTE"),
-    supabase.from("bookmakers").select("saldo_atual, saldo_freebet, status, estado_conta, aguardando_saque_at, projeto_id, moeda").in("status", ["ativo", "ATIVO", "EM_USO", "limitada", "LIMITADA", "AGUARDANDO_SAQUE"]),
-    supabase.from("bookmakers").select("saldo_atual, projeto_id, moeda, projetos(nome)").in("status", ["ativo", "ATIVO", "EM_USO", "limitada", "LIMITADA", "AGUARDANDO_SAQUE"]),
-    supabase.from("parceiros").select("id", { count: "exact", head: true }).eq("status", "ativo"),
+    supabase.from("cash_ledger").select("tipo_transacao, valor, data_transacao, moeda").eq("workspace_id", workspaceId).eq("status", "CONFIRMADO"),
+    supabase.from("despesas_administrativas").select("*").eq("workspace_id", workspaceId).eq("status", "CONFIRMADO"),
+    supabase.from("despesas_administrativas").select("*").eq("workspace_id", workspaceId).eq("status", "PENDENTE"),
+    supabase.from("pagamentos_operador").select("tipo_pagamento, valor, data_pagamento, status, operador_id, operadores(nome)").eq("workspace_id", workspaceId).eq("status", "CONFIRMADO"),
+    supabase.from("pagamentos_operador").select("tipo_pagamento, valor, data_pagamento, status, operador_id, operadores(nome)").eq("workspace_id", workspaceId).eq("status", "PENDENTE"),
+    supabase.from("bookmakers").select("saldo_atual, saldo_freebet, status, estado_conta, aguardando_saque_at, projeto_id, moeda").eq("workspace_id", workspaceId).in("status", ["ativo", "ATIVO", "EM_USO", "limitada", "LIMITADA", "AGUARDANDO_SAQUE"]),
+    supabase.from("bookmakers").select("saldo_atual, projeto_id, moeda, projetos(nome)").eq("workspace_id", workspaceId).in("status", ["ativo", "ATIVO", "EM_USO", "limitada", "LIMITADA", "AGUARDANDO_SAQUE"]),
+    supabase.from("parceiros").select("id", { count: "exact", head: true }).eq("workspace_id", workspaceId).eq("status", "ativo"),
     supabase
       .from("parcerias")
       .select("id, valor_parceiro, origem_tipo, status, custo_aquisicao_isento")
+      .eq("workspace_id", workspaceId)
       .in("status", ["ATIVA", "EM_ENCERRAMENTO"])
       .or("custo_aquisicao_isento.is.null,custo_aquisicao_isento.eq.false")
       .gt("valor_parceiro", 0),
     supabase
       .from("parcerias")
       .select("id, valor_comissao_indicador, comissao_paga")
+      .eq("workspace_id", workspaceId)
       .eq("comissao_paga", false)
       .not("valor_comissao_indicador", "is", null)
       .gt("valor_comissao_indicador", 0),
     supabase
       .from("indicador_acordos")
       .select("indicador_id, meta_parceiros, valor_bonus")
+      .eq("workspace_id", workspaceId)
       .eq("ativo", true),
     supabase.from("v_saldo_parceiro_contas").select("parceiro_id, conta_id, saldo, banco, parceiro_nome, moeda"),
     supabase.from("v_saldo_parceiro_wallets").select("parceiro_id, wallet_id, coin, saldo_coin, saldo_usd, exchange"),
     supabase.from("v_saldo_parceiro_contas").select("saldo, banco, parceiro_nome, moeda, parceiro_id"),
     supabase.from("v_saldo_parceiro_wallets").select("saldo_usd, exchange, parceiro_id"),
-    supabase.from("participacao_ciclos").select("valor_participacao, data_pagamento").eq("status", "PAGO"),
-    supabase.from("apostas_unificada").select("lucro_prejuizo, data_aposta").not("resultado", "is", null),
+    supabase.from("participacao_ciclos").select("valor_participacao, data_pagamento").eq("workspace_id", workspaceId).eq("status", "PAGO"),
+    supabase.from("apostas_unificada").select("lucro_prejuizo, data_aposta").eq("workspace_id", workspaceId).not("resultado", "is", null),
   ]);
 
   // Throw on first error
