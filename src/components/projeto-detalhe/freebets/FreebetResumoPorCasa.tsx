@@ -64,7 +64,7 @@ export function FreebetResumoPorCasa({ stats, formatCurrency, viewMode = 'card' 
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Saldo</p>
-                <p className="font-semibold text-amber-400">{formatCurrency(stat.saldo_atual)}</p>
+                <p className="font-semibold text-amber-400">{formatCurrency(Math.max(0, stat.saldo_atual))}</p>
               </div>
             </div>
           </div>
