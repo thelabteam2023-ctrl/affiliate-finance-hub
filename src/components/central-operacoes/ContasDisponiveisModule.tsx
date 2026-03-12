@@ -604,9 +604,7 @@ export function ContasDisponiveisModule() {
                                   onClick={() => {
                                     setSelectedConta(conta);
                                     setSelectedProjetoId(proj.id);
-                                    // Auto-confirm via direct action
-                                    handleVincular(conta);
-                                    setSelectedProjetoId(proj.id);
+                                    setVincularDialogOpen(true);
                                   }}
                                   className="gap-2"
                                 >
