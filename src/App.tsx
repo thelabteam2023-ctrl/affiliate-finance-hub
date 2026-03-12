@@ -306,45 +306,59 @@ const App = () => (
             {/* Pop-out chat - no layout, standalone */}
             <Route path="/comunidade/chat" element={
               <ProtectedRoute>
-                <ComunidadeChatPopout />
+                <Suspense fallback={<PageLoader />}>
+                  <ComunidadeChatPopout />
+                </Suspense>
               </ProtectedRoute>
             } />
             
             {/* Proteção Progressiva - standalone, sem layout */}
             <Route path="/ferramentas/protecao-progressiva" element={
               <ProtectedRoute>
-                <ProtecaoProgressiva />
+                <Suspense fallback={<PageLoader />}>
+                  <ProtecaoProgressiva />
+                </Suspense>
               </ProtectedRoute>
             } />
             
             {/* Janela Surebet - standalone, para abrir em nova janela */}
             <Route path="/janela/surebet/novo" element={
               <ProtectedRoute>
-                <SurebetWindowPage />
+                <Suspense fallback={<PageLoader />}>
+                  <SurebetWindowPage />
+                </Suspense>
               </ProtectedRoute>
             } />
             <Route path="/janela/surebet/:id" element={
               <ProtectedRoute>
-                <SurebetWindowPage />
+                <Suspense fallback={<PageLoader />}>
+                  <SurebetWindowPage />
+                </Suspense>
               </ProtectedRoute>
             } />
             
             {/* Janela Aposta Simples - standalone, para abrir em nova janela */}
             <Route path="/janela/aposta/novo" element={
               <ProtectedRoute>
-                <ApostaWindowPage />
+                <Suspense fallback={<PageLoader />}>
+                  <ApostaWindowPage />
+                </Suspense>
               </ProtectedRoute>
             } />
             <Route path="/janela/aposta/:id" element={
               <ProtectedRoute>
-                <ApostaWindowPage />
+                <Suspense fallback={<PageLoader />}>
+                  <ApostaWindowPage />
+                </Suspense>
               </ProtectedRoute>
             } />
             
             {/* Janela Aposta Múltipla - standalone, para abrir em nova janela */}
             <Route path="/janela/multipla/novo" element={
               <ProtectedRoute>
-                <ApostaMultiplaWindowPage />
+                <Suspense fallback={<PageLoader />}>
+                  <ApostaMultiplaWindowPage />
+                </Suspense>
               </ProtectedRoute>
             } />
             <Route path="/janela/multipla/:id" element={
