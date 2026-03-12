@@ -287,7 +287,7 @@ export const ParceiroBookmakersTab = memo(function ParceiroBookmakersTab({
 
   const bookmakersVinculados = data?.vinculados || [];
   const bookmakersDisponiveis = data?.disponiveis || [];
-  const filteredVinculados = bookmakersVinculados.filter((b) => b.nome.toLowerCase().includes(searchVinculados.toLowerCase())).sort((a, b) => getSaldoCorreto(b) - getSaldoCorreto(a));
+  const filteredVinculados = bookmakersVinculados.filter((b) => b.nome.toLowerCase().includes(searchVinculados.toLowerCase())).sort((a, b) => getSaldoVisual(b) - getSaldoVisual(a));
   const displayedVinculados = showAllVinculados ? filteredVinculados : filteredVinculados.slice(0, 6);
   const hasMoreVinculados = filteredVinculados.length > 6;
   const filteredDisponiveis = bookmakersDisponiveis.filter((b) => b.nome.toLowerCase().includes(searchDisponiveis.toLowerCase()));
