@@ -322,6 +322,7 @@ export function useParceiroFinanceiroConsolidado(parceiroId: string | null) {
           has_credentials: !!(bm.login_username && bm.login_username.trim()),
           login_username: bm.login_username || null,
           login_password_encrypted: bm.login_password_encrypted || null,
+          catalogo_status: null, // Legacy path - catalogo_status not fetched here
         };
       });
 
