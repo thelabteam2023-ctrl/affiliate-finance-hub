@@ -173,7 +173,7 @@ export function useParceirosData() {
 
   const query = useQuery({
     queryKey: ["parceiros-data", workspaceId],
-    queryFn: fetchParceirosData,
+    queryFn: () => fetchParceirosData(workspaceId!),
     enabled: !!workspaceId,
     staleTime: PERIOD_STALE_TIME,
     gcTime: PERIOD_GC_TIME,
