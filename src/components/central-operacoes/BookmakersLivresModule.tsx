@@ -463,7 +463,10 @@ export function BookmakersLivresModule({ onRegistrarPerda, onVincularProjeto, on
               </thead>
               <tbody>
                 {sorted.map((conta) => {
-                  const isAtivo = ["ativo", "aguardando_saque", "AGUARDANDO_DECISAO"].includes(conta.status);
+                  const estadoConta = conta.estado_conta?.toLowerCase() || "normal";
+                  const isNormal = estadoConta === "normal" || estadoConta === "";
+                  const isLimitada = estadoConta === "limitada";
+                  const isEncerrada = estadoConta === "encerrada";
                   return (
                     <ContextMenu key={conta.id}>
                       <ContextMenuTrigger asChild>
