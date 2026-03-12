@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { PROJETO_RESULTADO_QUERY_KEY } from "./useProjetoResultado";
+import { PROJETO_DASHBOARD_QUERY_KEY } from "./useProjetoDashboardData";
 import { estornarGiroGratisViaLedger } from "@/lib/ledgerService";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { 
@@ -45,7 +46,9 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
 
   // Invalidar grupo FINANCIAL_STATE completo após mutação
   const invalidateProjectKPIs = useCallback(() => {
-    // KPIs
+    // Dashboard RPC centralizado (fonte de dados para KPIs)
+    queryClient.invalidateQueries({ queryKey: [PROJETO_DASHBOARD_QUERY_KEY, projetoId] });
+    // Legacy keys (mantido por segurança)
     queryClient.invalidateQueries({ queryKey: [PROJETO_RESULTADO_QUERY_KEY, projetoId] });
     queryClient.invalidateQueries({ queryKey: ["projeto-breakdowns", projetoId] });
     
