@@ -219,6 +219,8 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
     USDC: rates.USDBRL,
   };
 
+  const clampSaldoVisual = (value: number | null | undefined) => Math.max(0, Number(value ?? 0));
+
   // Mover hooks useMemo ANTES de qualquer early return
   const depositadoEntries = useMemo(() => 
     data ? saldosToEntries(data.depositado_por_moeda) : [], 
@@ -228,10 +230,19 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
     data ? saldosToEntries(data.sacado_por_moeda) : [], 
     [data?.sacado_por_moeda]
   );
-  const saldoEntries = useMemo(() => 
-    data ? saldosToEntries(data.saldo_por_moeda) : [], 
-    [data?.saldo_por_moeda]
-  );
+  const saldoEntriesVisual = useMemo(() => {
+    if (!data?.bookmakers) return [];
+
+    const saldosPorMoeda: Record<string, number> = {};
+    data.bookmakers.forEach((bm) => {
+      const moeda = bm.moeda || "BRL";
+      saldosPorMoeda[moeda] = (saldosPorMoeda[moeda] || 0) + clampSaldoVisual(bm.saldo_atual);
+    });
+
+    return Object.entries(saldosPorMoeda)
+      .filter(([, value]) => value !== 0)
+      .map(([currency, value]) => ({ currency, value }));
+  }, [data?.bookmakers]);
   const resultadoEntries = useMemo(() => 
     data ? saldosToEntries(data.resultado_por_moeda) : [], 
     [data?.resultado_por_moeda]
