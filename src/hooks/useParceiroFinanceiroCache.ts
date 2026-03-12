@@ -149,11 +149,16 @@ export function useParceiroFinanceiroCache() {
     if (catalogoIds.length > 0) {
       const { data: catalogoData } = await supabase
         .from("bookmakers_catalogo")
-        .select("id, logo_url")
+        .select("id, logo_url, status")
         .in("id", catalogoIds as string[]);
 
       catalogoData?.forEach((c) => {
         if (c.logo_url) logosMap.set(c.id, c.logo_url);
+      });
+      // Map catalogo status (regulamentação)
+      var catalogoStatusMap = new Map<string, string>();
+      catalogoData?.forEach((c) => {
+        catalogoStatusMap.set(c.id, c.status);
       });
     }
 
