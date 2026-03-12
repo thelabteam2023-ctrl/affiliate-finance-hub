@@ -58,6 +58,26 @@ export function useBookmakerUsageStatus(bookmakerIds: string[]) {
 
       if (histError) throw histError;
 
+      // Buscar vínculo ativo direto na tabela bookmakers (fonte primária de verdade)
+      const { data: bookmakersAtivos, error: bmError } = await supabase
+        .from("bookmakers")
+        .select("id, projeto_id, projetos:projetos!bookmakers_projeto_id_fkey(nome, tipo_projeto)")
+        .in("id", bookmakerIds)
+        .not("projeto_id", "is", null);
+
+      if (bmError) throw bmError;
+
+      // Mapa de vínculos ativos diretos da tabela bookmakers
+      const activeProjectMap = new Map<string, { projetoNome: string; tipoProjeto: string | null }>();
+      (bookmakersAtivos || []).forEach((bm: any) => {
+        if (bm.projeto_id) {
+          activeProjectMap.set(bm.id, {
+            projetoNome: bm.projetos?.nome || null,
+            tipoProjeto: bm.projetos?.tipo_projeto || null,
+          });
+        }
+      });
+
       // Buscar se tem operações (apostas, transações, bônus) - para bloquear delete
       const { data: apostasData, error: apostasError } = await supabase
         .from("apostas_unificada")
