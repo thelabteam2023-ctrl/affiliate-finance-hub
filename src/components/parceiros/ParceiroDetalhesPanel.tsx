@@ -200,6 +200,8 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
   useEffect(() => {
     setFiltroMoeda("todas");
     setBuscaCasa("");
+    setFiltroStatus(null);
+    setFiltroRegulamentacao("todas");
   }, [parceiroId]);
   
   // Converter rates para um mapa simples de moeda → cotação em BRL
