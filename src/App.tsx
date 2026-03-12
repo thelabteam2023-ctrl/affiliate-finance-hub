@@ -1,3 +1,4 @@
+import { Suspense, lazy } from "react";
 import { ThemeProvider } from "next-themes";
 import { TopBarProvider, useTopBar } from "@/contexts/TopBarContext";
 import { Toaster } from "@/components/ui/toaster";
@@ -17,35 +18,50 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppSidebar } from "@/components/AppSidebar";
 import { InactivityWarningBanner } from "@/components/InactivityWarningBanner";
 import { useInactivityTimeout } from "@/hooks/useInactivityTimeout";
+import { Loader2 } from "lucide-react";
+
+// ─── Eager imports: lightweight pages / public routes ───
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
-import GestaoParceiros from "./pages/GestaoParceiros";
-import GestaoBookmakers from "./pages/GestaoBookmakers";
-import GestaoBancos from "./pages/GestaoBancos";
-import GestaoInvestidores from "./pages/GestaoInvestidores";
-import GestaoOperadores from "./pages/GestaoOperadores";
-import GestaoProjetos from "./pages/GestaoProjetos";
-import ProjetoDetalhe from "./pages/ProjetoDetalhe";
-import ProgramaIndicacao from "./pages/ProgramaIndicacao";
-import Caixa from "./pages/Caixa";
-import Financeiro from "./pages/Financeiro";
-import CentralOperacoes from "./pages/CentralOperacoes";
-import Anotacoes from "./pages/Anotacoes";
-import Testes from "./pages/Testes";
-import Workspace from "./pages/Workspace";
-import Comunidade from "./pages/Comunidade";
-import ComunidadeDetalhe from "./pages/ComunidadeDetalhe";
-import ComunidadeTopico from "./pages/ComunidadeTopico";
-import ComunidadeChatPopout from "./pages/ComunidadeChatPopout";
-import SystemAdmin from "./pages/SystemAdmin";
 import AcceptInvite from "./pages/AcceptInvite";
-import ProtecaoProgressiva from "./pages/ProtecaoProgressiva";
-import SurebetWindowPage from "./pages/SurebetWindowPage";
-import ApostaWindowPage from "./pages/ApostaWindowPage";
-import ApostaMultiplaWindowPage from "./pages/ApostaMultiplaWindowPage";
 import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient();
+// ─── Lazy imports: heavy authenticated pages ───
+const GestaoParceiros = lazy(() => import("./pages/GestaoParceiros"));
+const GestaoBookmakers = lazy(() => import("./pages/GestaoBookmakers"));
+const GestaoBancos = lazy(() => import("./pages/GestaoBancos"));
+const GestaoInvestidores = lazy(() => import("./pages/GestaoInvestidores"));
+const GestaoOperadores = lazy(() => import("./pages/GestaoOperadores"));
+const GestaoProjetos = lazy(() => import("./pages/GestaoProjetos"));
+const ProjetoDetalhe = lazy(() => import("./pages/ProjetoDetalhe"));
+const ProgramaIndicacao = lazy(() => import("./pages/ProgramaIndicacao"));
+const Caixa = lazy(() => import("./pages/Caixa"));
+const Financeiro = lazy(() => import("./pages/Financeiro"));
+const CentralOperacoes = lazy(() => import("./pages/CentralOperacoes"));
+const Anotacoes = lazy(() => import("./pages/Anotacoes"));
+const Testes = lazy(() => import("./pages/Testes"));
+const Workspace = lazy(() => import("./pages/Workspace"));
+const Comunidade = lazy(() => import("./pages/Comunidade"));
+const ComunidadeDetalhe = lazy(() => import("./pages/ComunidadeDetalhe"));
+const ComunidadeTopico = lazy(() => import("./pages/ComunidadeTopico"));
+const ComunidadeChatPopout = lazy(() => import("./pages/ComunidadeChatPopout"));
+const SystemAdmin = lazy(() => import("./pages/SystemAdmin"));
+const ProtecaoProgressiva = lazy(() => import("./pages/ProtecaoProgressiva"));
+const SurebetWindowPage = lazy(() => import("./pages/SurebetWindowPage"));
+const ApostaWindowPage = lazy(() => import("./pages/ApostaWindowPage"));
+const ApostaMultiplaWindowPage = lazy(() => import("./pages/ApostaMultiplaWindowPage"));
+
+// ─── QueryClient com defaults globais de performance ───
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30 * 1000,       // 30s — dados frescos, sem refetch desnecessário
+      gcTime: 10 * 60 * 1000,     // 10min — manter cache na memória
+      refetchOnWindowFocus: false, // Evitar refetch ao alternar abas
+      retry: 1,                    // Apenas 1 retry em caso de erro
+    },
+  },
+});
 
 // Layout component for authenticated routes with inactivity monitoring
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {

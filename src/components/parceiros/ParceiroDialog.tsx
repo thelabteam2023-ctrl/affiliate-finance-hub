@@ -190,9 +190,9 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
     fetchRedes();
   }, []);
 
-  // 🔍 DEBUG: useEffect que monitora abertura do dialog
   useEffect(() => {
-    console.log('[ParceiroDialog] useEffect[open] triggered', {
+    // Monitor abertura do dialog (logs de debug removidos)
+    const _ = {
       open,
       parceiro_prop_id: parceiro?.id || null,
       estado_atual_nome: nome,
