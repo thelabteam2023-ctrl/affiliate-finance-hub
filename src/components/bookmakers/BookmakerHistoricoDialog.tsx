@@ -39,6 +39,7 @@ interface BookmakerHistoricoDialogProps {
   bookmakerId: string;
   bookmakerNome: string;
   logoUrl?: string;
+  bookmakerStatus?: string;
 }
 
 export function BookmakerHistoricoDialog({
