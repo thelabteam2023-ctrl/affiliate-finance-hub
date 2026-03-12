@@ -167,8 +167,7 @@ function SearchableSelectPopover({
 export function BookmakersLivresModule({ onRegistrarPerda, onVincularProjeto, onNewTransacao }: BookmakersLivresModuleProps) {
   const { workspaceId } = useAuth();
 
-  const [statusFilter, setStatusFilter] = useState("todos");
-  const [usoFilter, setUsoFilter] = useState("todas");
+  const [estadoContaFilter, setEstadoContaFilter] = useState("operacional");
   const [casaFilter, setCasaFilter] = useState("todas");
   const [parceiroFilter, setParceiroFilter] = useState("todos");
   const [regulamentacaoFilter, setRegulamentacaoFilter] = useState("todas");
