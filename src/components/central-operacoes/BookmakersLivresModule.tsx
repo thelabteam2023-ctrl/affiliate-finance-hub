@@ -343,85 +343,99 @@ export function BookmakersLivresModule({ onRegistrarPerda, onVincularProjeto, on
 
   return (
     <div className="space-y-4">
-      {/* Filters Row 1: Searchable selects */}
-      <div className="flex flex-wrap items-center gap-2">
-        <SearchableSelectPopover
-          value={casaFilter}
-          onValueChange={setCasaFilter}
-          options={casasUnicas}
-          placeholder="Buscar casa..."
-          allLabel="Todas as casas"
-          icon={<Building2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
-        />
+      {/* Filters */}
+      <div className="flex flex-wrap items-end gap-4">
+        <div className="flex flex-col gap-1">
+          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Bookmaker</span>
+          <SearchableSelectPopover
+            value={casaFilter}
+            onValueChange={setCasaFilter}
+            options={casasUnicas}
+            placeholder="Buscar casa..."
+            allLabel="Todas as casas"
+            icon={<Building2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
+          />
+        </div>
 
-        <SearchableSelectPopover
-          value={parceiroFilter}
-          onValueChange={setParceiroFilter}
-          options={parceirosUnicos}
-          placeholder="Buscar parceiro..."
-          allLabel="Todos parceiros"
-          icon={<User className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
-        />
+        <div className="flex flex-col gap-1">
+          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Parceiro</span>
+          <SearchableSelectPopover
+            value={parceiroFilter}
+            onValueChange={setParceiroFilter}
+            options={parceirosUnicos}
+            placeholder="Buscar parceiro..."
+            allLabel="Todos parceiros"
+            icon={<User className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
+          />
+        </div>
 
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[150px] h-9 text-sm" icon={<Filter className="h-3.5 w-3.5" />}>
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="todos">Todos status</SelectItem>
-            <SelectItem value="ativo">Ativo</SelectItem>
-            <SelectItem value="inativo">Inativo</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex flex-col gap-1">
+          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Status</span>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[140px] h-9 text-sm" icon={<Filter className="h-3.5 w-3.5" />}>
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos status</SelectItem>
+              <SelectItem value="ativo">Ativo</SelectItem>
+              <SelectItem value="inativo">Inativo</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
-        <Select value={usoFilter} onValueChange={setUsoFilter}>
-          <SelectTrigger className="w-[155px] h-9 text-sm">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="todas">Todas contas</SelectItem>
-            <SelectItem value="virgem">Conta virgem</SelectItem>
-            <SelectItem value="utilizada">Já utilizada</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex flex-col gap-1">
+          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Histórico</span>
+          <Select value={usoFilter} onValueChange={setUsoFilter}>
+            <SelectTrigger className="w-[150px] h-9 text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todas">Todas contas</SelectItem>
+              <SelectItem value="virgem">Conta virgem</SelectItem>
+              <SelectItem value="utilizada">Já utilizada</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
-        <Badge variant="outline" className="h-9 px-3 text-sm font-mono">
+        <div className="flex flex-col gap-1">
+          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Regulamentação</span>
+          <div className="flex items-center gap-1 h-9">
+            <button
+              onClick={() => setRegulamentacaoFilter(regulamentacaoFilter === "REGULAMENTADA" ? "todas" : "REGULAMENTADA")}
+              className={cn(
+                "h-8 px-3 rounded-md text-xs font-medium tracking-wide transition-colors uppercase border",
+                regulamentacaoFilter === "REGULAMENTADA"
+                  ? "bg-success/15 border-success/40 text-success"
+                  : "border-border text-muted-foreground hover:text-foreground hover:bg-muted/50"
+              )}
+            >
+              Regulamentada
+            </button>
+            <button
+              onClick={() => setRegulamentacaoFilter(regulamentacaoFilter === "NAO_REGULAMENTADA" ? "todas" : "NAO_REGULAMENTADA")}
+              className={cn(
+                "h-8 px-3 rounded-md text-xs font-medium tracking-wide transition-colors uppercase border",
+                regulamentacaoFilter === "NAO_REGULAMENTADA"
+                  ? "bg-warning/15 border-warning/40 text-warning"
+                  : "border-border text-muted-foreground hover:text-foreground hover:bg-muted/50"
+              )}
+            >
+              Não Regulamentada
+            </button>
+          </div>
+        </div>
+
+        <Badge variant="outline" className="h-9 px-3 text-sm font-mono self-end">
           {sorted.length} / {contas?.length || 0}
         </Badge>
-      </div>
-
-      {/* Filters Row 2: Regulamentação pills */}
-      <div className="flex items-center gap-1">
-        <button
-          onClick={() => setRegulamentacaoFilter(regulamentacaoFilter === "REGULAMENTADA" ? "todas" : "REGULAMENTADA")}
-          className={cn(
-            "h-7 px-3 rounded-md text-xs font-medium tracking-wide transition-colors uppercase border",
-            regulamentacaoFilter === "REGULAMENTADA"
-              ? "bg-success/15 border-success/40 text-success"
-              : "border-border text-muted-foreground hover:text-foreground hover:bg-muted/50"
-          )}
-        >
-          Regulamentada
-        </button>
-        <button
-          onClick={() => setRegulamentacaoFilter(regulamentacaoFilter === "NAO_REGULAMENTADA" ? "todas" : "NAO_REGULAMENTADA")}
-          className={cn(
-            "h-7 px-3 rounded-md text-xs font-medium tracking-wide transition-colors uppercase border",
-            regulamentacaoFilter === "NAO_REGULAMENTADA"
-              ? "bg-warning/15 border-warning/40 text-warning"
-              : "border-border text-muted-foreground hover:text-foreground hover:bg-muted/50"
-          )}
-        >
-          Não Regulamentada
-        </button>
       </div>
 
       {/* Table */}
       <Card>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto max-h-[calc(100vh-320px)] overflow-y-auto relative">
             <table className="w-full text-sm">
-              <thead>
+              <thead className="sticky top-0 z-10 bg-card">
                 <tr className="border-b border-border">
                   <th className="text-left p-3 font-medium text-muted-foreground">Casa</th>
                   <th className="text-left p-3 font-medium text-muted-foreground">Parceiro</th>
