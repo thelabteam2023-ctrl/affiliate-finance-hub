@@ -140,7 +140,7 @@ async function fetchFinanceiroData(workspaceId: string): Promise<FinanceiroData>
   const parceirosWallets = allWallets.filter((row: any) => !caixaParceiroId || row.parceiro_id !== caixaParceiroId);
 
   // Compromissos pendentes
-  const allMovimentacoes = movIndicacaoResult.data || [];
+  const allMovimentacoes = allMovimentacoesRaw;
   const parceriasPagas = allMovimentacoes
     .filter((m: any) => m.tipo === "PAGTO_PARCEIRO" && m.parceria_id)
     .map((m: any) => m.parceria_id);
