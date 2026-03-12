@@ -236,12 +236,18 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
   const hasLucro = useMemo(() => resultadoEntries.some(e => e.value > 0), [resultadoEntries]);
   const hasPrejuizo = useMemo(() => resultadoEntries.some(e => e.value < 0), [resultadoEntries]);
   
-  // Base filtrada por moeda (sem filtro de status) para contagem dos badges
+  // Base filtrada por moeda e regulamentação (sem filtro de status) para contagem dos badges
   const bookmakersFiltradosPorMoeda = useMemo(() => {
     if (!data?.bookmakers) return [];
-    if (filtroMoeda === "todas") return data.bookmakers;
-    return data.bookmakers.filter(b => (b.moeda || "BRL") === filtroMoeda);
-  }, [data?.bookmakers, filtroMoeda]);
+    let filtered = data.bookmakers;
+    if (filtroMoeda !== "todas") {
+      filtered = filtered.filter(b => (b.moeda || "BRL") === filtroMoeda);
+    }
+    if (filtroRegulamentacao !== "todas") {
+      filtered = filtered.filter(b => (b.catalogo_status || "REGULAMENTADA") === filtroRegulamentacao);
+    }
+    return filtered;
+  }, [data?.bookmakers, filtroMoeda, filtroRegulamentacao]);
 
   // Contagem baseada no status REAL da conta, respeitando filtro de moeda
   const bookmarkersAtivos = useMemo(() => 
