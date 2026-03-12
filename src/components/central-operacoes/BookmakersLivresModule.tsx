@@ -376,15 +376,16 @@ export function BookmakersLivresModule({ onRegistrarPerda, onVincularProjeto, on
         </div>
 
         <div className="flex flex-col gap-1">
-          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Status</span>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-auto min-w-[140px] h-9 text-sm" icon={<Filter className="h-3.5 w-3.5" />}>
-              <SelectValue placeholder="Status" />
+          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Estado Conta</span>
+          <Select value={estadoContaFilter} onValueChange={setEstadoContaFilter}>
+            <SelectTrigger className="w-auto min-w-[160px] h-9 text-sm" icon={<Filter className="h-3.5 w-3.5" />}>
+              <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="todos">Todos status</SelectItem>
-              <SelectItem value="ativo">Ativo</SelectItem>
-              <SelectItem value="inativo">Inativo</SelectItem>
+              <SelectItem value="operacional">Operacionais</SelectItem>
+              <SelectItem value="todos">Todos estados</SelectItem>
+              <SelectItem value="limitada">Limitada</SelectItem>
+              <SelectItem value="encerrada">Encerrada</SelectItem>
             </SelectContent>
           </Select>
         </div>
