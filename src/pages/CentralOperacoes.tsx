@@ -149,7 +149,7 @@ export default function CentralOperacoes() {
     if (!workspaceId) return;
     const debouncedRefresh = () => {
       if (realtimeDebounceRef.current) clearTimeout(realtimeDebounceRef.current);
-      realtimeDebounceRef.current = setTimeout(() => refetchCentral(), 3000);
+      realtimeDebounceRef.current = setTimeout(() => refetchCentral(), 5000);
     };
     const channel = supabase
       .channel('central-operacoes-realtime')

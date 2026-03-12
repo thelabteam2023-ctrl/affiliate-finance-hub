@@ -285,12 +285,13 @@ export function useCentralOperacoesMutations(fetchData: (isRefresh?: boolean) =>
 
       toast.success(`Pagamento de ${dispensaState.parceiroNome} dispensado${dispensaState.comissaoJaPaga && dispensaState.estornar ? ". Estorno da comissão registrado." : ""}`);
       resetDispensa();
-      fetchData(true);
+      // Complex mutation — full refetch for consistency
+      fullRefetch();
     } catch (err) {
       console.error("Erro ao dispensar pagamento:", err);
       toast.error("Erro ao dispensar pagamento");
     }
-  }, [user, fetchData]);
+  }, [user, fullRefetch]);
 
   return {
     handleSaqueAction,
