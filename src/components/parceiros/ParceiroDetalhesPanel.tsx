@@ -1131,7 +1131,8 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                                           open: true,
                                           bookmakerId: bm.bookmaker_id,
                                           bookmakerNome: bm.bookmaker_nome,
-                                          logoUrl: bm.logo_url
+                                          logoUrl: bm.logo_url,
+                                          status: bm.status,
                                         })}
                                       >
                                         <IconComponent className={cn("h-4 w-4", iconColorClass, "hover:opacity-80")} />
