@@ -5,12 +5,12 @@
  * Foco: visibilidade total de contas livres para reutilização operacional.
  */
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { formatCurrency } from "@/utils/formatCurrency";
-import { getFirstLastName } from "@/lib/utils";
+import { getFirstLastName, cn } from "@/lib/utils";
 import {
   Search,
   Unlink,
@@ -21,16 +21,22 @@ import {
   ArrowDown,
   CheckCircle2,
   XCircle,
-  History,
   Plus,
   Minus,
   AlertTriangle,
   FolderKanban,
   DollarSign,
+  User,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -55,6 +61,7 @@ interface BookmakerLivre {
   logo_url: string | null;
   ultimo_projeto_nome: string | null;
   ja_usada: boolean;
+  catalogo_status: string;
 }
 
 type SortColumn = "saldo" | null;
@@ -66,13 +73,104 @@ interface BookmakersLivresModuleProps {
   onNewTransacao?: (bookmakerId: string, bookmakerNome: string, moeda: string, saldoAtual: number, saldoUsd: number, tipo: "deposito" | "retirada") => void;
 }
 
+// Searchable select popover component
+function SearchableSelectPopover({
+  value,
+  onValueChange,
+  options,
+  placeholder,
+  allLabel,
+  icon,
+}: {
+  value: string;
+  onValueChange: (v: string) => void;
+  options: { value: string; label: string }[];
+  placeholder: string;
+  allLabel: string;
+  icon: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const filtered = useMemo(() => {
+    if (!search) return options;
+    const q = search.toLowerCase();
+    return options.filter((o) => o.label.toLowerCase().includes(q));
+  }, [options, search]);
+
+  const selectedLabel = value === "todas" || value === "todos"
+    ? allLabel
+    : options.find((o) => o.value === value)?.label || allLabel;
+
+  return (
+    <Popover open={open} onOpenChange={(o) => { setOpen(o); if (!o) setSearch(""); }}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          className="h-9 px-3 text-sm gap-2 font-normal justify-between min-w-[160px]"
+        >
+          <span className="flex items-center gap-1.5 truncate">
+            {icon}
+            <span className="truncate max-w-[120px]">{selectedLabel}</span>
+          </span>
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[220px] p-0" align="start">
+        <div className="p-2 border-b border-border">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              ref={inputRef}
+              placeholder={placeholder}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => e.stopPropagation()}
+              className="h-8 pl-8 text-sm"
+              autoFocus
+            />
+          </div>
+        </div>
+        <div className="max-h-[250px] overflow-y-auto p-1">
+          <button
+            onClick={() => { onValueChange(allLabel === "Todas as casas" ? "todas" : "todos"); setOpen(false); }}
+            className={cn(
+              "w-full text-left text-sm px-2 py-1.5 rounded-sm hover:bg-muted/50 transition-colors",
+              (value === "todas" || value === "todos") && "bg-primary/10 text-primary font-medium"
+            )}
+          >
+            {allLabel}
+          </button>
+          {filtered.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => { onValueChange(opt.value); setOpen(false); }}
+              className={cn(
+                "w-full text-left text-sm px-2 py-1.5 rounded-sm hover:bg-muted/50 transition-colors",
+                value === opt.value && "bg-primary/10 text-primary font-medium"
+              )}
+            >
+              {opt.label}
+            </button>
+          ))}
+          {filtered.length === 0 && (
+            <p className="text-xs text-muted-foreground text-center py-3">Nenhum resultado</p>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export function BookmakersLivresModule({ onRegistrarPerda, onVincularProjeto, onNewTransacao }: BookmakersLivresModuleProps) {
   const { workspaceId } = useAuth();
 
-  const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("todos");
-  const [usoFilter, setUsoFilter] = useState("todos");
+  const [usoFilter, setUsoFilter] = useState("todas");
   const [casaFilter, setCasaFilter] = useState("todas");
+  const [parceiroFilter, setParceiroFilter] = useState("todos");
+  const [regulamentacaoFilter, setRegulamentacaoFilter] = useState("todas");
   const [sortColumn, setSortColumn] = useState<SortColumn>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
@@ -86,7 +184,7 @@ export function BookmakersLivresModule({ onRegistrarPerda, onVincularProjeto, on
           id, nome, status, saldo_atual, moeda,
           parceiro_id,
           parceiro:parceiros!bookmakers_parceiro_id_fkey (nome),
-          catalogo:bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url)
+          catalogo:bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url, status)
         `)
         .eq("workspace_id", workspaceId!)
         .is("projeto_id", null)
@@ -149,6 +247,7 @@ export function BookmakersLivresModule({ onRegistrarPerda, onVincularProjeto, on
         logo_url: b.catalogo?.logo_url || null,
         ultimo_projeto_nome: lastProjectMap.get(b.id) || null,
         ja_usada: usedSet.has(b.id),
+        catalogo_status: b.catalogo?.status || "REGULAMENTADA",
       }));
     },
     enabled: !!workspaceId,
@@ -176,7 +275,21 @@ export function BookmakersLivresModule({ onRegistrarPerda, onVincularProjeto, on
   const casasUnicas = useMemo(() => {
     if (!contas) return [];
     const set = new Set(contas.map((c) => c.nome));
-    return [...set].sort();
+    return [...set].sort().map((c) => ({ value: c, label: c }));
+  }, [contas]);
+
+  // Unique parceiros for filter
+  const parceirosUnicos = useMemo(() => {
+    if (!contas) return [];
+    const map = new Map<string, string>();
+    contas.forEach((c) => {
+      if (c.parceiro_id && c.parceiro_nome) {
+        map.set(c.parceiro_id, getFirstLastName(c.parceiro_nome));
+      }
+    });
+    return Array.from(map.entries())
+      .sort((a, b) => a[1].localeCompare(b[1]))
+      .map(([id, nome]) => ({ value: id, label: nome }));
   }, [contas]);
 
   // Filtered
@@ -184,17 +297,15 @@ export function BookmakersLivresModule({ onRegistrarPerda, onVincularProjeto, on
     if (!contas) return [];
     return contas.filter((c) => {
       if (casaFilter !== "todas" && c.nome !== casaFilter) return false;
+      if (parceiroFilter !== "todos" && c.parceiro_id !== parceiroFilter) return false;
       if (statusFilter === "ativo" && !["ativo", "aguardando_saque", "AGUARDANDO_DECISAO"].includes(c.status)) return false;
       if (statusFilter === "inativo" && ["ativo", "aguardando_saque", "AGUARDANDO_DECISAO"].includes(c.status)) return false;
-      if (usoFilter === "nunca" && c.ja_usada) return false;
-      if (usoFilter === "ja_usada" && !c.ja_usada) return false;
-      if (search) {
-        const q = search.toLowerCase();
-        if (!c.nome.toLowerCase().includes(q) && !c.parceiro_nome?.toLowerCase().includes(q)) return false;
-      }
+      if (usoFilter === "virgem" && c.ja_usada) return false;
+      if (usoFilter === "utilizada" && !c.ja_usada) return false;
+      if (regulamentacaoFilter !== "todas" && c.catalogo_status !== regulamentacaoFilter) return false;
       return true;
     });
-  }, [contas, search, casaFilter, statusFilter, usoFilter]);
+  }, [contas, casaFilter, parceiroFilter, statusFilter, usoFilter, regulamentacaoFilter]);
 
   // Sorted
   const sorted = useMemo(() => {
@@ -232,34 +343,28 @@ export function BookmakersLivresModule({ onRegistrarPerda, onVincularProjeto, on
 
   return (
     <div className="space-y-4">
-      {/* Filters */}
+      {/* Filters Row 1: Searchable selects */}
       <div className="flex flex-wrap items-center gap-2">
-        <div className="relative w-[220px] shrink-0">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Buscar casa ou parceiro..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 h-9 text-sm"
-          />
-        </div>
+        <SearchableSelectPopover
+          value={casaFilter}
+          onValueChange={setCasaFilter}
+          options={casasUnicas}
+          placeholder="Buscar casa..."
+          allLabel="Todas as casas"
+          icon={<Building2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
+        />
 
-        {casasUnicas.length > 1 && (
-          <Select value={casaFilter} onValueChange={setCasaFilter}>
-            <SelectTrigger className="w-[175px] h-9 text-sm" icon={<Building2 className="h-3.5 w-3.5" />}>
-              <SelectValue placeholder="Casa" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todas">Todas as casas</SelectItem>
-              {casasUnicas.map((c) => (
-                <SelectItem key={c} value={c}>{c}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
+        <SearchableSelectPopover
+          value={parceiroFilter}
+          onValueChange={setParceiroFilter}
+          options={parceirosUnicos}
+          placeholder="Buscar parceiro..."
+          allLabel="Todos parceiros"
+          icon={<User className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
+        />
 
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[160px] h-9 text-sm" icon={<Filter className="h-3.5 w-3.5" />}>
+          <SelectTrigger className="w-[150px] h-9 text-sm" icon={<Filter className="h-3.5 w-3.5" />}>
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
@@ -270,19 +375,45 @@ export function BookmakersLivresModule({ onRegistrarPerda, onVincularProjeto, on
         </Select>
 
         <Select value={usoFilter} onValueChange={setUsoFilter}>
-          <SelectTrigger className="w-[170px] h-9 text-sm" icon={<History className="h-3.5 w-3.5" />}>
-            <SelectValue placeholder="Histórico" />
+          <SelectTrigger className="w-[155px] h-9 text-sm">
+            <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="todos">Todos</SelectItem>
-            <SelectItem value="nunca">Nunca usada</SelectItem>
-            <SelectItem value="ja_usada">Já usada</SelectItem>
+            <SelectItem value="todas">Todas contas</SelectItem>
+            <SelectItem value="virgem">Conta virgem</SelectItem>
+            <SelectItem value="utilizada">Já utilizada</SelectItem>
           </SelectContent>
         </Select>
 
-        <Badge variant="outline" className="h-9 px-3 text-sm">
+        <Badge variant="outline" className="h-9 px-3 text-sm font-mono">
           {sorted.length} / {contas?.length || 0}
         </Badge>
+      </div>
+
+      {/* Filters Row 2: Regulamentação pills */}
+      <div className="flex items-center gap-1">
+        <button
+          onClick={() => setRegulamentacaoFilter(regulamentacaoFilter === "REGULAMENTADA" ? "todas" : "REGULAMENTADA")}
+          className={cn(
+            "h-7 px-3 rounded-md text-xs font-medium tracking-wide transition-colors uppercase border",
+            regulamentacaoFilter === "REGULAMENTADA"
+              ? "bg-success/15 border-success/40 text-success"
+              : "border-border text-muted-foreground hover:text-foreground hover:bg-muted/50"
+          )}
+        >
+          Regulamentada
+        </button>
+        <button
+          onClick={() => setRegulamentacaoFilter(regulamentacaoFilter === "NAO_REGULAMENTADA" ? "todas" : "NAO_REGULAMENTADA")}
+          className={cn(
+            "h-7 px-3 rounded-md text-xs font-medium tracking-wide transition-colors uppercase border",
+            regulamentacaoFilter === "NAO_REGULAMENTADA"
+              ? "bg-warning/15 border-warning/40 text-warning"
+              : "border-border text-muted-foreground hover:text-foreground hover:bg-muted/50"
+          )}
+        >
+          Não Regulamentada
+        </button>
       </div>
 
       {/* Table */}
