@@ -191,18 +191,9 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
   }, []);
 
   useEffect(() => {
-    // Monitor abertura do dialog (logs de debug removidos)
-    const _ = {
-      open,
-      parceiro_prop_id: parceiro?.id || null,
-      estado_atual_nome: nome,
-      estado_atual_cpf: cpf,
-    });
     if (open) {
       setActiveTab(initialTab);
-      // FIX: Reset form quando abre em modo CREATE (parceiro é null)
       if (!parceiro) {
-        console.log('[ParceiroDialog] Abrindo em modo CREATE - resetando formulário');
         resetForm();
       }
     }
