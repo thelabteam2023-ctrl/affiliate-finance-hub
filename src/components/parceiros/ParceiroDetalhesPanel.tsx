@@ -89,7 +89,7 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
   const { requestDecrypt, isDecrypted, getCached } = usePasswordDecryption();
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [credentialsPopoverOpen, setCredentialsPopoverOpen] = useState<string | null>(null);
-  const [historicoDialog, setHistoricoDialog] = useState<{ open: boolean; bookmakerId: string; bookmakerNome: string; logoUrl: string | null }>({ open: false, bookmakerId: "", bookmakerNome: "", logoUrl: null });
+  const [historicoDialog, setHistoricoDialog] = useState<{ open: boolean; bookmakerId: string; bookmakerNome: string; logoUrl: string | null; status: string }>({ open: false, bookmakerId: "", bookmakerNome: "", logoUrl: null, status: "ativo" });
   const [filtroMoeda, setFiltroMoeda] = useState<string>("todas");
   const [buscaCasa, setBuscaCasa] = useState("");
   const [filtroStatus, setFiltroStatus] = useState<string | null>(null);
@@ -1131,7 +1131,8 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                                           open: true,
                                           bookmakerId: bm.bookmaker_id,
                                           bookmakerNome: bm.bookmaker_nome,
-                                          logoUrl: bm.logo_url
+                                          logoUrl: bm.logo_url,
+                                          status: bm.status,
                                         })}
                                       >
                                         <IconComponent className={cn("h-4 w-4", iconColorClass, "hover:opacity-80")} />
@@ -1417,6 +1418,7 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
         bookmakerId={historicoDialog.bookmakerId}
         bookmakerNome={historicoDialog.bookmakerNome}
         logoUrl={historicoDialog.logoUrl}
+        bookmakerStatus={historicoDialog.status}
       />
 
       {/* Dialog de Perda Rápida */}

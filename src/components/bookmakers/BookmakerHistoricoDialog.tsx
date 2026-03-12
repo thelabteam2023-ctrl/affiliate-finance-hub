@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
@@ -39,6 +40,7 @@ interface BookmakerHistoricoDialogProps {
   bookmakerId: string;
   bookmakerNome: string;
   logoUrl?: string;
+  bookmakerStatus?: string;
 }
 
 export function BookmakerHistoricoDialog({
@@ -47,6 +49,7 @@ export function BookmakerHistoricoDialog({
   bookmakerId,
   bookmakerNome,
   logoUrl,
+  bookmakerStatus = "ativo",
 }: BookmakerHistoricoDialogProps) {
   const [historico, setHistorico] = useState<HistoricoItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -166,7 +169,7 @@ export function BookmakerHistoricoDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
               {logoUrl ? (
                 <img
                   src={logoUrl}
@@ -178,9 +181,22 @@ export function BookmakerHistoricoDialog({
                   <Building2 className="h-4 w-4 text-muted-foreground" />
                 </div>
               )}
-              <span className="text-base font-semibold">{bookmakerNome}</span>
+              <span className="text-base font-semibold truncate">{bookmakerNome}</span>
+              <Badge
+                variant="outline"
+                className={cn(
+                  "text-[10px] px-1.5 py-0 h-5 shrink-0",
+                  bookmakerStatus === "ativo"
+                    ? "border-success/50 text-success"
+                    : bookmakerStatus === "limitada"
+                      ? "border-warning/50 text-warning"
+                      : "border-destructive/50 text-destructive"
+                )}
+              >
+                {bookmakerStatus === "ativo" ? "Ativo" : bookmakerStatus === "limitada" ? "Limitada" : "Encerrada"}
+              </Badge>
             </div>
-            <Badge variant="outline" className="ml-auto gap-1 text-xs">
+            <Badge variant="outline" className="ml-auto gap-1 text-xs shrink-0">
               <History className="h-3 w-3" />
               Histórico
             </Badge>
@@ -249,32 +265,17 @@ export function BookmakerHistoricoDialog({
                         }`}
                       >
                         {/* Project name and tipo */}
-                        <div className="flex items-center justify-between gap-2 mb-2">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <h4 className="font-medium text-sm truncate">
-                              {item.projeto_nome}
-                            </h4>
-                            {item.tipo_projeto && (
-                              <Badge className={`${getTipoProjetoColor(item.tipo_projeto)} text-[10px] shrink-0`}>
-                                {getTipoProjetoLabel(item.tipo_projeto)}
-                              </Badge>
-                            )}
-                          </div>
-                          {isAtivo(item) ? (
-                            <Badge className="bg-success/20 text-success border-success/30 text-[10px]">
-                              Em uso
+                        <div className="flex items-center gap-2 mb-2">
+                          <h4 className="font-medium text-sm truncate">
+                            {item.projeto_nome}
+                          </h4>
+                          {item.tipo_projeto && (
+                            <Badge className={`${getTipoProjetoColor(item.tipo_projeto)} text-[10px] shrink-0`}>
+                              {getTipoProjetoLabel(item.tipo_projeto)}
                             </Badge>
-                          ) : (
-                            <Badge
-                              variant="secondary"
-                              className={`text-[10px] ${
-                                item.status_final?.toUpperCase() === "LIMITADA"
-                                  ? "bg-warning/20 text-warning border-warning/30"
-                                  : ""
-                              }`}
-                            >
-                              {item.status_final || "Encerrada"}
-                            </Badge>
+                          )}
+                          {isAtivo(item) && (
+                            <span className="text-[10px] text-success font-medium ml-auto shrink-0">ativo</span>
                           )}
                         </div>
 
