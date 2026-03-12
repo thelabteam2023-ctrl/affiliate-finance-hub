@@ -9,12 +9,13 @@ import type {
   BonusDetalhe,
   InfraestruturaDetalhe,
   OperadorDetalhe,
+} from "@/components/financeiro/ComposicaoCustosCard";
+import type {
   BookmakerPorProjeto,
   ContaPorBanco,
   WalletPorExchange,
   CaixaDetalhe,
-} from "@/components/financeiro/ComposicaoCustosCard";
-import { MapaPatrimonioCard } from "@/components/financeiro/MapaPatrimonioCard";
+} from "@/components/financeiro/MapaPatrimonioCard";
 
 interface FinanceiroCalcParams {
   finData: FinanceiroData;
