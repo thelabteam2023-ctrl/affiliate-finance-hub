@@ -1,0 +1,190 @@
+CREATE OR REPLACE FUNCTION public.get_projeto_dashboard_data(p_projeto_id uuid)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_workspace_id uuid;
+  v_moeda text;
+  v_cotacao_trabalho numeric;
+  v_fonte_cotacao text;
+  v_bookmaker_ids uuid[];
+  result jsonb;
+BEGIN
+  -- 1) Resolve workspace + moeda consolidação
+  SELECT workspace_id, moeda_consolidacao, cotacao_trabalho, fonte_cotacao
+    INTO v_workspace_id, v_moeda, v_cotacao_trabalho, v_fonte_cotacao
+    FROM projetos
+   WHERE id = p_projeto_id;
+
+  -- 2) Bookmaker IDs do projeto
+  SELECT array_agg(id) INTO v_bookmaker_ids
+    FROM bookmakers
+   WHERE projeto_id = p_projeto_id;
+
+  IF v_bookmaker_ids IS NULL THEN
+    v_bookmaker_ids := ARRAY[]::uuid[];
+  END IF;
+
+  -- 3) Build consolidated JSONB
+  result := jsonb_build_object(
+    'moeda_consolidacao', COALESCE(v_moeda, 'BRL'),
+    'cotacao_trabalho', v_cotacao_trabalho,
+    'fonte_cotacao', v_fonte_cotacao,
+
+    -- All apostas (not cancelled) for KPIs + calendar
+    'apostas', (
+      SELECT COALESCE(jsonb_agg(row_to_json(a) ORDER BY a.data_aposta ASC), '[]'::jsonb)
+      FROM (
+        SELECT id, data_aposta, lucro_prejuizo, pl_consolidado,
+               lucro_prejuizo_brl_referencia, stake, stake_total,
+               stake_consolidado, moeda_operacao, consolidation_currency,
+               forma_registro, estrategia, resultado, bonus_id,
+               bookmaker_id, valor_brl_referencia, esporte, status
+        FROM apostas_unificada
+        WHERE projeto_id = p_projeto_id
+          AND cancelled_at IS NULL
+      ) a
+    ),
+
+    -- Giros gratis confirmados
+    'giros_gratis', (
+      SELECT COALESCE(jsonb_agg(row_to_json(g)), '[]'::jsonb)
+      FROM (
+        SELECT data_registro, valor_retorno, bookmaker_id,
+               quantidade_giros, valor_total_giros
+        FROM giros_gratis
+        WHERE projeto_id = p_projeto_id AND status = 'confirmado'
+      ) g
+    ),
+
+    -- Cashback manual
+    'cashback', (
+      SELECT COALESCE(jsonb_agg(row_to_json(c)), '[]'::jsonb)
+      FROM (
+        SELECT data_credito, valor, moeda_operacao, valor_brl_referencia
+        FROM cashback_manual
+        WHERE projeto_id = p_projeto_id
+      ) c
+    ),
+
+    -- Projeto perdas (all statuses)
+    'perdas', (
+      SELECT COALESCE(jsonb_agg(row_to_json(p)), '[]'::jsonb)
+      FROM (
+        SELECT valor, status, data_registro, bookmaker_id
+        FROM projeto_perdas
+        WHERE projeto_id = p_projeto_id
+      ) p
+    ),
+
+    -- Ocorrencias com perda registrada
+    'ocorrencias_perdas', (
+      SELECT COALESCE(jsonb_agg(row_to_json(o)), '[]'::jsonb)
+      FROM (
+        SELECT valor_perda, resultado_financeiro, status, created_at
+        FROM ocorrencias
+        WHERE projeto_id = p_projeto_id
+          AND perda_registrada_ledger = true
+      ) o
+    ),
+
+    -- Conciliacoes
+    'conciliacoes', (
+      SELECT COALESCE(jsonb_agg(row_to_json(ba)), '[]'::jsonb)
+      FROM (
+        SELECT saldo_anterior, saldo_novo, diferenca, bookmaker_id, created_at
+        FROM bookmaker_balance_audit
+        WHERE origem = 'CONCILIACAO_VINCULO'
+          AND referencia_tipo = 'projeto'
+          AND referencia_id = p_projeto_id::text
+      ) ba
+    ),
+
+    -- Bonus creditados
+    'bonus', (
+      SELECT COALESCE(jsonb_agg(row_to_json(b)), '[]'::jsonb)
+      FROM (
+        SELECT credited_at, bonus_amount, currency, tipo_bonus,
+               bookmaker_id, created_at
+        FROM project_bookmaker_link_bonuses
+        WHERE project_id = p_projeto_id
+          AND status IN ('credited', 'finalized')
+      ) b
+    ),
+
+    -- Bookmakers do projeto (moeda + saldos)
+    'bookmakers', (
+      SELECT COALESCE(jsonb_agg(row_to_json(bk)), '[]'::jsonb)
+      FROM (
+        SELECT id, nome, moeda, saldo_atual, saldo_freebet, saldo_bonus,
+               saldo_irrecuperavel, parceiro_id, bookmaker_catalogo_id
+        FROM bookmakers
+        WHERE projeto_id = p_projeto_id
+      ) bk
+    ),
+
+    -- Deposits: project-scoped + orphaned (safety net)
+    'depositos', (
+      SELECT COALESCE(jsonb_agg(row_to_json(d)), '[]'::jsonb)
+      FROM (
+        SELECT id, valor, valor_confirmado, moeda, destino_bookmaker_id, data_transacao
+        FROM cash_ledger
+        WHERE tipo_transacao IN ('DEPOSITO', 'DEPOSITO_VIRTUAL')
+          AND status = 'CONFIRMADO'
+          AND (
+            projeto_id_snapshot = p_projeto_id
+            OR (projeto_id_snapshot IS NULL AND destino_bookmaker_id = ANY(v_bookmaker_ids))
+          )
+      ) d
+    ),
+
+    -- Withdrawals
+    'saques', (
+      SELECT COALESCE(jsonb_agg(row_to_json(s)), '[]'::jsonb)
+      FROM (
+        SELECT id, valor, valor_confirmado, moeda, origem_bookmaker_id, data_transacao
+        FROM cash_ledger
+        WHERE tipo_transacao IN ('SAQUE', 'SAQUE_VIRTUAL')
+          AND status = 'CONFIRMADO'
+          AND projeto_id_snapshot = p_projeto_id
+      ) s
+    ),
+
+    -- Cash ledger extras (ajustes, FX, promotional)
+    'ledger_extras', (
+      SELECT COALESCE(jsonb_agg(row_to_json(e)), '[]'::jsonb)
+      FROM (
+        SELECT id, data_transacao, valor, moeda, tipo_transacao,
+               ajuste_direcao, ajuste_motivo, destino_bookmaker_id,
+               origem_bookmaker_id, auditoria_metadata, projeto_id_snapshot
+        FROM cash_ledger
+        WHERE status = 'CONFIRMADO'
+          AND (
+            (tipo_transacao = 'AJUSTE_SALDO' AND projeto_id_snapshot = p_projeto_id)
+            OR (tipo_transacao IN ('GANHO_CAMBIAL', 'PERDA_CAMBIAL') AND projeto_id_snapshot = p_projeto_id)
+            OR (tipo_transacao IN ('FREEBET_CONVERTIDA', 'CREDITO_PROMOCIONAL', 'GIRO_GRATIS_GANHO')
+                AND destino_bookmaker_id = ANY(v_bookmaker_ids))
+            OR (ajuste_motivo = 'BONUS_CANCELAMENTO' AND ajuste_direcao = 'SAIDA'
+                AND origem_bookmaker_id = ANY(v_bookmaker_ids))
+          )
+      ) e
+    ),
+
+    -- Financial events: ajustes pos limitacao
+    'ajustes_pos_limitacao', (
+      SELECT COALESCE(jsonb_agg(row_to_json(fe)), '[]'::jsonb)
+      FROM (
+        SELECT valor, moeda, bookmaker_id, metadata, created_at
+        FROM financial_events
+        WHERE tipo_evento = 'AJUSTE'
+          AND bookmaker_id = ANY(v_bookmaker_ids)
+          AND metadata IS NOT NULL
+      ) fe
+    )
+  );
+
+  RETURN result;
+END;
+$$;
