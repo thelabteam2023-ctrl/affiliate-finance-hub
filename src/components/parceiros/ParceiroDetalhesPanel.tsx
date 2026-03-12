@@ -801,29 +801,61 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                           className="h-6 w-[130px] rounded border border-border/50 bg-background/50 pl-6 pr-2 text-[10px] placeholder:text-muted-foreground/60 focus:outline-none focus:border-border transition-colors"
                         />
                       </div>
-                      {moedasDisponiveis.length > 1 && (
-                        <Select value={filtroMoeda} onValueChange={setFiltroMoeda}>
-                          <SelectTrigger className="h-6 w-[80px] text-[10px] px-2 py-0">
-                            <SelectValue placeholder="Moeda" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="todas" className="text-xs">Todas</SelectItem>
-                            {moedasDisponiveis.map(moeda => (
-                              <SelectItem key={moeda} value={moeda} className="text-xs">{moeda}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
-                      <Select value={filtroRegulamentacao} onValueChange={setFiltroRegulamentacao}>
-                        <SelectTrigger className="h-6 w-[80px] text-[10px] px-2 py-0">
-                          <SelectValue placeholder="Tipo" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="todas" className="text-xs">Todas</SelectItem>
-                          <SelectItem value="REGULAMENTADA" className="text-xs">Reg.</SelectItem>
-                          <SelectItem value="NAO_REGULAMENTADA" className="text-xs">Não Reg.</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <div className="flex items-center gap-1 rounded-md border border-border/50 bg-background/50 p-0.5">
+                        {/* Moeda filter pills */}
+                        <button
+                          onClick={() => setFiltroMoeda("todas")}
+                          className={cn(
+                            "h-5 px-2 rounded text-[10px] font-medium tracking-wide transition-colors",
+                            filtroMoeda === "todas" && filtroRegulamentacao === "todas"
+                              ? "bg-primary text-primary-foreground"
+                              : filtroMoeda === "todas"
+                                ? "bg-muted text-foreground"
+                                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                          )}
+                        >
+                          Todas
+                        </button>
+                        {moedasDisponiveis.map(moeda => (
+                          <button
+                            key={moeda}
+                            onClick={() => setFiltroMoeda(filtroMoeda === moeda ? "todas" : moeda)}
+                            className={cn(
+                              "h-5 px-2 rounded text-[10px] font-medium tracking-wide transition-colors",
+                              filtroMoeda === moeda
+                                ? "bg-primary text-primary-foreground"
+                                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                            )}
+                          >
+                            {moeda}
+                          </button>
+                        ))}
+                        {/* Separator */}
+                        <div className="w-px h-3.5 bg-border/60 mx-0.5" />
+                        {/* Regulation filter pills */}
+                        <button
+                          onClick={() => setFiltroRegulamentacao(filtroRegulamentacao === "REGULAMENTADA" ? "todas" : "REGULAMENTADA")}
+                          className={cn(
+                            "h-5 px-2 rounded text-[10px] font-medium tracking-wide transition-colors",
+                            filtroRegulamentacao === "REGULAMENTADA"
+                              ? "bg-success/80 text-success-foreground"
+                              : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                          )}
+                        >
+                          Regulamentada
+                        </button>
+                        <button
+                          onClick={() => setFiltroRegulamentacao(filtroRegulamentacao === "NAO_REGULAMENTADA" ? "todas" : "NAO_REGULAMENTADA")}
+                          className={cn(
+                            "h-5 px-2 rounded text-[10px] font-medium tracking-wide transition-colors",
+                            filtroRegulamentacao === "NAO_REGULAMENTADA"
+                              ? "bg-warning/80 text-warning-foreground"
+                              : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                          )}
+                        >
+                          Não Regulamentada
+                        </button>
+                      </div>
                     </div>
                   </div>
 
