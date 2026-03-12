@@ -163,7 +163,7 @@ export function BookmakersLivresModule({ onRegistrarPerda, onVincularProjeto, on
         .from("projetos")
         .select("id, nome")
         .eq("workspace_id", workspaceId!)
-        .in("status", ["ativo", "em_andamento"])
+        .in("status", ["ativo", "em_andamento", "EM_ANDAMENTO", "ATIVO"])
         .order("nome");
       if (error) throw error;
       return data || [];
