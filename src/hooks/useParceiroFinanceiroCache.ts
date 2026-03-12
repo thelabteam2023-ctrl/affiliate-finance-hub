@@ -301,7 +301,7 @@ export function useParceiroFinanceiroCache() {
         has_credentials: !!(bm.login_username && bm.login_username.trim()),
         login_username: bm.login_username || null,
         login_password_encrypted: bm.login_password_encrypted || null,
-        catalogo_status: bm.bookmaker_catalogo_id ? (typeof catalogoStatusMap !== 'undefined' ? catalogoStatusMap.get(bm.bookmaker_catalogo_id) || null : null) : null,
+        catalogo_status: bm.bookmaker_catalogo_id ? catalogoStatusMap.get(bm.bookmaker_catalogo_id) || null : null,
       };
     });
 
