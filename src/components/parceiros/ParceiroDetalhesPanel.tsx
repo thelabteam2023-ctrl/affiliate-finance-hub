@@ -235,18 +235,25 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
   const hasLucro = useMemo(() => resultadoEntries.some(e => e.value > 0), [resultadoEntries]);
   const hasPrejuizo = useMemo(() => resultadoEntries.some(e => e.value < 0), [resultadoEntries]);
   
-  // Contagem baseada no status REAL da conta (não no bloqueio por parceiro)
+  // Base filtrada por moeda (sem filtro de status) para contagem dos badges
+  const bookmakersFiltradosPorMoeda = useMemo(() => {
+    if (!data?.bookmakers) return [];
+    if (filtroMoeda === "todas") return data.bookmakers;
+    return data.bookmakers.filter(b => (b.moeda || "BRL") === filtroMoeda);
+  }, [data?.bookmakers, filtroMoeda]);
+
+  // Contagem baseada no status REAL da conta, respeitando filtro de moeda
   const bookmarkersAtivos = useMemo(() => 
-    data?.bookmakers.filter(b => b.status === "ativo").length ?? 0, 
-    [data?.bookmakers]
+    bookmakersFiltradosPorMoeda.filter(b => b.status === "ativo").length, 
+    [bookmakersFiltradosPorMoeda]
   );
   const bookmakersLimitados = useMemo(() => 
-    data?.bookmakers.filter(b => b.status === "limitada").length ?? 0, 
-    [data?.bookmakers]
+    bookmakersFiltradosPorMoeda.filter(b => b.status === "limitada").length, 
+    [bookmakersFiltradosPorMoeda]
   );
   const bookmakersEncerrados = useMemo(() => 
-    data?.bookmakers.filter(b => b.status === "encerrada").length ?? 0, 
-    [data?.bookmakers]
+    bookmakersFiltradosPorMoeda.filter(b => b.status === "encerrada").length, 
+    [bookmakersFiltradosPorMoeda]
   );
 
   // IDs dos bookmakers para buscar status de uso
