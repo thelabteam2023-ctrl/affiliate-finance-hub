@@ -336,7 +336,6 @@ export function ContasDisponiveisModule() {
     // Clamp: saldos nunca devem ser exibidos como negativos
     return Math.max(0, c.saldo_atual);
   };
-  };
 
   if (isLoading) {
     return (
