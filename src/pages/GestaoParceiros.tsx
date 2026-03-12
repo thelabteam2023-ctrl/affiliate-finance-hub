@@ -236,7 +236,7 @@ export default function GestaoParceiros() {
     setVinculoParceiroId(null);
     setVinculoBookmakerId(null);
     setEditingBookmaker(null);
-    fetchParceiros();
+    refetchParceiros();
     if (parceiroId) {
       parceiroCache.invalidateCache(parceiroId);
       // Invalidar cache de bookmakers para atualizar Casas Vinculadas/Disponíveis
