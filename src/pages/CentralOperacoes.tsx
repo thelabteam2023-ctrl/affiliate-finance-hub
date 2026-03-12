@@ -2571,6 +2571,17 @@ export default function CentralOperacoes() {
                     toast.error("Erro ao vincular projeto");
                   }
                 }}
+                onNewTransacao={(bookmakerId, bookmakerNome, moeda, _saldo, _saldoUsd, tipo) => {
+                  navigate("/caixa", {
+                    state: {
+                      openDialog: true,
+                      bookmakerId,
+                      bookmakerNome,
+                      tipo: tipo === "deposito" ? "deposito" : "retirada",
+                      moeda,
+                    },
+                  });
+                }}
               />
             </TabsContent>
           </Tabs>
