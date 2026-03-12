@@ -277,7 +277,7 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
     return Array.from(moedas).sort();
   }, [data?.bookmakers]);
 
-  // Bookmakers filtrados por moeda, status e busca
+  // Bookmakers filtrados por moeda, status, regulamentação e busca
   const bookmakersFiltradosMoeda = useMemo(() => {
     if (!data?.bookmakers) return [];
     let filtered = data.bookmakers;
@@ -287,8 +287,11 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
     if (filtroStatus) {
       filtered = filtered.filter(b => b.status === filtroStatus);
     }
+    if (filtroRegulamentacao !== "todas") {
+      filtered = filtered.filter(b => (b.catalogo_status || "REGULAMENTADA") === filtroRegulamentacao);
+    }
     return filtered;
-  }, [data?.bookmakers, filtroMoeda, filtroStatus]);
+  }, [data?.bookmakers, filtroMoeda, filtroStatus, filtroRegulamentacao]);
 
   const bookmakersFiltrados = useMemo(() => {
     if (!buscaCasa.trim()) return bookmakersFiltradosMoeda;
