@@ -103,17 +103,26 @@ import { ParceriaDialog, type RenewalSuccessData } from "@/components/parcerias/
 import { ContasDisponiveisModule } from "@/components/central-operacoes/ContasDisponiveisModule";
 import { BookmakersLivresModule } from "@/components/central-operacoes/BookmakersLivresModule";
 
-// Classificação de domínio dos eventos
-type EventDomain = 'project_event' | 'financial_event' | 'partner_event' | 'admin_event';
-
-// Mapa de visibilidade por role
-const ROLE_VISIBILITY: Record<string, EventDomain[]> = {
-  owner: ['project_event', 'financial_event', 'partner_event', 'admin_event'],
-  admin: ['project_event', 'financial_event', 'partner_event', 'admin_event'],
-  finance: ['project_event', 'financial_event', 'partner_event'],
-  operator: ['project_event'], // Operadores veem apenas eventos de projeto
-  viewer: [], // Viewer não vê ações pendentes
-};
+// Types imported from hook
+import {
+  useCentralOperacoesData,
+  ROLE_VISIBILITY,
+  type EventDomain,
+  type CasaPendenteConciliacao,
+  type Alerta,
+  type EntregaPendente,
+  type PagamentoParceiroPendente,
+  type PagamentoFornecedorPendente,
+  type BonusPendente,
+  type ComissaoPendente,
+  type PagamentoOperadorPendente,
+  type ParceriaAlertaEncerramento,
+  type ParceiroSemParceria,
+  type SaquePendenteConfirmacao,
+  type AlertaLucroParceiro,
+  type ParticipacaoPendente,
+  type BookmakerDesvinculado,
+} from "@/hooks/useCentralOperacoesData";
 
 // Mapeamento de cards para domínios
 const CARD_DOMAIN_MAP: Record<string, EventDomain> = {
@@ -136,209 +145,6 @@ const CARD_DOMAIN_MAP: Record<string, EventDomain> = {
   'comissoes-pendentes': 'partner_event',
   'parcerias-encerrando': 'partner_event',
 };
-
-interface CasaPendenteConciliacao {
-  bookmaker_id: string;
-  bookmaker_nome: string;
-  bookmaker_logo_url: string | null;
-  moeda: string;
-  saldo_atual: number;
-  projeto_id: string | null;
-  projeto_nome: string | null;
-  parceiro_nome: string | null;
-  qtd_transacoes_pendentes: number;
-  valor_total_pendente: number;
-}
-
-interface Alerta {
-  tipo_alerta: string;
-  entidade_tipo: string;
-  entidade_id: string;
-  user_id: string;
-  titulo: string;
-  descricao: string;
-  valor: number | null;
-  moeda: string;
-  nivel_urgencia: string;
-  ordem_urgencia: number;
-  data_limite: string | null;
-  created_at: string;
-  parceiro_id: string | null;
-  parceiro_nome: string | null;
-  projeto_id: string | null;
-  projeto_nome: string | null;
-  status_anterior: string | null;
-}
-
-interface EntregaPendente {
-  id: string;
-  numero_entrega: number;
-  resultado_nominal: number;
-  saldo_inicial: number;
-  meta_valor: number | null;
-  meta_percentual: number | null;
-  tipo_gatilho: string;
-  data_inicio: string;
-  data_fim_prevista: string | null;
-  status_conciliacao: string;
-  nivel_urgencia: string;
-  operador_nome: string;
-  projeto_nome: string;
-  modelo_pagamento: string;
-  valor_fixo: number | null;
-  percentual: number | null;
-  operador_projeto_id: string;
-  operador_id: string;
-  projeto_id: string;
-}
-
-interface PagamentoParceiroPendente {
-  parceriaId: string;
-  parceiroNome: string;
-  valorParceiro: number;
-  origemTipo: string;
-  diasRestantes: number;
-  parceiroId: string;
-  workspaceId: string;
-}
-
-interface PagamentoFornecedorPendente {
-  parceriaId: string;
-  parceiroNome: string;
-  fornecedorNome: string;
-  fornecedorId: string;
-  valorFornecedor: number;
-  valorPago: number;
-  valorRestante: number;
-  diasRestantes: number;
-  workspaceId: string;
-}
-
-interface BonusPendente {
-  indicadorId: string;
-  indicadorNome: string;
-  valorBonus: number;
-  qtdParceiros: number;
-  meta: number;
-  ciclosPendentes: number;
-  totalBonusPendente: number;
-}
-
-interface ComissaoPendente {
-  parceriaId: string;
-  parceiroNome: string;
-  indicadorId: string;
-  indicadorNome: string;
-  valorComissao: number;
-}
-
-interface PagamentoOperadorPendente {
-  id: string;
-  operador_id: string;
-  operador_nome: string;
-  tipo_pagamento: string;
-  valor: number;
-  data_pagamento: string;
-  projeto_id?: string | null;
-  projeto_nome?: string | null;
-}
-
-interface ParceriaAlertaEncerramento {
-  id: string;
-  parceiro_id: string;
-  parceiroNome: string;
-  diasRestantes: number;
-  dataFim: string;
-  dataInicio: string;
-  duracaoDias: number;
-  valor_parceiro: number;
-  valor_indicador: number;
-  valor_fornecedor: number;
-  origem_tipo: string;
-  fornecedor_id: string | null;
-  indicacao_id: string | null;
-  elegivel_renovacao: boolean;
-  observacoes: string | null;
-  status: string;
-}
-
-interface ParceiroSemParceria {
-  id: string;
-  nome: string;
-  cpf: string;
-  createdAt: string;
-}
-
-interface SaquePendenteConfirmacao {
-  id: string;
-  valor: number;
-  moeda: string;
-  data_transacao: string;
-  descricao: string | null;
-  origem_bookmaker_id: string | null;
-  destino_parceiro_id: string | null;
-  destino_conta_bancaria_id: string | null;
-  destino_wallet_id: string | null;
-  bookmaker_nome?: string;
-  parceiro_nome?: string;
-  banco_nome?: string;
-  wallet_nome?: string;
-  projeto_nome?: string;
-  // Campos cripto para liquidação real
-  coin?: string;
-  qtd_coin?: number;
-  cotacao_original?: number;
-  moeda_origem?: string;
-  moeda_destino?: string;
-  valor_origem?: number; // Valor na moeda da casa
-  valor_destino?: number; // Valor esperado na moeda de destino (estimativa)
-  cotacao?: number; // Cotação Casa→Destino usada na estimativa (ex: EUR/BRL = 6.21)
-  // Dados da wallet de destino
-  wallet_network?: string;
-  wallet_exchange?: string;
-  wallet_moedas?: string[];
-  // Snapshot do projeto para rastreabilidade FX
-  projeto_id_snapshot?: string | null;
-}
-
-interface AlertaLucroParceiro {
-  id: string;
-  parceiro_id: string;
-  parceiro_nome: string;
-  marco_valor: number;
-  lucro_atual: number;
-  data_atingido: string;
-}
-
-interface ParticipacaoPendente {
-  id: string;
-  projeto_id: string;
-  ciclo_id: string;
-  investidor_id: string;
-  percentual_aplicado: number;
-  base_calculo: string;
-  lucro_base: number;
-  valor_participacao: number;
-  data_apuracao: string;
-  investidor_nome?: string;
-  projeto_nome?: string;
-  ciclo_numero?: number;
-}
-
-interface BookmakerDesvinculado {
-  id: string;
-  nome: string;
-  status: string;
-  saldo_atual: number;
-  saldo_usd: number;
-  saldo_freebet: number;
-  moeda: string;
-  workspace_id: string;
-  parceiro_id: string | null;
-  parceiro_nome: string | null;
-  saldo_efetivo: number;
-  saldo_total: number;
-}
 
 // Enum for card priority
 const PRIORITY = {
