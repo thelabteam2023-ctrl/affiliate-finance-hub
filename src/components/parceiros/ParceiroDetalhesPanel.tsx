@@ -302,11 +302,14 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
     );
   }, [bookmakersFiltradosMoeda, buscaCasa]);
 
-  // KPIs filtrados por moeda - recalcula com base nos bookmakers filtrados
-  // Quando "todas", consolida em BRL e mantém breakdown por moeda original
+  // Determina se há algum filtro dimensional ativo (status ou regulamentação)
+  const hasActiveFilter = !!filtroStatus || filtroRegulamentacao !== "todas";
+  
+  // KPIs filtrados - recalcula com base nos bookmakers filtrados
+  // Quando há filtro dimensional ativo, SEMPRE agrega dos bookmakers filtrados
   const kpisFiltrados = useMemo(() => {
-    if (filtroMoeda === "todas") {
-      // Calcular totais consolidados em BRL
+    if (filtroMoeda === "todas" && !hasActiveFilter) {
+      // Sem filtro algum: usar dados consolidados originais
       const consolidarEmBRL = (entries: { currency: string; value: number }[]): number => {
         return entries.reduce((total, e) => {
           return total + convertToBRL(e.value, e.currency);
@@ -327,34 +330,77 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
       };
     }
     
-    // Agregar valores apenas dos bookmakers da moeda selecionada
+    // Há algum filtro ativo: agregar dos bookmakers filtrados
+    const consolidarEmBRL = (entries: { currency: string; value: number }[]): number => {
+      return entries.reduce((total, e) => {
+        return total + convertToBRL(e.value, e.currency);
+      }, 0);
+    };
+
     let depositadoTotal = 0;
     let sacadoTotal = 0;
     let saldoTotal = 0;
     let resultadoTotal = 0;
     let apostasTotal = 0;
     
+    // Agregar por moeda para breakdown
+    const depPorMoeda: Record<string, number> = {};
+    const saqPorMoeda: Record<string, number> = {};
+    const salPorMoeda: Record<string, number> = {};
+    const resPorMoeda: Record<string, number> = {};
+    
     bookmakersFiltradosMoeda.forEach(bm => {
+      const moeda = bm.moeda || "BRL";
       depositadoTotal += bm.total_depositado ?? 0;
       sacadoTotal += bm.total_sacado ?? 0;
       saldoTotal += bm.saldo_atual ?? 0;
       resultadoTotal += bm.lucro_prejuizo ?? 0;
       apostasTotal += bm.qtd_apostas ?? 0;
+      
+      depPorMoeda[moeda] = (depPorMoeda[moeda] || 0) + (bm.total_depositado ?? 0);
+      saqPorMoeda[moeda] = (saqPorMoeda[moeda] || 0) + (bm.total_sacado ?? 0);
+      salPorMoeda[moeda] = (salPorMoeda[moeda] || 0) + (bm.saldo_atual ?? 0);
+      resPorMoeda[moeda] = (resPorMoeda[moeda] || 0) + (bm.lucro_prejuizo ?? 0);
     });
     
+    const toEntries = (map: Record<string, number>) => 
+      Object.entries(map).filter(([, v]) => v !== 0).map(([currency, value]) => ({ currency, value }));
+    
+    if (filtroMoeda !== "todas") {
+      // Moeda específica selecionada
+      return {
+        depositado: [{ currency: filtroMoeda, value: depositadoTotal }],
+        depositadoBRL: undefined,
+        sacado: [{ currency: filtroMoeda, value: sacadoTotal }],
+        sacadoBRL: undefined,
+        saldo: [{ currency: filtroMoeda, value: saldoTotal }],
+        saldoBRL: undefined,
+        resultado: [{ currency: filtroMoeda, value: resultadoTotal }],
+        resultadoBRL: undefined,
+        apostas: apostasTotal,
+        isConsolidado: false,
+      };
+    }
+    
+    // Moeda "todas" mas com filtro dimensional: consolidar em BRL com breakdown
+    const depEntries = toEntries(depPorMoeda);
+    const saqEntries = toEntries(saqPorMoeda);
+    const salEntries = toEntries(salPorMoeda);
+    const resEntries = toEntries(resPorMoeda);
+    
     return {
-      depositado: [{ currency: filtroMoeda, value: depositadoTotal }],
-      depositadoBRL: undefined,
-      sacado: [{ currency: filtroMoeda, value: sacadoTotal }],
-      sacadoBRL: undefined,
-      saldo: [{ currency: filtroMoeda, value: saldoTotal }],
-      saldoBRL: undefined,
-      resultado: [{ currency: filtroMoeda, value: resultadoTotal }],
-      resultadoBRL: undefined,
+      depositado: depEntries,
+      depositadoBRL: consolidarEmBRL(depEntries),
+      sacado: saqEntries,
+      sacadoBRL: consolidarEmBRL(saqEntries),
+      saldo: salEntries,
+      saldoBRL: consolidarEmBRL(salEntries),
+      resultado: resEntries,
+      resultadoBRL: consolidarEmBRL(resEntries),
       apostas: apostasTotal,
-      isConsolidado: false,
+      isConsolidado: true,
     };
-  }, [filtroMoeda, bookmakersFiltradosMoeda, depositadoEntries, sacadoEntries, saldoEntries, resultadoEntries, data?.qtd_apostas_total, convertToBRL]);
+  }, [filtroMoeda, hasActiveFilter, bookmakersFiltradosMoeda, depositadoEntries, sacadoEntries, saldoEntries, resultadoEntries, data?.qtd_apostas_total, convertToBRL]);
 
   // Determinar lucro/prejuízo baseado nos KPIs filtrados
   const hasLucroFiltrado = useMemo(() => kpisFiltrados.resultado.some(e => e.value > 0), [kpisFiltrados.resultado]);
