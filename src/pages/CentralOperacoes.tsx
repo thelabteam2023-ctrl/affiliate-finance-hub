@@ -2461,7 +2461,7 @@ export default function CentralOperacoes() {
             )}
           </TabsTrigger>
           <TabsTrigger value="contas" className="relative">
-            Contas Disponíveis
+            Bookmakers Disponíveis
             {(contasDisponiveisCount ?? 0) > 0 && (
               <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-amber-500 text-white text-[10px] font-bold leading-none animate-pulse">
                 !
@@ -2521,7 +2521,7 @@ export default function CentralOperacoes() {
         <TabsContent value="contas" className="mt-4">
           <Tabs defaultValue="contas-saldo" className="w-full">
             <TabsList className="mb-4">
-              <TabsTrigger value="contas-saldo">Contas Disponíveis</TabsTrigger>
+              <TabsTrigger value="contas-saldo">Bookmakers Disponíveis</TabsTrigger>
               <TabsTrigger value="bookmakers-livres">Bookmakers Livres</TabsTrigger>
             </TabsList>
             <TabsContent value="contas-saldo">
