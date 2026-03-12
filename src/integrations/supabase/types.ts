@@ -12863,6 +12863,10 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_projeto_dashboard_data: {
+        Args: { p_projeto_id: string }
+        Returns: Json
+      }
       get_public_plans: { Args: never; Returns: Json }
       get_remaining_days: { Args: { p_expires_at: string }; Returns: number }
       get_saldo_disponivel_com_reservas: {
