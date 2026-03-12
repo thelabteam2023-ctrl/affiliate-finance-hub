@@ -63,6 +63,8 @@ interface ParceiroDetalhesPanelProps {
   bookmakerRefreshKey?: number;
 }
 
+const clampSaldoVisual = (value: number | null | undefined) => Math.max(0, Number(value ?? 0));
+
 // Memoizado para evitar re-renders desnecessários quando o parent re-renderiza
 // (ex: abertura/fechamento de modais)
 export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({ 
@@ -219,6 +221,7 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
     USDC: rates.USDBRL,
   };
 
+
   // Mover hooks useMemo ANTES de qualquer early return
   const depositadoEntries = useMemo(() => 
     data ? saldosToEntries(data.depositado_por_moeda) : [], 
@@ -228,10 +231,19 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
     data ? saldosToEntries(data.sacado_por_moeda) : [], 
     [data?.sacado_por_moeda]
   );
-  const saldoEntries = useMemo(() => 
-    data ? saldosToEntries(data.saldo_por_moeda) : [], 
-    [data?.saldo_por_moeda]
-  );
+  const saldoEntriesVisual = useMemo(() => {
+    if (!data?.bookmakers) return [];
+
+    const saldosPorMoeda: Record<string, number> = {};
+    data.bookmakers.forEach((bm) => {
+      const moeda = bm.moeda || "BRL";
+      saldosPorMoeda[moeda] = (saldosPorMoeda[moeda] || 0) + clampSaldoVisual(bm.saldo_atual);
+    });
+
+    return Object.entries(saldosPorMoeda)
+      .filter(([, value]) => value !== 0)
+      .map(([currency, value]) => ({ currency, value }));
+  }, [data?.bookmakers]);
   const resultadoEntries = useMemo(() => 
     data ? saldosToEntries(data.resultado_por_moeda) : [], 
     [data?.resultado_por_moeda]
@@ -322,8 +334,8 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
     const keyMap = { dep: "total_depositado", saq: "total_sacado", saldo: "saldo_atual", resultado: "lucro_prejuizo", apostas: "qtd_apostas" } as const;
     const key = keyMap[sortColumn];
     return [...bookmakersFiltrados].sort((a, b) => {
-      const va = (a as any)[key] ?? 0;
-      const vb = (b as any)[key] ?? 0;
+      const va = sortColumn === "saldo" ? clampSaldoVisual((a as any)[key]) : ((a as any)[key] ?? 0);
+      const vb = sortColumn === "saldo" ? clampSaldoVisual((b as any)[key]) : ((b as any)[key] ?? 0);
       return sortDirection === "desc" ? vb - va : va - vb;
     });
   }, [bookmakersFiltrados, sortColumn, sortDirection]);
@@ -347,8 +359,8 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
         depositadoBRL: consolidarEmBRL(depositadoEntries),
         sacado: sacadoEntries,
         sacadoBRL: consolidarEmBRL(sacadoEntries),
-        saldo: saldoEntries,
-        saldoBRL: consolidarEmBRL(saldoEntries),
+        saldo: saldoEntriesVisual,
+        saldoBRL: consolidarEmBRL(saldoEntriesVisual),
         resultado: resultadoEntries,
         resultadoBRL: consolidarEmBRL(resultadoEntries),
         apostas: data?.qtd_apostas_total ?? 0,
@@ -379,13 +391,13 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
       const moeda = bm.moeda || "BRL";
       depositadoTotal += bm.total_depositado ?? 0;
       sacadoTotal += bm.total_sacado ?? 0;
-      saldoTotal += bm.saldo_atual ?? 0;
+      saldoTotal += clampSaldoVisual(bm.saldo_atual);
       resultadoTotal += bm.lucro_prejuizo ?? 0;
       apostasTotal += bm.qtd_apostas ?? 0;
       
       depPorMoeda[moeda] = (depPorMoeda[moeda] || 0) + (bm.total_depositado ?? 0);
       saqPorMoeda[moeda] = (saqPorMoeda[moeda] || 0) + (bm.total_sacado ?? 0);
-      salPorMoeda[moeda] = (salPorMoeda[moeda] || 0) + (bm.saldo_atual ?? 0);
+      salPorMoeda[moeda] = (salPorMoeda[moeda] || 0) + clampSaldoVisual(bm.saldo_atual);
       resPorMoeda[moeda] = (resPorMoeda[moeda] || 0) + (bm.lucro_prejuizo ?? 0);
     });
     
@@ -426,7 +438,7 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
       apostas: apostasTotal,
       isConsolidado: true,
     };
-  }, [filtroMoeda, hasActiveFilter, bookmakersFiltradosMoeda, depositadoEntries, sacadoEntries, saldoEntries, resultadoEntries, data?.qtd_apostas_total, convertToBRL]);
+  }, [filtroMoeda, hasActiveFilter, bookmakersFiltradosMoeda, depositadoEntries, sacadoEntries, saldoEntriesVisual, resultadoEntries, data?.qtd_apostas_total, convertToBRL]);
 
   // Determinar lucro/prejuízo baseado nos KPIs filtrados
   const hasLucroFiltrado = useMemo(() => kpisFiltrados.resultado.some(e => e.value > 0), [kpisFiltrados.resultado]);
@@ -1188,12 +1200,12 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                                 </TooltipContent>
                               )}
                             </Tooltip>
-                            {/* Saldo Atual - moeda nativa */}
+                            {/* Saldo Atual - moeda nativa (clamp visual para não negativo) */}
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <div className="text-right">
                                   <MoneyDisplay
-                                    value={bm.saldo_atual}
+                                    value={clampSaldoVisual(bm.saldo_atual)}
                                     currency={bm.moeda || "BRL"}
                                     size="sm"
                                     masked={!showSensitiveData}
@@ -1203,8 +1215,8 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                               {showSensitiveData && (
                                 <TooltipContent side="top" className="text-xs space-y-1">
                                   <p className="font-medium">Saldo atual na casa</p>
-                                  <p>{formatMoneyValue(bm.saldo_atual, bm.moeda || "BRL")}</p>
-                                  {bm.saldo_atual === 0 && (
+                                  <p>{formatMoneyValue(clampSaldoVisual(bm.saldo_atual), bm.moeda || "BRL")}</p>
+                                  {clampSaldoVisual(bm.saldo_atual) === 0 && (
                                     <p className="text-muted-foreground italic">Sem saldo remanescente</p>
                                   )}
                                 </TooltipContent>
@@ -1236,7 +1248,7 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                                     <div className="flex justify-between gap-4">
                                       <span className="text-muted-foreground">+ Saldo Atual</span>
                                       <span>
-                                        {formatMoneyValue(bm.saldo_atual, bm.moeda || "BRL")}
+                                        {formatMoneyValue(clampSaldoVisual(bm.saldo_atual), bm.moeda || "BRL")}
                                       </span>
                                     </div>
                                     <div className="flex justify-between gap-4">

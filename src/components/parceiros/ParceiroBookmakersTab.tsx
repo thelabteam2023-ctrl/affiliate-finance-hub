@@ -239,8 +239,9 @@ export const ParceiroBookmakersTab = memo(function ParceiroBookmakersTab({
 
   const handleCreateVinculo = (bookmakerId: string) => { onCreateVinculo?.(parceiroId, bookmakerId); };
 
-  // Usar saldo_atual para todas as moedas (normalizado no banco)
+  // Usar saldo_atual para operações e versão visual clampada para exibição
   const getSaldoCorreto = (bm: BookmakerVinculado) => bm.saldo_atual || 0;
+  const getSaldoVisual = (bm: BookmakerVinculado) => Math.max(0, getSaldoCorreto(bm));
 
   const formatCurrencyLocal = (value: number, moeda: string = "BRL") => {
     const symbol = getCurrencySymbol(moeda);
@@ -286,7 +287,7 @@ export const ParceiroBookmakersTab = memo(function ParceiroBookmakersTab({
 
   const bookmakersVinculados = data?.vinculados || [];
   const bookmakersDisponiveis = data?.disponiveis || [];
-  const filteredVinculados = bookmakersVinculados.filter((b) => b.nome.toLowerCase().includes(searchVinculados.toLowerCase())).sort((a, b) => getSaldoCorreto(b) - getSaldoCorreto(a));
+  const filteredVinculados = bookmakersVinculados.filter((b) => b.nome.toLowerCase().includes(searchVinculados.toLowerCase())).sort((a, b) => getSaldoVisual(b) - getSaldoVisual(a));
   const displayedVinculados = showAllVinculados ? filteredVinculados : filteredVinculados.slice(0, 6);
   const hasMoreVinculados = filteredVinculados.length > 6;
   const filteredDisponiveis = bookmakersDisponiveis.filter((b) => b.nome.toLowerCase().includes(searchDisponiveis.toLowerCase()));
@@ -343,7 +344,7 @@ export const ParceiroBookmakersTab = memo(function ParceiroBookmakersTab({
                         </div>
                         <div className="flex items-center gap-1.5">
                           <Badge variant="outline" className={`text-[8px] px-1 py-0 h-3.5 ${bm.moeda === "BRL" ? "border-emerald-500/50 text-emerald-500" : "border-amber-500/50 text-amber-500"}`}>{bm.moeda || "BRL"}</Badge>
-                          <span className="text-[10px] font-medium">{maskCurrency(getSaldoCorreto(bm), bm.moeda)}</span>
+                          <span className="text-[10px] font-medium">{maskCurrency(getSaldoVisual(bm), bm.moeda)}</span>
                         </div>
                       </div>
                       {/* Botão Histórico */}
