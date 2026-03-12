@@ -266,13 +266,14 @@ const ParceiroSelect = forwardRef<ParceiroSelectRef, ParceiroSelectProps>(({
         </div>
       </SelectTrigger>
       <SelectContent>
-        <div className="p-2 border-b">
+        <div className="p-2 border-b" onKeyDown={(e) => e.stopPropagation()}>
           <div className="relative">
             <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Buscar parceiro..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyDown={(e) => e.stopPropagation()}
               className="pl-8"
             />
           </div>
@@ -284,7 +285,7 @@ const ParceiroSelect = forwardRef<ParceiroSelectRef, ParceiroSelectProps>(({
             </div>
           ) : (
             filteredParceiros.map((parceiro) => (
-              <SelectItem key={parceiro.id} value={parceiro.id}>
+              <SelectItem key={parceiro.id} value={parceiro.id} className="text-left justify-start">
                 <div className="flex flex-col w-full py-0.5">
                   <div className="flex items-center gap-2">
                     <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
