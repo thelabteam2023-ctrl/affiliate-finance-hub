@@ -802,11 +802,11 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                         />
                       </div>
                       <div className="flex items-center gap-1 rounded-md border border-border/50 bg-background/50 p-0.5">
-                        {/* Moeda filter pills */}
+                        {/* Moeda filter pills - max 4 visible + overflow */}
                         <button
                           onClick={() => setFiltroMoeda("todas")}
                           className={cn(
-                            "h-5 px-2 rounded text-[10px] font-medium tracking-wide transition-colors",
+                            "h-5 px-2 rounded text-[10px] font-medium tracking-wide transition-colors uppercase",
                             filtroMoeda === "todas" && filtroRegulamentacao === "todas"
                               ? "bg-primary text-primary-foreground"
                               : filtroMoeda === "todas"
@@ -816,7 +816,7 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                         >
                           Todas
                         </button>
-                        {moedasDisponiveis.map(moeda => (
+                        {moedasDisponiveis.slice(0, 4).map(moeda => (
                           <button
                             key={moeda}
                             onClick={() => setFiltroMoeda(filtroMoeda === moeda ? "todas" : moeda)}
@@ -830,13 +830,45 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                             {moeda}
                           </button>
                         ))}
+                        {moedasDisponiveis.length > 4 && (
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <button
+                                className={cn(
+                                  "h-5 px-2 rounded text-[10px] font-medium tracking-wide transition-colors",
+                                  moedasDisponiveis.slice(4).includes(filtroMoeda)
+                                    ? "bg-primary text-primary-foreground"
+                                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                                )}
+                              >
+                                +{moedasDisponiveis.length - 4}
+                              </button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-1.5 flex flex-col gap-0.5" align="end">
+                              {moedasDisponiveis.slice(4).map(moeda => (
+                                <button
+                                  key={moeda}
+                                  onClick={() => setFiltroMoeda(filtroMoeda === moeda ? "todas" : moeda)}
+                                  className={cn(
+                                    "h-6 px-3 rounded text-[11px] font-medium tracking-wide transition-colors text-left",
+                                    filtroMoeda === moeda
+                                      ? "bg-primary text-primary-foreground"
+                                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                                  )}
+                                >
+                                  {moeda}
+                                </button>
+                              ))}
+                            </PopoverContent>
+                          </Popover>
+                        )}
                         {/* Separator */}
                         <div className="w-px h-3.5 bg-border/60 mx-0.5" />
                         {/* Regulation filter pills */}
                         <button
                           onClick={() => setFiltroRegulamentacao(filtroRegulamentacao === "REGULAMENTADA" ? "todas" : "REGULAMENTADA")}
                           className={cn(
-                            "h-5 px-2 rounded text-[10px] font-medium tracking-wide transition-colors",
+                            "h-5 px-2 rounded text-[10px] font-medium tracking-wide transition-colors uppercase",
                             filtroRegulamentacao === "REGULAMENTADA"
                               ? "bg-success/80 text-success-foreground"
                               : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
@@ -847,7 +879,7 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                         <button
                           onClick={() => setFiltroRegulamentacao(filtroRegulamentacao === "NAO_REGULAMENTADA" ? "todas" : "NAO_REGULAMENTADA")}
                           className={cn(
-                            "h-5 px-2 rounded text-[10px] font-medium tracking-wide transition-colors",
+                            "h-5 px-2 rounded text-[10px] font-medium tracking-wide transition-colors uppercase",
                             filtroRegulamentacao === "NAO_REGULAMENTADA"
                               ? "bg-warning/80 text-warning-foreground"
                               : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
