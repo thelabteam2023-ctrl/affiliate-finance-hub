@@ -199,16 +199,8 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
     }
   }, [open, initialTab, parceiro]);
 
-  // 🔍 DEBUG: useEffect que controla reset do formulário
   useEffect(() => {
-    console.log('[ParceiroDialog] useEffect[parceiro] triggered', {
-      parceiro_id: parceiro?.id || null,
-      parceiro_nome: parceiro?.nome || null,
-      vai_fazer_reset: !parceiro,
-    });
-    
     if (parceiro) {
-      console.log('[ParceiroDialog] Carregando dados do parceiro existente');
       setNome(parceiro.nome || "");
       setCpf(formatCPF(parceiro.cpf || "")); // Apply mask when loading
       setEmail(parceiro.email || "");
