@@ -386,7 +386,7 @@ export function BookmakersLivresModule({ onRegistrarPerda, onVincularProjeto, on
         <div className="flex flex-col gap-1">
           <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Histórico</span>
           <Select value={usoFilter} onValueChange={setUsoFilter}>
-            <SelectTrigger className="w-[150px] h-9 text-sm">
+            <SelectTrigger className="w-auto min-w-[150px] h-9 text-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
