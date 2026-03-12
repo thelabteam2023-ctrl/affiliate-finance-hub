@@ -74,7 +74,7 @@ export function FornecedoresTab() {
         .select("id, fornecedor_id, valor_fornecedor, parceiro:parceiros!parcerias_parceiro_id_fkey(nome)")
         .eq("origem_tipo", "FORNECEDOR");
 
-      // Fetch real payments from movimentacoes_indicacao
+      // Fetch real payments from movimentacoes_indicacao (com workspace_id)
       const { data: pagamentosData } = await supabase
         .from("movimentacoes_indicacao")
         .select("parceria_id, valor, tipo, status")

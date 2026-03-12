@@ -305,7 +305,7 @@ async function fetchCentralData(params: {
     canSeeFinancialData ? supabase.from("v_painel_operacional").select("*") : Promise.resolve({ data: [], error: null }),
     supabase.from("v_entregas_pendentes").select("*").in("status_conciliacao", ["PRONTA"]),
     canSeePartnerData ? supabase.from("parcerias").select("id, parceiro_id, valor_parceiro, origem_tipo, data_fim_prevista, custo_aquisicao_isento, workspace_id, parceiro:parceiros(nome)").in("status", ["ATIVA", "EM_ENCERRAMENTO"]).or("custo_aquisicao_isento.is.null,custo_aquisicao_isento.eq.false").gt("valor_parceiro", 0).eq("pagamento_dispensado", false) : Promise.resolve({ data: [], error: null }),
-    canSeePartnerData ? supabase.from("movimentacoes_indicacao").select("parceria_id, tipo, status, indicador_id, valor") : Promise.resolve({ data: [], error: null }),
+    canSeePartnerData ? supabase.from("movimentacoes_indicacao").select("parceria_id, tipo, status, indicador_id, valor").eq("workspace_id", workspaceId) : Promise.resolve({ data: [], error: null }),
     canSeePartnerData ? supabase.from("parcerias").select("id, parceiro_id, data_inicio, data_fim_prevista, duracao_dias, valor_parceiro, valor_indicador, valor_fornecedor, origem_tipo, fornecedor_id, indicacao_id, elegivel_renovacao, observacoes, status, parceiro:parceiros(nome)").in("status", ["ATIVA", "EM_ENCERRAMENTO"]).not("data_fim_prevista", "is", null) : Promise.resolve({ data: [], error: null }),
     canSeePartnerData ? supabase.from("parceiros").select("id, nome, cpf, created_at").eq("status", "ativo") : Promise.resolve({ data: [], error: null }),
     canSeePartnerData ? supabase.from("parcerias").select("parceiro_id").in("status", ["ATIVA", "EM_ENCERRAMENTO"]) : Promise.resolve({ data: [], error: null }),

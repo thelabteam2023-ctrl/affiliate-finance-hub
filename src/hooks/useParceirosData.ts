@@ -65,7 +65,7 @@ interface ParceirosQueryData {
   parceriasData: Map<string, ParceriaStatus>;
 }
 
-async function fetchParceirosData(): Promise<ParceirosQueryData> {
+async function fetchParceirosData(workspaceId: string): Promise<ParceirosQueryData> {
   // Fetch parceiros + ROI data + saldos + parcerias in parallel
   const [parceirosResult, bookmakersResult, resultadosResult, saldosFiatResult, saldosCryptoResult, parceriasResult, pagamentosResult] = await Promise.all([
     supabase.from("parceiros").select("*, contas_bancarias(*), wallets_crypto(*)").order("created_at", { ascending: false }),
@@ -74,7 +74,7 @@ async function fetchParceirosData(): Promise<ParceirosQueryData> {
     supabase.from("v_saldo_parceiro_contas").select("*"),
     supabase.from("v_saldo_parceiro_wallets").select("*"),
     supabase.from("parcerias").select("id, parceiro_id, data_fim_prevista, custo_aquisicao_isento, valor_parceiro").in("status", ["ATIVA", "EM_ENCERRAMENTO"]),
-    supabase.from("movimentacoes_indicacao").select("parceria_id").eq("tipo", "PAGTO_PARCEIRO").eq("status", "CONFIRMADO"),
+    supabase.from("movimentacoes_indicacao").select("parceria_id").eq("workspace_id", workspaceId).eq("tipo", "PAGTO_PARCEIRO").eq("status", "CONFIRMADO"),
   ]);
 
   if (parceirosResult.error) throw parceirosResult.error;
@@ -173,7 +173,7 @@ export function useParceirosData() {
 
   const query = useQuery({
     queryKey: ["parceiros-data", workspaceId],
-    queryFn: fetchParceirosData,
+    queryFn: () => fetchParceirosData(workspaceId!),
     enabled: !!workspaceId,
     staleTime: PERIOD_STALE_TIME,
     gcTime: PERIOD_GC_TIME,
