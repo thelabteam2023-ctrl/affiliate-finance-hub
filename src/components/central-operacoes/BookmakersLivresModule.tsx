@@ -181,7 +181,7 @@ export function BookmakersLivresModule({ onRegistrarPerda, onVincularProjeto, on
       const { data: bookmakers, error } = await supabase
         .from("bookmakers")
         .select(`
-          id, nome, status, saldo_atual, moeda,
+          id, nome, status, estado_conta, saldo_atual, moeda,
           parceiro_id,
           parceiro:parceiros!bookmakers_parceiro_id_fkey (nome),
           catalogo:bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url, status)
