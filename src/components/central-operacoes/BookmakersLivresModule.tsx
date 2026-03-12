@@ -493,17 +493,21 @@ export function BookmakersLivresModule({ onRegistrarPerda, onVincularProjeto, on
                           <td className="p-3 text-center">
                             <Badge
                               variant="outline"
-                              className={
-                                isAtivo
-                                  ? "border-emerald-500/30 text-emerald-400 text-xs"
-                                  : "border-red-500/30 text-red-400 text-xs"
-                              }
+                              className={cn("text-xs",
+                                isNormal && "border-emerald-500/30 text-emerald-400",
+                                isLimitada && "border-amber-500/30 text-amber-400",
+                                isEncerrada && "border-red-500/30 text-red-400",
+                              )}
                             >
                               <span className="flex items-center gap-1">
-                                {isAtivo ? (
-                                  <><CheckCircle2 className="h-3 w-3" /> Ativo</>
+                                {isNormal ? (
+                                  <><CheckCircle2 className="h-3 w-3" /> Normal</>
+                                ) : isLimitada ? (
+                                  <><AlertTriangle className="h-3 w-3" /> Limitada</>
+                                ) : isEncerrada ? (
+                                  <><XCircle className="h-3 w-3" /> Encerrada</>
                                 ) : (
-                                  <><XCircle className="h-3 w-3" /> Inativo</>
+                                  <>{estadoConta}</>
                                 )}
                               </span>
                             </Badge>
