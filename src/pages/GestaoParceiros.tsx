@@ -195,7 +195,7 @@ export default function GestaoParceiros() {
         title: "Parceiro excluído",
         description: "O parceiro foi removido com sucesso.",
       });
-      fetchParceiros();
+      refetchParceiros();
       setDeleteDialogOpen(false);
       
       if (selectedParceiroDetalhes === parceiroToDelete) {
