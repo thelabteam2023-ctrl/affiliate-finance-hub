@@ -9,7 +9,7 @@ import { useState, useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { formatCurrency } from "@/utils/formatCurrency";
+import { formatBalance } from "@/utils/formatCurrency";
 import { getFirstLastName, cn } from "@/lib/utils";
 import {
   Search,
