@@ -239,8 +239,9 @@ export const ParceiroBookmakersTab = memo(function ParceiroBookmakersTab({
 
   const handleCreateVinculo = (bookmakerId: string) => { onCreateVinculo?.(parceiroId, bookmakerId); };
 
-  // Usar saldo_atual para todas as moedas (normalizado no banco)
+  // Usar saldo_atual para operações e versão visual clampada para exibição
   const getSaldoCorreto = (bm: BookmakerVinculado) => bm.saldo_atual || 0;
+  const getSaldoVisual = (bm: BookmakerVinculado) => Math.max(0, getSaldoCorreto(bm));
 
   const formatCurrencyLocal = (value: number, moeda: string = "BRL") => {
     const symbol = getCurrencySymbol(moeda);
