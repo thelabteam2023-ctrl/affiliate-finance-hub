@@ -384,7 +384,6 @@ export function BookmakersLivresModule({ onRegistrarPerda, onVincularProjeto, on
             <SelectContent>
               <SelectItem value="operacional">Operacionais</SelectItem>
               <SelectItem value="limitada">Limitada / Encerrada</SelectItem>
-              <SelectItem value="todos">Todos estados</SelectItem>
             </SelectContent>
           </Select>
         </div>
