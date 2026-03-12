@@ -29,8 +29,7 @@ import { formatCPF, maskCPFPartial } from "@/lib/validators";
 import { useParceiroFinanceiroCache } from "@/hooks/useParceiroFinanceiroCache";
 import { getGlobalBookmakersCache } from "@/hooks/useParceiroTabsCache";
 import { FIAT_CURRENCIES } from "@/types/currency";
-
-// ============== MULTI-CURRENCY TYPES ==============
+import { useParceirosData, type Parceiro, type ParceiroROI, type SaldoParceiro, type SaldoCryptoRaw, type ParceriaStatus } from "@/hooks/useParceirosData";
 
 // Lista de moedas FIAT suportadas
 const SUPPORTED_FIAT: string[] = FIAT_CURRENCIES.map(c => c.value);
@@ -38,66 +37,19 @@ const SUPPORTED_FIAT: string[] = FIAT_CURRENCIES.map(c => c.value);
 // Record dinâmico para saldos por moeda
 type SaldosPorMoeda = Record<string, number>;
 
-// Helper para criar objeto de saldos vazio
-function createEmptySaldos(): SaldosPorMoeda {
-  const saldos: SaldosPorMoeda = {};
-  SUPPORTED_FIAT.forEach(moeda => {
-    saldos[moeda] = 0;
-  });
-  return saldos;
-}
-
-interface Parceiro {
-  id: string;
-  nome: string;
-  cpf: string;
-  email: string | null;
-  telefone: string | null;
-  status: string;
-  created_at: string;
-  contas_bancarias: any[];
-  wallets_crypto: any[];
-}
-
-interface ParceiroROI {
-  parceiro_id: string;
-  depositado_por_moeda: SaldosPorMoeda;
-  sacado_por_moeda: SaldosPorMoeda;
-  saldo_por_moeda: SaldosPorMoeda;
-  resultado_por_moeda: SaldosPorMoeda;
-  moedas_utilizadas: string[];
-  roi_percentual: number;
-  num_bookmakers: number;
-  num_bookmakers_limitadas: number;
-}
-
-interface SaldoParceiro {
-  parceiro_id: string;
-  saldo_fiat: number;
-  saldo_crypto_usd: number;
-}
-
-interface SaldoCryptoRaw {
-  parceiro_id: string;
-  coin: string;
-  saldo_coin: number;
-  saldo_usd: number;
-}
-
-interface ParceriaStatus {
-  parceiro_id: string;
-  dias_restantes: number;
-  pagamento_parceiro_realizado: boolean;
-}
-
 export default function GestaoParceiros() {
-  const [parceiros, setParceiros] = useState<Parceiro[]>([]);
-  const [roiData, setRoiData] = useState<Map<string, ParceiroROI>>(new Map());
+  // ==================== REACT QUERY: Cache + Deduplicação ====================
+  const { parceiros, roiData, saldosData: saldosDataBase, saldosCryptoRaw, parceriasData, loading, refetch: refetchParceiros } = useParceirosData();
+  
+  // Mutable copy of saldosData for crypto price updates
   const [saldosData, setSaldosData] = useState<Map<string, SaldoParceiro>>(new Map());
-  const [saldosCryptoRaw, setSaldosCryptoRaw] = useState<SaldoCryptoRaw[]>([]);
-  const [parceriasData, setParceriasData] = useState<Map<string, ParceriaStatus>>(new Map());
+  
+  // Sync saldosData when base data changes
+  useEffect(() => {
+    setSaldosData(new Map(saldosDataBase));
+  }, [saldosDataBase]);
+  
   const [showSensitiveData, setShowSensitiveData] = useState(true);
-  const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingParceiro, setEditingParceiro] = useState<Parceiro | null>(null);
   const [viewMode, setViewMode] = useState(false);
