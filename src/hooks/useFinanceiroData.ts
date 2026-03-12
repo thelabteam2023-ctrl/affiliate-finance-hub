@@ -105,10 +105,14 @@ async function fetchFinanceiroData(workspaceId: string): Promise<FinanceiroData>
   ]);
 
   // Throw on first error
-  const results = [despesasResult, custosResult, ledgerResult, despesasAdminResult, despesasAdminPendentesResult, pagamentosOpResult, pagamentosOpPendentesResult, movIndicacaoResult, bookmakersResult];
+  const results = [allMovIndicacaoResult, custosResult, ledgerResult, despesasAdminResult, despesasAdminPendentesResult, pagamentosOpResult, pagamentosOpPendentesResult, bookmakersResult];
   for (const r of results) {
     if (r.error) throw r.error;
   }
+
+  // Derive confirmed-only and all movimentacoes from the unified query
+  const allMovimentacoesRaw = allMovIndicacaoResult.data || [];
+  const confirmedDespesas = allMovimentacoesRaw.filter((m: any) => m.status === "CONFIRMADO");
 
   const allContas = allContasSaldoResult.data || [];
   const allWallets = allWalletsSaldoResult.data || [];
