@@ -114,6 +114,17 @@ export function BookmakerHistoricoDialog({
         }
       }
 
+      // If no historico found at all, check if there are orphan operations
+      if (formattedData.length === 0) {
+        const [{ count: apostasCount }, { count: ledgerCount }] = await Promise.all([
+          supabase.from("apostas_unificada").select("id", { count: "exact", head: true }).eq("bookmaker_id", bookmakerId),
+          supabase.from("cash_ledger").select("id", { count: "exact", head: true }).or(`origem_bookmaker_id.eq.${bookmakerId},destino_bookmaker_id.eq.${bookmakerId}`),
+        ]);
+        setHasOrphanOperations((apostasCount || 0) + (ledgerCount || 0) > 0);
+      } else {
+        setHasOrphanOperations(false);
+      }
+
       setHistorico(formattedData);
     } catch (err: any) {
       console.error("Erro ao buscar histórico:", err);
