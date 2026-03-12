@@ -303,8 +303,8 @@ export function BookmakersLivresModule({ onRegistrarPerda, onVincularProjeto, on
       // Estado conta filter: "operacional" hides limitada/encerrada/bloqueada
       if (estadoContaFilter === "operacional") {
         if (["limitada", "encerrada", "bloqueada", "LIMITADA", "ENCERRADA", "BLOQUEADA"].includes(c.estado_conta)) return false;
-      } else if (estadoContaFilter !== "todos") {
-        if (c.estado_conta.toLowerCase() !== estadoContaFilter.toLowerCase()) return false;
+      } else if (estadoContaFilter === "limitada") {
+        if (!["limitada", "encerrada", "bloqueada", "LIMITADA", "ENCERRADA", "BLOQUEADA"].includes(c.estado_conta)) return false;
       }
       if (usoFilter === "virgem" && c.ja_usada) return false;
       if (usoFilter === "utilizada" && !c.ja_usada) return false;
