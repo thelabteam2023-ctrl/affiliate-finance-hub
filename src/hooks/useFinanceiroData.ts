@@ -49,14 +49,13 @@ async function fetchFinanceiroData(workspaceId: string): Promise<FinanceiroData>
   const caixaParceiroId = caixaParceiro?.id || null;
 
   const [
-    despesasResult,
+    allMovIndicacaoResult,
     custosResult,
     ledgerResult,
     despesasAdminResult,
     despesasAdminPendentesResult,
     pagamentosOpResult,
     pagamentosOpPendentesResult,
-    movIndicacaoResult,
     bookmakersResult,
     bookmakersDetalhadosResult,
     parceirosAtivosResult,
@@ -78,7 +77,6 @@ async function fetchFinanceiroData(workspaceId: string): Promise<FinanceiroData>
     supabase.from("despesas_administrativas").select("*").eq("status", "PENDENTE"),
     supabase.from("pagamentos_operador").select("tipo_pagamento, valor, data_pagamento, status, operador_id, operadores(nome)").eq("status", "CONFIRMADO"),
     supabase.from("pagamentos_operador").select("tipo_pagamento, valor, data_pagamento, status, operador_id, operadores(nome)").eq("status", "PENDENTE"),
-    // REMOVIDA: Q2 duplicada — agora usa a query unificada acima filtrando no client
     supabase.from("bookmakers").select("saldo_atual, saldo_freebet, status, estado_conta, aguardando_saque_at, projeto_id, moeda").in("status", ["ativo", "ATIVO", "EM_USO", "limitada", "LIMITADA", "AGUARDANDO_SAQUE"]),
     supabase.from("bookmakers").select("saldo_atual, projeto_id, moeda, projetos(nome)").in("status", ["ativo", "ATIVO", "EM_USO", "limitada", "LIMITADA", "AGUARDANDO_SAQUE"]),
     supabase.from("parceiros").select("id", { count: "exact", head: true }).eq("status", "ativo"),
