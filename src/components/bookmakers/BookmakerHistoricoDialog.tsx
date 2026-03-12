@@ -265,32 +265,17 @@ export function BookmakerHistoricoDialog({
                         }`}
                       >
                         {/* Project name and tipo */}
-                        <div className="flex items-center justify-between gap-2 mb-2">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <h4 className="font-medium text-sm truncate">
-                              {item.projeto_nome}
-                            </h4>
-                            {item.tipo_projeto && (
-                              <Badge className={`${getTipoProjetoColor(item.tipo_projeto)} text-[10px] shrink-0`}>
-                                {getTipoProjetoLabel(item.tipo_projeto)}
-                              </Badge>
-                            )}
-                          </div>
-                          {isAtivo(item) ? (
-                            <Badge className="bg-success/20 text-success border-success/30 text-[10px]">
-                              Em uso
+                        <div className="flex items-center gap-2 mb-2">
+                          <h4 className="font-medium text-sm truncate">
+                            {item.projeto_nome}
+                          </h4>
+                          {item.tipo_projeto && (
+                            <Badge className={`${getTipoProjetoColor(item.tipo_projeto)} text-[10px] shrink-0`}>
+                              {getTipoProjetoLabel(item.tipo_projeto)}
                             </Badge>
-                          ) : (
-                            <Badge
-                              variant="secondary"
-                              className={`text-[10px] ${
-                                item.status_final?.toUpperCase() === "LIMITADA"
-                                  ? "bg-warning/20 text-warning border-warning/30"
-                                  : ""
-                              }`}
-                            >
-                              {item.status_final || "Encerrada"}
-                            </Badge>
+                          )}
+                          {isAtivo(item) && (
+                            <span className="text-[10px] text-success font-medium ml-auto shrink-0">ativo</span>
                           )}
                         </div>
 
