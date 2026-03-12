@@ -43,6 +43,7 @@ async function fetchFinanceiroData(workspaceId: string): Promise<FinanceiroData>
   const { data: caixaParceiro } = await supabase
     .from("parceiros")
     .select("id")
+    .eq("workspace_id", workspaceId)
     .eq("is_caixa_operacional", true)
     .maybeSingle();
 
