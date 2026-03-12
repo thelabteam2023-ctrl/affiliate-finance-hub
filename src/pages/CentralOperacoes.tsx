@@ -2521,7 +2521,7 @@ export default function CentralOperacoes() {
         <TabsContent value="contas" className="mt-4">
           <Tabs defaultValue="contas-saldo" className="w-full">
             <TabsList className="mb-4">
-              <TabsTrigger value="contas-saldo">Contas Disponíveis</TabsTrigger>
+              <TabsTrigger value="contas-saldo">Bookmakers Disponíveis</TabsTrigger>
               <TabsTrigger value="bookmakers-livres">Bookmakers Livres</TabsTrigger>
             </TabsList>
             <TabsContent value="contas-saldo">
