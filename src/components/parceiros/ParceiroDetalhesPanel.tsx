@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { TrendingUp, TrendingDown, ArrowDownToLine, ArrowUpFromLine, Target, Building2, User, Wallet, AlertCircle, Eye, EyeOff, History, BarChart3, IdCard, Edit, Trash2, Copy, Check, Calendar, RefreshCw, CircleDashed, CircleCheck, Lock, Search, Pencil, Plus, Minus, FolderKanban, Loader2, AlertTriangle, DollarSign } from "lucide-react";
+import { TrendingUp, TrendingDown, ArrowDownToLine, ArrowUpFromLine, Target, Building2, User, Wallet, AlertCircle, Eye, EyeOff, History, BarChart3, IdCard, Edit, Trash2, Copy, Check, Calendar, RefreshCw, CircleDashed, CircleCheck, Lock, Search, Pencil, Plus, Minus, FolderKanban, Loader2, AlertTriangle, DollarSign, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -95,6 +95,8 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
   const [filtroStatus, setFiltroStatus] = useState<string | null>(null);
   const [filtroRegulamentacao, setFiltroRegulamentacao] = useState<string>("todas");
   const [perdaDialog, setPerdaDialog] = useState<{ open: boolean; bookmakerId: string; bookmakerNome: string; moeda: string; saldoAtual: number } | null>(null);
+  const [sortColumn, setSortColumn] = useState<"dep" | "saq" | "saldo" | "resultado" | "apostas" | null>(null);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const { canEdit, canDelete } = useActionAccess();
   const { convertToBRL, dataSource, isUsingFallback, rates } = useCotacoes();
   const { workspaceId } = useWorkspace();
@@ -303,6 +305,28 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
       (b.instance_identifier || '').toLowerCase().includes(termo)
     );
   }, [bookmakersFiltradosMoeda, buscaCasa]);
+
+  // Sort handler
+  const handleSort = useCallback((col: typeof sortColumn) => {
+    if (sortColumn === col) {
+      setSortDirection(prev => prev === "desc" ? "asc" : "desc");
+    } else {
+      setSortColumn(col);
+      setSortDirection("desc");
+    }
+  }, [sortColumn]);
+
+  // Sorted bookmakers
+  const bookmakersSorted = useMemo(() => {
+    if (!sortColumn) return bookmakersFiltrados;
+    const keyMap = { dep: "total_depositado", saq: "total_sacado", saldo: "saldo_atual", resultado: "lucro_prejuizo", apostas: "qtd_apostas" } as const;
+    const key = keyMap[sortColumn];
+    return [...bookmakersFiltrados].sort((a, b) => {
+      const va = (a as any)[key] ?? 0;
+      const vb = (b as any)[key] ?? 0;
+      return sortDirection === "desc" ? vb - va : va - vb;
+    });
+  }, [bookmakersFiltrados, sortColumn, sortDirection]);
 
   // Determina se há algum filtro dimensional ativo (status ou regulamentação)
   const hasActiveFilter = !!filtroStatus || filtroRegulamentacao !== "todas";
@@ -906,20 +930,37 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                           Mostrando {bookmakersFiltrados.length} de {bookmakersFiltradosMoeda.length} casas
                         </div>
                       )}
-                      {/* Header da tabela */}
+                      {/* Header da tabela - sortable columns */}
                       <div className="grid grid-cols-8 gap-2 px-3 py-1.5 text-[10px] font-medium text-muted-foreground uppercase tracking-wide bg-muted/30 border-b border-border">
                         <div className="col-span-2">Casa</div>
                         <div className="text-center"></div>
-                        <div className="text-right">Dep.</div>
-                        <div className="text-right">Saq.</div>
-                        <div className="text-right">Saldo</div>
-                        <div className="text-right">Result. Fin.</div>
-                        <div className="text-right">Apost.</div>
+                        {([
+                          { key: "dep", label: "Dep." },
+                          { key: "saq", label: "Saq." },
+                          { key: "saldo", label: "Saldo" },
+                          { key: "resultado", label: "Result. Fin." },
+                          { key: "apostas", label: "Apost." },
+                        ] as const).map(col => (
+                          <button
+                            key={col.key}
+                            onClick={() => handleSort(col.key)}
+                            className="text-right flex items-center justify-end gap-0.5 hover:text-foreground transition-colors cursor-pointer"
+                          >
+                            <span>{col.label}</span>
+                            {sortColumn === col.key ? (
+                              sortDirection === "desc" 
+                                ? <ArrowDown className="h-2.5 w-2.5 text-primary" /> 
+                                : <ArrowUp className="h-2.5 w-2.5 text-primary" />
+                            ) : (
+                              <ArrowUpDown className="h-2.5 w-2.5 opacity-30" />
+                            )}
+                          </button>
+                        ))}
                       </div>
 
                       {/* Lista de bookmakers - único elemento rolável */}
                       <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-border">
-                        {bookmakersFiltrados.map((bm) => (
+                        {bookmakersSorted.map((bm) => (
                           <ContextMenu key={bm.bookmaker_id}>
                             <ContextMenuTrigger asChild>
                               <div
