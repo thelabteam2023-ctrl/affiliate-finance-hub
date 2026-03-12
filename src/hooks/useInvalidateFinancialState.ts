@@ -106,6 +106,74 @@ export type FinancialStateKey = keyof typeof FINANCIAL_STATE_KEYS;
  * - Registrar giros grátis
  * - Registrar cashback
  */
+/**
+ * Tipo de operação financeira para invalidação granular.
+ * Cada tipo invalida APENAS as queries afetadas.
+ */
+export type FinancialOperation = 
+  | "aposta"           // criar/editar/liquidar/reverter apostas
+  | "transacao"        // depósito/saque no caixa
+  | "vinculo"          // vincular/desvincular bookmaker
+  | "bonus"            // criar/editar/finalizar bônus
+  | "giro"             // registrar giro grátis
+  | "cashback"         // registrar cashback
+  | "conciliacao"      // conciliar saldo
+  | "full";            // invalidar TUDO (fallback)
+
+/**
+ * Mapa de quais query keys são afetadas por cada tipo de operação.
+ */
+const OPERATION_KEYS: Record<FinancialOperation, string[]> = {
+  aposta: [
+    FINANCIAL_STATE_KEYS.BOOKMAKER_SALDOS,
+    FINANCIAL_STATE_KEYS.SALDO_OPERAVEL_RPC,
+    FINANCIAL_STATE_KEYS.APOSTAS,
+    FINANCIAL_STATE_KEYS.PROJETO_RESULTADO,
+    FINANCIAL_STATE_KEYS.PROJETO_BREAKDOWNS,
+    FINANCIAL_STATE_KEYS.DASHBOARD_CALENDARIO,
+    FINANCIAL_STATE_KEYS.DASHBOARD_APOSTAS,
+    FINANCIAL_STATE_KEYS.DASHBOARD_EXTRAS,
+    FINANCIAL_STATE_KEYS.CALENDAR_APOSTAS,
+    FINANCIAL_STATE_KEYS.EXPOSICAO_PROJETO,
+    FINANCIAL_STATE_KEYS.CAPACIDADE_APOSTA,
+  ],
+  transacao: [
+    FINANCIAL_STATE_KEYS.BOOKMAKER_SALDOS,
+    FINANCIAL_STATE_KEYS.BOOKMAKER_SALDOS_FINANCEIRO,
+    FINANCIAL_STATE_KEYS.SALDO_OPERAVEL_RPC,
+    FINANCIAL_STATE_KEYS.PARCEIRO_FINANCEIRO,
+    FINANCIAL_STATE_KEYS.PARCEIRO_CONSOLIDADO,
+  ],
+  vinculo: [
+    FINANCIAL_STATE_KEYS.PROJETO_VINCULOS,
+    FINANCIAL_STATE_KEYS.BOOKMAKERS_DISPONIVEIS,
+    FINANCIAL_STATE_KEYS.BOOKMAKERS,
+    FINANCIAL_STATE_KEYS.BOOKMAKER_SALDOS,
+  ],
+  bonus: [
+    FINANCIAL_STATE_KEYS.BONUS,
+    FINANCIAL_STATE_KEYS.BOOKMAKER_SALDOS,
+    FINANCIAL_STATE_KEYS.PROJETO_RESULTADO,
+  ],
+  giro: [
+    FINANCIAL_STATE_KEYS.GIROS_GRATIS,
+    FINANCIAL_STATE_KEYS.GIROS_DISPONIVEIS,
+    FINANCIAL_STATE_KEYS.BOOKMAKER_SALDOS,
+    FINANCIAL_STATE_KEYS.PROJETO_RESULTADO,
+  ],
+  cashback: [
+    FINANCIAL_STATE_KEYS.CASHBACK_MANUAL,
+    FINANCIAL_STATE_KEYS.PROJETO_RESULTADO,
+    FINANCIAL_STATE_KEYS.BOOKMAKER_SALDOS,
+  ],
+  conciliacao: [
+    FINANCIAL_STATE_KEYS.BOOKMAKER_SALDOS,
+    FINANCIAL_STATE_KEYS.BOOKMAKER_SALDOS_FINANCEIRO,
+    FINANCIAL_STATE_KEYS.SALDO_OPERAVEL_RPC,
+  ],
+  full: Object.values(FINANCIAL_STATE_KEYS),
+};
+
 export function useInvalidateFinancialState() {
   const queryClient = useQueryClient();
 
@@ -115,148 +183,48 @@ export function useInvalidateFinancialState() {
       includeGlobal?: boolean;
       /** Se true, dispara evento para componentes legacy */
       dispatchEvent?: boolean;
+      /** Tipo de operação — define quais queries invalidar (default: "full") */
+      operation?: FinancialOperation;
     }) => {
-      const { includeGlobal = true, dispatchEvent = true } = options || {};
+      const { includeGlobal = false, dispatchEvent = true, operation = "full" } = options || {};
       
+      const keysToInvalidate = OPERATION_KEYS[operation];
       const invalidations: Promise<void>[] = [];
 
-      // ========================================
-      // INVALIDAÇÃO POR PROJETO (quando temos projetoId)
-      // ========================================
-      if (projetoId) {
-        // Saldos específicos do projeto
-        invalidations.push(
-          queryClient.invalidateQueries({ 
-            queryKey: [FINANCIAL_STATE_KEYS.BOOKMAKER_SALDOS, projetoId] 
-          }),
-          queryClient.invalidateQueries({ 
-            queryKey: [FINANCIAL_STATE_KEYS.SALDO_OPERAVEL_RPC, projetoId] 
-          })
-        );
-
-        // Vínculos do projeto
-        invalidations.push(
-          queryClient.invalidateQueries({ 
-            queryKey: [FINANCIAL_STATE_KEYS.PROJETO_VINCULOS, projetoId] 
-          }),
-          queryClient.invalidateQueries({ 
-            queryKey: [FINANCIAL_STATE_KEYS.PROJETO_VINCULOS, "historico", projetoId] 
-          })
-        );
-
-        // KPIs do projeto
-        invalidations.push(
-          queryClient.invalidateQueries({ 
-            queryKey: [FINANCIAL_STATE_KEYS.PROJETO_RESULTADO, projetoId] 
-          }),
-          queryClient.invalidateQueries({ 
-            queryKey: [FINANCIAL_STATE_KEYS.PROJETO_BREAKDOWNS, projetoId] 
-          })
-        );
-
-        // Apostas do projeto
-        invalidations.push(
-          queryClient.invalidateQueries({ 
-            queryKey: [FINANCIAL_STATE_KEYS.APOSTAS, projetoId] 
-          })
-        );
-
-        // Dashboard (Visão Geral) - calendário, apostas filtradas, extras
-        invalidations.push(
-          queryClient.invalidateQueries({ 
-            queryKey: [FINANCIAL_STATE_KEYS.DASHBOARD_CALENDARIO, projetoId] 
-          }),
-          queryClient.invalidateQueries({ 
-            queryKey: [FINANCIAL_STATE_KEYS.DASHBOARD_APOSTAS, projetoId] 
-          }),
-          queryClient.invalidateQueries({ 
-            queryKey: [FINANCIAL_STATE_KEYS.DASHBOARD_EXTRAS, projetoId] 
-          })
-        );
-
-        // Calendário por estratégia (Surebet, ValueBet, DuploGreen tabs)
-        invalidations.push(
-          queryClient.invalidateQueries({ 
-            queryKey: [FINANCIAL_STATE_KEYS.CALENDAR_APOSTAS, projetoId] 
-          })
-        );
-
-        // Exposição do projeto
-        invalidations.push(
-          queryClient.invalidateQueries({ 
-            queryKey: [FINANCIAL_STATE_KEYS.EXPOSICAO_PROJETO, projetoId] 
-          }),
-          queryClient.invalidateQueries({ 
-            queryKey: [FINANCIAL_STATE_KEYS.CAPACIDADE_APOSTA, projetoId] 
-          })
-        );
-
-        // Giros e Bônus do projeto
-        invalidations.push(
-          queryClient.invalidateQueries({ 
-            queryKey: [FINANCIAL_STATE_KEYS.GIROS_GRATIS, projetoId] 
-          }),
-          queryClient.invalidateQueries({ 
-            queryKey: [FINANCIAL_STATE_KEYS.GIROS_DISPONIVEIS, projetoId] 
-          }),
-          queryClient.invalidateQueries({ 
-            queryKey: [FINANCIAL_STATE_KEYS.BONUS, "project", projetoId] 
-          }),
-          queryClient.invalidateQueries({ 
-            queryKey: [FINANCIAL_STATE_KEYS.CASHBACK_MANUAL, projetoId] 
-          })
-        );
+      for (const key of keysToInvalidate) {
+        if (projetoId) {
+          // Invalidar com escopo de projeto
+          invalidations.push(
+            queryClient.invalidateQueries({ queryKey: [key, projetoId] })
+          );
+          // Variantes com sub-keys (historico, project prefix)
+          if (key === FINANCIAL_STATE_KEYS.PROJETO_VINCULOS) {
+            invalidations.push(
+              queryClient.invalidateQueries({ queryKey: [key, "historico", projetoId] })
+            );
+          }
+          if (key === FINANCIAL_STATE_KEYS.BONUS) {
+            invalidations.push(
+              queryClient.invalidateQueries({ queryKey: [key, "project", projetoId] })
+            );
+          }
+        }
+        
+        if (includeGlobal || !projetoId) {
+          // Invalidar globalmente (sem projetoId no key)
+          invalidations.push(
+            queryClient.invalidateQueries({ queryKey: [key] })
+          );
+        }
       }
 
-      // ========================================
-      // INVALIDAÇÃO GLOBAL (sempre ou quando solicitado)
-      // ========================================
-      if (includeGlobal || !projetoId) {
-        // Saldos globais
-        invalidations.push(
-          queryClient.invalidateQueries({ 
-            queryKey: [FINANCIAL_STATE_KEYS.BOOKMAKER_SALDOS] 
-          }),
-          queryClient.invalidateQueries({ 
-            queryKey: [FINANCIAL_STATE_KEYS.BOOKMAKER_SALDOS_FINANCEIRO] 
-          })
-        );
-
-        // Bookmakers disponíveis (afetado por vínculos)
-        invalidations.push(
-          queryClient.invalidateQueries({ 
-            queryKey: [FINANCIAL_STATE_KEYS.BOOKMAKERS_DISPONIVEIS] 
-          }),
-          queryClient.invalidateQueries({ 
-            queryKey: [FINANCIAL_STATE_KEYS.BOOKMAKERS] 
-          })
-        );
-
-        // Parceiros (saldos consolidados de todas as casas)
-        invalidations.push(
-          queryClient.invalidateQueries({ 
-            queryKey: [FINANCIAL_STATE_KEYS.PARCEIRO_FINANCEIRO] 
-          }),
-          queryClient.invalidateQueries({ 
-            queryKey: [FINANCIAL_STATE_KEYS.PARCEIRO_CONSOLIDADO] 
-          })
-        );
-      }
-
-      // Executar todas as invalidações em paralelo
       await Promise.all(invalidations);
 
-      // Disparar evento para componentes legacy que ainda usam listeners
       if (dispatchEvent && typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent("lovable:financial-state-changed", {
           detail: { projetoId, timestamp: Date.now() }
         }));
       }
-
-      console.log(
-        `[useInvalidateFinancialState] Invalidated FINANCIAL_STATE group`,
-        { projetoId, includeGlobal, queriesInvalidated: invalidations.length }
-      );
     },
     [queryClient]
   );

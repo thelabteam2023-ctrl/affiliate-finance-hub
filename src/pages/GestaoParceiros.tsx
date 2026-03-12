@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useTabWorkspace } from "@/hooks/useTabWorkspace";
-import { useWorkspaceChangeListener } from "@/hooks/useWorkspaceCacheClear";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
@@ -30,8 +29,7 @@ import { formatCPF, maskCPFPartial } from "@/lib/validators";
 import { useParceiroFinanceiroCache } from "@/hooks/useParceiroFinanceiroCache";
 import { getGlobalBookmakersCache } from "@/hooks/useParceiroTabsCache";
 import { FIAT_CURRENCIES } from "@/types/currency";
-
-// ============== MULTI-CURRENCY TYPES ==============
+import { useParceirosData, type Parceiro, type ParceiroROI, type SaldoParceiro, type SaldoCryptoRaw, type ParceriaStatus } from "@/hooks/useParceirosData";
 
 // Lista de moedas FIAT suportadas
 const SUPPORTED_FIAT: string[] = FIAT_CURRENCIES.map(c => c.value);
@@ -39,66 +37,19 @@ const SUPPORTED_FIAT: string[] = FIAT_CURRENCIES.map(c => c.value);
 // Record dinâmico para saldos por moeda
 type SaldosPorMoeda = Record<string, number>;
 
-// Helper para criar objeto de saldos vazio
-function createEmptySaldos(): SaldosPorMoeda {
-  const saldos: SaldosPorMoeda = {};
-  SUPPORTED_FIAT.forEach(moeda => {
-    saldos[moeda] = 0;
-  });
-  return saldos;
-}
-
-interface Parceiro {
-  id: string;
-  nome: string;
-  cpf: string;
-  email: string | null;
-  telefone: string | null;
-  status: string;
-  created_at: string;
-  contas_bancarias: any[];
-  wallets_crypto: any[];
-}
-
-interface ParceiroROI {
-  parceiro_id: string;
-  depositado_por_moeda: SaldosPorMoeda;
-  sacado_por_moeda: SaldosPorMoeda;
-  saldo_por_moeda: SaldosPorMoeda;
-  resultado_por_moeda: SaldosPorMoeda;
-  moedas_utilizadas: string[];
-  roi_percentual: number;
-  num_bookmakers: number;
-  num_bookmakers_limitadas: number;
-}
-
-interface SaldoParceiro {
-  parceiro_id: string;
-  saldo_fiat: number;
-  saldo_crypto_usd: number;
-}
-
-interface SaldoCryptoRaw {
-  parceiro_id: string;
-  coin: string;
-  saldo_coin: number;
-  saldo_usd: number;
-}
-
-interface ParceriaStatus {
-  parceiro_id: string;
-  dias_restantes: number;
-  pagamento_parceiro_realizado: boolean;
-}
-
 export default function GestaoParceiros() {
-  const [parceiros, setParceiros] = useState<Parceiro[]>([]);
-  const [roiData, setRoiData] = useState<Map<string, ParceiroROI>>(new Map());
+  // ==================== REACT QUERY: Cache + Deduplicação ====================
+  const { parceiros, roiData, saldosData: saldosDataBase, saldosCryptoRaw, parceriasData, loading, refetch: refetchParceiros } = useParceirosData();
+  
+  // Mutable copy of saldosData for crypto price updates
   const [saldosData, setSaldosData] = useState<Map<string, SaldoParceiro>>(new Map());
-  const [saldosCryptoRaw, setSaldosCryptoRaw] = useState<SaldoCryptoRaw[]>([]);
-  const [parceriasData, setParceriasData] = useState<Map<string, ParceriaStatus>>(new Map());
+  
+  // Sync saldosData when base data changes
+  useEffect(() => {
+    setSaldosData(new Map(saldosDataBase));
+  }, [saldosDataBase]);
+  
   const [showSensitiveData, setShowSensitiveData] = useState(true);
-  const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingParceiro, setEditingParceiro] = useState<Parceiro | null>(null);
   const [viewMode, setViewMode] = useState(false);
@@ -171,278 +122,16 @@ export default function GestaoParceiros() {
     setSaldosData(new Map(saldosMap));
   }, [cryptoPrices, saldosCryptoRaw]);
 
-  // SEGURANÇA: Refetch quando workspace muda
+  // Auth check on workspace change
   useEffect(() => {
     if (workspaceId) {
+      const checkAuth = async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) navigate("/auth");
+      };
       checkAuth();
-      fetchParceiros();
-      fetchParceriasStatus();
     }
-  }, [workspaceId]);
-
-  // Listener para reset de estados locais na troca de workspace
-  useWorkspaceChangeListener(useCallback(() => {
-    console.log("[GestaoParceiros] Workspace changed - resetting local state");
-    setParceiros([]);
-    setRoiData(new Map());
-    setSaldosData(new Map());
-    setSaldosCryptoRaw([]);
-    // Persistência: Limpar parceiro selecionado ao trocar workspace
-    setSelectedParceiroDetalhes(null);
-    localStorage.removeItem('last_selected_partner_id');
-    // Limpar TODOS os caches (incluindo globais de abas)
-    parceiroCache.invalidateAllCache();
-    // Importar e limpar caches de abas
-    import('@/hooks/useParceiroTabsCache').then(({ clearAllParceiroTabsCaches }) => {
-      clearAllParceiroTabsCaches();
-    });
-    setLoading(true);
-  }, [parceiroCache]));
-
-  const checkAuth = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      navigate("/auth");
-    }
-  };
-
-  const fetchParceiros = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("parceiros")
-        .select(`
-          *,
-          contas_bancarias(*),
-          wallets_crypto(*)
-        `)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      setParceiros(data || []);
-      
-      await fetchROIData();
-      await fetchSaldosData();
-    } catch (error: any) {
-      toast({
-        title: "Erro ao carregar parceiros",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchROIData = async () => {
-    try {
-      // =====================================================================
-      // NOVO: Usar view de resultado operacional PURO
-      // Inclui APENAS: apostas + giros + cashback
-      // Exclui: depósitos, saques, FX, ajustes
-      // =====================================================================
-      
-      // Step 1: Get bookmakers with their operational results
-      const { data: bookmakersData, error: bookmakersError } = await supabase
-        .from("bookmakers")
-        .select("id, parceiro_id, saldo_atual, moeda, status");
-
-      if (bookmakersError) throw bookmakersError;
-
-      // Step 2: Get operational results from the view
-      const bookmakerIds = (bookmakersData || []).map(b => b.id);
-      let resultadosOperacionais: Array<{
-        bookmaker_id: string;
-        resultado_operacional_total: number;
-      }> = [];
-
-      if (bookmakerIds.length > 0) {
-        const { data: resultados, error: resultadosError } = await supabase
-          .from("v_bookmaker_resultado_operacional")
-          .select("bookmaker_id, resultado_operacional_total")
-          .in("bookmaker_id", bookmakerIds);
-
-        if (resultadosError) throw resultadosError;
-        resultadosOperacionais = resultados || [];
-      }
-
-      // Build map of bookmaker_id -> resultado
-      const resultadoMap = new Map<string, number>();
-      resultadosOperacionais.forEach((r) => {
-        resultadoMap.set(r.bookmaker_id, Number(r.resultado_operacional_total) || 0);
-      });
-
-      // Step 3: Aggregate by partner and currency
-      const roiMap = new Map<string, ParceiroROI>();
-      const parceiroAggregates = new Map<string, {
-        count: number;
-        countLimitadas: number;
-        saldo: SaldosPorMoeda;
-        resultado: SaldosPorMoeda;
-      }>();
-
-      bookmakersData?.forEach((bm) => {
-        if (!bm.parceiro_id) return;
-        
-        const current = parceiroAggregates.get(bm.parceiro_id) || {
-          count: 0,
-          countLimitadas: 0,
-          saldo: createEmptySaldos(),
-          resultado: createEmptySaldos(),
-        };
-
-        // Count bookmakers by status
-        if (bm.status === "ativo") {
-          current.count += 1;
-        } else if (bm.status === "limitada") {
-          current.countLimitadas += 1;
-        }
-
-        // Use bookmaker's native currency
-        const moedaNativa = bm.moeda || "BRL";
-        const saldoNativo = Number(bm.saldo_atual) || 0;
-        const resultadoOperacional = resultadoMap.get(bm.id) || 0;
-
-        current.saldo[moedaNativa] = (current.saldo[moedaNativa] || 0) + saldoNativo;
-        current.resultado[moedaNativa] = (current.resultado[moedaNativa] || 0) + resultadoOperacional;
-
-        parceiroAggregates.set(bm.parceiro_id, current);
-      });
-
-      // Step 4: Build ROI data for each partner
-      parceiroAggregates.forEach((aggregates, parceiroId) => {
-        const moedasUtilizadas = SUPPORTED_FIAT.filter(
-          (moeda) => (aggregates.saldo[moeda] || 0) !== 0 || (aggregates.resultado[moeda] || 0) !== 0
-        );
-
-        // ROI calculation (using BRL as base for simplicity)
-        const resultadoBRL = aggregates.resultado["BRL"] || 0;
-        // Note: We don't have deposits here, so ROI is just the result for display
-        // Real ROI would need deposit data, but for sidebar we show resultado
-
-        roiMap.set(parceiroId, {
-          parceiro_id: parceiroId,
-          depositado_por_moeda: createEmptySaldos(), // Not needed for sidebar
-          sacado_por_moeda: createEmptySaldos(), // Not needed for sidebar
-          saldo_por_moeda: aggregates.saldo,
-          resultado_por_moeda: aggregates.resultado,
-          moedas_utilizadas: moedasUtilizadas,
-          roi_percentual: 0, // Not calculated here
-          num_bookmakers: aggregates.count,
-          num_bookmakers_limitadas: aggregates.countLimitadas,
-        });
-      });
-
-      setRoiData(roiMap);
-    } catch (error: any) {
-      console.error("Erro ao carregar ROI:", error);
-    }
-  };
-
-  const fetchParceriasStatus = async () => {
-    try {
-      const { data: parcerias, error } = await supabase
-        .from("parcerias")
-        .select("id, parceiro_id, data_fim_prevista, custo_aquisicao_isento, valor_parceiro")
-        .in("status", ["ATIVA", "EM_ENCERRAMENTO"]);
-
-      if (error) throw error;
-
-      const parceriasComCusto = parcerias?.filter(p => !p.custo_aquisicao_isento && p.valor_parceiro && p.valor_parceiro > 0) || [];
-      const parceriaIdsComCusto = parceriasComCusto.map(p => p.id);
-      
-      const { data: pagamentos } = parceriaIdsComCusto.length > 0 
-        ? await supabase
-            .from("movimentacoes_indicacao")
-            .select("parceria_id")
-            .in("parceria_id", parceriaIdsComCusto)
-            .eq("tipo", "PAGTO_PARCEIRO")
-            .eq("status", "CONFIRMADO")
-        : { data: [] };
-
-      const pagamentosSet = new Set((pagamentos || []).map(p => p.parceria_id));
-
-      const parceriasMap = new Map<string, ParceriaStatus>();
-      
-      parcerias?.forEach((parceria) => {
-        if (!parceria.parceiro_id || !parceria.data_fim_prevista) return;
-        
-        const dataFim = new Date(parceria.data_fim_prevista);
-        const hoje = new Date();
-        hoje.setHours(0, 0, 0, 0);
-        dataFim.setHours(0, 0, 0, 0);
-        const diffTime = dataFim.getTime() - hoje.getTime();
-        const diasRestantes = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        
-        const valorParceiro = Number(parceria.valor_parceiro) || 0;
-        const custoIsento = parceria.custo_aquisicao_isento === true;
-        const isGratuita = custoIsento || valorParceiro <= 0;
-        
-        parceriasMap.set(parceria.parceiro_id, {
-          parceiro_id: parceria.parceiro_id,
-          dias_restantes: diasRestantes,
-          pagamento_parceiro_realizado: isGratuita || pagamentosSet.has(parceria.id),
-        });
-      });
-
-      setParceriasData(parceriasMap);
-    } catch (error: any) {
-      console.error("Erro ao carregar status de parcerias:", error);
-    }
-  };
-
-  const fetchSaldosData = async () => {
-    try {
-      const { data: saldosFiat, error: errorFiat } = await supabase
-        .from("v_saldo_parceiro_contas")
-        .select("*");
-
-      if (errorFiat) throw errorFiat;
-
-      const { data: saldosCrypto, error: errorCrypto } = await supabase
-        .from("v_saldo_parceiro_wallets")
-        .select("*");
-
-      if (errorCrypto) throw errorCrypto;
-
-      const cryptoRaw: SaldoCryptoRaw[] = (saldosCrypto || [])
-        .filter((s: any) => s.parceiro_id && s.saldo_coin > 0)
-        .map((s: any) => ({
-          parceiro_id: s.parceiro_id,
-          coin: s.coin,
-          saldo_coin: Number(s.saldo_coin || 0),
-          saldo_usd: Number(s.saldo_usd || 0),
-        }));
-      setSaldosCryptoRaw(cryptoRaw);
-
-      const saldosMap = new Map<string, SaldoParceiro>();
-
-      saldosFiat?.forEach((saldo) => {
-        if (!saldo.parceiro_id) return;
-        const current = saldosMap.get(saldo.parceiro_id) || {
-          parceiro_id: saldo.parceiro_id,
-          saldo_fiat: 0,
-          saldo_crypto_usd: 0,
-        };
-        current.saldo_fiat += Number(saldo.saldo || 0);
-        saldosMap.set(saldo.parceiro_id, current);
-      });
-
-      saldosCrypto?.forEach((saldo) => {
-        if (!saldo.parceiro_id || Number(saldo.saldo_coin) === 0) return;
-        const current = saldosMap.get(saldo.parceiro_id) || {
-          parceiro_id: saldo.parceiro_id,
-          saldo_fiat: 0,
-          saldo_crypto_usd: 0,
-        };
-        current.saldo_crypto_usd += Number(saldo.saldo_usd || 0);
-        saldosMap.set(saldo.parceiro_id, current);
-      });
-
-      setSaldosData(saldosMap);
-    } catch (error: any) {
-      console.error("Erro ao carregar saldos:", error);
-    }
-  };
+  }, [workspaceId, navigate]);
 
   const handleDeleteClick = async (id: string) => {
     const roiInfo = roiData.get(id);
@@ -506,7 +195,7 @@ export default function GestaoParceiros() {
         title: "Parceiro excluído",
         description: "O parceiro foi removido com sucesso.",
       });
-      fetchParceiros();
+      refetchParceiros();
       setDeleteDialogOpen(false);
       
       if (selectedParceiroDetalhes === parceiroToDelete) {
@@ -534,8 +223,7 @@ export default function GestaoParceiros() {
     
     // Só recarrega dados se houve salvamento (evita reload desnecessário em visualização)
     if (options?.saved) {
-      fetchParceiros();
-      fetchSaldosData();
+      refetchParceiros();
       if (editedParceiroId) {
         parceiroCache.invalidateCache(editedParceiroId);
       }
@@ -548,7 +236,7 @@ export default function GestaoParceiros() {
     setVinculoParceiroId(null);
     setVinculoBookmakerId(null);
     setEditingBookmaker(null);
-    fetchParceiros();
+    refetchParceiros();
     if (parceiroId) {
       parceiroCache.invalidateCache(parceiroId);
       // Invalidar cache de bookmakers para atualizar Casas Vinculadas/Disponíveis
@@ -626,7 +314,7 @@ export default function GestaoParceiros() {
     if (selectedParceiroDetalhes) {
       parceiroCache.invalidateCache(selectedParceiroDetalhes);
     }
-    fetchParceiros();
+    refetchParceiros();
   }, [selectedParceiroDetalhes, parceiroCache]);
 
   // ============== MEMOIZED MODAL HANDLERS ==============
@@ -710,7 +398,7 @@ export default function GestaoParceiros() {
         cpf: p.cpf,
         status: p.status,
         created_at: p.created_at,
-        resultado_por_moeda: roi?.resultado_por_moeda || createEmptySaldos(),
+        resultado_por_moeda: roi?.resultado_por_moeda || ({} as Record<string, number>),
         moedas_utilizadas: roi?.moedas_utilizadas || [],
         has_parceria: parceriasData.has(p.id),
       };
