@@ -96,7 +96,9 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
 
           {/* Main content - flex-1 + min-h-0 + overflow-auto para scroll correto */}
           <main className="flex-1 min-h-0 overflow-auto">
-            {children}
+            <Suspense fallback={<PageLoader />}>
+              {children}
+            </Suspense>
           </main>
         </div>
       </div>
