@@ -1415,7 +1415,7 @@ export default function Financeiro() {
         open={despesaAdminDialogOpen}
         onOpenChange={setDespesaAdminDialogOpen}
         despesa={editingDespesa}
-        onSuccess={fetchData}
+        onSuccess={() => refetchFinanceiro()}
       />
     </div>
   );
