@@ -1215,7 +1215,7 @@ export default function Financeiro() {
                     acc[grupo] = (acc[grupo] || 0) + d.valor;
                     return acc;
                   }, {} as Record<string, number>)
-                ).sort((a, b) => b[1] - a[1]).map(([grupo, valor]) => {
+                ).sort((a, b) => (b[1] as number) - (a[1] as number)).map(([grupo, valor]) => {
                   const grupoInfo = getGrupoInfo(grupo);
                   const IconComponent = grupoInfo.icon;
                   return (
