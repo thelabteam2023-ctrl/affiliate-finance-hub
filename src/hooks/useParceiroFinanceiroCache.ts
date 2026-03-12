@@ -146,14 +146,16 @@ export function useParceiroFinanceiroCache() {
       .filter(Boolean))];
     
     let logosMap = new Map<string, string>();
+    let catalogoStatusMap = new Map<string, string>();
     if (catalogoIds.length > 0) {
       const { data: catalogoData } = await supabase
         .from("bookmakers_catalogo")
-        .select("id, logo_url")
+        .select("id, logo_url, status")
         .in("id", catalogoIds as string[]);
 
       catalogoData?.forEach((c) => {
         if (c.logo_url) logosMap.set(c.id, c.logo_url);
+        catalogoStatusMap.set(c.id, c.status);
       });
     }
 
@@ -299,6 +301,7 @@ export function useParceiroFinanceiroCache() {
         has_credentials: !!(bm.login_username && bm.login_username.trim()),
         login_username: bm.login_username || null,
         login_password_encrypted: bm.login_password_encrypted || null,
+        catalogo_status: bm.bookmaker_catalogo_id ? catalogoStatusMap.get(bm.bookmaker_catalogo_id) || null : null,
       };
     });
 

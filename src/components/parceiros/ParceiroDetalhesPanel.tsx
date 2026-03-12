@@ -93,6 +93,7 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
   const [filtroMoeda, setFiltroMoeda] = useState<string>("todas");
   const [buscaCasa, setBuscaCasa] = useState("");
   const [filtroStatus, setFiltroStatus] = useState<string | null>(null);
+  const [filtroRegulamentacao, setFiltroRegulamentacao] = useState<string>("todas");
   const [perdaDialog, setPerdaDialog] = useState<{ open: boolean; bookmakerId: string; bookmakerNome: string; moeda: string; saldoAtual: number } | null>(null);
   const { canEdit, canDelete } = useActionAccess();
   const { convertToBRL, dataSource, isUsingFallback, rates } = useCotacoes();
@@ -199,6 +200,8 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
   useEffect(() => {
     setFiltroMoeda("todas");
     setBuscaCasa("");
+    setFiltroStatus(null);
+    setFiltroRegulamentacao("todas");
   }, [parceiroId]);
   
   // Converter rates para um mapa simples de moeda → cotação em BRL
@@ -235,12 +238,18 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
   const hasLucro = useMemo(() => resultadoEntries.some(e => e.value > 0), [resultadoEntries]);
   const hasPrejuizo = useMemo(() => resultadoEntries.some(e => e.value < 0), [resultadoEntries]);
   
-  // Base filtrada por moeda (sem filtro de status) para contagem dos badges
+  // Base filtrada por moeda e regulamentação (sem filtro de status) para contagem dos badges
   const bookmakersFiltradosPorMoeda = useMemo(() => {
     if (!data?.bookmakers) return [];
-    if (filtroMoeda === "todas") return data.bookmakers;
-    return data.bookmakers.filter(b => (b.moeda || "BRL") === filtroMoeda);
-  }, [data?.bookmakers, filtroMoeda]);
+    let filtered = data.bookmakers;
+    if (filtroMoeda !== "todas") {
+      filtered = filtered.filter(b => (b.moeda || "BRL") === filtroMoeda);
+    }
+    if (filtroRegulamentacao !== "todas") {
+      filtered = filtered.filter(b => (b.catalogo_status || "REGULAMENTADA") === filtroRegulamentacao);
+    }
+    return filtered;
+  }, [data?.bookmakers, filtroMoeda, filtroRegulamentacao]);
 
   // Contagem baseada no status REAL da conta, respeitando filtro de moeda
   const bookmarkersAtivos = useMemo(() => 
@@ -270,7 +279,7 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
     return Array.from(moedas).sort();
   }, [data?.bookmakers]);
 
-  // Bookmakers filtrados por moeda, status e busca
+  // Bookmakers filtrados por moeda, status, regulamentação e busca
   const bookmakersFiltradosMoeda = useMemo(() => {
     if (!data?.bookmakers) return [];
     let filtered = data.bookmakers;
@@ -280,8 +289,11 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
     if (filtroStatus) {
       filtered = filtered.filter(b => b.status === filtroStatus);
     }
+    if (filtroRegulamentacao !== "todas") {
+      filtered = filtered.filter(b => (b.catalogo_status || "REGULAMENTADA") === filtroRegulamentacao);
+    }
     return filtered;
-  }, [data?.bookmakers, filtroMoeda, filtroStatus]);
+  }, [data?.bookmakers, filtroMoeda, filtroStatus, filtroRegulamentacao]);
 
   const bookmakersFiltrados = useMemo(() => {
     if (!buscaCasa.trim()) return bookmakersFiltradosMoeda;
@@ -292,11 +304,14 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
     );
   }, [bookmakersFiltradosMoeda, buscaCasa]);
 
-  // KPIs filtrados por moeda - recalcula com base nos bookmakers filtrados
-  // Quando "todas", consolida em BRL e mantém breakdown por moeda original
+  // Determina se há algum filtro dimensional ativo (status ou regulamentação)
+  const hasActiveFilter = !!filtroStatus || filtroRegulamentacao !== "todas";
+  
+  // KPIs filtrados - recalcula com base nos bookmakers filtrados
+  // Quando há filtro dimensional ativo, SEMPRE agrega dos bookmakers filtrados
   const kpisFiltrados = useMemo(() => {
-    if (filtroMoeda === "todas") {
-      // Calcular totais consolidados em BRL
+    if (filtroMoeda === "todas" && !hasActiveFilter) {
+      // Sem filtro algum: usar dados consolidados originais
       const consolidarEmBRL = (entries: { currency: string; value: number }[]): number => {
         return entries.reduce((total, e) => {
           return total + convertToBRL(e.value, e.currency);
@@ -317,34 +332,77 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
       };
     }
     
-    // Agregar valores apenas dos bookmakers da moeda selecionada
+    // Há algum filtro ativo: agregar dos bookmakers filtrados
+    const consolidarEmBRL = (entries: { currency: string; value: number }[]): number => {
+      return entries.reduce((total, e) => {
+        return total + convertToBRL(e.value, e.currency);
+      }, 0);
+    };
+
     let depositadoTotal = 0;
     let sacadoTotal = 0;
     let saldoTotal = 0;
     let resultadoTotal = 0;
     let apostasTotal = 0;
     
+    // Agregar por moeda para breakdown
+    const depPorMoeda: Record<string, number> = {};
+    const saqPorMoeda: Record<string, number> = {};
+    const salPorMoeda: Record<string, number> = {};
+    const resPorMoeda: Record<string, number> = {};
+    
     bookmakersFiltradosMoeda.forEach(bm => {
+      const moeda = bm.moeda || "BRL";
       depositadoTotal += bm.total_depositado ?? 0;
       sacadoTotal += bm.total_sacado ?? 0;
       saldoTotal += bm.saldo_atual ?? 0;
       resultadoTotal += bm.lucro_prejuizo ?? 0;
       apostasTotal += bm.qtd_apostas ?? 0;
+      
+      depPorMoeda[moeda] = (depPorMoeda[moeda] || 0) + (bm.total_depositado ?? 0);
+      saqPorMoeda[moeda] = (saqPorMoeda[moeda] || 0) + (bm.total_sacado ?? 0);
+      salPorMoeda[moeda] = (salPorMoeda[moeda] || 0) + (bm.saldo_atual ?? 0);
+      resPorMoeda[moeda] = (resPorMoeda[moeda] || 0) + (bm.lucro_prejuizo ?? 0);
     });
     
+    const toEntries = (map: Record<string, number>) => 
+      Object.entries(map).filter(([, v]) => v !== 0).map(([currency, value]) => ({ currency, value }));
+    
+    if (filtroMoeda !== "todas") {
+      // Moeda específica selecionada
+      return {
+        depositado: [{ currency: filtroMoeda, value: depositadoTotal }],
+        depositadoBRL: undefined,
+        sacado: [{ currency: filtroMoeda, value: sacadoTotal }],
+        sacadoBRL: undefined,
+        saldo: [{ currency: filtroMoeda, value: saldoTotal }],
+        saldoBRL: undefined,
+        resultado: [{ currency: filtroMoeda, value: resultadoTotal }],
+        resultadoBRL: undefined,
+        apostas: apostasTotal,
+        isConsolidado: false,
+      };
+    }
+    
+    // Moeda "todas" mas com filtro dimensional: consolidar em BRL com breakdown
+    const depEntries = toEntries(depPorMoeda);
+    const saqEntries = toEntries(saqPorMoeda);
+    const salEntries = toEntries(salPorMoeda);
+    const resEntries = toEntries(resPorMoeda);
+    
     return {
-      depositado: [{ currency: filtroMoeda, value: depositadoTotal }],
-      depositadoBRL: undefined,
-      sacado: [{ currency: filtroMoeda, value: sacadoTotal }],
-      sacadoBRL: undefined,
-      saldo: [{ currency: filtroMoeda, value: saldoTotal }],
-      saldoBRL: undefined,
-      resultado: [{ currency: filtroMoeda, value: resultadoTotal }],
-      resultadoBRL: undefined,
+      depositado: depEntries,
+      depositadoBRL: consolidarEmBRL(depEntries),
+      sacado: saqEntries,
+      sacadoBRL: consolidarEmBRL(saqEntries),
+      saldo: salEntries,
+      saldoBRL: consolidarEmBRL(salEntries),
+      resultado: resEntries,
+      resultadoBRL: consolidarEmBRL(resEntries),
       apostas: apostasTotal,
-      isConsolidado: false,
+      isConsolidado: true,
     };
-  }, [filtroMoeda, bookmakersFiltradosMoeda, depositadoEntries, sacadoEntries, saldoEntries, resultadoEntries, data?.qtd_apostas_total, convertToBRL]);
+  }, [filtroMoeda, hasActiveFilter, bookmakersFiltradosMoeda, depositadoEntries, sacadoEntries, saldoEntries, resultadoEntries, data?.qtd_apostas_total, convertToBRL]);
 
   // Determinar lucro/prejuízo baseado nos KPIs filtrados
   const hasLucroFiltrado = useMemo(() => kpisFiltrados.resultado.some(e => e.value > 0), [kpisFiltrados.resultado]);
@@ -756,6 +814,16 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                           </SelectContent>
                         </Select>
                       )}
+                      <Select value={filtroRegulamentacao} onValueChange={setFiltroRegulamentacao}>
+                        <SelectTrigger className="h-6 w-[80px] text-[10px] px-2 py-0">
+                          <SelectValue placeholder="Tipo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="todas" className="text-xs">Todas</SelectItem>
+                          <SelectItem value="REGULAMENTADA" className="text-xs">Reg.</SelectItem>
+                          <SelectItem value="NAO_REGULAMENTADA" className="text-xs">Não Reg.</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
 
