@@ -1,8 +1,8 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useTabWorkspace } from "@/hooks/useTabWorkspace";
-import { useWorkspaceChangeListener } from "@/hooks/useWorkspaceCacheClear";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useFinanceiroData } from "@/hooks/useFinanceiroData";
 import { useToast } from "@/hooks/use-toast";
 import { useCotacoes } from "@/hooks/useCotacoes";
 import { useCurrencySnapshot } from "@/hooks/useCurrencySnapshot";
