@@ -396,7 +396,6 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
   };
 
   const resetForm = () => {
-    console.log('[ParceiroDialog] resetForm() EXECUTADO - limpando todos os campos');
     setNome("");
     setCpf("");
     setEmail("");
