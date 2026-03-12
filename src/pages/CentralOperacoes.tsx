@@ -156,23 +156,77 @@ const PRIORITY = {
 
 export default function CentralOperacoes() {
   const { setContent: setTopBarContent } = useTopBar();
-  const [alertas, setAlertas] = useState<Alerta[]>([]);
-  const [entregasPendentes, setEntregasPendentes] = useState<EntregaPendente[]>([]);
-  const [pagamentosParceiros, setPagamentosParceiros] = useState<PagamentoParceiroPendente[]>([]);
-  const [pagamentosFornecedores, setPagamentosFornecedores] = useState<PagamentoFornecedorPendente[]>([]);
-  const [bonusPendentes, setBonusPendentes] = useState<BonusPendente[]>([]);
-  const [comissoesPendentes, setComissoesPendentes] = useState<ComissaoPendente[]>([]);
-  const [parceriasEncerramento, setParceriasEncerramento] = useState<ParceriaAlertaEncerramento[]>([]);
-  const [parceirosSemParceria, setParceirosSemParceria] = useState<ParceiroSemParceria[]>([]);
-  const [saquesPendentes, setSaquesPendentes] = useState<SaquePendenteConfirmacao[]>([]);
+  const navigate = useNavigate();
+
+  const { alertas: alertasCiclos, refetch: refetchCiclos } = useCicloAlertas();
+  const { role, isOperator } = useRole();
+  const { user, workspaceId } = useAuth();
+  const { data: kpisOcorrencias } = useOcorrenciasKpis();
+  const { data: kpisSolicitacoes } = useSolicitacoesKpis();
+
+  // ==================== REACT QUERY: Cache + Deduplicação ====================
+  const { data: centralData, loading, refreshing, refetch: refetchCentral, allowedDomains } = useCentralOperacoesData();
+
+  // Destructure all data from cached query
+  const {
+    alertas, entregasPendentes, pagamentosParceiros, pagamentosFornecedores,
+    bonusPendentes, comissoesPendentes, parceriasEncerramento: parceriasEncerramentoData,
+    parceirosSemParceria, saquesPendentes, alertasLucro: alertasLucroData,
+    pagamentosOperadorPendentes, participacoesPendentes, casasDesvinculadas,
+    casasPendentesConciliacao, propostasPagamentoCount,
+  } = centralData;
+
+  // Mutable state for items that can be modified locally (optimistic updates)
   const [alertasLucro, setAlertasLucro] = useState<AlertaLucroParceiro[]>([]);
-  const [pagamentosOperadorPendentes, setPagamentosOperadorPendentes] = useState<PagamentoOperadorPendente[]>([]);
-  const [participacoesPendentes, setParticipacoesPendentes] = useState<ParticipacaoPendente[]>([]);
-  const [casasDesvinculadas, setCasasDesvinculadas] = useState<BookmakerDesvinculado[]>([]);
-  const [casasPendentesConciliacao, setCasasPendentesConciliacao] = useState<CasaPendenteConciliacao[]>([]);
-  const [propostasPagamentoCount, setPropostasPagamentoCount] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const [parceriasEncerramento, setParceriasEncerramento] = useState<ParceriaAlertaEncerramento[]>([]);
+  
+  // Sync mutable state from query
+  useEffect(() => { setAlertasLucro(alertasLucroData); }, [alertasLucroData]);
+  useEffect(() => { setParceriasEncerramento(parceriasEncerramentoData); }, [parceriasEncerramentoData]);
+
+  // Contagem de contas disponíveis com saldo (alerta visual)
+  const { data: contasDisponiveisCount } = useQuery({
+    queryKey: ['contas-disponiveis-count', workspaceId],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('bookmakers')
+        .select('id', { count: 'exact', head: true })
+        .is('projeto_id', null)
+        .eq('workspace_id', workspaceId!)
+        .gte('saldo_atual', 1);
+      if (error) throw error;
+      return count ?? 0;
+    },
+    enabled: !!workspaceId,
+    staleTime: 30_000,
+  });
+
+  // ─── REALTIME: Apenas eventos críticos ─────
+  const realtimeDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
+  useEffect(() => {
+    if (!workspaceId) return;
+
+    const debouncedRefresh = () => {
+      if (realtimeDebounceRef.current) clearTimeout(realtimeDebounceRef.current);
+      realtimeDebounceRef.current = setTimeout(() => {
+        refetchCentral();
+      }, 3000);
+    };
+
+    const channel = supabase
+      .channel('central-operacoes-realtime')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'cash_ledger', filter: `workspace_id=eq.${workspaceId}` }, debouncedRefresh)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'bookmakers', filter: `workspace_id=eq.${workspaceId}` }, debouncedRefresh)
+      .subscribe();
+
+    return () => {
+      if (realtimeDebounceRef.current) clearTimeout(realtimeDebounceRef.current);
+      supabase.removeChannel(channel);
+    };
+  }, [workspaceId, refetchCentral]);
+
+  // Dialog UI states (kept local - not data)
   const [conciliacaoOpen, setConciliacaoOpen] = useState(false);
   const [selectedEntrega, setSelectedEntrega] = useState<EntregaPendente | null>(null);
   const [confirmarSaqueOpen, setConfirmarSaqueOpen] = useState(false);
@@ -201,7 +255,6 @@ export default function CentralOperacoes() {
   const [selectedPagamentoFornecedor, setSelectedPagamentoFornecedor] = useState<PagamentoFornecedorPendente | null>(null);
   const [pagamentoParceiroDialogOpen, setPagamentoParceiroDialogOpen] = useState(false);
   const [selectedPagamentoParceiro, setSelectedPagamentoParceiro] = useState<PagamentoParceiroPendente | null>(null);
-  // Parcerias encerramento
   const [encerrarDialogOpen, setEncerrarDialogOpen] = useState(false);
   const [parceriaToEncerrar, setParceriaToEncerrar] = useState<ParceriaAlertaEncerramento | null>(null);
   const [encerrarLoading, setEncerrarLoading] = useState(false);
@@ -216,592 +269,9 @@ export default function CentralOperacoes() {
     setMainTabState(tab);
     localStorage.setItem('central-operacoes-main-tab', tab);
   };
-  const navigate = useNavigate();
 
-  const { alertas: alertasCiclos, refetch: refetchCiclos } = useCicloAlertas();
-  const { role, isOperator } = useRole();
-  const { user, workspaceId } = useAuth();
-  const { data: kpisOcorrencias } = useOcorrenciasKpis();
-  const { data: kpisSolicitacoes } = useSolicitacoesKpis();
-
-  // Contagem de contas disponíveis com saldo (alerta visual)
-  const { data: contasDisponiveisCount } = useQuery({
-    queryKey: ['contas-disponiveis-count', workspaceId],
-    queryFn: async () => {
-      const { count, error } = await supabase
-        .from('bookmakers')
-        .select('id', { count: 'exact', head: true })
-        .is('projeto_id', null)
-        .eq('workspace_id', workspaceId!)
-        .gte('saldo_atual', 1);
-      if (error) throw error;
-      return count ?? 0;
-    },
-    enabled: !!workspaceId,
-    staleTime: 30_000,
-  });
-  // Domínios permitidos para o role atual
-  const allowedDomains = useMemo(() => {
-    return ROLE_VISIBILITY[role || 'viewer'] || [];
-  }, [role]);
-
-  useEffect(() => {
-    if (user && workspaceId) {
-      fetchData();
-    }
-  }, [user, role, workspaceId]);
-
-  // ─── REALTIME: Apenas eventos críticos (cash_ledger + bookmakers) ─────
-  const realtimeDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  
-  useEffect(() => {
-    if (!workspaceId) return;
-
-    const debouncedRefresh = () => {
-      if (realtimeDebounceRef.current) clearTimeout(realtimeDebounceRef.current);
-      realtimeDebounceRef.current = setTimeout(() => {
-        fetchData(true);
-      }, 3000); // 3s debounce — agrupa mudanças simultâneas
-    };
-
-    const channel = supabase
-      .channel('central-operacoes-realtime')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'cash_ledger', filter: `workspace_id=eq.${workspaceId}` }, debouncedRefresh)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'bookmakers', filter: `workspace_id=eq.${workspaceId}` }, debouncedRefresh)
-      .subscribe();
-
-    return () => {
-      if (realtimeDebounceRef.current) clearTimeout(realtimeDebounceRef.current);
-      supabase.removeChannel(channel);
-    };
-  }, [workspaceId]);
-
-  const fetchData = async (isRefresh = false) => {
-    try {
-      if (isRefresh) {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
-      }
-
-      const hoje = new Date();
-      hoje.setHours(0, 0, 0, 0);
-
-      // Para operadores, primeiro buscar os projetos vinculados
-      let operatorProjectIds: string[] = [];
-      let operadorId: string | null = null;
-
-      if (isOperator && user) {
-        const { data: operadorData } = await supabase
-          .from("operadores")
-          .select("id")
-          .eq("auth_user_id", user.id)
-          .single();
-
-        if (operadorData) {
-          operadorId = operadorData.id;
-          const { data: vinculos } = await supabase
-            .from("operador_projetos")
-            .select("projeto_id")
-            .eq("operador_id", operadorData.id)
-            .eq("status", "ATIVO");
-          operatorProjectIds = (vinculos || []).map((v: any) => v.projeto_id);
-        }
-      }
-
-      // Operadores não devem ver dados administrativos, financeiros ou de parceiros
-      const canSeeAdminData = allowedDomains.includes('admin_event');
-      const canSeeFinancialData = allowedDomains.includes('financial_event');
-      const canSeePartnerData = allowedDomains.includes('partner_event');
-
-      // Buscar dados em paralelo, respeitando restrições de role
-      const [
-        alertasResult,
-        entregasResult,
-        parceirosResult,
-        movimentacoesResult,
-        encerResult,
-        todosParceirosResult,
-        todasParceriasResult,
-        saquesPendentesResult,
-        alertasLucroResult,
-        custosResult,
-        acordosResult,
-        comissoesResult,
-        indicacoesResult,
-        indicadoresResult,
-        pagamentosOperadorResult,
-        fornecedoresParceriasResult,
-        fornecedoresNomesResult,
-      ] = await Promise.all([
-        // Alertas do painel operacional (saques e casas limitadas) - financial_event
-        canSeeFinancialData 
-          ? supabase.from("v_painel_operacional").select("*")
-          : Promise.resolve({ data: [], error: null }),
-        // Entregas pendentes - filtrar por projetos do operador se for operador
-        supabase.from("v_entregas_pendentes").select("*").in("status_conciliacao", ["PRONTA"]),
-        // Parcerias para pagamentos - apenas se puder ver dados de parceiros
-        canSeePartnerData
-          ? supabase
-              .from("parcerias")
-              .select(`id, parceiro_id, valor_parceiro, origem_tipo, data_fim_prevista, custo_aquisicao_isento, workspace_id, parceiro:parceiros(nome)`)
-              .in("status", ["ATIVA", "EM_ENCERRAMENTO"])
-              .or("custo_aquisicao_isento.is.null,custo_aquisicao_isento.eq.false")
-              .gt("valor_parceiro", 0)
-              .eq("pagamento_dispensado", false)
-          : Promise.resolve({ data: [], error: null }),
-        // Movimentações para filtrar pagamentos já feitos
-        canSeePartnerData
-          ? supabase.from("movimentacoes_indicacao").select("parceria_id, tipo, status, indicador_id, valor")
-          : Promise.resolve({ data: [], error: null }),
-        // Parcerias próximas do encerramento - apenas se puder ver dados de parceiros
-        canSeePartnerData
-          ? supabase
-              .from("parcerias")
-              .select(`id, parceiro_id, data_inicio, data_fim_prevista, duracao_dias, valor_parceiro, valor_indicador, valor_fornecedor, origem_tipo, fornecedor_id, indicacao_id, elegivel_renovacao, observacoes, status, parceiro:parceiros(nome)`)
-              .in("status", ["ATIVA", "EM_ENCERRAMENTO"])
-              .not("data_fim_prevista", "is", null)
-          : Promise.resolve({ data: [], error: null }),
-        // Parceiros sem parceria - apenas se puder ver dados de parceiros
-        canSeePartnerData
-          ? supabase.from("parceiros").select("id, nome, cpf, created_at").eq("status", "ativo")
-          : Promise.resolve({ data: [], error: null }),
-        canSeePartnerData
-          ? supabase.from("parcerias").select("parceiro_id").in("status", ["ATIVA", "EM_ENCERRAMENTO"])
-          : Promise.resolve({ data: [], error: null }),
-        // Saques pendentes - apenas se puder ver dados financeiros (incluindo dados cripto)
-        // NOTA: cotacao = Casa→Destino (ex: EUR/BRL), valor_destino = estimativa na moeda de destino
-        canSeeFinancialData
-          ? supabase
-              .from("cash_ledger")
-              .select(`id, valor, moeda, data_transacao, descricao, origem_bookmaker_id, destino_parceiro_id, destino_conta_bancaria_id, destino_wallet_id, coin, qtd_coin, cotacao, moeda_origem, moeda_destino, valor_origem, valor_destino, projeto_id_snapshot`)
-              .eq("tipo_transacao", "SAQUE")
-              .eq("status", "PENDENTE")
-              .order("data_transacao", { ascending: false })
-          : Promise.resolve({ data: [], error: null }),
-        // Alertas de lucro - apenas se puder ver dados de parceiros
-        canSeePartnerData
-          ? supabase
-              .from("parceiro_lucro_alertas")
-              .select(`id, parceiro_id, marco_valor, lucro_atual, data_atingido, parceiro:parceiros(nome)`)
-              .eq("notificado", false)
-              .order("data_atingido", { ascending: false })
-          : Promise.resolve({ data: [], error: null }),
-        // Custos para bonus - apenas se puder ver dados de parceiros
-        canSeePartnerData
-          ? supabase.from("v_custos_aquisicao").select("*")
-          : Promise.resolve({ data: [], error: null }),
-        canSeePartnerData
-          ? supabase.from("indicador_acordos").select("*").eq("ativo", true)
-          : Promise.resolve({ data: [], error: null }),
-        // Comissões pendentes - apenas se puder ver dados de parceiros
-        canSeePartnerData
-          ? supabase
-              .from("parcerias")
-              .select(`id, valor_comissao_indicador, comissao_paga, parceiro_id, parceiro:parceiros(nome)`)
-              .eq("comissao_paga", false)
-              .not("valor_comissao_indicador", "is", null)
-              .gt("valor_comissao_indicador", 0)
-          : Promise.resolve({ data: [], error: null }),
-        canSeePartnerData
-          ? supabase.from("indicacoes").select("parceiro_id, indicador_id")
-          : Promise.resolve({ data: [], error: null }),
-        canSeePartnerData
-          ? supabase.from("indicadores_referral").select("id, nome")
-          : Promise.resolve({ data: [], error: null }),
-        // Pagamentos de operador pendentes
-        supabase
-          .from("pagamentos_operador")
-          .select(`id, operador_id, tipo_pagamento, valor, data_pagamento, projeto_id, operador:operadores(nome), projeto:projetos(nome)`)
-          .eq("status", "PENDENTE")
-          .order("data_pagamento", { ascending: false }),
-        // Parcerias com fornecedor para pagamentos pendentes
-        canSeePartnerData
-          ? supabase
-              .from("parcerias")
-              .select(`id, parceiro_id, fornecedor_id, valor_fornecedor, data_fim_prevista, workspace_id, parceiro:parceiros(nome)`)
-              .in("status", ["ATIVA", "EM_ENCERRAMENTO"])
-              .eq("origem_tipo", "FORNECEDOR")
-              .gt("valor_fornecedor", 0)
-              .eq("pagamento_dispensado", false)
-          : Promise.resolve({ data: [], error: null }),
-        // Nomes dos fornecedores
-        canSeePartnerData
-          ? supabase.from("fornecedores").select("id, nome")
-          : Promise.resolve({ data: [], error: null }),
-      ]);
-
-      if (alertasResult.error) throw alertasResult.error;
-      setAlertas(alertasResult.data || []);
-
-      // Filtrar entregas por projetos do operador se necessário
-      if (entregasResult.error) throw entregasResult.error;
-      let entregasData = entregasResult.data || [];
-      if (isOperator && operatorProjectIds.length > 0) {
-        entregasData = entregasData.filter((e: any) => operatorProjectIds.includes(e.projeto_id));
-      } else if (isOperator) {
-        entregasData = []; // Operador sem projetos vinculados não vê entregas
-      }
-      setEntregasPendentes(entregasData);
-
-      if (!alertasLucroResult.error && alertasLucroResult.data) {
-        setAlertasLucro(
-          alertasLucroResult.data.map((a: any) => ({
-            id: a.id,
-            parceiro_id: a.parceiro_id,
-            parceiro_nome: a.parceiro?.nome || "Parceiro",
-            marco_valor: a.marco_valor,
-            lucro_atual: a.lucro_atual,
-            data_atingido: a.data_atingido,
-          }))
-        );
-      }
-
-      if (!parceirosResult.error && !movimentacoesResult.error) {
-        const parceriasPagas = (movimentacoesResult.data || [])
-          .filter((m: any) => m.tipo === "PAGTO_PARCEIRO" && m.status === "CONFIRMADO")
-          .map((m: any) => m.parceria_id);
-
-        const pagamentosMap: PagamentoParceiroPendente[] = (parceirosResult.data || [])
-          .filter((p: any) => !parceriasPagas.includes(p.id))
-          .map((p: any) => {
-            const dataFim = p.data_fim_prevista ? new Date(p.data_fim_prevista) : null;
-            let diasRestantes = 999;
-            if (dataFim) {
-              dataFim.setHours(0, 0, 0, 0);
-              diasRestantes = Math.ceil((dataFim.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
-            }
-            return {
-              parceriaId: p.id,
-              parceiroNome: p.parceiro?.nome || "N/A",
-              valorParceiro: p.valor_parceiro,
-              origemTipo: p.origem_tipo || "INDICADOR",
-              diasRestantes,
-              parceiroId: p.parceiro_id,
-              workspaceId: p.workspace_id,
-            };
-          });
-        setPagamentosParceiros(pagamentosMap);
-      }
-
-      // Pagamentos a fornecedores pendentes - supports partial payments
-      if (!fornecedoresParceriasResult.error && !movimentacoesResult.error) {
-        const fornecedoresMap = new Map(
-          (fornecedoresNomesResult.data || []).map((f: any) => [f.id, f.nome])
-        );
-        // Sum all confirmed payments per parceria
-        const pagamentosPorParceria = new Map<string, number>();
-        (movimentacoesResult.data || [])
-          .filter((m: any) => m.tipo === "PAGTO_FORNECEDOR" && m.status === "CONFIRMADO")
-          .forEach((m: any) => {
-            const atual = pagamentosPorParceria.get(m.parceria_id) || 0;
-            pagamentosPorParceria.set(m.parceria_id, atual + (m.valor || 0));
-          });
-
-        const pagFornecedores: PagamentoFornecedorPendente[] = (fornecedoresParceriasResult.data || [])
-          .map((p: any) => {
-            const dataFim = p.data_fim_prevista ? new Date(p.data_fim_prevista) : null;
-            let diasRestantes = 999;
-            if (dataFim) {
-              dataFim.setHours(0, 0, 0, 0);
-              diasRestantes = Math.ceil((dataFim.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
-            }
-            const valorTotal = p.valor_fornecedor || 0;
-            const valorPago = pagamentosPorParceria.get(p.id) || 0;
-            const valorRestante = Math.max(0, valorTotal - valorPago);
-            return {
-              parceriaId: p.id,
-              parceiroNome: p.parceiro?.nome || "N/A",
-              fornecedorNome: fornecedoresMap.get(p.fornecedor_id) || "Fornecedor",
-              fornecedorId: p.fornecedor_id,
-              valorFornecedor: valorTotal,
-              valorPago,
-              valorRestante,
-              diasRestantes,
-              workspaceId: p.workspace_id,
-            };
-          })
-          .filter((p) => p.valorRestante > 0);
-        setPagamentosFornecedores(pagFornecedores);
-      }
-
-      if (custosResult.data && acordosResult.data && movimentacoesResult.data) {
-        const indicadorStats: Record<string, { nome: string; qtd: number }> = {};
-
-        custosResult.data.forEach((c: any) => {
-          if (c.indicador_id && c.indicador_nome) {
-            if (!indicadorStats[c.indicador_id]) {
-              indicadorStats[c.indicador_id] = { nome: c.indicador_nome, qtd: 0 };
-            }
-            indicadorStats[c.indicador_id].qtd += 1;
-          }
-        });
-
-        const bonusPagosPorIndicador: Record<string, number> = {};
-        (movimentacoesResult.data || [])
-          .filter((m: any) => m.tipo === "BONUS_INDICADOR" && m.status === "CONFIRMADO")
-          .forEach((m: any) => {
-            if (m.indicador_id) {
-              bonusPagosPorIndicador[m.indicador_id] = (bonusPagosPorIndicador[m.indicador_id] || 0) + 1;
-            }
-          });
-
-        const pendentes: BonusPendente[] = [];
-        acordosResult.data.forEach((acordo: any) => {
-          const stats = indicadorStats[acordo.indicador_id];
-          if (stats && acordo.meta_parceiros && acordo.meta_parceiros > 0) {
-            const ciclosCompletos = Math.floor(stats.qtd / acordo.meta_parceiros);
-            const bonusJaPagos = bonusPagosPorIndicador[acordo.indicador_id] || 0;
-            const ciclosPendentes = ciclosCompletos - bonusJaPagos;
-
-            if (ciclosPendentes > 0) {
-              const valorBonusUnitario = acordo.valor_bonus || 0;
-              pendentes.push({
-                indicadorId: acordo.indicador_id,
-                indicadorNome: stats.nome,
-                valorBonus: valorBonusUnitario,
-                qtdParceiros: stats.qtd,
-                meta: acordo.meta_parceiros,
-                ciclosPendentes: ciclosPendentes,
-                totalBonusPendente: valorBonusUnitario * ciclosPendentes,
-              });
-            }
-          }
-        });
-        setBonusPendentes(pendentes);
-      }
-
-      if (comissoesResult.data && indicacoesResult.data && indicadoresResult.data) {
-        const indicadoresMap: Record<string, { id: string; nome: string }> = {};
-        indicadoresResult.data.forEach((ind: any) => {
-          if (ind.id) {
-            indicadoresMap[ind.id] = { id: ind.id, nome: ind.nome };
-          }
-        });
-
-        const parceiroIndicadorMap: Record<string, { id: string; nome: string }> = {};
-        indicacoesResult.data.forEach((ind: any) => {
-          if (ind.parceiro_id && ind.indicador_id && indicadoresMap[ind.indicador_id]) {
-            parceiroIndicadorMap[ind.parceiro_id] = indicadoresMap[ind.indicador_id];
-          }
-        });
-
-        const comissoes: ComissaoPendente[] = comissoesResult.data
-          .filter((p: any) => p.parceiro_id && parceiroIndicadorMap[p.parceiro_id])
-          .map((p: any) => {
-            const indicador = parceiroIndicadorMap[p.parceiro_id];
-            return {
-              parceriaId: p.id,
-              parceiroNome: p.parceiro?.nome || "N/A",
-              indicadorId: indicador.id,
-              indicadorNome: indicador.nome,
-              valorComissao: p.valor_comissao_indicador || 0,
-            };
-          });
-        setComissoesPendentes(comissoes);
-      }
-
-      if (!encerResult.error) {
-        const alertasEncer: ParceriaAlertaEncerramento[] = (encerResult.data || [])
-          .map((p: any) => {
-            const dataFim = new Date(p.data_fim_prevista);
-            dataFim.setHours(0, 0, 0, 0);
-            const diasRestantes = Math.ceil((dataFim.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
-            return {
-              id: p.id,
-              parceiro_id: p.parceiro_id,
-              parceiroNome: p.parceiro?.nome || "N/A",
-              diasRestantes,
-              dataFim: p.data_fim_prevista,
-              dataInicio: p.data_inicio,
-              duracaoDias: p.duracao_dias,
-              valor_parceiro: p.valor_parceiro || 0,
-              valor_indicador: p.valor_indicador || 0,
-              valor_fornecedor: p.valor_fornecedor || 0,
-              origem_tipo: p.origem_tipo || "DIRETO",
-              fornecedor_id: p.fornecedor_id,
-              indicacao_id: p.indicacao_id,
-              elegivel_renovacao: p.elegivel_renovacao ?? true,
-              observacoes: p.observacoes,
-              status: p.status,
-            };
-          })
-          .filter((p) => p.diasRestantes <= 7)
-          .sort((a, b) => a.diasRestantes - b.diasRestantes);
-
-        setParceriasEncerramento(alertasEncer);
-      }
-
-      if (!todosParceirosResult.error && !todasParceriasResult.error) {
-        const parceirosComParceria = new Set(
-          (todasParceriasResult.data || []).map((p: any) => p.parceiro_id)
-        );
-
-        const semParceria: ParceiroSemParceria[] = (todosParceirosResult.data || [])
-          .filter((p: any) => !parceirosComParceria.has(p.id))
-          .map((p: any) => ({
-            id: p.id,
-            nome: p.nome,
-            cpf: p.cpf,
-            createdAt: p.created_at,
-          }));
-
-        setParceirosSemParceria(semParceria);
-      }
-
-      if (!saquesPendentesResult.error && saquesPendentesResult.data && saquesPendentesResult.data.length > 0) {
-        const bookmakersIds = saquesPendentesResult.data.map((s: any) => s.origem_bookmaker_id).filter(Boolean);
-        const parceirosIds = saquesPendentesResult.data.map((s: any) => s.destino_parceiro_id).filter(Boolean);
-        const contasIds = saquesPendentesResult.data.map((s: any) => s.destino_conta_bancaria_id).filter(Boolean);
-        const walletsIds = saquesPendentesResult.data.map((s: any) => s.destino_wallet_id).filter(Boolean);
-
-        const [bookmakersData, parceirosNomes, contasNomes, walletsNomes] = await Promise.all([
-          bookmakersIds.length > 0 ? supabase.from("bookmakers").select("id, nome, projeto_id").in("id", bookmakersIds) : Promise.resolve({ data: [] }),
-          parceirosIds.length > 0 ? supabase.from("parceiros").select("id, nome").in("id", parceirosIds) : Promise.resolve({ data: [] }),
-          contasIds.length > 0 ? supabase.from("contas_bancarias").select("id, banco, titular").in("id", contasIds) : Promise.resolve({ data: [] }),
-          walletsIds.length > 0 ? supabase.from("wallets_crypto").select("id, exchange, moeda, network").in("id", walletsIds) : Promise.resolve({ data: [] }),
-        ]);
-
-        // Buscar nomes dos projetos vinculados às bookmakers
-        const projetosIds = (bookmakersData.data || []).map((b: any) => b.projeto_id).filter(Boolean);
-        const projetosNomes = projetosIds.length > 0 
-          ? await supabase.from("projetos").select("id, nome").in("id", projetosIds)
-          : { data: [] };
-
-        const bookmakersMap = Object.fromEntries((bookmakersData.data || []).map((b: any) => [b.id, { nome: b.nome, projeto_id: b.projeto_id }]));
-        const projetosMap = Object.fromEntries((projetosNomes.data || []).map((p: any) => [p.id, p.nome]));
-        const parceirosMap = Object.fromEntries((parceirosNomes.data || []).map((p: any) => [p.id, p.nome]));
-        const contasMap = Object.fromEntries((contasNomes.data || []).map((c: any) => [c.id, c.banco || "Conta Bancária"]));
-        // Criar mapa estruturado das wallets (com dados completos, não apenas label)
-        const walletsDataMap = Object.fromEntries(
-          (walletsNomes.data || []).map((w: any) => {
-            const moedas = Array.isArray(w.moeda) ? w.moeda : [];
-            const exchange = w.exchange ? String(w.exchange).replace(/-/g, " ").toUpperCase() : "WALLET";
-            const label = moedas.length > 0 ? `${exchange} (${moedas.join(", ")})` : exchange;
-            return [w.id, { 
-              label, 
-              network: w.network,
-              exchange,
-              moedas 
-            }];
-          })
-        );
-
-        const saquesEnriquecidos: SaquePendenteConfirmacao[] = saquesPendentesResult.data.map((s: any) => {
-          const bkData = bookmakersMap[s.origem_bookmaker_id] || { nome: "Bookmaker", projeto_id: null };
-          const walletData = s.destino_wallet_id ? walletsDataMap[s.destino_wallet_id] : null;
-          
-          return {
-            ...s,
-            bookmaker_nome: bkData.nome,
-            parceiro_nome: parceirosMap[s.destino_parceiro_id] || "",
-            banco_nome: s.destino_conta_bancaria_id ? contasMap[s.destino_conta_bancaria_id] : undefined,
-            wallet_nome: walletData?.label || undefined,
-            projeto_nome: bkData.projeto_id ? projetosMap[bkData.projeto_id] : undefined,
-            // Dados cripto do cash_ledger
-            coin: s.coin || undefined,
-            qtd_coin: s.qtd_coin || undefined,
-            cotacao_original: s.cotacao || undefined,
-            moeda_origem: s.moeda_origem || undefined,
-            valor_origem: s.valor_origem || undefined,
-            moeda_destino: s.moeda_destino || undefined,
-            // Dados de conversão para conciliação
-            valor_destino: s.valor_destino || undefined,
-            cotacao_snapshot: s.cotacao_snapshot || s.cotacao || undefined,
-            // Dados da wallet
-            wallet_network: walletData?.network || undefined,
-            wallet_exchange: walletData?.exchange || undefined,
-            wallet_moedas: walletData?.moedas || undefined,
-          };
-        });
-
-        setSaquesPendentes(saquesEnriquecidos);
-      } else {
-        setSaquesPendentes([]);
-      }
-
-      // Filtrar pagamentos de operador
-      if (!pagamentosOperadorResult.error && pagamentosOperadorResult.data) {
-        let pagamentosOp: PagamentoOperadorPendente[] = pagamentosOperadorResult.data.map((p: any) => ({
-          id: p.id,
-          operador_id: p.operador_id,
-          operador_nome: p.operador?.nome || "N/A",
-          tipo_pagamento: p.tipo_pagamento,
-          valor: p.valor,
-          data_pagamento: p.data_pagamento,
-          projeto_id: p.projeto_id || null,
-          projeto_nome: p.projeto?.nome || null,
-        }));
-
-        // Operador vê apenas seus próprios pagamentos
-        if (isOperator && operadorId) {
-          pagamentosOp = pagamentosOp.filter(p => p.operador_id === operadorId);
-        }
-        
-        setPagamentosOperadorPendentes(pagamentosOp);
-      }
-
-      // Participações - apenas para quem pode ver dados financeiros
-      if (canSeeFinancialData) {
-        const participacoesResult = await supabase
-          .from("participacao_ciclos")
-          .select(`id, projeto_id, ciclo_id, investidor_id, percentual_aplicado, base_calculo, lucro_base, valor_participacao, data_apuracao, investidor:investidores(nome), projeto:projetos(nome), ciclo:projeto_ciclos(numero_ciclo)`)
-          .eq("status", "A_PAGAR");
-
-        if (!participacoesResult.error && participacoesResult.data) {
-          const participacoes: ParticipacaoPendente[] = participacoesResult.data.map((p: any) => ({
-            id: p.id,
-            projeto_id: p.projeto_id,
-            ciclo_id: p.ciclo_id,
-            investidor_id: p.investidor_id,
-            percentual_aplicado: p.percentual_aplicado,
-            base_calculo: p.base_calculo,
-            lucro_base: p.lucro_base,
-            valor_participacao: p.valor_participacao,
-            data_apuracao: p.data_apuracao,
-            investidor_nome: p.investidor?.nome || "N/A",
-            projeto_nome: p.projeto?.nome || "N/A",
-            ciclo_numero: p.ciclo?.numero_ciclo || 0,
-          }));
-          setParticipacoesPendentes(participacoes);
-        }
-
-        // Buscar casas desvinculadas
-        const casasResult = await supabase
-          .from("v_bookmakers_desvinculados")
-          .select("*");
-
-        if (!casasResult.error && casasResult.data) {
-          setCasasDesvinculadas(casasResult.data as BookmakerDesvinculado[]);
-        }
-
-        // Buscar casas pendentes de conciliação (globalmente no workspace)
-        const conciliacaoResult = await supabase.rpc("get_bookmakers_pendentes_conciliacao", {
-          p_workspace_id: workspaceId,
-        });
-
-        if (!conciliacaoResult.error && conciliacaoResult.data) {
-          setCasasPendentesConciliacao(conciliacaoResult.data as CasaPendenteConciliacao[]);
-        }
-      } else {
-        setParticipacoesPendentes([]);
-        setCasasDesvinculadas([]);
-        setCasasPendentesConciliacao([]);
-      }
-
-      // Propostas de pagamento - buscar contagem para renderização condicional
-      const propostasResult = await supabase
-        .from("pagamentos_propostos")
-        .select("id", { count: "exact", head: true })
-        .eq("status", "PENDENTE");
-      
-      setPropostasPagamentoCount(propostasResult.count || 0);
-
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
+  // Helper alias for refetch after mutations
+  const fetchData = useCallback((isRefresh?: boolean) => { refetchCentral(); }, [refetchCentral]);
 
   const handleEncerrarParceria = async () => {
     if (!parceriaToEncerrar) return;
