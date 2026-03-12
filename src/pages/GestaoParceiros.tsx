@@ -223,8 +223,7 @@ export default function GestaoParceiros() {
     
     // Só recarrega dados se houve salvamento (evita reload desnecessário em visualização)
     if (options?.saved) {
-      fetchParceiros();
-      fetchSaldosData();
+      refetchParceiros();
       if (editedParceiroId) {
         parceiroCache.invalidateCache(editedParceiroId);
       }
