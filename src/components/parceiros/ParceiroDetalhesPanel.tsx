@@ -93,6 +93,7 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
   const [filtroMoeda, setFiltroMoeda] = useState<string>("todas");
   const [buscaCasa, setBuscaCasa] = useState("");
   const [filtroStatus, setFiltroStatus] = useState<string | null>(null);
+  const [filtroRegulamentacao, setFiltroRegulamentacao] = useState<string>("todas");
   const [perdaDialog, setPerdaDialog] = useState<{ open: boolean; bookmakerId: string; bookmakerNome: string; moeda: string; saldoAtual: number } | null>(null);
   const { canEdit, canDelete } = useActionAccess();
   const { convertToBRL, dataSource, isUsingFallback, rates } = useCotacoes();
