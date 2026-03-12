@@ -54,6 +54,7 @@ interface BookmakerLivre {
   id: string;
   nome: string;
   status: string;
+  estado_conta: string;
   saldo_atual: number;
   moeda: string;
   parceiro_id: string | null;
@@ -166,7 +167,7 @@ function SearchableSelectPopover({
 export function BookmakersLivresModule({ onRegistrarPerda, onVincularProjeto, onNewTransacao }: BookmakersLivresModuleProps) {
   const { workspaceId } = useAuth();
 
-  const [statusFilter, setStatusFilter] = useState("todos");
+  const [estadoContaFilter, setEstadoContaFilter] = useState("operacional");
   const [usoFilter, setUsoFilter] = useState("todas");
   const [casaFilter, setCasaFilter] = useState("todas");
   const [parceiroFilter, setParceiroFilter] = useState("todos");
@@ -181,7 +182,7 @@ export function BookmakersLivresModule({ onRegistrarPerda, onVincularProjeto, on
       const { data: bookmakers, error } = await supabase
         .from("bookmakers")
         .select(`
-          id, nome, status, saldo_atual, moeda,
+          id, nome, status, estado_conta, saldo_atual, moeda,
           parceiro_id,
           parceiro:parceiros!bookmakers_parceiro_id_fkey (nome),
           catalogo:bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url, status)
@@ -240,6 +241,7 @@ export function BookmakersLivresModule({ onRegistrarPerda, onVincularProjeto, on
         id: b.id,
         nome: b.nome,
         status: b.status || "ativo",
+        estado_conta: b.estado_conta || "normal",
         saldo_atual: Number(b.saldo_atual) || 0,
         moeda: b.moeda || "BRL",
         parceiro_id: b.parceiro_id,
@@ -298,14 +300,18 @@ export function BookmakersLivresModule({ onRegistrarPerda, onVincularProjeto, on
     return contas.filter((c) => {
       if (casaFilter !== "todas" && c.nome !== casaFilter) return false;
       if (parceiroFilter !== "todos" && c.parceiro_id !== parceiroFilter) return false;
-      if (statusFilter === "ativo" && !["ativo", "aguardando_saque", "AGUARDANDO_DECISAO"].includes(c.status)) return false;
-      if (statusFilter === "inativo" && ["ativo", "aguardando_saque", "AGUARDANDO_DECISAO"].includes(c.status)) return false;
+      // Estado conta filter: "operacional" hides limitada/encerrada/bloqueada
+      if (estadoContaFilter === "operacional") {
+        if (["limitada", "encerrada", "bloqueada", "LIMITADA", "ENCERRADA", "BLOQUEADA"].includes(c.estado_conta)) return false;
+      } else if (estadoContaFilter !== "todos") {
+        if (c.estado_conta.toLowerCase() !== estadoContaFilter.toLowerCase()) return false;
+      }
       if (usoFilter === "virgem" && c.ja_usada) return false;
       if (usoFilter === "utilizada" && !c.ja_usada) return false;
       if (regulamentacaoFilter !== "todas" && c.catalogo_status !== regulamentacaoFilter) return false;
       return true;
     });
-  }, [contas, casaFilter, parceiroFilter, statusFilter, usoFilter, regulamentacaoFilter]);
+  }, [contas, casaFilter, parceiroFilter, estadoContaFilter, usoFilter, regulamentacaoFilter]);
 
   // Sorted
   const sorted = useMemo(() => {
@@ -370,15 +376,16 @@ export function BookmakersLivresModule({ onRegistrarPerda, onVincularProjeto, on
         </div>
 
         <div className="flex flex-col gap-1">
-          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Status</span>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-auto min-w-[140px] h-9 text-sm" icon={<Filter className="h-3.5 w-3.5" />}>
-              <SelectValue placeholder="Status" />
+          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Estado Conta</span>
+          <Select value={estadoContaFilter} onValueChange={setEstadoContaFilter}>
+            <SelectTrigger className="w-auto min-w-[160px] h-9 text-sm" icon={<Filter className="h-3.5 w-3.5" />}>
+              <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="todos">Todos status</SelectItem>
-              <SelectItem value="ativo">Ativo</SelectItem>
-              <SelectItem value="inativo">Inativo</SelectItem>
+              <SelectItem value="operacional">Operacionais</SelectItem>
+              <SelectItem value="todos">Todos estados</SelectItem>
+              <SelectItem value="limitada">Limitada</SelectItem>
+              <SelectItem value="encerrada">Encerrada</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -449,14 +456,17 @@ export function BookmakersLivresModule({ onRegistrarPerda, onVincularProjeto, on
                       <SortIcon className="h-3.5 w-3.5" />
                     </button>
                   </th>
-                  <th className="text-center p-3 font-medium text-muted-foreground">Status Usuário</th>
+                  <th className="text-center p-3 font-medium text-muted-foreground">Estado Conta</th>
                   <th className="text-center p-3 font-medium text-muted-foreground">Já Foi Usada</th>
                   <th className="text-left p-3 font-medium text-muted-foreground">Último Projeto</th>
                 </tr>
               </thead>
               <tbody>
                 {sorted.map((conta) => {
-                  const isAtivo = ["ativo", "aguardando_saque", "AGUARDANDO_DECISAO"].includes(conta.status);
+                  const estadoConta = conta.estado_conta?.toLowerCase() || "normal";
+                  const isNormal = estadoConta === "normal" || estadoConta === "";
+                  const isLimitada = estadoConta === "limitada";
+                  const isEncerrada = estadoConta === "encerrada";
                   return (
                     <ContextMenu key={conta.id}>
                       <ContextMenuTrigger asChild>
@@ -483,17 +493,21 @@ export function BookmakersLivresModule({ onRegistrarPerda, onVincularProjeto, on
                           <td className="p-3 text-center">
                             <Badge
                               variant="outline"
-                              className={
-                                isAtivo
-                                  ? "border-emerald-500/30 text-emerald-400 text-xs"
-                                  : "border-red-500/30 text-red-400 text-xs"
-                              }
+                              className={cn("text-xs",
+                                isNormal && "border-emerald-500/30 text-emerald-400",
+                                isLimitada && "border-amber-500/30 text-amber-400",
+                                isEncerrada && "border-red-500/30 text-red-400",
+                              )}
                             >
                               <span className="flex items-center gap-1">
-                                {isAtivo ? (
-                                  <><CheckCircle2 className="h-3 w-3" /> Ativo</>
+                                {isNormal ? (
+                                  <><CheckCircle2 className="h-3 w-3" /> Normal</>
+                                ) : isLimitada ? (
+                                  <><AlertTriangle className="h-3 w-3" /> Limitada</>
+                                ) : isEncerrada ? (
+                                  <><XCircle className="h-3 w-3" /> Encerrada</>
                                 ) : (
-                                  <><XCircle className="h-3 w-3" /> Inativo</>
+                                  <>{estadoConta}</>
                                 )}
                               </span>
                             </Badge>
