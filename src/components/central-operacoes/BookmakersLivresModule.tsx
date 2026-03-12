@@ -486,7 +486,7 @@ export function BookmakersLivresModule({ onRegistrarPerda, onVincularProjeto, on
                             <Badge variant="outline" className="text-xs">{conta.moeda}</Badge>
                           </td>
                           <td className="p-3 text-right font-mono font-medium">
-                            {formatCurrency(conta.saldo_atual, conta.moeda)}
+                            {formatBalance(conta.saldo_atual, conta.moeda)}
                           </td>
                           <td className="p-3 text-center">
                             <Badge
