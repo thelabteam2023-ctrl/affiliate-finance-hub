@@ -51,6 +51,7 @@ export function BookmakerHistoricoDialog({
   const [historico, setHistorico] = useState<HistoricoItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hasOrphanOperations, setHasOrphanOperations] = useState(false);
 
   useEffect(() => {
     if (open && bookmakerId) {
