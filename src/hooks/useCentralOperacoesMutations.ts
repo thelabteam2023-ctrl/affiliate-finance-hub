@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getTodayCivilDate } from "@/utils/dateUtils";
 import { getFirstLastName } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
+import { useCentralOperacoesCache } from "@/hooks/useCentralOperacoesCache";
 import type {
   Alerta,
   EntregaPendente,
