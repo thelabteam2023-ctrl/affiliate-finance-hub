@@ -63,6 +63,15 @@ const queryClient = new QueryClient({
   },
 });
 
+// Fallback de loading para Suspense (lazy pages)
+function PageLoader() {
+  return (
+    <div className="flex-1 flex items-center justify-center min-h-[200px]">
+      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+    </div>
+  );
+}
+
 // Layout component for authenticated routes with inactivity monitoring
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   const { minutesUntilTimeout, showingWarning, resetActivity } = useInactivityTimeout();
