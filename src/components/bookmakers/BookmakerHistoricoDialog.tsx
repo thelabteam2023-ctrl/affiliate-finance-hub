@@ -63,6 +63,7 @@ export function BookmakerHistoricoDialog({
     setError(null);
 
     try {
+      // Buscar histórico formal
       const { data, error: fetchError } = await supabase
         .from("projeto_bookmaker_historico")
         .select(`
@@ -88,6 +89,29 @@ export function BookmakerHistoricoDialog({
         data_desvinculacao: item.data_desvinculacao,
         status_final: item.status_final,
       }));
+
+      // Se não há registro ativo no histórico, verificar vínculo direto na tabela bookmakers
+      const hasActiveInHistory = formattedData.some(h => !h.data_desvinculacao);
+      if (!hasActiveInHistory) {
+        const { data: bmData } = await supabase
+          .from("bookmakers")
+          .select("projeto_id, created_at, projetos:projetos!bookmakers_projeto_id_fkey(nome, tipo_projeto)")
+          .eq("id", bookmakerId)
+          .not("projeto_id", "is", null)
+          .single();
+
+        if (bmData?.projeto_id) {
+          formattedData.unshift({
+            id: `active-${bookmakerId}`,
+            projeto_id: bmData.projeto_id,
+            projeto_nome: (bmData as any).projetos?.nome || "Projeto ativo",
+            tipo_projeto: (bmData as any).projetos?.tipo_projeto || null,
+            data_vinculacao: bmData.created_at,
+            data_desvinculacao: null,
+            status_final: null,
+          });
+        }
+      }
 
       setHistorico(formattedData);
     } catch (err: any) {
