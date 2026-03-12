@@ -12790,6 +12790,16 @@ export type Database = {
           total_saques: number
         }[]
       }
+      get_central_operacoes_data: {
+        Args: {
+          p_include_financial?: boolean
+          p_include_partner?: boolean
+          p_is_operator?: boolean
+          p_user_id: string
+          p_workspace_id: string
+        }
+        Returns: Json
+      }
       get_current_workspace: { Args: never; Returns: string }
       get_effective_access: {
         Args: { _user_id: string; _workspace_id?: string }
