@@ -101,6 +101,7 @@ import { PagamentoFornecedorDialog } from "@/components/programa-indicacao/Pagam
 import { PagamentoParceiroDialog } from "@/components/programa-indicacao/PagamentoParceiroDialog";
 import { ParceriaDialog, type RenewalSuccessData } from "@/components/parcerias/ParceriaDialog";
 import { ContasDisponiveisModule } from "@/components/central-operacoes/ContasDisponiveisModule";
+import { BookmakersLivresModule } from "@/components/central-operacoes/BookmakersLivresModule";
 
 // Classificação de domínio dos eventos
 type EventDomain = 'project_event' | 'financial_event' | 'partner_event' | 'admin_event';
@@ -2516,9 +2517,20 @@ export default function CentralOperacoes() {
           )}
         </TabsContent>
 
-        {/* ABA: CONTAS DISPONÍVEIS */}
+        {/* ABA: CONTAS DISPONÍVEIS (com sub-abas) */}
         <TabsContent value="contas" className="mt-4">
-          <ContasDisponiveisModule />
+          <Tabs defaultValue="contas-saldo" className="w-full">
+            <TabsList className="mb-4">
+              <TabsTrigger value="contas-saldo">Contas Disponíveis</TabsTrigger>
+              <TabsTrigger value="bookmakers-livres">Bookmakers Livres</TabsTrigger>
+            </TabsList>
+            <TabsContent value="contas-saldo">
+              <ContasDisponiveisModule />
+            </TabsContent>
+            <TabsContent value="bookmakers-livres">
+              <BookmakersLivresModule />
+            </TabsContent>
+          </Tabs>
         </TabsContent>
 
         {/* ABA: OCORRÊNCIAS */}
