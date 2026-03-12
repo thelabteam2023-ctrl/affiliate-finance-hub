@@ -1258,7 +1258,7 @@ export default function Financeiro() {
           </div>
           <ParticipacaoInvestidoresTab 
             formatCurrency={formatCurrency}
-            onRefresh={fetchData}
+            onRefresh={() => refetchFinanceiro()}
             investidorFiltroId={investidorFiltroId || undefined}
           />
         </TabsContent>
