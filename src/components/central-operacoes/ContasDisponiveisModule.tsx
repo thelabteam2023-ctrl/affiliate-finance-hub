@@ -333,7 +333,9 @@ export function ContasDisponiveisModule() {
 
   const getSaldoEfetivo = (c: ContaDisponivel) => {
     // saldo_atual é a fonte de verdade para TODAS as moedas
-    return c.saldo_atual;
+    // Clamp: saldos nunca devem ser exibidos como negativos
+    return Math.max(0, c.saldo_atual);
+  };
   };
 
   if (isLoading) {
