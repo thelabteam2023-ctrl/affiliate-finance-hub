@@ -95,7 +95,7 @@ export function FreebetResumoPorCasa({ stats, formatCurrency, viewMode = 'card' 
               {stat.saldo_atual > 0 && (
                 <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30">
                   <Gift className="h-3 w-3 mr-1" />
-                  {formatCurrency(stat.saldo_atual)}
+                  {formatCurrency(Math.max(0, stat.saldo_atual))}
                 </Badge>
               )}
             </div>
