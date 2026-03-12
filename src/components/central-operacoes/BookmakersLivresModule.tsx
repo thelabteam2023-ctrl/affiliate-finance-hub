@@ -168,7 +168,7 @@ export function BookmakersLivresModule({ onRegistrarPerda, onVincularProjeto, on
   const { workspaceId } = useAuth();
 
   const [estadoContaFilter, setEstadoContaFilter] = useState("operacional");
-  const [usoFilter, setUsoFilter] = useState("todas");
+  const [usoFilter, setUsoFilter] = useState("virgem");
   const [casaFilter, setCasaFilter] = useState("todas");
   const [parceiroFilter, setParceiroFilter] = useState("todos");
   const [regulamentacaoFilter, setRegulamentacaoFilter] = useState("todas");
