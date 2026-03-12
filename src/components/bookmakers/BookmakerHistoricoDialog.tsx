@@ -48,6 +48,7 @@ export function BookmakerHistoricoDialog({
   bookmakerId,
   bookmakerNome,
   logoUrl,
+  bookmakerStatus = "ativo",
 }: BookmakerHistoricoDialogProps) {
   const [historico, setHistorico] = useState<HistoricoItem[]>([]);
   const [loading, setLoading] = useState(true);
