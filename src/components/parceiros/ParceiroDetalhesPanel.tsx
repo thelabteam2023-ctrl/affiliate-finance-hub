@@ -1199,12 +1199,12 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                                 </TooltipContent>
                               )}
                             </Tooltip>
-                            {/* Saldo Atual - moeda nativa */}
+                            {/* Saldo Atual - moeda nativa (clamp visual para não negativo) */}
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <div className="text-right">
                                   <MoneyDisplay
-                                    value={bm.saldo_atual}
+                                    value={clampSaldoVisual(bm.saldo_atual)}
                                     currency={bm.moeda || "BRL"}
                                     size="sm"
                                     masked={!showSensitiveData}
@@ -1214,8 +1214,8 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                               {showSensitiveData && (
                                 <TooltipContent side="top" className="text-xs space-y-1">
                                   <p className="font-medium">Saldo atual na casa</p>
-                                  <p>{formatMoneyValue(bm.saldo_atual, bm.moeda || "BRL")}</p>
-                                  {bm.saldo_atual === 0 && (
+                                  <p>{formatMoneyValue(clampSaldoVisual(bm.saldo_atual), bm.moeda || "BRL")}</p>
+                                  {clampSaldoVisual(bm.saldo_atual) === 0 && (
                                     <p className="text-muted-foreground italic">Sem saldo remanescente</p>
                                   )}
                                 </TooltipContent>
