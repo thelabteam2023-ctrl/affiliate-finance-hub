@@ -106,15 +106,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
   const [hasSavedDuringSession, setHasSavedDuringSession] = useState(false);
   const { toast } = useToast();
 
-  // 🔍 DEBUG: Log para rastrear montagem/desmontagem e estado do dialog
-  console.log('[ParceiroDialog] RENDER', {
-    open,
-    parceiro_id: parceiro?.id || null,
-    parceiro_nome: parceiro?.nome || null,
-    viewMode,
-    nome_atual_no_estado: nome,
-    cpf_atual_no_estado: cpf,
-  });
+  // DEBUG logs removidos — causavam re-render tracking desnecessário
 
   const copyToClipboard = async (text: string, fieldName: string) => {
     try {
@@ -198,34 +190,17 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
     fetchRedes();
   }, []);
 
-  // 🔍 DEBUG: useEffect que monitora abertura do dialog
   useEffect(() => {
-    console.log('[ParceiroDialog] useEffect[open] triggered', {
-      open,
-      parceiro_prop_id: parceiro?.id || null,
-      estado_atual_nome: nome,
-      estado_atual_cpf: cpf,
-    });
     if (open) {
       setActiveTab(initialTab);
-      // FIX: Reset form quando abre em modo CREATE (parceiro é null)
       if (!parceiro) {
-        console.log('[ParceiroDialog] Abrindo em modo CREATE - resetando formulário');
         resetForm();
       }
     }
   }, [open, initialTab, parceiro]);
 
-  // 🔍 DEBUG: useEffect que controla reset do formulário
   useEffect(() => {
-    console.log('[ParceiroDialog] useEffect[parceiro] triggered', {
-      parceiro_id: parceiro?.id || null,
-      parceiro_nome: parceiro?.nome || null,
-      vai_fazer_reset: !parceiro,
-    });
-    
     if (parceiro) {
-      console.log('[ParceiroDialog] Carregando dados do parceiro existente');
       setNome(parceiro.nome || "");
       setCpf(formatCPF(parceiro.cpf || "")); // Apply mask when loading
       setEmail(parceiro.email || "");
@@ -284,7 +259,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       
       setParceiroId(parceiro.id);
     } else {
-      console.log('[ParceiroDialog] parceiro é null, chamando resetForm()');
+      resetForm();
       resetForm();
     }
   }, [parceiro]);
@@ -421,7 +396,6 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
   };
 
   const resetForm = () => {
-    console.log('[ParceiroDialog] resetForm() EXECUTADO - limpando todos os campos');
     setNome("");
     setCpf("");
     setEmail("");

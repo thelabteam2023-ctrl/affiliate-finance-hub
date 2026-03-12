@@ -825,12 +825,14 @@ export default function GestaoParceiros() {
         </div>
 
         {/* Dialogs */}
-        <ParceiroDialog
-          open={dialogOpen}
-          onClose={handleDialogClose}
-          parceiro={editingParceiro}
-          viewMode={viewMode}
-        />
+        {dialogOpen && (
+          <ParceiroDialog
+            open={dialogOpen}
+            onClose={handleDialogClose}
+            parceiro={editingParceiro}
+            viewMode={viewMode}
+          />
+        )}
 
         <BookmakerDialog
           key={`vinculo-${vinculoDialogOpen}-${editingBookmaker?.id || 'none'}-${vinculoParceiroId || 'none'}-${vinculoBookmakerId || 'none'}`}

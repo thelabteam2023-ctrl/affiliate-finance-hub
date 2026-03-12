@@ -318,8 +318,8 @@ export function useCentralAlertsCount() {
 
     fetchCount();
 
-    // Refresh every 60 seconds
-    const interval = setInterval(fetchCount, 60000);
+    // Refresh every 5 minutes (was 60s — reduced polling load)
+    const interval = setInterval(fetchCount, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, [user, workspaceId, role, isOperator, allowedDomains]);
 
