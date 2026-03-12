@@ -54,6 +54,7 @@ interface BookmakerLivre {
   id: string;
   nome: string;
   status: string;
+  estado_conta: string;
   saldo_atual: number;
   moeda: string;
   parceiro_id: string | null;
