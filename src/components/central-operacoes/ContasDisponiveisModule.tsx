@@ -450,114 +450,179 @@ export function ContasDisponiveisModule() {
                   const saldoEfetivo = getSaldoEfetivo(conta);
                   const isExpanded = showHistory === conta.id;
                   return (
-                    <tr
-                      key={conta.id}
-                      className="border-b border-border/50 hover:bg-muted/30 transition-colors"
-                    >
-                      <td className="p-3">
-                        <div className="flex items-center gap-2">
-                          {conta.logo_url ? (
-                            <img src={conta.logo_url} alt="" className="h-6 w-6 rounded object-contain" />
-                          ) : (
-                            <Building2 className="h-4 w-4 text-muted-foreground" />
-                          )}
-                          <span className="font-medium">{conta.nome}</span>
-                        </div>
-                      </td>
-                      <td className="p-3 text-muted-foreground">
-                        {conta.parceiro_nome ? getFirstLastName(conta.parceiro_nome) : "—"}
-                      </td>
-                      <td className="p-3">
-                        <Badge variant="outline" className="text-xs">{conta.moeda}</Badge>
-                      </td>
-                      <td className="p-3 text-right font-mono font-medium">
-                        {formatCurrency(saldoEfetivo, conta.moeda)}
-                      </td>
-                      <td className="p-3 text-right font-mono">
-                        {conta.saldo_freebet > 0 ? (
-                          <span className="text-amber-400">🎁 {formatCurrency(conta.saldo_freebet, conta.moeda)}</span>
-                        ) : "—"}
-                      </td>
-                      <td className="p-3">
-                        <Badge
-                          variant={conta.status === "aguardando_saque" ? "default" : "secondary"}
-                          className={
-                            conta.status === "aguardando_saque"
-                              ? "bg-orange-500/20 text-orange-400 text-xs"
-                              : conta.status === "limitada"
-                              ? "bg-red-500/20 text-red-400 text-xs"
-                              : "text-xs"
-                          }
-                        >
-                          {conta.status === "aguardando_saque" ? "Aguard. Saque" : 
-                           conta.status === "limitada" ? "Limitada" :
-                           conta.status === "AGUARDANDO_DECISAO" ? "Aguard. Decisão" : "Ativa"}
-                        </Badge>
-                      </td>
-                      <td className="p-3 text-muted-foreground text-xs">
-                        {conta.ultimo_projeto_nome ? (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span className="cursor-help underline decoration-dotted">
-                                {conta.ultimo_projeto_nome}
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              Desvinculada em {conta.data_desvinculacao
-                                ? new Date(conta.data_desvinculacao).toLocaleDateString("pt-BR")
-                                : "data desconhecida"}
-                            </TooltipContent>
-                          </Tooltip>
-                        ) : (
-                          <span className="text-muted-foreground/50">Nunca vinculada</span>
-                        )}
-                      </td>
-                      <td className="p-3">
-                        <div className="flex items-center justify-end gap-1">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-7 w-7"
-                                onClick={() => handleVincular(conta)}
-                              >
-                                <Link2 className="h-3.5 w-3.5 text-emerald-400" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Vincular a projeto</TooltipContent>
-                          </Tooltip>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-7 w-7"
-                                onClick={() => handleGerarSaque(conta)}
-                              >
-                                <ArrowUpFromLine className="h-3.5 w-3.5 text-blue-400" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Gerar saque</TooltipContent>
-                          </Tooltip>
-                          {conta.status !== "aguardando_saque" && (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  className="h-7 w-7"
-                                  onClick={() => handleMarcarParaSaque(conta)}
+                    <ContextMenu key={conta.id}>
+                      <ContextMenuTrigger asChild>
+                        <tr className="border-b border-border/50 hover:bg-muted/30 transition-colors cursor-context-menu">
+                          <td className="p-3">
+                            <div className="flex items-center gap-2">
+                              {conta.logo_url ? (
+                                <img src={conta.logo_url} alt="" className="h-6 w-6 rounded object-contain" />
+                              ) : (
+                                <Building2 className="h-4 w-4 text-muted-foreground" />
+                              )}
+                              <span className="font-medium">{conta.nome}</span>
+                            </div>
+                          </td>
+                          <td className="p-3 text-muted-foreground">
+                            {conta.parceiro_nome ? getFirstLastName(conta.parceiro_nome) : "—"}
+                          </td>
+                          <td className="p-3">
+                            <Badge variant="outline" className="text-xs">{conta.moeda}</Badge>
+                          </td>
+                          <td className="p-3 text-right font-mono font-medium">
+                            {formatCurrency(saldoEfetivo, conta.moeda)}
+                          </td>
+                          <td className="p-3 text-right font-mono">
+                            {conta.saldo_freebet > 0 ? (
+                              <span className="text-amber-400">🎁 {formatCurrency(conta.saldo_freebet, conta.moeda)}</span>
+                            ) : "—"}
+                          </td>
+                          <td className="p-3">
+                            <Badge
+                              variant={conta.status === "aguardando_saque" ? "default" : "secondary"}
+                              className={
+                                conta.status === "aguardando_saque"
+                                  ? "bg-orange-500/20 text-orange-400 text-xs"
+                                  : conta.status === "limitada"
+                                  ? "bg-red-500/20 text-red-400 text-xs"
+                                  : "text-xs"
+                              }
+                            >
+                              {conta.status === "aguardando_saque" ? "Aguard. Saque" : 
+                               conta.status === "limitada" ? "Limitada" :
+                               conta.status === "AGUARDANDO_DECISAO" ? "Aguard. Decisão" : "Ativa"}
+                            </Badge>
+                          </td>
+                          <td className="p-3 text-muted-foreground text-xs">
+                            {conta.ultimo_projeto_nome ? (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="cursor-help underline decoration-dotted">
+                                    {conta.ultimo_projeto_nome}
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  Desvinculada em {conta.data_desvinculacao
+                                    ? new Date(conta.data_desvinculacao).toLocaleDateString("pt-BR")
+                                    : "data desconhecida"}
+                                </TooltipContent>
+                              </Tooltip>
+                            ) : (
+                              <span className="text-muted-foreground/50">Nunca vinculada</span>
+                            )}
+                          </td>
+                          <td className="p-3">
+                            <div className="flex items-center justify-end gap-1">
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-7 w-7"
+                                    onClick={() => handleVincular(conta)}
+                                  >
+                                    <Link2 className="h-3.5 w-3.5 text-emerald-400" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Vincular a projeto</TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-7 w-7"
+                                    onClick={() => handleGerarSaque(conta)}
+                                  >
+                                    <ArrowUpFromLine className="h-3.5 w-3.5 text-blue-400" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Gerar saque</TooltipContent>
+                              </Tooltip>
+                              {conta.status !== "aguardando_saque" && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="h-7 w-7"
+                                      onClick={() => handleMarcarParaSaque(conta)}
+                                    >
+                                      <Package className="h-3.5 w-3.5 text-orange-400" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Marcar para saque</TooltipContent>
+                                </Tooltip>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      </ContextMenuTrigger>
+                      <ContextMenuContent>
+                        <ContextMenuSub>
+                          <ContextMenuSubTrigger className="gap-2">
+                            <DollarSign className="h-4 w-4" />
+                            Financeiro
+                          </ContextMenuSubTrigger>
+                          <ContextMenuSubContent className="min-w-[180px]">
+                            <ContextMenuItem
+                              onClick={() => navigate("/caixa", { state: { openDialog: true, bookmakerId: conta.id, bookmakerNome: conta.nome, tipo: "deposito", moeda: conta.moeda } })}
+                              className="gap-2"
+                            >
+                              <Plus className="h-4 w-4 text-success" />
+                              Depósito
+                            </ContextMenuItem>
+                            <ContextMenuItem
+                              onClick={() => handleGerarSaque(conta)}
+                              className="gap-2"
+                            >
+                              <Minus className="h-4 w-4 text-destructive" />
+                              Saque
+                            </ContextMenuItem>
+                            <ContextMenuSeparator />
+                            <ContextMenuItem
+                              onClick={() => handleMarcarParaSaque(conta)}
+                              className="gap-2"
+                              disabled={conta.status === "aguardando_saque"}
+                            >
+                              <Package className="h-4 w-4 text-amber-400" />
+                              Marcar para saque
+                            </ContextMenuItem>
+                          </ContextMenuSubContent>
+                        </ContextMenuSub>
+                        <ContextMenuSeparator />
+                        <ContextMenuSub>
+                          <ContextMenuSubTrigger className="gap-2">
+                            <FolderKanban className="h-4 w-4" />
+                            Vincular a projeto
+                          </ContextMenuSubTrigger>
+                          <ContextMenuSubContent className="min-w-[180px]">
+                            {projetos && projetos.length > 0 ? (
+                              projetos.map((proj) => (
+                                <ContextMenuItem
+                                  key={proj.id}
+                                  onClick={() => {
+                                    setSelectedConta(conta);
+                                    setSelectedProjetoId(proj.id);
+                                    // Auto-confirm via direct action
+                                    handleVincular(conta);
+                                    setSelectedProjetoId(proj.id);
+                                  }}
+                                  className="gap-2"
                                 >
-                                  <Package className="h-3.5 w-3.5 text-orange-400" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Marcar para saque</TooltipContent>
-                            </Tooltip>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
+                                  <FolderKanban className="h-3.5 w-3.5 text-muted-foreground" />
+                                  {proj.nome}
+                                </ContextMenuItem>
+                              ))
+                            ) : (
+                              <ContextMenuItem disabled className="text-muted-foreground text-xs">
+                                Nenhum projeto disponível
+                              </ContextMenuItem>
+                            )}
+                          </ContextMenuSubContent>
+                        </ContextMenuSub>
+                      </ContextMenuContent>
+                    </ContextMenu>
                   );
                 })}
                 {filtered.length === 0 && (
