@@ -243,7 +243,7 @@ export function useFinanceiroData() {
 
   const query = useQuery({
     queryKey: ["financeiro-data", workspaceId],
-    queryFn: fetchFinanceiroData,
+    queryFn: () => fetchFinanceiroData(workspaceId!),
     enabled: !!workspaceId,
     staleTime: PERIOD_STALE_TIME,
     gcTime: PERIOD_GC_TIME,
