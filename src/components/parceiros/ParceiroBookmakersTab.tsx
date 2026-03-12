@@ -344,7 +344,7 @@ export const ParceiroBookmakersTab = memo(function ParceiroBookmakersTab({
                         </div>
                         <div className="flex items-center gap-1.5">
                           <Badge variant="outline" className={`text-[8px] px-1 py-0 h-3.5 ${bm.moeda === "BRL" ? "border-emerald-500/50 text-emerald-500" : "border-amber-500/50 text-amber-500"}`}>{bm.moeda || "BRL"}</Badge>
-                          <span className="text-[10px] font-medium">{maskCurrency(getSaldoCorreto(bm), bm.moeda)}</span>
+                          <span className="text-[10px] font-medium">{maskCurrency(getSaldoVisual(bm), bm.moeda)}</span>
                         </div>
                       </div>
                       {/* Botão Histórico */}
