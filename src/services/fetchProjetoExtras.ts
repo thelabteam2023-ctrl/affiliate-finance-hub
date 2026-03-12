@@ -364,7 +364,7 @@ async function fetchConciliacoes(
 async function fetchPerdasOperacionais(projetoId: string): Promise<ProjetoExtraEntry[]> {
   const { data } = await supabase
     .from('projeto_perdas')
-    .select('valor, status, data_perda, bookmaker_id')
+    .select('valor, status, data_registro, bookmaker_id')
     .eq('projeto_id', projetoId)
     .eq('status', 'CONFIRMADA');
 
