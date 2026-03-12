@@ -106,15 +106,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
   const [hasSavedDuringSession, setHasSavedDuringSession] = useState(false);
   const { toast } = useToast();
 
-  // 🔍 DEBUG: Log para rastrear montagem/desmontagem e estado do dialog
-  console.log('[ParceiroDialog] RENDER', {
-    open,
-    parceiro_id: parceiro?.id || null,
-    parceiro_nome: parceiro?.nome || null,
-    viewMode,
-    nome_atual_no_estado: nome,
-    cpf_atual_no_estado: cpf,
-  });
+  // DEBUG logs removidos — causavam re-render tracking desnecessário
 
   const copyToClipboard = async (text: string, fieldName: string) => {
     try {
