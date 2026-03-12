@@ -15,7 +15,6 @@ import {
   Search,
   Unlink,
   Building2,
-  User,
   Filter,
   ArrowUpDown,
   ArrowUp,
@@ -23,17 +22,27 @@ import {
   CheckCircle2,
   XCircle,
   History,
+  Plus,
+  Minus,
+  AlertTriangle,
+  FolderKanban,
+  DollarSign,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+  ContextMenuSeparator,
+  ContextMenuSub,
+  ContextMenuSubTrigger,
+  ContextMenuSubContent,
+} from "@/components/ui/context-menu";
 
 interface BookmakerLivre {
   id: string;
@@ -51,7 +60,13 @@ interface BookmakerLivre {
 type SortColumn = "saldo" | null;
 type SortDirection = "asc" | "desc";
 
-export function BookmakersLivresModule() {
+interface BookmakersLivresModuleProps {
+  onRegistrarPerda?: (bookmakerId: string, bookmakerNome: string, moeda: string, saldoAtual: number) => void;
+  onVincularProjeto?: (bookmakerId: string, projetoId: string, projetoNome: string) => void;
+  onNewTransacao?: (bookmakerId: string, bookmakerNome: string, moeda: string, saldoAtual: number, saldoUsd: number, tipo: "deposito" | "retirada") => void;
+}
+
+export function BookmakersLivresModule({ onRegistrarPerda, onVincularProjeto, onNewTransacao }: BookmakersLivresModuleProps) {
   const { workspaceId } = useAuth();
 
   const [search, setSearch] = useState("");
@@ -65,7 +80,6 @@ export function BookmakersLivresModule() {
   const { data: contas, isLoading } = useQuery({
     queryKey: ["bookmakers-livres", workspaceId],
     queryFn: async (): Promise<BookmakerLivre[]> => {
-      // Get all bookmakers without projeto_id (livre = sem vínculo ativo)
       const { data: bookmakers, error } = await supabase
         .from("bookmakers")
         .select(`
@@ -82,12 +96,10 @@ export function BookmakersLivresModule() {
 
       const bookmakerIds = (bookmakers || []).map((b: any) => b.id);
 
-      // Check usage history
       let usedSet = new Set<string>();
       let lastProjectMap = new Map<string, string>();
 
       if (bookmakerIds.length > 0) {
-        // Check historico
         const { data: historico } = await supabase
           .from("projeto_bookmaker_historico")
           .select("bookmaker_id, projeto:projetos!projeto_bookmaker_historico_projeto_id_fkey (nome)")
@@ -104,7 +116,6 @@ export function BookmakersLivresModule() {
           }
         }
 
-        // Check apostas
         const { data: apostas } = await supabase
           .from("apostas_unificada")
           .select("bookmaker_id")
@@ -115,7 +126,6 @@ export function BookmakersLivresModule() {
           if (a.bookmaker_id) usedSet.add(a.bookmaker_id);
         });
 
-        // Check ledger
         const { data: ledger } = await supabase
           .from("cash_ledger")
           .select("origem_bookmaker_id, destino_bookmaker_id")
@@ -143,6 +153,23 @@ export function BookmakersLivresModule() {
     },
     enabled: !!workspaceId,
     staleTime: 30 * 1000,
+  });
+
+  // Fetch active projects for context menu
+  const { data: projetos } = useQuery({
+    queryKey: ["projetos-ativos-livres", workspaceId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("projetos")
+        .select("id, nome")
+        .eq("workspace_id", workspaceId!)
+        .in("status", ["ativo", "em_andamento"])
+        .order("nome");
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!workspaceId,
+    staleTime: 60 * 1000,
   });
 
   // Unique casas for filter
@@ -286,67 +313,128 @@ export function BookmakersLivresModule() {
                 {sorted.map((conta) => {
                   const isAtivo = ["ativo", "aguardando_saque", "AGUARDANDO_DECISAO"].includes(conta.status);
                   return (
-                    <tr
-                      key={conta.id}
-                      className="border-b border-border/50 hover:bg-muted/30 transition-colors"
-                    >
-                      <td className="p-3">
-                        <div className="flex items-center gap-2">
-                          {conta.logo_url ? (
-                            <img src={conta.logo_url} alt="" className="h-6 w-6 rounded object-contain" />
-                          ) : (
-                            <Building2 className="h-4 w-4 text-muted-foreground" />
-                          )}
-                          <span className="font-medium">{conta.nome}</span>
-                        </div>
-                      </td>
-                      <td className="p-3 text-muted-foreground">
-                        {conta.parceiro_nome ? getFirstLastName(conta.parceiro_nome) : "—"}
-                      </td>
-                      <td className="p-3">
-                        <Badge variant="outline" className="text-xs">{conta.moeda}</Badge>
-                      </td>
-                      <td className="p-3 text-right font-mono font-medium">
-                        {formatCurrency(conta.saldo_atual, conta.moeda)}
-                      </td>
-                      <td className="p-3 text-center">
-                        <Badge
-                          variant="outline"
-                          className={
-                            isAtivo
-                              ? "border-emerald-500/30 text-emerald-400 text-xs"
-                              : "border-red-500/30 text-red-400 text-xs"
-                          }
-                        >
-                          <span className="flex items-center gap-1">
-                            {isAtivo ? (
-                              <><CheckCircle2 className="h-3 w-3" /> Ativo</>
+                    <ContextMenu key={conta.id}>
+                      <ContextMenuTrigger asChild>
+                        <tr className="border-b border-border/50 hover:bg-muted/30 transition-colors cursor-context-menu">
+                          <td className="p-3">
+                            <div className="flex items-center gap-2">
+                              {conta.logo_url ? (
+                                <img src={conta.logo_url} alt="" className="h-6 w-6 rounded object-contain" />
+                              ) : (
+                                <Building2 className="h-4 w-4 text-muted-foreground" />
+                              )}
+                              <span className="font-medium">{conta.nome}</span>
+                            </div>
+                          </td>
+                          <td className="p-3 text-muted-foreground">
+                            {conta.parceiro_nome ? getFirstLastName(conta.parceiro_nome) : "—"}
+                          </td>
+                          <td className="p-3">
+                            <Badge variant="outline" className="text-xs">{conta.moeda}</Badge>
+                          </td>
+                          <td className="p-3 text-right font-mono font-medium">
+                            {formatCurrency(conta.saldo_atual, conta.moeda)}
+                          </td>
+                          <td className="p-3 text-center">
+                            <Badge
+                              variant="outline"
+                              className={
+                                isAtivo
+                                  ? "border-emerald-500/30 text-emerald-400 text-xs"
+                                  : "border-red-500/30 text-red-400 text-xs"
+                              }
+                            >
+                              <span className="flex items-center gap-1">
+                                {isAtivo ? (
+                                  <><CheckCircle2 className="h-3 w-3" /> Ativo</>
+                                ) : (
+                                  <><XCircle className="h-3 w-3" /> Inativo</>
+                                )}
+                              </span>
+                            </Badge>
+                          </td>
+                          <td className="p-3 text-center">
+                            <Badge
+                              variant="outline"
+                              className={
+                                conta.ja_usada
+                                  ? "border-amber-500/30 text-amber-400 text-xs"
+                                  : "border-muted-foreground/30 text-muted-foreground text-xs"
+                              }
+                            >
+                              {conta.ja_usada ? "Sim" : "Não"}
+                            </Badge>
+                          </td>
+                          <td className="p-3 text-muted-foreground text-xs">
+                            {conta.ultimo_projeto_nome ? (
+                              <span>{conta.ultimo_projeto_nome}</span>
                             ) : (
-                              <><XCircle className="h-3 w-3" /> Inativo</>
+                              <span className="text-muted-foreground/50">—</span>
                             )}
-                          </span>
-                        </Badge>
-                      </td>
-                      <td className="p-3 text-center">
-                        <Badge
-                          variant="outline"
-                          className={
-                            conta.ja_usada
-                              ? "border-amber-500/30 text-amber-400 text-xs"
-                              : "border-muted-foreground/30 text-muted-foreground text-xs"
-                          }
-                        >
-                          {conta.ja_usada ? "Sim" : "Não"}
-                        </Badge>
-                      </td>
-                      <td className="p-3 text-muted-foreground text-xs">
-                        {conta.ultimo_projeto_nome ? (
-                          <span>{conta.ultimo_projeto_nome}</span>
-                        ) : (
-                          <span className="text-muted-foreground/50">—</span>
-                        )}
-                      </td>
-                    </tr>
+                          </td>
+                        </tr>
+                      </ContextMenuTrigger>
+                      <ContextMenuContent>
+                        <ContextMenuSub>
+                          <ContextMenuSubTrigger className="gap-2">
+                            <DollarSign className="h-4 w-4" />
+                            Financeiro
+                          </ContextMenuSubTrigger>
+                          <ContextMenuSubContent className="min-w-[180px]">
+                            <ContextMenuItem
+                              onClick={() => onNewTransacao?.(conta.id, conta.nome, conta.moeda, conta.saldo_atual, 0, "deposito")}
+                              className="gap-2"
+                              disabled={!onNewTransacao}
+                            >
+                              <Plus className="h-4 w-4 text-success" />
+                              Depósito
+                            </ContextMenuItem>
+                            <ContextMenuItem
+                              onClick={() => onNewTransacao?.(conta.id, conta.nome, conta.moeda, conta.saldo_atual, 0, "retirada")}
+                              className="gap-2"
+                              disabled={!onNewTransacao}
+                            >
+                              <Minus className="h-4 w-4 text-destructive" />
+                              Saque
+                            </ContextMenuItem>
+                            <ContextMenuSeparator />
+                            <ContextMenuItem
+                              onClick={() => onRegistrarPerda?.(conta.id, conta.nome, conta.moeda, conta.saldo_atual)}
+                              className="gap-2 text-destructive focus:text-destructive"
+                              disabled={!onRegistrarPerda}
+                            >
+                              <AlertTriangle className="h-4 w-4" />
+                              Registrar perda
+                            </ContextMenuItem>
+                          </ContextMenuSubContent>
+                        </ContextMenuSub>
+                        <ContextMenuSeparator />
+                        <ContextMenuSub>
+                          <ContextMenuSubTrigger className="gap-2">
+                            <FolderKanban className="h-4 w-4" />
+                            Vincular a projeto
+                          </ContextMenuSubTrigger>
+                          <ContextMenuSubContent className="min-w-[180px]">
+                            {projetos && projetos.length > 0 ? (
+                              projetos.map((proj) => (
+                                <ContextMenuItem
+                                  key={proj.id}
+                                  onClick={() => onVincularProjeto?.(conta.id, proj.id, proj.nome)}
+                                  className="gap-2"
+                                >
+                                  <FolderKanban className="h-3.5 w-3.5 text-muted-foreground" />
+                                  {proj.nome}
+                                </ContextMenuItem>
+                              ))
+                            ) : (
+                              <ContextMenuItem disabled className="text-muted-foreground text-xs">
+                                Nenhum projeto disponível
+                              </ContextMenuItem>
+                            )}
+                          </ContextMenuSubContent>
+                        </ContextMenuSub>
+                      </ContextMenuContent>
+                    </ContextMenu>
                   );
                 })}
                 {sorted.length === 0 && (
