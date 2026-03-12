@@ -38,7 +38,7 @@ export interface FinanceiroData {
   bonusPendentes: { valorTotal: number; count: number };
 }
 
-async function fetchFinanceiroData(): Promise<FinanceiroData> {
+async function fetchFinanceiroData(workspaceId: string): Promise<FinanceiroData> {
   // STEP 1: Identify Caixa Operacional partner
   const { data: caixaParceiro } = await supabase
     .from("parceiros")
