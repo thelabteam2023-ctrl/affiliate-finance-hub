@@ -314,7 +314,7 @@ export default function GestaoParceiros() {
     if (selectedParceiroDetalhes) {
       parceiroCache.invalidateCache(selectedParceiroDetalhes);
     }
-    fetchParceiros();
+    refetchParceiros();
   }, [selectedParceiroDetalhes, parceiroCache]);
 
   // ============== MEMOIZED MODAL HANDLERS ==============
