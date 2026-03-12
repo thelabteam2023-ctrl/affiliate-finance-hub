@@ -201,31 +201,34 @@ export default function Financeiro() {
   // SEGURANÇA: workspaceId como dependência para isolamento multi-tenant
   const { workspaceId } = useTabWorkspace();
   
-  const [loading, setLoading] = useState(true);
-  const [caixaFiat, setCaixaFiat] = useState<CaixaFiat[]>([]);
-  const [caixaCrypto, setCaixaCrypto] = useState<CaixaCrypto[]>([]);
-  const [despesas, setDespesas] = useState<DespesaIndicacao[]>([]);
-  const [custos, setCustos] = useState<CustoAquisicao[]>([]);
-  const [cashLedger, setCashLedger] = useState<CashLedgerEntry[]>([]);
-  const [despesasAdmin, setDespesasAdmin] = useState<DespesaAdministrativa[]>([]);
-  const [despesasAdminPendentes, setDespesasAdminPendentes] = useState<DespesaAdministrativa[]>([]);
-  const [pagamentosOperador, setPagamentosOperador] = useState<PagamentoOperador[]>([]);
-  const [pagamentosOperadorPendentes, setPagamentosOperadorPendentes] = useState<PagamentoOperador[]>([]);
-  const [movimentacoesIndicacao, setMovimentacoesIndicacao] = useState<DespesaIndicacao[]>([]);
-  const [bookmakersSaldos, setBookmakersSaldos] = useState<BookmakerSaldo[]>([]);
-  const [bookmakersDetalhados, setBookmakersDetalhados] = useState<BookmakerDetalhado[]>([]);
-  const [apostasHistorico, setApostasHistorico] = useState<ApostaHistorico[]>([]);
-  const [totalParceirosAtivos, setTotalParceirosAtivos] = useState<number>(0);
-  const [contasParceiros, setContasParceiros] = useState<ContaParceiro[]>([]);
-  const [contasDetalhadas, setContasDetalhadas] = useState<ContaDetalhada[]>([]);
-  const [walletsParceiros, setWalletsParceiros] = useState<WalletParceiro[]>([]);
-  const [walletsDetalhadas, setWalletsDetalhadas] = useState<WalletDetalhada[]>([]);
-  const [participacoesPagas, setParticipacoesPagas] = useState<{ valor_participacao: number; data_pagamento: string }[]>([]);
+  // ==================== REACT QUERY: Cache + Deduplicação ====================
+  const { data: finData, loading, refetch: refetchFinanceiro } = useFinanceiroData();
   
-  // Estados para compromissos pendentes de parcerias
-  const [parceirosPendentes, setParceirosPendentes] = useState<{ valorTotal: number; count: number }>({ valorTotal: 0, count: 0 });
-  const [comissoesPendentes, setComissoesPendentes] = useState<{ valorTotal: number; count: number }>({ valorTotal: 0, count: 0 });
-  const [bonusPendentes, setBonusPendentes] = useState<{ valorTotal: number; count: number }>({ valorTotal: 0, count: 0 });
+  // Destructure all data from the cached query
+  const {
+    caixaFiat,
+    caixaCrypto,
+    despesas,
+    custos,
+    cashLedger,
+    despesasAdmin,
+    despesasAdminPendentes,
+    pagamentosOperador,
+    pagamentosOperadorPendentes,
+    movimentacoesIndicacao,
+    bookmakersSaldos,
+    bookmakersDetalhados,
+    apostasHistorico,
+    totalParceirosAtivos,
+    contasParceiros,
+    contasDetalhadas,
+    walletsParceiros,
+    walletsDetalhadas,
+    participacoesPagas,
+    parceirosPendentes,
+    comissoesPendentes,
+    bonusPendentes,
+  } = finData;
   
   // Hook centralizado de cotações
   const cryptoSymbols = useMemo(() => caixaCrypto.map(c => c.coin), [caixaCrypto]);
@@ -257,7 +260,6 @@ export default function Financeiro() {
   );
 
   // ==================== FONTE ÚNICA DE VERDADE: LUCRO OPERACIONAL ====================
-  // Hook centralizado que consolida: apostas + cashback + giros grátis (e futuros módulos)
   const { 
     resultado: lucroOperacionalData, 
     loading: loadingLucroOperacional,
@@ -269,15 +271,14 @@ export default function Financeiro() {
     cotacoes: cotacoesMap,
   });
 
-  // Valores derivados do hook centralizado
   const lucroOperacionalApostas = lucroOperacionalData?.lucroTotal ?? 0;
   const hasMultiCurrencyApostas = lucroOperacionalData?.hasMultiCurrency ?? false;
 
-  // Hook de capital médio do período (para ROI temporalmente consistente)
+  // Hook de capital médio do período
   const capitalMedioPeriodo = useCapitalMedioPeriodo({
     dataInicio: dataInicio || null,
     dataFim: dataFim || null,
-    capitalAtual: 0, // Will be set after bookmakers load
+    capitalAtual: 0,
   });
 
   // Dialog states
@@ -294,246 +295,16 @@ export default function Financeiro() {
   const [activeFinanceiroTab, setActiveFinanceiroTab] = useState(tabFromUrl || "overview");
   const investidorFiltroId = searchParams.get("investidor");
 
-  // SEGURANÇA: Refetch quando workspace muda
+  // Auth check
   useEffect(() => {
     if (workspaceId) {
+      const checkAuth = async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) navigate("/auth");
+      };
       checkAuth();
     }
-  }, [workspaceId]);
-
-  // Listener para reset de estados locais na troca de workspace
-  useWorkspaceChangeListener(useCallback(() => {
-    console.log("[Financeiro] Workspace changed - resetting local state");
-    setCaixaFiat([]);
-    setCaixaCrypto([]);
-    setDespesas([]);
-    setCustos([]);
-    setCashLedger([]);
-    setDespesasAdmin([]);
-    setDespesasAdminPendentes([]);
-    setPagamentosOperador([]);
-    setPagamentosOperadorPendentes([]);
-    setMovimentacoesIndicacao([]);
-    setBookmakersSaldos([]);
-    setBookmakersDetalhados([]);
-    setApostasHistorico([]);
-    setContasParceiros([]);
-    setContasDetalhadas([]);
-    setWalletsParceiros([]);
-    setWalletsDetalhadas([]);
-    setLoading(true);
-  }, []));
-
-  // Datas derivadas automaticamente do periodoPreset via useMemo - sem necessidade de useEffect
-
-  const checkAuth = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      navigate("/auth");
-    } else {
-      fetchData();
-    }
-  };
-
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-
-      // STEP 1: Identify the Caixa Operacional partner to use as filter
-      const { data: caixaParceiro } = await supabase
-        .from("parceiros")
-        .select("id")
-        .eq("is_caixa_operacional", true)
-        .maybeSingle();
-      
-      const caixaParceiroId = caixaParceiro?.id || null;
-
-      const [
-        despesasResult, 
-        custosResult, 
-        ledgerResult, 
-        despesasAdminResult, 
-        despesasAdminPendentesResult,
-        pagamentosOpResult, 
-        pagamentosOpPendentesResult,
-        movIndicacaoResult,
-        bookmakersResult,
-        bookmakersDetalhadosResult,
-        parceirosAtivosResult,
-        parceriasParceiroResult,
-        parceriasComissaoResult,
-        acordosIndicadorResult,
-        // Saldos de contas e wallets (ALL parceiros - filtraremos depois)
-        allContasSaldoResult,
-        allWalletsSaldoResult,
-        contasDetalhadasResult,
-        walletsDetalhadasResult,
-        participacoesResult,
-        apostasHistoricoResult,
-      ] = await Promise.all([
-        supabase.from("movimentacoes_indicacao").select("tipo, valor, data_movimentacao, parceria_id, indicador_id, indicadores_referral(nome)").eq("status", "CONFIRMADO"),
-        supabase.from("v_custos_aquisicao").select("custo_total, valor_indicador, valor_parceiro, valor_fornecedor, data_inicio, indicador_id, indicador_nome"),
-        supabase.from("cash_ledger").select("tipo_transacao, valor, data_transacao, moeda").eq("status", "CONFIRMADO"),
-        supabase.from("despesas_administrativas").select("*").eq("status", "CONFIRMADO"),
-        supabase.from("despesas_administrativas").select("*").eq("status", "PENDENTE"),
-        supabase.from("pagamentos_operador").select("tipo_pagamento, valor, data_pagamento, status, operador_id, operadores(nome)").eq("status", "CONFIRMADO"),
-        supabase.from("pagamentos_operador").select("tipo_pagamento, valor, data_pagamento, status, operador_id, operadores(nome)").eq("status", "PENDENTE"),
-        supabase.from("movimentacoes_indicacao").select("tipo, valor, data_movimentacao, parceria_id, indicador_id, indicadores_referral(nome)"),
-        supabase.from("bookmakers").select("saldo_atual, saldo_freebet, status, estado_conta, aguardando_saque_at, projeto_id, moeda").in("status", ["ativo", "ATIVO", "EM_USO", "limitada", "LIMITADA", "AGUARDANDO_SAQUE"]),
-        supabase.from("bookmakers").select("saldo_atual, projeto_id, moeda, projetos(nome)").in("status", ["ativo", "ATIVO", "EM_USO", "limitada", "LIMITADA", "AGUARDANDO_SAQUE"]),
-        supabase.from("parceiros").select("id", { count: "exact", head: true }).eq("status", "ativo"),
-        supabase
-          .from("parcerias")
-          .select("id, valor_parceiro, origem_tipo, status, custo_aquisicao_isento")
-          .in("status", ["ATIVA", "EM_ENCERRAMENTO"])
-          .or("custo_aquisicao_isento.is.null,custo_aquisicao_isento.eq.false")
-          .gt("valor_parceiro", 0),
-        supabase
-          .from("parcerias")
-          .select("id, valor_comissao_indicador, comissao_paga")
-          .eq("comissao_paga", false)
-          .not("valor_comissao_indicador", "is", null)
-          .gt("valor_comissao_indicador", 0),
-        supabase
-          .from("indicador_acordos")
-          .select("indicador_id, meta_parceiros, valor_bonus")
-          .eq("ativo", true),
-        // UNIFIED SOURCE: Use v_saldo_parceiro_contas/wallets for ALL saldos
-        // Then split into caixa vs parceiros client-side
-        supabase.from("v_saldo_parceiro_contas").select("parceiro_id, conta_id, saldo, banco, parceiro_nome, moeda"),
-        supabase.from("v_saldo_parceiro_wallets").select("parceiro_id, wallet_id, coin, saldo_coin, saldo_usd, exchange"),
-        supabase.from("v_saldo_parceiro_contas").select("saldo, banco, parceiro_nome, moeda, parceiro_id"),
-        supabase.from("v_saldo_parceiro_wallets").select("saldo_usd, exchange, parceiro_id"),
-        supabase.from("participacao_ciclos").select("valor_participacao, data_pagamento").eq("status", "PAGO"),
-        supabase.from("apostas_unificada").select("lucro_prejuizo, data_aposta").not("resultado", "is", null),
-      ]);
-
-      if (despesasResult.error) throw despesasResult.error;
-      if (custosResult.error) throw custosResult.error;
-      if (ledgerResult.error) throw ledgerResult.error;
-      if (despesasAdminResult.error) throw despesasAdminResult.error;
-      if (despesasAdminPendentesResult.error) throw despesasAdminPendentesResult.error;
-      if (pagamentosOpResult.error) throw pagamentosOpResult.error;
-      if (pagamentosOpPendentesResult.error) throw pagamentosOpPendentesResult.error;
-      if (movIndicacaoResult.error) throw movIndicacaoResult.error;
-      if (bookmakersResult.error) throw bookmakersResult.error;
-
-      const allContas = allContasSaldoResult.data || [];
-      const allWallets = allWalletsSaldoResult.data || [];
-
-      // STEP 2: Split contas/wallets into Caixa Operacional vs Parceiros
-      // This ensures IDENTICAL logic to the Caixa page (v_saldo_parceiro_contas filtered by caixa parceiro)
-      
-      // Caixa FIAT = contas do parceiro caixa operacional, agrupadas por moeda
-      const caixaFiatMap: Record<string, number> = {};
-      allContas.forEach((row: any) => {
-        if (caixaParceiroId && row.parceiro_id === caixaParceiroId) {
-          const m = row.moeda || "BRL";
-          caixaFiatMap[m] = (caixaFiatMap[m] || 0) + (row.saldo || 0);
-        }
-      });
-      setCaixaFiat(Object.entries(caixaFiatMap).map(([moeda, saldo]) => ({ moeda, saldo })));
-
-      // Caixa CRYPTO = wallets do parceiro caixa operacional, agrupadas por coin
-      const caixaCryptoMap: Record<string, { saldo_coin: number; saldo_usd: number }> = {};
-      allWallets.forEach((row: any) => {
-        if (caixaParceiroId && row.parceiro_id === caixaParceiroId) {
-          const c = row.coin || "USDT";
-          if (!caixaCryptoMap[c]) caixaCryptoMap[c] = { saldo_coin: 0, saldo_usd: 0 };
-          caixaCryptoMap[c].saldo_coin += (row.saldo_coin || 0);
-          caixaCryptoMap[c].saldo_usd += (row.saldo_usd || 0);
-        }
-      });
-      setCaixaCrypto(Object.entries(caixaCryptoMap).map(([coin, vals]) => ({ coin, ...vals })));
-
-      // Parceiros contas/wallets = EXCLUINDO caixa operacional (evita double-counting)
-      const parceirosContas = allContas.filter((row: any) => !caixaParceiroId || row.parceiro_id !== caixaParceiroId);
-      const parceirosWallets = allWallets.filter((row: any) => !caixaParceiroId || row.parceiro_id !== caixaParceiroId);
-
-      setDespesas(despesasResult.data || []);
-      setCustos(custosResult.data || []);
-      setCashLedger(ledgerResult.data || []);
-      setDespesasAdmin(despesasAdminResult.data || []);
-      setDespesasAdminPendentes(despesasAdminPendentesResult.data || []);
-      setPagamentosOperador(pagamentosOpResult.data || []);
-      setPagamentosOperadorPendentes(pagamentosOpPendentesResult.data || []);
-      setMovimentacoesIndicacao(movIndicacaoResult.data || []);
-      setBookmakersSaldos(bookmakersResult.data || []);
-      setBookmakersDetalhados(bookmakersDetalhadosResult.data || []);
-      setContasParceiros(parceirosContas);
-      setWalletsParceiros(parceirosWallets);
-      // Detalhadas also exclude caixa
-      setContasDetalhadas((contasDetalhadasResult.data || []).filter((c: any) => !caixaParceiroId || c.parceiro_id !== caixaParceiroId));
-      setWalletsDetalhadas((walletsDetalhadasResult.data || []).filter((w: any) => !caixaParceiroId || w.parceiro_id !== caixaParceiroId));
-      setParticipacoesPagas(participacoesResult.data || []);
-      
-      // Armazenar apostas para histórico mensal (não mais usado para lucro operacional)
-      setApostasHistorico(apostasHistoricoResult.data || []);
-      
-      // Total de parceiros ativos
-      setTotalParceirosAtivos(parceirosAtivosResult.count || 0);
-      
-      // ========== CÁLCULO DE COMPROMISSOS PENDENTES DE PARCERIAS ==========
-      const allMovimentacoes = movIndicacaoResult.data || [];
-      
-      // 1. Parceiros pendentes
-      const parceriasPagas = allMovimentacoes
-        .filter((m: any) => m.tipo === "PAGTO_PARCEIRO" && m.parceria_id)
-        .map((m: any) => m.parceria_id);
-      const parceirosPendentesCalc = (parceriasParceiroResult.data || [])
-        .filter((p: any) => !parceriasPagas.includes(p.id));
-      const valorParceirosPendentes = parceirosPendentesCalc.reduce((acc: number, p: any) => acc + (p.valor_parceiro || 0), 0);
-      setParceirosPendentes({ valorTotal: valorParceirosPendentes, count: parceirosPendentesCalc.length });
-      
-      // 2. Comissões pendentes
-      const comissoesPendentesCalc = parceriasComissaoResult.data || [];
-      const valorComissoesPendentes = comissoesPendentesCalc.reduce((acc: number, p: any) => acc + (p.valor_comissao_indicador || 0), 0);
-      setComissoesPendentes({ valorTotal: valorComissoesPendentes, count: comissoesPendentesCalc.length });
-      
-      // 3. Bônus pendentes
-      const custosData = custosResult.data || [];
-      const acordosData = acordosIndicadorResult.data || [];
-      
-      const indicadorStats: Record<string, number> = {};
-      custosData.forEach((c: any) => {
-        if (c.indicador_id) {
-          indicadorStats[c.indicador_id] = (indicadorStats[c.indicador_id] || 0) + 1;
-        }
-      });
-      
-      const bonusPagosPorIndicador: Record<string, number> = {};
-      allMovimentacoes
-        .filter((m: any) => m.tipo === "BONUS_INDICADOR" && m.indicador_id)
-        .forEach((m: any) => {
-          bonusPagosPorIndicador[m.indicador_id] = (bonusPagosPorIndicador[m.indicador_id] || 0) + 1;
-        });
-      
-      let totalBonusPendente = 0;
-      let countBonusPendente = 0;
-      acordosData.forEach((acordo: any) => {
-        const qtdParceiros = indicadorStats[acordo.indicador_id] || 0;
-        if (acordo.meta_parceiros && acordo.meta_parceiros > 0) {
-          const ciclosCompletos = Math.floor(qtdParceiros / acordo.meta_parceiros);
-          const bonusJaPagos = bonusPagosPorIndicador[acordo.indicador_id] || 0;
-          const ciclosPendentes = ciclosCompletos - bonusJaPagos;
-          if (ciclosPendentes > 0) {
-            totalBonusPendente += (acordo.valor_bonus || 0) * ciclosPendentes;
-            countBonusPendente += ciclosPendentes;
-          }
-        }
-      });
-      setBonusPendentes({ valorTotal: totalBonusPendente, count: countBonusPendente });
-    } catch (error: any) {
-      toast({
-        title: "Erro ao carregar dados",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  }, [workspaceId, navigate]);
   const openKpiHelp = (type: KpiType) => {
     setKpiType(type);
     setKpiDialogOpen(true);
