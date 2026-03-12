@@ -63,6 +63,8 @@ interface ParceiroDetalhesPanelProps {
   bookmakerRefreshKey?: number;
 }
 
+const clampSaldoVisual = (value: number | null | undefined) => Math.max(0, Number(value ?? 0));
+
 // Memoizado para evitar re-renders desnecessários quando o parent re-renderiza
 // (ex: abertura/fechamento de modais)
 export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({ 
