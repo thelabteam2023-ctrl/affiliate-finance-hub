@@ -46,7 +46,9 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
 
   // Invalidar grupo FINANCIAL_STATE completo após mutação
   const invalidateProjectKPIs = useCallback(() => {
-    // KPIs
+    // Dashboard RPC centralizado (fonte de dados para KPIs)
+    queryClient.invalidateQueries({ queryKey: [PROJETO_DASHBOARD_QUERY_KEY, projetoId] });
+    // Legacy keys (mantido por segurança)
     queryClient.invalidateQueries({ queryKey: [PROJETO_RESULTADO_QUERY_KEY, projetoId] });
     queryClient.invalidateQueries({ queryKey: ["projeto-breakdowns", projetoId] });
     
