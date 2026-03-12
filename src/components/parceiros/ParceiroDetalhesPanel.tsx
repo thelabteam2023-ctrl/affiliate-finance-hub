@@ -930,20 +930,37 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                           Mostrando {bookmakersFiltrados.length} de {bookmakersFiltradosMoeda.length} casas
                         </div>
                       )}
-                      {/* Header da tabela */}
+                      {/* Header da tabela - sortable columns */}
                       <div className="grid grid-cols-8 gap-2 px-3 py-1.5 text-[10px] font-medium text-muted-foreground uppercase tracking-wide bg-muted/30 border-b border-border">
                         <div className="col-span-2">Casa</div>
                         <div className="text-center"></div>
-                        <div className="text-right">Dep.</div>
-                        <div className="text-right">Saq.</div>
-                        <div className="text-right">Saldo</div>
-                        <div className="text-right">Result. Fin.</div>
-                        <div className="text-right">Apost.</div>
+                        {([
+                          { key: "dep", label: "Dep." },
+                          { key: "saq", label: "Saq." },
+                          { key: "saldo", label: "Saldo" },
+                          { key: "resultado", label: "Result. Fin." },
+                          { key: "apostas", label: "Apost." },
+                        ] as const).map(col => (
+                          <button
+                            key={col.key}
+                            onClick={() => handleSort(col.key)}
+                            className="text-right flex items-center justify-end gap-0.5 hover:text-foreground transition-colors cursor-pointer"
+                          >
+                            <span>{col.label}</span>
+                            {sortColumn === col.key ? (
+                              sortDirection === "desc" 
+                                ? <ArrowDown className="h-2.5 w-2.5 text-primary" /> 
+                                : <ArrowUp className="h-2.5 w-2.5 text-primary" />
+                            ) : (
+                              <ArrowUpDown className="h-2.5 w-2.5 opacity-30" />
+                            )}
+                          </button>
+                        ))}
                       </div>
 
                       {/* Lista de bookmakers - único elemento rolável */}
                       <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-border">
-                        {bookmakersFiltrados.map((bm) => (
+                        {bookmakersSorted.map((bm) => (
                           <ContextMenu key={bm.bookmaker_id}>
                             <ContextMenuTrigger asChild>
                               <div
