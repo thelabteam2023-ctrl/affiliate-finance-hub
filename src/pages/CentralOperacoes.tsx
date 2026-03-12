@@ -445,7 +445,7 @@ export default function CentralOperacoes() {
     }
   }, [user, role, workspaceId]);
 
-  // ─── REALTIME: Auto-refresh quando outro operador faz uma ação ─────
+  // ─── REALTIME: Apenas eventos críticos (cash_ledger + bookmakers) ─────
   const realtimeDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   useEffect(() => {
@@ -455,17 +455,13 @@ export default function CentralOperacoes() {
       if (realtimeDebounceRef.current) clearTimeout(realtimeDebounceRef.current);
       realtimeDebounceRef.current = setTimeout(() => {
         fetchData(true);
-      }, 1000); // 1s debounce para agrupar mudanças simultâneas
+      }, 3000); // 3s debounce — agrupa mudanças simultâneas
     };
 
     const channel = supabase
       .channel('central-operacoes-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'cash_ledger', filter: `workspace_id=eq.${workspaceId}` }, debouncedRefresh)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookmakers', filter: `workspace_id=eq.${workspaceId}` }, debouncedRefresh)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'parcerias', filter: `workspace_id=eq.${workspaceId}` }, debouncedRefresh)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'pagamentos_operador' }, debouncedRefresh)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'movimentacoes_indicacao' }, debouncedRefresh)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'parceiro_lucro_alertas' }, debouncedRefresh)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'cash_ledger', filter: `workspace_id=eq.${workspaceId}` }, debouncedRefresh)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'bookmakers', filter: `workspace_id=eq.${workspaceId}` }, debouncedRefresh)
       .subscribe();
 
     return () => {
