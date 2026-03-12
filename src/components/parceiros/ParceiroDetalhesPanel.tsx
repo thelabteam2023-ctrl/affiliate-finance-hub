@@ -1247,7 +1247,7 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                                     <div className="flex justify-between gap-4">
                                       <span className="text-muted-foreground">+ Saldo Atual</span>
                                       <span>
-                                        {formatMoneyValue(bm.saldo_atual, bm.moeda || "BRL")}
+                                        {formatMoneyValue(clampSaldoVisual(bm.saldo_atual), bm.moeda || "BRL")}
                                       </span>
                                     </div>
                                     <div className="flex justify-between gap-4">
