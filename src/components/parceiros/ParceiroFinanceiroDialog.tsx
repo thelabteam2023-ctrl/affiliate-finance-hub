@@ -835,7 +835,7 @@ export default function ParceiroFinanceiroDialog({
                             
                             <div className="text-right flex-shrink-0">
                               <p className="text-sm font-bold">
-                                {formatCurrency(bookmaker.saldo_atual)}
+                                {formatCurrency(Math.max(0, bookmaker.saldo_atual))}
                               </p>
                             </div>
                           </div>

@@ -278,7 +278,7 @@ export function VinculoFinanceiroSheet({
                 </div>
                 <div className="text-right">
                   <p className="text-sm text-muted-foreground">Saldo Atual</p>
-                  <p className="text-lg font-bold">{formatCurrency(bookmaker.saldo_atual)}</p>
+                  <p className="text-lg font-bold">{formatCurrency(Math.max(0, bookmaker.saldo_atual))}</p>
                 </div>
               </div>
 

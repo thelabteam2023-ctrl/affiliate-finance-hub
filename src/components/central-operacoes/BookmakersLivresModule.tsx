@@ -9,7 +9,7 @@ import { useState, useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { formatCurrency } from "@/utils/formatCurrency";
+import { formatBalance } from "@/utils/formatCurrency";
 import { getFirstLastName, cn } from "@/lib/utils";
 import {
   Search,
@@ -486,7 +486,7 @@ export function BookmakersLivresModule({ onRegistrarPerda, onVincularProjeto, on
                             <Badge variant="outline" className="text-xs">{conta.moeda}</Badge>
                           </td>
                           <td className="p-3 text-right font-mono font-medium">
-                            {formatCurrency(conta.saldo_atual, conta.moeda)}
+                            {formatBalance(conta.saldo_atual, conta.moeda)}
                           </td>
                           <td className="p-3 text-center">
                             <Badge

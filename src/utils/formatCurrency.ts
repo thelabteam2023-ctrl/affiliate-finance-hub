@@ -118,6 +118,23 @@ export function formatCurrency(
 }
 
 /**
+ * Formata um SALDO (balance) monetário, clampando valores negativos a zero.
+ * 
+ * Regra de Domínio: Saldos financeiros nunca devem ser exibidos como negativos,
+ * pois valores abaixo de zero são erros de integridade ou pendências de reconciliação.
+ * 
+ * USO: Apenas para saldo_atual, saldo_freebet, saldo_bonus e saldos de contas/wallets.
+ * NÃO usar para lucro/prejuízo, P&L ou diferenças que podem ser legitimamente negativas.
+ */
+export function formatBalance(
+  value: number,
+  moeda: string = "BRL",
+  options: FormatOptions = {}
+): string {
+  return formatCurrency(Math.max(0, value), moeda, options);
+}
+
+/**
  * Formata com sinal explícito (+/-)
  */
 export function formatCurrencyWithSign(
