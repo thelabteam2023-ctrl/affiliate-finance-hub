@@ -1224,7 +1224,7 @@ export default function Financeiro() {
                         <IconComponent className="h-4 w-4" />
                         <span>{grupoInfo.label}</span>
                       </span>
-                      <span className="font-medium text-orange-500">{formatCurrency(valor)}</span>
+                      <span className="font-medium text-orange-500">{formatCurrency(valor as number)}</span>
                     </div>
                   );
                 })}
