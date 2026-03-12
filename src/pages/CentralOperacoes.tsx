@@ -2516,9 +2516,20 @@ export default function CentralOperacoes() {
           )}
         </TabsContent>
 
-        {/* ABA: CONTAS DISPONÍVEIS */}
+        {/* ABA: CONTAS DISPONÍVEIS (com sub-abas) */}
         <TabsContent value="contas" className="mt-4">
-          <ContasDisponiveisModule />
+          <Tabs defaultValue="contas-saldo" className="w-full">
+            <TabsList className="mb-4">
+              <TabsTrigger value="contas-saldo">Contas Disponíveis</TabsTrigger>
+              <TabsTrigger value="bookmakers-livres">Bookmakers Livres</TabsTrigger>
+            </TabsList>
+            <TabsContent value="contas-saldo">
+              <ContasDisponiveisModule />
+            </TabsContent>
+            <TabsContent value="bookmakers-livres">
+              <BookmakersLivresModule />
+            </TabsContent>
+          </Tabs>
         </TabsContent>
 
         {/* ABA: OCORRÊNCIAS */}
