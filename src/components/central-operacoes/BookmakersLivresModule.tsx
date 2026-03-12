@@ -240,6 +240,7 @@ export function BookmakersLivresModule({ onRegistrarPerda, onVincularProjeto, on
         id: b.id,
         nome: b.nome,
         status: b.status || "ativo",
+        estado_conta: b.estado_conta || "normal",
         saldo_atual: Number(b.saldo_atual) || 0,
         moeda: b.moeda || "BRL",
         parceiro_id: b.parceiro_id,
