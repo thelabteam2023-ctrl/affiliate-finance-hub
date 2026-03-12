@@ -80,36 +80,39 @@ export function useCentralOperacoesMutations(fetchData: (isRefresh?: boolean) =>
       toast.success(`"${alerta.titulo}" devolvida para Contas Disponíveis`, {
         description: "Você pode vincular a um projeto ou tomar outra decisão.",
       });
-      fetchData(true);
+      // Optimistic: remove alert from list
+      removeFromList('alertas', 'entidade_id', alerta.entidade_id);
     } catch (err) {
       console.error("Erro ao cancelar liberação:", err);
       toast.error("Erro ao cancelar liberação");
     }
-  }, [fetchData]);
+  }, [removeFromList]);
 
   const handleMarcarParaSaque = useCallback(async (casa: BookmakerDesvinculado) => {
     try {
       const { error } = await supabase.rpc('marcar_para_saque', { p_bookmaker_id: casa.id });
       if (error) throw error;
       toast.success(`"${casa.nome}" marcada para saque`);
-      fetchData(true);
+      // Optimistic: remove from casasDesvinculadas
+      removeFromList('casasDesvinculadas', 'id', casa.id);
     } catch (err) {
       console.error("Erro ao marcar para saque:", err);
       toast.error("Erro ao marcar para saque");
     }
-  }, [fetchData]);
+  }, [removeFromList]);
 
   const handleDisponibilizarCasa = useCallback(async (casa: BookmakerDesvinculado) => {
     try {
       const { error } = await supabase.rpc('confirmar_saque_concluido', { p_bookmaker_id: casa.id });
       if (error) throw error;
       toast.success(`"${casa.nome}" disponibilizada para novos projetos`);
-      fetchData(true);
+      // Optimistic: remove from casasDesvinculadas
+      removeFromList('casasDesvinculadas', 'id', casa.id);
     } catch (err) {
       console.error("Erro ao disponibilizar casa:", err);
       toast.error("Erro ao disponibilizar casa");
     }
-  }, [fetchData]);
+  }, [removeFromList]);
 
   const handleAcknowledgeCasaDesvinculada = useCallback(async (casa: BookmakerDesvinculado) => {
     try {
@@ -123,12 +126,13 @@ export function useCentralOperacoesMutations(fetchData: (isRefresh?: boolean) =>
         });
       if (error) throw error;
       toast.success(`Alerta de "${casa.nome}" removido`);
-      fetchData(true);
+      // Optimistic: remove from casasDesvinculadas
+      removeFromList('casasDesvinculadas', 'id', casa.id);
     } catch (err) {
       console.error("Erro ao registrar acknowledge:", err);
       toast.error("Erro ao confirmar ciência");
     }
-  }, [fetchData, user?.id]);
+  }, [removeFromList, user?.id]);
 
   const handleSolicitarSaqueCasaDesvinculada = useCallback((casa: BookmakerDesvinculado) => {
     navigate("/caixa", { state: { openDialog: true, bookmakerId: casa.id, bookmakerNome: casa.nome } });
