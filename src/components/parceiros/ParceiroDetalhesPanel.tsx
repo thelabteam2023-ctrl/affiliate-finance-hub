@@ -812,6 +812,16 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                           </SelectContent>
                         </Select>
                       )}
+                      <Select value={filtroRegulamentacao} onValueChange={setFiltroRegulamentacao}>
+                        <SelectTrigger className="h-6 w-[80px] text-[10px] px-2 py-0">
+                          <SelectValue placeholder="Tipo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="todas" className="text-xs">Todas</SelectItem>
+                          <SelectItem value="REGULAMENTADA" className="text-xs">Reg.</SelectItem>
+                          <SelectItem value="NAO_REGULAMENTADA" className="text-xs">Não Reg.</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
 
