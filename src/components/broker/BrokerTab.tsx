@@ -112,7 +112,7 @@ export function BrokerTab() {
       style: "currency",
       currency: moeda,
       minimumFractionDigits: 2,
-    }).format(value);
+    }).format(Math.max(0, value));
   };
 
   const getStatusColor = (status: string) => {

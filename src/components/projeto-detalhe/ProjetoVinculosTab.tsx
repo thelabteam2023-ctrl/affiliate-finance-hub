@@ -1428,7 +1428,7 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
                         </p>
                       </div>
                       <span className={`text-sm font-medium ${hasSaldo ? "text-green-500" : "text-muted-foreground"}`}>
-                        {formatCurrency(item.saldo_atual, item.moeda)}
+                        {formatCurrency(Math.max(0, item.saldo_atual), item.moeda)}
                       </span>
                     </div>
                   );
