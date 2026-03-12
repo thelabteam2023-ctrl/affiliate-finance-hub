@@ -2528,7 +2528,50 @@ export default function CentralOperacoes() {
               <ContasDisponiveisModule />
             </TabsContent>
             <TabsContent value="bookmakers-livres">
-              <BookmakersLivresModule />
+              <BookmakersLivresModule
+                onRegistrarPerda={(bookmakerId, bookmakerNome, moeda, saldoAtual) =>
+                  setPerdaLimitadaDialog({ open: true, bookmakerId, bookmakerNome, moeda, saldoAtual })
+                }
+                onVincularProjeto={async (bookmakerId, projetoId, projetoNome) => {
+                  try {
+                    const { data: current } = await supabase
+                      .from("bookmakers")
+                      .select("projeto_id, saldo_atual, moeda, workspace_id")
+                      .eq("id", bookmakerId)
+                      .single();
+                    if (current?.projeto_id) {
+                      toast.error("Casa já vinculada a um projeto");
+                      return;
+                    }
+                    const { error } = await supabase
+                      .from("bookmakers")
+                      .update({ projeto_id: projetoId })
+                      .eq("id", bookmakerId);
+                    if (error) throw error;
+
+                    if (current?.workspace_id) {
+                      const { data: userData } = await supabase.auth.getUser();
+                      if (userData.user) {
+                        const { executeLink } = await import("@/lib/projetoTransitionService");
+                        await executeLink({
+                          bookmakerId,
+                          projetoId,
+                          workspaceId: current.workspace_id,
+                          userId: userData.user.id,
+                          saldoAtual: current.saldo_atual || 0,
+                          moeda: current.moeda || "BRL",
+                        });
+                      }
+                    }
+
+                    toast.success(`Casa vinculada ao projeto "${projetoNome}"`);
+                    fetchData(true);
+                  } catch (err) {
+                    console.error("Erro ao vincular:", err);
+                    toast.error("Erro ao vincular projeto");
+                  }
+                }}
+              />
             </TabsContent>
           </Tabs>
         </TabsContent>
