@@ -299,14 +299,18 @@ export function BookmakersLivresModule({ onRegistrarPerda, onVincularProjeto, on
     return contas.filter((c) => {
       if (casaFilter !== "todas" && c.nome !== casaFilter) return false;
       if (parceiroFilter !== "todos" && c.parceiro_id !== parceiroFilter) return false;
-      if (statusFilter === "ativo" && !["ativo", "aguardando_saque", "AGUARDANDO_DECISAO"].includes(c.status)) return false;
-      if (statusFilter === "inativo" && ["ativo", "aguardando_saque", "AGUARDANDO_DECISAO"].includes(c.status)) return false;
+      // Estado conta filter: "operacional" hides limitada/encerrada/bloqueada
+      if (estadoContaFilter === "operacional") {
+        if (["limitada", "encerrada", "bloqueada", "LIMITADA", "ENCERRADA", "BLOQUEADA"].includes(c.estado_conta)) return false;
+      } else if (estadoContaFilter !== "todos") {
+        if (c.estado_conta.toLowerCase() !== estadoContaFilter.toLowerCase()) return false;
+      }
       if (usoFilter === "virgem" && c.ja_usada) return false;
       if (usoFilter === "utilizada" && !c.ja_usada) return false;
       if (regulamentacaoFilter !== "todas" && c.catalogo_status !== regulamentacaoFilter) return false;
       return true;
     });
-  }, [contas, casaFilter, parceiroFilter, statusFilter, usoFilter, regulamentacaoFilter]);
+  }, [contas, casaFilter, parceiroFilter, estadoContaFilter, usoFilter, regulamentacaoFilter]);
 
   // Sorted
   const sorted = useMemo(() => {
