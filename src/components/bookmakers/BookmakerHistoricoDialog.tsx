@@ -51,6 +51,7 @@ export function BookmakerHistoricoDialog({
   const [historico, setHistorico] = useState<HistoricoItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hasOrphanOperations, setHasOrphanOperations] = useState(false);
 
   useEffect(() => {
     if (open && bookmakerId) {
@@ -111,6 +112,17 @@ export function BookmakerHistoricoDialog({
             status_final: null,
           });
         }
+      }
+
+      // If no historico found at all, check if there are orphan operations
+      if (formattedData.length === 0) {
+        const [{ count: apostasCount }, { count: ledgerCount }] = await Promise.all([
+          supabase.from("apostas_unificada").select("id", { count: "exact", head: true }).eq("bookmaker_id", bookmakerId),
+          supabase.from("cash_ledger").select("id", { count: "exact", head: true }).or(`origem_bookmaker_id.eq.${bookmakerId},destino_bookmaker_id.eq.${bookmakerId}`),
+        ]);
+        setHasOrphanOperations((apostasCount || 0) + (ledgerCount || 0) > 0);
+      } else {
+        setHasOrphanOperations(false);
       }
 
       setHistorico(formattedData);
@@ -190,8 +202,19 @@ export function BookmakerHistoricoDialog({
           ) : historico.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-muted-foreground gap-2">
               <History className="h-10 w-10 opacity-30" />
-              <p className="text-sm">Nenhum histórico encontrado</p>
-              <p className="text-xs">Esta casa ainda não foi vinculada a nenhum projeto</p>
+              {hasOrphanOperations ? (
+                <>
+                  <p className="text-sm font-medium text-amber-400/80">Operações detectadas</p>
+                  <p className="text-xs text-center px-4">
+                    Esta casa possui transações/apostas registradas, mas não foi formalmente vinculada a um projeto com rastreamento de histórico ativo.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm">Nenhum histórico encontrado</p>
+                  <p className="text-xs">Esta casa ainda não foi vinculada a nenhum projeto</p>
+                </>
+              )}
             </div>
           ) : (
             <ScrollArea className="max-h-[400px] pr-3">
