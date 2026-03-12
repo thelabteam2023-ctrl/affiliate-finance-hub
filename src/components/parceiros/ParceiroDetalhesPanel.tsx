@@ -333,8 +333,8 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
     const keyMap = { dep: "total_depositado", saq: "total_sacado", saldo: "saldo_atual", resultado: "lucro_prejuizo", apostas: "qtd_apostas" } as const;
     const key = keyMap[sortColumn];
     return [...bookmakersFiltrados].sort((a, b) => {
-      const va = (a as any)[key] ?? 0;
-      const vb = (b as any)[key] ?? 0;
+      const va = sortColumn === "saldo" ? clampSaldoVisual((a as any)[key]) : ((a as any)[key] ?? 0);
+      const vb = sortColumn === "saldo" ? clampSaldoVisual((b as any)[key]) : ((b as any)[key] ?? 0);
       return sortDirection === "desc" ? vb - va : va - vb;
     });
   }, [bookmakersFiltrados, sortColumn, sortDirection]);
@@ -358,8 +358,8 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
         depositadoBRL: consolidarEmBRL(depositadoEntries),
         sacado: sacadoEntries,
         sacadoBRL: consolidarEmBRL(sacadoEntries),
-        saldo: saldoEntries,
-        saldoBRL: consolidarEmBRL(saldoEntries),
+        saldo: saldoEntriesVisual,
+        saldoBRL: consolidarEmBRL(saldoEntriesVisual),
         resultado: resultadoEntries,
         resultadoBRL: consolidarEmBRL(resultadoEntries),
         apostas: data?.qtd_apostas_total ?? 0,
@@ -390,13 +390,13 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
       const moeda = bm.moeda || "BRL";
       depositadoTotal += bm.total_depositado ?? 0;
       sacadoTotal += bm.total_sacado ?? 0;
-      saldoTotal += bm.saldo_atual ?? 0;
+      saldoTotal += clampSaldoVisual(bm.saldo_atual);
       resultadoTotal += bm.lucro_prejuizo ?? 0;
       apostasTotal += bm.qtd_apostas ?? 0;
       
       depPorMoeda[moeda] = (depPorMoeda[moeda] || 0) + (bm.total_depositado ?? 0);
       saqPorMoeda[moeda] = (saqPorMoeda[moeda] || 0) + (bm.total_sacado ?? 0);
-      salPorMoeda[moeda] = (salPorMoeda[moeda] || 0) + (bm.saldo_atual ?? 0);
+      salPorMoeda[moeda] = (salPorMoeda[moeda] || 0) + clampSaldoVisual(bm.saldo_atual);
       resPorMoeda[moeda] = (resPorMoeda[moeda] || 0) + (bm.lucro_prejuizo ?? 0);
     });
     
@@ -437,7 +437,7 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
       apostas: apostasTotal,
       isConsolidado: true,
     };
-  }, [filtroMoeda, hasActiveFilter, bookmakersFiltradosMoeda, depositadoEntries, sacadoEntries, saldoEntries, resultadoEntries, data?.qtd_apostas_total, convertToBRL]);
+  }, [filtroMoeda, hasActiveFilter, bookmakersFiltradosMoeda, depositadoEntries, sacadoEntries, saldoEntriesVisual, resultadoEntries, data?.qtd_apostas_total, convertToBRL]);
 
   // Determinar lucro/prejuízo baseado nos KPIs filtrados
   const hasLucroFiltrado = useMemo(() => kpisFiltrados.resultado.some(e => e.value > 0), [kpisFiltrados.resultado]);
