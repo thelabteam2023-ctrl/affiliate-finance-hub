@@ -1181,7 +1181,7 @@ export default function Financeiro() {
                                           toast({ title: "Erro ao excluir", description: error.message, variant: "destructive" });
                                         } else {
                                           toast({ title: "Despesa excluída" });
-                                          fetchData();
+                                          refetchFinanceiro();
                                         }
                                       }
                                     }}
