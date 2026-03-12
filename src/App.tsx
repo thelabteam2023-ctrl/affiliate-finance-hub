@@ -363,7 +363,9 @@ const App = () => (
             } />
             <Route path="/janela/multipla/:id" element={
               <ProtectedRoute>
-                <ApostaMultiplaWindowPage />
+                <Suspense fallback={<PageLoader />}>
+                  <ApostaMultiplaWindowPage />
+                </Suspense>
               </ProtectedRoute>
             } />
             
