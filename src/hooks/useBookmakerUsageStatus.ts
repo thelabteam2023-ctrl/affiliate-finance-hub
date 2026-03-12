@@ -58,6 +58,26 @@ export function useBookmakerUsageStatus(bookmakerIds: string[]) {
 
       if (histError) throw histError;
 
+      // Buscar vínculo ativo direto na tabela bookmakers (fonte primária de verdade)
+      const { data: bookmakersAtivos, error: bmError } = await supabase
+        .from("bookmakers")
+        .select("id, projeto_id, projetos:projetos!bookmakers_projeto_id_fkey(nome, tipo_projeto)")
+        .in("id", bookmakerIds)
+        .not("projeto_id", "is", null);
+
+      if (bmError) throw bmError;
+
+      // Mapa de vínculos ativos diretos da tabela bookmakers
+      const activeProjectMap = new Map<string, { projetoNome: string; tipoProjeto: string | null }>();
+      (bookmakersAtivos || []).forEach((bm: any) => {
+        if (bm.projeto_id) {
+          activeProjectMap.set(bm.id, {
+            projetoNome: bm.projetos?.nome || null,
+            tipoProjeto: bm.projetos?.tipo_projeto || null,
+          });
+        }
+      });
+
       // Buscar se tem operações (apostas, transações, bônus) - para bloquear delete
       const { data: apostasData, error: apostasError } = await supabase
         .from("apostas_unificada")
@@ -94,27 +114,38 @@ export function useBookmakerUsageStatus(bookmakerIds: string[]) {
         const vinculosAtivos = bookmakerHistorico.filter(
           (h: any) => !h.data_desvinculacao
         );
-        const projetosAtivos = vinculosAtivos.length;
+        let projetosAtivos = vinculosAtivos.length;
 
-        // Pegar o nome do primeiro projeto ativo
+        // Fonte primária: tabela bookmakers.projeto_id (vínculo real)
+        const activeProject = activeProjectMap.get(id);
+        const isActiveFromBookmakers = !!activeProject;
+
+        // Se o vínculo existe na tabela bookmakers mas não no histórico, ainda é ATIVA
+        if (isActiveFromBookmakers && projetosAtivos === 0) {
+          projetosAtivos = 1;
+        }
+
+        // Pegar o nome do primeiro projeto ativo (preferência: histórico, fallback: bookmakers)
         const projetoAtivoNome = vinculosAtivos.length > 0 
-          ? vinculosAtivos[0]?.projetos?.nome || null 
-          : null;
+          ? vinculosAtivos[0]?.projetos?.nome || activeProject?.projetoNome || null 
+          : activeProject?.projetoNome || null;
 
         const tiposProjeto = [
           ...new Set(
-            bookmakerHistorico
-              .map((h: any) => h.tipo_projeto_snapshot)
-              .filter(Boolean) as TipoProjeto[]
+            [
+              ...bookmakerHistorico
+                .map((h: any) => h.tipo_projeto_snapshot)
+                .filter(Boolean),
+              ...(activeProject?.tipoProjeto ? [activeProject.tipoProjeto] : []),
+            ] as TipoProjeto[]
           ),
         ];
 
         const hasHistory = bookmakerHistorico.length > 0;
         const hasOperations = operacoesSet.has(id);
-        const isActiveInProject = projetosAtivos > 0;
+        const isActiveInProject = projetosAtivos > 0 || isActiveFromBookmakers;
 
         // Categoria baseada em vínculos a projetos E operações
-        // Se tem operações (apostas/ledger) mas sem historico formal, ainda é "JA_USADA"
         let category: BookmakerUsageCategory;
         if (isActiveInProject) {
           category = "ATIVA";
