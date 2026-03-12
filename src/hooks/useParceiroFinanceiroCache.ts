@@ -146,6 +146,7 @@ export function useParceiroFinanceiroCache() {
       .filter(Boolean))];
     
     let logosMap = new Map<string, string>();
+    let catalogoStatusMap = new Map<string, string>();
     if (catalogoIds.length > 0) {
       const { data: catalogoData } = await supabase
         .from("bookmakers_catalogo")
@@ -154,10 +155,6 @@ export function useParceiroFinanceiroCache() {
 
       catalogoData?.forEach((c) => {
         if (c.logo_url) logosMap.set(c.id, c.logo_url);
-      });
-      // Map catalogo status (regulamentação)
-      var catalogoStatusMap = new Map<string, string>();
-      catalogoData?.forEach((c) => {
         catalogoStatusMap.set(c.id, c.status);
       });
     }
