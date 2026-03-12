@@ -259,7 +259,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       
       setParceiroId(parceiro.id);
     } else {
-      console.log('[ParceiroDialog] parceiro é null, chamando resetForm()');
+      resetForm();
       resetForm();
     }
   }, [parceiro]);
