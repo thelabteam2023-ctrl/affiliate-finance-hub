@@ -202,8 +202,19 @@ export function BookmakerHistoricoDialog({
           ) : historico.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-muted-foreground gap-2">
               <History className="h-10 w-10 opacity-30" />
-              <p className="text-sm">Nenhum histórico encontrado</p>
-              <p className="text-xs">Esta casa ainda não foi vinculada a nenhum projeto</p>
+              {hasOrphanOperations ? (
+                <>
+                  <p className="text-sm font-medium text-amber-400/80">Operações detectadas</p>
+                  <p className="text-xs text-center px-4">
+                    Esta casa possui transações/apostas registradas, mas não foi formalmente vinculada a um projeto com rastreamento de histórico ativo.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm">Nenhum histórico encontrado</p>
+                  <p className="text-xs">Esta casa ainda não foi vinculada a nenhum projeto</p>
+                </>
+              )}
             </div>
           ) : (
             <ScrollArea className="max-h-[400px] pr-3">
