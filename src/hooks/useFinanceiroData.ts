@@ -70,14 +70,15 @@ async function fetchFinanceiroData(workspaceId: string): Promise<FinanceiroData>
     participacoesResult,
     apostasHistoricoResult,
   ] = await Promise.all([
-    supabase.from("movimentacoes_indicacao").select("tipo, valor, data_movimentacao, parceria_id, indicador_id, indicadores_referral(nome)").eq("status", "CONFIRMADO"),
+    // UNIFICADA: Uma única query com workspace_id (substitui Q1+Q2 que eram 2 full scans)
+    supabase.from("movimentacoes_indicacao").select("tipo, valor, data_movimentacao, parceria_id, indicador_id, status, indicadores_referral(nome)").eq("workspace_id", workspaceId),
     supabase.from("v_custos_aquisicao").select("custo_total, valor_indicador, valor_parceiro, valor_fornecedor, data_inicio, indicador_id, indicador_nome"),
     supabase.from("cash_ledger").select("tipo_transacao, valor, data_transacao, moeda").eq("status", "CONFIRMADO"),
     supabase.from("despesas_administrativas").select("*").eq("status", "CONFIRMADO"),
     supabase.from("despesas_administrativas").select("*").eq("status", "PENDENTE"),
     supabase.from("pagamentos_operador").select("tipo_pagamento, valor, data_pagamento, status, operador_id, operadores(nome)").eq("status", "CONFIRMADO"),
     supabase.from("pagamentos_operador").select("tipo_pagamento, valor, data_pagamento, status, operador_id, operadores(nome)").eq("status", "PENDENTE"),
-    supabase.from("movimentacoes_indicacao").select("tipo, valor, data_movimentacao, parceria_id, indicador_id, indicadores_referral(nome)"),
+    // REMOVIDA: Q2 duplicada — agora usa a query unificada acima filtrando no client
     supabase.from("bookmakers").select("saldo_atual, saldo_freebet, status, estado_conta, aguardando_saque_at, projeto_id, moeda").in("status", ["ativo", "ATIVO", "EM_USO", "limitada", "LIMITADA", "AGUARDANDO_SAQUE"]),
     supabase.from("bookmakers").select("saldo_atual, projeto_id, moeda, projetos(nome)").in("status", ["ativo", "ATIVO", "EM_USO", "limitada", "LIMITADA", "AGUARDANDO_SAQUE"]),
     supabase.from("parceiros").select("id", { count: "exact", head: true }).eq("status", "ativo"),
