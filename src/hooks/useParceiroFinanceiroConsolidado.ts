@@ -55,6 +55,7 @@ export interface BookmakerFinanceiro {
   has_credentials: boolean;
   login_username: string | null;
   login_password_encrypted: string | null;
+  catalogo_status: string | null;
 }
 
 export interface ParceiroFinanceiroConsolidado {
