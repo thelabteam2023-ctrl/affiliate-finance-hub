@@ -372,7 +372,7 @@ export function BookmakersLivresModule({ onRegistrarPerda, onVincularProjeto, on
         <div className="flex flex-col gap-1">
           <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Status</span>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[140px] h-9 text-sm" icon={<Filter className="h-3.5 w-3.5" />}>
+            <SelectTrigger className="w-auto min-w-[140px] h-9 text-sm" icon={<Filter className="h-3.5 w-3.5" />}>
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
