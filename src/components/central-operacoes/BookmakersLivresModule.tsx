@@ -456,7 +456,7 @@ export function BookmakersLivresModule({ onRegistrarPerda, onVincularProjeto, on
                       <SortIcon className="h-3.5 w-3.5" />
                     </button>
                   </th>
-                  <th className="text-center p-3 font-medium text-muted-foreground">Status Usuário</th>
+                  <th className="text-center p-3 font-medium text-muted-foreground">Estado Conta</th>
                   <th className="text-center p-3 font-medium text-muted-foreground">Já Foi Usada</th>
                   <th className="text-left p-3 font-medium text-muted-foreground">Último Projeto</th>
                 </tr>
