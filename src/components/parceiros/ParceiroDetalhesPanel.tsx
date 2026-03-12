@@ -221,7 +221,6 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
     USDC: rates.USDBRL,
   };
 
-  const clampSaldoVisual = (value: number | null | undefined) => Math.max(0, Number(value ?? 0));
 
   // Mover hooks useMemo ANTES de qualquer early return
   const depositadoEntries = useMemo(() => 
