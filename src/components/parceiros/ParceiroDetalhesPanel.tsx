@@ -306,6 +306,28 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
     );
   }, [bookmakersFiltradosMoeda, buscaCasa]);
 
+  // Sort handler
+  const handleSort = useCallback((col: typeof sortColumn) => {
+    if (sortColumn === col) {
+      setSortDirection(prev => prev === "desc" ? "asc" : "desc");
+    } else {
+      setSortColumn(col);
+      setSortDirection("desc");
+    }
+  }, [sortColumn]);
+
+  // Sorted bookmakers
+  const bookmakersSorted = useMemo(() => {
+    if (!sortColumn) return bookmakersFiltrados;
+    const keyMap = { dep: "total_depositado", saq: "total_sacado", saldo: "saldo_atual", resultado: "lucro_prejuizo", apostas: "qtd_apostas" } as const;
+    const key = keyMap[sortColumn];
+    return [...bookmakersFiltrados].sort((a, b) => {
+      const va = (a as any)[key] ?? 0;
+      const vb = (b as any)[key] ?? 0;
+      return sortDirection === "desc" ? vb - va : va - vb;
+    });
+  }, [bookmakersFiltrados, sortColumn, sortDirection]);
+
   // Determina se há algum filtro dimensional ativo (status ou regulamentação)
   const hasActiveFilter = !!filtroStatus || filtroRegulamentacao !== "todas";
   
