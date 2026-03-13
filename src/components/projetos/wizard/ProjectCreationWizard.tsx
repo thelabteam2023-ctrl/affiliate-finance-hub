@@ -367,7 +367,7 @@ export function ProjectCreationWizard({
   const renderStep = () => {
     switch (currentStep) {
       case "dados":
-        return <StepDadosBasicos formData={formData} onChange={handleFormChange} />;
+        return <StepDadosBasicos formData={formData} onChange={handleFormChange} isBrokerContext={isBrokerContext} />;
       case "moeda":
         return <StepMoedaConsolidacao formData={formData} onChange={handleFormChange} />;
       case "estrutura":

@@ -27,9 +27,11 @@ import { TipoProjetoIcon } from "@/components/projetos/TipoProjetoIcon";
 interface StepDadosBasicosProps {
   formData: ProjectFormData;
   onChange: (data: Partial<ProjectFormData>) => void;
+  /** Se true, investidor é obrigatório (contexto Broker) */
+  isBrokerContext?: boolean;
 }
 
-export function StepDadosBasicos({ formData, onChange }: StepDadosBasicosProps) {
+export function StepDadosBasicos({ formData, onChange, isBrokerContext = false }: StepDadosBasicosProps) {
   // Derived state: investidor is "active" when an investor is selected
   const hasInvestidor = !!formData.investidor_id;
 
