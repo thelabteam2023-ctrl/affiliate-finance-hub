@@ -58,6 +58,8 @@ interface ProjetoKanbanCardProps {
   isDragging?: boolean;
   onDragStart: () => void;
   onDragEnd: () => void;
+  isBroker?: boolean;
+  onReceberContas?: () => void;
 }
 
 const getStatusColor = (status: string) => {
