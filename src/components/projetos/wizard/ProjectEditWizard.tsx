@@ -304,7 +304,7 @@ export function ProjectEditWizard({
           onStepClick={handleStepClick}
         />
 
-        <ScrollArea className="h-[450px] pr-4">{renderStep()}</ScrollArea>
+        <ScrollArea className="h-[60vh] max-h-[600px] pr-4">{renderStep()}</ScrollArea>
 
         <div className="flex justify-between pt-4 border-t">
           {currentIndex > 0 ? (
