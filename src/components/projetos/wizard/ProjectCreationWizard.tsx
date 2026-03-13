@@ -43,6 +43,7 @@ export function ProjectCreationWizard({
   open,
   onOpenChange,
   onSuccess,
+  defaultTipoProjeto = "INTERNO",
 }: ProjectCreationWizardProps) {
   const { workspaceId } = useWorkspace();
   const [currentStep, setCurrentStep] = useState<WizardStep>("dados");
