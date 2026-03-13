@@ -117,8 +117,10 @@ interface ProjetoDialogProps {
   onSuccess: () => void;
   onCreatedOpenEdit?: (projetoId: string, initialTab?: string) => void;
   initialTab?: string;
-  /** Tipo do projeto a criar (default: INTERNO). Usado para diferenciar BROKER */
+  /** Tipo do projeto a criar (default: INTERNO) */
   defaultTipoProjeto?: string;
+  /** Se true, força investidor_id obrigatório no wizard */
+  isBrokerContext?: boolean;
 }
 
 export function ProjetoDialog({
