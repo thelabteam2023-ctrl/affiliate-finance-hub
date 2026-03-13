@@ -883,7 +883,8 @@ export default function GestaoProjetos() {
         onSuccess={fetchProjetos}
         onCreatedOpenEdit={handleCreatedOpenEdit}
         initialTab={dialogInitialTab}
-        defaultTipoProjeto={isBrokerSection ? "BROKER" : "INTERNO"}
+        defaultTipoProjeto="INTERNO"
+        isBrokerContext={isBrokerSection}
       />
 
       <ProjetoDeleteDialog
