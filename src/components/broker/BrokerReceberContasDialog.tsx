@@ -51,7 +51,7 @@ function createEmptyEntry(): ContaEntry {
 
 type Step = "select-investor" | "select-house" | "add-accounts";
 
-export function BrokerReceberContasDialog({ open, onClose, onSuccess }: BrokerReceberContasDialogProps) {
+export function BrokerReceberContasDialog({ open, onClose, onSuccess, projetoId }: BrokerReceberContasDialogProps) {
   const { workspaceId } = useTabWorkspace();
   const [step, setStep] = useState<Step>("select-investor");
   const [investidorId, setInvestidorId] = useState("");
