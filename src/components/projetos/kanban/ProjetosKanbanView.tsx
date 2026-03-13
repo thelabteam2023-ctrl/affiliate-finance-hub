@@ -49,9 +49,12 @@ export function ProjetosKanbanView({
   canEdit,
   canDelete,
   onReorder,
+  isBrokerSection,
 }: ProjetosKanbanViewProps) {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [receberContasOpen, setReceberContasOpen] = useState(false);
+  const [receberContasProjetoId, setReceberContasProjetoId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Ordenar por display_order
