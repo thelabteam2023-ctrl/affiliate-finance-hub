@@ -36,12 +36,14 @@ interface ProjectCreationWizardProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: (projectId: string) => void;
+  defaultTipoProjeto?: string;
 }
 
 export function ProjectCreationWizard({
   open,
   onOpenChange,
   onSuccess,
+  defaultTipoProjeto = "INTERNO",
 }: ProjectCreationWizardProps) {
   const { workspaceId } = useWorkspace();
   const [currentStep, setCurrentStep] = useState<WizardStep>("dados");
@@ -67,7 +69,7 @@ export function ProjectCreationWizard({
       setCurrentStep("dados");
       setCompletedSteps([]);
       setSkippedSteps([]);
-      setFormData(DEFAULT_FORM_DATA);
+      setFormData({ ...DEFAULT_FORM_DATA, tipo_projeto: defaultTipoProjeto });
       setSelectedModules([]);
     }
   }, [open]);
@@ -216,7 +218,7 @@ export function ProjectCreationWizard({
         investidor_id: formData.investidor_id,
         percentual_investidor: formData.percentual_investidor,
         base_calculo_investidor: formData.base_calculo_investidor,
-        tipo_projeto: formData.tipo_projeto || "OUTROS",
+        tipo_projeto: formData.tipo_projeto || defaultTipoProjeto || "OUTROS",
         metrica_lucro_ciclo: formData.metrica_lucro_ciclo || "operacional",
         user_id: session.session.user.id,
         workspace_id: workspaceId!,

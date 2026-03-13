@@ -450,6 +450,7 @@ export function ProjetoDialog({
       <ProjectCreationWizard
         open={open}
         onOpenChange={onOpenChange}
+        defaultTipoProjeto={defaultTipoProjeto}
         onSuccess={(projectId) => {
           onSuccess();
           if (projectId) {
