@@ -255,9 +255,19 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
     const depositosTotal = rawMetrics.depositos.reduce(
       (acc, d) => acc + convertToConsolidationOficial(d.valor, d.moeda), 0
     );
+    // Breakdown: investor vs internal deposits
+    const depositosInvestidor = rawMetrics.depositos
+      .filter(d => d.destino_bookmaker_id && rawMetrics.investorBookmakerIds.has(d.destino_bookmaker_id))
+      .reduce((acc, d) => acc + convertToConsolidationOficial(d.valor, d.moeda), 0);
+    const depositosInterno = depositosTotal - depositosInvestidor;
     const saquesRecebidos = rawMetrics.saques.reduce(
       (acc, s) => acc + convertToConsolidationOficial(s.valor_confirmado ?? s.valor, s.moeda), 0
     );
+    // Breakdown: investor vs internal withdrawals
+    const saquesInvestidor = rawMetrics.saques
+      .filter(s => s.origem_bookmaker_id && rawMetrics.investorBookmakerIds.has(s.origem_bookmaker_id))
+      .reduce((acc, s) => acc + convertToConsolidationOficial(s.valor_confirmado ?? s.valor, s.moeda), 0);
+    const saquesInterno = saquesRecebidos - saquesInvestidor;
     const saquesPendentes = rawMetrics.saquesPendentes.reduce(
       (acc, s) => acc + convertToConsolidationOficial(s.valor, s.moeda), 0
     );
