@@ -289,10 +289,25 @@ export const ParceiroBookmakersTab = memo(function ParceiroBookmakersTab({
 
   const bookmakersVinculados = data?.vinculados || [];
   const bookmakersDisponiveis = data?.disponiveis || [];
-  const filteredVinculados = bookmakersVinculados.filter((b) => b.nome.toLowerCase().includes(searchVinculados.toLowerCase())).sort((a, b) => getSaldoVisual(b) - getSaldoVisual(a));
+  // Build catalog status map for vinculados (to filter by regulation)
+  const catalogStatusMap = new Map<string, string>();
+  bookmakersDisponiveis.forEach(d => catalogStatusMap.set(d.id, d.status));
+
+  const filteredVinculados = bookmakersVinculados.filter((b) => {
+    if (!b.nome.toLowerCase().includes(searchVinculados.toLowerCase())) return false;
+    if (regFilter !== "todas" && b.bookmaker_catalogo_id) {
+      const catStatus = catalogStatusMap.get(b.bookmaker_catalogo_id);
+      if (catStatus && catStatus !== regFilter) return false;
+    }
+    return true;
+  }).sort((a, b) => getSaldoVisual(b) - getSaldoVisual(a));
   const displayedVinculados = showAllVinculados ? filteredVinculados : filteredVinculados.slice(0, 6);
   const hasMoreVinculados = filteredVinculados.length > 6;
-  const filteredDisponiveis = bookmakersDisponiveis.filter((b) => b.nome.toLowerCase().includes(searchDisponiveis.toLowerCase()));
+  const filteredDisponiveis = bookmakersDisponiveis.filter((b) => {
+    if (!b.nome.toLowerCase().includes(searchDisponiveis.toLowerCase())) return false;
+    if (regFilter !== "todas" && b.status !== regFilter) return false;
+    return true;
+  });
 
   // CONTENT: h-full flex-col, SEM scroll global, cada lista com scroll próprio
   return (
