@@ -139,6 +139,8 @@ export function useProjetoVinculos(projetoId: string | undefined) {
         login_password_encrypted: string | null;
         bookmaker_catalogo_id: string | null;
         created_at: string | null;
+        investidor_id: string | null;
+        investidor_nome: string | null;
       }> = {};
       let apostasCount: Record<string, number> = {};
 
