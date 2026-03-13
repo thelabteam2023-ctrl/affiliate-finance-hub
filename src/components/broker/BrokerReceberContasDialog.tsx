@@ -82,10 +82,16 @@ export function BrokerReceberContasDialog({ open, onClose, onSuccess }: BrokerRe
   }, [open, workspaceId]);
 
   const filteredCasas = useMemo(() => {
-    if (!searchQuery.trim()) return catalogoBookmakers;
-    const q = searchQuery.toLowerCase();
-    return catalogoBookmakers.filter(b => b.nome.toLowerCase().includes(q));
-  }, [catalogoBookmakers, searchQuery]);
+    let list = catalogoBookmakers;
+    if (regFilter !== "todas") {
+      list = list.filter(b => (b.status || "REGULAMENTADA") === regFilter);
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter(b => b.nome.toLowerCase().includes(q));
+    }
+    return list;
+  }, [catalogoBookmakers, searchQuery, regFilter]);
 
   const addEntry = () => setContas(prev => [...prev, createEmptyEntry()]);
 
