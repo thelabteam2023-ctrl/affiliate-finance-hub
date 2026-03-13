@@ -92,6 +92,8 @@ export const ParceiroBookmakersTab = memo(function ParceiroBookmakersTab({
 
   const [searchVinculados, setSearchVinculados] = useState("");
   const [searchDisponiveis, setSearchDisponiveis] = useState("");
+  type RegFilter = "todas" | "REGULAMENTADA" | "NAO_REGULAMENTADA";
+  const [regFilter, setRegFilter] = useState<RegFilter>("todas");
   const [editingStatus, setEditingStatus] = useState<string | null>(null);
   const [showAllVinculados, setShowAllVinculados] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
@@ -287,15 +289,54 @@ export const ParceiroBookmakersTab = memo(function ParceiroBookmakersTab({
 
   const bookmakersVinculados = data?.vinculados || [];
   const bookmakersDisponiveis = data?.disponiveis || [];
-  const filteredVinculados = bookmakersVinculados.filter((b) => b.nome.toLowerCase().includes(searchVinculados.toLowerCase())).sort((a, b) => getSaldoVisual(b) - getSaldoVisual(a));
+  // Build catalog status map for vinculados (to filter by regulation)
+  const catalogStatusMap = new Map<string, string>();
+  bookmakersDisponiveis.forEach(d => catalogStatusMap.set(d.id, d.status));
+
+  const filteredVinculados = bookmakersVinculados.filter((b) => {
+    if (!b.nome.toLowerCase().includes(searchVinculados.toLowerCase())) return false;
+    if (regFilter !== "todas" && b.bookmaker_catalogo_id) {
+      const catStatus = catalogStatusMap.get(b.bookmaker_catalogo_id);
+      if (catStatus && catStatus !== regFilter) return false;
+    }
+    return true;
+  }).sort((a, b) => getSaldoVisual(b) - getSaldoVisual(a));
   const displayedVinculados = showAllVinculados ? filteredVinculados : filteredVinculados.slice(0, 6);
   const hasMoreVinculados = filteredVinculados.length > 6;
-  const filteredDisponiveis = bookmakersDisponiveis.filter((b) => b.nome.toLowerCase().includes(searchDisponiveis.toLowerCase()));
+  const filteredDisponiveis = bookmakersDisponiveis.filter((b) => {
+    if (!b.nome.toLowerCase().includes(searchDisponiveis.toLowerCase())) return false;
+    if (regFilter !== "todas" && b.status !== regFilter) return false;
+    return true;
+  });
 
   // CONTENT: h-full flex-col, SEM scroll global, cada lista com scroll próprio
   return (
     <TooltipProvider>
       <div className="h-full flex flex-col gap-3">
+        {/* Filtro de regulamentação - pills */}
+        <div className="shrink-0 flex items-center gap-2">
+          {(["todas", "REGULAMENTADA", "NAO_REGULAMENTADA"] as RegFilter[]).map((value) => {
+            const isActive = regFilter === value;
+            const label = value === "todas" ? "TODAS" : value === "REGULAMENTADA" ? "REGULAMENTADA" : "NÃO REGULAMENTADA";
+            return (
+              <button
+                key={value}
+                onClick={() => setRegFilter(value)}
+                className={`h-7 px-3 rounded text-[11px] font-semibold tracking-wide transition-colors uppercase ${
+                  isActive
+                    ? value === "REGULAMENTADA"
+                      ? "bg-emerald-600 text-white"
+                      : value === "NAO_REGULAMENTADA"
+                        ? "bg-amber-600 text-white"
+                        : "bg-primary text-primary-foreground"
+                    : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
         {/* Container de colunas - flex-1 para ocupar espaço restante */}
         <div className="flex-1 min-h-0 grid grid-cols-2 gap-3">
           
@@ -468,7 +509,7 @@ export const ParceiroBookmakersTab = memo(function ParceiroBookmakersTab({
               <div className="flex items-center gap-2">
                 <Plus className="h-4 w-4 text-muted-foreground" />
                 <h4 className="text-sm font-medium">Casas Disponíveis</h4>
-                <Badge variant="outline" className="text-xs ml-auto">{bookmakersDisponiveis.length}</Badge>
+                <Badge variant="outline" className="text-xs ml-auto">{filteredDisponiveis.length}</Badge>
               </div>
               <div className="relative">
                 <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
