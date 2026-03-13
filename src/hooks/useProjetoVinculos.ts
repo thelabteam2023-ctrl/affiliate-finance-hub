@@ -246,6 +246,8 @@ export function useProjetoVinculos(projetoId: string | undefined) {
           totalApostas: apostasCount[s.id] || 0,
           has_pending_transactions: Boolean(s.has_pending_transactions),
           created_at: creds.created_at,
+          investidor_id: creds.investidor_id,
+          investidor_nome: creds.investidor_nome,
         };
       });
     },
