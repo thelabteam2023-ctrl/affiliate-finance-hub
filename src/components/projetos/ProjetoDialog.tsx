@@ -454,6 +454,7 @@ export function ProjetoDialog({
         open={open}
         onOpenChange={onOpenChange}
         defaultTipoProjeto={defaultTipoProjeto}
+        isBrokerContext={isBrokerContext}
         onSuccess={(projectId) => {
           onSuccess();
           if (projectId) {

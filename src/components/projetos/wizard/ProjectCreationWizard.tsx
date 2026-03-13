@@ -37,6 +37,8 @@ interface ProjectCreationWizardProps {
   onOpenChange: (open: boolean) => void;
   onSuccess: (projectId: string) => void;
   defaultTipoProjeto?: string;
+  /** Se true, contexto Broker - investidor obrigatório */
+  isBrokerContext?: boolean;
 }
 
 export function ProjectCreationWizard({
@@ -44,6 +46,7 @@ export function ProjectCreationWizard({
   onOpenChange,
   onSuccess,
   defaultTipoProjeto = "INTERNO",
+  isBrokerContext = false,
 }: ProjectCreationWizardProps) {
   const { workspaceId } = useWorkspace();
   const [currentStep, setCurrentStep] = useState<WizardStep>("dados");
