@@ -1241,7 +1241,7 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId }: Pro
                             setTransacaoDialogOpen(true);
                           }}
                         >
-                          <ArrowRightLine className="h-4 w-4" />
+                          <ArrowRightLeft className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
