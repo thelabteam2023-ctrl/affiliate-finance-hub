@@ -74,24 +74,39 @@ export function BrokerReceberContasDialog({ open, onClose, onSuccess, projetoId 
     if (!open || !workspaceId) return;
     const loadData = async () => {
       // Buscar investidores e casas autorizadas para o workspace
-      const [invRes, accessRes] = await Promise.all([
+      const [invRes, accessRes, regulamentadasRes] = await Promise.all([
         supabase.from("investidores").select("id, nome").eq("workspace_id", workspaceId).order("nome"),
         supabase.from("bookmaker_workspace_access").select("bookmaker_catalogo_id").eq("workspace_id", workspaceId),
+        // Regulamentadas são públicas — disponíveis para todos os workspaces
+        supabase.from("bookmakers_catalogo")
+          .select("id, nome, moeda_padrao, logo_url, status")
+          .eq("status", "REGULAMENTADA")
+          .order("nome"),
       ]);
       setInvestidores(invRes.data || []);
 
-      const allowedIds = new Set((accessRes.data || []).map(a => a.bookmaker_catalogo_id));
+      const regulamentadas = regulamentadasRes.data || [];
+      const regulamentadasIds = new Set(regulamentadas.map(r => r.id));
 
-      if (allowedIds.size > 0) {
-        const { data: catData } = await supabase
+      // Não-regulamentadas restritas por acesso do workspace
+      const allowedIds = (accessRes.data || [])
+        .map(a => a.bookmaker_catalogo_id)
+        .filter(id => !regulamentadasIds.has(id));
+
+      let naoRegulamentadas: typeof regulamentadas = [];
+      if (allowedIds.length > 0) {
+        const { data: nrData } = await supabase
           .from("bookmakers_catalogo")
           .select("id, nome, moeda_padrao, logo_url, status")
-          .in("id", Array.from(allowedIds))
+          .in("id", allowedIds)
           .order("nome");
-        setCatalogoBookmakers(catData || []);
-      } else {
-        setCatalogoBookmakers([]);
+        naoRegulamentadas = nrData || [];
       }
+
+      // Combinar: regulamentadas (públicas) + não-regulamentadas (restritas)
+      const combined = [...regulamentadas, ...naoRegulamentadas];
+      combined.sort((a, b) => a.nome.localeCompare(b.nome));
+      setCatalogoBookmakers(combined);
     };
     loadData();
   }, [open, workspaceId]);
