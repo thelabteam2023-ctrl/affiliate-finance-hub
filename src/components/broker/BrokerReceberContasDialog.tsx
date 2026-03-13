@@ -54,7 +54,7 @@ export function BrokerReceberContasDialog({ open, onClose, onSuccess }: BrokerRe
   const [step, setStep] = useState<Step>("select-investor");
   const [investidorId, setInvestidorId] = useState("");
   const [investidores, setInvestidores] = useState<Array<{ id: string; nome: string }>>([]);
-  const [catalogoBookmakers, setCatalogoBookmakers] = useState<Array<{ id: string; nome: string; moeda_padrao: string }>>([]);
+  const [catalogoBookmakers, setCatalogoBookmakers] = useState<Array<{ id: string; nome: string; moeda_padrao: string; logo_url: string | null; status: string }>>([]);
   
   // Casa selecionada
   const [selectedCasaId, setSelectedCasaId] = useState("");
