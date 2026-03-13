@@ -73,7 +73,7 @@ export function BrokerReceberContasDialog({ open, onClose, onSuccess }: BrokerRe
     const loadData = async () => {
       const [invRes, catRes] = await Promise.all([
         supabase.from("investidores").select("id, nome").eq("workspace_id", workspaceId).order("nome"),
-        supabase.from("bookmakers_catalogo").select("id, nome, moeda_padrao").order("nome"),
+        supabase.from("bookmakers_catalogo").select("id, nome, moeda_padrao, logo_url, status").order("nome"),
       ]);
       setInvestidores(invRes.data || []);
       setCatalogoBookmakers(catRes.data || []);
