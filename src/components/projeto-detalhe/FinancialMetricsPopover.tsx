@@ -52,10 +52,8 @@ async function fetchFinancialMetricsRaw(projetoId: string, dateRange?: { from: s
     .eq("projeto_id", projetoId);
 
   const bookmakerSaldos = (bookmakers || []).map(b => ({ saldo_atual: b.saldo_atual || 0, moeda: b.moeda || "BRL" }));
-  // Map bookmaker_id -> is investor account
-  const investorBookmakerIds = new Set(
-    (bookmakers || []).filter(b => !!b.investidor_id).map(b => b.id)
-  );
+  // Array of investor bookmaker IDs (Set doesn't survive React Query serialization)
+  const investorBookmakerIds = (bookmakers || []).filter(b => !!b.investidor_id).map(b => b.id);
 
   const depositoQ = applyDateFilter(
     supabase.from("cash_ledger").select("valor, moeda, destino_bookmaker_id")
