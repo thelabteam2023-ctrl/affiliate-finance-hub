@@ -48,20 +48,24 @@ function applyDateFilter<T extends { gte: (col: string, val: string) => T; lte: 
 async function fetchFinancialMetricsRaw(projetoId: string, dateRange?: { from: string; to: string } | null) {
   const { data: bookmakers } = await supabase
     .from("bookmakers")
-    .select("id, saldo_atual, moeda")
+    .select("id, saldo_atual, moeda, investidor_id")
     .eq("projeto_id", projetoId);
 
   const bookmakerSaldos = (bookmakers || []).map(b => ({ saldo_atual: b.saldo_atual || 0, moeda: b.moeda || "BRL" }));
+  // Map bookmaker_id -> is investor account
+  const investorBookmakerIds = new Set(
+    (bookmakers || []).filter(b => !!b.investidor_id).map(b => b.id)
+  );
 
   const depositoQ = applyDateFilter(
-    supabase.from("cash_ledger").select("valor, moeda")
+    supabase.from("cash_ledger").select("valor, moeda, destino_bookmaker_id")
       .in("tipo_transacao", ["DEPOSITO", "DEPOSITO_VIRTUAL"])
       .eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId),
     dateRange
   );
 
   const saqueQ = applyDateFilter(
-    supabase.from("cash_ledger").select("valor, valor_confirmado, moeda")
+    supabase.from("cash_ledger").select("valor, valor_confirmado, moeda, origem_bookmaker_id")
       .in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])
       .eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId),
     dateRange
@@ -122,8 +126,9 @@ async function fetchFinancialMetricsRaw(projetoId: string, dateRange?: { from: s
 
   return {
     bookmakerSaldos,
-    depositos: (depositos.data || []) as LedgerEntry[],
-    saques: (saques.data || []) as LedgerEntry[],
+    investorBookmakerIds,
+    depositos: (depositos.data || []) as (LedgerEntry & { destino_bookmaker_id?: string | null })[],
+    saques: (saques.data || []) as (LedgerEntry & { origem_bookmaker_id?: string | null })[],
     saquesPendentes: (saquesPend.data || []) as LedgerEntry[],
     reconciliation: {
       cashbackManual: (cashbackM.data || []) as { valor: number; moeda: string }[],
@@ -250,9 +255,19 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
     const depositosTotal = rawMetrics.depositos.reduce(
       (acc, d) => acc + convertToConsolidationOficial(d.valor, d.moeda), 0
     );
+    // Breakdown: investor vs internal deposits
+    const depositosInvestidor = rawMetrics.depositos
+      .filter(d => d.destino_bookmaker_id && rawMetrics.investorBookmakerIds.has(d.destino_bookmaker_id))
+      .reduce((acc, d) => acc + convertToConsolidationOficial(d.valor, d.moeda), 0);
+    const depositosInterno = depositosTotal - depositosInvestidor;
     const saquesRecebidos = rawMetrics.saques.reduce(
       (acc, s) => acc + convertToConsolidationOficial(s.valor_confirmado ?? s.valor, s.moeda), 0
     );
+    // Breakdown: investor vs internal withdrawals
+    const saquesInvestidor = rawMetrics.saques
+      .filter(s => s.origem_bookmaker_id && rawMetrics.investorBookmakerIds.has(s.origem_bookmaker_id))
+      .reduce((acc, s) => acc + convertToConsolidationOficial(s.valor_confirmado ?? s.valor, s.moeda), 0);
+    const saquesInterno = saquesRecebidos - saquesInvestidor;
     const saquesPendentes = rawMetrics.saquesPendentes.reduce(
       (acc, s) => acc + convertToConsolidationOficial(s.valor, s.moeda), 0
     );
@@ -312,13 +327,18 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
 
 
 
+    const hasInvestorCapital = depositosInvestidor > 0 || saquesInvestidor > 0;
+
     return {
-      depositosTotal, saquesRecebidos, saquesPendentes, saldoCasas,
+      depositosTotal, depositosInvestidor, depositosInterno,
+      saquesRecebidos, saquesInvestidor, saquesInterno,
+      saquesPendentes, saldoCasas,
       fluxoCaixaLiquido, fluxoLiquidoAjustado, capitalTotal, extrasPositivos,
       cashbackLiquido, girosGratis, ajustes, ganhoConfirmacao, ganhoFx, perdaOp, perdaFx,
       bonusGanhos,
       patrimonio, lucroFinanceiro,
       breakEvenDate, breakEvenDays,
+      hasInvestorCapital,
     };
   }, [rawMetrics, convertToConsolidationOficial, cotacaoOficialUSD]);
 
@@ -356,11 +376,19 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
       {/* ─── Seção 1: Fluxo de Caixa ─── */}
       <div className="space-y-1 pb-3">
         <SectionHeader icon={ArrowRightLeft} label="Fluxo de Caixa" />
-        <MetricRow label="Depósitos Confirmados" value={formatCurrency(metrics.depositosTotal)} />
+        <MetricRow 
+          label="Depósitos Confirmados" 
+          value={formatCurrency(metrics.depositosTotal)}
+          tooltip={metrics.hasInvestorCapital ? `Interno: ${formatCurrency(metrics.depositosInterno)} · Investidor: ${formatCurrency(metrics.depositosInvestidor)}` : undefined}
+        />
         {hasExtras && (
           <ExtrasCollapsible metrics={metrics} formatCurrency={formatCurrency} />
         )}
-        <MetricRow label="Saques Recebidos" value={formatCurrency(metrics.saquesRecebidos)} />
+        <MetricRow 
+          label="Saques Recebidos" 
+          value={formatCurrency(metrics.saquesRecebidos)}
+          tooltip={metrics.hasInvestorCapital ? `Interno: ${formatCurrency(metrics.saquesInterno)} · Investidor: ${formatCurrency(metrics.saquesInvestidor)}` : undefined}
+        />
         {metrics.saquesPendentes > 0 && (
           <MetricRow 
             label="Saques Pendentes" 
