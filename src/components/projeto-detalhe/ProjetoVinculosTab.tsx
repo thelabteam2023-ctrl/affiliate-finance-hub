@@ -1222,44 +1222,48 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId }: Pro
                     >
                       <Coins className="h-4 w-4" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      title="Depositar"
-                      onClick={() => {
-                        setTransacaoContext({
-                          bookmarkerId: vinculo.id,
-                          bookmakerNome: vinculo.nome,
-                          moeda: vinculo.moeda,
-                          saldoAtual: vinculo.saldo_real,
-                          parceiroId: vinculo.parceiro_id,
-                          tipo: "DEPOSITO",
-                        });
-                        setTransacaoDialogOpen(true);
-                      }}
-                    >
-                      <ArrowRightLeft className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      title="Sacar"
-                      onClick={() => {
-                        setTransacaoContext({
-                          bookmarkerId: vinculo.id,
-                          bookmakerNome: vinculo.nome,
-                          moeda: vinculo.moeda,
-                          saldoAtual: vinculo.saldo_real,
-                          parceiroId: vinculo.parceiro_id,
-                          tipo: "SAQUE",
-                        });
-                        setTransacaoDialogOpen(true);
-                      }}
-                    >
-                      <Wallet className="h-4 w-4" />
-                    </Button>
+                    {!vinculo.investidor_id && (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          title="Depositar"
+                          onClick={() => {
+                            setTransacaoContext({
+                              bookmarkerId: vinculo.id,
+                              bookmakerNome: vinculo.nome,
+                              moeda: vinculo.moeda,
+                              saldoAtual: vinculo.saldo_real,
+                              parceiroId: vinculo.parceiro_id,
+                              tipo: "DEPOSITO",
+                            });
+                            setTransacaoDialogOpen(true);
+                          }}
+                        >
+                          <ArrowRightLine className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          title="Sacar"
+                          onClick={() => {
+                            setTransacaoContext({
+                              bookmarkerId: vinculo.id,
+                              bookmakerNome: vinculo.nome,
+                              moeda: vinculo.moeda,
+                              saldoAtual: vinculo.saldo_real,
+                              parceiroId: vinculo.parceiro_id,
+                              tipo: "SAQUE",
+                            });
+                            setTransacaoDialogOpen(true);
+                          }}
+                        >
+                          <Wallet className="h-4 w-4" />
+                        </Button>
+                      </>
+                    )}
                     <Popover 
                       open={statusPopoverId === vinculo.id} 
                       onOpenChange={(open) => setStatusPopoverId(open ? vinculo.id : null)}
