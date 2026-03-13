@@ -1015,7 +1015,7 @@ export default function ProjetoDetalhe() {
           </TabsContent>
 
           <TabsContent value="vinculos" className="h-full m-0">
-            <ProjetoVinculosTab projetoId={id!} tipoProjeto={projeto.tipo_projeto} />
+            <ProjetoVinculosTab projetoId={id!} tipoProjeto={projeto.tipo_projeto} investidorId={projeto.investidor_id} />
           </TabsContent>
 
           <TabsContent value="modulos" className="h-full m-0">
