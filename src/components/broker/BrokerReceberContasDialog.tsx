@@ -158,12 +158,13 @@ export function BrokerReceberContasDialog({ open, onClose, onSuccess, projetoId 
             login_username: conta.login_username,
             login_password_encrypted: passwordToStore,
             moeda,
-            saldo_atual: 0,
+            saldo_atual: saldoInicial,
             saldo_freebet: 0,
             saldo_irrecuperavel: 0,
             saldo_usd: 0,
             status: "ativo",
             investidor_id: investidorId,
+            projeto_id: projetoId || null,
           })
           .select("id")
           .single();
