@@ -295,6 +295,24 @@ export function ProjetoKanbanCard({
         </div>
         
         <div className="flex items-center justify-end gap-1 mt-3 pt-3 border-t">
+          {isBroker && onReceberContas && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onReceberContas();
+                  }}
+                >
+                  <Briefcase className="h-3.5 w-3.5 text-primary" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Receber Contas</TooltipContent>
+            </Tooltip>
+          )}
           {canEdit && (
             <Tooltip>
               <TooltipTrigger asChild>
