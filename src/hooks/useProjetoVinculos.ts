@@ -148,7 +148,7 @@ export function useProjetoVinculos(projetoId: string | undefined) {
         // Buscar credenciais e status das bookmakers
         const { data: bookmarkersDetails } = await supabase
           .from("bookmakers")
-          .select("id, status, login_username, login_password_encrypted, bookmaker_catalogo_id, created_at")
+          .select("id, status, login_username, login_password_encrypted, bookmaker_catalogo_id, created_at, investidor_id, investidores(nome)")
           .in("id", bookmakerIds);
 
         if (bookmarkersDetails) {
@@ -159,6 +159,8 @@ export function useProjetoVinculos(projetoId: string | undefined) {
               login_password_encrypted: b.login_password_encrypted,
               bookmaker_catalogo_id: b.bookmaker_catalogo_id,
               created_at: b.created_at || null,
+              investidor_id: b.investidor_id || null,
+              investidor_nome: b.investidores?.nome || null,
             };
           });
         }
