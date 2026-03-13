@@ -1,0 +1,1 @@
+UPDATE projetos SET tipo_projeto = 'BROKER' WHERE nome ILIKE '%broker%' AND tipo_projeto != 'BROKER';
