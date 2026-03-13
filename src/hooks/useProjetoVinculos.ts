@@ -220,7 +220,9 @@ export function useProjetoVinculos(projetoId: string | undefined) {
           login_username: "",
           login_password_encrypted: null,
           bookmaker_catalogo_id: null,
-          created_at: null
+          created_at: null,
+          investidor_id: null,
+          investidor_nome: null,
         };
 
         return {
