@@ -218,7 +218,7 @@ export function ProjectCreationWizard({
         investidor_id: formData.investidor_id,
         percentual_investidor: formData.percentual_investidor,
         base_calculo_investidor: formData.base_calculo_investidor,
-        tipo_projeto: formData.tipo_projeto || "OUTROS",
+        tipo_projeto: formData.tipo_projeto || defaultTipoProjeto || "OUTROS",
         metrica_lucro_ciclo: formData.metrica_lucro_ciclo || "operacional",
         user_id: session.session.user.id,
         workspace_id: workspaceId!,
