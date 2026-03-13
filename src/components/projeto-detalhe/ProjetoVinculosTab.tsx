@@ -109,11 +109,12 @@ type VinculoSortMode = "alpha" | "newest" | "oldest" | "apostas_desc" | "apostas
 interface ProjetoVinculosTabProps {
   projetoId: string;
   tipoProjeto?: string;
+  investidorId?: string | null;
 }
 
 // Interface Vinculo importada de useProjetoVinculos
 
-export function ProjetoVinculosTab({ projetoId, tipoProjeto }: ProjetoVinculosTabProps) {
+export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId }: ProjetoVinculosTabProps) {
   const { workspaceId } = useWorkspace();
   const navigate = useNavigate();
   
@@ -186,7 +187,7 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto }: ProjetoVinculosTa
   
   const [sortMode, setSortMode] = useState<VinculoSortMode>("alpha");
   const [receberContasDialogOpen, setReceberContasDialogOpen] = useState(false);
-  const isBroker = tipoProjeto === "BROKER";
+  const isBroker = !!investidorId;
 
   const { bonuses, fetchBonuses: refetchBonuses, getSummary, getActiveBonusByBookmaker, getBookmakersWithActiveBonus } = useProjectBonuses({ projectId: projetoId });
 
