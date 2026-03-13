@@ -249,15 +249,41 @@ export function BrokerReceberContasDialog({ open, onClose, onSuccess }: BrokerRe
               <Badge variant="outline" className="text-xs">{investidorNome}</Badge>
             </div>
 
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Pesquisar casa de apostas..."
-                className="pl-10 h-11"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                autoFocus
-              />
+            <div className="flex items-center gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Pesquisar casa de apostas..."
+                  className="pl-10 h-11"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  autoFocus
+                />
+              </div>
+              <div className="shrink-0 flex items-center gap-1">
+                {(["todas", "REGULAMENTADA", "NAO_REGULAMENTADA"] as RegFilter[]).map((value) => {
+                  const isActive = regFilter === value;
+                  const label = value === "todas" ? "TODAS" : value === "REGULAMENTADA" ? "REGULAMENTADA" : "NÃO REGULAMENTADA";
+                  return (
+                    <button
+                      key={value}
+                      onClick={() => setRegFilter(value)}
+                      className={cn(
+                        "h-7 px-3 rounded text-[10px] font-semibold tracking-wide transition-colors uppercase",
+                        isActive
+                          ? value === "REGULAMENTADA"
+                            ? "bg-emerald-600 text-white"
+                            : value === "NAO_REGULAMENTADA"
+                              ? "bg-amber-600 text-white"
+                              : "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                      )}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             <ScrollArea className="h-[350px]">
