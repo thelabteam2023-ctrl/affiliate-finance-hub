@@ -93,6 +93,7 @@ interface Projeto {
   nome: string;
   descricao: string | null;
   status: string;
+  tipo_projeto: string;
   data_inicio: string | null;
   data_fim_prevista: string | null;
   data_fim_real: string | null;
