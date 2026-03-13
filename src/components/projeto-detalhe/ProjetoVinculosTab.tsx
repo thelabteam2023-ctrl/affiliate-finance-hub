@@ -184,6 +184,8 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto }: ProjetoVinculosTa
   const [vinculoParaAjuste, setVinculoParaAjuste] = useState<Vinculo | null>(null);
   
   const [sortMode, setSortMode] = useState<VinculoSortMode>("alpha");
+  const [receberContasDialogOpen, setReceberContasDialogOpen] = useState(false);
+  const isBroker = tipoProjeto === "BROKER";
 
   const { bonuses, fetchBonuses: refetchBonuses, getSummary, getActiveBonusByBookmaker, getBookmakersWithActiveBonus } = useProjectBonuses({ projectId: projetoId });
 
