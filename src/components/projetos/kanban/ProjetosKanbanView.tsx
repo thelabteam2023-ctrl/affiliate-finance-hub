@@ -36,6 +36,7 @@ interface ProjetosKanbanViewProps {
   canEdit: boolean;
   canDelete: boolean;
   onReorder: (projetos: Projeto[]) => void;
+  isBrokerSection?: boolean;
 }
 
 export function ProjetosKanbanView({
