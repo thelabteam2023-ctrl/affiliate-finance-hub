@@ -102,6 +102,7 @@ interface Projeto {
   tem_investimento_crypto: boolean;
   conciliado: boolean;
   modelo_absorcao_taxas: string;
+  investidor_id: string | null;
 }
 
 interface ProjetoResumo {
