@@ -255,7 +255,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
     );
     // Breakdown: investor vs internal deposits
     const depositosInvestidor = rawMetrics.depositos
-      .filter(d => d.destino_bookmaker_id && rawMetrics.investorBookmakerIds.has(d.destino_bookmaker_id))
+      .filter(d => d.destino_bookmaker_id && rawMetrics.investorBookmakerIds.includes(d.destino_bookmaker_id))
       .reduce((acc, d) => acc + convertToConsolidationOficial(d.valor, d.moeda), 0);
     const depositosInterno = depositosTotal - depositosInvestidor;
     const saquesRecebidos = rawMetrics.saques.reduce(
