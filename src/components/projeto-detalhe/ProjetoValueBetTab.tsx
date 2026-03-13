@@ -688,26 +688,53 @@ export function ProjetoValueBetTab({
   const apostasListaAtual = apostasSubTab === "abertas" ? apostasAbertas : apostasHistorico;
   
   const apostasFiltradas = useMemo(() => {
+    const { bookmakerIds, parceiroIds, resultados } = tabFilters;
+    
     return apostasListaAtual.filter(a => {
+      // Filtro por texto (busca)
       const matchesSearch = 
         (a.evento || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (a.esporte || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (a.selecao || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (a.bookmaker_nome || '').toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesResultado = tabFilters.resultados.length === 0 || tabFilters.resultados.includes(a.resultado as any);
-      return matchesSearch && matchesResultado;
+      if (!matchesSearch) return false;
+
+      // Filtro por bookmaker (Casas)
+      if (bookmakerIds.length > 0) {
+        if (!a.bookmaker_id || !bookmakerIds.includes(a.bookmaker_id)) return false;
+      }
+
+      // Filtro por parceiro
+      if (parceiroIds.length > 0) {
+        const bk = bookmakers.find(b => b.id === a.bookmaker_id);
+        if (!bk?.parceiro_id || !parceiroIds.includes(bk.parceiro_id)) return false;
+      }
+
+      // Filtro por resultado
+      const matchesResultado = resultados.length === 0 || resultados.includes(a.resultado as any);
+      return matchesResultado;
     });
-  }, [apostasListaAtual, searchTerm, tabFilters.resultados]);
+  }, [apostasListaAtual, searchTerm, tabFilters.bookmakerIds, tabFilters.parceiroIds, tabFilters.resultados, bookmakers]);
 
   // Filtered counts per sub-tab for badge display
   const filteredAbertasCount = useMemo(() => apostasAbertas.filter(a => {
+    if (tabFilters.bookmakerIds.length > 0 && (!a.bookmaker_id || !tabFilters.bookmakerIds.includes(a.bookmaker_id))) return false;
+    if (tabFilters.parceiroIds.length > 0) {
+      const bk = bookmakers.find(b => b.id === a.bookmaker_id);
+      if (!bk?.parceiro_id || !tabFilters.parceiroIds.includes(bk.parceiro_id)) return false;
+    }
     const matchesResultado = tabFilters.resultados.length === 0 || tabFilters.resultados.includes(a.resultado as any);
     return matchesResultado;
-  }).length, [apostasAbertas, tabFilters.resultados]);
+  }).length, [apostasAbertas, tabFilters.bookmakerIds, tabFilters.parceiroIds, tabFilters.resultados, bookmakers]);
   const filteredHistoricoCount = useMemo(() => apostasHistorico.filter(a => {
+    if (tabFilters.bookmakerIds.length > 0 && (!a.bookmaker_id || !tabFilters.bookmakerIds.includes(a.bookmaker_id))) return false;
+    if (tabFilters.parceiroIds.length > 0) {
+      const bk = bookmakers.find(b => b.id === a.bookmaker_id);
+      if (!bk?.parceiro_id || !tabFilters.parceiroIds.includes(bk.parceiro_id)) return false;
+    }
     const matchesResultado = tabFilters.resultados.length === 0 || tabFilters.resultados.includes(a.resultado as any);
     return matchesResultado;
-  }).length, [apostasHistorico, tabFilters.resultados]);
+  }).length, [apostasHistorico, tabFilters.bookmakerIds, tabFilters.parceiroIds, tabFilters.resultados, bookmakers]);
 
   // formatCurrency agora vem do useProjetoCurrency
 
