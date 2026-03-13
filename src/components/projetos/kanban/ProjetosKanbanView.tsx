@@ -182,6 +182,21 @@ export function ProjetosKanbanView({
           </div>
         )}
       </div>
+
+      {/* Broker: Receber Contas Dialog */}
+      {isBrokerSection && (
+        <BrokerReceberContasDialog
+          open={receberContasOpen}
+          onClose={() => {
+            setReceberContasOpen(false);
+            setReceberContasProjetoId(null);
+          }}
+          onSuccess={() => {
+            setReceberContasOpen(false);
+            setReceberContasProjetoId(null);
+          }}
+        />
+      )}
     </div>
   );
 }
