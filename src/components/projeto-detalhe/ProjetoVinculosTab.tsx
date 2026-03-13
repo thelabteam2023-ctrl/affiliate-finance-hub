@@ -106,6 +106,7 @@ type VinculoSortMode = "alpha" | "newest" | "oldest" | "apostas_desc" | "apostas
 
 interface ProjetoVinculosTabProps {
   projetoId: string;
+  tipoProjeto?: string;
 }
 
 // Interface Vinculo importada de useProjetoVinculos
