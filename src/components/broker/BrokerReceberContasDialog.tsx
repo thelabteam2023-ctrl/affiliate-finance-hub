@@ -18,6 +18,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, Trash2, Loader2, Search, ArrowLeft } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { BookmakerLogo } from "@/components/ui/bookmaker-logo";
+import { cn } from "@/lib/utils";
 
 interface ContaEntry {
   id: string;
