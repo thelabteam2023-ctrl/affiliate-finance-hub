@@ -119,6 +119,8 @@ export function ProjetoKanbanCard({
   isDragging,
   onDragStart,
   onDragEnd,
+  isBroker,
+  onReceberContas,
 }: ProjetoKanbanCardProps) {
   const navigate = useNavigate();
   const cardRef = useRef<HTMLDivElement>(null);
