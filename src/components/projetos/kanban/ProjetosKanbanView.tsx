@@ -2,6 +2,7 @@ import { useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ProjetoKanbanCard } from "./ProjetoKanbanCard";
+import { BrokerReceberContasDialog } from "@/components/broker/BrokerReceberContasDialog";
 import { cn } from "@/lib/utils";
 
 type SaldoByMoeda = Record<string, number>;
