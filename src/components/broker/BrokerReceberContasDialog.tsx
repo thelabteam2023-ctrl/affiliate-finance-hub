@@ -292,10 +292,11 @@ export function BrokerReceberContasDialog({ open, onClose, onSuccess }: BrokerRe
                   <button
                     key={casa.id}
                     onClick={() => selectCasa(casa)}
-                    className="flex items-center justify-between p-3 rounded-lg border border-border/50 bg-card/50 hover:bg-primary/5 hover:border-primary/30 transition-all text-left group"
+                    className="flex items-center gap-2 p-3 rounded-lg border border-border/50 bg-card/50 hover:bg-primary/5 hover:border-primary/30 transition-all text-left group"
                   >
-                    <span className="text-sm font-medium truncate">{casa.nome}</span>
-                    <Badge variant="outline" className="text-[10px] ml-2 shrink-0 opacity-60 group-hover:opacity-100">
+                    <BookmakerLogo logoUrl={casa.logo_url} alt={casa.nome} size="h-7 w-7" iconSize="h-3.5 w-3.5" />
+                    <span className="text-sm font-medium truncate flex-1">{casa.nome}</span>
+                    <Badge variant="outline" className="text-[10px] shrink-0 opacity-60 group-hover:opacity-100">
                       {casa.moeda_padrao}
                     </Badge>
                   </button>
