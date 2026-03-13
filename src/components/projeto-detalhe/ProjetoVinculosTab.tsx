@@ -1592,6 +1592,18 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto }: ProjetoVinculosTa
           invalidateVinculos();
         }}
       />
+
+      {/* Broker: Receber Contas Dialog */}
+      {isBroker && (
+        <BrokerReceberContasDialog
+          open={receberContasDialogOpen}
+          onClose={() => setReceberContasDialogOpen(false)}
+          onSuccess={() => {
+            setReceberContasDialogOpen(false);
+            invalidateVinculos();
+          }}
+        />
+      )}
     </Tabs>
   );
 }
