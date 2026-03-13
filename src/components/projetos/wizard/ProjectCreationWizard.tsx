@@ -69,7 +69,7 @@ export function ProjectCreationWizard({
       setCurrentStep("dados");
       setCompletedSteps([]);
       setSkippedSteps([]);
-      setFormData(DEFAULT_FORM_DATA);
+      setFormData({ ...DEFAULT_FORM_DATA, tipo_projeto: defaultTipoProjeto });
       setSelectedModules([]);
     }
   }, [open]);
