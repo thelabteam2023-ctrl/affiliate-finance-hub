@@ -327,13 +327,18 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
 
 
 
+    const hasInvestorCapital = depositosInvestidor > 0 || saquesInvestidor > 0;
+
     return {
-      depositosTotal, saquesRecebidos, saquesPendentes, saldoCasas,
+      depositosTotal, depositosInvestidor, depositosInterno,
+      saquesRecebidos, saquesInvestidor, saquesInterno,
+      saquesPendentes, saldoCasas,
       fluxoCaixaLiquido, fluxoLiquidoAjustado, capitalTotal, extrasPositivos,
       cashbackLiquido, girosGratis, ajustes, ganhoConfirmacao, ganhoFx, perdaOp, perdaFx,
       bonusGanhos,
       patrimonio, lucroFinanceiro,
       breakEvenDate, breakEvenDays,
+      hasInvestorCapital,
     };
   }, [rawMetrics, convertToConsolidationOficial, cotacaoOficialUSD]);
 
