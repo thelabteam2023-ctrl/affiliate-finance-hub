@@ -427,10 +427,9 @@ export default function GestaoProjetos() {
   const sectionFilteredProjetos = projetos.filter((proj) => {
     const matchesSearch = proj.nome.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || proj.status === statusFilter;
-    const projTipo = (proj as any).tipo_projeto;
     const matchesSection = isBrokerSection 
-      ? projTipo === "BROKER" 
-      : projTipo !== "BROKER";
+      ? !!proj.investidor_id 
+      : !proj.investidor_id;
     return matchesSearch && matchesStatus && matchesSection;
   });
 
