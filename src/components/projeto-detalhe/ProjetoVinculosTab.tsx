@@ -559,6 +559,18 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto }: ProjetoVinculosTa
             )}
           </Tooltip>
         </TooltipProvider>
+        {/* Botão Receber Contas - apenas projetos Broker */}
+        {isBroker && canManageVinculos && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="text-xs"
+            onClick={() => setReceberContasDialogOpen(true)}
+          >
+            <Users className="mr-1.5 h-3.5 w-3.5" />
+            Receber Contas
+          </Button>
+        )}
         {/* Botão Desvinculação em Massa */}
         {canManageVinculos && vinculos.length > 0 && (
           <Button
