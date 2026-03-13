@@ -18,6 +18,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, Trash2, Loader2, Search, ArrowLeft } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { BookmakerLogo } from "@/components/ui/bookmaker-logo";
+import { cn } from "@/lib/utils";
 
 interface ContaEntry {
   id: string;
@@ -52,13 +54,15 @@ export function BrokerReceberContasDialog({ open, onClose, onSuccess }: BrokerRe
   const [step, setStep] = useState<Step>("select-investor");
   const [investidorId, setInvestidorId] = useState("");
   const [investidores, setInvestidores] = useState<Array<{ id: string; nome: string }>>([]);
-  const [catalogoBookmakers, setCatalogoBookmakers] = useState<Array<{ id: string; nome: string; moeda_padrao: string }>>([]);
+  const [catalogoBookmakers, setCatalogoBookmakers] = useState<Array<{ id: string; nome: string; moeda_padrao: string; logo_url: string | null; status: string }>>([]);
   
   // Casa selecionada
   const [selectedCasaId, setSelectedCasaId] = useState("");
   const [selectedCasaNome, setSelectedCasaNome] = useState("");
   const [moeda, setMoeda] = useState("BRL");
   const [searchQuery, setSearchQuery] = useState("");
+  type RegFilter = "todas" | "REGULAMENTADA" | "NAO_REGULAMENTADA";
+  const [regFilter, setRegFilter] = useState<RegFilter>("todas");
   
   // Contas da casa selecionada
   const [contas, setContas] = useState<ContaEntry[]>([createEmptyEntry()]);
@@ -69,7 +73,7 @@ export function BrokerReceberContasDialog({ open, onClose, onSuccess }: BrokerRe
     const loadData = async () => {
       const [invRes, catRes] = await Promise.all([
         supabase.from("investidores").select("id, nome").eq("workspace_id", workspaceId).order("nome"),
-        supabase.from("bookmakers_catalogo").select("id, nome, moeda_padrao").order("nome"),
+        supabase.from("bookmakers_catalogo").select("id, nome, moeda_padrao, logo_url, status").order("nome"),
       ]);
       setInvestidores(invRes.data || []);
       setCatalogoBookmakers(catRes.data || []);
@@ -78,10 +82,16 @@ export function BrokerReceberContasDialog({ open, onClose, onSuccess }: BrokerRe
   }, [open, workspaceId]);
 
   const filteredCasas = useMemo(() => {
-    if (!searchQuery.trim()) return catalogoBookmakers;
-    const q = searchQuery.toLowerCase();
-    return catalogoBookmakers.filter(b => b.nome.toLowerCase().includes(q));
-  }, [catalogoBookmakers, searchQuery]);
+    let list = catalogoBookmakers;
+    if (regFilter !== "todas") {
+      list = list.filter(b => (b.status || "REGULAMENTADA") === regFilter);
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter(b => b.nome.toLowerCase().includes(q));
+    }
+    return list;
+  }, [catalogoBookmakers, searchQuery, regFilter]);
 
   const addEntry = () => setContas(prev => [...prev, createEmptyEntry()]);
 
@@ -239,15 +249,41 @@ export function BrokerReceberContasDialog({ open, onClose, onSuccess }: BrokerRe
               <Badge variant="outline" className="text-xs">{investidorNome}</Badge>
             </div>
 
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Pesquisar casa de apostas..."
-                className="pl-10 h-11"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                autoFocus
-              />
+            <div className="flex items-center gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Pesquisar casa de apostas..."
+                  className="pl-10 h-11"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  autoFocus
+                />
+              </div>
+              <div className="shrink-0 flex items-center gap-1">
+                {(["todas", "REGULAMENTADA", "NAO_REGULAMENTADA"] as RegFilter[]).map((value) => {
+                  const isActive = regFilter === value;
+                  const label = value === "todas" ? "TODAS" : value === "REGULAMENTADA" ? "REGULAMENTADA" : "NÃO REGULAMENTADA";
+                  return (
+                    <button
+                      key={value}
+                      onClick={() => setRegFilter(value)}
+                      className={cn(
+                        "h-7 px-3 rounded text-[10px] font-semibold tracking-wide transition-colors uppercase",
+                        isActive
+                          ? value === "REGULAMENTADA"
+                            ? "bg-emerald-600 text-white"
+                            : value === "NAO_REGULAMENTADA"
+                              ? "bg-amber-600 text-white"
+                              : "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                      )}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             <ScrollArea className="h-[350px]">
@@ -256,10 +292,11 @@ export function BrokerReceberContasDialog({ open, onClose, onSuccess }: BrokerRe
                   <button
                     key={casa.id}
                     onClick={() => selectCasa(casa)}
-                    className="flex items-center justify-between p-3 rounded-lg border border-border/50 bg-card/50 hover:bg-primary/5 hover:border-primary/30 transition-all text-left group"
+                    className="flex items-center gap-2 p-3 rounded-lg border border-border/50 bg-card/50 hover:bg-primary/5 hover:border-primary/30 transition-all text-left group"
                   >
-                    <span className="text-sm font-medium truncate">{casa.nome}</span>
-                    <Badge variant="outline" className="text-[10px] ml-2 shrink-0 opacity-60 group-hover:opacity-100">
+                    <BookmakerLogo logoUrl={casa.logo_url} alt={casa.nome} size="h-7 w-7" iconSize="h-3.5 w-3.5" />
+                    <span className="text-sm font-medium truncate flex-1">{casa.nome}</span>
+                    <Badge variant="outline" className="text-[10px] shrink-0 opacity-60 group-hover:opacity-100">
                       {casa.moeda_padrao}
                     </Badge>
                   </button>
