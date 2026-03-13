@@ -376,11 +376,19 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
       {/* ─── Seção 1: Fluxo de Caixa ─── */}
       <div className="space-y-1 pb-3">
         <SectionHeader icon={ArrowRightLeft} label="Fluxo de Caixa" />
-        <MetricRow label="Depósitos Confirmados" value={formatCurrency(metrics.depositosTotal)} />
+        <MetricRow 
+          label="Depósitos Confirmados" 
+          value={formatCurrency(metrics.depositosTotal)}
+          tooltip={metrics.hasInvestorCapital ? `Interno: ${formatCurrency(metrics.depositosInterno)} · Investidor: ${formatCurrency(metrics.depositosInvestidor)}` : undefined}
+        />
         {hasExtras && (
           <ExtrasCollapsible metrics={metrics} formatCurrency={formatCurrency} />
         )}
-        <MetricRow label="Saques Recebidos" value={formatCurrency(metrics.saquesRecebidos)} />
+        <MetricRow 
+          label="Saques Recebidos" 
+          value={formatCurrency(metrics.saquesRecebidos)}
+          tooltip={metrics.hasInvestorCapital ? `Interno: ${formatCurrency(metrics.saquesInterno)} · Investidor: ${formatCurrency(metrics.saquesInvestidor)}` : undefined}
+        />
         {metrics.saquesPendentes > 0 && (
           <MetricRow 
             label="Saques Pendentes" 
