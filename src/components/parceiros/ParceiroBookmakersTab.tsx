@@ -509,7 +509,7 @@ export const ParceiroBookmakersTab = memo(function ParceiroBookmakersTab({
               <div className="flex items-center gap-2">
                 <Plus className="h-4 w-4 text-muted-foreground" />
                 <h4 className="text-sm font-medium">Casas Disponíveis</h4>
-                <Badge variant="outline" className="text-xs ml-auto">{bookmakersDisponiveis.length}</Badge>
+                <Badge variant="outline" className="text-xs ml-auto">{filteredDisponiveis.length}</Badge>
               </div>
               <div className="relative">
                 <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
