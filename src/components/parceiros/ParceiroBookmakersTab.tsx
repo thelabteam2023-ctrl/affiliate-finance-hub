@@ -313,6 +313,30 @@ export const ParceiroBookmakersTab = memo(function ParceiroBookmakersTab({
   return (
     <TooltipProvider>
       <div className="h-full flex flex-col gap-3">
+        {/* Filtro de regulamentação - pills */}
+        <div className="shrink-0 flex items-center gap-2">
+          {(["todas", "REGULAMENTADA", "NAO_REGULAMENTADA"] as RegFilter[]).map((value) => {
+            const isActive = regFilter === value;
+            const label = value === "todas" ? "TODAS" : value === "REGULAMENTADA" ? "REGULAMENTADA" : "NÃO REGULAMENTADA";
+            return (
+              <button
+                key={value}
+                onClick={() => setRegFilter(value)}
+                className={`h-7 px-3 rounded text-[11px] font-semibold tracking-wide transition-colors uppercase ${
+                  isActive
+                    ? value === "REGULAMENTADA"
+                      ? "bg-emerald-600 text-white"
+                      : value === "NAO_REGULAMENTADA"
+                        ? "bg-amber-600 text-white"
+                        : "bg-primary text-primary-foreground"
+                    : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
         {/* Container de colunas - flex-1 para ocupar espaço restante */}
         <div className="flex-1 min-h-0 grid grid-cols-2 gap-3">
           
