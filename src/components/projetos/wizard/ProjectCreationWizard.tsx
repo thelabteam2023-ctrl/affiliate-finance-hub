@@ -36,6 +36,7 @@ interface ProjectCreationWizardProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: (projectId: string) => void;
+  defaultTipoProjeto?: string;
 }
 
 export function ProjectCreationWizard({
