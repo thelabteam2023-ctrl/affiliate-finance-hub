@@ -52,10 +52,8 @@ async function fetchFinancialMetricsRaw(projetoId: string, dateRange?: { from: s
     .eq("projeto_id", projetoId);
 
   const bookmakerSaldos = (bookmakers || []).map(b => ({ saldo_atual: b.saldo_atual || 0, moeda: b.moeda || "BRL" }));
-  // Map bookmaker_id -> is investor account
-  const investorBookmakerIds = new Set(
-    (bookmakers || []).filter(b => !!b.investidor_id).map(b => b.id)
-  );
+  // Array of investor bookmaker IDs (Set doesn't survive React Query serialization)
+  const investorBookmakerIds = (bookmakers || []).filter(b => !!b.investidor_id).map(b => b.id);
 
   const depositoQ = applyDateFilter(
     supabase.from("cash_ledger").select("valor, moeda, destino_bookmaker_id")
@@ -257,7 +255,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
     );
     // Breakdown: investor vs internal deposits
     const depositosInvestidor = rawMetrics.depositos
-      .filter(d => d.destino_bookmaker_id && rawMetrics.investorBookmakerIds.has(d.destino_bookmaker_id))
+      .filter(d => d.destino_bookmaker_id && rawMetrics.investorBookmakerIds.includes(d.destino_bookmaker_id))
       .reduce((acc, d) => acc + convertToConsolidationOficial(d.valor, d.moeda), 0);
     const depositosInterno = depositosTotal - depositosInvestidor;
     const saquesRecebidos = rawMetrics.saques.reduce(
@@ -265,7 +263,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
     );
     // Breakdown: investor vs internal withdrawals
     const saquesInvestidor = rawMetrics.saques
-      .filter(s => s.origem_bookmaker_id && rawMetrics.investorBookmakerIds.has(s.origem_bookmaker_id))
+      .filter(s => s.origem_bookmaker_id && rawMetrics.investorBookmakerIds.includes(s.origem_bookmaker_id))
       .reduce((acc, s) => acc + convertToConsolidationOficial(s.valor_confirmado ?? s.valor, s.moeda), 0);
     const saquesInterno = saquesRecebidos - saquesInvestidor;
     const saquesPendentes = rawMetrics.saquesPendentes.reduce(
