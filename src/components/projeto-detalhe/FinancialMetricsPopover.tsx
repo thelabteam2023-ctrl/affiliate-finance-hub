@@ -263,7 +263,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
     );
     // Breakdown: investor vs internal withdrawals
     const saquesInvestidor = rawMetrics.saques
-      .filter(s => s.origem_bookmaker_id && rawMetrics.investorBookmakerIds.has(s.origem_bookmaker_id))
+      .filter(s => s.origem_bookmaker_id && rawMetrics.investorBookmakerIds.includes(s.origem_bookmaker_id))
       .reduce((acc, s) => acc + convertToConsolidationOficial(s.valor_confirmado ?? s.valor, s.moeda), 0);
     const saquesInterno = saquesRecebidos - saquesInvestidor;
     const saquesPendentes = rawMetrics.saquesPendentes.reduce(
