@@ -166,7 +166,8 @@ export function StepDadosBasicos({ formData, onChange, isBrokerContext = false }
         {/* Participação de Investidor - Card com expansão interna */}
         <Card className={cn(
           "transition-colors",
-          hasInvestidor && "border-purple-500/30"
+          hasInvestidor && "border-purple-500/30",
+          isBrokerContext && !hasInvestidor && "border-destructive/50"
         )}>
           <CardContent className="pt-4">
             <div className="space-y-4">
@@ -178,10 +179,12 @@ export function StepDadosBasicos({ formData, onChange, isBrokerContext = false }
                 <div className="space-y-1 flex-1">
                   <Label className="flex items-center gap-2">
                     Participação de Investidor
-                    <Badge variant="secondary" className="text-xs ml-auto">Opcional</Badge>
+                    <Badge variant={isBrokerContext ? "destructive" : "secondary"} className="text-xs ml-auto">
+                      {isBrokerContext ? "Obrigatório" : "Opcional"}
+                    </Badge>
                   </Label>
                   <p className="text-xs text-muted-foreground">
-                    Vincule para dividir lucros
+                    {isBrokerContext ? "Selecione o investidor dono das contas" : "Vincule para dividir lucros"}
                   </p>
                 </div>
               </div>
