@@ -718,13 +718,23 @@ export function ProjetoValueBetTab({
 
   // Filtered counts per sub-tab for badge display
   const filteredAbertasCount = useMemo(() => apostasAbertas.filter(a => {
+    if (tabFilters.bookmakerIds.length > 0 && (!a.bookmaker_id || !tabFilters.bookmakerIds.includes(a.bookmaker_id))) return false;
+    if (tabFilters.parceiroIds.length > 0) {
+      const bk = bookmakers.find(b => b.id === a.bookmaker_id);
+      if (!bk?.parceiro_id || !tabFilters.parceiroIds.includes(bk.parceiro_id)) return false;
+    }
     const matchesResultado = tabFilters.resultados.length === 0 || tabFilters.resultados.includes(a.resultado as any);
     return matchesResultado;
-  }).length, [apostasAbertas, tabFilters.resultados]);
+  }).length, [apostasAbertas, tabFilters.bookmakerIds, tabFilters.parceiroIds, tabFilters.resultados, bookmakers]);
   const filteredHistoricoCount = useMemo(() => apostasHistorico.filter(a => {
+    if (tabFilters.bookmakerIds.length > 0 && (!a.bookmaker_id || !tabFilters.bookmakerIds.includes(a.bookmaker_id))) return false;
+    if (tabFilters.parceiroIds.length > 0) {
+      const bk = bookmakers.find(b => b.id === a.bookmaker_id);
+      if (!bk?.parceiro_id || !tabFilters.parceiroIds.includes(bk.parceiro_id)) return false;
+    }
     const matchesResultado = tabFilters.resultados.length === 0 || tabFilters.resultados.includes(a.resultado as any);
     return matchesResultado;
-  }).length, [apostasHistorico, tabFilters.resultados]);
+  }).length, [apostasHistorico, tabFilters.bookmakerIds, tabFilters.parceiroIds, tabFilters.resultados, bookmakers]);
 
   // formatCurrency agora vem do useProjetoCurrency
 
