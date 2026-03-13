@@ -101,6 +101,7 @@ import { Toggle } from "@/components/ui/toggle";
 import { SaldoOperavelDisplay } from "@/components/ui/saldo-operavel-display";
 import { usePasswordDecryption } from "@/hooks/usePasswordDecryption";
 import { LazyPasswordField } from "@/components/parceiros/LazyPasswordField";
+import { BrokerReceberContasDialog } from "@/components/broker/BrokerReceberContasDialog";
 
 type VinculoSortMode = "alpha" | "newest" | "oldest" | "apostas_desc" | "apostas_asc" | "saldo_desc" | "saldo_asc" | "em_aposta_desc" | "em_aposta_asc" | "disponivel_desc" | "disponivel_asc";
 
