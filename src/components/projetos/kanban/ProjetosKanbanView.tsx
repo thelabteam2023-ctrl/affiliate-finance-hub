@@ -195,6 +195,7 @@ export function ProjetosKanbanView({
             setReceberContasOpen(false);
             setReceberContasProjetoId(null);
           }}
+          projetoId={receberContasProjetoId}
         />
       )}
     </div>

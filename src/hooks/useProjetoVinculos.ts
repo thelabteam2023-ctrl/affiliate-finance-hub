@@ -18,6 +18,8 @@ export interface Vinculo {
   nome: string;
   parceiro_id: string | null;
   parceiro_nome: string | null;
+  investidor_id: string | null;
+  investidor_nome: string | null;
   projeto_id: string | null;
   bookmaker_status: string;
   saldo_real: number;
@@ -137,6 +139,8 @@ export function useProjetoVinculos(projetoId: string | undefined) {
         login_password_encrypted: string | null;
         bookmaker_catalogo_id: string | null;
         created_at: string | null;
+        investidor_id: string | null;
+        investidor_nome: string | null;
       }> = {};
       let apostasCount: Record<string, number> = {};
 
@@ -144,7 +148,7 @@ export function useProjetoVinculos(projetoId: string | undefined) {
         // Buscar credenciais e status das bookmakers
         const { data: bookmarkersDetails } = await supabase
           .from("bookmakers")
-          .select("id, status, login_username, login_password_encrypted, bookmaker_catalogo_id, created_at")
+          .select("id, status, login_username, login_password_encrypted, bookmaker_catalogo_id, created_at, investidor_id, investidores(nome)")
           .in("id", bookmakerIds);
 
         if (bookmarkersDetails) {
@@ -155,6 +159,8 @@ export function useProjetoVinculos(projetoId: string | undefined) {
               login_password_encrypted: b.login_password_encrypted,
               bookmaker_catalogo_id: b.bookmaker_catalogo_id,
               created_at: b.created_at || null,
+              investidor_id: b.investidor_id || null,
+              investidor_nome: b.investidores?.nome || null,
             };
           });
         }
@@ -214,7 +220,9 @@ export function useProjetoVinculos(projetoId: string | undefined) {
           login_username: "",
           login_password_encrypted: null,
           bookmaker_catalogo_id: null,
-          created_at: null
+          created_at: null,
+          investidor_id: null,
+          investidor_nome: null,
         };
 
         return {
@@ -238,6 +246,8 @@ export function useProjetoVinculos(projetoId: string | undefined) {
           totalApostas: apostasCount[s.id] || 0,
           has_pending_transactions: Boolean(s.has_pending_transactions),
           created_at: creds.created_at,
+          investidor_id: creds.investidor_id,
+          investidor_nome: creds.investidor_nome,
         };
       });
     },

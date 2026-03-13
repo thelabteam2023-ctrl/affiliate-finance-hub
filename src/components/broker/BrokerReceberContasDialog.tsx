@@ -33,6 +33,8 @@ interface BrokerReceberContasDialogProps {
   open: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  /** Projeto Broker ao qual vincular as contas recebidas */
+  projetoId?: string | null;
 }
 
 const MOEDAS = ["BRL", "USD", "EUR", "GBP", "MXN", "MYR", "ARS", "COP", "USDT"];
@@ -49,7 +51,7 @@ function createEmptyEntry(): ContaEntry {
 
 type Step = "select-investor" | "select-house" | "add-accounts";
 
-export function BrokerReceberContasDialog({ open, onClose, onSuccess }: BrokerReceberContasDialogProps) {
+export function BrokerReceberContasDialog({ open, onClose, onSuccess, projetoId }: BrokerReceberContasDialogProps) {
   const { workspaceId } = useTabWorkspace();
   const [step, setStep] = useState<Step>("select-investor");
   const [investidorId, setInvestidorId] = useState("");
@@ -156,19 +158,23 @@ export function BrokerReceberContasDialog({ open, onClose, onSuccess }: BrokerRe
             login_username: conta.login_username,
             login_password_encrypted: passwordToStore,
             moeda,
-            saldo_atual: 0,
+            saldo_atual: saldoInicial,
             saldo_freebet: 0,
             saldo_irrecuperavel: 0,
             saldo_usd: 0,
             status: "ativo",
             investidor_id: investidorId,
+            projeto_id: projetoId || null,
           })
           .select("id")
           .single();
 
         if (bmError) throw bmError;
 
-        if (saldoInicial > 0 && newBookmaker) {
+        // Se há saldo inicial e projeto vinculado, o trigger tr_ensure_deposito_virtual_on_link
+        // já gera o DEPOSITO_VIRTUAL automaticamente ao setar projeto_id.
+        // Se não há projeto, criar APORTE_DIRETO manual para registrar o capital.
+        if (saldoInicial > 0 && newBookmaker && !projetoId) {
           const { error: ledgerError } = await supabase
             .from("cash_ledger")
             .insert({
