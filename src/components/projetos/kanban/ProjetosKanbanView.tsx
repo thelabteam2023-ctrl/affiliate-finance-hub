@@ -2,6 +2,7 @@ import { useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ProjetoKanbanCard } from "./ProjetoKanbanCard";
+import { BrokerReceberContasDialog } from "@/components/broker/BrokerReceberContasDialog";
 import { cn } from "@/lib/utils";
 
 type SaldoByMoeda = Record<string, number>;
@@ -35,6 +36,7 @@ interface ProjetosKanbanViewProps {
   canEdit: boolean;
   canDelete: boolean;
   onReorder: (projetos: Projeto[]) => void;
+  isBrokerSection?: boolean;
 }
 
 export function ProjetosKanbanView({
@@ -47,9 +49,12 @@ export function ProjetosKanbanView({
   canEdit,
   canDelete,
   onReorder,
+  isBrokerSection,
 }: ProjetosKanbanViewProps) {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [receberContasOpen, setReceberContasOpen] = useState(false);
+  const [receberContasProjetoId, setReceberContasProjetoId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Ordenar por display_order
@@ -151,6 +156,11 @@ export function ProjetosKanbanView({
               isDragging={draggingId === projeto.id}
               onDragStart={() => handleDragStart(projeto.id)}
               onDragEnd={handleDragEnd}
+              isBroker={isBrokerSection}
+              onReceberContas={() => {
+                setReceberContasProjetoId(projeto.id);
+                setReceberContasOpen(true);
+              }}
             />
           </div>
         ))}
@@ -172,6 +182,21 @@ export function ProjetosKanbanView({
           </div>
         )}
       </div>
+
+      {/* Broker: Receber Contas Dialog */}
+      {isBrokerSection && (
+        <BrokerReceberContasDialog
+          open={receberContasOpen}
+          onClose={() => {
+            setReceberContasOpen(false);
+            setReceberContasProjetoId(null);
+          }}
+          onSuccess={() => {
+            setReceberContasOpen(false);
+            setReceberContasProjetoId(null);
+          }}
+        />
+      )}
     </div>
   );
 }

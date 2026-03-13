@@ -723,6 +723,7 @@ export default function GestaoProjetos() {
             }}
             canEdit={canEdit('projetos', 'projetos.edit')}
             canDelete={canDelete('projetos', 'projetos.delete')}
+            isBrokerSection={isBrokerSection}
             onReorder={(reorderedProjetos) => {
               // Atualizar estado local com nova ordem
               setProjetos(prev => 
