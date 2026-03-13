@@ -156,6 +156,11 @@ export function ProjetosKanbanView({
               isDragging={draggingId === projeto.id}
               onDragStart={() => handleDragStart(projeto.id)}
               onDragEnd={handleDragEnd}
+              isBroker={isBrokerSection}
+              onReceberContas={() => {
+                setReceberContasProjetoId(projeto.id);
+                setReceberContasOpen(true);
+              }}
             />
           </div>
         ))}
