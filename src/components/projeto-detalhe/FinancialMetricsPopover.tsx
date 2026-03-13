@@ -126,8 +126,9 @@ async function fetchFinancialMetricsRaw(projetoId: string, dateRange?: { from: s
 
   return {
     bookmakerSaldos,
-    depositos: (depositos.data || []) as LedgerEntry[],
-    saques: (saques.data || []) as LedgerEntry[],
+    investorBookmakerIds,
+    depositos: (depositos.data || []) as (LedgerEntry & { destino_bookmaker_id?: string | null })[],
+    saques: (saques.data || []) as (LedgerEntry & { origem_bookmaker_id?: string | null })[],
     saquesPendentes: (saquesPend.data || []) as LedgerEntry[],
     reconciliation: {
       cashbackManual: (cashbackM.data || []) as { valor: number; moeda: string }[],
