@@ -95,22 +95,25 @@ import {
   ArrowDown,
   ArrowDownAZ,
   Clock,
+  Users,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Toggle } from "@/components/ui/toggle";
 import { SaldoOperavelDisplay } from "@/components/ui/saldo-operavel-display";
 import { usePasswordDecryption } from "@/hooks/usePasswordDecryption";
 import { LazyPasswordField } from "@/components/parceiros/LazyPasswordField";
+import { BrokerReceberContasDialog } from "@/components/broker/BrokerReceberContasDialog";
 
 type VinculoSortMode = "alpha" | "newest" | "oldest" | "apostas_desc" | "apostas_asc" | "saldo_desc" | "saldo_asc" | "em_aposta_desc" | "em_aposta_asc" | "disponivel_desc" | "disponivel_asc";
 
 interface ProjetoVinculosTabProps {
   projetoId: string;
+  tipoProjeto?: string;
 }
 
 // Interface Vinculo importada de useProjetoVinculos
 
-export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
+export function ProjetoVinculosTab({ projetoId, tipoProjeto }: ProjetoVinculosTabProps) {
   const { workspaceId } = useWorkspace();
   const navigate = useNavigate();
   
@@ -182,6 +185,8 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
   const [vinculoParaAjuste, setVinculoParaAjuste] = useState<Vinculo | null>(null);
   
   const [sortMode, setSortMode] = useState<VinculoSortMode>("alpha");
+  const [receberContasDialogOpen, setReceberContasDialogOpen] = useState(false);
+  const isBroker = tipoProjeto === "BROKER";
 
   const { bonuses, fetchBonuses: refetchBonuses, getSummary, getActiveBonusByBookmaker, getBookmakersWithActiveBonus } = useProjectBonuses({ projectId: projetoId });
 
@@ -555,6 +560,18 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
             )}
           </Tooltip>
         </TooltipProvider>
+        {/* Botão Receber Contas - apenas projetos Broker */}
+        {isBroker && canManageVinculos && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="text-xs"
+            onClick={() => setReceberContasDialogOpen(true)}
+          >
+            <Users className="mr-1.5 h-3.5 w-3.5" />
+            Receber Contas
+          </Button>
+        )}
         {/* Botão Desvinculação em Massa */}
         {canManageVinculos && vinculos.length > 0 && (
           <Button
@@ -1575,6 +1592,18 @@ export function ProjetoVinculosTab({ projetoId }: ProjetoVinculosTabProps) {
           invalidateVinculos();
         }}
       />
+
+      {/* Broker: Receber Contas Dialog */}
+      {isBroker && (
+        <BrokerReceberContasDialog
+          open={receberContasDialogOpen}
+          onClose={() => setReceberContasDialogOpen(false)}
+          onSuccess={() => {
+            setReceberContasDialogOpen(false);
+            invalidateVinculos();
+          }}
+        />
+      )}
     </Tabs>
   );
 }

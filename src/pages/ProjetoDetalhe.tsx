@@ -93,6 +93,7 @@ interface Projeto {
   nome: string;
   descricao: string | null;
   status: string;
+  tipo_projeto: string;
   data_inicio: string | null;
   data_fim_prevista: string | null;
   data_fim_real: string | null;
@@ -1013,7 +1014,7 @@ export default function ProjetoDetalhe() {
           </TabsContent>
 
           <TabsContent value="vinculos" className="h-full m-0">
-            <ProjetoVinculosTab projetoId={id!} />
+            <ProjetoVinculosTab projetoId={id!} tipoProjeto={projeto.tipo_projeto} />
           </TabsContent>
 
           <TabsContent value="modulos" className="h-full m-0">
