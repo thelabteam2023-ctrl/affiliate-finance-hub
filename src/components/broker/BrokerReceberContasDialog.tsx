@@ -71,12 +71,25 @@ export function BrokerReceberContasDialog({ open, onClose, onSuccess }: BrokerRe
   useEffect(() => {
     if (!open || !workspaceId) return;
     const loadData = async () => {
-      const [invRes, catRes] = await Promise.all([
+      // Buscar investidores e casas autorizadas para o workspace
+      const [invRes, accessRes] = await Promise.all([
         supabase.from("investidores").select("id, nome").eq("workspace_id", workspaceId).order("nome"),
-        supabase.from("bookmakers_catalogo").select("id, nome, moeda_padrao, logo_url, status").order("nome"),
+        supabase.from("bookmaker_workspace_access").select("bookmaker_catalogo_id").eq("workspace_id", workspaceId),
       ]);
       setInvestidores(invRes.data || []);
-      setCatalogoBookmakers(catRes.data || []);
+
+      const allowedIds = new Set((accessRes.data || []).map(a => a.bookmaker_catalogo_id));
+
+      if (allowedIds.size > 0) {
+        const { data: catData } = await supabase
+          .from("bookmakers_catalogo")
+          .select("id, nome, moeda_padrao, logo_url, status")
+          .in("id", Array.from(allowedIds))
+          .order("nome");
+        setCatalogoBookmakers(catData || []);
+      } else {
+        setCatalogoBookmakers([]);
+      }
     };
     loadData();
   }, [open, workspaceId]);
