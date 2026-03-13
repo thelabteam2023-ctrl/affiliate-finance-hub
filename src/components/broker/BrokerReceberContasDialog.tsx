@@ -171,7 +171,10 @@ export function BrokerReceberContasDialog({ open, onClose, onSuccess, projetoId 
 
         if (bmError) throw bmError;
 
-        if (saldoInicial > 0 && newBookmaker) {
+        // Se há saldo inicial e projeto vinculado, o trigger tr_ensure_deposito_virtual_on_link
+        // já gera o DEPOSITO_VIRTUAL automaticamente ao setar projeto_id.
+        // Se não há projeto, criar APORTE_DIRETO manual para registrar o capital.
+        if (saldoInicial > 0 && newBookmaker && !projetoId) {
           const { error: ledgerError } = await supabase
             .from("cash_ledger")
             .insert({

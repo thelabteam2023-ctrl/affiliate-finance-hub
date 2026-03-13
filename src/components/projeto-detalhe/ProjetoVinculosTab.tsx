@@ -1607,6 +1607,7 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto }: ProjetoVinculosTa
             setReceberContasDialogOpen(false);
             invalidateVinculos();
           }}
+          projetoId={projetoId}
         />
       )}
     </Tabs>
