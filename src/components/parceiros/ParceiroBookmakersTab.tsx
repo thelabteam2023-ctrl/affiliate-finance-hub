@@ -92,6 +92,8 @@ export const ParceiroBookmakersTab = memo(function ParceiroBookmakersTab({
 
   const [searchVinculados, setSearchVinculados] = useState("");
   const [searchDisponiveis, setSearchDisponiveis] = useState("");
+  type RegFilter = "todas" | "REGULAMENTADA" | "NAO_REGULAMENTADA";
+  const [regFilter, setRegFilter] = useState<RegFilter>("todas");
   const [editingStatus, setEditingStatus] = useState<string | null>(null);
   const [showAllVinculados, setShowAllVinculados] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
