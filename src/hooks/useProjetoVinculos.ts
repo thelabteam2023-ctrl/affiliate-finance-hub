@@ -18,6 +18,8 @@ export interface Vinculo {
   nome: string;
   parceiro_id: string | null;
   parceiro_nome: string | null;
+  investidor_id: string | null;
+  investidor_nome: string | null;
   projeto_id: string | null;
   bookmaker_status: string;
   saldo_real: number;

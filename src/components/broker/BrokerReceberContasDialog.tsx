@@ -33,6 +33,8 @@ interface BrokerReceberContasDialogProps {
   open: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  /** Projeto Broker ao qual vincular as contas recebidas */
+  projetoId?: string | null;
 }
 
 const MOEDAS = ["BRL", "USD", "EUR", "GBP", "MXN", "MYR", "ARS", "COP", "USDT"];
