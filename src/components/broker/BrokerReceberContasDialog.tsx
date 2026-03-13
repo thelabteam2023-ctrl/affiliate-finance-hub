@@ -61,6 +61,8 @@ export function BrokerReceberContasDialog({ open, onClose, onSuccess }: BrokerRe
   const [selectedCasaNome, setSelectedCasaNome] = useState("");
   const [moeda, setMoeda] = useState("BRL");
   const [searchQuery, setSearchQuery] = useState("");
+  type RegFilter = "todas" | "REGULAMENTADA" | "NAO_REGULAMENTADA";
+  const [regFilter, setRegFilter] = useState<RegFilter>("todas");
   
   // Contas da casa selecionada
   const [contas, setContas] = useState<ContaEntry[]>([createEmptyEntry()]);
