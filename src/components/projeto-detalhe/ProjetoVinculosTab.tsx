@@ -929,6 +929,11 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto }: ProjetoVinculosTa
                     <span className="text-muted-foreground">
                       {vinculo.parceiro_nome || "Sem parceiro"}
                     </span>
+                    {vinculo.investidor_nome && (
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-500/40 text-amber-400">
+                        Inv: {vinculo.investidor_nome}
+                      </Badge>
+                    )}
                   </div>
                   
                   {/* ===== SALDOS UNIFICADOS ===== */}
