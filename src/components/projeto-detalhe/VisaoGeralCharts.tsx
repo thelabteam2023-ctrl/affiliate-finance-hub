@@ -785,13 +785,7 @@ export function VisaoGeralCharts({
 
   // Helpers locais de consolidação para casas
   const getConsolidatedStakeLocal = (a: ApostaBase): number => {
-    const rawStake = typeof a.stake_total === "number" ? a.stake_total : a.stake;
-    if (typeof a.stake_consolidado === "number" && a.stake_consolidado !== 0) return a.stake_consolidado;
-    const moedaOp = a.moeda_operacao || "BRL";
-    if (moedaConsolidacao && moedaOp === moedaConsolidacao) return rawStake;
-    if (moedaConsolidacao === "BRL" && typeof a.valor_brl_referencia === "number") return a.valor_brl_referencia;
-    if (convertToConsolidation && moedaOp !== (moedaConsolidacao || "BRL")) return convertToConsolidation(rawStake, moedaOp);
-    return rawStake;
+    return getConsolidatedStake(a, convertToConsolidation, moedaConsolidacao);
   };
 
   const getConsolidatedLucroLocal = consolidateLucro;
