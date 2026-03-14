@@ -23,6 +23,7 @@ import { CaixaTransacaoDialog } from "@/components/caixa/CaixaTransacaoDialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { HistoricoVinculosTab } from "./HistoricoVinculosTab";
 import { HistoricoConciliacoesTab } from "./HistoricoConciliacoesTab";
+import { SaquesBrokerTab } from "./SaquesBrokerTab";
 
 import { ContasNoProjetoCard } from "./ContasNoProjetoCard";
 import { SaldoOperavelCard } from "./SaldoOperavelCard";
