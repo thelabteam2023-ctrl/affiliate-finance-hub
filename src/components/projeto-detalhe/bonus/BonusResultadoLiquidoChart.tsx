@@ -61,6 +61,7 @@ interface AjustePostLimitacao {
 interface BonusResultadoLiquidoChartProps {
   bonuses: ProjectBonus[];
   bonusBets: BonusBetData[];
+  pernasMap?: PernasMap;
   ajustesPostLimitacao?: AjustePostLimitacao[];
   formatCurrency: (value: number) => string;
   /** Função para converter valores para moeda de consolidação do projeto */
