@@ -115,7 +115,7 @@ interface ProjetoVinculosTabProps {
 
 // Interface Vinculo importada de useProjetoVinculos
 
-export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId }: ProjetoVinculosTabProps) {
+export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBroker: isBrokerProp }: ProjetoVinculosTabProps) {
   const { workspaceId } = useWorkspace();
   const navigate = useNavigate();
   
