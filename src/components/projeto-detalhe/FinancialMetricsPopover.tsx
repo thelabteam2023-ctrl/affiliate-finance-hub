@@ -15,6 +15,8 @@ import {
   CheckCircle2,
   AlertCircle,
   ChevronDown,
+  Users,
+  Building2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
@@ -38,8 +40,6 @@ function applyDateFilter<T extends { gte: (col: string, val: string) => T; lte: 
   dateColumn = "data_transacao"
 ): T {
   if (!dateRange) return query;
-  // CRÍTICO: data_transacao e credited_at são "datas civis" (meia-noite UTC)
-  // Usar range UTC puro (00:00Z → 23:59Z) para não excluir registros pelo offset de 3h
   const startUTC = `${dateRange.from}T00:00:00.000Z`;
   const endUTC = `${dateRange.to}T23:59:59.999Z`;
   return query.gte(dateColumn, startUTC).lte(dateColumn, endUTC);
@@ -51,8 +51,12 @@ async function fetchFinancialMetricsRaw(projetoId: string, dateRange?: { from: s
     .select("id, saldo_atual, moeda, investidor_id")
     .eq("projeto_id", projetoId);
 
-  const bookmakerSaldos = (bookmakers || []).map(b => ({ saldo_atual: b.saldo_atual || 0, moeda: b.moeda || "BRL" }));
-  // Array of investor bookmaker IDs (Set doesn't survive React Query serialization)
+  // Keep investidor_id for saldo breakdown
+  const bookmakerSaldos = (bookmakers || []).map(b => ({
+    saldo_atual: b.saldo_atual || 0,
+    moeda: b.moeda || "BRL",
+    isInvestor: !!b.investidor_id,
+  }));
   const investorBookmakerIds = (bookmakers || []).filter(b => !!b.investidor_id).map(b => b.id);
 
   const depositoQ = applyDateFilter(
@@ -69,8 +73,9 @@ async function fetchFinancialMetricsRaw(projetoId: string, dateRange?: { from: s
     dateRange
   );
 
+  // Include origem_bookmaker_id for pending breakdown
   const saquePendQ = applyDateFilter(
-    supabase.from("cash_ledger").select("valor, moeda")
+    supabase.from("cash_ledger").select("valor, moeda, origem_bookmaker_id")
       .in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])
       .eq("status", "PENDENTE").eq("projeto_id_snapshot", projetoId),
     dateRange
@@ -96,10 +101,11 @@ async function fetchFinancialMetricsRaw(projetoId: string, dateRange?: { from: s
       .eq("tipo_transacao", "GANHO_CAMBIAL").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId), dateRange),
   ]);
 
+  // Include bookmaker IDs in timeline for internal-only break-even
   const timelineQ = applyDateFilter(
     supabase
       .from("cash_ledger")
-      .select("valor, valor_confirmado, moeda, data_transacao, tipo_transacao")
+      .select("valor, valor_confirmado, moeda, data_transacao, tipo_transacao, destino_bookmaker_id, origem_bookmaker_id")
       .in("tipo_transacao", ["DEPOSITO", "DEPOSITO_VIRTUAL", "SAQUE", "SAQUE_VIRTUAL"])
       .eq("status", "CONFIRMADO")
       .eq("projeto_id_snapshot", projetoId)
@@ -109,7 +115,6 @@ async function fetchFinancialMetricsRaw(projetoId: string, dateRange?: { from: s
 
   const { data: timelineData } = await timelineQ;
 
-  // Fetch bonus ganhos (credited + finalized) - filter by credited_at if dateRange
   let bonusQuery = supabase
     .from("project_bookmaker_link_bonuses")
     .select("bonus_amount, currency")
@@ -127,7 +132,7 @@ async function fetchFinancialMetricsRaw(projetoId: string, dateRange?: { from: s
     investorBookmakerIds,
     depositos: (depositos.data || []) as (LedgerEntry & { destino_bookmaker_id?: string | null })[],
     saques: (saques.data || []) as (LedgerEntry & { origem_bookmaker_id?: string | null })[],
-    saquesPendentes: (saquesPend.data || []) as LedgerEntry[],
+    saquesPendentes: (saquesPend.data || []) as (LedgerEntry & { origem_bookmaker_id?: string | null })[],
     reconciliation: {
       cashbackManual: (cashbackM.data || []) as { valor: number; moeda: string }[],
       cashbackEstorno: (cashbackE.data || []) as { valor: number; moeda: string }[],
@@ -137,7 +142,7 @@ async function fetchFinancialMetricsRaw(projetoId: string, dateRange?: { from: s
       perdaCambial: (perdasFx.data || []) as { valor: number; moeda: string }[],
       ganhoCambial: (ganhosFx.data || []) as { valor: number; moeda: string }[],
     },
-    breakEvenTimeline: (timelineData || []) as { valor: number; valor_confirmado?: number | null; moeda: string; data_transacao: string; tipo_transacao: string }[],
+    breakEvenTimeline: (timelineData || []) as { valor: number; valor_confirmado?: number | null; moeda: string; data_transacao: string; tipo_transacao: string; destino_bookmaker_id?: string | null; origem_bookmaker_id?: string | null }[],
     bonusGanhos: (bonusGanhosData || []) as { bonus_amount: number; currency: string }[],
   };
 }
@@ -234,6 +239,30 @@ function ExtrasCollapsible({ metrics, formatCurrency }: { metrics: any; formatCu
   );
 }
 
+/** Helper to compute break-even from a timeline */
+function computeBreakEven(
+  timeline: { valor: number; valor_confirmado?: number | null; moeda: string; data_transacao: string; tipo_transacao: string }[],
+  convertToConsolidationOficial: (valor: number, moeda: string) => number,
+) {
+  let cumulativeFlow = 0;
+  let breakEvenDate: string | null = null;
+  let firstTransactionDate: string | null = null;
+  for (const entry of timeline) {
+    if (!firstTransactionDate) firstTransactionDate = entry.data_transacao;
+    const isSaque = entry.tipo_transacao === "SAQUE" || entry.tipo_transacao === "SAQUE_VIRTUAL";
+    const valor = isSaque
+      ? convertToConsolidationOficial(entry.valor_confirmado ?? entry.valor, entry.moeda)
+      : convertToConsolidationOficial(entry.valor, entry.moeda);
+    cumulativeFlow += isSaque ? valor : -valor;
+    if (cumulativeFlow >= 0 && !breakEvenDate) breakEvenDate = entry.data_transacao;
+    if (cumulativeFlow < 0) breakEvenDate = null;
+  }
+  const breakEvenDays = breakEvenDate && firstTransactionDate
+    ? differenceInDays(parseISO(breakEvenDate), parseISO(firstTransactionDate))
+    : null;
+  return { breakEvenDate, breakEvenDays, fluxoFinal: cumulativeFlow };
+}
+
 export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetricsPopoverProps) {
   const { formatCurrency, convertToConsolidationOficial, cotacaoOficialUSD } = useProjetoCurrency(projetoId);
 
@@ -247,28 +276,42 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
   const metrics = useMemo(() => {
     if (!rawMetrics) return null;
 
+    // ─── Saldo nas casas: total + breakdown ───
     const saldoCasas = rawMetrics.bookmakerSaldos.reduce(
       (acc, b) => acc + convertToConsolidationOficial(b.saldo_atual, b.moeda), 0
     );
+    const saldoCasasInvestidor = rawMetrics.bookmakerSaldos
+      .filter(b => b.isInvestor)
+      .reduce((acc, b) => acc + convertToConsolidationOficial(b.saldo_atual, b.moeda), 0);
+    const saldoCasasInterno = saldoCasas - saldoCasasInvestidor;
+
+    // ─── Depósitos: total + breakdown ───
     const depositosTotal = rawMetrics.depositos.reduce(
       (acc, d) => acc + convertToConsolidationOficial(d.valor, d.moeda), 0
     );
-    // Breakdown: investor vs internal deposits
     const depositosInvestidor = rawMetrics.depositos
       .filter(d => d.destino_bookmaker_id && rawMetrics.investorBookmakerIds.includes(d.destino_bookmaker_id))
       .reduce((acc, d) => acc + convertToConsolidationOficial(d.valor, d.moeda), 0);
     const depositosInterno = depositosTotal - depositosInvestidor;
+
+    // ─── Saques confirmados: total + breakdown ───
     const saquesRecebidos = rawMetrics.saques.reduce(
       (acc, s) => acc + convertToConsolidationOficial(s.valor_confirmado ?? s.valor, s.moeda), 0
     );
-    // Breakdown: investor vs internal withdrawals
     const saquesInvestidor = rawMetrics.saques
       .filter(s => s.origem_bookmaker_id && rawMetrics.investorBookmakerIds.includes(s.origem_bookmaker_id))
       .reduce((acc, s) => acc + convertToConsolidationOficial(s.valor_confirmado ?? s.valor, s.moeda), 0);
     const saquesInterno = saquesRecebidos - saquesInvestidor;
+
+    // ─── Saques pendentes: total + breakdown ───
     const saquesPendentes = rawMetrics.saquesPendentes.reduce(
       (acc, s) => acc + convertToConsolidationOficial(s.valor, s.moeda), 0
     );
+    const saquesPendentesInvestidor = rawMetrics.saquesPendentes
+      .filter(s => s.origem_bookmaker_id && rawMetrics.investorBookmakerIds.includes(s.origem_bookmaker_id))
+      .reduce((acc, s) => acc + convertToConsolidationOficial(s.valor, s.moeda), 0);
+    const saquesPendentesInterno = saquesPendentes - saquesPendentesInvestidor;
+
     const ganhoConfirmacao = rawMetrics.saques.reduce((acc, s) => {
       if (s.valor_confirmado != null && s.valor_confirmado !== s.valor) {
         return acc + convertToConsolidationOficial(s.valor_confirmado - s.valor, s.moeda);
@@ -290,52 +333,58 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
     const perdaFx = sumConvert(r.perdaCambial);
     const ganhoFx = sumConvert(r.ganhoCambial);
 
-    // Bônus ganhos (creditados)
     const bonusGanhos = rawMetrics.bonusGanhos.reduce(
       (acc, b) => acc + convertToConsolidationOficial(b.bonus_amount, b.currency || 'BRL'), 0
     );
 
+    // ─── Fluxo consolidado ───
     const fluxoCaixaLiquido = saquesRecebidos - depositosTotal;
     const extrasPositivos = cashbackLiquido + girosGratis + ajustes + ganhoConfirmacao + ganhoFx + bonusGanhos;
     const capitalTotal = depositosTotal + extrasPositivos;
-    // Fluxo Líquido Ajustado = Saques - Depósitos (fórmula canônica de fluxo de caixa)
     const fluxoLiquidoAjustado = fluxoCaixaLiquido;
     const patrimonio = saldoCasas + saquesRecebidos + saquesPendentes;
     const lucroFinanceiro = patrimonio - depositosTotal;
 
-    // Break-even
-    let cumulativeFlow = 0;
-    let breakEvenDate: string | null = null;
-    let firstTransactionDate: string | null = null;
-    const timeline = rawMetrics.breakEvenTimeline || [];
-    for (const entry of timeline) {
-      if (!firstTransactionDate) firstTransactionDate = entry.data_transacao;
+    // ─── Fluxo INTERNO (sem investidor) ───
+    const fluxoInternoLiquido = saquesInterno - depositosInterno;
+
+    // ─── Break-even CONSOLIDADO ───
+    const beConsolidado = computeBreakEven(
+      rawMetrics.breakEvenTimeline,
+      convertToConsolidationOficial,
+    );
+
+    // ─── Break-even INTERNO (exclui transações do investidor) ───
+    const investorIds = rawMetrics.investorBookmakerIds;
+    const timelineInterno = rawMetrics.breakEvenTimeline.filter(entry => {
       const isSaque = entry.tipo_transacao === "SAQUE" || entry.tipo_transacao === "SAQUE_VIRTUAL";
-      const valor = isSaque
-        ? convertToConsolidationOficial(entry.valor_confirmado ?? entry.valor, entry.moeda)
-        : convertToConsolidationOficial(entry.valor, entry.moeda);
-      cumulativeFlow += isSaque ? valor : -valor;
-      if (cumulativeFlow >= 0 && !breakEvenDate) breakEvenDate = entry.data_transacao;
-      if (cumulativeFlow < 0) breakEvenDate = null;
-    }
-    const breakEvenDays = breakEvenDate && firstTransactionDate
-      ? differenceInDays(parseISO(breakEvenDate), parseISO(firstTransactionDate))
-      : null;
+      const bmId = isSaque ? entry.origem_bookmaker_id : entry.destino_bookmaker_id;
+      return !bmId || !investorIds.includes(bmId);
+    });
+    const beInterno = computeBreakEven(
+      timelineInterno,
+      convertToConsolidationOficial,
+    );
 
-
-
-
-    const hasInvestorCapital = depositosInvestidor > 0 || saquesInvestidor > 0;
+    const hasInvestorCapital = depositosInvestidor > 0 || saquesInvestidor > 0 || saldoCasasInvestidor > 0;
 
     return {
       depositosTotal, depositosInvestidor, depositosInterno,
       saquesRecebidos, saquesInvestidor, saquesInterno,
-      saquesPendentes, saldoCasas,
+      saquesPendentes, saquesPendentesInvestidor, saquesPendentesInterno,
+      saldoCasas, saldoCasasInvestidor, saldoCasasInterno,
       fluxoCaixaLiquido, fluxoLiquidoAjustado, capitalTotal, extrasPositivos,
+      fluxoInternoLiquido,
       cashbackLiquido, girosGratis, ajustes, ganhoConfirmacao, ganhoFx, perdaOp, perdaFx,
       bonusGanhos,
       patrimonio, lucroFinanceiro,
-      breakEvenDate, breakEvenDays,
+      // Break-even consolidado
+      breakEvenDate: beConsolidado.breakEvenDate,
+      breakEvenDays: beConsolidado.breakEvenDays,
+      // Break-even interno
+      breakEvenInternoDate: beInterno.breakEvenDate,
+      breakEvenInternoDays: beInterno.breakEvenDays,
+      fluxoInternoFinal: beInterno.fluxoFinal,
       hasInvestorCapital,
     };
   }, [rawMetrics, convertToConsolidationOficial, cotacaoOficialUSD]);
@@ -352,6 +401,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
   }
 
   const breakEvenReached = metrics.fluxoCaixaLiquido >= 0;
+  const breakEvenInternoReached = metrics.fluxoInternoLiquido >= 0;
   const hasExtras = Math.abs(metrics.extrasPositivos) >= 0.01;
 
   return (
@@ -392,6 +442,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
             label="Saques Pendentes" 
             value={formatCurrency(metrics.saquesPendentes)} 
             colorClass="text-amber-500"
+            tooltip={metrics.hasInvestorCapital ? `Interno: ${formatCurrency(metrics.saquesPendentesInterno)} · Investidor: ${formatCurrency(metrics.saquesPendentesInvestidor)}` : undefined}
           />
         )}
         <div className="border-t border-border/30 mt-1.5 pt-1.5">
@@ -400,47 +451,104 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
             value={formatCurrency(hasExtras ? metrics.fluxoLiquidoAjustado : metrics.fluxoCaixaLiquido)} 
             colorClass={(hasExtras ? metrics.fluxoLiquidoAjustado : metrics.fluxoCaixaLiquido) >= 0 ? "text-emerald-500" : "text-red-500"}
             bold
+            tooltip={metrics.hasInvestorCapital ? `Consolidado (Interno + Investidor). Interno: ${formatCurrency(metrics.fluxoInternoLiquido)}` : undefined}
           />
           {hasExtras && (
             <p className="text-[9px] text-muted-foreground/70 mt-0.5">
               Saques − Depósitos
             </p>
           )}
+          {/* Fluxo interno separado quando há investidor */}
+          {metrics.hasInvestorCapital && (
+            <div className="mt-1.5 pt-1.5 border-t border-dashed border-border/20">
+              <MetricRow
+                label="↳ Fluxo Interno"
+                value={formatCurrency(metrics.fluxoInternoLiquido)}
+                colorClass={metrics.fluxoInternoLiquido >= 0 ? "text-emerald-500" : "text-red-500"}
+                bold
+                tooltip="Apenas movimentações de capital interno (sem investidor). Reflete o retorno real do seu próprio capital."
+              />
+            </div>
+          )}
         </div>
       </div>
 
       {/* ─── Seção 4: Retorno de Capital ─── */}
-      <div className="border-t border-border/40 pt-3">
-        <div className="flex items-center gap-1.5 mb-1.5">
-          {breakEvenReached ? (
-            <CheckCircle2 className="h-3 w-3 text-emerald-500" />
-          ) : (
-            <AlertCircle className="h-3 w-3 text-amber-500" />
-          )}
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Lucro Realizado
-          </span>
-        </div>
-        
-        {breakEvenReached ? (
-          <div className="rounded-lg bg-emerald-500/5 border border-emerald-500/15 px-3 py-2">
-            <p className="text-[11px] text-foreground font-medium">
-              Capital recuperado em {metrics.breakEvenDays ?? "—"} dias
-            </p>
-            <p className="text-[10px] text-muted-foreground mt-0.5">
-              Saques superaram depósitos em{" "}
-              {metrics.breakEvenDate && format(parseISO(metrics.breakEvenDate), "dd/MM/yyyy")}.
-              O caixa já recebeu de volta todo o valor investido.
-            </p>
+      <div className="border-t border-border/40 pt-3 space-y-2">
+        {/* Break-even CONSOLIDADO */}
+        <div>
+          <div className="flex items-center gap-1.5 mb-1.5">
+            {breakEvenReached ? (
+              <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+            ) : (
+              <AlertCircle className="h-3 w-3 text-amber-500" />
+            )}
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Lucro Realizado
+              {metrics.hasInvestorCapital && (
+                <span className="ml-1 text-[9px] font-normal normal-case text-muted-foreground/60">(consolidado)</span>
+              )}
+            </span>
           </div>
-        ) : (
-          <div className="rounded-lg bg-amber-500/5 border border-amber-500/15 px-3 py-2">
-            <p className="text-[11px] text-foreground font-medium">
-              Faltam {formatCurrency(Math.abs(metrics.fluxoCaixaLiquido))} para recuperar
-            </p>
-            <p className="text-[10px] text-muted-foreground mt-0.5">
-              Saques recebidos ainda não cobriram os depósitos realizados.
-            </p>
+          
+          {breakEvenReached ? (
+            <div className="rounded-lg bg-emerald-500/5 border border-emerald-500/15 px-3 py-2">
+              <p className="text-[11px] text-foreground font-medium">
+                Capital recuperado em {metrics.breakEvenDays ?? "—"} dias
+              </p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">
+                Saques superaram depósitos em{" "}
+                {metrics.breakEvenDate && format(parseISO(metrics.breakEvenDate), "dd/MM/yyyy")}.
+                O caixa já recebeu de volta todo o valor investido.
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-lg bg-amber-500/5 border border-amber-500/15 px-3 py-2">
+              <p className="text-[11px] text-foreground font-medium">
+                Faltam {formatCurrency(Math.abs(metrics.fluxoCaixaLiquido))} para recuperar
+              </p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">
+                Saques recebidos ainda não cobriram os depósitos realizados.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Break-even INTERNO — apenas quando há investidor */}
+        {metrics.hasInvestorCapital && (
+          <div>
+            <div className="flex items-center gap-1.5 mb-1.5">
+              {breakEvenInternoReached ? (
+                <Building2 className="h-3 w-3 text-emerald-500" />
+              ) : (
+                <Building2 className="h-3 w-3 text-amber-500" />
+              )}
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Capital Interno
+                <span className="ml-1 text-[9px] font-normal normal-case text-muted-foreground/60">(sem investidor)</span>
+              </span>
+            </div>
+
+            {breakEvenInternoReached ? (
+              <div className="rounded-lg bg-emerald-500/5 border border-emerald-500/15 px-3 py-2">
+                <p className="text-[11px] text-foreground font-medium">
+                  Capital interno recuperado em {metrics.breakEvenInternoDays ?? "—"} dias
+                </p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">
+                  Saques de contas internas já cobriram todos os depósitos internos.
+                  {metrics.breakEvenInternoDate && ` Alcançado em ${format(parseISO(metrics.breakEvenInternoDate), "dd/MM/yyyy")}.`}
+                </p>
+              </div>
+            ) : (
+              <div className="rounded-lg bg-amber-500/5 border border-amber-500/15 px-3 py-2">
+                <p className="text-[11px] text-foreground font-medium">
+                  Faltam {formatCurrency(Math.abs(metrics.fluxoInternoLiquido))} (capital interno)
+                </p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">
+                  Saques de contas internas ainda não cobriram os depósitos internos.
+                </p>
+              </div>
+            )}
           </div>
         )}
       </div>
