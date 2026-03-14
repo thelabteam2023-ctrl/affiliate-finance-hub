@@ -70,7 +70,7 @@ interface ApostaUnificada {
 async function fetchApostasCalendarioFn(projetoId: string): Promise<ApostaUnificada[]> {
   const { data, error } = await supabase
     .from("apostas_unificada")
-    .select(`id, data_aposta, lucro_prejuizo, pl_consolidado, lucro_prejuizo_brl_referencia, resultado, stake, stake_total, stake_consolidado, moeda_operacao, valor_brl_referencia, forma_registro, bookmaker_id`)
+    .select(`id, data_aposta, lucro_prejuizo, pl_consolidado, consolidation_currency, lucro_prejuizo_brl_referencia, resultado, stake, stake_total, stake_consolidado, moeda_operacao, valor_brl_referencia, forma_registro, bookmaker_id`)
     .eq("projeto_id", projetoId)
     .eq("status", "LIQUIDADA")
     .is("cancelled_at", null)
