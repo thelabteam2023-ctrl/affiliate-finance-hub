@@ -243,7 +243,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
           <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform group-hover:text-primary" />
         )}
       </div>
-      {saldoOperavel > 0 && (
+      {saldoAtualTotal > 0 && (
         <span className="text-xs text-muted-foreground">
           {conversaoVisual.label} {conversaoVisual.valor.toLocaleString("pt-BR", { 
             minimumFractionDigits: 2, 
