@@ -416,7 +416,7 @@ export function SurebetDialogTable({
           const file = item.getAsFile();
           if (file) {
             e.preventDefault();
-            await processLegImage(focusedLeg, file);
+            await processLegImage(focusedLeg, file, mercado);
             break;
           }
         }
