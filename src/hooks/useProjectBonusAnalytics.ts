@@ -137,6 +137,7 @@ async function fetchBonusAnalytics(projectId: string, convertToConsolidationOfic
         contexto_operacional,
         forma_registro,
         moeda_operacao,
+        apostas_pernas ( stake, moeda ),
         bookmakers!apostas_unificada_bookmaker_id_fkey ( bookmaker_catalogo_id, moeda )
       `)
       .eq("projeto_id", projectId)
@@ -180,6 +181,38 @@ async function fetchBonusAnalytics(projectId: string, convertToConsolidationOfic
   // Track orphan raw volume per currency too
   const orphanRawVolume: Record<string, number> = {};
 
+  const isArbitragemComPernas = (bet: any): boolean => {
+    return bet.forma_registro === 'ARBITRAGEM' && Array.isArray(bet.apostas_pernas) && bet.apostas_pernas.length > 0;
+  };
+
+  const getConsolidatedStakeFromBet = (bet: any): number => {
+    if (!isArbitragemComPernas(bet)) {
+      return getConsolidatedStake(bet, convertToConsolidation, moedaConsolidacao);
+    }
+
+    // CRÍTICO: Em arbitragem multi-moeda, consolidar por perna para evitar soma nominal incorreta do stake_total
+    return (bet.apostas_pernas as Array<{ stake?: number | null; moeda?: string | null }>).reduce((acc, perna) => {
+      const stake = Number(perna?.stake || 0);
+      const moeda = (perna?.moeda || bet.moeda_operacao || 'BRL').toUpperCase();
+      return acc + convertToConsolidation(stake, moeda);
+    }, 0);
+  };
+
+  const addRawStakeBreakdown = (target: Record<string, number>, bet: any) => {
+    if (!isArbitragemComPernas(bet)) {
+      const moeda = (bet.moeda_operacao || 'BRL').toUpperCase();
+      const rawStake = Number((bet.forma_registro === 'ARBITRAGEM' ? bet.stake_total : bet.stake) || 0);
+      target[moeda] = (target[moeda] || 0) + rawStake;
+      return;
+    }
+
+    (bet.apostas_pernas as Array<{ stake?: number | null; moeda?: string | null }>).forEach((perna) => {
+      const moeda = (perna?.moeda || bet.moeda_operacao || 'BRL').toUpperCase();
+      const stake = Number(perna?.stake || 0);
+      target[moeda] = (target[moeda] || 0) + stake;
+    });
+  };
+
   // 3. Agregar por bookmaker_catalogo_id
   const catalogoMap = new Map<string, {
     nome: string;
@@ -221,13 +254,8 @@ async function fetchBonusAnalytics(projectId: string, convertToConsolidationOfic
   betsData.forEach((bet: any) => {
     const catalogoId = bet.bookmakers?.bookmaker_catalogo_id;
     if (!catalogoId || !catalogoMap.has(catalogoId)) {
-      orphanStakeConsolidated += getConsolidatedStake(bet, convertToConsolidation, moedaConsolidacao);
-      // Track orphan raw volume per currency
-      const moeda = (bet.moeda_operacao || 'BRL').toUpperCase();
-      const rawStake = bet.forma_registro === 'ARBITRAGEM' 
-        ? Number(bet.stake_total || 0) 
-        : Number(bet.stake || 0);
-      orphanRawVolume[moeda] = (orphanRawVolume[moeda] || 0) + rawStake;
+      orphanStakeConsolidated += getConsolidatedStakeFromBet(bet);
+      addRawStakeBreakdown(orphanRawVolume, bet);
       return;
     }
     catalogoMap.get(catalogoId)!.bets.push(bet);
@@ -269,17 +297,11 @@ async function fetchBonusAnalytics(projectId: string, convertToConsolidationOfic
 
     const totalBets = bets.length;
     const totalStake = bets.reduce((sum: number, b: any) => {
-      return sum + getConsolidatedStake(b, convertToConsolidation, moedaConsolidacao);
+      return sum + getConsolidatedStakeFromBet(b);
     }, 0);
     
     // Track raw volume per currency for breakdown (NOT consolidated)
-    bets.forEach((b: any) => {
-      const moeda = (b.moeda_operacao || 'BRL').toUpperCase();
-      const rawStake = b.forma_registro === 'ARBITRAGEM' 
-        ? Number(b.stake_total || 0) 
-        : Number(b.stake || 0);
-      rawVolumeByCurrency[moeda] = (rawVolumeByCurrency[moeda] || 0) + rawStake;
-    });
+    bets.forEach((b: any) => addRawStakeBreakdown(rawVolumeByCurrency, b));
     
     const betsWon = bets.filter((b: any) => b.resultado === 'GREEN' || b.resultado === 'MEIO_GREEN').length;
     const betsLost = bets.filter((b: any) => b.resultado === 'RED' || b.resultado === 'MEIO_RED').length;
