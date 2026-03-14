@@ -457,7 +457,7 @@ export function SaquesBrokerTab({ projetoId }: SaquesBrokerTabProps) {
         </div>
 
         <Select value={filterType} onValueChange={setFilterType}>
-          <SelectTrigger className="h-8 w-[130px] text-xs">
+           <SelectTrigger className="h-8 w-auto min-w-[140px] text-xs">
             <SelectValue placeholder="Tipo" />
           </SelectTrigger>
           <SelectContent>
