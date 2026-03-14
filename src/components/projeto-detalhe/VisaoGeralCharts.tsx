@@ -22,7 +22,7 @@ import { ptBR } from "date-fns/locale";
 import { CalendarioLucros } from "./CalendarioLucros";
 import { getFirstLastName } from "@/lib/utils";
 import { parseLocalDateTime, extractLocalDateKey } from "@/utils/dateUtils";
-import { getConsolidatedLucro, getConsolidatedStake } from "@/utils/consolidatedValues";
+import { getConsolidatedLucro, getConsolidatedStake, getConsolidatedLucroDirect } from "@/utils/consolidatedValues";
 
 // =====================================================
 // TIPOS
@@ -59,6 +59,7 @@ interface ApostaBase {
   consolidation_currency?: string | null;
   valor_brl_referencia?: number | null;
   lucro_prejuizo_brl_referencia?: number | null;
+  is_multicurrency?: boolean | null;
 }
 
 interface VinculoDetalhe {
@@ -561,8 +562,9 @@ export function VisaoGeralCharts({
   const calendarData = apostasCalendario ?? apostas;
 
   // Helper de consolidação multi-moeda — usado em periodTotal, evolução e calendário
+  // MULTICURRENCY: usa pernas inline para conversão direta (evita cross-rate via BRL pivot)
   const consolidateLucro = (a: ApostaBase): number => {
-    return getConsolidatedLucro(a, convertToConsolidation, moedaConsolidacao);
+    return getConsolidatedLucroDirect(a, a.pernas, convertToConsolidation, moedaConsolidacao);
   };
 
   // Fallback para formatChartAxis se não fornecido - usa versão compacta do formatCurrency

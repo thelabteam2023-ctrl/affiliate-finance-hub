@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { agruparExtrasPorTipo, fetchProjetoExtras } from "@/services/fetchProjetoExtras";
-import { getConsolidatedLucro } from "@/utils/consolidatedValues";
+import { getConsolidatedLucro, getConsolidatedLucroDirect } from "@/utils/consolidatedValues";
 import { getOperationalDateRangeFromStrings } from "@/utils/dateUtils";
 
 /** Breakdown de lucro por moeda original (dinâmico — suporta todas as moedas) */
@@ -177,13 +177,31 @@ export async function fetchProjetosLucroOperacionalKpi({
     () => {
       let q = supabase
         .from("apostas_unificada")
-        .select("projeto_id, lucro_prejuizo, pl_consolidado, lucro_prejuizo_brl_referencia, moeda_operacao, consolidation_currency, status")
+        .select("id, projeto_id, lucro_prejuizo, pl_consolidado, lucro_prejuizo_brl_referencia, moeda_operacao, consolidation_currency, status, is_multicurrency")
         .in("projeto_id", projetoIds)
         .eq("status", "LIQUIDADA");
       q = applyDateFilter(q, dateFilters, "data_aposta");
       return q;
     }
   );
+
+  // Fetch pernas para apostas multicurrency (conversão direta sem pivot BRL)
+  const multicurrencyIds = apostasData.filter((a: any) => a.is_multicurrency).map((a: any) => a.id);
+  const pernasMap: Record<string, Array<{ moeda: string; lucro_prejuizo: number | null; resultado: string | null }>> = {};
+  
+  if (multicurrencyIds.length > 0) {
+    const { data: pernas } = await supabase
+      .from("apostas_pernas")
+      .select("aposta_id, moeda, lucro_prejuizo, resultado")
+      .in("aposta_id", multicurrencyIds);
+    
+    if (pernas) {
+      for (const p of pernas) {
+        if (!pernasMap[p.aposta_id]) pernasMap[p.aposta_id] = [];
+        pernasMap[p.aposta_id].push(p);
+      }
+    }
+  }
 
   // Demais queries: volume menor, busca direta
   const [
@@ -267,7 +285,7 @@ export async function fetchProjetosLucroOperacionalKpi({
     target[key] = (target[key] || 0) + valor;
   };
 
-  // 1) Apostas LIQUIDADAS (mesma lógica getConsolidatedLucro do KPI)
+  // 1) Apostas LIQUIDADAS (com conversão direta multicurrency)
   apostasData.forEach((ap: any) => {
     const projetoId = ap.projeto_id;
     if (!projetoId || !result[projetoId]) return;
@@ -276,7 +294,7 @@ export async function fetchProjetosLucroOperacionalKpi({
     const bruto = Number(ap.lucro_prejuizo || 0);
     addToMoeda(result[projetoId].porMoeda, moeda, bruto);
 
-    const consolidado = getConsolidatedLucro(ap, convertToConsolidation, moedaConsolidacao);
+    const consolidado = getConsolidatedLucroDirect(ap, pernasMap[ap.id], convertToConsolidation, moedaConsolidacao);
     result[projetoId].consolidado += consolidado;
   });
 
