@@ -233,8 +233,11 @@ export async function fetchProjetosLucroOperacionalKpi({
         .from("project_bookmaker_link_bonuses")
         .select("project_id, bonus_amount, currency, tipo_bonus")
         .in("project_id", projetoIds)
-        .in("status", ["credited", "finalized"]);
-      q = applyDateFilter(q, dateFilters, "created_at");
+        .in("status", ["credited", "finalized"])
+        .not('credited_at', 'is', null);
+      // CORREÇÃO: usar credited_at (data de crédito) em vez de created_at
+      // para alinhar com fetchProjetoExtras canônico
+      q = applyDateFilter(q, dateFilters, "credited_at");
       return q;
     })(),
     (() => {
@@ -243,7 +246,9 @@ export async function fetchProjetosLucroOperacionalKpi({
         .select("projeto_id, valor, status, bookmaker_id")
         .in("projeto_id", projetoIds)
         .eq("status", "CONFIRMADA");
-      q = applyDateFilter(q, dateFilters, "created_at");
+      // CORREÇÃO: usar data_registro (data civil da perda) em vez de created_at
+      // para alinhar com fetchProjetoExtras canônico
+      q = applyDateFilterSimple(q, dataInicio, dataFim, "data_registro");
       return q;
     })(),
     (() => {
