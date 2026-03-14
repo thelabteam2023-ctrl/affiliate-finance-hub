@@ -82,6 +82,7 @@ interface Projeto {
   lucro_realizado?: number;
   display_order?: number;
   investidor_id?: string | null;
+  is_broker?: boolean;
   moeda_consolidacao?: string;
 }
 
@@ -396,6 +397,7 @@ export default function GestaoProjetos() {
           display_order: proj.display_order || 0,
           tipo_projeto: proj.tipo_projeto || 'INTERNO',
           investidor_id: proj.investidor_id || null,
+          is_broker: proj.is_broker === true,
           moeda_consolidacao: moedaConsolidacao,
         };
       });
@@ -428,8 +430,8 @@ export default function GestaoProjetos() {
     const matchesSearch = proj.nome.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || proj.status === statusFilter;
     const matchesSection = isBrokerSection 
-      ? !!proj.investidor_id 
-      : !proj.investidor_id;
+      ? proj.is_broker === true
+      : proj.is_broker !== true;
     return matchesSearch && matchesStatus && matchesSection;
   });
 

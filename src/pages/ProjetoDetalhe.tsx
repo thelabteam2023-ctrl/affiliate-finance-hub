@@ -103,6 +103,7 @@ interface Projeto {
   conciliado: boolean;
   modelo_absorcao_taxas: string;
   investidor_id: string | null;
+  is_broker: boolean;
 }
 
 interface ProjetoResumo {
@@ -1015,7 +1016,7 @@ export default function ProjetoDetalhe() {
           </TabsContent>
 
           <TabsContent value="vinculos" className="h-full m-0">
-            <ProjetoVinculosTab projetoId={id!} tipoProjeto={projeto.tipo_projeto} investidorId={projeto.investidor_id} />
+            <ProjetoVinculosTab projetoId={id!} tipoProjeto={projeto.tipo_projeto} investidorId={projeto.investidor_id} isBroker={projeto.is_broker} />
           </TabsContent>
 
           <TabsContent value="modulos" className="h-full m-0">

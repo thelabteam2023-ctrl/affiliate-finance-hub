@@ -110,11 +110,12 @@ interface ProjetoVinculosTabProps {
   projetoId: string;
   tipoProjeto?: string;
   investidorId?: string | null;
+  isBroker?: boolean;
 }
 
 // Interface Vinculo importada de useProjetoVinculos
 
-export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId }: ProjetoVinculosTabProps) {
+export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBroker: isBrokerProp }: ProjetoVinculosTabProps) {
   const { workspaceId } = useWorkspace();
   const navigate = useNavigate();
   
@@ -187,7 +188,7 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId }: Pro
   
   const [sortMode, setSortMode] = useState<VinculoSortMode>("alpha");
   const [receberContasDialogOpen, setReceberContasDialogOpen] = useState(false);
-  const isBroker = !!investidorId;
+  const isBroker = isBrokerProp === true;
 
   const { bonuses, fetchBonuses: refetchBonuses, getSummary, getActiveBonusByBookmaker, getBookmakersWithActiveBonus } = useProjectBonuses({ projectId: projetoId });
 

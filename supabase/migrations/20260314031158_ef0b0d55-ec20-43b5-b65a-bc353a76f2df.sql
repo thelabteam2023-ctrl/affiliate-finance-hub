@@ -1,0 +1,1 @@
+ALTER TABLE projetos ADD COLUMN is_broker BOOLEAN NOT NULL DEFAULT false;
