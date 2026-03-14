@@ -59,6 +59,7 @@ interface ApostaBase {
   consolidation_currency?: string | null;
   valor_brl_referencia?: number | null;
   lucro_prejuizo_brl_referencia?: number | null;
+  is_multicurrency?: boolean | null;
 }
 
 interface VinculoDetalhe {
