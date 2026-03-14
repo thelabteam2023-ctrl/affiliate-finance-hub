@@ -482,7 +482,7 @@ export function SaquesBrokerTab({ projetoId }: SaquesBrokerTabProps) {
         </Select>
 
         <Select value={filterOrigem} onValueChange={setFilterOrigem}>
-          <SelectTrigger className="h-8 w-[130px] text-xs">
+           <SelectTrigger className="h-8 w-auto min-w-[140px] text-xs">
             <SelectValue placeholder="Origem" />
           </SelectTrigger>
           <SelectContent>
