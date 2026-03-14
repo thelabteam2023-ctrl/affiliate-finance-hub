@@ -344,8 +344,8 @@ export function useSurebetPrintImport(): UseSurebetPrintImportReturn {
   }, []);
 
   // Try to infer line for other legs when one leg is processed
-  const tryInferOtherLegs = useCallback((processedLegIndex: number, parsedData: ParsedBetSlip, currentMercado: string | null) => {
-    const mercado = currentMercado || parsedData.mercado?.value;
+  const tryInferOtherLegs = useCallback((processedLegIndex: number, parsedData: ParsedBetSlip, currentMercado: string | null, formMercado?: string | null) => {
+    const mercado = currentMercado || parsedData.mercado?.value || formMercado;
     if (!mercado) return;
 
     const sourceLine = parsedData.selecao?.value;
