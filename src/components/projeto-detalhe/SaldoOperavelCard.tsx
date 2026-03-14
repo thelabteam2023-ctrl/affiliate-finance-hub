@@ -169,7 +169,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
       <Card className="border-destructive/30 bg-destructive/5">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 md:p-6">
           <CardTitle className="text-xs md:text-sm font-medium flex items-center gap-1.5 text-destructive">
-            Saldo Operável
+            Saldo Atual
             <AlertTriangle className="h-3.5 w-3.5 md:h-4 md:w-4" />
           </CardTitle>
         </CardHeader>
@@ -264,7 +264,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
       {/* Header */}
       <div className="flex items-center gap-2 pb-2 border-b border-border/50">
         <Wallet className="h-4 w-4 text-primary" />
-        <h3 className="text-sm font-semibold text-foreground">Saldo Operável</h3>
+        <h3 className="text-sm font-semibold text-foreground">Saldo Atual</h3>
         <Badge 
           variant="outline" 
           className="text-[10px] px-2 py-0.5 bg-muted/50 border-muted-foreground/30 text-muted-foreground font-normal"
