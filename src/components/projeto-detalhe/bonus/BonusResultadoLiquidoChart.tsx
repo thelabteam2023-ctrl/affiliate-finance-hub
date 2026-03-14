@@ -46,7 +46,10 @@ interface BonusBetData {
   bonus_id: string | null;
   stake_bonus?: number | null;
   estrategia?: string | null;
+  is_multicurrency?: boolean | null;
 }
+
+type PernasMap = Record<string, Array<{ moeda: string; lucro_prejuizo: number | null; resultado: string | null }>>;
 
 interface AjustePostLimitacao {
   valor: number;
