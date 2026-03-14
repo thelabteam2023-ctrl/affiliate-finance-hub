@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { getConsolidatedLucroDirect } from "@/utils/consolidatedValues";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Receipt, TrendingUp, TrendingDown, AreaChart as AreaChartIcon, Activity, Filter, X, Calendar, Info, Target } from "lucide-react";
