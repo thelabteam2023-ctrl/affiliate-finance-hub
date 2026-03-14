@@ -297,7 +297,24 @@ export default function CentralOperacoes() {
   };
 
   // ─── Derived data ─────
-  const alertasSaques = alertas.filter((a) => a.tipo_alerta === "BOOKMAKER_SAQUE");
+  // Fetch investor bookmaker IDs to exclude from Central de Operações
+  const { data: investorBkIds } = useQuery({
+    queryKey: ["investor-bookmaker-ids", workspaceId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("bookmakers")
+        .select("id")
+        .eq("workspace_id", workspaceId!)
+        .not("investidor_id", "is", null);
+      return new Set((data || []).map((b: any) => b.id));
+    },
+    enabled: !!workspaceId,
+    staleTime: 60_000,
+  });
+
+  const alertasSaques = alertas
+    .filter((a) => a.tipo_alerta === "BOOKMAKER_SAQUE")
+    .filter((a) => !investorBkIds || !investorBkIds.has(a.entidade_id));
   const alertasLimitadas = alertas.filter((a) => a.tipo_alerta === "BOOKMAKER_LIMITADA");
   const alertasCriticos = alertas.filter((a) => a.nivel_urgencia === "CRITICA");
 
