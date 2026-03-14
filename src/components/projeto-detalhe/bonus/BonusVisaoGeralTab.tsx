@@ -867,6 +867,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
         ajustesPostLimitacao={[...ajustesPostLimitacao, ...perdasCancelamento]}
         formatCurrency={formatCurrency}
         convertToConsolidation={convertToConsolidation}
+        moedaConsolidacao={analyticsSummary.moeda_consolidacao}
         isSingleDayPeriod={isSingleDayPeriod}
         dateRange={dateRange}
         potencialBruto={bonusPerformance.totalBonusCreditado}
