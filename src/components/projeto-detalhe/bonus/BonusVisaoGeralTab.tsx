@@ -893,7 +893,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
       {/* Gráfico de Resultado Líquido de Bônus (substituindo "Evolução do Lucro") */}
       <BonusResultadoLiquidoChart
         bonuses={bonuses}
-        bonusBets={bonusBetsData}
+        bonusBets={bonusBetsWithPernas.bets}
         ajustesPostLimitacao={[...ajustesPostLimitacao, ...perdasCancelamento]}
         formatCurrency={formatCurrency}
         convertToConsolidation={convertToConsolidation}
