@@ -138,8 +138,9 @@ export async function executeUnlink(params: {
   saldoVirtualEfetivo: number;
   moeda: string;
   marcarParaSaque?: boolean;
+  isInvestorAccount?: boolean;
 }): Promise<void> {
-  const { bookmakerId, projetoId, workspaceId, userId, statusFinal, saldoVirtualEfetivo, moeda, marcarParaSaque = false } = params;
+  const { bookmakerId, projetoId, workspaceId, userId, statusFinal, saldoVirtualEfetivo, moeda, marcarParaSaque = false, isInvestorAccount = false } = params;
 
   const { data, error } = await supabase.rpc('desvincular_bookmaker_atomico', {
     p_bookmaker_id: bookmakerId,
@@ -150,6 +151,7 @@ export async function executeUnlink(params: {
     p_saldo_virtual_efetivo: saldoVirtualEfetivo,
     p_moeda: moeda,
     p_marcar_para_saque: marcarParaSaque,
+    p_is_investor_account: isInvestorAccount,
   });
 
   if (error) {
