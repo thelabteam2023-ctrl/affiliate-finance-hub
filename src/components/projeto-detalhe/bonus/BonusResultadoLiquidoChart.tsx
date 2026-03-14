@@ -46,7 +46,10 @@ interface BonusBetData {
   bonus_id: string | null;
   stake_bonus?: number | null;
   estrategia?: string | null;
+  is_multicurrency?: boolean | null;
 }
+
+type PernasMap = Record<string, Array<{ moeda: string; lucro_prejuizo: number | null; resultado: string | null }>>;
 
 interface AjustePostLimitacao {
   valor: number;
@@ -58,6 +61,7 @@ interface AjustePostLimitacao {
 interface BonusResultadoLiquidoChartProps {
   bonuses: ProjectBonus[];
   bonusBets: BonusBetData[];
+  pernasMap?: PernasMap;
   ajustesPostLimitacao?: AjustePostLimitacao[];
   formatCurrency: (value: number) => string;
   /** Função para converter valores para moeda de consolidação do projeto */
@@ -94,6 +98,7 @@ type ChartMode = "resultado" | "bonus_juice";
 export function BonusResultadoLiquidoChart({
   bonuses,
   bonusBets,
+  pernasMap = {},
   ajustesPostLimitacao = [],
   formatCurrency,
   convertToConsolidation,
@@ -183,9 +188,15 @@ export function BonusResultadoLiquidoChart({
       // CORREÇÃO: Usar extractLocalDateKey em vez de split("T")[0]
       const date = extractLocalDateKey(bet.data_aposta);
       
-      // CRÍTICO: Só usar pl_consolidado se consolidation_currency bate com moeda do projeto
+      // MULTICURRENCY: Converter cada perna individualmente para evitar cross-rate via BRL pivot
       let pl: number;
-      if (bet.pl_consolidado != null && bet.consolidation_currency && moedaConsolidacao && bet.consolidation_currency === moedaConsolidacao) {
+      const pernas = pernasMap[bet.id];
+      if (bet.is_multicurrency && pernas && pernas.length > 0 && convertToConsolidation) {
+        pl = pernas.reduce((pAcc, p) => {
+          if (!p.resultado || p.resultado === 'PENDENTE') return pAcc;
+          return pAcc + convertToConsolidation(p.lucro_prejuizo ?? 0, p.moeda || 'BRL');
+        }, 0);
+      } else if (bet.pl_consolidado != null && bet.consolidation_currency && moedaConsolidacao && bet.consolidation_currency === moedaConsolidacao) {
         pl = bet.pl_consolidado;
       } else if (convertToConsolidation) {
         const moedaOperacao = bet.moeda_operacao || "BRL";
@@ -258,7 +269,7 @@ export function BonusResultadoLiquidoChart({
     });
 
     return data;
-  }, [filteredBonuses, bonusBets, bonuses, ajustesPostLimitacao, dateRange, selectedBookmaker, convertToConsolidation]);
+  }, [filteredBonuses, bonusBets, bonuses, ajustesPostLimitacao, dateRange, selectedBookmaker, convertToConsolidation, pernasMap, moedaConsolidacao]);
 
   // KPIs
   const kpis = useMemo(() => {
@@ -323,8 +334,14 @@ export function BonusResultadoLiquidoChart({
       }
       const date = extractLocalDateKey(bet.data_aposta);
       let pl: number;
-      // CRÍTICO: Só usar pl_consolidado se consolidation_currency bate com moeda do projeto
-      if (bet.pl_consolidado != null && bet.consolidation_currency && moedaConsolidacao && bet.consolidation_currency === moedaConsolidacao) {
+      // MULTICURRENCY: Converter cada perna individualmente para evitar cross-rate via BRL pivot
+      const pernas = pernasMap[bet.id];
+      if (bet.is_multicurrency && pernas && pernas.length > 0 && convertToConsolidation) {
+        pl = pernas.reduce((pAcc, p) => {
+          if (!p.resultado || p.resultado === 'PENDENTE') return pAcc;
+          return pAcc + convertToConsolidation(p.lucro_prejuizo ?? 0, p.moeda || 'BRL');
+        }, 0);
+      } else if (bet.pl_consolidado != null && bet.consolidation_currency && moedaConsolidacao && bet.consolidation_currency === moedaConsolidacao) {
         pl = bet.pl_consolidado;
       } else if (convertToConsolidation) {
         pl = convertToConsolidation(bet.lucro_prejuizo ?? 0, bet.moeda_operacao || "BRL");
@@ -349,7 +366,7 @@ export function BonusResultadoLiquidoChart({
         resultado: resultado >= 0 ? "GREEN" as const : "RED" as const,
         lucro_prejuizo: resultado,
       }));
-  }, [bonuses, bonusBets, ajustesPostLimitacao, selectedBookmaker, convertToConsolidation]);
+  }, [bonuses, bonusBets, ajustesPostLimitacao, selectedBookmaker, convertToConsolidation, pernasMap, moedaConsolidacao]);
 
   // Mês inicial do calendário: abre no mês do filtro ativo
   const calendarInitialMonth = useMemo(() => {

@@ -894,6 +894,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
       <BonusResultadoLiquidoChart
         bonuses={bonuses}
         bonusBets={bonusBetsWithPernas.bets}
+        pernasMap={bonusBetsWithPernas.pernasMap}
         ajustesPostLimitacao={[...ajustesPostLimitacao, ...perdasCancelamento]}
         formatCurrency={formatCurrency}
         convertToConsolidation={convertToConsolidation}
