@@ -125,8 +125,14 @@ export function BonusSummaryCards({ projetoId, compact = false }: BonusSummaryCa
     });
     const bonusPorMoeda = Object.entries(bonusPorMoedaMap).map(([moeda, valor]) => ({ moeda, valor }));
     
+    const moedaConsolidacaoProjeto = analyticsSummary.moeda_consolidacao || "USD";
     const juiceBets = bonusBetsData.reduce((acc, bet) => {
-      if (bet.pl_consolidado != null) {
+      // CRÍTICO: Só usar pl_consolidado se consolidation_currency bate com moeda do projeto
+      if (
+        bet.pl_consolidado != null &&
+        (bet as any).consolidation_currency &&
+        (bet as any).consolidation_currency === moedaConsolidacaoProjeto
+      ) {
         return acc + bet.pl_consolidado;
       }
       const moedaOperacao = bet.moeda_operacao || "BRL";
