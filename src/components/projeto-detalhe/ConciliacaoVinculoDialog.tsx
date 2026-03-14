@@ -37,6 +37,9 @@ interface ConciliacaoVinculoDialogProps {
     saldo_atual: number;
     moeda: string;
     bookmaker_status: string;
+    investidor_id?: string | null;
+    instance_identifier?: string | null;
+    investidor_nome?: string | null;
   } | null;
   projetoId: string;
   projetoNome?: string;
@@ -239,6 +242,7 @@ export function ConciliacaoVinculoDialog({
   if (!vinculo) return null;
 
   const isLimitada = vinculo.bookmaker_status.toUpperCase() === "LIMITADA";
+  const isInvestidor = !!vinculo.investidor_id;
   const canAdjust = saldoReal !== "" && temDiferenca && observacoes.trim();
   const canRelease = saldoReal !== "" && (!temDiferenca || observacoes.trim());
   const isProcessing = saving || savingAjuste;
@@ -263,12 +267,21 @@ export function ConciliacaoVinculoDialog({
             <div className="min-w-0">
               <p className="font-medium text-sm truncate">{vinculo.nome}</p>
               <p className="text-xs text-muted-foreground truncate">
-                {vinculo.parceiro_nome || "Sem parceiro"}
+                {isInvestidor 
+                  ? (vinculo.instance_identifier || vinculo.investidor_nome || "Investidor")
+                  : (vinculo.parceiro_nome || "Sem parceiro")}
               </p>
             </div>
-            <Badge variant="outline" className="text-xs shrink-0 ml-2">
-              {vinculo.moeda}
-            </Badge>
+            <div className="flex items-center gap-1.5">
+              {isInvestidor && (
+                <Badge variant="outline" className="text-[10px] text-blue-400 border-blue-400/30">
+                  Investidor
+                </Badge>
+              )}
+              <Badge variant="outline" className="text-xs shrink-0">
+                {vinculo.moeda}
+              </Badge>
+            </div>
           </div>
 
           {/* Balance Comparison - Compact Grid */}
@@ -360,10 +373,12 @@ export function ConciliacaoVinculoDialog({
           </div>
 
           {/* Security Note - Compact */}
-          <div className="flex items-start gap-2 p-2.5 rounded-lg bg-primary/5 border border-primary/20">
-            <ShieldCheck className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+          <div className={`flex items-start gap-2 p-2.5 rounded-lg ${isInvestidor ? "bg-blue-500/5 border border-blue-500/20" : "bg-primary/5 border border-primary/20"}`}>
+            <ShieldCheck className={`h-4 w-4 mt-0.5 shrink-0 ${isInvestidor ? "text-blue-400" : "text-primary"}`} />
             <p className="text-xs text-muted-foreground">
-              A conciliação garante consistência financeira antes de liberar a bookmaker.
+              {isInvestidor
+                ? "Conta de investidor. O saque será rastreado em Saques Broker, sem impacto no caixa operacional."
+                : "A conciliação garante consistência financeira antes de liberar a bookmaker."}
             </p>
           </div>
         </div>
@@ -404,7 +419,9 @@ export function ConciliacaoVinculoDialog({
               ) : (
                 <>
                   <ArrowDownToLine className="h-4 w-4 mr-1.5" />
-                  {saldoRealNum > 0 ? "Liberar + Saque" : "Liberar"}
+                  {saldoRealNum > 0 
+                    ? (isInvestidor ? "Liberar + Devolver" : "Liberar + Saque")
+                    : "Liberar"}
                 </>
               )}
             </Button>

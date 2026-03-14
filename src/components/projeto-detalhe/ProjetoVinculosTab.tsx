@@ -1583,7 +1583,10 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
           parceiro_nome: vinculoParaConciliar.parceiro_nome,
           saldo_atual: vinculoParaConciliar.saldo_real, // Conciliação usa saldo_real
           moeda: vinculoParaConciliar.moeda,
-          bookmaker_status: vinculoParaConciliar.bookmaker_status
+          bookmaker_status: vinculoParaConciliar.bookmaker_status,
+          investidor_id: vinculoParaConciliar.investidor_id,
+          instance_identifier: vinculoParaConciliar.instance_identifier,
+          investidor_nome: vinculoParaConciliar.investidor_nome,
         } : null}
         projetoId={projetoId}
         projetoNome={projetoNome}
