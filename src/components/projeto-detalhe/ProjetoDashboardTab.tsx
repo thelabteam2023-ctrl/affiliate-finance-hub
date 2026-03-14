@@ -165,16 +165,18 @@ async function fetchApostasFiltradas(
     // Stake original (para arbitragem usa stake_total)
     const rawStake = item.forma_registro === 'ARBITRAGEM' ? (item.stake_total || 0) : (item.stake || 0);
     // Stake consolidado: priorizar stake_consolidado > valor_brl_referencia > raw
+    // CRÍTICO: Só usar stake_consolidado se consolidation_currency bate com moeda do projeto
     let consolidatedStake = rawStake;
     const moedaOp = item.moeda_operacao || 'BRL';
-    if (item.stake_consolidado != null && item.stake_consolidado !== 0) {
+    if (item.stake_consolidado != null && item.stake_consolidado !== 0 && item.consolidation_currency === moedaConsolidacao) {
       consolidatedStake = item.stake_consolidado;
     } else if (moedaOp !== 'BRL' && item.valor_brl_referencia != null) {
       consolidatedStake = item.valor_brl_referencia;
     }
     // Lucro consolidado: priorizar pl_consolidado > lucro_prejuizo_brl_referencia > raw
+    // CRÍTICO: Só usar pl_consolidado se consolidation_currency bate com moeda do projeto
     let consolidatedLucro = item.lucro_prejuizo || 0;
-    if (item.pl_consolidado != null) {
+    if (item.pl_consolidado != null && item.consolidation_currency === moedaConsolidacao) {
       consolidatedLucro = item.pl_consolidado;
     } else if (moedaOp !== 'BRL' && item.lucro_prejuizo_brl_referencia != null) {
       consolidatedLucro = item.lucro_prejuizo_brl_referencia;
