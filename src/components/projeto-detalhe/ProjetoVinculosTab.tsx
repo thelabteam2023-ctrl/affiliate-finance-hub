@@ -1163,7 +1163,7 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
                     </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <User className="h-3 w-3" />
-                      <span className="truncate">{vinculo.parceiro_nome || "Sem parceiro"}</span>
+                      <span className="truncate">{vinculo.parceiro_nome || (vinculo.investidor_nome && vinculo.instance_identifier ? vinculo.instance_identifier : "Sem parceiro")}</span>
                       {vinculo.investidor_nome && (
                         <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-500/40 text-amber-400 ml-1">
                           Inv: {vinculo.investidor_nome}
