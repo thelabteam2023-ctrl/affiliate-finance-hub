@@ -562,13 +562,7 @@ export function VisaoGeralCharts({
 
   // Helper de consolidação multi-moeda — usado em periodTotal, evolução e calendário
   const consolidateLucro = (a: ApostaBase): number => {
-    const rawLucro = a.lucro_prejuizo ?? 0;
-    if (typeof a.pl_consolidado === "number") return a.pl_consolidado;
-    const moedaOp = a.moeda_operacao || "BRL";
-    if (moedaConsolidacao && moedaOp === moedaConsolidacao) return rawLucro;
-    if (moedaConsolidacao === "BRL" && typeof a.lucro_prejuizo_brl_referencia === "number") return a.lucro_prejuizo_brl_referencia;
-    if (convertToConsolidation && moedaOp !== (moedaConsolidacao || "BRL")) return convertToConsolidation(rawLucro, moedaOp);
-    return rawLucro;
+    return getConsolidatedLucro(a, convertToConsolidation, moedaConsolidacao);
   };
 
   // Fallback para formatChartAxis se não fornecido - usa versão compacta do formatCurrency
