@@ -56,6 +56,7 @@ interface ApostaBase {
   moeda_operacao?: string | null;
   stake_consolidado?: number | null;
   pl_consolidado?: number | null;
+  consolidation_currency?: string | null;
   valor_brl_referencia?: number | null;
   lucro_prejuizo_brl_referencia?: number | null;
 }
