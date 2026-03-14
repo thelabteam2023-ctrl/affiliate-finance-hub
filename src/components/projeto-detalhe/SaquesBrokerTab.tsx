@@ -289,6 +289,23 @@ export function SaquesBrokerTab({ projetoId }: SaquesBrokerTabProps) {
     });
   }, [transactions, filterType, filterStatus, filterOrigem, searchTerm]);
 
+  const lucroConsolidado = useMemo(() => {
+    return metrics
+      ? metrics.saquesTotal - metrics.depositosTotal + metrics.saldoCasas
+      : 0;
+  }, [metrics]);
+
+  // Group transactions by date
+  const grouped = useMemo(() => {
+    const map = new Map<string, BrokerTransaction[]>();
+    filteredTransactions.forEach((t) => {
+      const date = new Date(t.data_transacao).toLocaleDateString("pt-BR");
+      if (!map.has(date)) map.set(date, []);
+      map.get(date)!.push(t);
+    });
+    return Array.from(map.entries());
+  }, [filteredTransactions]);
+
   const handleUpdateStatus = async (transactionId: string, newStatus: string) => {
     const { error } = await supabase
       .from("cash_ledger")
@@ -316,21 +333,6 @@ export function SaquesBrokerTab({ projetoId }: SaquesBrokerTabProps) {
       </div>
     );
   }
-
-  const lucroConsolidado = metrics
-    ? metrics.saquesTotal - metrics.depositosTotal + metrics.saldoCasas
-    : 0;
-
-  // Group transactions by date
-  const grouped = useMemo(() => {
-    const map = new Map<string, BrokerTransaction[]>();
-    filteredTransactions.forEach((t) => {
-      const date = new Date(t.data_transacao).toLocaleDateString("pt-BR");
-      if (!map.has(date)) map.set(date, []);
-      map.get(date)!.push(t);
-    });
-    return Array.from(map.entries());
-  }, [filteredTransactions]);
 
   return (
     <div className="space-y-4">
