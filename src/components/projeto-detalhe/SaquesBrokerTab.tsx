@@ -506,11 +506,22 @@ export function SaquesBrokerTab({ projetoId }: SaquesBrokerTabProps) {
                 <div className="flex-1 h-px bg-border/30" />
               </div>
               <div className="space-y-1.5">
-                {txns.map((t) => (
-                  <Card key={t.id} className="border-border/30 hover:border-border/60 transition-colors">
+                {txns.map((t) => {
+                  const isSaque = t.tipo_transacao.includes("SAQUE");
+                  const canEditStatus = t.is_investor_account && isSaque;
+
+                  return (
+                  <Card 
+                    key={t.id} 
+                    className={`border-border/30 hover:border-border/60 transition-colors ${
+                      t.is_investor_account ? "border-l-2 border-l-blue-500/40" : ""
+                    }`}
+                  >
                     <CardContent className="p-3 flex items-center gap-3">
                       {/* Icon */}
-                      <div className="shrink-0 h-8 w-8 rounded-full bg-muted/50 flex items-center justify-center">
+                      <div className={`shrink-0 h-8 w-8 rounded-full flex items-center justify-center ${
+                        t.is_investor_account ? "bg-blue-500/10" : "bg-muted/50"
+                      }`}>
                         {getTransactionIcon(t.tipo_transacao)}
                       </div>
 
@@ -520,49 +531,69 @@ export function SaquesBrokerTab({ projetoId }: SaquesBrokerTabProps) {
                           <span className="text-sm font-medium text-foreground truncate">
                             {getTransactionLabel(t.tipo_transacao)}
                           </span>
-                          {t.is_investor_account && (
+                          {t.is_investor_account ? (
                             <Badge variant="outline" className="text-[9px] px-1 py-0 text-blue-400 border-blue-400/30">
-                              Investidor
+                              Inv: {t.investidor_nome || "Investidor"}
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-[9px] px-1 py-0 text-muted-foreground border-border/50">
+                              Interno
                             </Badge>
                           )}
                         </div>
                         <p className="text-xs text-muted-foreground truncate">
                           {t.bookmaker_nome || "—"}
-                          {t.investidor_nome && ` · ${t.investidor_nome}`}
                           {t.descricao && ` · ${t.descricao}`}
                         </p>
                       </div>
 
                       {/* Value */}
                       <div className="text-right shrink-0">
-                        <p className={`text-sm font-semibold ${t.tipo_transacao.includes("SAQUE") ? "text-emerald-400" : "text-red-400"}`}>
-                          {t.tipo_transacao.includes("SAQUE") ? "+" : "-"}{formatCurrency(t.valor, t.moeda)}
+                        <p className={`text-sm font-semibold ${isSaque ? "text-emerald-400" : "text-red-400"}`}>
+                          {isSaque ? "+" : "-"}{formatCurrency(t.valor, t.moeda)}
                         </p>
                         <p className="text-[10px] text-muted-foreground">
                           {new Date(t.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                         </p>
                       </div>
 
-                      {/* Status with edit */}
+                      {/* Status */}
                       <div className="shrink-0">
-                        <Select
-                          value={t.status}
-                          onValueChange={(val) => handleUpdateStatus(t.id, val)}
-                        >
-                          <SelectTrigger className="h-6 w-auto border-0 bg-transparent p-0 gap-1 text-xs focus:ring-0 [&>svg]:h-3 [&>svg]:w-3">
-                            {getStatusBadge(t.status)}
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="PENDENTE">Pendente</SelectItem>
-                            <SelectItem value="EM_TRANSITO">Em Trânsito</SelectItem>
-                            <SelectItem value="CONFIRMADO">Confirmado</SelectItem>
-                            <SelectItem value="CANCELADO">Cancelado</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        {canEditStatus ? (
+                          <Select
+                            value={t.status}
+                            onValueChange={(val) => handleUpdateStatus(t.id, val)}
+                          >
+                            <SelectTrigger className="h-6 w-auto border-0 bg-transparent p-0 gap-1 text-xs focus:ring-0 [&>svg]:h-3 [&>svg]:w-3">
+                              {getStatusBadge(t.status, true)}
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="PENDENTE">Pendente</SelectItem>
+                              <SelectItem value="AGUARDANDO_DEVOLUCAO">Aguardando Devolução</SelectItem>
+                              <SelectItem value="EM_TRANSITO">Em Trânsito</SelectItem>
+                              <SelectItem value="DEVOLVIDO">Devolvido</SelectItem>
+                              <SelectItem value="CANCELADO">Cancelado</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div>{getStatusBadge(t.status)}</div>
+                              </TooltipTrigger>
+                              <TooltipContent side="left" className="text-xs">
+                                {t.is_investor_account
+                                  ? "Depósitos refletem o status do ledger"
+                                  : "Status gerido pela Central de Operações"}
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
-                ))}
+                  );
+                })}
               </div>
             </div>
           ))}
