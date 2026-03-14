@@ -55,7 +55,7 @@ interface BonusResultEntry {
 export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = false, periodFilter, actionsSlot }: BonusVisaoGeralTabProps) {
   const queryClient = useQueryClient();
   const { bonuses, getSummary, getBookmakersWithActiveBonus } = useProjectBonuses({ projectId: projetoId });
-  const { formatCurrency, convertToConsolidation: convertToConsolidationTrabalho, convertToConsolidationOficial } = useProjetoCurrency(projetoId);
+  const { formatCurrency, convertToConsolidation: convertToConsolidationTrabalho, convertToConsolidationOficial, isLoading: currencyLoading, moedaConsolidacao, cotacaoOficialUSD } = useProjetoCurrency(projetoId);
   // CORREÇÃO: Usar cotação oficial para KPIs e gráficos analíticos (consistência com Visão Geral)
   const convertToConsolidation = convertToConsolidationOficial;
   const { summary: analyticsSummary, stats: analyticsStats } = useProjectBonusAnalytics(projetoId, convertToConsolidation);
@@ -254,10 +254,11 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
 
   // Totais (sempre na moeda de consolidação do projeto)
   const activeBonusTotalConsolidated = useMemo(() => {
+    if (currencyLoading) return 0; // Não calcular com cotações fallback
     return bonuses
       .filter((b) => b.status === "credited" && (b.saldo_atual || 0) > 0)
       .reduce((acc, b) => acc + convertToConsolidation(b.saldo_atual || 0, b.currency), 0);
-  }, [bonuses, convertToConsolidation]);
+  }, [bonuses, convertToConsolidation, currencyLoading, cotacaoOficialUSD]);
 
   // Fetch ajustes pós-limitação (financial_events com AJUSTE_POS_LIMITACAO)
   const { data: ajustesPostLimitacao = [] } = useQuery({
@@ -338,6 +339,10 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
   // Performance de Bônus = Total de bônus creditados + Juice das operações + Ajustes Pós-Limitação - Perdas Cancelamento
   // CRÍTICO: Converter TODOS os valores para moeda de consolidação do projeto
   const bonusPerformance = useMemo(() => {
+    // GUARD: Não calcular enquanto cotações não estão disponíveis (evita distorção por fallback)
+    if (currencyLoading) {
+      return { totalBonusCreditado: 0, totalJuice: 0, totalPerdasCancelamento: 0, total: 0, performancePercent: 0, bonusPorMoeda: [] };
+    }
     // Filtrar bônus por período (usar credited_at como data de competência)
     let eligibleBonuses = bonuses.filter(b => b.status === "credited" || b.status === "finalized");
     
@@ -426,7 +431,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
       : 0;
     
     return { totalBonusCreditado, totalJuice, totalPerdasCancelamento, total, performancePercent, bonusPorMoeda };
-  }, [bonuses, bonusBetsData, ajustesPostLimitacao, perdasCancelamento, convertToConsolidation, dateRange]);
+  }, [bonuses, bonusBetsData, ajustesPostLimitacao, perdasCancelamento, convertToConsolidation, dateRange, cotacaoOficialUSD, moedaConsolidacao, currencyLoading]);
 
   // NOTA: totalSaldoOperavel agora vem do hook useSaldoOperavel (já declarado no início)
 
