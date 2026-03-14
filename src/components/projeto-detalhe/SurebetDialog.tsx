@@ -2968,7 +2968,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
                             if (!isEditing && legPrints[index] && !legPrints[index].isProcessing) {
                               const file = e.dataTransfer.files[0];
                               if (file && file.type.startsWith('image/')) {
-                                processLegImage(index, file);
+                                processLegImage(index, file, mercado);
                               }
                             }
                           }}
