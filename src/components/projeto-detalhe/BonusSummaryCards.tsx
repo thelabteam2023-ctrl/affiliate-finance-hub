@@ -34,10 +34,11 @@ export function BonusSummaryCards({ projetoId, compact = false }: BonusSummaryCa
       .reduce((acc, b) => acc + convertToConsolidation(b.saldo_atual || 0, b.currency), 0);
   }, [bonuses, convertToConsolidation]);
 
-  // Fetch apostas com bônus para calcular juice
-  // INCLUI: apostas com bonus_id OU estratégia EXTRACAO_BONUS (mesmo sem bonus_id)
-  const { data: bonusBetsData = [], isLoading: betsLoading } = useQuery({
-    queryKey: ["bonus-bets-summary", projetoId],
+  // Fetch apostas com bônus e suas PERNAS para calcular juice corretamente
+  // CRÍTICO: Usar pernas individuais para conversão direta (EUR→USD, BRL→USD)
+  // em vez de pl_consolidado que usa pivot BRL e causa discrepância de cross-rate
+  const { data: bonusBetsWithPernas = { bets: [], pernasMap: {} }, isLoading: betsLoading } = useQuery({
+    queryKey: ["bonus-bets-pernas-summary", projetoId],
     queryFn: async () => {
       const startDate = subDays(new Date(), 365).toISOString();
       const startDateStr = startDate.split('T')[0];
@@ -45,7 +46,7 @@ export function BonusSummaryCards({ projetoId, compact = false }: BonusSummaryCa
       // Query 1: apostas vinculadas via bonus_id
       const queryBonusId = supabase
         .from("apostas_unificada")
-        .select("id, pl_consolidado, consolidation_currency, lucro_prejuizo, moeda_operacao")
+        .select("id, pl_consolidado, consolidation_currency, lucro_prejuizo, moeda_operacao, is_multicurrency")
         .eq("projeto_id", projetoId)
         .gte("data_aposta", startDateStr)
         .not("bonus_id", "is", null);
@@ -53,7 +54,7 @@ export function BonusSummaryCards({ projetoId, compact = false }: BonusSummaryCa
       // Query 2: apostas com estratégia EXTRACAO_BONUS (mesmo sem bonus_id)
       const queryEstrategia = supabase
         .from("apostas_unificada")
-        .select("id, pl_consolidado, consolidation_currency, lucro_prejuizo, moeda_operacao")
+        .select("id, pl_consolidado, consolidation_currency, lucro_prejuizo, moeda_operacao, is_multicurrency")
         .eq("projeto_id", projetoId)
         .gte("data_aposta", startDateStr)
         .eq("estrategia", "EXTRACAO_BONUS");
@@ -65,7 +66,30 @@ export function BonusSummaryCards({ projetoId, compact = false }: BonusSummaryCa
 
       // Combinar removendo duplicados por id
       const allBets = [...(resBonusId.data || []), ...(resEstrategia.data || [])];
-      return Array.from(new Map(allBets.map(b => [b.id, b])).values());
+      const uniqueBets = Array.from(new Map(allBets.map(b => [b.id, b])).values());
+      
+      // Buscar pernas para apostas multicurrency (para conversão direta sem pivot BRL)
+      const multicurrencyIds = uniqueBets
+        .filter(b => b.is_multicurrency)
+        .map(b => b.id);
+      
+      let pernasMap: Record<string, Array<{ moeda: string; lucro_prejuizo: number | null; resultado: string | null }>> = {};
+      
+      if (multicurrencyIds.length > 0) {
+        const { data: pernas } = await supabase
+          .from("apostas_pernas")
+          .select("aposta_id, moeda, lucro_prejuizo, resultado")
+          .in("aposta_id", multicurrencyIds);
+        
+        if (pernas) {
+          for (const p of pernas) {
+            if (!pernasMap[p.aposta_id]) pernasMap[p.aposta_id] = [];
+            pernasMap[p.aposta_id].push(p);
+          }
+        }
+      }
+      
+      return { bets: uniqueBets, pernasMap };
     },
     staleTime: PERIOD_STALE_TIME,
     gcTime: PERIOD_GC_TIME,
