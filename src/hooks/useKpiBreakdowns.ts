@@ -6,6 +6,7 @@ import {
   buildBookmakerMoedaMap,
   type ProjetoDashboardRawData,
   type RawAposta,
+  type RawApostaPerna,
   type RawLedgerExtra,
 } from './useProjetoDashboardData';
 import { 
@@ -86,15 +87,26 @@ function combinarBreakdownsMoeda(...breakdowns: CurrencyBreakdownItem[][]): Curr
 function deriveApostasModule(
   apostas: RawAposta[],
   moedaConsolidacao: string,
-  convert: ConvertFn
+  convert: ConvertFn,
+  pernasMap: Map<string, RawApostaPerna[]>
 ): ModuleDataWithCurrency {
   const greens = apostas.filter(a => a.resultado === 'GREEN' || a.resultado === 'MEIO_GREEN').length;
   const reds = apostas.filter(a => a.resultado === 'RED' || a.resultado === 'MEIO_RED').length;
   const voids = apostas.filter(a => a.resultado === 'VOID' || a.resultado === 'REEMBOLSO').length;
   const countDetails = `${greens}G ${reds}R ${voids}V`;
 
-  const volume = apostas.reduce((acc, a) => 
-    acc + getConsolidatedStake(a as any, convert, moedaConsolidacao), 0);
+  // Volume: para arbitragem com pernas, consolidar por perna individual
+  const volume = apostas.reduce((acc, a) => {
+    const pernas = pernasMap.get(a.id);
+    if (a.forma_registro === 'ARBITRAGEM' && pernas && pernas.length > 0) {
+      // Consolidar cada perna individualmente para evitar soma nominal de moedas diferentes
+      return acc + pernas.reduce((sum, p) => {
+        const moeda = (p.moeda || a.moeda_operacao || 'BRL').toUpperCase();
+        return sum + convert(Number(p.stake || 0), moeda);
+      }, 0);
+    }
+    return acc + getConsolidatedStake(a as any, convert, moedaConsolidacao);
+  }, 0);
 
   const lucroPorEstrategia: Record<string, number> = {};
   let lucro = 0;
@@ -105,10 +117,21 @@ function deriveApostasModule(
     lucroPorEstrategia[key] = (lucroPorEstrategia[key] || 0) + pl;
   });
 
-  const volumeItems = apostas.map(a => ({
-    valor: a.forma_registro === 'ARBITRAGEM' ? Number(a.stake_total || 0) : Number(a.stake || 0),
-    moeda: a.moeda_operacao || 'BRL'
-  }));
+  // Volume por moeda: usar pernas para arbitragem
+  const volumeItems: { valor: number; moeda: string }[] = [];
+  apostas.forEach(a => {
+    const pernas = pernasMap.get(a.id);
+    if (a.forma_registro === 'ARBITRAGEM' && pernas && pernas.length > 0) {
+      pernas.forEach(p => {
+        volumeItems.push({ valor: Number(p.stake || 0), moeda: (p.moeda || a.moeda_operacao || 'BRL').toUpperCase() });
+      });
+    } else {
+      volumeItems.push({
+        valor: Number(a.forma_registro === 'ARBITRAGEM' ? (a.stake_total || 0) : (a.stake || 0)),
+        moeda: (a.moeda_operacao || 'BRL').toUpperCase()
+      });
+    }
+  });
   const volumePorMoeda = agregarPorMoeda(volumeItems);
 
   const lucroItems = apostas.filter(a => a.status === 'LIQUIDADA').map(a => ({
@@ -434,8 +457,15 @@ function deriveBreakdowns(
   moedaConsolidacao: string,
   convert: ConvertFn
 ): ProjetoKpiBreakdowns {
+  // Build pernas map for per-leg consolidation of arbitrage bets
+  const pernasMap = new Map<string, RawApostaPerna[]>();
+  (rawData.apostas_pernas || []).forEach(p => {
+    if (!pernasMap.has(p.aposta_id)) pernasMap.set(p.aposta_id, []);
+    pernasMap.get(p.aposta_id)!.push(p);
+  });
+
   // Módulos individuais
-  const apostasData = deriveApostasModule(rawData.apostas, moedaConsolidacao, convert);
+  const apostasData = deriveApostasModule(rawData.apostas, moedaConsolidacao, convert, pernasMap);
   const girosGratisData = deriveGirosGratisModule(rawData, convert);
   const perdasData = derivePerdasModule(rawData);
   const ajustesData = deriveAjustesModule(rawData);

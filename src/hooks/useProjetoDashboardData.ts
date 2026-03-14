@@ -139,6 +139,13 @@ export interface RawAjustePosLimitacao {
   created_at: string;
 }
 
+export interface RawApostaPerna {
+  aposta_id: string;
+  stake: number;
+  moeda: string;
+  bookmaker_id: string;
+}
+
 // =====================================================
 // TIPO AGREGADO
 // =====================================================
@@ -148,6 +155,7 @@ export interface ProjetoDashboardRawData {
   cotacao_trabalho: number | null;
   fonte_cotacao: string | null;
   apostas: RawAposta[];
+  apostas_pernas: RawApostaPerna[];
   giros_gratis: RawGiro[];
   cashback: RawCashback[];
   perdas: RawPerda[];
@@ -207,6 +215,7 @@ export function useProjetoDashboardData(projetoId: string | undefined): UseProje
         cotacao_trabalho: raw.cotacao_trabalho,
         fonte_cotacao: raw.fonte_cotacao,
         apostas: raw.apostas || [],
+        apostas_pernas: raw.apostas_pernas || [],
         giros_gratis: raw.giros_gratis || [],
         cashback: raw.cashback || [],
         perdas: raw.perdas || [],
