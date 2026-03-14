@@ -98,6 +98,7 @@ type ChartMode = "resultado" | "bonus_juice";
 export function BonusResultadoLiquidoChart({
   bonuses,
   bonusBets,
+  pernasMap = {},
   ajustesPostLimitacao = [],
   formatCurrency,
   convertToConsolidation,
