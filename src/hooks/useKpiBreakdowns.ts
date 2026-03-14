@@ -6,6 +6,7 @@ import {
   buildBookmakerMoedaMap,
   type ProjetoDashboardRawData,
   type RawAposta,
+  type RawApostaPerna,
   type RawLedgerExtra,
 } from './useProjetoDashboardData';
 import { 
