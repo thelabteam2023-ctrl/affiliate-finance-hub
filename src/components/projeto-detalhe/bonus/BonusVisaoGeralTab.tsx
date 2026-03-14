@@ -380,18 +380,18 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
       const isBonusBet = bet.bonus_id || bet.estrategia === "EXTRACAO_BONUS";
       if (!isBonusBet) return acc;
       
-      // CRÍTICO: Só usar pl_consolidado se consolidation_currency bate com a moeda do projeto
-      // Caso contrário, o valor está em outra moeda e seria interpretado incorretamente
-      if (
-        bet.pl_consolidado != null &&
-        (bet as any).consolidation_currency &&
-        (bet as any).consolidation_currency === moedaConsolidacaoProjeto
-      ) {
-        return acc + bet.pl_consolidado;
-      }
-      
-      const moedaOperacao = bet.moeda_operacao || "BRL";
-      return acc + convertToConsolidation(bet.lucro_prejuizo ?? 0, moedaOperacao);
+      // CRÍTICO: Usar getConsolidatedLucro para respeitar pl_consolidado (todas as pernas)
+      // mesmo quando consolidation_currency difere da moeda do projeto (conversão secundária)
+      return acc + getConsolidatedLucro(
+        {
+          lucro_prejuizo: bet.lucro_prejuizo,
+          moeda_operacao: bet.moeda_operacao,
+          pl_consolidado: bet.pl_consolidado,
+          consolidation_currency: (bet as any).consolidation_currency,
+        },
+        convertToConsolidation,
+        moedaConsolidacaoProjeto,
+      );
     }, 0);
 
     // Somar ajustes pós-limitação ao juice - FILTRAR POR PERÍODO
