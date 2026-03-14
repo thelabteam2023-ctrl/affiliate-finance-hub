@@ -125,15 +125,18 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
     setSearchTerm("");
   }, []);
 
+  // Saldo Atual = patrimônio total nas casas (saldo_real + freebet), SEM descontar apostas em aberto
+  const saldoAtualTotal = saldoReal + saldoFreebet;
+
   const conversaoVisual = useMemo(() => {
     if (moedaConsolidacao === "USD") {
-      const valorBRL = saldoOperavel * cotacaoUSD;
+      const valorBRL = saldoAtualTotal * cotacaoUSD;
       return { valor: valorBRL, moeda: "BRL", symbol: "R$", label: "≈ R$" };
     } else {
-      const valorUSD = saldoOperavel / cotacaoUSD;
+      const valorUSD = saldoAtualTotal / cotacaoUSD;
       return { valor: valorUSD, moeda: "USD", symbol: "$", label: "≈ $" };
     }
-  }, [saldoOperavel, moedaConsolidacao, cotacaoUSD]);
+  }, [saldoAtualTotal, moedaConsolidacao, cotacaoUSD]);
 
   const handleRetry = async () => {
     setIsRetrying(true);
@@ -205,7 +208,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
       <div className="flex items-center justify-center gap-2">
         <Wallet className="h-4 w-4 text-primary" />
         <span className="text-sm font-medium font-bold text-primary">
-          {formatCurrency(saldoOperavel)}
+          {formatCurrency(saldoAtualTotal)}
         </span>
         {hasCasas && (
           <ChevronDown className="h-3 w-3 text-muted-foreground transition-transform group-hover:text-primary" />
@@ -222,7 +225,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
     >
       <div className="flex items-center justify-center gap-2">
         <span className="text-lg md:text-2xl font-bold text-primary">
-          {formatCurrency(saldoOperavel)}
+          {formatCurrency(saldoAtualTotal)}
         </span>
         {casasComRollover > 0 && (
           <TooltipProvider>
@@ -240,7 +243,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
           <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform group-hover:text-primary" />
         )}
       </div>
-      {saldoOperavel > 0 && (
+      {saldoAtualTotal > 0 && (
         <span className="text-xs text-muted-foreground">
           {conversaoVisual.label} {conversaoVisual.valor.toLocaleString("pt-BR", { 
             minimumFractionDigits: 2, 
