@@ -595,7 +595,7 @@ export function useSurebetPrintImport(): UseSurebetPrintImportReturn {
         });
 
         // Try to infer lines for other legs
-        tryInferOtherLegs(legIndex, rawData, sharedContext.mercado);
+        tryInferOtherLegs(legIndex, rawData, sharedContext.mercado, formMercado);
 
         toast.success(`Perna ${legIndex + 1}: Print analisado com sucesso!`);
       } else {
