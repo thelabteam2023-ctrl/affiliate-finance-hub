@@ -41,6 +41,7 @@ interface BonusBetData {
   data_aposta: string;
   lucro_prejuizo: number | null;
   pl_consolidado: number | null;
+  consolidation_currency?: string | null;
   moeda_operacao?: string | null;
   bonus_id: string | null;
   stake_bonus?: number | null;
