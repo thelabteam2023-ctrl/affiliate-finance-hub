@@ -37,6 +37,9 @@ interface ConciliacaoVinculoDialogProps {
     saldo_atual: number;
     moeda: string;
     bookmaker_status: string;
+    investidor_id?: string | null;
+    instance_identifier?: string | null;
+    investidor_nome?: string | null;
   } | null;
   projetoId: string;
   projetoNome?: string;
