@@ -390,12 +390,22 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
     const bonusPorMoeda = Object.entries(bonusPorMoedaMap).map(([moeda, valor]) => ({ moeda, valor }));
     
     const moedaConsolidacaoProjeto = analyticsSummary.moeda_consolidacao || "USD";
-    const juiceBets = bonusBetsData.reduce((acc, bet) => {
+    const { bets: bonusBetsFlat, pernasMap } = bonusBetsWithPernas;
+    
+    const juiceBets = bonusBetsFlat.reduce((acc, bet) => {
       const isBonusBet = bet.bonus_id || bet.estrategia === "EXTRACAO_BONUS";
       if (!isBonusBet) return acc;
       
-      // CRÍTICO: Usar getConsolidatedLucro para respeitar pl_consolidado (todas as pernas)
-      // mesmo quando consolidation_currency difere da moeda do projeto (conversão secundária)
+      // MULTICURRENCY: Converter cada perna individualmente para evitar cross-rate via BRL pivot
+      const pernas = pernasMap[bet.id];
+      if (bet.is_multicurrency && pernas && pernas.length > 0) {
+        return acc + pernas.reduce((pAcc, p) => {
+          if (!p.resultado || p.resultado === 'PENDENTE') return pAcc;
+          return pAcc + convertToConsolidation(p.lucro_prejuizo ?? 0, p.moeda || 'BRL');
+        }, 0);
+      }
+      
+      // MONOCURRENCY: usar getConsolidatedLucro
       return acc + getConsolidatedLucro(
         {
           lucro_prejuizo: bet.lucro_prejuizo,
