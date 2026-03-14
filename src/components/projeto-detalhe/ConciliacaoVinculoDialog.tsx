@@ -377,7 +377,7 @@ export function ConciliacaoVinculoDialog({
             <ShieldCheck className={`h-4 w-4 mt-0.5 shrink-0 ${isInvestidor ? "text-blue-400" : "text-primary"}`} />
             <p className="text-xs text-muted-foreground">
               {isInvestidor
-                ? "Conta de investidor. O saque será rastreado em Saques Broker, sem impacto no caixa operacional."
+                ? "Conta de investidor. O saque será rastreado no Extrato Broker, sem impacto no caixa operacional."
                 : "A conciliação garante consistência financeira antes de liberar a bookmaker."}
             </p>
           </div>
