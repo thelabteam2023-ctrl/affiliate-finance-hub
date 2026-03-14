@@ -97,6 +97,7 @@ async function fetchApostasCalendarioFn(projetoId: string): Promise<ApostaUnific
     bonus_id: null,
     moeda_operacao: item.moeda_operacao,
     stake_consolidado: item.stake_consolidado,
+    consolidation_currency: item.consolidation_currency,
     valor_brl_referencia: item.valor_brl_referencia,
     lucro_prejuizo_brl_referencia: item.lucro_prejuizo_brl_referencia,
     pernas: undefined,
