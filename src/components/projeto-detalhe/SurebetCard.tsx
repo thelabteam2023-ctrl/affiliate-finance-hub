@@ -543,9 +543,9 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
   // Usar lucro_esperado do banco ou calcular a partir das pernas
   const piorCenarioCalculado = !isLiquidada ? calcularPiorCenario() : null;
   
-  const lucroConsolidadoEfetivo = typeof surebet.pl_consolidado === "number"
-    ? surebet.pl_consolidado
-    : lucroConsolidadoFallback;
+  const lucroConsolidadoEfetivo = isMulticurrency
+    ? (typeof lucroConsolidadoFallback === "number" ? lucroConsolidadoFallback : surebet.pl_consolidado)
+    : (typeof surebet.pl_consolidado === "number" ? surebet.pl_consolidado : lucroConsolidadoFallback);
 
   // Para lucro exibido: priorizar consolidado para multicurrency
   const lucroExibir = isLiquidada 

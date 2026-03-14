@@ -419,6 +419,7 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
           data_aposta: a.data_aposta,
           lucro_prejuizo: a.lucro_prejuizo,
           pl_consolidado: a.pl_consolidado,
+          consolidation_currency: a.consolidation_currency,
           moeda_operacao: a.moeda_operacao,
           lucro_prejuizo_brl_referencia: a.lucro_prejuizo_brl_referencia,
           valor_brl_referencia: a.valor_brl_referencia,
