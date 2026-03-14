@@ -941,7 +941,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
   const handlePrintFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>, legIndex: number) => {
     const file = event.target.files?.[0];
     if (file) {
-      processLegImage(legIndex, file);
+      processLegImage(legIndex, file, mercado);
     }
     // Reset input
     if (event.target) {
@@ -2968,7 +2968,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
                             if (!isEditing && legPrints[index] && !legPrints[index].isProcessing) {
                               const file = e.dataTransfer.files[0];
                               if (file && file.type.startsWith('image/')) {
-                                processLegImage(index, file);
+                                processLegImage(index, file, mercado);
                               }
                             }
                           }}
@@ -2983,7 +2983,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
                                 e.preventDefault();
                                 const file = items[i].getAsFile();
                                 if (file) {
-                                  processLegImage(index, file);
+                                  processLegImage(index, file, mercado);
                                 }
                                 return;
                               }

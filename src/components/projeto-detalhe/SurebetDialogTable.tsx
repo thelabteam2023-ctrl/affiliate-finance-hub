@@ -416,7 +416,7 @@ export function SurebetDialogTable({
           const file = item.getAsFile();
           if (file) {
             e.preventDefault();
-            await processLegImage(focusedLeg, file);
+            await processLegImage(focusedLeg, file, mercado);
             break;
           }
         }
@@ -442,7 +442,7 @@ export function SurebetDialogTable({
       return;
     }
     
-    await processLegImage(selectedLegForPrint, file);
+    await processLegImage(selectedLegForPrint, file, mercado);
     
     if (fileInputRef.current) {
       fileInputRef.current.value = '';

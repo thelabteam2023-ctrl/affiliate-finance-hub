@@ -18,7 +18,7 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 // ========================================================================
 
 // MATCH_ODDS / 1X2 (3-way, football only)
-const MATCH_ODDS_MARKET_PATTERN = /(?:1\s*[x×X]\s*2|[1Il]\s*[xX×]\s*2|match\s*odds?|resultado\s*(?:da\s*)?(?:partida|final)|final\s*(?:da|de)\s*partida|full\s*time\s*result|ft\s*result|tres\s*vias|três\s*vias|three\s*way|moneyline\s*soccer)/i;
+const MATCH_ODDS_MARKET_PATTERN = /(?:1\s*[x×X]\s*2|[1Il]\s*[xX×]\s*2|match\s*odds?|\bresultado\b|resultado\s*(?:da\s*)?(?:partida|final)|final\s*(?:da|de)\s*partida|full\s*time\s*result|ft\s*result|tres\s*vias|três\s*vias|three\s*way|moneyline\s*soccer)/i;
 
 // MONEYLINE / MATCH_WINNER (2-way, no draw — basketball, tennis, MMA, etc.)
 const MONEYLINE_MARKET_PATTERN = /(?:moneyline|money\s*line|\bml\b|vencedor(?!\s*(?:da\s*)?(?:partida|match))|winner|match\s*winner|main\s*line)/i;
@@ -196,7 +196,44 @@ function inferDnbOpposite(
  * Detects the market family from the mercado text.
  * Priority order matters — more specific patterns first.
  */
+// Direct mapping of UI dropdown values to market families
+const UI_MERCADO_MAP: Record<string, "MATCH_ODDS" | "MONEYLINE" | "TOTALS" | "TEAM_TOTALS" | "PLAYER_TOTALS" | "YES_NO" | "HANDICAP" | "DNB" | "RACE_TO" | "BINARY"> = {
+  "1x2": "MATCH_ODDS",
+  "resultado final": "MATCH_ODDS",
+  "resultado do 1º tempo": "MATCH_ODDS",
+  "dupla chance": "MATCH_ODDS",
+  "moneyline": "MONEYLINE",
+  "vencedor da partida": "MONEYLINE",
+  "vencedor do set": "MONEYLINE",
+  "vencedor do 1º set": "MONEYLINE",
+  "over/under gols": "TOTALS",
+  "over/under pontos": "TOTALS",
+  "over/under games": "TOTALS",
+  "over/under escanteios": "TOTALS",
+  "over/under 1º tempo": "TOTALS",
+  "total de runs": "TOTALS",
+  "total de sets": "TOTALS",
+  "total por equipe": "TEAM_TOTALS",
+  "props de jogadores": "PLAYER_TOTALS",
+  "handicap asiático": "HANDICAP",
+  "handicap de gols": "HANDICAP",
+  "handicap de games": "HANDICAP",
+  "handicap de sets": "HANDICAP",
+  "handicap / spread": "HANDICAP",
+  "handicap 1º tempo": "HANDICAP",
+  "run line": "HANDICAP",
+  "draw no bet": "DNB",
+  "ambas marcam": "YES_NO",
+  "resultado tempo regulamentar": "MATCH_ODDS",
+  "resultado 1º tempo": "MATCH_ODDS",
+  "resultado por quarto": "MATCH_ODDS",
+};
+
 function detectMarketFamily(mercado: string): "MATCH_ODDS" | "MONEYLINE" | "TOTALS" | "TEAM_TOTALS" | "PLAYER_TOTALS" | "YES_NO" | "HANDICAP" | "DNB" | "RACE_TO" | "BINARY" | null {
+  // ★ Direct UI dropdown value lookup (exact match, case-insensitive)
+  const directMatch = UI_MERCADO_MAP[mercado.toLowerCase().trim()];
+  if (directMatch) return directMatch;
+
   // ★ REGRA DE OURO: Contexto temporal tem PRIORIDADE MÁXIMA
   // Quarter > Half > Set > Inning > Match
   // Se detectar período, classificar pelo sub-tipo do período, NUNCA como MATCH
@@ -244,7 +281,7 @@ export interface UseSurebetPrintImportReturn {
     evento: string | null;
     mercado: string | null;
   };
-  processLegImage: (legIndex: number, file: File) => Promise<void>;
+  processLegImage: (legIndex: number, file: File, formMercado?: string | null) => Promise<void>;
   processLegFromClipboard: (legIndex: number, event: ClipboardEvent) => Promise<void>;
   clearLegPrint: (legIndex: number) => void;
   clearAllPrints: () => void;
@@ -344,8 +381,8 @@ export function useSurebetPrintImport(): UseSurebetPrintImportReturn {
   }, []);
 
   // Try to infer line for other legs when one leg is processed
-  const tryInferOtherLegs = useCallback((processedLegIndex: number, parsedData: ParsedBetSlip, currentMercado: string | null) => {
-    const mercado = currentMercado || parsedData.mercado?.value;
+  const tryInferOtherLegs = useCallback((processedLegIndex: number, parsedData: ParsedBetSlip, currentMercado: string | null, formMercado?: string | null) => {
+    const mercado = currentMercado || parsedData.mercado?.value || formMercado;
     if (!mercado) return;
 
     const sourceLine = parsedData.selecao?.value;
@@ -464,7 +501,7 @@ export function useSurebetPrintImport(): UseSurebetPrintImportReturn {
     }
   }, [canInferLine, getInferredLine]);
 
-  const processLegImage = useCallback(async (legIndex: number, file: File) => {
+  const processLegImage = useCallback(async (legIndex: number, file: File, formMercado?: string | null) => {
     // Validate file type
     if (!file.type.startsWith("image/")) {
       toast.error("Por favor, selecione uma imagem válida.");
@@ -595,7 +632,7 @@ export function useSurebetPrintImport(): UseSurebetPrintImportReturn {
         });
 
         // Try to infer lines for other legs
-        tryInferOtherLegs(legIndex, rawData, sharedContext.mercado);
+        tryInferOtherLegs(legIndex, rawData, sharedContext.mercado, formMercado);
 
         toast.success(`Perna ${legIndex + 1}: Print analisado com sucesso!`);
       } else {
