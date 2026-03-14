@@ -464,7 +464,7 @@ export function useSurebetPrintImport(): UseSurebetPrintImportReturn {
     }
   }, [canInferLine, getInferredLine]);
 
-  const processLegImage = useCallback(async (legIndex: number, file: File) => {
+  const processLegImage = useCallback(async (legIndex: number, file: File, formMercado?: string | null) => {
     // Validate file type
     if (!file.type.startsWith("image/")) {
       toast.error("Por favor, selecione uma imagem válida.");
