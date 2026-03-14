@@ -189,19 +189,37 @@ export async function calcularMetricasPeriodo({
   const apostasNaoArbitragem = apostas.filter(a => a.forma_registro !== "ARBITRAGEM").length;
 
   let pernasCount = 0;
+  let pernasData: Array<{ aposta_id: string; stake: number; moeda: string }> = [];
   if (arbitragemIds.length > 0) {
-    const { count } = await supabase
+    const { data: fetchedPernas, count } = await supabase
       .from("apostas_pernas")
-      .select("*", { count: "exact", head: true })
+      .select("aposta_id, stake, moeda", { count: "exact" })
       .in("aposta_id", arbitragemIds);
     pernasCount = count || 0;
+    pernasData = fetchedPernas || [];
   }
   const qtdApostas = apostasNaoArbitragem + pernasCount;
 
+  // Build pernas map for per-leg volume consolidation
+  const pernasMap = new Map<string, Array<{ stake: number; moeda: string }>>();
+  pernasData.forEach(p => {
+    if (!pernasMap.has(p.aposta_id)) pernasMap.set(p.aposta_id, []);
+    pernasMap.get(p.aposta_id)!.push({ stake: p.stake, moeda: p.moeda });
+  });
+
   // ═══════════════════════════════════════════════════════════════════
-  // VOLUME (mesma lógica: stake_consolidado ou fallback com conversão)
+  // VOLUME (consolidação por perna para arbitragem multi-moeda)
   // ═══════════════════════════════════════════════════════════════════
   const volume = apostas.reduce((acc, a: any) => {
+    // Para arbitragem com pernas, consolidar cada perna individualmente
+    const pernas = pernasMap.get(a.id);
+    if (a.forma_registro === "ARBITRAGEM" && pernas && pernas.length > 0) {
+      return acc + pernas.reduce((sum, p) => {
+        const moeda = (p.moeda || a.moeda_operacao || 'BRL').toUpperCase();
+        return sum + convert(Number(p.stake || 0), moeda);
+      }, 0);
+    }
+
     if (a.stake_consolidado != null && a.consolidation_currency === moedaConsolidacao) {
       return acc + Number(a.stake_consolidado);
     }
