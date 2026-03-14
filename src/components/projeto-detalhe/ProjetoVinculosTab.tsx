@@ -23,6 +23,7 @@ import { CaixaTransacaoDialog } from "@/components/caixa/CaixaTransacaoDialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { HistoricoVinculosTab } from "./HistoricoVinculosTab";
 import { HistoricoConciliacoesTab } from "./HistoricoConciliacoesTab";
+import { SaquesBrokerTab } from "./SaquesBrokerTab";
 
 import { ContasNoProjetoCard } from "./ContasNoProjetoCard";
 import { SaldoOperavelCard } from "./SaldoOperavelCard";
@@ -96,6 +97,7 @@ import {
   ArrowDownAZ,
   Clock,
   Users,
+  ArrowUpFromLine,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Toggle } from "@/components/ui/toggle";
@@ -489,6 +491,12 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
             <ArrowRightLeft className="h-4 w-4" />
             Ajustes
           </TabsTrigger>
+          {isBroker && (
+            <TabsTrigger value="saques-broker" className="flex items-center gap-2">
+              <ArrowUpFromLine className="h-4 w-4" />
+              Saques Broker
+            </TabsTrigger>
+          )}
         </TabsList>
       </div>
 
@@ -1556,6 +1564,12 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
       <TabsContent value="conciliacoes">
         <HistoricoConciliacoesTab projetoId={projetoId} />
       </TabsContent>
+
+      {isBroker && (
+        <TabsContent value="saques-broker">
+          <SaquesBrokerTab projetoId={projetoId} />
+        </TabsContent>
+      )}
 
       <ConciliacaoVinculoDialog
         open={conciliacaoDialogOpen}
