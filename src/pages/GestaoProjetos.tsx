@@ -397,6 +397,7 @@ export default function GestaoProjetos() {
           display_order: proj.display_order || 0,
           tipo_projeto: proj.tipo_projeto || 'INTERNO',
           investidor_id: proj.investidor_id || null,
+          is_broker: proj.is_broker === true,
           moeda_consolidacao: moedaConsolidacao,
         };
       });
