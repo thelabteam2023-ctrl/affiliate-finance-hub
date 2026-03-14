@@ -22,6 +22,7 @@ import { ptBR } from "date-fns/locale";
 import { CalendarioLucros } from "./CalendarioLucros";
 import { getFirstLastName } from "@/lib/utils";
 import { parseLocalDateTime, extractLocalDateKey } from "@/utils/dateUtils";
+import { getConsolidatedLucro, getConsolidatedStake } from "@/utils/consolidatedValues";
 
 // =====================================================
 // TIPOS
