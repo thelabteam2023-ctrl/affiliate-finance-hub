@@ -334,8 +334,14 @@ export function BonusResultadoLiquidoChart({
       }
       const date = extractLocalDateKey(bet.data_aposta);
       let pl: number;
-      // CRÍTICO: Só usar pl_consolidado se consolidation_currency bate com moeda do projeto
-      if (bet.pl_consolidado != null && bet.consolidation_currency && moedaConsolidacao && bet.consolidation_currency === moedaConsolidacao) {
+      // MULTICURRENCY: Converter cada perna individualmente para evitar cross-rate via BRL pivot
+      const pernas = pernasMap[bet.id];
+      if (bet.is_multicurrency && pernas && pernas.length > 0 && convertToConsolidation) {
+        pl = pernas.reduce((pAcc, p) => {
+          if (!p.resultado || p.resultado === 'PENDENTE') return pAcc;
+          return pAcc + convertToConsolidation(p.lucro_prejuizo ?? 0, p.moeda || 'BRL');
+        }, 0);
+      } else if (bet.pl_consolidado != null && bet.consolidation_currency && moedaConsolidacao && bet.consolidation_currency === moedaConsolidacao) {
         pl = bet.pl_consolidado;
       } else if (convertToConsolidation) {
         pl = convertToConsolidation(bet.lucro_prejuizo ?? 0, bet.moeda_operacao || "BRL");
