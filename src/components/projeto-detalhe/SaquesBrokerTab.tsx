@@ -466,6 +466,8 @@ export function SaquesBrokerTab({ projetoId }: SaquesBrokerTabProps) {
             <SelectItem value="CONFIRMADO">Confirmado</SelectItem>
             <SelectItem value="PENDENTE">Pendente</SelectItem>
             <SelectItem value="EM_TRANSITO">Em Trânsito</SelectItem>
+            <SelectItem value="AGUARDANDO_DEVOLUCAO">Aguard. Devolução</SelectItem>
+            <SelectItem value="DEVOLVIDO">Devolvido</SelectItem>
           </SelectContent>
         </Select>
 
