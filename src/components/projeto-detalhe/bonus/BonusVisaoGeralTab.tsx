@@ -426,7 +426,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
       : 0;
     
     return { totalBonusCreditado, totalJuice, totalPerdasCancelamento, total, performancePercent, bonusPorMoeda };
-  }, [bonuses, bonusBetsData, ajustesPostLimitacao, perdasCancelamento, convertToConsolidation, dateRange]);
+  }, [bonuses, bonusBetsData, ajustesPostLimitacao, perdasCancelamento, convertToConsolidation, dateRange, cotacaoOficialUSD, moedaConsolidacao]);
 
   // NOTA: totalSaldoOperavel agora vem do hook useSaldoOperavel (já declarado no início)
 
