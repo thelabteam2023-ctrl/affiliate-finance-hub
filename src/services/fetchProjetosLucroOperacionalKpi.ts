@@ -177,13 +177,31 @@ export async function fetchProjetosLucroOperacionalKpi({
     () => {
       let q = supabase
         .from("apostas_unificada")
-        .select("projeto_id, lucro_prejuizo, pl_consolidado, lucro_prejuizo_brl_referencia, moeda_operacao, consolidation_currency, status")
+        .select("id, projeto_id, lucro_prejuizo, pl_consolidado, lucro_prejuizo_brl_referencia, moeda_operacao, consolidation_currency, status, is_multicurrency")
         .in("projeto_id", projetoIds)
         .eq("status", "LIQUIDADA");
       q = applyDateFilter(q, dateFilters, "data_aposta");
       return q;
     }
   );
+
+  // Fetch pernas para apostas multicurrency (conversão direta sem pivot BRL)
+  const multicurrencyIds = apostasData.filter((a: any) => a.is_multicurrency).map((a: any) => a.id);
+  const pernasMap: Record<string, Array<{ moeda: string; lucro_prejuizo: number | null; resultado: string | null }>> = {};
+  
+  if (multicurrencyIds.length > 0) {
+    const { data: pernas } = await supabase
+      .from("apostas_pernas")
+      .select("aposta_id, moeda, lucro_prejuizo, resultado")
+      .in("aposta_id", multicurrencyIds);
+    
+    if (pernas) {
+      for (const p of pernas) {
+        if (!pernasMap[p.aposta_id]) pernasMap[p.aposta_id] = [];
+        pernasMap[p.aposta_id].push(p);
+      }
+    }
+  }
 
   // Demais queries: volume menor, busca direta
   const [
