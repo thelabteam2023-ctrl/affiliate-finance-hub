@@ -151,9 +151,21 @@ export function BonusSummaryCards({ projetoId, compact = false }: BonusSummaryCa
     const bonusPorMoeda = Object.entries(bonusPorMoedaMap).map(([moeda, valor]) => ({ moeda, valor }));
     
     const moedaConsolidacaoProjeto = analyticsSummary.moeda_consolidacao || "USD";
-    const juiceBets = bonusBetsData.reduce((acc, bet) => {
-      // CRÍTICO: Usar getConsolidatedLucro para respeitar pl_consolidado (todas as pernas)
-      // mesmo quando consolidation_currency difere da moeda do projeto (conversão secundária)
+    const { bets, pernasMap } = bonusBetsWithPernas;
+    
+    const juiceBets = bets.reduce((acc, bet) => {
+      // MULTICURRENCY: Converter cada perna individualmente para evitar cross-rate via BRL pivot
+      // Isso garante paridade com o SurebetCard que faz EUR→USD direto
+      const pernas = pernasMap[bet.id];
+      if (bet.is_multicurrency && pernas && pernas.length > 0) {
+        return acc + pernas.reduce((pAcc, p) => {
+          if (!p.resultado || p.resultado === 'PENDENTE') return pAcc;
+          const moeda = p.moeda || 'BRL';
+          return pAcc + convertToConsolidation(p.lucro_prejuizo ?? 0, moeda);
+        }, 0);
+      }
+      
+      // MONOCURRENCY: usar getConsolidatedLucro normalmente
       return acc + getConsolidatedLucro(
         {
           lucro_prejuizo: bet.lucro_prejuizo,
@@ -179,7 +191,7 @@ export function BonusSummaryCards({ projetoId, compact = false }: BonusSummaryCa
       : 0;
     
     return { totalBonusCreditado, totalJuice, total, performancePercent, bonusPorMoeda };
-  }, [bonuses, bonusBetsData, ajustesPostLimitacao, convertToConsolidation]);
+  }, [bonuses, bonusBetsWithPernas, ajustesPostLimitacao, convertToConsolidation, analyticsSummary.moeda_consolidacao]);
 
   const isLoading = bonusesLoading || betsLoading || ajustesLoading;
 
