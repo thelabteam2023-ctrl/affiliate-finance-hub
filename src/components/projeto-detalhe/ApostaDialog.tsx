@@ -2550,32 +2550,49 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         // 1. Dois usuários apostando simultaneamente na mesma casa
         // 2. Saldo negativo resultante
         // 3. Bookmaker desvinculada durante preenchimento
-        const bookmakerParaValidar = tipoAposta === "bookmaker" 
-          ? bookmakerId 
-          : tipoOperacaoExchange === "cobertura" 
-            ? coberturaBackBookmakerId 
-            : exchangeBookmakerId;
-        
-        const stakeParaValidar = tipoAposta === "bookmaker"
-          ? parseFloat(stake)
-          : tipoOperacaoExchange === "cobertura"
-            ? parseFloat(coberturaBackStake)
-            : parseFloat(exchangeStake);
-        
         // Só validar se não for freebet (freebet não debita saldo real)
         const isFreebet = (tipoAposta === "bookmaker" && usarFreebetBookmaker) ||
                           (tipoAposta === "exchange" && tipoOperacaoExchange === "back" && tipoApostaExchangeBack !== "normal") ||
                           (tipoAposta === "exchange" && tipoOperacaoExchange === "cobertura" && tipoApostaBack !== "normal");
         
-        if (bookmakerParaValidar && stakeParaValidar > 0 && !isFreebet && statusResultado === "PENDENTE") {
-          const validation = await validateAndReserve(projetoId, [
-            { bookmaker_id: bookmakerParaValidar, stake: stakeParaValidar }
-          ]);
+        if (statusResultado === "PENDENTE" && !isFreebet) {
+          // Construir lista de TODAS as bookmakers a validar (primária + entradas adicionais)
+          const stakesToValidate: Array<{ bookmaker_id: string; stake: number }> = [];
           
-          if (!validation.valid) {
-            showValidationErrors(validation.errors);
-            setLoading(false);
-            return; // Abortar sem inserir
+          if (tipoAposta === "bookmaker") {
+            // Entrada primária
+            const primaryStake = parseFloat(stake);
+            if (bookmakerId && primaryStake > 0 && !usarFreebetBookmaker) {
+              stakesToValidate.push({ bookmaker_id: bookmakerId, stake: primaryStake });
+            }
+            // Entradas adicionais (multi-entry)
+            for (const entry of additionalEntries) {
+              const entryStake = parseFloat(entry.stake) || 0;
+              if (entry.bookmaker_id && entryStake > 0 && !entry.usar_freebet) {
+                stakesToValidate.push({ bookmaker_id: entry.bookmaker_id, stake: entryStake });
+              }
+            }
+          } else {
+            // Exchange
+            const bookmakerParaValidar = tipoOperacaoExchange === "cobertura" 
+              ? coberturaBackBookmakerId 
+              : exchangeBookmakerId;
+            const stakeParaValidar = tipoOperacaoExchange === "cobertura"
+              ? parseFloat(coberturaBackStake)
+              : parseFloat(exchangeStake);
+            if (bookmakerParaValidar && stakeParaValidar > 0) {
+              stakesToValidate.push({ bookmaker_id: bookmakerParaValidar, stake: stakeParaValidar });
+            }
+          }
+          
+          if (stakesToValidate.length > 0) {
+            const validation = await validateAndReserve(projetoId, stakesToValidate);
+            
+            if (!validation.valid) {
+              showValidationErrors(validation.errors);
+              setLoading(false);
+              return; // Abortar sem inserir
+            }
           }
         }
         // ========== FIM VALIDAÇÃO PRÉ-COMMIT ==========
