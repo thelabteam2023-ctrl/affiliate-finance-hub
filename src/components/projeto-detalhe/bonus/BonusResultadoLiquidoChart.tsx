@@ -323,7 +323,8 @@ export function BonusResultadoLiquidoChart({
       }
       const date = extractLocalDateKey(bet.data_aposta);
       let pl: number;
-      if (bet.pl_consolidado != null) {
+      // CRÍTICO: Só usar pl_consolidado se consolidation_currency bate com moeda do projeto
+      if (bet.pl_consolidado != null && bet.consolidation_currency && moedaConsolidacao && bet.consolidation_currency === moedaConsolidacao) {
         pl = bet.pl_consolidado;
       } else if (convertToConsolidation) {
         pl = convertToConsolidation(bet.lucro_prejuizo ?? 0, bet.moeda_operacao || "BRL");
