@@ -562,8 +562,9 @@ export function VisaoGeralCharts({
   const calendarData = apostasCalendario ?? apostas;
 
   // Helper de consolidação multi-moeda — usado em periodTotal, evolução e calendário
+  // MULTICURRENCY: usa pernas inline para conversão direta (evita cross-rate via BRL pivot)
   const consolidateLucro = (a: ApostaBase): number => {
-    return getConsolidatedLucro(a, convertToConsolidation, moedaConsolidacao);
+    return getConsolidatedLucroDirect(a, a.pernas, convertToConsolidation, moedaConsolidacao);
   };
 
   // Fallback para formatChartAxis se não fornecido - usa versão compacta do formatCurrency
