@@ -457,7 +457,7 @@ export function SaquesBrokerTab({ projetoId }: SaquesBrokerTabProps) {
         </div>
 
         <Select value={filterType} onValueChange={setFilterType}>
-          <SelectTrigger className="h-8 w-[130px] text-xs">
+           <SelectTrigger className="h-8 w-auto min-w-[140px] text-xs">
             <SelectValue placeholder="Tipo" />
           </SelectTrigger>
           <SelectContent>
@@ -468,7 +468,7 @@ export function SaquesBrokerTab({ projetoId }: SaquesBrokerTabProps) {
         </Select>
 
         <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="h-8 w-[130px] text-xs">
+           <SelectTrigger className="h-8 w-auto min-w-[140px] text-xs">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
@@ -482,7 +482,7 @@ export function SaquesBrokerTab({ projetoId }: SaquesBrokerTabProps) {
         </Select>
 
         <Select value={filterOrigem} onValueChange={setFilterOrigem}>
-          <SelectTrigger className="h-8 w-[130px] text-xs">
+           <SelectTrigger className="h-8 w-auto min-w-[140px] text-xs">
             <SelectValue placeholder="Origem" />
           </SelectTrigger>
           <SelectContent>
