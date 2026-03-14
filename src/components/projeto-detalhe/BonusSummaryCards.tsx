@@ -44,7 +44,7 @@ export function BonusSummaryCards({ projetoId, compact = false }: BonusSummaryCa
       // Query 1: apostas vinculadas via bonus_id
       const queryBonusId = supabase
         .from("apostas_unificada")
-        .select("id, pl_consolidado, lucro_prejuizo, moeda_operacao")
+        .select("id, pl_consolidado, consolidation_currency, lucro_prejuizo, moeda_operacao")
         .eq("projeto_id", projetoId)
         .gte("data_aposta", startDateStr)
         .not("bonus_id", "is", null);

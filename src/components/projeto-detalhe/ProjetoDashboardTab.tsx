@@ -307,7 +307,8 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
       const moedaOp = aposta.moeda_operacao || 'BRL';
       const rawLucro = aposta.lucro_prejuizo || 0;
       let lucroConsolidado = rawLucro;
-      if (aposta.pl_consolidado != null) {
+      // CRÍTICO: Só usar pl_consolidado se consolidation_currency bate com moeda do projeto
+      if (aposta.pl_consolidado != null && aposta.consolidation_currency === moedaConsolidacao) {
         lucroConsolidado = aposta.pl_consolidado;
       } else if (moedaOp !== moedaConsolidacao) {
         lucroConsolidado = convertToConsolidationOficial(rawLucro, moedaOp);
