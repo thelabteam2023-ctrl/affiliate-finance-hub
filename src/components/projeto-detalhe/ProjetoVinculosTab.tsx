@@ -1461,7 +1461,7 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
                           )}
                         </div>
                         <p className="text-sm text-muted-foreground">
-                          {item.parceiro_nome || "Sem parceiro"}
+                          {item.parceiro_nome || (item.investidor_nome && item.instance_identifier ? item.instance_identifier : "Sem parceiro")}
                         </p>
                       </div>
                       <span className={`text-sm font-medium ${hasSaldo ? "text-green-500" : "text-muted-foreground"}`}>
