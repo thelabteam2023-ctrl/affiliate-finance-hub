@@ -447,8 +447,8 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
     ? (v: number) => formatPernaValue(v, moedaPernas)
     : formatValue;
   
-  // Para multicurrency, priorizar valor consolidado do banco.
-  // Fallback robusto: consolidar em runtime a partir das pernas.
+  // Para multicurrency, priorizar consolidação runtime (source-of-truth por perna).
+  // Só cai em stake_consolidado se não houver fallback disponível.
   const stakeConsolidadoFallback = (() => {
     if (!isMulticurrency || !surebet.pernas || surebet.pernas.length === 0 || !convertToConsolidation) {
       return null;
@@ -463,8 +463,8 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
 
   const stakeRealTotal = (() => {
     if (isMulticurrency) {
-      if (typeof surebet.stake_consolidado === "number") return surebet.stake_consolidado;
       if (typeof stakeConsolidadoFallback === "number") return stakeConsolidadoFallback;
+      if (typeof surebet.stake_consolidado === "number") return surebet.stake_consolidado;
       return surebet.stake_total;
     }
 
@@ -543,9 +543,9 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
   // Usar lucro_esperado do banco ou calcular a partir das pernas
   const piorCenarioCalculado = !isLiquidada ? calcularPiorCenario() : null;
   
-  const lucroConsolidadoEfetivo = typeof surebet.pl_consolidado === "number"
-    ? surebet.pl_consolidado
-    : lucroConsolidadoFallback;
+  const lucroConsolidadoEfetivo = isMulticurrency
+    ? (typeof lucroConsolidadoFallback === "number" ? lucroConsolidadoFallback : surebet.pl_consolidado)
+    : (typeof surebet.pl_consolidado === "number" ? surebet.pl_consolidado : lucroConsolidadoFallback);
 
   // Para lucro exibido: priorizar consolidado para multicurrency
   const lucroExibir = isLiquidada 

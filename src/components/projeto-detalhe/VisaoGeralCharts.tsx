@@ -22,6 +22,7 @@ import { ptBR } from "date-fns/locale";
 import { CalendarioLucros } from "./CalendarioLucros";
 import { getFirstLastName } from "@/lib/utils";
 import { parseLocalDateTime, extractLocalDateKey } from "@/utils/dateUtils";
+import { getConsolidatedLucro, getConsolidatedStake } from "@/utils/consolidatedValues";
 
 // =====================================================
 // TIPOS
@@ -55,6 +56,7 @@ interface ApostaBase {
   moeda_operacao?: string | null;
   stake_consolidado?: number | null;
   pl_consolidado?: number | null;
+  consolidation_currency?: string | null;
   valor_brl_referencia?: number | null;
   lucro_prejuizo_brl_referencia?: number | null;
 }
@@ -560,13 +562,7 @@ export function VisaoGeralCharts({
 
   // Helper de consolidação multi-moeda — usado em periodTotal, evolução e calendário
   const consolidateLucro = (a: ApostaBase): number => {
-    const rawLucro = a.lucro_prejuizo ?? 0;
-    if (typeof a.pl_consolidado === "number") return a.pl_consolidado;
-    const moedaOp = a.moeda_operacao || "BRL";
-    if (moedaConsolidacao && moedaOp === moedaConsolidacao) return rawLucro;
-    if (moedaConsolidacao === "BRL" && typeof a.lucro_prejuizo_brl_referencia === "number") return a.lucro_prejuizo_brl_referencia;
-    if (convertToConsolidation && moedaOp !== (moedaConsolidacao || "BRL")) return convertToConsolidation(rawLucro, moedaOp);
-    return rawLucro;
+    return getConsolidatedLucro(a, convertToConsolidation, moedaConsolidacao);
   };
 
   // Fallback para formatChartAxis se não fornecido - usa versão compacta do formatCurrency
@@ -789,13 +785,7 @@ export function VisaoGeralCharts({
 
   // Helpers locais de consolidação para casas
   const getConsolidatedStakeLocal = (a: ApostaBase): number => {
-    const rawStake = typeof a.stake_total === "number" ? a.stake_total : a.stake;
-    if (typeof a.stake_consolidado === "number" && a.stake_consolidado !== 0) return a.stake_consolidado;
-    const moedaOp = a.moeda_operacao || "BRL";
-    if (moedaConsolidacao && moedaOp === moedaConsolidacao) return rawStake;
-    if (moedaConsolidacao === "BRL" && typeof a.valor_brl_referencia === "number") return a.valor_brl_referencia;
-    if (convertToConsolidation && moedaOp !== (moedaConsolidacao || "BRL")) return convertToConsolidation(rawStake, moedaOp);
-    return rawStake;
+    return getConsolidatedStake(a, convertToConsolidation, moedaConsolidacao);
   };
 
   const getConsolidatedLucroLocal = consolidateLucro;
