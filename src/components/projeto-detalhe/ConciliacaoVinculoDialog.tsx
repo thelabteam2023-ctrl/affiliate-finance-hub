@@ -419,7 +419,9 @@ export function ConciliacaoVinculoDialog({
               ) : (
                 <>
                   <ArrowDownToLine className="h-4 w-4 mr-1.5" />
-                  {saldoRealNum > 0 ? "Liberar + Saque" : "Liberar"}
+                  {saldoRealNum > 0 
+                    ? (isInvestidor ? "Liberar + Devolver" : "Liberar + Saque")
+                    : "Liberar"}
                 </>
               )}
             </Button>
