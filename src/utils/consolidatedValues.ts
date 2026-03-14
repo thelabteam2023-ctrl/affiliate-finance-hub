@@ -60,6 +60,20 @@ export function getConsolidatedStake(
     return aposta.stake_consolidado;
   }
 
+  // 1b. stake_consolidado existe mas em OUTRA moeda → converter stake_consolidado (não raw stake!)
+  // CRÍTICO para ARBITRAGEM: raw stake é nominal de UMA perna,
+  // enquanto stake_consolidado já considera TODAS as pernas corretamente.
+  if (
+    typeof aposta.stake_consolidado === "number" &&
+    aposta.stake_consolidado !== 0 &&
+    aposta.consolidation_currency &&
+    moedaConsolidacao &&
+    aposta.consolidation_currency !== moedaConsolidacao &&
+    convertToConsolidation
+  ) {
+    return convertToConsolidation(aposta.stake_consolidado, aposta.consolidation_currency);
+  }
+
   // 2. Se moeda é a mesma da consolidação, usar bruto
   const moedaOp = aposta.moeda_operacao || "BRL";
   if (moedaConsolidacao && moedaOp === moedaConsolidacao) {
@@ -100,6 +114,19 @@ export function getConsolidatedLucro(
     aposta.consolidation_currency === moedaConsolidacao
   ) {
     return aposta.pl_consolidado;
+  }
+
+  // 1b. pl_consolidado existe mas em OUTRA moeda → converter pl_consolidado (não lucro_prejuizo!)
+  // CRÍTICO para ARBITRAGEM: lucro_prejuizo é P&L nominal de UMA perna,
+  // enquanto pl_consolidado já considera TODAS as pernas corretamente.
+  if (
+    typeof aposta.pl_consolidado === "number" &&
+    aposta.consolidation_currency &&
+    moedaConsolidacao &&
+    aposta.consolidation_currency !== moedaConsolidacao &&
+    convertToConsolidation
+  ) {
+    return convertToConsolidation(aposta.pl_consolidado, aposta.consolidation_currency);
   }
 
   // 2. Mesma moeda
