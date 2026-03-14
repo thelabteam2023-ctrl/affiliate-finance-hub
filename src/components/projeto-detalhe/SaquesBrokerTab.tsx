@@ -434,6 +434,16 @@ export function SaquesBrokerTab({ projetoId }: SaquesBrokerTabProps) {
         </Card>
       </div>
 
+      {/* Info Banner */}
+      <div className="flex items-start gap-2 px-3 py-2 rounded-lg bg-muted/30 border border-border/30">
+        <Info className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+        <div className="text-xs text-muted-foreground space-y-0.5">
+          <p><span className="inline-block w-2 h-2 rounded-sm bg-blue-500/40 mr-1.5 align-middle" />
+            <strong>Investidor</strong> — saques editáveis aqui (Pendente → Devolvido). Fluxo independente da Central de Ops.</p>
+          <p><strong>Interno</strong> — status gerido automaticamente pela Central de Operações (somente leitura).</p>
+        </div>
+      </div>
+
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-[200px] max-w-xs">
