@@ -285,7 +285,7 @@ export async function fetchProjetosLucroOperacionalKpi({
     target[key] = (target[key] || 0) + valor;
   };
 
-  // 1) Apostas LIQUIDADAS (mesma lógica getConsolidatedLucro do KPI)
+  // 1) Apostas LIQUIDADAS (com conversão direta multicurrency)
   apostasData.forEach((ap: any) => {
     const projetoId = ap.projeto_id;
     if (!projetoId || !result[projetoId]) return;
@@ -294,7 +294,7 @@ export async function fetchProjetosLucroOperacionalKpi({
     const bruto = Number(ap.lucro_prejuizo || 0);
     addToMoeda(result[projetoId].porMoeda, moeda, bruto);
 
-    const consolidado = getConsolidatedLucro(ap, convertToConsolidation, moedaConsolidacao);
+    const consolidado = getConsolidatedLucroDirect(ap, pernasMap[ap.id], convertToConsolidation, moedaConsolidacao);
     result[projetoId].consolidado += consolidado;
   });
 
