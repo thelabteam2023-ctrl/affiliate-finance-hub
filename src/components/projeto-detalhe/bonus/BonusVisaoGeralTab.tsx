@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, Fragment } from "react";
+import { getConsolidatedLucro } from "@/utils/consolidatedValues";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { KpiSummaryBar } from "@/components/ui/kpi-summary-bar";
 import { Badge } from "@/components/ui/badge";
