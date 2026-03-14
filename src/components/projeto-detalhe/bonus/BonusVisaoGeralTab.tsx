@@ -339,6 +339,10 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
   // Performance de Bônus = Total de bônus creditados + Juice das operações + Ajustes Pós-Limitação - Perdas Cancelamento
   // CRÍTICO: Converter TODOS os valores para moeda de consolidação do projeto
   const bonusPerformance = useMemo(() => {
+    // GUARD: Não calcular enquanto cotações não estão disponíveis (evita distorção por fallback)
+    if (currencyLoading) {
+      return { totalBonusCreditado: 0, totalJuice: 0, totalPerdasCancelamento: 0, total: 0, performancePercent: 0, bonusPorMoeda: [] };
+    }
     // Filtrar bônus por período (usar credited_at como data de competência)
     let eligibleBonuses = bonuses.filter(b => b.status === "credited" || b.status === "finalized");
     
