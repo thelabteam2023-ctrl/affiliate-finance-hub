@@ -93,12 +93,16 @@ function getTransactionLabel(tipo: string) {
   }
 }
 
-function getStatusBadge(status: string) {
+function getStatusBadge(status: string, isInvestor: boolean = false) {
   switch (status) {
     case "CONFIRMADO":
       return <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/20 text-[10px]">Confirmado</Badge>;
+    case "DEVOLVIDO":
+      return <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/20 text-[10px]">Devolvido</Badge>;
     case "PENDENTE":
       return <Badge className="bg-amber-500/15 text-amber-400 border-amber-500/20 text-[10px]">Pendente</Badge>;
+    case "AGUARDANDO_DEVOLUCAO":
+      return <Badge className="bg-orange-500/15 text-orange-400 border-orange-500/20 text-[10px]">Aguardando Devolução</Badge>;
     case "EM_TRANSITO":
       return <Badge className="bg-blue-500/15 text-blue-400 border-blue-500/20 text-[10px]">Em Trânsito</Badge>;
     case "CANCELADO":
