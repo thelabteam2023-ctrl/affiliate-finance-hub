@@ -351,6 +351,7 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
       moeda_operacao: a.moeda_operacao,
       stake_consolidado: a.stake_consolidado,
       pl_consolidado: a.pl_consolidado,
+      consolidation_currency: a.consolidation_currency,
       valor_brl_referencia: a.valor_brl_referencia,
       lucro_prejuizo_brl_referencia: a.lucro_prejuizo_brl_referencia,
     }));
