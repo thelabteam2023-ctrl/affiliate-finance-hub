@@ -208,7 +208,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
       <div className="flex items-center justify-center gap-2">
         <Wallet className="h-4 w-4 text-primary" />
         <span className="text-sm font-medium font-bold text-primary">
-          {formatCurrency(saldoOperavel)}
+          {formatCurrency(saldoAtualTotal)}
         </span>
         {hasCasas && (
           <ChevronDown className="h-3 w-3 text-muted-foreground transition-transform group-hover:text-primary" />
