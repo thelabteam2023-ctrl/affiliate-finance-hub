@@ -58,8 +58,8 @@ function SelectionBadge({
   return (
     <div 
       className={cn(
-        // Base: inline-flex para adaptar ao conteúdo
-        "inline-flex items-center justify-center",
+        // Base: flex para preencher o container e centralizar texto
+        "flex items-center justify-center w-full",
         // Altura mínima mas permite crescer
         "min-h-5",
         // Padding consistente
