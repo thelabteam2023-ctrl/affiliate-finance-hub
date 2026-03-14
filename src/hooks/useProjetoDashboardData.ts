@@ -215,6 +215,7 @@ export function useProjetoDashboardData(projetoId: string | undefined): UseProje
         cotacao_trabalho: raw.cotacao_trabalho,
         fonte_cotacao: raw.fonte_cotacao,
         apostas: raw.apostas || [],
+        apostas_pernas: raw.apostas_pernas || [],
         giros_gratis: raw.giros_gratis || [],
         cashback: raw.cashback || [],
         perdas: raw.perdas || [],
