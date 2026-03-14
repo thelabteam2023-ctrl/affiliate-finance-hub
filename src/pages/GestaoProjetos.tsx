@@ -82,6 +82,7 @@ interface Projeto {
   lucro_realizado?: number;
   display_order?: number;
   investidor_id?: string | null;
+  is_broker?: boolean;
   moeda_consolidacao?: string;
 }
 
