@@ -333,9 +333,12 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
           )}
           {/* Apostas em Aberto */}
           {saldoEmAposta > 0 && (
-            <div className="flex items-center justify-between px-3 py-2 bg-muted/20 border-t border-border/30">
-              <span className="text-muted-foreground">Apostas em Aberto</span>
-              <span className="font-semibold text-amber-500">- {formatCurrency(saldoEmAposta)}</span>
+            <div className="flex items-center justify-between px-3 py-2 bg-amber-500/10 border-t border-border/30">
+              <span className="text-muted-foreground flex items-center gap-1">
+                <Clock className="h-3 w-3 text-amber-500" />
+                Saldo Comprometido
+              </span>
+              <span className="font-semibold text-amber-500">{formatCurrency(saldoEmAposta)}</span>
             </div>
           )}
           {/* Total */}
