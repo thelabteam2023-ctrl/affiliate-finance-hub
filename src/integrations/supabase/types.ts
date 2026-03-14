@@ -7759,6 +7759,7 @@ export type Database = {
           fonte_cotacao: string | null
           id: string
           investidor_id: string | null
+          is_broker: boolean
           marco_zero_at: string | null
           metrica_lucro_ciclo: string
           modelo_absorcao_taxas: string
@@ -7795,6 +7796,7 @@ export type Database = {
           fonte_cotacao?: string | null
           id?: string
           investidor_id?: string | null
+          is_broker?: boolean
           marco_zero_at?: string | null
           metrica_lucro_ciclo?: string
           modelo_absorcao_taxas?: string
@@ -7831,6 +7833,7 @@ export type Database = {
           fonte_cotacao?: string | null
           id?: string
           investidor_id?: string | null
+          is_broker?: boolean
           marco_zero_at?: string | null
           metrica_lucro_ciclo?: string
           modelo_absorcao_taxas?: string
