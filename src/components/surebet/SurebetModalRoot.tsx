@@ -718,7 +718,7 @@ export function SurebetModalRoot({
       return;
     }
     
-    await processLegImage(selectedLegForPrint, file);
+    await processLegImage(selectedLegForPrint, file, mercado);
     if (fileInputRef.current) fileInputRef.current.value = '';
   }, [selectedLegForPrint, processLegImage]);
 

@@ -244,7 +244,7 @@ export interface UseSurebetPrintImportReturn {
     evento: string | null;
     mercado: string | null;
   };
-  processLegImage: (legIndex: number, file: File) => Promise<void>;
+  processLegImage: (legIndex: number, file: File, formMercado?: string | null) => Promise<void>;
   processLegFromClipboard: (legIndex: number, event: ClipboardEvent) => Promise<void>;
   clearLegPrint: (legIndex: number) => void;
   clearAllPrints: () => void;
