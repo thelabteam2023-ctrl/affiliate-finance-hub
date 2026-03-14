@@ -430,8 +430,8 @@ export default function GestaoProjetos() {
     const matchesSearch = proj.nome.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || proj.status === statusFilter;
     const matchesSection = isBrokerSection 
-      ? !!proj.investidor_id 
-      : !proj.investidor_id;
+      ? proj.is_broker === true
+      : proj.is_broker !== true;
     return matchesSearch && matchesStatus && matchesSection;
   });
 

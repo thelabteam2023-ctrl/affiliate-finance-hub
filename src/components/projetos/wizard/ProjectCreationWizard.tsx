@@ -224,6 +224,7 @@ export function ProjectCreationWizard({
         base_calculo_investidor: formData.base_calculo_investidor,
         tipo_projeto: formData.tipo_projeto || defaultTipoProjeto || "OUTROS",
         metrica_lucro_ciclo: formData.metrica_lucro_ciclo || "operacional",
+        is_broker: isBrokerContext,
         user_id: session.session.user.id,
         workspace_id: workspaceId!,
       };
