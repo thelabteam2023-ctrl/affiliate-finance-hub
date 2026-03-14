@@ -153,8 +153,8 @@ export function getConsolidatedLucro(
  * Tipo para pernas individuais usadas na conversão direta multicurrency.
  */
 export interface PernaConsolidavel {
-  moeda: string;
-  lucro_prejuizo: number | null;
+  moeda?: string;
+  lucro_prejuizo?: number | null;
   resultado?: string | null;
   stake?: number | null;
   stake_brl_referencia?: number | null;
