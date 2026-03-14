@@ -137,6 +137,7 @@ async function fetchBonusAnalytics(projectId: string, convertToConsolidationOfic
         contexto_operacional,
         forma_registro,
         moeda_operacao,
+        apostas_pernas ( stake, moeda ),
         bookmakers!apostas_unificada_bookmaker_id_fkey ( bookmaker_catalogo_id, moeda )
       `)
       .eq("projeto_id", projectId)
