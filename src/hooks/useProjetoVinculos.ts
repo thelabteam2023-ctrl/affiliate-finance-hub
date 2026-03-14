@@ -252,6 +252,7 @@ export function useProjetoVinculos(projetoId: string | undefined) {
           created_at: creds.created_at,
           investidor_id: creds.investidor_id,
           investidor_nome: creds.investidor_nome,
+          instance_identifier: creds.instance_identifier,
         };
       });
     },
