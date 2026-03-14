@@ -297,17 +297,11 @@ async function fetchBonusAnalytics(projectId: string, convertToConsolidationOfic
 
     const totalBets = bets.length;
     const totalStake = bets.reduce((sum: number, b: any) => {
-      return sum + getConsolidatedStake(b, convertToConsolidation, moedaConsolidacao);
+      return sum + getConsolidatedStakeFromBet(b);
     }, 0);
     
     // Track raw volume per currency for breakdown (NOT consolidated)
-    bets.forEach((b: any) => {
-      const moeda = (b.moeda_operacao || 'BRL').toUpperCase();
-      const rawStake = b.forma_registro === 'ARBITRAGEM' 
-        ? Number(b.stake_total || 0) 
-        : Number(b.stake || 0);
-      rawVolumeByCurrency[moeda] = (rawVolumeByCurrency[moeda] || 0) + rawStake;
-    });
+    bets.forEach((b: any) => addRawStakeBreakdown(rawVolumeByCurrency, b));
     
     const betsWon = bets.filter((b: any) => b.resultado === 'GREEN' || b.resultado === 'MEIO_GREEN').length;
     const betsLost = bets.filter((b: any) => b.resultado === 'RED' || b.resultado === 'MEIO_RED').length;
