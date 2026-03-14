@@ -60,6 +60,20 @@ export function getConsolidatedStake(
     return aposta.stake_consolidado;
   }
 
+  // 1b. stake_consolidado existe mas em OUTRA moeda → converter stake_consolidado (não raw stake!)
+  // CRÍTICO para ARBITRAGEM: raw stake é nominal de UMA perna,
+  // enquanto stake_consolidado já considera TODAS as pernas corretamente.
+  if (
+    typeof aposta.stake_consolidado === "number" &&
+    aposta.stake_consolidado !== 0 &&
+    aposta.consolidation_currency &&
+    moedaConsolidacao &&
+    aposta.consolidation_currency !== moedaConsolidacao &&
+    convertToConsolidation
+  ) {
+    return convertToConsolidation(aposta.stake_consolidado, aposta.consolidation_currency);
+  }
+
   // 2. Se moeda é a mesma da consolidação, usar bruto
   const moedaOp = aposta.moeda_operacao || "BRL";
   if (moedaConsolidacao && moedaOp === moedaConsolidacao) {
