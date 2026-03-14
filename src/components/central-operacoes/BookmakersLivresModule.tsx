@@ -189,6 +189,7 @@ export function BookmakersLivresModule({ onRegistrarPerda, onVincularProjeto, on
         `)
         .eq("workspace_id", workspaceId!)
         .is("projeto_id", null)
+        .is("investidor_id", null) // Excluir contas de investidores - não pertencem ao pool interno
         .order("nome");
 
       if (error) throw error;

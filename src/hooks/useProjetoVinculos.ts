@@ -325,10 +325,12 @@ export function useBookmakersDisponiveis(enabled: boolean = false) {
           status,
           saldo_atual,
           moeda,
+          investidor_id,
           parceiros!bookmakers_parceiro_id_fkey (nome),
           bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url)
         `)
-        .is("projeto_id", null);
+        .is("projeto_id", null)
+        .is("investidor_id", null); // Excluir contas de investidores - não pertencem ao pool interno
 
       if (error) throw error;
 
