@@ -20,6 +20,7 @@ export interface Vinculo {
   parceiro_nome: string | null;
   investidor_id: string | null;
   investidor_nome: string | null;
+  instance_identifier: string | null;
   projeto_id: string | null;
   bookmaker_status: string;
   saldo_real: number;
@@ -141,6 +142,7 @@ export function useProjetoVinculos(projetoId: string | undefined) {
         created_at: string | null;
         investidor_id: string | null;
         investidor_nome: string | null;
+        instance_identifier: string | null;
       }> = {};
       let apostasCount: Record<string, number> = {};
 
@@ -148,7 +150,7 @@ export function useProjetoVinculos(projetoId: string | undefined) {
         // Buscar credenciais e status das bookmakers
         const { data: bookmarkersDetails } = await supabase
           .from("bookmakers")
-          .select("id, status, login_username, login_password_encrypted, bookmaker_catalogo_id, created_at, investidor_id, investidores(nome)")
+          .select("id, status, login_username, login_password_encrypted, bookmaker_catalogo_id, created_at, investidor_id, instance_identifier, investidores(nome)")
           .in("id", bookmakerIds);
 
         if (bookmarkersDetails) {
@@ -161,6 +163,7 @@ export function useProjetoVinculos(projetoId: string | undefined) {
               created_at: b.created_at || null,
               investidor_id: b.investidor_id || null,
               investidor_nome: b.investidores?.nome || null,
+              instance_identifier: b.instance_identifier || null,
             };
           });
         }
@@ -223,6 +226,7 @@ export function useProjetoVinculos(projetoId: string | undefined) {
           created_at: null,
           investidor_id: null,
           investidor_nome: null,
+          instance_identifier: null,
         };
 
         return {
@@ -248,6 +252,7 @@ export function useProjetoVinculos(projetoId: string | undefined) {
           created_at: creds.created_at,
           investidor_id: creds.investidor_id,
           investidor_nome: creds.investidor_nome,
+          instance_identifier: creds.instance_identifier,
         };
       });
     },
