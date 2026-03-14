@@ -304,7 +304,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
                 <Clock className="h-3 w-3 text-amber-500" />
                 Apostas em Aberto
               </span>
-              <span className="font-semibold text-amber-500">- {formatCurrency(saldoEmAposta)}</span>
+              <span className="font-semibold text-amber-500">{formatCurrency(saldoEmAposta)}</span>
             </div>
           )}
         </div>
