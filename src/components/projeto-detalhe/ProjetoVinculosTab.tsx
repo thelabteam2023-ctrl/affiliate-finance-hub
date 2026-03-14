@@ -929,7 +929,7 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
                   <div className="flex items-center gap-2 text-sm">
                     <User className="h-4 w-4 text-muted-foreground" />
                     <span className="text-muted-foreground">
-                      {vinculo.parceiro_nome || "Sem parceiro"}
+                      {vinculo.parceiro_nome || (vinculo.investidor_nome && vinculo.instance_identifier ? vinculo.instance_identifier : "Sem parceiro")}
                     </span>
                     {vinculo.investidor_nome && (
                       <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-500/40 text-amber-400">
