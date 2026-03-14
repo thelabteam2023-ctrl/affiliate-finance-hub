@@ -267,12 +267,21 @@ export function ConciliacaoVinculoDialog({
             <div className="min-w-0">
               <p className="font-medium text-sm truncate">{vinculo.nome}</p>
               <p className="text-xs text-muted-foreground truncate">
-                {vinculo.parceiro_nome || "Sem parceiro"}
+                {isInvestidor 
+                  ? (vinculo.instance_identifier || vinculo.investidor_nome || "Investidor")
+                  : (vinculo.parceiro_nome || "Sem parceiro")}
               </p>
             </div>
-            <Badge variant="outline" className="text-xs shrink-0 ml-2">
-              {vinculo.moeda}
-            </Badge>
+            <div className="flex items-center gap-1.5">
+              {isInvestidor && (
+                <Badge variant="outline" className="text-[10px] text-blue-400 border-blue-400/30">
+                  Investidor
+                </Badge>
+              )}
+              <Badge variant="outline" className="text-xs shrink-0">
+                {vinculo.moeda}
+              </Badge>
+            </div>
           </div>
 
           {/* Balance Comparison - Compact Grid */}
