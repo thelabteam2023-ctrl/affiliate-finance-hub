@@ -97,6 +97,7 @@ export function BonusResultadoLiquidoChart({
   ajustesPostLimitacao = [],
   formatCurrency,
   convertToConsolidation,
+  moedaConsolidacao,
   isSingleDayPeriod = false,
   dateRange,
   potencialBruto = 0,
