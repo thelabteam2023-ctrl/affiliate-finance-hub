@@ -254,10 +254,11 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
 
   // Totais (sempre na moeda de consolidação do projeto)
   const activeBonusTotalConsolidated = useMemo(() => {
+    if (currencyLoading) return 0; // Não calcular com cotações fallback
     return bonuses
       .filter((b) => b.status === "credited" && (b.saldo_atual || 0) > 0)
       .reduce((acc, b) => acc + convertToConsolidation(b.saldo_atual || 0, b.currency), 0);
-  }, [bonuses, convertToConsolidation]);
+  }, [bonuses, convertToConsolidation, currencyLoading, cotacaoOficialUSD]);
 
   // Fetch ajustes pós-limitação (financial_events com AJUSTE_POS_LIMITACAO)
   const { data: ajustesPostLimitacao = [] } = useQuery({
