@@ -118,6 +118,7 @@ export function ContasDisponiveisModule() {
         `)
         .eq("workspace_id", workspaceId!)
         .is("projeto_id", null)
+        .is("investidor_id", null) // Excluir contas de investidores - não pertencem ao pool interno
         .not("status", "in", '("encerrada","bloqueada")')
         .order("nome");
 
