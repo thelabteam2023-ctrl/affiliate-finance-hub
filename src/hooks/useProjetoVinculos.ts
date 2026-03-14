@@ -478,7 +478,7 @@ export function useRemoveVinculo(projetoId: string, workspaceId: string | undefi
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ bookmakerId, statusFinal }: { bookmakerId: string; statusFinal: string }) => {
+    mutationFn: async ({ bookmakerId, statusFinal, isInvestorAccount }: { bookmakerId: string; statusFinal: string; isInvestorAccount?: boolean }) => {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error("Usuário não autenticado");
       if (!workspaceId) throw new Error("Workspace não definido");
@@ -490,6 +490,17 @@ export function useRemoveVinculo(projetoId: string, workspaceId: string | undefi
         console.warn('[useRemoveVinculo] Warnings:', check.warnings);
       }
 
+      // Se não informado explicitamente, detectar automaticamente
+      let investorFlag = isInvestorAccount;
+      if (investorFlag === undefined) {
+        const { data: bm } = await supabase
+          .from("bookmakers")
+          .select("investidor_id")
+          .eq("id", bookmakerId)
+          .single();
+        investorFlag = !!(bm?.investidor_id);
+      }
+
       // Executa desvinculação com todas as proteções
       await executeUnlink({
         bookmakerId,
@@ -499,6 +510,7 @@ export function useRemoveVinculo(projetoId: string, workspaceId: string | undefi
         statusFinal,
         saldoVirtualEfetivo: check.saldoVirtualEfetivo,
         moeda: check.moeda,
+        isInvestorAccount: investorFlag,
       });
 
       return { bookmakerId, statusFinal, warnings: check.warnings };

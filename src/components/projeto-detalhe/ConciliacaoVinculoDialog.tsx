@@ -206,6 +206,7 @@ export function ConciliacaoVinculoDialog({
         saldoVirtualEfetivo: check.saldoVirtualEfetivo,
         moeda: vinculo.moeda,
         marcarParaSaque: deveMarcarParaSaque,
+        isInvestorAccount: !!(vinculo.investidor_id),
       });
 
       if (isLimitada) {

@@ -187,6 +187,7 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
         saldoVirtualEfetivo: check.saldoVirtualEfetivo,
         moeda: check.moeda,
       });
+      // Nota: Parceiro panel não tem contexto de investidor, usa default (false)
 
       if (check.warnings.length > 0) {
         toast({ title: "Desvinculado com avisos", description: check.warnings.join('; ') });

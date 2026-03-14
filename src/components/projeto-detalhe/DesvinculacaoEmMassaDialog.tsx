@@ -323,6 +323,7 @@ export function DesvinculacaoEmMassaDialog({
           saldoVirtualEfetivo: check.saldoVirtualEfetivo,
           moeda: vinculo.moeda,
           marcarParaSaque: deveMarcarParaSaque,
+          isInvestorAccount: !!(vinculo.investidor_id),
         });
 
         resultados.push({ id, nome: vinculo.nome, success: true });
