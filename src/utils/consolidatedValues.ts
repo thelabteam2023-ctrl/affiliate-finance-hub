@@ -150,6 +150,93 @@ export function getConsolidatedLucro(
 }
 
 /**
+ * Tipo para pernas individuais usadas na conversão direta multicurrency.
+ */
+export interface PernaConsolidavel {
+  moeda: string;
+  lucro_prejuizo: number | null;
+  resultado?: string | null;
+  stake?: number | null;
+  stake_brl_referencia?: number | null;
+}
+
+/**
+ * Retorna o lucro/prejuízo na moeda de consolidação do projeto,
+ * usando conversão DIRETA por perna para apostas multicurrency.
+ * 
+ * MOTIVAÇÃO: pl_consolidado é salvo com consolidation_currency BRL.
+ * Para projetos USD, converter BRL→USD introduz erro de cross-rate
+ * em apostas multicurrency (ex: EUR→BRL→USD vs EUR→USD direto).
+ * Esta função elimina o pivot intermediário quando pernas estão disponíveis.
+ * 
+ * @param pernas - Array de pernas da aposta (de apostas_pernas ou JSON inline).
+ *                 Se undefined/vazio, faz fallback para getConsolidatedLucro padrão.
+ */
+export function getConsolidatedLucroDirect(
+  aposta: ApostaConsolidavel & { is_multicurrency?: boolean | null },
+  pernas: PernaConsolidavel[] | undefined | null,
+  convertToConsolidation?: ConvertFn,
+  moedaConsolidacao?: string,
+): number {
+  // Multicurrency com pernas disponíveis: converter cada perna individualmente
+  if (aposta.is_multicurrency && pernas && pernas.length > 0 && convertToConsolidation) {
+    return pernas.reduce((acc, p) => {
+      if (p.resultado && p.resultado === 'PENDENTE') return acc;
+      const moeda = p.moeda || 'BRL';
+      return acc + convertToConsolidation(p.lucro_prejuizo ?? 0, moeda);
+    }, 0);
+  }
+
+  // Pernas inline com moedas mistas (detecta multicurrency mesmo sem flag)
+  if (pernas && pernas.length >= 2 && convertToConsolidation) {
+    const moedas = new Set(pernas.map(p => (p.moeda || 'BRL').toUpperCase()));
+    if (moedas.size > 1) {
+      return pernas.reduce((acc, p) => {
+        if (p.resultado && p.resultado === 'PENDENTE') return acc;
+        const moeda = p.moeda || 'BRL';
+        return acc + convertToConsolidation(p.lucro_prejuizo ?? 0, moeda);
+      }, 0);
+    }
+  }
+
+  // Fallback: lógica padrão
+  return getConsolidatedLucro(aposta, convertToConsolidation, moedaConsolidacao);
+}
+
+/**
+ * Retorna o stake na moeda de consolidação do projeto,
+ * usando conversão DIRETA por perna para apostas multicurrency.
+ */
+export function getConsolidatedStakeDirect(
+  aposta: ApostaConsolidavel & { is_multicurrency?: boolean | null },
+  pernas: PernaConsolidavel[] | undefined | null,
+  convertToConsolidation?: ConvertFn,
+  moedaConsolidacao?: string,
+): number {
+  // Multicurrency com pernas disponíveis: converter cada perna individualmente
+  if (aposta.is_multicurrency && pernas && pernas.length > 0 && convertToConsolidation) {
+    return pernas.reduce((acc, p) => {
+      const moeda = p.moeda || 'BRL';
+      return acc + convertToConsolidation(Math.abs(p.stake ?? 0), moeda);
+    }, 0);
+  }
+
+  // Pernas inline com moedas mistas
+  if (pernas && pernas.length >= 2 && convertToConsolidation) {
+    const moedas = new Set(pernas.map(p => (p.moeda || 'BRL').toUpperCase()));
+    if (moedas.size > 1) {
+      return pernas.reduce((acc, p) => {
+        const moeda = p.moeda || 'BRL';
+        return acc + convertToConsolidation(Math.abs(p.stake ?? 0), moeda);
+      }, 0);
+    }
+  }
+
+  // Fallback: lógica padrão
+  return getConsolidatedStake(aposta, convertToConsolidation, moedaConsolidacao);
+}
+
+/**
  * Campos SELECT obrigatórios para queries que alimentam KPIs.
  * Adicione estes campos a toda query de apostas_unificada que calcula volume/lucro.
  */
