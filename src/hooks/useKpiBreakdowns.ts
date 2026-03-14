@@ -457,8 +457,15 @@ function deriveBreakdowns(
   moedaConsolidacao: string,
   convert: ConvertFn
 ): ProjetoKpiBreakdowns {
+  // Build pernas map for per-leg consolidation of arbitrage bets
+  const pernasMap = new Map<string, RawApostaPerna[]>();
+  (rawData.apostas_pernas || []).forEach(p => {
+    if (!pernasMap.has(p.aposta_id)) pernasMap.set(p.aposta_id, []);
+    pernasMap.get(p.aposta_id)!.push(p);
+  });
+
   // Módulos individuais
-  const apostasData = deriveApostasModule(rawData.apostas, moedaConsolidacao, convert);
+  const apostasData = deriveApostasModule(rawData.apostas, moedaConsolidacao, convert, pernasMap);
   const girosGratisData = deriveGirosGratisModule(rawData, convert);
   const perdasData = derivePerdasModule(rawData);
   const ajustesData = deriveAjustesModule(rawData);
