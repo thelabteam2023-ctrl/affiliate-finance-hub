@@ -102,6 +102,19 @@ export function getConsolidatedLucro(
     return aposta.pl_consolidado;
   }
 
+  // 1b. pl_consolidado existe mas em OUTRA moeda → converter pl_consolidado (não lucro_prejuizo!)
+  // CRÍTICO para ARBITRAGEM: lucro_prejuizo é P&L nominal de UMA perna,
+  // enquanto pl_consolidado já considera TODAS as pernas corretamente.
+  if (
+    typeof aposta.pl_consolidado === "number" &&
+    aposta.consolidation_currency &&
+    moedaConsolidacao &&
+    aposta.consolidation_currency !== moedaConsolidacao &&
+    convertToConsolidation
+  ) {
+    return convertToConsolidation(aposta.pl_consolidado, aposta.consolidation_currency);
+  }
+
   // 2. Mesma moeda
   const moedaOp = aposta.moeda_operacao || "BRL";
   if (moedaConsolidacao && moedaOp === moedaConsolidacao) {
