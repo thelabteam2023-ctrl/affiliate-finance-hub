@@ -44,7 +44,7 @@ export function BonusSummaryCards({ projetoId, compact = false }: BonusSummaryCa
       // Query 1: apostas vinculadas via bonus_id
       const queryBonusId = supabase
         .from("apostas_unificada")
-        .select("id, pl_consolidado, lucro_prejuizo, moeda_operacao")
+        .select("id, pl_consolidado, consolidation_currency, lucro_prejuizo, moeda_operacao")
         .eq("projeto_id", projetoId)
         .gte("data_aposta", startDateStr)
         .not("bonus_id", "is", null);
@@ -52,7 +52,7 @@ export function BonusSummaryCards({ projetoId, compact = false }: BonusSummaryCa
       // Query 2: apostas com estratégia EXTRACAO_BONUS (mesmo sem bonus_id)
       const queryEstrategia = supabase
         .from("apostas_unificada")
-        .select("id, pl_consolidado, lucro_prejuizo, moeda_operacao")
+        .select("id, pl_consolidado, consolidation_currency, lucro_prejuizo, moeda_operacao")
         .eq("projeto_id", projetoId)
         .gte("data_aposta", startDateStr)
         .eq("estrategia", "EXTRACAO_BONUS");
@@ -125,8 +125,14 @@ export function BonusSummaryCards({ projetoId, compact = false }: BonusSummaryCa
     });
     const bonusPorMoeda = Object.entries(bonusPorMoedaMap).map(([moeda, valor]) => ({ moeda, valor }));
     
+    const moedaConsolidacaoProjeto = analyticsSummary.moeda_consolidacao || "USD";
     const juiceBets = bonusBetsData.reduce((acc, bet) => {
-      if (bet.pl_consolidado != null) {
+      // CRÍTICO: Só usar pl_consolidado se consolidation_currency bate com moeda do projeto
+      if (
+        bet.pl_consolidado != null &&
+        (bet as any).consolidation_currency &&
+        (bet as any).consolidation_currency === moedaConsolidacaoProjeto
+      ) {
         return acc + bet.pl_consolidado;
       }
       const moedaOperacao = bet.moeda_operacao || "BRL";

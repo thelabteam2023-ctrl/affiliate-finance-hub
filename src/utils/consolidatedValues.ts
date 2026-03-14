@@ -8,6 +8,7 @@
  * 
  * Prioridade de resolução:
  * 1. Campo consolidado pré-calculado (stake_consolidado / pl_consolidado)
+ *    ⚠️ SÓ se consolidation_currency === moedaConsolidacao do projeto!
  * 2. Campo de referência BRL (valor_brl_referencia / lucro_prejuizo_brl_referencia)
  * 3. Conversão runtime via convertToConsolidation (se moeda != consolidação)
  * 4. Valor bruto (fallback - somente se mesma moeda)
@@ -21,6 +22,7 @@ export interface ApostaConsolidavel {
   // Campos consolidados
   stake_consolidado?: number | null;
   pl_consolidado?: number | null;
+  consolidation_currency?: string | null;
   valor_brl_referencia?: number | null;
   lucro_prejuizo_brl_referencia?: number | null;
   // Tipo de registro
@@ -33,6 +35,9 @@ type ConvertFn = (valor: number, moedaOrigem: string) => number;
  * Retorna o stake efetivo (para volume) na moeda de consolidação do projeto.
  * 
  * Para ARBITRAGEM, usa stake_total em vez de stake.
+ * 
+ * CRÍTICO: stake_consolidado só é usado se consolidation_currency === moedaConsolidacao.
+ * Caso contrário, o valor pré-calculado está em outra moeda e seria interpretado incorretamente.
  */
 export function getConsolidatedStake(
   aposta: ApostaConsolidavel,
@@ -44,8 +49,14 @@ export function getConsolidatedStake(
     ? aposta.stake_total 
     : (aposta.stake ?? 0);
 
-  // 1. Campo pré-calculado no banco
-  if (typeof aposta.stake_consolidado === "number" && aposta.stake_consolidado !== 0) {
+  // 1. Campo pré-calculado no banco — APENAS se a moeda de consolidação bate
+  if (
+    typeof aposta.stake_consolidado === "number" && 
+    aposta.stake_consolidado !== 0 &&
+    aposta.consolidation_currency &&
+    moedaConsolidacao &&
+    aposta.consolidation_currency === moedaConsolidacao
+  ) {
     return aposta.stake_consolidado;
   }
 
@@ -71,6 +82,8 @@ export function getConsolidatedStake(
 
 /**
  * Retorna o lucro/prejuízo na moeda de consolidação do projeto.
+ * 
+ * CRÍTICO: pl_consolidado só é usado se consolidation_currency === moedaConsolidacao.
  */
 export function getConsolidatedLucro(
   aposta: ApostaConsolidavel,
@@ -79,8 +92,13 @@ export function getConsolidatedLucro(
 ): number {
   const rawLucro = aposta.lucro_prejuizo ?? 0;
 
-  // 1. Campo pré-calculado
-  if (typeof aposta.pl_consolidado === "number") {
+  // 1. Campo pré-calculado — APENAS se a moeda de consolidação bate
+  if (
+    typeof aposta.pl_consolidado === "number" &&
+    aposta.consolidation_currency &&
+    moedaConsolidacao &&
+    aposta.consolidation_currency === moedaConsolidacao
+  ) {
     return aposta.pl_consolidado;
   }
 
@@ -109,4 +127,4 @@ export function getConsolidatedLucro(
  * Adicione estes campos a toda query de apostas_unificada que calcula volume/lucro.
  */
 export const CONSOLIDATION_SELECT_FIELDS = 
-  "moeda_operacao, stake_consolidado, pl_consolidado, valor_brl_referencia, lucro_prejuizo_brl_referencia";
+  "moeda_operacao, stake_consolidado, pl_consolidado, consolidation_currency, valor_brl_referencia, lucro_prejuizo_brl_referencia";

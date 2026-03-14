@@ -51,6 +51,7 @@ interface ApostaUnificada {
   // Multi-currency fields
   moeda_operacao?: string | null;
   stake_consolidado?: number | null;
+  consolidation_currency?: string | null;
   valor_brl_referencia?: number | null;
   lucro_prejuizo_brl_referencia?: number | null;
   pernas?: {
@@ -69,7 +70,7 @@ interface ApostaUnificada {
 async function fetchApostasCalendarioFn(projetoId: string): Promise<ApostaUnificada[]> {
   const { data, error } = await supabase
     .from("apostas_unificada")
-    .select(`id, data_aposta, lucro_prejuizo, pl_consolidado, lucro_prejuizo_brl_referencia, resultado, stake, stake_total, stake_consolidado, moeda_operacao, valor_brl_referencia, forma_registro, bookmaker_id`)
+    .select(`id, data_aposta, lucro_prejuizo, pl_consolidado, consolidation_currency, lucro_prejuizo_brl_referencia, resultado, stake, stake_total, stake_consolidado, moeda_operacao, valor_brl_referencia, forma_registro, bookmaker_id`)
     .eq("projeto_id", projetoId)
     .eq("status", "LIQUIDADA")
     .is("cancelled_at", null)
@@ -96,6 +97,7 @@ async function fetchApostasCalendarioFn(projetoId: string): Promise<ApostaUnific
     bonus_id: null,
     moeda_operacao: item.moeda_operacao,
     stake_consolidado: item.stake_consolidado,
+    consolidation_currency: item.consolidation_currency,
     valor_brl_referencia: item.valor_brl_referencia,
     lucro_prejuizo_brl_referencia: item.lucro_prejuizo_brl_referencia,
     pernas: undefined,
@@ -108,7 +110,7 @@ async function fetchApostasFiltradas(
 ): Promise<ApostaUnificada[]> {
   let query = supabase
     .from("apostas_unificada")
-    .select(`id, data_aposta, lucro_prejuizo, pl_consolidado, resultado, stake, stake_total, stake_consolidado, esporte, bookmaker_id, forma_registro, estrategia, bonus_id, moeda_operacao, valor_brl_referencia, lucro_prejuizo_brl_referencia`)
+    .select(`id, data_aposta, lucro_prejuizo, pl_consolidado, consolidation_currency, resultado, stake, stake_total, stake_consolidado, esporte, bookmaker_id, forma_registro, estrategia, bonus_id, moeda_operacao, valor_brl_referencia, lucro_prejuizo_brl_referencia`)
     .eq("projeto_id", projetoId)
     .eq("status", "LIQUIDADA")
     .is("cancelled_at", null)
@@ -162,27 +164,11 @@ async function fetchApostasFiltradas(
 
   return (data || []).map((item: any) => {
     const bkInfo = bookmakerMap[item.bookmaker_id] || { nome: 'Desconhecida', parceiro_nome: null, logo_url: null };
-    // Stake original (para arbitragem usa stake_total)
-    const rawStake = item.forma_registro === 'ARBITRAGEM' ? (item.stake_total || 0) : (item.stake || 0);
-    // Stake consolidado: priorizar stake_consolidado > valor_brl_referencia > raw
-    let consolidatedStake = rawStake;
-    const moedaOp = item.moeda_operacao || 'BRL';
-    if (item.stake_consolidado != null && item.stake_consolidado !== 0) {
-      consolidatedStake = item.stake_consolidado;
-    } else if (moedaOp !== 'BRL' && item.valor_brl_referencia != null) {
-      consolidatedStake = item.valor_brl_referencia;
-    }
-    // Lucro consolidado: priorizar pl_consolidado > lucro_prejuizo_brl_referencia > raw
-    let consolidatedLucro = item.lucro_prejuizo || 0;
-    if (item.pl_consolidado != null) {
-      consolidatedLucro = item.pl_consolidado;
-    } else if (moedaOp !== 'BRL' && item.lucro_prejuizo_brl_referencia != null) {
-      consolidatedLucro = item.lucro_prejuizo_brl_referencia;
-    }
     return {
       id: item.id, data_aposta: item.data_aposta,
-      lucro_prejuizo: consolidatedLucro, pl_consolidado: item.pl_consolidado,
-      resultado: item.resultado, stake: consolidatedStake, stake_total: item.forma_registro === 'ARBITRAGEM' ? consolidatedStake : item.stake_total,
+      lucro_prejuizo: item.lucro_prejuizo, pl_consolidado: item.pl_consolidado,
+      consolidation_currency: item.consolidation_currency,
+      resultado: item.resultado, stake: item.stake || 0, stake_total: item.stake_total,
       esporte: item.esporte || item.estrategia || 'N/A',
       bookmaker_id: item.bookmaker_id || 'unknown',
       bookmaker_nome: bkInfo.nome, parceiro_nome: bkInfo.parceiro_nome, logo_url: bkInfo.logo_url,
@@ -305,7 +291,8 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
       const moedaOp = aposta.moeda_operacao || 'BRL';
       const rawLucro = aposta.lucro_prejuizo || 0;
       let lucroConsolidado = rawLucro;
-      if (aposta.pl_consolidado != null) {
+      // CRÍTICO: Só usar pl_consolidado se consolidation_currency bate com moeda do projeto
+      if (aposta.pl_consolidado != null && aposta.consolidation_currency === moedaConsolidacao) {
         lucroConsolidado = aposta.pl_consolidado;
       } else if (moedaOp !== moedaConsolidacao) {
         lucroConsolidado = convertToConsolidationOficial(rawLucro, moedaOp);
