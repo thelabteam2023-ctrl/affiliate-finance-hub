@@ -196,7 +196,44 @@ function inferDnbOpposite(
  * Detects the market family from the mercado text.
  * Priority order matters — more specific patterns first.
  */
+// Direct mapping of UI dropdown values to market families
+const UI_MERCADO_MAP: Record<string, "MATCH_ODDS" | "MONEYLINE" | "TOTALS" | "TEAM_TOTALS" | "PLAYER_TOTALS" | "YES_NO" | "HANDICAP" | "DNB" | "RACE_TO" | "BINARY"> = {
+  "1x2": "MATCH_ODDS",
+  "resultado final": "MATCH_ODDS",
+  "resultado do 1º tempo": "MATCH_ODDS",
+  "dupla chance": "MATCH_ODDS",
+  "moneyline": "MONEYLINE",
+  "vencedor da partida": "MONEYLINE",
+  "vencedor do set": "MONEYLINE",
+  "vencedor do 1º set": "MONEYLINE",
+  "over/under gols": "TOTALS",
+  "over/under pontos": "TOTALS",
+  "over/under games": "TOTALS",
+  "over/under escanteios": "TOTALS",
+  "over/under 1º tempo": "TOTALS",
+  "total de runs": "TOTALS",
+  "total de sets": "TOTALS",
+  "total por equipe": "TEAM_TOTALS",
+  "props de jogadores": "PLAYER_TOTALS",
+  "handicap asiático": "HANDICAP",
+  "handicap de gols": "HANDICAP",
+  "handicap de games": "HANDICAP",
+  "handicap de sets": "HANDICAP",
+  "handicap / spread": "HANDICAP",
+  "handicap 1º tempo": "HANDICAP",
+  "run line": "HANDICAP",
+  "draw no bet": "DNB",
+  "ambas marcam": "YES_NO",
+  "resultado tempo regulamentar": "MATCH_ODDS",
+  "resultado 1º tempo": "MATCH_ODDS",
+  "resultado por quarto": "MATCH_ODDS",
+};
+
 function detectMarketFamily(mercado: string): "MATCH_ODDS" | "MONEYLINE" | "TOTALS" | "TEAM_TOTALS" | "PLAYER_TOTALS" | "YES_NO" | "HANDICAP" | "DNB" | "RACE_TO" | "BINARY" | null {
+  // ★ Direct UI dropdown value lookup (exact match, case-insensitive)
+  const directMatch = UI_MERCADO_MAP[mercado.toLowerCase().trim()];
+  if (directMatch) return directMatch;
+
   // ★ REGRA DE OURO: Contexto temporal tem PRIORIDADE MÁXIMA
   // Quarter > Half > Set > Inning > Match
   // Se detectar período, classificar pelo sub-tipo do período, NUNCA como MATCH
