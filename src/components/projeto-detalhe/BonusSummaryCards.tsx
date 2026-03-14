@@ -128,16 +128,18 @@ export function BonusSummaryCards({ projetoId, compact = false }: BonusSummaryCa
     
     const moedaConsolidacaoProjeto = analyticsSummary.moeda_consolidacao || "USD";
     const juiceBets = bonusBetsData.reduce((acc, bet) => {
-      // CRÍTICO: Só usar pl_consolidado se consolidation_currency bate com moeda do projeto
-      if (
-        bet.pl_consolidado != null &&
-        (bet as any).consolidation_currency &&
-        (bet as any).consolidation_currency === moedaConsolidacaoProjeto
-      ) {
-        return acc + bet.pl_consolidado;
-      }
-      const moedaOperacao = bet.moeda_operacao || "BRL";
-      return acc + convertToConsolidation(bet.lucro_prejuizo ?? 0, moedaOperacao);
+      // CRÍTICO: Usar getConsolidatedLucro para respeitar pl_consolidado (todas as pernas)
+      // mesmo quando consolidation_currency difere da moeda do projeto (conversão secundária)
+      return acc + getConsolidatedLucro(
+        {
+          lucro_prejuizo: bet.lucro_prejuizo,
+          moeda_operacao: bet.moeda_operacao,
+          pl_consolidado: bet.pl_consolidado,
+          consolidation_currency: (bet as any).consolidation_currency,
+        },
+        convertToConsolidation,
+        moedaConsolidacaoProjeto,
+      );
     }, 0);
 
     // Somar ajustes pós-limitação ao juice
