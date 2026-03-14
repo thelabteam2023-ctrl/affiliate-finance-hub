@@ -142,6 +142,7 @@ export function useProjetoVinculos(projetoId: string | undefined) {
         created_at: string | null;
         investidor_id: string | null;
         investidor_nome: string | null;
+        instance_identifier: string | null;
       }> = {};
       let apostasCount: Record<string, number> = {};
 
