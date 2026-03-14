@@ -103,6 +103,7 @@ interface Projeto {
   conciliado: boolean;
   modelo_absorcao_taxas: string;
   investidor_id: string | null;
+  is_broker: boolean;
 }
 
 interface ProjetoResumo {
