@@ -307,11 +307,6 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
               <span className="font-semibold text-amber-500">- {formatCurrency(saldoEmAposta)}</span>
             </div>
           )}
-          {/* Total Operável = Saldo Atual - Apostas em Aberto */}
-          <div className="flex items-center justify-between px-3 py-2.5 border-t border-border/50 bg-primary/10">
-            <span className="font-semibold text-foreground">Disponível para Operar</span>
-            <span className="font-bold text-primary">{formatCurrency(saldoOperavel)}</span>
-          </div>
         </div>
       </div>
 
