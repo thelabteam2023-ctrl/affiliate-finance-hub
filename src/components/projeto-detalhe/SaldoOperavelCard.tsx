@@ -125,15 +125,18 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
     setSearchTerm("");
   }, []);
 
+  // Saldo Atual = patrimônio total nas casas (saldo_real + freebet), SEM descontar apostas em aberto
+  const saldoAtualTotal = saldoReal + saldoFreebet;
+
   const conversaoVisual = useMemo(() => {
     if (moedaConsolidacao === "USD") {
-      const valorBRL = saldoOperavel * cotacaoUSD;
+      const valorBRL = saldoAtualTotal * cotacaoUSD;
       return { valor: valorBRL, moeda: "BRL", symbol: "R$", label: "≈ R$" };
     } else {
-      const valorUSD = saldoOperavel / cotacaoUSD;
+      const valorUSD = saldoAtualTotal / cotacaoUSD;
       return { valor: valorUSD, moeda: "USD", symbol: "$", label: "≈ $" };
     }
-  }, [saldoOperavel, moedaConsolidacao, cotacaoUSD]);
+  }, [saldoAtualTotal, moedaConsolidacao, cotacaoUSD]);
 
   const handleRetry = async () => {
     setIsRetrying(true);
