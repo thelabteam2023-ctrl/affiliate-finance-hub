@@ -134,24 +134,21 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
 
   // Fetch apostas com bônus (juice/custo operacional) - inclui apostas com bonus_id OU estratégia EXTRACAO_BONUS
   // IMPORTANTE: Buscar moeda_operacao para converter corretamente para moeda de consolidação
-  const { data: bonusBetsData = [], isLoading: betsLoading } = useQuery({
-    queryKey: ["bonus-bets-juice", projetoId, dateRange?.start?.toISOString(), dateRange?.end?.toISOString()],
+  const { data: bonusBetsWithPernas = { bets: [], pernasMap: {} }, isLoading: betsLoading } = useQuery({
+    queryKey: ["bonus-bets-juice-pernas", projetoId, dateRange?.start?.toISOString(), dateRange?.end?.toISOString()],
     queryFn: async () => {
       const startDate = dateRange?.start?.toISOString() || subDays(new Date(), 365).toISOString();
       
-      // Query para apostas vinculadas a bônus (via bonus_id)
-      // CRÍTICO: Incluir moeda_operacao para conversão multi-moeda
       let queryBonusId = supabase
         .from("apostas_unificada")
-        .select("id, data_aposta, lucro_prejuizo, pl_consolidado, consolidation_currency, moeda_operacao, bookmaker_id, bonus_id, stake_bonus, estrategia")
+        .select("id, data_aposta, lucro_prejuizo, pl_consolidado, consolidation_currency, moeda_operacao, bookmaker_id, bonus_id, stake_bonus, estrategia, is_multicurrency")
         .eq("projeto_id", projetoId)
         .gte("data_aposta", startDate.split('T')[0])
         .not("bonus_id", "is", null);
 
-      // Query para apostas de estratégia EXTRACAO_BONUS (mesmo sem bonus_id)
       let queryEstrategia = supabase
         .from("apostas_unificada")
-        .select("id, data_aposta, lucro_prejuizo, pl_consolidado, consolidation_currency, moeda_operacao, bookmaker_id, bonus_id, stake_bonus, estrategia")
+        .select("id, data_aposta, lucro_prejuizo, pl_consolidado, consolidation_currency, moeda_operacao, bookmaker_id, bonus_id, stake_bonus, estrategia, is_multicurrency")
         .eq("projeto_id", projetoId)
         .gte("data_aposta", startDate.split('T')[0])
         .eq("estrategia", "EXTRACAO_BONUS");
@@ -166,11 +163,28 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
       if (resBonusId.error) throw resBonusId.error;
       if (resEstrategia.error) throw resEstrategia.error;
 
-      // Combina resultados removendo duplicados por id
       const allBets = [...(resBonusId.data || []), ...(resEstrategia.data || [])];
       const uniqueBets = Array.from(new Map(allBets.map(b => [b.id, b])).values());
       
-      return uniqueBets;
+      // Buscar pernas para apostas multicurrency (conversão direta sem pivot BRL)
+      const multicurrencyIds = uniqueBets.filter(b => b.is_multicurrency).map(b => b.id);
+      let pernasMap: Record<string, Array<{ moeda: string; lucro_prejuizo: number | null; resultado: string | null }>> = {};
+      
+      if (multicurrencyIds.length > 0) {
+        const { data: pernas } = await supabase
+          .from("apostas_pernas")
+          .select("aposta_id, moeda, lucro_prejuizo, resultado")
+          .in("aposta_id", multicurrencyIds);
+        
+        if (pernas) {
+          for (const p of pernas) {
+            if (!pernasMap[p.aposta_id]) pernasMap[p.aposta_id] = [];
+            pernasMap[p.aposta_id].push(p);
+          }
+        }
+      }
+      
+      return { bets: uniqueBets, pernasMap };
     },
     enabled: !!projetoId,
     staleTime: PERIOD_STALE_TIME,
@@ -376,12 +390,22 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
     const bonusPorMoeda = Object.entries(bonusPorMoedaMap).map(([moeda, valor]) => ({ moeda, valor }));
     
     const moedaConsolidacaoProjeto = analyticsSummary.moeda_consolidacao || "USD";
-    const juiceBets = bonusBetsData.reduce((acc, bet) => {
+    const { bets: bonusBetsFlat, pernasMap } = bonusBetsWithPernas;
+    
+    const juiceBets = bonusBetsFlat.reduce((acc, bet) => {
       const isBonusBet = bet.bonus_id || bet.estrategia === "EXTRACAO_BONUS";
       if (!isBonusBet) return acc;
       
-      // CRÍTICO: Usar getConsolidatedLucro para respeitar pl_consolidado (todas as pernas)
-      // mesmo quando consolidation_currency difere da moeda do projeto (conversão secundária)
+      // MULTICURRENCY: Converter cada perna individualmente para evitar cross-rate via BRL pivot
+      const pernas = pernasMap[bet.id];
+      if (bet.is_multicurrency && pernas && pernas.length > 0) {
+        return acc + pernas.reduce((pAcc, p) => {
+          if (!p.resultado || p.resultado === 'PENDENTE') return pAcc;
+          return pAcc + convertToConsolidation(p.lucro_prejuizo ?? 0, p.moeda || 'BRL');
+        }, 0);
+      }
+      
+      // MONOCURRENCY: usar getConsolidatedLucro
       return acc + getConsolidatedLucro(
         {
           lucro_prejuizo: bet.lucro_prejuizo,
@@ -432,7 +456,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
       : 0;
     
     return { totalBonusCreditado, totalJuice, totalPerdasCancelamento, total, performancePercent, bonusPorMoeda };
-  }, [bonuses, bonusBetsData, ajustesPostLimitacao, perdasCancelamento, convertToConsolidation, dateRange, cotacaoOficialUSD, moedaConsolidacao, currencyLoading]);
+  }, [bonuses, bonusBetsWithPernas, ajustesPostLimitacao, perdasCancelamento, convertToConsolidation, dateRange, cotacaoOficialUSD, moedaConsolidacao, currencyLoading]);
 
   // NOTA: totalSaldoOperavel agora vem do hook useSaldoOperavel (já declarado no início)
 
@@ -869,7 +893,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
       {/* Gráfico de Resultado Líquido de Bônus (substituindo "Evolução do Lucro") */}
       <BonusResultadoLiquidoChart
         bonuses={bonuses}
-        bonusBets={bonusBetsData}
+        bonusBets={bonusBetsWithPernas.bets}
         ajustesPostLimitacao={[...ajustesPostLimitacao, ...perdasCancelamento]}
         formatCurrency={formatCurrency}
         convertToConsolidation={convertToConsolidation}
