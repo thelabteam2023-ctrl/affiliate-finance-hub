@@ -142,7 +142,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
       // CRÍTICO: Incluir moeda_operacao para conversão multi-moeda
       let queryBonusId = supabase
         .from("apostas_unificada")
-        .select("id, data_aposta, lucro_prejuizo, pl_consolidado, moeda_operacao, bookmaker_id, bonus_id, stake_bonus, estrategia")
+        .select("id, data_aposta, lucro_prejuizo, pl_consolidado, consolidation_currency, moeda_operacao, bookmaker_id, bonus_id, stake_bonus, estrategia")
         .eq("projeto_id", projetoId)
         .gte("data_aposta", startDate.split('T')[0])
         .not("bonus_id", "is", null);
@@ -150,7 +150,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
       // Query para apostas de estratégia EXTRACAO_BONUS (mesmo sem bonus_id)
       let queryEstrategia = supabase
         .from("apostas_unificada")
-        .select("id, data_aposta, lucro_prejuizo, pl_consolidado, moeda_operacao, bookmaker_id, bonus_id, stake_bonus, estrategia")
+        .select("id, data_aposta, lucro_prejuizo, pl_consolidado, consolidation_currency, moeda_operacao, bookmaker_id, bonus_id, stake_bonus, estrategia")
         .eq("projeto_id", projetoId)
         .gte("data_aposta", startDate.split('T')[0])
         .eq("estrategia", "EXTRACAO_BONUS");
