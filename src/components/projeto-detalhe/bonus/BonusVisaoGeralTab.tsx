@@ -55,7 +55,7 @@ interface BonusResultEntry {
 export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = false, periodFilter, actionsSlot }: BonusVisaoGeralTabProps) {
   const queryClient = useQueryClient();
   const { bonuses, getSummary, getBookmakersWithActiveBonus } = useProjectBonuses({ projectId: projetoId });
-  const { formatCurrency, convertToConsolidation: convertToConsolidationTrabalho, convertToConsolidationOficial } = useProjetoCurrency(projetoId);
+  const { formatCurrency, convertToConsolidation: convertToConsolidationTrabalho, convertToConsolidationOficial, isLoading: currencyLoading, moedaConsolidacao, cotacaoOficialUSD } = useProjetoCurrency(projetoId);
   // CORREÇÃO: Usar cotação oficial para KPIs e gráficos analíticos (consistência com Visão Geral)
   const convertToConsolidation = convertToConsolidationOficial;
   const { summary: analyticsSummary, stats: analyticsStats } = useProjectBonusAnalytics(projetoId, convertToConsolidation);
