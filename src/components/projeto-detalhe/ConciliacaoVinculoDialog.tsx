@@ -242,6 +242,7 @@ export function ConciliacaoVinculoDialog({
   if (!vinculo) return null;
 
   const isLimitada = vinculo.bookmaker_status.toUpperCase() === "LIMITADA";
+  const isInvestidor = !!vinculo.investidor_id;
   const canAdjust = saldoReal !== "" && temDiferenca && observacoes.trim();
   const canRelease = saldoReal !== "" && (!temDiferenca || observacoes.trim());
   const isProcessing = saving || savingAjuste;
