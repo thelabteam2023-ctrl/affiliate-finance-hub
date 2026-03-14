@@ -110,6 +110,7 @@ interface ProjetoVinculosTabProps {
   projetoId: string;
   tipoProjeto?: string;
   investidorId?: string | null;
+  isBroker?: boolean;
 }
 
 // Interface Vinculo importada de useProjetoVinculos
