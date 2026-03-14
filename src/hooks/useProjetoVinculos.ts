@@ -226,6 +226,7 @@ export function useProjetoVinculos(projetoId: string | undefined) {
           created_at: null,
           investidor_id: null,
           investidor_nome: null,
+          instance_identifier: null,
         };
 
         return {
