@@ -844,7 +844,7 @@ export function ApostaCard({
           </div>
         )}
 
-        {/* SUB-ENTRIES Collapsible (card variant - padrão SurebetCard) */}
+        {/* MULTI-ENTRY: All entries listed equally (card variant) */}
         {hasSubEntries && (
           <Collapsible open={isSubEntriesOpen} onOpenChange={setIsSubEntriesOpen}>
             <CollapsibleTrigger asChild>
@@ -852,12 +852,11 @@ export function ApostaCard({
                 className="w-full flex items-center gap-2 hover:bg-muted/30 rounded-md py-1.5 px-1 transition-colors text-xs text-muted-foreground mb-2"
                 onClick={(e) => e.stopPropagation()}
               >
-                <BookmakerLogo logoUrl={aposta.logo_url} size="h-7 w-7" iconSize="h-3.5 w-3.5" />
-                <span className="truncate flex-1 uppercase text-left">
-                  {aposta.bookmaker_nome}{aposta.parceiro_nome ? ` - ${getFirstLastName(aposta.parceiro_nome)}` : ''}
+                <Layers className="h-3.5 w-3.5 text-primary shrink-0" />
+                <span className="text-foreground font-medium shrink-0">
+                  {aposta.sub_entries!.length + 1} entradas
                 </span>
-                <span className="font-medium shrink-0 text-foreground">@{(aposta.primary_odd ?? aposta.odd ?? 0).toFixed(2)}</span>
-                <span className="shrink-0">{formatByMoeda(aposta.stake, aposta.moeda || 'BRL')}</span>
+                <span className="flex-1" />
                 {isSubEntriesOpen ? (
                   <ChevronUp className="h-3 w-3 text-muted-foreground shrink-0" />
                 ) : (
@@ -866,15 +865,25 @@ export function ApostaCard({
               </button>
             </CollapsibleTrigger>
             <CollapsibleContent className="animate-in slide-in-from-top-1 duration-200">
-              <div className="mt-1 space-y-1.5 ml-4 pl-4 border-l-2 border-primary/20 mb-3">
+              <div className="mt-1 space-y-1.5 ml-1 mb-3">
+                {/* Primary entry */}
+                <div className="flex items-center gap-2 text-xs py-0.5 px-1 rounded">
+                  <BookmakerLogo logoUrl={aposta.logo_url} size="h-6 w-6" iconSize="h-3 w-3" />
+                  <span className="truncate flex-1 uppercase text-muted-foreground">
+                    {aposta.bookmaker_nome}{aposta.parceiro_nome ? ` - ${getFirstLastName(aposta.parceiro_nome)}` : ''}
+                  </span>
+                  <span className="font-medium shrink-0 text-foreground">@{(aposta.primary_odd ?? aposta.odd ?? 0).toFixed(2)}</span>
+                  <span className="shrink-0 text-muted-foreground">{formatByMoeda(aposta.stake, aposta.moeda || 'BRL')}</span>
+                </div>
+                {/* Sub entries */}
                 {aposta.sub_entries!.map((entry, idx) => (
-                  <div key={idx} className="flex items-center gap-2 text-xs text-muted-foreground py-0.5">
+                  <div key={idx} className="flex items-center gap-2 text-xs py-0.5 px-1 rounded">
                     <BookmakerLogo logoUrl={entry.logo_url} size="h-6 w-6" iconSize="h-3 w-3" />
-                    <span className="truncate flex-1 uppercase">
+                    <span className="truncate flex-1 uppercase text-muted-foreground">
                       {entry.bookmaker_nome}{entry.parceiro_nome ? ` - ${getFirstLastName(entry.parceiro_nome)}` : ''}
                     </span>
                     <span className="font-medium shrink-0 text-foreground">@{entry.odd.toFixed(2)}</span>
-                    <span className="shrink-0">{formatByMoeda(entry.stake, entry.moeda || aposta.moeda || 'BRL')}</span>
+                    <span className="shrink-0 text-muted-foreground">{formatByMoeda(entry.stake, entry.moeda || aposta.moeda || 'BRL')}</span>
                   </div>
                 ))}
               </div>
