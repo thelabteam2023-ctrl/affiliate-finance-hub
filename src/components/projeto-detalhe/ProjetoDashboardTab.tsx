@@ -164,29 +164,11 @@ async function fetchApostasFiltradas(
 
   return (data || []).map((item: any) => {
     const bkInfo = bookmakerMap[item.bookmaker_id] || { nome: 'Desconhecida', parceiro_nome: null, logo_url: null };
-    // Stake original (para arbitragem usa stake_total)
-    const rawStake = item.forma_registro === 'ARBITRAGEM' ? (item.stake_total || 0) : (item.stake || 0);
-    // Stake consolidado: priorizar stake_consolidado > valor_brl_referencia > raw
-    // CRÍTICO: Só usar stake_consolidado se consolidation_currency bate com moeda do projeto
-    let consolidatedStake = rawStake;
-    const moedaOp = item.moeda_operacao || 'BRL';
-    if (item.stake_consolidado != null && item.stake_consolidado !== 0 && item.consolidation_currency === moedaConsolidacao) {
-      consolidatedStake = item.stake_consolidado;
-    } else if (moedaOp !== 'BRL' && item.valor_brl_referencia != null) {
-      consolidatedStake = item.valor_brl_referencia;
-    }
-    // Lucro consolidado: priorizar pl_consolidado > lucro_prejuizo_brl_referencia > raw
-    // CRÍTICO: Só usar pl_consolidado se consolidation_currency bate com moeda do projeto
-    let consolidatedLucro = item.lucro_prejuizo || 0;
-    if (item.pl_consolidado != null && item.consolidation_currency === moedaConsolidacao) {
-      consolidatedLucro = item.pl_consolidado;
-    } else if (moedaOp !== 'BRL' && item.lucro_prejuizo_brl_referencia != null) {
-      consolidatedLucro = item.lucro_prejuizo_brl_referencia;
-    }
     return {
       id: item.id, data_aposta: item.data_aposta,
-      lucro_prejuizo: consolidatedLucro, pl_consolidado: item.pl_consolidado,
-      resultado: item.resultado, stake: consolidatedStake, stake_total: item.forma_registro === 'ARBITRAGEM' ? consolidatedStake : item.stake_total,
+      lucro_prejuizo: item.lucro_prejuizo, pl_consolidado: item.pl_consolidado,
+      consolidation_currency: item.consolidation_currency,
+      resultado: item.resultado, stake: item.stake || 0, stake_total: item.stake_total,
       esporte: item.esporte || item.estrategia || 'N/A',
       bookmaker_id: item.bookmaker_id || 'unknown',
       bookmaker_nome: bkInfo.nome, parceiro_nome: bkInfo.parceiro_nome, logo_url: bkInfo.logo_url,
