@@ -373,10 +373,12 @@ export function ConciliacaoVinculoDialog({
           </div>
 
           {/* Security Note - Compact */}
-          <div className="flex items-start gap-2 p-2.5 rounded-lg bg-primary/5 border border-primary/20">
-            <ShieldCheck className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+          <div className={`flex items-start gap-2 p-2.5 rounded-lg ${isInvestidor ? "bg-blue-500/5 border border-blue-500/20" : "bg-primary/5 border border-primary/20"}`}>
+            <ShieldCheck className={`h-4 w-4 mt-0.5 shrink-0 ${isInvestidor ? "text-blue-400" : "text-primary"}`} />
             <p className="text-xs text-muted-foreground">
-              A conciliação garante consistência financeira antes de liberar a bookmaker.
+              {isInvestidor
+                ? "Conta de investidor. O saque será rastreado em Saques Broker, sem impacto no caixa operacional."
+                : "A conciliação garante consistência financeira antes de liberar a bookmaker."}
             </p>
           </div>
         </div>
