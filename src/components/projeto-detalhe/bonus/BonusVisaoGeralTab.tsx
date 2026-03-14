@@ -369,11 +369,18 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
     });
     const bonusPorMoeda = Object.entries(bonusPorMoedaMap).map(([moeda, valor]) => ({ moeda, valor }));
     
+    const moedaConsolidacaoProjeto = analyticsSummary.moeda_consolidacao || "USD";
     const juiceBets = bonusBetsData.reduce((acc, bet) => {
       const isBonusBet = bet.bonus_id || bet.estrategia === "EXTRACAO_BONUS";
       if (!isBonusBet) return acc;
       
-      if (bet.pl_consolidado != null) {
+      // CRÍTICO: Só usar pl_consolidado se consolidation_currency bate com a moeda do projeto
+      // Caso contrário, o valor está em outra moeda e seria interpretado incorretamente
+      if (
+        bet.pl_consolidado != null &&
+        (bet as any).consolidation_currency &&
+        (bet as any).consolidation_currency === moedaConsolidacaoProjeto
+      ) {
         return acc + bet.pl_consolidado;
       }
       
