@@ -307,13 +307,7 @@ export async function fetchProjetosLucroOperacionalKpi({
     const valor = Number(cb.valor || 0);
     addToMoeda(result[projetoId].porMoeda, moeda, valor);
 
-    let consolidado = valor;
-    if (moeda !== "BRL") {
-      consolidado = cb.valor_brl_referencia != null
-        ? Number(cb.valor_brl_referencia)
-        : convertToConsolidation(valor, moeda);
-    }
-    result[projetoId].consolidado += consolidado;
+    result[projetoId].consolidado += convertToConsolidation(valor, moeda);
   });
 
   // 3) Giros grátis confirmados
