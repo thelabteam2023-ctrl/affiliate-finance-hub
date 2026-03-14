@@ -269,7 +269,7 @@ export function BonusResultadoLiquidoChart({
     });
 
     return data;
-  }, [filteredBonuses, bonusBets, bonuses, ajustesPostLimitacao, dateRange, selectedBookmaker, convertToConsolidation]);
+  }, [filteredBonuses, bonusBets, bonuses, ajustesPostLimitacao, dateRange, selectedBookmaker, convertToConsolidation, pernasMap, moedaConsolidacao]);
 
   // KPIs
   const kpis = useMemo(() => {
