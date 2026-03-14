@@ -126,6 +126,7 @@ async function fetchBonusAnalytics(projectId: string, convertToConsolidationOfic
         stake_total,
         stake_consolidado,
         pl_consolidado,
+        consolidation_currency,
         valor_brl_referencia,
         lucro_prejuizo_brl_referencia,
         resultado,
