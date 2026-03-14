@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { agruparExtrasPorTipo, fetchProjetoExtras } from "@/services/fetchProjetoExtras";
-import { getConsolidatedLucro } from "@/utils/consolidatedValues";
+import { getConsolidatedLucro, getConsolidatedLucroDirect } from "@/utils/consolidatedValues";
 import { getOperationalDateRangeFromStrings } from "@/utils/dateUtils";
 
 /** Breakdown de lucro por moeda original (dinâmico — suporta todas as moedas) */
