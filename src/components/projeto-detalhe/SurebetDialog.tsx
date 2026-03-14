@@ -2983,7 +2983,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
                                 e.preventDefault();
                                 const file = items[i].getAsFile();
                                 if (file) {
-                                  processLegImage(index, file);
+                                  processLegImage(index, file, mercado);
                                 }
                                 return;
                               }
