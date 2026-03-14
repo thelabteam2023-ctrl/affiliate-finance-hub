@@ -62,6 +62,8 @@ interface BonusResultadoLiquidoChartProps {
   formatCurrency: (value: number) => string;
   /** Função para converter valores para moeda de consolidação do projeto */
   convertToConsolidation?: (valor: number, moedaOrigem: string) => number;
+  /** Moeda de consolidação do projeto (para validar pl_consolidado) */
+  moedaConsolidacao?: string;
   isSingleDayPeriod?: boolean;
   dateRange?: { start: Date; end: Date } | null;
   /** Valor bruto total de bônus creditados (potencial máximo) - já consolidado */
