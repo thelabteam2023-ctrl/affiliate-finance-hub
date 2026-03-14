@@ -154,25 +154,15 @@ export function BonusSummaryCards({ projetoId, compact = false }: BonusSummaryCa
     const { bets, pernasMap } = bonusBetsWithPernas;
     
     const juiceBets = bets.reduce((acc, bet) => {
-      // MULTICURRENCY: Converter cada perna individualmente para evitar cross-rate via BRL pivot
-      // Isso garante paridade com o SurebetCard que faz EUR→USD direto
-      const pernas = pernasMap[bet.id];
-      if (bet.is_multicurrency && pernas && pernas.length > 0) {
-        return acc + pernas.reduce((pAcc, p) => {
-          if (!p.resultado || p.resultado === 'PENDENTE') return pAcc;
-          const moeda = p.moeda || 'BRL';
-          return pAcc + convertToConsolidation(p.lucro_prejuizo ?? 0, moeda);
-        }, 0);
-      }
-      
-      // MONOCURRENCY: usar getConsolidatedLucro normalmente
-      return acc + getConsolidatedLucro(
+      return acc + getConsolidatedLucroDirect(
         {
           lucro_prejuizo: bet.lucro_prejuizo,
           moeda_operacao: bet.moeda_operacao,
           pl_consolidado: bet.pl_consolidado,
           consolidation_currency: (bet as any).consolidation_currency,
+          is_multicurrency: bet.is_multicurrency,
         },
+        pernasMap[bet.id],
         convertToConsolidation,
         moedaConsolidacaoProjeto,
       );
