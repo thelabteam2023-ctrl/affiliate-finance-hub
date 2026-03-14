@@ -1,5 +1,5 @@
 import { useMemo, Fragment } from "react";
-import { getConsolidatedLucro } from "@/utils/consolidatedValues";
+import { getConsolidatedLucroDirect } from "@/utils/consolidatedValues";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Building2, Coins, TrendingUp, TrendingDown, Receipt, BarChart3 } from "lucide-react";
