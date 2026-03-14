@@ -941,7 +941,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
   const handlePrintFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>, legIndex: number) => {
     const file = event.target.files?.[0];
     if (file) {
-      processLegImage(legIndex, file);
+      processLegImage(legIndex, file, mercado);
     }
     // Reset input
     if (event.target) {
