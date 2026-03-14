@@ -18,7 +18,7 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 // ========================================================================
 
 // MATCH_ODDS / 1X2 (3-way, football only)
-const MATCH_ODDS_MARKET_PATTERN = /(?:1\s*[x×X]\s*2|[1Il]\s*[xX×]\s*2|match\s*odds?|resultado\s*(?:da\s*)?(?:partida|final)|final\s*(?:da|de)\s*partida|full\s*time\s*result|ft\s*result|tres\s*vias|três\s*vias|three\s*way|moneyline\s*soccer)/i;
+const MATCH_ODDS_MARKET_PATTERN = /(?:1\s*[x×X]\s*2|[1Il]\s*[xX×]\s*2|match\s*odds?|\bresultado\b|resultado\s*(?:da\s*)?(?:partida|final)|final\s*(?:da|de)\s*partida|full\s*time\s*result|ft\s*result|tres\s*vias|três\s*vias|three\s*way|moneyline\s*soccer)/i;
 
 // MONEYLINE / MATCH_WINNER (2-way, no draw — basketball, tennis, MMA, etc.)
 const MONEYLINE_MARKET_PATTERN = /(?:moneyline|money\s*line|\bml\b|vencedor(?!\s*(?:da\s*)?(?:partida|match))|winner|match\s*winner|main\s*line)/i;
