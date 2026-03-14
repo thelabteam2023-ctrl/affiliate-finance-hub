@@ -366,7 +366,7 @@ export function BonusResultadoLiquidoChart({
         resultado: resultado >= 0 ? "GREEN" as const : "RED" as const,
         lucro_prejuizo: resultado,
       }));
-  }, [bonuses, bonusBets, ajustesPostLimitacao, selectedBookmaker, convertToConsolidation]);
+  }, [bonuses, bonusBets, ajustesPostLimitacao, selectedBookmaker, convertToConsolidation, pernasMap, moedaConsolidacao]);
 
   // Mês inicial do calendário: abre no mês do filtro ativo
   const calendarInitialMonth = useMemo(() => {
