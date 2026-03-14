@@ -169,7 +169,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
       <Card className="border-destructive/30 bg-destructive/5">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 md:p-6">
           <CardTitle className="text-xs md:text-sm font-medium flex items-center gap-1.5 text-destructive">
-            Saldo Operável
+            Saldo Atual
             <AlertTriangle className="h-3.5 w-3.5 md:h-4 md:w-4" />
           </CardTitle>
         </CardHeader>
