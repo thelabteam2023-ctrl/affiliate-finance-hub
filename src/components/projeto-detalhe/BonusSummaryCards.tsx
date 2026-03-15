@@ -48,6 +48,7 @@ export function BonusSummaryCards({ projetoId, compact = false }: BonusSummaryCa
         .from("apostas_unificada")
         .select("id, pl_consolidado, consolidation_currency, lucro_prejuizo, moeda_operacao, is_multicurrency")
         .eq("projeto_id", projetoId)
+        .eq("status", "LIQUIDADA")
         .gte("data_aposta", startDateStr)
         .not("bonus_id", "is", null);
 
