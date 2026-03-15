@@ -476,22 +476,34 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
   const showBonusBadge = isBonusContext || surebet.estrategia === "EXTRACAO_BONUS";
   
   // Calcular pior cenário a partir das pernas quando pendente
-  // IMPORTANTE: Só funciona corretamente para moeda única. Para multicurrency, usar valores consolidados.
+  // Para multicurrency: converte cada payout para moeda de consolidação antes de comparar
   const calcularPiorCenario = (): { lucro: number; roi: number } | null => {
     if (!surebet.pernas || surebet.pernas.length < 2) return null;
-    // NÃO calcular localmente para multicurrency - as moedas se misturam
-    if (isMulticurrency) return null;
     
-    const stakeTotal = surebet.stake_total || surebet.pernas.reduce((sum, p) => sum + (p.stake_total || p.stake || 0), 0);
+    // Calcular stake total (consolidado para multicurrency)
+    let stakeTotal: number;
+    if (isMulticurrency && convertToConsolidation) {
+      stakeTotal = surebet.pernas.reduce((sum, p) => {
+        const s = p.stake_total || p.stake || 0;
+        return sum + convertToConsolidation(s, p.moeda || "BRL");
+      }, 0);
+    } else {
+      stakeTotal = surebet.stake_total || surebet.pernas.reduce((sum, p) => sum + (p.stake_total || p.stake || 0), 0);
+    }
     if (stakeTotal <= 0) return null;
     
     // Para cada cenário (cada perna ganhando), calcular o lucro
     const cenarios = surebet.pernas.map(perna => {
       const oddEfetiva = perna.odd_media || perna.odd || 0;
       const stakeNessaPerna = perna.stake_total || perna.stake || 0;
-      const retorno = stakeNessaPerna * oddEfetiva;
-      const lucro = retorno - stakeTotal;
-      return lucro;
+      const retornoLocal = stakeNessaPerna * oddEfetiva;
+      
+      // Converter retorno para moeda de consolidação se multicurrency
+      const retorno = (isMulticurrency && convertToConsolidation)
+        ? convertToConsolidation(retornoLocal, perna.moeda || "BRL")
+        : retornoLocal;
+      
+      return retorno - stakeTotal;
     });
     
     const piorLucro = Math.min(...cenarios);
