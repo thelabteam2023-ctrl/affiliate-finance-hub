@@ -77,6 +77,7 @@ interface BonusResultadoLiquidoChartProps {
 
 interface ChartDataPoint {
   data: string;
+  dateKey: string; // yyyy-MM-dd for month detection
   label: string;
   bonus_creditado: number;
   juice: number;
