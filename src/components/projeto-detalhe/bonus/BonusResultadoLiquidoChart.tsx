@@ -558,6 +558,27 @@ export function BonusResultadoLiquidoChart({
 
   // Renderiza gráfico baseado no modo
   const renderChart = () => {
+    // Adaptive X-axis: for long periods, show monthly markers like VisaoGeralCharts
+    const MONTH_NAMES_SHORT = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    const useMonthlyTicks = !isSingleDayPeriod && chartData.length > 20;
+    
+    // Build set of indices that should show a tick (first day of each month)
+    const monthlyTickIndices = useMemo(() => {
+      if (!useMonthlyTicks) return null;
+      const indices = new Set<number>();
+      let lastMonth = '';
+      chartData.forEach((d, i) => {
+        if (d.dateKey) {
+          const month = d.dateKey.substring(0, 7); // yyyy-MM
+          if (month !== lastMonth) {
+            indices.add(i);
+            lastMonth = month;
+          }
+        }
+      });
+      return indices;
+    }, [chartData, useMonthlyTicks]);
+
     switch (chartMode) {
       case "resultado":
         return (
@@ -575,6 +596,41 @@ export function BonusResultadoLiquidoChart({
               fontSize={11}
               tickLine={false}
               axisLine={false}
+              interval={useMonthlyTicks ? 0 : undefined}
+              tick={({ x, y, payload, index }: { x: number; y: number; payload: { value: string }; index: number }) => {
+                if (useMonthlyTicks && monthlyTickIndices) {
+                  // Only render ticks at month boundaries
+                  if (!monthlyTickIndices.has(index)) return null;
+                  const entry = chartData[index];
+                  const monthIdx = entry?.dateKey ? parseInt(entry.dateKey.substring(5, 7), 10) - 1 : -1;
+                  const label = monthIdx >= 0 ? MONTH_NAMES_SHORT[monthIdx] : '';
+                  return (
+                    <text 
+                      x={x} 
+                      y={y + 10} 
+                      textAnchor="middle" 
+                      fill="hsl(var(--muted-foreground))" 
+                      fontSize={11}
+                      fontWeight={500}
+                    >
+                      {label}
+                    </text>
+                  );
+                }
+                // Default: render if label is non-empty
+                if (!payload.value) return null;
+                return (
+                  <text 
+                    x={x} 
+                    y={y + 10} 
+                    textAnchor="middle" 
+                    fill="hsl(var(--muted-foreground))" 
+                    fontSize={11}
+                  >
+                    {payload.value}
+                  </text>
+                );
+              }}
             />
             <YAxis
               stroke="hsl(var(--muted-foreground))"
