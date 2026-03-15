@@ -144,6 +144,9 @@ export interface RawApostaPerna {
   stake: number;
   moeda: string;
   bookmaker_id: string;
+  lucro_prejuizo?: number | null;
+  resultado?: string | null;
+  stake_brl_referencia?: number | null;
 }
 
 // =====================================================
