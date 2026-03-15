@@ -575,7 +575,7 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
       }
       return surebet.roi_real;
     }
-    return surebet.roi_esperado ?? piorCenarioCalculado?.roi ?? null;
+    return piorCenarioCalculado?.roi ?? surebet.roi_esperado ?? null;
   })();
   
   // Configuração do badge principal
