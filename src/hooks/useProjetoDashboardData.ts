@@ -39,6 +39,7 @@ export interface RawAposta {
   valor_brl_referencia: number | null;
   esporte: string | null;
   status: string;
+  is_multicurrency?: boolean | null;
 }
 
 export interface RawGiro {
@@ -144,6 +145,9 @@ export interface RawApostaPerna {
   stake: number;
   moeda: string;
   bookmaker_id: string;
+  lucro_prejuizo?: number | null;
+  resultado?: string | null;
+  stake_brl_referencia?: number | null;
 }
 
 // =====================================================
