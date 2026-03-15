@@ -249,6 +249,7 @@ export function BonusResultadoLiquidoChart({
 
       return {
         data: date,
+        dateKey: date, // yyyy-MM-dd format for month detection
         label: format(new Date(date + "T12:00:00"), "dd/MM", { locale: ptBR }),
         bonus_creditado: bonus,
         juice: juice,
