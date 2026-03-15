@@ -17,7 +17,7 @@ import {
   createKpiBreakdown 
 } from '@/types/moduleBreakdown';
 import { ESTRATEGIA_LABELS, type ApostaEstrategia } from '@/lib/apostaConstants';
-import { getConsolidatedStake, getConsolidatedLucro } from '@/utils/consolidatedValues';
+import { getConsolidatedStake, getConsolidatedLucro, getConsolidatedLucroDirect, type PernaConsolidavel } from '@/utils/consolidatedValues';
 import { extractCivilDateKey } from '@/utils/dateUtils';
 
 interface UseKpiBreakdownsProps {
