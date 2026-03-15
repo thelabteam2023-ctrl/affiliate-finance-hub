@@ -382,25 +382,34 @@ function calcularLucroCanonicoFromRpc(
     porMoeda[key] = (porMoeda[key] || 0) + valor;
   };
 
-  // 1) Apostas LIQUIDADAS
+  // Build pernas map para conversão direta multicurrency
+  const pernasMap = new Map<string, PernaConsolidavel[]>();
+  (rawData.apostas_pernas || []).forEach(p => {
+    if (!pernasMap.has(p.aposta_id)) pernasMap.set(p.aposta_id, []);
+    pernasMap.get(p.aposta_id)!.push({
+      moeda: p.moeda,
+      lucro_prejuizo: p.lucro_prejuizo != null ? Number(p.lucro_prejuizo) : null,
+      resultado: p.resultado,
+      stake: p.stake != null ? Number(p.stake) : null,
+      stake_brl_referencia: p.stake_brl_referencia != null ? Number(p.stake_brl_referencia) : null,
+    });
+  });
+
+  // 1) Apostas LIQUIDADAS — CORREÇÃO: usar getConsolidatedLucroDirect para conversão direta
+  // em apostas multicurrency (evita cross-rate via BRL pivot)
   rawData.apostas.filter(a => a.status === 'LIQUIDADA').forEach(a => {
     const moeda = (a.moeda_operacao || 'BRL').toUpperCase();
     addToMoeda(moeda, Number(a.lucro_prejuizo || 0));
-    consolidado += getConsolidatedLucro(a as any, convert, moedaConsolidacao);
+    const pernas = pernasMap.get(a.id);
+    consolidado += getConsolidatedLucroDirect(a as any, pernas, convert, moedaConsolidacao);
   });
 
-  // 2) Cashback
+  // 2) Cashback — CORREÇÃO: usar convert() consistentemente (sem fallback valor_brl_referencia)
   rawData.cashback.forEach(cb => {
     const moeda = (cb.moeda_operacao || 'BRL').toUpperCase();
     const valor = Number(cb.valor || 0);
     addToMoeda(moeda, valor);
-    if (moeda !== 'BRL') {
-      consolidado += cb.valor_brl_referencia != null 
-        ? Number(cb.valor_brl_referencia) 
-        : convert(valor, moeda);
-    } else {
-      consolidado += valor;
-    }
+    consolidado += convert(valor, moeda);
   });
 
   // 3) Giros grátis
