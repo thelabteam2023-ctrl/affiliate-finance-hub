@@ -564,7 +564,7 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
     ? (isMulticurrency
       ? (typeof lucroConsolidadoEfetivo === "number" ? lucroConsolidadoEfetivo : surebet.lucro_real)
       : surebet.lucro_real)
-    : (surebet.lucro_esperado ?? piorCenarioCalculado?.lucro ?? null);
+    : (piorCenarioCalculado?.lucro ?? surebet.lucro_esperado ?? null);
 
   const roiExibir = (() => {
     if (isLiquidada) {
