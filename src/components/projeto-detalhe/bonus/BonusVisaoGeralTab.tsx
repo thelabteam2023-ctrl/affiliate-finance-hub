@@ -151,6 +151,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
         .from("apostas_unificada")
         .select("id, data_aposta, lucro_prejuizo, pl_consolidado, consolidation_currency, moeda_operacao, bookmaker_id, bonus_id, stake_bonus, estrategia, is_multicurrency")
         .eq("projeto_id", projetoId)
+        .eq("status", "LIQUIDADA")
         .gte("data_aposta", startDate.split('T')[0])
         .eq("estrategia", "EXTRACAO_BONUS");
 
