@@ -39,6 +39,7 @@ export interface RawAposta {
   valor_brl_referencia: number | null;
   esporte: string | null;
   status: string;
+  is_multicurrency?: boolean | null;
 }
 
 export interface RawGiro {
