@@ -412,23 +412,7 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
 
       <VisaoGeralCharts 
         apostas={apostasParaGraficos}
-        apostasCalendario={apostasCalendario.map(a => ({
-          data_aposta: a.data_aposta,
-          lucro_prejuizo: a.lucro_prejuizo,
-          pl_consolidado: a.pl_consolidado,
-          consolidation_currency: a.consolidation_currency,
-          moeda_operacao: a.moeda_operacao,
-          lucro_prejuizo_brl_referencia: a.lucro_prejuizo_brl_referencia,
-          valor_brl_referencia: a.valor_brl_referencia,
-          stake_consolidado: a.stake_consolidado,
-          stake: a.stake,
-          stake_total: a.stake_total,
-          bookmaker_nome: a.bookmaker_nome,
-          parceiro_nome: a.parceiro_nome,
-          bookmaker_id: a.bookmaker_id,
-          pernas: a.pernas,
-          forma_registro: a.forma_registro ?? undefined,
-        }))}
+        apostasCalendario={transformCalendarApostasForCharts(calendarApostasRaw)}
         extrasLucro={extrasLucro}
         accentColor="hsl(var(--primary))"
         logoMap={catalogLogoMap}
