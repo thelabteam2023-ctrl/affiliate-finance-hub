@@ -214,13 +214,9 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
     return `${dateRange.start.toISOString()}_${dateRange.end.toISOString()}`;
   }, [dateRange]);
 
-  // ---- useQuery: Calendar apostas (no period filter) ----
-  const { data: apostasCalendario = [] } = useQuery({
-    queryKey: ["projeto-dashboard-calendario", projetoId],
-    queryFn: () => fetchApostasCalendarioFn(projetoId),
-    staleTime: STALE_TIME,
-    gcTime: GC_TIME,
-  });
+  // ---- useCalendarApostas: Calendar apostas (no period filter, with operacoes) ----
+  const { apostas: calendarApostasRaw = [] } = useCalendarApostas({ projetoId });
+  const apostasCalendario = calendarApostasRaw;
 
   // ---- useQuery: Filtered apostas (with period) ----
   const { 
