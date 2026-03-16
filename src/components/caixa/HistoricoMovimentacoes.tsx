@@ -359,23 +359,65 @@ export function HistoricoMovimentacoes({
             )}
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {/* Tipo filter */}
+            {/* Tipo filter - Multi-select */}
             <div className="flex items-center">
-              <Select value={filtroTipo} onValueChange={setFiltroTipo}>
-                <SelectTrigger className={`h-8 text-xs whitespace-nowrap w-auto [&>span]:justify-start [&>span]:gap-1.5 [&>span]:flex-nowrap ${filtroTipo !== "TODOS" ? "bg-secondary border-secondary" : "border-border/50"}`}>
-                  <span className="shrink-0">Tipo:</span>{" "}
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="TODOS">Todos</SelectItem>
-                  <SelectItem value="TRANSFERENCIA">Transferência</SelectItem>
-                  <SelectItem value="DEPOSITO">Depósito</SelectItem>
-                  <SelectItem value="SAQUE">Saque</SelectItem>
-                  <SelectItem value="APORTE_FINANCEIRO">Aporte & Liquidação</SelectItem>
-                  <SelectItem value="SWAP">Swap Crypto</SelectItem>
-                  <SelectItem value="OUTROS">Outros</SelectItem>
-                </SelectContent>
-              </Select>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={`h-8 text-xs whitespace-nowrap gap-1.5 ${filtroTipo.length > 0 ? "bg-secondary border-secondary" : "border-border/50"}`}
+                  >
+                    <Filter className="h-3 w-3" />
+                    <span>Tipo:</span>
+                    {filtroTipo.length === 0 ? (
+                      <span>Todos</span>
+                    ) : filtroTipo.length === 1 ? (
+                      <span>{TIPO_OPTIONS.find(o => o.value === filtroTipo[0])?.label || filtroTipo[0]}</span>
+                    ) : (
+                      <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">
+                        {filtroTipo.length}
+                      </Badge>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-52 p-2" align="start">
+                  <div className="space-y-1">
+                    {TIPO_OPTIONS.map((opt) => {
+                      const isSelected = filtroTipo.includes(opt.value);
+                      return (
+                        <button
+                          key={opt.value}
+                          className={`flex items-center gap-2 w-full px-2 py-1.5 rounded text-xs hover:bg-muted/80 transition-colors ${isSelected ? "bg-muted font-medium" : ""}`}
+                          onClick={() => {
+                            if (isSelected) {
+                              setFiltroTipo(filtroTipo.filter(v => v !== opt.value));
+                            } else {
+                              setFiltroTipo([...filtroTipo, opt.value]);
+                            }
+                          }}
+                        >
+                          <div className={`h-3.5 w-3.5 rounded-sm border flex items-center justify-center ${isSelected ? "bg-primary border-primary" : "border-muted-foreground/40"}`}>
+                            {isSelected && <CheckCircle2 className="h-3 w-3 text-primary-foreground" />}
+                          </div>
+                          {opt.label}
+                        </button>
+                      );
+                    })}
+                    {filtroTipo.length > 0 && (
+                      <>
+                        <div className="border-t border-border/50 my-1" />
+                        <button
+                          className="w-full px-2 py-1.5 rounded text-xs text-muted-foreground hover:bg-muted/80 transition-colors text-center"
+                          onClick={() => setFiltroTipo([])}
+                        >
+                          Limpar filtros
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
             {/* Projeto filter with search */}
             <ProjetoFilterSelect
