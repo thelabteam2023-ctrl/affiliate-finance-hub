@@ -22,6 +22,8 @@ interface ApostaData {
   data_aposta: string;
   resultado: string | null;
   lucro_prejuizo: number | null;
+  /** Número de operações que esta entrada representa (pernas de arbitragem, etc). Default: 1 */
+  operacoes?: number;
 }
 
 /** Entrada extra de lucro (cashback, giros grátis, etc.) por competência */
@@ -97,10 +99,12 @@ export function CalendarioLucros({
       
       const dataKey = extractLocalDateKey(aposta.data_aposta);
       const atual = mapa.get(dataKey) || { lucro: 0, count: 0 };
+      // Usar operacoes (pernas) quando disponível, senão 1
+      const ops = aposta.operacoes ?? 1;
       
       mapa.set(dataKey, {
         lucro: atual.lucro + (aposta.lucro_prejuizo || 0),
-        count: atual.count + 1
+        count: atual.count + ops
       });
     });
 
@@ -147,7 +151,8 @@ export function CalendarioLucros({
         
         if (isLiquidada) {
           lucroTotal += aposta.lucro_prejuizo || 0;
-          totalApostas++;
+          // Usar operacoes (pernas) quando disponível, senão 1
+          totalApostas += aposta.operacoes ?? 1;
         }
       }
     });

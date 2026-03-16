@@ -301,9 +301,9 @@ export function BonusResultadoLiquidoChart({
   // Calendário: dados COMPLETOS (sem filtro de dateRange) para ser independente do filtro de período
   const calendarApostas = useMemo(() => {
     // Agrupa tudo (bonuses + juice) por data, SEM filtro de dateRange
-    const resultByDate: Record<string, number> = {};
+    const resultByDate: Record<string, { lucro: number; operacoes: number }> = {};
 
-    // Bônus creditados (sem filtro de data)
+    // Bônus creditados (sem filtro de data) — NÃO contam como operações de apostas
     const filteredForCalendar = selectedBookmaker
       ? bonuses.filter(b => b.bookmaker_id === selectedBookmaker)
       : bonuses;
@@ -314,7 +314,10 @@ export function BonusResultadoLiquidoChart({
         const date = extractCivilDateKey(b.credited_at!);
         const rawAmount = b.bonus_amount || 0;
         const consolidated = convertToConsolidation ? convertToConsolidation(rawAmount, b.currency || "BRL") : rawAmount;
-        resultByDate[date] = (resultByDate[date] || 0) + consolidated;
+        const entry = resultByDate[date] || { lucro: 0, operacoes: 0 };
+        entry.lucro += consolidated;
+        // Bônus creditados não incrementam operacoes (não são apostas)
+        resultByDate[date] = entry;
       });
 
     // Juice (P&L das apostas de bônus, sem filtro de data)
@@ -332,23 +335,31 @@ export function BonusResultadoLiquidoChart({
         convertToConsolidation,
         moedaConsolidacao,
       );
-      resultByDate[date] = (resultByDate[date] || 0) + pl;
+      const entry = resultByDate[date] || { lucro: 0, operacoes: 0 };
+      entry.lucro += pl;
+      // Contar pernas individuais (regra institucional: arbitragem = N pernas)
+      const pernasCount = pernasMap[bet.id]?.length || 0;
+      entry.operacoes += pernasCount > 0 ? pernasCount : 1;
+      resultByDate[date] = entry;
     });
 
-    // Ajustes pós-limitação (sem filtro de data)
+    // Ajustes pós-limitação (sem filtro de data) — não contam como operações
     ajustesPostLimitacao.forEach(ajuste => {
       if (selectedBookmaker && ajuste.bookmaker_id !== selectedBookmaker) return;
       const date = extractCivilDateKey(ajuste.data_operacional);
       const valor = convertToConsolidation ? convertToConsolidation(ajuste.valor, ajuste.moeda) : ajuste.valor;
-      resultByDate[date] = (resultByDate[date] || 0) + valor;
+      const entry = resultByDate[date] || { lucro: 0, operacoes: 0 };
+      entry.lucro += valor;
+      resultByDate[date] = entry;
     });
 
     return Object.entries(resultByDate)
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, resultado]) => ({
+      .map(([date, { lucro, operacoes }]) => ({
         data_aposta: date + "T12:00:00",
-        resultado: resultado >= 0 ? "GREEN" as const : "RED" as const,
-        lucro_prejuizo: resultado,
+        resultado: lucro >= 0 ? "GREEN" as const : "RED" as const,
+        lucro_prejuizo: lucro,
+        operacoes,
       }));
   }, [bonuses, bonusBets, ajustesPostLimitacao, selectedBookmaker, convertToConsolidation, pernasMap, moedaConsolidacao]);
 
