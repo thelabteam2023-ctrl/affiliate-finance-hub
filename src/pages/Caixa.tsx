@@ -155,7 +155,7 @@ export default function Caixa() {
   // O fetchData só deve rodar quando: filtros mudam, nova transação criada, ou mount inicial.
   
   // Filters
-  const [filtroTipo, setFiltroTipo] = useState<string>("TODOS");
+  const [filtroTipo, setFiltroTipo] = useState<string[]>([]);
   const [filtroProjeto, setFiltroProjeto] = useState<string>("TODOS");
   const [filtroParceiro, setFiltroParceiro] = useState<string>("TODOS");
   const [dataInicio, setDataInicio] = useState<Date | undefined>(subDays(new Date(), 30));
