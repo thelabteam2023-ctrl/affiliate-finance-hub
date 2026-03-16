@@ -228,6 +228,7 @@ export function useSaldoOperavel(projetoId: string) {
           saldoRealNativo,
           saldoFreebetNativo,
           saldoEmApostaNativo,
+          saldoDisponivelNativo,
           // Rollover individual
           hasRollover: !!rolloverInfo,
           rolloverProgress: rolloverInfo?.progress || 0,
