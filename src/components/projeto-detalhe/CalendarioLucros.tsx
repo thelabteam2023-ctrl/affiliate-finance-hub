@@ -151,7 +151,8 @@ export function CalendarioLucros({
         
         if (isLiquidada) {
           lucroTotal += aposta.lucro_prejuizo || 0;
-          totalApostas++;
+          // Usar operacoes (pernas) quando disponível, senão 1
+          totalApostas += aposta.operacoes ?? 1;
         }
       }
     });
