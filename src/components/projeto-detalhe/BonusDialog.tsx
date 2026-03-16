@@ -151,8 +151,10 @@ export function BonusDialog({
         setCurrency(bonus.currency);
         setTipoBonus(bonus.tipo_bonus || "BONUS");
         setStatus(bonus.status);
-        setCreditedAt(bonus.credited_at ? format(new Date(bonus.credited_at), "yyyy-MM-dd") : "");
-        setExpiresAt(bonus.expires_at ? format(new Date(bonus.expires_at), "yyyy-MM-dd") : "");
+        // Extrair data civil diretamente da string ISO para evitar drift de timezone
+        // (ex: 2026-03-16T00:00:00+00:00 em UTC-3 mostraria 15/03 se parsear via Date)
+        setCreditedAt(bonus.credited_at ? bonus.credited_at.split("T")[0] : "");
+        setExpiresAt(bonus.expires_at ? bonus.expires_at.split("T")[0] : "");
         
         setRolloverMultiplier(bonus.rollover_multiplier ? String(bonus.rollover_multiplier) : "");
         setRolloverBase(bonus.rollover_base || "DEPOSITO_BONUS");
