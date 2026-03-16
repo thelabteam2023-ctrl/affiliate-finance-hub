@@ -238,15 +238,17 @@ export function ConfirmarSaqueDialog({
         }
 
         // Atualizar com dados reais de cripto
-        // CRÍTICO: qtd_coin do SAQUE deve manter o valor ORIGINAL esperado.
-        // A diferença é registrada separadamente como GANHO_CAMBIAL/PERDA_CAMBIAL.
-        // Se atualizarmos qtd_coin para o valor recebido, a view v_saldo_parceiro_wallets
-        // vai somar o valor recebido + a diferença, causando dupla contagem.
+        // CRÍTICO: qtd_coin deve ser atualizado para o valor REALMENTE RECEBIDO.
+        // A view v_saldo_parceiro_wallets usa qtd_coin para calcular o saldo da wallet.
+        // Se mantivermos o valor original, a wallet será creditada com o valor solicitado
+        // em vez do valor real, causando divergência de saldo.
+        // A entrada PERDA/GANHO_CAMBIAL é registrada separadamente SEM destino_wallet_id
+        // para evitar dupla contagem — ela serve apenas como registro contábil.
         const { data: updateResult, error } = await supabase
           .from("cash_ledger")
           .update({
             status: "CONFIRMADO",
-            // NÃO atualizar qtd_coin aqui - manter valor original para evitar dupla contagem
+            qtd_coin: qtdCoinRecebidaNum, // Atualizar para valor REAL recebido (view usa este campo)
             valor_confirmado: qtdCoinRecebidaNum, // registrar valor real recebido para auditoria
             descricao: descricaoFinal || null,
             transit_status: "CONFIRMED", // Confirmar trânsito para creditação na wallet
