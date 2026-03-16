@@ -86,8 +86,8 @@ interface HistoricoMovimentacoesProps {
   walletsDetalhes: WalletDetalhe[];
   bookmakers: { [key: string]: { nome: string; status: string; projeto_id?: string } };
   loading: boolean;
-  filtroTipo: string;
-  setFiltroTipo: (tipo: string) => void;
+  filtroTipo: string[];
+  setFiltroTipo: (tipo: string[]) => void;
   filtroProjeto: string;
   setFiltroProjeto: (projeto: string) => void;
   filtroParceiro: string;
