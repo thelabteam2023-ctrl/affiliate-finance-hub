@@ -315,7 +315,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
 
       {/* Saldo por Casa — GRID RESPONSIVO */}
       <div className="space-y-2">
-        <p className="text-xs font-medium text-foreground">Saldo por Casa</p>
+        <p className="text-xs font-medium text-foreground">Saldo por Casa <span className="font-normal text-muted-foreground">— disponível para uso</span></p>
         
         {casasComSaldo.length >= 8 && (
           <div className="relative">
