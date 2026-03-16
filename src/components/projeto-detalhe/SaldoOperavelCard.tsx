@@ -282,7 +282,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
         <div className="space-y-0 text-xs rounded-lg border border-border/50 overflow-hidden">
           {/* Saldo Real */}
           <div className="flex items-center justify-between px-3 py-2 bg-muted/20">
-            <span className="text-muted-foreground">Saldo nas Casas</span>
+            <span className="text-muted-foreground">Saldo Total</span>
             <span className="font-semibold">{formatCurrency(Math.max(0, saldoReal))}</span>
           </div>
           {/* Freebet */}
