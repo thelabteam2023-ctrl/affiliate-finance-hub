@@ -27,6 +27,15 @@ import { EditarDataTransacaoDialog } from "./EditarDataTransacaoDialog";
 import { EditarSaqueConfirmadoDialog } from "./EditarSaqueConfirmadoDialog";
 const PAGE_SIZE = 50;
 
+const TIPO_OPTIONS = [
+  { value: "TRANSFERENCIA", label: "Transferência" },
+  { value: "DEPOSITO", label: "Depósito" },
+  { value: "SAQUE", label: "Saque" },
+  { value: "APORTE_FINANCEIRO", label: "Aporte & Liquidação" },
+  { value: "SWAP", label: "Swap Crypto" },
+  { value: "OUTROS", label: "Outros" },
+];
+
 const getStatusBadge = (status: string) => {
   switch (status) {
     case "PENDENTE":
