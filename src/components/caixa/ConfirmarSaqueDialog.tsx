@@ -291,7 +291,8 @@ export function ConfirmarSaqueDialog({
               tipo_moeda: "CRYPTO",
               impacta_caixa_operacional: false,
               referencia_transacao_id: saque.id,
-              destino_wallet_id: saque.destino_wallet_id,
+              // NÃO vincular à wallet - esta entrada é apenas registro contábil da diferença.
+              // O saldo da wallet já reflete o valor real via qtd_coin atualizado no SAQUE.
               coin: coinMoeda,
               qtd_coin: Math.abs(diferencaCoin),
               // Herdar projeto do saque pai para isolamento financeiro
