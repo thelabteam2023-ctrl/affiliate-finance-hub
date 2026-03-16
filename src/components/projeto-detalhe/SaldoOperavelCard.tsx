@@ -282,7 +282,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
         <div className="space-y-0 text-xs rounded-lg border border-border/50 overflow-hidden">
           {/* Saldo Real */}
           <div className="flex items-center justify-between px-3 py-2 bg-muted/20">
-            <span className="text-muted-foreground">Saldo nas Casas</span>
+            <span className="text-muted-foreground">Saldo Total</span>
             <span className="font-semibold">{formatCurrency(Math.max(0, saldoReal))}</span>
           </div>
           {/* Freebet */}
@@ -295,11 +295,6 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
               <span className="font-semibold text-warning">{formatCurrency(saldoFreebet)}</span>
             </div>
           )}
-          {/* Saldo Atual = Saldo Real + Freebet (patrimônio total) */}
-          <div className="flex items-center justify-between px-3 py-2.5 border-t border-border/50 bg-muted/30">
-            <span className="font-semibold text-foreground">Saldo Atual</span>
-            <span className="font-bold text-foreground">{formatCurrency(saldoReal + saldoFreebet)}</span>
-          </div>
           {/* Apostas em Aberto — dedução */}
           {saldoEmAposta > 0 && (
             <div className="flex items-center justify-between px-3 py-2 bg-amber-500/10 border-t border-border/30">
@@ -310,6 +305,11 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
               <span className="font-semibold text-amber-500">{formatCurrency(saldoEmAposta)}</span>
             </div>
           )}
+          {/* Saldo Livre = Saldo Real + Freebet - Apostas em Aberto */}
+          <div className="flex items-center justify-between px-3 py-2.5 border-t border-border/50 bg-muted/30">
+            <span className="font-semibold text-foreground">Saldo Livre</span>
+            <span className="font-bold text-foreground">{formatCurrency(Math.max(0, saldoReal + saldoFreebet - saldoEmAposta))}</span>
+          </div>
         </div>
       </div>
 
