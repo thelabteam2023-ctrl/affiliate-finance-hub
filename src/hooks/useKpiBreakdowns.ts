@@ -485,8 +485,8 @@ function deriveBreakdowns(
   // Módulos individuais
   const apostasData = deriveApostasModule(rawData.apostas, moedaConsolidacao, convert, pernasMap);
   const girosGratisData = deriveGirosGratisModule(rawData, convert);
-  const perdasData = derivePerdasModule(rawData);
-  const ajustesData = deriveAjustesModule(rawData);
+  const perdasData = derivePerdasModule(rawData, convert);
+  const ajustesData = deriveAjustesModule(rawData, convert);
   const cashbackData = deriveCashbackModule(rawData, moedaConsolidacao, convert);
   const bonusGanhosData = deriveBonusGanhosModule(rawData, moedaConsolidacao, convert);
 
