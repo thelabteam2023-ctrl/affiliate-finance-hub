@@ -197,12 +197,15 @@ function derivePerdasModule(rawData: ProjetoDashboardRawData, convert: ConvertFn
   return { count: 0, volume: 0, lucro: 0, confirmadas, pendentes, volumePorMoeda: [], lucroPorMoeda };
 }
 
-function deriveAjustesModule(rawData: ProjetoDashboardRawData): ModuleDataWithCurrency {
+function deriveAjustesModule(rawData: ProjetoDashboardRawData, convert: ConvertFn): ModuleDataWithCurrency {
   const bookmakerMoeda = buildBookmakerMoedaMap(rawData.bookmakers);
   const conciliacoes = rawData.conciliacoes;
 
-  const total = conciliacoes.reduce((acc, c) => 
-    acc + (Number(c.saldo_novo) - Number(c.saldo_anterior)), 0);
+  const total = conciliacoes.reduce((acc, c) => {
+    const delta = Number(c.saldo_novo) - Number(c.saldo_anterior);
+    const moeda = bookmakerMoeda.get(c.bookmaker_id) || 'BRL';
+    return acc + convert(delta, moeda);
+  }, 0);
 
   const lucroItems = conciliacoes.map(c => ({
     valor: Number(c.saldo_novo) - Number(c.saldo_anterior),
