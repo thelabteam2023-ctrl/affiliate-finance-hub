@@ -22,6 +22,8 @@ interface ApostaData {
   data_aposta: string;
   resultado: string | null;
   lucro_prejuizo: number | null;
+  /** Número de operações que esta entrada representa (pernas de arbitragem, etc). Default: 1 */
+  operacoes?: number;
 }
 
 /** Entrada extra de lucro (cashback, giros grátis, etc.) por competência */
