@@ -99,10 +99,12 @@ export function CalendarioLucros({
       
       const dataKey = extractLocalDateKey(aposta.data_aposta);
       const atual = mapa.get(dataKey) || { lucro: 0, count: 0 };
+      // Usar operacoes (pernas) quando disponível, senão 1
+      const ops = aposta.operacoes ?? 1;
       
       mapa.set(dataKey, {
         lucro: atual.lucro + (aposta.lucro_prejuizo || 0),
-        count: atual.count + 1
+        count: atual.count + ops
       });
     });
 
