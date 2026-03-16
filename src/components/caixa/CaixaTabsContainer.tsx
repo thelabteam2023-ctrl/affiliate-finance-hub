@@ -24,8 +24,8 @@ interface CaixaTabsContainerProps {
   walletsDetalhes: Array<{ id: string; exchange: string; endereco: string; network: string; parceiro_id: string }>;
   bookmakers: { [key: string]: { nome: string; status: string; projeto_id?: string } };
   loading: boolean;
-  filtroTipo: string;
-  setFiltroTipo: (tipo: string) => void;
+  filtroTipo: string[];
+  setFiltroTipo: (tipo: string[]) => void;
   filtroProjeto: string;
   setFiltroProjeto: (projeto: string) => void;
   filtroParceiro: string;

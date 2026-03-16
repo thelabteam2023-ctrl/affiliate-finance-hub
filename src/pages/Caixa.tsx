@@ -155,7 +155,7 @@ export default function Caixa() {
   // O fetchData só deve rodar quando: filtros mudam, nova transação criada, ou mount inicial.
   
   // Filters
-  const [filtroTipo, setFiltroTipo] = useState<string>("TODOS");
+  const [filtroTipo, setFiltroTipo] = useState<string[]>([]);
   const [filtroProjeto, setFiltroProjeto] = useState<string>("TODOS");
   const [filtroParceiro, setFiltroParceiro] = useState<string>("TODOS");
   const [dataInicio, setDataInicio] = useState<Date | undefined>(subDays(new Date(), 30));
@@ -488,11 +488,13 @@ export default function Caixa() {
       
       // Include both APORTE and LIQUIDACAO when filter is APORTE_FINANCEIRO
       const knownTypes = ["TRANSFERENCIA", "DEPOSITO", "SAQUE", "APORTE_FINANCEIRO", "SWAP"];
-      const matchTipo = filtroTipo === "TODOS" || 
-        (filtroTipo === "APORTE_FINANCEIRO" && t.tipo_transacao === "APORTE_FINANCEIRO") ||
-        (filtroTipo === "SWAP" && (t.tipo_transacao === "SWAP_OUT" || t.tipo_transacao === "SWAP_IN")) ||
-        (filtroTipo === "OUTROS" && !knownTypes.includes(t.tipo_transacao) && t.tipo_transacao !== "SWAP_OUT" && t.tipo_transacao !== "SWAP_IN") ||
-        t.tipo_transacao === filtroTipo;
+      const matchTipo = filtroTipo.length === 0 || 
+        filtroTipo.some(f => 
+          (f === "APORTE_FINANCEIRO" && t.tipo_transacao === "APORTE_FINANCEIRO") ||
+          (f === "SWAP" && (t.tipo_transacao === "SWAP_OUT" || t.tipo_transacao === "SWAP_IN")) ||
+          (f === "OUTROS" && !knownTypes.includes(t.tipo_transacao) && t.tipo_transacao !== "SWAP_OUT" && t.tipo_transacao !== "SWAP_IN") ||
+          t.tipo_transacao === f
+        );
       
       // Filtro por projeto usando projeto_id_snapshot (imutável, gravado no momento da transação)
       // MODELO: Atribuição temporal - cada transação pertence ao projeto que era dono no momento
