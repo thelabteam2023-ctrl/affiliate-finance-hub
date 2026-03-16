@@ -1,5 +1,5 @@
 # Memory: finance/project-financial-scope-isolation
-Updated: 2026-03-06
+Updated: 2026-03-16
 
 ## Isolamento Financeiro entre Projetos
 
@@ -12,35 +12,25 @@ Para garantir resultado fidedigno quando uma bookmaker é transferida entre proj
 1. **Ao desvincular** (Projeto A): Gera `SAQUE_VIRTUAL` com saldo efetivo (saldo_atual - saques_pendentes + depositos_pendentes), atribuído ao `projeto_id_snapshot = Projeto A`.
 2. **Ao vincular** (Projeto B): Gera `DEPOSITO_VIRTUAL` com o `saldo_atual` da bookmaker, atribuído ao `projeto_id_snapshot = Projeto B`.
 
+### Regra de Baseline (CORRIGIDO v3 - 2026-03-16)
+
+**DEPOSITO_VIRTUAL é a ÚNICA fonte de baseline para o projeto.**
+
+- ❌ **Adoção de órfãos REMOVIDA** dos triggers. Depósitos anteriores à vinculação NÃO são atribuídos ao projeto.
+- ✅ `DEPOSITO_VIRTUAL = saldo_atual` (simples, sem cálculos de net flow).
+- ✅ `data_transacao = CURRENT_DATE` (data da vinculação, não data do depósito original).
+- Isso garante que o projeto reconhece a **data de vínculo** como marco financeiro, não a data de depósitos passados.
+
 ### Proteções contra Edge Cases
 
-#### Saques Pendentes (cenário 4)
-- `SAQUE_VIRTUAL = saldo_atual - saques_pendentes + depositos_pendentes` → evita dupla contagem.
-- Warning ao operador: se saque cancelado pós-desvinculação, valor fica sub-contado (limitação aceita).
+#### Idempotência
+- Verificação de DV existente nos últimos 30 segundos antes de criar novo.
 
-#### Depósitos Pendentes (cenário 5)
-- Ao desvincular, todas as transações PENDENTES e LIQUIDADO recebem `projeto_id_snapshot` explícito → confirmação futura mantém atribuição correta.
+#### Race Condition
+- `hasRecentVirtualTransaction()` verifica duplicatas por clique duplo ou operações simultâneas.
 
-#### Apostas Pendentes (cenário 3)
-- Sistema emite **warnings** ao operador informando quantas apostas pendentes existem.
-- Resultado de apostas liquidadas após desvinculação ficará sem projeto (limitação aceita, operador avisado).
-
-#### Dupla Contagem (CORRIGIDO)
-- `executeLink` **NÃO** atribui transações órfãs retroativamente ao novo projeto.
-- O `DEPOSITO_VIRTUAL` é a ÚNICA fonte de baseline para o novo projeto.
-
-#### Race Condition (CORRIGIDO)
-- `hasRecentVirtualTransaction()` verifica se já existe SAQUE_VIRTUAL ou DEPOSITO_VIRTUAL nos últimos 10 segundos antes de criar um novo, evitando duplicatas por clique duplo ou operações simultâneas.
-
-#### Re-vinculação ao Mesmo Projeto (CORRIGIDO v2 - 2026-03-06)
-- Supressão de transações virtuais foi REMOVIDA. Sempre cria pares completos (SAQUE_VIRTUAL + DEPOSITO_VIRTUAL) para manter o ledger balanceado.
-
-#### Freebet (CORRIGIDO)
-- `preCheckUnlink()` agora inclui `saldoFreebet` e emite warning quando há saldo freebet, informando que freebets não são transferidas entre projetos.
-
-#### Atomicidade e Validação (CORRIGIDO - 2026-03-06)
+#### Atomicidade (CORRIGIDO - 2026-03-06)
 - SAQUE_VIRTUAL é criado ANTES de desvincular. Se falhar, desvinculação é abortada.
-- Retorno de `registrarSaqueVirtualViaLedger` e `registrarDepositoVirtualViaLedger` é validado. Exceção lançada em caso de falha.
 
 ### Serviço Centralizado
 
@@ -48,7 +38,3 @@ Para garantir resultado fidedigno quando uma bookmaker é transferida entre proj
 - `preCheckUnlink()` — verifica pendências, calcula saldo efetivo, gera warnings (inclui freebet)
 - `executeUnlink()` — idempotência + trava snapshots + SAQUE_VIRTUAL + desvincula + histórico (nesta ordem)
 - `executeLink()` — idempotência + DEPOSITO_VIRTUAL (obrigatório, sem exceções)
-
-### Frontend
-
-Queries em `ProjetoFinancialMetricsCard` e `HistoricoVinculosTab` usam `.in("tipo_transacao", ["DEPOSITO", "DEPOSITO_VIRTUAL"])` e `.in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])`.
