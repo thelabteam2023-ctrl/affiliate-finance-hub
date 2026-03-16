@@ -68,42 +68,7 @@ interface ApostaUnificada {
 
 // ---------- Data Fetching Functions (extracted for useQuery) ----------
 
-async function fetchApostasCalendarioFn(projetoId: string): Promise<ApostaUnificada[]> {
-  const { data, error } = await supabase
-    .from("apostas_unificada")
-    .select(`id, data_aposta, lucro_prejuizo, pl_consolidado, consolidation_currency, lucro_prejuizo_brl_referencia, resultado, stake, stake_total, stake_consolidado, moeda_operacao, valor_brl_referencia, forma_registro, bookmaker_id`)
-    .eq("projeto_id", projetoId)
-    .eq("status", "LIQUIDADA")
-    .is("cancelled_at", null)
-    .order("data_aposta", { ascending: true });
-
-  if (error) throw error;
-
-  return (data || []).map((item: any) => ({
-    id: item.id,
-    data_aposta: item.data_aposta,
-    // IMPORTANTE: manter valor bruto + metadados de moeda para evitar dupla conversão no calendário
-    lucro_prejuizo: item.lucro_prejuizo,
-    pl_consolidado: item.pl_consolidado,
-    resultado: item.resultado,
-    stake: item.stake || 0,
-    stake_total: item.stake_total,
-    esporte: 'N/A',
-    bookmaker_id: item.bookmaker_id || 'unknown',
-    bookmaker_nome: '',
-    parceiro_nome: null,
-    logo_url: null,
-    forma_registro: item.forma_registro,
-    estrategia: null,
-    bonus_id: null,
-    moeda_operacao: item.moeda_operacao,
-    stake_consolidado: item.stake_consolidado,
-    consolidation_currency: item.consolidation_currency,
-    valor_brl_referencia: item.valor_brl_referencia,
-    lucro_prejuizo_brl_referencia: item.lucro_prejuizo_brl_referencia,
-    pernas: undefined,
-  }));
-}
+// Calendar apostas agora vem do hook compartilhado useCalendarApostas
 
 async function fetchApostasFiltradas(
   projetoId: string, 
