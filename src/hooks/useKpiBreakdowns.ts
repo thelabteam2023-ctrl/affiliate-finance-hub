@@ -173,14 +173,20 @@ function deriveGirosGratisModule(
   return { count, volume: 0, lucro, valorTotal, volumePorMoeda, lucroPorMoeda };
 }
 
-function derivePerdasModule(rawData: ProjetoDashboardRawData): ModuleDataWithCurrency {
+function derivePerdasModule(rawData: ProjetoDashboardRawData, convert: ConvertFn): ModuleDataWithCurrency {
   const bookmakerMoeda = buildBookmakerMoedaMap(rawData.bookmakers);
   const perdas = rawData.perdas;
 
   const confirmadas = perdas.filter(p => p.status === 'CONFIRMADA')
-    .reduce((acc, p) => acc + Number(p.valor || 0), 0);
+    .reduce((acc, p) => {
+      const moeda = bookmakerMoeda.get(p.bookmaker_id || '') || 'BRL';
+      return acc + convert(Number(p.valor || 0), moeda);
+    }, 0);
   const pendentes = perdas.filter(p => p.status === 'PENDENTE')
-    .reduce((acc, p) => acc + Number(p.valor || 0), 0);
+    .reduce((acc, p) => {
+      const moeda = bookmakerMoeda.get(p.bookmaker_id || '') || 'BRL';
+      return acc + convert(Number(p.valor || 0), moeda);
+    }, 0);
 
   const lucroItems = perdas.filter(p => p.status === 'CONFIRMADA').map(p => ({
     valor: Number(p.valor || 0),
@@ -191,12 +197,15 @@ function derivePerdasModule(rawData: ProjetoDashboardRawData): ModuleDataWithCur
   return { count: 0, volume: 0, lucro: 0, confirmadas, pendentes, volumePorMoeda: [], lucroPorMoeda };
 }
 
-function deriveAjustesModule(rawData: ProjetoDashboardRawData): ModuleDataWithCurrency {
+function deriveAjustesModule(rawData: ProjetoDashboardRawData, convert: ConvertFn): ModuleDataWithCurrency {
   const bookmakerMoeda = buildBookmakerMoedaMap(rawData.bookmakers);
   const conciliacoes = rawData.conciliacoes;
 
-  const total = conciliacoes.reduce((acc, c) => 
-    acc + (Number(c.saldo_novo) - Number(c.saldo_anterior)), 0);
+  const total = conciliacoes.reduce((acc, c) => {
+    const delta = Number(c.saldo_novo) - Number(c.saldo_anterior);
+    const moeda = bookmakerMoeda.get(c.bookmaker_id) || 'BRL';
+    return acc + convert(delta, moeda);
+  }, 0);
 
   const lucroItems = conciliacoes.map(c => ({
     valor: Number(c.saldo_novo) - Number(c.saldo_anterior),
@@ -476,8 +485,8 @@ function deriveBreakdowns(
   // Módulos individuais
   const apostasData = deriveApostasModule(rawData.apostas, moedaConsolidacao, convert, pernasMap);
   const girosGratisData = deriveGirosGratisModule(rawData, convert);
-  const perdasData = derivePerdasModule(rawData);
-  const ajustesData = deriveAjustesModule(rawData);
+  const perdasData = derivePerdasModule(rawData, convert);
+  const ajustesData = deriveAjustesModule(rawData, convert);
   const cashbackData = deriveCashbackModule(rawData, moedaConsolidacao, convert);
   const bonusGanhosData = deriveBonusGanhosModule(rawData, moedaConsolidacao, convert);
 
