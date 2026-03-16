@@ -182,5 +182,7 @@ export function transformCalendarApostasForCharts(apostas: CalendarApostaData[])
     stake_consolidado: a.stake_consolidado,
     lucro_prejuizo_brl_referencia: a.lucro_prejuizo_brl_referencia,
     valor_brl_referencia: a.valor_brl_referencia,
+    // Contagem de operações para o calendário
+    operacoes: a.operacoes,
   }));
 }
