@@ -512,7 +512,7 @@ export default function BookmakerDialog({
                   value={parceiroId}
                   onValueChange={(newParceiroId) => {
                     setParceiroId(newParceiroId);
-                    if (!bookmaker) {
+                    if (!bookmaker && !lockBookmaker) {
                       setBookmakerId("");
                       setSelectedBookmaker(null);
                       setSelectedLink("");
