@@ -173,14 +173,20 @@ function deriveGirosGratisModule(
   return { count, volume: 0, lucro, valorTotal, volumePorMoeda, lucroPorMoeda };
 }
 
-function derivePerdasModule(rawData: ProjetoDashboardRawData): ModuleDataWithCurrency {
+function derivePerdasModule(rawData: ProjetoDashboardRawData, convert: ConvertFn): ModuleDataWithCurrency {
   const bookmakerMoeda = buildBookmakerMoedaMap(rawData.bookmakers);
   const perdas = rawData.perdas;
 
   const confirmadas = perdas.filter(p => p.status === 'CONFIRMADA')
-    .reduce((acc, p) => acc + Number(p.valor || 0), 0);
+    .reduce((acc, p) => {
+      const moeda = bookmakerMoeda.get(p.bookmaker_id || '') || 'BRL';
+      return acc + convert(Number(p.valor || 0), moeda);
+    }, 0);
   const pendentes = perdas.filter(p => p.status === 'PENDENTE')
-    .reduce((acc, p) => acc + Number(p.valor || 0), 0);
+    .reduce((acc, p) => {
+      const moeda = bookmakerMoeda.get(p.bookmaker_id || '') || 'BRL';
+      return acc + convert(Number(p.valor || 0), moeda);
+    }, 0);
 
   const lucroItems = perdas.filter(p => p.status === 'CONFIRMADA').map(p => ({
     valor: Number(p.valor || 0),
