@@ -27,6 +27,8 @@ interface CalendarApostaData {
   stake_consolidado: number | null;
   lucro_prejuizo_brl_referencia: number | null;
   valor_brl_referencia: number | null;
+  /** Número de operações (pernas) que esta aposta representa */
+  operacoes: number;
 }
 
 interface UseCalendarApostasOptions {
