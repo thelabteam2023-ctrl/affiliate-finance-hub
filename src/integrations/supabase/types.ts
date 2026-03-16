@@ -12524,7 +12524,7 @@ export type Database = {
         Returns: string
       }
       criar_aposta_atomica:
-        | { Args: { p_aposta_data: Json; p_pernas_data: Json }; Returns: Json }
+        | { Args: { p_aposta_data: Json; p_pernas_data?: Json }; Returns: Json }
         | {
             Args: {
               p_aposta_data: Json
