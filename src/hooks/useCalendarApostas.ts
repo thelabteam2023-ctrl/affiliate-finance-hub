@@ -77,6 +77,26 @@ async function fetchCalendarApostas(
   const { data, error } = await query;
   if (error) throw error;
 
+  const apostaIds = (data || []).map((a: any) => a.id);
+
+  // Buscar contagem de pernas por aposta (para operações multi-casa/multi-entrada)
+  let pernasCountMap: Record<string, number> = {};
+  if (apostaIds.length > 0) {
+    // Buscar em lotes de 200 para evitar limites de URL
+    const batchSize = 200;
+    for (let i = 0; i < apostaIds.length; i += batchSize) {
+      const batch = apostaIds.slice(i, i + batchSize);
+      const { data: pernas } = await supabase
+        .from("apostas_pernas")
+        .select("aposta_id")
+        .in("aposta_id", batch);
+      
+      (pernas || []).forEach((p: any) => {
+        pernasCountMap[p.aposta_id] = (pernasCountMap[p.aposta_id] || 0) + 1;
+      });
+    }
+  }
+
   // Buscar nomes de bookmakers
   const bookmakerIds = [...new Set((data || []).map(a => a.bookmaker_id).filter(Boolean))] as string[];
   let bookmakerMap: Record<string, { nome: string; parceiro_nome: string | null }> = {};
@@ -99,6 +119,9 @@ async function fetchCalendarApostas(
   // Transformar dados
   return (data || []).map((item: any) => {
     const bkInfo = bookmakerMap[item.bookmaker_id] || { nome: '', parceiro_nome: null };
+    // Regra institucional: se tem pernas, contar pernas; senão, 1 operação
+    const pernasCount = pernasCountMap[item.id] || 0;
+    const operacoes = pernasCount > 0 ? pernasCount : 1;
     return {
       id: item.id,
       data_aposta: item.data_aposta,
@@ -114,6 +137,7 @@ async function fetchCalendarApostas(
       stake_consolidado: item.stake_consolidado,
       lucro_prejuizo_brl_referencia: item.lucro_prejuizo_brl_referencia,
       valor_brl_referencia: item.valor_brl_referencia,
+      operacoes,
     };
   });
 }
