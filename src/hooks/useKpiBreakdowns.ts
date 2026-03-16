@@ -111,7 +111,8 @@ function deriveApostasModule(
   const lucroPorEstrategia: Record<string, number> = {};
   let lucro = 0;
   apostas.filter(a => a.status === 'LIQUIDADA').forEach(a => {
-    const pl = getConsolidatedLucro(a as any, convert, moedaConsolidacao);
+    const pernas = pernasMap.get(a.id);
+    const pl = getConsolidatedLucroDirect(a as any, pernas, convert, moedaConsolidacao);
     lucro += pl;
     const key = a.estrategia || 'PUNTER';
     lucroPorEstrategia[key] = (lucroPorEstrategia[key] || 0) + pl;
