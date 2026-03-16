@@ -2633,7 +2633,10 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
     }
   };
 
-  // Liquidar perna por índice - usa tabela apostas_pernas (Motor v9.5)
+  // Liquidar perna por índice visual - usa tabela apostas_pernas (Motor v9.5)
+  // CORREÇÃO CRÍTICA: pernaIndex é o índice VISUAL (agrupado por seleção).
+  // Quando uma seleção tem múltiplas entradas (sub-entries/casas), precisamos
+  // liquidar TODAS as linhas de apostas_pernas desse grupo, não apenas a primeira.
   const handleLiquidarPerna = useCallback(async (pernaIndex: number, resultado: "GREEN" | "RED" | "VOID" | "MEIO_GREEN" | "MEIO_RED" | null) => {
     if (!surebet || !workspaceId) return;
     
@@ -2641,7 +2644,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
       // Buscar pernas da tabela normalizada apostas_pernas
       const { data: pernasData } = await supabase
         .from("apostas_pernas")
-        .select("id, bookmaker_id, stake, odd, moeda, resultado")
+        .select("id, bookmaker_id, stake, odd, moeda, resultado, selecao")
         .eq("aposta_id", surebet.id)
         .order("ordem", { ascending: true });
       
@@ -2654,60 +2657,78 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
       
       if (!pernasData || pernasData.length === 0) return;
       
-      const perna = pernasData[pernaIndex];
-      if (!perna) return;
-
-      const stake = perna.stake || 0;
-      const odd = perna.odd || 0;
-      const resultadoAnterior = perna.resultado;
-      const bookmakerId = perna.bookmaker_id;
-      const moeda = perna.moeda || 'BRL';
       const fonteSaldo = operacaoData?.fonte_saldo || 'REAL';
 
-      // Se o resultado não mudou, não fazer nada
-      if (resultadoAnterior === resultado) return;
-
-      // MOTOR FINANCEIRO v9.5: Usar liquidarPernaSurebet do ApostaService
-      const liquidacaoResult = await liquidarPernaSurebet({
-        surebet_id: surebet.id,
-        perna_id: perna.id,
-        perna_index: pernaIndex,
-        bookmaker_id: bookmakerId,
-        resultado,
-        resultado_anterior: resultadoAnterior || null,
-        stake,
-        odd,
-        moeda,
-        workspace_id: workspaceId,
-        fonte_saldo: fonteSaldo,
-      });
-
-      if (!liquidacaoResult.success) {
-        toast.error(liquidacaoResult.error?.message || "Erro ao liquidar perna");
-        return;
+      // Agrupar pernas por seleção (mantendo ordem de aparição) para mapear
+      // índice visual → grupo de pernas no DB
+      const groupOrder: string[] = [];
+      const groups = new Map<string, typeof pernasData>();
+      for (const p of pernasData) {
+        const key = p.selecao || `__unnamed_${p.id}`;
+        if (!groups.has(key)) {
+          groups.set(key, []);
+          groupOrder.push(key);
+        }
+        groups.get(key)!.push(p);
       }
 
-      const lucro = liquidacaoResult.data?.lucro_prejuizo ?? 0;
+      // Ordenar grupos pela mesma ordem fixa usada na UI
+      const ordemFixa = getOrdemFixa(odds.length === 3 ? "1-X-2" : "1-2", surebet.mercado || "");
+      groupOrder.sort((a, b) => {
+        const indexA = ordemFixa.indexOf(a);
+        const indexB = ordemFixa.indexOf(b);
+        if (indexA === -1 && indexB === -1) return 0;
+        if (indexA === -1) return 1;
+        if (indexB === -1) return -1;
+        return indexA - indexB;
+      });
 
-      // ====== LÓGICA DE ROLLOVER ======
-      // Regra: se a casa tem bônus ativo (rollover em andamento), qualquer aposta liquidada conta para o rollover,
-      // independente da aba/contexto em que foi registrada.
-      const temBonusAtivoParaRollover = await hasActiveRolloverBonus(projetoId, bookmakerId);
-      if (temBonusAtivoParaRollover) {
-        const resultadoContaRollover = resultado !== "VOID" && resultado !== null;
-        const resultadoAnteriorContava = resultadoAnterior && resultadoAnterior !== "VOID" && resultadoAnterior !== "PENDENTE";
-        
-        // Stake da perna (tabela normalizada - sem entries adicionais)
-        let stakeTotalPerna = stake;
-        
-        if (resultadoContaRollover && !resultadoAnteriorContava) {
-          // Primeira vez liquidando (não VOID/PENDENTE) - adicionar ao rollover
-          await atualizarProgressoRollover(projetoId, bookmakerId, stakeTotalPerna, odd);
-          console.log(`Rollover atualizado: perna ${pernaIndex}, bookmaker ${bookmakerId}, stake ${stakeTotalPerna}`);
-        } else if (!resultadoContaRollover && resultadoAnteriorContava) {
-          // Resultado válido → VOID/PENDENTE/null - reverter rollover
-          await reverterProgressoRollover(projetoId, bookmakerId, stakeTotalPerna);
-          console.log(`Rollover revertido: perna ${pernaIndex}, bookmaker ${bookmakerId}, stake ${stakeTotalPerna}`);
+      const groupKey = groupOrder[pernaIndex];
+      if (!groupKey) return;
+      
+      const pernasDoGrupo = groups.get(groupKey) || [];
+      if (pernasDoGrupo.length === 0) return;
+
+      const primeiraPernaAnterior = pernasDoGrupo[0].resultado;
+
+      // Se o resultado não mudou (comparar com a primeira perna do grupo)
+      if (primeiraPernaAnterior === resultado) return;
+
+      let lucroTotal = 0;
+
+      // Liquidar CADA perna do grupo individualmente
+      for (const perna of pernasDoGrupo) {
+        const liquidacaoResult = await liquidarPernaSurebet({
+          surebet_id: surebet.id,
+          perna_id: perna.id,
+          bookmaker_id: perna.bookmaker_id,
+          resultado,
+          resultado_anterior: perna.resultado || null,
+          stake: perna.stake || 0,
+          odd: perna.odd || 0,
+          moeda: perna.moeda || 'BRL',
+          workspace_id: workspaceId,
+          fonte_saldo: fonteSaldo,
+        });
+
+        if (!liquidacaoResult.success) {
+          toast.error(liquidacaoResult.error?.message || "Erro ao liquidar perna");
+          return;
+        }
+
+        lucroTotal += liquidacaoResult.data?.lucro_prejuizo ?? 0;
+
+        // ====== LÓGICA DE ROLLOVER (por sub-entrada) ======
+        const temBonusAtivoParaRollover = await hasActiveRolloverBonus(projetoId, perna.bookmaker_id);
+        if (temBonusAtivoParaRollover) {
+          const resultadoContaRollover = resultado !== "VOID" && resultado !== null;
+          const resultadoAnteriorContava = perna.resultado && perna.resultado !== "VOID" && perna.resultado !== "PENDENTE";
+          
+          if (resultadoContaRollover && !resultadoAnteriorContava) {
+            await atualizarProgressoRollover(projetoId, perna.bookmaker_id, perna.stake || 0, perna.odd || 0);
+          } else if (!resultadoContaRollover && resultadoAnteriorContava) {
+            await reverterProgressoRollover(projetoId, perna.bookmaker_id, perna.stake || 0);
+          }
         }
       }
       
@@ -2717,13 +2738,13 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
       // Atualizar estados locais
       setOdds(prev => prev.map((o, idx) => 
         idx === pernaIndex
-          ? { ...o, resultado, lucro_prejuizo: lucro }
+          ? { ...o, resultado, lucro_prejuizo: lucroTotal }
           : o
       ));
 
       setLinkedApostas(prev => prev.map((a, idx) => 
         idx === pernaIndex
-          ? { ...a, resultado, lucro_prejuizo: lucro }
+          ? { ...a, resultado, lucro_prejuizo: lucroTotal }
           : a
       ));
 

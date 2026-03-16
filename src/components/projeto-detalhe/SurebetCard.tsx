@@ -659,18 +659,39 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
                   bookmakerNomeMap={bookmakerNomeMap}
                   convertToConsolidation={convertToConsolidation}
                   onResultChange={onPernaResultChange && perna.bookmaker_id ? async (resultado: string) => {
-                    await onPernaResultChange({
-                      pernaId: perna.id,
-                      surebetId: surebet.id,
-                      bookmarkerId: perna.bookmaker_id!,
-                      resultado,
-                      stake: perna.stake,
-                      odd: perna.odd,
-                      moeda: perna.moeda || 'BRL',
-                      resultadoAnterior: perna.resultado,
-                      workspaceId: surebet.workspace_id || '',
-                      bookmakerNome: perna.bookmaker_nome,
-                    });
+                    // CORREÇÃO: Para pernas agrupadas (múltiplas entradas/casas),
+                    // liquidar TODAS as sub-entradas, não apenas a primeira.
+                    if (perna.entries && perna.entries.length > 1) {
+                      for (const entry of perna.entries) {
+                        if (!entry.id || !entry.bookmaker_id) continue;
+                        await onPernaResultChange({
+                          pernaId: entry.id,
+                          surebetId: surebet.id,
+                          bookmarkerId: entry.bookmaker_id,
+                          resultado,
+                          stake: entry.stake,
+                          odd: entry.odd,
+                          moeda: entry.moeda || 'BRL',
+                          resultadoAnterior: perna.resultado,
+                          workspaceId: surebet.workspace_id || '',
+                          bookmakerNome: entry.bookmaker_nome,
+                          silent: true,
+                        });
+                      }
+                    } else {
+                      await onPernaResultChange({
+                        pernaId: perna.id,
+                        surebetId: surebet.id,
+                        bookmarkerId: perna.bookmaker_id!,
+                        resultado,
+                        stake: perna.stake,
+                        odd: perna.odd,
+                        moeda: perna.moeda || 'BRL',
+                        resultadoAnterior: perna.resultado,
+                        workspaceId: surebet.workspace_id || '',
+                        bookmakerNome: perna.bookmaker_nome,
+                      });
+                    }
                   } : undefined}
                 />
               ))}
