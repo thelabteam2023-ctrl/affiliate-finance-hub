@@ -384,7 +384,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
                     {casa.moedaOriginal}
                   </Badge>
                   <SaldoCompostoSimples
-                    saldoReal={casa.saldoRealNativo}
+                    saldoReal={casa.saldoDisponivelNativo}
                     saldoFreebet={casa.saldoFreebetNativo}
                     formatCurrency={(val) => formatCurrencyUtil(val, casa.moedaOriginal)}
                     className="text-xs text-primary font-semibold whitespace-nowrap"
