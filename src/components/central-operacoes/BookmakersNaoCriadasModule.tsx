@@ -181,6 +181,7 @@ export default function BookmakersNaoCriadasModule() {
         .map((p: any) => ({
           ...p,
           origem: origemMap.get(p.id) || undefined,
+          diasRestantes: diasRestantesMap.get(p.id) ?? null,
         }));
     },
     enabled: !!workspaceId && !!selectedCatalogoId,
