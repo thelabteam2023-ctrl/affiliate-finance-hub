@@ -436,7 +436,7 @@ export function BonusResultadoLiquidoChart({
   }
 
   // Determina cor do acumulado final
-  const acumuladoFinal = chartData[chartData.length - 1]?.acumulado ?? 0;
+  const acumuladoFinal = visibleChartData[visibleChartData.length - 1]?.acumulado ?? 0;
   const isPositivo = acumuladoFinal >= 0;
 
   // Renderiza KPIs baseado no modo
