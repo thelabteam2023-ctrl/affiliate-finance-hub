@@ -68,6 +68,10 @@ interface ParceriaDetalhe {
   dispensaMotivo?: string;
 }
 
+interface IndicacaoDetalhe {
+  parceiroNome: string;
+}
+
 interface IndicadorPerformance {
   indicador_id: string;
   user_id: string;
