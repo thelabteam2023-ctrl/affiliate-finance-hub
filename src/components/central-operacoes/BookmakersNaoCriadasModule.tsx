@@ -60,6 +60,8 @@ export default function BookmakersNaoCriadasModule() {
   const [bkPopoverOpen, setBkPopoverOpen] = useState(false);
   const [showDescartados, setShowDescartados] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [grupoFilter, setGrupoFilter] = useState("todos");
+  const { getCatalogoIdsByGrupo } = useBookmakerGrupos();
 
   // Dialog state for creating a new bookmaker account
   const [criarDialog, setCriarDialog] = useState<{
