@@ -113,13 +113,6 @@ export function BonusResultadoLiquidoChart({
   const [selectedBookmaker, setSelectedBookmaker] = useState<string | null>(null);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [showBenchmark, setShowBenchmark] = useState(false);
-  const [zoomCurrentMonth, setZoomCurrentMonth] = useState(false);
-
-  // Detecta se o ciclo abrange múltiplos meses (para mostrar toggle de zoom)
-  const isMultiMonthCycle = useMemo(() => {
-    if (!dateRange) return false;
-    return !isSameMonth(dateRange.start, dateRange.end);
-  }, [dateRange]);
 
   // Calcula estatísticas por bookmaker (para filtro e breakdown)
   const bookmakerStats = useMemo(() => {
