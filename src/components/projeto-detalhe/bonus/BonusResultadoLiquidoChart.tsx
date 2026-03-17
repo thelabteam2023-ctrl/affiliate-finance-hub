@@ -758,7 +758,7 @@ export function BonusResultadoLiquidoChart({
               radius={[4, 4, 0, 0]} 
               maxBarSize={24}
             >
-              {visibleChartData.map((entry, index) => (
+              {chartData.map((entry, index) => (
                 <Cell 
                   key={`cell-juice-${index}`} 
                   fill={entry.juice >= 0 ? "url(#juicePositiveGradient)" : "url(#juiceNegativeGradient)"} 
