@@ -377,8 +377,15 @@ export default function ParceiroFinanceiroDialog({
         vinculadosData?.map(b => b.bookmaker_catalogo_id).filter(Boolean) || []
       );
 
+      // Buscar indisponíveis para este parceiro
+      const { data: indispRows } = await (supabase as any)
+        .from("bookmaker_indisponiveis")
+        .select("bookmaker_catalogo_id")
+        .eq("parceiro_id", parceiroId);
+      const indispSet = new Set((indispRows ?? []).map((r: any) => r.bookmaker_catalogo_id));
+
       const disponiveis = catalogoData?.filter(
-        c => !vinculadosCatalogoIds.has(c.id)
+        c => !vinculadosCatalogoIds.has(c.id) && !indispSet.has(c.id)
       ) || [];
 
       setBookmakersDisponiveis(disponiveis);

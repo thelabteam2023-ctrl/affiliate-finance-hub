@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef, useCallback, memo } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, memo } from "react";
 import { getCurrencySymbol } from "@/types/currency";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -86,9 +87,11 @@ export const ParceiroBookmakersTab = memo(function ParceiroBookmakersTab({
   onVincularProjeto,
   onDesvincularProjeto,
 }: ParceiroBookmakersTabProps) {
+  const { workspaceId } = useAuth();
   const [data, setData] = useState<BookmakersData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [indisponiveisSet, setIndisponiveisSet] = useState<Set<string>>(new Set());
 
   const [searchVinculados, setSearchVinculados] = useState("");
   const [searchDisponiveis, setSearchDisponiveis] = useState("");
@@ -213,6 +216,23 @@ export const ParceiroBookmakersTab = memo(function ParceiroBookmakersTab({
     };
   }, [parceiroId, refreshKey]);
 
+  // Fetch indisponíveis para este parceiro
+  useEffect(() => {
+    if (!parceiroId || !workspaceId) return;
+    let cancelled = false;
+    (async () => {
+      const { data: rows } = await (supabase as any)
+        .from("bookmaker_indisponiveis")
+        .select("bookmaker_catalogo_id")
+        .eq("workspace_id", workspaceId)
+        .eq("parceiro_id", parceiroId);
+      if (!cancelled) {
+        setIndisponiveisSet(new Set((rows ?? []).map((r: any) => r.bookmaker_catalogo_id)));
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [parceiroId, workspaceId, refreshKey]);
+
   const handleRefresh = useCallback(() => {
     fetchData(true);
   }, [fetchData]);
@@ -264,6 +284,13 @@ export const ParceiroBookmakersTab = memo(function ParceiroBookmakersTab({
 
   const hasCredentials = (bm: BookmakerVinculado) => bm.login_username && bm.login_username.trim();
 
+  const bookmakersVinculados = data?.vinculados || [];
+  const bookmakersDisponiveis = useMemo(() => {
+    const all = data?.disponiveis || [];
+    if (indisponiveisSet.size === 0) return all;
+    return all.filter((b) => !indisponiveisSet.has(b.id));
+  }, [data?.disponiveis, indisponiveisSet]);
+
   // LOADING (apenas no primeiro carregamento)
   if (loading && !data) {
     return (
@@ -287,8 +314,6 @@ export const ParceiroBookmakersTab = memo(function ParceiroBookmakersTab({
     );
   }
 
-  const bookmakersVinculados = data?.vinculados || [];
-  const bookmakersDisponiveis = data?.disponiveis || [];
   // Build catalog status map for vinculados (to filter by regulation)
   const catalogStatusMap = new Map<string, string>();
   bookmakersDisponiveis.forEach(d => catalogStatusMap.set(d.id, d.status));
