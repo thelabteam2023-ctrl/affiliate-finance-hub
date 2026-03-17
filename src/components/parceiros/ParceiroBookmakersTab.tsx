@@ -87,9 +87,11 @@ export const ParceiroBookmakersTab = memo(function ParceiroBookmakersTab({
   onVincularProjeto,
   onDesvincularProjeto,
 }: ParceiroBookmakersTabProps) {
+  const { workspaceId } = useAuth();
   const [data, setData] = useState<BookmakersData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [indisponiveisSet, setIndisponiveisSet] = useState<Set<string>>(new Set());
 
   const [searchVinculados, setSearchVinculados] = useState("");
   const [searchDisponiveis, setSearchDisponiveis] = useState("");
