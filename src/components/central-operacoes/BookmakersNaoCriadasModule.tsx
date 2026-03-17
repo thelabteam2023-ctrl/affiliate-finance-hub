@@ -118,7 +118,7 @@ export default function BookmakersNaoCriadasModule() {
           .not("parceiro_id", "is", null),
         (supabase as any)
           .from("parcerias")
-          .select("parceiro_id, origem_tipo, fornecedor:fornecedores!parcerias_fornecedor_id_fkey(nome), indicador:indicadores_referral!parcerias_indicador_id_fkey(nome)")
+          .select("parceiro_id, origem_tipo, fornecedor_id, indicacao_id, fornecedor:fornecedores!parcerias_fornecedor_id_fkey(nome), indicacao:indicacoes!parcerias_indicacao_id_fkey(indicador:indicadores_referral!indicacoes_indicador_id_fkey(nome))")
           .eq("workspace_id", workspaceId),
         (supabase as any)
           .from("indicacoes")
@@ -141,8 +141,8 @@ export default function BookmakersNaoCriadasModule() {
         if (origemMap.has(p.parceiro_id)) return; // first match wins
         if (p.origem_tipo === "FORNECEDOR" && p.fornecedor) {
           origemMap.set(p.parceiro_id, p.fornecedor.nome);
-        } else if (p.origem_tipo === "INDICADOR" && p.indicador) {
-          origemMap.set(p.parceiro_id, p.indicador.nome);
+        } else if (p.origem_tipo === "INDICADOR" && p.indicacao?.indicador) {
+          origemMap.set(p.parceiro_id, p.indicacao.indicador.nome);
         } else if (p.origem_tipo === "DIRETO") {
           origemMap.set(p.parceiro_id, "Direto");
         }
