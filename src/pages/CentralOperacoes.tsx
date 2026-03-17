@@ -193,14 +193,13 @@ export default function CentralOperacoes() {
   const [parceriaToRenovar, setParceriaToRenovar] = useState<ParceriaAlertaEncerramento | null>(null);
   const [mainTab, setMainTabState] = useState<'financeiro' | 'contas' | 'ocorrencias' | 'solicitacoes' | 'alertas'>(() => {
     const saved = localStorage.getItem('central-operacoes-main-tab');
-    // Operadores só podem ver a aba "contas" (sem Bookmakers Disponíveis)
-    if (role === 'operator') return 'contas';
+    // Operadores não têm acesso à Central de Operações completa
+    if (role === 'operator') return 'financeiro';
     if (saved === 'financeiro' || saved === 'contas' || saved === 'ocorrencias' || saved === 'solicitacoes' || saved === 'alertas') return saved;
     return 'financeiro';
   });
   const setMainTab = (tab: typeof mainTab) => {
-    // Operadores só podem acessar a aba "contas"
-    if (isOperator && tab !== 'contas') return;
+    if (isOperator) return;
     setMainTabState(tab);
     localStorage.setItem('central-operacoes-main-tab', tab);
   };
@@ -1068,10 +1067,12 @@ export default function CentralOperacoes() {
               {alertCards.length > 0 && <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-orange-500 text-white text-[10px] font-bold leading-none">{alertCards.length}</span>}
             </TabsTrigger>
           )}
-          <TabsTrigger value="contas" className="relative">
-            Bookmakers
-            {!isOperator && (contasDisponiveisCount ?? 0) > 0 && <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-amber-500 text-white text-[10px] font-bold leading-none animate-pulse">!</span>}
-          </TabsTrigger>
+          {!isOperator && (
+            <TabsTrigger value="contas" className="relative">
+              Bookmakers
+              {(contasDisponiveisCount ?? 0) > 0 && <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-amber-500 text-white text-[10px] font-bold leading-none animate-pulse">!</span>}
+            </TabsTrigger>
+          )}
           {!isOperator && (
             <TabsTrigger value="ocorrencias" className="relative">
               Ocorrências
@@ -1108,16 +1109,16 @@ export default function CentralOperacoes() {
           </TabsContent>
         )}
 
+        {!isOperator && (
         <TabsContent value="contas" className="mt-4">
-          <Tabs defaultValue={isOperator ? "nao-criadas" : "contas-saldo"} className="w-full">
+          <Tabs defaultValue="contas-saldo" className="w-full">
             <TabsList className="mb-4">
-              {!isOperator && <TabsTrigger value="contas-saldo">Bookmakers Disponíveis</TabsTrigger>}
-              {!isOperator && <TabsTrigger value="bookmakers-livres">Bookmakers Livres</TabsTrigger>}
+              <TabsTrigger value="contas-saldo">Bookmakers Disponíveis</TabsTrigger>
+              <TabsTrigger value="bookmakers-livres">Bookmakers Livres</TabsTrigger>
               <TabsTrigger value="nao-criadas">Não Criadas</TabsTrigger>
             </TabsList>
-            {!isOperator && <TabsContent value="contas-saldo"><ContasDisponiveisModule /></TabsContent>}
-            {!isOperator && (
-              <TabsContent value="bookmakers-livres">
+            <TabsContent value="contas-saldo"><ContasDisponiveisModule /></TabsContent>
+            <TabsContent value="bookmakers-livres">
                 <BookmakersLivresModule
                   onRegistrarPerda={(bookmakerId, bookmakerNome, moeda, saldoAtual) => setPerdaLimitadaDialog({ open: true, bookmakerId, bookmakerNome, moeda, saldoAtual })}
                   onVincularProjeto={async (bookmakerId, projetoId, projetoNome) => {
@@ -1141,13 +1142,13 @@ export default function CentralOperacoes() {
                     navigate("/caixa", { state: { openDialog: true, bookmakerId, bookmakerNome, tipo: tipo === "deposito" ? "deposito" : "retirada", moeda } });
                   }}
                 />
-              </TabsContent>
-            )}
+            </TabsContent>
             <TabsContent value="nao-criadas">
               <BookmakersNaoCriadasModule />
             </TabsContent>
           </Tabs>
         </TabsContent>
+        )}
 
         {!isOperator && <TabsContent value="ocorrencias" className="mt-4"><OcorrenciasModule /></TabsContent>}
         {!isOperator && <TabsContent value="solicitacoes" className="mt-4"><SolicitacoesModule /></TabsContent>}
