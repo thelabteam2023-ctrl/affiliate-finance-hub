@@ -54,6 +54,7 @@ import { ContasDisponiveisModule } from "@/components/central-operacoes/ContasDi
 import { BookmakersLivresModule } from "@/components/central-operacoes/BookmakersLivresModule";
 import BookmakersNaoCriadasModule from "@/components/central-operacoes/BookmakersNaoCriadasModule";
 import { CentralOperacoesDialogs } from "@/components/central-operacoes/CentralOperacoesDialogs";
+import { OperatorSaquesReadOnly } from "@/components/central-operacoes/OperatorSaquesReadOnly";
 import { useCentralOperacoesMutations, type DispensaState, type PerdaLimitadaState } from "@/hooks/useCentralOperacoesMutations";
 import { useCicloAlertas } from "@/hooks/useCicloAlertas";
 import { useRole } from "@/hooks/useRole";
@@ -1059,57 +1060,47 @@ export default function CentralOperacoes() {
         )}
       </div>
 
+      {isOperator ? (
+        <OperatorSaquesReadOnly />
+      ) : (
       <Tabs value={mainTab} onValueChange={(v) => setMainTab(v as typeof mainTab)}>
         <TabsList>
-          {!isOperator && (
-            <TabsTrigger value="financeiro" className="relative">
-              Financeiro
-              {alertCards.length > 0 && <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-orange-500 text-white text-[10px] font-bold leading-none">{alertCards.length}</span>}
-            </TabsTrigger>
-          )}
-          {!isOperator && (
-            <TabsTrigger value="contas" className="relative">
-              Bookmakers
-              {(contasDisponiveisCount ?? 0) > 0 && <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-amber-500 text-white text-[10px] font-bold leading-none animate-pulse">!</span>}
-            </TabsTrigger>
-          )}
-          {!isOperator && (
-            <TabsTrigger value="ocorrencias" className="relative">
-              Ocorrências
-              {(kpisOcorrencias?.abertas_total ?? 0) > 0 && <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold leading-none">{kpisOcorrencias!.abertas_total}</span>}
-            </TabsTrigger>
-          )}
-          {!isOperator && (
-            <TabsTrigger value="solicitacoes" className="relative">
-              Solicitações
-              {(kpisSolicitacoes?.total_abertas ?? 0) > 0 && <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-yellow-500 text-white text-[10px] font-bold leading-none">{kpisSolicitacoes!.total_abertas}</span>}
-            </TabsTrigger>
-          )}
-          {!isOperator && (
-            <TabsTrigger value="alertas" disabled className="opacity-50">Alertas<span className="ml-1.5 text-[10px] text-muted-foreground">(em breve)</span></TabsTrigger>
-          )}
+          <TabsTrigger value="financeiro" className="relative">
+            Financeiro
+            {alertCards.length > 0 && <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-orange-500 text-white text-[10px] font-bold leading-none">{alertCards.length}</span>}
+          </TabsTrigger>
+          <TabsTrigger value="contas" className="relative">
+            Bookmakers
+            {(contasDisponiveisCount ?? 0) > 0 && <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-amber-500 text-white text-[10px] font-bold leading-none animate-pulse">!</span>}
+          </TabsTrigger>
+          <TabsTrigger value="ocorrencias" className="relative">
+            Ocorrências
+            {(kpisOcorrencias?.abertas_total ?? 0) > 0 && <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold leading-none">{kpisOcorrencias!.abertas_total}</span>}
+          </TabsTrigger>
+          <TabsTrigger value="solicitacoes" className="relative">
+            Solicitações
+            {(kpisSolicitacoes?.total_abertas ?? 0) > 0 && <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-yellow-500 text-white text-[10px] font-bold leading-none">{kpisSolicitacoes!.total_abertas}</span>}
+          </TabsTrigger>
+          <TabsTrigger value="alertas" disabled className="opacity-50">Alertas<span className="ml-1.5 text-[10px] text-muted-foreground">(em breve)</span></TabsTrigger>
         </TabsList>
 
-        {!isOperator && (
-          <TabsContent value="financeiro" className="mt-4 space-y-4">
-            {!hasAnyAlerts && (
-              <Card className="border-emerald-500/30 bg-emerald-500/5">
-                <CardContent className="pt-6">
-                  <div className="text-center py-16">
-                    <div className="mx-auto h-16 w-16 rounded-full bg-emerald-500/10 flex items-center justify-center mb-4"><CheckCircle2 className="h-8 w-8 text-emerald-400" /></div>
-                    <h3 className="text-xl font-semibold text-emerald-400">Nenhuma pendência</h3>
-                    <p className="text-muted-foreground mt-2">Todas as operações estão em dia! 🎉</p>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-            {hasAnyAlerts && (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">{alertCards.map((card) => card.component)}</div>
-            )}
-          </TabsContent>
-        )}
+        <TabsContent value="financeiro" className="mt-4 space-y-4">
+          {!hasAnyAlerts && (
+            <Card className="border-emerald-500/30 bg-emerald-500/5">
+              <CardContent className="pt-6">
+                <div className="text-center py-16">
+                  <div className="mx-auto h-16 w-16 rounded-full bg-emerald-500/10 flex items-center justify-center mb-4"><CheckCircle2 className="h-8 w-8 text-emerald-400" /></div>
+                  <h3 className="text-xl font-semibold text-emerald-400">Nenhuma pendência</h3>
+                  <p className="text-muted-foreground mt-2">Todas as operações estão em dia! 🎉</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          {hasAnyAlerts && (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">{alertCards.map((card) => card.component)}</div>
+          )}
+        </TabsContent>
 
-        {!isOperator && (
         <TabsContent value="contas" className="mt-4">
           <Tabs defaultValue="contas-saldo" className="w-full">
             <TabsList className="mb-4">
@@ -1148,16 +1139,14 @@ export default function CentralOperacoes() {
             </TabsContent>
           </Tabs>
         </TabsContent>
-        )}
 
-        {!isOperator && <TabsContent value="ocorrencias" className="mt-4"><OcorrenciasModule /></TabsContent>}
-        {!isOperator && <TabsContent value="solicitacoes" className="mt-4"><SolicitacoesModule /></TabsContent>}
-        {!isOperator && (
-          <TabsContent value="alertas" className="mt-4">
-            <div className="flex flex-col items-center justify-center py-24 text-center"><p className="text-muted-foreground">Em breve: Alertas automáticos do sistema.</p></div>
-          </TabsContent>
-        )}
+        <TabsContent value="ocorrencias" className="mt-4"><OcorrenciasModule /></TabsContent>
+        <TabsContent value="solicitacoes" className="mt-4"><SolicitacoesModule /></TabsContent>
+        <TabsContent value="alertas" className="mt-4">
+          <div className="flex flex-col items-center justify-center py-24 text-center"><p className="text-muted-foreground">Em breve: Alertas automáticos do sistema.</p></div>
+        </TabsContent>
       </Tabs>
+      )}
 
       {/* Extracted dialogs */}
       <CentralOperacoesDialogs
