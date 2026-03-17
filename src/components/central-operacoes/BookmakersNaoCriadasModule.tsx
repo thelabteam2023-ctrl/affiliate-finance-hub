@@ -523,7 +523,7 @@ export default function BookmakersNaoCriadasModule() {
                       </th>
                       <th
                         className="text-left px-4 py-3 font-medium text-muted-foreground uppercase text-xs tracking-wide cursor-pointer select-none hover:text-foreground transition-colors"
-                        onClick={() => setSortOrigem((prev) => prev === "asc" ? "desc" : prev === "desc" ? null : "asc")}
+                        onClick={() => { setSortOrigem((prev) => prev === "asc" ? "desc" : prev === "desc" ? null : "asc"); setSortDias(null); }}
                       >
                         <span className="inline-flex items-center gap-1">
                           Origem
