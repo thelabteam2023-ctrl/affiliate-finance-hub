@@ -346,13 +346,15 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
           };
         });
 
-      // Enriquecer com sub_entries de apostas_pernas
+      // Enriquecer com pernas de apostas_pernas (para ARBITRAGEM e sub_entries de SIMPLES)
       const apostaIds = mapped.map((a: any) => a.id);
       if (apostaIds.length > 0) {
         const { data: pernasData } = await supabase
           .from("apostas_pernas")
           .select(`
-            aposta_id, bookmaker_id, odd, stake, moeda, selecao_livre, ordem,
+            id, aposta_id, bookmaker_id, odd, stake, moeda, selecao, selecao_livre, ordem,
+            resultado, lucro_prejuizo, gerou_freebet, valor_freebet_gerada,
+            stake_brl_referencia, lucro_prejuizo_brl_referencia,
             bookmaker:bookmakers (
               nome, parceiro_id,
               parceiro:parceiros (nome),
@@ -371,7 +373,32 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
           }
           for (const a of mapped) {
             const pernas = pernasMap.get(a.id);
-            if (pernas && pernas.length > 1) {
+            if (!pernas || pernas.length === 0) continue;
+
+            if (a.forma_registro === "ARBITRAGEM") {
+              // ARBITRAGEM/Surebet: populate pernas with full data for SurebetCard
+              const parceiroNome = (p: any) => p.bookmaker?.parceiro?.nome;
+              a.pernas = pernas.map((p: any) => ({
+                id: p.id,
+                bookmaker_id: p.bookmaker_id,
+                bookmaker_nome: parceiroNome(p) 
+                  ? `${p.bookmaker?.nome || "—"} - ${parceiroNome(p)}` 
+                  : (p.bookmaker?.nome || "—"),
+                parceiro_nome: parceiroNome(p) || null,
+                moeda: p.moeda || 'BRL',
+                selecao: p.selecao,
+                selecao_livre: p.selecao_livre,
+                odd: p.odd,
+                stake: p.stake,
+                resultado: p.resultado,
+                lucro_prejuizo: p.lucro_prejuizo,
+                gerou_freebet: p.gerou_freebet,
+                valor_freebet_gerada: p.valor_freebet_gerada,
+                stake_brl_referencia: p.stake_brl_referencia,
+                lucro_prejuizo_brl_referencia: p.lucro_prejuizo_brl_referencia,
+              }));
+            } else if (pernas.length > 1) {
+              // SIMPLES multi-entry: store as sub_entries
               (a as any)._sub_entries = pernas;
             }
           }
