@@ -329,8 +329,12 @@ export default function BookmakersNaoCriadasModule() {
               {loadingCatalogo ? (
                 <div className="p-2"><Skeleton className="h-6 w-full" /></div>
               ) : (
-                (catalogoBookmakers ?? [])
-                  .filter((bk) => bk.nome.toLowerCase().includes(bkSearch.toLowerCase()))
+                (() => {
+                  const grupoIds = grupoFilter !== "todos" ? getCatalogoIdsByGrupo(grupoFilter) : null;
+                  return (catalogoBookmakers ?? [])
+                    .filter((bk) => bk.nome.toLowerCase().includes(bkSearch.toLowerCase()))
+                    .filter((bk) => !grupoIds || grupoIds.has(bk.id));
+                })()
                   .map((bk) => (
                     <button
                       key={bk.id}
