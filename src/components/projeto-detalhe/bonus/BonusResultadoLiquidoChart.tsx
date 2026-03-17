@@ -271,7 +271,19 @@ export function BonusResultadoLiquidoChart({
     return data;
   }, [filteredBonuses, bonusBets, bonuses, ajustesPostLimitacao, dateRange, selectedBookmaker, convertToConsolidation, pernasMap, moedaConsolidacao]);
 
-  // KPIs
+  // Dados visíveis (zoom no mês atual ou ciclo completo)
+  const visibleChartData = useMemo(() => {
+    if (!zoomCurrentMonth || !isMultiMonthCycle) return chartData;
+    
+    const now = new Date();
+    const monthStart = format(startOfMonth(now), "yyyy-MM-dd");
+    const monthEnd = format(endOfMonth(now), "yyyy-MM-dd");
+    
+    const filtered = chartData.filter(d => d.dateKey >= monthStart && d.dateKey <= monthEnd);
+    return filtered.length > 0 ? filtered : chartData;
+  }, [chartData, zoomCurrentMonth, isMultiMonthCycle]);
+
+
   const kpis = useMemo(() => {
     const totalBonus = chartData.reduce((acc, d) => acc + d.bonus_creditado, 0);
     const totalJuice = chartData.reduce((acc, d) => acc + d.juice, 0);
