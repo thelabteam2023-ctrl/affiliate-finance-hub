@@ -8,6 +8,7 @@
 
 import { useState, useMemo, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRole } from "@/hooks/useRole";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useWorkspaceBookmakers } from "@/hooks/useWorkspaceBookmakers";
@@ -53,6 +54,7 @@ interface IndisponibilidadeRecord {
 
 export default function BookmakersNaoCriadasModule() {
   const { workspaceId, user } = useAuth();
+  const { isOperator } = useRole();
   const userId = user?.id;
   const queryClient = useQueryClient();
   const [selectedCatalogoId, setSelectedCatalogoId] = useState<string>("");
@@ -332,11 +334,13 @@ export default function BookmakersNaoCriadasModule() {
     <div className="space-y-4">
       {/* Header: Bookmaker selector */}
       <div className="flex flex-wrap items-center gap-4">
-        <BookmakerGrupoFilter
-          value={grupoFilter}
-          onChange={(v) => { setGrupoFilter(v); setSelectedCatalogoId(""); resetSelection(); }}
-          className="w-[200px]"
-        />
+        {!isOperator && (
+          <BookmakerGrupoFilter
+            value={grupoFilter}
+            onChange={(v) => { setGrupoFilter(v); setSelectedCatalogoId(""); resetSelection(); }}
+            className="w-[200px]"
+          />
+        )}
         <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium uppercase tracking-wide">
           <Building2 className="h-4 w-4" />
           Bookmaker
