@@ -36,6 +36,8 @@ export default function BookmakersNaoCriadasModule() {
   const { workspaceId } = useAuth();
   const [selectedCatalogoId, setSelectedCatalogoId] = useState<string>("");
   const [search, setSearch] = useState("");
+  const [bkSearch, setBkSearch] = useState("");
+  const [bkPopoverOpen, setBkPopoverOpen] = useState(false);
 
   // Dialog state for creating a new bookmaker account
   const [criarDialog, setCriarDialog] = useState<{
