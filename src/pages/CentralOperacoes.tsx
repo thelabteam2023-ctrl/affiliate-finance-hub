@@ -1127,6 +1127,9 @@ export default function CentralOperacoes() {
                 }}
               />
             </TabsContent>
+            <TabsContent value="nao-criadas">
+              <BookmakersNaoCriadasModule />
+            </TabsContent>
           </Tabs>
         </TabsContent>
 
