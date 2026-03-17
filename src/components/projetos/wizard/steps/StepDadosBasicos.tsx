@@ -32,19 +32,7 @@ interface StepDadosBasicosProps {
 }
 
 export function StepDadosBasicos({ formData, onChange, isBrokerContext = false }: StepDadosBasicosProps) {
-  // Derived state: investidor is "active" when an investor is selected
-  const hasInvestidor = !!formData.investidor_id;
-
-  const handleToggleInvestidor = (checked: boolean) => {
-    if (!checked) {
-      // Clear investor data when deactivating
-      onChange({
-        investidor_id: null,
-        percentual_investidor: 0,
-        base_calculo_investidor: "LUCRO_LIQUIDO",
-      });
-    }
-  };
+  const hasInvestidores = (formData.investidores_projeto || []).length > 0;
 
   return (
     <div className="space-y-6">
