@@ -193,14 +193,13 @@ export default function CentralOperacoes() {
   const [parceriaToRenovar, setParceriaToRenovar] = useState<ParceriaAlertaEncerramento | null>(null);
   const [mainTab, setMainTabState] = useState<'financeiro' | 'contas' | 'ocorrencias' | 'solicitacoes' | 'alertas'>(() => {
     const saved = localStorage.getItem('central-operacoes-main-tab');
-    // Operadores só podem ver a aba "contas" (sem Bookmakers Disponíveis)
-    if (role === 'operator') return 'contas';
+    // Operadores não têm acesso à Central de Operações completa
+    if (role === 'operator') return 'financeiro';
     if (saved === 'financeiro' || saved === 'contas' || saved === 'ocorrencias' || saved === 'solicitacoes' || saved === 'alertas') return saved;
     return 'financeiro';
   });
   const setMainTab = (tab: typeof mainTab) => {
-    // Operadores só podem acessar a aba "contas"
-    if (isOperator && tab !== 'contas') return;
+    if (isOperator) return;
     setMainTabState(tab);
     localStorage.setItem('central-operacoes-main-tab', tab);
   };
