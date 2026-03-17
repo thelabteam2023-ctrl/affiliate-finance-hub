@@ -576,9 +576,9 @@ export function BonusResultadoLiquidoChart({
       if (!useMonthlyTicks) return null;
       const indices = new Set<number>();
       let lastMonth = '';
-      visibleChartData.forEach((d, i) => {
+      chartData.forEach((d, i) => {
         if (d.dateKey) {
-          const month = d.dateKey.substring(0, 7); // yyyy-MM
+          const month = d.dateKey.substring(0, 7);
           if (month !== lastMonth) {
             indices.add(i);
             lastMonth = month;
@@ -586,7 +586,7 @@ export function BonusResultadoLiquidoChart({
         }
       });
       return indices;
-    }, [visibleChartData, useMonthlyTicks]);
+    }, [chartData, useMonthlyTicks]);
 
     switch (chartMode) {
       case "resultado":
