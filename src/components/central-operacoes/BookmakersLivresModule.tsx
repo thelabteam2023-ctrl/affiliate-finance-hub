@@ -440,6 +440,11 @@ export function BookmakersLivresModule({ onRegistrarPerda, onVincularProjeto, on
           </div>
         </div>
 
+        <div className="flex flex-col gap-1">
+          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Grupo</span>
+          <BookmakerGrupoFilter value={grupoFilter} onChange={setGrupoFilter} className="w-[180px] h-9" />
+        </div>
+
         <Badge variant="outline" className="h-9 px-3 text-sm font-mono self-end">
           {sorted.length} / {contas?.length || 0}
         </Badge>
