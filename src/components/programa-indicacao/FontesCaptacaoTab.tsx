@@ -85,6 +85,7 @@ interface IndicadorPerformance {
   parcerias_encerradas: number;
   total_comissoes: number;
   total_bonus: number;
+  parceiros_indicados_nomes?: IndicacaoDetalhe[];
 }
 
 interface IndicadorAcordo {
