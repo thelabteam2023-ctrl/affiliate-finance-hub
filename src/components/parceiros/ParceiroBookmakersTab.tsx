@@ -284,6 +284,13 @@ export const ParceiroBookmakersTab = memo(function ParceiroBookmakersTab({
 
   const hasCredentials = (bm: BookmakerVinculado) => bm.login_username && bm.login_username.trim();
 
+  const bookmakersVinculados = data?.vinculados || [];
+  const bookmakersDisponiveis = useMemo(() => {
+    const all = data?.disponiveis || [];
+    if (indisponiveisSet.size === 0) return all;
+    return all.filter((b) => !indisponiveisSet.has(b.id));
+  }, [data?.disponiveis, indisponiveisSet]);
+
   // LOADING (apenas no primeiro carregamento)
   if (loading && !data) {
     return (
@@ -307,12 +314,6 @@ export const ParceiroBookmakersTab = memo(function ParceiroBookmakersTab({
     );
   }
 
-  const bookmakersVinculados = data?.vinculados || [];
-  const bookmakersDisponiveis = useMemo(() => {
-    const all = data?.disponiveis || [];
-    if (indisponiveisSet.size === 0) return all;
-    return all.filter((b) => !indisponiveisSet.has(b.id));
-  }, [data?.disponiveis, indisponiveisSet]);
   // Build catalog status map for vinculados (to filter by regulation)
   const catalogStatusMap = new Map<string, string>();
   bookmakersDisponiveis.forEach(d => catalogStatusMap.set(d.id, d.status));
