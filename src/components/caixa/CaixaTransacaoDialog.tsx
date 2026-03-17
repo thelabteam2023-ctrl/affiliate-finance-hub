@@ -2669,8 +2669,11 @@ export function CaixaTransacaoDialog({
       // - PENDING: Transações que saem para blockchain externa (depósito em bookmaker, saque externo)
       // - CONFIRMED: Transferências internas WALLET→WALLET (instantâneas, sem blockchain)
       // =========================================================================
-       const isTransacaoCryptoDeWallet = tipoMoeda === "CRYPTO" && (origemWalletId || destinoWalletId);
-      const isWalletToWalletTransfer = origemWalletId && destinoWalletId;
+       // Resolve effective wallet IDs: caixaWalletId is used for CAIXA_OPERACIONAL origin/destination
+       const effectiveOrigemWalletId = origemWalletId || (origemTipo === "CAIXA_OPERACIONAL" && caixaWalletId && caixaWalletId !== "none" ? caixaWalletId : "");
+       const effectiveDestinoWalletId = destinoWalletId || (destinoTipo === "CAIXA_OPERACIONAL" && caixaWalletId && caixaWalletId !== "none" ? caixaWalletId : "");
+       const isTransacaoCryptoDeWallet = tipoMoeda === "CRYPTO" && (effectiveOrigemWalletId || effectiveDestinoWalletId);
+       const isWalletToWalletTransfer = effectiveOrigemWalletId && effectiveDestinoWalletId;
       
       if (isTransacaoCryptoDeWallet) {
         // Transferências WALLET→WALLET são instantâneas (confirmadas imediatamente)
@@ -2678,37 +2681,37 @@ export function CaixaTransacaoDialog({
         if (isWalletToWalletTransfer) {
           transactionData.transit_status = "CONFIRMED";
           console.log("[CRYPTO TRANSIT] Transferência WALLET→WALLET: CONFIRMED imediatamente", {
-            origem: origemWalletId,
-            destino: destinoWalletId,
+            origem: effectiveOrigemWalletId,
+            destino: effectiveDestinoWalletId,
           });
-         } else if (origemWalletId) {
+         } else if (effectiveOrigemWalletId) {
            // Saída de wallet para blockchain externa (WALLET → BOOKMAKER) - precisa de confirmação
           transactionData.transit_status = "PENDING";
            console.log("[CRYPTO TRANSIT] Saída de wallet para blockchain externa: PENDING", {
-            walletId: origemWalletId,
+            walletId: effectiveOrigemWalletId,
             valorQueSeraTravado: valorUsdReferencia,
           });
-         } else if (destinoWalletId && tipoTransacao === "SAQUE") {
+         } else if (effectiveDestinoWalletId && tipoTransacao === "SAQUE") {
            // SAQUE BOOKMAKER → WALLET: Aguarda confirmação de recebimento
            // A wallet NÃO deve ser creditada até o usuário confirmar na conciliação
            transactionData.transit_status = "PENDING";
            console.log("[CRYPTO TRANSIT] Saque BOOKMAKER→WALLET: PENDING até confirmação", {
              origemBookmaker: origemBookmakerId,
-             destinoWallet: destinoWalletId,
+             destinoWallet: effectiveDestinoWalletId,
              valorEstimado: valorUsdReferencia,
            });
-         } else if (destinoWalletId && !origemWalletId && origemTipo === "CAIXA_OPERACIONAL") {
+         } else if (effectiveDestinoWalletId && !effectiveOrigemWalletId && origemTipo === "CAIXA_OPERACIONAL") {
            // CAIXA → WALLET: Aporte interno, instantâneo - não passa por blockchain
            transactionData.transit_status = "CONFIRMED";
            console.log("[CRYPTO TRANSIT] CAIXA→WALLET: CONFIRMED (aporte interno)", {
-             destinoWallet: destinoWalletId,
+             destinoWallet: effectiveDestinoWalletId,
            });
          } else {
            // Outros casos crypto com wallet envolvida - conservador = PENDING
            transactionData.transit_status = "PENDING";
            console.log("[CRYPTO TRANSIT] Transação crypto genérica com wallet: PENDING", {
-             origemWalletId,
-             destinoWalletId,
+             effectiveOrigemWalletId,
+             effectiveDestinoWalletId,
            });
         }
       }
