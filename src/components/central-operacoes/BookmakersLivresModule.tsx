@@ -63,6 +63,7 @@ interface BookmakerLivre {
   ultimo_projeto_nome: string | null;
   ja_usada: boolean;
   catalogo_status: string;
+  bookmaker_catalogo_id: string | null;
 }
 
 type SortColumn = "saldo" | null;
