@@ -1080,6 +1080,15 @@ export function FontesCaptacaoTab() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Parceiros List Modal */}
+      <ParceirosListModal
+        open={parceirosModalOpen}
+        onOpenChange={setParceirosModalOpen}
+        title={parceirosModalTitle}
+        subtitle={parceirosModalSubtitle}
+        parceiros={parceirosModalData}
+      />
     </div>
   );
 }
