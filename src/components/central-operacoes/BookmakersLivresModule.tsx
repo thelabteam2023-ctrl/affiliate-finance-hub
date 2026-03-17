@@ -184,7 +184,7 @@ export function BookmakersLivresModule({ onRegistrarPerda, onVincularProjeto, on
         .from("bookmakers")
         .select(`
           id, nome, status, estado_conta, saldo_atual, moeda,
-          parceiro_id,
+          parceiro_id, bookmaker_catalogo_id,
           parceiro:parceiros!bookmakers_parceiro_id_fkey (nome),
           catalogo:bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url, status)
         `)
