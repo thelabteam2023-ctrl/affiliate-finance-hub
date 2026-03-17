@@ -40,6 +40,7 @@ interface ParceiroSemConta {
   nome: string;
   cpf: string;
   status: string;
+  origem?: string; // e.g. "Fornecedor: JOAO VITOR" or "Indicador: LUCAS" or "Direto"
 }
 
 interface IndisponibilidadeRecord {
