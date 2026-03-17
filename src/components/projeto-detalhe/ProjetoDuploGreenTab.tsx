@@ -529,7 +529,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
       const aposta = apostas.find(a => a.id === surebetId);
       if (!aposta?.pernas || aposta.pernas.length === 0) return;
 
-      const workspaceId = aposta.pernas[0]?.workspace_id || '';
+      const workspaceId = (aposta as any).workspace_id || aposta.pernas[0]?.workspace_id || '';
 
       // Agrupar pernas por seleção para alinhar com os índices do menu (que usa pernas agrupadas)
       const pernasAgrupadas = groupPernasBySelecao(
