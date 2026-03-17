@@ -263,35 +263,70 @@ export function CicloDialog({
 
         if (error) throw error;
 
-        // Verificar se projeto tem investidor vinculado para criar participação automaticamente
-        const { data: projeto } = await supabase
-          .from("projetos")
-          .select("investidor_id, percentual_investidor, base_calculo_investidor")
-          .eq("id", projetoId)
-          .single();
+        // Criar participações para TODOS os investidores do projeto
+        const { data: investidoresProjeto } = await supabase
+          .from("projeto_investidores")
+          .select("investidor_id, percentual_participacao, base_calculo, investidores(tipo)")
+          .eq("projeto_id", projetoId)
+          .eq("ativo", true);
 
-        if (projeto?.investidor_id && projeto.percentual_investidor > 0) {
-          // Criar participação com status AGUARDANDO_CICLO
-          const { error: partError } = await supabase
-            .from("participacao_ciclos")
-            .insert({
-              user_id: session.session.user.id,
-              workspace_id: workspaceId,
-              projeto_id: projetoId,
-              ciclo_id: novoCiclo.id,
-              investidor_id: projeto.investidor_id,
-              percentual_aplicado: projeto.percentual_investidor,
-              base_calculo: projeto.base_calculo_investidor || "LUCRO_BRUTO",
-              lucro_base: 0,
-              valor_participacao: 0,
-              status: "AGUARDANDO_CICLO",
-              tipo_participacao: "LUCRO_CICLO",
-              data_apuracao: new Date().toISOString(),
-            });
+        if (investidoresProjeto && investidoresProjeto.length > 0) {
+          for (const pi of investidoresProjeto) {
+            if (pi.percentual_participacao > 0) {
+              const investidorTipo = (pi as any).investidores?.tipo || 'externo';
+              const status = investidorTipo === 'proprio' ? 'RECONHECIDO' : 'AGUARDANDO_CICLO';
+              
+              const { error: partError } = await supabase
+                .from("participacao_ciclos")
+                .insert({
+                  user_id: session.session.user.id,
+                  workspace_id: workspaceId,
+                  projeto_id: projetoId,
+                  ciclo_id: novoCiclo.id,
+                  investidor_id: pi.investidor_id,
+                  percentual_aplicado: pi.percentual_participacao,
+                  base_calculo: pi.base_calculo || "LUCRO_BRUTO",
+                  lucro_base: 0,
+                  valor_participacao: 0,
+                  status,
+                  tipo_participacao: "LUCRO_CICLO",
+                  data_apuracao: new Date().toISOString(),
+                });
 
-          if (partError) {
-            console.error("Erro ao criar participação:", partError);
-            // Não falhar a criação do ciclo por causa da participação
+              if (partError) {
+                console.error("Erro ao criar participação:", partError);
+              }
+            }
+          }
+        } else {
+          // Fallback: legacy single investor on project
+          const { data: projeto } = await supabase
+            .from("projetos")
+            .select("investidor_id, percentual_investidor, base_calculo_investidor")
+            .eq("id", projetoId)
+            .single();
+
+          if (projeto?.investidor_id && projeto.percentual_investidor > 0) {
+            const { error: partError } = await supabase
+              .from("participacao_ciclos")
+              .insert({
+                user_id: session.session.user.id,
+                workspace_id: workspaceId,
+                projeto_id: projetoId,
+                ciclo_id: novoCiclo.id,
+                investidor_id: projeto.investidor_id,
+                percentual_aplicado: projeto.percentual_investidor,
+                base_calculo: projeto.base_calculo_investidor || "LUCRO_BRUTO",
+                lucro_base: 0,
+                valor_participacao: 0,
+                status: "AGUARDANDO_CICLO",
+                tipo_participacao: "LUCRO_CICLO",
+                data_apuracao: new Date().toISOString(),
+              });
+
+            if (partError) {
+              console.error("Erro ao criar participação:", partError);
+            }
           }
         }
 

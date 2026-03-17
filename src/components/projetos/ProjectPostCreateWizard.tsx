@@ -626,29 +626,63 @@ export function ProjectPostCreateWizard({
 
       if (error) throw error;
 
-      const { data: projeto } = await supabase
-        .from("projetos")
-        .select("investidor_id, percentual_investidor, base_calculo_investidor")
-        .eq("id", projectId)
-        .single();
+      // Create participações for all projeto_investidores
+      const { data: investidoresProjeto } = await supabase
+        .from("projeto_investidores")
+        .select("investidor_id, percentual_participacao, base_calculo, investidores(tipo)")
+        .eq("projeto_id", projectId)
+        .eq("ativo", true);
 
-      if (projeto?.investidor_id && projeto.percentual_investidor > 0) {
-        await supabase
-          .from("participacao_ciclos")
-          .insert({
-            user_id: session.session.user.id,
-            workspace_id: workspaceId!,
-            projeto_id: projectId,
-            ciclo_id: novoCiclo.id,
-            investidor_id: projeto.investidor_id,
-            percentual_aplicado: projeto.percentual_investidor,
-            base_calculo: projeto.base_calculo_investidor || "LUCRO_BRUTO",
-            lucro_base: 0,
-            valor_participacao: 0,
-            status: "AGUARDANDO_CICLO",
-            tipo_participacao: "LUCRO_CICLO",
-            data_apuracao: new Date().toISOString(),
-          });
+      if (investidoresProjeto && investidoresProjeto.length > 0) {
+        for (const pi of investidoresProjeto) {
+          if (pi.percentual_participacao > 0) {
+            const investidorTipo = (pi as any).investidores?.tipo || 'externo';
+            const status = investidorTipo === 'proprio' ? 'RECONHECIDO' : 'AGUARDANDO_CICLO';
+            
+            await supabase
+              .from("participacao_ciclos")
+              .insert({
+                user_id: session.session.user.id,
+                workspace_id: workspaceId!,
+                projeto_id: projectId,
+                ciclo_id: novoCiclo.id,
+                investidor_id: pi.investidor_id,
+                percentual_aplicado: pi.percentual_participacao,
+                base_calculo: pi.base_calculo || "LUCRO_BRUTO",
+                lucro_base: 0,
+                valor_participacao: 0,
+                status,
+                tipo_participacao: "LUCRO_CICLO",
+                data_apuracao: new Date().toISOString(),
+              });
+          }
+        }
+      } else {
+        // Fallback: legacy single investor
+        const { data: projeto } = await supabase
+          .from("projetos")
+          .select("investidor_id, percentual_investidor, base_calculo_investidor")
+          .eq("id", projectId)
+          .single();
+
+        if (projeto?.investidor_id && projeto.percentual_investidor > 0) {
+          await supabase
+            .from("participacao_ciclos")
+            .insert({
+              user_id: session.session.user.id,
+              workspace_id: workspaceId!,
+              projeto_id: projectId,
+              ciclo_id: novoCiclo.id,
+              investidor_id: projeto.investidor_id,
+              percentual_aplicado: projeto.percentual_investidor,
+              base_calculo: projeto.base_calculo_investidor || "LUCRO_BRUTO",
+              lucro_base: 0,
+              valor_participacao: 0,
+              status: "AGUARDANDO_CICLO",
+              tipo_participacao: "LUCRO_CICLO",
+              data_apuracao: new Date().toISOString(),
+            });
+        }
       }
 
       // Show success state with cycle info
