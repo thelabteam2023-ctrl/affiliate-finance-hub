@@ -1245,6 +1245,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
                   onDelete={handleDeleteSurebet}
                   formatCurrency={formatCurrency}
                   convertToConsolidation={convertFnOficial}
+                  bookmakerNomeMap={bookmakerNomeMap}
                 />
               );
             })}
