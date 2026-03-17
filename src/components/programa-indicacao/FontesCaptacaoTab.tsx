@@ -12,6 +12,11 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -63,6 +68,10 @@ interface ParceriaDetalhe {
   dispensaMotivo?: string;
 }
 
+interface IndicacaoDetalhe {
+  parceiroNome: string;
+}
+
 interface IndicadorPerformance {
   indicador_id: string;
   user_id: string;
@@ -76,6 +85,7 @@ interface IndicadorPerformance {
   parcerias_encerradas: number;
   total_comissoes: number;
   total_bonus: number;
+  parceiros_indicados_nomes?: IndicacaoDetalhe[];
 }
 
 interface IndicadorAcordo {
@@ -177,7 +187,7 @@ export function FontesCaptacaoTab() {
     try {
       setLoading(true);
       
-      const [indicadoresRes, acordosRes, fornecedoresRes, parceriasRes, custosDiretosRes, lucrosDiretosRes, pagamentosRes] = await Promise.all([
+      const [indicadoresRes, acordosRes, fornecedoresRes, parceriasRes, custosDiretosRes, lucrosDiretosRes, pagamentosRes, indicacoesRes] = await Promise.all([
         supabase.from("v_indicador_performance").select("*"),
         supabase.from("indicador_acordos").select("*").eq("ativo", true),
         supabase.from("fornecedores").select("*").order("nome"),
@@ -185,10 +195,23 @@ export function FontesCaptacaoTab() {
         supabase.from("v_custos_aquisicao").select("parceiro_id, custo_total").eq("origem_tipo", "DIRETO"),
         supabase.from("v_parceiro_lucro_total").select("parceiro_id, lucro_projetos"),
         supabase.from("movimentacoes_indicacao").select("parceria_id, valor, tipo, status").eq("tipo", "PAGTO_FORNECEDOR").eq("status", "CONFIRMADO"),
+        supabase.from("indicacoes").select("indicador_id, parceiro:parceiros!indicacoes_parceiro_id_fkey(nome)"),
       ]);
 
       if (indicadoresRes.error) throw indicadoresRes.error;
-      setIndicadores(indicadoresRes.data || []);
+
+      // Build indicacoes map (indicador_id -> partner names)
+      const indicacoesMap = new Map<string, IndicacaoDetalhe[]>();
+      (indicacoesRes.data || []).forEach((ind: any) => {
+        const list = indicacoesMap.get(ind.indicador_id) || [];
+        list.push({ parceiroNome: ind.parceiro?.nome || "N/A" });
+        indicacoesMap.set(ind.indicador_id, list);
+      });
+
+      setIndicadores((indicadoresRes.data || []).map((i: any) => ({
+        ...i,
+        parceiros_indicados_nomes: indicacoesMap.get(i.indicador_id) || [],
+      })));
       setAcordos(acordosRes.data || []);
 
       // Build payment sum per parceria
@@ -821,9 +844,32 @@ export function FontesCaptacaoTab() {
                     </div>
 
                     <div className="mt-4 grid grid-cols-3 gap-4">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Parceiros</p>
-                        <p className="font-semibold">{fonte.totalParceiros}</p>
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <div className="cursor-pointer hover:bg-muted/50 rounded-md p-1 -m-1 transition-colors">
+                              <p className="text-sm text-muted-foreground flex items-center gap-1">
+                                Parceiros <Users className="h-3 w-3" />
+                              </p>
+                              <p className="font-semibold">{fonte.totalParceiros}</p>
+                            </div>
+                          </PopoverTrigger>
+                          <PopoverContent side="bottom" align="start" className="w-64 p-3">
+                            <p className="font-semibold text-sm mb-2">Parceiros deste fornecedor</p>
+                            {(fonte.parcerias_detalhes || []).length === 0 ? (
+                              <p className="text-sm text-muted-foreground">Nenhum parceiro vinculado</p>
+                            ) : (
+                              <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                                {(fonte.parcerias_detalhes || []).map((d, i) => (
+                                  <div key={d.parceriaId} className="flex items-center gap-2 text-sm">
+                                    <span className="text-muted-foreground">{i + 1}.</span>
+                                    <span className="truncate">{d.parceiroNome}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </PopoverContent>
+                        </Popover>
                       </div>
                       <div>
                         <TooltipProvider>
@@ -923,9 +969,35 @@ export function FontesCaptacaoTab() {
                   </div>
                   <div>
                     <div className="font-semibold">{fonte.nome}</div>
-                    <div className="text-sm text-muted-foreground">
-                      {fonte.totalParceiros} parceiros
-                    </div>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <div className="text-sm text-muted-foreground cursor-pointer hover:text-foreground transition-colors inline-flex items-center gap-1">
+                          {fonte.totalParceiros} parceiros <Users className="h-3 w-3" />
+                        </div>
+                      </PopoverTrigger>
+                      <PopoverContent side="bottom" align="start" className="w-64 p-3">
+                        <p className="font-semibold text-sm mb-2">
+                          Parceiros {fonte.tipo === "INDICADOR" ? "indicados" : "deste fornecedor"}
+                        </p>
+                        {(() => {
+                          const nomes = fonte.tipo === "FORNECEDOR"
+                            ? (fonte.parcerias_detalhes || []).map(d => d.parceiroNome)
+                            : ((fonte.originalData as IndicadorPerformance).parceiros_indicados_nomes || []).map(d => d.parceiroNome);
+                          return nomes.length === 0 ? (
+                            <p className="text-sm text-muted-foreground">Nenhum parceiro vinculado</p>
+                          ) : (
+                            <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                              {nomes.map((nome, i) => (
+                                <div key={i} className="flex items-center gap-2 text-sm">
+                                  <span className="text-muted-foreground">{i + 1}.</span>
+                                  <span className="truncate">{nome}</span>
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        })()}
+                      </PopoverContent>
+                    </Popover>
                   </div>
                 </div>
                 <div className="flex items-center gap-4">

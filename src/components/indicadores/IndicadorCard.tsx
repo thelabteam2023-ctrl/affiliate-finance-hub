@@ -1,6 +1,11 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Users, Eye, Pencil, Trash2, DollarSign, Gift } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 interface IndicadorPerformance {
   indicador_id: string;
@@ -14,6 +19,7 @@ interface IndicadorPerformance {
   parcerias_encerradas: number;
   total_comissoes: number;
   total_bonus: number;
+  parceiros_indicados_nomes?: { parceiroNome: string }[];
 }
 
 interface IndicadorCardProps {
@@ -34,6 +40,7 @@ export function IndicadorCard({
   getStatusBadge,
 }: IndicadorCardProps) {
   const totalRecebido = indicador.total_comissoes + indicador.total_bonus;
+  const parceirosNomes = indicador.parceiros_indicados_nomes || [];
 
   return (
     <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={onView}>
@@ -55,11 +62,32 @@ export function IndicadorCard({
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Stats Grid */}
-        <div className="grid grid-cols-3 gap-2 text-center">
-          <div className="bg-muted/50 rounded-lg p-2">
-            <p className="text-lg font-bold">{indicador.total_parceiros_indicados}</p>
-            <p className="text-xs text-muted-foreground">Indicados</p>
-          </div>
+        <div className="grid grid-cols-3 gap-2 text-center" onClick={(e) => e.stopPropagation()}>
+          <Popover>
+            <PopoverTrigger asChild>
+              <div className="bg-muted/50 rounded-lg p-2 cursor-pointer hover:bg-muted transition-colors">
+                <p className="text-lg font-bold">{indicador.total_parceiros_indicados}</p>
+                <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
+                  Indicados <Users className="h-3 w-3" />
+                </p>
+              </div>
+            </PopoverTrigger>
+            <PopoverContent side="bottom" align="start" className="w-64 p-3">
+              <p className="font-semibold text-sm mb-2">Parceiros indicados</p>
+              {parceirosNomes.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Nenhum parceiro vinculado</p>
+              ) : (
+                <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                  {parceirosNomes.map((d, i) => (
+                    <div key={i} className="flex items-center gap-2 text-sm">
+                      <span className="text-muted-foreground">{i + 1}.</span>
+                      <span className="truncate">{d.parceiroNome}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </PopoverContent>
+          </Popover>
           <div className="bg-emerald-500/10 rounded-lg p-2">
             <p className="text-lg font-bold text-emerald-500">{indicador.parcerias_ativas}</p>
             <p className="text-xs text-muted-foreground">Ativas</p>
