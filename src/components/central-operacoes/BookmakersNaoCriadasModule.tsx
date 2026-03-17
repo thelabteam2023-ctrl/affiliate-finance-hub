@@ -530,8 +530,14 @@ export default function BookmakersNaoCriadasModule() {
                           {sortOrigem === "asc" ? <ArrowUp className="h-3 w-3" /> : sortOrigem === "desc" ? <ArrowDown className="h-3 w-3" /> : <ArrowUpDown className="h-3 w-3 opacity-40" />}
                         </span>
                       </th>
-                      <th className="text-center px-4 py-3 font-medium text-muted-foreground uppercase text-xs tracking-wide w-[120px]">
-                        Dias Rest.
+                      <th
+                        className="text-center px-4 py-3 font-medium text-muted-foreground uppercase text-xs tracking-wide w-[120px] cursor-pointer select-none hover:text-foreground transition-colors"
+                        onClick={() => { setSortDias((prev) => prev === "desc" ? "asc" : prev === "asc" ? null : "desc"); setSortOrigem(null); }}
+                      >
+                        <span className="inline-flex items-center gap-1">
+                          Dias Rest.
+                          {sortDias === "desc" ? <ArrowDown className="h-3 w-3" /> : sortDias === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowUpDown className="h-3 w-3 opacity-40" />}
+                        </span>
                       </th>
                       <th className="text-right px-4 py-3 font-medium text-muted-foreground uppercase text-xs tracking-wide w-[220px]">
                         Ações
