@@ -165,6 +165,38 @@ export function FontesCaptacaoTab() {
   const [dispensaFornecedorNome, setDispensaFornecedorNome] = useState("");
   const [dispensaLoading, setDispensaLoading] = useState(false);
 
+  // Parceiros list modal
+  const [parceirosModalOpen, setParceirosModalOpen] = useState(false);
+  const [parceirosModalTitle, setParceirosModalTitle] = useState("");
+  const [parceirosModalSubtitle, setParceirosModalSubtitle] = useState("");
+  const [parceirosModalData, setParceirosModalData] = useState<{ nome: string; extra?: string; dispensado?: boolean }[]>([]);
+
+  const openParceirosModal = (fonte: FonteCaptacao) => {
+    if (fonte.tipo === "FORNECEDOR") {
+      setParceirosModalTitle(`Parceiros de ${fonte.nome}`);
+      setParceirosModalSubtitle(`${fonte.totalParceiros} parceiro${fonte.totalParceiros !== 1 ? "s" : ""} fornecido${fonte.totalParceiros !== 1 ? "s" : ""}`);
+      setParceirosModalData(
+        (fonte.parcerias_detalhes || []).map(d => ({
+          nome: d.parceiroNome,
+          extra: d.dispensado ? undefined : `${formatCurrencyFn(d.valorPago)} / ${formatCurrencyFn(d.valorContratado)}`,
+          dispensado: d.dispensado,
+        }))
+      );
+    } else {
+      const ind = fonte.originalData as IndicadorPerformance;
+      setParceirosModalTitle(`Parceiros indicados por ${fonte.nome}`);
+      setParceirosModalSubtitle(`${fonte.totalParceiros} parceiro${fonte.totalParceiros !== 1 ? "s" : ""} indicado${fonte.totalParceiros !== 1 ? "s" : ""}`);
+      setParceirosModalData(
+        (ind.parceiros_indicados_nomes || []).map(d => ({ nome: d.parceiroNome }))
+      );
+    }
+    setParceirosModalOpen(true);
+  };
+
+  const formatCurrencyFn = (value: number) => {
+    return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
+  };
+
   const { canCreate, canEdit, canDelete } = useActionAccess();
 
   useEffect(() => {
