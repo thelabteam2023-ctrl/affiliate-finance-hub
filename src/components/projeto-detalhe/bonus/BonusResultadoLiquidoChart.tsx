@@ -803,6 +803,11 @@ export function BonusResultadoLiquidoChart({
             </CardTitle>
             <p className="text-xs text-muted-foreground mt-1">
               {currentConfig.subtitle} • {kpis.diasOperados} {kpis.diasOperados === 1 ? "dia" : "dias"} de operação
+              {zoomCurrentMonth && isMultiMonthCycle && (
+                <span className="text-accent-foreground/70 ml-1">
+                  (foco: {format(new Date(), "MMMM", { locale: ptBR })})
+                </span>
+              )}
             </p>
           </div>
           
