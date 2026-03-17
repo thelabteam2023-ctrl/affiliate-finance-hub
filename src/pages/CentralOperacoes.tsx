@@ -1147,11 +1147,13 @@ export default function CentralOperacoes() {
           </Tabs>
         </TabsContent>
 
-        <TabsContent value="ocorrencias" className="mt-4"><OcorrenciasModule /></TabsContent>
-        <TabsContent value="solicitacoes" className="mt-4"><SolicitacoesModule /></TabsContent>
-        <TabsContent value="alertas" className="mt-4">
-          <div className="flex flex-col items-center justify-center py-24 text-center"><p className="text-muted-foreground">Em breve: Alertas automáticos do sistema.</p></div>
-        </TabsContent>
+        {!isOperator && <TabsContent value="ocorrencias" className="mt-4"><OcorrenciasModule /></TabsContent>}
+        {!isOperator && <TabsContent value="solicitacoes" className="mt-4"><SolicitacoesModule /></TabsContent>}
+        {!isOperator && (
+          <TabsContent value="alertas" className="mt-4">
+            <div className="flex flex-col items-center justify-center py-24 text-center"><p className="text-muted-foreground">Em breve: Alertas automáticos do sistema.</p></div>
+          </TabsContent>
+        )}
       </Tabs>
 
       {/* Extracted dialogs */}
