@@ -569,7 +569,7 @@ export function BonusResultadoLiquidoChart({
   const renderChart = () => {
     // Adaptive X-axis: for long periods, show monthly markers like VisaoGeralCharts
     const MONTH_NAMES_SHORT = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-    const useMonthlyTicks = !isSingleDayPeriod && visibleChartData.length > 20;
+    const useMonthlyTicks = !isSingleDayPeriod && chartData.length > 20;
     
     // Build set of indices that should show a tick (first day of each month)
     const monthlyTickIndices = useMemo(() => {
