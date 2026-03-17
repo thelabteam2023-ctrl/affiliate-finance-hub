@@ -1105,13 +1105,13 @@ export default function CentralOperacoes() {
         </TabsContent>
 
         <TabsContent value="contas" className="mt-4">
-          <Tabs defaultValue="contas-saldo" className="w-full">
+          <Tabs defaultValue={isOperator ? "nao-criadas" : "contas-saldo"} className="w-full">
             <TabsList className="mb-4">
-              <TabsTrigger value="contas-saldo">Bookmakers Disponíveis</TabsTrigger>
-              <TabsTrigger value="bookmakers-livres">Bookmakers Livres</TabsTrigger>
+              {!isOperator && <TabsTrigger value="contas-saldo">Bookmakers Disponíveis</TabsTrigger>}
+              {!isOperator && <TabsTrigger value="bookmakers-livres">Bookmakers Livres</TabsTrigger>}
               <TabsTrigger value="nao-criadas">Não Criadas</TabsTrigger>
             </TabsList>
-            <TabsContent value="contas-saldo"><ContasDisponiveisModule /></TabsContent>
+            {!isOperator && <TabsContent value="contas-saldo"><ContasDisponiveisModule /></TabsContent>}
             <TabsContent value="bookmakers-livres">
               <BookmakersLivresModule
                 onRegistrarPerda={(bookmakerId, bookmakerNome, moeda, saldoAtual) => setPerdaLimitadaDialog({ open: true, bookmakerId, bookmakerNome, moeda, saldoAtual })}
