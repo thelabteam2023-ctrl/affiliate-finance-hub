@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { getConsolidatedLucroDirect } from "@/utils/consolidatedValues";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Receipt, TrendingUp, TrendingDown, AreaChart as AreaChartIcon, Activity, Filter, X, Calendar, Info, Target, ZoomIn } from "lucide-react";
+import { Receipt, TrendingUp, TrendingDown, AreaChart as AreaChartIcon, Activity, Filter, X, Calendar, Info, Target } from "lucide-react";
 import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -31,7 +31,7 @@ import {
   ReferenceLine,
   Cell,
 } from "recharts";
-import { format, addDays, startOfDay, startOfMonth, endOfMonth, isSameMonth } from "date-fns";
+import { format, addDays, startOfDay } from "date-fns";
 import { extractLocalDateKey, extractCivilDateKey, parseLocalDateTime } from "@/utils/dateUtils";
 import { ptBR } from "date-fns/locale";
 import { ProjectBonus } from "@/hooks/useProjectBonuses";
@@ -113,13 +113,6 @@ export function BonusResultadoLiquidoChart({
   const [selectedBookmaker, setSelectedBookmaker] = useState<string | null>(null);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [showBenchmark, setShowBenchmark] = useState(false);
-  const [zoomCurrentMonth, setZoomCurrentMonth] = useState(false);
-
-  // Detecta se o ciclo abrange múltiplos meses (para mostrar toggle de zoom)
-  const isMultiMonthCycle = useMemo(() => {
-    if (!dateRange) return false;
-    return !isSameMonth(dateRange.start, dateRange.end);
-  }, [dateRange]);
 
   // Calcula estatísticas por bookmaker (para filtro e breakdown)
   const bookmakerStats = useMemo(() => {
@@ -271,34 +264,19 @@ export function BonusResultadoLiquidoChart({
     return data;
   }, [filteredBonuses, bonusBets, bonuses, ajustesPostLimitacao, dateRange, selectedBookmaker, convertToConsolidation, pernasMap, moedaConsolidacao]);
 
-  // Dados visíveis (zoom no mês atual ou ciclo completo)
-  const visibleChartData = useMemo(() => {
-    if (!zoomCurrentMonth || !isMultiMonthCycle) return chartData;
-    
-    const now = new Date();
-    const monthStart = format(startOfMonth(now), "yyyy-MM-dd");
-    const monthEnd = format(endOfMonth(now), "yyyy-MM-dd");
-    
-    const filtered = chartData.filter(d => d.dateKey >= monthStart && d.dateKey <= monthEnd);
-    return filtered.length > 0 ? filtered : chartData;
-  }, [chartData, zoomCurrentMonth, isMultiMonthCycle]);
-
-
   const kpis = useMemo(() => {
-    const source = visibleChartData;
-    const totalBonus = source.reduce((acc, d) => acc + d.bonus_creditado, 0);
-    const totalJuice = source.reduce((acc, d) => acc + d.juice, 0);
+    const totalBonus = chartData.reduce((acc, d) => acc + d.bonus_creditado, 0);
+    const totalJuice = chartData.reduce((acc, d) => acc + d.juice, 0);
     const resultadoLiquido = totalBonus + totalJuice;
-    const diasOperados = source.length;
-    const ultimoAcumulado = source.length > 0 ? source[source.length - 1].acumulado : 0;
+    const diasOperados = chartData.length;
+    const ultimoAcumulado = chartData.length > 0 ? chartData[chartData.length - 1].acumulado : 0;
     
-    // Performance % = (Resultado Líquido / Total Bônus) * 100
     const performancePercent = totalBonus > 0 
       ? ((resultadoLiquido / totalBonus) * 100) 
       : 0;
 
     return { totalBonus, totalJuice, resultadoLiquido, diasOperados, ultimoAcumulado, performancePercent };
-  }, [visibleChartData]);
+  }, [chartData]);
 
   // Benchmark levels (baseado no potencial bruto, não na curva real)
   const benchmarkLevels = useMemo(() => {
@@ -436,7 +414,7 @@ export function BonusResultadoLiquidoChart({
   }
 
   // Determina cor do acumulado final
-  const acumuladoFinal = visibleChartData[visibleChartData.length - 1]?.acumulado ?? 0;
+  const acumuladoFinal = chartData[chartData.length - 1]?.acumulado ?? 0;
   const isPositivo = acumuladoFinal >= 0;
 
   // Renderiza KPIs baseado no modo
@@ -591,16 +569,16 @@ export function BonusResultadoLiquidoChart({
   const renderChart = () => {
     // Adaptive X-axis: for long periods, show monthly markers like VisaoGeralCharts
     const MONTH_NAMES_SHORT = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-    const useMonthlyTicks = !isSingleDayPeriod && visibleChartData.length > 20;
+    const useMonthlyTicks = !isSingleDayPeriod && chartData.length > 20;
     
     // Build set of indices that should show a tick (first day of each month)
     const monthlyTickIndices = useMemo(() => {
       if (!useMonthlyTicks) return null;
       const indices = new Set<number>();
       let lastMonth = '';
-      visibleChartData.forEach((d, i) => {
+      chartData.forEach((d, i) => {
         if (d.dateKey) {
-          const month = d.dateKey.substring(0, 7); // yyyy-MM
+          const month = d.dateKey.substring(0, 7);
           if (month !== lastMonth) {
             indices.add(i);
             lastMonth = month;
@@ -608,12 +586,12 @@ export function BonusResultadoLiquidoChart({
         }
       });
       return indices;
-    }, [visibleChartData, useMonthlyTicks]);
+    }, [chartData, useMonthlyTicks]);
 
     switch (chartMode) {
       case "resultado":
         return (
-          <AreaChart data={visibleChartData} margin={{ top: 10, right: showBenchmark ? 120 : 10, left: 0, bottom: 0 }}>
+          <AreaChart data={chartData} margin={{ top: 10, right: showBenchmark ? 120 : 10, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="bonusGradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor={isPositivo ? colorPositivo : colorNegativo} stopOpacity={0.3} />
@@ -632,7 +610,7 @@ export function BonusResultadoLiquidoChart({
                 if (useMonthlyTicks && monthlyTickIndices) {
                   // Only render ticks at month boundaries
                   if (!monthlyTickIndices.has(index)) return null;
-                  const entry = visibleChartData[index];
+                  const entry = chartData[index];
                   const monthIdx = entry?.dateKey ? parseInt(entry.dateKey.substring(5, 7), 10) - 1 : -1;
                   const label = monthIdx >= 0 ? MONTH_NAMES_SHORT[monthIdx] : '';
                   return (
@@ -717,7 +695,7 @@ export function BonusResultadoLiquidoChart({
         // Gráfico de barras agrupadas: Bônus e Juice lado a lado
         return (
           <BarChart 
-            data={visibleChartData} 
+            data={chartData} 
             margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
             barCategoryGap="20%"
             barGap={2}
@@ -780,7 +758,7 @@ export function BonusResultadoLiquidoChart({
               radius={[4, 4, 0, 0]} 
               maxBarSize={24}
             >
-              {visibleChartData.map((entry, index) => (
+              {chartData.map((entry, index) => (
                 <Cell 
                   key={`cell-juice-${index}`} 
                   fill={entry.juice >= 0 ? "url(#juicePositiveGradient)" : "url(#juiceNegativeGradient)"} 
@@ -803,39 +781,10 @@ export function BonusResultadoLiquidoChart({
             </CardTitle>
             <p className="text-xs text-muted-foreground mt-1">
               {currentConfig.subtitle} • {kpis.diasOperados} {kpis.diasOperados === 1 ? "dia" : "dias"} de operação
-              {zoomCurrentMonth && isMultiMonthCycle && (
-                <span className="text-accent-foreground/70 ml-1">
-                  (foco: {format(new Date(), "MMMM", { locale: ptBR })})
-                </span>
-              )}
             </p>
           </div>
           
           <div className="flex items-center gap-2">
-            {/* Zoom mês atual - só aparece em ciclos multi-mês */}
-            {isMultiMonthCycle && (
-              <TooltipProvider>
-                <UITooltip>
-                  <TooltipTrigger asChild>
-                    <Button 
-                      variant={zoomCurrentMonth ? "secondary" : "ghost"} 
-                      size="sm" 
-                      className={`h-7 px-2 text-xs gap-1 ${zoomCurrentMonth ? "bg-accent text-accent-foreground" : ""}`}
-                      onClick={() => setZoomCurrentMonth(!zoomCurrentMonth)}
-                    >
-                      <ZoomIn className="h-3.5 w-3.5" />
-                      <span className="hidden sm:inline">Mês atual</span>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">
-                    <p className="text-xs">
-                      {zoomCurrentMonth ? "Voltar para ciclo completo" : "Focar no mês atual"}
-                    </p>
-                  </TooltipContent>
-                </UITooltip>
-              </TooltipProvider>
-            )}
-
             {/* Calendário */}
             <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
               <PopoverTrigger asChild>
