@@ -610,7 +610,7 @@ export function BonusResultadoLiquidoChart({
                 if (useMonthlyTicks && monthlyTickIndices) {
                   // Only render ticks at month boundaries
                   if (!monthlyTickIndices.has(index)) return null;
-                  const entry = visibleChartData[index];
+                  const entry = chartData[index];
                   const monthIdx = entry?.dateKey ? parseInt(entry.dateKey.substring(5, 7), 10) - 1 : -1;
                   const label = monthIdx >= 0 ? MONTH_NAMES_SHORT[monthIdx] : '';
                   return (
