@@ -148,7 +148,7 @@ export function OperatorSaquesReadOnly() {
                   )}
                   <div className="flex items-center justify-between pt-1">
                     <span className="text-sm font-mono font-semibold">
-                      {formatCurrency(bk.saldo_atual, bk.moeda)}
+                      {formatCurrencyValue(bk.saldo_atual, bk.moeda)}
                     </span>
                     {diasAguardando !== null && (
                       <Badge
