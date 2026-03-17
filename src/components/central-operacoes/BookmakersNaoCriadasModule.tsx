@@ -140,7 +140,7 @@ export default function BookmakersNaoCriadasModule() {
                   {selectedBookmaker.nome}
                 </span>
               ) : (
-                <span className="text-muted-foreground">Selecione uma bookmaker...</span>
+                <span className="text-muted-foreground">Selecionar</span>
               )}
               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
