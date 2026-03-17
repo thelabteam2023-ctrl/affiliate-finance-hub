@@ -63,6 +63,15 @@ export const STEP_CONFIG: Record<WizardStep, {
   },
 };
 
+export interface ProjetoInvestidorWizard {
+  investidor_id: string;
+  investidor_nome?: string;
+  investidor_tipo?: string;
+  percentual_participacao: number;
+  base_calculo: string;
+  ativo: boolean;
+}
+
 export interface ProjectFormData {
   // Etapa 1 - Dados Básicos
   nome: string;
@@ -76,6 +85,7 @@ export interface ProjectFormData {
   percentual_investidor: number;
   base_calculo_investidor: string;
   metrica_lucro_ciclo: "operacional" | "realizado";
+  investidores_projeto: ProjetoInvestidorWizard[];
   
   // Etapa 2 - Moeda
   moeda_consolidacao: "BRL" | "USD";
