@@ -9,7 +9,15 @@ import { useAuth } from "@/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Clock, Banknote } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
+
+const formatCurrencyValue = (value: number, moeda: string) => {
+  const currencyMap: Record<string, string> = { BRL: "BRL", EUR: "EUR", USD: "USD" };
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: currencyMap[moeda] || "BRL",
+    minimumFractionDigits: 2,
+  }).format(value);
+};
 
 interface SaqueBookmaker {
   id: string;
