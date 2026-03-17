@@ -495,6 +495,15 @@ export default function BookmakersNaoCriadasModule() {
                         <td className="px-4 py-3 text-muted-foreground font-mono text-xs">
                           {p.cpf}
                         </td>
+                        <td className="px-4 py-3">
+                          {p.origem ? (
+                            <Badge variant="outline" className="text-xs font-normal">
+                              {p.origem}
+                            </Badge>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </td>
                         <td className="px-4 py-3 text-right space-x-2">
                           {showDescartados ? (
                             <Button
