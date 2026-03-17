@@ -52,6 +52,7 @@ import { ParticipacoesSmartFilter } from "@/components/central-operacoes/Partici
 import { PropostasPagamentoCard } from "@/components/operadores/PropostasPagamentoCard";
 import { ContasDisponiveisModule } from "@/components/central-operacoes/ContasDisponiveisModule";
 import { BookmakersLivresModule } from "@/components/central-operacoes/BookmakersLivresModule";
+import BookmakersNaoCriadasModule from "@/components/central-operacoes/BookmakersNaoCriadasModule";
 import { CentralOperacoesDialogs } from "@/components/central-operacoes/CentralOperacoesDialogs";
 import { useCentralOperacoesMutations, type DispensaState, type PerdaLimitadaState } from "@/hooks/useCentralOperacoesMutations";
 import { useCicloAlertas } from "@/hooks/useCicloAlertas";
@@ -1098,6 +1099,7 @@ export default function CentralOperacoes() {
             <TabsList className="mb-4">
               <TabsTrigger value="contas-saldo">Bookmakers Disponíveis</TabsTrigger>
               <TabsTrigger value="bookmakers-livres">Bookmakers Livres</TabsTrigger>
+              <TabsTrigger value="nao-criadas">Não Criadas</TabsTrigger>
             </TabsList>
             <TabsContent value="contas-saldo"><ContasDisponiveisModule /></TabsContent>
             <TabsContent value="bookmakers-livres">
@@ -1124,6 +1126,9 @@ export default function CentralOperacoes() {
                   navigate("/caixa", { state: { openDialog: true, bookmakerId, bookmakerNome, tipo: tipo === "deposito" ? "deposito" : "retirada", moeda } });
                 }}
               />
+            </TabsContent>
+            <TabsContent value="nao-criadas">
+              <BookmakersNaoCriadasModule />
             </TabsContent>
           </Tabs>
         </TabsContent>
