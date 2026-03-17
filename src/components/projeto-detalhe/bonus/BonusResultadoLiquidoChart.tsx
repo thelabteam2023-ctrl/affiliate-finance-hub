@@ -264,34 +264,19 @@ export function BonusResultadoLiquidoChart({
     return data;
   }, [filteredBonuses, bonusBets, bonuses, ajustesPostLimitacao, dateRange, selectedBookmaker, convertToConsolidation, pernasMap, moedaConsolidacao]);
 
-  // Dados visíveis (zoom no mês atual ou ciclo completo)
-  const visibleChartData = useMemo(() => {
-    if (!zoomCurrentMonth || !isMultiMonthCycle) return chartData;
-    
-    const now = new Date();
-    const monthStart = format(startOfMonth(now), "yyyy-MM-dd");
-    const monthEnd = format(endOfMonth(now), "yyyy-MM-dd");
-    
-    const filtered = chartData.filter(d => d.dateKey >= monthStart && d.dateKey <= monthEnd);
-    return filtered.length > 0 ? filtered : chartData;
-  }, [chartData, zoomCurrentMonth, isMultiMonthCycle]);
-
-
   const kpis = useMemo(() => {
-    const source = visibleChartData;
-    const totalBonus = source.reduce((acc, d) => acc + d.bonus_creditado, 0);
-    const totalJuice = source.reduce((acc, d) => acc + d.juice, 0);
+    const totalBonus = chartData.reduce((acc, d) => acc + d.bonus_creditado, 0);
+    const totalJuice = chartData.reduce((acc, d) => acc + d.juice, 0);
     const resultadoLiquido = totalBonus + totalJuice;
-    const diasOperados = source.length;
-    const ultimoAcumulado = source.length > 0 ? source[source.length - 1].acumulado : 0;
+    const diasOperados = chartData.length;
+    const ultimoAcumulado = chartData.length > 0 ? chartData[chartData.length - 1].acumulado : 0;
     
-    // Performance % = (Resultado Líquido / Total Bônus) * 100
     const performancePercent = totalBonus > 0 
       ? ((resultadoLiquido / totalBonus) * 100) 
       : 0;
 
     return { totalBonus, totalJuice, resultadoLiquido, diasOperados, ultimoAcumulado, performancePercent };
-  }, [visibleChartData]);
+  }, [chartData]);
 
   // Benchmark levels (baseado no potencial bruto, não na curva real)
   const benchmarkLevels = useMemo(() => {
