@@ -493,7 +493,7 @@ export default function BookmakersNaoCriadasModule() {
                           {getFirstLastName(p.nome)}
                         </td>
                         <td className="px-4 py-3 text-muted-foreground font-mono text-xs">
-                          {p.cpf}
+                          {p.cpf ? `${p.cpf.slice(0, 3)}.***.***-${p.cpf.slice(-2)}` : "—"}
                         </td>
                         <td className="px-4 py-3">
                           {p.origem ? (
