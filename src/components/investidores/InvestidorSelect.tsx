@@ -32,7 +32,7 @@ export function InvestidorSelect({ value, onValueChange, disabled }: InvestidorS
       // RLS policies handle workspace isolation
       const { data, error } = await supabase
         .from("investidores")
-        .select("*")
+        .select("id, nome, cpf, status, tipo")
         .eq("status", "ativo")
         .order("nome");
 
