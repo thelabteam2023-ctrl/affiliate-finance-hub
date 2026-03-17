@@ -717,7 +717,7 @@ export function BonusResultadoLiquidoChart({
         // Gráfico de barras agrupadas: Bônus e Juice lado a lado
         return (
           <BarChart 
-            data={chartData} 
+            data={visibleChartData} 
             margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
             barCategoryGap="20%"
             barGap={2}
