@@ -14,7 +14,7 @@ import { useWorkspaceBookmakers } from "@/hooks/useWorkspaceBookmakers";
 import { getFirstLastName, cn } from "@/lib/utils";
 import {
   Search, UserPlus, Building2, Users, ChevronsUpDown, Check,
-  Ban, Undo2, Eye, EyeOff, CheckSquare,
+  Ban, Undo2, Eye, EyeOff, CheckSquare, ArrowUpDown, ArrowUp, ArrowDown,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -61,6 +61,7 @@ export default function BookmakersNaoCriadasModule() {
   const [showDescartados, setShowDescartados] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [grupoFilter, setGrupoFilter] = useState("todos");
+  const [sortOrigem, setSortOrigem] = useState<"asc" | "desc" | null>(null);
   const { getCatalogoIdsByGrupo } = useBookmakerGrupos();
 
   // Dialog state for creating a new bookmaker account
@@ -185,14 +186,27 @@ export default function BookmakersNaoCriadasModule() {
 
   const visibleList = showDescartados ? descartados : disponiveis;
 
-  // Filter by search
+  // Filter by search and sort
   const filtered = useMemo(() => {
-    if (!search.trim()) return visibleList;
-    const q = search.toLowerCase();
-    return visibleList.filter(
-      (p) => p.nome.toLowerCase().includes(q) || p.cpf?.includes(q)
-    );
-  }, [visibleList, search]);
+    let result = visibleList;
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      result = result.filter(
+        (p) => p.nome.toLowerCase().includes(q) || p.cpf?.includes(q)
+      );
+    }
+    if (sortOrigem) {
+      result = [...result].sort((a, b) => {
+        const oa = (a.origem || "").toLowerCase();
+        const ob = (b.origem || "").toLowerCase();
+        if (!oa && !ob) return 0;
+        if (!oa) return 1;
+        if (!ob) return -1;
+        return sortOrigem === "asc" ? oa.localeCompare(ob) : ob.localeCompare(oa);
+      });
+    }
+    return result;
+  }, [visibleList, search, sortOrigem]);
 
   // Clear selection when switching views or bookmaker
   const resetSelection = useCallback(() => setSelectedIds(new Set()), []);
@@ -479,8 +493,14 @@ export default function BookmakersNaoCriadasModule() {
                       <th className="text-left px-4 py-3 font-medium text-muted-foreground uppercase text-xs tracking-wide">
                         CPF
                       </th>
-                      <th className="text-left px-4 py-3 font-medium text-muted-foreground uppercase text-xs tracking-wide">
-                        Origem
+                      <th
+                        className="text-left px-4 py-3 font-medium text-muted-foreground uppercase text-xs tracking-wide cursor-pointer select-none hover:text-foreground transition-colors"
+                        onClick={() => setSortOrigem((prev) => prev === "asc" ? "desc" : prev === "desc" ? null : "asc")}
+                      >
+                        <span className="inline-flex items-center gap-1">
+                          Origem
+                          {sortOrigem === "asc" ? <ArrowUp className="h-3 w-3" /> : sortOrigem === "desc" ? <ArrowDown className="h-3 w-3" /> : <ArrowUpDown className="h-3 w-3 opacity-40" />}
+                        </span>
                       </th>
                       <th className="text-right px-4 py-3 font-medium text-muted-foreground uppercase text-xs tracking-wide w-[220px]">
                         Ações
