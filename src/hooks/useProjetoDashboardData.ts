@@ -229,7 +229,7 @@ export function useProjetoDashboardData(projetoId: string | undefined): UseProje
         bookmakers: raw.bookmakers || [],
         depositos: raw.depositos || [],
         saques: raw.saques || [],
-        ledger_extras: raw.extras_ledger || raw.ledger_extras || [],
+        ledger_extras: raw.ledger_extras || [],
         ajustes_pos_limitacao: raw.ajustes_pos_limitacao || [],
       };
     },
