@@ -91,6 +91,8 @@ export default function CatalogoBookmakers() {
   const [vinculoCriadoConfirmOpen, setVinculoCriadoConfirmOpen] = useState(false);
   const [vinculoCriadoContext, setVinculoCriadoContext] = useState<VinculoCriadoContext | null>(null);
   const [depositDialogOpen, setDepositDialogOpen] = useState(false);
+  const [gruposDialogOpen, setGruposDialogOpen] = useState(false);
+  const [grupoFilter, setGrupoFilter] = useState("todos");
   const { toast } = useToast();
   const { isOwnerOrAdmin } = useRole();
   const { isSystemOwner, user } = useAuth();
