@@ -6,24 +6,22 @@
  * parceiro + bookmaker pré-selecionados.
  */
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useWorkspaceBookmakers } from "@/hooks/useWorkspaceBookmakers";
 import { getFirstLastName, cn } from "@/lib/utils";
-import { Search, UserPlus, Building2, Users } from "lucide-react";
+import { Search, UserPlus, Building2, Users, ChevronsUpDown, Check } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import BookmakerDialog from "@/components/bookmakers/BookmakerDialog";
 import type { VinculoCriadoContext } from "@/components/bookmakers/BookmakerDialog";
 
@@ -38,6 +36,8 @@ export default function BookmakersNaoCriadasModule() {
   const { workspaceId } = useAuth();
   const [selectedCatalogoId, setSelectedCatalogoId] = useState<string>("");
   const [search, setSearch] = useState("");
+  const [bkSearch, setBkSearch] = useState("");
+  const [bkPopoverOpen, setBkPopoverOpen] = useState(false);
 
   // Dialog state for creating a new bookmaker account
   const [criarDialog, setCriarDialog] = useState<{
@@ -129,33 +129,58 @@ export default function BookmakersNaoCriadasModule() {
           <Building2 className="h-4 w-4" />
           Bookmaker
         </div>
-        <Select value={selectedCatalogoId} onValueChange={setSelectedCatalogoId}>
-          <SelectTrigger className="w-[280px]">
-            <SelectValue placeholder="Selecione uma bookmaker..." />
-          </SelectTrigger>
-          <SelectContent className="max-h-[300px]">
-            {loadingCatalogo ? (
-              <div className="p-2">
-                <Skeleton className="h-6 w-full" />
-              </div>
-            ) : (
-              (catalogoBookmakers ?? []).map((bk) => (
-                <SelectItem key={bk.id} value={bk.id}>
-                  <div className="flex items-center gap-2">
-                    {bk.logo_url && (
-                      <img
-                        src={bk.logo_url}
-                        alt=""
-                        className="h-5 w-5 rounded object-contain"
-                      />
-                    )}
-                    {bk.nome}
-                  </div>
-                </SelectItem>
-              ))
-            )}
-          </SelectContent>
-        </Select>
+        <Popover open={bkPopoverOpen} onOpenChange={(open) => { setBkPopoverOpen(open); if (!open) setBkSearch(""); }}>
+          <PopoverTrigger asChild>
+            <Button variant="outline" role="combobox" className="w-[280px] justify-between font-normal">
+              {selectedBookmaker ? (
+                <span className="flex items-center gap-2 truncate">
+                  {selectedBookmaker.logo_url && (
+                    <img src={selectedBookmaker.logo_url} alt="" className="h-5 w-5 rounded object-contain flex-shrink-0" />
+                  )}
+                  {selectedBookmaker.nome}
+                </span>
+              ) : (
+                <span className="text-muted-foreground">Selecione uma bookmaker...</span>
+              )}
+              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[280px] p-0" align="start">
+            <div className="flex items-center border-b border-border px-3 py-2">
+              <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+              <input
+                placeholder="Buscar bookmaker..."
+                value={bkSearch}
+                onChange={(e) => setBkSearch(e.target.value)}
+                className="flex h-8 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+              />
+            </div>
+            <div className="max-h-[260px] overflow-y-auto p-1">
+              {loadingCatalogo ? (
+                <div className="p-2"><Skeleton className="h-6 w-full" /></div>
+              ) : (
+                (catalogoBookmakers ?? [])
+                  .filter((bk) => bk.nome.toLowerCase().includes(bkSearch.toLowerCase()))
+                  .map((bk) => (
+                    <button
+                      key={bk.id}
+                      onClick={() => { setSelectedCatalogoId(bk.id); setBkPopoverOpen(false); setBkSearch(""); }}
+                      className={cn(
+                        "flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground transition-colors",
+                        selectedCatalogoId === bk.id && "bg-accent"
+                      )}
+                    >
+                      <Check className={cn("h-4 w-4 shrink-0", selectedCatalogoId === bk.id ? "opacity-100" : "opacity-0")} />
+                      {bk.logo_url && (
+                        <img src={bk.logo_url} alt="" className="h-5 w-5 rounded object-contain flex-shrink-0" />
+                      )}
+                      <span className="truncate">{bk.nome}</span>
+                    </button>
+                  ))
+              )}
+            </div>
+          </PopoverContent>
+        </Popover>
 
         {selectedCatalogoId && !loadingParceiros && (
           <Badge variant="outline" className="text-xs font-mono gap-1">
