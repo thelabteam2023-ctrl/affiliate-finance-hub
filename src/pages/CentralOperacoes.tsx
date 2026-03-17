@@ -1099,6 +1099,7 @@ export default function CentralOperacoes() {
             <TabsList className="mb-4">
               <TabsTrigger value="contas-saldo">Bookmakers Disponíveis</TabsTrigger>
               <TabsTrigger value="bookmakers-livres">Bookmakers Livres</TabsTrigger>
+              <TabsTrigger value="nao-criadas">Não Criadas</TabsTrigger>
             </TabsList>
             <TabsContent value="contas-saldo"><ContasDisponiveisModule /></TabsContent>
             <TabsContent value="bookmakers-livres">
