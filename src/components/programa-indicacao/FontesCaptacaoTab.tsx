@@ -11,11 +11,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { ParceirosListModal } from "@/components/programa-indicacao/ParceirosListModal";
 import {
   Select,
   SelectContent,
@@ -168,6 +164,38 @@ export function FontesCaptacaoTab() {
   const [dispensaParceiroNome, setDispensaParceiroNome] = useState("");
   const [dispensaFornecedorNome, setDispensaFornecedorNome] = useState("");
   const [dispensaLoading, setDispensaLoading] = useState(false);
+
+  // Parceiros list modal
+  const [parceirosModalOpen, setParceirosModalOpen] = useState(false);
+  const [parceirosModalTitle, setParceirosModalTitle] = useState("");
+  const [parceirosModalSubtitle, setParceirosModalSubtitle] = useState("");
+  const [parceirosModalData, setParceirosModalData] = useState<{ nome: string; extra?: string; dispensado?: boolean }[]>([]);
+
+  const openParceirosModal = (fonte: FonteCaptacao) => {
+    if (fonte.tipo === "FORNECEDOR") {
+      setParceirosModalTitle(`Parceiros de ${fonte.nome}`);
+      setParceirosModalSubtitle(`${fonte.totalParceiros} parceiro${fonte.totalParceiros !== 1 ? "s" : ""} fornecido${fonte.totalParceiros !== 1 ? "s" : ""}`);
+      setParceirosModalData(
+        (fonte.parcerias_detalhes || []).map(d => ({
+          nome: d.parceiroNome,
+          extra: d.dispensado ? undefined : `${formatCurrencyFn(d.valorPago)} / ${formatCurrencyFn(d.valorContratado)}`,
+          dispensado: d.dispensado,
+        }))
+      );
+    } else {
+      const ind = fonte.originalData as IndicadorPerformance;
+      setParceirosModalTitle(`Parceiros indicados por ${fonte.nome}`);
+      setParceirosModalSubtitle(`${fonte.totalParceiros} parceiro${fonte.totalParceiros !== 1 ? "s" : ""} indicado${fonte.totalParceiros !== 1 ? "s" : ""}`);
+      setParceirosModalData(
+        (ind.parceiros_indicados_nomes || []).map(d => ({ nome: d.parceiroNome }))
+      );
+    }
+    setParceirosModalOpen(true);
+  };
+
+  const formatCurrencyFn = (value: number) => {
+    return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
+  };
 
   const { canCreate, canEdit, canDelete } = useActionAccess();
 
@@ -844,32 +872,13 @@ export function FontesCaptacaoTab() {
                     </div>
 
                     <div className="mt-4 grid grid-cols-3 gap-4">
-                      <div onClick={(e) => e.stopPropagation()}>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <div className="cursor-pointer hover:bg-muted/50 rounded-md p-1 -m-1 transition-colors">
-                              <p className="text-sm text-muted-foreground flex items-center gap-1">
-                                Parceiros <Users className="h-3 w-3" />
-                              </p>
-                              <p className="font-semibold">{fonte.totalParceiros}</p>
-                            </div>
-                          </PopoverTrigger>
-                          <PopoverContent side="bottom" align="start" className="w-64 p-3">
-                            <p className="font-semibold text-sm mb-2">Parceiros deste fornecedor</p>
-                            {(fonte.parcerias_detalhes || []).length === 0 ? (
-                              <p className="text-sm text-muted-foreground">Nenhum parceiro vinculado</p>
-                            ) : (
-                              <div className="space-y-1.5 max-h-48 overflow-y-auto">
-                                {(fonte.parcerias_detalhes || []).map((d, i) => (
-                                  <div key={d.parceriaId} className="flex items-center gap-2 text-sm">
-                                    <span className="text-muted-foreground">{i + 1}.</span>
-                                    <span className="truncate">{d.parceiroNome}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </PopoverContent>
-                        </Popover>
+                      <div onClick={(e) => { e.stopPropagation(); openParceirosModal(fonte); }}>
+                        <div className="cursor-pointer hover:bg-muted/50 rounded-md p-1 -m-1 transition-colors">
+                          <p className="text-sm text-muted-foreground flex items-center gap-1">
+                            Parceiros <Users className="h-3 w-3" />
+                          </p>
+                          <p className="font-semibold">{fonte.totalParceiros}</p>
+                        </div>
                       </div>
                       <div>
                         <TooltipProvider>
@@ -969,35 +978,12 @@ export function FontesCaptacaoTab() {
                   </div>
                   <div>
                     <div className="font-semibold">{fonte.nome}</div>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <div className="text-sm text-muted-foreground cursor-pointer hover:text-foreground transition-colors inline-flex items-center gap-1">
-                          {fonte.totalParceiros} parceiros <Users className="h-3 w-3" />
-                        </div>
-                      </PopoverTrigger>
-                      <PopoverContent side="bottom" align="start" className="w-64 p-3">
-                        <p className="font-semibold text-sm mb-2">
-                          Parceiros {fonte.tipo === "INDICADOR" ? "indicados" : "deste fornecedor"}
-                        </p>
-                        {(() => {
-                          const nomes = fonte.tipo === "FORNECEDOR"
-                            ? (fonte.parcerias_detalhes || []).map(d => d.parceiroNome)
-                            : ((fonte.originalData as IndicadorPerformance).parceiros_indicados_nomes || []).map(d => d.parceiroNome);
-                          return nomes.length === 0 ? (
-                            <p className="text-sm text-muted-foreground">Nenhum parceiro vinculado</p>
-                          ) : (
-                            <div className="space-y-1.5 max-h-48 overflow-y-auto">
-                              {nomes.map((nome, i) => (
-                                <div key={i} className="flex items-center gap-2 text-sm">
-                                  <span className="text-muted-foreground">{i + 1}.</span>
-                                  <span className="truncate">{nome}</span>
-                                </div>
-                              ))}
-                            </div>
-                          );
-                        })()}
-                      </PopoverContent>
-                    </Popover>
+                    <div
+                      className="text-sm text-muted-foreground cursor-pointer hover:text-foreground transition-colors inline-flex items-center gap-1"
+                      onClick={() => openParceirosModal(fonte)}
+                    >
+                      {fonte.totalParceiros} parceiros <Users className="h-3 w-3" />
+                    </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
@@ -1094,6 +1080,15 @@ export function FontesCaptacaoTab() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Parceiros List Modal */}
+      <ParceirosListModal
+        open={parceirosModalOpen}
+        onOpenChange={setParceirosModalOpen}
+        title={parceirosModalTitle}
+        subtitle={parceirosModalSubtitle}
+        parceiros={parceirosModalData}
+      />
     </div>
   );
 }
