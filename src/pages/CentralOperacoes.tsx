@@ -193,6 +193,8 @@ export default function CentralOperacoes() {
   const [parceriaToRenovar, setParceriaToRenovar] = useState<ParceriaAlertaEncerramento | null>(null);
   const [mainTab, setMainTabState] = useState<'financeiro' | 'contas' | 'ocorrencias' | 'solicitacoes' | 'alertas'>(() => {
     const saved = localStorage.getItem('central-operacoes-main-tab');
+    // Operadores só podem ver a aba "contas" (sem Bookmakers Disponíveis)
+    if (role === 'operator') return 'contas';
     if (saved === 'financeiro' || saved === 'contas' || saved === 'ocorrencias' || saved === 'solicitacoes' || saved === 'alertas') return saved;
     return 'financeiro';
   });
@@ -1058,23 +1060,31 @@ export default function CentralOperacoes() {
 
       <Tabs value={mainTab} onValueChange={(v) => setMainTab(v as typeof mainTab)}>
         <TabsList>
-          <TabsTrigger value="financeiro" className="relative">
-            Financeiro
-            {alertCards.length > 0 && <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-orange-500 text-white text-[10px] font-bold leading-none">{alertCards.length}</span>}
-          </TabsTrigger>
+          {!isOperator && (
+            <TabsTrigger value="financeiro" className="relative">
+              Financeiro
+              {alertCards.length > 0 && <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-orange-500 text-white text-[10px] font-bold leading-none">{alertCards.length}</span>}
+            </TabsTrigger>
+          )}
           <TabsTrigger value="contas" className="relative">
-            Bookmakers Disponíveis
-            {(contasDisponiveisCount ?? 0) > 0 && <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-amber-500 text-white text-[10px] font-bold leading-none animate-pulse">!</span>}
+            Bookmakers
+            {!isOperator && (contasDisponiveisCount ?? 0) > 0 && <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-amber-500 text-white text-[10px] font-bold leading-none animate-pulse">!</span>}
           </TabsTrigger>
-          <TabsTrigger value="ocorrencias" className="relative">
-            Ocorrências
-            {(kpisOcorrencias?.abertas_total ?? 0) > 0 && <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold leading-none">{kpisOcorrencias!.abertas_total}</span>}
-          </TabsTrigger>
-          <TabsTrigger value="solicitacoes" className="relative">
-            Solicitações
-            {(kpisSolicitacoes?.total_abertas ?? 0) > 0 && <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-yellow-500 text-white text-[10px] font-bold leading-none">{kpisSolicitacoes!.total_abertas}</span>}
-          </TabsTrigger>
-          <TabsTrigger value="alertas" disabled className="opacity-50">Alertas<span className="ml-1.5 text-[10px] text-muted-foreground">(em breve)</span></TabsTrigger>
+          {!isOperator && (
+            <TabsTrigger value="ocorrencias" className="relative">
+              Ocorrências
+              {(kpisOcorrencias?.abertas_total ?? 0) > 0 && <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold leading-none">{kpisOcorrencias!.abertas_total}</span>}
+            </TabsTrigger>
+          )}
+          {!isOperator && (
+            <TabsTrigger value="solicitacoes" className="relative">
+              Solicitações
+              {(kpisSolicitacoes?.total_abertas ?? 0) > 0 && <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-yellow-500 text-white text-[10px] font-bold leading-none">{kpisSolicitacoes!.total_abertas}</span>}
+            </TabsTrigger>
+          )}
+          {!isOperator && (
+            <TabsTrigger value="alertas" disabled className="opacity-50">Alertas<span className="ml-1.5 text-[10px] text-muted-foreground">(em breve)</span></TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="financeiro" className="mt-4 space-y-4">
@@ -1095,38 +1105,40 @@ export default function CentralOperacoes() {
         </TabsContent>
 
         <TabsContent value="contas" className="mt-4">
-          <Tabs defaultValue="contas-saldo" className="w-full">
+          <Tabs defaultValue={isOperator ? "nao-criadas" : "contas-saldo"} className="w-full">
             <TabsList className="mb-4">
-              <TabsTrigger value="contas-saldo">Bookmakers Disponíveis</TabsTrigger>
-              <TabsTrigger value="bookmakers-livres">Bookmakers Livres</TabsTrigger>
+              {!isOperator && <TabsTrigger value="contas-saldo">Bookmakers Disponíveis</TabsTrigger>}
+              {!isOperator && <TabsTrigger value="bookmakers-livres">Bookmakers Livres</TabsTrigger>}
               <TabsTrigger value="nao-criadas">Não Criadas</TabsTrigger>
             </TabsList>
-            <TabsContent value="contas-saldo"><ContasDisponiveisModule /></TabsContent>
-            <TabsContent value="bookmakers-livres">
-              <BookmakersLivresModule
-                onRegistrarPerda={(bookmakerId, bookmakerNome, moeda, saldoAtual) => setPerdaLimitadaDialog({ open: true, bookmakerId, bookmakerNome, moeda, saldoAtual })}
-                onVincularProjeto={async (bookmakerId, projetoId, projetoNome) => {
-                  try {
-                    const { data: current } = await supabase.from("bookmakers").select("projeto_id, saldo_atual, moeda, workspace_id").eq("id", bookmakerId).single();
-                    if (current?.projeto_id) { toast.error("Casa já vinculada a um projeto"); return; }
-                    const { error } = await supabase.from("bookmakers").update({ projeto_id: projetoId }).eq("id", bookmakerId);
-                    if (error) throw error;
-                    if (current?.workspace_id) {
-                      const { data: userData } = await supabase.auth.getUser();
-                      if (userData.user) {
-                        const { executeLink } = await import("@/lib/projetoTransitionService");
-                        await executeLink({ bookmakerId, projetoId, workspaceId: current.workspace_id, userId: userData.user.id, saldoAtual: current.saldo_atual || 0, moeda: current.moeda || "BRL" });
+            {!isOperator && <TabsContent value="contas-saldo"><ContasDisponiveisModule /></TabsContent>}
+            {!isOperator && (
+              <TabsContent value="bookmakers-livres">
+                <BookmakersLivresModule
+                  onRegistrarPerda={(bookmakerId, bookmakerNome, moeda, saldoAtual) => setPerdaLimitadaDialog({ open: true, bookmakerId, bookmakerNome, moeda, saldoAtual })}
+                  onVincularProjeto={async (bookmakerId, projetoId, projetoNome) => {
+                    try {
+                      const { data: current } = await supabase.from("bookmakers").select("projeto_id, saldo_atual, moeda, workspace_id").eq("id", bookmakerId).single();
+                      if (current?.projeto_id) { toast.error("Casa já vinculada a um projeto"); return; }
+                      const { error } = await supabase.from("bookmakers").update({ projeto_id: projetoId }).eq("id", bookmakerId);
+                      if (error) throw error;
+                      if (current?.workspace_id) {
+                        const { data: userData } = await supabase.auth.getUser();
+                        if (userData.user) {
+                          const { executeLink } = await import("@/lib/projetoTransitionService");
+                          await executeLink({ bookmakerId, projetoId, workspaceId: current.workspace_id, userId: userData.user.id, saldoAtual: current.saldo_atual || 0, moeda: current.moeda || "BRL" });
+                        }
                       }
-                    }
-                    toast.success(`Casa vinculada ao projeto "${projetoNome}"`);
-                    fetchData(true);
-                  } catch (err) { console.error("Erro ao vincular:", err); toast.error("Erro ao vincular projeto"); }
-                }}
-                onNewTransacao={(bookmakerId, bookmakerNome, moeda, _saldo, _saldoUsd, tipo) => {
-                  navigate("/caixa", { state: { openDialog: true, bookmakerId, bookmakerNome, tipo: tipo === "deposito" ? "deposito" : "retirada", moeda } });
-                }}
-              />
-            </TabsContent>
+                      toast.success(`Casa vinculada ao projeto "${projetoNome}"`);
+                      fetchData(true);
+                    } catch (err) { console.error("Erro ao vincular:", err); toast.error("Erro ao vincular projeto"); }
+                  }}
+                  onNewTransacao={(bookmakerId, bookmakerNome, moeda, _saldo, _saldoUsd, tipo) => {
+                    navigate("/caixa", { state: { openDialog: true, bookmakerId, bookmakerNome, tipo: tipo === "deposito" ? "deposito" : "retirada", moeda } });
+                  }}
+                />
+              </TabsContent>
+            )}
             <TabsContent value="nao-criadas">
               <BookmakersNaoCriadasModule />
             </TabsContent>
