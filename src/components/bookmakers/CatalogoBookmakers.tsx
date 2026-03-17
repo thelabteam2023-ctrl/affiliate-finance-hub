@@ -345,6 +345,17 @@ export default function CatalogoBookmakers() {
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
+            <BookmakerGrupoFilter value={grupoFilter} onChange={setGrupoFilter} />
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" size="icon" onClick={() => setGruposDialogOpen(true)}>
+                    <FolderOpen className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Gerenciar grupos</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             {canCreate('bookmakers', 'bookmakers.catalog.create') && (
               <Button onClick={() => setDialogOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
