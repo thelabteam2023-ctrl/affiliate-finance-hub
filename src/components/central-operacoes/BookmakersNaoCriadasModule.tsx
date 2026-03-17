@@ -141,8 +141,8 @@ export default function BookmakersNaoCriadasModule() {
         if (origemMap.has(p.parceiro_id)) return; // first match wins
         if (p.origem_tipo === "FORNECEDOR" && p.fornecedor) {
           origemMap.set(p.parceiro_id, p.fornecedor.nome);
-        } else if (p.origem_tipo === "INDICADOR" && p.indicador) {
-          origemMap.set(p.parceiro_id, p.indicador.nome);
+        } else if (p.origem_tipo === "INDICADOR" && p.indicacao?.indicador) {
+          origemMap.set(p.parceiro_id, p.indicacao.indicador.nome);
         } else if (p.origem_tipo === "DIRETO") {
           origemMap.set(p.parceiro_id, "Direto");
         }
