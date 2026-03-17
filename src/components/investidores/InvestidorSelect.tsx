@@ -15,6 +15,7 @@ interface Investidor {
   nome: string;
   cpf: string;
   status: string;
+  tipo: string;
 }
 
 export function InvestidorSelect({ value, onValueChange, disabled }: InvestidorSelectProps) {
