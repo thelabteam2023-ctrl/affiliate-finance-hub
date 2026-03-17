@@ -32,14 +32,19 @@ export function BookmakerGruposDialog({ open, onOpenChange }: BookmakerGruposDia
   const [formCor, setFormCor] = useState("#6366f1");
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [bkSearch, setBkSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"TODAS" | "REGULAMENTADA" | "NAO_REGULAMENTADA">("TODAS");
 
   const membrosDoGrupo = selectedGrupo ? getCatalogoIdsByGrupo(selectedGrupo.id) : new Set<string>();
 
   const filteredBookmakers = useMemo(() => {
     if (!catalogoBookmakers) return [];
     const q = bkSearch.toLowerCase();
-    return catalogoBookmakers.filter((bk) => bk.nome.toLowerCase().includes(q));
-  }, [catalogoBookmakers, bkSearch]);
+    return catalogoBookmakers.filter((bk) => {
+      if (!bk.nome.toLowerCase().includes(q)) return false;
+      if (statusFilter !== "TODAS" && bk.status !== statusFilter) return false;
+      return true;
+    });
+  }, [catalogoBookmakers, bkSearch, statusFilter]);
 
   const handleCreateGrupo = () => {
     if (!formNome.trim()) return;
