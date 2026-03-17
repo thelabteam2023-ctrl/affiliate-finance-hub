@@ -239,6 +239,7 @@ export function BookmakerGruposDialog({ open, onOpenChange }: BookmakerGruposDia
                         {opt.label}
                       </Button>
                     ))}
+                  </div>
                   <ScrollArea className="flex-1">
                     <div className="space-y-0.5 pr-2">
                       {filteredBookmakers.map((bk) => {
