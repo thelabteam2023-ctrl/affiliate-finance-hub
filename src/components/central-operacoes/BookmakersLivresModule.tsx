@@ -315,9 +315,13 @@ export function BookmakersLivresModule({ onRegistrarPerda, onVincularProjeto, on
       if (usoFilter === "virgem" && c.ja_usada) return false;
       if (usoFilter === "utilizada" && !c.ja_usada) return false;
       if (regulamentacaoFilter !== "todas" && c.catalogo_status !== regulamentacaoFilter) return false;
+      if (grupoFilter !== "todos") {
+        const grupoIds = getCatalogoIdsByGrupo(grupoFilter);
+        if (!c.bookmaker_catalogo_id || !grupoIds.has(c.bookmaker_catalogo_id)) return false;
+      }
       return true;
     });
-  }, [contas, casaFilter, parceiroFilter, estadoContaFilter, usoFilter, regulamentacaoFilter]);
+  }, [contas, casaFilter, parceiroFilter, estadoContaFilter, usoFilter, regulamentacaoFilter, grupoFilter, getCatalogoIdsByGrupo]);
 
   // Sorted
   const sorted = useMemo(() => {
