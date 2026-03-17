@@ -126,7 +126,7 @@ export function useCentralAlertsCount() {
             : Promise.resolve({ data: [], error: null }),
           // Parceiros sem parceria - partner_event
           canSeePartnerData
-            ? supabase.from("parceiros").select("id").eq("status", "ativo")
+            ? supabase.from("parceiros").select("id").eq("status", "ativo").eq("is_caixa_operacional", false)
             : Promise.resolve({ data: [], error: null }),
           // Todas as parcerias ativas (para filtrar parceiros sem parceria)
           canSeePartnerData
