@@ -591,14 +591,14 @@ export function BonusResultadoLiquidoChart({
   const renderChart = () => {
     // Adaptive X-axis: for long periods, show monthly markers like VisaoGeralCharts
     const MONTH_NAMES_SHORT = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-    const useMonthlyTicks = !isSingleDayPeriod && chartData.length > 20;
+    const useMonthlyTicks = !isSingleDayPeriod && visibleChartData.length > 20;
     
     // Build set of indices that should show a tick (first day of each month)
     const monthlyTickIndices = useMemo(() => {
       if (!useMonthlyTicks) return null;
       const indices = new Set<number>();
       let lastMonth = '';
-      chartData.forEach((d, i) => {
+      visibleChartData.forEach((d, i) => {
         if (d.dateKey) {
           const month = d.dateKey.substring(0, 7); // yyyy-MM
           if (month !== lastMonth) {
@@ -608,12 +608,12 @@ export function BonusResultadoLiquidoChart({
         }
       });
       return indices;
-    }, [chartData, useMonthlyTicks]);
+    }, [visibleChartData, useMonthlyTicks]);
 
     switch (chartMode) {
       case "resultado":
         return (
-          <AreaChart data={chartData} margin={{ top: 10, right: showBenchmark ? 120 : 10, left: 0, bottom: 0 }}>
+          <AreaChart data={visibleChartData} margin={{ top: 10, right: showBenchmark ? 120 : 10, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="bonusGradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor={isPositivo ? colorPositivo : colorNegativo} stopOpacity={0.3} />
@@ -632,7 +632,7 @@ export function BonusResultadoLiquidoChart({
                 if (useMonthlyTicks && monthlyTickIndices) {
                   // Only render ticks at month boundaries
                   if (!monthlyTickIndices.has(index)) return null;
-                  const entry = chartData[index];
+                  const entry = visibleChartData[index];
                   const monthIdx = entry?.dateKey ? parseInt(entry.dateKey.substring(5, 7), 10) - 1 : -1;
                   const label = monthIdx >= 0 ? MONTH_NAMES_SHORT[monthIdx] : '';
                   return (
