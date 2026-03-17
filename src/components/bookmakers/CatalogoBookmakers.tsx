@@ -103,6 +103,7 @@ export default function CatalogoBookmakers() {
   const canManageGlobal = isSystemOwner;
   // Permissão para criar vínculos (contas em parceiros)
   const canCreateVinculo = hasPermission('bookmakers.accounts.create');
+  const { getCatalogoIdsByGrupo } = useBookmakerGrupos();
 
   useEffect(() => {
     fetchBookmakers();
