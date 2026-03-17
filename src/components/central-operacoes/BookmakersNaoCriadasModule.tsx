@@ -158,7 +158,7 @@ export default function BookmakersNaoCriadasModule() {
           }
         }
         // Dias restantes (keep the active partnership with nearest end date)
-        if (p.status === "ativa" && p.data_fim_prevista) {
+        if (p.status?.toUpperCase() === "ATIVA" && p.data_fim_prevista) {
           const fim = new Date(p.data_fim_prevista);
           fim.setHours(0, 0, 0, 0);
           const diff = Math.ceil((fim.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
