@@ -987,6 +987,97 @@ export type Database = {
           },
         ]
       }
+      bookmaker_grupo_membros: {
+        Row: {
+          added_at: string
+          bookmaker_catalogo_id: string
+          grupo_id: string
+          id: string
+          workspace_id: string
+        }
+        Insert: {
+          added_at?: string
+          bookmaker_catalogo_id: string
+          grupo_id: string
+          id?: string
+          workspace_id: string
+        }
+        Update: {
+          added_at?: string
+          bookmaker_catalogo_id?: string
+          grupo_id?: string
+          id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookmaker_grupo_membros_bookmaker_catalogo_id_fkey"
+            columns: ["bookmaker_catalogo_id"]
+            isOneToOne: false
+            referencedRelation: "bookmakers_catalogo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookmaker_grupo_membros_bookmaker_catalogo_id_fkey"
+            columns: ["bookmaker_catalogo_id"]
+            isOneToOne: false
+            referencedRelation: "v_community_bookmaker_stats"
+            referencedColumns: ["bookmaker_catalogo_id"]
+          },
+          {
+            foreignKeyName: "bookmaker_grupo_membros_grupo_id_fkey"
+            columns: ["grupo_id"]
+            isOneToOne: false
+            referencedRelation: "bookmaker_grupos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookmaker_grupo_membros_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bookmaker_grupos: {
+        Row: {
+          cor: string | null
+          created_at: string
+          descricao: string | null
+          id: string
+          nome: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          cor?: string | null
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          cor?: string | null
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookmaker_grupos_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bookmaker_indisponiveis: {
         Row: {
           bookmaker_catalogo_id: string

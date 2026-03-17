@@ -49,7 +49,8 @@ import {
   ContextMenuSubTrigger,
   ContextMenuSubContent,
 } from "@/components/ui/context-menu";
-
+import { BookmakerGrupoFilter } from "@/components/bookmakers/BookmakerGrupoFilter";
+import { useBookmakerGrupos } from "@/hooks/useBookmakerGrupos";
 interface BookmakerLivre {
   id: string;
   nome: string;
@@ -63,6 +64,7 @@ interface BookmakerLivre {
   ultimo_projeto_nome: string | null;
   ja_usada: boolean;
   catalogo_status: string;
+  bookmaker_catalogo_id: string | null;
 }
 
 type SortColumn = "saldo" | null;
@@ -174,6 +176,8 @@ export function BookmakersLivresModule({ onRegistrarPerda, onVincularProjeto, on
   const [regulamentacaoFilter, setRegulamentacaoFilter] = useState("todas");
   const [sortColumn, setSortColumn] = useState<SortColumn>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+  const [grupoFilter, setGrupoFilter] = useState("todos");
+  const { getCatalogoIdsByGrupo } = useBookmakerGrupos();
 
   // Query: all bookmakers without active project
   const { data: contas, isLoading } = useQuery({
@@ -183,7 +187,7 @@ export function BookmakersLivresModule({ onRegistrarPerda, onVincularProjeto, on
         .from("bookmakers")
         .select(`
           id, nome, status, estado_conta, saldo_atual, moeda,
-          parceiro_id,
+          parceiro_id, bookmaker_catalogo_id,
           parceiro:parceiros!bookmakers_parceiro_id_fkey (nome),
           catalogo:bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url, status)
         `)
@@ -251,6 +255,7 @@ export function BookmakersLivresModule({ onRegistrarPerda, onVincularProjeto, on
         ultimo_projeto_nome: lastProjectMap.get(b.id) || null,
         ja_usada: usedSet.has(b.id),
         catalogo_status: b.catalogo?.status || "REGULAMENTADA",
+        bookmaker_catalogo_id: b.bookmaker_catalogo_id || null,
       }));
     },
     enabled: !!workspaceId,
@@ -310,9 +315,13 @@ export function BookmakersLivresModule({ onRegistrarPerda, onVincularProjeto, on
       if (usoFilter === "virgem" && c.ja_usada) return false;
       if (usoFilter === "utilizada" && !c.ja_usada) return false;
       if (regulamentacaoFilter !== "todas" && c.catalogo_status !== regulamentacaoFilter) return false;
+      if (grupoFilter !== "todos") {
+        const grupoIds = getCatalogoIdsByGrupo(grupoFilter);
+        if (!c.bookmaker_catalogo_id || !grupoIds.has(c.bookmaker_catalogo_id)) return false;
+      }
       return true;
     });
-  }, [contas, casaFilter, parceiroFilter, estadoContaFilter, usoFilter, regulamentacaoFilter]);
+  }, [contas, casaFilter, parceiroFilter, estadoContaFilter, usoFilter, regulamentacaoFilter, grupoFilter, getCatalogoIdsByGrupo]);
 
   // Sorted
   const sorted = useMemo(() => {
@@ -429,6 +438,11 @@ export function BookmakersLivresModule({ onRegistrarPerda, onVincularProjeto, on
               Não Regulamentada
             </button>
           </div>
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Grupo</span>
+          <BookmakerGrupoFilter value={grupoFilter} onChange={setGrupoFilter} className="w-[180px] h-9" />
         </div>
 
         <Badge variant="outline" className="h-9 px-3 text-sm font-mono self-end">

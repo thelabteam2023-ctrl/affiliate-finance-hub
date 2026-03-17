@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Edit, Trash2, ExternalLink, Filter, X, Gift, ShieldCheck, AlertTriangle, LayoutGrid, List, Info, Globe, Lock, Users, Settings2, Link2 } from "lucide-react";
+import { Plus, Search, Edit, Trash2, ExternalLink, Filter, X, Gift, ShieldCheck, AlertTriangle, LayoutGrid, List, Info, Globe, Lock, Users, Settings2, Link2, FolderOpen } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,6 +28,9 @@ import { CaixaTransacaoDialog } from "@/components/caixa/CaixaTransacaoDialog";
 import { useRole } from "@/hooks/useRole";
 import { useAuth } from "@/hooks/useAuth";
 import { useActionAccess, useModuleAccess } from "@/hooks/useModuleAccess";
+import { BookmakerGruposDialog } from "./BookmakerGruposDialog";
+import { BookmakerGrupoFilter } from "./BookmakerGrupoFilter";
+import { useBookmakerGrupos } from "@/hooks/useBookmakerGrupos";
 
 interface BookmakerCatalogo {
   id: string;
@@ -88,6 +91,8 @@ export default function CatalogoBookmakers() {
   const [vinculoCriadoConfirmOpen, setVinculoCriadoConfirmOpen] = useState(false);
   const [vinculoCriadoContext, setVinculoCriadoContext] = useState<VinculoCriadoContext | null>(null);
   const [depositDialogOpen, setDepositDialogOpen] = useState(false);
+  const [gruposDialogOpen, setGruposDialogOpen] = useState(false);
+  const [grupoFilter, setGrupoFilter] = useState("todos");
   const { toast } = useToast();
   const { isOwnerOrAdmin } = useRole();
   const { isSystemOwner, user } = useAuth();
@@ -98,6 +103,7 @@ export default function CatalogoBookmakers() {
   const canManageGlobal = isSystemOwner;
   // Permissão para criar vínculos (contas em parceiros)
   const canCreateVinculo = hasPermission('bookmakers.accounts.create');
+  const { getCatalogoIdsByGrupo } = useBookmakerGrupos();
 
   useEffect(() => {
     fetchBookmakers();
@@ -266,6 +272,7 @@ export default function CatalogoBookmakers() {
     setOperacionalFilter("todos");
     setVerificacaoFilter("todos");
     setBonusFilter("todos");
+    setGrupoFilter("todos");
   };
 
   const hasActiveFilters = 
@@ -273,7 +280,10 @@ export default function CatalogoBookmakers() {
     statusFilter !== "todos" || 
     operacionalFilter !== "todos" || 
     verificacaoFilter !== "todos" || 
-    bonusFilter !== "todos";
+    bonusFilter !== "todos" ||
+    grupoFilter !== "todos";
+
+  const grupoMemberIds = grupoFilter !== "todos" ? getCatalogoIdsByGrupo(grupoFilter) : null;
 
   const filteredBookmakers = bookmakers.filter((bookmaker) => {
     const matchesSearch = bookmaker.nome.toLowerCase().includes(searchTerm.toLowerCase());
@@ -284,8 +294,9 @@ export default function CatalogoBookmakers() {
       bonusFilter === "todos" || 
       (bonusFilter === "com_bonus" && bookmaker.bonus_enabled) ||
       (bonusFilter === "sem_bonus" && !bookmaker.bonus_enabled);
+    const matchesGrupo = !grupoMemberIds || grupoMemberIds.has(bookmaker.id);
 
-    return matchesSearch && matchesStatus && matchesOperacional && matchesVerificacao && matchesBonus;
+    return matchesSearch && matchesStatus && matchesOperacional && matchesVerificacao && matchesBonus && matchesGrupo;
   });
 
   if (loading) {
@@ -332,6 +343,17 @@ export default function CatalogoBookmakers() {
                 <TooltipContent>
                   <p>{viewType === "cards" ? "Visualizar como lista" : "Visualizar como cards"}</p>
                 </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <BookmakerGrupoFilter value={grupoFilter} onChange={setGrupoFilter} />
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" size="icon" onClick={() => setGruposDialogOpen(true)}>
+                    <FolderOpen className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Gerenciar grupos</TooltipContent>
               </Tooltip>
             </TooltipProvider>
             {canCreate('bookmakers', 'bookmakers.catalog.create') && (
@@ -1129,6 +1151,8 @@ export default function CatalogoBookmakers() {
           defaultMoeda={vinculoCriadoContext.moeda}
         />
       )}
+
+      <BookmakerGruposDialog open={gruposDialogOpen} onOpenChange={setGruposDialogOpen} />
     </div>
   );
 }

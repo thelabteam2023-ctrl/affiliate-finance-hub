@@ -34,6 +34,8 @@ import {
 import BookmakerDialog from "@/components/bookmakers/BookmakerDialog";
 import type { VinculoCriadoContext } from "@/components/bookmakers/BookmakerDialog";
 import { toast } from "sonner";
+import { BookmakerGrupoFilter } from "@/components/bookmakers/BookmakerGrupoFilter";
+import { useBookmakerGrupos } from "@/hooks/useBookmakerGrupos";
 
 interface ParceiroSemConta {
   id: string;
@@ -58,6 +60,8 @@ export default function BookmakersNaoCriadasModule() {
   const [bkPopoverOpen, setBkPopoverOpen] = useState(false);
   const [showDescartados, setShowDescartados] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [grupoFilter, setGrupoFilter] = useState("todos");
+  const { getCatalogoIdsByGrupo } = useBookmakerGrupos();
 
   // Dialog state for creating a new bookmaker account
   const [criarDialog, setCriarDialog] = useState<{
@@ -286,6 +290,11 @@ export default function BookmakersNaoCriadasModule() {
     <div className="space-y-4">
       {/* Header: Bookmaker selector */}
       <div className="flex flex-wrap items-center gap-4">
+        <BookmakerGrupoFilter
+          value={grupoFilter}
+          onChange={(v) => { setGrupoFilter(v); setSelectedCatalogoId(""); resetSelection(); }}
+          className="w-[200px]"
+        />
         <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium uppercase tracking-wide">
           <Building2 className="h-4 w-4" />
           Bookmaker
@@ -320,8 +329,12 @@ export default function BookmakersNaoCriadasModule() {
               {loadingCatalogo ? (
                 <div className="p-2"><Skeleton className="h-6 w-full" /></div>
               ) : (
-                (catalogoBookmakers ?? [])
-                  .filter((bk) => bk.nome.toLowerCase().includes(bkSearch.toLowerCase()))
+                (() => {
+                  const grupoIds = grupoFilter !== "todos" ? getCatalogoIdsByGrupo(grupoFilter) : null;
+                  return (catalogoBookmakers ?? [])
+                    .filter((bk) => bk.nome.toLowerCase().includes(bkSearch.toLowerCase()))
+                    .filter((bk) => !grupoIds || grupoIds.has(bk.id));
+                })()
                   .map((bk) => (
                     <button
                       key={bk.id}
