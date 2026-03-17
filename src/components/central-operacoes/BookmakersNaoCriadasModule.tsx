@@ -14,7 +14,7 @@ import { useWorkspaceBookmakers } from "@/hooks/useWorkspaceBookmakers";
 import { getFirstLastName, cn } from "@/lib/utils";
 import {
   Search, UserPlus, Building2, Users, ChevronsUpDown, Check,
-  Ban, Undo2, Eye, EyeOff, CheckSquare, ArrowUpDown, ArrowUp, ArrowDown,
+  Ban, Undo2, Eye, EyeOff, CheckSquare, ArrowUpDown, ArrowUp, ArrowDown, Clock,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
