@@ -34,6 +34,8 @@ import {
 import BookmakerDialog from "@/components/bookmakers/BookmakerDialog";
 import type { VinculoCriadoContext } from "@/components/bookmakers/BookmakerDialog";
 import { toast } from "sonner";
+import { BookmakerGrupoFilter } from "@/components/bookmakers/BookmakerGrupoFilter";
+import { useBookmakerGrupos } from "@/hooks/useBookmakerGrupos";
 
 interface ParceiroSemConta {
   id: string;
