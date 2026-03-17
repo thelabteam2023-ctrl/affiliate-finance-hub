@@ -31,7 +31,7 @@ import {
   ReferenceLine,
   Cell,
 } from "recharts";
-import { format, addDays, startOfDay, startOfMonth, endOfMonth, isSameMonth } from "date-fns";
+import { format, addDays, startOfDay } from "date-fns";
 import { extractLocalDateKey, extractCivilDateKey, parseLocalDateTime } from "@/utils/dateUtils";
 import { ptBR } from "date-fns/locale";
 import { ProjectBonus } from "@/hooks/useProjectBonuses";
