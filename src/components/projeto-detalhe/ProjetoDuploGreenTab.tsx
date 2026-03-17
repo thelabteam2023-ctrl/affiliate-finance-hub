@@ -1188,13 +1188,37 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
           <div className="space-y-2">
             {/* Surebets renderizadas com SurebetCard (motor financeiro unificado) */}
             {apostasArbitragem.map((aposta) => {
+              // Group pernas by selecao (same as Surebet tab)
+              const pernasRaw = (aposta.pernas as any[] || []).map((p: any) => ({
+                id: p.id,
+                bookmaker_id: p.bookmaker_id,
+                bookmaker_nome: p.bookmaker_nome || '',
+                parceiro_nome: p.parceiro_nome || null,
+                moeda: p.moeda || 'BRL',
+                selecao: p.selecao || '',
+                selecao_livre: p.selecao_livre,
+                odd: p.odd || 0,
+                stake: p.stake || 0,
+                resultado: p.resultado,
+                lucro_prejuizo: p.lucro_prejuizo ?? null,
+                gerou_freebet: p.gerou_freebet,
+                valor_freebet_gerada: p.valor_freebet_gerada,
+                stake_brl_referencia: p.stake_brl_referencia,
+                lucro_prejuizo_brl_referencia: p.lucro_prejuizo_brl_referencia,
+              }));
+              const pernasOrdenadas = [...pernasRaw].sort((a, b) => {
+                const order: Record<string, number> = { "Casa": 1, "1": 1, "Empate": 2, "X": 2, "Fora": 3, "2": 3 };
+                return (order[a.selecao] || 99) - (order[b.selecao] || 99);
+              });
+              const pernasAgrupadas = groupPernasBySelecao(pernasOrdenadas);
+
               const surebetData = {
                 id: aposta.id,
-                workspace_id: (aposta.pernas as any)?.[0]?.workspace_id || '',
+                workspace_id: (aposta as any).workspace_id || '',
                 data_operacao: aposta.data_aposta,
                 evento: aposta.evento || '',
                 esporte: aposta.esporte || '',
-                modelo: aposta.modelo || 'SIMPLES',
+                modelo: aposta.modelo || '1-2',
                 mercado: aposta.mercado,
                 estrategia: aposta.estrategia,
                 stake_total: aposta.stake_total || aposta.stake || 0,
@@ -1208,18 +1232,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
                 status: aposta.status,
                 resultado: aposta.resultado,
                 observacoes: aposta.observacoes,
-                pernas: (aposta.pernas as any[])?.map((p: any) => ({
-                  id: p.id,
-                  selecao: p.selecao || '',
-                  selecao_livre: p.selecao_livre,
-                  odd: p.odd || 0,
-                  stake: p.stake || 0,
-                  resultado: p.resultado,
-                  lucro_prejuizo: p.lucro_prejuizo ?? null,
-                  bookmaker_nome: p.bookmaker_nome || '',
-                  bookmaker_id: p.bookmaker_id,
-                  moeda: p.moeda || 'BRL',
-                })) || [],
+                pernas: pernasAgrupadas,
               };
               return (
                 <SurebetCard
