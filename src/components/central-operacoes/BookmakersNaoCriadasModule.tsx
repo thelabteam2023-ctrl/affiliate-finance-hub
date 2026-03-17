@@ -14,7 +14,7 @@ import { useWorkspaceBookmakers } from "@/hooks/useWorkspaceBookmakers";
 import { getFirstLastName, cn } from "@/lib/utils";
 import {
   Search, UserPlus, Building2, Users, ChevronsUpDown, Check,
-  Ban, Undo2, Eye, EyeOff, CheckSquare, ArrowUpDown, ArrowUp, ArrowDown,
+  Ban, Undo2, Eye, EyeOff, CheckSquare, ArrowUpDown, ArrowUp, ArrowDown, Clock,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -42,7 +42,8 @@ interface ParceiroSemConta {
   nome: string;
   cpf: string;
   status: string;
-  origem?: string; // e.g. "Fornecedor: JOAO VITOR" or "Indicador: LUCAS" or "Direto"
+  origem?: string;
+  diasRestantes?: number | null; // null = sem parceria ativa ou sem data_fim_prevista
 }
 
 interface IndisponibilidadeRecord {
@@ -123,7 +124,7 @@ export default function BookmakersNaoCriadasModule() {
           .not("parceiro_id", "is", null),
         (supabase as any)
           .from("parcerias")
-          .select("parceiro_id, origem_tipo, fornecedor_id, indicacao_id, fornecedor:fornecedores!parcerias_fornecedor_id_fkey(nome), indicacao:indicacoes!parcerias_indicacao_id_fkey(indicador:indicadores_referral!indicacoes_indicador_id_fkey(nome))")
+          .select("parceiro_id, origem_tipo, data_fim_prevista, status, fornecedor_id, indicacao_id, fornecedor:fornecedores!parcerias_fornecedor_id_fkey(nome), indicacao:indicacoes!parcerias_indicacao_id_fkey(indicador:indicadores_referral!indicacoes_indicador_id_fkey(nome))")
           .eq("workspace_id", workspaceId),
         (supabase as any)
           .from("indicacoes")
@@ -138,18 +139,33 @@ export default function BookmakersNaoCriadasModule() {
         (accountsRes.data ?? []).map((a: any) => a.parceiro_id)
       );
 
-      // Build origem map: parceiro_id -> origin label
+      // Build origem map and dias restantes map
       const origemMap = new Map<string, string>();
+      const diasRestantesMap = new Map<string, number | null>();
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
 
       // From parcerias (fornecedor or indicador)
       (parceriasRes.data ?? []).forEach((p: any) => {
-        if (origemMap.has(p.parceiro_id)) return; // first match wins
-        if (p.origem_tipo === "FORNECEDOR" && p.fornecedor) {
-          origemMap.set(p.parceiro_id, p.fornecedor.nome);
-        } else if (p.origem_tipo === "INDICADOR" && p.indicacao?.indicador) {
-          origemMap.set(p.parceiro_id, p.indicacao.indicador.nome);
-        } else if (p.origem_tipo === "DIRETO") {
-          origemMap.set(p.parceiro_id, "Direto");
+        // Origem (first match wins)
+        if (!origemMap.has(p.parceiro_id)) {
+          if (p.origem_tipo === "FORNECEDOR" && p.fornecedor) {
+            origemMap.set(p.parceiro_id, p.fornecedor.nome);
+          } else if (p.origem_tipo === "INDICADOR" && p.indicacao?.indicador) {
+            origemMap.set(p.parceiro_id, p.indicacao.indicador.nome);
+          } else if (p.origem_tipo === "DIRETO") {
+            origemMap.set(p.parceiro_id, "Direto");
+          }
+        }
+        // Dias restantes (keep the active partnership with nearest end date)
+        if (p.status === "ativa" && p.data_fim_prevista) {
+          const fim = new Date(p.data_fim_prevista);
+          fim.setHours(0, 0, 0, 0);
+          const diff = Math.ceil((fim.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+          const current = diasRestantesMap.get(p.parceiro_id);
+          if (current === undefined || current === null || diff < current) {
+            diasRestantesMap.set(p.parceiro_id, diff);
+          }
         }
       });
 
@@ -165,6 +181,7 @@ export default function BookmakersNaoCriadasModule() {
         .map((p: any) => ({
           ...p,
           origem: origemMap.get(p.id) || undefined,
+          diasRestantes: diasRestantesMap.get(p.id) ?? null,
         }));
     },
     enabled: !!workspaceId && !!selectedCatalogoId,
@@ -502,6 +519,9 @@ export default function BookmakersNaoCriadasModule() {
                           {sortOrigem === "asc" ? <ArrowUp className="h-3 w-3" /> : sortOrigem === "desc" ? <ArrowDown className="h-3 w-3" /> : <ArrowUpDown className="h-3 w-3 opacity-40" />}
                         </span>
                       </th>
+                      <th className="text-center px-4 py-3 font-medium text-muted-foreground uppercase text-xs tracking-wide w-[120px]">
+                        Dias Rest.
+                      </th>
                       <th className="text-right px-4 py-3 font-medium text-muted-foreground uppercase text-xs tracking-wide w-[220px]">
                         Ações
                       </th>
@@ -532,6 +552,19 @@ export default function BookmakersNaoCriadasModule() {
                           {p.origem ? (
                             <Badge variant="outline" className="text-xs font-normal">
                               {p.origem}
+                            </Badge>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          {p.diasRestantes !== null && p.diasRestantes !== undefined ? (
+                            <Badge
+                              variant={p.diasRestantes <= 7 ? "destructive" : p.diasRestantes <= 30 ? "secondary" : "outline"}
+                              className="text-xs font-mono gap-1"
+                            >
+                              <Clock className="h-3 w-3" />
+                              {p.diasRestantes <= 0 ? "Expirado" : `${p.diasRestantes}d`}
                             </Badge>
                           ) : (
                             <span className="text-xs text-muted-foreground">—</span>
@@ -579,7 +612,7 @@ export default function BookmakersNaoCriadasModule() {
                     ))}
                     {filtered.length === 0 && (
                       <tr>
-                        <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
+                        <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
                           Nenhum parceiro encontrado para a busca
                         </td>
                       </tr>
