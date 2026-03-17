@@ -279,7 +279,7 @@ export function BookmakerGruposDialog({ open, onOpenChange }: BookmakerGruposDia
       </Dialog>
 
       <AlertDialog open={!!deleteConfirmId} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>
-        <AlertDialogContent>
+        <AlertDialogContent className="z-[200]">
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir grupo</AlertDialogTitle>
             <AlertDialogDescription>
@@ -288,7 +288,7 @@ export function BookmakerGruposDialog({ open, onOpenChange }: BookmakerGruposDia
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive text-destructive-foreground">
+            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Excluir
             </AlertDialogAction>
           </AlertDialogFooter>
