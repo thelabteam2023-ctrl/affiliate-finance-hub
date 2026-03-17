@@ -987,6 +987,104 @@ export type Database = {
           },
         ]
       }
+      bookmaker_indisponiveis: {
+        Row: {
+          bookmaker_catalogo_id: string
+          created_at: string
+          id: string
+          marcado_por: string
+          parceiro_id: string
+          workspace_id: string
+        }
+        Insert: {
+          bookmaker_catalogo_id: string
+          created_at?: string
+          id?: string
+          marcado_por: string
+          parceiro_id: string
+          workspace_id: string
+        }
+        Update: {
+          bookmaker_catalogo_id?: string
+          created_at?: string
+          id?: string
+          marcado_por?: string
+          parceiro_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookmaker_indisponiveis_bookmaker_catalogo_id_fkey"
+            columns: ["bookmaker_catalogo_id"]
+            isOneToOne: false
+            referencedRelation: "bookmakers_catalogo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookmaker_indisponiveis_bookmaker_catalogo_id_fkey"
+            columns: ["bookmaker_catalogo_id"]
+            isOneToOne: false
+            referencedRelation: "v_community_bookmaker_stats"
+            referencedColumns: ["bookmaker_catalogo_id"]
+          },
+          {
+            foreignKeyName: "bookmaker_indisponiveis_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "parceiros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookmaker_indisponiveis_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_parceiro_lucro_total"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "bookmaker_indisponiveis_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_contas_bancarias"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "bookmaker_indisponiveis_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_parceiro_contas"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "bookmaker_indisponiveis_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "bookmaker_indisponiveis_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_wallets_crypto"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "bookmaker_indisponiveis_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_wallet_crypto_balances"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "bookmaker_indisponiveis_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bookmaker_stake_reservations: {
         Row: {
           bookmaker_id: string
