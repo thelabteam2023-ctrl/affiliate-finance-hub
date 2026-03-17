@@ -272,6 +272,7 @@ export default function CatalogoBookmakers() {
     setOperacionalFilter("todos");
     setVerificacaoFilter("todos");
     setBonusFilter("todos");
+    setGrupoFilter("todos");
   };
 
   const hasActiveFilters = 
@@ -279,7 +280,10 @@ export default function CatalogoBookmakers() {
     statusFilter !== "todos" || 
     operacionalFilter !== "todos" || 
     verificacaoFilter !== "todos" || 
-    bonusFilter !== "todos";
+    bonusFilter !== "todos" ||
+    grupoFilter !== "todos";
+
+  const grupoMemberIds = grupoFilter !== "todos" ? getCatalogoIdsByGrupo(grupoFilter) : null;
 
   const filteredBookmakers = bookmakers.filter((bookmaker) => {
     const matchesSearch = bookmaker.nome.toLowerCase().includes(searchTerm.toLowerCase());
@@ -290,8 +294,9 @@ export default function CatalogoBookmakers() {
       bonusFilter === "todos" || 
       (bonusFilter === "com_bonus" && bookmaker.bonus_enabled) ||
       (bonusFilter === "sem_bonus" && !bookmaker.bonus_enabled);
+    const matchesGrupo = !grupoMemberIds || grupoMemberIds.has(bookmaker.id);
 
-    return matchesSearch && matchesStatus && matchesOperacional && matchesVerificacao && matchesBonus;
+    return matchesSearch && matchesStatus && matchesOperacional && matchesVerificacao && matchesBonus && matchesGrupo;
   });
 
   if (loading) {
