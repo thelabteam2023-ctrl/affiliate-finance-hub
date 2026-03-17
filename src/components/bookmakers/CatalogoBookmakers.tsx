@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Edit, Trash2, ExternalLink, Filter, X, Gift, ShieldCheck, AlertTriangle, LayoutGrid, List, Info, Globe, Lock, Users, Settings2, Link2 } from "lucide-react";
+import { Plus, Search, Edit, Trash2, ExternalLink, Filter, X, Gift, ShieldCheck, AlertTriangle, LayoutGrid, List, Info, Globe, Lock, Users, Settings2, Link2, FolderOpen } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
