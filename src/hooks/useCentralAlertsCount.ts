@@ -112,9 +112,9 @@ export function useCentralAlertsCount() {
           canSeeProjectData
             ? supabase.from("pagamentos_operador").select("id, operador_id").eq("status", "PENDENTE")
             : Promise.resolve({ data: [], error: null }),
-          // Participações pendentes - financial_event
+          // Participações pendentes - financial_event (only external investors)
           canSeeFinancialData
-            ? supabase.from("participacao_ciclos").select("id", { count: "exact", head: true }).eq("status", "A_PAGAR")
+            ? supabase.from("participacao_ciclos").select("id, investidores!inner(tipo)", { count: "exact", head: true }).eq("status", "A_PAGAR").eq("investidores.tipo", "externo")
             : Promise.resolve({ count: 0, error: null }),
           // Parcerias próximas do encerramento - partner_event
           canSeePartnerData
