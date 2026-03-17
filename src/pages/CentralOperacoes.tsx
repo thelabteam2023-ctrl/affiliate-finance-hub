@@ -1109,16 +1109,16 @@ export default function CentralOperacoes() {
           </TabsContent>
         )}
 
+        {!isOperator && (
         <TabsContent value="contas" className="mt-4">
-          <Tabs defaultValue={isOperator ? "nao-criadas" : "contas-saldo"} className="w-full">
+          <Tabs defaultValue="contas-saldo" className="w-full">
             <TabsList className="mb-4">
-              {!isOperator && <TabsTrigger value="contas-saldo">Bookmakers Disponíveis</TabsTrigger>}
-              {!isOperator && <TabsTrigger value="bookmakers-livres">Bookmakers Livres</TabsTrigger>}
+              <TabsTrigger value="contas-saldo">Bookmakers Disponíveis</TabsTrigger>
+              <TabsTrigger value="bookmakers-livres">Bookmakers Livres</TabsTrigger>
               <TabsTrigger value="nao-criadas">Não Criadas</TabsTrigger>
             </TabsList>
-            {!isOperator && <TabsContent value="contas-saldo"><ContasDisponiveisModule /></TabsContent>}
-            {!isOperator && (
-              <TabsContent value="bookmakers-livres">
+            <TabsContent value="contas-saldo"><ContasDisponiveisModule /></TabsContent>
+            <TabsContent value="bookmakers-livres">
                 <BookmakersLivresModule
                   onRegistrarPerda={(bookmakerId, bookmakerNome, moeda, saldoAtual) => setPerdaLimitadaDialog({ open: true, bookmakerId, bookmakerNome, moeda, saldoAtual })}
                   onVincularProjeto={async (bookmakerId, projetoId, projetoNome) => {
@@ -1142,13 +1142,13 @@ export default function CentralOperacoes() {
                     navigate("/caixa", { state: { openDialog: true, bookmakerId, bookmakerNome, tipo: tipo === "deposito" ? "deposito" : "retirada", moeda } });
                   }}
                 />
-              </TabsContent>
-            )}
+            </TabsContent>
             <TabsContent value="nao-criadas">
               <BookmakersNaoCriadasModule />
             </TabsContent>
           </Tabs>
         </TabsContent>
+        )}
 
         {!isOperator && <TabsContent value="ocorrencias" className="mt-4"><OcorrenciasModule /></TabsContent>}
         {!isOperator && <TabsContent value="solicitacoes" className="mt-4"><SolicitacoesModule /></TabsContent>}
