@@ -63,6 +63,7 @@ export default function BookmakersNaoCriadasModule() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [grupoFilter, setGrupoFilter] = useState("todos");
   const [sortOrigem, setSortOrigem] = useState<"asc" | "desc" | null>(null);
+  const [sortDias, setSortDias] = useState<"asc" | "desc" | null>(null);
   const { getCatalogoIdsByGrupo } = useBookmakerGrupos();
 
   // Dialog state for creating a new bookmaker account
@@ -222,8 +223,18 @@ export default function BookmakersNaoCriadasModule() {
         return sortOrigem === "asc" ? oa.localeCompare(ob) : ob.localeCompare(oa);
       });
     }
+    if (sortDias) {
+      result = [...result].sort((a, b) => {
+        const da = a.diasRestantes;
+        const db = b.diasRestantes;
+        if (da === null && db === null) return 0;
+        if (da === null) return 1;
+        if (db === null) return -1;
+        return sortDias === "asc" ? da - db : db - da;
+      });
+    }
     return result;
-  }, [visibleList, search, sortOrigem]);
+  }, [visibleList, search, sortOrigem, sortDias]);
 
   // Clear selection when switching views or bookmaker
   const resetSelection = useCallback(() => setSelectedIds(new Set()), []);
@@ -512,15 +523,21 @@ export default function BookmakersNaoCriadasModule() {
                       </th>
                       <th
                         className="text-left px-4 py-3 font-medium text-muted-foreground uppercase text-xs tracking-wide cursor-pointer select-none hover:text-foreground transition-colors"
-                        onClick={() => setSortOrigem((prev) => prev === "asc" ? "desc" : prev === "desc" ? null : "asc")}
+                        onClick={() => { setSortOrigem((prev) => prev === "asc" ? "desc" : prev === "desc" ? null : "asc"); setSortDias(null); }}
                       >
                         <span className="inline-flex items-center gap-1">
                           Origem
                           {sortOrigem === "asc" ? <ArrowUp className="h-3 w-3" /> : sortOrigem === "desc" ? <ArrowDown className="h-3 w-3" /> : <ArrowUpDown className="h-3 w-3 opacity-40" />}
                         </span>
                       </th>
-                      <th className="text-center px-4 py-3 font-medium text-muted-foreground uppercase text-xs tracking-wide w-[120px]">
-                        Dias Rest.
+                      <th
+                        className="text-center px-4 py-3 font-medium text-muted-foreground uppercase text-xs tracking-wide w-[120px] cursor-pointer select-none hover:text-foreground transition-colors"
+                        onClick={() => { setSortDias((prev) => prev === "desc" ? "asc" : prev === "asc" ? null : "desc"); setSortOrigem(null); }}
+                      >
+                        <span className="inline-flex items-center gap-1">
+                          Dias Rest.
+                          {sortDias === "desc" ? <ArrowDown className="h-3 w-3" /> : sortDias === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowUpDown className="h-3 w-3 opacity-40" />}
+                        </span>
                       </th>
                       <th className="text-right px-4 py-3 font-medium text-muted-foreground uppercase text-xs tracking-wide w-[220px]">
                         Ações
