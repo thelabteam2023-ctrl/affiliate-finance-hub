@@ -85,6 +85,7 @@ interface ProjetoDuploGreenTabProps {
 
 interface Aposta {
   id: string;
+  workspace_id?: string;
   data_aposta: string;
   esporte: string;
   evento: string;
