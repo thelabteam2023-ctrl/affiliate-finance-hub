@@ -101,7 +101,14 @@ export function InvestidorSelect({ value, onValueChange, disabled }: InvestidorS
           filteredInvestidores.map((investidor) => (
             <SelectItem key={investidor.id} value={investidor.id}>
               <div className="flex flex-col">
-                <span className="font-medium">{investidor.nome}</span>
+                <span className="font-medium flex items-center gap-1.5">
+                  {investidor.nome}
+                  {investidor.tipo === "proprio" && (
+                    <span className="text-[10px] px-1 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                      Próprio
+                    </span>
+                  )}
+                </span>
                 <span className="text-xs text-muted-foreground">{formatCPF(investidor.cpf)}</span>
               </div>
             </SelectItem>
