@@ -103,31 +103,64 @@ export default function BookmakersNaoCriadasModule() {
     queryFn: async (): Promise<ParceiroSemConta[]> => {
       if (!workspaceId || !selectedCatalogoId) return [];
 
-      const { data: allParceiros, error: pErr } = await supabase
-        .from("parceiros")
-        .select("id, nome, cpf, status")
-        .eq("workspace_id", workspaceId)
-        .eq("status", "ativo")
-        .order("nome");
+      const [parceirosRes, accountsRes, parceriasRes, indicacoesRes] = await Promise.all([
+        supabase
+          .from("parceiros")
+          .select("id, nome, cpf, status")
+          .eq("workspace_id", workspaceId)
+          .eq("status", "ativo")
+          .order("nome"),
+        supabase
+          .from("bookmakers")
+          .select("parceiro_id")
+          .eq("workspace_id", workspaceId)
+          .eq("bookmaker_catalogo_id", selectedCatalogoId)
+          .not("parceiro_id", "is", null),
+        supabase
+          .from("parcerias")
+          .select("parceiro_id, origem_tipo, fornecedor:fornecedores!parcerias_fornecedor_id_fkey(nome), indicador:indicadores_referral!parcerias_indicador_id_fkey(nome)")
+          .eq("workspace_id", workspaceId),
+        supabase
+          .from("indicacoes")
+          .select("parceiro_id, indicador:indicadores_referral!indicacoes_indicador_id_fkey(nome)")
+          .eq("workspace_id", workspaceId),
+      ]);
 
-      if (pErr) throw pErr;
-
-      const { data: existingAccounts, error: aErr } = await supabase
-        .from("bookmakers")
-        .select("parceiro_id")
-        .eq("workspace_id", workspaceId)
-        .eq("bookmaker_catalogo_id", selectedCatalogoId)
-        .not("parceiro_id", "is", null);
-
-      if (aErr) throw aErr;
+      if (parceirosRes.error) throw parceirosRes.error;
+      if (accountsRes.error) throw accountsRes.error;
 
       const withAccount = new Set(
-        (existingAccounts ?? []).map((a: any) => a.parceiro_id)
+        (accountsRes.data ?? []).map((a: any) => a.parceiro_id)
       );
 
-      return (allParceiros ?? []).filter(
-        (p: any) => !withAccount.has(p.id)
-      );
+      // Build origem map: parceiro_id -> origin label
+      const origemMap = new Map<string, string>();
+
+      // From parcerias (fornecedor or indicador)
+      (parceriasRes.data ?? []).forEach((p: any) => {
+        if (origemMap.has(p.parceiro_id)) return; // first match wins
+        if (p.origem_tipo === "FORNECEDOR" && p.fornecedor) {
+          origemMap.set(p.parceiro_id, p.fornecedor.nome);
+        } else if (p.origem_tipo === "INDICADOR" && p.indicador) {
+          origemMap.set(p.parceiro_id, p.indicador.nome);
+        } else if (p.origem_tipo === "DIRETO") {
+          origemMap.set(p.parceiro_id, "Direto");
+        }
+      });
+
+      // From indicacoes table (fallback)
+      (indicacoesRes.data ?? []).forEach((ind: any) => {
+        if (!origemMap.has(ind.parceiro_id) && ind.indicador) {
+          origemMap.set(ind.parceiro_id, ind.indicador.nome);
+        }
+      });
+
+      return (parceirosRes.data ?? [])
+        .filter((p: any) => !withAccount.has(p.id))
+        .map((p: any) => ({
+          ...p,
+          origem: origemMap.get(p.id) || undefined,
+        }));
     },
     enabled: !!workspaceId && !!selectedCatalogoId,
     staleTime: 60_000,
