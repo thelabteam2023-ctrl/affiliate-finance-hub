@@ -123,11 +123,14 @@ export function StepRevisao({ formData, selectedModules, modulesNames }: StepRev
                 </Badge>
               </div>
             )}
-            {formData.investidor_id && (
-              <div className="col-span-2">
-                <Badge variant="outline" className="bg-purple-500/10 text-purple-400 border-purple-500/30">
-                  Participação de Investidor: {formData.percentual_investidor}%
-                </Badge>
+            {(formData.investidores_projeto || []).length > 0 && (
+              <div className="col-span-2 space-y-1">
+                {formData.investidores_projeto!.map((inv, i) => (
+                  <Badge key={i} variant="outline" className="bg-purple-500/10 text-purple-400 border-purple-500/30 mr-1">
+                    {inv.investidor_nome || "Investidor"}: {inv.percentual_participacao}%
+                    {inv.investidor_tipo === "proprio" && " (Próprio)"}
+                  </Badge>
+                ))}
               </div>
             )}
           </div>

@@ -206,11 +206,12 @@ export function ProjectCreationWizard({
         return;
       }
 
-      // Create project
+      // Create project - use first investor for backward compat
+      const firstInvestidor = (formData.investidores_projeto || [])[0];
       const projectPayload = {
         nome: formData.nome.trim(),
         descricao: formData.descricao,
-        status: "EM_ANDAMENTO", // Status fixo - válido pelo constraint do banco
+        status: "EM_ANDAMENTO",
         data_inicio: formData.data_inicio,
         data_fim_prevista: formData.data_fim_prevista,
         orcamento_inicial: 0,
@@ -219,9 +220,9 @@ export function ProjectCreationWizard({
         moeda_consolidacao: formData.moeda_consolidacao,
         fonte_cotacao: formData.fonte_cotacao,
         cotacao_trabalho: formData.cotacao_trabalho,
-        investidor_id: formData.investidor_id,
-        percentual_investidor: formData.percentual_investidor,
-        base_calculo_investidor: formData.base_calculo_investidor,
+        investidor_id: firstInvestidor?.investidor_id || null,
+        percentual_investidor: firstInvestidor?.percentual_participacao || 0,
+        base_calculo_investidor: firstInvestidor?.base_calculo || "LUCRO_LIQUIDO",
         tipo_projeto: formData.tipo_projeto || defaultTipoProjeto || "OUTROS",
         metrica_lucro_ciclo: formData.metrica_lucro_ciclo || "operacional",
         is_broker: isBrokerContext,
@@ -244,6 +245,26 @@ export function ProjectCreationWizard({
       }
 
       const projectId = newProject.id;
+
+      // Save all investors to projeto_investidores
+      const investidores = formData.investidores_projeto || [];
+      if (investidores.length > 0) {
+        const investidoresPayload = investidores.map((inv) => ({
+          projeto_id: projectId,
+          investidor_id: inv.investidor_id,
+          percentual_participacao: inv.percentual_participacao,
+          base_calculo: inv.base_calculo,
+          workspace_id: workspaceId!,
+        }));
+
+        const { error: invError } = await supabase
+          .from("projeto_investidores")
+          .insert(investidoresPayload);
+
+        if (invError) {
+          console.error("Erro ao vincular investidores:", invError);
+        }
+      }
 
       // Vinculate operator if requested
       if (formData.vincular_operador && formData.operador_user_id) {

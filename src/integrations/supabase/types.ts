@@ -4767,6 +4767,7 @@ export type Database = {
           nome: string
           observacoes: string | null
           status: string
+          tipo: string
           updated_at: string
           user_id: string
           workspace_id: string
@@ -4778,6 +4779,7 @@ export type Database = {
           nome: string
           observacoes?: string | null
           status?: string
+          tipo?: string
           updated_at?: string
           user_id: string
           workspace_id: string
@@ -4789,6 +4791,7 @@ export type Database = {
           nome?: string
           observacoes?: string | null
           status?: string
+          tipo?: string
           updated_at?: string
           user_id?: string
           workspace_id?: string
@@ -7783,6 +7786,78 @@ export type Database = {
           },
           {
             foreignKeyName: "projeto_conciliacoes_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projeto_investidores: {
+        Row: {
+          ativo: boolean
+          base_calculo: string
+          created_at: string
+          id: string
+          investidor_id: string
+          percentual_participacao: number
+          projeto_id: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          ativo?: boolean
+          base_calculo?: string
+          created_at?: string
+          id?: string
+          investidor_id: string
+          percentual_participacao?: number
+          projeto_id: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          ativo?: boolean
+          base_calculo?: string
+          created_at?: string
+          id?: string
+          investidor_id?: string
+          percentual_participacao?: number
+          projeto_id?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projeto_investidores_investidor_id_fkey"
+            columns: ["investidor_id"]
+            isOneToOne: false
+            referencedRelation: "investidores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projeto_investidores_investidor_id_fkey"
+            columns: ["investidor_id"]
+            isOneToOne: false
+            referencedRelation: "v_roi_investidores"
+            referencedColumns: ["investidor_id"]
+          },
+          {
+            foreignKeyName: "projeto_investidores_investidor_id_fkey"
+            columns: ["investidor_id"]
+            isOneToOne: false
+            referencedRelation: "v_roi_investidores_multimoeda"
+            referencedColumns: ["investidor_id"]
+          },
+          {
+            foreignKeyName: "projeto_investidores_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projeto_investidores_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"

@@ -183,10 +183,14 @@ export function ParticipacaoInvestidoresTab({ formatCurrency, onRefresh, investi
   );
   
   const pagas = participacoesFiltradas.filter(p => p.status === "PAGO");
+  
+  // Reconhecidas (capital próprio - apenas registro contábil)
+  const reconhecidas = participacoesFiltradas.filter(p => p.status === "RECONHECIDO");
 
   const totalAguardando = aguardando.reduce((acc, p) => acc + p.valor_participacao, 0);
   const totalPendente = pendentes.reduce((acc, p) => acc + p.valor_participacao, 0);
   const totalPago = pagas.reduce((acc, p) => acc + p.valor_participacao, 0);
+  const totalReconhecido = reconhecidas.reduce((acc, p) => acc + p.valor_participacao, 0);
 
   if (loading) {
     return (

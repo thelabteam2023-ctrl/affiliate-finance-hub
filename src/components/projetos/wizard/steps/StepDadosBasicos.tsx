@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { InvestidorSelect } from "@/components/investidores/InvestidorSelect";
+import { ProjetoInvestidoresManager } from "@/components/projetos/ProjetoInvestidoresManager";
 import { ProjectFormData } from "../ProjectCreationWizardTypes";
 import { cn } from "@/lib/utils";
 import { TIPO_PROJETO_CONFIG, TipoProjeto } from "@/types/projeto";
@@ -32,19 +32,7 @@ interface StepDadosBasicosProps {
 }
 
 export function StepDadosBasicos({ formData, onChange, isBrokerContext = false }: StepDadosBasicosProps) {
-  // Derived state: investidor is "active" when an investor is selected
-  const hasInvestidor = !!formData.investidor_id;
-
-  const handleToggleInvestidor = (checked: boolean) => {
-    if (!checked) {
-      // Clear investor data when deactivating
-      onChange({
-        investidor_id: null,
-        percentual_investidor: 0,
-        base_calculo_investidor: "LUCRO_LIQUIDO",
-      });
-    }
-  };
+  const hasInvestidores = (formData.investidores_projeto || []).length > 0;
 
   return (
     <div className="space-y-6">
@@ -163,110 +151,17 @@ export function StepDadosBasicos({ formData, onChange, isBrokerContext = false }
 
       {/* Cards opcionais em grid 2 colunas (desktop) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Participação de Investidor - Card com expansão interna */}
+        {/* Participação de Investidores - Multi-investidor */}
         <Card className={cn(
           "transition-colors",
-          hasInvestidor && "border-purple-500/30",
-          isBrokerContext && !hasInvestidor && "border-destructive/50"
+          hasInvestidores && "border-purple-500/30",
+          isBrokerContext && !hasInvestidores && "border-destructive/50"
         )}>
           <CardContent className="pt-4">
-            <div className="space-y-4">
-              {/* Header do card */}
-              <div className="flex items-start gap-3">
-                <div className="p-1.5 rounded-md bg-purple-500/10">
-                  <Briefcase className="h-4 w-4 text-purple-500" />
-                </div>
-                <div className="space-y-1 flex-1">
-                  <Label className="flex items-center gap-2">
-                    Participação de Investidor
-                    <Badge variant={isBrokerContext ? "destructive" : "secondary"} className="text-xs ml-auto">
-                      {isBrokerContext ? "Obrigatório" : "Opcional"}
-                    </Badge>
-                  </Label>
-                  <p className="text-xs text-muted-foreground">
-                    {isBrokerContext ? "Selecione o investidor dono das contas" : "Vincule para dividir lucros"}
-                  </p>
-                </div>
-              </div>
-
-              {/* Seletor de investidor - sempre visível para permitir ativação */}
-              <div className="space-y-2">
-                <InvestidorSelect
-                  value={formData.investidor_id || ""}
-                  onValueChange={(value) => onChange({ 
-                    investidor_id: value || null,
-                  })}
-                />
-              </div>
-
-              {/* Campos de configuração - só aparecem quando há investidor selecionado */}
-              {hasInvestidor && (
-                <div className="space-y-4 pt-2 border-t border-border">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-1 text-sm">
-                        <Percent className="h-3 w-3" />
-                        Percentual *
-                      </Label>
-                      <Input
-                        type="number"
-                        min="0"
-                        max="100"
-                        step="0.1"
-                        value={formData.percentual_investidor || ""}
-                        onChange={(e) =>
-                          onChange({
-                            percentual_investidor: parseFloat(e.target.value) || 0,
-                          })
-                        }
-                        placeholder="Ex: 50"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-sm">Base de Cálculo *</Label>
-                      <RadioGroup
-                        value={formData.base_calculo_investidor || "LUCRO_LIQUIDO"}
-                        onValueChange={(value) =>
-                          onChange({ base_calculo_investidor: value })
-                        }
-                        className="flex flex-col gap-1"
-                      >
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="LUCRO_LIQUIDO" id="lucro_liquido" />
-                          <label htmlFor="lucro_liquido" className="text-xs cursor-pointer">
-                            Lucro Líquido
-                          </label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="LUCRO_BRUTO" id="lucro_bruto" />
-                          <label htmlFor="lucro_bruto" className="text-xs cursor-pointer">
-                            Lucro Bruto
-                          </label>
-                        </div>
-                      </RadioGroup>
-                    </div>
-                  </div>
-
-                  <div className="p-2 rounded-lg bg-purple-500/10 border border-purple-500/20">
-                    <div className="flex items-start gap-2">
-                      <Info className="h-3 w-3 text-purple-400 mt-0.5 flex-shrink-0" />
-                      <p className="text-xs text-muted-foreground">
-                        Receberá{" "}
-                        <strong className="text-purple-400">
-                          {formData.percentual_investidor || 0}%
-                        </strong>{" "}
-                        do{" "}
-                        <strong className="text-purple-400">
-                          {formData.base_calculo_investidor === "LUCRO_BRUTO"
-                            ? "lucro bruto"
-                            : "lucro líquido"}
-                        </strong>
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
+            <ProjetoInvestidoresManager
+              value={formData.investidores_projeto || []}
+              onChange={(investidores) => onChange({ investidores_projeto: investidores })}
+            />
           </CardContent>
         </Card>
 
