@@ -694,19 +694,6 @@ export function ProjetoDialog({
                       disabled={isViewMode}
                     />
                   </CardContent>
-                </Card>
-                                <strong className="text-purple-400">
-                                  {formData.base_calculo_investidor === "LUCRO_BRUTO" ? "lucro bruto" : "lucro líquido"}
-                                </strong>{" "}
-                                de cada ciclo fechado deste projeto. A participação será automaticamente calculada e ficará disponível para pagamento.
-                              </p>
-                            </div>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
               </TabsContent>
 
               <TabsContent value="moeda" className="space-y-4 px-1">
