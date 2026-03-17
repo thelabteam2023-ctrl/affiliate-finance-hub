@@ -557,6 +557,19 @@ export default function BookmakersNaoCriadasModule() {
                             <span className="text-xs text-muted-foreground">—</span>
                           )}
                         </td>
+                        <td className="px-4 py-3 text-center">
+                          {p.diasRestantes !== null && p.diasRestantes !== undefined ? (
+                            <Badge
+                              variant={p.diasRestantes <= 7 ? "destructive" : p.diasRestantes <= 30 ? "secondary" : "outline"}
+                              className="text-xs font-mono gap-1"
+                            >
+                              <Clock className="h-3 w-3" />
+                              {p.diasRestantes <= 0 ? "Expirado" : `${p.diasRestantes}d`}
+                            </Badge>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </td>
                         <td className="px-4 py-3 text-right space-x-2">
                           {showDescartados ? (
                             <Button
