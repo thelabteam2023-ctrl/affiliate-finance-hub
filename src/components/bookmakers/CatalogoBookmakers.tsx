@@ -1151,6 +1151,8 @@ export default function CatalogoBookmakers() {
           defaultMoeda={vinculoCriadoContext.moeda}
         />
       )}
+
+      <BookmakerGruposDialog open={gruposDialogOpen} onOpenChange={setGruposDialogOpen} />
     </div>
   );
 }
