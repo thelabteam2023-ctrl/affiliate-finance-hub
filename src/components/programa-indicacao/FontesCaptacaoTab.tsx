@@ -872,32 +872,13 @@ export function FontesCaptacaoTab() {
                     </div>
 
                     <div className="mt-4 grid grid-cols-3 gap-4">
-                      <div onClick={(e) => e.stopPropagation()}>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <div className="cursor-pointer hover:bg-muted/50 rounded-md p-1 -m-1 transition-colors">
-                              <p className="text-sm text-muted-foreground flex items-center gap-1">
-                                Parceiros <Users className="h-3 w-3" />
-                              </p>
-                              <p className="font-semibold">{fonte.totalParceiros}</p>
-                            </div>
-                          </PopoverTrigger>
-                          <PopoverContent side="bottom" align="start" className="w-64 p-3">
-                            <p className="font-semibold text-sm mb-2">Parceiros deste fornecedor</p>
-                            {(fonte.parcerias_detalhes || []).length === 0 ? (
-                              <p className="text-sm text-muted-foreground">Nenhum parceiro vinculado</p>
-                            ) : (
-                              <div className="space-y-1.5 max-h-48 overflow-y-auto">
-                                {(fonte.parcerias_detalhes || []).map((d, i) => (
-                                  <div key={d.parceriaId} className="flex items-center gap-2 text-sm">
-                                    <span className="text-muted-foreground">{i + 1}.</span>
-                                    <span className="truncate">{d.parceiroNome}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </PopoverContent>
-                        </Popover>
+                      <div onClick={(e) => { e.stopPropagation(); openParceirosModal(fonte); }}>
+                        <div className="cursor-pointer hover:bg-muted/50 rounded-md p-1 -m-1 transition-colors">
+                          <p className="text-sm text-muted-foreground flex items-center gap-1">
+                            Parceiros <Users className="h-3 w-3" />
+                          </p>
+                          <p className="font-semibold">{fonte.totalParceiros}</p>
+                        </div>
                       </div>
                       <div>
                         <TooltipProvider>
