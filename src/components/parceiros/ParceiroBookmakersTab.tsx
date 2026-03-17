@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, memo } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, memo } from "react";
 import { getCurrencySymbol } from "@/types/currency";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
