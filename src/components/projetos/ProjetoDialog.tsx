@@ -62,7 +62,7 @@ import { VincularOperadorDialog } from "@/components/projetos/VincularOperadorDi
 import { EditarAcordoOperadorDialog } from "@/components/projetos/EditarAcordoOperadorDialog";
 import { ProjetoConciliacaoDialog } from "@/components/projetos/ProjetoConciliacaoDialog";
 import { ConfirmacaoSenhaDialog } from "@/components/ui/confirmacao-senha-dialog";
-import { InvestidorSelect } from "@/components/investidores/InvestidorSelect";
+import { ProjetoInvestidoresManager } from "@/components/projetos/ProjetoInvestidoresManager";
 import { ProjectPostCreateWizard } from "@/components/projetos/ProjectPostCreateWizard";
 import { ProjectModulesStep } from "@/components/projetos/ProjectModulesStep";
 import { ProjectCreationWizard } from "@/components/projetos/wizard/ProjectCreationWizard";
