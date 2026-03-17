@@ -807,6 +807,30 @@ export function BonusResultadoLiquidoChart({
           </div>
           
           <div className="flex items-center gap-2">
+            {/* Zoom mês atual - só aparece em ciclos multi-mês */}
+            {isMultiMonthCycle && (
+              <TooltipProvider>
+                <UITooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      variant={zoomCurrentMonth ? "secondary" : "ghost"} 
+                      size="sm" 
+                      className={`h-7 px-2 text-xs gap-1 ${zoomCurrentMonth ? "bg-accent text-accent-foreground" : ""}`}
+                      onClick={() => setZoomCurrentMonth(!zoomCurrentMonth)}
+                    >
+                      <ZoomIn className="h-3.5 w-3.5" />
+                      <span className="hidden sm:inline">Mês atual</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    <p className="text-xs">
+                      {zoomCurrentMonth ? "Voltar para ciclo completo" : "Focar no mês atual"}
+                    </p>
+                  </TooltipContent>
+                </UITooltip>
+              </TooltipProvider>
+            )}
+
             {/* Calendário */}
             <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
               <PopoverTrigger asChild>
