@@ -252,6 +252,7 @@ export function BookmakersLivresModule({ onRegistrarPerda, onVincularProjeto, on
         ultimo_projeto_nome: lastProjectMap.get(b.id) || null,
         ja_usada: usedSet.has(b.id),
         catalogo_status: b.catalogo?.status || "REGULAMENTADA",
+        bookmaker_catalogo_id: b.bookmaker_catalogo_id || null,
       }));
     },
     enabled: !!workspaceId,
