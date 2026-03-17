@@ -285,11 +285,12 @@ export function BonusResultadoLiquidoChart({
 
 
   const kpis = useMemo(() => {
-    const totalBonus = chartData.reduce((acc, d) => acc + d.bonus_creditado, 0);
-    const totalJuice = chartData.reduce((acc, d) => acc + d.juice, 0);
+    const source = visibleChartData;
+    const totalBonus = source.reduce((acc, d) => acc + d.bonus_creditado, 0);
+    const totalJuice = source.reduce((acc, d) => acc + d.juice, 0);
     const resultadoLiquido = totalBonus + totalJuice;
-    const diasOperados = chartData.length;
-    const ultimoAcumulado = chartData.length > 0 ? chartData[chartData.length - 1].acumulado : 0;
+    const diasOperados = source.length;
+    const ultimoAcumulado = source.length > 0 ? source[source.length - 1].acumulado : 0;
     
     // Performance % = (Resultado Líquido / Total Bônus) * 100
     const performancePercent = totalBonus > 0 
@@ -297,7 +298,7 @@ export function BonusResultadoLiquidoChart({
       : 0;
 
     return { totalBonus, totalJuice, resultadoLiquido, diasOperados, ultimoAcumulado, performancePercent };
-  }, [chartData]);
+  }, [visibleChartData]);
 
   // Benchmark levels (baseado no potencial bruto, não na curva real)
   const benchmarkLevels = useMemo(() => {
