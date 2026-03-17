@@ -466,6 +466,9 @@ export default function BookmakersNaoCriadasModule() {
                       <th className="text-left px-4 py-3 font-medium text-muted-foreground uppercase text-xs tracking-wide">
                         CPF
                       </th>
+                      <th className="text-left px-4 py-3 font-medium text-muted-foreground uppercase text-xs tracking-wide">
+                        Origem
+                      </th>
                       <th className="text-right px-4 py-3 font-medium text-muted-foreground uppercase text-xs tracking-wide w-[220px]">
                         Ações
                       </th>
