@@ -187,7 +187,7 @@ export function FontesCaptacaoTab() {
     try {
       setLoading(true);
       
-      const [indicadoresRes, acordosRes, fornecedoresRes, parceriasRes, custosDiretosRes, lucrosDiretosRes, pagamentosRes] = await Promise.all([
+      const [indicadoresRes, acordosRes, fornecedoresRes, parceriasRes, custosDiretosRes, lucrosDiretosRes, pagamentosRes, indicacoesRes] = await Promise.all([
         supabase.from("v_indicador_performance").select("*"),
         supabase.from("indicador_acordos").select("*").eq("ativo", true),
         supabase.from("fornecedores").select("*").order("nome"),
@@ -195,10 +195,23 @@ export function FontesCaptacaoTab() {
         supabase.from("v_custos_aquisicao").select("parceiro_id, custo_total").eq("origem_tipo", "DIRETO"),
         supabase.from("v_parceiro_lucro_total").select("parceiro_id, lucro_projetos"),
         supabase.from("movimentacoes_indicacao").select("parceria_id, valor, tipo, status").eq("tipo", "PAGTO_FORNECEDOR").eq("status", "CONFIRMADO"),
+        supabase.from("indicacoes").select("indicador_id, parceiro:parceiros!indicacoes_parceiro_id_fkey(nome)"),
       ]);
 
       if (indicadoresRes.error) throw indicadoresRes.error;
-      setIndicadores(indicadoresRes.data || []);
+
+      // Build indicacoes map (indicador_id -> partner names)
+      const indicacoesMap = new Map<string, IndicacaoDetalhe[]>();
+      (indicacoesRes.data || []).forEach((ind: any) => {
+        const list = indicacoesMap.get(ind.indicador_id) || [];
+        list.push({ parceiroNome: ind.parceiro?.nome || "N/A" });
+        indicacoesMap.set(ind.indicador_id, list);
+      });
+
+      setIndicadores((indicadoresRes.data || []).map((i: any) => ({
+        ...i,
+        parceiros_indicados_nomes: indicacoesMap.get(i.indicador_id) || [],
+      })));
       setAcordos(acordosRes.data || []);
 
       // Build payment sum per parceria
