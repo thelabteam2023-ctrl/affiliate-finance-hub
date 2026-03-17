@@ -223,6 +223,22 @@ export function BookmakerGruposDialog({ open, onOpenChange }: BookmakerGruposDia
                       className="pl-8 h-8 text-sm"
                     />
                   </div>
+                  <div className="flex gap-1.5 mb-3">
+                    {([
+                      { value: "TODAS", label: "Todas" },
+                      { value: "REGULAMENTADA", label: "Regulamentadas" },
+                      { value: "NAO_REGULAMENTADA", label: "Não Regulamentadas" },
+                    ] as const).map((opt) => (
+                      <Button
+                        key={opt.value}
+                        size="sm"
+                        variant={statusFilter === opt.value ? "default" : "outline"}
+                        className="h-7 text-xs"
+                        onClick={() => setStatusFilter(opt.value)}
+                      >
+                        {opt.label}
+                      </Button>
+                    ))}
                   <ScrollArea className="flex-1">
                     <div className="space-y-0.5 pr-2">
                       {filteredBookmakers.map((bk) => {
