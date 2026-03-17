@@ -216,6 +216,23 @@ export const ParceiroBookmakersTab = memo(function ParceiroBookmakersTab({
     };
   }, [parceiroId, refreshKey]);
 
+  // Fetch indisponíveis para este parceiro
+  useEffect(() => {
+    if (!parceiroId || !workspaceId) return;
+    let cancelled = false;
+    (async () => {
+      const { data: rows } = await (supabase as any)
+        .from("bookmaker_indisponiveis")
+        .select("bookmaker_catalogo_id")
+        .eq("workspace_id", workspaceId)
+        .eq("parceiro_id", parceiroId);
+      if (!cancelled) {
+        setIndisponiveisSet(new Set((rows ?? []).map((r: any) => r.bookmaker_catalogo_id)));
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [parceiroId, workspaceId, refreshKey]);
+
   const handleRefresh = useCallback(() => {
     fetchData(true);
   }, [fetchData]);
