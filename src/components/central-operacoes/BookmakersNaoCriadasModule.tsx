@@ -139,18 +139,33 @@ export default function BookmakersNaoCriadasModule() {
         (accountsRes.data ?? []).map((a: any) => a.parceiro_id)
       );
 
-      // Build origem map: parceiro_id -> origin label
+      // Build origem map and dias restantes map
       const origemMap = new Map<string, string>();
+      const diasRestantesMap = new Map<string, number | null>();
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
 
       // From parcerias (fornecedor or indicador)
       (parceriasRes.data ?? []).forEach((p: any) => {
-        if (origemMap.has(p.parceiro_id)) return; // first match wins
-        if (p.origem_tipo === "FORNECEDOR" && p.fornecedor) {
-          origemMap.set(p.parceiro_id, p.fornecedor.nome);
-        } else if (p.origem_tipo === "INDICADOR" && p.indicacao?.indicador) {
-          origemMap.set(p.parceiro_id, p.indicacao.indicador.nome);
-        } else if (p.origem_tipo === "DIRETO") {
-          origemMap.set(p.parceiro_id, "Direto");
+        // Origem (first match wins)
+        if (!origemMap.has(p.parceiro_id)) {
+          if (p.origem_tipo === "FORNECEDOR" && p.fornecedor) {
+            origemMap.set(p.parceiro_id, p.fornecedor.nome);
+          } else if (p.origem_tipo === "INDICADOR" && p.indicacao?.indicador) {
+            origemMap.set(p.parceiro_id, p.indicacao.indicador.nome);
+          } else if (p.origem_tipo === "DIRETO") {
+            origemMap.set(p.parceiro_id, "Direto");
+          }
+        }
+        // Dias restantes (keep the active partnership with nearest end date)
+        if (p.status === "ativa" && p.data_fim_prevista) {
+          const fim = new Date(p.data_fim_prevista);
+          fim.setHours(0, 0, 0, 0);
+          const diff = Math.ceil((fim.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+          const current = diasRestantesMap.get(p.parceiro_id);
+          if (current === undefined || current === null || diff < current) {
+            diasRestantesMap.set(p.parceiro_id, diff);
+          }
         }
       });
 
