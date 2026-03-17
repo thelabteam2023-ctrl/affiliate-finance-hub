@@ -42,7 +42,8 @@ interface ParceiroSemConta {
   nome: string;
   cpf: string;
   status: string;
-  origem?: string; // e.g. "Fornecedor: JOAO VITOR" or "Indicador: LUCAS" or "Direto"
+  origem?: string;
+  diasRestantes?: number | null; // null = sem parceria ativa ou sem data_fim_prevista
 }
 
 interface IndisponibilidadeRecord {
