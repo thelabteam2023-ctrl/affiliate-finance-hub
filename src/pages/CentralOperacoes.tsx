@@ -54,6 +54,7 @@ import { ContasDisponiveisModule } from "@/components/central-operacoes/ContasDi
 import { BookmakersLivresModule } from "@/components/central-operacoes/BookmakersLivresModule";
 import BookmakersNaoCriadasModule from "@/components/central-operacoes/BookmakersNaoCriadasModule";
 import { CentralOperacoesDialogs } from "@/components/central-operacoes/CentralOperacoesDialogs";
+import { OperatorSaquesReadOnly } from "@/components/central-operacoes/OperatorSaquesReadOnly";
 import { useCentralOperacoesMutations, type DispensaState, type PerdaLimitadaState } from "@/hooks/useCentralOperacoesMutations";
 import { useCicloAlertas } from "@/hooks/useCicloAlertas";
 import { useRole } from "@/hooks/useRole";
