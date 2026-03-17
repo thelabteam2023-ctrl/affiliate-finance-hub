@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { InvestidorSelect } from "@/components/investidores/InvestidorSelect";
+import { ProjetoInvestidoresManager } from "@/components/projetos/ProjetoInvestidoresManager";
 import { ProjectFormData } from "../ProjectCreationWizardTypes";
 import { cn } from "@/lib/utils";
 import { TIPO_PROJETO_CONFIG, TipoProjeto } from "@/types/projeto";
