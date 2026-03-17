@@ -176,6 +176,8 @@ export function BookmakersLivresModule({ onRegistrarPerda, onVincularProjeto, on
   const [regulamentacaoFilter, setRegulamentacaoFilter] = useState("todas");
   const [sortColumn, setSortColumn] = useState<SortColumn>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+  const [grupoFilter, setGrupoFilter] = useState("todos");
+  const { getCatalogoIdsByGrupo } = useBookmakerGrupos();
 
   // Query: all bookmakers without active project
   const { data: contas, isLoading } = useQuery({
