@@ -1060,23 +1060,31 @@ export default function CentralOperacoes() {
 
       <Tabs value={mainTab} onValueChange={(v) => setMainTab(v as typeof mainTab)}>
         <TabsList>
-          <TabsTrigger value="financeiro" className="relative">
-            Financeiro
-            {alertCards.length > 0 && <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-orange-500 text-white text-[10px] font-bold leading-none">{alertCards.length}</span>}
-          </TabsTrigger>
+          {!isOperator && (
+            <TabsTrigger value="financeiro" className="relative">
+              Financeiro
+              {alertCards.length > 0 && <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-orange-500 text-white text-[10px] font-bold leading-none">{alertCards.length}</span>}
+            </TabsTrigger>
+          )}
           <TabsTrigger value="contas" className="relative">
-            Bookmakers Disponíveis
-            {(contasDisponiveisCount ?? 0) > 0 && <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-amber-500 text-white text-[10px] font-bold leading-none animate-pulse">!</span>}
+            Bookmakers
+            {!isOperator && (contasDisponiveisCount ?? 0) > 0 && <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-amber-500 text-white text-[10px] font-bold leading-none animate-pulse">!</span>}
           </TabsTrigger>
-          <TabsTrigger value="ocorrencias" className="relative">
-            Ocorrências
-            {(kpisOcorrencias?.abertas_total ?? 0) > 0 && <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold leading-none">{kpisOcorrencias!.abertas_total}</span>}
-          </TabsTrigger>
-          <TabsTrigger value="solicitacoes" className="relative">
-            Solicitações
-            {(kpisSolicitacoes?.total_abertas ?? 0) > 0 && <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-yellow-500 text-white text-[10px] font-bold leading-none">{kpisSolicitacoes!.total_abertas}</span>}
-          </TabsTrigger>
-          <TabsTrigger value="alertas" disabled className="opacity-50">Alertas<span className="ml-1.5 text-[10px] text-muted-foreground">(em breve)</span></TabsTrigger>
+          {!isOperator && (
+            <TabsTrigger value="ocorrencias" className="relative">
+              Ocorrências
+              {(kpisOcorrencias?.abertas_total ?? 0) > 0 && <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold leading-none">{kpisOcorrencias!.abertas_total}</span>}
+            </TabsTrigger>
+          )}
+          {!isOperator && (
+            <TabsTrigger value="solicitacoes" className="relative">
+              Solicitações
+              {(kpisSolicitacoes?.total_abertas ?? 0) > 0 && <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-yellow-500 text-white text-[10px] font-bold leading-none">{kpisSolicitacoes!.total_abertas}</span>}
+            </TabsTrigger>
+          )}
+          {!isOperator && (
+            <TabsTrigger value="alertas" disabled className="opacity-50">Alertas<span className="ml-1.5 text-[10px] text-muted-foreground">(em breve)</span></TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="financeiro" className="mt-4 space-y-4">
