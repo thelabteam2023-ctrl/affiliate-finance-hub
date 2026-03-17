@@ -2,28 +2,38 @@
  * Módulo "Bookmakers Não Criadas"
  *
  * Dado uma bookmaker do catálogo, lista todos os parceiros que NÃO possuem
- * conta (instância) nessa casa. Permite abrir o diálogo de criação com
- * parceiro + bookmaker pré-selecionados.
+ * conta (instância) nessa casa. Permite marcar parceiros como "indisponível"
+ * (já usaram fora do sistema) para limpar a lista, com opção de reverter.
  */
 
-import { useState, useMemo, useRef } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useMemo, useCallback } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useWorkspaceBookmakers } from "@/hooks/useWorkspaceBookmakers";
 import { getFirstLastName, cn } from "@/lib/utils";
-import { Search, UserPlus, Building2, Users, ChevronsUpDown, Check } from "lucide-react";
+import {
+  Search, UserPlus, Building2, Users, ChevronsUpDown, Check,
+  Ban, Undo2, Eye, EyeOff, CheckSquare,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import BookmakerDialog from "@/components/bookmakers/BookmakerDialog";
 import type { VinculoCriadoContext } from "@/components/bookmakers/BookmakerDialog";
+import { toast } from "sonner";
 
 interface ParceiroSemConta {
   id: string;
@@ -32,12 +42,20 @@ interface ParceiroSemConta {
   status: string;
 }
 
+interface IndisponibilidadeRecord {
+  id: string;
+  parceiro_id: string;
+}
+
 export default function BookmakersNaoCriadasModule() {
-  const { workspaceId } = useAuth();
+  const { workspaceId, userId } = useAuth();
+  const queryClient = useQueryClient();
   const [selectedCatalogoId, setSelectedCatalogoId] = useState<string>("");
   const [search, setSearch] = useState("");
   const [bkSearch, setBkSearch] = useState("");
   const [bkPopoverOpen, setBkPopoverOpen] = useState(false);
+  const [showDescartados, setShowDescartados] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // Dialog state for creating a new bookmaker account
   const [criarDialog, setCriarDialog] = useState<{
@@ -49,13 +67,40 @@ export default function BookmakersNaoCriadasModule() {
   // Fetch catalog bookmakers for the dropdown
   const { data: catalogoBookmakers, isLoading: loadingCatalogo } = useWorkspaceBookmakers();
 
+  const selectedBookmaker = catalogoBookmakers?.find(
+    (b) => b.id === selectedCatalogoId
+  );
+
+  // Fetch indisponiveis for the selected bookmaker
+  const indisponiveisKey = ["bookmaker-indisponiveis", workspaceId, selectedCatalogoId];
+  const { data: indisponiveisData } = useQuery({
+    queryKey: indisponiveisKey,
+    queryFn: async (): Promise<IndisponibilidadeRecord[]> => {
+      if (!workspaceId || !selectedCatalogoId) return [];
+      const { data, error } = await (supabase as any)
+        .from("bookmaker_indisponiveis")
+        .select("id, parceiro_id")
+        .eq("workspace_id", workspaceId)
+        .eq("bookmaker_catalogo_id", selectedCatalogoId);
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!workspaceId && !!selectedCatalogoId,
+    staleTime: 60_000,
+  });
+
+  const indisponiveisMap = useMemo(() => {
+    const map = new Map<string, string>();
+    (indisponiveisData ?? []).forEach((r) => map.set(r.parceiro_id, r.id));
+    return map;
+  }, [indisponiveisData]);
+
   // Fetch parceiros that do NOT have an account for the selected bookmaker
   const { data: parceirosResult, isLoading: loadingParceiros, refetch } = useQuery({
     queryKey: ["parceiros-sem-bookmaker", workspaceId, selectedCatalogoId],
     queryFn: async (): Promise<ParceiroSemConta[]> => {
       if (!workspaceId || !selectedCatalogoId) return [];
 
-      // Get all parceiros of this workspace
       const { data: allParceiros, error: pErr } = await supabase
         .from("parceiros")
         .select("id, nome, cpf, status")
@@ -65,7 +110,6 @@ export default function BookmakersNaoCriadasModule() {
 
       if (pErr) throw pErr;
 
-      // Get parceiro_ids that DO have this bookmaker
       const { data: existingAccounts, error: aErr } = await supabase
         .from("bookmakers")
         .select("parceiro_id")
@@ -87,29 +131,35 @@ export default function BookmakersNaoCriadasModule() {
     staleTime: 60_000,
   });
 
-  const parceiros = parceirosResult ?? [];
+  const allParceiros = parceirosResult ?? [];
+
+  // Split into available vs descartados
+  const { disponiveis, descartados } = useMemo(() => {
+    const disp: ParceiroSemConta[] = [];
+    const desc: ParceiroSemConta[] = [];
+    allParceiros.forEach((p) => {
+      if (indisponiveisMap.has(p.id)) desc.push(p);
+      else disp.push(p);
+    });
+    return { disponiveis: disp, descartados: desc };
+  }, [allParceiros, indisponiveisMap]);
+
+  const visibleList = showDescartados ? descartados : disponiveis;
 
   // Filter by search
   const filtered = useMemo(() => {
-    if (!search.trim()) return parceiros;
+    if (!search.trim()) return visibleList;
     const q = search.toLowerCase();
-    return parceiros.filter(
-      (p) =>
-        p.nome.toLowerCase().includes(q) ||
-        p.cpf?.includes(q)
+    return visibleList.filter(
+      (p) => p.nome.toLowerCase().includes(q) || p.cpf?.includes(q)
     );
-  }, [parceiros, search]);
+  }, [visibleList, search]);
 
-  const selectedBookmaker = catalogoBookmakers?.find(
-    (b) => b.id === selectedCatalogoId
-  );
+  // Clear selection when switching views or bookmaker
+  const resetSelection = useCallback(() => setSelectedIds(new Set()), []);
 
   const handleCriarConta = (parceiroId: string) => {
-    setCriarDialog({
-      open: true,
-      parceiroId,
-      catalogoId: selectedCatalogoId,
-    });
+    setCriarDialog({ open: true, parceiroId, catalogoId: selectedCatalogoId });
   };
 
   const handleDialogClose = () => {
@@ -119,6 +169,82 @@ export default function BookmakersNaoCriadasModule() {
   const handleCreated = (_ctx: VinculoCriadoContext) => {
     handleDialogClose();
     refetch();
+  };
+
+  // Mark as indisponível
+  const marcarIndisponivel = useCallback(async (parceiroIds: string[]) => {
+    if (!workspaceId || !selectedCatalogoId || !userId) return;
+    try {
+      const rows = parceiroIds.map((pid) => ({
+        workspace_id: workspaceId,
+        parceiro_id: pid,
+        bookmaker_catalogo_id: selectedCatalogoId,
+        marcado_por: userId,
+      }));
+      const { error } = await (supabase as any)
+        .from("bookmaker_indisponiveis")
+        .upsert(rows, { onConflict: "workspace_id,parceiro_id,bookmaker_catalogo_id" });
+      if (error) throw error;
+      toast.success(
+        parceiroIds.length === 1
+          ? "Parceiro marcado como indisponível"
+          : `${parceiroIds.length} parceiros marcados como indisponíveis`
+      );
+      queryClient.invalidateQueries({ queryKey: indisponiveisKey });
+      resetSelection();
+    } catch (err) {
+      console.error(err);
+      toast.error("Erro ao marcar indisponibilidade");
+    }
+  }, [workspaceId, selectedCatalogoId, userId, queryClient, indisponiveisKey, resetSelection]);
+
+  // Restore (remove indisponibilidade)
+  const restaurarDisponibilidade = useCallback(async (parceiroIds: string[]) => {
+    if (!workspaceId || !selectedCatalogoId) return;
+    try {
+      const recordIds = parceiroIds
+        .map((pid) => indisponiveisMap.get(pid))
+        .filter(Boolean) as string[];
+      if (recordIds.length === 0) return;
+      const { error } = await (supabase as any)
+        .from("bookmaker_indisponiveis")
+        .delete()
+        .in("id", recordIds);
+      if (error) throw error;
+      toast.success(
+        parceiroIds.length === 1
+          ? "Parceiro restaurado"
+          : `${parceiroIds.length} parceiros restaurados`
+      );
+      queryClient.invalidateQueries({ queryKey: indisponiveisKey });
+      resetSelection();
+    } catch (err) {
+      console.error(err);
+      toast.error("Erro ao restaurar disponibilidade");
+    }
+  }, [workspaceId, selectedCatalogoId, indisponiveisMap, queryClient, indisponiveisKey, resetSelection]);
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filtered.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filtered.map((p) => p.id)));
+    }
+  };
+
+  const handleBatchAction = () => {
+    const ids = Array.from(selectedIds);
+    if (showDescartados) restaurarDisponibilidade(ids);
+    else marcarIndisponivel(ids);
   };
 
   return (
@@ -164,7 +290,13 @@ export default function BookmakersNaoCriadasModule() {
                   .map((bk) => (
                     <button
                       key={bk.id}
-                      onClick={() => { setSelectedCatalogoId(bk.id); setBkPopoverOpen(false); setBkSearch(""); }}
+                      onClick={() => {
+                        setSelectedCatalogoId(bk.id);
+                        setBkPopoverOpen(false);
+                        setBkSearch("");
+                        resetSelection();
+                        setShowDescartados(false);
+                      }}
                       className={cn(
                         "flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground transition-colors",
                         selectedCatalogoId === bk.id && "bg-accent"
@@ -183,12 +315,59 @@ export default function BookmakersNaoCriadasModule() {
         </Popover>
 
         {selectedCatalogoId && !loadingParceiros && (
-          <Badge variant="outline" className="text-xs font-mono gap-1">
-            <Users className="h-3 w-3" />
-            {filtered.length} / {parceiros.length}
-          </Badge>
+          <>
+            <Badge variant="outline" className="text-xs font-mono gap-1">
+              <Users className="h-3 w-3" />
+              {showDescartados
+                ? `${filtered.length} descartado${filtered.length !== 1 ? "s" : ""}`
+                : `${filtered.length} / ${disponiveis.length}`}
+            </Badge>
+
+            {descartados.length > 0 && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={showDescartados ? "secondary" : "ghost"}
+                    size="sm"
+                    className="gap-1.5 text-xs"
+                    onClick={() => { setShowDescartados(!showDescartados); resetSelection(); }}
+                  >
+                    {showDescartados ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                    {showDescartados ? "Ocultar descartados" : `Descartados (${descartados.length})`}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {showDescartados ? "Voltar à lista de disponíveis" : "Ver parceiros marcados como indisponíveis"}
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </>
         )}
       </div>
+
+      {/* Batch action bar */}
+      {selectedIds.size > 0 && (
+        <div className="flex items-center gap-3 rounded-md border border-border bg-muted/40 px-4 py-2">
+          <span className="text-sm font-medium">
+            {selectedIds.size} selecionado{selectedIds.size > 1 ? "s" : ""}
+          </span>
+          <Button
+            size="sm"
+            variant={showDescartados ? "outline" : "destructive"}
+            className="gap-1.5 text-xs"
+            onClick={handleBatchAction}
+          >
+            {showDescartados ? (
+              <><Undo2 className="h-3.5 w-3.5" /> Restaurar</>
+            ) : (
+              <><Ban className="h-3.5 w-3.5" /> Marcar indisponível</>
+            )}
+          </Button>
+          <Button size="sm" variant="ghost" className="text-xs" onClick={resetSelection}>
+            Limpar seleção
+          </Button>
+        </div>
+      )}
 
       {/* No bookmaker selected */}
       {!selectedCatalogoId && (
@@ -210,14 +389,16 @@ export default function BookmakersNaoCriadasModule() {
       {/* Results */}
       {selectedCatalogoId && !loadingParceiros && (
         <>
-          {parceiros.length === 0 ? (
+          {visibleList.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-2">
               <Users className="h-10 w-10 opacity-30" />
               <p className="text-sm">
-                Todos os parceiros já possuem conta na{" "}
-                <span className="font-semibold text-foreground">
-                  {selectedBookmaker?.nome}
-                </span>
+                {showDescartados
+                  ? "Nenhum parceiro descartado para esta bookmaker"
+                  : <>Todos os parceiros já possuem conta na{" "}
+                    <span className="font-semibold text-foreground">{selectedBookmaker?.nome}</span>
+                  </>
+                }
               </p>
             </div>
           ) : (
@@ -238,14 +419,20 @@ export default function BookmakersNaoCriadasModule() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-border bg-muted/30">
+                      <th className="w-[40px] px-3 py-3">
+                        <Checkbox
+                          checked={filtered.length > 0 && selectedIds.size === filtered.length}
+                          onCheckedChange={toggleSelectAll}
+                        />
+                      </th>
                       <th className="text-left px-4 py-3 font-medium text-muted-foreground uppercase text-xs tracking-wide">
                         Parceiro
                       </th>
                       <th className="text-left px-4 py-3 font-medium text-muted-foreground uppercase text-xs tracking-wide">
                         CPF
                       </th>
-                      <th className="text-right px-4 py-3 font-medium text-muted-foreground uppercase text-xs tracking-wide w-[140px]">
-                        Ação
+                      <th className="text-right px-4 py-3 font-medium text-muted-foreground uppercase text-xs tracking-wide w-[220px]">
+                        Ações
                       </th>
                     </tr>
                   </thead>
@@ -253,33 +440,66 @@ export default function BookmakersNaoCriadasModule() {
                     {filtered.map((p) => (
                       <tr
                         key={p.id}
-                        className="border-b border-border/50 hover:bg-muted/20 transition-colors"
+                        className={cn(
+                          "border-b border-border/50 hover:bg-muted/20 transition-colors",
+                          selectedIds.has(p.id) && "bg-muted/30"
+                        )}
                       >
+                        <td className="px-3 py-3">
+                          <Checkbox
+                            checked={selectedIds.has(p.id)}
+                            onCheckedChange={() => toggleSelect(p.id)}
+                          />
+                        </td>
                         <td className="px-4 py-3 font-medium">
                           {getFirstLastName(p.nome)}
                         </td>
                         <td className="px-4 py-3 text-muted-foreground font-mono text-xs">
                           {p.cpf}
                         </td>
-                        <td className="px-4 py-3 text-right">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="gap-1.5 text-xs"
-                            onClick={() => handleCriarConta(p.id)}
-                          >
-                            <UserPlus className="h-3.5 w-3.5" />
-                            Criar conta
-                          </Button>
+                        <td className="px-4 py-3 text-right space-x-2">
+                          {showDescartados ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-1.5 text-xs"
+                              onClick={() => restaurarDisponibilidade([p.id])}
+                            >
+                              <Undo2 className="h-3.5 w-3.5" />
+                              Restaurar
+                            </Button>
+                          ) : (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="gap-1.5 text-xs"
+                                onClick={() => handleCriarConta(p.id)}
+                              >
+                                <UserPlus className="h-3.5 w-3.5" />
+                                Criar conta
+                              </Button>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="gap-1 text-xs text-muted-foreground hover:text-destructive"
+                                    onClick={() => marcarIndisponivel([p.id])}
+                                  >
+                                    <Ban className="h-3.5 w-3.5" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Marcar como indisponível</TooltipContent>
+                              </Tooltip>
+                            </>
+                          )}
                         </td>
                       </tr>
                     ))}
                     {filtered.length === 0 && (
                       <tr>
-                        <td
-                          colSpan={3}
-                          className="px-4 py-8 text-center text-muted-foreground"
-                        >
+                        <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">
                           Nenhum parceiro encontrado para a busca
                         </td>
                       </tr>
