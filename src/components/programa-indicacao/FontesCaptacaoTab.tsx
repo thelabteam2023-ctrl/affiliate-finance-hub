@@ -969,9 +969,35 @@ export function FontesCaptacaoTab() {
                   </div>
                   <div>
                     <div className="font-semibold">{fonte.nome}</div>
-                    <div className="text-sm text-muted-foreground">
-                      {fonte.totalParceiros} parceiros
-                    </div>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <div className="text-sm text-muted-foreground cursor-pointer hover:text-foreground transition-colors inline-flex items-center gap-1">
+                          {fonte.totalParceiros} parceiros <Users className="h-3 w-3" />
+                        </div>
+                      </PopoverTrigger>
+                      <PopoverContent side="bottom" align="start" className="w-64 p-3">
+                        <p className="font-semibold text-sm mb-2">
+                          Parceiros {fonte.tipo === "INDICADOR" ? "indicados" : "deste fornecedor"}
+                        </p>
+                        {(() => {
+                          const nomes = fonte.tipo === "FORNECEDOR"
+                            ? (fonte.parcerias_detalhes || []).map(d => d.parceiroNome)
+                            : ((fonte.originalData as IndicadorPerformance).parceiros_indicados_nomes || []).map(d => d.parceiroNome);
+                          return nomes.length === 0 ? (
+                            <p className="text-sm text-muted-foreground">Nenhum parceiro vinculado</p>
+                          ) : (
+                            <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                              {nomes.map((nome, i) => (
+                                <div key={i} className="flex items-center gap-2 text-sm">
+                                  <span className="text-muted-foreground">{i + 1}.</span>
+                                  <span className="truncate">{nome}</span>
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        })()}
+                      </PopoverContent>
+                    </Popover>
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
