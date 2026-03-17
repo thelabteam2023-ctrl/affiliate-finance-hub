@@ -131,7 +131,7 @@ export default function BookmakersNaoCriadasModule() {
         </div>
         <Popover open={bkPopoverOpen} onOpenChange={(open) => { setBkPopoverOpen(open); if (!open) setBkSearch(""); }}>
           <PopoverTrigger asChild>
-            <Button variant="outline" role="combobox" className="w-[280px] justify-between font-normal">
+            <Button variant="outline" role="combobox" className="w-[280px] justify-center font-normal">
               {selectedBookmaker ? (
                 <span className="flex items-center gap-2 truncate">
                   {selectedBookmaker.logo_url && (
