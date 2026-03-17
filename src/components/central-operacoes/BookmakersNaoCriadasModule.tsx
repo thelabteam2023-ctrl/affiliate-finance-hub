@@ -223,8 +223,18 @@ export default function BookmakersNaoCriadasModule() {
         return sortOrigem === "asc" ? oa.localeCompare(ob) : ob.localeCompare(oa);
       });
     }
+    if (sortDias) {
+      result = [...result].sort((a, b) => {
+        const da = a.diasRestantes;
+        const db = b.diasRestantes;
+        if (da === null && db === null) return 0;
+        if (da === null) return 1;
+        if (db === null) return -1;
+        return sortDias === "asc" ? da - db : db - da;
+      });
+    }
     return result;
-  }, [visibleList, search, sortOrigem]);
+  }, [visibleList, search, sortOrigem, sortDias]);
 
   // Clear selection when switching views or bookmaker
   const resetSelection = useCallback(() => setSelectedIds(new Set()), []);
