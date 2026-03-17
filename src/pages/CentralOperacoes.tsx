@@ -199,6 +199,8 @@ export default function CentralOperacoes() {
     return 'financeiro';
   });
   const setMainTab = (tab: typeof mainTab) => {
+    // Operadores só podem acessar a aba "contas"
+    if (isOperator && tab !== 'contas') return;
     setMainTabState(tab);
     localStorage.setItem('central-operacoes-main-tab', tab);
   };
