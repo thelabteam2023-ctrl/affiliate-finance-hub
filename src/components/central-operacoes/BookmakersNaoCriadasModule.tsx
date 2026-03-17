@@ -118,7 +118,7 @@ export default function BookmakersNaoCriadasModule() {
           .not("parceiro_id", "is", null),
         (supabase as any)
           .from("parcerias")
-          .select("parceiro_id, origem_tipo, fornecedor:fornecedores!parcerias_fornecedor_id_fkey(nome), indicador:indicadores_referral!parcerias_indicador_id_fkey(nome)")
+          .select("parceiro_id, origem_tipo, fornecedor_id, indicacao_id, fornecedor:fornecedores!parcerias_fornecedor_id_fkey(nome), indicacao:indicacoes!parcerias_indicacao_id_fkey(indicador:indicadores_referral!indicacoes_indicador_id_fkey(nome))")
           .eq("workspace_id", workspaceId),
         (supabase as any)
           .from("indicacoes")
