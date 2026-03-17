@@ -6,24 +6,22 @@
  * parceiro + bookmaker pré-selecionados.
  */
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useWorkspaceBookmakers } from "@/hooks/useWorkspaceBookmakers";
 import { getFirstLastName, cn } from "@/lib/utils";
-import { Search, UserPlus, Building2, Users } from "lucide-react";
+import { Search, UserPlus, Building2, Users, ChevronsUpDown, Check } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import BookmakerDialog from "@/components/bookmakers/BookmakerDialog";
 import type { VinculoCriadoContext } from "@/components/bookmakers/BookmakerDialog";
 
