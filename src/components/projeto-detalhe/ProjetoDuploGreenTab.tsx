@@ -815,6 +815,17 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
       .slice(0, 8);
   }, [apostas]);
 
+  // Mapa de bookmaker_id -> nome completo com parceiro para enriquecer dados no SurebetCard
+  const bookmakerNomeMap = useMemo(() => {
+    const map = new Map<string, string>();
+    bookmakers.forEach(bk => {
+      const shortName = bk.parceiro?.nome ? getFirstLastName(bk.parceiro.nome) : "";
+      const nomeCompleto = shortName ? `${bk.nome} - ${shortName}` : bk.nome;
+      map.set(bk.id, nomeCompleto);
+    });
+    return map;
+  }, [bookmakers]);
+
   // Mapa de logos combinando catálogo global + bookmakers do projeto
   const logoMap = useMemo(() => {
     const map = new Map<string, string | null>();
