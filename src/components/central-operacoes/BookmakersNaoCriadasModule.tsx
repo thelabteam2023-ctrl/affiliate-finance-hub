@@ -48,7 +48,8 @@ interface IndisponibilidadeRecord {
 }
 
 export default function BookmakersNaoCriadasModule() {
-  const { workspaceId, userId } = useAuth();
+  const { workspaceId, user } = useAuth();
+  const userId = user?.id;
   const queryClient = useQueryClient();
   const [selectedCatalogoId, setSelectedCatalogoId] = useState<string>("");
   const [search, setSearch] = useState("");
