@@ -694,6 +694,7 @@ export function ProjetoDialog({
                       disabled={isViewMode}
                     />
                   </CardContent>
+                </Card>
               </TabsContent>
 
               <TabsContent value="moeda" className="space-y-4 px-1">
