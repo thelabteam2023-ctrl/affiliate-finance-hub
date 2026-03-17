@@ -28,6 +28,9 @@ import { CaixaTransacaoDialog } from "@/components/caixa/CaixaTransacaoDialog";
 import { useRole } from "@/hooks/useRole";
 import { useAuth } from "@/hooks/useAuth";
 import { useActionAccess, useModuleAccess } from "@/hooks/useModuleAccess";
+import { BookmakerGruposDialog } from "./BookmakerGruposDialog";
+import { BookmakerGrupoFilter } from "./BookmakerGrupoFilter";
+import { useBookmakerGrupos } from "@/hooks/useBookmakerGrupos";
 
 interface BookmakerCatalogo {
   id: string;
