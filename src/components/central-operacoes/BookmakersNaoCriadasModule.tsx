@@ -116,11 +116,11 @@ export default function BookmakersNaoCriadasModule() {
           .eq("workspace_id", workspaceId)
           .eq("bookmaker_catalogo_id", selectedCatalogoId)
           .not("parceiro_id", "is", null),
-        supabase
+        (supabase as any)
           .from("parcerias")
           .select("parceiro_id, origem_tipo, fornecedor:fornecedores!parcerias_fornecedor_id_fkey(nome), indicador:indicadores_referral!parcerias_indicador_id_fkey(nome)")
           .eq("workspace_id", workspaceId),
-        supabase
+        (supabase as any)
           .from("indicacoes")
           .select("parceiro_id, indicador:indicadores_referral!indicacoes_indicador_id_fkey(nome)")
           .eq("workspace_id", workspaceId),
