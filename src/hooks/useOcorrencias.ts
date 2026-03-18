@@ -630,14 +630,13 @@ export function useReabrirOcorrencia() {
 
       // 2. Se houve perda registrada, estornar do ledger e projeto_perdas
       if (valorPerda > 0 && perdaRegistrada) {
-        // Remover entrada de projeto_perdas vinculada a esta ocorrência
+        // Remover entrada de projeto_perdas vinculada a esta ocorrência (via ocorrencia_id)
         if (ocorrencia.projeto_id) {
           await (supabase as any)
             .from('projeto_perdas')
             .delete()
-            .eq('descricao', `Perda via ocorrência: ${ocorrencia.titulo}`)
-            .eq('projeto_id', ocorrencia.projeto_id)
-            .eq('valor', valorPerda);
+            .eq('ocorrencia_id', id)
+            .eq('projeto_id', ocorrencia.projeto_id);
         }
 
         // Registrar estorno no ledger (PERDA_REVERSAO)
