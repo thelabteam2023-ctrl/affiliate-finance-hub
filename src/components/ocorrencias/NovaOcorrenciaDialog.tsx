@@ -374,7 +374,9 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                     >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Selecione" />
+                          <SelectValue placeholder="Selecione">
+                            {field.value === 'bookmaker' ? 'Bookmaker' : field.value === 'banco' ? 'Banco' : 'Selecione'}
+                          </SelectValue>
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
