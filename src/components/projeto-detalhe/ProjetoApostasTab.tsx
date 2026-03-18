@@ -144,6 +144,7 @@ interface Aposta {
 
 interface ApostaMultipla {
   id: string;
+  created_at?: string;
   evento?: string | null;
   esporte?: string | null;
   tipo_multipla: string;
