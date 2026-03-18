@@ -339,8 +339,39 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
               />
             </div>
 
-            {/* Sub-motivo + Onde ocorreu */}
+            {/* Onde ocorreu + Motivo específico */}
             <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="contexto_entidade"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Onde ocorreu? *</FormLabel>
+                    <Select
+                      onValueChange={(v) => {
+                        field.onChange(v);
+                        form.setValue('entidade_id', '');
+                        form.setValue('sub_motivo', '');
+                        setSelectedCasa('');
+                        setSelectedParceiroId(null);
+                      }}
+                      value={field.value || ''}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="bookmaker">Bookmaker</SelectItem>
+                        <SelectItem value="banco">Banco</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               {subMotivos.length > 0 ? (
                 <FormField
                   control={form.control}
@@ -367,36 +398,6 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                   )}
                 />
               ) : <div />}
-
-              <FormField
-                control={form.control}
-                name="contexto_entidade"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Onde ocorreu? *</FormLabel>
-                    <Select
-                      onValueChange={(v) => {
-                        field.onChange(v);
-                        form.setValue('entidade_id', '');
-                        setSelectedCasa('');
-                        setSelectedParceiroId(null);
-                      }}
-                      value={field.value || ''}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="bookmaker">Bookmaker</SelectItem>
-                        <SelectItem value="banco">Banco</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </div>
 
             {/* Seletor de Bookmaker: Casa + Vínculo */}
