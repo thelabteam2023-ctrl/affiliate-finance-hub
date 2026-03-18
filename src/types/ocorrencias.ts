@@ -184,6 +184,25 @@ export const SUB_MOTIVOS: Record<OcorrenciaTipo, { value: string; label: string 
   ],
 };
 
-export const SUB_MOTIVO_LABELS: Record<string, string> = Object.values(SUB_MOTIVOS)
-  .flat()
-  .reduce((acc, item) => ({ ...acc, [item.value]: item.label }), {} as Record<string, string>);
+// Sub-motivos de Movimentação Financeira por contexto (bookmaker vs banco)
+export const SUB_MOTIVOS_MOVIMENTACAO: Record<string, { value: string; label: string }[]> = {
+  bookmaker: [
+    { value: 'saque_rejeitado', label: 'Saque rejeitado pela plataforma' },
+    { value: 'atraso_provedor', label: 'Atraso do provedor de pagamento' },
+    { value: 'deposito_nao_creditado', label: 'Depósito não creditado' },
+    { value: 'deposito_estornado', label: 'Depósito estornado' },
+    { value: 'outro', label: 'Outro motivo' },
+  ],
+  banco: [
+    { value: 'saldo_divergente', label: 'Saldo divergente do esperado' },
+    { value: 'dados_incorretos', label: 'Dados bancários incorretos' },
+    { value: 'deposito_nao_creditado', label: 'Depósito não creditado' },
+    { value: 'deposito_estornado', label: 'Depósito estornado' },
+    { value: 'taxa_indevida', label: 'Taxa/cobrança indevida' },
+  ],
+};
+
+export const SUB_MOTIVO_LABELS: Record<string, string> = [
+  ...Object.values(SUB_MOTIVOS).flat(),
+  ...Object.values(SUB_MOTIVOS_MOVIMENTACAO).flat(),
+].reduce((acc, item) => ({ ...acc, [item.value]: item.label }), {} as Record<string, string>);
