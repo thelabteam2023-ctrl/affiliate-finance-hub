@@ -576,19 +576,52 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
               {(saldoBanco > 0 || saldoCrypto > 0) && (
                 <>
                   <span>•</span>
-                  {saldoBanco > 0 && (
-                    <span className="flex items-center gap-1">
-                      <Building2 className="h-3 w-3" />
-                      Banco: {showSensitiveData ? `R$ ${saldoBanco.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "•••"}
-                    </span>
-                  )}
-                  {saldoBanco > 0 && saldoCrypto > 0 && <span>|</span>}
-                  {saldoCrypto > 0 && (
-                    <span className="flex items-center gap-1">
-                      <Wallet className="h-3 w-3" />
-                      Wallets: {showSensitiveData ? `$ ${saldoCrypto.toLocaleString("en-US", { minimumFractionDigits: 2 })}` : "•••"}
-                    </span>
-                  )}
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer rounded px-1.5 py-0.5 hover:bg-muted/50">
+                        <DollarSign className="h-3 w-3" />
+                        <span>Ver saldos</span>
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent side="bottom" align="start" className="w-64 p-3">
+                      <div className="space-y-3">
+                        <p className="text-xs font-semibold text-foreground">Saldos do Parceiro</p>
+                        
+                        {saldoBanco > 0 && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-muted-foreground flex items-center gap-1.5">
+                              <Building2 className="h-3.5 w-3.5" />
+                              Contas Bancárias
+                            </span>
+                            <span className="text-sm font-medium font-mono">
+                              R$ {saldoBanco.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                            </span>
+                          </div>
+                        )}
+                        
+                        {saldoCrypto > 0 && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-muted-foreground flex items-center gap-1.5">
+                              <Wallet className="h-3.5 w-3.5" />
+                              Wallets Crypto
+                            </span>
+                            <span className="text-sm font-medium font-mono">
+                              $ {saldoCrypto.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                            </span>
+                          </div>
+                        )}
+
+                        {saldoBanco > 0 && saldoCrypto > 0 && (
+                          <div className="border-t pt-2 flex items-center justify-between">
+                            <span className="text-xs font-medium text-muted-foreground">Patrimônio externo</span>
+                            <span className="text-sm font-bold text-primary font-mono">
+                              R$ {(saldoBanco + convertToBRL(saldoCrypto, "USD")).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                 </>
               )}
             </div>
