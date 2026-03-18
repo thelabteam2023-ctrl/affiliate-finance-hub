@@ -897,11 +897,15 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
   // Aplicar filtros na lista atual (abertas ou histórico)
   const apostasListaAtual = apostasSubTab === "abertas" ? apostasAbertas : apostasHistorico;
   
+  // Suspicious date filter
+  const suspiciousFilter = useSuspiciousDateFilter(apostasListaAtual);
+
   const apostasFiltradas = useMemo(() => apostasListaAtual.filter(a => {
+    if (!suspiciousFilter.filterFn(a)) return false;
     const matchesSearch = a.evento.toLowerCase().includes(searchTerm.toLowerCase()) || a.esporte.toLowerCase().includes(searchTerm.toLowerCase()) || a.selecao.toLowerCase().includes(searchTerm.toLowerCase()) || (a.bookmaker_nome || '').toLowerCase().includes(searchTerm.toLowerCase()) || (a.pernas || []).some((p: any) => (p?.bookmaker_nome || '').toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesResultado = tabFilters.resultados.length === 0 || tabFilters.resultados.includes(a.resultado as any);
     return matchesSearch && matchesResultado;
-  }), [apostasListaAtual, searchTerm, tabFilters.resultados]);
+  }), [apostasListaAtual, searchTerm, tabFilters.resultados, suspiciousFilter.active]);
   
   // Ordenar casaData conforme filtro selecionado
   const casaDataSorted = useMemo(() => {
