@@ -119,17 +119,22 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
     return Array.from(ids);
   }, [ocorrencias]);
 
-  // Fetch bookmaker names
-  const { data: bookmakerNames = {} } = useQuery({
-    queryKey: ['bookmaker-names-incidentes', bookmakerIds],
+  // Fetch bookmaker names + logos
+  const { data: bookmakerInfo = {} } = useQuery({
+    queryKey: ['bookmaker-info-incidentes', bookmakerIds],
     queryFn: async () => {
       if (bookmakerIds.length === 0) return {};
       const { data } = await supabase
         .from('bookmakers')
-        .select('id, nome')
+        .select('id, nome, bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url)')
         .in('id', bookmakerIds);
-      const map: Record<string, string> = {};
-      data?.forEach((b: any) => { map[b.id] = b.nome; });
+      const map: Record<string, { nome: string; logo_url: string | null }> = {};
+      data?.forEach((b: any) => {
+        map[b.id] = {
+          nome: b.nome,
+          logo_url: b.bookmakers_catalogo?.logo_url || null,
+        };
+      });
       return map;
     },
     enabled: bookmakerIds.length > 0,
