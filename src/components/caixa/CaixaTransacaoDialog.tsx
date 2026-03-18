@@ -4539,9 +4539,11 @@ export function CaixaTransacaoDialog({
           .map(b => b.moeda)
       )];
       
-      // CRYPTO: mostrar TODAS as moedas crypto quando há bookmakers com saldo USD
-      // Isso permite depositar em uma moeda (ex: USDT) e sacar em outra (ex: BTC)
-      const temBookmakerComSaldoUsd = bookmakers.some(b => b.saldo_usd > 0);
+      // CRYPTO: mostrar TODAS as moedas crypto quando há bookmakers com saldo em USD
+      // Verifica tanto saldo_atual de casas USD quanto saldo_usd legado
+      const temBookmakerComSaldoUsd = bookmakers.some(b => 
+        (b.moeda === 'USD' && b.saldo_atual > 0) || b.saldo_usd > 0
+      );
       
       return {
         fiat: MOEDAS_FIAT.filter(m => moedasFiatBookmakers.includes(m.value)),
