@@ -688,10 +688,16 @@ export function ProjetoValueBetTab({
   // Aplicar filtros na lista atual (abertas ou histórico)
   const apostasListaAtual = apostasSubTab === "abertas" ? apostasAbertas : apostasHistorico;
   
+  // Suspicious date filter
+  const suspiciousFilter = useSuspiciousDateFilter(apostasListaAtual);
+  
   const apostasFiltradas = useMemo(() => {
     const { bookmakerIds, parceiroIds, resultados } = tabFilters;
     
     return apostasListaAtual.filter(a => {
+      // Filtro de datas suspeitas
+      if (!suspiciousFilter.filterFn(a)) return false;
+
       // Filtro por texto (busca)
       const matchesSearch = 
         (a.evento || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -715,7 +721,7 @@ export function ProjetoValueBetTab({
       const matchesResultado = resultados.length === 0 || resultados.includes(a.resultado as any);
       return matchesResultado;
     });
-  }, [apostasListaAtual, searchTerm, tabFilters.bookmakerIds, tabFilters.parceiroIds, tabFilters.resultados, bookmakers]);
+  }, [apostasListaAtual, searchTerm, tabFilters.bookmakerIds, tabFilters.parceiroIds, tabFilters.resultados, bookmakers, suspiciousFilter.active]);
 
   // Filtered counts per sub-tab for badge display
   const filteredAbertasCount = useMemo(() => apostasAbertas.filter(a => {
