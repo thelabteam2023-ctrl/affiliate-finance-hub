@@ -515,8 +515,120 @@ export function useResolverOcorrenciaComFinanceiro() {
 }
 
 // ============================================================
-// MUTATION: adicionar comentário/anexo
+// MUTATION: reabrir ocorrência resolvida (estorno financeiro)
 // ============================================================
+export function useReabrirOcorrencia() {
+  const { workspaceId, user } = useAuth();
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id }: { id: string }) => {
+      // 1. Buscar dados da ocorrência resolvida
+      const { data: ocorrencia, error: fetchError } = await ocorrenciasTable()
+        .select('id, status, resultado_financeiro, valor_perda, perda_registrada_ledger, bookmaker_id, moeda, titulo, tipo, projeto_id, sub_motivo')
+        .eq('id', id)
+        .single();
+
+      if (fetchError) throw fetchError;
+      if (!ocorrencia || ocorrencia.status !== 'resolvido') {
+        throw new Error('Ocorrência não está resolvida');
+      }
+
+      const valorPerda = Number(ocorrencia.valor_perda || 0);
+      const perdaRegistrada = ocorrencia.perda_registrada_ledger === true;
+
+      // 2. Se houve perda registrada, estornar do ledger e projeto_perdas
+      if (valorPerda > 0 && perdaRegistrada) {
+        // Remover entrada de projeto_perdas vinculada a esta ocorrência
+        if (ocorrencia.projeto_id) {
+          await (supabase as any)
+            .from('projeto_perdas')
+            .delete()
+            .eq('descricao', `Perda via ocorrência: ${ocorrencia.titulo}`)
+            .eq('projeto_id', ocorrencia.projeto_id)
+            .eq('valor', valorPerda);
+        }
+
+        // Registrar estorno no ledger (PERDA_REVERSAO)
+        let bkMoeda = ocorrencia.moeda || 'BRL';
+        let bkWorkspaceId = workspaceId!;
+        let bkProjetoId: string | undefined = ocorrencia.projeto_id || undefined;
+
+        if (ocorrencia.bookmaker_id) {
+          const { data: bkInfo } = await (supabase as any)
+            .from('bookmakers')
+            .select('moeda, workspace_id, saldo_irrecuperavel, projeto_id')
+            .eq('id', ocorrencia.bookmaker_id)
+            .single();
+
+          if (bkInfo) {
+            bkMoeda = bkInfo.moeda || bkMoeda;
+            bkWorkspaceId = bkInfo.workspace_id || bkWorkspaceId;
+            bkProjetoId = ocorrencia.projeto_id || bkInfo.projeto_id || undefined;
+
+            // Se era saldo_irrecuperavel, reverter o acúmulo
+            if (ocorrencia.sub_motivo === 'saldo_irrecuperavel') {
+              const novoIrrecuperavel = Math.max(0, Number(bkInfo.saldo_irrecuperavel || 0) - valorPerda);
+              await (supabase as any)
+                .from('bookmakers')
+                .update({ saldo_irrecuperavel: novoIrrecuperavel })
+                .eq('id', ocorrencia.bookmaker_id);
+            }
+          }
+        }
+
+        // Registrar reversão no ledger
+        const { registrarPerdaReversaoViaLedger } = await import('@/lib/ledgerService');
+        await registrarPerdaReversaoViaLedger({
+          bookmakerId: ocorrencia.bookmaker_id || '',
+          valor: valorPerda,
+          moeda: bkMoeda,
+          workspaceId: bkWorkspaceId,
+          userId: user!.id,
+          descricao: `Estorno de perda (reabertura): ${ocorrencia.titulo}`,
+          perdaId: id,
+          projetoIdSnapshot: bkProjetoId,
+        });
+      }
+
+      // 3. Atualizar ocorrência para em_andamento
+      const { error: updateError } = await ocorrenciasTable()
+        .update({
+          status: 'em_andamento',
+          resolved_at: null,
+          resultado_financeiro: null,
+          valor_perda: null,
+          perda_registrada_ledger: false,
+        })
+        .eq('id', id)
+        .eq('workspace_id', workspaceId!);
+
+      if (updateError) throw updateError;
+
+      // 4. Evento de reabertura
+      await eventosTable().insert({
+        ocorrencia_id: id,
+        workspace_id: workspaceId!,
+        tipo: 'status_alterado',
+        autor_id: user!.id,
+        valor_anterior: 'resolvido',
+        valor_novo: 'em_andamento',
+      });
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: OCORRENCIAS_KEYS.all(workspaceId!) });
+      qc.invalidateQueries({ queryKey: OCORRENCIAS_KEYS.detail(vars.id) });
+      qc.invalidateQueries({ queryKey: OCORRENCIAS_KEYS.eventos(vars.id) });
+      qc.invalidateQueries({ queryKey: ['projeto-dashboard-data'] });
+      qc.invalidateQueries({ queryKey: ['central-operacoes-data'] });
+      qc.invalidateQueries({ queryKey: ['projeto-kpi'] });
+      qc.invalidateQueries({ queryKey: ['projeto-extras'] });
+      toast.success('Ocorrência reaberta com sucesso. Estornos financeiros aplicados.');
+    },
+    onError: (err: any) => toast.error(`Erro ao reabrir: ${err.message || 'erro desconhecido'}`),
+  });
+}
+
 export function useAdicionarComentario() {
   const { workspaceId, user } = useAuth();
   const qc = useQueryClient();
