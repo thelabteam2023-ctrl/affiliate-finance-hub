@@ -316,23 +316,7 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
         <MiniKpi icon={<Target className="h-4 w-4" />} label="Total" value={String(stats.total)} sub={`${stats.abertas} abertas`} />
         <MiniKpi icon={<CheckCircle className="h-4 w-4 text-emerald-400" />} label="Taxa Resolução" value={`${stats.taxaResolucao.toFixed(0)}%`} sub={`${stats.resolvidas} resolvidas`} />
         <MiniKpi icon={<Timer className="h-4 w-4 text-blue-400" />} label="Tempo Médio" value={formatDuration(stats.tempoMedio)} sub="para resolução" />
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div>
-                <MiniKpi icon={<DollarSign className="h-4 w-4 text-yellow-400" />} label="Risco Aberto" value={formatBRL(stats.valorRiscoAbertoBRL)} sub={`${formatBRL(stats.valorPerdaConfirmadaBRL)} perdido`} />
-              </div>
-            </TooltipTrigger>
-            {Object.keys(stats.riscoPorMoeda).length > 0 && (
-              <TooltipContent side="bottom" className="text-xs space-y-1">
-                <p className="font-medium mb-1">Risco por moeda (PTAX):</p>
-                {Object.entries(stats.riscoPorMoeda).map(([moeda, valor]) => (
-                  <p key={moeda}>{CURRENCY_SYMBOLS[moeda as SupportedCurrency] || moeda} {valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                ))}
-              </TooltipContent>
-            )}
-          </Tooltip>
-        </TooltipProvider>
+        <MiniKpi icon={<DollarSign className="h-4 w-4 text-red-400" />} label="Perda Total" value={formatBRL(stats.valorPerdaConfirmadaBRL)} sub={`${stats.resolvidasComPerda} com perda`} />
       </div>
 
       {/* Sub-tabs */}
