@@ -28,7 +28,7 @@ import {
 import { PrioridadeBadge, StatusBadge, TipoBadge, SlaBadge } from './OcorrenciaBadges';
 import { ResolucaoFinanceiraDialog } from './ResolucaoFinanceiraDialog';
 import { EditarOcorrenciaDialog } from './EditarOcorrenciaDialog';
-import { useOcorrenciaEventos, useExcluirOcorrencia, useResolverOcorrenciaComFinanceiro } from '@/hooks/useOcorrencias';
+import { useOcorrenciaEventos, useExcluirOcorrencia, useResolverOcorrenciaComFinanceiro, useReabrirOcorrencia } from '@/hooks/useOcorrencias';
 import { useWorkspaceMembers } from '@/hooks/useWorkspaceMembers';
 import type { Ocorrencia, OcorrenciaStatus, OcorrenciaEvento } from '@/types/ocorrencias';
 import { STATUS_LABELS, SUB_MOTIVO_LABELS, EVENTO_TIPO_LABELS } from '@/types/ocorrencias';
