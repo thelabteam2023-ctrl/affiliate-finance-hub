@@ -38,7 +38,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { useParceiroContas, type ContaOuWallet } from '@/hooks/useParceiroContas';
-import { TIPO_LABELS, PRIORIDADE_LABELS, SUB_MOTIVOS } from '@/types/ocorrencias';
+import { TIPO_LABELS, PRIORIDADE_LABELS, SUB_MOTIVOS, SUB_MOTIVOS_MOVIMENTACAO } from '@/types/ocorrencias';
 import type { OcorrenciaTipo, OcorrenciaPrioridade } from '@/types/ocorrencias';
 import { AlertTriangle, Loader2, X, ChevronsUpDown, Check, Users, Filter, CalendarIcon, Wallet, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -146,7 +146,9 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
 
   const tipoSelecionado = form.watch('tipo');
   const contextoEntidade = form.watch('contexto_entidade');
-  const subMotivos = SUB_MOTIVOS[tipoSelecionado] || [];
+  const subMotivos = tipoSelecionado === 'movimentacao_financeira'
+    ? (SUB_MOTIVOS_MOVIMENTACAO[contextoEntidade] || [])
+    : (SUB_MOTIVOS[tipoSelecionado] || []);
 
   // Casas únicas com logo (derivadas dos bookmakers operacionais do workspace)
   const casasUnicasMap = (bookmakers as any[]).reduce<Record<string, string | null>>((acc, bk) => {
@@ -337,8 +339,39 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
               />
             </div>
 
-            {/* Sub-motivo + Onde ocorreu */}
+            {/* Onde ocorreu + Motivo específico */}
             <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="contexto_entidade"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Onde ocorreu? *</FormLabel>
+                    <Select
+                      onValueChange={(v) => {
+                        field.onChange(v);
+                        form.setValue('entidade_id', '');
+                        form.setValue('sub_motivo', '');
+                        setSelectedCasa('');
+                        setSelectedParceiroId(null);
+                      }}
+                      value={field.value || ''}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="bookmaker">Bookmaker</SelectItem>
+                        <SelectItem value="banco">Banco</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               {subMotivos.length > 0 ? (
                 <FormField
                   control={form.control}
@@ -365,36 +398,6 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                   )}
                 />
               ) : <div />}
-
-              <FormField
-                control={form.control}
-                name="contexto_entidade"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Onde ocorreu? *</FormLabel>
-                    <Select
-                      onValueChange={(v) => {
-                        field.onChange(v);
-                        form.setValue('entidade_id', '');
-                        setSelectedCasa('');
-                        setSelectedParceiroId(null);
-                      }}
-                      value={field.value || ''}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="bookmaker">Bookmaker</SelectItem>
-                        <SelectItem value="banco">Banco</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </div>
 
             {/* Seletor de Bookmaker: Casa + Vínculo */}
