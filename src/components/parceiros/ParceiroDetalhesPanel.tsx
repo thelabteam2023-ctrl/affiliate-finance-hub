@@ -573,6 +573,24 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                   </span>
                 </>
               )}
+              {(saldoBanco > 0 || saldoCrypto > 0) && (
+                <>
+                  <span>•</span>
+                  {saldoBanco > 0 && (
+                    <span className="flex items-center gap-1">
+                      <Building2 className="h-3 w-3" />
+                      Banco: {showSensitiveData ? `R$ ${saldoBanco.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "•••"}
+                    </span>
+                  )}
+                  {saldoBanco > 0 && saldoCrypto > 0 && <span>|</span>}
+                  {saldoCrypto > 0 && (
+                    <span className="flex items-center gap-1">
+                      <Wallet className="h-3 w-3" />
+                      Wallets: {showSensitiveData ? `$ ${saldoCrypto.toLocaleString("en-US", { minimumFractionDigits: 2 })}` : "•••"}
+                    </span>
+                  )}
+                </>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-1.5">
