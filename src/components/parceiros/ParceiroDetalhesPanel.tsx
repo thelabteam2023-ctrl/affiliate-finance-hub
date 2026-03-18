@@ -84,6 +84,8 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
   diasRestantes,
   parceiroCache,
   bookmakerRefreshKey,
+  saldoBanco = 0,
+  saldoCrypto = 0,
 }: ParceiroDetalhesPanelProps) {
   const data = parceiroCache.resumoData;
   const loading = parceiroCache.resumoLoading;
