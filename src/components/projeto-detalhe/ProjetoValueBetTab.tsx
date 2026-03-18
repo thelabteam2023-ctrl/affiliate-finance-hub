@@ -286,7 +286,7 @@ export function ProjetoValueBetTab({
       let query = supabase
         .from("apostas_unificada")
         .select(`
-          id, data_aposta, esporte, evento, mercado, selecao, odd, stake, stake_total, estrategia, 
+          id, created_at, data_aposta, esporte, evento, mercado, selecao, odd, stake, stake_total, estrategia, 
           status, resultado, lucro_prejuizo, valor_retorno, observacoes, bookmaker_id,
           modo_entrada, gerou_freebet, valor_freebet_gerada, tipo_freebet, forma_registro,
           contexto_operacional, lay_exchange, lay_odd, lay_stake, lay_liability, lay_comissao,
