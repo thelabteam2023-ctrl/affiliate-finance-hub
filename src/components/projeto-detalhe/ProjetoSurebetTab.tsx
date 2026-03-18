@@ -68,7 +68,7 @@ import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { useTabFilters, type EstrategiaFilter } from "@/hooks/useTabFilters";
 import { TabFiltersBar } from "./TabFiltersBar";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange as FilterDateRange } from "./StandardTimeFilter";
-import { OperationsSubTabHeader, type HistorySubTab } from "./operations";
+import { OperationsSubTabHeader, type HistorySubTab, SuspiciousDateFilterButton, useSuspiciousDateFilter } from "./operations";
 import { ExportMenu, transformSurebetToExport, transformApostaToExport } from "./ExportMenu";
 import { SaldoOperavelCard } from "./SaldoOperavelCard";
 // FinancialSummaryCompact removed — now integrated into Lucro KPI popover
