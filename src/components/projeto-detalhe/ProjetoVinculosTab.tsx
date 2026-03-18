@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useProjectCurrencyFormat } from "@/hooks/useProjectCurrencyFormat";
@@ -128,6 +129,7 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
     loading: responsibilitiesLoading 
   } = useProjectResponsibilities(projetoId);
 
+  const queryClient = useQueryClient();
   // ===== REACT QUERY HOOKS - Lifecycle management automático =====
   // Isso elimina toasts "fantasmas" após navegação, pois as queries
   // são automaticamente canceladas no unmount do componente.
@@ -1627,6 +1629,7 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
         workspaceId={workspaceId}
         onAjustado={() => {
           invalidateVinculos();
+          queryClient.invalidateQueries({ queryKey: ["projeto-dashboard-data", projetoId] });
         }}
       />
 
