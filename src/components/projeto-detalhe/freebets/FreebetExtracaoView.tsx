@@ -157,13 +157,13 @@ export function FreebetExtracaoView({
   );
   const apostasHistorico = useMemo(() => {
     const { bookmakerIds, parceiroIds, resultados } = dimensionalFilter;
-    if (bookmakerIds.length === 0 && parceiroIds.length === 0 && resultados.length === 0) return apostasHistoricoRaw;
     return apostasHistoricoRaw.filter(ap => {
+      if (!suspiciousFilter.filterFn(ap)) return false;
       if (bookmakerIds.length > 0 && !bookmakerIds.includes(ap.bookmaker_id)) return false;
       if (resultados.length > 0 && !resultados.includes(ap.resultado as any)) return false;
       return true;
     });
-  }, [apostasHistoricoRaw, dimensionalFilter]);
+  }, [apostasHistoricoRaw, dimensionalFilter, suspiciousFilter.active]);
 
   // Auto-switch to history tab when no active operations
   useEffect(() => {
