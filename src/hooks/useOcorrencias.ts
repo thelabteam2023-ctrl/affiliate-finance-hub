@@ -418,7 +418,7 @@ export function useResolverOcorrenciaComFinanceiro() {
         valor_novo: 'resolvido',
       });
 
-      // 3. Se houve perda, registrar no ledger
+      // 3. Se houve perda, registrar no ledger E na tabela projeto_perdas
       if (valorPerda > 0) {
         // Buscar dados da ocorrência para o ledger (incluindo projeto_id da ocorrência)
         const { data: ocorrencia } = await ocorrenciasTable()
@@ -462,6 +462,28 @@ export function useResolverOcorrenciaComFinanceiro() {
             categoria: ocorrencia.tipo,
             projetoIdSnapshot: bkProjetoId,
           });
+
+          // Registrar na tabela projeto_perdas para impactar o cálculo de lucro operacional
+          if (bkProjetoId) {
+            const dataResolucaoFormatted = resolvedAt 
+              ? resolvedAt.substring(0, 10)
+              : new Date().toISOString().substring(0, 10);
+
+            await (supabase as any)
+              .from('projeto_perdas')
+              .insert({
+                projeto_id: bkProjetoId,
+                workspace_id: bkWorkspaceId,
+                user_id: user!.id,
+                bookmaker_id: ocorrencia.bookmaker_id || null,
+                valor: valorPerda,
+                categoria: ocorrencia.tipo || 'bloqueio_contas',
+                status: 'CONFIRMADA',
+                data_registro: dataResolucaoFormatted,
+                data_confirmacao: dataResolucaoFormatted,
+                descricao: `Perda via ocorrência: ${ocorrencia.titulo}`,
+              });
+          }
 
           // Se o sub-motivo for saldo_irrecuperavel, acumular no campo da bookmaker
           if (ocorrencia.sub_motivo === 'saldo_irrecuperavel' && ocorrencia.bookmaker_id) {
