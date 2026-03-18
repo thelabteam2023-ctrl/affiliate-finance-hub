@@ -251,6 +251,7 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
         porExecutor[uid].count += 1;
         if (o.status === 'resolvido') porExecutor[uid].resolvidas += 1;
       });
+    });
 
     const riscoPorMoeda: Record<string, number> = {};
     let valorRiscoAbertoBRL = 0;
