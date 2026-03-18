@@ -196,10 +196,12 @@ export function OcorrenciaDetalheDialog({ ocorrenciaId, open, onOpenChange }: Pr
                   variant="outline"
                   size="sm"
                   className="w-full justify-start text-xs"
-                  disabled={updatingStatus}
+                  disabled={updatingStatus || reabrindo}
                   onClick={() => {
                     if (s === 'resolvido') {
                       setResolucaoOpen(true);
+                    } else if (ocorrencia.status === 'resolvido' && s === 'em_andamento') {
+                      reabrirOcorrencia({ id: ocorrencia.id });
                     } else {
                       atualizarStatus({
                         id: ocorrencia.id,
@@ -210,7 +212,9 @@ export function OcorrenciaDetalheDialog({ ocorrenciaId, open, onOpenChange }: Pr
                   }}
                 >
                   <ArrowRight className="h-3 w-3 mr-1.5" />
-                  {STATUS_LABELS[s]}
+                  {ocorrencia.status === 'resolvido' && s === 'em_andamento'
+                    ? 'Reabrir ocorrência'
+                    : STATUS_LABELS[s]}
                 </Button>
               ))}
             </div>
