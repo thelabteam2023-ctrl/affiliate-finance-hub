@@ -950,9 +950,7 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
               </Button>
               <Button type="submit" disabled={isPending || executoresSelecionados.length === 0}>
                 {isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                {executoresSelecionados.length > 1
-                  ? `Criar ${executoresSelecionados.length} Ocorrências`
-                  : 'Criar Ocorrência'}
+                Criar Ocorrência
               </Button>
             </div>
           </form>
