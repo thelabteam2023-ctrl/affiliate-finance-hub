@@ -153,9 +153,10 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
       if (!map[bid]) {
         map[bid] = {
           bookmaker_id: bid,
-          nome: bookmakerNames[bid] || bid.slice(0, 8),
+          nome: bookmakerInfo[bid]?.nome || bid.slice(0, 8),
+          logo_url: bookmakerInfo[bid]?.logo_url || null,
           count: 0, abertas: 0, resolvidas: 0,
-          riscoBRL: 0, perdaBRL: 0,
+          perdaBRL: 0,
           tempoMedioHoras: null,
           incidentes: [],
         };
