@@ -815,7 +815,7 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
               )}
               {executoresSelecionados.length > 1 && (
                 <p className="text-xs text-muted-foreground">
-                  Será criada uma ocorrência para cada executor selecionado ({executoresSelecionados.length} ocorrências)
+                  Será criada 1 ocorrência com todos os executores selecionados.
                 </p>
               )}
             </div>
