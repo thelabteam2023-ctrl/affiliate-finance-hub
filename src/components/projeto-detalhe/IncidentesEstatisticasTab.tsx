@@ -170,8 +170,6 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
 
       if (isAberta) {
         c.abertas += 1;
-        const risco = Number((o as any).valor_risco || 0);
-        if (risco > 0) c.riscoBRL += converterParaBRL(risco, moeda).valorBRL;
       }
       if (isResolvida) {
         c.resolvidas += 1;
