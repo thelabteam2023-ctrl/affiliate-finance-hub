@@ -314,11 +314,6 @@ export function ProjetoDialog({
       return;
     }
 
-    // Validar conciliação obrigatória para projetos crypto ao finalizar
-    if (formData.status === "FINALIZADO" && formData.tem_investimento_crypto && !formData.conciliado) {
-      toast.error("Projetos com investimento crypto precisam ser conciliados antes de finalizar");
-      return;
-    }
 
     setLoading(true);
     try {
