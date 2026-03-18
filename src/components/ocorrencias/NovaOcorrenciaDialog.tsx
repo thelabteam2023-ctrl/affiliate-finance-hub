@@ -885,7 +885,7 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
               )}
             />
 
-            {/* Valor em risco */}
+            {/* Valor em disputa */}
             <FormField
               control={form.control}
               name="valor_risco"
