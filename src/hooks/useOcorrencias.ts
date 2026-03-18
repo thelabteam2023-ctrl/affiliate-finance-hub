@@ -290,9 +290,73 @@ export function useAtualizarStatusOcorrencia() {
       novoStatus: OcorrenciaStatus;
       statusAnterior: OcorrenciaStatus;
     }) => {
+      // CENÁRIO: Cancelar ocorrência que já teve perda registrada
+      // Precisamos estornar a perda antes de cancelar
+      if (novoStatus === 'cancelado') {
+        const { data: ocorrencia } = await ocorrenciasTable()
+          .select('valor_perda, perda_registrada_ledger, bookmaker_id, moeda, titulo, projeto_id, sub_motivo')
+          .eq('id', id)
+          .single();
+
+        if (ocorrencia?.perda_registrada_ledger && ocorrencia.valor_perda > 0) {
+          const valorPerda = ocorrencia.valor_perda;
+
+          // Remover de projeto_perdas
+          if (ocorrencia.projeto_id) {
+            await (supabase as any)
+              .from('projeto_perdas')
+              .delete()
+              .eq('descricao', `Perda via ocorrência: ${ocorrencia.titulo}`)
+              .eq('projeto_id', ocorrencia.projeto_id)
+              .eq('valor', valorPerda);
+          }
+
+          // Verificar se bookmaker ainda está no projeto antes de estornar saldo
+          if (ocorrencia.bookmaker_id) {
+            const { data: bkInfo } = await (supabase as any)
+              .from('bookmakers')
+              .select('moeda, workspace_id, projeto_id, saldo_irrecuperavel')
+              .eq('id', ocorrencia.bookmaker_id)
+              .single();
+
+            if (bkInfo) {
+              const bookmakerStillLinked = bkInfo.projeto_id === ocorrencia.projeto_id;
+
+              // Só estornar saldo se a bookmaker ainda está no projeto
+              // (se desvinculada, o saldo já saiu via SAQUE_VIRTUAL)
+              if (bookmakerStillLinked) {
+                const { reverterPerdaOperacionalViaLedger } = await import('@/lib/ledgerService');
+                await reverterPerdaOperacionalViaLedger({
+                  bookmakerId: ocorrencia.bookmaker_id,
+                  valor: valorPerda,
+                  moeda: bkInfo.moeda || ocorrencia.moeda || 'BRL',
+                  workspaceId: bkInfo.workspace_id || workspaceId!,
+                  userId: user!.id,
+                  descricao: `Estorno de perda (cancelamento): ${ocorrencia.titulo}`,
+                  perdaId: id,
+                  projetoIdSnapshot: ocorrencia.projeto_id || undefined,
+                });
+              }
+
+              // Reverter saldo_irrecuperavel se aplicável
+              if (ocorrencia.sub_motivo === 'saldo_irrecuperavel') {
+                const novoIrrecuperavel = Math.max(0, Number(bkInfo.saldo_irrecuperavel || 0) - valorPerda);
+                await (supabase as any)
+                  .from('bookmakers')
+                  .update({ saldo_irrecuperavel: novoIrrecuperavel })
+                  .eq('id', ocorrencia.bookmaker_id);
+              }
+            }
+          }
+        }
+      }
+
       const extra: Record<string, unknown> = {};
       if (novoStatus === 'resolvido') extra.resolved_at = new Date().toISOString();
-      if (novoStatus === 'cancelado') extra.cancelled_at = new Date().toISOString();
+      if (novoStatus === 'cancelado') {
+        extra.cancelled_at = new Date().toISOString();
+        extra.perda_registrada_ledger = false; // Marcar que a perda foi estornada
+      }
 
       const { error } = await ocorrenciasTable()
         .update({ status: novoStatus, ...extra })
@@ -313,6 +377,13 @@ export function useAtualizarStatusOcorrencia() {
       qc.invalidateQueries({ queryKey: OCORRENCIAS_KEYS.all(workspaceId!) });
       qc.invalidateQueries({ queryKey: OCORRENCIAS_KEYS.detail(vars.id) });
       qc.invalidateQueries({ queryKey: OCORRENCIAS_KEYS.eventos(vars.id) });
+      if (vars.novoStatus === 'cancelado') {
+        // Invalidar queries financeiras caso tenha havido estorno
+        qc.invalidateQueries({ queryKey: ['projeto-dashboard-data'] });
+        qc.invalidateQueries({ queryKey: ['central-operacoes-data'] });
+        qc.invalidateQueries({ queryKey: ['projeto-kpi'] });
+        qc.invalidateQueries({ queryKey: ['projeto-extras'] });
+      }
       toast.success('Status atualizado');
     },
     onError: () => toast.error('Erro ao atualizar status'),
