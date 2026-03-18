@@ -230,6 +230,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
   // Sub-tab state (Abertas/Histórico pattern)
   const [subTab, setSubTab] = useState<HistorySubTab>("abertas");
   const [reasonFilter, setReasonFilter] = useState<string>("all");
+  const [suspiciousActive, setSuspiciousActive] = useState(false);
   
   // Filtros dimensionais independentes para o histórico
   const { dimensionalFilter, setDimensionalFilter } = useHistoryDimensionalFilter();
