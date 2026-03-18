@@ -25,22 +25,28 @@ export function isSuspiciousDate(dataAposta: string, createdAt: string): boolean
  * Hook para gerenciar filtro de datas suspeitas.
  * Recebe a lista completa de apostas e retorna contagem + toggle.
  */
-export function useSuspiciousDateFilter<T extends { data_aposta?: string; created_at?: string }>(
-  items: T[]
+export function useSuspiciousDateFilter<T extends Record<string, any>>(
+  items: T[],
+  /** Campo de data da operação (default: data_aposta) */
+  dateField: string = "data_aposta"
 ) {
   const [active, setActive] = useState(false);
 
   const suspiciousCount = useMemo(() => {
     return items.filter(item => {
-      if (!item.data_aposta || !item.created_at) return false;
-      return isSuspiciousDate(item.data_aposta, item.created_at);
+      const dataAposta = item[dateField];
+      const createdAt = item.created_at;
+      if (!dataAposta || !createdAt) return false;
+      return isSuspiciousDate(dataAposta, createdAt);
     }).length;
-  }, [items]);
+  }, [items, dateField]);
 
   const filterFn = (item: T): boolean => {
     if (!active) return true;
-    if (!item.data_aposta || !item.created_at) return false;
-    return isSuspiciousDate(item.data_aposta, item.created_at);
+    const dataAposta = item[dateField];
+    const createdAt = item.created_at;
+    if (!dataAposta || !createdAt) return false;
+    return isSuspiciousDate(dataAposta, createdAt);
   };
 
   return {
