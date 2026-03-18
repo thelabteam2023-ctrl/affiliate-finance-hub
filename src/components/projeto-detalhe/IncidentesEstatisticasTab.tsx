@@ -91,10 +91,10 @@ interface CasaIncidenteDetail {
 interface CasaStats {
   bookmaker_id: string;
   nome: string;
+  logo_url: string | null;
   count: number;
   abertas: number;
   resolvidas: number;
-  riscoBRL: number;
   perdaBRL: number;
   tempoMedioHoras: number | null;
   incidentes: CasaIncidenteDetail[];
@@ -119,17 +119,22 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
     return Array.from(ids);
   }, [ocorrencias]);
 
-  // Fetch bookmaker names
-  const { data: bookmakerNames = {} } = useQuery({
-    queryKey: ['bookmaker-names-incidentes', bookmakerIds],
+  // Fetch bookmaker names + logos
+  const { data: bookmakerInfo = {} } = useQuery({
+    queryKey: ['bookmaker-info-incidentes', bookmakerIds],
     queryFn: async () => {
       if (bookmakerIds.length === 0) return {};
       const { data } = await supabase
         .from('bookmakers')
-        .select('id, nome')
+        .select('id, nome, bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url)')
         .in('id', bookmakerIds);
-      const map: Record<string, string> = {};
-      data?.forEach((b: any) => { map[b.id] = b.nome; });
+      const map: Record<string, { nome: string; logo_url: string | null }> = {};
+      data?.forEach((b: any) => {
+        map[b.id] = {
+          nome: b.nome,
+          logo_url: b.bookmakers_catalogo?.logo_url || null,
+        };
+      });
       return map;
     },
     enabled: bookmakerIds.length > 0,
@@ -148,9 +153,10 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
       if (!map[bid]) {
         map[bid] = {
           bookmaker_id: bid,
-          nome: bookmakerNames[bid] || bid.slice(0, 8),
+          nome: bookmakerInfo[bid]?.nome || bid.slice(0, 8),
+          logo_url: bookmakerInfo[bid]?.logo_url || null,
           count: 0, abertas: 0, resolvidas: 0,
-          riscoBRL: 0, perdaBRL: 0,
+          perdaBRL: 0,
           tempoMedioHoras: null,
           incidentes: [],
         };
@@ -164,8 +170,6 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
 
       if (isAberta) {
         c.abertas += 1;
-        const risco = Number((o as any).valor_risco || 0);
-        if (risco > 0) c.riscoBRL += converterParaBRL(risco, moeda).valorBRL;
       }
       if (isResolvida) {
         c.resolvidas += 1;
@@ -199,7 +203,7 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
     });
 
     return Object.values(map).sort((a, b) => b.count - a.count);
-  }, [ocorrencias, bookmakerNames, converterParaBRL]);
+  }, [ocorrencias, bookmakerInfo, converterParaBRL]);
 
   // ====== General stats ======
   const stats = useMemo(() => {
@@ -312,23 +316,7 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
         <MiniKpi icon={<Target className="h-4 w-4" />} label="Total" value={String(stats.total)} sub={`${stats.abertas} abertas`} />
         <MiniKpi icon={<CheckCircle className="h-4 w-4 text-emerald-400" />} label="Taxa Resolução" value={`${stats.taxaResolucao.toFixed(0)}%`} sub={`${stats.resolvidas} resolvidas`} />
         <MiniKpi icon={<Timer className="h-4 w-4 text-blue-400" />} label="Tempo Médio" value={formatDuration(stats.tempoMedio)} sub="para resolução" />
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div>
-                <MiniKpi icon={<DollarSign className="h-4 w-4 text-yellow-400" />} label="Risco Aberto" value={formatBRL(stats.valorRiscoAbertoBRL)} sub={`${formatBRL(stats.valorPerdaConfirmadaBRL)} perdido`} />
-              </div>
-            </TooltipTrigger>
-            {Object.keys(stats.riscoPorMoeda).length > 0 && (
-              <TooltipContent side="bottom" className="text-xs space-y-1">
-                <p className="font-medium mb-1">Risco por moeda (PTAX):</p>
-                {Object.entries(stats.riscoPorMoeda).map(([moeda, valor]) => (
-                  <p key={moeda}>{CURRENCY_SYMBOLS[moeda as SupportedCurrency] || moeda} {valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                ))}
-              </TooltipContent>
-            )}
-          </Tooltip>
-        </TooltipProvider>
+        <MiniKpi icon={<DollarSign className="h-4 w-4 text-red-400" />} label="Perda Total" value={formatBRL(stats.valorPerdaConfirmadaBRL)} sub={`${stats.resolvidasComPerda} com perda`} />
       </div>
 
       {/* Sub-tabs */}
@@ -516,21 +504,27 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
               ) : (
                 <div className="space-y-0">
                   {/* Header */}
-                  <div className="grid grid-cols-[1fr_70px_70px_90px_100px_100px] gap-2 pb-2 border-b border-border/50 text-xs text-muted-foreground">
+                  <div className="grid grid-cols-[1fr_70px_70px_90px_100px] gap-2 pb-2 border-b border-border/50 text-xs text-muted-foreground">
                     <span>Casa</span>
                     <span className="text-center">Total</span>
                     <span className="text-center">Abertas</span>
                     <span className="text-center">Tempo ø</span>
-                    <span className="text-right">Risco</span>
                     <span className="text-right">Perda</span>
                   </div>
                   {/* Rows */}
                   {casaStats.map((c) => (
                     <div
                       key={c.bookmaker_id}
-                      className="grid grid-cols-[1fr_70px_70px_90px_100px_100px] gap-2 py-2.5 border-b border-border/30 last:border-b-0 items-center"
+                      className="grid grid-cols-[1fr_70px_70px_90px_100px] gap-2 py-2.5 border-b border-border/30 last:border-b-0 items-center"
                     >
-                      <span className="text-sm truncate font-medium">{c.nome}</span>
+                      <div className="flex items-center gap-2 min-w-0">
+                        {c.logo_url ? (
+                          <img src={c.logo_url} alt={c.nome} className="h-5 w-5 rounded object-contain shrink-0" />
+                        ) : (
+                          <Building2 className="h-5 w-5 text-muted-foreground shrink-0" />
+                        )}
+                        <span className="text-sm truncate font-medium">{c.nome}</span>
+                      </div>
                       <div className="flex justify-center">
                         <button
                           onClick={() => setSelectedCasa(c)}
@@ -552,9 +546,6 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
                       <span className="text-xs text-center font-medium text-muted-foreground">
                         {c.tempoMedioHoras !== null ? formatDuration(c.tempoMedioHoras) : '—'}
                       </span>
-                      <span className={cn("text-xs text-right font-medium", c.riscoBRL > 0 ? "text-yellow-400" : "text-muted-foreground")}>
-                        {c.riscoBRL > 0 ? formatBRL(c.riscoBRL) : '—'}
-                      </span>
                       <span className={cn("text-xs text-right font-medium", c.perdaBRL > 0 ? "text-red-400" : "text-muted-foreground")}>
                         {c.perdaBRL > 0 ? formatBRL(c.perdaBRL) : '—'}
                       </span>
@@ -572,7 +563,11 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Building2 className="h-5 w-5 text-muted-foreground" />
+              {selectedCasa?.logo_url ? (
+                <img src={selectedCasa.logo_url} alt={selectedCasa.nome} className="h-6 w-6 rounded object-contain" />
+              ) : (
+                <Building2 className="h-5 w-5 text-muted-foreground" />
+              )}
               {selectedCasa?.nome}
               <Badge variant="secondary" className="ml-2">{selectedCasa?.count} incidências</Badge>
             </DialogTitle>
