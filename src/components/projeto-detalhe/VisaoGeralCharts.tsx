@@ -809,7 +809,9 @@ export function VisaoGeralCharts({
       let vinculo: string;
       
       if (parceiroNome) {
-        casa = bookmakerNome;
+        // Se bookmakerNome contém "CASA - PARCEIRO", extrair apenas a casa
+        const separatorIdx = bookmakerNome.indexOf(" - ");
+        casa = separatorIdx > 0 ? bookmakerNome.substring(0, separatorIdx).trim() : bookmakerNome;
         vinculo = getFirstLastName(parceiroNome);
       } else {
         const separatorIdx = bookmakerNome.indexOf(" - ");
