@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -90,6 +90,7 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
   const [parceiroPopoverOpen, setParceiroPopoverOpen] = useState(false);
   const [selectedCasa, setSelectedCasa] = useState<string>('');
   const [selectedParceiroId, setSelectedParceiroId] = useState<string | null>(null);
+  const isSubmittingRef = useRef(false);
 
   // Carregar bookmakers — se dentro de um projeto, filtra apenas as vinculadas ao projeto
   const projetoIdCtx = contextoInicial?.projeto_id;
@@ -195,49 +196,55 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
   };
 
   const onSubmit = async (data: FormData) => {
-    if (executoresSelecionados.length === 0) return;
+    if (executoresSelecionados.length === 0 || isPending || isSubmittingRef.current) return;
 
-    const isBookmaker = data.contexto_entidade === 'bookmaker';
-    const isBanco = data.contexto_entidade === 'banco';
+    isSubmittingRef.current = true;
 
-    // Executor principal = primeiro selecionado; demais ficam no metadata
-    const executorPrincipal = executoresSelecionados[0];
-    const executoresExtras = executoresSelecionados.slice(1);
+    try {
+      const isBookmaker = data.contexto_entidade === 'bookmaker';
+      const isBanco = data.contexto_entidade === 'banco';
 
-    const metadata: Record<string, unknown> = {
-      ...(contextoInicial?.contexto_metadata ?? {}),
-    };
+      // Executor principal = primeiro selecionado; demais ficam no metadata
+      const executorPrincipal = executoresSelecionados[0];
+      const executoresExtras = executoresSelecionados.slice(1);
 
-    // Salva todos os executores no metadata quando há mais de um
-    if (executoresExtras.length > 0) {
-      const nomeMap = (members ?? []).reduce<Record<string, string>>((acc, m) => {
-        acc[m.user_id] = m.full_name ?? m.user_id;
-        return acc;
-      }, {});
-      metadata['executor_ids'] = executoresSelecionados;
-      metadata['executor_nomes'] = executoresSelecionados.map((id) => nomeMap[id] ?? id);
+      const metadata: Record<string, unknown> = {
+        ...(contextoInicial?.contexto_metadata ?? {}),
+      };
+
+      // Salva todos os executores no metadata quando há mais de um
+      if (executoresExtras.length > 0) {
+        const nomeMap = (members ?? []).reduce<Record<string, string>>((acc, m) => {
+          acc[m.user_id] = m.full_name ?? m.user_id;
+          return acc;
+        }, {});
+        metadata['executor_ids'] = executoresSelecionados;
+        metadata['executor_nomes'] = executoresSelecionados.map((id) => nomeMap[id] ?? id);
+      }
+
+      await criar({
+        titulo: data.titulo,
+        descricao: data.descricao,
+        tipo: data.tipo,
+        sub_motivo: data.sub_motivo || null,
+        prioridade: data.prioridade,
+        executor_id: executorPrincipal,
+        bookmaker_id: isBookmaker ? data.entidade_id : contextoInicial?.bookmaker_id,
+        conta_bancaria_id: isBanco && selectedContaOuWallet?.tipo === 'banco' ? data.entidade_id : undefined,
+        wallet_id: isBanco && selectedContaOuWallet?.tipo === 'wallet' ? data.entidade_id : undefined,
+        projeto_id: contextoInicial?.projeto_id,
+        parceiro_id: isBanco ? selectedParceiroId || undefined : contextoInicial?.parceiro_id,
+        contexto_metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
+        valor_risco: data.valor_risco || 0,
+        data_ocorrencia: data.data_ocorrencia ? format(data.data_ocorrencia, 'yyyy-MM-dd') : undefined,
+      });
+
+      onOpenChange(false);
+      form.reset();
+      setExecutoresSelecionados([]);
+    } finally {
+      isSubmittingRef.current = false;
     }
-
-    await criar({
-      titulo: data.titulo,
-      descricao: data.descricao,
-      tipo: data.tipo,
-      sub_motivo: data.sub_motivo || null,
-      prioridade: data.prioridade,
-      executor_id: executorPrincipal,
-      bookmaker_id: isBookmaker ? data.entidade_id : contextoInicial?.bookmaker_id,
-      conta_bancaria_id: isBanco && selectedContaOuWallet?.tipo === 'banco' ? data.entidade_id : undefined,
-      wallet_id: isBanco && selectedContaOuWallet?.tipo === 'wallet' ? data.entidade_id : undefined,
-      projeto_id: contextoInicial?.projeto_id,
-      parceiro_id: isBanco ? selectedParceiroId || undefined : contextoInicial?.parceiro_id,
-      contexto_metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
-      valor_risco: data.valor_risco || 0,
-      data_ocorrencia: data.data_ocorrencia ? format(data.data_ocorrencia, 'yyyy-MM-dd') : undefined,
-    });
-
-    onOpenChange(false);
-    form.reset();
-    setExecutoresSelecionados([]);
   };
 
   const executorError = executoresSelecionados.length === 0;
@@ -809,7 +816,7 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
               )}
               {executoresSelecionados.length > 1 && (
                 <p className="text-xs text-muted-foreground">
-                  Será criada uma ocorrência para cada executor selecionado ({executoresSelecionados.length} ocorrências)
+                  Será criada 1 ocorrência com todos os executores selecionados.
                 </p>
               )}
             </div>
@@ -944,9 +951,7 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
               </Button>
               <Button type="submit" disabled={isPending || executoresSelecionados.length === 0}>
                 {isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                {executoresSelecionados.length > 1
-                  ? `Criar ${executoresSelecionados.length} Ocorrências`
-                  : 'Criar Ocorrência'}
+                Criar Ocorrência
               </Button>
             </div>
           </form>
