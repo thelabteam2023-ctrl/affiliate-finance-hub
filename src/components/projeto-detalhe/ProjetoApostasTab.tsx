@@ -1177,9 +1177,39 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
     }
   }, [loading, apostasAbertasList.length, apostasHistoricoList.length]);
   
-  // Lista final baseada na sub-aba selecionada + busca por texto
+  // Suspicious date filter for ApostasTab
+  // We need to count suspicious across all unified items
+  const allUnifiedListaAtual = useMemo(() => {
+    return apostasSubTab === "abertas" ? apostasAbertasList : apostasHistoricoList;
+  }, [apostasSubTab, apostasAbertasList, apostasHistoricoList]);
+
+  const suspiciousCount = useMemo(() => {
+    return allUnifiedListaAtual.filter(u => {
+      const d = u.data as any;
+      const createdAt = d.created_at;
+      const dataAposta = u.data_aposta;
+      if (!dataAposta || !createdAt) return false;
+      return isSuspiciousDate(dataAposta, createdAt);
+    }).length;
+  }, [allUnifiedListaAtual]);
+
+  const [suspiciousActive, setSuspiciousActive] = useState(false);
+
+  // Lista final baseada na sub-aba selecionada + busca por texto + datas suspeitas
   const apostasUnificadas = useMemo(() => {
-    const lista = apostasSubTab === "abertas" ? apostasAbertasList : apostasHistoricoList;
+    let lista = allUnifiedListaAtual;
+    
+    // Filtro de datas suspeitas
+    if (suspiciousActive) {
+      lista = lista.filter(u => {
+        const d = u.data as any;
+        const createdAt = d.created_at;
+        const dataAposta = u.data_aposta;
+        if (!dataAposta || !createdAt) return false;
+        return isSuspiciousDate(dataAposta, createdAt);
+      });
+    }
+
     if (!searchTerm.trim()) return lista;
     const term = searchTerm.toLowerCase();
     return lista.filter(u => {
@@ -1196,7 +1226,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
              bookmakerNome.toLowerCase().includes(term) ||
              matchesPernas;
     });
-  }, [apostasSubTab, apostasAbertasList, apostasHistoricoList, searchTerm]);
+  }, [allUnifiedListaAtual, searchTerm, suspiciousActive]);
 
   // Contadores por contexto
   const contadores = useMemo(() => {
