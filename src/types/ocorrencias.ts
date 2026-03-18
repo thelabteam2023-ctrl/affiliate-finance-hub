@@ -157,7 +157,7 @@ export const EVENTO_TIPO_LABELS: Record<OcorrenciaEventoTipo, string> = {
 // ============================================================
 
 export const SUB_MOTIVOS: Record<OcorrenciaTipo, { value: string; label: string }[]> = {
-  movimentacao_financeira: [],
+  movimentacao_financeira: [], // handled by SUB_MOTIVOS_MOVIMENTACAO per context
   kyc: [
     { value: 'documento_pendente', label: 'Documento pendente de envio' },
     { value: 'documento_rejeitado', label: 'Documento rejeitado' },
