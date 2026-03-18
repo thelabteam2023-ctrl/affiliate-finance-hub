@@ -1,0 +1,3 @@
+DELETE FROM ocorrencias_eventos WHERE ocorrencia_id IN ('3bfafe2c-32bc-484c-8356-1ac3630b3eeb','27e686b8-ffe1-4fd8-875c-c85c3e39bc91','91b92341-0a6d-497f-8fc4-ef3b2716ce68','830adbe6-fb16-42fb-92d5-6db8ada7d45f');
+DELETE FROM ocorrencias_observadores WHERE ocorrencia_id IN ('3bfafe2c-32bc-484c-8356-1ac3630b3eeb','27e686b8-ffe1-4fd8-875c-c85c3e39bc91','91b92341-0a6d-497f-8fc4-ef3b2716ce68','830adbe6-fb16-42fb-92d5-6db8ada7d45f');
+DELETE FROM ocorrencias WHERE id IN ('3bfafe2c-32bc-484c-8356-1ac3630b3eeb','27e686b8-ffe1-4fd8-875c-c85c3e39bc91','91b92341-0a6d-497f-8fc4-ef3b2716ce68','830adbe6-fb16-42fb-92d5-6db8ada7d45f');
