@@ -101,7 +101,7 @@ export function ProjectCreationWizard({
   const validateStep = (step: WizardStep): boolean => {
     switch (step) {
       case "dados":
-        if (isBrokerContext && !formData.investidor_id) return false;
+        if (isBrokerContext && (!formData.investidores_projeto || formData.investidores_projeto.length === 0)) return false;
         return !!formData.nome.trim() && !!formData.data_inicio;
       case "moeda":
         // BRL não precisa de cotação, USD precisa
