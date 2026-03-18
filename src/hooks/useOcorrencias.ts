@@ -262,11 +262,9 @@ export function useCriarOcorrencia() {
 
       return ocorrencia as Ocorrencia;
     },
-    onSuccess: (_data, variables) => {
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: OCORRENCIAS_KEYS.all(workspaceId!) });
-      if (!variables._suppressToast) {
-        toast.success('Ocorrência criada com sucesso');
-      }
+      toast.success('Ocorrência criada com sucesso');
     },
     onError: (err) => {
       console.error('Erro ao criar ocorrência:', err);
