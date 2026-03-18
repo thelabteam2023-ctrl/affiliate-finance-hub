@@ -190,7 +190,7 @@ export function ProjetoOcorrenciasTab({ projetoId, onDataChange, formatCurrency:
                   <p className="font-semibold text-foreground">Ocorrências Abertas</p>
                   <p className="text-muted-foreground">Incidentes em andamento neste projeto.</p>
                   <div className="flex justify-between gap-4 border-t border-border/50 pt-1">
-                    <span>Valor em risco</span>
+                    <span>Valor em disputa</span>
                     <span className="font-semibold text-foreground">{formatBRL(valorRiscoAberto)}</span>
                   </div>
                 </div>
