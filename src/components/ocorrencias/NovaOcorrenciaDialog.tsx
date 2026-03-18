@@ -284,10 +284,16 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                       onValueChange={(v) => {
                         field.onChange(v);
                         form.setValue('sub_motivo', '');
-                        form.setValue('contexto_entidade', undefined as unknown as 'bookmaker' | 'banco');
                         form.setValue('entidade_id', '');
                         setSelectedCasa('');
                         setSelectedParceiroId(null);
+                        if (v === 'bloqueio_bancario') {
+                          form.setValue('contexto_entidade', 'banco');
+                        } else if (v === 'bloqueio_contas') {
+                          form.setValue('contexto_entidade', 'bookmaker');
+                        } else {
+                          form.setValue('contexto_entidade', undefined as unknown as 'bookmaker' | 'banco');
+                        }
                       }}
                       value={field.value}
                     >
