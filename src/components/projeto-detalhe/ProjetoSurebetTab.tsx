@@ -945,9 +945,17 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
     }
   }, [loading, surebetsAbertas.length, surebetsHistorico.length]);
   
-  // Lista baseada na sub-aba selecionada + busca por texto
+  // Lista baseada na sub-aba selecionada
+  const surebetsListaBase = useMemo(() => {
+    return operacoesSubTab === "abertas" ? surebetsAbertas : surebetsHistorico;
+  }, [operacoesSubTab, surebetsAbertas, surebetsHistorico]);
+
+  // Suspicious date filter
+  const suspiciousFilter = useSuspiciousDateFilter(surebetsListaBase, "data_operacao");
+
+  // Aplicar busca por texto + filtro de datas suspeitas
   const surebetsListaAtual = useMemo(() => {
-    const lista = operacoesSubTab === "abertas" ? surebetsAbertas : surebetsHistorico;
+    let lista = surebetsListaBase.filter(s => suspiciousFilter.filterFn(s));
     if (!searchTerm.trim()) return lista;
     const term = searchTerm.toLowerCase();
     return lista.filter(s => {
@@ -955,12 +963,11 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
         (s.esporte || '').toLowerCase().includes(term) ||
         (s.modelo || '').toLowerCase().includes(term);
       if (matchesBasic) return true;
-      // Busca por nome de casa (bookmaker) - simples ou pernas
       if ((s.bookmaker_nome || '').toLowerCase().includes(term)) return true;
       if (s.pernas?.some(p => (p.bookmaker_nome || '').toLowerCase().includes(term))) return true;
       return false;
     });
-  }, [operacoesSubTab, surebetsAbertas, surebetsHistorico, searchTerm]);
+  }, [surebetsListaBase, searchTerm, suspiciousFilter.active]);
 
   // Navigation handlers
   const handleModeToggle = () => {
