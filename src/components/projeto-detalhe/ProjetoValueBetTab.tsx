@@ -79,6 +79,7 @@ interface ProjetoValueBetTabProps {
 
 interface Aposta {
   id: string;
+  created_at?: string;
   data_aposta: string;
   esporte: string;
   evento: string;
