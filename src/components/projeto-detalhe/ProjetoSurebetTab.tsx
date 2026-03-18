@@ -84,6 +84,7 @@ interface ProjetoSurebetTabProps {
 
 interface Surebet {
   id: string;
+  created_at?: string;
   data_operacao: string;
   evento: string;
   esporte: string;
