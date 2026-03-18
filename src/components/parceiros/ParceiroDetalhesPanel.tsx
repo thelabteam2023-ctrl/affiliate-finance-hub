@@ -578,7 +578,10 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                   <span>•</span>
                   <Popover>
                     <PopoverTrigger asChild>
-                      <button className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer rounded px-1.5 py-0.5 hover:bg-muted/50">
+                      <button 
+                        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer rounded px-1.5 py-0.5 hover:bg-muted/50"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <DollarSign className="h-3 w-3" />
                         <span>Ver saldos</span>
                       </button>
