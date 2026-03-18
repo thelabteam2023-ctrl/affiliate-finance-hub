@@ -213,8 +213,13 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
         contexto_metadata: contextoInicial?.contexto_metadata,
         valor_risco: data.valor_risco || 0,
         data_ocorrencia: data.data_ocorrencia ? format(data.data_ocorrencia, 'yyyy-MM-dd') : undefined,
+        _suppressToast: true,
       });
     }
+
+    // Toast único após criar todas
+    const count = executoresSelecionados.length;
+    toast.success(count === 1 ? 'Ocorrência criada com sucesso' : `${count} ocorrências criadas com sucesso`);
 
     onOpenChange(false);
     form.reset();
