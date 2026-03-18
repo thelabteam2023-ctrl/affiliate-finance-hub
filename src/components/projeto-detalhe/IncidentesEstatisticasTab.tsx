@@ -579,7 +579,11 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Building2 className="h-5 w-5 text-muted-foreground" />
+              {selectedCasa?.logo_url ? (
+                <img src={selectedCasa.logo_url} alt={selectedCasa.nome} className="h-6 w-6 rounded object-contain" />
+              ) : (
+                <Building2 className="h-5 w-5 text-muted-foreground" />
+              )}
               {selectedCasa?.nome}
               <Badge variant="secondary" className="ml-2">{selectedCasa?.count} incidências</Badge>
             </DialogTitle>
