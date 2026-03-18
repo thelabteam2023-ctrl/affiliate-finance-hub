@@ -130,13 +130,13 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
 
   const conversaoVisual = useMemo(() => {
     if (moedaConsolidacao === "USD") {
-      const valorBRL = saldoAtualTotal * cotacaoUSD;
+      const valorBRL = saldoOperavel * cotacaoUSD;
       return { valor: valorBRL, moeda: "BRL", symbol: "R$", label: "≈ R$" };
     } else {
-      const valorUSD = saldoAtualTotal / cotacaoUSD;
+      const valorUSD = saldoOperavel / cotacaoUSD;
       return { valor: valorUSD, moeda: "USD", symbol: "$", label: "≈ $" };
     }
-  }, [saldoAtualTotal, moedaConsolidacao, cotacaoUSD]);
+  }, [saldoOperavel, moedaConsolidacao, cotacaoUSD]);
 
   const handleRetry = async () => {
     setIsRetrying(true);
