@@ -716,6 +716,25 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
   const totalAbertasCount = useMemo(() => allUnificadas.filter(isItemPendenteFn).length, [allUnificadas]);
   const totalHistoricoCount = useMemo(() => allUnificadas.filter(i => !isItemPendenteFn(i)).length, [allUnificadas]);
 
+  // Suspicious date count
+  const suspiciousCount = useMemo(() => {
+    const lista = subTab === "historico" ? apostasHistorico : [];
+    return lista.filter(u => {
+      const d = u.data as any;
+      if (!u.data_aposta || !d.created_at) return false;
+      return isSuspiciousDate(u.data_aposta, d.created_at);
+    }).length;
+  }, [apostasHistorico, subTab]);
+
+  const apostasHistoricoFiltered = useMemo(() => {
+    if (!suspiciousActive) return apostasHistorico;
+    return apostasHistorico.filter(u => {
+      const d = u.data as any;
+      if (!u.data_aposta || !d.created_at) return false;
+      return isSuspiciousDate(u.data_aposta, d.created_at);
+    });
+  }, [apostasHistorico, suspiciousActive]);
+
   // Auto-switch to history tab when no open operations
   useEffect(() => {
     if (!loading && apostasAbertas.length === 0 && apostasHistorico.length > 0 && subTab === 'abertas') {
