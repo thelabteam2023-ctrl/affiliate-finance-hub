@@ -515,7 +515,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
         const { data: pernasData } = await supabase
           .from("apostas_pernas")
           .select(`
-            aposta_id, bookmaker_id, odd, stake, moeda, selecao_livre, ordem,
+            aposta_id, id, bookmaker_id, odd, stake, moeda, selecao, selecao_livre, ordem, resultado, lucro_prejuizo,
             bookmaker:bookmakers (
               nome, parceiro_id,
               parceiro:parceiros (nome),
