@@ -281,13 +281,13 @@ export function EditarOcorrenciaDialog({ open, onOpenChange, ocorrencia }: Props
               )}
             />
 
-            {/* Valor em risco */}
+            {/* Valor em disputa */}
             <FormField
               control={form.control}
               name="valor_risco"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Valor em risco (opcional)</FormLabel>
+                  <FormLabel>Valor em disputa (opcional)</FormLabel>
                   <FormControl>
                     <Input
                       type="number"

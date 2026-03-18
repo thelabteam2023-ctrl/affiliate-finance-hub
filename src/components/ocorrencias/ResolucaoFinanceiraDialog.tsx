@@ -70,7 +70,7 @@ export function ResolucaoFinanceiraDialog({
     {
       value: 'perda_confirmada' as const,
       label: 'Perda total confirmada',
-      description: `Todo o valor em risco (${formatCurrency(valorRisco, moeda)}) será contabilizado como prejuízo.`,
+      description: `Todo o valor em disputa (${formatCurrency(valorRisco, moeda)}) será contabilizado como prejuízo.`,
       icon: <XCircle className="h-5 w-5 text-red-500" />,
       color: 'border-red-500/30 bg-red-500/5',
     },
@@ -139,7 +139,7 @@ export function ResolucaoFinanceiraDialog({
               className="font-mono"
             />
             <p className="text-xs text-muted-foreground">
-              Valor em risco: {formatCurrency(valorRisco, moeda)} — Informe quanto foi efetivamente perdido.
+              Valor em disputa: {formatCurrency(valorRisco, moeda)} — Informe quanto foi efetivamente perdido.
             </p>
           </div>
         )}
