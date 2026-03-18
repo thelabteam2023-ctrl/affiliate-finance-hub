@@ -2,11 +2,13 @@ import { useMemo } from 'react';
 import { useOcorrencias } from '@/hooks/useOcorrencias';
 import { useWorkspaceMembers } from '@/hooks/useWorkspaceMembers';
 import { useFinanceiroConsolidado } from '@/hooks/useFinanceiroConsolidado';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { TIPO_LABELS, PRIORIDADE_LABELS, STATUS_LABELS } from '@/types/ocorrencias';
+import { TIPO_LABELS, PRIORIDADE_LABELS } from '@/types/ocorrencias';
 import { CURRENCY_SYMBOLS, type SupportedCurrency } from '@/types/currency';
 import type { Ocorrencia, OcorrenciaTipo, OcorrenciaPrioridade } from '@/types/ocorrencias';
 import { getFirstLastName } from '@/lib/utils';
@@ -34,7 +36,6 @@ interface Props {
 const defaultFormat = (v: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
 
-/** Parse data_ocorrencia (yyyy-MM-dd) no timezone local, evitando bug UTC */
 function parseDataLocal(dateStr: string): Date {
   if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
     const [y, m, d] = dateStr.split('-').map(Number);
@@ -61,6 +62,31 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
   const { data: members = [] } = useWorkspaceMembers();
   const { converterParaBRL, formatBRL } = useFinanceiroConsolidado();
 
+  // Collect unique bookmaker IDs to resolve names
+  const bookmakerIds = useMemo(() => {
+    const ids = new Set<string>();
+    ocorrencias.forEach((o) => {
+      if (o.bookmaker_id) ids.add(o.bookmaker_id);
+    });
+    return Array.from(ids);
+  }, [ocorrencias]);
+
+  // Fetch bookmaker names
+  const { data: bookmakerNames = {} } = useQuery({
+    queryKey: ['bookmaker-names-incidentes', bookmakerIds],
+    queryFn: async () => {
+      if (bookmakerIds.length === 0) return {};
+      const { data } = await supabase
+        .from('bookmakers')
+        .select('id, nome')
+        .in('id', bookmakerIds);
+      const map: Record<string, string> = {};
+      data?.forEach((b: any) => { map[b.id] = b.nome; });
+      return map;
+    },
+    enabled: bookmakerIds.length > 0,
+  });
+
   const stats = useMemo(() => {
     if (!ocorrencias.length) return null;
 
@@ -69,10 +95,8 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
     const abertas = ocorrencias.filter((o) => !['resolvido', 'cancelado'].includes(o.status));
     const canceladas = ocorrencias.filter((o) => o.status === 'cancelado');
 
-    // === TAXA DE RESOLUÇÃO ===
     const taxaResolucao = total > 0 ? (resolvidas.length / total) * 100 : 0;
 
-    // === TEMPO MÉDIO DE RESOLUÇÃO (baseado em data_ocorrencia) ===
     const getInicio = (o: Ocorrencia) => (o as any).data_ocorrencia || o.created_at;
 
     const temposResolucao = resolvidas
@@ -81,15 +105,6 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
     const tempoMedio = temposResolucao.length > 0
       ? temposResolucao.reduce((a, b) => a + b, 0) / temposResolucao.length
       : 0;
-
-    // === TEMPO MÉDIO POR PRIORIDADE ===
-    const tempoPorPrioridade: Record<string, { total: number; count: number }> = {};
-    resolvidas.filter((o) => o.resolved_at).forEach((o) => {
-      const h = diffHours(getInicio(o), o.resolved_at!);
-      if (!tempoPorPrioridade[o.prioridade]) tempoPorPrioridade[o.prioridade] = { total: 0, count: 0 };
-      tempoPorPrioridade[o.prioridade].total += h;
-      tempoPorPrioridade[o.prioridade].count += 1;
-    });
 
     // === OCORRÊNCIAS MAIS ANTIGAS ABERTAS ===
     const maisAntigas = [...abertas]
@@ -102,18 +117,37 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
         prioridade: o.prioridade,
       }));
 
-    // === CASAS COM MAIS INCIDÊNCIAS ===
-    const porCasa: Record<string, { count: number; nome: string }> = {};
+    // === CASAS COM MAIS INCIDÊNCIAS (com financeiro) ===
+    const porCasa: Record<string, { count: number; nome: string; riscoBRL: number; perdaBRL: number; abertas: number; resolvidas: number }> = {};
     ocorrencias.forEach((o) => {
       if (o.bookmaker_id) {
-        const nome = (o as any).bookmaker?.nome || o.bookmaker_id.slice(0, 8);
-        if (!porCasa[o.bookmaker_id]) porCasa[o.bookmaker_id] = { count: 0, nome };
+        const nome = bookmakerNames[o.bookmaker_id] || o.bookmaker_id.slice(0, 8);
+        if (!porCasa[o.bookmaker_id]) porCasa[o.bookmaker_id] = { count: 0, nome, riscoBRL: 0, perdaBRL: 0, abertas: 0, resolvidas: 0 };
         porCasa[o.bookmaker_id].count += 1;
+
+        const moeda = (o as any).moeda || 'BRL';
+        const isAberta = !['resolvido', 'cancelado'].includes(o.status);
+        const isResolvida = o.status === 'resolvido';
+
+        if (isAberta) {
+          porCasa[o.bookmaker_id].abertas += 1;
+          const risco = Number((o as any).valor_risco || 0);
+          if (risco > 0) {
+            porCasa[o.bookmaker_id].riscoBRL += converterParaBRL(risco, moeda).valorBRL;
+          }
+        }
+        if (isResolvida) {
+          porCasa[o.bookmaker_id].resolvidas += 1;
+          const perda = Number((o as any).valor_perda || 0);
+          if (perda > 0) {
+            porCasa[o.bookmaker_id].perdaBRL += converterParaBRL(perda, moeda).valorBRL;
+          }
+        }
       }
     });
     const topCasas = Object.values(porCasa)
       .sort((a, b) => b.count - a.count)
-      .slice(0, 8);
+      .slice(0, 10);
 
     // === TIPOS MAIS FREQUENTES ===
     const porTipo: Record<string, number> = {};
@@ -138,8 +172,7 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
       if (o.status === 'resolvido') porExecutor[o.executor_id].resolvidas += 1;
     });
 
-    // === IMPACTO FINANCEIRO (MULTI-MOEDA via PTAX) ===
-    // Agrupar risco por moeda para exibição detalhada
+    // === IMPACTO FINANCEIRO (MULTI-MOEDA) ===
     const riscoPorMoeda: Record<string, number> = {};
     let valorRiscoAbertoBRL = 0;
     abertas.forEach((o) => {
@@ -147,8 +180,7 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
       const moeda = (o as any).moeda || 'BRL';
       if (valor > 0) {
         riscoPorMoeda[moeda] = (riscoPorMoeda[moeda] || 0) + valor;
-        const convertido = converterParaBRL(valor, moeda);
-        valorRiscoAbertoBRL += convertido.valorBRL;
+        valorRiscoAbertoBRL += converterParaBRL(valor, moeda).valorBRL;
       }
     });
 
@@ -159,8 +191,7 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
       const moeda = (o as any).moeda || 'BRL';
       if (valor > 0) {
         perdaPorMoeda[moeda] = (perdaPorMoeda[moeda] || 0) + valor;
-        const convertido = converterParaBRL(valor, moeda);
-        valorPerdaConfirmadaBRL += convertido.valorBRL;
+        valorPerdaConfirmadaBRL += converterParaBRL(valor, moeda).valorBRL;
       }
     });
 
@@ -176,7 +207,6 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
       canceladas: canceladas.length,
       taxaResolucao,
       tempoMedio,
-      tempoPorPrioridade,
       maisAntigas,
       topCasas,
       topTipos,
@@ -189,7 +219,7 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
       resolvidasSemImpacto,
       resolvidasComPerda,
     };
-  }, [ocorrencias, converterParaBRL]);
+  }, [ocorrencias, converterParaBRL, bookmakerNames]);
 
   if (isLoading) {
     return (
@@ -267,40 +297,8 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
         </TooltipProvider>
       </div>
 
-      {/* ROW 2: Tempo por prioridade + Distribuição prioridade */}
+      {/* ROW 2: Distribuição por prioridade + Tipos mais frequentes */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Tempo médio por prioridade */}
-        <Card className="border-border/50">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Clock className="h-4 w-4 text-muted-foreground" />
-              Tempo Médio por Prioridade
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2.5">
-            {prioridadeOrder.map((p) => {
-              const data = stats.tempoPorPrioridade[p];
-              if (!data) return null;
-              const avg = data.total / data.count;
-              return (
-                <div key={p} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className={cn('h-2.5 w-2.5 rounded-full', prioridadeColors[p])} />
-                    <span className="text-sm">{PRIORIDADE_LABELS[p]}</span>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-sm font-medium">{formatDuration(avg)}</span>
-                    <span className="text-xs text-muted-foreground ml-1.5">({data.count})</span>
-                  </div>
-                </div>
-              );
-            })}
-            {Object.keys(stats.tempoPorPrioridade).length === 0 && (
-              <p className="text-xs text-muted-foreground">Sem dados de resolução ainda</p>
-            )}
-          </CardContent>
-        </Card>
-
         {/* Distribuição por prioridade */}
         <Card className="border-border/50">
           <CardHeader className="pb-3">
@@ -330,10 +328,7 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
             })}
           </CardContent>
         </Card>
-      </div>
 
-      {/* ROW 3: Tipos mais frequentes + Casas com mais incidências */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Tipos */}
         <Card className="border-border/50">
           <CardHeader className="pb-3">
@@ -354,29 +349,64 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
             ))}
           </CardContent>
         </Card>
-
-        {/* Casas */}
-        <Card className="border-border/50">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Building2 className="h-4 w-4 text-muted-foreground" />
-              Casas com Mais Incidências
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2.5">
-            {stats.topCasas.length === 0 ? (
-              <p className="text-xs text-muted-foreground">Nenhuma casa vinculada</p>
-            ) : (
-              stats.topCasas.map((c, i) => (
-                <div key={i} className="flex items-center justify-between">
-                  <span className="text-sm truncate max-w-[200px]">{c.nome}</span>
-                  <Badge variant="secondary" className="text-xs">{c.count}</Badge>
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
       </div>
+
+      {/* ROW 3: Incidências por Casa (com financeiro) — full width */}
+      <Card className="border-border/50">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <Building2 className="h-4 w-4 text-muted-foreground" />
+            Incidências por Casa
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {stats.topCasas.length === 0 ? (
+            <p className="text-xs text-muted-foreground">Nenhuma casa vinculada</p>
+          ) : (
+            <div className="space-y-0">
+              {/* Header */}
+              <div className="grid grid-cols-[1fr_60px_80px_100px_100px] gap-2 pb-2 border-b border-border/50 text-xs text-muted-foreground">
+                <span>Casa</span>
+                <span className="text-center">Total</span>
+                <span className="text-center">Abertas</span>
+                <span className="text-right">Risco</span>
+                <span className="text-right">Perda</span>
+              </div>
+              {/* Rows */}
+              {stats.topCasas.map((c, i) => (
+                <div
+                  key={i}
+                  className="grid grid-cols-[1fr_60px_80px_100px_100px] gap-2 py-2 border-b border-border/30 last:border-b-0 items-center"
+                >
+                  <span className="text-sm truncate font-medium">{c.nome}</span>
+                  <div className="flex justify-center">
+                    <Badge variant="secondary" className="text-xs">{c.count}</Badge>
+                  </div>
+                  <div className="flex justify-center">
+                    {c.abertas > 0 ? (
+                      <Badge variant="outline" className="text-xs text-yellow-400 border-yellow-400/30">{c.abertas}</Badge>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">0</span>
+                    )}
+                  </div>
+                  <span className={cn(
+                    "text-xs text-right font-medium",
+                    c.riscoBRL > 0 ? "text-yellow-400" : "text-muted-foreground"
+                  )}>
+                    {c.riscoBRL > 0 ? formatBRL(c.riscoBRL) : '—'}
+                  </span>
+                  <span className={cn(
+                    "text-xs text-right font-medium",
+                    c.perdaBRL > 0 ? "text-red-400" : "text-muted-foreground"
+                  )}>
+                    {c.perdaBRL > 0 ? formatBRL(c.perdaBRL) : '—'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* ROW 4: Impacto financeiro + Executores */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
