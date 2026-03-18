@@ -28,7 +28,7 @@ import {
 import { PrioridadeBadge, StatusBadge, TipoBadge, SlaBadge } from './OcorrenciaBadges';
 import { ResolucaoFinanceiraDialog } from './ResolucaoFinanceiraDialog';
 import { EditarOcorrenciaDialog } from './EditarOcorrenciaDialog';
-import { useOcorrenciaEventos, useExcluirOcorrencia, useResolverOcorrenciaComFinanceiro } from '@/hooks/useOcorrencias';
+import { useOcorrenciaEventos, useExcluirOcorrencia, useResolverOcorrenciaComFinanceiro, useReabrirOcorrencia } from '@/hooks/useOcorrencias';
 import { useWorkspaceMembers } from '@/hooks/useWorkspaceMembers';
 import type { Ocorrencia, OcorrenciaStatus, OcorrenciaEvento } from '@/types/ocorrencias';
 import { STATUS_LABELS, SUB_MOTIVO_LABELS, EVENTO_TIPO_LABELS } from '@/types/ocorrencias';
@@ -69,7 +69,7 @@ const STATUS_TRANSICOES: Record<OcorrenciaStatus, OcorrenciaStatus[]> = {
   aberto: ['em_andamento', 'cancelado'],
   em_andamento: ['aguardando_terceiro', 'resolvido', 'cancelado'],
   aguardando_terceiro: ['em_andamento', 'resolvido', 'cancelado'],
-  resolvido: [],
+  resolvido: ['em_andamento'], // Reabrir
   cancelado: [],
 };
 
@@ -212,6 +212,7 @@ export function OcorrenciaCollapseCard({
   const [isOpen, setIsOpen] = useState(false);
   const { mutate: excluir, isPending: excluindo } = useExcluirOcorrencia();
   const { mutateAsync: resolverComFinanceiro } = useResolverOcorrenciaComFinanceiro();
+  const { mutate: reabrirOcorrencia, isPending: reabrindo } = useReabrirOcorrencia();
   const [confirmExcluir, setConfirmExcluir] = useState(false);
   const [resolucaoOpen, setResolucaoOpen] = useState(false);
   const [editarOpen, setEditarOpen] = useState(false);
@@ -362,15 +363,22 @@ export function OcorrenciaCollapseCard({
                       {transicoes.map((s) => (
                         <DropdownMenuItem
                           key={s}
+                          disabled={reabrindo}
                           onClick={() => {
                             if (s === 'resolvido') {
                               setResolucaoOpen(true);
+                            } else if (ocorrencia.status === 'resolvido' && s === 'em_andamento') {
+                              reabrirOcorrencia({ id: ocorrencia.id });
                             } else {
                               onAtualizarStatus(s);
                             }
                           }}
                         >
-                          → {STATUS_LABELS[s]}
+                          {ocorrencia.status === 'resolvido' && s === 'em_andamento' ? (
+                            <>↩ Reabrir ocorrência</>
+                          ) : (
+                            <>→ {STATUS_LABELS[s]}</>
+                          )}
                         </DropdownMenuItem>
                       ))}
                       {/* Editar - disponível para executor e admin */}

@@ -14,6 +14,7 @@ import {
   useAtualizarStatusOcorrencia,
   useAdicionarComentario,
   useResolverOcorrenciaComFinanceiro,
+  useReabrirOcorrencia,
 } from '@/hooks/useOcorrencias';
 import { useAuth } from '@/hooks/useAuth';
 import { useWorkspaceMembers } from '@/hooks/useWorkspaceMembers';
@@ -46,7 +47,7 @@ const STATUS_TRANSICOES: Record<OcorrenciaStatus, OcorrenciaStatus[]> = {
   aberto: ['em_andamento', 'cancelado'],
   em_andamento: ['aguardando_terceiro', 'resolvido', 'cancelado'],
   aguardando_terceiro: ['em_andamento', 'resolvido', 'cancelado'],
-  resolvido: [],
+  resolvido: ['em_andamento'], // Reabrir
   cancelado: [],
 };
 
@@ -57,6 +58,7 @@ export function OcorrenciaDetalheDialog({ ocorrenciaId, open, onOpenChange }: Pr
   const { data: members = [] } = useWorkspaceMembers();
   const { mutate: atualizarStatus, isPending: updatingStatus } = useAtualizarStatusOcorrencia();
   const { mutateAsync: resolverComFinanceiro } = useResolverOcorrenciaComFinanceiro();
+  const { mutate: reabrirOcorrencia, isPending: reabrindo } = useReabrirOcorrencia();
   const { mutate: adicionarComentario, isPending: addingComment } = useAdicionarComentario();
   const [comentario, setComentario] = useState('');
   const [resolucaoOpen, setResolucaoOpen] = useState(false);
@@ -194,10 +196,12 @@ export function OcorrenciaDetalheDialog({ ocorrenciaId, open, onOpenChange }: Pr
                   variant="outline"
                   size="sm"
                   className="w-full justify-start text-xs"
-                  disabled={updatingStatus}
+                  disabled={updatingStatus || reabrindo}
                   onClick={() => {
                     if (s === 'resolvido') {
                       setResolucaoOpen(true);
+                    } else if (ocorrencia.status === 'resolvido' && s === 'em_andamento') {
+                      reabrirOcorrencia({ id: ocorrencia.id });
                     } else {
                       atualizarStatus({
                         id: ocorrencia.id,
@@ -208,7 +212,9 @@ export function OcorrenciaDetalheDialog({ ocorrenciaId, open, onOpenChange }: Pr
                   }}
                 >
                   <ArrowRight className="h-3 w-3 mr-1.5" />
-                  {STATUS_LABELS[s]}
+                  {ocorrencia.status === 'resolvido' && s === 'em_andamento'
+                    ? 'Reabrir ocorrência'
+                    : STATUS_LABELS[s]}
                 </Button>
               ))}
             </div>
