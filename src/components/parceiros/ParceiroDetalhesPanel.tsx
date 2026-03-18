@@ -599,7 +599,10 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                 <Button
                   variant="outline"
                   size="icon"
-                  onClick={() => parceiroCache.refreshCurrent()}
+                  onClick={() => {
+                    parceiroCache.refreshCurrent();
+                    toast({ title: "Atualizando dados...", description: "Os dados do parceiro estão sendo recarregados." });
+                  }}
                   disabled={loading}
                   className="shrink-0 h-8 w-8"
                 >
