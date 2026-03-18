@@ -54,7 +54,7 @@ import { StandardTimeFilter } from "./StandardTimeFilter";
 import { useTabFilters } from "@/hooks/useTabFilters";
 import { cn, getFirstLastName } from "@/lib/utils";
 import { parsePernaFromJson } from "@/types/apostasUnificada";
-import { OperationsSubTabHeader, type HistorySubTab } from "./operations";
+import { OperationsSubTabHeader, type HistorySubTab, SuspiciousDateFilterButton, useSuspiciousDateFilter, isSuspiciousDate } from "./operations";
 import { parseLocalDateTime } from "@/utils/dateUtils";
 import { ExportMenu, transformApostaToExport, transformSurebetToExport } from "./ExportMenu";
 import { DeleteBetConfirmDialog, type DeleteBetInfo } from "@/components/apostas/DeleteBetConfirmDialog";
