@@ -5,20 +5,22 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const SUSPICIOUS_THRESHOLD_HOURS = 48;
+const SUSPICIOUS_THRESHOLD_HOURS = 72;
 
 /**
  * Verifica se uma aposta tem data suspeita.
  * 
- * Uma data é considerada suspeita quando a diferença entre
- * data_aposta (data informada pelo operador) e created_at (data real do registro)
- * é maior que 48 horas, indicando possível erro de digitação.
+ * Uma data é considerada suspeita quando:
+ * 1. |data_aposta - created_at| > 72 horas (possível erro de digitação), OU
+ * 2. O ano de data_aposta é diferente do ano vigente (ano atual).
  */
 export function isSuspiciousDate(dataAposta: string, createdAt: string): boolean {
-  const aposta = new Date(dataAposta).getTime();
-  const criacao = new Date(createdAt).getTime();
-  const diffHours = Math.abs(aposta - criacao) / (1000 * 60 * 60);
-  return diffHours > SUSPICIOUS_THRESHOLD_HOURS;
+  const aposta = new Date(dataAposta);
+  const criacao = new Date(createdAt);
+  const diffHours = Math.abs(aposta.getTime() - criacao.getTime()) / (1000 * 60 * 60);
+  const currentYear = new Date().getFullYear();
+  const apostaYear = aposta.getFullYear();
+  return diffHours > SUSPICIOUS_THRESHOLD_HOURS || apostaYear !== currentYear;
 }
 
 /**
@@ -110,9 +112,9 @@ export function SuspiciousDateFilterButton({
       <TooltipContent side="bottom" className="max-w-[280px] text-xs">
         <p className="font-semibold mb-1">Apostas com datas suspeitas</p>
         <p className="text-muted-foreground">
-          {count} {count === 1 ? "aposta foi registrada" : "apostas foram registradas"} com uma data de operação 
-          que difere em mais de 48h da data de criação do registro. 
-          Isso pode indicar erro de digitação na data.
+          {count} {count === 1 ? "aposta foi registrada" : "apostas foram registradas"} com data suspeita: 
+          diferença superior a 72h entre data da operação e data de criação, ou data de um ano diferente do vigente. 
+          Isso pode indicar erro de digitação.
         </p>
       </TooltipContent>
     </Tooltip>
