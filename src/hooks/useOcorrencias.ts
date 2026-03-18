@@ -203,6 +203,7 @@ interface CriarOcorrenciaPayload {
   valor_risco?: number;
   moeda?: string;
   data_ocorrencia?: string;
+  _suppressToast?: boolean;
 }
 
 export function useCriarOcorrencia() {
@@ -261,9 +262,11 @@ export function useCriarOcorrencia() {
 
       return ocorrencia as Ocorrencia;
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       qc.invalidateQueries({ queryKey: OCORRENCIAS_KEYS.all(workspaceId!) });
-      toast.success('Ocorrência criada com sucesso');
+      if (!variables._suppressToast) {
+        toast.success('Ocorrência criada com sucesso');
+      }
     },
     onError: (err) => {
       console.error('Erro ao criar ocorrência:', err);
