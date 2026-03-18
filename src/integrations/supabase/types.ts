@@ -7875,6 +7875,7 @@ export type Database = {
           data_reversao: string | null
           descricao: string | null
           id: string
+          ocorrencia_id: string | null
           projeto_id: string
           status: string
           updated_at: string
@@ -7891,6 +7892,7 @@ export type Database = {
           data_reversao?: string | null
           descricao?: string | null
           id?: string
+          ocorrencia_id?: string | null
           projeto_id: string
           status?: string
           updated_at?: string
@@ -7907,6 +7909,7 @@ export type Database = {
           data_reversao?: string | null
           descricao?: string | null
           id?: string
+          ocorrencia_id?: string | null
           projeto_id?: string
           status?: string
           updated_at?: string

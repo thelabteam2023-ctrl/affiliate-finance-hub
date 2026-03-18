@@ -1,0 +1,1 @@
+ALTER TABLE public.projeto_perdas ADD COLUMN IF NOT EXISTS ocorrencia_id uuid DEFAULT NULL;
