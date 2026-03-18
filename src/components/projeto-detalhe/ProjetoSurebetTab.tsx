@@ -1408,14 +1408,21 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
           {/* Filtros Dimensionais da Aba Operações (Casa, Parceiro) */}
           {/* ISOLAMENTO: Período já é controlado pelo filtro de nível superior */}
           {/* Apenas filtros dimensionais são exibidos aqui para não afetar Visão Geral */}
-          <TabFiltersBar
-            projetoId={projetoId}
-            filters={tabFilters}
-            showEstrategiaFilter={false}
-            showPeriodFilter={false}
-            showResultadoFilter={true}
-            className="pb-3 border-b border-border/50"
-          />
+          <div className="flex items-center gap-2 pb-3 border-b border-border/50 flex-wrap">
+            <TabFiltersBar
+              projetoId={projetoId}
+              filters={tabFilters}
+              showEstrategiaFilter={false}
+              showPeriodFilter={false}
+              showResultadoFilter={true}
+              className="flex-1"
+            />
+            <SuspiciousDateFilterButton
+              active={suspiciousFilter.active}
+              onToggle={suspiciousFilter.setActive}
+              count={suspiciousFilter.suspiciousCount}
+            />
+          </div>
         </CardContent>
       </Card>
 
