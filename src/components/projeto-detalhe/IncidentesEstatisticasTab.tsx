@@ -520,21 +520,27 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
               ) : (
                 <div className="space-y-0">
                   {/* Header */}
-                  <div className="grid grid-cols-[1fr_70px_70px_90px_100px_100px] gap-2 pb-2 border-b border-border/50 text-xs text-muted-foreground">
+                  <div className="grid grid-cols-[1fr_70px_70px_90px_100px] gap-2 pb-2 border-b border-border/50 text-xs text-muted-foreground">
                     <span>Casa</span>
                     <span className="text-center">Total</span>
                     <span className="text-center">Abertas</span>
                     <span className="text-center">Tempo ø</span>
-                    <span className="text-right">Risco</span>
                     <span className="text-right">Perda</span>
                   </div>
                   {/* Rows */}
                   {casaStats.map((c) => (
                     <div
                       key={c.bookmaker_id}
-                      className="grid grid-cols-[1fr_70px_70px_90px_100px_100px] gap-2 py-2.5 border-b border-border/30 last:border-b-0 items-center"
+                      className="grid grid-cols-[1fr_70px_70px_90px_100px] gap-2 py-2.5 border-b border-border/30 last:border-b-0 items-center"
                     >
-                      <span className="text-sm truncate font-medium">{c.nome}</span>
+                      <div className="flex items-center gap-2 min-w-0">
+                        {c.logo_url ? (
+                          <img src={c.logo_url} alt={c.nome} className="h-5 w-5 rounded object-contain shrink-0" />
+                        ) : (
+                          <Building2 className="h-5 w-5 text-muted-foreground shrink-0" />
+                        )}
+                        <span className="text-sm truncate font-medium">{c.nome}</span>
+                      </div>
                       <div className="flex justify-center">
                         <button
                           onClick={() => setSelectedCasa(c)}
@@ -555,9 +561,6 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
                       </div>
                       <span className="text-xs text-center font-medium text-muted-foreground">
                         {c.tempoMedioHoras !== null ? formatDuration(c.tempoMedioHoras) : '—'}
-                      </span>
-                      <span className={cn("text-xs text-right font-medium", c.riscoBRL > 0 ? "text-yellow-400" : "text-muted-foreground")}>
-                        {c.riscoBRL > 0 ? formatBRL(c.riscoBRL) : '—'}
                       </span>
                       <span className={cn("text-xs text-right font-medium", c.perdaBRL > 0 ? "text-red-400" : "text-muted-foreground")}>
                         {c.perdaBRL > 0 ? formatBRL(c.perdaBRL) : '—'}
