@@ -1040,13 +1040,20 @@ export function ProjetoValueBetTab({
       </CardHeader>
       <CardContent className="pt-0 space-y-3">
         {/* Filtros LOCAIS da aba (isolados de outras abas) */}
-        <TabFiltersBar
-          projetoId={projetoId}
-          filters={tabFilters}
-          showEstrategiaFilter={false}
-          showResultadoFilter={true}
-          className="pb-3 border-b border-border/50"
-        />
+        <div className="flex items-center gap-2 pb-3 border-b border-border/50 flex-wrap">
+          <TabFiltersBar
+            projetoId={projetoId}
+            filters={tabFilters}
+            showEstrategiaFilter={false}
+            showResultadoFilter={true}
+            className="flex-1"
+          />
+          <SuspiciousDateFilterButton
+            active={suspiciousFilter.active}
+            onToggle={suspiciousFilter.setActive}
+            count={suspiciousFilter.suspiciousCount}
+          />
+        </div>
       </CardContent>
     </Card>
 
