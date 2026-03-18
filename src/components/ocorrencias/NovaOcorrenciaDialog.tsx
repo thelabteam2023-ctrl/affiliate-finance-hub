@@ -286,7 +286,7 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                         form.setValue('entidade_id', '');
                         setSelectedCasa('');
                         setSelectedParceiroId(null);
-                      }
+                      }}
                       value={field.value}
                     >
                       <FormControl>
