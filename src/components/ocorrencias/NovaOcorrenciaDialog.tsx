@@ -119,6 +119,7 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
         .from('parceiros')
         .select('id, nome')
         .eq('workspace_id', workspaceId!)
+        .neq('is_caixa_operacional', true)
         .order('nome');
       if (error) throw error;
       return data || [];
