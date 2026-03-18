@@ -163,33 +163,6 @@ export function StepDadosBasicos({ formData, onChange, isBrokerContext = false }
         </CardContent>
       </Card>
 
-      {/* Investimento Crypto */}
-      <Card className={cn(
-        "transition-colors",
-        formData.tem_investimento_crypto && "border-orange-500/30"
-      )}>
-        <CardContent className="pt-4">
-          <div className="flex items-start gap-3">
-            <Checkbox
-              id="tem_crypto"
-              checked={formData.tem_investimento_crypto}
-              onCheckedChange={(checked) =>
-                onChange({ tem_investimento_crypto: checked as boolean })
-              }
-            />
-            <div className="space-y-1 flex-1">
-              <Label htmlFor="tem_crypto" className="flex items-center gap-2 cursor-pointer">
-                <Coins className="h-4 w-4 text-orange-500" />
-                Investimento Crypto
-                <Badge variant="secondary" className="text-xs ml-auto">Opcional</Badge>
-              </Label>
-              <p className="text-xs text-muted-foreground">
-                Ativa conciliação patrimonial obrigatória
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

@@ -418,12 +418,6 @@ export default function ProjetoDetalhe() {
           <div className="h-4 w-px bg-border flex-shrink-0 hidden sm:block" />
 
           <div className="flex items-center gap-1.5 flex-shrink-0 hidden sm:flex">
-            {projeto.tem_investimento_crypto && (
-              <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30 text-[10px] px-1.5 py-0">
-                <Coins className="h-2.5 w-2.5 mr-0.5" />
-                Crypto
-              </Badge>
-            )}
             {diasCiclo !== null && (
               <>
                 <span className="text-muted-foreground/40 hidden md:inline">•</span>
