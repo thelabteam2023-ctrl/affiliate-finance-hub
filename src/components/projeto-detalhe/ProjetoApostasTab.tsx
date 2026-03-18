@@ -1515,13 +1515,21 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
         </CardHeader>
         <CardContent className="pt-0 space-y-3">
           {/* Filtros LOCAIS da aba Apostas (isolados de outras abas) */}
-          <TabFiltersBar
-            projetoId={projetoId}
-            filters={tabFilters}
-            showPeriodFilter={false}
-            showEstrategiaFilter={true}
-            showResultadoFilter={true}
-          />
+          <div className="flex items-center gap-2 flex-wrap">
+            <TabFiltersBar
+              projetoId={projetoId}
+              filters={tabFilters}
+              showPeriodFilter={false}
+              showEstrategiaFilter={true}
+              showResultadoFilter={true}
+              className="flex-1"
+            />
+            <SuspiciousDateFilterButton
+              active={suspiciousActive}
+              onToggle={setSuspiciousActive}
+              count={suspiciousCount}
+            />
+          </div>
         </CardContent>
       </Card>
 
