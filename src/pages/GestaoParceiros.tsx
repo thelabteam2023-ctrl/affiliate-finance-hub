@@ -507,6 +507,8 @@ export default function GestaoParceiros() {
                 onDeleteParceiro={handleDeleteParceiroClick}
                 parceiroCache={parceiroCache}
                 bookmakerRefreshKey={bookmakerRefreshKey}
+                saldoBanco={selectedParceiroDetalhes ? (saldosData.get(selectedParceiroDetalhes)?.saldo_fiat ?? 0) : 0}
+                saldoCrypto={selectedParceiroDetalhes ? (saldosData.get(selectedParceiroDetalhes)?.saldo_crypto_usd ?? 0) : 0}
               />
             </div>
           </Card>
