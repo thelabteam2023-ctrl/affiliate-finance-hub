@@ -319,7 +319,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
         const { data: pendentesData } = await supabase
           .from("apostas_unificada")
           .select(`
-            id, workspace_id, data_aposta, evento, esporte, modelo, mercado, stake, stake_total, stake_bonus,
+            id, workspace_id, created_at, data_aposta, evento, esporte, modelo, mercado, stake, stake_total, stake_bonus,
             spread_calculado, roi_esperado, lucro_esperado, lucro_prejuizo, roi_real,
             status, resultado, observacoes, forma_registro, estrategia, contexto_operacional,
             odd, selecao, bookmaker_id, bonus_id,
