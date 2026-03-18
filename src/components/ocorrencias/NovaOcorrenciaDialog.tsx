@@ -38,7 +38,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { useParceiroContas, type ContaOuWallet } from '@/hooks/useParceiroContas';
-import { TIPO_LABELS, PRIORIDADE_LABELS, SUB_MOTIVOS } from '@/types/ocorrencias';
+import { TIPO_LABELS, PRIORIDADE_LABELS, SUB_MOTIVOS, SUB_MOTIVOS_MOVIMENTACAO } from '@/types/ocorrencias';
 import type { OcorrenciaTipo, OcorrenciaPrioridade } from '@/types/ocorrencias';
 import { AlertTriangle, Loader2, X, ChevronsUpDown, Check, Users, Filter, CalendarIcon, Wallet, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
