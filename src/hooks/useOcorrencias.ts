@@ -578,8 +578,8 @@ export function useReabrirOcorrencia() {
         }
 
         // Registrar reversão no ledger
-        const { registrarPerdaReversaoViaLedger } = await import('@/lib/ledgerService');
-        await registrarPerdaReversaoViaLedger({
+        const { reverterPerdaOperacionalViaLedger } = await import('@/lib/ledgerService');
+        await reverterPerdaOperacionalViaLedger({
           bookmakerId: ocorrencia.bookmaker_id || '',
           valor: valorPerda,
           moeda: bkMoeda,

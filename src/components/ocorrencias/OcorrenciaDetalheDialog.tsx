@@ -46,7 +46,7 @@ const STATUS_TRANSICOES: Record<OcorrenciaStatus, OcorrenciaStatus[]> = {
   aberto: ['em_andamento', 'cancelado'],
   em_andamento: ['aguardando_terceiro', 'resolvido', 'cancelado'],
   aguardando_terceiro: ['em_andamento', 'resolvido', 'cancelado'],
-  resolvido: [],
+  resolvido: ['em_andamento'], // Reabrir
   cancelado: [],
 };
 
