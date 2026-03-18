@@ -129,6 +129,7 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
     loading: responsibilitiesLoading 
   } = useProjectResponsibilities(projetoId);
 
+  const queryClient = useQueryClient();
   // ===== REACT QUERY HOOKS - Lifecycle management automático =====
   // Isso elimina toasts "fantasmas" após navegação, pois as queries
   // são automaticamente canceladas no unmount do componente.
