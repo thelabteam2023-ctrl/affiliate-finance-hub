@@ -272,37 +272,10 @@ async function fetchPerdasCancelamentoBonuses(
   }).filter(e => e.valor !== 0);
 }
 
-async function fetchAjustesPosLimitacao(
-  projectBookmakerIds: Set<string>,
-  projectBookmakerMoeda: Map<string, string>
-): Promise<ProjetoExtraEntry[]> {
-  if (projectBookmakerIds.size === 0) return [];
-
-  const { data } = await supabase
-    .from('financial_events')
-    .select('valor, moeda, bookmaker_id, metadata, created_at')
-    .eq('tipo_evento', 'AJUSTE')
-    .in('bookmaker_id', Array.from(projectBookmakerIds))
-    .not('metadata', 'is', null);
-
-  const entries: ProjetoExtraEntry[] = [];
-  (data || []).forEach((evt: any) => {
-    try {
-      const meta = typeof evt.metadata === 'string' ? JSON.parse(evt.metadata) : evt.metadata;
-      if (meta?.tipo_ajuste !== 'AJUSTE_POS_LIMITACAO') return;
-      const dataOp = meta?.data_encerramento || evt.created_at;
-      const valor = Number(evt.valor) || 0;
-      if (!valor) return;
-      entries.push({
-        data: extractCivilDateKey(dataOp),
-        valor,
-        moeda: evt.moeda || projectBookmakerMoeda.get(evt.bookmaker_id) || 'BRL',
-        tipo: 'ajuste_saldo',
-      });
-    } catch { /* metadata inválido */ }
-  });
-  return entries;
-}
+// NOTA: fetchAjustesPosLimitacao foi REMOVIDO.
+// financial_events tipo AJUSTE são correções internas de saldo da bookmaker
+// (estornos de exclusão, ajustes de payout/odd) e NÃO representam lucro/prejuízo
+// operacional real. Incluí-los inflava artificialmente o lucro do projeto.
 
 async function fetchAjustesSaldo(projetoId: string): Promise<ProjetoExtraEntry[]> {
   const { data } = await supabase
