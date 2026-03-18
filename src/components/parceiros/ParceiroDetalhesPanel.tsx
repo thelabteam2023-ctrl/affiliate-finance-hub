@@ -573,7 +573,7 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                   </span>
                 </>
               )}
-              {(saldoBanco > 0 || saldoCrypto > 0) && (
+              {(saldoBanco !== 0 || saldoCrypto !== 0) && (
                 <>
                   <span>•</span>
                   <Popover>
