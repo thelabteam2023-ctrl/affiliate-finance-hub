@@ -566,6 +566,7 @@ export function useResolverOcorrenciaComFinanceiro() {
                 workspace_id: bkWorkspaceId,
                 user_id: user!.id,
                 bookmaker_id: ocorrencia.bookmaker_id || null,
+                ocorrencia_id: id,
                 valor: valorPerda,
                 categoria: ocorrencia.tipo || 'bloqueio_contas',
                 status: 'CONFIRMADA',
