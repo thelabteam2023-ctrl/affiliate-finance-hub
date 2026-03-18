@@ -14,6 +14,7 @@ import {
   useAtualizarStatusOcorrencia,
   useAdicionarComentario,
   useResolverOcorrenciaComFinanceiro,
+  useReabrirOcorrencia,
 } from '@/hooks/useOcorrencias';
 import { useAuth } from '@/hooks/useAuth';
 import { useWorkspaceMembers } from '@/hooks/useWorkspaceMembers';
