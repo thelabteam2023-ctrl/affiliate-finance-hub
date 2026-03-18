@@ -499,7 +499,12 @@ export function useResolverOcorrenciaComFinanceiro() {
       qc.invalidateQueries({ queryKey: OCORRENCIAS_KEYS.all(workspaceId!) });
       qc.invalidateQueries({ queryKey: OCORRENCIAS_KEYS.detail(vars.id) });
       qc.invalidateQueries({ queryKey: OCORRENCIAS_KEYS.eventos(vars.id) });
+      // Invalidar queries financeiras do projeto para refletir a perda no KPI
       if (vars.valorPerda > 0) {
+        qc.invalidateQueries({ queryKey: ['projeto-dashboard-data'] });
+        qc.invalidateQueries({ queryKey: ['central-operacoes-data'] });
+        qc.invalidateQueries({ queryKey: ['projeto-kpi'] });
+        qc.invalidateQueries({ queryKey: ['projeto-extras'] });
         toast.success(`Ocorrência resolvida com perda de ${vars.valorPerda.toFixed(2)} registrada`);
       } else {
         toast.success('Ocorrência resolvida sem impacto financeiro');
