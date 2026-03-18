@@ -1811,15 +1811,21 @@ export function CaixaTransacaoDialog({
   };
 
   const getParceirosDisponiveisDestino = () => {
-    // Retorna apenas parceiros que têm contas/wallets disponíveis (excluindo a selecionada na origem)
+    // Retorna apenas parceiros que têm contas/wallets disponíveis,
+    // excluindo a conta/wallet de origem E o parceiro de origem (evita transferência para si mesmo)
+    const parceirosExcluidos = new Set<string>();
+    if (origemParceiroId) parceirosExcluidos.add(origemParceiroId);
+    // Quando a origem é o Caixa Operacional, excluir o parceiro virtual da Caixa
+    if (caixaParceiroId) parceirosExcluidos.add(caixaParceiroId);
+
     if (tipoMoeda === "FIAT") {
       return contasBancarias
-        .filter((c) => c.id !== origemContaId)
+        .filter((c) => c.id !== origemContaId && !parceirosExcluidos.has(c.parceiro_id))
         .map((c) => c.parceiro_id)
         .filter((value, index, self) => self.indexOf(value) === index); // unique
     } else {
       return walletsCrypto
-        .filter((w) => w.moeda?.includes(coin) && w.id !== origemWalletId)
+        .filter((w) => w.moeda?.includes(coin) && w.id !== origemWalletId && !parceirosExcluidos.has(w.parceiro_id))
         .map((w) => w.parceiro_id)
         .filter((value, index, self) => self.indexOf(value) === index); // unique
     }
