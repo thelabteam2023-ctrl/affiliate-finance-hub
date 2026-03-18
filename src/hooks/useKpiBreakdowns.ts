@@ -338,13 +338,9 @@ function deriveExtrasFromRpc(
     }
   });
 
-  // Ajustes pós-limitação
-  rawData.ajustes_pos_limitacao.forEach(ap => {
-    const valor = Number(ap.valor || 0);
-    if (valor === 0) return;
-    const moeda = ap.moeda || bookmakerMoeda.get(ap.bookmaker_id) || 'BRL';
-    addEntry('ajuste_saldo', valor, moeda);
-  });
+  // NOTA: ajustes_pos_limitacao (financial_events tipo AJUSTE) são correções de saldo
+  // da bookmaker (estornos de exclusão, ajustes de payout), NÃO representam lucro/prejuízo
+  // operacional real. Por isso são EXCLUÍDOS do cálculo de lucro.
 
   // Converter Maps para arrays
   const formatted: Record<string, ExtraAgrupado> = {};
