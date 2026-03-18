@@ -124,14 +124,15 @@ export function useCentralAlertsCount() {
                 .in("status", ["ATIVA", "EM_ENCERRAMENTO"])
                 .not("data_fim_prevista", "is", null)
             : Promise.resolve({ data: [], error: null }),
-          // Parceiros sem parceria - partner_event
+          // Parceiros ativos elegíveis ao card de origem - partner_event
           canSeePartnerData
             ? supabase.from("parceiros").select("id").eq("status", "ativo").eq("is_caixa_operacional", false)
             : Promise.resolve({ data: [], error: null }),
-          // Todas as parcerias ativas (para filtrar parceiros sem parceria)
+          // Histórico de origens registradas para excluir parceiros já vinculados anteriormente
           canSeePartnerData
-            ? supabase.from("parcerias").select("parceiro_id").in("status", ["ATIVA", "EM_ENCERRAMENTO"])
+            ? supabase.from("parcerias").select("parceiro_id, indicacao_id, fornecedor_id, origem_tipo")
             : Promise.resolve({ data: [], error: null }),
+            
           // Custos para bonus - partner_event
           canSeePartnerData
             ? supabase.from("v_custos_aquisicao").select("indicador_id")
