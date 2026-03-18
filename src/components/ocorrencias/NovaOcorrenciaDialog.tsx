@@ -90,15 +90,20 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
   const [selectedCasa, setSelectedCasa] = useState<string>('');
   const [selectedParceiroId, setSelectedParceiroId] = useState<string | null>(null);
 
-  // Carregar bookmakers do workspace com logo do catálogo
+  // Carregar bookmakers — se dentro de um projeto, filtra apenas as vinculadas ao projeto
+  const projetoIdCtx = contextoInicial?.projeto_id;
   const { data: bookmakers = [] } = useQuery({
-    queryKey: ['ocorrencia-bookmakers', workspaceId],
+    queryKey: ['ocorrencia-bookmakers', workspaceId, projetoIdCtx],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('bookmakers')
         .select('id, nome, instance_identifier, parceiro_id, bookmaker_catalogo_id, saldo_atual, moeda, parceiros!bookmakers_parceiro_id_fkey (nome), bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url)')
         .eq('workspace_id', workspaceId!)
         .order('nome');
+      if (projetoIdCtx) {
+        query = query.eq('projeto_id', projetoIdCtx);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },
