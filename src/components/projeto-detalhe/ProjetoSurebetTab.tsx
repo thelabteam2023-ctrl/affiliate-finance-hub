@@ -387,7 +387,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
         const hasValidPernas = pernasSurebetCard.length > 0;
         const isSimples = arb.forma_registro === "SIMPLES" && !hasValidPernas;
         return {
-          id: arb.id, workspace_id: arb.workspace_id, data_operacao: arb.data_aposta, evento: arb.evento || "",
+          id: arb.id, workspace_id: arb.workspace_id, created_at: arb.created_at, data_operacao: arb.data_aposta, evento: arb.evento || "",
           esporte: arb.esporte || "", modelo: arb.modelo || "1-2", mercado: arb.mercado,
           stake_total: arb.stake_total || arb.stake || 0, spread_calculado: arb.spread_calculado,
           roi_esperado: arb.roi_esperado, lucro_esperado: arb.lucro_esperado,
