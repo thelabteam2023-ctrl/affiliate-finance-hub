@@ -3986,6 +3986,8 @@ export function CaixaTransacaoDialog({
 
     if (tipoTransacao === "TRANSFERENCIA") {
       if (fluxoTransferencia === "CAIXA_PARCEIRO") {
+        const parceirosDisponiveis = getParceirosDisponiveisDestino();
+
         // CAIXA → PARCEIRO flow
         if (tipoMoeda === "FIAT") {
           return (
@@ -4004,6 +4006,7 @@ export function CaixaTransacaoDialog({
                       destinoContaBancariaSelectRef.current?.click();
                     }, 180);
                   }}
+                  onlyParceiros={parceirosDisponiveis}
                   showSaldo={true}
                   tipoMoeda="FIAT"
                   moeda={moeda}
@@ -4027,8 +4030,7 @@ export function CaixaTransacaoDialog({
                       <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
                     <SelectContent>
-                      {contasBancarias
-                        .filter((c) => c.parceiro_id === destinoParceiroId && c.moeda === moeda)
+                      {getContasDisponiveisDestino(destinoParceiroId, moeda)
                         .map((conta) => (
                           <SelectItem key={conta.id} value={conta.id}>
                             {conta.banco} ({conta.moeda})
@@ -4038,11 +4040,11 @@ export function CaixaTransacaoDialog({
                   </Select>
                 </div>
               )}
-              {destinoParceiroId && contasBancarias.filter((c) => c.parceiro_id === destinoParceiroId).length === 0 && (
+              {destinoParceiroId && getContasDisponiveisDestino(destinoParceiroId).length === 0 && (
                 <Alert variant="destructive" className="border-warning/50 bg-warning/10">
                   <AlertTriangle className="h-4 w-4 text-warning" />
                   <AlertDescription className="text-warning">
-                    Este parceiro não possui contas bancárias cadastradas.{' '}
+                    Este parceiro não possui contas bancárias válidas para este destino.{' '}
                     <button
                       onClick={() => {
                         setAlertParceiroId(destinoParceiroId);
@@ -4069,6 +4071,7 @@ export function CaixaTransacaoDialog({
                     setDestinoParceiroId(value);
                     setDestinoWalletId("");
                   }}
+                  onlyParceiros={parceirosDisponiveis}
                   showSaldo={true}
                   tipoMoeda="CRYPTO"
                   coin={coin}
@@ -4088,8 +4091,7 @@ export function CaixaTransacaoDialog({
                       <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
                   <SelectContent>
-                    {walletsCrypto
-                      .filter((w) => w.parceiro_id === destinoParceiroId && w.moeda?.includes(coin))
+                    {getWalletsDisponiveisDestino(destinoParceiroId)
                       .map((wallet) => {
                         const walletName = wallet.exchange?.replace(/-/g, ' ').toUpperCase() || 'WALLET';
                         const shortenedAddress = wallet.endereco 
@@ -4105,11 +4107,11 @@ export function CaixaTransacaoDialog({
                   </Select>
                 </div>
               )}
-              {destinoParceiroId && walletsCrypto.filter((w) => w.parceiro_id === destinoParceiroId && w.moeda?.includes(coin)).length === 0 && (
+              {destinoParceiroId && getWalletsDisponiveisDestino(destinoParceiroId).length === 0 && (
                 <Alert variant="destructive" className="border-warning/50 bg-warning/10">
                   <AlertTriangle className="h-4 w-4 text-warning" />
                   <AlertDescription className="text-warning">
-                    Este parceiro não possui wallets cadastradas para {coin}.{' '}
+                    Este parceiro não possui wallets válidas para {coin}.{' '}
                     <button
                       onClick={() => {
                         setAlertParceiroId(destinoParceiroId);
