@@ -197,30 +197,40 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
     const isBookmaker = data.contexto_entidade === 'bookmaker';
     const isBanco = data.contexto_entidade === 'banco';
 
-    // Criar uma ocorrência por executor selecionado
-    for (const executorId of executoresSelecionados) {
-      await criar({
-        titulo: data.titulo,
-        descricao: data.descricao,
-        tipo: data.tipo,
-        sub_motivo: data.sub_motivo || null,
-        prioridade: data.prioridade,
-        executor_id: executorId,
-        bookmaker_id: isBookmaker ? data.entidade_id : contextoInicial?.bookmaker_id,
-        conta_bancaria_id: isBanco && selectedContaOuWallet?.tipo === 'banco' ? data.entidade_id : undefined,
-        wallet_id: isBanco && selectedContaOuWallet?.tipo === 'wallet' ? data.entidade_id : undefined,
-        projeto_id: contextoInicial?.projeto_id,
-        parceiro_id: isBanco ? selectedParceiroId || undefined : contextoInicial?.parceiro_id,
-        contexto_metadata: contextoInicial?.contexto_metadata,
-        valor_risco: data.valor_risco || 0,
-        data_ocorrencia: data.data_ocorrencia ? format(data.data_ocorrencia, 'yyyy-MM-dd') : undefined,
-        _suppressToast: true,
-      });
+    // Executor principal = primeiro selecionado; demais ficam no metadata
+    const executorPrincipal = executoresSelecionados[0];
+    const executoresExtras = executoresSelecionados.slice(1);
+
+    const metadata: Record<string, unknown> = {
+      ...(contextoInicial?.contexto_metadata ?? {}),
+    };
+
+    // Salva todos os executores no metadata quando há mais de um
+    if (executoresExtras.length > 0) {
+      const nomeMap = (members ?? []).reduce<Record<string, string>>((acc, m) => {
+        acc[m.profile_id] = m.full_name ?? m.profile_id;
+        return acc;
+      }, {});
+      metadata['executor_ids'] = executoresSelecionados;
+      metadata['executor_nomes'] = executoresSelecionados.map((id) => nomeMap[id] ?? id);
     }
 
-    // Toast único após criar todas
-    const count = executoresSelecionados.length;
-    toast.success(count === 1 ? 'Ocorrência criada com sucesso' : `${count} ocorrências criadas com sucesso`);
+    await criar({
+      titulo: data.titulo,
+      descricao: data.descricao,
+      tipo: data.tipo,
+      sub_motivo: data.sub_motivo || null,
+      prioridade: data.prioridade,
+      executor_id: executorPrincipal,
+      bookmaker_id: isBookmaker ? data.entidade_id : contextoInicial?.bookmaker_id,
+      conta_bancaria_id: isBanco && selectedContaOuWallet?.tipo === 'banco' ? data.entidade_id : undefined,
+      wallet_id: isBanco && selectedContaOuWallet?.tipo === 'wallet' ? data.entidade_id : undefined,
+      projeto_id: contextoInicial?.projeto_id,
+      parceiro_id: isBanco ? selectedParceiroId || undefined : contextoInicial?.parceiro_id,
+      contexto_metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
+      valor_risco: data.valor_risco || 0,
+      data_ocorrencia: data.data_ocorrencia ? format(data.data_ocorrencia, 'yyyy-MM-dd') : undefined,
+    });
 
     onOpenChange(false);
     form.reset();
