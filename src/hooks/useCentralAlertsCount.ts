@@ -247,11 +247,15 @@ export function useCentralAlertsCount() {
           totalCount += alertasEncer;
         }
 
-        // Count parceiros sem parceria (partner_event)
+        // Count parceiros sem origem histórica registrada (partner_event)
         if (todosParceirosResult.data && todasParceriasResult.data) {
-          const parceirosComParceria = new Set((todasParceriasResult.data || []).map((p: any) => p.parceiro_id));
+          const parceirosComOrigemHistorica = new Set(
+            (todasParceriasResult.data || [])
+              .filter((p: any) => p.indicacao_id || p.fornecedor_id || p.origem_tipo)
+              .map((p: any) => p.parceiro_id)
+          );
           const parceirosSemParceria = (todosParceirosResult.data || [])
-            .filter((p: any) => !parceirosComParceria.has(p.id)).length;
+            .filter((p: any) => !parceirosComOrigemHistorica.has(p.id)).length;
           totalCount += parceirosSemParceria;
         }
 
