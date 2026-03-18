@@ -1596,6 +1596,8 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
         onConciliado={() => {
           invalidateVinculos();
           queryClient.invalidateQueries({ queryKey: ["projeto-dashboard-data", projetoId] });
+          queryClient.invalidateQueries({ queryKey: ["central-operacoes-data"] });
+          queryClient.invalidateQueries({ queryKey: ["contas-disponiveis-count"] });
         }}
       />
 
