@@ -230,8 +230,10 @@ function PernaItem({
   onResultChange?: (resultado: string) => Promise<void>;
   convertToConsolidation?: (valor: number, moedaOrigem: string) => number;
 }) {
-  const [isOpen, setIsOpen] = useState(false);
   const hasMultipleEntries = perna.entries && perna.entries.length > 1;
+  const [isOpen, setIsOpen] = useState(
+    hasMultipleEntries ? (perna.entries!.length <= 3) : false
+  );
   
   // Usar odd_media e stake_total se disponíveis, senão usar valores legados
   const displayOdd = perna.odd_media || perna.odd;
