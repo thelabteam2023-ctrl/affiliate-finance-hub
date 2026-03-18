@@ -361,33 +361,36 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Onde ocorreu? *</FormLabel>
-                    <Select
-                      onValueChange={(v) => {
-                        field.onChange(v);
-                        form.setValue('entidade_id', '');
-                        form.setValue('sub_motivo', '');
-                        setSelectedCasa('');
-                        setSelectedParceiroId(null);
-                      }}
-                      value={field.value || ''}
-                      disabled={tipoSelecionado === 'bloqueio_bancario' || tipoSelecionado === 'bloqueio_contas'}
-                    >
+                    {tipoSelecionado === 'bloqueio_bancario' || tipoSelecionado === 'bloqueio_contas' ? (
                       <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione">
-                            {field.value === 'bookmaker' ? 'Bookmaker' : field.value === 'banco' ? 'Banco' : 'Selecione'}
-                          </SelectValue>
+                        <SelectTrigger disabled>
+                          <span>
+                            {tipoSelecionado === 'bloqueio_bancario' ? 'Banco' : 'Bookmaker'}
+                          </span>
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent>
-                        {tipoSelecionado !== 'bloqueio_bancario' && (
+                    ) : (
+                      <Select
+                        onValueChange={(v) => {
+                          field.onChange(v);
+                          form.setValue('entidade_id', '');
+                          form.setValue('sub_motivo', '');
+                          setSelectedCasa('');
+                          setSelectedParceiroId(null);
+                        }}
+                        value={field.value || ''}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
                           <SelectItem value="bookmaker">Bookmaker</SelectItem>
-                        )}
-                        {tipoSelecionado !== 'bloqueio_contas' && (
                           <SelectItem value="banco">Banco</SelectItem>
-                        )}
-                      </SelectContent>
-                    </Select>
+                        </SelectContent>
+                      </Select>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}
