@@ -335,20 +335,22 @@ export function ProjetoInvestidoresManager({
       {!disabled && (
         <>
           {addingNew ? (
-            <div className="flex items-end gap-2">
-              <div className="flex-1">
+            <div className="space-y-2">
+              <div>
                 <Label className="text-xs">Selecionar investidor</Label>
                 <InvestidorSelect
                   value={newInvestidorId}
                   onValueChange={setNewInvestidorId}
                 />
               </div>
-              <Button size="sm" onClick={handleAdd} disabled={!newInvestidorId}>
-                Adicionar
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => { setAddingNew(false); setNewInvestidorId(""); }}>
-                Cancelar
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button size="sm" onClick={handleAdd} disabled={!newInvestidorId}>
+                  Adicionar
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => { setAddingNew(false); setNewInvestidorId(""); }}>
+                  Cancelar
+                </Button>
+              </div>
             </div>
           ) : (
             <Button
