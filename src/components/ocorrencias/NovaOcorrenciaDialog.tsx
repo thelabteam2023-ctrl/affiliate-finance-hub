@@ -282,6 +282,10 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                       onValueChange={(v) => {
                         field.onChange(v);
                         form.setValue('sub_motivo', '');
+                        form.setValue('contexto_entidade', undefined as unknown as 'bookmaker' | 'banco');
+                        form.setValue('entidade_id', '');
+                        setSelectedCasa('');
+                        setSelectedParceiroId(null);
                       }}
                       value={field.value}
                     >
