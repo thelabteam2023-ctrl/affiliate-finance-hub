@@ -108,9 +108,9 @@ export function SuspiciousDateFilterButton({
       <TooltipContent side="bottom" className="max-w-[280px] text-xs">
         <p className="font-semibold mb-1">Apostas com datas suspeitas</p>
         <p className="text-muted-foreground">
-          {count} {count === 1 ? "aposta foi registrada" : "apostas foram registradas"} com data suspeita: 
-          diferença superior a 72h entre data da operação e data de criação, ou data de um ano diferente do vigente. 
-          Isso pode indicar erro de digitação.
+          {count} {count === 1 ? "aposta foi registrada" : "apostas foram registradas"} com diferença superior 
+          a 72h entre a data da operação e a data de criação do registro. 
+          Isso pode indicar erro de digitação na data.
         </p>
       </TooltipContent>
     </Tooltip>
