@@ -81,6 +81,7 @@ const defaultFormatCurrency = (value: number): string => {
 
 interface Aposta {
   id: string;
+  created_at?: string;
   data_aposta: string;
   esporte: string;
   evento: string;
