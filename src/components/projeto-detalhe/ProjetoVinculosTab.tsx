@@ -1627,6 +1627,7 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
         workspaceId={workspaceId}
         onAjustado={() => {
           invalidateVinculos();
+          queryClient.invalidateQueries({ queryKey: ["projeto-dashboard-data", projetoId] });
         }}
       />
 
