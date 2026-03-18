@@ -41,6 +41,7 @@ import { useParceiroContas, type ContaOuWallet } from '@/hooks/useParceiroContas
 import { TIPO_LABELS, PRIORIDADE_LABELS, SUB_MOTIVOS } from '@/types/ocorrencias';
 import type { OcorrenciaTipo, OcorrenciaPrioridade } from '@/types/ocorrencias';
 import { AlertTriangle, Loader2, X, ChevronsUpDown, Check, Users, Filter, CalendarIcon, Wallet, Building2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { getFirstLastName } from '@/lib/utils';
 import { getRoleLabel } from '@/lib/roleLabels';
