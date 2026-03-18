@@ -351,12 +351,19 @@ export function FreebetExtracaoView({
           {subTab === "historico" && (
             <>
               {/* Filtros dimensionais independentes do histórico */}
-              <HistoryDimensionalFilter
-                projetoId={projetoId}
-                value={dimensionalFilter}
-                onChange={setDimensionalFilter}
-                className="pb-3 border-b border-border/50 mb-4"
-              />
+              <div className="flex items-center gap-2 pb-3 border-b border-border/50 mb-4 flex-wrap">
+                <HistoryDimensionalFilter
+                  projetoId={projetoId}
+                  value={dimensionalFilter}
+                  onChange={setDimensionalFilter}
+                  className="flex-1"
+                />
+                <SuspiciousDateFilterButton
+                  active={suspiciousFilter.active}
+                  onToggle={suspiciousFilter.setActive}
+                  count={suspiciousFilter.suspiciousCount}
+                />
+              </div>
               {apostasHistorico.length === 0 ? (
                 <div className="text-center py-12 border rounded-lg bg-muted/5">
                   <CheckCircle2 className="mx-auto h-10 w-10 text-muted-foreground/30" />
