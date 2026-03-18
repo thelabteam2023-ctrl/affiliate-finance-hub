@@ -208,7 +208,7 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
     // Salva todos os executores no metadata quando há mais de um
     if (executoresExtras.length > 0) {
       const nomeMap = (members ?? []).reduce<Record<string, string>>((acc, m) => {
-        acc[m.profile_id] = m.full_name ?? m.profile_id;
+        acc[m.user_id] = m.full_name ?? m.user_id;
         return acc;
       }, {});
       metadata['executor_ids'] = executoresSelecionados;
