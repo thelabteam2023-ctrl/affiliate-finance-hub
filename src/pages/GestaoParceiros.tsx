@@ -101,7 +101,8 @@ export default function GestaoParceiros() {
   useEffect(() => {
     if (saldosCryptoRaw.length === 0) return;
     
-    const saldosMap = new Map<string, SaldoParceiro>(saldosData);
+    // Start from saldosDataBase (source of truth for fiat), not stale saldosData
+    const saldosMap = new Map<string, SaldoParceiro>(saldosDataBase);
     
     saldosMap.forEach((saldo) => {
       saldo.saldo_crypto_usd = 0;
@@ -120,7 +121,7 @@ export default function GestaoParceiros() {
     });
     
     setSaldosData(new Map(saldosMap));
-  }, [cryptoPrices, saldosCryptoRaw]);
+  }, [cryptoPrices, saldosCryptoRaw, saldosDataBase]);
 
   // Auth check on workspace change
   useEffect(() => {
