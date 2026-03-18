@@ -362,6 +362,7 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                         setSelectedParceiroId(null);
                       }}
                       value={field.value || ''}
+                      disabled={tipoSelecionado === 'bloqueio_bancario' || tipoSelecionado === 'bloqueio_contas'}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -369,8 +370,12 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="bookmaker">Bookmaker</SelectItem>
-                        <SelectItem value="banco">Banco</SelectItem>
+                        {tipoSelecionado !== 'bloqueio_bancario' && (
+                          <SelectItem value="bookmaker">Bookmaker</SelectItem>
+                        )}
+                        {tipoSelecionado !== 'bloqueio_contas' && (
+                          <SelectItem value="banco">Banco</SelectItem>
+                        )}
                       </SelectContent>
                     </Select>
                     <FormMessage />
