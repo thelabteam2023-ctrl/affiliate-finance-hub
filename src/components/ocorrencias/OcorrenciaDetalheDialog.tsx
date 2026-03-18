@@ -58,6 +58,7 @@ export function OcorrenciaDetalheDialog({ ocorrenciaId, open, onOpenChange }: Pr
   const { data: members = [] } = useWorkspaceMembers();
   const { mutate: atualizarStatus, isPending: updatingStatus } = useAtualizarStatusOcorrencia();
   const { mutateAsync: resolverComFinanceiro } = useResolverOcorrenciaComFinanceiro();
+  const { mutate: reabrirOcorrencia, isPending: reabrindo } = useReabrirOcorrencia();
   const { mutate: adicionarComentario, isPending: addingComment } = useAdicionarComentario();
   const [comentario, setComentario] = useState('');
   const [resolucaoOpen, setResolucaoOpen] = useState(false);
