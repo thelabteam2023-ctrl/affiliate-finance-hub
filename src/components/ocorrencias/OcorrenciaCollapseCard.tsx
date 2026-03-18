@@ -212,6 +212,7 @@ export function OcorrenciaCollapseCard({
   const [isOpen, setIsOpen] = useState(false);
   const { mutate: excluir, isPending: excluindo } = useExcluirOcorrencia();
   const { mutateAsync: resolverComFinanceiro } = useResolverOcorrenciaComFinanceiro();
+  const { mutate: reabrirOcorrencia, isPending: reabrindo } = useReabrirOcorrencia();
   const [confirmExcluir, setConfirmExcluir] = useState(false);
   const [resolucaoOpen, setResolucaoOpen] = useState(false);
   const [editarOpen, setEditarOpen] = useState(false);
