@@ -22,7 +22,7 @@ import { CurvaExtracaoChart } from "./CurvaExtracaoChart";
 import { FreebetApostasList } from "./FreebetApostasList";
 import { FreebetApostaCard } from "./FreebetApostaCard";
 import { OperationsSubTabHeader } from "../operations";
-import { HistoryDimensionalFilter, useHistoryDimensionalFilter } from "../operations";
+import { HistoryDimensionalFilter, useHistoryDimensionalFilter, SuspiciousDateFilterButton, useSuspiciousDateFilter } from "../operations";
 
 export interface FreebetExtracaoMetrics {
   valorFreebetUsado: number;

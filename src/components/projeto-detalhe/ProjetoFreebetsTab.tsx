@@ -243,7 +243,7 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
       const { data: apostasUnificadas, error: errorUnificadas } = await supabase
         .from("apostas_unificada")
         .select(`
-          id, evento, mercado, selecao, odd, stake, lucro_prejuizo, valor_retorno,
+          id, created_at, evento, mercado, selecao, odd, stake, lucro_prejuizo, valor_retorno,
           data_aposta, status, resultado, tipo_freebet, contexto_operacional,
           gerou_freebet, valor_freebet_gerada, bookmaker_id, estrategia, modo_entrada,
           esporte, forma_registro, lay_exchange, lay_odd, lay_stake, lay_liability,
