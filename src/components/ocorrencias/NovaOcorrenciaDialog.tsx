@@ -362,13 +362,9 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                   <FormItem>
                     <FormLabel>Onde ocorreu? *</FormLabel>
                     {tipoSelecionado === 'bloqueio_bancario' || tipoSelecionado === 'bloqueio_contas' ? (
-                      <FormControl>
-                        <SelectTrigger disabled>
-                          <span>
-                            {tipoSelecionado === 'bloqueio_bancario' ? 'Banco' : 'Bookmaker'}
-                          </span>
-                        </SelectTrigger>
-                      </FormControl>
+                      <div className="flex h-10 w-full items-center justify-center rounded-lg border border-input bg-background px-3 py-2 text-sm text-muted-foreground opacity-50 cursor-not-allowed">
+                        {tipoSelecionado === 'bloqueio_bancario' ? 'Banco' : 'Bookmaker'}
+                      </div>
                     ) : (
                       <Select
                         onValueChange={(v) => {
