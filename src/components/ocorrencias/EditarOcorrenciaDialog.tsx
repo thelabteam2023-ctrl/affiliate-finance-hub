@@ -281,7 +281,7 @@ export function EditarOcorrenciaDialog({ open, onOpenChange, ocorrencia }: Props
               )}
             />
 
-            {/* Valor em risco */}
+            {/* Valor em disputa */}
             <FormField
               control={form.control}
               name="valor_risco"
