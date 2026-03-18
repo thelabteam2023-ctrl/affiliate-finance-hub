@@ -13327,6 +13327,10 @@ export type Database = {
         Args: { _user_id: string; _workspace_id?: string }
         Returns: boolean
       }
+      is_privileged_role: {
+        Args: { _user_id: string; _workspace_id?: string }
+        Returns: boolean
+      }
       is_system_owner: { Args: { _user_id: string }; Returns: boolean }
       is_workspace_member_active: {
         Args: { _user_id: string; _workspace_id: string }
