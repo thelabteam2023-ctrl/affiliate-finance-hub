@@ -146,7 +146,9 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
 
   const tipoSelecionado = form.watch('tipo');
   const contextoEntidade = form.watch('contexto_entidade');
-  const subMotivos = SUB_MOTIVOS[tipoSelecionado] || [];
+  const subMotivos = tipoSelecionado === 'movimentacao_financeira'
+    ? (SUB_MOTIVOS_MOVIMENTACAO[contextoEntidade] || [])
+    : (SUB_MOTIVOS[tipoSelecionado] || []);
 
   // Casas únicas com logo (derivadas dos bookmakers operacionais do workspace)
   const casasUnicasMap = (bookmakers as any[]).reduce<Record<string, string | null>>((acc, bk) => {
