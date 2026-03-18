@@ -615,11 +615,16 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                         )}
 
                         {saldoBanco !== 0 && saldoCrypto !== 0 && (
-                          <div className="border-t pt-2 flex items-center justify-between">
-                            <span className="text-xs font-medium text-muted-foreground">Patrimônio externo</span>
-                            <span className="text-sm font-bold text-primary font-mono">
-                              R$ {(saldoBanco + convertToBRL(saldoCrypto, "USD")).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                            </span>
+                          <div className="border-t pt-2 space-y-1.5">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-medium text-muted-foreground">Patrimônio externo</span>
+                              <span className="text-sm font-bold text-primary font-mono">
+                                R$ {(saldoBanco + convertToBRL(saldoCrypto, "USD")).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-muted-foreground">
+                              Cotação USD: R$ {rates.USDBRL.toFixed(4)}
+                            </p>
                           </div>
                         )}
                       </div>
