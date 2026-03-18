@@ -11,16 +11,12 @@ const SUSPICIOUS_THRESHOLD_HOURS = 72;
  * Verifica se uma aposta tem data suspeita.
  * 
  * Uma data é considerada suspeita quando:
- * 1. |data_aposta - created_at| > 72 horas (possível erro de digitação), OU
- * 2. O ano de data_aposta é diferente do ano vigente (ano atual).
+ * |data_aposta - created_at| > 72 horas (possível erro de digitação).
+ * Cobre tanto datas no passado quanto no futuro relativas ao registro.
  */
 export function isSuspiciousDate(dataAposta: string, createdAt: string): boolean {
-  const aposta = new Date(dataAposta);
-  const criacao = new Date(createdAt);
-  const diffHours = Math.abs(aposta.getTime() - criacao.getTime()) / (1000 * 60 * 60);
-  const currentYear = new Date().getFullYear();
-  const apostaYear = aposta.getFullYear();
-  return diffHours > SUSPICIOUS_THRESHOLD_HOURS || apostaYear !== currentYear;
+  const diffHours = Math.abs(new Date(dataAposta).getTime() - new Date(createdAt).getTime()) / (1000 * 60 * 60);
+  return diffHours > SUSPICIOUS_THRESHOLD_HOURS;
 }
 
 /**
