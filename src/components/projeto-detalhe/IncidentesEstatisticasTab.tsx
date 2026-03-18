@@ -91,10 +91,10 @@ interface CasaIncidenteDetail {
 interface CasaStats {
   bookmaker_id: string;
   nome: string;
+  logo_url: string | null;
   count: number;
   abertas: number;
   resolvidas: number;
-  riscoBRL: number;
   perdaBRL: number;
   tempoMedioHoras: number | null;
   incidentes: CasaIncidenteDetail[];
