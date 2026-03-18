@@ -615,7 +615,7 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                           <div className="border-t pt-2 flex items-center justify-between">
                             <span className="text-xs font-medium text-muted-foreground">Patrimônio externo</span>
                             <span className="text-sm font-bold text-primary font-mono">
-                              R$ {(saldoBanco + saldoCrypto * (rates?.USD || 5.5)).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                              R$ {(saldoBanco + convertToBRL(saldoCrypto, "USD")).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                             </span>
                           </div>
                         )}
