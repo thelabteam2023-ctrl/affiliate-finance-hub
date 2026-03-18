@@ -340,12 +340,8 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
 
       if (allData.length === 0) return [];
 
-      const apostaIdsMultiLeg = allData
-        .filter((arb: any) => 
-          arb.forma_registro === 'ARBITRAGEM' || arb.forma_registro === 'SUREBET' ||
-          (arb.modelo && arb.modelo !== 'SIMPLES')
-        )
-        .map((arb: any) => arb.id);
+      // Buscar pernas para TODAS as apostas (incluindo SIMPLES com multi-entry)
+      const apostaIdsMultiLeg = allData.map((arb: any) => arb.id);
       
       let pernasMap: Record<string, any[]> = {};
       if (apostaIdsMultiLeg.length > 0) {

@@ -90,8 +90,8 @@ async function fetchApostasFiltradas(
   const { data, error } = await query;
   if (error) throw error;
 
-  // Fetch pernas for ARBITRAGEM
-  const apostaIds = (data || []).filter(a => a.forma_registro === 'ARBITRAGEM').map(a => a.id);
+  // Fetch pernas for all bets (including SIMPLES with multi-entry)
+  const apostaIds = (data || []).map(a => a.id);
   let pernasMap: Record<string, any[]> = {};
   if (apostaIds.length > 0) {
     const { data: pernasData } = await supabase
