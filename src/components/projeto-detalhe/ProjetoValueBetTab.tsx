@@ -64,7 +64,7 @@ import { VolumeKPI } from "@/components/kpis/VolumeKPI";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { TabFiltersBar } from "./TabFiltersBar";
 import { useTabFilters } from "@/hooks/useTabFilters";
-import { OperationsSubTabHeader, type HistorySubTab } from "./operations";
+import { OperationsSubTabHeader, type HistorySubTab, SuspiciousDateFilterButton, useSuspiciousDateFilter } from "./operations";
 import { ExportMenu, transformApostaToExport } from "./ExportMenu";
 import { SaldoOperavelCard } from "./SaldoOperavelCard";
 // FinancialSummaryCompact removed — now integrated into Lucro KPI popover
