@@ -1054,11 +1054,12 @@ export default function CentralOperacoes() {
     }
 
     return cards.sort((a, b) => a.priority - b.priority);
-  }, [
+   }, [
     alertasCriticos, saquesPendentes, alertasSaques, alertasLimitadas, casasDesvinculadas,
     participacoesPendentes, pagamentosOperadorPendentes, alertasCiclosFiltrados, alertasLucro,
     entregasPendentes, parceirosSemParceria, pagamentosParceiros, pagamentosFornecedores, bonusPendentes, comissoesPendentes,
-    parceriasEncerramento, allowedDomains, propostasPagamentoCount, casasPendentesConciliacao, navigate, mutations
+    parceriasEncerramento, allowedDomains, propostasPagamentoCount, casasPendentesConciliacao, navigate, mutations,
+    ciclosDismissedCount, showDismissedCiclos, setShowDismissedCiclos, dismissCiclo, undismissCiclo,
   ]);
 
   const hasAnyAlerts = alertCards.length > 0;
