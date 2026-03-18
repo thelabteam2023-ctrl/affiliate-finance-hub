@@ -1581,7 +1581,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                   mercado: aposta.mercado,
                   modelo: (aposta as any).modelo || '1-N',
                   estrategia: aposta.estrategia || 'SUREBET',
-                  stake_total: aposta.stake_total ?? aposta.stake ?? 0,
+                  stake_total: (aposta as any).stake_total ?? aposta.stake ?? 0,
                   spread_calculado: (aposta as any).spread_calculado ?? null,
                   roi_esperado: (aposta as any).roi_esperado ?? null,
                   lucro_esperado: (aposta as any).lucro_esperado ?? null,
