@@ -301,14 +301,13 @@ export function useAtualizarStatusOcorrencia() {
         if (ocorrencia?.perda_registrada_ledger && ocorrencia.valor_perda > 0) {
           const valorPerda = ocorrencia.valor_perda;
 
-          // Remover de projeto_perdas
+           // Remover de projeto_perdas usando ocorrencia_id (link confiável)
           if (ocorrencia.projeto_id) {
             await (supabase as any)
               .from('projeto_perdas')
               .delete()
-              .eq('descricao', `Perda via ocorrência: ${ocorrencia.titulo}`)
-              .eq('projeto_id', ocorrencia.projeto_id)
-              .eq('valor', valorPerda);
+              .eq('ocorrencia_id', id)
+              .eq('projeto_id', ocorrencia.projeto_id);
           }
 
           // Verificar se bookmaker ainda está no projeto antes de estornar saldo
