@@ -18,7 +18,6 @@
  *   + Σ bônus_creditados (exceto FREEBET — lucro SNR já no P&L)
  *   + Σ eventos_promocionais (freebet_convertida, credito_promocional, giro_gratis_ganho)
  *   - Σ perdas_cancelamento_bonus
- *   + Σ ajustes_pos_limitacao
  *   + Σ ajustes_saldo
  *   + Σ resultado_cambial (ganho - perda)
  *   + Σ conciliações
