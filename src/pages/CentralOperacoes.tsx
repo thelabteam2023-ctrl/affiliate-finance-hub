@@ -105,7 +105,7 @@ export default function CentralOperacoes() {
   const { setContent: setTopBarContent } = useTopBar();
   const navigate = useNavigate();
 
-  const { alertas: alertasCiclos, refetch: refetchCiclos } = useCicloAlertas();
+  const { alertas: alertasCiclos, dismissedCount: ciclosDismissedCount, showDismissed: showDismissedCiclos, setShowDismissed: setShowDismissedCiclos, dismissCiclo, undismissCiclo, refetch: refetchCiclos } = useCicloAlertas();
   const { role, isOperator } = useRole();
   const { user, workspaceId } = useAuth();
   const { data: kpisOcorrencias } = useOcorrenciasKpis();
