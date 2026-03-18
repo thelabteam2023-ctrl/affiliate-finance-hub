@@ -11,16 +11,12 @@ const SUSPICIOUS_THRESHOLD_HOURS = 72;
  * Verifica se uma aposta tem data suspeita.
  * 
  * Uma data é considerada suspeita quando:
- * 1. |data_aposta - created_at| > 72 horas (possível erro de digitação), OU
- * 2. O ano de data_aposta é diferente do ano vigente (ano atual).
+ * |data_aposta - created_at| > 72 horas (possível erro de digitação).
+ * Cobre tanto datas no passado quanto no futuro relativas ao registro.
  */
 export function isSuspiciousDate(dataAposta: string, createdAt: string): boolean {
-  const aposta = new Date(dataAposta);
-  const criacao = new Date(createdAt);
-  const diffHours = Math.abs(aposta.getTime() - criacao.getTime()) / (1000 * 60 * 60);
-  const currentYear = new Date().getFullYear();
-  const apostaYear = aposta.getFullYear();
-  return diffHours > SUSPICIOUS_THRESHOLD_HOURS || apostaYear !== currentYear;
+  const diffHours = Math.abs(new Date(dataAposta).getTime() - new Date(createdAt).getTime()) / (1000 * 60 * 60);
+  return diffHours > SUSPICIOUS_THRESHOLD_HOURS;
 }
 
 /**
@@ -112,9 +108,9 @@ export function SuspiciousDateFilterButton({
       <TooltipContent side="bottom" className="max-w-[280px] text-xs">
         <p className="font-semibold mb-1">Apostas com datas suspeitas</p>
         <p className="text-muted-foreground">
-          {count} {count === 1 ? "aposta foi registrada" : "apostas foram registradas"} com data suspeita: 
-          diferença superior a 72h entre data da operação e data de criação, ou data de um ano diferente do vigente. 
-          Isso pode indicar erro de digitação.
+          {count} {count === 1 ? "aposta foi registrada" : "apostas foram registradas"} com diferença superior 
+          a 72h entre a data da operação e a data de criação do registro. 
+          Isso pode indicar erro de digitação na data.
         </p>
       </TooltipContent>
     </Tooltip>
