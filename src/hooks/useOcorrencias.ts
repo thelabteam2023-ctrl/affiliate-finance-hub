@@ -420,45 +420,54 @@ export function useResolverOcorrenciaComFinanceiro() {
 
       // 3. Se houve perda, registrar no ledger
       if (valorPerda > 0) {
-        // Buscar dados da ocorrência para o ledger
+        // Buscar dados da ocorrência para o ledger (incluindo projeto_id da ocorrência)
         const { data: ocorrencia } = await ocorrenciasTable()
-          .select('bookmaker_id, moeda, titulo, tipo')
+          .select('bookmaker_id, moeda, titulo, tipo, projeto_id, sub_motivo')
           .eq('id', id)
           .single();
 
-        if (ocorrencia?.bookmaker_id) {
+        if (ocorrencia) {
           const { registrarPerdaOperacionalViaLedger } = await import('@/lib/ledgerService');
           
-          // Buscar moeda do bookmaker
-          const { data: bkInfo } = await (supabase as any)
-            .from('bookmakers')
-            .select('moeda, workspace_id, saldo_irrecuperavel, projeto_id')
-            .eq('id', ocorrencia.bookmaker_id)
-            .single();
+          let bkMoeda = ocorrencia.moeda || 'BRL';
+          let bkWorkspaceId = workspaceId!;
+          let bkProjetoId: string | undefined = ocorrencia.projeto_id || undefined;
+          let bkSaldoIrrecuperavel = 0;
+
+          // Se tem bookmaker vinculada, buscar dados adicionais
+          if (ocorrencia.bookmaker_id) {
+            const { data: bkInfo } = await (supabase as any)
+              .from('bookmakers')
+              .select('moeda, workspace_id, saldo_irrecuperavel, projeto_id')
+              .eq('id', ocorrencia.bookmaker_id)
+              .single();
+
+            if (bkInfo) {
+              bkMoeda = bkInfo.moeda || bkMoeda;
+              bkWorkspaceId = bkInfo.workspace_id || bkWorkspaceId;
+              // Prioridade: projeto_id da ocorrência > projeto_id da bookmaker
+              bkProjetoId = ocorrencia.projeto_id || bkInfo.projeto_id || undefined;
+              bkSaldoIrrecuperavel = Number(bkInfo.saldo_irrecuperavel || 0);
+            }
+          }
 
           await registrarPerdaOperacionalViaLedger({
-            bookmakerId: ocorrencia.bookmaker_id,
+            bookmakerId: ocorrencia.bookmaker_id || '',
             valor: valorPerda,
-            moeda: bkInfo?.moeda || ocorrencia.moeda || 'BRL',
-            workspaceId: bkInfo?.workspace_id || workspaceId!,
+            moeda: bkMoeda,
+            workspaceId: bkWorkspaceId,
             userId: user!.id,
             descricao: `Perda via ocorrência: ${ocorrencia.titulo}`,
             perdaId: id,
             categoria: ocorrencia.tipo,
-            projetoIdSnapshot: bkInfo?.projeto_id || undefined,
+            projetoIdSnapshot: bkProjetoId,
           });
 
           // Se o sub-motivo for saldo_irrecuperavel, acumular no campo da bookmaker
-          const { data: ocorrenciaFull } = await ocorrenciasTable()
-            .select('sub_motivo')
-            .eq('id', id)
-            .single();
-
-          if (ocorrenciaFull?.sub_motivo === 'saldo_irrecuperavel') {
-            const currentIrrec = Number(bkInfo?.saldo_irrecuperavel || 0);
+          if (ocorrencia.sub_motivo === 'saldo_irrecuperavel' && ocorrencia.bookmaker_id) {
             await (supabase as any)
               .from('bookmakers')
-              .update({ saldo_irrecuperavel: currentIrrec + valorPerda })
+              .update({ saldo_irrecuperavel: bkSaldoIrrecuperavel + valorPerda })
               .eq('id', ocorrencia.bookmaker_id);
           }
         }
