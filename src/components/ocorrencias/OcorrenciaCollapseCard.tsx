@@ -535,6 +535,9 @@ export function OcorrenciaCollapseCard({
         onOpenChange={setResolucaoOpen}
         valorRisco={Number((ocorrencia as any).valor_risco) || 0}
         moeda={(ocorrencia as any).moeda || 'BRL'}
+        bookmaker_id={(ocorrencia as any).bookmaker_id}
+        projeto_id={(ocorrencia as any).projeto_id}
+        ocorrencia_id={ocorrencia.id}
         onConfirmar={async (resultado, valorPerda, dataResolucao) => {
           await resolverComFinanceiro({
             id: ocorrencia.id,

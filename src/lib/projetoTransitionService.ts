@@ -84,7 +84,25 @@ export async function preCheckUnlink(bookmakerId: string): Promise<UnlinkPreChec
   // 6. Calcular saldo virtual efetivo
   const saldoVirtualEfetivo = Math.max(0, bm.saldo_atual - pendingSaquesTotal + pendingDepositosTotal);
 
-  // 7. Warnings
+  // 7. NOVO: Verificar ocorrências abertas vinculadas a esta bookmaker
+  if (bm.projeto_id) {
+    const { data: ocorrenciasAbertas } = await (supabase as any)
+      .from('ocorrencias')
+      .select('id, titulo, valor_risco, status')
+      .eq('bookmaker_id', bookmakerId)
+      .eq('projeto_id', bm.projeto_id)
+      .in('status', ['aberto', 'em_andamento', 'aguardando_terceiro']);
+
+    if (ocorrenciasAbertas && ocorrenciasAbertas.length > 0) {
+      const totalRisco = ocorrenciasAbertas.reduce((acc: number, o: any) => acc + (o.valor_risco || 0), 0);
+      warnings.push(
+        `🚨 ${ocorrenciasAbertas.length} ocorrência(s) aberta(s) com risco total de ${totalRisco.toFixed(2)} ${bm.moeda}. ` +
+        `Se resolvidas com perda APÓS a desvinculação, o saldo NÃO será debitado novamente (já saiu via Saque Virtual).`
+      );
+    }
+  }
+
+  // 8. Warnings padrão
   if (totalPendingBets > 0) {
     warnings.push(`⚠️ ${totalPendingBets} aposta(s) pendente(s) — se liquidadas após desvinculação, o resultado NÃO será atribuído a nenhum projeto`);
   }
