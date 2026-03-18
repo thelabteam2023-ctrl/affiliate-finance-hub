@@ -2298,20 +2298,25 @@ export function CaixaTransacaoDialog({
 
 
       // Validar transferência para mesma conta/wallet
-      if (tipoTransacao === "TRANSFERENCIA" && fluxoTransferencia === "PARCEIRO_PARCEIRO") {
-        if (origemTipo === "PARCEIRO_CONTA" && destinoTipo === "PARCEIRO_CONTA" && origemContaId === destinoContaId) {
+      if (tipoTransacao === "TRANSFERENCIA") {
+        const effectiveOrigemContaId = origemContaId || (origemTipo === "CAIXA_OPERACIONAL" ? caixaContaId : "");
+        const effectiveDestinoContaId = destinoContaId || (destinoTipo === "CAIXA_OPERACIONAL" ? caixaContaId : "");
+        const effectiveOrigemWalletId = origemWalletId || (origemTipo === "CAIXA_OPERACIONAL" ? caixaWalletId : "");
+        const effectiveDestinoWalletId = destinoWalletId || (destinoTipo === "CAIXA_OPERACIONAL" ? caixaWalletId : "");
+
+        if (effectiveOrigemContaId && effectiveDestinoContaId && effectiveOrigemContaId === effectiveDestinoContaId) {
           toast({
             title: "Erro",
-            description: "Não é possível transferir de uma conta bancária para ela mesma",
+            description: "Não é possível transferir para a mesma conta bancária",
             variant: "destructive",
           });
           return;
         }
         
-        if (origemTipo === "PARCEIRO_WALLET" && destinoTipo === "PARCEIRO_WALLET" && origemWalletId === destinoWalletId) {
+        if (effectiveOrigemWalletId && effectiveDestinoWalletId && effectiveOrigemWalletId === effectiveDestinoWalletId) {
           toast({
             title: "Erro",
-            description: "Não é possível transferir de uma wallet para ela mesma",
+            description: "Não é possível transferir para a mesma wallet",
             variant: "destructive",
           });
           return;
