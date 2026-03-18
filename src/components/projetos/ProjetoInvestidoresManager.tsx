@@ -178,6 +178,18 @@ export function ProjetoInvestidoresManager({
 
   const handleUpdate = async (index: number, field: string, value: any) => {
     const updated = [...investidores];
+
+    // Auto-cap percentual to not exceed 100% total
+    if (field === "percentual_participacao") {
+      const othersTotal = investidores.reduce(
+        (sum, inv, i) => (i !== index ? sum + inv.percentual_participacao : sum),
+        0
+      );
+      const maxAllowed = Math.max(0, 100 - othersTotal);
+      value = Math.min(Number(value) || 0, maxAllowed);
+      value = Math.round(value * 10) / 10; // 1 decimal
+    }
+
     (updated[index] as any)[field] = value;
     setInvestidores(updated);
     onChange?.(updated);
