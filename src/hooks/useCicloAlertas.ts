@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { differenceInDays } from "date-fns";
 import { calcularMetricasPeriodo } from "@/services/calcularMetricasPeriodo";
+import { toast } from "sonner";
 
 export interface AlertaCiclo {
   id: string;
@@ -21,38 +22,54 @@ export interface AlertaCiclo {
   mensagem_tempo: string | null;
   mensagem_volume: string | null;
   motivo_alerta: "META_ATINGIDA" | "META_PROXIMA" | "TEMPO_VENCIDO" | "TEMPO_PROXIMO";
+  dismissed?: boolean;
 }
 
 export function useCicloAlertas() {
-  const [alertas, setAlertas] = useState<AlertaCiclo[]>([]);
+  const [allAlertas, setAllAlertas] = useState<AlertaCiclo[]>([]);
+  const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [showDismissed, setShowDismissed] = useState(false);
 
-  const fetchAlertas = async () => {
+  const fetchAlertas = useCallback(async () => {
     try {
       setLoading(true);
       const hoje = new Date();
       hoje.setHours(0, 0, 0, 0);
 
-      const { data: ciclos, error: ciclosError } = await supabase
-        .from("projeto_ciclos")
-        .select(`
-          id, projeto_id, numero_ciclo, tipo_gatilho,
-          data_inicio, data_fim_prevista, meta_volume,
-          valor_acumulado, metrica_acumuladora,
-          projeto:projetos(nome, metrica_lucro_ciclo)
-        `)
-        .eq("status", "EM_ANDAMENTO");
+      // Fetch cycles and dismissals in parallel
+      const [ciclosResult, dismissalsResult] = await Promise.all([
+        supabase
+          .from("projeto_ciclos")
+          .select(`
+            id, projeto_id, numero_ciclo, tipo_gatilho,
+            data_inicio, data_fim_prevista, meta_volume,
+            valor_acumulado, metrica_acumuladora,
+            projeto:projetos(nome, metrica_lucro_ciclo)
+          `)
+          .eq("status", "EM_ANDAMENTO"),
+        supabase
+          .from("ciclo_alert_dismissals")
+          .select("ciclo_id"),
+      ]);
 
-      if (ciclosError) throw ciclosError;
-      if (!ciclos || ciclos.length === 0) {
-        setAlertas([]);
+      if (ciclosResult.error) throw ciclosResult.error;
+
+      // Build dismissed set
+      const dismissed = new Set<string>(
+        (dismissalsResult.data || []).map((d: any) => d.ciclo_id)
+      );
+      setDismissedIds(dismissed);
+
+      const ciclos = ciclosResult.data || [];
+      if (ciclos.length === 0) {
+        setAllAlertas([]);
         return;
       }
 
       const alertasCalculados: AlertaCiclo[] = [];
 
       for (const ciclo of ciclos) {
-        // FONTE ÚNICA: Usar serviço canônico de métricas
         const metricas = await calcularMetricasPeriodo({
           projetoId: ciclo.projeto_id,
           dataInicio: ciclo.data_inicio,
@@ -130,6 +147,7 @@ export function useCicloAlertas() {
             mensagem_tempo: mensagemTempo,
             mensagem_volume: mensagemVolume,
             motivo_alerta: motivoAlerta,
+            dismissed: dismissed.has(ciclo.id),
           });
         }
       }
@@ -142,17 +160,78 @@ export function useCicloAlertas() {
         return b.progresso_volume - a.progresso_volume;
       });
 
-      setAlertas(alertasCalculados);
+      setAllAlertas(alertasCalculados);
     } catch (error) {
       console.error("Erro ao buscar alertas de ciclo:", error);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  const dismissCiclo = useCallback(async (cicloId: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      
+      const { error } = await supabase
+        .from("ciclo_alert_dismissals")
+        .insert({ ciclo_id: cicloId, dismissed_by: user.id });
+      
+      if (error) throw error;
+      
+      setDismissedIds(prev => new Set([...prev, cicloId]));
+      toast.success("Ciclo oculto da central");
+    } catch (err) {
+      console.error("Erro ao ocultar ciclo:", err);
+      toast.error("Erro ao ocultar ciclo");
+    }
+  }, []);
+
+  const undismissCiclo = useCallback(async (cicloId: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { error } = await supabase
+        .from("ciclo_alert_dismissals")
+        .delete()
+        .eq("ciclo_id", cicloId)
+        .eq("dismissed_by", user.id);
+
+      if (error) throw error;
+
+      setDismissedIds(prev => {
+        const next = new Set(prev);
+        next.delete(cicloId);
+        return next;
+      });
+      toast.success("Ciclo visível novamente");
+    } catch (err) {
+      console.error("Erro ao desocultar ciclo:", err);
+      toast.error("Erro ao desocultar ciclo");
+    }
+  }, []);
 
   useEffect(() => {
     fetchAlertas();
-  }, []);
+  }, [fetchAlertas]);
 
-  return { alertas, loading, refetch: fetchAlertas };
+  // Filtered alertas based on visibility toggle
+  const visibleAlertas = showDismissed
+    ? allAlertas
+    : allAlertas.filter(a => !dismissedIds.has(a.id));
+
+  const dismissedCount = allAlertas.filter(a => dismissedIds.has(a.id)).length;
+
+  return {
+    alertas: visibleAlertas,
+    allAlertas,
+    dismissedCount,
+    showDismissed,
+    setShowDismissed,
+    dismissCiclo,
+    undismissCiclo,
+    loading,
+    refetch: fetchAlertas,
+  };
 }

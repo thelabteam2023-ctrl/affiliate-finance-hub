@@ -2595,6 +2595,42 @@ export type Database = {
           },
         ]
       }
+      ciclo_alert_dismissals: {
+        Row: {
+          ciclo_id: string
+          dismissed_at: string
+          dismissed_by: string
+          id: string
+        }
+        Insert: {
+          ciclo_id: string
+          dismissed_at?: string
+          dismissed_by: string
+          id?: string
+        }
+        Update: {
+          ciclo_id?: string
+          dismissed_at?: string
+          dismissed_by?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ciclo_alert_dismissals_ciclo_id_fkey"
+            columns: ["ciclo_id"]
+            isOneToOne: false
+            referencedRelation: "projeto_ciclos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ciclo_alert_dismissals_ciclo_id_fkey"
+            columns: ["ciclo_id"]
+            isOneToOne: false
+            referencedRelation: "v_ciclos_proximos_fechamento"
+            referencedColumns: ["ciclo_id"]
+          },
+        ]
+      }
       community_blocked_words: {
         Row: {
           category: string

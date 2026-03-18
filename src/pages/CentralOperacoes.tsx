@@ -105,7 +105,7 @@ export default function CentralOperacoes() {
   const { setContent: setTopBarContent } = useTopBar();
   const navigate = useNavigate();
 
-  const { alertas: alertasCiclos, refetch: refetchCiclos } = useCicloAlertas();
+  const { alertas: alertasCiclos, dismissedCount: ciclosDismissedCount, showDismissed: showDismissedCiclos, setShowDismissed: setShowDismissedCiclos, dismissCiclo, undismissCiclo, refetch: refetchCiclos } = useCicloAlertas();
   const { role, isOperator } = useRole();
   const { user, workspaceId } = useAuth();
   const { data: kpisOcorrencias } = useOcorrenciasKpis();
@@ -699,7 +699,8 @@ export default function CentralOperacoes() {
     }
 
     // 7. Ciclos de Apuração
-    if (alertasCiclosFiltrados.length > 0 && allowedDomains.includes('project_event')) {
+    const showCiclosCard = (alertasCiclosFiltrados.length > 0 || ciclosDismissedCount > 0) && allowedDomains.includes('project_event');
+    if (showCiclosCard) {
       cards.push({
         id: "ciclos-apuracao", priority: PRIORITY.MEDIUM, domain: 'project_event',
         component: (
@@ -708,34 +709,70 @@ export default function CentralOperacoes() {
               <CardTitle className="flex items-center gap-2 text-sm">
                 <Target className="h-4 w-4 text-violet-400" />Ciclos de Apuração
                 <CardInfoTooltip title="Ciclos de Apuração" description="Ciclos próximos do fechamento ou que já atingiram a meta." flow="Ciclos são criados automaticamente e fecham por tempo, volume ou ambos." />
-                <Badge className="ml-auto bg-violet-500/20 text-violet-400">{alertasCiclosFiltrados.length}</Badge>
+                {alertasCiclosFiltrados.length > 0 && (
+                  <Badge className="ml-auto bg-violet-500/20 text-violet-400">{alertasCiclosFiltrados.length}</Badge>
+                )}
               </CardTitle>
+              {ciclosDismissedCount > 0 && (
+                <button
+                  onClick={() => setShowDismissedCiclos(!showDismissedCiclos)}
+                  className="text-[10px] text-muted-foreground hover:text-foreground transition-colors text-left"
+                >
+                  {showDismissedCiclos ? "Ocultar dispensados" : `${ciclosDismissedCount} oculto${ciclosDismissedCount > 1 ? "s" : ""} — mostrar`}
+                </button>
+              )}
             </CardHeader>
             <CardContent className="pt-0">
-              <div className="max-h-[240px] overflow-y-auto space-y-2 pr-1">
-                {alertasCiclosFiltrados.map((ciclo) => {
-                  const getUrgencyColor = () => { switch (ciclo.urgencia) { case "CRITICA": return "border-red-500/40 bg-red-500/10"; case "ALTA": return "border-orange-500/40 bg-orange-500/10"; default: return "border-violet-500/30 bg-violet-500/10"; } };
-                  return (
-                    <div key={ciclo.id} className={`p-2 rounded-lg border cursor-pointer ${getUrgencyColor()}`} onClick={() => navigate(`/projeto/${ciclo.projeto_id}`)}>
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 min-w-0 flex-1">
-                          <FolderKanban className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                          <span className="text-xs font-medium truncate">{ciclo.projeto_nome}</span>
-                          <Badge variant="outline" className="text-[10px] shrink-0">Ciclo {ciclo.numero_ciclo}</Badge>
+              {alertasCiclosFiltrados.length === 0 && !showDismissedCiclos ? (
+                <p className="text-xs text-muted-foreground text-center py-4">Todos os ciclos foram ocultos.</p>
+              ) : (
+                <div className="max-h-[240px] overflow-y-auto space-y-2 pr-1">
+                  {alertasCiclosFiltrados.map((ciclo) => {
+                    const isDismissed = ciclo.dismissed;
+                    const getUrgencyColor = () => {
+                      if (isDismissed) return "border-muted/40 bg-muted/10 opacity-60";
+                      switch (ciclo.urgencia) { case "CRITICA": return "border-red-500/40 bg-red-500/10"; case "ALTA": return "border-orange-500/40 bg-orange-500/10"; default: return "border-violet-500/30 bg-violet-500/10"; }
+                    };
+                    return (
+                      <div key={ciclo.id} className={`p-2 rounded-lg border ${getUrgencyColor()} group`}>
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0 flex-1 cursor-pointer" onClick={() => navigate(`/projeto/${ciclo.projeto_id}`)}>
+                            <FolderKanban className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                            <span className="text-xs font-medium truncate">{ciclo.projeto_nome}</span>
+                            <Badge variant="outline" className="text-[10px] shrink-0">Ciclo {ciclo.numero_ciclo}</Badge>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            {ciclo.tipo_gatilho === "TEMPO" && <Clock className="h-3 w-3 text-muted-foreground" />}
+                            {ciclo.tipo_gatilho === "VOLUME" && <Target className="h-3 w-3 text-muted-foreground" />}
+                            {ciclo.tipo_gatilho === "HIBRIDO" && <Zap className="h-3 w-3 text-muted-foreground" />}
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    isDismissed ? undismissCiclo(ciclo.id) : dismissCiclo(ciclo.id);
+                                  }}
+                                >
+                                  {isDismissed ? <Undo2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent side="left">
+                                {isDismissed ? "Tornar visível novamente" : "Ocultar este ciclo"}
+                              </TooltipContent>
+                            </Tooltip>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1">
-                          {ciclo.tipo_gatilho === "TEMPO" && <Clock className="h-3 w-3 text-muted-foreground" />}
-                          {ciclo.tipo_gatilho === "VOLUME" && <Target className="h-3 w-3 text-muted-foreground" />}
-                          {ciclo.tipo_gatilho === "HIBRIDO" && <Zap className="h-3 w-3 text-muted-foreground" />}
-                        </div>
+                        {(ciclo.tipo_gatilho === "VOLUME" || ciclo.tipo_gatilho === "HIBRIDO") && ciclo.meta_volume && (
+                          <div className="mt-2"><Progress value={Math.min(100, ciclo.progresso_volume)} className="h-1" /><p className="text-[10px] text-muted-foreground mt-1">{ciclo.progresso_volume.toFixed(0)}% concluído</p></div>
+                        )}
                       </div>
-                      {(ciclo.tipo_gatilho === "VOLUME" || ciclo.tipo_gatilho === "HIBRIDO") && ciclo.meta_volume && (
-                        <div className="mt-2"><Progress value={Math.min(100, ciclo.progresso_volume)} className="h-1" /><p className="text-[10px] text-muted-foreground mt-1">{ciclo.progresso_volume.toFixed(0)}% concluído</p></div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              )}
             </CardContent>
           </Card>
         ),
@@ -1017,11 +1054,12 @@ export default function CentralOperacoes() {
     }
 
     return cards.sort((a, b) => a.priority - b.priority);
-  }, [
+   }, [
     alertasCriticos, saquesPendentes, alertasSaques, alertasLimitadas, casasDesvinculadas,
     participacoesPendentes, pagamentosOperadorPendentes, alertasCiclosFiltrados, alertasLucro,
     entregasPendentes, parceirosSemParceria, pagamentosParceiros, pagamentosFornecedores, bonusPendentes, comissoesPendentes,
-    parceriasEncerramento, allowedDomains, propostasPagamentoCount, casasPendentesConciliacao, navigate, mutations
+    parceriasEncerramento, allowedDomains, propostasPagamentoCount, casasPendentesConciliacao, navigate, mutations,
+    ciclosDismissedCount, showDismissedCiclos, setShowDismissedCiclos, dismissCiclo, undismissCiclo,
   ]);
 
   const hasAnyAlerts = alertCards.length > 0;
