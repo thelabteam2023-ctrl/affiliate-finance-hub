@@ -61,6 +61,8 @@ interface ParceiroDetalhesPanelProps {
   diasRestantes?: number | null;
   parceiroCache: ParceiroCache;
   bookmakerRefreshKey?: number;
+  saldoBanco?: number;
+  saldoCrypto?: number;
 }
 
 const clampSaldoVisual = (value: number | null | undefined) => Math.max(0, Number(value ?? 0));
