@@ -194,7 +194,6 @@ export const SUB_MOTIVOS: Record<OcorrenciaTipo, { value: string; label: string 
     { value: 'outro', label: 'Outro motivo' },
   ],
   bloqueio_contas: [
-    { value: 'conta_limitada', label: 'Conta limitada/restrita' },
     { value: 'conta_suspensa', label: 'Conta suspensa' },
     { value: 'conta_encerrada', label: 'Conta encerrada permanentemente' },
     { value: 'aposta_cancelada', label: 'Apostas canceladas pela casa' },
