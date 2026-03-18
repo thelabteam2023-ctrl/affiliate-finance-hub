@@ -240,10 +240,17 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
 
     const porExecutor: Record<string, { count: number; resolvidas: number }> = {};
     ocorrencias.forEach((o) => {
-      if (!porExecutor[o.executor_id]) porExecutor[o.executor_id] = { count: 0, resolvidas: 0 };
-      porExecutor[o.executor_id].count += 1;
-      if (o.status === 'resolvido') porExecutor[o.executor_id].resolvidas += 1;
-    });
+      // Use all executors from contexto_metadata when available (multi-executor)
+      const meta = (o as any).contexto_metadata;
+      const executorIds: string[] = (meta && Array.isArray(meta.executor_ids) && meta.executor_ids.length > 0)
+        ? meta.executor_ids
+        : [o.executor_id];
+
+      executorIds.forEach((uid: string) => {
+        if (!porExecutor[uid]) porExecutor[uid] = { count: 0, resolvidas: 0 };
+        porExecutor[uid].count += 1;
+        if (o.status === 'resolvido') porExecutor[uid].resolvidas += 1;
+      });
 
     const riscoPorMoeda: Record<string, number> = {};
     let valorRiscoAbertoBRL = 0;
