@@ -363,15 +363,22 @@ export function OcorrenciaCollapseCard({
                       {transicoes.map((s) => (
                         <DropdownMenuItem
                           key={s}
+                          disabled={reabrindo}
                           onClick={() => {
                             if (s === 'resolvido') {
                               setResolucaoOpen(true);
+                            } else if (ocorrencia.status === 'resolvido' && s === 'em_andamento') {
+                              reabrirOcorrencia({ id: ocorrencia.id });
                             } else {
                               onAtualizarStatus(s);
                             }
                           }}
                         >
-                          → {STATUS_LABELS[s]}
+                          {ocorrencia.status === 'resolvido' && s === 'em_andamento' ? (
+                            <>↩ Reabrir ocorrência</>
+                          ) : (
+                            <>→ {STATUS_LABELS[s]}</>
+                          )}
                         </DropdownMenuItem>
                       ))}
                       {/* Editar - disponível para executor e admin */}
