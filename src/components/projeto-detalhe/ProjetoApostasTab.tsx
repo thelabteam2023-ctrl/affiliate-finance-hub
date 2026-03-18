@@ -583,7 +583,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
         const { data: pendentesData } = await supabase
           .from("apostas_unificada")
           .select(`
-            id, data_aposta, evento, esporte, stake, odd_final, lucro_prejuizo, valor_retorno,
+            id, created_at, data_aposta, evento, esporte, stake, odd_final, lucro_prejuizo, valor_retorno,
             status, resultado, observacoes, bookmaker_id, estrategia,
             tipo_freebet, gerou_freebet, valor_freebet_gerada, is_bonus_bet,
             contexto_operacional, forma_registro, selecoes, tipo_multipla, retorno_potencial,
