@@ -50,6 +50,8 @@ import {
   type HistorySubTab,
   HistoryDimensionalFilter,
   useHistoryDimensionalFilter,
+  SuspiciousDateFilterButton,
+  isSuspiciousDate,
 } from "../operations";
 import { parseLocalDateTime } from "@/utils/dateUtils";
 
@@ -228,6 +230,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
   // Sub-tab state (Abertas/Histórico pattern)
   const [subTab, setSubTab] = useState<HistorySubTab>("abertas");
   const [reasonFilter, setReasonFilter] = useState<string>("all");
+  const [suspiciousActive, setSuspiciousActive] = useState(false);
   
   // Filtros dimensionais independentes para o histórico
   const { dimensionalFilter, setDimensionalFilter } = useHistoryDimensionalFilter();
@@ -712,6 +715,25 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
   ], [apostas, apostasMultiplas, surebets]);
   const totalAbertasCount = useMemo(() => allUnificadas.filter(isItemPendenteFn).length, [allUnificadas]);
   const totalHistoricoCount = useMemo(() => allUnificadas.filter(i => !isItemPendenteFn(i)).length, [allUnificadas]);
+
+  // Suspicious date count
+  const suspiciousCount = useMemo(() => {
+    const lista = subTab === "historico" ? apostasHistorico : [];
+    return lista.filter(u => {
+      const d = u.data as any;
+      if (!u.data_aposta || !d.created_at) return false;
+      return isSuspiciousDate(u.data_aposta, d.created_at);
+    }).length;
+  }, [apostasHistorico, subTab]);
+
+  const apostasHistoricoFiltered = useMemo(() => {
+    if (!suspiciousActive) return apostasHistorico;
+    return apostasHistorico.filter(u => {
+      const d = u.data as any;
+      if (!u.data_aposta || !d.created_at) return false;
+      return isSuspiciousDate(u.data_aposta, d.created_at);
+    });
+  }, [apostasHistorico, suspiciousActive]);
 
   // Auto-switch to history tab when no open operations
   useEffect(() => {
@@ -1210,30 +1232,39 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
           {subTab === "historico" && (
             <div className="space-y-4">
               {/* Filtros dimensionais independentes do histórico */}
-              <HistoryDimensionalFilter
-                projetoId={projetoId}
-                value={dimensionalFilter}
-                onChange={setDimensionalFilter}
-                className="pb-3 border-b border-border/50"
-              />
+              <div className="flex items-center gap-2 pb-3 border-b border-border/50 flex-wrap">
+                <HistoryDimensionalFilter
+                  projetoId={projetoId}
+                  value={dimensionalFilter}
+                  onChange={setDimensionalFilter}
+                  className="flex-1"
+                />
+                <SuspiciousDateFilterButton
+                  active={suspiciousActive}
+                  onToggle={setSuspiciousActive}
+                  count={suspiciousCount}
+                />
+              </div>
               {/* Apostas Liquidadas */}
-              {apostasHistorico.length > 0 && (
+              {apostasHistoricoFiltered.length > 0 && (
                 <div className="space-y-3">
                   <h4 className="text-sm font-medium flex items-center gap-2 text-muted-foreground">
                     <CheckCircle2 className="h-4 w-4" />
-                    Apostas Liquidadas ({apostasHistorico.length})
+                    Apostas Liquidadas ({apostasHistoricoFiltered.length})
                   </h4>
-                  {renderBetCards(apostasHistorico)}
+                  {renderBetCards(apostasHistoricoFiltered)}
                 </div>
               )}
               
               {/* Empty state for histórico */}
-              {apostasHistorico.length === 0 && (
+              {apostasHistoricoFiltered.length === 0 && (
                 <div className="text-center py-10">
                   <History className="mx-auto h-12 w-12 text-muted-foreground/50" />
-                  <h3 className="mt-4 text-lg font-semibold">Nenhum histórico</h3>
+                  <h3 className="mt-4 text-lg font-semibold">
+                    {suspiciousActive ? "Nenhuma aposta com data suspeita" : "Nenhum histórico"}
+                  </h3>
                   <p className="text-muted-foreground">
-                    Apostas liquidadas aparecerão aqui
+                    {suspiciousActive ? "Nenhuma aposta apresenta discrepância de data" : "Apostas liquidadas aparecerão aqui"}
                   </p>
                 </div>
               )}

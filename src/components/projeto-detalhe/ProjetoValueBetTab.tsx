@@ -64,7 +64,7 @@ import { VolumeKPI } from "@/components/kpis/VolumeKPI";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { TabFiltersBar } from "./TabFiltersBar";
 import { useTabFilters } from "@/hooks/useTabFilters";
-import { OperationsSubTabHeader, type HistorySubTab } from "./operations";
+import { OperationsSubTabHeader, type HistorySubTab, SuspiciousDateFilterButton, useSuspiciousDateFilter } from "./operations";
 import { ExportMenu, transformApostaToExport } from "./ExportMenu";
 import { SaldoOperavelCard } from "./SaldoOperavelCard";
 // FinancialSummaryCompact removed — now integrated into Lucro KPI popover
@@ -79,6 +79,7 @@ interface ProjetoValueBetTabProps {
 
 interface Aposta {
   id: string;
+  created_at?: string;
   data_aposta: string;
   esporte: string;
   evento: string;
@@ -285,7 +286,7 @@ export function ProjetoValueBetTab({
       let query = supabase
         .from("apostas_unificada")
         .select(`
-          id, data_aposta, esporte, evento, mercado, selecao, odd, stake, stake_total, estrategia, 
+          id, created_at, data_aposta, esporte, evento, mercado, selecao, odd, stake, stake_total, estrategia, 
           status, resultado, lucro_prejuizo, valor_retorno, observacoes, bookmaker_id,
           modo_entrada, gerou_freebet, valor_freebet_gerada, tipo_freebet, forma_registro,
           contexto_operacional, lay_exchange, lay_odd, lay_stake, lay_liability, lay_comissao,
@@ -313,7 +314,7 @@ export function ProjetoValueBetTab({
         const { data: pendentesData } = await supabase
           .from("apostas_unificada")
           .select(`
-            id, data_aposta, esporte, evento, mercado, selecao, odd, stake, stake_total, estrategia, 
+            id, created_at, data_aposta, esporte, evento, mercado, selecao, odd, stake, stake_total, estrategia, 
             status, resultado, lucro_prejuizo, valor_retorno, observacoes, bookmaker_id,
             modo_entrada, gerou_freebet, valor_freebet_gerada, tipo_freebet, forma_registro,
             contexto_operacional, lay_exchange, lay_odd, lay_stake, lay_liability, lay_comissao,
@@ -687,10 +688,16 @@ export function ProjetoValueBetTab({
   // Aplicar filtros na lista atual (abertas ou histórico)
   const apostasListaAtual = apostasSubTab === "abertas" ? apostasAbertas : apostasHistorico;
   
+  // Suspicious date filter
+  const suspiciousFilter = useSuspiciousDateFilter(apostasListaAtual);
+  
   const apostasFiltradas = useMemo(() => {
     const { bookmakerIds, parceiroIds, resultados } = tabFilters;
     
     return apostasListaAtual.filter(a => {
+      // Filtro de datas suspeitas
+      if (!suspiciousFilter.filterFn(a)) return false;
+
       // Filtro por texto (busca)
       const matchesSearch = 
         (a.evento || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -714,7 +721,7 @@ export function ProjetoValueBetTab({
       const matchesResultado = resultados.length === 0 || resultados.includes(a.resultado as any);
       return matchesResultado;
     });
-  }, [apostasListaAtual, searchTerm, tabFilters.bookmakerIds, tabFilters.parceiroIds, tabFilters.resultados, bookmakers]);
+  }, [apostasListaAtual, searchTerm, tabFilters.bookmakerIds, tabFilters.parceiroIds, tabFilters.resultados, bookmakers, suspiciousFilter.active]);
 
   // Filtered counts per sub-tab for badge display
   const filteredAbertasCount = useMemo(() => apostasAbertas.filter(a => {
@@ -1033,13 +1040,20 @@ export function ProjetoValueBetTab({
       </CardHeader>
       <CardContent className="pt-0 space-y-3">
         {/* Filtros LOCAIS da aba (isolados de outras abas) */}
-        <TabFiltersBar
-          projetoId={projetoId}
-          filters={tabFilters}
-          showEstrategiaFilter={false}
-          showResultadoFilter={true}
-          className="pb-3 border-b border-border/50"
-        />
+        <div className="flex items-center gap-2 pb-3 border-b border-border/50 flex-wrap">
+          <TabFiltersBar
+            projetoId={projetoId}
+            filters={tabFilters}
+            showEstrategiaFilter={false}
+            showResultadoFilter={true}
+            className="flex-1"
+          />
+          <SuspiciousDateFilterButton
+            active={suspiciousFilter.active}
+            onToggle={suspiciousFilter.setActive}
+            count={suspiciousFilter.suspiciousCount}
+          />
+        </div>
       </CardContent>
     </Card>
 

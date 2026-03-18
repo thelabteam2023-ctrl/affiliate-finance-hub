@@ -54,7 +54,7 @@ import { StandardTimeFilter } from "./StandardTimeFilter";
 import { useTabFilters } from "@/hooks/useTabFilters";
 import { cn, getFirstLastName } from "@/lib/utils";
 import { parsePernaFromJson } from "@/types/apostasUnificada";
-import { OperationsSubTabHeader, type HistorySubTab } from "./operations";
+import { OperationsSubTabHeader, type HistorySubTab, SuspiciousDateFilterButton, useSuspiciousDateFilter, isSuspiciousDate } from "./operations";
 import { parseLocalDateTime } from "@/utils/dateUtils";
 import { ExportMenu, transformApostaToExport, transformSurebetToExport } from "./ExportMenu";
 import { DeleteBetConfirmDialog, type DeleteBetInfo } from "@/components/apostas/DeleteBetConfirmDialog";
@@ -81,6 +81,7 @@ const defaultFormatCurrency = (value: number): string => {
 
 interface Aposta {
   id: string;
+  created_at?: string;
   data_aposta: string;
   esporte: string;
   evento: string;
@@ -143,6 +144,7 @@ interface Aposta {
 
 interface ApostaMultipla {
   id: string;
+  created_at?: string;
   evento?: string | null;
   esporte?: string | null;
   tipo_multipla: string;
@@ -412,7 +414,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
       let query = supabase
         .from("apostas_unificada")
         .select(`
-          id, data_aposta, esporte, evento, mercado, selecao, odd, stake, estrategia,
+          id, created_at, data_aposta, esporte, evento, mercado, selecao, odd, stake, estrategia,
           status, resultado, valor_retorno, lucro_prejuizo, observacoes, bookmaker_id,
           modo_entrada, lay_exchange, lay_odd, lay_stake, lay_liability, lay_comissao,
           back_comissao, back_em_exchange, gerou_freebet, valor_freebet_gerada,
@@ -442,7 +444,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
         const { data: pendentesData } = await supabase
           .from("apostas_unificada")
           .select(`
-            id, data_aposta, esporte, evento, mercado, selecao, odd, stake, estrategia,
+            id, created_at, data_aposta, esporte, evento, mercado, selecao, odd, stake, estrategia,
             status, resultado, valor_retorno, lucro_prejuizo, observacoes, bookmaker_id,
             modo_entrada, lay_exchange, lay_odd, lay_stake, lay_liability, lay_comissao,
             back_comissao, back_em_exchange, gerou_freebet, valor_freebet_gerada,
@@ -555,7 +557,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
       let query = supabase
         .from("apostas_unificada")
         .select(`
-          id, data_aposta, evento, esporte, stake, odd_final, lucro_prejuizo, valor_retorno,
+          id, created_at, data_aposta, evento, esporte, stake, odd_final, lucro_prejuizo, valor_retorno,
           status, resultado, observacoes, bookmaker_id, estrategia,
           tipo_freebet, gerou_freebet, valor_freebet_gerada, is_bonus_bet,
           contexto_operacional, forma_registro, selecoes, tipo_multipla, retorno_potencial,
@@ -581,7 +583,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
         const { data: pendentesData } = await supabase
           .from("apostas_unificada")
           .select(`
-            id, data_aposta, evento, esporte, stake, odd_final, lucro_prejuizo, valor_retorno,
+            id, created_at, data_aposta, evento, esporte, stake, odd_final, lucro_prejuizo, valor_retorno,
             status, resultado, observacoes, bookmaker_id, estrategia,
             tipo_freebet, gerou_freebet, valor_freebet_gerada, is_bonus_bet,
             contexto_operacional, forma_registro, selecoes, tipo_multipla, retorno_potencial,
@@ -1175,9 +1177,39 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
     }
   }, [loading, apostasAbertasList.length, apostasHistoricoList.length]);
   
-  // Lista final baseada na sub-aba selecionada + busca por texto
+  // Suspicious date filter for ApostasTab
+  // We need to count suspicious across all unified items
+  const allUnifiedListaAtual = useMemo(() => {
+    return apostasSubTab === "abertas" ? apostasAbertasList : apostasHistoricoList;
+  }, [apostasSubTab, apostasAbertasList, apostasHistoricoList]);
+
+  const suspiciousCount = useMemo(() => {
+    return allUnifiedListaAtual.filter(u => {
+      const d = u.data as any;
+      const createdAt = d.created_at;
+      const dataAposta = u.data_aposta;
+      if (!dataAposta || !createdAt) return false;
+      return isSuspiciousDate(dataAposta, createdAt);
+    }).length;
+  }, [allUnifiedListaAtual]);
+
+  const [suspiciousActive, setSuspiciousActive] = useState(false);
+
+  // Lista final baseada na sub-aba selecionada + busca por texto + datas suspeitas
   const apostasUnificadas = useMemo(() => {
-    const lista = apostasSubTab === "abertas" ? apostasAbertasList : apostasHistoricoList;
+    let lista = allUnifiedListaAtual;
+    
+    // Filtro de datas suspeitas
+    if (suspiciousActive) {
+      lista = lista.filter(u => {
+        const d = u.data as any;
+        const createdAt = d.created_at;
+        const dataAposta = u.data_aposta;
+        if (!dataAposta || !createdAt) return false;
+        return isSuspiciousDate(dataAposta, createdAt);
+      });
+    }
+
     if (!searchTerm.trim()) return lista;
     const term = searchTerm.toLowerCase();
     return lista.filter(u => {
@@ -1194,7 +1226,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
              bookmakerNome.toLowerCase().includes(term) ||
              matchesPernas;
     });
-  }, [apostasSubTab, apostasAbertasList, apostasHistoricoList, searchTerm]);
+  }, [allUnifiedListaAtual, searchTerm, suspiciousActive]);
 
   // Contadores por contexto
   const contadores = useMemo(() => {
@@ -1483,13 +1515,21 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
         </CardHeader>
         <CardContent className="pt-0 space-y-3">
           {/* Filtros LOCAIS da aba Apostas (isolados de outras abas) */}
-          <TabFiltersBar
-            projetoId={projetoId}
-            filters={tabFilters}
-            showPeriodFilter={false}
-            showEstrategiaFilter={true}
-            showResultadoFilter={true}
-          />
+          <div className="flex items-center gap-2 flex-wrap">
+            <TabFiltersBar
+              projetoId={projetoId}
+              filters={tabFilters}
+              showPeriodFilter={false}
+              showEstrategiaFilter={true}
+              showResultadoFilter={true}
+              className="flex-1"
+            />
+            <SuspiciousDateFilterButton
+              active={suspiciousActive}
+              onToggle={setSuspiciousActive}
+              count={suspiciousCount}
+            />
+          </div>
         </CardContent>
       </Card>
 

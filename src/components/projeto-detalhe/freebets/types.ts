@@ -26,6 +26,7 @@ export interface BookmakerComFreebet {
 
 export interface ApostaOperacionalFreebet {
   id: string;
+  created_at?: string;
   tipo: "simples" | "multipla";
   evento: string;
   mercado: string | null;

@@ -70,7 +70,7 @@ import { VolumeKPI } from "@/components/kpis/VolumeKPI";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { TabFiltersBar } from "./TabFiltersBar";
 import { useTabFilters } from "@/hooks/useTabFilters";
-import { OperationsSubTabHeader, type HistorySubTab } from "./operations";
+import { OperationsSubTabHeader, type HistorySubTab, SuspiciousDateFilterButton, useSuspiciousDateFilter } from "./operations";
 import { ExportMenu, transformApostaToExport, transformSurebetToExport } from "./ExportMenu";
 import { SaldoOperavelCard } from "./SaldoOperavelCard";
 // FinancialSummaryCompact removed — now integrated into Lucro KPI popover
@@ -86,6 +86,7 @@ interface ProjetoDuploGreenTabProps {
 interface Aposta {
   id: string;
   workspace_id?: string;
+  created_at?: string;
   data_aposta: string;
   esporte: string;
   evento: string;
@@ -282,7 +283,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
     try {
       let query = supabase
         .from("apostas_unificada")
-        .select(`id, workspace_id, data_aposta, esporte, evento, mercado, selecao, odd, stake, estrategia, status, resultado, lucro_prejuizo, valor_retorno, observacoes, bookmaker_id, modo_entrada, gerou_freebet, valor_freebet_gerada, tipo_freebet, forma_registro, contexto_operacional, lay_exchange, lay_odd, lay_stake, lay_liability, lay_comissao, back_em_exchange, back_comissao, pernas, stake_total, spread_calculado, roi_esperado, roi_real, lucro_esperado, modelo, moeda_operacao, stake_consolidado, pl_consolidado, valor_brl_referencia, lucro_prejuizo_brl_referencia`)
+        .select(`id, workspace_id, created_at, data_aposta, esporte, evento, mercado, selecao, odd, stake, estrategia, status, resultado, lucro_prejuizo, valor_retorno, observacoes, bookmaker_id, modo_entrada, gerou_freebet, valor_freebet_gerada, tipo_freebet, forma_registro, contexto_operacional, lay_exchange, lay_odd, lay_stake, lay_liability, lay_comissao, back_em_exchange, back_comissao, pernas, stake_total, spread_calculado, roi_esperado, roi_real, lucro_esperado, modelo, moeda_operacao, stake_consolidado, pl_consolidado, valor_brl_referencia, lucro_prejuizo_brl_referencia`)
         .eq("projeto_id", projetoId)
         .eq("estrategia", APOSTA_ESTRATEGIA.DUPLO_GREEN)
         .is("cancelled_at", null)
@@ -302,7 +303,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
       if (dateRange) {
         const { data: pendentesData } = await supabase
           .from("apostas_unificada")
-          .select(`id, workspace_id, data_aposta, esporte, evento, mercado, selecao, odd, stake, estrategia, status, resultado, lucro_prejuizo, valor_retorno, observacoes, bookmaker_id, modo_entrada, gerou_freebet, valor_freebet_gerada, tipo_freebet, forma_registro, contexto_operacional, lay_exchange, lay_odd, lay_stake, lay_liability, lay_comissao, back_em_exchange, back_comissao, pernas, stake_total, spread_calculado, roi_esperado, roi_real, lucro_esperado, modelo, moeda_operacao, stake_consolidado, pl_consolidado, valor_brl_referencia, lucro_prejuizo_brl_referencia`)
+          .select(`id, workspace_id, created_at, data_aposta, esporte, evento, mercado, selecao, odd, stake, estrategia, status, resultado, lucro_prejuizo, valor_retorno, observacoes, bookmaker_id, modo_entrada, gerou_freebet, valor_freebet_gerada, tipo_freebet, forma_registro, contexto_operacional, lay_exchange, lay_odd, lay_stake, lay_liability, lay_comissao, back_em_exchange, back_comissao, pernas, stake_total, spread_calculado, roi_esperado, roi_real, lucro_esperado, modelo, moeda_operacao, stake_consolidado, pl_consolidado, valor_brl_referencia, lucro_prejuizo_brl_referencia`)
           .eq("projeto_id", projetoId)
           .eq("estrategia", APOSTA_ESTRATEGIA.DUPLO_GREEN)
           .eq("status", "PENDENTE")
@@ -896,11 +897,15 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
   // Aplicar filtros na lista atual (abertas ou histórico)
   const apostasListaAtual = apostasSubTab === "abertas" ? apostasAbertas : apostasHistorico;
   
+  // Suspicious date filter
+  const suspiciousFilter = useSuspiciousDateFilter(apostasListaAtual);
+
   const apostasFiltradas = useMemo(() => apostasListaAtual.filter(a => {
+    if (!suspiciousFilter.filterFn(a)) return false;
     const matchesSearch = a.evento.toLowerCase().includes(searchTerm.toLowerCase()) || a.esporte.toLowerCase().includes(searchTerm.toLowerCase()) || a.selecao.toLowerCase().includes(searchTerm.toLowerCase()) || (a.bookmaker_nome || '').toLowerCase().includes(searchTerm.toLowerCase()) || (a.pernas || []).some((p: any) => (p?.bookmaker_nome || '').toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesResultado = tabFilters.resultados.length === 0 || tabFilters.resultados.includes(a.resultado as any);
     return matchesSearch && matchesResultado;
-  }), [apostasListaAtual, searchTerm, tabFilters.resultados]);
+  }), [apostasListaAtual, searchTerm, tabFilters.resultados, suspiciousFilter.active]);
   
   // Ordenar casaData conforme filtro selecionado
   const casaDataSorted = useMemo(() => {
@@ -1175,13 +1180,20 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
         </CardHeader>
         <CardContent className="pt-0 space-y-3">
           {/* Filtros LOCAIS da aba (isolados de outras abas) */}
-          <TabFiltersBar
-            projetoId={projetoId}
-            filters={tabFilters}
-            showEstrategiaFilter={false}
-            showResultadoFilter={true}
-            className="pb-3 border-b border-border/50"
-          />
+          <div className="flex items-center gap-2 pb-3 border-b border-border/50 flex-wrap">
+            <TabFiltersBar
+              projetoId={projetoId}
+              filters={tabFilters}
+              showEstrategiaFilter={false}
+              showResultadoFilter={true}
+              className="flex-1"
+            />
+            <SuspiciousDateFilterButton
+              active={suspiciousFilter.active}
+              onToggle={suspiciousFilter.setActive}
+              count={suspiciousFilter.suspiciousCount}
+            />
+          </div>
         </CardContent>
       </Card>
 

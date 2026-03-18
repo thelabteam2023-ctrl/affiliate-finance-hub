@@ -22,7 +22,7 @@ import { CurvaExtracaoChart } from "./CurvaExtracaoChart";
 import { FreebetApostasList } from "./FreebetApostasList";
 import { FreebetApostaCard } from "./FreebetApostaCard";
 import { OperationsSubTabHeader } from "../operations";
-import { HistoryDimensionalFilter, useHistoryDimensionalFilter } from "../operations";
+import { HistoryDimensionalFilter, useHistoryDimensionalFilter, SuspiciousDateFilterButton, useSuspiciousDateFilter } from "../operations";
 
 export interface FreebetExtracaoMetrics {
   valorFreebetUsado: number;
@@ -60,6 +60,7 @@ export function FreebetExtracaoView({
   
   // Filtros dimensionais independentes para o histórico
   const { dimensionalFilter, setDimensionalFilter } = useHistoryDimensionalFilter();
+  const suspiciousFilter = useSuspiciousDateFilter(apostas);
 
   // Hook de contaminação
   const {
@@ -156,13 +157,13 @@ export function FreebetExtracaoView({
   );
   const apostasHistorico = useMemo(() => {
     const { bookmakerIds, parceiroIds, resultados } = dimensionalFilter;
-    if (bookmakerIds.length === 0 && parceiroIds.length === 0 && resultados.length === 0) return apostasHistoricoRaw;
     return apostasHistoricoRaw.filter(ap => {
+      if (!suspiciousFilter.filterFn(ap)) return false;
       if (bookmakerIds.length > 0 && !bookmakerIds.includes(ap.bookmaker_id)) return false;
       if (resultados.length > 0 && !resultados.includes(ap.resultado as any)) return false;
       return true;
     });
-  }, [apostasHistoricoRaw, dimensionalFilter]);
+  }, [apostasHistoricoRaw, dimensionalFilter, suspiciousFilter.active]);
 
   // Auto-switch to history tab when no active operations
   useEffect(() => {
@@ -350,12 +351,19 @@ export function FreebetExtracaoView({
           {subTab === "historico" && (
             <>
               {/* Filtros dimensionais independentes do histórico */}
-              <HistoryDimensionalFilter
-                projetoId={projetoId}
-                value={dimensionalFilter}
-                onChange={setDimensionalFilter}
-                className="pb-3 border-b border-border/50 mb-4"
-              />
+              <div className="flex items-center gap-2 pb-3 border-b border-border/50 mb-4 flex-wrap">
+                <HistoryDimensionalFilter
+                  projetoId={projetoId}
+                  value={dimensionalFilter}
+                  onChange={setDimensionalFilter}
+                  className="flex-1"
+                />
+                <SuspiciousDateFilterButton
+                  active={suspiciousFilter.active}
+                  onToggle={suspiciousFilter.setActive}
+                  count={suspiciousFilter.suspiciousCount}
+                />
+              </div>
               {apostasHistorico.length === 0 ? (
                 <div className="text-center py-12 border rounded-lg bg-muted/5">
                   <CheckCircle2 className="mx-auto h-10 w-10 text-muted-foreground/30" />

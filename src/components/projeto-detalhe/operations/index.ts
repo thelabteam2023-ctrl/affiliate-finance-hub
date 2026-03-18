@@ -4,3 +4,4 @@ export { OperationsHistoryModule, type OperationsHistoryConfig } from "./Operati
 export { OperationsSubTabHeader, type OperationsSubTabHeaderProps, type HistorySubTab } from "./OperationsSubTabHeader";
 export { useOperationsHistory, type UseOperationsHistoryOptions, type UseOperationsHistoryReturn } from "./useOperationsHistory";
 export { HistoryDimensionalFilter, useHistoryDimensionalFilter, type HistoryDimensionalFilterState } from "./HistoryDimensionalFilter";
+export { SuspiciousDateFilterButton, useSuspiciousDateFilter, isSuspiciousDate } from "./SuspiciousDateFilter";

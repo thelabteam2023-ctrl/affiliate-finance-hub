@@ -68,7 +68,7 @@ import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { useTabFilters, type EstrategiaFilter } from "@/hooks/useTabFilters";
 import { TabFiltersBar } from "./TabFiltersBar";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange as FilterDateRange } from "./StandardTimeFilter";
-import { OperationsSubTabHeader, type HistorySubTab } from "./operations";
+import { OperationsSubTabHeader, type HistorySubTab, SuspiciousDateFilterButton, useSuspiciousDateFilter } from "./operations";
 import { ExportMenu, transformSurebetToExport, transformApostaToExport } from "./ExportMenu";
 import { SaldoOperavelCard } from "./SaldoOperavelCard";
 // FinancialSummaryCompact removed — now integrated into Lucro KPI popover
@@ -84,6 +84,7 @@ interface ProjetoSurebetTabProps {
 
 interface Surebet {
   id: string;
+  created_at?: string;
   data_operacao: string;
   evento: string;
   esporte: string;
@@ -291,7 +292,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
       let query = supabase
         .from("apostas_unificada")
         .select(`
-          id, workspace_id, data_aposta, evento, esporte, modelo, mercado, stake, stake_total, stake_bonus,
+          id, workspace_id, created_at, data_aposta, evento, esporte, modelo, mercado, stake, stake_total, stake_bonus,
           spread_calculado, roi_esperado, lucro_esperado, lucro_prejuizo, roi_real,
           status, resultado, observacoes, forma_registro, estrategia, contexto_operacional,
           odd, selecao, bookmaker_id, bonus_id,
@@ -318,7 +319,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
         const { data: pendentesData } = await supabase
           .from("apostas_unificada")
           .select(`
-            id, workspace_id, data_aposta, evento, esporte, modelo, mercado, stake, stake_total, stake_bonus,
+            id, workspace_id, created_at, data_aposta, evento, esporte, modelo, mercado, stake, stake_total, stake_bonus,
             spread_calculado, roi_esperado, lucro_esperado, lucro_prejuizo, roi_real,
             status, resultado, observacoes, forma_registro, estrategia, contexto_operacional,
             odd, selecao, bookmaker_id, bonus_id,
@@ -386,7 +387,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
         const hasValidPernas = pernasSurebetCard.length > 0;
         const isSimples = arb.forma_registro === "SIMPLES" && !hasValidPernas;
         return {
-          id: arb.id, workspace_id: arb.workspace_id, data_operacao: arb.data_aposta, evento: arb.evento || "",
+          id: arb.id, workspace_id: arb.workspace_id, created_at: arb.created_at, data_operacao: arb.data_aposta, evento: arb.evento || "",
           esporte: arb.esporte || "", modelo: arb.modelo || "1-2", mercado: arb.mercado,
           stake_total: arb.stake_total || arb.stake || 0, spread_calculado: arb.spread_calculado,
           roi_esperado: arb.roi_esperado, lucro_esperado: arb.lucro_esperado,
@@ -944,9 +945,17 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
     }
   }, [loading, surebetsAbertas.length, surebetsHistorico.length]);
   
-  // Lista baseada na sub-aba selecionada + busca por texto
+  // Lista baseada na sub-aba selecionada
+  const surebetsListaBase = useMemo(() => {
+    return operacoesSubTab === "abertas" ? surebetsAbertas : surebetsHistorico;
+  }, [operacoesSubTab, surebetsAbertas, surebetsHistorico]);
+
+  // Suspicious date filter
+  const suspiciousFilter = useSuspiciousDateFilter(surebetsListaBase, "data_operacao");
+
+  // Aplicar busca por texto + filtro de datas suspeitas
   const surebetsListaAtual = useMemo(() => {
-    const lista = operacoesSubTab === "abertas" ? surebetsAbertas : surebetsHistorico;
+    let lista = surebetsListaBase.filter(s => suspiciousFilter.filterFn(s));
     if (!searchTerm.trim()) return lista;
     const term = searchTerm.toLowerCase();
     return lista.filter(s => {
@@ -954,12 +963,11 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
         (s.esporte || '').toLowerCase().includes(term) ||
         (s.modelo || '').toLowerCase().includes(term);
       if (matchesBasic) return true;
-      // Busca por nome de casa (bookmaker) - simples ou pernas
       if ((s.bookmaker_nome || '').toLowerCase().includes(term)) return true;
       if (s.pernas?.some(p => (p.bookmaker_nome || '').toLowerCase().includes(term))) return true;
       return false;
     });
-  }, [operacoesSubTab, surebetsAbertas, surebetsHistorico, searchTerm]);
+  }, [surebetsListaBase, searchTerm, suspiciousFilter.active]);
 
   // Navigation handlers
   const handleModeToggle = () => {
@@ -1400,14 +1408,21 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
           {/* Filtros Dimensionais da Aba Operações (Casa, Parceiro) */}
           {/* ISOLAMENTO: Período já é controlado pelo filtro de nível superior */}
           {/* Apenas filtros dimensionais são exibidos aqui para não afetar Visão Geral */}
-          <TabFiltersBar
-            projetoId={projetoId}
-            filters={tabFilters}
-            showEstrategiaFilter={false}
-            showPeriodFilter={false}
-            showResultadoFilter={true}
-            className="pb-3 border-b border-border/50"
-          />
+          <div className="flex items-center gap-2 pb-3 border-b border-border/50 flex-wrap">
+            <TabFiltersBar
+              projetoId={projetoId}
+              filters={tabFilters}
+              showEstrategiaFilter={false}
+              showPeriodFilter={false}
+              showResultadoFilter={true}
+              className="flex-1"
+            />
+            <SuspiciousDateFilterButton
+              active={suspiciousFilter.active}
+              onToggle={suspiciousFilter.setActive}
+              count={suspiciousFilter.suspiciousCount}
+            />
+          </div>
         </CardContent>
       </Card>
 
