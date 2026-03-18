@@ -61,6 +61,8 @@ interface ParceiroDetalhesPanelProps {
   diasRestantes?: number | null;
   parceiroCache: ParceiroCache;
   bookmakerRefreshKey?: number;
+  saldoBanco?: number;
+  saldoCrypto?: number;
 }
 
 const clampSaldoVisual = (value: number | null | undefined) => Math.max(0, Number(value ?? 0));
@@ -82,6 +84,8 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
   diasRestantes,
   parceiroCache,
   bookmakerRefreshKey,
+  saldoBanco = 0,
+  saldoCrypto = 0,
 }: ParceiroDetalhesPanelProps) {
   const data = parceiroCache.resumoData;
   const loading = parceiroCache.resumoLoading;
@@ -569,6 +573,24 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                   </span>
                 </>
               )}
+              {(saldoBanco > 0 || saldoCrypto > 0) && (
+                <>
+                  <span>•</span>
+                  {saldoBanco > 0 && (
+                    <span className="flex items-center gap-1">
+                      <Building2 className="h-3 w-3" />
+                      Banco: {showSensitiveData ? `R$ ${saldoBanco.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "•••"}
+                    </span>
+                  )}
+                  {saldoBanco > 0 && saldoCrypto > 0 && <span>|</span>}
+                  {saldoCrypto > 0 && (
+                    <span className="flex items-center gap-1">
+                      <Wallet className="h-3 w-3" />
+                      Wallets: {showSensitiveData ? `$ ${saldoCrypto.toLocaleString("en-US", { minimumFractionDigits: 2 })}` : "•••"}
+                    </span>
+                  )}
+                </>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-1.5">
@@ -577,7 +599,10 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                 <Button
                   variant="outline"
                   size="icon"
-                  onClick={() => parceiroCache.refreshCurrent()}
+                  onClick={() => {
+                    parceiroCache.refreshCurrent();
+                    toast({ title: "Atualizando dados...", description: "Os dados do parceiro estão sendo recarregados." });
+                  }}
                   disabled={loading}
                   className="shrink-0 h-8 w-8"
                 >
