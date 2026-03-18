@@ -235,13 +235,13 @@ export function useCentralAlertsCount() {
           totalCount += pagamentosPendentes;
         }
 
-        // Count parcerias próximas do encerramento (≤ 7 dias) - partner_event
+        // Count parcerias próximas do encerramento (≤ 10 dias) - partner_event
         if (encerResult.data) {
           const alertasEncer = (encerResult.data || []).filter((p: any) => {
             const dataFim = new Date(p.data_fim_prevista);
             dataFim.setHours(0, 0, 0, 0);
             const diasRestantes = Math.ceil((dataFim.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
-            return diasRestantes >= 0 && diasRestantes <= 7;
+            return diasRestantes >= 0 && diasRestantes <= 10;
           }).length;
           totalCount += alertasEncer;
         }
