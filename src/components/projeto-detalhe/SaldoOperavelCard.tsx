@@ -130,13 +130,13 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
 
   const conversaoVisual = useMemo(() => {
     if (moedaConsolidacao === "USD") {
-      const valorBRL = saldoAtualTotal * cotacaoUSD;
+      const valorBRL = saldoOperavel * cotacaoUSD;
       return { valor: valorBRL, moeda: "BRL", symbol: "R$", label: "≈ R$" };
     } else {
-      const valorUSD = saldoAtualTotal / cotacaoUSD;
+      const valorUSD = saldoOperavel / cotacaoUSD;
       return { valor: valorUSD, moeda: "USD", symbol: "$", label: "≈ $" };
     }
-  }, [saldoAtualTotal, moedaConsolidacao, cotacaoUSD]);
+  }, [saldoOperavel, moedaConsolidacao, cotacaoUSD]);
 
   const handleRetry = async () => {
     setIsRetrying(true);
@@ -208,7 +208,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
       <div className="flex items-center justify-center gap-2">
         <Wallet className="h-4 w-4 text-primary" />
         <span className="text-sm font-medium font-bold text-primary">
-          {formatCurrency(saldoAtualTotal)}
+          {formatCurrency(saldoOperavel)}
         </span>
         {hasCasas && (
           <ChevronDown className="h-3 w-3 text-muted-foreground transition-transform group-hover:text-primary" />
@@ -225,7 +225,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
     >
       <div className="flex items-center justify-center gap-2">
         <span className="text-lg md:text-2xl font-bold text-primary">
-          {formatCurrency(saldoAtualTotal)}
+          {formatCurrency(saldoOperavel)}
         </span>
         {casasComRollover > 0 && (
           <TooltipProvider>
