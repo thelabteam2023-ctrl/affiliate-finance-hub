@@ -79,6 +79,8 @@ async function fetchParceirosData(workspaceId: string): Promise<ParceirosQueryDa
 
   if (parceirosResult.error) throw parceirosResult.error;
   if (bookmakersResult.error) throw bookmakersResult.error;
+  if (saldosFiatResult.error) console.warn("[useParceirosData] Erro ao buscar saldos FIAT:", saldosFiatResult.error);
+  if (saldosCryptoResult.error) console.warn("[useParceirosData] Erro ao buscar saldos crypto:", saldosCryptoResult.error);
 
   const parceiros = parceirosResult.data || [];
 
