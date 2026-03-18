@@ -1564,21 +1564,76 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
               );
             }
             
-            // ===== APOSTA SIMPLES - Usando ApostaCard padronizado =====
+            // ===== APOSTA SIMPLES =====
             if (item.tipo === "simples") {
               const aposta = item.data as Aposta;
+              const subEntries = (aposta as any)._sub_entries;
+              const hasMultipleEntries = subEntries && subEntries.length > 1;
+
+              // Multi-entry simples → renderizar como SurebetCard para padronizar visual
+              if (hasMultipleEntries) {
+                const surebetData: SurebetData = {
+                  id: aposta.id,
+                  evento: aposta.evento,
+                  esporte: aposta.esporte,
+                  mercado: aposta.mercado,
+                  modelo: aposta.modelo || '1-N',
+                  estrategia: aposta.estrategia || 'SUREBET',
+                  forma_registro: aposta.forma_registro || 'SIMPLES',
+                  data_aposta: aposta.data_aposta,
+                  resultado: aposta.resultado,
+                  status: aposta.status,
+                  lucro_prejuizo: aposta.lucro_prejuizo,
+                  lucro_real: aposta.pl_consolidado ?? aposta.lucro_prejuizo,
+                  pl_consolidado: aposta.pl_consolidado,
+                  stake_consolidado: aposta.stake_consolidado,
+                  observacoes: aposta.observacoes,
+                  workspace_id: (aposta as any).workspace_id,
+                  pernas: groupPernasBySelecao(
+                    subEntries.map((p: any) => ({
+                      id: p.id,
+                      selecao: p.selecao,
+                      selecao_livre: p.selecao_livre,
+                      odd: p.odd,
+                      stake: p.stake,
+                      resultado: p.resultado,
+                      lucro_prejuizo: p.lucro_prejuizo ?? null,
+                      bookmaker_nome: p.bookmaker?.nome || '—',
+                      bookmaker_id: p.bookmaker_id,
+                      moeda: p.moeda || 'BRL',
+                    }))
+                  ),
+                };
+
+                return (
+                  <SurebetCard
+                    key={aposta.id}
+                    surebet={surebetData}
+                    onEdit={(surebet) => {
+                      const a = apostas.find(ap => ap.id === surebet.id);
+                      if (a) handleOpenDialog(a);
+                    }}
+                    onQuickResolve={handleQuickResolveSurebet}
+                    onPernaResultChange={handleSurebetPernaResolve}
+                    onDelete={prepareDeleteSimples}
+                    formatCurrency={formatCurrency}
+                    convertToConsolidation={convertToConsolidation}
+                    bookmakerNomeMap={bookmakerNomeMap}
+                  />
+                );
+              }
+
+              // Single-entry simples → ApostaCard normal
               const displayInfo = getApostaDisplayInfo(aposta);
               const bookmakerBase = aposta.bookmaker?.nome?.split(" - ")[0] || aposta.bookmaker?.nome;
               const parceiroNome = aposta.bookmaker?.parceiro?.nome;
               const logoUrl = aposta.bookmaker?.bookmakers_catalogo?.logo_url;
               
-              // Determinar estratégia para o card - usar valor do banco diretamente
               let estrategia: string = aposta.estrategia || "NORMAL";
               if (aposta.gerou_freebet && estrategia === "NORMAL") estrategia = "FREEBET";
               else if (item.contexto === "FREEBET" && estrategia === "NORMAL") estrategia = "FREEBET";
               else if (item.contexto === "BONUS" && estrategia === "NORMAL") estrategia = "BONUS";
               
-               // Preparar dados para ApostaCard - moeda ORIGINAL da aposta
                const apostaCardData: ApostaCardData = {
                  id: aposta.id,
                  evento: aposta.evento,
@@ -1596,21 +1651,6 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                  parceiro_nome: parceiroNome,
                  logo_url: logoUrl,
                  moeda: aposta.moeda_operacao || "BRL",
-                 // Odd real da 1ª perna (pode diferir da média ponderada em aposta.odd)
-                 primary_odd: (aposta as any)._sub_entries?.[0]?.odd ?? undefined,
-                 // Multi-entry: sub-entradas de apostas_pernas (exclui a 1ª perna que é a principal)
-                 sub_entries: (aposta as any)._sub_entries
-                   ?.filter((_: any, i: number) => i > 0)
-                   ?.map((p: any) => ({
-                     bookmaker_nome: p.bookmaker?.nome?.split(" - ")[0] || p.bookmaker?.nome || '?',
-                     parceiro_nome: p.bookmaker?.parceiro?.nome || null,
-                     odd: p.odd,
-                     stake: p.stake,
-                     moeda: p.moeda,
-                     logo_url: p.bookmaker?.bookmakers_catalogo?.logo_url || null,
-                     selecao_livre: p.selecao_livre,
-                    })) || undefined,
-                 // Multi-currency consolidation
                  pl_consolidado: aposta.pl_consolidado ?? undefined,
                  stake_consolidado: aposta.stake_consolidado ?? undefined,
                };
@@ -1632,8 +1672,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                    moedaConsolidacao={moedaConsolidacao}
                  />
               );
-            }
-
+             }
             // ===== APOSTA MÚLTIPLA - Usando ApostaCard padronizado =====
             const multipla = item.data as ApostaMultipla;
             const bookmakerBaseMultipla = multipla.bookmaker?.nome?.split(" - ")[0] || multipla.bookmaker?.nome;
