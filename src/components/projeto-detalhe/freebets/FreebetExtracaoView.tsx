@@ -60,6 +60,7 @@ export function FreebetExtracaoView({
   
   // Filtros dimensionais independentes para o histórico
   const { dimensionalFilter, setDimensionalFilter } = useHistoryDimensionalFilter();
+  const suspiciousFilter = useSuspiciousDateFilter(apostas);
 
   // Hook de contaminação
   const {
