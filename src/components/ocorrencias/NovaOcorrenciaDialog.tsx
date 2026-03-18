@@ -89,6 +89,7 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
   const [bancoPopoverOpen, setBancoPopoverOpen] = useState(false);
   const [parceiroPopoverOpen, setParceiroPopoverOpen] = useState(false);
   const [selectedCasa, setSelectedCasa] = useState<string>('');
+  const [selectedParceiroId, setSelectedParceiroId] = useState<string | null>(null);
   const isSubmittingRef = useRef(false);
 
   // Carregar bookmakers — se dentro de um projeto, filtra apenas as vinculadas ao projeto
