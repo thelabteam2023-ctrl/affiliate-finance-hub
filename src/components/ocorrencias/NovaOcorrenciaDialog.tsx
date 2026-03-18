@@ -895,7 +895,7 @@ export function NovaOcorrenciaDialog({ open, onOpenChange, contextoInicial }: Pr
                 return (
                   <FormItem>
                     <div className="flex items-center justify-between">
-                      <FormLabel>Valor em risco (opcional)</FormLabel>
+                      <FormLabel>Valor em disputa (opcional)</FormLabel>
                       {saldoRef !== null && saldoRef > 0 && (
                         <button
                           type="button"

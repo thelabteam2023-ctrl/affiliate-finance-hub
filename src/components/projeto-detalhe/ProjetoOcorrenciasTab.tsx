@@ -196,7 +196,7 @@ export function ProjetoOcorrenciasTab({ projetoId, onDataChange, formatCurrency:
                 </div>
               ),
               valueClassName: abertas.length > 0 ? 'text-amber-500' : 'text-muted-foreground',
-              subtitle: <span className="text-muted-foreground">{formatBRL(valorRiscoAberto)} em risco</span>,
+              subtitle: <span className="text-muted-foreground">{formatBRL(valorRiscoAberto)} em disputa</span>,
             },
             {
               label: 'Perdas Confirmadas',

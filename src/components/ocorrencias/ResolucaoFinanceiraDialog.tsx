@@ -139,7 +139,7 @@ export function ResolucaoFinanceiraDialog({
               className="font-mono"
             />
             <p className="text-xs text-muted-foreground">
-              Valor em risco: {formatCurrency(valorRisco, moeda)} — Informe quanto foi efetivamente perdido.
+              Valor em disputa: {formatCurrency(valorRisco, moeda)} — Informe quanto foi efetivamente perdido.
             </p>
           </div>
         )}
