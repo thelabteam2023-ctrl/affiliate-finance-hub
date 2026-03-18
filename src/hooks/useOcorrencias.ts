@@ -301,14 +301,13 @@ export function useAtualizarStatusOcorrencia() {
         if (ocorrencia?.perda_registrada_ledger && ocorrencia.valor_perda > 0) {
           const valorPerda = ocorrencia.valor_perda;
 
-          // Remover de projeto_perdas
+           // Remover de projeto_perdas usando ocorrencia_id (link confiável)
           if (ocorrencia.projeto_id) {
             await (supabase as any)
               .from('projeto_perdas')
               .delete()
-              .eq('descricao', `Perda via ocorrência: ${ocorrencia.titulo}`)
-              .eq('projeto_id', ocorrencia.projeto_id)
-              .eq('valor', valorPerda);
+              .eq('ocorrencia_id', id)
+              .eq('projeto_id', ocorrencia.projeto_id);
           }
 
           // Verificar se bookmaker ainda está no projeto antes de estornar saldo
@@ -567,6 +566,7 @@ export function useResolverOcorrenciaComFinanceiro() {
                 workspace_id: bkWorkspaceId,
                 user_id: user!.id,
                 bookmaker_id: ocorrencia.bookmaker_id || null,
+                ocorrencia_id: id,
                 valor: valorPerda,
                 categoria: ocorrencia.tipo || 'bloqueio_contas',
                 status: 'CONFIRMADA',
@@ -630,20 +630,20 @@ export function useReabrirOcorrencia() {
 
       // 2. Se houve perda registrada, estornar do ledger e projeto_perdas
       if (valorPerda > 0 && perdaRegistrada) {
-        // Remover entrada de projeto_perdas vinculada a esta ocorrência
+        // Remover entrada de projeto_perdas vinculada a esta ocorrência (via ocorrencia_id)
         if (ocorrencia.projeto_id) {
           await (supabase as any)
             .from('projeto_perdas')
             .delete()
-            .eq('descricao', `Perda via ocorrência: ${ocorrencia.titulo}`)
-            .eq('projeto_id', ocorrencia.projeto_id)
-            .eq('valor', valorPerda);
+            .eq('ocorrencia_id', id)
+            .eq('projeto_id', ocorrencia.projeto_id);
         }
 
         // Registrar estorno no ledger (PERDA_REVERSAO)
         let bkMoeda = ocorrencia.moeda || 'BRL';
         let bkWorkspaceId = workspaceId!;
         let bkProjetoId: string | undefined = ocorrencia.projeto_id || undefined;
+        let bookmakerStillLinked = false;
 
         if (ocorrencia.bookmaker_id) {
           const { data: bkInfo } = await (supabase as any)
@@ -656,9 +656,10 @@ export function useReabrirOcorrencia() {
             bkMoeda = bkInfo.moeda || bkMoeda;
             bkWorkspaceId = bkInfo.workspace_id || bkWorkspaceId;
             bkProjetoId = ocorrencia.projeto_id || bkInfo.projeto_id || undefined;
+            bookmakerStillLinked = bkInfo.projeto_id === ocorrencia.projeto_id;
 
-            // Se era saldo_irrecuperavel, reverter o acúmulo
-            if (ocorrencia.sub_motivo === 'saldo_irrecuperavel') {
+            // Se era saldo_irrecuperavel E bookmaker ainda vinculada, reverter o acúmulo
+            if (ocorrencia.sub_motivo === 'saldo_irrecuperavel' && bookmakerStillLinked) {
               const novoIrrecuperavel = Math.max(0, Number(bkInfo.saldo_irrecuperavel || 0) - valorPerda);
               await (supabase as any)
                 .from('bookmakers')
@@ -668,18 +669,26 @@ export function useReabrirOcorrencia() {
           }
         }
 
-        // Registrar reversão no ledger
-        const { reverterPerdaOperacionalViaLedger } = await import('@/lib/ledgerService');
-        await reverterPerdaOperacionalViaLedger({
-          bookmakerId: ocorrencia.bookmaker_id || '',
-          valor: valorPerda,
-          moeda: bkMoeda,
-          workspaceId: bkWorkspaceId,
-          userId: user!.id,
-          descricao: `Estorno de perda (reabertura): ${ocorrencia.titulo}`,
-          perdaId: id,
-          projetoIdSnapshot: bkProjetoId,
-        });
+        // Só estornar saldo via ledger se a bookmaker ainda está vinculada ao projeto
+        // Se desvinculada, a perda foi apenas contábil (projeto_perdas) — saldo já saiu via SAQUE_VIRTUAL
+        if (bookmakerStillLinked || !ocorrencia.bookmaker_id) {
+          const { reverterPerdaOperacionalViaLedger } = await import('@/lib/ledgerService');
+          await reverterPerdaOperacionalViaLedger({
+            bookmakerId: ocorrencia.bookmaker_id || '',
+            valor: valorPerda,
+            moeda: bkMoeda,
+            workspaceId: bkWorkspaceId,
+            userId: user!.id,
+            descricao: `Estorno de perda (reabertura): ${ocorrencia.titulo}`,
+            perdaId: id,
+            projetoIdSnapshot: bkProjetoId,
+          });
+        } else {
+          console.warn(
+            `[reabrirOcorrencia] Bookmaker ${ocorrencia.bookmaker_id} desvinculada. ` +
+            `Estorno apenas em projeto_perdas (sem crédito de saldo).`
+          );
+        }
       }
 
       // 3. Atualizar ocorrência para em_andamento
