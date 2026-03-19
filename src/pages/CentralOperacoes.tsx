@@ -61,6 +61,8 @@ import { useRole } from "@/hooks/useRole";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import type { RenewalSuccessData } from "@/components/parcerias/ParceriaDialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 import {
   useCentralOperacoesData,
