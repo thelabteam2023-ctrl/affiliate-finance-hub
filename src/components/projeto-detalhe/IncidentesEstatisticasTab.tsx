@@ -411,7 +411,7 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
               <CardContent className="space-y-3">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Valor em disputa (abertas)</span>
-                  <span className="font-medium text-yellow-400">{formatBRL(stats.valorRiscoAbertoBRL)}</span>
+                  <span className="font-medium text-yellow-400">{formatConsolidated(stats.valorRiscoAbertoBRL)}</span>
                 </div>
                 {Object.keys(stats.riscoPorMoeda).length > 1 && (
                   <div className="pl-2 space-y-0.5">
