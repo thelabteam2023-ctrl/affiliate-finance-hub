@@ -282,7 +282,7 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
       const moeda = (o as any).moeda || 'BRL';
       if (valor > 0) {
         perdaPorMoeda[moeda] = (perdaPorMoeda[moeda] || 0) + valor;
-        valorPerdaConfirmadaBRL += converterParaBRL(valor, moeda).valorBRL;
+        valorPerdaConfirmadaBRL += convertValue(valor, moeda);
       }
     });
 
