@@ -145,6 +145,23 @@ export default function CentralOperacoes() {
     staleTime: 30_000,
   });
 
+  // Projetos ativos para vincular bookmakers
+  const { data: projetosAtivos } = useQuery({
+    queryKey: ['projetos-ativos-central', workspaceId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('projetos')
+        .select('id, nome')
+        .eq('workspace_id', workspaceId!)
+        .eq('status', 'ativo')
+        .order('nome');
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!workspaceId,
+    staleTime: 60_000,
+  });
+
   // ─── REALTIME ─────
   const realtimeDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
