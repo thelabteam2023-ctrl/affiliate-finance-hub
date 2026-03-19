@@ -214,7 +214,7 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
     });
 
     return Object.values(map).sort((a, b) => b.count - a.count);
-  }, [ocorrencias, bookmakerInfo, converterParaBRL]);
+  }, [ocorrencias, bookmakerInfo, convertValue]);
 
   // ====== General stats ======
   const stats = useMemo(() => {
