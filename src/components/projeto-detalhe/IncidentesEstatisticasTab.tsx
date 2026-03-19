@@ -335,7 +335,7 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
         <MiniKpi icon={<Target className="h-4 w-4" />} label="Total" value={String(stats.total)} sub={`${stats.abertas} abertas`} />
         <MiniKpi icon={<CheckCircle className="h-4 w-4 text-emerald-400" />} label="Taxa Resolução" value={`${stats.taxaResolucao.toFixed(0)}%`} sub={`${stats.resolvidas} resolvidas`} />
         <MiniKpi icon={<Timer className="h-4 w-4 text-blue-400" />} label="Tempo Médio" value={formatDuration(stats.tempoMedio)} sub="para resolução" />
-        <MiniKpi icon={<DollarSign className="h-4 w-4 text-red-400" />} label="Perda Total" value={formatBRL(stats.valorPerdaConfirmadaBRL)} sub={`${stats.resolvidasComPerda} com perda`} />
+        <MiniKpi icon={<DollarSign className="h-4 w-4 text-red-400" />} label="Perda Total" value={formatConsolidated(stats.valorPerdaConfirmadaBRL)} sub={`${stats.resolvidasComPerda} com perda`} />
       </div>
 
       {/* Sub-tabs */}
