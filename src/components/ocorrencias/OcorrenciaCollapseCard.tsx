@@ -48,7 +48,9 @@ import {
   Paperclip,
   CircleDot,
   Pencil,
+  DollarSign,
 } from 'lucide-react';
+import { getCurrencySymbol } from '@/types/currency';
 import { formatDistanceToNow, differenceInDays, differenceInHours, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -319,6 +321,14 @@ export function OcorrenciaCollapseCard({
                       <span className="flex items-center gap-1 text-orange-400/80">
                         <Users className="h-3 w-3" />
                         {parceiroNome}
+                      </span>
+                    )}
+                    {/* Valor em disputa */}
+                    {(ocorrencia as any).valor_risco > 0 && (
+                      <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-red-500/10 text-red-400 font-medium">
+                        <DollarSign className="h-3 w-3" />
+                        {getCurrencySymbol((ocorrencia as any).moeda || 'BRL')}{' '}
+                        {Number((ocorrencia as any).valor_risco).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>
                     )}
                     {isExecutor && (
