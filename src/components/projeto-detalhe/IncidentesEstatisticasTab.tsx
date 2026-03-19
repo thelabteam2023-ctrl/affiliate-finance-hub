@@ -271,7 +271,7 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
       const moeda = (o as any).moeda || 'BRL';
       if (valor > 0) {
         riscoPorMoeda[moeda] = (riscoPorMoeda[moeda] || 0) + valor;
-        valorRiscoAbertoBRL += converterParaBRL(valor, moeda).valorBRL;
+        valorRiscoAbertoBRL += convertValue(valor, moeda);
       }
     });
 
