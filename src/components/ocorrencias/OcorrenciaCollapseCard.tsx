@@ -429,25 +429,27 @@ export function OcorrenciaCollapseCard({
                       Vinculado a:
                     </span>
                     {bookmakerNome && (
-                      <span className="flex items-center gap-1.5 text-foreground">
-                        {bookmakerLogoUrl ? (
-                          <img src={bookmakerLogoUrl} alt="" className="h-4 w-4 rounded-sm object-contain" />
-                        ) : (
-                          <Building2 className="h-3.5 w-3.5 text-blue-400" />
+                      <div className="flex flex-col">
+                        <span className="flex items-center gap-1.5 text-foreground">
+                          {bookmakerLogoUrl ? (
+                            <img src={bookmakerLogoUrl} alt="" className="h-4 w-4 rounded-sm object-contain" />
+                          ) : (
+                            <Building2 className="h-3.5 w-3.5 text-blue-400" />
+                          )}
+                          {bookmakerNome}
+                        </span>
+                        {parceiroNome && (
+                          <span className="flex items-center gap-1.5 text-muted-foreground text-xs ml-5.5 mt-0.5">
+                            <Users className="h-3 w-3 text-orange-400" />
+                            {getFirstLastName(parceiroNome)}
+                          </span>
                         )}
-                        {bookmakerNome}
-                      </span>
+                      </div>
                     )}
                     {projetoNome && (
                       <span className="flex items-center gap-1.5 text-foreground">
                         <FolderOpen className="h-3.5 w-3.5 text-purple-400" />
                         {projetoNome}
-                      </span>
-                    )}
-                    {parceiroNome && (
-                      <span className="flex items-center gap-1.5 text-foreground">
-                        <Users className="h-3.5 w-3.5 text-orange-400" />
-                        {parceiroNome}
                       </span>
                     )}
                   </div>
