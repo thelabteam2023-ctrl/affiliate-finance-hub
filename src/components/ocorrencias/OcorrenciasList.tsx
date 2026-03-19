@@ -19,7 +19,7 @@ interface Props {
   emptyMessage?: string;
 }
 
-/** Fetch bookmaker names and logos for a set of IDs */
+/** Fetch bookmaker names, logos, and parceiro (owner) names for a set of IDs */
 function useBookmakerInfo(ids: string[]) {
   return useQuery({
     queryKey: ['bookmaker-info', ids],
@@ -27,11 +27,15 @@ function useBookmakerInfo(ids: string[]) {
       if (ids.length === 0) return {};
       const { data } = await supabase
         .from('bookmakers')
-        .select('id, nome, bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url)')
+        .select('id, nome, parceiro_id, bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url), parceiros!bookmakers_parceiro_id_fkey (nome)')
         .in('id', ids);
-      const map: Record<string, { nome: string; logo_url: string | null }> = {};
+      const map: Record<string, { nome: string; logo_url: string | null; parceiroNome: string | null }> = {};
       data?.forEach((b: any) => {
-        map[b.id] = { nome: b.nome, logo_url: b.bookmakers_catalogo?.logo_url || null };
+        map[b.id] = {
+          nome: b.nome,
+          logo_url: b.bookmakers_catalogo?.logo_url || null,
+          parceiroNome: b.parceiros?.nome || null,
+        };
       });
       return map;
     },
@@ -47,24 +51,6 @@ function useProjetoNames(ids: string[]) {
       if (ids.length === 0) return {};
       const { data } = await supabase
         .from('projetos')
-        .select('id, nome')
-        .in('id', ids);
-      const map: Record<string, string> = {};
-      data?.forEach((p) => { map[p.id] = p.nome; });
-      return map;
-    },
-    enabled: ids.length > 0,
-  });
-}
-
-/** Fetch parceiro names */
-function useParceiroNames(ids: string[]) {
-  return useQuery({
-    queryKey: ['parceiro-names', ids],
-    queryFn: async () => {
-      if (ids.length === 0) return {};
-      const { data } = await supabase
-        .from('parceiros')
         .select('id, nome')
         .in('id', ids);
       const map: Record<string, string> = {};
@@ -104,14 +90,9 @@ export function OcorrenciasList({ statusFilter, modoMinhas, tipoFilter, emptyMes
     () => [...new Set(lista.filter((o) => o.projeto_id).map((o) => o.projeto_id!))],
     [lista]
   );
-  const parceiroIds = useMemo(
-    () => [...new Set(lista.filter((o) => o.parceiro_id).map((o) => o.parceiro_id!))],
-    [lista]
-  );
 
   const { data: bookmakerMap = {} } = useBookmakerInfo(bookmakerIds);
   const { data: projetoMap = {} } = useProjetoNames(projetoIds);
-  const { data: parceiroMap = {} } = useParceiroNames(parceiroIds);
 
   // Group by priority for kanban columns
   const PRIORIDADE_ORDER: OcorrenciaPrioridade[] = ['urgente', 'alta', 'media', 'baixa'];
@@ -178,7 +159,7 @@ export function OcorrenciasList({ statusFilter, modoMinhas, tipoFilter, emptyMes
       bookmakerNome={ocorrencia.bookmaker_id ? bookmakerMap[ocorrencia.bookmaker_id]?.nome : undefined}
       bookmakerLogoUrl={ocorrencia.bookmaker_id ? bookmakerMap[ocorrencia.bookmaker_id]?.logo_url : undefined}
       projetoNome={ocorrencia.projeto_id ? projetoMap[ocorrencia.projeto_id] : undefined}
-      parceiroNome={ocorrencia.parceiro_id ? parceiroMap[ocorrencia.parceiro_id] : undefined}
+      parceiroNome={ocorrencia.bookmaker_id ? bookmakerMap[ocorrencia.bookmaker_id]?.parceiroNome ?? undefined : undefined}
     />
   );
 
