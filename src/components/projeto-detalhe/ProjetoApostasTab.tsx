@@ -1151,7 +1151,13 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
   };
 
   // Separar apostas em abertas e histórico
-  const apostasAbertasList = useMemo(() => apostasUnificadasBase.filter(isItemPendente), [apostasUnificadasBase]);
+  // Abertas: ordenadas por data_aposta crescente (jogo mais próximo primeiro)
+  const apostasAbertasList = useMemo(() => 
+    apostasUnificadasBase
+      .filter(isItemPendente)
+      .sort((a, b) => new Date(a.data_aposta).getTime() - new Date(b.data_aposta).getTime()),
+    [apostasUnificadasBase]
+  );
   const apostasHistoricoList = useMemo(() => apostasUnificadasBase.filter(item => !isItemPendente(item)), [apostasUnificadasBase]);
 
   // Total counts without dimensional filters for badge comparison

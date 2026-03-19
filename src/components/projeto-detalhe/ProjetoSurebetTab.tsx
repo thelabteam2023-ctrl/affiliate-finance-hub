@@ -931,7 +931,13 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
 
   // Separar surebets em abertas e histórico (usando dados FILTRADOS para Operações)
   // ISOLAMENTO: Filtros dimensionais (Casa/Parceiro) afetam APENAS esta lista
-  const surebetsAbertas = useMemo(() => filteredSurebetsForOperacoes.filter(s => !s.resultado || s.resultado === "PENDENTE" || s.status === "PENDENTE"), [filteredSurebetsForOperacoes]);
+  // Abertas: ordenadas por data_operacao crescente (jogo mais próximo primeiro)
+  const surebetsAbertas = useMemo(() => 
+    filteredSurebetsForOperacoes
+      .filter(s => !s.resultado || s.resultado === "PENDENTE" || s.status === "PENDENTE")
+      .sort((a, b) => new Date(a.data_operacao).getTime() - new Date(b.data_operacao).getTime()),
+    [filteredSurebetsForOperacoes]
+  );
   const surebetsHistorico = useMemo(() => filteredSurebetsForOperacoes.filter(s => s.resultado && s.resultado !== "PENDENTE" && s.status !== "PENDENTE"), [filteredSurebetsForOperacoes]);
 
   // Contagens totais (sem filtros dimensionais) para indicar no badge

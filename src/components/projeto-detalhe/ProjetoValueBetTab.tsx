@@ -670,7 +670,13 @@ export function ProjetoValueBetTab({
   }, [casaData, porCasaSort]);
 
   // Separar apostas em abertas e histórico
-  const apostasAbertas = useMemo(() => apostas.filter(a => !a.resultado || a.resultado === "PENDENTE"), [apostas]);
+  // Abertas: ordenadas por data_aposta crescente (jogo mais próximo primeiro)
+  const apostasAbertas = useMemo(() => 
+    apostas
+      .filter(a => !a.resultado || a.resultado === "PENDENTE")
+      .sort((a, b) => new Date(a.data_aposta).getTime() - new Date(b.data_aposta).getTime()),
+    [apostas]
+  );
   const apostasHistorico = useMemo(() => apostas.filter(a => a.resultado && a.resultado !== "PENDENTE"), [apostas]);
 
   // Auto-switch to history tab when no open operations
