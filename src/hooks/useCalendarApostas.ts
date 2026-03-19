@@ -63,7 +63,8 @@ async function fetchCalendarApostas(
     .eq("projeto_id", projetoId)
     .eq("status", "LIQUIDADA")
     .is("cancelled_at", null)
-    .order("data_aposta", { ascending: true });
+    .order("data_aposta", { ascending: true })
+    .limit(10000);
 
   // Aplica filtro de estratégia se fornecido
   if (estrategia) {

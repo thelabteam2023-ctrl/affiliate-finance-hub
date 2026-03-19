@@ -80,7 +80,8 @@ async function fetchApostasFiltradas(
     .eq("projeto_id", projetoId)
     .eq("status", "LIQUIDADA")
     .is("cancelled_at", null)
-    .order("data_aposta", { ascending: true });
+    .order("data_aposta", { ascending: true })
+    .limit(10000);
 
   if (dateRange) {
     const { startUTC, endUTC } = getOperationalDateRangeForQuery(dateRange.start, dateRange.end);
