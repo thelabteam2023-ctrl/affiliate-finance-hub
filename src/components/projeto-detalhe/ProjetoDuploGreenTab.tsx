@@ -55,7 +55,7 @@ import { getOperationalDateRangeForQuery } from "@/utils/dateUtils";
 // import { SurebetDialog } from "./SurebetDialog";
 import { ApostaPernasResumo, ApostaPernasInline, getModeloOperacao, Perna } from "./ApostaPernasResumo";
 import { ApostaCard } from "./ApostaCard";
-import { SurebetCard } from "./SurebetCard";
+import { SurebetCard, SurebetData } from "./SurebetCard";
 import type { SurebetQuickResult } from "@/components/apostas/SurebetRowActionsMenu";
 import { APOSTA_ESTRATEGIA } from "@/lib/apostaConstants";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange as FilterDateRange } from "./StandardTimeFilter";
