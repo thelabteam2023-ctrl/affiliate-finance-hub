@@ -426,7 +426,8 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
         // Todas as apostas SIMPLES aparecem aqui, incluindo SUREBET
         // A separação visual é feita via badges, não via filtro excludente
         .is("cancelled_at", null)
-        .order("data_aposta", { ascending: false });
+        .order("data_aposta", { ascending: false })
+        .limit(10000);
       
       if (dateRange) {
         // CRÍTICO: Usar getOperationalDateRangeForQuery para garantir timezone operacional (São Paulo)
