@@ -28,7 +28,7 @@ interface ProjetoOcorrenciasTabProps {
 const defaultFormatCurrency = (value: number): string =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
-/** Fetch bookmaker names and logos for a set of IDs */
+/** Fetch bookmaker names, logos, and parceiro (owner) names for a set of IDs */
 function useBookmakerInfo(ids: string[]) {
   return useQuery({
     queryKey: ['bookmaker-info', ids],
@@ -36,27 +36,16 @@ function useBookmakerInfo(ids: string[]) {
       if (ids.length === 0) return {};
       const { data } = await supabase
         .from('bookmakers')
-        .select('id, nome, bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url)')
+        .select('id, nome, parceiro_id, bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url), parceiros!bookmakers_parceiro_id_fkey (nome)')
         .in('id', ids);
-      const map: Record<string, { nome: string; logo_url: string | null }> = {};
+      const map: Record<string, { nome: string; logo_url: string | null; parceiroNome: string | null }> = {};
       data?.forEach((b: any) => {
-        map[b.id] = { nome: b.nome, logo_url: b.bookmakers_catalogo?.logo_url || null };
+        map[b.id] = {
+          nome: b.nome,
+          logo_url: b.bookmakers_catalogo?.logo_url || null,
+          parceiroNome: b.parceiros?.nome || null,
+        };
       });
-      return map;
-    },
-    enabled: ids.length > 0,
-  });
-}
-
-/** Fetch parceiro names */
-function useParceiroNames(ids: string[]) {
-  return useQuery({
-    queryKey: ['parceiro-names', ids],
-    queryFn: async () => {
-      if (ids.length === 0) return {};
-      const { data } = await supabase.from('parceiros').select('id, nome').in('id', ids);
-      const map: Record<string, string> = {};
-      data?.forEach((p) => { map[p.id] = p.nome; });
       return map;
     },
     enabled: ids.length > 0,
