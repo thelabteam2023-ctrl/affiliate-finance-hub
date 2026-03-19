@@ -425,7 +425,7 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
                 )}
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Perdas confirmadas</span>
-                  <span className="font-medium text-red-400">{formatBRL(stats.valorPerdaConfirmadaBRL)}</span>
+                  <span className="font-medium text-red-400">{formatConsolidated(stats.valorPerdaConfirmadaBRL)}</span>
                 </div>
                 {Object.keys(stats.perdaPorMoeda).length > 1 && (
                   <div className="pl-2 space-y-0.5">
