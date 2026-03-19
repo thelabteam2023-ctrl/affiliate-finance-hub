@@ -155,7 +155,7 @@ export default function CentralOperacoes() {
         .from('projetos')
         .select('id, nome')
         .eq('workspace_id', workspaceId!)
-        .eq('status', 'ativo')
+        .in('status', ['ativo', 'EM_ANDAMENTO'])
         .order('nome');
       if (error) throw error;
       return data || [];
