@@ -233,6 +233,47 @@ export default function CentralOperacoes() {
 
   const formatCurrency = (value: number, moeda: string = "BRL") => formatCurrencyUtil(value, moeda);
 
+  const handleVincularConciliacao = async () => {
+    if (!selectedCasaConciliacao || !selectedProjetoVincular || !user || !workspaceId) return;
+    setVincularConciliacaoLoading(true);
+    try {
+      const { error: updateError } = await supabase
+        .from("bookmakers")
+        .update({ projeto_id: selectedProjetoVincular })
+        .eq("id", selectedCasaConciliacao.bookmaker_id);
+      if (updateError) throw updateError;
+
+      await supabase.from("projeto_bookmaker_historico").insert({
+        projeto_id: selectedProjetoVincular,
+        bookmaker_id: selectedCasaConciliacao.bookmaker_id,
+        bookmaker_nome: selectedCasaConciliacao.bookmaker_nome,
+        parceiro_id: (selectedCasaConciliacao as any).parceiro_id || null,
+        parceiro_nome: selectedCasaConciliacao.parceiro_nome || null,
+        user_id: user.id,
+        workspace_id: workspaceId,
+      });
+
+      const { executeLink } = await import("@/lib/projetoTransitionService");
+      await executeLink({
+        bookmakerId: selectedCasaConciliacao.bookmaker_id,
+        projetoId: selectedProjetoVincular,
+        workspaceId,
+        userId: user.id,
+        saldoAtual: selectedCasaConciliacao.saldo_atual,
+        moeda: selectedCasaConciliacao.moeda,
+      });
+
+      toast.success(`"${selectedCasaConciliacao.bookmaker_nome}" vinculada ao projeto!`);
+      setVincularConciliacaoOpen(false);
+      refetchCentral();
+    } catch (err) {
+      console.error("Erro ao vincular:", err);
+      toast.error("Erro ao vincular bookmaker ao projeto");
+    } finally {
+      setVincularConciliacaoLoading(false);
+    }
+  };
+
   const handleRenovarClick = (parc: ParceriaAlertaEncerramento) => {
     setParceriaToRenovar(parc);
     setRenovarDialogOpen(true);
