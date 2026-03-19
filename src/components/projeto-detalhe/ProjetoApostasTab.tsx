@@ -654,7 +654,8 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
         .eq("projeto_id", projetoId)
         .eq("forma_registro", "ARBITRAGEM")
         .is("cancelled_at", null)
-        .order("data_aposta", { ascending: false });
+        .order("data_aposta", { ascending: false })
+        .limit(10000);
       
       if (dateRange) {
         const { startUTC, endUTC } = getOperationalDateRangeForQuery(dateRange.start, dateRange.end);
