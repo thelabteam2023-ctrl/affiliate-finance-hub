@@ -432,6 +432,8 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
   // Usa formatCurrency do projeto ou fallback para BRL
   const formatValue = formatCurrency || defaultFormatCurrency;
   const isDuploGreen = surebet.estrategia === "DUPLO_GREEN";
+  const isValueBet = surebet.estrategia === "VALUEBET";
+  const isSimples = surebet.estrategia === "SIMPLES" || surebet.estrategia === "NORMAL";
   const isLiquidada = surebet.status === "LIQUIDADA";
   
   // Detectar moeda predominante das pernas (se todas iguais, usar essa; senão, usar formatValue do projeto)
