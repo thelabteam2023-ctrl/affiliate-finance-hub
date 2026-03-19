@@ -426,7 +426,8 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
         // Todas as apostas SIMPLES aparecem aqui, incluindo SUREBET
         // A separação visual é feita via badges, não via filtro excludente
         .is("cancelled_at", null)
-        .order("data_aposta", { ascending: false });
+        .order("data_aposta", { ascending: false })
+        .limit(10000);
       
       if (dateRange) {
         // CRÍTICO: Usar getOperationalDateRangeForQuery para garantir timezone operacional (São Paulo)
@@ -455,7 +456,8 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
           .eq("forma_registro", "SIMPLES")
           .eq("status", "PENDENTE")
           .is("cancelled_at", null)
-          .order("data_aposta", { ascending: false });
+          .order("data_aposta", { ascending: false })
+          .limit(10000);
 
         if (pendentesData && pendentesData.length > 0) {
           const existingIds = new Set(allData.map((a: any) => a.id));
@@ -566,7 +568,8 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
         .eq("projeto_id", projetoId)
         .eq("forma_registro", "MULTIPLA")
         .is("cancelled_at", null)
-        .order("data_aposta", { ascending: false });
+        .order("data_aposta", { ascending: false })
+        .limit(10000);
       
       if (dateRange) {
         const { startUTC, endUTC } = getOperationalDateRangeForQuery(dateRange.start, dateRange.end);
@@ -593,7 +596,8 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
           .eq("forma_registro", "MULTIPLA")
           .eq("status", "PENDENTE")
           .is("cancelled_at", null)
-          .order("data_aposta", { ascending: false });
+          .order("data_aposta", { ascending: false })
+          .limit(10000);
 
         if (pendentesData && pendentesData.length > 0) {
           const existingIds = new Set(allData.map((a: any) => a.id));
@@ -650,7 +654,8 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
         .eq("projeto_id", projetoId)
         .eq("forma_registro", "ARBITRAGEM")
         .is("cancelled_at", null)
-        .order("data_aposta", { ascending: false });
+        .order("data_aposta", { ascending: false })
+        .limit(10000);
       
       if (dateRange) {
         const { startUTC, endUTC } = getOperationalDateRangeForQuery(dateRange.start, dateRange.end);
@@ -681,7 +686,8 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
           .eq("forma_registro", "ARBITRAGEM")
           .eq("status", "PENDENTE")
           .is("cancelled_at", null)
-          .order("data_aposta", { ascending: false });
+          .order("data_aposta", { ascending: false })
+          .limit(10000);
 
         if (pendentesData && pendentesData.length > 0) {
           const existingIds = new Set(allSurebetData.map((a: any) => a.id));
