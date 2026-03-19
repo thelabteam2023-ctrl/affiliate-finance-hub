@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useOcorrencias } from '@/hooks/useOcorrencias';
 import { useWorkspaceMembers } from '@/hooks/useWorkspaceMembers';
 import { useFinanceiroConsolidado } from '@/hooks/useFinanceiroConsolidado';
+import { useProjetoCurrency } from '@/hooks/useProjetoCurrency';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
