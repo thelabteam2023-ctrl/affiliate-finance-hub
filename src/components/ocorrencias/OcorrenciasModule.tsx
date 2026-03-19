@@ -51,6 +51,9 @@ export function OcorrenciasModule() {
     return map;
   }, [activeOcorrencias]);
 
+  const riscoByMoeda = kpis?.riscoByMoeda ?? {};
+  const hasRisco = Object.keys(riscoByMoeda).length > 0;
+
   const kpiCards = [
     {
       label: 'Pendentes',
