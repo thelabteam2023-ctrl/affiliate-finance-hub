@@ -202,7 +202,7 @@ export function ProjetoOcorrenciasTab({ projetoId, onDataChange, formatCurrency:
             },
             {
               label: 'Perdas Confirmadas',
-              value: formatBRL(totalPerdasConfirmadas),
+              value: formatProjectCurrency(totalPerdasConfirmadas),
               tooltip: (
                 <div className="space-y-1">
                   <p className="font-semibold text-foreground">Perdas Confirmadas</p>
