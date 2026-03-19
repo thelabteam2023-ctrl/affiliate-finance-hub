@@ -144,7 +144,7 @@ export function ProjetoOcorrenciasTab({ projetoId, onDataChange, formatCurrency:
       }
       bookmakerNome={ocorrencia.bookmaker_id ? bookmakerMap[ocorrencia.bookmaker_id]?.nome : undefined}
       bookmakerLogoUrl={ocorrencia.bookmaker_id ? bookmakerMap[ocorrencia.bookmaker_id]?.logo_url : undefined}
-      parceiroNome={ocorrencia.parceiro_id ? parceiroMap[ocorrencia.parceiro_id] : undefined}
+      parceiroNome={ocorrencia.bookmaker_id ? bookmakerMap[ocorrencia.bookmaker_id]?.parceiroNome ?? undefined : undefined}
     />
   );
 
