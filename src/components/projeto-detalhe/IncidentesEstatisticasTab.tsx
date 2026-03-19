@@ -299,7 +299,7 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
       riscoPorMoeda, perdaPorMoeda,
       resolvidasSemImpacto, resolvidasComPerda,
     };
-  }, [ocorrencias, converterParaBRL]);
+  }, [ocorrencias, convertValue]);
 
   if (isLoading) {
     return (
