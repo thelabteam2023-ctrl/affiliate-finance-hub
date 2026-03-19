@@ -101,20 +101,44 @@ export function OcorrenciasModule() {
       </div>
 
       {/* KPI Strip */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         {loadingKpis
-          ? [1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-20" />)
-          : kpiCards.map((card) => (
-              <Card key={card.label} className={card.value > 0 ? '' : 'opacity-60'}>
+          ? [1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-20" />)
+          : <>
+              {kpiCards.map((card) => (
+                <Card key={card.label} className={card.value > 0 ? '' : 'opacity-60'}>
+                  <CardContent className="p-3 flex items-center gap-3">
+                    {card.icon}
+                    <div>
+                      <p className={`text-2xl font-bold ${card.color}`}>{card.value}</p>
+                      <p className="text-xs text-muted-foreground">{card.label}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+              {/* Valor em Disputa - multi-currency */}
+              <Card className={hasRisco ? '' : 'opacity-60'}>
                 <CardContent className="p-3 flex items-center gap-3">
-                  {card.icon}
+                  <DollarSign className="h-5 w-5 text-red-400" />
                   <div>
-                    <p className={`text-2xl font-bold ${card.color}`}>{card.value}</p>
-                    <p className="text-xs text-muted-foreground">{card.label}</p>
+                    {hasRisco ? (
+                      <div className="flex flex-col gap-0.5">
+                        {Object.entries(riscoByMoeda).map(([moeda, valor]) => (
+                          <p key={moeda} className="text-lg font-bold text-red-400 leading-tight">
+                            {getCurrencySymbol(moeda)}{' '}
+                            {Number(valor).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </p>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-2xl font-bold text-red-400">0</p>
+                    )}
+                    <p className="text-xs text-muted-foreground">Valor em Disputa</p>
                   </div>
                 </CardContent>
               </Card>
-            ))}
+            </>
+        }
       </div>
 
       {/* Type breakdown chips */}
