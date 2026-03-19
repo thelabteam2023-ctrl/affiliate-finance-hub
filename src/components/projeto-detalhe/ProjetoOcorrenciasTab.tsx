@@ -3,6 +3,7 @@ import { useOcorrencias, useAtualizarStatusOcorrencia } from '@/hooks/useOcorren
 import { useAuth } from '@/hooks/useAuth';
 import { useRole } from '@/hooks/useRole';
 import { useFinanceiroConsolidado } from '@/hooks/useFinanceiroConsolidado';
+import { useProjetoCurrency } from '@/hooks/useProjetoCurrency';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
