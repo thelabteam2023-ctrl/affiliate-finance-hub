@@ -88,15 +88,18 @@ export function ProjetoOcorrenciasTab({ projetoId, onDataChange, formatCurrency:
 
   const todas = [...abertas, ...historico];
 
-  // KPIs - consolidação multi-moeda via PTAX
-  const valorRiscoAberto = useMemo(() => {
-    return abertas.reduce((acc, o) => {
+  // KPIs - breakdown multi-moeda
+  const riscoByMoeda = useMemo(() => {
+    const map: Record<string, number> = {};
+    abertas.forEach((o) => {
       const valor = Number((o as any).valor_risco || 0);
       const moeda = (o as any).moeda || 'BRL';
-      if (valor <= 0) return acc;
-      return acc + converterParaBRL(valor, moeda).valorBRL;
-    }, 0);
-  }, [abertas, converterParaBRL]);
+      if (valor > 0) {
+        map[moeda] = (map[moeda] || 0) + valor;
+      }
+    });
+    return map;
+  }, [abertas]);
 
   const perdasConfirmadas = historico.filter((o) => (o as any).resultado_financeiro === 'perda_confirmada' || (o as any).resultado_financeiro === 'perda_parcial');
   const totalPerdasConfirmadas = useMemo(() => {
