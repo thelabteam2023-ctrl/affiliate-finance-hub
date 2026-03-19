@@ -53,6 +53,10 @@ import { APOSTA_ESTRATEGIA } from "@/lib/apostaConstants";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange as FilterDateRange } from "./StandardTimeFilter";
 import { VisaoGeralCharts } from "./VisaoGeralCharts";
 import { ApostaCard } from "./ApostaCard";
+import { SurebetCard, SurebetData, SurebetPerna } from "./SurebetCard";
+import { groupPernasBySelecao } from "@/utils/groupPernasBySelecao";
+import { liquidarPernaSurebet } from "@/services/aposta/ApostaService";
+import type { SurebetQuickResult } from "@/components/apostas/SurebetRowActionsMenu";
 import { UnifiedStatisticsCard } from "./UnifiedStatisticsCard";
 import { ChartEmptyState } from "@/components/ui/chart-empty-state";
 
