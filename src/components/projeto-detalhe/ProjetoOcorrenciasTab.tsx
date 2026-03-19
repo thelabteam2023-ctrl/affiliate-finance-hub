@@ -193,23 +193,12 @@ export function ProjetoOcorrenciasTab({ projetoId, onDataChange, formatCurrency:
                   <p className="text-muted-foreground">Incidentes em andamento neste projeto.</p>
                    <div className="flex justify-between gap-4 border-t border-border/50 pt-1">
                      <span>Valor em disputa</span>
-                     <div className="flex flex-col items-end gap-0.5">
-                       {Object.keys(riscoByMoeda).length > 0
-                         ? Object.entries(riscoByMoeda).map(([moeda, valor]) => (
-                             <span key={moeda} className="font-semibold text-foreground">
-                               {getCurrencySymbol(moeda)} {Number(valor).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                             </span>
-                           ))
-                         : <span className="font-semibold text-foreground">R$ 0,00</span>
-                       }
-                     </div>
+                     <span className="font-semibold text-foreground">{formatProjectCurrency(valorRiscoConsolidado)}</span>
                    </div>
                  </div>
                ),
                valueClassName: abertas.length > 0 ? 'text-amber-500' : 'text-muted-foreground',
-               subtitle: Object.keys(riscoByMoeda).length > 0
-                 ? <span className="text-muted-foreground">{Object.entries(riscoByMoeda).map(([moeda, valor]) => `${getCurrencySymbol(moeda)} ${Number(valor).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`).join(' + ')} em disputa</span>
-                 : <span className="text-muted-foreground">R$ 0,00 em disputa</span>,
+               subtitle: <span className="text-muted-foreground">{formatProjectCurrency(valorRiscoConsolidado)} em disputa</span>,
             },
             {
               label: 'Perdas Confirmadas',
