@@ -106,9 +106,9 @@ export function ProjetoOcorrenciasTab({ projetoId, onDataChange, formatCurrency:
       const valor = Number((o as any).valor_perda || 0);
       const moeda = (o as any).moeda || 'BRL';
       if (valor <= 0) return acc;
-      return acc + converterParaBRL(valor, moeda).valorBRL;
+      return acc + convertToConsolidation(valor, moeda);
     }, 0);
-  }, [perdasConfirmadas, converterParaBRL]);
+  }, [perdasConfirmadas, convertToConsolidation]);
 
   const resolvidasSemImpacto = historico.filter((o) => o.status === 'resolvido' && !(o as any).resultado_financeiro);
 
