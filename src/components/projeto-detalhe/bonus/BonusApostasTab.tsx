@@ -1075,14 +1075,69 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
           );
         }
         
-        // ===== APOSTA SIMPLES - Usando ApostaCard padronizado =====
+        // ===== APOSTA SIMPLES =====
         if (item.tipo === "simples") {
           const aposta = item.data as Aposta;
+          const subEntries = (aposta as any)._sub_entries;
+          const hasMultipleEntries = subEntries && subEntries.length > 1;
+
+          if (hasMultipleEntries) {
+            const surebetData: SurebetData = {
+              id: aposta.id,
+              workspace_id: (aposta as any).workspace_id,
+              data_operacao: aposta.data_aposta,
+              evento: aposta.evento,
+              esporte: aposta.esporte,
+              mercado: aposta.mercado,
+              modelo: (aposta as any).modelo || '1-N',
+              estrategia: aposta.estrategia || 'EXTRACAO_BONUS',
+              stake_total: (aposta as any).stake_total ?? aposta.stake ?? 0,
+              spread_calculado: null,
+              roi_esperado: null,
+              lucro_esperado: null,
+              lucro_real: aposta.pl_consolidado ?? aposta.lucro_prejuizo,
+              roi_real: null,
+              pl_consolidado: aposta.pl_consolidado,
+              stake_consolidado: aposta.stake_consolidado,
+              status: aposta.status,
+              resultado: aposta.resultado,
+              observacoes: aposta.observacoes,
+              pernas: groupPernasBySelecao(
+                subEntries.map((p: any) => ({
+                  id: p.id,
+                  selecao: p.selecao || aposta.selecao,
+                  selecao_livre: p.selecao_livre,
+                  odd: p.odd,
+                  stake: p.stake,
+                  resultado: p.resultado,
+                  lucro_prejuizo: p.lucro_prejuizo ?? null,
+                  bookmaker_nome: p.bookmaker?.nome || '—',
+                  bookmaker_id: p.bookmaker_id,
+                  moeda: p.moeda || 'BRL',
+                }))
+              ),
+            };
+
+            return (
+              <SurebetCard
+                key={aposta.id}
+                surebet={surebetData}
+                isBonusContext={true}
+                onEdit={() => handleOpenDialog(aposta)}
+                onQuickResolve={(surebetId, result) => handleQuickResolveSurebet(surebetId, result)}
+                onPernaResultChange={handleSurebetPernaResolve}
+                onDelete={handleDeleteAposta}
+                formatCurrency={formatProjectCurrency}
+                convertToConsolidation={convertToConsolidation}
+                bookmakerNomeMap={bookmakerNomeMap}
+              />
+            );
+          }
+
           const bookmakerBase = aposta.bookmaker?.nome?.split(" - ")[0] || aposta.bookmaker?.nome;
           const parceiroNome = aposta.bookmaker?.parceiro?.nome ? getFirstLastName(aposta.bookmaker.parceiro.nome) : null;
           const logoUrl = aposta.bookmaker?.bookmakers_catalogo?.logo_url;
           
-          // Preparar dados para ApostaCard - moeda ORIGINAL da aposta
            const apostaCardData: ApostaCardData = {
              id: aposta.id,
              evento: aposta.evento,
@@ -1100,19 +1155,6 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
              parceiro_nome: parceiroNome,
              logo_url: logoUrl,
              moeda: aposta.moeda_operacao || "BRL",
-             primary_odd: (aposta as any)._sub_entries?.[0]?.odd ?? undefined,
-             // Multi-entry: sub-entradas de apostas_pernas (exclui a 1ª perna que é a principal)
-             sub_entries: (aposta as any)._sub_entries
-               ?.filter((_: any, i: number) => i > 0)
-               ?.map((p: any) => ({
-                 bookmaker_nome: p.bookmaker?.nome?.split(" - ")[0] || p.bookmaker?.nome || '?',
-                 parceiro_nome: p.bookmaker?.parceiro?.nome || null,
-                 odd: p.odd,
-                 stake: p.stake,
-                 moeda: p.moeda,
-                 logo_url: p.bookmaker?.bookmakers_catalogo?.logo_url || null,
-                 selecao_livre: p.selecao_livre,
-               })) || undefined,
            };
            
            return (
