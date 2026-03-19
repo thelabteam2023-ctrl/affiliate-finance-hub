@@ -209,6 +209,11 @@ export default function CentralOperacoes() {
   const [encerrarLoading, setEncerrarLoading] = useState(false);
   const [renovarDialogOpen, setRenovarDialogOpen] = useState(false);
   const [parceriaToRenovar, setParceriaToRenovar] = useState<ParceriaAlertaEncerramento | null>(null);
+  // Vincular projeto a casa pendente de conciliação
+  const [vincularConciliacaoOpen, setVincularConciliacaoOpen] = useState(false);
+  const [selectedCasaConciliacao, setSelectedCasaConciliacao] = useState<typeof casasPendentesConciliacao[0] | null>(null);
+  const [selectedProjetoVincular, setSelectedProjetoVincular] = useState("");
+  const [vincularConciliacaoLoading, setVincularConciliacaoLoading] = useState(false);
   const [mainTab, setMainTabState] = useState<'financeiro' | 'contas' | 'ocorrencias' | 'solicitacoes' | 'alertas'>(() => {
     const saved = localStorage.getItem('central-operacoes-main-tab');
     // Operadores não têm acesso à Central de Operações completa
