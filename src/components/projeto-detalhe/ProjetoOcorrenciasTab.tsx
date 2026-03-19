@@ -66,7 +66,8 @@ function useParceiroNames(ids: string[]) {
 
 export function ProjetoOcorrenciasTab({ projetoId, onDataChange, formatCurrency: formatCurrencyProp }: ProjetoOcorrenciasTabProps) {
   const { converterParaBRL, formatBRL } = useFinanceiroConsolidado();
-  const formatCurrency = formatCurrencyProp || defaultFormatCurrency;
+  const { convertToConsolidation, formatCurrency: formatProjectCurrency, moedaConsolidacao } = useProjetoCurrency(projetoId);
+  const formatCurrency = formatCurrencyProp || formatProjectCurrency;
   const { user } = useAuth();
   const { isOwnerOrAdmin } = useRole();
   const [dialogOpen, setDialogOpen] = useState(false);
