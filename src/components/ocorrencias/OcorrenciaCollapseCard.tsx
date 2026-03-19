@@ -439,7 +439,7 @@ export function OcorrenciaCollapseCard({
                           {bookmakerNome}
                         </span>
                         {parceiroNome && (
-                          <span className="flex items-center gap-1.5 text-muted-foreground text-xs ml-5.5 mt-0.5">
+                          <span className="flex items-center gap-1.5 text-muted-foreground text-xs ml-[22px] mt-0.5">
                             <Users className="h-3 w-3 text-orange-400" />
                             {getFirstLastName(parceiroNome)}
                           </span>
