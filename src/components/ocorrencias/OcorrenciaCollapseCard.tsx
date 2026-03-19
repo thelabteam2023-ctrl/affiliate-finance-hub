@@ -311,16 +311,16 @@ export function OcorrenciaCollapseCard({
                         {bookmakerNome}
                       </span>
                     )}
+                    {parceiroNome && (
+                      <span className="flex items-center gap-1 text-orange-400/80">
+                        <Users className="h-3 w-3" />
+                        {getFirstLastName(parceiroNome)}
+                      </span>
+                    )}
                     {projetoNome && (
                       <span className="flex items-center gap-1 text-purple-400/80">
                         <FolderOpen className="h-3 w-3" />
                         {projetoNome}
-                      </span>
-                    )}
-                    {parceiroNome && (
-                      <span className="flex items-center gap-1 text-orange-400/80">
-                        <Users className="h-3 w-3" />
-                        {parceiroNome}
                       </span>
                     )}
                     {/* Valor em disputa */}
