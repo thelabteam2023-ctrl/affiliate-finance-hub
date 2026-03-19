@@ -90,14 +90,9 @@ export function OcorrenciasList({ statusFilter, modoMinhas, tipoFilter, emptyMes
     () => [...new Set(lista.filter((o) => o.projeto_id).map((o) => o.projeto_id!))],
     [lista]
   );
-  const parceiroIds = useMemo(
-    () => [...new Set(lista.filter((o) => o.parceiro_id).map((o) => o.parceiro_id!))],
-    [lista]
-  );
 
   const { data: bookmakerMap = {} } = useBookmakerInfo(bookmakerIds);
   const { data: projetoMap = {} } = useProjetoNames(projetoIds);
-  const { data: parceiroMap = {} } = useParceiroNames(parceiroIds);
 
   // Group by priority for kanban columns
   const PRIORIDADE_ORDER: OcorrenciaPrioridade[] = ['urgente', 'alta', 'media', 'baixa'];
