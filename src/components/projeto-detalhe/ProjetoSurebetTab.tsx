@@ -302,7 +302,8 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
         .eq("projeto_id", projetoId)
         .eq("estrategia", "SUREBET")
         .is("cancelled_at", null)
-        .order("data_aposta", { ascending: false });
+        .order("data_aposta", { ascending: false })
+        .limit(10000);
       
       if (dateRange) {
         const { startUTC, endUTC } = getOperationalDateRangeForQuery(dateRange.start, dateRange.end);
