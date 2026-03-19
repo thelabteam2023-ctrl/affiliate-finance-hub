@@ -669,6 +669,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
     : apostasUnificadasRaw;
 
   // Separate into Abertas (pending) and Histórico (settled)
+  // Abertas: ordenadas por data_aposta crescente (jogo mais próximo primeiro)
   const apostasAbertas = apostasUnificadas.filter(item => {
     if (item.tipo === "simples") {
       const a = item.data as Aposta;
@@ -683,7 +684,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
       return sb.status === "PENDENTE" || !sb.resultado;
     }
     return false;
-  });
+  }).sort((a, b) => new Date(a.data_aposta).getTime() - new Date(b.data_aposta).getTime());
 
   const apostasHistorico = apostasUnificadas.filter(item => {
     if (item.tipo === "simples") {
