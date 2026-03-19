@@ -1294,6 +1294,46 @@ export default function CentralOperacoes() {
         parceriaToRenovar={parceriaToRenovar}
         onRenewalSuccess={handleRenewalSuccess}
       />
+
+      {/* Dialog: Vincular projeto a casa pendente de conciliação */}
+      <Dialog open={vincularConciliacaoOpen} onOpenChange={setVincularConciliacaoOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Vincular a Projeto</DialogTitle>
+            <DialogDescription>
+              Vincular <strong>{selectedCasaConciliacao?.bookmaker_nome}</strong>
+              {selectedCasaConciliacao?.parceiro_nome && ` de ${getFirstLastName(selectedCasaConciliacao.parceiro_nome)}`} a um projeto ativo.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">
+              <Wallet className="h-4 w-4 text-primary" />
+              <span className="text-sm">Saldo: <strong>{selectedCasaConciliacao && formatCurrency(selectedCasaConciliacao.saldo_atual, selectedCasaConciliacao.moeda)}</strong></span>
+            </div>
+            <Select value={selectedProjetoVincular} onValueChange={setSelectedProjetoVincular}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecionar projeto..." />
+              </SelectTrigger>
+              <SelectContent>
+                {(projetosAtivos || []).map((p) => (
+                  <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setVincularConciliacaoOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleVincularConciliacao}
+              disabled={!selectedProjetoVincular || vincularConciliacaoLoading}
+            >
+              {vincularConciliacaoLoading ? "Vinculando..." : "Vincular"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
