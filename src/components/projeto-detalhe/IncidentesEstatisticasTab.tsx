@@ -185,7 +185,7 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
       if (isResolvida) {
         c.resolvidas += 1;
         const perda = Number((o as any).valor_perda || 0);
-        if (perda > 0) c.perdaBRL += converterParaBRL(perda, moeda).valorBRL;
+        if (perda > 0) c.perdaBRL += convertValue(perda, moeda);
       }
 
       const inicio = getInicio(o);
