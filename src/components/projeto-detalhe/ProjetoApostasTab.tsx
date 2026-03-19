@@ -686,7 +686,8 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
           .eq("forma_registro", "ARBITRAGEM")
           .eq("status", "PENDENTE")
           .is("cancelled_at", null)
-          .order("data_aposta", { ascending: false });
+          .order("data_aposta", { ascending: false })
+          .limit(10000);
 
         if (pendentesData && pendentesData.length > 0) {
           const existingIds = new Set(allSurebetData.map((a: any) => a.id));
