@@ -102,11 +102,20 @@ interface CasaStats {
 }
 
 export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) {
-  const fmt = formatCurrency || defaultFormat;
+  const { converterParaBRL, formatBRL } = useFinanceiroConsolidado();
+  const { convertToConsolidation, formatCurrency: formatProjectCurrency, moedaConsolidacao } = useProjetoCurrency(projetoId);
+  
+  // In project context: use project consolidation currency
+  // In workspace context: show per-currency breakdown
+  const isProjectContext = !!projetoId;
+  const fmt = formatCurrency || (isProjectContext ? formatProjectCurrency : defaultFormat);
+  const convertValue = isProjectContext
+    ? (valor: number, moeda: string) => convertToConsolidation(valor, moeda)
+    : (valor: number, moeda: string) => converterParaBRL(valor, moeda).valorBRL;
+  const formatConsolidated = isProjectContext ? formatProjectCurrency : formatBRL;
+  
   const filters = projetoId ? { projetoId } : undefined;
   const { data: ocorrencias = [], isLoading } = useOcorrencias(filters);
-  const { data: members = [] } = useWorkspaceMembers();
-  const { converterParaBRL, formatBRL } = useFinanceiroConsolidado();
 
   const [statsSubTab, setStatsSubTab] = useState<'geral' | 'por-casa'>('geral');
   const [selectedCasa, setSelectedCasa] = useState<CasaStats | null>(null);
