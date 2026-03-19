@@ -454,7 +454,7 @@ export default function CentralOperacoes() {
                       <div className="min-w-0 flex-1">
                         <p className="text-xs font-medium truncate">{casa.bookmaker_nome}{casa.parceiro_nome && <span className="text-muted-foreground font-normal"> de {getFirstLastName(casa.parceiro_nome)}</span>}</p>
                         <p className="text-[10px] text-muted-foreground truncate">
-                          {casa.projeto_nome ? <span className="text-primary/80">{casa.projeto_nome}</span> : <span className="text-amber-600 italic">Nenhum projeto vinculado</span>}
+                          {casa.projeto_nome ? <span className="text-primary/80">{casa.projeto_nome}</span> : <button type="button" onClick={(e) => { e.stopPropagation(); setSelectedCasaConciliacao(casa); setSelectedProjetoVincular(""); setVincularConciliacaoOpen(true); }} className="text-amber-600 italic hover:text-amber-400 hover:underline cursor-pointer transition-colors inline-flex items-center gap-0.5"><FolderKanban className="h-2.5 w-2.5" />Nenhum projeto vinculado</button>}
                           <span className="mx-1">•</span>{casa.qtd_transacoes_pendentes} {casa.qtd_transacoes_pendentes === 1 ? "transação" : "transações"}
                         </p>
                       </div>
