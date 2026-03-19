@@ -1281,42 +1281,90 @@ export function ProjetoValueBetTab({
         </div>
       ) : (
         <div className="space-y-2">
-          {apostasFiltradas.map((aposta) => (
-            <ApostaCard
-              key={aposta.id}
-               aposta={{
-                 ...aposta,
-                 evento: aposta.evento || '',
-                 esporte: aposta.esporte || '',
-                 pernas: aposta.pernas ?? undefined,
-                 selecoes: Array.isArray(aposta.selecoes) ? aposta.selecoes : undefined,
-                 moeda: aposta.moeda_operacao || "BRL",
-                 primary_odd: (aposta as any)._sub_entries?.[0]?.odd ?? undefined,
-                 sub_entries: (aposta as any)._sub_entries
-                   ?.filter((_: any, i: number) => i > 0)
-                   ?.map((p: any) => ({
-                     bookmaker_nome: p.bookmaker?.nome?.split(" - ")[0] || p.bookmaker?.nome || '?',
-                     parceiro_nome: p.bookmaker?.parceiro?.nome || null,
-                     odd: p.odd,
-                     stake: p.stake,
-                     moeda: p.moeda,
-                     logo_url: p.bookmaker?.bookmakers_catalogo?.logo_url || null,
-                     selecao_livre: p.selecao_livre,
-                   })) || undefined,
-               }}
-               estrategia="VALUEBET"
-               onEdit={(apostaId) => {
-                 const a = apostasFiltradas.find(ap => ap.id === apostaId);
-                 if (a) openEditDialog(a);
-               }}
-               onQuickResolve={handleQuickResolve}
-               onDelete={handleDeleteAposta}
-               variant="list"
-               formatCurrency={formatCurrency}
-               convertToConsolidation={convertToConsolidationOficialFn}
-               moedaConsolidacao={moedaConsolidacaoVal}
-            />
-          ))}
+          {apostasFiltradas.map((aposta) => {
+            const subEntries = (aposta as any)._sub_entries;
+            const hasMultipleEntries = subEntries && subEntries.length > 1;
+
+            if (hasMultipleEntries) {
+              const surebetData: SurebetData = {
+                id: aposta.id,
+                workspace_id: aposta.workspace_id,
+                data_operacao: aposta.data_aposta,
+                evento: aposta.evento,
+                esporte: aposta.esporte,
+                mercado: aposta.mercado,
+                modelo: (aposta as any).modelo || '1-N',
+                estrategia: aposta.estrategia || 'VALUEBET',
+                stake_total: (aposta as any).stake_total ?? aposta.stake ?? 0,
+                spread_calculado: null,
+                roi_esperado: null,
+                lucro_esperado: null,
+                lucro_real: aposta.pl_consolidado ?? aposta.lucro_prejuizo,
+                roi_real: null,
+                pl_consolidado: aposta.pl_consolidado,
+                stake_consolidado: aposta.stake_consolidado,
+                status: aposta.status,
+                resultado: aposta.resultado,
+                observacoes: aposta.observacoes,
+                pernas: groupPernasBySelecao(
+                  subEntries.map((p: any) => ({
+                    id: p.id,
+                    selecao: p.selecao || aposta.selecao,
+                    selecao_livre: p.selecao_livre,
+                    odd: p.odd,
+                    stake: p.stake,
+                    resultado: p.resultado,
+                    lucro_prejuizo: p.lucro_prejuizo ?? null,
+                    bookmaker_nome: p.bookmaker?.nome || '—',
+                    bookmaker_id: p.bookmaker_id,
+                    moeda: p.moeda || 'BRL',
+                  }))
+                ),
+              };
+
+              return (
+                <SurebetCard
+                  key={aposta.id}
+                  surebet={surebetData}
+                  onEdit={(surebet) => {
+                    const a = apostasFiltradas.find(ap => ap.id === surebet.id);
+                    if (a) openEditDialog(a);
+                  }}
+                  onQuickResolve={handleQuickResolveSurebet}
+                  onPernaResultChange={handleSurebetPernaResolve}
+                  onDelete={handleDeleteAposta}
+                  formatCurrency={formatCurrency}
+                  convertToConsolidation={convertToConsolidationOficialFn}
+                  bookmakerNomeMap={bookmakerNomeMap}
+                />
+              );
+            }
+
+            return (
+              <ApostaCard
+                key={aposta.id}
+                aposta={{
+                  ...aposta,
+                  evento: aposta.evento || '',
+                  esporte: aposta.esporte || '',
+                  pernas: aposta.pernas ?? undefined,
+                  selecoes: Array.isArray(aposta.selecoes) ? aposta.selecoes : undefined,
+                  moeda: aposta.moeda_operacao || "BRL",
+                }}
+                estrategia="VALUEBET"
+                onEdit={(apostaId) => {
+                  const a = apostasFiltradas.find(ap => ap.id === apostaId);
+                  if (a) openEditDialog(a);
+                }}
+                onQuickResolve={handleQuickResolve}
+                onDelete={handleDeleteAposta}
+                variant="list"
+                formatCurrency={formatCurrency}
+                convertToConsolidation={convertToConsolidationOficialFn}
+                moedaConsolidacao={moedaConsolidacaoVal}
+              />
+            );
+          })}
         </div>
       )}
     </div>
