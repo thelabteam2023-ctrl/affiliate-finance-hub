@@ -116,6 +116,7 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
   
   const filters = projetoId ? { projetoId } : undefined;
   const { data: ocorrencias = [], isLoading } = useOcorrencias(filters);
+  const { data: members = [] } = useWorkspaceMembers();
 
   const [statsSubTab, setStatsSubTab] = useState<'geral' | 'por-casa'>('geral');
   const [selectedCasa, setSelectedCasa] = useState<CasaStats | null>(null);
