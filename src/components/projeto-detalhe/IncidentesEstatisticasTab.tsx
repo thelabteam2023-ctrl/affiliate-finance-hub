@@ -566,7 +566,7 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
                         {c.tempoMedioHoras !== null ? formatDuration(c.tempoMedioHoras) : '—'}
                       </span>
                       <span className={cn("text-xs text-right font-medium", c.perdaBRL > 0 ? "text-red-400" : "text-muted-foreground")}>
-                        {c.perdaBRL > 0 ? formatBRL(c.perdaBRL) : '—'}
+                        {c.perdaBRL > 0 ? formatConsolidated(c.perdaBRL) : '—'}
                       </span>
                     </div>
                   ))}
