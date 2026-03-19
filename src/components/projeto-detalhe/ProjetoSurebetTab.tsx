@@ -331,7 +331,8 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
           .eq("estrategia", "SUREBET")
           .eq("status", "PENDENTE")
           .is("cancelled_at", null)
-          .order("data_aposta", { ascending: false });
+          .order("data_aposta", { ascending: false })
+          .limit(10000);
 
         if (pendentesData && pendentesData.length > 0) {
           const existingIds = new Set(allData.map((a: any) => a.id));
