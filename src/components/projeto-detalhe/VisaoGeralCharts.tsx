@@ -985,6 +985,7 @@ export function VisaoGeralCharts({
                       accentColor="purple"
                       compact
                       formatCurrency={formatCurrency}
+                      initialMonth={periodStart}
                     />
                   </PopoverContent>
                 </Popover>
@@ -1049,6 +1050,7 @@ export function VisaoGeralCharts({
                       accentColor="purple"
                       compact
                       formatCurrency={formatCurrency}
+                      initialMonth={periodStart}
                     />
                   </PopoverContent>
                 </Popover>
