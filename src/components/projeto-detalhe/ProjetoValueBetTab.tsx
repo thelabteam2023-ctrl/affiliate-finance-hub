@@ -132,6 +132,7 @@ interface Aposta {
   pl_consolidado?: number | null;
   valor_brl_referencia?: number | null;
   lucro_prejuizo_brl_referencia?: number | null;
+  workspace_id?: string;
 }
 
 type NavigationMode = "tabs" | "sidebar";
