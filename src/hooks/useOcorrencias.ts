@@ -100,12 +100,21 @@ export function useOcorrenciasKpis() {
       today.setHours(0, 0, 0, 0);
 
       const { data, error } = await ocorrenciasTable()
-        .select('id, status, prioridade, sla_violado, created_at')
+        .select('id, status, prioridade, sla_violado, created_at, valor_risco, moeda')
         .eq('workspace_id', workspaceId!)
         .not('status', 'in', '(resolvido,cancelado)');
 
       if (error) throw error;
       const abertas: any[] = data || [];
+
+      // Group valor_risco by real currency
+      const riscoByMoeda: Record<string, number> = {};
+      abertas.forEach((o) => {
+        if (o.valor_risco && o.valor_risco > 0) {
+          const moeda = o.moeda || 'BRL';
+          riscoByMoeda[moeda] = (riscoByMoeda[moeda] || 0) + Number(o.valor_risco);
+        }
+      });
 
       return {
         abertas_total: abertas.length,
@@ -117,6 +126,7 @@ export function useOcorrenciasKpis() {
           (o) => o.status === 'aguardando_terceiro'
         ).length,
         atrasadas_sla: abertas.filter((o) => o.sla_violado).length,
+        riscoByMoeda,
       };
     },
     enabled: !!workspaceId,
