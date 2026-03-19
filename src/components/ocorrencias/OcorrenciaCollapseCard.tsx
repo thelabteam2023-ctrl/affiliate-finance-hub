@@ -53,7 +53,7 @@ import {
 import { getCurrencySymbol } from '@/types/currency';
 import { formatDistanceToNow, differenceInDays, differenceInHours, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { cn } from '@/lib/utils';
+import { cn, getFirstLastName } from '@/lib/utils';
 
 interface Props {
   ocorrencia: Ocorrencia;
