@@ -48,7 +48,9 @@ import {
   Paperclip,
   CircleDot,
   Pencil,
+  DollarSign,
 } from 'lucide-react';
+import { getCurrencySymbol } from '@/types/currency';
 import { formatDistanceToNow, differenceInDays, differenceInHours, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
