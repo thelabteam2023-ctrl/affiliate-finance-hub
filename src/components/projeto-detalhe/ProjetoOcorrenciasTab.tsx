@@ -104,12 +104,7 @@ export function ProjetoOcorrenciasTab({ projetoId, onDataChange, formatCurrency:
     () => [...new Set(todas.filter((o) => o.bookmaker_id).map((o) => o.bookmaker_id!))],
     [todas]
   );
-  const parceiroIds = useMemo(
-    () => [...new Set(todas.filter((o) => o.parceiro_id).map((o) => o.parceiro_id!))],
-    [todas]
-  );
   const { data: bookmakerMap = {} } = useBookmakerInfo(bookmakerIds);
-  const { data: parceiroMap = {} } = useParceiroNames(parceiroIds);
 
   // Kanban grouping
   const PRIORIDADE_ORDER: OcorrenciaPrioridade[] = ['urgente', 'alta', 'media', 'baixa'];
