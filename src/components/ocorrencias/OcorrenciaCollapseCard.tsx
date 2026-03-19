@@ -424,34 +424,46 @@ export function OcorrenciaCollapseCard({
               <div className="border-t border-border/40 px-4 py-3 ml-7">
                 {/* Entity links section */}
                 {hasEntities && (
-                  <div className="flex items-center gap-4 mb-3 pb-3 border-b border-border/30 text-sm">
+                  <div className="mb-3 space-y-2 pb-3 border-b border-border/30 text-sm">
                     <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
                       Vinculado a:
                     </span>
-                    {bookmakerNome && (
-                      <div className="flex flex-col">
-                        <span className="flex items-center gap-1.5 text-foreground">
+
+                    <div className="grid gap-2 md:grid-cols-3">
+                      {bookmakerNome && (
+                        <div className="flex items-start gap-2 rounded-md border border-border/40 bg-muted/20 px-3 py-2">
                           {bookmakerLogoUrl ? (
-                            <img src={bookmakerLogoUrl} alt="" className="h-4 w-4 rounded-sm object-contain" />
+                            <img src={bookmakerLogoUrl} alt="" className="mt-0.5 h-4 w-4 rounded-sm object-contain" />
                           ) : (
-                            <Building2 className="h-3.5 w-3.5 text-blue-400" />
+                            <Building2 className="mt-0.5 h-3.5 w-3.5 text-primary" />
                           )}
-                          {bookmakerNome}
-                        </span>
-                        {parceiroNome && (
-                          <span className="flex items-center gap-1.5 text-muted-foreground text-xs ml-[22px] mt-0.5">
-                            <Users className="h-3 w-3 text-orange-400" />
-                            {getFirstLastName(parceiroNome)}
-                          </span>
-                        )}
-                      </div>
-                    )}
-                    {projetoNome && (
-                      <span className="flex items-center gap-1.5 text-foreground">
-                        <FolderOpen className="h-3.5 w-3.5 text-purple-400" />
-                        {projetoNome}
-                      </span>
-                    )}
+                          <div className="min-w-0">
+                            <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Casa</p>
+                            <p className="truncate text-foreground">{bookmakerNome}</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {parceiroNome && (
+                        <div className="flex items-start gap-2 rounded-md border border-border/40 bg-muted/20 px-3 py-2">
+                          <Users className="mt-0.5 h-3.5 w-3.5 text-primary" />
+                          <div className="min-w-0">
+                            <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Titular da conta</p>
+                            <p className="truncate text-foreground">{getFirstLastName(parceiroNome)}</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {projetoNome && (
+                        <div className="flex items-start gap-2 rounded-md border border-border/40 bg-muted/20 px-3 py-2">
+                          <FolderOpen className="mt-0.5 h-3.5 w-3.5 text-primary" />
+                          <div className="min-w-0">
+                            <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Projeto vinculado</p>
+                            <p className="truncate text-foreground">{projetoNome}</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
 
