@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useOcorrencias, useAtualizarStatusOcorrencia } from '@/hooks/useOcorrencias';
 import { useAuth } from '@/hooks/useAuth';
 import { useRole } from '@/hooks/useRole';
-import { useFinanceiroConsolidado } from '@/hooks/useFinanceiroConsolidado';
+import { useProjetoCurrency } from '@/hooks/useProjetoCurrency';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -13,7 +13,6 @@ import { OcorrenciaCollapseCard } from '@/components/ocorrencias/OcorrenciaColla
 import { OcorrenciaDetalheDialog } from '@/components/ocorrencias/OcorrenciaDetalheDialog';
 import { NovaOcorrenciaDialog } from '@/components/ocorrencias/NovaOcorrenciaDialog';
 import type { OcorrenciaStatus, OcorrenciaPrioridade } from '@/types/ocorrencias';
-import { getCurrencySymbol } from '@/types/currency';
 import { PRIORIDADE_LABELS, PRIORIDADE_COLORS, PRIORIDADE_BG } from '@/types/ocorrencias';
 import { Plus, Inbox, Zap, AlertTriangle, ArrowUp, ArrowDown, ShieldAlert, CheckCircle, BarChart3 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -65,8 +64,8 @@ function useParceiroNames(ids: string[]) {
 }
 
 export function ProjetoOcorrenciasTab({ projetoId, onDataChange, formatCurrency: formatCurrencyProp }: ProjetoOcorrenciasTabProps) {
-  const { converterParaBRL, formatBRL } = useFinanceiroConsolidado();
-  const formatCurrency = formatCurrencyProp || defaultFormatCurrency;
+  const { convertToConsolidation, formatCurrency: formatProjectCurrency, moedaConsolidacao } = useProjetoCurrency(projetoId);
+  const formatCurrency = formatCurrencyProp || formatProjectCurrency;
   const { user } = useAuth();
   const { isOwnerOrAdmin } = useRole();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -89,18 +88,15 @@ export function ProjetoOcorrenciasTab({ projetoId, onDataChange, formatCurrency:
 
   const todas = [...abertas, ...historico];
 
-  // KPIs - breakdown multi-moeda
-  const riscoByMoeda = useMemo(() => {
-    const map: Record<string, number> = {};
-    abertas.forEach((o) => {
+  // KPIs - consolidar na moeda do projeto
+  const valorRiscoConsolidado = useMemo(() => {
+    return abertas.reduce((acc, o) => {
       const valor = Number((o as any).valor_risco || 0);
       const moeda = (o as any).moeda || 'BRL';
-      if (valor > 0) {
-        map[moeda] = (map[moeda] || 0) + valor;
-      }
-    });
-    return map;
-  }, [abertas]);
+      if (valor <= 0) return acc;
+      return acc + convertToConsolidation(valor, moeda);
+    }, 0);
+  }, [abertas, convertToConsolidation]);
 
   const perdasConfirmadas = historico.filter((o) => (o as any).resultado_financeiro === 'perda_confirmada' || (o as any).resultado_financeiro === 'perda_parcial');
   const totalPerdasConfirmadas = useMemo(() => {
@@ -108,9 +104,9 @@ export function ProjetoOcorrenciasTab({ projetoId, onDataChange, formatCurrency:
       const valor = Number((o as any).valor_perda || 0);
       const moeda = (o as any).moeda || 'BRL';
       if (valor <= 0) return acc;
-      return acc + converterParaBRL(valor, moeda).valorBRL;
+      return acc + convertToConsolidation(valor, moeda);
     }, 0);
-  }, [perdasConfirmadas, converterParaBRL]);
+  }, [perdasConfirmadas, convertToConsolidation]);
 
   const resolvidasSemImpacto = historico.filter((o) => o.status === 'resolvido' && !(o as any).resultado_financeiro);
 
@@ -195,27 +191,16 @@ export function ProjetoOcorrenciasTab({ projetoId, onDataChange, formatCurrency:
                   <p className="text-muted-foreground">Incidentes em andamento neste projeto.</p>
                    <div className="flex justify-between gap-4 border-t border-border/50 pt-1">
                      <span>Valor em disputa</span>
-                     <div className="flex flex-col items-end gap-0.5">
-                       {Object.keys(riscoByMoeda).length > 0
-                         ? Object.entries(riscoByMoeda).map(([moeda, valor]) => (
-                             <span key={moeda} className="font-semibold text-foreground">
-                               {getCurrencySymbol(moeda)} {Number(valor).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                             </span>
-                           ))
-                         : <span className="font-semibold text-foreground">R$ 0,00</span>
-                       }
-                     </div>
+                     <span className="font-semibold text-foreground">{formatProjectCurrency(valorRiscoConsolidado)}</span>
                    </div>
                  </div>
                ),
                valueClassName: abertas.length > 0 ? 'text-amber-500' : 'text-muted-foreground',
-               subtitle: Object.keys(riscoByMoeda).length > 0
-                 ? <span className="text-muted-foreground">{Object.entries(riscoByMoeda).map(([moeda, valor]) => `${getCurrencySymbol(moeda)} ${Number(valor).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`).join(' + ')} em disputa</span>
-                 : <span className="text-muted-foreground">R$ 0,00 em disputa</span>,
+               subtitle: <span className="text-muted-foreground">{formatProjectCurrency(valorRiscoConsolidado)} em disputa</span>,
             },
             {
               label: 'Perdas Confirmadas',
-              value: formatBRL(totalPerdasConfirmadas),
+              value: formatProjectCurrency(totalPerdasConfirmadas),
               tooltip: (
                 <div className="space-y-1">
                   <p className="font-semibold text-foreground">Perdas Confirmadas</p>

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useOcorrencias } from '@/hooks/useOcorrencias';
 import { useWorkspaceMembers } from '@/hooks/useWorkspaceMembers';
 import { useFinanceiroConsolidado } from '@/hooks/useFinanceiroConsolidado';
+import { useProjetoCurrency } from '@/hooks/useProjetoCurrency';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -101,11 +102,21 @@ interface CasaStats {
 }
 
 export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) {
-  const fmt = formatCurrency || defaultFormat;
+  const { converterParaBRL, formatBRL } = useFinanceiroConsolidado();
+  const { convertToConsolidation, formatCurrency: formatProjectCurrency, moedaConsolidacao } = useProjetoCurrency(projetoId);
+  
+  // In project context: use project consolidation currency
+  // In workspace context: show per-currency breakdown
+  const isProjectContext = !!projetoId;
+  const fmt = formatCurrency || (isProjectContext ? formatProjectCurrency : defaultFormat);
+  const convertValue = isProjectContext
+    ? (valor: number, moeda: string) => convertToConsolidation(valor, moeda)
+    : (valor: number, moeda: string) => converterParaBRL(valor, moeda).valorBRL;
+  const formatConsolidated = isProjectContext ? formatProjectCurrency : formatBRL;
+  
   const filters = projetoId ? { projetoId } : undefined;
   const { data: ocorrencias = [], isLoading } = useOcorrencias(filters);
   const { data: members = [] } = useWorkspaceMembers();
-  const { converterParaBRL, formatBRL } = useFinanceiroConsolidado();
 
   const [statsSubTab, setStatsSubTab] = useState<'geral' | 'por-casa'>('geral');
   const [selectedCasa, setSelectedCasa] = useState<CasaStats | null>(null);
@@ -174,7 +185,7 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
       if (isResolvida) {
         c.resolvidas += 1;
         const perda = Number((o as any).valor_perda || 0);
-        if (perda > 0) c.perdaBRL += converterParaBRL(perda, moeda).valorBRL;
+        if (perda > 0) c.perdaBRL += convertValue(perda, moeda);
       }
 
       const inicio = getInicio(o);
@@ -203,7 +214,7 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
     });
 
     return Object.values(map).sort((a, b) => b.count - a.count);
-  }, [ocorrencias, bookmakerInfo, converterParaBRL]);
+  }, [ocorrencias, bookmakerInfo, convertValue]);
 
   // ====== General stats ======
   const stats = useMemo(() => {
@@ -260,7 +271,7 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
       const moeda = (o as any).moeda || 'BRL';
       if (valor > 0) {
         riscoPorMoeda[moeda] = (riscoPorMoeda[moeda] || 0) + valor;
-        valorRiscoAbertoBRL += converterParaBRL(valor, moeda).valorBRL;
+        valorRiscoAbertoBRL += convertValue(valor, moeda);
       }
     });
 
@@ -271,7 +282,7 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
       const moeda = (o as any).moeda || 'BRL';
       if (valor > 0) {
         perdaPorMoeda[moeda] = (perdaPorMoeda[moeda] || 0) + valor;
-        valorPerdaConfirmadaBRL += converterParaBRL(valor, moeda).valorBRL;
+        valorPerdaConfirmadaBRL += convertValue(valor, moeda);
       }
     });
 
@@ -288,7 +299,7 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
       riscoPorMoeda, perdaPorMoeda,
       resolvidasSemImpacto, resolvidasComPerda,
     };
-  }, [ocorrencias, converterParaBRL]);
+  }, [ocorrencias, convertValue]);
 
   if (isLoading) {
     return (
@@ -324,7 +335,7 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
         <MiniKpi icon={<Target className="h-4 w-4" />} label="Total" value={String(stats.total)} sub={`${stats.abertas} abertas`} />
         <MiniKpi icon={<CheckCircle className="h-4 w-4 text-emerald-400" />} label="Taxa Resolução" value={`${stats.taxaResolucao.toFixed(0)}%`} sub={`${stats.resolvidas} resolvidas`} />
         <MiniKpi icon={<Timer className="h-4 w-4 text-blue-400" />} label="Tempo Médio" value={formatDuration(stats.tempoMedio)} sub="para resolução" />
-        <MiniKpi icon={<DollarSign className="h-4 w-4 text-red-400" />} label="Perda Total" value={formatBRL(stats.valorPerdaConfirmadaBRL)} sub={`${stats.resolvidasComPerda} com perda`} />
+        <MiniKpi icon={<DollarSign className="h-4 w-4 text-red-400" />} label="Perda Total" value={formatConsolidated(stats.valorPerdaConfirmadaBRL)} sub={`${stats.resolvidasComPerda} com perda`} />
       </div>
 
       {/* Sub-tabs */}
@@ -400,7 +411,7 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
               <CardContent className="space-y-3">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Valor em disputa (abertas)</span>
-                  <span className="font-medium text-yellow-400">{formatBRL(stats.valorRiscoAbertoBRL)}</span>
+                  <span className="font-medium text-yellow-400">{formatConsolidated(stats.valorRiscoAbertoBRL)}</span>
                 </div>
                 {Object.keys(stats.riscoPorMoeda).length > 1 && (
                   <div className="pl-2 space-y-0.5">
@@ -414,7 +425,7 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
                 )}
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Perdas confirmadas</span>
-                  <span className="font-medium text-red-400">{formatBRL(stats.valorPerdaConfirmadaBRL)}</span>
+                  <span className="font-medium text-red-400">{formatConsolidated(stats.valorPerdaConfirmadaBRL)}</span>
                 </div>
                 {Object.keys(stats.perdaPorMoeda).length > 1 && (
                   <div className="pl-2 space-y-0.5">
@@ -555,7 +566,7 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
                         {c.tempoMedioHoras !== null ? formatDuration(c.tempoMedioHoras) : '—'}
                       </span>
                       <span className={cn("text-xs text-right font-medium", c.perdaBRL > 0 ? "text-red-400" : "text-muted-foreground")}>
-                        {c.perdaBRL > 0 ? formatBRL(c.perdaBRL) : '—'}
+                        {c.perdaBRL > 0 ? formatConsolidated(c.perdaBRL) : '—'}
                       </span>
                     </div>
                   ))}
@@ -600,7 +611,7 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
                 <div className="rounded-lg border border-border/50 p-2.5 text-center">
                   <p className="text-xs text-muted-foreground">Perda Total</p>
                   <p className={cn("text-lg font-semibold", selectedCasa.perdaBRL > 0 ? "text-red-400" : "text-muted-foreground")}>
-                    {selectedCasa.perdaBRL > 0 ? formatBRL(selectedCasa.perdaBRL) : '—'}
+                    {selectedCasa.perdaBRL > 0 ? formatConsolidated(selectedCasa.perdaBRL) : '—'}
                   </p>
                 </div>
               </div>
