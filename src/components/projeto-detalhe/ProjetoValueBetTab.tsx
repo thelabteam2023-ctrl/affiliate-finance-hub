@@ -53,6 +53,10 @@ import { APOSTA_ESTRATEGIA } from "@/lib/apostaConstants";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange as FilterDateRange } from "./StandardTimeFilter";
 import { VisaoGeralCharts } from "./VisaoGeralCharts";
 import { ApostaCard } from "./ApostaCard";
+import { SurebetCard, SurebetData, SurebetPerna } from "./SurebetCard";
+import { groupPernasBySelecao } from "@/utils/groupPernasBySelecao";
+import { liquidarPernaSurebet } from "@/services/aposta/ApostaService";
+import type { SurebetQuickResult } from "@/components/apostas/SurebetRowActionsMenu";
 import { UnifiedStatisticsCard } from "./UnifiedStatisticsCard";
 import { ChartEmptyState } from "@/components/ui/chart-empty-state";
 
@@ -128,6 +132,7 @@ interface Aposta {
   pl_consolidado?: number | null;
   valor_brl_referencia?: number | null;
   lucro_prejuizo_brl_referencia?: number | null;
+  workspace_id?: string;
 }
 
 type NavigationMode = "tabs" | "sidebar";
@@ -287,7 +292,7 @@ export function ProjetoValueBetTab({
         .from("apostas_unificada")
         .select(`
           id, created_at, data_aposta, esporte, evento, mercado, selecao, odd, stake, stake_total, estrategia, 
-          status, resultado, lucro_prejuizo, valor_retorno, observacoes, bookmaker_id,
+          status, resultado, lucro_prejuizo, valor_retorno, observacoes, bookmaker_id, workspace_id,
           modo_entrada, gerou_freebet, valor_freebet_gerada, tipo_freebet, forma_registro,
           contexto_operacional, lay_exchange, lay_odd, lay_stake, lay_liability, lay_comissao,
           back_em_exchange, back_comissao, pernas, modelo, selecoes, tipo_multipla, odd_final,
@@ -315,7 +320,7 @@ export function ProjetoValueBetTab({
           .from("apostas_unificada")
           .select(`
             id, created_at, data_aposta, esporte, evento, mercado, selecao, odd, stake, stake_total, estrategia, 
-            status, resultado, lucro_prejuizo, valor_retorno, observacoes, bookmaker_id,
+            status, resultado, lucro_prejuizo, valor_retorno, observacoes, bookmaker_id, workspace_id,
             modo_entrada, gerou_freebet, valor_freebet_gerada, tipo_freebet, forma_registro,
             contexto_operacional, lay_exchange, lay_odd, lay_stake, lay_liability, lay_comissao,
             back_em_exchange, back_comissao, pernas, modelo, selecoes, tipo_multipla, odd_final,
@@ -375,7 +380,8 @@ export function ProjetoValueBetTab({
         const { data: pernasData } = await supabase
           .from("apostas_pernas")
           .select(`
-            aposta_id, bookmaker_id, odd, stake, moeda, selecao_livre, ordem,
+            id, aposta_id, bookmaker_id, odd, stake, moeda, selecao, selecao_livre, ordem,
+            resultado, lucro_prejuizo,
             bookmaker:bookmakers (
               nome, parceiro_id,
               parceiro:parceiros (nome),
@@ -480,6 +486,127 @@ export function ProjetoValueBetTab({
       toast.error("Erro ao excluir aposta");
     }
   }, [projetoId, invalidateSaldos, onDataChange]);
+
+  // Liquidação de perna individual (multi-entry simples via SurebetCard)
+  const handleSurebetPernaResolve = useCallback(async (input: {
+    pernaId: string;
+    surebetId: string;
+    bookmarkerId: string;
+    resultado: string;
+    stake: number;
+    odd: number;
+    moeda: string;
+    resultadoAnterior: string | null;
+    workspaceId: string;
+    bookmakerNome?: string;
+    silent?: boolean;
+  }) => {
+    try {
+      const result = await liquidarPernaSurebet({
+        surebet_id: input.surebetId,
+        perna_id: input.pernaId,
+        bookmaker_id: input.bookmarkerId,
+        resultado: input.resultado as any,
+        resultado_anterior: input.resultadoAnterior,
+        stake: input.stake,
+        odd: input.odd,
+        moeda: input.moeda,
+        workspace_id: input.workspaceId,
+      });
+      if (!result.success) {
+        toast.error(result.error?.message || "Erro ao liquidar perna");
+        return;
+      }
+      invalidateSaldos(projetoId);
+      fetchData();
+      const resultLabel = { GREEN: "Green", RED: "Red", MEIO_GREEN: "½ Green", MEIO_RED: "½ Red", VOID: "Void" }[input.resultado] || input.resultado;
+      if (!input.silent) {
+        const nome = input.bookmakerNome || '';
+        toast.success(nome ? `${resultLabel} na ${nome}` : `Resultado alterado com sucesso`);
+      }
+      onDataChange?.();
+    } catch (error: any) {
+      console.error("Erro ao liquidar perna:", error);
+      toast.error("Erro ao atualizar resultado da perna");
+    }
+  }, [projetoId, invalidateSaldos, onDataChange]);
+
+  // Quick resolve para multi-entry simples (via SurebetCard)
+  const handleQuickResolveSurebet = useCallback(async (apostaId: string, quickResult: SurebetQuickResult) => {
+    try {
+      const aposta = apostas.find(a => a.id === apostaId);
+      if (!aposta) return;
+      const subEntries = (aposta as any)._sub_entries;
+      if (!subEntries || subEntries.length < 2) return;
+
+      const pernasAgrupadas = groupPernasBySelecao(
+        subEntries.map((p: any) => ({
+          id: p.id,
+          selecao: p.selecao || aposta.selecao,
+          selecao_livre: p.selecao_livre,
+          odd: p.odd,
+          stake: p.stake,
+          resultado: p.resultado,
+          lucro_prejuizo: p.lucro_prejuizo ?? null,
+          bookmaker_nome: p.bookmaker?.nome || '—',
+          bookmaker_id: p.bookmaker_id,
+          moeda: p.moeda || 'BRL',
+        }))
+      ).filter(p => p.bookmaker_id && p.odd && p.odd > 0);
+
+      for (let i = 0; i < pernasAgrupadas.length; i++) {
+        const perna = pernasAgrupadas[i];
+        const isWinner = quickResult.winners.includes(i);
+        const resultado = quickResult.type === "all_void" ? "VOID" : (isWinner ? "GREEN" : "RED");
+
+        if (perna.entries && perna.entries.length > 1) {
+          for (const entry of perna.entries) {
+            if (!entry.id || !entry.bookmaker_id) continue;
+            await handleSurebetPernaResolve({
+              pernaId: entry.id,
+              surebetId: apostaId,
+              bookmarkerId: entry.bookmaker_id,
+              resultado,
+              stake: entry.stake,
+              odd: entry.odd,
+              moeda: entry.moeda || 'BRL',
+              resultadoAnterior: perna.resultado,
+              workspaceId: aposta.workspace_id || '',
+              silent: true,
+            });
+          }
+        } else {
+          await handleSurebetPernaResolve({
+            pernaId: perna.id,
+            surebetId: apostaId,
+            bookmarkerId: perna.bookmaker_id!,
+            resultado,
+            stake: perna.stake,
+            odd: perna.odd,
+            moeda: perna.moeda || 'BRL',
+            resultadoAnterior: perna.resultado,
+            workspaceId: aposta.workspace_id || '',
+            silent: true,
+          });
+        }
+      }
+      toast.success("Resultado alterado com sucesso");
+    } catch (error: any) {
+      console.error("Erro ao liquidar:", error);
+      toast.error("Erro ao liquidar aposta");
+    }
+  }, [apostas, handleSurebetPernaResolve]);
+
+  // Mapa de bookmaker_id -> nome completo com parceiro para SurebetCard
+  const bookmakerNomeMap = useMemo(() => {
+    const map = new Map<string, string>();
+    bookmakers.forEach(bk => {
+      const shortName = getFirstLastName(bk.parceiro?.nome || "");
+      const nomeCompleto = shortName ? `${bk.nome} - ${shortName}` : bk.nome;
+      map.set(bk.id, nomeCompleto);
+    });
+    return map;
+  }, [bookmakers]);
 
   const metricas = useMemo(() => {
     const { convertToConsolidation, moedaConsolidacao } = { convertToConsolidation: convertToConsolidationOficialFn, moedaConsolidacao: moedaConsolidacaoVal };
@@ -1067,81 +1194,177 @@ export function ProjetoValueBetTab({
         </Card>
       ) : viewMode === "cards" ? (
         <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {apostasFiltradas.map((aposta) => (
-            <ApostaCard
-              key={aposta.id}
-               aposta={{
-                 ...aposta,
-                 evento: aposta.evento || '',
-                 esporte: aposta.esporte || '',
-                 pernas: aposta.pernas ?? undefined,
-                 selecoes: Array.isArray(aposta.selecoes) ? aposta.selecoes : undefined,
-                 moeda: aposta.moeda_operacao || "BRL",
-                 primary_odd: (aposta as any)._sub_entries?.[0]?.odd ?? undefined,
-                 sub_entries: (aposta as any)._sub_entries
-                   ?.filter((_: any, i: number) => i > 0)
-                   ?.map((p: any) => ({
-                     bookmaker_nome: p.bookmaker?.nome?.split(" - ")[0] || p.bookmaker?.nome || '?',
-                     parceiro_nome: p.bookmaker?.parceiro?.nome || null,
-                     odd: p.odd,
-                     stake: p.stake,
-                     moeda: p.moeda,
-                     logo_url: p.bookmaker?.bookmakers_catalogo?.logo_url || null,
-                     selecao_livre: p.selecao_livre,
-                   })) || undefined,
-               }}
-               estrategia="VALUEBET"
-               onEdit={(apostaId) => {
-                 const a = apostasFiltradas.find(ap => ap.id === apostaId);
-                 if (a) openEditDialog(a);
-               }}
-               onQuickResolve={handleQuickResolve}
-               onDelete={handleDeleteAposta}
-               variant="card"
-               formatCurrency={formatCurrency}
-               convertToConsolidation={convertToConsolidationOficialFn}
-               moedaConsolidacao={moedaConsolidacaoVal}
-            />
-          ))}
+          {apostasFiltradas.map((aposta) => {
+            const subEntries = (aposta as any)._sub_entries;
+            const hasMultipleEntries = subEntries && subEntries.length > 1;
+
+            if (hasMultipleEntries) {
+              const surebetData: SurebetData = {
+                id: aposta.id,
+                workspace_id: aposta.workspace_id,
+                data_operacao: aposta.data_aposta,
+                evento: aposta.evento,
+                esporte: aposta.esporte,
+                mercado: aposta.mercado,
+                modelo: (aposta as any).modelo || '1-N',
+                estrategia: aposta.estrategia || 'VALUEBET',
+                stake_total: (aposta as any).stake_total ?? aposta.stake ?? 0,
+                spread_calculado: null,
+                roi_esperado: null,
+                lucro_esperado: null,
+                lucro_real: aposta.pl_consolidado ?? aposta.lucro_prejuizo,
+                roi_real: null,
+                pl_consolidado: aposta.pl_consolidado,
+                stake_consolidado: aposta.stake_consolidado,
+                status: aposta.status,
+                resultado: aposta.resultado,
+                observacoes: aposta.observacoes,
+                pernas: groupPernasBySelecao(
+                  subEntries.map((p: any) => ({
+                    id: p.id,
+                    selecao: p.selecao || aposta.selecao,
+                    selecao_livre: p.selecao_livre,
+                    odd: p.odd,
+                    stake: p.stake,
+                    resultado: p.resultado,
+                    lucro_prejuizo: p.lucro_prejuizo ?? null,
+                    bookmaker_nome: p.bookmaker?.nome || '—',
+                    bookmaker_id: p.bookmaker_id,
+                    moeda: p.moeda || 'BRL',
+                  }))
+                ),
+              };
+
+              return (
+                <SurebetCard
+                  key={aposta.id}
+                  surebet={surebetData}
+                  onEdit={(surebet) => {
+                    const a = apostasFiltradas.find(ap => ap.id === surebet.id);
+                    if (a) openEditDialog(a);
+                  }}
+                  onQuickResolve={handleQuickResolveSurebet}
+                  onPernaResultChange={handleSurebetPernaResolve}
+                  onDelete={handleDeleteAposta}
+                  formatCurrency={formatCurrency}
+                  convertToConsolidation={convertToConsolidationOficialFn}
+                  bookmakerNomeMap={bookmakerNomeMap}
+                />
+              );
+            }
+
+            return (
+              <ApostaCard
+                key={aposta.id}
+                aposta={{
+                  ...aposta,
+                  evento: aposta.evento || '',
+                  esporte: aposta.esporte || '',
+                  pernas: aposta.pernas ?? undefined,
+                  selecoes: Array.isArray(aposta.selecoes) ? aposta.selecoes : undefined,
+                  moeda: aposta.moeda_operacao || "BRL",
+                }}
+                estrategia="VALUEBET"
+                onEdit={(apostaId) => {
+                  const a = apostasFiltradas.find(ap => ap.id === apostaId);
+                  if (a) openEditDialog(a);
+                }}
+                onQuickResolve={handleQuickResolve}
+                onDelete={handleDeleteAposta}
+                variant="card"
+                formatCurrency={formatCurrency}
+                convertToConsolidation={convertToConsolidationOficialFn}
+                moedaConsolidacao={moedaConsolidacaoVal}
+              />
+            );
+          })}
         </div>
       ) : (
         <div className="space-y-2">
-          {apostasFiltradas.map((aposta) => (
-            <ApostaCard
-              key={aposta.id}
-               aposta={{
-                 ...aposta,
-                 evento: aposta.evento || '',
-                 esporte: aposta.esporte || '',
-                 pernas: aposta.pernas ?? undefined,
-                 selecoes: Array.isArray(aposta.selecoes) ? aposta.selecoes : undefined,
-                 moeda: aposta.moeda_operacao || "BRL",
-                 primary_odd: (aposta as any)._sub_entries?.[0]?.odd ?? undefined,
-                 sub_entries: (aposta as any)._sub_entries
-                   ?.filter((_: any, i: number) => i > 0)
-                   ?.map((p: any) => ({
-                     bookmaker_nome: p.bookmaker?.nome?.split(" - ")[0] || p.bookmaker?.nome || '?',
-                     parceiro_nome: p.bookmaker?.parceiro?.nome || null,
-                     odd: p.odd,
-                     stake: p.stake,
-                     moeda: p.moeda,
-                     logo_url: p.bookmaker?.bookmakers_catalogo?.logo_url || null,
-                     selecao_livre: p.selecao_livre,
-                   })) || undefined,
-               }}
-               estrategia="VALUEBET"
-               onEdit={(apostaId) => {
-                 const a = apostasFiltradas.find(ap => ap.id === apostaId);
-                 if (a) openEditDialog(a);
-               }}
-               onQuickResolve={handleQuickResolve}
-               onDelete={handleDeleteAposta}
-               variant="list"
-               formatCurrency={formatCurrency}
-               convertToConsolidation={convertToConsolidationOficialFn}
-               moedaConsolidacao={moedaConsolidacaoVal}
-            />
-          ))}
+          {apostasFiltradas.map((aposta) => {
+            const subEntries = (aposta as any)._sub_entries;
+            const hasMultipleEntries = subEntries && subEntries.length > 1;
+
+            if (hasMultipleEntries) {
+              const surebetData: SurebetData = {
+                id: aposta.id,
+                workspace_id: aposta.workspace_id,
+                data_operacao: aposta.data_aposta,
+                evento: aposta.evento,
+                esporte: aposta.esporte,
+                mercado: aposta.mercado,
+                modelo: (aposta as any).modelo || '1-N',
+                estrategia: aposta.estrategia || 'VALUEBET',
+                stake_total: (aposta as any).stake_total ?? aposta.stake ?? 0,
+                spread_calculado: null,
+                roi_esperado: null,
+                lucro_esperado: null,
+                lucro_real: aposta.pl_consolidado ?? aposta.lucro_prejuizo,
+                roi_real: null,
+                pl_consolidado: aposta.pl_consolidado,
+                stake_consolidado: aposta.stake_consolidado,
+                status: aposta.status,
+                resultado: aposta.resultado,
+                observacoes: aposta.observacoes,
+                pernas: groupPernasBySelecao(
+                  subEntries.map((p: any) => ({
+                    id: p.id,
+                    selecao: p.selecao || aposta.selecao,
+                    selecao_livre: p.selecao_livre,
+                    odd: p.odd,
+                    stake: p.stake,
+                    resultado: p.resultado,
+                    lucro_prejuizo: p.lucro_prejuizo ?? null,
+                    bookmaker_nome: p.bookmaker?.nome || '—',
+                    bookmaker_id: p.bookmaker_id,
+                    moeda: p.moeda || 'BRL',
+                  }))
+                ),
+              };
+
+              return (
+                <SurebetCard
+                  key={aposta.id}
+                  surebet={surebetData}
+                  onEdit={(surebet) => {
+                    const a = apostasFiltradas.find(ap => ap.id === surebet.id);
+                    if (a) openEditDialog(a);
+                  }}
+                  onQuickResolve={handleQuickResolveSurebet}
+                  onPernaResultChange={handleSurebetPernaResolve}
+                  onDelete={handleDeleteAposta}
+                  formatCurrency={formatCurrency}
+                  convertToConsolidation={convertToConsolidationOficialFn}
+                  bookmakerNomeMap={bookmakerNomeMap}
+                />
+              );
+            }
+
+            return (
+              <ApostaCard
+                key={aposta.id}
+                aposta={{
+                  ...aposta,
+                  evento: aposta.evento || '',
+                  esporte: aposta.esporte || '',
+                  pernas: aposta.pernas ?? undefined,
+                  selecoes: Array.isArray(aposta.selecoes) ? aposta.selecoes : undefined,
+                  moeda: aposta.moeda_operacao || "BRL",
+                }}
+                estrategia="VALUEBET"
+                onEdit={(apostaId) => {
+                  const a = apostasFiltradas.find(ap => ap.id === apostaId);
+                  if (a) openEditDialog(a);
+                }}
+                onQuickResolve={handleQuickResolve}
+                onDelete={handleDeleteAposta}
+                variant="list"
+                formatCurrency={formatCurrency}
+                convertToConsolidation={convertToConsolidationOficialFn}
+                moedaConsolidacao={moedaConsolidacaoVal}
+              />
+            );
+          })}
         </div>
       )}
     </div>

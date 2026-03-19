@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge, SelectionBadge } from "@/components/ui/badge";
 import { format as formatDate } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ArrowLeftRight, Zap, CheckCircle2, Clock, Coins, ChevronDown, ChevronUp, Layers, Building2 } from "lucide-react";
+import { ArrowLeftRight, Zap, CheckCircle2, Clock, Coins, ChevronDown, ChevronUp, Layers, Building2, TrendingUp, Target } from "lucide-react";
 import { cn, getFirstLastName } from "@/lib/utils";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -432,6 +432,8 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
   // Usa formatCurrency do projeto ou fallback para BRL
   const formatValue = formatCurrency || defaultFormatCurrency;
   const isDuploGreen = surebet.estrategia === "DUPLO_GREEN";
+  const isValueBet = surebet.estrategia === "VALUEBET";
+  const isSimples = surebet.estrategia === "SIMPLES" || surebet.estrategia === "NORMAL";
   const isLiquidada = surebet.status === "LIQUIDADA";
   
   // Detectar moeda predominante das pernas (se todas iguais, usar essa; senão, usar formatValue do projeto)
@@ -585,7 +587,11 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
     ? { label: "BÔNUS", icon: Coins, color: "text-amber-400", bgColor: "bg-amber-500/20", borderColor: "border-amber-500/30" }
     : isDuploGreen 
       ? { label: "DG", icon: Zap, color: "text-teal-400", bgColor: "bg-teal-500/20", borderColor: "border-teal-500/30" }
-      : { label: "SUREBET", icon: ArrowLeftRight, color: "text-amber-400", bgColor: "bg-amber-500/20", borderColor: "border-amber-500/30" };
+      : isValueBet
+        ? { label: "VB", icon: TrendingUp, color: "text-purple-400", bgColor: "bg-purple-500/20", borderColor: "border-purple-500/30" }
+        : isSimples
+          ? { label: "SIMPLES", icon: Target, color: "text-blue-400", bgColor: "bg-blue-500/20", borderColor: "border-blue-500/30" }
+          : { label: "SUREBET", icon: ArrowLeftRight, color: "text-amber-400", bgColor: "bg-amber-500/20", borderColor: "border-amber-500/30" };
   
   const Icon = estrategiaConfig.icon;
 
