@@ -61,6 +61,8 @@ import { useRole } from "@/hooks/useRole";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import type { RenewalSuccessData } from "@/components/parcerias/ParceriaDialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 import {
   useCentralOperacoesData,
@@ -145,6 +147,23 @@ export default function CentralOperacoes() {
     staleTime: 30_000,
   });
 
+  // Projetos ativos para vincular bookmakers
+  const { data: projetosAtivos } = useQuery({
+    queryKey: ['projetos-ativos-central', workspaceId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('projetos')
+        .select('id, nome')
+        .eq('workspace_id', workspaceId!)
+        .eq('status', 'ativo')
+        .order('nome');
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!workspaceId,
+    staleTime: 60_000,
+  });
+
   // ─── REALTIME ─────
   const realtimeDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
@@ -192,6 +211,11 @@ export default function CentralOperacoes() {
   const [encerrarLoading, setEncerrarLoading] = useState(false);
   const [renovarDialogOpen, setRenovarDialogOpen] = useState(false);
   const [parceriaToRenovar, setParceriaToRenovar] = useState<ParceriaAlertaEncerramento | null>(null);
+  // Vincular projeto a casa pendente de conciliação
+  const [vincularConciliacaoOpen, setVincularConciliacaoOpen] = useState(false);
+  const [selectedCasaConciliacao, setSelectedCasaConciliacao] = useState<typeof casasPendentesConciliacao[0] | null>(null);
+  const [selectedProjetoVincular, setSelectedProjetoVincular] = useState("");
+  const [vincularConciliacaoLoading, setVincularConciliacaoLoading] = useState(false);
   const [mainTab, setMainTabState] = useState<'financeiro' | 'contas' | 'ocorrencias' | 'solicitacoes' | 'alertas'>(() => {
     const saved = localStorage.getItem('central-operacoes-main-tab');
     // Operadores não têm acesso à Central de Operações completa
@@ -210,6 +234,47 @@ export default function CentralOperacoes() {
   const mutations = useCentralOperacoesMutations(fetchData);
 
   const formatCurrency = (value: number, moeda: string = "BRL") => formatCurrencyUtil(value, moeda);
+
+  const handleVincularConciliacao = async () => {
+    if (!selectedCasaConciliacao || !selectedProjetoVincular || !user || !workspaceId) return;
+    setVincularConciliacaoLoading(true);
+    try {
+      const { error: updateError } = await supabase
+        .from("bookmakers")
+        .update({ projeto_id: selectedProjetoVincular })
+        .eq("id", selectedCasaConciliacao.bookmaker_id);
+      if (updateError) throw updateError;
+
+      await supabase.from("projeto_bookmaker_historico").insert({
+        projeto_id: selectedProjetoVincular,
+        bookmaker_id: selectedCasaConciliacao.bookmaker_id,
+        bookmaker_nome: selectedCasaConciliacao.bookmaker_nome,
+        parceiro_id: (selectedCasaConciliacao as any).parceiro_id || null,
+        parceiro_nome: selectedCasaConciliacao.parceiro_nome || null,
+        user_id: user.id,
+        workspace_id: workspaceId,
+      });
+
+      const { executeLink } = await import("@/lib/projetoTransitionService");
+      await executeLink({
+        bookmakerId: selectedCasaConciliacao.bookmaker_id,
+        projetoId: selectedProjetoVincular,
+        workspaceId,
+        userId: user.id,
+        saldoAtual: selectedCasaConciliacao.saldo_atual,
+        moeda: selectedCasaConciliacao.moeda,
+      });
+
+      toast.success(`"${selectedCasaConciliacao.bookmaker_nome}" vinculada ao projeto!`);
+      setVincularConciliacaoOpen(false);
+      refetchCentral();
+    } catch (err) {
+      console.error("Erro ao vincular:", err);
+      toast.error("Erro ao vincular bookmaker ao projeto");
+    } finally {
+      setVincularConciliacaoLoading(false);
+    }
+  };
 
   const handleRenovarClick = (parc: ParceriaAlertaEncerramento) => {
     setParceriaToRenovar(parc);
@@ -391,7 +456,7 @@ export default function CentralOperacoes() {
                       <div className="min-w-0 flex-1">
                         <p className="text-xs font-medium truncate">{casa.bookmaker_nome}{casa.parceiro_nome && <span className="text-muted-foreground font-normal"> de {getFirstLastName(casa.parceiro_nome)}</span>}</p>
                         <p className="text-[10px] text-muted-foreground truncate">
-                          {casa.projeto_nome ? <span className="text-primary/80">{casa.projeto_nome}</span> : <span className="text-amber-600 italic">Nenhum projeto vinculado</span>}
+                          {casa.projeto_nome ? <span className="text-primary/80">{casa.projeto_nome}</span> : <button type="button" onClick={(e) => { e.stopPropagation(); setSelectedCasaConciliacao(casa); setSelectedProjetoVincular(""); setVincularConciliacaoOpen(true); }} className="text-amber-600 italic hover:text-amber-400 hover:underline cursor-pointer transition-colors inline-flex items-center gap-0.5"><FolderKanban className="h-2.5 w-2.5" />Nenhum projeto vinculado</button>}
                           <span className="mx-1">•</span>{casa.qtd_transacoes_pendentes} {casa.qtd_transacoes_pendentes === 1 ? "transação" : "transações"}
                         </p>
                       </div>
@@ -1229,6 +1294,46 @@ export default function CentralOperacoes() {
         parceriaToRenovar={parceriaToRenovar}
         onRenewalSuccess={handleRenewalSuccess}
       />
+
+      {/* Dialog: Vincular projeto a casa pendente de conciliação */}
+      <Dialog open={vincularConciliacaoOpen} onOpenChange={setVincularConciliacaoOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Vincular a Projeto</DialogTitle>
+            <DialogDescription>
+              Vincular <strong>{selectedCasaConciliacao?.bookmaker_nome}</strong>
+              {selectedCasaConciliacao?.parceiro_nome && ` de ${getFirstLastName(selectedCasaConciliacao.parceiro_nome)}`} a um projeto ativo.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">
+              <Wallet className="h-4 w-4 text-primary" />
+              <span className="text-sm">Saldo: <strong>{selectedCasaConciliacao && formatCurrency(selectedCasaConciliacao.saldo_atual, selectedCasaConciliacao.moeda)}</strong></span>
+            </div>
+            <Select value={selectedProjetoVincular} onValueChange={setSelectedProjetoVincular}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecionar projeto..." />
+              </SelectTrigger>
+              <SelectContent>
+                {(projetosAtivos || []).map((p) => (
+                  <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setVincularConciliacaoOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleVincularConciliacao}
+              disabled={!selectedProjetoVincular || vincularConciliacaoLoading}
+            >
+              {vincularConciliacaoLoading ? "Vinculando..." : "Vincular"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
