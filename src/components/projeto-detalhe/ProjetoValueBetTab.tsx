@@ -487,6 +487,127 @@ export function ProjetoValueBetTab({
     }
   }, [projetoId, invalidateSaldos, onDataChange]);
 
+  // Liquidação de perna individual (multi-entry simples via SurebetCard)
+  const handleSurebetPernaResolve = useCallback(async (input: {
+    pernaId: string;
+    surebetId: string;
+    bookmarkerId: string;
+    resultado: string;
+    stake: number;
+    odd: number;
+    moeda: string;
+    resultadoAnterior: string | null;
+    workspaceId: string;
+    bookmakerNome?: string;
+    silent?: boolean;
+  }) => {
+    try {
+      const result = await liquidarPernaSurebet({
+        surebet_id: input.surebetId,
+        perna_id: input.pernaId,
+        bookmaker_id: input.bookmarkerId,
+        resultado: input.resultado as any,
+        resultado_anterior: input.resultadoAnterior,
+        stake: input.stake,
+        odd: input.odd,
+        moeda: input.moeda,
+        workspace_id: input.workspaceId,
+      });
+      if (!result.success) {
+        toast.error(result.error?.message || "Erro ao liquidar perna");
+        return;
+      }
+      invalidateSaldos(projetoId);
+      fetchData();
+      const resultLabel = { GREEN: "Green", RED: "Red", MEIO_GREEN: "½ Green", MEIO_RED: "½ Red", VOID: "Void" }[input.resultado] || input.resultado;
+      if (!input.silent) {
+        const nome = input.bookmakerNome || '';
+        toast.success(nome ? `${resultLabel} na ${nome}` : `Resultado alterado com sucesso`);
+      }
+      onDataChange?.();
+    } catch (error: any) {
+      console.error("Erro ao liquidar perna:", error);
+      toast.error("Erro ao atualizar resultado da perna");
+    }
+  }, [projetoId, invalidateSaldos, onDataChange]);
+
+  // Quick resolve para multi-entry simples (via SurebetCard)
+  const handleQuickResolveSurebet = useCallback(async (apostaId: string, quickResult: SurebetQuickResult) => {
+    try {
+      const aposta = apostas.find(a => a.id === apostaId);
+      if (!aposta) return;
+      const subEntries = (aposta as any)._sub_entries;
+      if (!subEntries || subEntries.length < 2) return;
+
+      const pernasAgrupadas = groupPernasBySelecao(
+        subEntries.map((p: any) => ({
+          id: p.id,
+          selecao: p.selecao || aposta.selecao,
+          selecao_livre: p.selecao_livre,
+          odd: p.odd,
+          stake: p.stake,
+          resultado: p.resultado,
+          lucro_prejuizo: p.lucro_prejuizo ?? null,
+          bookmaker_nome: p.bookmaker?.nome || '—',
+          bookmaker_id: p.bookmaker_id,
+          moeda: p.moeda || 'BRL',
+        }))
+      ).filter(p => p.bookmaker_id && p.odd && p.odd > 0);
+
+      for (let i = 0; i < pernasAgrupadas.length; i++) {
+        const perna = pernasAgrupadas[i];
+        const isWinner = quickResult.winners.includes(i);
+        const resultado = quickResult.type === "all_void" ? "VOID" : (isWinner ? "GREEN" : "RED");
+
+        if (perna.entries && perna.entries.length > 1) {
+          for (const entry of perna.entries) {
+            if (!entry.id || !entry.bookmaker_id) continue;
+            await handleSurebetPernaResolve({
+              pernaId: entry.id,
+              surebetId: apostaId,
+              bookmarkerId: entry.bookmaker_id,
+              resultado,
+              stake: entry.stake,
+              odd: entry.odd,
+              moeda: entry.moeda || 'BRL',
+              resultadoAnterior: perna.resultado,
+              workspaceId: aposta.workspace_id || '',
+              silent: true,
+            });
+          }
+        } else {
+          await handleSurebetPernaResolve({
+            pernaId: perna.id,
+            surebetId: apostaId,
+            bookmarkerId: perna.bookmaker_id!,
+            resultado,
+            stake: perna.stake,
+            odd: perna.odd,
+            moeda: perna.moeda || 'BRL',
+            resultadoAnterior: perna.resultado,
+            workspaceId: aposta.workspace_id || '',
+            silent: true,
+          });
+        }
+      }
+      toast.success("Resultado alterado com sucesso");
+    } catch (error: any) {
+      console.error("Erro ao liquidar:", error);
+      toast.error("Erro ao liquidar aposta");
+    }
+  }, [apostas, handleSurebetPernaResolve]);
+
+  // Mapa de bookmaker_id -> nome completo com parceiro para SurebetCard
+  const bookmakerNomeMap = useMemo(() => {
+    const map = new Map<string, string>();
+    bookmakers.forEach(bk => {
+      const shortName = getFirstLastName(bk.parceiro?.nome || "");
+      const nomeCompleto = shortName ? `${bk.nome} - ${shortName}` : bk.nome;
+      map.set(bk.id, nomeCompleto);
+    });
+    return map;
+  }, [bookmakers]);
+
   const metricas = useMemo(() => {
     const { convertToConsolidation, moedaConsolidacao } = { convertToConsolidation: convertToConsolidationOficialFn, moedaConsolidacao: moedaConsolidacaoVal };
     
