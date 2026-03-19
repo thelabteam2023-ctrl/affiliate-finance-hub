@@ -611,7 +611,7 @@ export function IncidentesEstatisticasTab({ projetoId, formatCurrency }: Props) 
                 <div className="rounded-lg border border-border/50 p-2.5 text-center">
                   <p className="text-xs text-muted-foreground">Perda Total</p>
                   <p className={cn("text-lg font-semibold", selectedCasa.perdaBRL > 0 ? "text-red-400" : "text-muted-foreground")}>
-                    {selectedCasa.perdaBRL > 0 ? formatBRL(selectedCasa.perdaBRL) : '—'}
+                    {selectedCasa.perdaBRL > 0 ? formatConsolidated(selectedCasa.perdaBRL) : '—'}
                   </p>
                 </div>
               </div>
