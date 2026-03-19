@@ -16,9 +16,11 @@ import {
   Inbox,
   CheckCircle2,
   BarChart3,
+  DollarSign,
 } from 'lucide-react';
 import { TIPO_LABELS } from '@/types/ocorrencias';
 import type { OcorrenciaTipo, OcorrenciaStatus } from '@/types/ocorrencias';
+import { getCurrencySymbol } from '@/types/currency';
 
 type ViewMode = 'list' | 'board';
 type FilterTab = 'todas' | 'minhas' | 'historico' | 'estatisticas';
