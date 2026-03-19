@@ -14,7 +14,6 @@ import { OcorrenciaCollapseCard } from '@/components/ocorrencias/OcorrenciaColla
 import { OcorrenciaDetalheDialog } from '@/components/ocorrencias/OcorrenciaDetalheDialog';
 import { NovaOcorrenciaDialog } from '@/components/ocorrencias/NovaOcorrenciaDialog';
 import type { OcorrenciaStatus, OcorrenciaPrioridade } from '@/types/ocorrencias';
-import { getCurrencySymbol } from '@/types/currency';
 import { PRIORIDADE_LABELS, PRIORIDADE_COLORS, PRIORIDADE_BG } from '@/types/ocorrencias';
 import { Plus, Inbox, Zap, AlertTriangle, ArrowUp, ArrowDown, ShieldAlert, CheckCircle, BarChart3 } from 'lucide-react';
 import { cn } from '@/lib/utils';
