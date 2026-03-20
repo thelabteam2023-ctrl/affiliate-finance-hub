@@ -862,11 +862,10 @@ export function SurebetModalRoot({
         if (bk) entries[entryIndex].moeda = bk.moeda as SupportedCurrency;
       }
 
-      // Auto-calcular stake via PAYOUT quando odd é preenchida e stake está vazia
+      // Auto-calcular stake via PAYOUT quando odd muda (recalcula sempre que a odd é alterada)
       if (field === 'odd') {
         const oddVal = parseFloat(value);
-        const currentStake = parseFloat(entries[entryIndex].stake) || 0;
-        if (oddVal > 1 && currentStake === 0) {
+        if (oddVal > 1) {
           const targetPayout = targetPayoutsLocal?.[pernaIndex] || 0;
           const mainStake = parseFloat(newOdds[pernaIndex].stake) || 0;
           const mainOdd = parseFloat(newOdds[pernaIndex].odd) || 0;
@@ -883,6 +882,7 @@ export function SurebetModalRoot({
           }
         }
       }
+      // Stake editada manualmente: NÃO recalcular (respeitar valor do usuário)
 
       newOdds[pernaIndex] = { ...newOdds[pernaIndex], additionalEntries: entries };
       return newOdds;
