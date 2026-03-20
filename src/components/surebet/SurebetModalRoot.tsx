@@ -1306,7 +1306,7 @@ export function SurebetModalRoot({
               odd: parseFloat(flat.odd) || 0,
               moeda: getBookmakerMoeda(flat.bookmaker_id),
               workspace_id: workspaceId,
-              fonte_saldo: 'REAL',
+              fonte_saldo: flat.fonteSaldo || 'REAL',
             });
             
             if (!liqResult.success) {
