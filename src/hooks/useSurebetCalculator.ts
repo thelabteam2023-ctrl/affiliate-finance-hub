@@ -313,31 +313,55 @@ export function useSurebetCalculator({
     return calcularStakesDirecionadas(parsedOdds, baseStakes, directedProfitLegs, refIndex, arredondarStake);
   }, [odds, directedProfitLegs, arredondarStake, getOddMediaPerna, getStakeTotalPerna, equalizedStakesSnapshot]);
 
-  // ── Stakes equalizadas IDEAIS (ignora manual edits, para auto-fill de sub-entradas) ──
-  const equalizedTargetStakes = useMemo(() => {
+  // ── Stakes equalizadas IDEAIS + Target Payouts por perna ──
+  const { equalizedTargetStakes, targetPayoutsLocal } = useMemo(() => {
     const refIndex = odds.findIndex(o => o.isReference);
-    if (refIndex === -1) return odds.map(o => getStakeTotalPerna(o));
+    if (refIndex === -1) {
+      const fallback = odds.map(o => getStakeTotalPerna(o));
+      return {
+        equalizedTargetStakes: fallback,
+        targetPayoutsLocal: fallback.map((s, i) => s * getOddMediaPerna(odds[i])),
+      };
+    }
 
     const ref = odds[refIndex];
     const refStake = getStakeTotalPerna(ref);
     const refOdd = getOddMediaPerna(ref);
-    if (refStake <= 0 || refOdd <= 1) return odds.map(o => getStakeTotalPerna(o));
+    if (refStake <= 0 || refOdd <= 1) {
+      const fallback = odds.map(o => getStakeTotalPerna(o));
+      return {
+        equalizedTargetStakes: fallback,
+        targetPayoutsLocal: fallback.map((s, i) => s * getOddMediaPerna(odds[i])),
+      };
+    }
 
     const refMoeda = getMoedaPerna(ref);
     const targetReturnConsolidated = convertViaBRL(
       refStake * refOdd, refMoeda, safeConfig.consolidationCurrency, safeConfig.brlRates
     );
 
-    return odds.map((o, i) => {
-      if (i === refIndex) return refStake;
+    const stakes: number[] = [];
+    const payouts: number[] = [];
+    odds.forEach((o, i) => {
+      if (i === refIndex) {
+        stakes.push(refStake);
+        payouts.push(refStake * refOdd);
+        return;
+      }
       const legMoeda = getMoedaPerna(o);
       const legOdd = getOddMediaPerna(o);
-      if (legOdd <= 1) return getStakeTotalPerna(o);
       const targetInLeg = convertViaBRL(
         targetReturnConsolidated, safeConfig.consolidationCurrency, legMoeda, safeConfig.brlRates
       );
-      return arredondarStake(targetInLeg / legOdd);
+      if (legOdd <= 1) {
+        stakes.push(getStakeTotalPerna(o));
+        payouts.push(targetInLeg);
+      } else {
+        stakes.push(arredondarStake(targetInLeg / legOdd));
+        payouts.push(targetInLeg);
+      }
     });
+    return { equalizedTargetStakes: stakes, targetPayoutsLocal: payouts };
   }, [odds, safeConfig, arredondarStake, getMoedaPerna, getOddMediaPerna, getStakeTotalPerna]);
 
   // ── Stakes equalizadas ou dirigidas ──────────────────────────
@@ -415,9 +439,10 @@ export function useSurebetCalculator({
 
   return {
     analysis,
-    calculatedStakes: calculatedStakesLocal,   // stakes locais (para UI de entrada)
-    calculatedStakesConsolidated,               // stakes convertidas (para exibição de totais)
-    equalizedTargetStakes,                      // stakes IDEAIS equalizadas (ignora manual edits)
+    calculatedStakes: calculatedStakesLocal,
+    calculatedStakesConsolidated,
+    equalizedTargetStakes,
+    targetPayoutsLocal,                         // payout alvo por perna (moeda local) para auto-fill
     directedStakes: directedStakesLocal,
     pernasValidas,
     arredondarStake,
