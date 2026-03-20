@@ -1226,6 +1226,7 @@ export function SurebetModalRoot({
                 ordem: i + 1,
                 cotacao_snapshot: snapshotFields.cotacao_snapshot,
                 stake_brl_referencia: snapshotFields.valor_brl_referencia,
+                fonte_saldo: flat.fonteSaldo || 'REAL',
               });
             
             if (insertError) {
