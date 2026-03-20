@@ -426,10 +426,15 @@ function PernaItem({
                 )}
               </div>
               
-              {/* Odd + Stake */}
+              {/* Odd + Stake + FB badge */}
               <div className="flex items-center gap-2 shrink-0">
                 <span className="font-medium text-foreground">@{entry.odd.toFixed(2)}</span>
                 <span className="text-muted-foreground">{formatPernaValue(entry.stake, entry.moeda)}</span>
+                {entry.fonte_saldo === 'FREEBET' && (
+                  <Badge variant="outline" className="text-[9px] px-1 py-0 shrink-0 border-green-500/40 text-green-400 bg-green-500/10 font-bold">
+                    FB
+                  </Badge>
+                )}
               </div>
             </div>
           ))}
