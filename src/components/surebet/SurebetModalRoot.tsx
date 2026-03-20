@@ -1150,6 +1150,7 @@ export function SurebetModalRoot({
         selecaoLivre: string;
         moeda: SupportedCurrency;
         resultado?: string | null;
+        fonteSaldo?: 'REAL' | 'FREEBET';
         /** Index da perna pai no array odds (para agrupar resultado) */
         parentLegIndex: number;
       }
@@ -1166,6 +1167,7 @@ export function SurebetModalRoot({
           selecaoLivre: entry.selecaoLivre || '',
           moeda: entry.moeda,
           resultado: (entry as any).resultado || null,
+          fonteSaldo: entry.fonteSaldo || 'REAL',
           parentLegIndex: legIdx,
         });
         // Sub-entradas (additionalEntries)
@@ -1180,6 +1182,7 @@ export function SurebetModalRoot({
                 selecaoLivre: sub.selecaoLivre || entry.selecaoLivre || '',
                 moeda: sub.moeda || entry.moeda,
                 resultado: (entry as any).resultado || null, // mesmo resultado da perna pai
+                fonteSaldo: sub.fonteSaldo || 'REAL',
                 parentLegIndex: legIdx,
               });
             }
