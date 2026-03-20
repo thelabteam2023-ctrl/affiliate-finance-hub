@@ -90,6 +90,7 @@ export function SurebetMobileCard({
   numPernas,
   moedaDominante,
   hasInsufficientBalance = false,
+  insufficientEntries,
   onResultadoChange,
   onUpdateOdd,
   onSetReference,
