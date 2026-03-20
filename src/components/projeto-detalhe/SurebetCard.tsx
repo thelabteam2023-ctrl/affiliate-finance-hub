@@ -636,7 +636,7 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
                 surebetId={surebet.id}
                 status={surebet.status || "PENDENTE"}
                 resultado={surebet.resultado || null}
-                pernas={surebet.pernas
+                pernas={(surebet.pernas || [])
                   .filter(p => p.bookmaker_id && p.odd && p.odd > 0)
                   .map((p, idx) => ({
                     id: p.id,
