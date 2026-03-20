@@ -2850,6 +2850,7 @@ export function CaixaTransacaoDialog({
       dispatchCaixaDataChanged();
       
       onSuccess();
+      onClose();
     } catch (error: any) {
       console.error("Erro ao registrar transação:", error);
       toast({
