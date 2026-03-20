@@ -415,7 +415,9 @@ export function analisarArbitragem(
     // Lucro = payout consolidado − custo REAL total (freebet não conta)
     const lucro = payoutConsolidado - stakeRealTotal;
 
-    const roi = stakeRealTotal > 0 ? (lucro / stakeRealTotal) * 100 : 0;
+    // ROI: sobre stake real se houver, senão sobre stake total (100% FB = lucro puro)
+    const roiBase = stakeRealTotal > 0 ? stakeRealTotal : stakeTotal;
+    const roi = roiBase > 0 ? (lucro / roiBase) * 100 : 0;
 
     return {
       legIndex: i,
