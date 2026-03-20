@@ -630,13 +630,13 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
           </Badge>
           <ResultadoBadge resultado={isLiquidada ? surebet.resultado : null} />
           
-          <div className="ml-auto">
-            {(onDelete || onDuplicate || onQuickResolve) && surebet.pernas && surebet.pernas.length >= 2 && (
+          <div className="ml-auto flex-shrink-0">
+            {(onEdit || onDelete || onDuplicate || onQuickResolve) && (
               <SurebetRowActionsMenu
                 surebetId={surebet.id}
                 status={surebet.status || "PENDENTE"}
                 resultado={surebet.resultado || null}
-                pernas={surebet.pernas
+                pernas={(surebet.pernas || [])
                   .filter(p => p.bookmaker_id && p.odd && p.odd > 0)
                   .map((p, idx) => ({
                     id: p.id,
