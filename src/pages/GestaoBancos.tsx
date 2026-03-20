@@ -203,6 +203,7 @@ export default function GestaoBancos() {
       }
 
       handleDialogClose();
+      fetchBancos();
     } catch (error: any) {
       toast({ title: "Erro ao salvar banco", description: error.message, variant: "destructive" });
     } finally {

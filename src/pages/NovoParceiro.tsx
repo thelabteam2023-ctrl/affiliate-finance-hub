@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Save, UserPlus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ const NovoParceiro = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, workspaceId } = useAuth();
+  const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -130,6 +132,12 @@ const NovoParceiro = () => {
         }
         return;
       }
+
+      // Invalidar cache de parceiros para atualizar listagens
+      queryClient.invalidateQueries({ queryKey: ["parceiros"] });
+      queryClient.invalidateQueries({ queryKey: ["parceiros-data"] });
+      queryClient.invalidateQueries({ queryKey: ["parceiro-financeiro"] });
+      queryClient.invalidateQueries({ queryKey: ["parceiro-consolidado"] });
 
       toast({
         title: "Parceiro cadastrado!",
