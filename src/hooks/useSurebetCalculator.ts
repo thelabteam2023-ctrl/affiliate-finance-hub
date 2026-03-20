@@ -454,15 +454,24 @@ export function useSurebetCalculator({
     // Usar stakes REAIS da tela para análise (não equalizadas)
     const realStakesLocal = odds.map(o => getStakeTotalPerna(o));
 
-    const engineLegs: EngineLeg[] = odds.map((o, i) => ({
-      moeda: getMoedaPerna(o),
-      stakeLocal: realStakesLocal[i],
-      odd: getOddMediaPerna(o),
-      isReference: o.isReference,
-      isManuallyEdited: o.isManuallyEdited,
-      isFromPrint: o.stakeOrigem === "print",
-      isFreebet: o.fonteSaldo === 'FREEBET',
-    }));
+    const engineLegs: EngineLeg[] = odds.map((o, i) => {
+      const baseCurrency = getMoedaPerna(o);
+      const split = calcularStakeSplit(
+        { stake: o.stake, fonteSaldo: o.fonteSaldo },
+        o.additionalEntries, safeConfig.brlRates, baseCurrency
+      );
+      return {
+        moeda: baseCurrency,
+        stakeLocal: realStakesLocal[i],
+        odd: getOddMediaPerna(o),
+        isReference: o.isReference,
+        isManuallyEdited: o.isManuallyEdited,
+        isFromPrint: o.stakeOrigem === "print",
+        isFreebet: o.fonteSaldo === 'FREEBET' && !o.additionalEntries?.length,
+        realStakeLocal: split.realStakeLocal,
+        freebetStakeLocal: split.freebetStakeLocal,
+      };
+    });
 
     // Stakes efetivos para análise: direcionadas se ativo, senão reais
     const effectiveStakes = directedStakesLocal || realStakesLocal;
