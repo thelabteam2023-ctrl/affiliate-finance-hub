@@ -439,9 +439,10 @@ export function useSurebetCalculator({
 
   return {
     analysis,
-    calculatedStakes: calculatedStakesLocal,   // stakes locais (para UI de entrada)
-    calculatedStakesConsolidated,               // stakes convertidas (para exibição de totais)
-    equalizedTargetStakes,                      // stakes IDEAIS equalizadas (ignora manual edits)
+    calculatedStakes: calculatedStakesLocal,
+    calculatedStakesConsolidated,
+    equalizedTargetStakes,
+    targetPayoutsLocal,                         // payout alvo por perna (moeda local) para auto-fill
     directedStakes: directedStakesLocal,
     pernasValidas,
     arredondarStake,
