@@ -1795,107 +1795,79 @@ export function SurebetModalRoot({
    */
   const balanceValidation = useMemo(() => {
     const insufficientLegs: number[] = [];
+    // Granular: Map<"main-{legIdx}" | "sub-{legIdx}-{subIdx}", true>
+    const insufficientEntries = new Map<string, boolean>();
     const adjustedBalances = new Map<string, number>();
     
     // Acumular alocações separadas por bookmaker: real vs freebet
-    // Map<bookmaker_id, { real: number, freebet: number }>
     const alocadoPorBookmaker = new Map<string, { real: number; freebet: number }>();
     
-    // Coletar TODAS as alocações de todas as pernas e sub-entradas
-    interface FlatEntry {
-      bookmaker_id: string;
-      stake: number;
-      isFreebet: boolean;
-      legIndex: number;
-    }
-    const flatEntries: FlatEntry[] = [];
-    
     odds.forEach((entry, index) => {
-      if (!entry.bookmaker_id) return;
-      const mainStake = parseFloat(entry.stake) || 0;
-      if (mainStake > 0) {
-        flatEntries.push({
-          bookmaker_id: entry.bookmaker_id,
-          stake: mainStake,
-          isFreebet: entry.fonteSaldo === 'FREEBET',
-          legIndex: index,
-        });
+      if (entry.bookmaker_id) {
+        const mainStake = parseFloat(entry.stake) || 0;
+        if (mainStake > 0) {
+          const cur = alocadoPorBookmaker.get(entry.bookmaker_id) || { real: 0, freebet: 0 };
+          if (entry.fonteSaldo === 'FREEBET') cur.freebet += mainStake; else cur.real += mainStake;
+          alocadoPorBookmaker.set(entry.bookmaker_id, cur);
+        }
       }
-      // Sub-entradas
       (entry.additionalEntries || []).forEach(sub => {
         const subBk = sub.bookmaker_id || entry.bookmaker_id;
+        if (!subBk) return;
         const subStake = parseFloat(sub.stake) || 0;
         if (subStake > 0) {
-          flatEntries.push({
-            bookmaker_id: subBk,
-            stake: subStake,
-            isFreebet: sub.fonteSaldo === 'FREEBET',
-            legIndex: index,
-          });
+          const cur = alocadoPorBookmaker.get(subBk) || { real: 0, freebet: 0 };
+          if (sub.fonteSaldo === 'FREEBET') cur.freebet += subStake; else cur.real += subStake;
+          alocadoPorBookmaker.set(subBk, cur);
         }
       });
     });
     
-    // Agrupar por bookmaker
-    for (const fe of flatEntries) {
-      const current = alocadoPorBookmaker.get(fe.bookmaker_id) || { real: 0, freebet: 0 };
-      if (fe.isFreebet) {
-        current.freebet += fe.stake;
-      } else {
-        current.real += fe.stake;
-      }
-      alocadoPorBookmaker.set(fe.bookmaker_id, current);
-    }
-    
-    // Validar cada bookmaker: real contra saldo_operavel, freebet contra saldo_freebet
+    // Validar cada bookmaker
     const bookmakerInsuficientes = new Set<string>();
     const bookmakerFBInsuficientes = new Set<string>();
     
     for (const [bkId, alocado] of alocadoPorBookmaker.entries()) {
       const bookmaker = bookmakerSaldos.find(b => b.id === bkId);
       if (!bookmaker) continue;
-      
       const creditoVirtual = isEditing ? (originalStakesByBookmaker.current.get(bkId) || 0) : 0;
       const saldoReal = (bookmaker.saldo_operavel ?? 0) + creditoVirtual;
       const saldoFB = bookmaker.saldo_freebet ?? 0;
-      
-      if (alocado.real > saldoReal + 0.01) {
-        bookmakerInsuficientes.add(bkId);
-      }
-      if (alocado.freebet > saldoFB + 0.01) {
-        bookmakerFBInsuficientes.add(bkId);
-      }
+      if (alocado.real > saldoReal + 0.01) bookmakerInsuficientes.add(bkId);
+      if (alocado.freebet > saldoFB + 0.01) bookmakerFBInsuficientes.add(bkId);
     }
     
-    // Marcar pernas afetadas
+    // Marcar entradas específicas com problema
     odds.forEach((entry, index) => {
-      if (!entry.bookmaker_id) return;
-      const stake = parseFloat(entry.stake) || 0;
-      if (stake <= 0) return;
+      let legHasIssue = false;
       
-      const isMainFB = entry.fonteSaldo === 'FREEBET';
-      const hasSubFB = (entry.additionalEntries || []).some(s => s.fonteSaldo === 'FREEBET');
-      
-      if ((!isMainFB && bookmakerInsuficientes.has(entry.bookmaker_id)) ||
-          (isMainFB && bookmakerFBInsuficientes.has(entry.bookmaker_id)) ||
-          (hasSubFB && bookmakerFBInsuficientes.has(entry.bookmaker_id))) {
-        insufficientLegs.push(index);
+      if (entry.bookmaker_id) {
+        const isMainFB = entry.fonteSaldo === 'FREEBET';
+        if ((isMainFB && bookmakerFBInsuficientes.has(entry.bookmaker_id)) ||
+            (!isMainFB && bookmakerInsuficientes.has(entry.bookmaker_id))) {
+          insufficientEntries.set(`main-${index}`, true);
+          legHasIssue = true;
+        }
       }
       
-      // Verificar sub-entradas com bookmakers diferentes
-      (entry.additionalEntries || []).forEach(sub => {
+      (entry.additionalEntries || []).forEach((sub, subIdx) => {
         const subBk = sub.bookmaker_id || entry.bookmaker_id;
-        if (sub.fonteSaldo === 'FREEBET' && bookmakerFBInsuficientes.has(subBk)) {
-          if (!insufficientLegs.includes(index)) insufficientLegs.push(index);
-        } else if (sub.fonteSaldo !== 'FREEBET' && bookmakerInsuficientes.has(subBk)) {
-          if (!insufficientLegs.includes(index)) insufficientLegs.push(index);
+        if (!subBk) return;
+        const isSubFB = sub.fonteSaldo === 'FREEBET';
+        if ((isSubFB && bookmakerFBInsuficientes.has(subBk)) ||
+            (!isSubFB && bookmakerInsuficientes.has(subBk))) {
+          insufficientEntries.set(`sub-${index}-${subIdx}`, true);
+          legHasIssue = true;
         }
       });
+      
+      if (legHasIssue) insufficientLegs.push(index);
     });
     
     return {
       hasInsufficientBalance: insufficientLegs.length > 0,
       insufficientLegs,
+      insufficientEntries,
       adjustedBalances,
       bookmakerFBInsuficientes,
     };
