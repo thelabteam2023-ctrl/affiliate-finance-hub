@@ -350,7 +350,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
         const { data: pernasData } = await supabase
           .from("apostas_pernas")
           .select(`
-            aposta_id, bookmaker_id, odd, stake, moeda, selecao_livre, ordem,
+            aposta_id, bookmaker_id, odd, stake, moeda, selecao_livre, ordem, fonte_saldo,
             bookmaker:bookmakers (
               nome, parceiro_id,
               parceiro:parceiros (nome),
