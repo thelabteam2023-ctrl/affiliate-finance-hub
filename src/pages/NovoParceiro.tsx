@@ -23,6 +23,7 @@ const NovoParceiro = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, workspaceId } = useAuth();
+  const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
