@@ -65,6 +65,7 @@ interface SurebetMobileCardProps {
   numPernas: number;
   moedaDominante: SupportedCurrency;
   hasInsufficientBalance?: boolean;
+  insufficientEntries?: Map<string, boolean>;
   onResultadoChange?: (index: number, resultado: PernaResultado) => void;
   onUpdateOdd: (index: number, field: keyof OddEntry, value: string | boolean) => void;
   onSetReference: (index: number) => void;

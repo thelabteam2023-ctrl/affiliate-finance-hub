@@ -76,6 +76,8 @@ interface SurebetTableRowProps {
   moedaDominante: SupportedCurrency;
   /** Indica se esta perna tem saldo insuficiente */
   hasInsufficientBalance?: boolean;
+  /** Map granular de entradas insuficientes: "main-{idx}" ou "sub-{idx}-{subIdx}" */
+  insufficientEntries?: Map<string, boolean>;
   /** Callback para alterar resultado da perna (modo edição) */
   onResultadoChange?: (index: number, resultado: PernaResultado) => void;
   onUpdateOdd: (index: number, field: keyof OddEntry, value: string | boolean) => void;
