@@ -15,10 +15,13 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { validateCPF } from "@/lib/validators";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 const NovoParceiro = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user, workspaceId } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -89,21 +92,60 @@ const NovoParceiro = () => {
       return;
     }
 
-    // Simular salvamento (CPF normalizado sem máscara)
-    const dataToSave = {
-      ...formData,
-      nome: nomeTrimmed,
-      cpf: cpfDigits,
-    };
-
-    setTimeout(() => {
+    if (!user?.id || !workspaceId) {
       toast({
-        title: "Parceiro cadastrado!",
-        description: `${dataToSave.nome} foi adicionado com sucesso.`,
+        title: "Erro de autenticação",
+        description: "Você precisa estar logado para cadastrar um parceiro.",
+        variant: "destructive",
       });
       setIsSubmitting(false);
+      return;
+    }
+
+    try {
+      const { error } = await supabase.from("parceiros").insert({
+        nome: nomeTrimmed,
+        cpf: cpfDigits,
+        email: formData.email.trim() || null,
+        telefone: formData.telefone.trim() || null,
+        data_nascimento: formData.dataNascimento || null,
+        endereco: formData.endereco.trim() || null,
+        cep: formData.cep.replace(/\D/g, "") || null,
+        cidade: formData.cidade.trim() || null,
+        observacoes: formData.notas.trim() || null,
+        status: formData.status,
+        user_id: user.id,
+        workspace_id: workspaceId,
+      });
+
+      if (error) {
+        if (error.code === "23505") {
+          toast({
+            title: "CPF já cadastrado",
+            description: "Já existe um parceiro com este CPF no sistema.",
+            variant: "destructive",
+          });
+        } else {
+          throw error;
+        }
+        return;
+      }
+
+      toast({
+        title: "Parceiro cadastrado!",
+        description: `${nomeTrimmed} foi adicionado com sucesso.`,
+      });
       navigate("/parceiros");
-    }, 1000);
+    } catch (error: any) {
+      console.error("Erro ao cadastrar parceiro:", error);
+      toast({
+        title: "Erro ao cadastrar",
+        description: error.message || "Não foi possível salvar o parceiro. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
