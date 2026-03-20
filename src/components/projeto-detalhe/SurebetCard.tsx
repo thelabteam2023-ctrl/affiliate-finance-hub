@@ -25,6 +25,8 @@ export interface SurebetPernaEntry {
   stake: number;
   // NOVO: Seleção/linha por entrada
   selecao_livre?: string;
+  /** Fonte do saldo: REAL ou FREEBET */
+  fonte_saldo?: string;
 }
 
 export interface SurebetPerna {
