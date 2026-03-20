@@ -477,31 +477,48 @@ export function SurebetTableRow({
             
             {/* Stake + FB toggle */}
             <td className="px-1" style={{ height: '52px' }}>
-              <div className="flex items-center gap-1">
-                <MoneyInput 
-                  value={addEntry.stake}
-                  onChange={(val) => onUpdateAdditionalEntry(pernaIndex, addIndex, 'stake', val)}
-                  currency={addEntry.moeda}
-                  minDigits={6}
-                  className={cn(
-                    "h-7 text-xs text-center tabular-nums",
-                    (addEntry as any).fonteSaldo === 'FREEBET' ? "w-[72px]" : "w-[90px]"
-                  )}
-                />
-                <button
-                  type="button"
-                  onClick={() => onUpdateAdditionalEntry(pernaIndex, addIndex, 'fonteSaldo', (addEntry as any).fonteSaldo === 'FREEBET' ? 'REAL' : 'FREEBET')}
-                  className={cn(
-                    "shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold transition-colors border",
-                    (addEntry as any).fonteSaldo === 'FREEBET'
-                      ? "bg-purple-500/20 text-purple-400 border-purple-500/40"
-                      : "text-muted-foreground/40 border-transparent hover:text-muted-foreground/60 hover:border-border/40"
-                  )}
-                  title={(addEntry as any).fonteSaldo === 'FREEBET' ? "FB ativo" : "Usar Freebet"}
-                >
-                  FB
-                </button>
-              </div>
+              {(() => {
+                const subInsufficient = insufficientEntries?.get(`sub-${pernaIndex}-${addIndex}`) || false;
+                const subHasFB = (addBookmaker?.saldo_freebet ?? 0) > 0;
+                const isSubFB = (addEntry as any).fonteSaldo === 'FREEBET';
+                return (
+                  <div className="flex flex-col items-center gap-0.5">
+                    <div className="flex items-center gap-1">
+                      <MoneyInput 
+                        value={addEntry.stake}
+                        onChange={(val) => onUpdateAdditionalEntry(pernaIndex, addIndex, 'stake', val)}
+                        currency={addEntry.moeda}
+                        minDigits={6}
+                        className={cn(
+                          "h-7 text-xs text-center tabular-nums",
+                          isSubFB ? "w-[72px]" : "w-[90px]",
+                          subInsufficient ? "border-destructive focus-visible:ring-destructive/50" : ""
+                        )}
+                      />
+                      {(subHasFB || isSubFB) && (
+                        <button
+                          type="button"
+                          onClick={() => onUpdateAdditionalEntry(pernaIndex, addIndex, 'fonteSaldo', isSubFB ? 'REAL' : 'FREEBET')}
+                          className={cn(
+                            "shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold transition-colors border",
+                            isSubFB
+                              ? "bg-purple-500/20 text-purple-400 border-purple-500/40"
+                              : "text-muted-foreground/40 border-transparent hover:text-muted-foreground/60 hover:border-border/40"
+                          )}
+                          title={isSubFB ? "FB ativo" : "Usar Freebet"}
+                        >
+                          FB
+                        </button>
+                      )}
+                    </div>
+                    {subInsufficient && (
+                      <span className="text-[9px] text-destructive font-medium">
+                        {isSubFB ? 'FB insuf.' : 'Saldo insuf.'}
+                      </span>
+                    )}
+                  </div>
+                );
+              })()}
             </td>
             
             {/* Linha (vazia para sub-entradas) + Remove */}
