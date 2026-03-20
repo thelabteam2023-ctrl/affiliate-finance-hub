@@ -2317,8 +2317,10 @@ export function SurebetModalRoot({
               <div className="flex items-center gap-2 p-2 bg-destructive/10 border border-destructive/30 rounded text-xs text-destructive">
                 <AlertTriangle className="h-4 w-4 shrink-0" />
                 <span>
-                  Saldo insuficiente na(s) perna(s) {balanceValidation.insufficientLegs.map(i => i + 1).join(", ")}. 
-                  Reduza o stake ou selecione outra casa.
+                  {balanceValidation.bookmakerFBInsuficientes && balanceValidation.bookmakerFBInsuficientes.size > 0
+                    ? `Saldo de Freebet insuficiente na(s) perna(s) ${balanceValidation.insufficientLegs.map(i => i + 1).join(", ")}. O valor FB excede o saldo disponível.`
+                    : `Saldo insuficiente na(s) perna(s) ${balanceValidation.insufficientLegs.map(i => i + 1).join(", ")}. Reduza o stake ou selecione outra casa.`
+                  }
                 </span>
               </div>
             </div>
