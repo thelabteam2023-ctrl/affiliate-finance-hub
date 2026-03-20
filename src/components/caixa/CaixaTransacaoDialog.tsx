@@ -2965,6 +2965,7 @@ export function CaixaTransacaoDialog({
       resetForm();
       dispatchCaixaDataChanged();
       onSuccess();
+      onClose();
     } catch (error: any) {
       console.error("Erro ao registrar transação com taxa:", error);
       toast({ title: "Erro ao registrar transação", description: error.message, variant: "destructive" });
