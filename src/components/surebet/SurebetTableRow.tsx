@@ -462,15 +462,33 @@ export function SurebetTableRow({
               />
             </td>
             
-            {/* Stake */}
+            {/* Stake + FB toggle */}
             <td className="px-1" style={{ height: '52px' }}>
-              <MoneyInput 
-                value={addEntry.stake}
-                onChange={(val) => onUpdateAdditionalEntry(pernaIndex, addIndex, 'stake', val)}
-                currency={addEntry.moeda}
-                minDigits={6}
-                className="h-7 text-xs text-center w-[90px] tabular-nums"
-              />
+              <div className="flex items-center gap-1">
+                <MoneyInput 
+                  value={addEntry.stake}
+                  onChange={(val) => onUpdateAdditionalEntry(pernaIndex, addIndex, 'stake', val)}
+                  currency={addEntry.moeda}
+                  minDigits={6}
+                  className={cn(
+                    "h-7 text-xs text-center tabular-nums",
+                    (addEntry as any).fonteSaldo === 'FREEBET' ? "w-[72px]" : "w-[90px]"
+                  )}
+                />
+                <button
+                  type="button"
+                  onClick={() => onUpdateAdditionalEntry(pernaIndex, addIndex, 'fonteSaldo', (addEntry as any).fonteSaldo === 'FREEBET' ? 'REAL' : 'FREEBET')}
+                  className={cn(
+                    "shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold transition-colors border",
+                    (addEntry as any).fonteSaldo === 'FREEBET'
+                      ? "bg-purple-500/20 text-purple-400 border-purple-500/40"
+                      : "text-muted-foreground/40 border-transparent hover:text-muted-foreground/60 hover:border-border/40"
+                  )}
+                  title={(addEntry as any).fonteSaldo === 'FREEBET' ? "FB ativo" : "Usar Freebet"}
+                >
+                  FB
+                </button>
+              </div>
             </td>
             
             {/* Linha (vazia para sub-entradas) + Remove */}
