@@ -335,7 +335,7 @@ export function SurebetModalRoot({
     };
   }, [moedaConsolidacao, cotacaoUsdFormulario, getCotacaoRate]);
 
-  const { analysis, calculatedStakes, equalizedTargetStakes, pernasValidas, arredondarStake, getOddMediaPerna, getStakeTotalPerna, directedStakes } = useSurebetCalculator({
+  const { analysis, calculatedStakes, equalizedTargetStakes, targetPayoutsLocal, pernasValidas, arredondarStake, getOddMediaPerna, getStakeTotalPerna, directedStakes } = useSurebetCalculator({
     odds,
     directedProfitLegs,
     numPernas,
