@@ -885,8 +885,58 @@ export function SurebetModalRoot({
       return newOdds;
     });
   }, []);
-  
-  // Handler para alterar resultado de uma perna específica
+
+  // ── Auto-fill reativo: quando main stake muda e sub-entradas têm stake vazia ──
+  useEffect(() => {
+    if (!equalizedTargetStakes || equalizedTargetStakes.length === 0) return;
+
+    let needsUpdate = false;
+    const newOdds = odds.map((o, i) => {
+      const entries = o.additionalEntries;
+      if (!entries || entries.length === 0) return o;
+
+      // Verificar se alguma sub-entrada tem odd preenchida mas stake vazia
+      const hasEmptyStakeSub = entries.some(e => {
+        const oddVal = parseFloat(e.odd) || 0;
+        const stakeVal = parseFloat(e.stake) || 0;
+        return oddVal > 1 && stakeVal === 0;
+      });
+      if (!hasEmptyStakeSub) return o;
+
+      const totalNeeded = equalizedTargetStakes[i] || 0;
+      if (totalNeeded <= 0) return o;
+
+      const mainStake = parseFloat(o.stake) || 0;
+      let usedSubStakes = 0;
+      const updatedEntries = entries.map(e => {
+        const oddVal = parseFloat(e.odd) || 0;
+        const stakeVal = parseFloat(e.stake) || 0;
+        if (stakeVal > 0 || oddVal <= 1) {
+          usedSubStakes += stakeVal;
+          return e;
+        }
+        // Calcular remaining para esta sub-entrada
+        const remaining = Math.max(0, totalNeeded - mainStake - usedSubStakes);
+        if (remaining > 0) {
+          needsUpdate = true;
+          const filled = arredondarStake(remaining);
+          usedSubStakes += filled;
+          return { ...e, stake: filled.toFixed(2) };
+        }
+        return e;
+      });
+
+      return { ...o, additionalEntries: updatedEntries };
+    });
+
+    if (needsUpdate) {
+      setOdds(newOdds);
+    }
+  }, [
+    odds.map(o => `${o.stake}-${(o.additionalEntries || []).map(e => `${e.odd}:${e.stake}`).join('|')}`).join(','),
+    equalizedTargetStakes?.join(','),
+  ]);
+
   const handlePernaResultadoChange = useCallback((index: number, resultado: 'GREEN' | 'RED' | 'VOID' | null) => {
     setOdds(prev => {
       const newOdds = [...prev];
