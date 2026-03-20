@@ -819,18 +819,27 @@ export function SurebetModalRoot({
     });
   }, []);
 
-  const addAdditionalEntry = useCallback((pernaIndex: number) => {
+   const addAdditionalEntry = useCallback((pernaIndex: number) => {
     setOdds(prev => {
       const newOdds = [...prev];
       const currentEntries = newOdds[pernaIndex].additionalEntries || [];
-      if (currentEntries.length >= 4) return prev; // max 5 total (1 main + 4 additional)
+      if (currentEntries.length >= 4) return prev;
 
-      // Calcular stake restante: totalNeeded - mainStake - subStakes existentes
-      const totalNeeded = equalizedTargetStakes?.[pernaIndex] || calculatedStakes?.[pernaIndex] || 0;
+      // Calcular stake restante via PAYOUT: targetPayout - payoutExistente = payoutRestante
+      const targetPayout = targetPayoutsLocal?.[pernaIndex] || 0;
       const mainStake = parseFloat(newOdds[pernaIndex].stake) || 0;
-      const existingSubStakes = currentEntries.reduce((sum, e) => sum + (parseFloat(e.stake) || 0), 0);
-      const remainingStake = Math.max(0, totalNeeded - mainStake - existingSubStakes);
-      const prefilledStake = remainingStake > 0 ? arredondarStake(remainingStake).toFixed(2) : "";
+      const mainOdd = parseFloat(newOdds[pernaIndex].odd) || 0;
+      const mainPayout = mainStake * (mainOdd > 1 ? mainOdd : 0);
+      const existingSubPayout = currentEntries.reduce((sum, e) => {
+        const s = parseFloat(e.stake) || 0;
+        const o = parseFloat(e.odd) || 0;
+        return sum + s * (o > 1 ? o : 0);
+      }, 0);
+      const remainingPayout = Math.max(0, targetPayout - mainPayout - existingSubPayout);
+
+      // Sem odd conhecida, usar odd da perna principal como estimativa
+      const estimatedOdd = mainOdd > 1 ? mainOdd : 2;
+      const prefilledStake = remainingPayout > 0 ? arredondarStake(remainingPayout / estimatedOdd).toFixed(2) : "";
 
       newOdds[pernaIndex] = {
         ...newOdds[pernaIndex],
@@ -841,7 +850,7 @@ export function SurebetModalRoot({
       };
       return newOdds;
     });
-  }, [equalizedTargetStakes, calculatedStakes, arredondarStake]);
+  }, [targetPayoutsLocal, arredondarStake]);
 
   const updateAdditionalEntry = useCallback((pernaIndex: number, entryIndex: number, field: string, value: string) => {
     setOdds(prev => {
