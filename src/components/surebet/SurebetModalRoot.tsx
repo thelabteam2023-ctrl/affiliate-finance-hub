@@ -335,7 +335,7 @@ export function SurebetModalRoot({
     };
   }, [moedaConsolidacao, cotacaoUsdFormulario, getCotacaoRate]);
 
-  const { analysis, calculatedStakes, pernasValidas, arredondarStake, getOddMediaPerna, getStakeTotalPerna, directedStakes } = useSurebetCalculator({
+  const { analysis, calculatedStakes, equalizedTargetStakes, pernasValidas, arredondarStake, getOddMediaPerna, getStakeTotalPerna, directedStakes } = useSurebetCalculator({
     odds,
     directedProfitLegs,
     numPernas,
@@ -826,7 +826,7 @@ export function SurebetModalRoot({
       if (currentEntries.length >= 4) return prev; // max 5 total (1 main + 4 additional)
 
       // Calcular stake restante: totalNeeded - mainStake - subStakes existentes
-      const totalNeeded = calculatedStakes?.[pernaIndex] || 0;
+      const totalNeeded = equalizedTargetStakes?.[pernaIndex] || calculatedStakes?.[pernaIndex] || 0;
       const mainStake = parseFloat(newOdds[pernaIndex].stake) || 0;
       const existingSubStakes = currentEntries.reduce((sum, e) => sum + (parseFloat(e.stake) || 0), 0);
       const remainingStake = Math.max(0, totalNeeded - mainStake - existingSubStakes);
@@ -841,7 +841,7 @@ export function SurebetModalRoot({
       };
       return newOdds;
     });
-  }, [calculatedStakes, arredondarStake]);
+  }, [equalizedTargetStakes, calculatedStakes, arredondarStake]);
 
   const updateAdditionalEntry = useCallback((pernaIndex: number, entryIndex: number, field: string, value: string) => {
     setOdds(prev => {
@@ -858,7 +858,7 @@ export function SurebetModalRoot({
         const oddVal = parseFloat(value);
         const currentStake = parseFloat(entries[entryIndex].stake) || 0;
         if (oddVal > 1 && currentStake === 0) {
-          const totalNeeded = calculatedStakes?.[pernaIndex] || 0;
+          const totalNeeded = equalizedTargetStakes?.[pernaIndex] || calculatedStakes?.[pernaIndex] || 0;
           const mainStake = parseFloat(newOdds[pernaIndex].stake) || 0;
           const otherSubStakes = entries.reduce((sum, e, idx) => {
             if (idx === entryIndex) return sum; // excluir a própria entrada
@@ -874,7 +874,7 @@ export function SurebetModalRoot({
       newOdds[pernaIndex] = { ...newOdds[pernaIndex], additionalEntries: entries };
       return newOdds;
     });
-  }, [bookmakerSaldos, calculatedStakes, arredondarStake]);
+  }, [bookmakerSaldos, equalizedTargetStakes, calculatedStakes, arredondarStake]);
 
   const removeAdditionalEntry = useCallback((pernaIndex: number, entryIndex: number) => {
     setOdds(prev => {

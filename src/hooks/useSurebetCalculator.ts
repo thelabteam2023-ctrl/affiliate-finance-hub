@@ -313,6 +313,33 @@ export function useSurebetCalculator({
     return calcularStakesDirecionadas(parsedOdds, baseStakes, directedProfitLegs, refIndex, arredondarStake);
   }, [odds, directedProfitLegs, arredondarStake, getOddMediaPerna, getStakeTotalPerna, equalizedStakesSnapshot]);
 
+  // ── Stakes equalizadas IDEAIS (ignora manual edits, para auto-fill de sub-entradas) ──
+  const equalizedTargetStakes = useMemo(() => {
+    const refIndex = odds.findIndex(o => o.isReference);
+    if (refIndex === -1) return odds.map(o => getStakeTotalPerna(o));
+
+    const ref = odds[refIndex];
+    const refStake = getStakeTotalPerna(ref);
+    const refOdd = getOddMediaPerna(ref);
+    if (refStake <= 0 || refOdd <= 1) return odds.map(o => getStakeTotalPerna(o));
+
+    const refMoeda = getMoedaPerna(ref);
+    const targetReturnConsolidated = convertViaBRL(
+      refStake * refOdd, refMoeda, safeConfig.consolidationCurrency, safeConfig.brlRates
+    );
+
+    return odds.map((o, i) => {
+      if (i === refIndex) return refStake;
+      const legMoeda = getMoedaPerna(o);
+      const legOdd = getOddMediaPerna(o);
+      if (legOdd <= 1) return getStakeTotalPerna(o);
+      const targetInLeg = convertViaBRL(
+        targetReturnConsolidated, safeConfig.consolidationCurrency, legMoeda, safeConfig.brlRates
+      );
+      return arredondarStake(targetInLeg / legOdd);
+    });
+  }, [odds, safeConfig, arredondarStake, getMoedaPerna, getOddMediaPerna, getStakeTotalPerna]);
+
   // ── Stakes equalizadas ou dirigidas ──────────────────────────
   const { calculatedStakesLocal, calculatedStakesConsolidated } = useMemo(() => {
     if (directedStakesLocal) {
@@ -390,6 +417,7 @@ export function useSurebetCalculator({
     analysis,
     calculatedStakes: calculatedStakesLocal,   // stakes locais (para UI de entrada)
     calculatedStakesConsolidated,               // stakes convertidas (para exibição de totais)
+    equalizedTargetStakes,                      // stakes IDEAIS equalizadas (ignora manual edits)
     directedStakes: directedStakesLocal,
     pernasValidas,
     arredondarStake,
