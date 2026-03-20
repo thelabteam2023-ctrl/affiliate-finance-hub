@@ -107,6 +107,7 @@ export function SurebetTableRow({
   numPernas,
   moedaDominante,
   hasInsufficientBalance = false,
+  insufficientEntries,
   onResultadoChange,
   onUpdateOdd,
   onSetReference,
