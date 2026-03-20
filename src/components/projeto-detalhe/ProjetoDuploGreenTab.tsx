@@ -1353,6 +1353,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
                           bookmaker_nome: p.bookmaker?.nome || '—',
                           bookmaker_id: p.bookmaker_id,
                           moeda: p.moeda || 'BRL',
+                          fonte_saldo: p.fonte_saldo || null,
                         }))
                       ),
                     };
