@@ -98,6 +98,7 @@ export function SurebetColumnsView({
   numPernas,
   moedaDominante,
   insufficientLegs,
+  insufficientEntries,
   onResultadoChange,
   onUpdateOdd,
   onSetReference,
