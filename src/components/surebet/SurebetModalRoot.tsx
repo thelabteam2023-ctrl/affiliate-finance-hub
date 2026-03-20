@@ -1323,12 +1323,14 @@ export function SurebetModalRoot({
           const moeda = getBookmakerMoeda(flat.bookmaker_id);
           const odd = parseFloat(flat.odd) || 0;
           const resultado = flat.resultado as ('GREEN' | 'RED' | 'MEIO_GREEN' | 'MEIO_RED' | 'VOID' | null);
+          const isFreebet = flat.fonteSaldo === 'FREEBET';
           let lucro_prejuizo: number | null = null;
           
-          if (resultado === 'GREEN') lucro_prejuizo = (stake * odd) - stake;
-          else if (resultado === 'MEIO_GREEN') lucro_prejuizo = ((stake * odd) - stake) / 2;
-          else if (resultado === 'MEIO_RED') lucro_prejuizo = -stake / 2;
-          else if (resultado === 'RED') lucro_prejuizo = -stake;
+          // SNR (Stake Not Returned): Freebet RED = 0 loss, GREEN = (odd-1)*stake
+          if (resultado === 'GREEN') lucro_prejuizo = isFreebet ? (stake * (odd - 1)) : (stake * odd) - stake;
+          else if (resultado === 'MEIO_GREEN') lucro_prejuizo = isFreebet ? ((stake * (odd - 1)) / 2) : (((stake * odd) - stake) / 2);
+          else if (resultado === 'MEIO_RED') lucro_prejuizo = isFreebet ? 0 : -stake / 2;
+          else if (resultado === 'RED') lucro_prejuizo = isFreebet ? 0 : -stake;
           else if (resultado === 'VOID') lucro_prejuizo = 0;
           
           return {
