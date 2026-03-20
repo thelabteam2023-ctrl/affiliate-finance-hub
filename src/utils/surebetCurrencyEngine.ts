@@ -58,6 +58,8 @@ export interface EngineLeg {
   isReference: boolean; // perna de referência para equalização
   isManuallyEdited?: boolean;
   isFromPrint?: boolean;
+  /** SNR: Freebet stake não retorna e não conta como custo */
+  isFreebet?: boolean;
 }
 
 /** Resultado de análise de uma perna num cenário */
@@ -312,6 +314,11 @@ export function analisarArbitragem(
   // Stake total consolidada (NUNCA pode ser zero se há stakes válidas)
   const stakeTotal = stakesConsolidated.reduce((a, b) => a + b, 0);
 
+  // SNR: Custo real = apenas stakes REAIS (freebet não é custo)
+  const stakeRealTotal = stakesConsolidated.reduce((sum, sc, i) => {
+    return sum + (legs[i]?.isFreebet ? 0 : sc);
+  }, 0);
+
   // Pernas completas
   const pernasCompletasCount = legs.filter(
     (l, i) => l.odd > 1 && stakesLocaisEfetivos[i] > 0 && l.moeda
@@ -321,6 +328,7 @@ export function analisarArbitragem(
   const scenarios: LegScenarioResult[] = legs.map((leg, i) => {
     const stakeLocal = stakesLocaisEfetivos[i] || 0;
     const stakeConsolidado = stakesConsolidated[i] || 0;
+    const isFB = leg.isFreebet || false;
 
     if (leg.odd <= 1 || stakeLocal <= 0) {
       return {
@@ -330,22 +338,22 @@ export function analisarArbitragem(
         stakeConsolidado,
         payoutLocal: 0,
         payoutConsolidado: 0,
-        lucro: -stakeTotal,
-        roi: stakeTotal > 0 ? (-stakeTotal / stakeTotal) * 100 : 0,
+        lucro: -stakeRealTotal,
+        roi: stakeRealTotal > 0 ? (-stakeRealTotal / stakeRealTotal) * 100 : 0,
         isPositive: false,
       };
     }
 
-    // Payout na moeda original
-    const payoutLocal = stakeLocal * leg.odd;
+    // SNR: Freebet payout = stake*(odd-1), Real = stake*odd
+    const payoutLocal = isFB ? stakeLocal * (leg.odd - 1) : stakeLocal * leg.odd;
 
     // Payout convertido para consolidation
     const payoutConsolidado = convertViaBRL(payoutLocal, leg.moeda, consolidationCurrency, brlRates);
 
-    // Lucro = payout consolidado − total apostado consolidado
-    const lucro = payoutConsolidado - stakeTotal;
+    // Lucro = payout consolidado − custo REAL total (freebet não conta)
+    const lucro = payoutConsolidado - stakeRealTotal;
 
-    const roi = stakeTotal > 0 ? (lucro / stakeTotal) * 100 : 0;
+    const roi = stakeRealTotal > 0 ? (lucro / stakeRealTotal) * 100 : 0;
 
     return {
       legIndex: i,
@@ -363,8 +371,8 @@ export function analisarArbitragem(
   const lucros = scenarios.map(s => s.lucro);
   const minLucro = lucros.length > 0 ? Math.min(...lucros) : 0;
   const maxLucro = lucros.length > 0 ? Math.max(...lucros) : 0;
-  const minRoi = stakeTotal > 0 ? (minLucro / stakeTotal) * 100 : 0;
-  const maxRoi = stakeTotal > 0 ? (maxLucro / stakeTotal) * 100 : 0;
+  const minRoi = stakeRealTotal > 0 ? (minLucro / stakeRealTotal) * 100 : 0;
+  const maxRoi = stakeRealTotal > 0 ? (maxLucro / stakeRealTotal) * 100 : 0;
 
   const isValidArbitrage = pernasCompletasCount >= numPernasEsperado && minLucro >= 0;
   const isOperacaoParcial = pernasCompletasCount >= 2 && pernasCompletasCount < numPernasEsperado;
