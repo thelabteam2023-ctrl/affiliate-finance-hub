@@ -475,6 +475,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
             resultado: p.resultado,
             lucro_prejuizo: p.lucro_prejuizo,
             moeda: p.moeda || bookmaker?.moeda || 'BRL',
+            fonte_saldo: p.fonte_saldo || null,
           });
         });
       }
