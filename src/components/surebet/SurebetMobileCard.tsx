@@ -65,6 +65,7 @@ interface SurebetMobileCardProps {
   numPernas: number;
   moedaDominante: SupportedCurrency;
   hasInsufficientBalance?: boolean;
+  insufficientEntries?: Map<string, boolean>;
   onResultadoChange?: (index: number, resultado: PernaResultado) => void;
   onUpdateOdd: (index: number, field: keyof OddEntry, value: string | boolean) => void;
   onSetReference: (index: number) => void;
@@ -89,6 +90,7 @@ export function SurebetMobileCard({
   numPernas,
   moedaDominante,
   hasInsufficientBalance = false,
+  insufficientEntries,
   onResultadoChange,
   onUpdateOdd,
   onSetReference,
@@ -265,21 +267,31 @@ export function SurebetMobileCard({
           </div>
           <div>
             <label className="text-[10px] text-muted-foreground uppercase mb-1 block">Stake</label>
-            <MoneyInput 
-              value={entry.stake}
-              onChange={(val) => onUpdateOdd(pernaIndex, "stake", val)}
-              currency={entry.moeda}
-              minDigits={6}
-              className={cn(
-                "h-9 text-sm text-center tabular-nums",
-                hasInsufficientBalance && "border-destructive focus-visible:ring-destructive/50"
-              )}
-              data-field-type="stake"
-              onKeyDown={(e) => onFieldKeyDown(e as any, 'stake')}
-            />
-            {hasInsufficientBalance && (
-              <span className="text-[9px] text-destructive font-medium mt-0.5 block text-center">Saldo insuficiente</span>
-            )}
+            {(() => {
+              const mainInsuf = insufficientEntries?.get(`main-${pernaIndex}`) || false;
+              const hasFBAvail = (selectedBookmaker?.saldo_freebet ?? 0) > 0;
+              return (
+                <>
+                  <MoneyInput 
+                    value={entry.stake}
+                    onChange={(val) => onUpdateOdd(pernaIndex, "stake", val)}
+                    currency={entry.moeda}
+                    minDigits={6}
+                    className={cn(
+                      "h-9 text-sm text-center tabular-nums",
+                      mainInsuf && "border-destructive focus-visible:ring-destructive/50"
+                    )}
+                    data-field-type="stake"
+                    onKeyDown={(e) => onFieldKeyDown(e as any, 'stake')}
+                  />
+                  {mainInsuf && (
+                    <span className="text-[9px] text-destructive font-medium mt-0.5 block text-center">
+                      {entry.fonteSaldo === 'FREEBET' ? 'FB insuficiente' : 'Saldo insuficiente'}
+                    </span>
+                  )}
+                </>
+              );
+            })()}
           </div>
         </div>
 
@@ -385,13 +397,46 @@ export function SurebetMobileCard({
                   className="h-8 text-xs text-center tabular-nums"
                   onWheel={(e) => e.currentTarget.blur()}
                 />
-                <MoneyInput 
-                  value={addEntry.stake}
-                  onChange={(val) => onUpdateAdditionalEntry(pernaIndex, addIndex, 'stake', val)}
-                  currency={addEntry.moeda}
-                  minDigits={6}
-                  className="h-8 text-xs text-center tabular-nums"
-                />
+                {(() => {
+                  const subInsuf = insufficientEntries?.get(`sub-${pernaIndex}-${addIndex}`) || false;
+                  const subHasFB = (addBookmaker?.saldo_freebet ?? 0) > 0;
+                  const isSubFB = (addEntry as any).fonteSaldo === 'FREEBET';
+                  return (
+                    <div className="flex flex-col">
+                      <div className="flex items-center gap-1">
+                        <MoneyInput 
+                          value={addEntry.stake}
+                          onChange={(val) => onUpdateAdditionalEntry(pernaIndex, addIndex, 'stake', val)}
+                          currency={addEntry.moeda}
+                          minDigits={6}
+                          className={cn(
+                            "h-8 text-xs text-center tabular-nums flex-1",
+                            subInsuf && "border-destructive focus-visible:ring-destructive/50"
+                          )}
+                        />
+                        {(subHasFB || isSubFB) && (
+                          <button
+                            type="button"
+                            onClick={() => onUpdateAdditionalEntry(pernaIndex, addIndex, 'fonteSaldo', isSubFB ? 'REAL' : 'FREEBET')}
+                            className={cn(
+                              "shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold transition-colors border",
+                              isSubFB
+                                ? "bg-purple-500/20 text-purple-400 border-purple-500/40"
+                                : "text-muted-foreground/40 border-transparent hover:text-muted-foreground/60"
+                            )}
+                          >
+                            FB
+                          </button>
+                        )}
+                      </div>
+                      {subInsuf && (
+                        <span className="text-[9px] text-destructive font-medium mt-0.5">
+                          {isSubFB ? 'FB insuf.' : 'Saldo insuf.'}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           );
