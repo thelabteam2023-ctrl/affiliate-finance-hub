@@ -122,8 +122,10 @@ export function SurebetRowActionsMenu({
   const voidOption = quickOptions.find(o => o.type === "all_void");
   
   const handleAction = (action: () => void) => {
+    // Executar ação ANTES de fechar o menu para preservar o user-gesture context
+    // (necessário para window.open não ser bloqueado por popup blockers)
+    action();
     setIsOpen(false);
-    setTimeout(() => action(), 0);
   };
   
   const handleQuickResolve = (result: SurebetQuickResult) => {
