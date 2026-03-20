@@ -244,7 +244,8 @@ export function SurebetModalRoot({
   
   // Crédito virtual: armazena stakes originais por bookmaker_id para modo edição
   // Permite que o saldo "bloqueado" pela aposta original seja reconhecido como disponível
-  const originalStakesByBookmaker = useRef<Map<string, number>>(new Map());
+  // Separado em real vs freebet para validação correta de ambos os saldos
+  const originalStakesByBookmaker = useRef<Map<string, { real: number; freebet: number }>>(new Map());
   // IDs das pernas originais (do banco) para usar na RPC de edição atômica
   const originalPernaIds = useRef<string[]>([]);
   // Snapshot das pernas originais para detectar mudanças
