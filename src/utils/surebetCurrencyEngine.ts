@@ -257,8 +257,20 @@ export function calcularStakesEqualizadasMultiCurrency(
   const ref = legs[refIndex];
   if (ref.stakeLocal <= 0) return fallback;
 
-  // Passo 1: retorno-alvo na moeda da referência
-  const targetReturnRef = ref.stakeLocal * ref.odd;
+  // Helper: calcula o payout efetivo de uma perna considerando SNR
+  const getEffectivePayout = (leg: EngineLeg, stakeOverride?: number): number => {
+    const stake = stakeOverride ?? leg.stakeLocal;
+    const realPart = leg.realStakeLocal ?? (leg.isFreebet ? 0 : stake);
+    const fbPart = leg.freebetStakeLocal ?? (leg.isFreebet ? stake : 0);
+    const total = realPart + fbPart;
+    if (total <= 0) return stake * leg.odd; // fallback
+    // Proporção real/fb aplicada à stake (pode ser override)
+    const ratio = stake / total;
+    return (realPart * ratio * leg.odd) + (fbPart * ratio * (leg.odd - 1));
+  };
+
+  // Passo 1: retorno-alvo na moeda da referência (considera SNR)
+  const targetReturnRef = getEffectivePayout(ref);
 
   // Passo 2: converter retorno-alvo para moeda de consolidação
   const targetReturnConsolidated = convertViaBRL(
@@ -273,7 +285,7 @@ export function calcularStakesEqualizadasMultiCurrency(
     if (i === refIndex) return ref.stakeLocal;
     if (leg.isManuallyEdited || leg.isFromPrint) return leg.stakeLocal;
 
-    // targetReturnConsolidated → moeda da perna → divide pela odd
+    // targetReturnConsolidated → moeda da perna
     const targetReturnInLegCurrency = convertViaBRL(
       targetReturnConsolidated,
       consolidationCurrency,
@@ -281,7 +293,26 @@ export function calcularStakesEqualizadasMultiCurrency(
       brlRates
     );
 
-    return roundFn(targetReturnInLegCurrency / leg.odd);
+    // Para pernas FB puras: payout = stake * (odd-1), então stake = target / (odd-1)
+    // Para pernas reais puras: payout = stake * odd, então stake = target / odd
+    // Para pernas mistas: usar odd efetivo baseado na proporção
+    const hasRealPart = (leg.realStakeLocal ?? (leg.isFreebet ? 0 : 1)) > 0;
+    const hasFbPart = (leg.freebetStakeLocal ?? (leg.isFreebet ? 1 : 0)) > 0;
+
+    if (hasFbPart && !hasRealPart) {
+      // 100% FB: payout = stake * (odd - 1)
+      return roundFn(targetReturnInLegCurrency / (leg.odd - 1));
+    } else if (!hasFbPart) {
+      // 100% Real: payout = stake * odd
+      return roundFn(targetReturnInLegCurrency / leg.odd);
+    } else {
+      // Misto: usar odd ponderado baseado na proporção real/fb
+      const total = (leg.realStakeLocal || 0) + (leg.freebetStakeLocal || 0);
+      const realRatio = (leg.realStakeLocal || 0) / total;
+      const fbRatio = (leg.freebetStakeLocal || 0) / total;
+      const effectiveOdd = (realRatio * leg.odd) + (fbRatio * (leg.odd - 1));
+      return roundFn(targetReturnInLegCurrency / effectiveOdd);
+    }
   });
 
   // Passo 4: converter todas as stakes para consolidation
