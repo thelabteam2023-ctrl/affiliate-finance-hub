@@ -248,7 +248,7 @@ export function SurebetModalRoot({
   // IDs das pernas originais (do banco) para usar na RPC de edição atômica
   const originalPernaIds = useRef<string[]>([]);
   // Snapshot das pernas originais para detectar mudanças
-  const originalPernasSnapshot = useRef<Array<{ id: string; bookmaker_id: string; stake: number; odd: number; selecao: string; selecao_livre: string; resultado: string | null }>>([]);
+  const originalPernasSnapshot = useRef<Array<{ id: string; bookmaker_id: string; stake: number; odd: number; selecao: string; selecao_livre: string; resultado: string | null; fonte_saldo: string | null }>>([]);
   const [selectedLegForPrint, setSelectedLegForPrint] = useState<number | null>(null);
   
   const {
