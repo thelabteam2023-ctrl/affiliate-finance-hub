@@ -852,10 +852,29 @@ export function SurebetModalRoot({
         const bk = bookmakerSaldos.find(b => b.id === value);
         if (bk) entries[entryIndex].moeda = bk.moeda as SupportedCurrency;
       }
+
+      // Auto-calcular stake quando odd é preenchida e stake está vazia
+      if (field === 'odd') {
+        const oddVal = parseFloat(value);
+        const currentStake = parseFloat(entries[entryIndex].stake) || 0;
+        if (oddVal > 1 && currentStake === 0) {
+          const totalNeeded = calculatedStakes?.[pernaIndex] || 0;
+          const mainStake = parseFloat(newOdds[pernaIndex].stake) || 0;
+          const otherSubStakes = entries.reduce((sum, e, idx) => {
+            if (idx === entryIndex) return sum; // excluir a própria entrada
+            return sum + (parseFloat(e.stake) || 0);
+          }, 0);
+          const remaining = Math.max(0, totalNeeded - mainStake - otherSubStakes);
+          if (remaining > 0) {
+            entries[entryIndex] = { ...entries[entryIndex], stake: arredondarStake(remaining).toFixed(2) };
+          }
+        }
+      }
+
       newOdds[pernaIndex] = { ...newOdds[pernaIndex], additionalEntries: entries };
       return newOdds;
     });
-  }, [bookmakerSaldos]);
+  }, [bookmakerSaldos, calculatedStakes, arredondarStake]);
 
   const removeAdditionalEntry = useCallback((pernaIndex: number, entryIndex: number) => {
     setOdds(prev => {
