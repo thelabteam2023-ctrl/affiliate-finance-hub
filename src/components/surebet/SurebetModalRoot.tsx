@@ -1983,8 +1983,15 @@ export function SurebetModalRoot({
               )}
             </div>
 
-            {/* MOBILE: Cards empilhados */}
-            {isMobile ? (
+            {/* Loading state for pernas */}
+            {pernasLoading && isEditing ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="text-center space-y-2">
+                  <div className="h-5 w-5 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+                  <p className="text-xs text-muted-foreground">Carregando entradas...</p>
+                </div>
+              </div>
+            ) : isMobile ? (
               <div className="space-y-3" ref={tableContainerRef}>
                 {odds.map((entry, pernaIndex) => (
                   <SurebetMobileCard
