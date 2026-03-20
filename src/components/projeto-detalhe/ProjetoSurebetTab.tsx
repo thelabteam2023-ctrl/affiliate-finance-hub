@@ -374,6 +374,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
             gerou_freebet: p.gerou_freebet, valor_freebet_gerada: p.valor_freebet_gerada,
             stake_brl_referencia: p.stake_brl_referencia,
             lucro_prejuizo_brl_referencia: p.lucro_prejuizo_brl_referencia,
+            fonte_saldo: p.fonte_saldo || null,
           });
         });
       }
