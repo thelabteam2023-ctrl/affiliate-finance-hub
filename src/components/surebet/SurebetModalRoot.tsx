@@ -248,7 +248,7 @@ export function SurebetModalRoot({
   // IDs das pernas originais (do banco) para usar na RPC de edição atômica
   const originalPernaIds = useRef<string[]>([]);
   // Snapshot das pernas originais para detectar mudanças
-  const originalPernasSnapshot = useRef<Array<{ id: string; bookmaker_id: string; stake: number; odd: number; selecao: string; selecao_livre: string; resultado: string | null }>>([]);
+  const originalPernasSnapshot = useRef<Array<{ id: string; bookmaker_id: string; stake: number; odd: number; selecao: string; selecao_livre: string; resultado: string | null; fonte_saldo: string | null }>>([]);
   const [selectedLegForPrint, setSelectedLegForPrint] = useState<number | null>(null);
   
   const {
@@ -599,6 +599,7 @@ export function SurebetModalRoot({
         selecao: p.selecao || "",
         selecao_livre: p.selecao_livre || "",
         resultado: p.resultado || null,
+        fonte_saldo: p.fonte_saldo || null,
       }));
       
       // ================================================================
@@ -1208,12 +1209,14 @@ export function SurebetModalRoot({
           const originalPerna = originalPernas[i]; // Pode ser undefined se é perna nova
           
           if (!originalPerna) {
-            // Perna nova (sub-entrada adicionada durante edição) - inserir diretamente
+            // Perna nova (sub-entrada adicionada durante edição)
+            // Inserir registro + gerar evento financeiro STAKE para debitar saldo
             const newStake = parseFloat(flat.stake) || 0;
             const moeda = getBookmakerMoeda(flat.bookmaker_id);
             const snapshotFields = getSnapshotFields(newStake, moeda);
+            const fonteSaldo = flat.fonteSaldo || 'REAL';
             
-            const { error: insertError } = await supabase
+            const { data: insertedPerna, error: insertError } = await supabase
               .from('apostas_pernas')
               .insert({
                 aposta_id: surebet.id,
@@ -1226,14 +1229,39 @@ export function SurebetModalRoot({
                 ordem: i + 1,
                 cotacao_snapshot: snapshotFields.cotacao_snapshot,
                 stake_brl_referencia: snapshotFields.valor_brl_referencia,
-                fonte_saldo: flat.fonteSaldo || 'REAL',
-              });
+                fonte_saldo: fonteSaldo,
+              })
+              .select('id')
+              .single();
             
             if (insertError) {
               console.error(`[SurebetModalRoot] Erro ao inserir nova perna ${i + 1}:`, insertError);
               throw new Error(`Erro ao adicionar sub-entrada ${i + 1}: ${insertError.message}`);
             }
-            console.log(`[SurebetModalRoot] ✅ Nova perna inserida na posição ${i + 1}`);
+            
+            // Gerar evento STAKE para debitar saldo do bookmaker
+            const tipoUso = fonteSaldo === 'FREEBET' ? 'FREEBET' : 'NORMAL';
+            const { error: eventError } = await supabase
+              .from('financial_events')
+              .insert({
+                workspace_id: workspaceId,
+                bookmaker_id: flat.bookmaker_id,
+                tipo_evento: 'STAKE',
+                tipo_uso: tipoUso,
+                valor: -newStake,
+                moeda,
+                aposta_id: surebet.id,
+                idempotency_key: `stake_${insertedPerna.id}_edit_add`,
+                descricao: `Stake nova perna (edição)`,
+                created_by: user.id,
+              });
+            
+            if (eventError) {
+              console.error(`[SurebetModalRoot] Erro ao criar evento STAKE para nova perna:`, eventError);
+              // Não lançar erro fatal - a perna foi inserida, o saldo será reconciliado
+            }
+            
+            console.log(`[SurebetModalRoot] ✅ Nova perna inserida na posição ${i + 1} com evento STAKE`);
             continue;
           }
           
@@ -1243,12 +1271,14 @@ export function SurebetModalRoot({
           const newBookmakerId = flat.bookmaker_id;
           const newSelecao = flat.selecao;
           const newSelecaoLivre = flat.selecaoLivre || "";
+          const newFonteSaldo = flat.fonteSaldo || 'REAL';
           
           const bookmakerChanged = newBookmakerId !== originalPerna.bookmaker_id;
           const stakeChanged = Math.abs(newStake - originalPerna.stake) > 0.001;
           const oddChanged = Math.abs(newOdd - originalPerna.odd) > 0.001;
           const selecaoChanged = newSelecao !== originalPerna.selecao;
           const selecaoLivreChanged = newSelecaoLivre !== originalPerna.selecao_livre;
+          const fonteSaldoChanged = newFonteSaldo !== (originalPerna.fonte_saldo || 'REAL');
           
           if (bookmakerChanged || stakeChanged || oddChanged || selecaoChanged || selecaoLivreChanged) {
             const { data: rpcResult, error: rpcError } = await supabase.rpc('editar_perna_surebet_atomica', {
@@ -1271,6 +1301,19 @@ export function SurebetModalRoot({
             }
             
             console.log(`[SurebetModalRoot] ✅ Perna ${originalPerna.id} editada via RPC:`, result);
+          }
+          
+          // Atualizar fonte_saldo se mudou (campo direto, sem impacto financeiro imediato)
+          if (fonteSaldoChanged) {
+            const { error: fsError } = await supabase
+              .from('apostas_pernas')
+              .update({ fonte_saldo: newFonteSaldo })
+              .eq('id', originalPerna.id);
+            if (fsError) {
+              console.error(`[SurebetModalRoot] Erro ao atualizar fonte_saldo perna ${originalPerna.id}:`, fsError);
+            } else {
+              console.log(`[SurebetModalRoot] ✅ fonte_saldo atualizado: ${originalPerna.fonte_saldo} → ${newFonteSaldo}`);
+            }
           }
         }
         
