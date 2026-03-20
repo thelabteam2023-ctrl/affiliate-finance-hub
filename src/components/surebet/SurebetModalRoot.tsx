@@ -862,20 +862,24 @@ export function SurebetModalRoot({
         if (bk) entries[entryIndex].moeda = bk.moeda as SupportedCurrency;
       }
 
-      // Auto-calcular stake quando odd é preenchida e stake está vazia
+      // Auto-calcular stake via PAYOUT quando odd é preenchida e stake está vazia
       if (field === 'odd') {
         const oddVal = parseFloat(value);
         const currentStake = parseFloat(entries[entryIndex].stake) || 0;
         if (oddVal > 1 && currentStake === 0) {
-          const totalNeeded = equalizedTargetStakes?.[pernaIndex] || calculatedStakes?.[pernaIndex] || 0;
+          const targetPayout = targetPayoutsLocal?.[pernaIndex] || 0;
           const mainStake = parseFloat(newOdds[pernaIndex].stake) || 0;
-          const otherSubStakes = entries.reduce((sum, e, idx) => {
-            if (idx === entryIndex) return sum; // excluir a própria entrada
-            return sum + (parseFloat(e.stake) || 0);
+          const mainOdd = parseFloat(newOdds[pernaIndex].odd) || 0;
+          const currentPayout = mainStake * (mainOdd > 1 ? mainOdd : 0);
+          const otherSubPayout = entries.reduce((sum, e, idx) => {
+            if (idx === entryIndex) return sum;
+            const s = parseFloat(e.stake) || 0;
+            const o = parseFloat(e.odd) || 0;
+            return sum + s * (o > 1 ? o : 0);
           }, 0);
-          const remaining = Math.max(0, totalNeeded - mainStake - otherSubStakes);
-          if (remaining > 0) {
-            entries[entryIndex] = { ...entries[entryIndex], stake: arredondarStake(remaining).toFixed(2) };
+          const remainingPayout = Math.max(0, targetPayout - currentPayout - otherSubPayout);
+          if (remainingPayout > 0) {
+            entries[entryIndex] = { ...entries[entryIndex], stake: arredondarStake(remainingPayout / oddVal).toFixed(2) };
           }
         }
       }
