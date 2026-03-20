@@ -46,6 +46,7 @@ export interface OddEntry {
   lucro_prejuizo?: number | null;
   gerouFreebet?: boolean;
   valorFreebetGerada?: string;
+  fonteSaldo?: 'REAL' | 'FREEBET';
   additionalEntries?: OddFormEntry[];
 }
 
