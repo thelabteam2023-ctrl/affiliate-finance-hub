@@ -599,6 +599,7 @@ export function SurebetModalRoot({
         selecao: p.selecao || "",
         selecao_livre: p.selecao_livre || "",
         resultado: p.resultado || null,
+        fonte_saldo: p.fonte_saldo || null,
       }));
       
       // ================================================================
