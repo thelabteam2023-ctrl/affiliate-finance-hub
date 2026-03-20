@@ -419,9 +419,17 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
       const aposta = apostas.find(a => a.id === apostaId);
       if (!aposta) return;
 
-      // Só permitir para apostas simples (sem pernas multi)
+      // Multi-entry SIMPLES: rotear para motor de surebet que processa por perna
       const hasPernas = Array.isArray(aposta.pernas) && aposta.pernas.length > 1;
-      if (hasPernas) return;
+      if (hasPernas) {
+        // Todas as pernas recebem o mesmo resultado (não é arbitragem)
+        const allIndices = Array.from({ length: aposta.pernas.length }, (_, i) => i);
+        const quickResult: SurebetQuickResult = resultado === 'VOID'
+          ? { type: 'all_void', winners: [] }
+          : { type: 'custom', winners: resultado === 'GREEN' ? allIndices : [] };
+        await handleQuickResolveSurebet(apostaId, quickResult);
+        return;
+      }
 
       const stake = typeof aposta.stake_total === "number" ? aposta.stake_total : aposta.stake;
       const odd = aposta.odd || 1;
