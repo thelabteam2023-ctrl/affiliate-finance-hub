@@ -266,12 +266,13 @@ export function SurebetModalRoot({
   const bookmakersDisponiveis = useMemo(() => {
     if (isEditing) {
       return bookmakerSaldos.map(bk => {
-        const creditoVirtual = originalStakesByBookmaker.current.get(bk.id) || 0;
-        if (creditoVirtual > 0) {
+        const credito = originalStakesByBookmaker.current.get(bk.id) || { real: 0, freebet: 0 };
+        if (credito.real > 0 || credito.freebet > 0) {
           return {
             ...bk,
-            saldo_operavel: bk.saldo_operavel + creditoVirtual,
-            saldo_disponivel: bk.saldo_disponivel + creditoVirtual,
+            saldo_operavel: bk.saldo_operavel + credito.real,
+            saldo_disponivel: bk.saldo_disponivel + credito.real,
+            saldo_freebet: (bk.saldo_freebet ?? 0) + credito.freebet,
           };
         }
         return bk;
