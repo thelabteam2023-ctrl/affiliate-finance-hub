@@ -1209,12 +1209,14 @@ export function SurebetModalRoot({
           const originalPerna = originalPernas[i]; // Pode ser undefined se é perna nova
           
           if (!originalPerna) {
-            // Perna nova (sub-entrada adicionada durante edição) - inserir diretamente
+            // Perna nova (sub-entrada adicionada durante edição)
+            // Inserir registro + gerar evento financeiro STAKE para debitar saldo
             const newStake = parseFloat(flat.stake) || 0;
             const moeda = getBookmakerMoeda(flat.bookmaker_id);
             const snapshotFields = getSnapshotFields(newStake, moeda);
+            const fonteSaldo = flat.fonteSaldo || 'REAL';
             
-            const { error: insertError } = await supabase
+            const { data: insertedPerna, error: insertError } = await supabase
               .from('apostas_pernas')
               .insert({
                 aposta_id: surebet.id,
@@ -1227,14 +1229,40 @@ export function SurebetModalRoot({
                 ordem: i + 1,
                 cotacao_snapshot: snapshotFields.cotacao_snapshot,
                 stake_brl_referencia: snapshotFields.valor_brl_referencia,
-                fonte_saldo: flat.fonteSaldo || 'REAL',
-              });
+                fonte_saldo: fonteSaldo,
+              })
+              .select('id')
+              .single();
             
             if (insertError) {
               console.error(`[SurebetModalRoot] Erro ao inserir nova perna ${i + 1}:`, insertError);
               throw new Error(`Erro ao adicionar sub-entrada ${i + 1}: ${insertError.message}`);
             }
-            console.log(`[SurebetModalRoot] ✅ Nova perna inserida na posição ${i + 1}`);
+            
+            // Gerar evento STAKE para debitar saldo do bookmaker
+            const tipoUso = fonteSaldo === 'FREEBET' ? 'FREEBET' : 'NORMAL';
+            const { error: eventError } = await supabase
+              .from('financial_events')
+              .insert({
+                workspace_id: workspaceId,
+                bookmaker_id: flat.bookmaker_id,
+                event_type: 'STAKE',
+                tipo_uso: tipoUso,
+                amount: -newStake,
+                moeda,
+                reference_id: surebet.id,
+                reference_type: 'aposta',
+                idempotency_key: `stake_${insertedPerna.id}_edit_add`,
+                description: `Stake nova perna (edição)`,
+                created_by: (await supabase.auth.getUser()).data.user?.id || '',
+              });
+            
+            if (eventError) {
+              console.error(`[SurebetModalRoot] Erro ao criar evento STAKE para nova perna:`, eventError);
+              // Não lançar erro fatal - a perna foi inserida, o saldo será reconciliado
+            }
+            
+            console.log(`[SurebetModalRoot] ✅ Nova perna inserida na posição ${i + 1} com evento STAKE`);
             continue;
           }
           
