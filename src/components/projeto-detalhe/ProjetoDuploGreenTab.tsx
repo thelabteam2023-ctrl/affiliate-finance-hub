@@ -356,6 +356,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
           .select(`
             id, aposta_id, bookmaker_id, odd, stake, moeda, selecao, selecao_livre, ordem,
             resultado, lucro_prejuizo, gerou_freebet, valor_freebet_gerada,
+            stake_brl_referencia, lucro_prejuizo_brl_referencia, fonte_saldo,
             stake_brl_referencia, lucro_prejuizo_brl_referencia,
             bookmaker:bookmakers (
               nome, parceiro_id,
@@ -567,6 +568,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
           bookmaker_nome: p.bookmaker?.nome || p.bookmaker_nome || "—",
           bookmaker_id: p.bookmaker_id,
           moeda: p.moeda || 'BRL',
+          fonte_saldo: p.fonte_saldo || null,
         }))
       ).filter(p => p.bookmaker_id && p.odd && p.odd > 0);
 
@@ -1269,6 +1271,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
                 valor_freebet_gerada: p.valor_freebet_gerada,
                 stake_brl_referencia: p.stake_brl_referencia,
                 lucro_prejuizo_brl_referencia: p.lucro_prejuizo_brl_referencia,
+                fonte_saldo: p.fonte_saldo || null,
               }));
               const pernasOrdenadas = [...pernasRaw].sort((a, b) => {
                 const order: Record<string, number> = { "Casa": 1, "1": 1, "Empate": 2, "X": 2, "Fora": 3, "2": 3 };
@@ -1351,6 +1354,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
                           bookmaker_nome: p.bookmaker?.nome || '—',
                           bookmaker_id: p.bookmaker_id,
                           moeda: p.moeda || 'BRL',
+                          fonte_saldo: p.fonte_saldo || null,
                         }))
                       ),
                     };

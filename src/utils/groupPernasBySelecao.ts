@@ -22,6 +22,7 @@ interface RawPerna {
   moeda?: string;
   gerou_freebet?: boolean;
   valor_freebet_gerada?: number | null;
+  fonte_saldo?: string | null;
   // Bookmaker join
   bookmaker?: { nome: string; parceiro?: { nome: string } };
 }
@@ -74,6 +75,7 @@ export function groupPernasBySelecao(
       bookmaker_nome: resolve(main),
       bookmaker_id: main.bookmaker_id,
       moeda: main.moeda || 'BRL',
+      fonte_saldo: main.fonte_saldo || undefined,
     };
 
     if (hasEntries) {
@@ -87,6 +89,7 @@ export function groupPernasBySelecao(
         odd: p.odd,
         stake: p.stake,
         selecao_livre: p.selecao_livre || undefined,
+        fonte_saldo: p.fonte_saldo || undefined,
       }));
     }
 

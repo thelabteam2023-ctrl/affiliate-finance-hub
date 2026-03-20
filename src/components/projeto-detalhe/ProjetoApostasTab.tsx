@@ -519,7 +519,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
         const { data: pernasData } = await supabase
           .from("apostas_pernas")
           .select(`
-            aposta_id, id, bookmaker_id, odd, stake, moeda, selecao, selecao_livre, ordem, resultado, lucro_prejuizo,
+            aposta_id, id, bookmaker_id, odd, stake, moeda, selecao, selecao_livre, ordem, resultado, lucro_prejuizo, fonte_saldo,
             bookmaker:bookmakers (
               nome, parceiro_id,
               parceiro:parceiros (nome),
@@ -979,6 +979,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
           bookmaker_nome: p.bookmaker?.nome || p.bookmaker_nome || "—",
           bookmaker_id: p.bookmaker_id,
           moeda: p.moeda || 'BRL',
+          fonte_saldo: p.fonte_saldo || null,
         }))
       ).filter(p => p.bookmaker_id && p.odd && p.odd > 0);
       
@@ -1593,6 +1594,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                     bookmaker_nome: p.bookmaker?.nome || p.bookmaker_nome || "—",
                     bookmaker_id: p.bookmaker_id,
                     moeda: p.moeda || 'BRL',
+                    fonte_saldo: p.fonte_saldo || null,
                   }))
                 ),
               };
@@ -1656,6 +1658,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                       bookmaker_nome: p.bookmaker?.nome || '—',
                       bookmaker_id: p.bookmaker_id,
                       moeda: p.moeda || 'BRL',
+                      fonte_saldo: p.fonte_saldo || null,
                     }))
                   ),
                 };

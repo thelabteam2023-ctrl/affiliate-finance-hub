@@ -381,7 +381,7 @@ export function ProjetoValueBetTab({
           .from("apostas_pernas")
           .select(`
             id, aposta_id, bookmaker_id, odd, stake, moeda, selecao, selecao_livre, ordem,
-            resultado, lucro_prejuizo,
+            resultado, lucro_prejuizo, fonte_saldo,
             bookmaker:bookmakers (
               nome, parceiro_id,
               parceiro:parceiros (nome),
@@ -551,6 +551,7 @@ export function ProjetoValueBetTab({
           bookmaker_nome: p.bookmaker?.nome || '—',
           bookmaker_id: p.bookmaker_id,
           moeda: p.moeda || 'BRL',
+          fonte_saldo: p.fonte_saldo || null,
         }))
       ).filter(p => p.bookmaker_id && p.odd && p.odd > 0);
 
@@ -1231,6 +1232,7 @@ export function ProjetoValueBetTab({
                     bookmaker_nome: p.bookmaker?.nome || '—',
                     bookmaker_id: p.bookmaker_id,
                     moeda: p.moeda || 'BRL',
+                    fonte_saldo: p.fonte_saldo || null,
                   }))
                 ),
               };
@@ -1318,6 +1320,7 @@ export function ProjetoValueBetTab({
                     bookmaker_nome: p.bookmaker?.nome || '—',
                     bookmaker_id: p.bookmaker_id,
                     moeda: p.moeda || 'BRL',
+                    fonte_saldo: p.fonte_saldo || null,
                   }))
                 ),
               };

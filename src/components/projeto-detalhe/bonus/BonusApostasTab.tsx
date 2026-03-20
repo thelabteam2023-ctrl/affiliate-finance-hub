@@ -350,7 +350,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
         const { data: pernasData } = await supabase
           .from("apostas_pernas")
           .select(`
-            aposta_id, bookmaker_id, odd, stake, moeda, selecao_livre, ordem,
+            aposta_id, bookmaker_id, odd, stake, moeda, selecao_livre, ordem, fonte_saldo,
             bookmaker:bookmakers (
               nome, parceiro_id,
               parceiro:parceiros (nome),
@@ -450,6 +450,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
             resultado,
             lucro_prejuizo,
             moeda,
+            fonte_saldo,
             bookmakers (nome, moeda, parceiro:parceiros(nome))
           `)
           .in("aposta_id", surebetIds)
@@ -474,6 +475,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
             resultado: p.resultado,
             lucro_prejuizo: p.lucro_prejuizo,
             moeda: p.moeda || bookmaker?.moeda || 'BRL',
+            fonte_saldo: p.fonte_saldo || null,
           });
         });
       }
@@ -939,6 +941,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
           bookmaker_nome: p.bookmaker?.nome || p.bookmaker_nome || "—",
           bookmaker_id: p.bookmaker_id,
           moeda: p.moeda || 'BRL',
+          fonte_saldo: p.fonte_saldo || null,
         }))
       ).filter(p => p.bookmaker_id && p.odd && p.odd > 0);
 
@@ -1051,6 +1054,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
                 bookmaker_nome: p.bookmaker_nome || p.bookmaker?.nome || "—",
                 bookmaker_id: p.bookmaker_id,
                 moeda: p.moeda || 'BRL',
+                fonte_saldo: p.fonte_saldo || null,
               }))
             ),
           };
@@ -1114,6 +1118,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
                   bookmaker_nome: p.bookmaker?.nome || '—',
                   bookmaker_id: p.bookmaker_id,
                   moeda: p.moeda || 'BRL',
+                  fonte_saldo: p.fonte_saldo || null,
                 }))
               ),
             };

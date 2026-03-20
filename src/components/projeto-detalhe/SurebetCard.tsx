@@ -25,6 +25,8 @@ export interface SurebetPernaEntry {
   stake: number;
   // NOVO: Seleção/linha por entrada
   selecao_livre?: string;
+  /** Fonte do saldo: REAL ou FREEBET */
+  fonte_saldo?: string;
 }
 
 export interface SurebetPerna {
@@ -39,6 +41,8 @@ export interface SurebetPerna {
   bookmaker_nome: string;
   bookmaker_id?: string;
   moeda?: string;
+  /** Fonte do saldo: REAL ou FREEBET */
+  fonte_saldo?: string;
   // Campos para múltiplas entradas
   entries?: SurebetPernaEntry[];
   odd_media?: number;
@@ -235,6 +239,11 @@ function PernaItem({
     hasMultipleEntries ? (perna.entries!.length <= 3) : false
   );
   
+  // Detectar se perna usa freebet
+  const isFreebet = perna.fonte_saldo === 'FREEBET';
+  const hasAnyFreebet = hasMultipleEntries 
+    ? perna.entries!.some(e => e.fonte_saldo === 'FREEBET')
+    : isFreebet;
   // Usar odd_media e stake_total se disponíveis, senão usar valores legados
   const displayOdd = perna.odd_media || perna.odd;
   const displayStake = perna.stake_total || perna.stake;
@@ -298,6 +307,11 @@ function PernaItem({
           <div className="flex items-center gap-2 shrink-0">
             <span className="text-sm sm:text-base font-medium whitespace-nowrap w-[60px] text-right tabular-nums">@{perna.odd.toFixed(2)}</span>
             <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap w-[90px] text-right tabular-nums">{formatPernaValue(perna.stake, perna.moeda)}</span>
+            {isFreebet && (
+              <Badge variant="outline" className="text-[9px] px-1 py-0 shrink-0 border-green-500/40 text-green-400 bg-green-500/10 font-bold">
+                FB
+              </Badge>
+            )}
           </div>
           
           {/* Result pill per perna */}
@@ -412,10 +426,15 @@ function PernaItem({
                 )}
               </div>
               
-              {/* Odd + Stake */}
+              {/* Odd + Stake + FB badge */}
               <div className="flex items-center gap-2 shrink-0">
                 <span className="font-medium text-foreground">@{entry.odd.toFixed(2)}</span>
                 <span className="text-muted-foreground">{formatPernaValue(entry.stake, entry.moeda)}</span>
+                {entry.fonte_saldo === 'FREEBET' && (
+                  <Badge variant="outline" className="text-[9px] px-1 py-0 shrink-0 border-green-500/40 text-green-400 bg-green-500/10 font-bold">
+                    FB
+                  </Badge>
+                )}
               </div>
             </div>
           ))}
