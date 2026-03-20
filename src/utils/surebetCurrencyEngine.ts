@@ -371,8 +371,8 @@ export function analisarArbitragem(
   const lucros = scenarios.map(s => s.lucro);
   const minLucro = lucros.length > 0 ? Math.min(...lucros) : 0;
   const maxLucro = lucros.length > 0 ? Math.max(...lucros) : 0;
-  const minRoi = stakeTotal > 0 ? (minLucro / stakeTotal) * 100 : 0;
-  const maxRoi = stakeTotal > 0 ? (maxLucro / stakeTotal) * 100 : 0;
+  const minRoi = stakeRealTotal > 0 ? (minLucro / stakeRealTotal) * 100 : 0;
+  const maxRoi = stakeRealTotal > 0 ? (maxLucro / stakeRealTotal) * 100 : 0;
 
   const isValidArbitrage = pernasCompletasCount >= numPernasEsperado && minLucro >= 0;
   const isOperacaoParcial = pernasCompletasCount >= 2 && pernasCompletasCount < numPernasEsperado;
