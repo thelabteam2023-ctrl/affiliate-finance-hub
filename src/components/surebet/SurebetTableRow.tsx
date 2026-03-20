@@ -263,17 +263,35 @@ export function SurebetTableRow({
         {/* Stake */}
         <td className="px-1" style={{ height: '78px' }}>
           <div className="flex flex-col items-center gap-0.5">
-            <MoneyInput 
-              value={entry.stake}
-              onChange={(val) => onUpdateOdd(pernaIndex, "stake", val)}
-              currency={entry.moeda}
-              minDigits={6}
-              className={`h-8 text-xs text-center w-[90px] tabular-nums ${
-                hasInsufficientBalance ? "border-destructive focus-visible:ring-destructive/50" : ""
-              }`}
-              data-field-type="stake"
-              onKeyDown={(e) => onFieldKeyDown(e as any, 'stake')}
-            />
+            <div className="flex items-center gap-1">
+              <MoneyInput 
+                value={entry.stake}
+                onChange={(val) => onUpdateOdd(pernaIndex, "stake", val)}
+                currency={entry.moeda}
+                minDigits={6}
+                className={cn(
+                  "h-8 text-xs text-center tabular-nums",
+                  entry.fonteSaldo === 'FREEBET' ? "w-[72px]" : "w-[90px]",
+                  hasInsufficientBalance ? "border-destructive focus-visible:ring-destructive/50" : ""
+                )}
+                data-field-type="stake"
+                onKeyDown={(e) => onFieldKeyDown(e as any, 'stake')}
+              />
+              {/* FB Toggle */}
+              <button
+                type="button"
+                onClick={() => onUpdateOdd(pernaIndex, "fonteSaldo" as any, entry.fonteSaldo === 'FREEBET' ? 'REAL' : 'FREEBET')}
+                className={cn(
+                  "shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold transition-colors border",
+                  entry.fonteSaldo === 'FREEBET'
+                    ? "bg-purple-500/20 text-purple-400 border-purple-500/40"
+                    : "text-muted-foreground/40 border-transparent hover:text-muted-foreground/60 hover:border-border/40"
+                )}
+                title={entry.fonteSaldo === 'FREEBET' ? "Usando Freebet (clique para desativar)" : "Usar Freebet nesta entrada"}
+              >
+                FB
+              </button>
+            </div>
             {hasInsufficientBalance && (
               <span className="text-[9px] text-destructive font-medium">Saldo insuf.</span>
             )}
@@ -444,15 +462,33 @@ export function SurebetTableRow({
               />
             </td>
             
-            {/* Stake */}
+            {/* Stake + FB toggle */}
             <td className="px-1" style={{ height: '52px' }}>
-              <MoneyInput 
-                value={addEntry.stake}
-                onChange={(val) => onUpdateAdditionalEntry(pernaIndex, addIndex, 'stake', val)}
-                currency={addEntry.moeda}
-                minDigits={6}
-                className="h-7 text-xs text-center w-[90px] tabular-nums"
-              />
+              <div className="flex items-center gap-1">
+                <MoneyInput 
+                  value={addEntry.stake}
+                  onChange={(val) => onUpdateAdditionalEntry(pernaIndex, addIndex, 'stake', val)}
+                  currency={addEntry.moeda}
+                  minDigits={6}
+                  className={cn(
+                    "h-7 text-xs text-center tabular-nums",
+                    (addEntry as any).fonteSaldo === 'FREEBET' ? "w-[72px]" : "w-[90px]"
+                  )}
+                />
+                <button
+                  type="button"
+                  onClick={() => onUpdateAdditionalEntry(pernaIndex, addIndex, 'fonteSaldo', (addEntry as any).fonteSaldo === 'FREEBET' ? 'REAL' : 'FREEBET')}
+                  className={cn(
+                    "shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold transition-colors border",
+                    (addEntry as any).fonteSaldo === 'FREEBET'
+                      ? "bg-purple-500/20 text-purple-400 border-purple-500/40"
+                      : "text-muted-foreground/40 border-transparent hover:text-muted-foreground/60 hover:border-border/40"
+                  )}
+                  title={(addEntry as any).fonteSaldo === 'FREEBET' ? "FB ativo" : "Usar Freebet"}
+                >
+                  FB
+                </button>
+              </div>
             </td>
             
             {/* Linha (vazia para sub-entradas) + Remove */}

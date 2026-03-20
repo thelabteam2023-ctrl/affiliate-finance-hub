@@ -636,12 +636,14 @@ export function SurebetModalRoot({
           lucro_prejuizo: mainPerna.lucro_prejuizo,
           gerouFreebet: mainPerna.gerou_freebet || false,
           valorFreebetGerada: mainPerna.valor_freebet_gerada?.toString() || "",
+          fonteSaldo: (mainPerna.fonte_saldo as 'REAL' | 'FREEBET') || 'REAL',
           additionalEntries: additionalPernas.map((sub: any) => ({
             bookmaker_id: sub.bookmaker_id || "",
             moeda: (sub.moeda || "BRL") as SupportedCurrency,
             odd: sub.odd?.toString() || "",
             stake: sub.stake?.toString() || "",
             selecaoLivre: sub.selecao_livre || "",
+            fonteSaldo: (sub.fonte_saldo as 'REAL' | 'FREEBET') || 'REAL',
           })),
         };
       });
@@ -1150,6 +1152,7 @@ export function SurebetModalRoot({
         selecaoLivre: string;
         moeda: SupportedCurrency;
         resultado?: string | null;
+        fonteSaldo?: 'REAL' | 'FREEBET';
         /** Index da perna pai no array odds (para agrupar resultado) */
         parentLegIndex: number;
       }
@@ -1166,6 +1169,7 @@ export function SurebetModalRoot({
           selecaoLivre: entry.selecaoLivre || '',
           moeda: entry.moeda,
           resultado: (entry as any).resultado || null,
+          fonteSaldo: entry.fonteSaldo || 'REAL',
           parentLegIndex: legIdx,
         });
         // Sub-entradas (additionalEntries)
@@ -1180,6 +1184,7 @@ export function SurebetModalRoot({
                 selecaoLivre: sub.selecaoLivre || entry.selecaoLivre || '',
                 moeda: sub.moeda || entry.moeda,
                 resultado: (entry as any).resultado || null, // mesmo resultado da perna pai
+                fonteSaldo: sub.fonteSaldo || 'REAL',
                 parentLegIndex: legIdx,
               });
             }
@@ -1221,6 +1226,7 @@ export function SurebetModalRoot({
                 ordem: i + 1,
                 cotacao_snapshot: snapshotFields.cotacao_snapshot,
                 stake_brl_referencia: snapshotFields.valor_brl_referencia,
+                fonte_saldo: flat.fonteSaldo || 'REAL',
               });
             
             if (insertError) {
@@ -1303,7 +1309,7 @@ export function SurebetModalRoot({
               odd: parseFloat(flat.odd) || 0,
               moeda: getBookmakerMoeda(flat.bookmaker_id),
               workspace_id: workspaceId,
-              fonte_saldo: 'REAL',
+              fonte_saldo: flat.fonteSaldo || 'REAL',
             });
             
             if (!liqResult.success) {
@@ -1320,12 +1326,14 @@ export function SurebetModalRoot({
           const moeda = getBookmakerMoeda(flat.bookmaker_id);
           const odd = parseFloat(flat.odd) || 0;
           const resultado = flat.resultado as ('GREEN' | 'RED' | 'MEIO_GREEN' | 'MEIO_RED' | 'VOID' | null);
+          const isFreebet = flat.fonteSaldo === 'FREEBET';
           let lucro_prejuizo: number | null = null;
           
-          if (resultado === 'GREEN') lucro_prejuizo = (stake * odd) - stake;
-          else if (resultado === 'MEIO_GREEN') lucro_prejuizo = ((stake * odd) - stake) / 2;
-          else if (resultado === 'MEIO_RED') lucro_prejuizo = -stake / 2;
-          else if (resultado === 'RED') lucro_prejuizo = -stake;
+          // SNR (Stake Not Returned): Freebet RED = 0 loss, GREEN = (odd-1)*stake
+          if (resultado === 'GREEN') lucro_prejuizo = isFreebet ? (stake * (odd - 1)) : (stake * odd) - stake;
+          else if (resultado === 'MEIO_GREEN') lucro_prejuizo = isFreebet ? ((stake * (odd - 1)) / 2) : (((stake * odd) - stake) / 2);
+          else if (resultado === 'MEIO_RED') lucro_prejuizo = isFreebet ? 0 : -stake / 2;
+          else if (resultado === 'RED') lucro_prejuizo = isFreebet ? 0 : -stake;
           else if (resultado === 'VOID') lucro_prejuizo = 0;
           
           return {
@@ -1441,6 +1449,7 @@ export function SurebetModalRoot({
             selecao_livre: flat.selecaoLivre || null,
             cotacao_snapshot: snapshotFields.cotacao_snapshot,
             stake_brl_referencia: snapshotFields.valor_brl_referencia,
+            fonte_saldo: flat.fonteSaldo || 'REAL',
           };
         });
         
@@ -1491,6 +1500,7 @@ export function SurebetModalRoot({
             bookmaker_id: flat.bookmaker_id,
             stake: flat.stake,
             odd: flat.odd,
+            fonteSaldo: flat.fonteSaldo || 'REAL',
           }))
           .filter(p => p.resultado && ['GREEN', 'RED', 'MEIO_GREEN', 'MEIO_RED', 'VOID'].includes(p.resultado!));
         
@@ -1517,7 +1527,7 @@ export function SurebetModalRoot({
                   odd: parseFloat(p.odd) || 0,
                   moeda: getBookmakerMoeda(p.bookmaker_id),
                   workspace_id: workspaceId,
-                  fonte_saldo: 'REAL',
+                  fonte_saldo: p.fonteSaldo || 'REAL',
                 });
                 
                 if (!liqResult.success) {
