@@ -582,11 +582,14 @@ export function SurebetModalRoot({
       }
 
       // Armazenar stakes originais por bookmaker para crédito virtual em modo edição
-      const stakeMap = new Map<string, number>();
+      // Separado por tipo (real vs freebet) para validação correta
+      const stakeMap = new Map<string, { real: number; freebet: number }>();
       pernasData.forEach((perna: any) => {
         if (perna.bookmaker_id && perna.stake) {
-          const current = stakeMap.get(perna.bookmaker_id) || 0;
-          stakeMap.set(perna.bookmaker_id, current + (parseFloat(perna.stake) || 0));
+          const cur = stakeMap.get(perna.bookmaker_id) || { real: 0, freebet: 0 };
+          const val = parseFloat(perna.stake) || 0;
+          if (perna.fonte_saldo === 'FREEBET') cur.freebet += val; else cur.real += val;
+          stakeMap.set(perna.bookmaker_id, cur);
         }
       });
       originalStakesByBookmaker.current = stakeMap;
