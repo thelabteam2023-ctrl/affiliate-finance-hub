@@ -367,6 +367,7 @@ export function useSurebetCalculator({
       isReference: o.isReference,
       isManuallyEdited: o.isManuallyEdited,
       isFromPrint: o.stakeOrigem === "print",
+      isFreebet: o.fonteSaldo === 'FREEBET',
     }));
 
     // Stakes efetivos para análise: direcionadas se ativo, senão reais
