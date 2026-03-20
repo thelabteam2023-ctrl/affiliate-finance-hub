@@ -636,12 +636,14 @@ export function SurebetModalRoot({
           lucro_prejuizo: mainPerna.lucro_prejuizo,
           gerouFreebet: mainPerna.gerou_freebet || false,
           valorFreebetGerada: mainPerna.valor_freebet_gerada?.toString() || "",
+          fonteSaldo: (mainPerna.fonte_saldo as 'REAL' | 'FREEBET') || 'REAL',
           additionalEntries: additionalPernas.map((sub: any) => ({
             bookmaker_id: sub.bookmaker_id || "",
             moeda: (sub.moeda || "BRL") as SupportedCurrency,
             odd: sub.odd?.toString() || "",
             stake: sub.stake?.toString() || "",
             selecaoLivre: sub.selecao_livre || "",
+            fonteSaldo: (sub.fonte_saldo as 'REAL' | 'FREEBET') || 'REAL',
           })),
         };
       });
