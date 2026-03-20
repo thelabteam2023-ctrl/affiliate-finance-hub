@@ -247,37 +247,49 @@ export function SurebetColumnsView({
                   </div>
                   <div className="flex-1 min-w-0">
                     <label className="text-[9px] text-muted-foreground uppercase tracking-wide mb-0.5 block">Stake</label>
-                    <div className="flex items-center gap-1">
-                      <MoneyInput 
-                        value={entry.stake}
-                        onChange={(val) => onUpdateOdd(pernaIndex, "stake", val)}
-                        currency={entry.moeda}
-                        minDigits={5}
-                        className={cn(
-                          "h-8 text-[11px] text-center tabular-nums flex-1",
-                          hasInsufficientBalance && "border-destructive focus-visible:ring-destructive/50"
-                        )}
-                        data-field-type="stake"
-                        onKeyDown={(e) => onFieldKeyDown(e as any, 'stake')}
-                        tabIndex={pernaIndex * 3 + 2}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => onUpdateOdd(pernaIndex, "fonteSaldo" as any, entry.fonteSaldo === 'FREEBET' ? 'REAL' : 'FREEBET')}
-                        className={cn(
-                          "shrink-0 px-1.5 py-1 rounded text-[9px] font-bold transition-colors border",
-                          entry.fonteSaldo === 'FREEBET'
-                            ? "bg-purple-500/20 text-purple-400 border-purple-500/40"
-                            : "text-muted-foreground/40 border-transparent hover:text-muted-foreground/60"
-                        )}
-                        title={entry.fonteSaldo === 'FREEBET' ? "FB ativo" : "Usar Freebet"}
-                      >
-                        FB
-                      </button>
-                    </div>
-                    {hasInsufficientBalance && (
-                      <span className="text-[9px] text-destructive font-medium mt-0.5 block text-center">Saldo insuf.</span>
-                    )}
+                    {(() => {
+                      const mainInsuf = insufficientEntries?.get(`main-${pernaIndex}`) || false;
+                      const hasFBAvail = (selectedBookmaker?.saldo_freebet ?? 0) > 0;
+                      return (
+                        <>
+                          <div className="flex items-center gap-1">
+                            <MoneyInput 
+                              value={entry.stake}
+                              onChange={(val) => onUpdateOdd(pernaIndex, "stake", val)}
+                              currency={entry.moeda}
+                              minDigits={5}
+                              className={cn(
+                                "h-8 text-[11px] text-center tabular-nums flex-1",
+                                mainInsuf && "border-destructive focus-visible:ring-destructive/50"
+                              )}
+                              data-field-type="stake"
+                              onKeyDown={(e) => onFieldKeyDown(e as any, 'stake')}
+                              tabIndex={pernaIndex * 3 + 2}
+                            />
+                            {(hasFBAvail || entry.fonteSaldo === 'FREEBET') && (
+                              <button
+                                type="button"
+                                onClick={() => onUpdateOdd(pernaIndex, "fonteSaldo" as any, entry.fonteSaldo === 'FREEBET' ? 'REAL' : 'FREEBET')}
+                                className={cn(
+                                  "shrink-0 px-1.5 py-1 rounded text-[9px] font-bold transition-colors border",
+                                  entry.fonteSaldo === 'FREEBET'
+                                    ? "bg-purple-500/20 text-purple-400 border-purple-500/40"
+                                    : "text-muted-foreground/40 border-transparent hover:text-muted-foreground/60"
+                                )}
+                                title={entry.fonteSaldo === 'FREEBET' ? "FB ativo" : "Usar Freebet"}
+                              >
+                                FB
+                              </button>
+                            )}
+                          </div>
+                          {mainInsuf && (
+                            <span className="text-[9px] text-destructive font-medium mt-0.5 block text-center">
+                              {entry.fonteSaldo === 'FREEBET' ? 'FB insuf.' : 'Saldo insuf.'}
+                            </span>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
                   <div className="flex-1 min-w-0">
                     <label className="text-[9px] text-muted-foreground uppercase tracking-wide mb-0.5 block">Linha</label>
