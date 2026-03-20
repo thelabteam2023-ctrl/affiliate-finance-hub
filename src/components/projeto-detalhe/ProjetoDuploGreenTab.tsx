@@ -931,15 +931,26 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
   const handleApostaUpdated = () => { fetchData(); onDataChange?.(); };
   // Abrir formulário em janela externa (padronizado com Surebet)
   const handleOpenAposta = useCallback((aposta: Aposta) => {
+    console.log("[DuploGreen] handleOpenAposta chamado:", { id: aposta.id, forma_registro: aposta.forma_registro });
+    
+    let url: string;
+    let windowFeatures: string;
+    
     if (aposta.forma_registro === "ARBITRAGEM") {
-      // Surebet/Arbitragem - height will auto-resize based on legs
-      const url = `/janela/surebet/${aposta.id}?projetoId=${encodeURIComponent(projetoId)}&tab=duplogreen`;
-      const height = calcSurebetWindowHeight(3); // editing mode, assume 3 pernas as safe default
-      window.open(url, '_blank', `width=780,height=${height},menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes`);
+      url = `/janela/surebet/${aposta.id}?projetoId=${encodeURIComponent(projetoId)}&tab=duplogreen`;
+      const height = calcSurebetWindowHeight(3);
+      windowFeatures = `width=780,height=${height},menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes`;
     } else {
-      // Aposta simples
-      const url = `/janela/aposta/${aposta.id}?projetoId=${encodeURIComponent(projetoId)}&tab=duplogreen&estrategia=DUPLO_GREEN`;
-      window.open(url, '_blank', 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
+      url = `/janela/aposta/${aposta.id}?projetoId=${encodeURIComponent(projetoId)}&tab=duplogreen&estrategia=DUPLO_GREEN`;
+      windowFeatures = 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes';
+    }
+    
+    const win = window.open(url, '_blank', windowFeatures);
+    console.log("[DuploGreen] window.open resultado:", win ? "abriu" : "BLOQUEADO");
+    
+    // Fallback se popup bloqueado
+    if (!win) {
+      window.open(url, '_blank');
     }
   }, [projetoId]);
 
