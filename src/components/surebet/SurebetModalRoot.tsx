@@ -244,7 +244,8 @@ export function SurebetModalRoot({
   
   // Crédito virtual: armazena stakes originais por bookmaker_id para modo edição
   // Permite que o saldo "bloqueado" pela aposta original seja reconhecido como disponível
-  const originalStakesByBookmaker = useRef<Map<string, number>>(new Map());
+  // Separado em real vs freebet para validação correta de ambos os saldos
+  const originalStakesByBookmaker = useRef<Map<string, { real: number; freebet: number }>>(new Map());
   // IDs das pernas originais (do banco) para usar na RPC de edição atômica
   const originalPernaIds = useRef<string[]>([]);
   // Snapshot das pernas originais para detectar mudanças
@@ -265,12 +266,13 @@ export function SurebetModalRoot({
   const bookmakersDisponiveis = useMemo(() => {
     if (isEditing) {
       return bookmakerSaldos.map(bk => {
-        const creditoVirtual = originalStakesByBookmaker.current.get(bk.id) || 0;
-        if (creditoVirtual > 0) {
+        const credito = originalStakesByBookmaker.current.get(bk.id) || { real: 0, freebet: 0 };
+        if (credito.real > 0 || credito.freebet > 0) {
           return {
             ...bk,
-            saldo_operavel: bk.saldo_operavel + creditoVirtual,
-            saldo_disponivel: bk.saldo_disponivel + creditoVirtual,
+            saldo_operavel: bk.saldo_operavel + credito.real,
+            saldo_disponivel: bk.saldo_disponivel + credito.real,
+            saldo_freebet: (bk.saldo_freebet ?? 0) + credito.freebet,
           };
         }
         return bk;
@@ -580,11 +582,14 @@ export function SurebetModalRoot({
       }
 
       // Armazenar stakes originais por bookmaker para crédito virtual em modo edição
-      const stakeMap = new Map<string, number>();
+      // Separado por tipo (real vs freebet) para validação correta
+      const stakeMap = new Map<string, { real: number; freebet: number }>();
       pernasData.forEach((perna: any) => {
         if (perna.bookmaker_id && perna.stake) {
-          const current = stakeMap.get(perna.bookmaker_id) || 0;
-          stakeMap.set(perna.bookmaker_id, current + (parseFloat(perna.stake) || 0));
+          const cur = stakeMap.get(perna.bookmaker_id) || { real: 0, freebet: 0 };
+          const val = parseFloat(perna.stake) || 0;
+          if (perna.fonte_saldo === 'FREEBET') cur.freebet += val; else cur.real += val;
+          stakeMap.set(perna.bookmaker_id, cur);
         }
       });
       originalStakesByBookmaker.current = stakeMap;
@@ -1829,11 +1834,12 @@ export function SurebetModalRoot({
       originalPernasSnapshot.current = originalPernasSnapshot.current.filter((_, i) => i !== pernaIndex);
       originalPernaIds.current = originalPernaIds.current.filter((_, i) => i !== pernaIndex);
       
-      // Recalcular crédito virtual
-      const stakeMap = new Map<string, number>();
+      // Recalcular crédito virtual (separado por tipo)
+      const stakeMap = new Map<string, { real: number; freebet: number }>();
       originalPernasSnapshot.current.forEach(p => {
-        const current = stakeMap.get(p.bookmaker_id) || 0;
-        stakeMap.set(p.bookmaker_id, current + p.stake);
+        const cur = stakeMap.get(p.bookmaker_id) || { real: 0, freebet: 0 };
+        if (p.fonte_saldo === 'FREEBET') cur.freebet += p.stake; else cur.real += p.stake;
+        stakeMap.set(p.bookmaker_id, cur);
       });
       originalStakesByBookmaker.current = stakeMap;
       
@@ -1915,9 +1921,9 @@ export function SurebetModalRoot({
     for (const [bkId, alocado] of alocadoPorBookmaker.entries()) {
       const bookmaker = bookmakerSaldos.find(b => b.id === bkId);
       if (!bookmaker) continue;
-      const creditoVirtual = isEditing ? (originalStakesByBookmaker.current.get(bkId) || 0) : 0;
-      const saldoReal = (bookmaker.saldo_operavel ?? 0) + creditoVirtual;
-      const saldoFB = bookmaker.saldo_freebet ?? 0;
+      const credito = isEditing ? (originalStakesByBookmaker.current.get(bkId) || { real: 0, freebet: 0 }) : { real: 0, freebet: 0 };
+      const saldoReal = (bookmaker.saldo_operavel ?? 0) + credito.real;
+      const saldoFB = (bookmaker.saldo_freebet ?? 0) + credito.freebet;
       if (alocado.real > saldoReal + 0.01) bookmakerInsuficientes.add(bkId);
       if (alocado.freebet > saldoFB + 0.01) bookmakerFBInsuficientes.add(bkId);
     }
