@@ -307,6 +307,11 @@ function PernaItem({
           <div className="flex items-center gap-2 shrink-0">
             <span className="text-sm sm:text-base font-medium whitespace-nowrap w-[60px] text-right tabular-nums">@{perna.odd.toFixed(2)}</span>
             <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap w-[90px] text-right tabular-nums">{formatPernaValue(perna.stake, perna.moeda)}</span>
+            {isFreebet && (
+              <Badge variant="outline" className="text-[9px] px-1 py-0 shrink-0 border-green-500/40 text-green-400 bg-green-500/10 font-bold">
+                FB
+              </Badge>
+            )}
           </div>
           
           {/* Result pill per perna */}
