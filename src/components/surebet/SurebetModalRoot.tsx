@@ -1921,9 +1921,9 @@ export function SurebetModalRoot({
     for (const [bkId, alocado] of alocadoPorBookmaker.entries()) {
       const bookmaker = bookmakerSaldos.find(b => b.id === bkId);
       if (!bookmaker) continue;
-      const creditoVirtual = isEditing ? (originalStakesByBookmaker.current.get(bkId) || 0) : 0;
-      const saldoReal = (bookmaker.saldo_operavel ?? 0) + creditoVirtual;
-      const saldoFB = bookmaker.saldo_freebet ?? 0;
+      const credito = isEditing ? (originalStakesByBookmaker.current.get(bkId) || { real: 0, freebet: 0 }) : { real: 0, freebet: 0 };
+      const saldoReal = (bookmaker.saldo_operavel ?? 0) + credito.real;
+      const saldoFB = (bookmaker.saldo_freebet ?? 0) + credito.freebet;
       if (alocado.real > saldoReal + 0.01) bookmakerInsuficientes.add(bkId);
       if (alocado.freebet > saldoFB + 0.01) bookmakerFBInsuficientes.add(bkId);
     }
