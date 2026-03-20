@@ -1381,17 +1381,29 @@ export function SurebetModalRoot({
           else resultadoAposta = 'VOID';
         }
 
+        // Recalcular stake_total e stake_consolidado a partir das pernas editadas
+        const newStakeTotal = pernasToSave.reduce((acc, p) => acc + p.stake, 0);
+        const newStakeConsolidado = pernasToSave.reduce((acc, p) => {
+          return acc + convertViaBRL(p.stake, p.moeda, engineConfig.consolidationCurrency, engineConfig.brlRates);
+        }, 0);
+
         const { error: updateError } = await supabase
           .from("apostas_unificada")
           .update({
+            data_aposta: toLocalTimestamp(dataAposta),
             evento,
             esporte,
             mercado,
             modelo,
             estrategia,
             contexto_operacional: contexto,
+            stake_total: newStakeTotal,
+            stake_consolidado: newStakeConsolidado,
             lucro_esperado: analysis.minLucro,
             roi_esperado: analysis.minRoi,
+            lucro_prejuizo: lucroRealTotal,
+            pl_consolidado: lucroRealTotal,
+            roi_real: roiReal,
             status: statusAposta,
             resultado: resultadoAposta,
             updated_at: new Date().toISOString()
