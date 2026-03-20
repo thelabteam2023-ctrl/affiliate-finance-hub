@@ -56,6 +56,7 @@ export interface OddFormEntry {
   odd: string;
   stake: string;
   selecaoLivre: string;
+  fonteSaldo?: 'REAL' | 'FREEBET';
 }
 
 interface BookmakerInfo {
