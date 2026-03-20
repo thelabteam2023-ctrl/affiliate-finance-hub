@@ -887,7 +887,7 @@ export function SurebetModalRoot({
       newOdds[pernaIndex] = { ...newOdds[pernaIndex], additionalEntries: entries };
       return newOdds;
     });
-  }, [bookmakerSaldos, equalizedTargetStakes, calculatedStakes, arredondarStake]);
+  }, [bookmakerSaldos, targetPayoutsLocal, arredondarStake]);
 
   const removeAdditionalEntry = useCallback((pernaIndex: number, entryIndex: number) => {
     setOdds(prev => {
