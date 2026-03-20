@@ -542,14 +542,43 @@ export function SurebetModalRoot({
     setEqualizedStakesSnapshot([]);
   };
 
-  const fetchLinkedPernas = async (surebetId: string) => {
-    const { data: pernasData } = await supabase
-      .from("apostas_pernas")
-      .select(`*, bookmakers (nome)`)
-      .eq("aposta_id", surebetId)
-      .order("ordem", { ascending: true });
+  const [pernasLoading, setPernasLoading] = useState(false);
 
-    if (pernasData && pernasData.length > 0) {
+  const fetchLinkedPernas = async (surebetId: string, retryCount = 0) => {
+    setPernasLoading(true);
+    try {
+      const { data: pernasData, error: pernasError } = await supabase
+        .from("apostas_pernas")
+        .select(`*, bookmakers (nome)`)
+        .eq("aposta_id", surebetId)
+        .order("ordem", { ascending: true });
+
+      if (pernasError) {
+        console.error("[SurebetModalRoot] Erro ao buscar pernas:", pernasError);
+        
+        // Retry up to 2 times (auth session might not be ready in new window)
+        if (retryCount < 2) {
+          console.log(`[SurebetModalRoot] Retry ${retryCount + 1}/2 em 500ms...`);
+          await new Promise(resolve => setTimeout(resolve, 500));
+          return fetchLinkedPernas(surebetId, retryCount + 1);
+        }
+        
+        toast.error("Erro ao carregar entradas da operação. Recarregue a página.");
+        return;
+      }
+
+      if (!pernasData || pernasData.length === 0) {
+        console.warn("[SurebetModalRoot] Nenhuma perna encontrada para aposta:", surebetId);
+        
+        // Retry once - data might not be immediately available
+        if (retryCount < 1) {
+          console.log("[SurebetModalRoot] Retry em 300ms...");
+          await new Promise(resolve => setTimeout(resolve, 300));
+          return fetchLinkedPernas(surebetId, retryCount + 1);
+        }
+        return;
+      }
+
       // Armazenar stakes originais por bookmaker para crédito virtual em modo edição
       const stakeMap = new Map<string, number>();
       pernasData.forEach((perna: any) => {
@@ -620,11 +649,22 @@ export function SurebetModalRoot({
       setOdds(pernasOdds);
       setDirectedProfitLegs(Array.from({ length: pernasOdds.length }, (_, i) => i));
       
-      console.log("[SurebetModalRoot] Pernas carregadas com agrupamento:", {
+      console.log("[SurebetModalRoot] ✅ Pernas carregadas com agrupamento:", {
         total_pernas: pernasData.length,
         grupos: pernasOdds.length,
         com_sub_entradas: pernasOdds.filter(o => (o.additionalEntries?.length || 0) > 0).length,
       });
+    } catch (err) {
+      console.error("[SurebetModalRoot] Exceção ao buscar pernas:", err);
+      
+      if (retryCount < 2) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        return fetchLinkedPernas(surebetId, retryCount + 1);
+      }
+      
+      toast.error("Erro inesperado ao carregar entradas. Recarregue a página.");
+    } finally {
+      setPernasLoading(false);
     }
   };
 
@@ -1943,8 +1983,15 @@ export function SurebetModalRoot({
               )}
             </div>
 
-            {/* MOBILE: Cards empilhados */}
-            {isMobile ? (
+            {/* Loading state for pernas */}
+            {pernasLoading && isEditing ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="text-center space-y-2">
+                  <div className="h-5 w-5 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+                  <p className="text-xs text-muted-foreground">Carregando entradas...</p>
+                </div>
+              </div>
+            ) : isMobile ? (
               <div className="space-y-3" ref={tableContainerRef}>
                 {odds.map((entry, pernaIndex) => (
                   <SurebetMobileCard
