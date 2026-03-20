@@ -331,3 +331,134 @@ describe("validateBalance", () => {
     expect(result.hasInsufficientBalance).toBe(false);
   });
 });
+
+// ============ Cenários de EXCLUSÃO de pernas ============
+describe("buildOriginalStakesMap - leg deletion scenarios", () => {
+  // Simula o fluxo: snapshot original → deletar perna → recalcular mapa
+
+  const fullSnapshot = [
+    { bookmaker_id: "bk1", stake: 100, fonte_saldo: null },       // perna 0 - real
+    { bookmaker_id: "bk1", stake: 48, fonte_saldo: "FREEBET" },   // perna 1 - freebet (sub)
+    { bookmaker_id: "bk2", stake: 80, fonte_saldo: null },        // perna 2 - real
+    { bookmaker_id: "bk2", stake: 30, fonte_saldo: "FREEBET" },   // perna 3 - freebet (sub)
+  ];
+
+  it("deletion of real leg recalculates credits correctly", () => {
+    // Remove perna 0 (bk1 real 100)
+    const remaining = fullSnapshot.filter((_, i) => i !== 0);
+    const map = buildOriginalStakesMap(remaining);
+    expect(map.get("bk1")).toEqual({ real: 0, freebet: 48 });
+    expect(map.get("bk2")).toEqual({ real: 80, freebet: 30 });
+  });
+
+  it("deletion of freebet leg recalculates credits correctly", () => {
+    // Remove perna 1 (bk1 freebet 48)
+    const remaining = fullSnapshot.filter((_, i) => i !== 1);
+    const map = buildOriginalStakesMap(remaining);
+    expect(map.get("bk1")).toEqual({ real: 100, freebet: 0 });
+    expect(map.get("bk2")).toEqual({ real: 80, freebet: 30 });
+  });
+
+  it("deletion of all legs for a bookmaker removes it from map", () => {
+    // Remove pernas 0 e 1 (ambas bk1)
+    const remaining = fullSnapshot.filter((_, i) => i !== 0 && i !== 1);
+    const map = buildOriginalStakesMap(remaining);
+    expect(map.has("bk1")).toBe(false);
+    expect(map.get("bk2")).toEqual({ real: 80, freebet: 30 });
+  });
+
+  it("deletion of all legs results in empty map", () => {
+    const map = buildOriginalStakesMap([]);
+    expect(map.size).toBe(0);
+  });
+});
+
+describe("validateBalance - post-deletion scenarios", () => {
+  // Cenário: Operação editada onde uma perna foi excluída.
+  // O crédito virtual deve refletir apenas as pernas RESTANTES do snapshot.
+
+  it("after deleting freebet leg, remaining freebet entry becomes insufficient", () => {
+    // Estado: bk1 tinha saldo_freebet=0 (consumido pela aposta original de 48 FB)
+    // Usuário deleta a perna FB original → crédito FB volta a 0
+    // Mas o formulário ainda mostra outra entrada FB de 48
+    const bookmakers = [bk("bk1", 500, 0)];
+    const odds: OddEntry[] = [entry("bk1", "48", "FREEBET")];
+    // Após exclusão, crédito FB = 0 (perna deletada)
+    const credits = new Map([["bk1", { real: 0, freebet: 0 }]]);
+    const result = validateBalance(odds, bookmakers, true, credits);
+    expect(result.hasInsufficientBalance).toBe(true);
+    expect(result.bookmakerFBInsuficientes.has("bk1")).toBe(true);
+  });
+
+  it("after deleting real leg, real balance may become sufficient for remaining", () => {
+    // bk1: saldo_operavel=300 (após débito original de 100 real)
+    // Original: perna real 100 + perna real 80 (total 180 crédito)
+    // Usuário deleta perna de 80 → crédito real = 100
+    // Formulário pede 150 real
+    const bookmakers = [bk("bk1", 300)];
+    const odds: OddEntry[] = [entry("bk1", "150")];
+    const credits = new Map([["bk1", { real: 100, freebet: 0 }]]);
+    // saldoReal = 300 + 100 = 400 ≥ 150 ✓
+    const result = validateBalance(odds, bookmakers, true, credits);
+    expect(result.hasInsufficientBalance).toBe(false);
+  });
+
+  it("deleting leg reduces credit, making new allocation insufficient", () => {
+    // bk1: saldo real 50 (após débito de 200)
+    // Original snapshot tinha 2 pernas: 120 + 80 = crédito 200
+    // Usuário deleta perna de 120 → crédito cai pra 80
+    // Formulário pede 200 real na perna restante
+    const bookmakers = [bk("bk1", 50)];
+    const odds: OddEntry[] = [entry("bk1", "200")];
+    const credits = new Map([["bk1", { real: 80, freebet: 0 }]]);
+    // saldoReal = 50 + 80 = 130 < 200 → insuficiente
+    const result = validateBalance(odds, bookmakers, true, credits);
+    expect(result.hasInsufficientBalance).toBe(true);
+  });
+
+  it("mixed deletion: remove real keep freebet", () => {
+    const bookmakers = [bk("bk1", 200, 0)];
+    // Formulário: 1 entrada freebet de 48
+    const odds: OddEntry[] = [entry("bk1", "48", "FREEBET")];
+    // Crédito: real foi deletado, só sobrou freebet original de 48
+    const credits = new Map([["bk1", { real: 0, freebet: 48 }]]);
+    // saldoFB = 0 + 48 = 48 ≥ 48 ✓
+    const result = validateBalance(odds, bookmakers, true, credits);
+    expect(result.hasInsufficientBalance).toBe(false);
+  });
+
+  it("mixed deletion: remove freebet keep real", () => {
+    const bookmakers = [bk("bk1", 200, 0)];
+    const odds: OddEntry[] = [entry("bk1", "100", "REAL")];
+    // Crédito: freebet foi deletado, só sobrou real original de 100
+    const credits = new Map([["bk1", { real: 100, freebet: 0 }]]);
+    // saldoReal = 200 + 100 = 300 ≥ 100 ✓
+    const result = validateBalance(odds, bookmakers, true, credits);
+    expect(result.hasInsufficientBalance).toBe(false);
+  });
+
+  it("complete deletion of all legs: no credits, no entries = no issues", () => {
+    const bookmakers = [bk("bk1", 0, 0)];
+    const odds: OddEntry[] = [];
+    const credits = new Map<string, OriginalCredits>();
+    const result = validateBalance(odds, bookmakers, true, credits);
+    expect(result.hasInsufficientBalance).toBe(false);
+    expect(result.insufficientLegs).toHaveLength(0);
+  });
+
+  it("multi-bookmaker deletion: only affected bookmaker loses credit", () => {
+    const bookmakers = [bk("bk1", 100, 0), bk("bk2", 50, 20)];
+    const odds: OddEntry[] = [
+      entry("bk1", "150"),          // precisa de crédito
+      entry("bk2", "20", "FREEBET"), // precisa de crédito FB
+    ];
+    // bk1: crédito real 100 (perna restante) | bk2: crédito freebet 20 (perna restante)
+    const credits = new Map([
+      ["bk1", { real: 100, freebet: 0 }],
+      ["bk2", { real: 0, freebet: 20 }],
+    ]);
+    // bk1: 100+100=200 ≥ 150 ✓  |  bk2 FB: 20+20=40 ≥ 20 ✓
+    const result = validateBalance(odds, bookmakers, true, credits);
+    expect(result.hasInsufficientBalance).toBe(false);
+  });
+});
