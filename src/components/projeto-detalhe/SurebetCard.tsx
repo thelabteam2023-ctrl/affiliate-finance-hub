@@ -239,6 +239,11 @@ function PernaItem({
     hasMultipleEntries ? (perna.entries!.length <= 3) : false
   );
   
+  // Detectar se perna usa freebet
+  const isFreebet = perna.fonte_saldo === 'FREEBET';
+  const hasAnyFreebet = hasMultipleEntries 
+    ? perna.entries!.some(e => e.fonte_saldo === 'FREEBET')
+    : isFreebet;
   // Usar odd_media e stake_total se disponíveis, senão usar valores legados
   const displayOdd = perna.odd_media || perna.odd;
   const displayStake = perna.stake_total || perna.stake;
