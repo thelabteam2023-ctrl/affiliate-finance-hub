@@ -388,13 +388,46 @@ export function SurebetColumnsView({
                         </div>
                         <div className="flex-1 min-w-0">
                           <label className="text-[9px] text-muted-foreground uppercase tracking-wide mb-0.5 block">Stake</label>
-                          <MoneyInput 
-                            value={addEntry.stake}
-                            onChange={(val) => onUpdateAdditionalEntry(pernaIndex, addIndex, 'stake', val)}
-                            currency={addEntry.moeda}
-                            minDigits={5}
-                            className="h-7 text-xs text-center tabular-nums"
-                          />
+                          {(() => {
+                            const subInsuf = insufficientEntries?.get(`sub-${pernaIndex}-${addIndex}`) || false;
+                            const subHasFB = (addBookmaker?.saldo_freebet ?? 0) > 0;
+                            const isSubFB = (addEntry as any).fonteSaldo === 'FREEBET';
+                            return (
+                              <>
+                                <div className="flex items-center gap-1">
+                                  <MoneyInput 
+                                    value={addEntry.stake}
+                                    onChange={(val) => onUpdateAdditionalEntry(pernaIndex, addIndex, 'stake', val)}
+                                    currency={addEntry.moeda}
+                                    minDigits={5}
+                                    className={cn(
+                                      "h-7 text-xs text-center tabular-nums flex-1",
+                                      subInsuf && "border-destructive focus-visible:ring-destructive/50"
+                                    )}
+                                  />
+                                  {(subHasFB || isSubFB) && (
+                                    <button
+                                      type="button"
+                                      onClick={() => onUpdateAdditionalEntry(pernaIndex, addIndex, 'fonteSaldo', isSubFB ? 'REAL' : 'FREEBET')}
+                                      className={cn(
+                                        "shrink-0 px-1 py-0.5 rounded text-[8px] font-bold transition-colors border",
+                                        isSubFB
+                                          ? "bg-purple-500/20 text-purple-400 border-purple-500/40"
+                                          : "text-muted-foreground/40 border-transparent hover:text-muted-foreground/60"
+                                      )}
+                                    >
+                                      FB
+                                    </button>
+                                  )}
+                                </div>
+                                {subInsuf && (
+                                  <span className="text-[8px] text-destructive font-medium mt-0.5 block">
+                                    {isSubFB ? 'FB insuf.' : 'Saldo insuf.'}
+                                  </span>
+                                )}
+                              </>
+                            );
+                          })()}
                         </div>
                         <div className="flex-1 min-w-0">
                           <label className="text-[9px] text-muted-foreground uppercase tracking-wide mb-0.5 block">Linha</label>
