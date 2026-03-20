@@ -265,39 +265,50 @@ export function SurebetTableRow({
         
         {/* Stake */}
         <td className="px-1" style={{ height: '78px' }}>
-          <div className="flex flex-col items-center gap-0.5">
-            <div className="flex items-center gap-1">
-              <MoneyInput 
-                value={entry.stake}
-                onChange={(val) => onUpdateOdd(pernaIndex, "stake", val)}
-                currency={entry.moeda}
-                minDigits={6}
-                className={cn(
-                  "h-8 text-xs text-center tabular-nums",
-                  entry.fonteSaldo === 'FREEBET' ? "w-[72px]" : "w-[90px]",
-                  hasInsufficientBalance ? "border-destructive focus-visible:ring-destructive/50" : ""
+          {(() => {
+            const mainInsufficient = insufficientEntries?.get(`main-${pernaIndex}`) || false;
+            const hasFBAvailable = (selectedBookmaker?.saldo_freebet ?? 0) > 0;
+            return (
+              <div className="flex flex-col items-center gap-0.5">
+                <div className="flex items-center gap-1">
+                  <MoneyInput 
+                    value={entry.stake}
+                    onChange={(val) => onUpdateOdd(pernaIndex, "stake", val)}
+                    currency={entry.moeda}
+                    minDigits={6}
+                    className={cn(
+                      "h-8 text-xs text-center tabular-nums",
+                      entry.fonteSaldo === 'FREEBET' ? "w-[72px]" : "w-[90px]",
+                      mainInsufficient ? "border-destructive focus-visible:ring-destructive/50" : ""
+                    )}
+                    data-field-type="stake"
+                    onKeyDown={(e) => onFieldKeyDown(e as any, 'stake')}
+                  />
+                  {/* FB Toggle — só aparece se a casa tem saldo de freebet */}
+                  {(hasFBAvailable || entry.fonteSaldo === 'FREEBET') && (
+                    <button
+                      type="button"
+                      onClick={() => onUpdateOdd(pernaIndex, "fonteSaldo" as any, entry.fonteSaldo === 'FREEBET' ? 'REAL' : 'FREEBET')}
+                      className={cn(
+                        "shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold transition-colors border",
+                        entry.fonteSaldo === 'FREEBET'
+                          ? "bg-purple-500/20 text-purple-400 border-purple-500/40"
+                          : "text-muted-foreground/40 border-transparent hover:text-muted-foreground/60 hover:border-border/40"
+                      )}
+                      title={entry.fonteSaldo === 'FREEBET' ? "Usando Freebet (clique para desativar)" : "Usar Freebet nesta entrada"}
+                    >
+                      FB
+                    </button>
+                  )}
+                </div>
+                {mainInsufficient && (
+                  <span className="text-[9px] text-destructive font-medium">
+                    {entry.fonteSaldo === 'FREEBET' ? 'FB insuf.' : 'Saldo insuf.'}
+                  </span>
                 )}
-                data-field-type="stake"
-                onKeyDown={(e) => onFieldKeyDown(e as any, 'stake')}
-              />
-              {/* FB Toggle */}
-              <button
-                type="button"
-                onClick={() => onUpdateOdd(pernaIndex, "fonteSaldo" as any, entry.fonteSaldo === 'FREEBET' ? 'REAL' : 'FREEBET')}
-                className={cn(
-                  "shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold transition-colors border",
-                  entry.fonteSaldo === 'FREEBET'
-                    ? "bg-purple-500/20 text-purple-400 border-purple-500/40"
-                    : "text-muted-foreground/40 border-transparent hover:text-muted-foreground/60 hover:border-border/40"
-                )}
-                title={entry.fonteSaldo === 'FREEBET' ? "Usando Freebet (clique para desativar)" : "Usar Freebet nesta entrada"}
-              >
-                FB
-              </button>
-            </div>
-            {hasInsufficientBalance && (
-              <span className="text-[9px] text-destructive font-medium">Saldo insuf.</span>
-            )}
+              </div>
+            );
+          })()}
           </div>
         </td>
         
