@@ -410,15 +410,24 @@ export function useSurebetCalculator({
     }
 
     // Construir EngineLeg para o equalizador
-    const engineLegs: EngineLeg[] = odds.map((o, i) => ({
-      moeda: getMoedaPerna(o),
-      stakeLocal: getStakeTotalPerna(o),
-      odd: getOddMediaPerna(o),
-      isReference: o.isReference,
-      isManuallyEdited: o.isManuallyEdited,
-      isFromPrint: o.stakeOrigem === "print",
-      isFreebet: o.fonteSaldo === 'FREEBET',
-    }));
+    const engineLegs: EngineLeg[] = odds.map((o, i) => {
+      const baseCurrency = getMoedaPerna(o);
+      const split = calcularStakeSplit(
+        { stake: o.stake, fonteSaldo: o.fonteSaldo },
+        o.additionalEntries, safeConfig.brlRates, baseCurrency
+      );
+      return {
+        moeda: baseCurrency,
+        stakeLocal: getStakeTotalPerna(o),
+        odd: getOddMediaPerna(o),
+        isReference: o.isReference,
+        isManuallyEdited: o.isManuallyEdited,
+        isFromPrint: o.stakeOrigem === "print",
+        isFreebet: o.fonteSaldo === 'FREEBET' && !o.additionalEntries?.length,
+        realStakeLocal: split.realStakeLocal,
+        freebetStakeLocal: split.freebetStakeLocal,
+      };
+    });
 
     const resultado = calcularStakesEqualizadasMultiCurrency(engineLegs, safeConfig, arredondarStake);
 
