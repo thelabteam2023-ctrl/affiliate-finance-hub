@@ -1797,43 +1797,107 @@ export function SurebetModalRoot({
     const insufficientLegs: number[] = [];
     const adjustedBalances = new Map<string, number>();
     
-    // Primeiro, calcular quanto foi alocado para cada bookmaker considerando TODAS as pernas anteriores
+    // Acumular alocações separadas por bookmaker: real vs freebet
+    // Map<bookmaker_id, { real: number, freebet: number }>
+    const alocadoPorBookmaker = new Map<string, { real: number; freebet: number }>();
+    
+    // Coletar TODAS as alocações de todas as pernas e sub-entradas
+    interface FlatEntry {
+      bookmaker_id: string;
+      stake: number;
+      isFreebet: boolean;
+      legIndex: number;
+    }
+    const flatEntries: FlatEntry[] = [];
+    
     odds.forEach((entry, index) => {
       if (!entry.bookmaker_id) return;
+      const mainStake = parseFloat(entry.stake) || 0;
+      if (mainStake > 0) {
+        flatEntries.push({
+          bookmaker_id: entry.bookmaker_id,
+          stake: mainStake,
+          isFreebet: entry.fonteSaldo === 'FREEBET',
+          legIndex: index,
+        });
+      }
+      // Sub-entradas
+      (entry.additionalEntries || []).forEach(sub => {
+        const subBk = sub.bookmaker_id || entry.bookmaker_id;
+        const subStake = parseFloat(sub.stake) || 0;
+        if (subStake > 0) {
+          flatEntries.push({
+            bookmaker_id: subBk,
+            stake: subStake,
+            isFreebet: sub.fonteSaldo === 'FREEBET',
+            legIndex: index,
+          });
+        }
+      });
+    });
+    
+    // Agrupar por bookmaker
+    for (const fe of flatEntries) {
+      const current = alocadoPorBookmaker.get(fe.bookmaker_id) || { real: 0, freebet: 0 };
+      if (fe.isFreebet) {
+        current.freebet += fe.stake;
+      } else {
+        current.real += fe.stake;
+      }
+      alocadoPorBookmaker.set(fe.bookmaker_id, current);
+    }
+    
+    // Validar cada bookmaker: real contra saldo_operavel, freebet contra saldo_freebet
+    const bookmakerInsuficientes = new Set<string>();
+    const bookmakerFBInsuficientes = new Set<string>();
+    
+    for (const [bkId, alocado] of alocadoPorBookmaker.entries()) {
+      const bookmaker = bookmakerSaldos.find(b => b.id === bkId);
+      if (!bookmaker) continue;
       
+      const creditoVirtual = isEditing ? (originalStakesByBookmaker.current.get(bkId) || 0) : 0;
+      const saldoReal = (bookmaker.saldo_operavel ?? 0) + creditoVirtual;
+      const saldoFB = bookmaker.saldo_freebet ?? 0;
+      
+      if (alocado.real > saldoReal + 0.01) {
+        bookmakerInsuficientes.add(bkId);
+      }
+      if (alocado.freebet > saldoFB + 0.01) {
+        bookmakerFBInsuficientes.add(bkId);
+      }
+    }
+    
+    // Marcar pernas afetadas
+    odds.forEach((entry, index) => {
+      if (!entry.bookmaker_id) return;
       const stake = parseFloat(entry.stake) || 0;
       if (stake <= 0) return;
       
-      const bookmaker = bookmakerSaldos.find(b => b.id === entry.bookmaker_id);
-      if (!bookmaker) return;
+      const isMainFB = entry.fonteSaldo === 'FREEBET';
+      const hasSubFB = (entry.additionalEntries || []).some(s => s.fonteSaldo === 'FREEBET');
       
-      // Em modo edição, aplicar crédito virtual das stakes originais
-      const creditoVirtual = isEditing ? (originalStakesByBookmaker.current.get(entry.bookmaker_id) || 0) : 0;
-      const saldoBase = (bookmaker.saldo_operavel ?? 0) + creditoVirtual;
-      
-      // Calcular quanto já foi alocado em pernas ANTERIORES (índice < atual) para esta mesma bookmaker
-      let alocadoEmOutrasPernas = 0;
-      for (let i = 0; i < index; i++) {
-        if (odds[i].bookmaker_id === entry.bookmaker_id) {
-          alocadoEmOutrasPernas += parseFloat(odds[i].stake) || 0;
-        }
-      }
-      
-      // Saldo disponível para ESTA perna = saldo base - já alocado em pernas anteriores
-      const saldoDisponivelParaEstaPerna = saldoBase - alocadoEmOutrasPernas;
-      
-      // Guardar para exibição (opcional)
-      adjustedBalances.set(`${entry.bookmaker_id}-${index}`, saldoDisponivelParaEstaPerna);
-      
-      if (stake > saldoDisponivelParaEstaPerna + 0.01) { // Tolerância de 1 centavo
+      if ((!isMainFB && bookmakerInsuficientes.has(entry.bookmaker_id)) ||
+          (isMainFB && bookmakerFBInsuficientes.has(entry.bookmaker_id)) ||
+          (hasSubFB && bookmakerFBInsuficientes.has(entry.bookmaker_id))) {
         insufficientLegs.push(index);
       }
+      
+      // Verificar sub-entradas com bookmakers diferentes
+      (entry.additionalEntries || []).forEach(sub => {
+        const subBk = sub.bookmaker_id || entry.bookmaker_id;
+        if (sub.fonteSaldo === 'FREEBET' && bookmakerFBInsuficientes.has(subBk)) {
+          if (!insufficientLegs.includes(index)) insufficientLegs.push(index);
+        } else if (sub.fonteSaldo !== 'FREEBET' && bookmakerInsuficientes.has(subBk)) {
+          if (!insufficientLegs.includes(index)) insufficientLegs.push(index);
+        }
+      });
     });
     
     return {
       hasInsufficientBalance: insufficientLegs.length > 0,
       insufficientLegs,
-      adjustedBalances
+      adjustedBalances,
+      bookmakerFBInsuficientes,
     };
   }, [odds, bookmakerSaldos, isEditing]);
 
@@ -2253,8 +2317,10 @@ export function SurebetModalRoot({
               <div className="flex items-center gap-2 p-2 bg-destructive/10 border border-destructive/30 rounded text-xs text-destructive">
                 <AlertTriangle className="h-4 w-4 shrink-0" />
                 <span>
-                  Saldo insuficiente na(s) perna(s) {balanceValidation.insufficientLegs.map(i => i + 1).join(", ")}. 
-                  Reduza o stake ou selecione outra casa.
+                  {balanceValidation.bookmakerFBInsuficientes && balanceValidation.bookmakerFBInsuficientes.size > 0
+                    ? `Saldo de Freebet insuficiente na(s) perna(s) ${balanceValidation.insufficientLegs.map(i => i + 1).join(", ")}. O valor FB excede o saldo disponível.`
+                    : `Saldo insuficiente na(s) perna(s) ${balanceValidation.insufficientLegs.map(i => i + 1).join(", ")}. Reduza o stake ou selecione outra casa.`
+                  }
                 </span>
               </div>
             </div>
