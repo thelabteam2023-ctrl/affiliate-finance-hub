@@ -1244,12 +1244,14 @@ export function SurebetModalRoot({
           const newBookmakerId = flat.bookmaker_id;
           const newSelecao = flat.selecao;
           const newSelecaoLivre = flat.selecaoLivre || "";
+          const newFonteSaldo = flat.fonteSaldo || 'REAL';
           
           const bookmakerChanged = newBookmakerId !== originalPerna.bookmaker_id;
           const stakeChanged = Math.abs(newStake - originalPerna.stake) > 0.001;
           const oddChanged = Math.abs(newOdd - originalPerna.odd) > 0.001;
           const selecaoChanged = newSelecao !== originalPerna.selecao;
           const selecaoLivreChanged = newSelecaoLivre !== originalPerna.selecao_livre;
+          const fonteSaldoChanged = newFonteSaldo !== (originalPerna.fonte_saldo || 'REAL');
           
           if (bookmakerChanged || stakeChanged || oddChanged || selecaoChanged || selecaoLivreChanged) {
             const { data: rpcResult, error: rpcError } = await supabase.rpc('editar_perna_surebet_atomica', {
@@ -1272,6 +1274,19 @@ export function SurebetModalRoot({
             }
             
             console.log(`[SurebetModalRoot] ✅ Perna ${originalPerna.id} editada via RPC:`, result);
+          }
+          
+          // Atualizar fonte_saldo se mudou (campo direto, sem impacto financeiro imediato)
+          if (fonteSaldoChanged) {
+            const { error: fsError } = await supabase
+              .from('apostas_pernas')
+              .update({ fonte_saldo: newFonteSaldo })
+              .eq('id', originalPerna.id);
+            if (fsError) {
+              console.error(`[SurebetModalRoot] Erro ao atualizar fonte_saldo perna ${originalPerna.id}:`, fsError);
+            } else {
+              console.log(`[SurebetModalRoot] ✅ fonte_saldo atualizado: ${originalPerna.fonte_saldo} → ${newFonteSaldo}`);
+            }
           }
         }
         
