@@ -826,7 +826,7 @@ export function SurebetModalRoot({
       if (currentEntries.length >= 4) return prev; // max 5 total (1 main + 4 additional)
 
       // Calcular stake restante: totalNeeded - mainStake - subStakes existentes
-      const totalNeeded = calculatedStakes?.[pernaIndex] || 0;
+      const totalNeeded = equalizedTargetStakes?.[pernaIndex] || calculatedStakes?.[pernaIndex] || 0;
       const mainStake = parseFloat(newOdds[pernaIndex].stake) || 0;
       const existingSubStakes = currentEntries.reduce((sum, e) => sum + (parseFloat(e.stake) || 0), 0);
       const remainingStake = Math.max(0, totalNeeded - mainStake - existingSubStakes);
