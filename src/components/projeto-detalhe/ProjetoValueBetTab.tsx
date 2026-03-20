@@ -381,7 +381,7 @@ export function ProjetoValueBetTab({
           .from("apostas_pernas")
           .select(`
             id, aposta_id, bookmaker_id, odd, stake, moeda, selecao, selecao_livre, ordem,
-            resultado, lucro_prejuizo,
+            resultado, lucro_prejuizo, fonte_saldo,
             bookmaker:bookmakers (
               nome, parceiro_id,
               parceiro:parceiros (nome),

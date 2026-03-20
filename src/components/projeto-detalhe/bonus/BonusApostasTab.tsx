@@ -450,6 +450,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
             resultado,
             lucro_prejuizo,
             moeda,
+            fonte_saldo,
             bookmakers (nome, moeda, parceiro:parceiros(nome))
           `)
           .in("aposta_id", surebetIds)
