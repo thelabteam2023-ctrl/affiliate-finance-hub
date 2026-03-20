@@ -422,12 +422,27 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
       // Multi-entry SIMPLES: rotear para motor de surebet que processa por perna
       const hasPernas = Array.isArray(aposta.pernas) && aposta.pernas.length > 1;
       if (hasPernas) {
-        // Todas as pernas recebem o mesmo resultado (não é arbitragem)
-        const allIndices = Array.from({ length: aposta.pernas.length }, (_, i) => i);
-        const quickResult: SurebetQuickResult = resultado === 'VOID'
-          ? { type: 'all_void', winners: [], label: 'Void Total' }
-          : { type: resultado === 'GREEN' ? 'double_green' : 'single_win', winners: resultado === 'GREEN' ? allIndices : [], label: resultado };
-        await handleQuickResolveSurebet(apostaId, quickResult);
+        // Delegar para liquidação por perna individual (mesmo motor das surebets)
+        const workspaceId = (aposta as any).workspace_id || aposta.pernas[0]?.workspace_id || '';
+        for (const perna of aposta.pernas as any[]) {
+          if (!perna.id || !perna.bookmaker_id) continue;
+          await liquidarPernaSurebet({
+            surebet_id: apostaId,
+            perna_id: perna.id,
+            bookmaker_id: perna.bookmaker_id,
+            resultado: resultado as any,
+            resultado_anterior: perna.resultado || null,
+            stake: perna.stake,
+            odd: perna.odd,
+            moeda: perna.moeda || 'BRL',
+            workspace_id: workspaceId,
+          });
+        }
+        invalidateSaldos(projetoId);
+        fetchData();
+        onDataChange?.();
+        const resultLabel = { GREEN: "Green", RED: "Red", MEIO_GREEN: "½ Green", MEIO_RED: "½ Red", VOID: "Void" }[resultado] || resultado;
+        toast.success(`Aposta marcada como ${resultLabel}`);
         return;
       }
 
