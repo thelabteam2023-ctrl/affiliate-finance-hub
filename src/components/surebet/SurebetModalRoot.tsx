@@ -1834,11 +1834,12 @@ export function SurebetModalRoot({
       originalPernasSnapshot.current = originalPernasSnapshot.current.filter((_, i) => i !== pernaIndex);
       originalPernaIds.current = originalPernaIds.current.filter((_, i) => i !== pernaIndex);
       
-      // Recalcular crédito virtual
-      const stakeMap = new Map<string, number>();
+      // Recalcular crédito virtual (separado por tipo)
+      const stakeMap = new Map<string, { real: number; freebet: number }>();
       originalPernasSnapshot.current.forEach(p => {
-        const current = stakeMap.get(p.bookmaker_id) || 0;
-        stakeMap.set(p.bookmaker_id, current + p.stake);
+        const cur = stakeMap.get(p.bookmaker_id) || { real: 0, freebet: 0 };
+        if (p.fonte_saldo === 'FREEBET') cur.freebet += p.stake; else cur.real += p.stake;
+        stakeMap.set(p.bookmaker_id, cur);
       });
       originalStakesByBookmaker.current = stakeMap;
       
