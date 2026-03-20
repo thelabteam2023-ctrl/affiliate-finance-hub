@@ -2196,6 +2196,7 @@ export function SurebetModalRoot({
                   numPernas={numPernas}
                   moedaDominante={analysis.moedaDominante}
                   insufficientLegs={balanceValidation.insufficientLegs}
+                  insufficientEntries={balanceValidation.insufficientEntries}
                   onResultadoChange={handlePernaResultadoChange}
                   onUpdateOdd={updateOdd}
                   onSetReference={setReferenceIndex}
