@@ -267,21 +267,31 @@ export function SurebetMobileCard({
           </div>
           <div>
             <label className="text-[10px] text-muted-foreground uppercase mb-1 block">Stake</label>
-            <MoneyInput 
-              value={entry.stake}
-              onChange={(val) => onUpdateOdd(pernaIndex, "stake", val)}
-              currency={entry.moeda}
-              minDigits={6}
-              className={cn(
-                "h-9 text-sm text-center tabular-nums",
-                hasInsufficientBalance && "border-destructive focus-visible:ring-destructive/50"
-              )}
-              data-field-type="stake"
-              onKeyDown={(e) => onFieldKeyDown(e as any, 'stake')}
-            />
-            {hasInsufficientBalance && (
-              <span className="text-[9px] text-destructive font-medium mt-0.5 block text-center">Saldo insuficiente</span>
-            )}
+            {(() => {
+              const mainInsuf = insufficientEntries?.get(`main-${pernaIndex}`) || false;
+              const hasFBAvail = (selectedBookmaker?.saldo_freebet ?? 0) > 0;
+              return (
+                <>
+                  <MoneyInput 
+                    value={entry.stake}
+                    onChange={(val) => onUpdateOdd(pernaIndex, "stake", val)}
+                    currency={entry.moeda}
+                    minDigits={6}
+                    className={cn(
+                      "h-9 text-sm text-center tabular-nums",
+                      mainInsuf && "border-destructive focus-visible:ring-destructive/50"
+                    )}
+                    data-field-type="stake"
+                    onKeyDown={(e) => onFieldKeyDown(e as any, 'stake')}
+                  />
+                  {mainInsuf && (
+                    <span className="text-[9px] text-destructive font-medium mt-0.5 block text-center">
+                      {entry.fonteSaldo === 'FREEBET' ? 'FB insuficiente' : 'Saldo insuficiente'}
+                    </span>
+                  )}
+                </>
+              );
+            })()}
           </div>
         </div>
 
