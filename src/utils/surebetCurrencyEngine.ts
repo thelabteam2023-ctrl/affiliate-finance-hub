@@ -58,6 +58,8 @@ export interface EngineLeg {
   isReference: boolean; // perna de referência para equalização
   isManuallyEdited?: boolean;
   isFromPrint?: boolean;
+  /** SNR: Freebet stake não retorna e não conta como custo */
+  isFreebet?: boolean;
 }
 
 /** Resultado de análise de uma perna num cenário */
