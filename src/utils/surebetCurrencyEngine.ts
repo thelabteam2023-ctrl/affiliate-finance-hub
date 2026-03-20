@@ -401,7 +401,7 @@ export function analisarArbitragem(
         payoutLocal: 0,
         payoutConsolidado: 0,
         lucro: -stakeRealTotal,
-        roi: stakeRealTotal > 0 ? (-stakeRealTotal / stakeRealTotal) * 100 : 0,
+        roi: stakeRealTotal > 0 ? -100 : 0,
         isPositive: false,
       };
     }
