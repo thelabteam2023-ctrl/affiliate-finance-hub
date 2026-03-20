@@ -858,7 +858,7 @@ export function SurebetModalRoot({
         const oddVal = parseFloat(value);
         const currentStake = parseFloat(entries[entryIndex].stake) || 0;
         if (oddVal > 1 && currentStake === 0) {
-          const totalNeeded = calculatedStakes?.[pernaIndex] || 0;
+          const totalNeeded = equalizedTargetStakes?.[pernaIndex] || calculatedStakes?.[pernaIndex] || 0;
           const mainStake = parseFloat(newOdds[pernaIndex].stake) || 0;
           const otherSubStakes = entries.reduce((sum, e, idx) => {
             if (idx === entryIndex) return sum; // excluir a própria entrada
