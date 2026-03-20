@@ -22,6 +22,7 @@ interface RawPerna {
   moeda?: string;
   gerou_freebet?: boolean;
   valor_freebet_gerada?: number | null;
+  fonte_saldo?: string | null;
   // Bookmaker join
   bookmaker?: { nome: string; parceiro?: { nome: string } };
 }

@@ -41,6 +41,8 @@ export interface SurebetPerna {
   bookmaker_nome: string;
   bookmaker_id?: string;
   moeda?: string;
+  /** Fonte do saldo: REAL ou FREEBET */
+  fonte_saldo?: string;
   // Campos para múltiplas entradas
   entries?: SurebetPernaEntry[];
   odd_media?: number;
