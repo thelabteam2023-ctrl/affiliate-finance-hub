@@ -1495,6 +1495,7 @@ export function SurebetModalRoot({
             bookmaker_id: flat.bookmaker_id,
             stake: flat.stake,
             odd: flat.odd,
+            fonteSaldo: flat.fonteSaldo || 'REAL',
           }))
           .filter(p => p.resultado && ['GREEN', 'RED', 'MEIO_GREEN', 'MEIO_RED', 'VOID'].includes(p.resultado!));
         
