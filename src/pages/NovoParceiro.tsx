@@ -133,6 +133,11 @@ const NovoParceiro = () => {
         return;
       }
 
+      // Invalidar cache de parceiros para atualizar listagens
+      queryClient.invalidateQueries({ queryKey: ["parceiros"] });
+      queryClient.invalidateQueries({ queryKey: ["parceiro-financeiro"] });
+      queryClient.invalidateQueries({ queryKey: ["parceiro-consolidado"] });
+
       toast({
         title: "Parceiro cadastrado!",
         description: `${nomeTrimmed} foi adicionado com sucesso.`,
