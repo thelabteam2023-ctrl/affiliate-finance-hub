@@ -1246,15 +1246,14 @@ export function SurebetModalRoot({
               .insert({
                 workspace_id: workspaceId,
                 bookmaker_id: flat.bookmaker_id,
-                event_type: 'STAKE',
+                tipo_evento: 'STAKE',
                 tipo_uso: tipoUso,
-                amount: -newStake,
+                valor: -newStake,
                 moeda,
-                reference_id: surebet.id,
-                reference_type: 'aposta',
+                aposta_id: surebet.id,
                 idempotency_key: `stake_${insertedPerna.id}_edit_add`,
-                description: `Stake nova perna (edição)`,
-                created_by: (await supabase.auth.getUser()).data.user?.id || '',
+                descricao: `Stake nova perna (edição)`,
+                created_by: user.id,
               });
             
             if (eventError) {
