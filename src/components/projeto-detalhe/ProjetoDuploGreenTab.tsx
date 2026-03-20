@@ -425,8 +425,8 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
         // Todas as pernas recebem o mesmo resultado (não é arbitragem)
         const allIndices = Array.from({ length: aposta.pernas.length }, (_, i) => i);
         const quickResult: SurebetQuickResult = resultado === 'VOID'
-          ? { type: 'all_void', winners: [] }
-          : { type: 'custom', winners: resultado === 'GREEN' ? allIndices : [] };
+          ? { type: 'all_void', winners: [], label: 'Void Total' }
+          : { type: resultado === 'GREEN' ? 'double_green' : 'single_win', winners: resultado === 'GREEN' ? allIndices : [], label: resultado };
         await handleQuickResolveSurebet(apostaId, quickResult);
         return;
       }
