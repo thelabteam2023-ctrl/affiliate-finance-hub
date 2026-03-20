@@ -353,7 +353,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
           .select(`
             id, aposta_id, bookmaker_id, moeda, selecao, selecao_livre, odd, stake,
             resultado, lucro_prejuizo, gerou_freebet, valor_freebet_gerada,
-            stake_brl_referencia, lucro_prejuizo_brl_referencia,
+            stake_brl_referencia, lucro_prejuizo_brl_referencia, fonte_saldo,
             bookmakers (nome, parceiro:parceiros(nome))
           `)
           .in("aposta_id", apostaIdsMultiLeg)
