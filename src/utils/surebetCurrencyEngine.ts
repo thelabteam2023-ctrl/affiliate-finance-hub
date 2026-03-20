@@ -53,13 +53,17 @@ export interface SurebetEngineConfig {
 /** Perna de entrada para o engine */
 export interface EngineLeg {
   moeda: SupportedCurrency;
-  stakeLocal: number;   // stake na moeda original da casa
+  stakeLocal: number;   // stake TOTAL na moeda original da casa
   odd: number;          // odd média desta perna
   isReference: boolean; // perna de referência para equalização
   isManuallyEdited?: boolean;
   isFromPrint?: boolean;
   /** SNR: Freebet stake não retorna e não conta como custo */
   isFreebet?: boolean;
+  /** Stake de saldo real dentro desta perna (para legs mistas Real+FB) */
+  realStakeLocal?: number;
+  /** Stake de freebet dentro desta perna (para legs mistas Real+FB) */
+  freebetStakeLocal?: number;
 }
 
 /** Resultado de análise de uma perna num cenário */
