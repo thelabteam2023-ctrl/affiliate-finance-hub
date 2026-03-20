@@ -135,6 +135,7 @@ const NovoParceiro = () => {
 
       // Invalidar cache de parceiros para atualizar listagens
       queryClient.invalidateQueries({ queryKey: ["parceiros"] });
+      queryClient.invalidateQueries({ queryKey: ["parceiros-data"] });
       queryClient.invalidateQueries({ queryKey: ["parceiro-financeiro"] });
       queryClient.invalidateQueries({ queryKey: ["parceiro-consolidado"] });
 
