@@ -143,6 +143,39 @@ export function calcularStakeTotal(
   return main + extra;
 }
 
+/**
+ * Calcula a separação Real vs Freebet de uma perna (incluindo sub-entradas).
+ * Retorna { realStakeLocal, freebetStakeLocal } na moeda base da perna.
+ */
+export function calcularStakeSplit(
+  mainEntry: { stake: string; fonteSaldo?: string },
+  additionalEntries?: OddFormEntry[],
+  brlRates?: BRLRates,
+  baseCurrency?: string
+): { realStakeLocal: number; freebetStakeLocal: number } {
+  const mainStake = parseFloat(mainEntry.stake) || 0;
+  const mainIsFB = mainEntry.fonteSaldo === 'FREEBET';
+  let realStake = mainIsFB ? 0 : mainStake;
+  let fbStake = mainIsFB ? mainStake : 0;
+
+  if (additionalEntries) {
+    for (const e of additionalEntries) {
+      let s = parseFloat(e.stake) || 0;
+      const moeda = (e.moeda as string) || baseCurrency || "BRL";
+      if (brlRates && baseCurrency && moeda !== baseCurrency) {
+        s = convertViaBRL(s, moeda, baseCurrency, brlRates);
+      }
+      if (e.fonteSaldo === 'FREEBET') {
+        fbStake += s;
+      } else {
+        realStake += s;
+      }
+    }
+  }
+
+  return { realStakeLocal: realStake, freebetStakeLocal: fbStake };
+}
+
 // ─── Checkbox D — Distribuição de Lucro ──────────────────────
 
 /**
