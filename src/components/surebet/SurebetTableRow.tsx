@@ -309,7 +309,6 @@ export function SurebetTableRow({
               </div>
             );
           })()}
-          </div>
         </td>
         
         {/* Linha */}
