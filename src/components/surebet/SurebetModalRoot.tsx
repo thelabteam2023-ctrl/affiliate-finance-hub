@@ -1444,6 +1444,7 @@ export function SurebetModalRoot({
             selecao_livre: flat.selecaoLivre || null,
             cotacao_snapshot: snapshotFields.cotacao_snapshot,
             stake_brl_referencia: snapshotFields.valor_brl_referencia,
+            fonte_saldo: flat.fonteSaldo || 'REAL',
           };
         });
         
