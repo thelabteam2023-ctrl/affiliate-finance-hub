@@ -143,6 +143,39 @@ export function calcularStakeTotal(
   return main + extra;
 }
 
+/**
+ * Calcula a separação Real vs Freebet de uma perna (incluindo sub-entradas).
+ * Retorna { realStakeLocal, freebetStakeLocal } na moeda base da perna.
+ */
+export function calcularStakeSplit(
+  mainEntry: { stake: string; fonteSaldo?: string },
+  additionalEntries?: OddFormEntry[],
+  brlRates?: BRLRates,
+  baseCurrency?: string
+): { realStakeLocal: number; freebetStakeLocal: number } {
+  const mainStake = parseFloat(mainEntry.stake) || 0;
+  const mainIsFB = mainEntry.fonteSaldo === 'FREEBET';
+  let realStake = mainIsFB ? 0 : mainStake;
+  let fbStake = mainIsFB ? mainStake : 0;
+
+  if (additionalEntries) {
+    for (const e of additionalEntries) {
+      let s = parseFloat(e.stake) || 0;
+      const moeda = (e.moeda as string) || baseCurrency || "BRL";
+      if (brlRates && baseCurrency && moeda !== baseCurrency) {
+        s = convertViaBRL(s, moeda, baseCurrency, brlRates);
+      }
+      if (e.fonteSaldo === 'FREEBET') {
+        fbStake += s;
+      } else {
+        realStake += s;
+      }
+    }
+  }
+
+  return { realStakeLocal: realStake, freebetStakeLocal: fbStake };
+}
+
 // ─── Checkbox D — Distribuição de Lucro ──────────────────────
 
 /**
@@ -377,15 +410,24 @@ export function useSurebetCalculator({
     }
 
     // Construir EngineLeg para o equalizador
-    const engineLegs: EngineLeg[] = odds.map((o, i) => ({
-      moeda: getMoedaPerna(o),
-      stakeLocal: getStakeTotalPerna(o),
-      odd: getOddMediaPerna(o),
-      isReference: o.isReference,
-      isManuallyEdited: o.isManuallyEdited,
-      isFromPrint: o.stakeOrigem === "print",
-      isFreebet: o.fonteSaldo === 'FREEBET',
-    }));
+    const engineLegs: EngineLeg[] = odds.map((o, i) => {
+      const baseCurrency = getMoedaPerna(o);
+      const split = calcularStakeSplit(
+        { stake: o.stake, fonteSaldo: o.fonteSaldo },
+        o.additionalEntries, safeConfig.brlRates, baseCurrency
+      );
+      return {
+        moeda: baseCurrency,
+        stakeLocal: getStakeTotalPerna(o),
+        odd: getOddMediaPerna(o),
+        isReference: o.isReference,
+        isManuallyEdited: o.isManuallyEdited,
+        isFromPrint: o.stakeOrigem === "print",
+        isFreebet: o.fonteSaldo === 'FREEBET' && !o.additionalEntries?.length,
+        realStakeLocal: split.realStakeLocal,
+        freebetStakeLocal: split.freebetStakeLocal,
+      };
+    });
 
     const resultado = calcularStakesEqualizadasMultiCurrency(engineLegs, safeConfig, arredondarStake);
 
@@ -412,15 +454,24 @@ export function useSurebetCalculator({
     // Usar stakes REAIS da tela para análise (não equalizadas)
     const realStakesLocal = odds.map(o => getStakeTotalPerna(o));
 
-    const engineLegs: EngineLeg[] = odds.map((o, i) => ({
-      moeda: getMoedaPerna(o),
-      stakeLocal: realStakesLocal[i],
-      odd: getOddMediaPerna(o),
-      isReference: o.isReference,
-      isManuallyEdited: o.isManuallyEdited,
-      isFromPrint: o.stakeOrigem === "print",
-      isFreebet: o.fonteSaldo === 'FREEBET',
-    }));
+    const engineLegs: EngineLeg[] = odds.map((o, i) => {
+      const baseCurrency = getMoedaPerna(o);
+      const split = calcularStakeSplit(
+        { stake: o.stake, fonteSaldo: o.fonteSaldo },
+        o.additionalEntries, safeConfig.brlRates, baseCurrency
+      );
+      return {
+        moeda: baseCurrency,
+        stakeLocal: realStakesLocal[i],
+        odd: getOddMediaPerna(o),
+        isReference: o.isReference,
+        isManuallyEdited: o.isManuallyEdited,
+        isFromPrint: o.stakeOrigem === "print",
+        isFreebet: o.fonteSaldo === 'FREEBET' && !o.additionalEntries?.length,
+        realStakeLocal: split.realStakeLocal,
+        freebetStakeLocal: split.freebetStakeLocal,
+      };
+    });
 
     // Stakes efetivos para análise: direcionadas se ativo, senão reais
     const effectiveStakes = directedStakesLocal || realStakesLocal;

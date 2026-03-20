@@ -53,13 +53,17 @@ export interface SurebetEngineConfig {
 /** Perna de entrada para o engine */
 export interface EngineLeg {
   moeda: SupportedCurrency;
-  stakeLocal: number;   // stake na moeda original da casa
+  stakeLocal: number;   // stake TOTAL na moeda original da casa
   odd: number;          // odd média desta perna
   isReference: boolean; // perna de referência para equalização
   isManuallyEdited?: boolean;
   isFromPrint?: boolean;
   /** SNR: Freebet stake não retorna e não conta como custo */
   isFreebet?: boolean;
+  /** Stake de saldo real dentro desta perna (para legs mistas Real+FB) */
+  realStakeLocal?: number;
+  /** Stake de freebet dentro desta perna (para legs mistas Real+FB) */
+  freebetStakeLocal?: number;
 }
 
 /** Resultado de análise de uma perna num cenário */
@@ -314,10 +318,36 @@ export function analisarArbitragem(
   // Stake total consolidada (NUNCA pode ser zero se há stakes válidas)
   const stakeTotal = stakesConsolidated.reduce((a, b) => a + b, 0);
 
-  // SNR: Custo real = apenas stakes REAIS (freebet não é custo)
-  const stakeRealTotal = stakesConsolidated.reduce((sum, sc, i) => {
-    return sum + (legs[i]?.isFreebet ? 0 : sc);
-  }, 0);
+  // SNR: Calcular stake real e freebet POR PERNA (suporte a legs mistas)
+  const perLegRealStakeConsolidated: number[] = [];
+  const perLegFbStakeLocal: number[] = [];
+  const perLegRealStakeLocal: number[] = [];
+
+  legs.forEach((leg, i) => {
+    const totalLocal = stakesLocaisEfetivos[i] || 0;
+    let realLocal: number;
+    let fbLocal: number;
+
+    if (leg.realStakeLocal !== undefined || leg.freebetStakeLocal !== undefined) {
+      // Mixed leg: use explicit split
+      realLocal = leg.realStakeLocal ?? totalLocal;
+      fbLocal = leg.freebetStakeLocal ?? 0;
+    } else if (leg.isFreebet) {
+      realLocal = 0;
+      fbLocal = totalLocal;
+    } else {
+      realLocal = totalLocal;
+      fbLocal = 0;
+    }
+
+    perLegRealStakeLocal.push(realLocal);
+    perLegFbStakeLocal.push(fbLocal);
+    perLegRealStakeConsolidated.push(
+      convertViaBRL(realLocal, leg.moeda || "BRL", consolidationCurrency, brlRates)
+    );
+  });
+
+  const stakeRealTotal = perLegRealStakeConsolidated.reduce((a, b) => a + b, 0);
 
   // Pernas completas
   const pernasCompletasCount = legs.filter(
@@ -328,7 +358,8 @@ export function analisarArbitragem(
   const scenarios: LegScenarioResult[] = legs.map((leg, i) => {
     const stakeLocal = stakesLocaisEfetivos[i] || 0;
     const stakeConsolidado = stakesConsolidated[i] || 0;
-    const isFB = leg.isFreebet || false;
+    const realLocal = perLegRealStakeLocal[i];
+    const fbLocal = perLegFbStakeLocal[i];
 
     if (leg.odd <= 1 || stakeLocal <= 0) {
       return {
@@ -344,8 +375,8 @@ export function analisarArbitragem(
       };
     }
 
-    // SNR: Freebet payout = stake*(odd-1), Real = stake*odd
-    const payoutLocal = isFB ? stakeLocal * (leg.odd - 1) : stakeLocal * leg.odd;
+    // SNR: Real payout = realStake * odd, FB payout = fbStake * (odd - 1)
+    const payoutLocal = (realLocal * leg.odd) + (fbLocal * (leg.odd - 1));
 
     // Payout convertido para consolidation
     const payoutConsolidado = convertViaBRL(payoutLocal, leg.moeda, consolidationCurrency, brlRates);
