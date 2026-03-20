@@ -901,7 +901,7 @@ export function SurebetModalRoot({
 
   // ── Auto-fill reativo: quando main stake muda e sub-entradas têm stake vazia ──
   useEffect(() => {
-    if (!equalizedTargetStakes || equalizedTargetStakes.length === 0) return;
+    if (!targetPayoutsLocal || targetPayoutsLocal.length === 0) return;
 
     let needsUpdate = false;
     const newOdds = odds.map((o, i) => {
@@ -916,24 +916,27 @@ export function SurebetModalRoot({
       });
       if (!hasEmptyStakeSub) return o;
 
-      const totalNeeded = equalizedTargetStakes[i] || 0;
-      if (totalNeeded <= 0) return o;
+      const targetPayout = targetPayoutsLocal[i] || 0;
+      if (targetPayout <= 0) return o;
 
+      // Calcular payout já coberto
       const mainStake = parseFloat(o.stake) || 0;
-      let usedSubStakes = 0;
+      const mainOdd = parseFloat(o.odd) || 0;
+      let usedPayout = mainStake * (mainOdd > 1 ? mainOdd : 0);
+
       const updatedEntries = entries.map(e => {
         const oddVal = parseFloat(e.odd) || 0;
         const stakeVal = parseFloat(e.stake) || 0;
         if (stakeVal > 0 || oddVal <= 1) {
-          usedSubStakes += stakeVal;
+          usedPayout += stakeVal * (oddVal > 1 ? oddVal : 0);
           return e;
         }
-        // Calcular remaining para esta sub-entrada
-        const remaining = Math.max(0, totalNeeded - mainStake - usedSubStakes);
-        if (remaining > 0) {
+        // Calcular payout restante e derivar stake
+        const remainingPayout = Math.max(0, targetPayout - usedPayout);
+        if (remainingPayout > 0 && oddVal > 1) {
           needsUpdate = true;
-          const filled = arredondarStake(remaining);
-          usedSubStakes += filled;
+          const filled = arredondarStake(remainingPayout / oddVal);
+          usedPayout += filled * oddVal;
           return { ...e, stake: filled.toFixed(2) };
         }
         return e;
@@ -946,8 +949,8 @@ export function SurebetModalRoot({
       setOdds(newOdds);
     }
   }, [
-    odds.map(o => `${o.stake}-${(o.additionalEntries || []).map(e => `${e.odd}:${e.stake}`).join('|')}`).join(','),
-    equalizedTargetStakes?.join(','),
+    odds.map(o => `${o.stake}-${o.odd}-${(o.additionalEntries || []).map(e => `${e.odd}:${e.stake}`).join('|')}`).join(','),
+    targetPayoutsLocal?.join(','),
   ]);
 
   const handlePernaResultadoChange = useCallback((index: number, resultado: 'GREEN' | 'RED' | 'VOID' | null) => {
