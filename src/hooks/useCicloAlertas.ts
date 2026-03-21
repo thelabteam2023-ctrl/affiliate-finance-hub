@@ -27,6 +27,7 @@ export interface AlertaCiclo {
 }
 
 export function useCicloAlertas() {
+  const { workspaceId } = useAuth();
   const [allAlertas, setAllAlertas] = useState<AlertaCiclo[]>([]);
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
