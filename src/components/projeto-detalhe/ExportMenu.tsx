@@ -130,6 +130,24 @@ export function ExportMenu({
   );
 }
 
+/** Currency conversion function type */
+type ConvertFn = (valor: number, moeda: string) => number;
+
+/**
+ * Helper: apply currency conversion to a monetary value
+ */
+function convertValue(
+  value: number | string | null | undefined,
+  moeda: string,
+  convert?: ConvertFn,
+): number | string {
+  if (value === null || value === undefined || value === '-') return '-';
+  const num = Number(value);
+  if (isNaN(num)) return value;
+  if (!convert || !moeda || moeda === 'BRL') return num;
+  return convert(num, moeda);
+}
+
 /**
  * Helper function to transform Surebet data to export format
  */
@@ -147,19 +165,39 @@ export function transformSurebetToExport(
     status: string;
     lucro_real?: number | null;
     observacoes?: string | null;
+    moeda_operacao?: string | null;
     pernas?: Array<{
       bookmaker_nome?: string;
       selecao?: string;
       odd?: number;
       stake?: number;
+      moeda?: string;
     }>;
   },
-  estrategia: string = 'SUREBET'
+  estrategia: string = 'SUREBET',
+  convert?: ConvertFn,
 ): ExportApostaRecord {
   const bookmakers = surebet.pernas?.map(p => p.bookmaker_nome).filter(Boolean).join(' / ') || '-';
   const selecoes = surebet.pernas?.map(p => p.selecao).filter(Boolean).join(' / ') || '-';
   const odds = surebet.pernas?.map(p => p.odd?.toFixed(2)).filter(Boolean).join(' / ') || '-';
-  
+  const moeda = surebet.moeda_operacao || 'BRL';
+
+  // For multi-currency pernas, convert each perna's stake individually
+  let stakeConvertido: number;
+  if (convert && surebet.pernas && surebet.pernas.length > 0) {
+    stakeConvertido = surebet.pernas.reduce((acc, p) => {
+      const pMoeda = p.moeda || moeda;
+      return acc + convert(Math.abs(p.stake || 0), pMoeda);
+    }, 0);
+  } else {
+    stakeConvertido = surebet.stake_total || 0;
+  }
+
+  const lucroConvertido = convertValue(surebet.lucro_real, moeda, convert);
+  const retornoConvertido = typeof lucroConvertido === 'number'
+    ? stakeConvertido + lucroConvertido
+    : '-';
+
   return {
     id: surebet.id,
     data_hora: surebet.data_operacao,
@@ -170,11 +208,11 @@ export function transformSurebetToExport(
     mercado: surebet.mercado || '-',
     selecao: selecoes,
     odd: odds,
-    stake: surebet.stake_total || 0,
-    retorno: surebet.lucro_real !== null ? surebet.stake_total + (surebet.lucro_real || 0) : '-',
+    stake: stakeConvertido,
+    retorno: retornoConvertido,
     resultado: surebet.resultado || 'PENDENTE',
     status: surebet.status,
-    lucro_prejuizo: surebet.lucro_real ?? '-',
+    lucro_prejuizo: lucroConvertido,
     observacoes: surebet.observacoes || '',
   };
 }
@@ -200,11 +238,17 @@ export function transformApostaToExport(
     observacoes?: string | null;
     bookmaker_nome?: string;
     estrategia?: string | null;
+    moeda_operacao?: string | null;
   },
-  abaOrigem: string = 'Apostas'
+  abaOrigem: string = 'Apostas',
+  convert?: ConvertFn,
 ): ExportApostaRecord {
-  const stake = typeof aposta.stake_total === 'number' ? aposta.stake_total : (aposta.stake || 0);
-  
+  const moeda = aposta.moeda_operacao || 'BRL';
+  const rawStake = typeof aposta.stake_total === 'number' ? aposta.stake_total : (aposta.stake || 0);
+  const stakeConvertido = convert && moeda !== 'BRL' ? convert(rawStake, moeda) : rawStake;
+  const lucroConvertido = convertValue(aposta.lucro_prejuizo, moeda, convert);
+  const retornoConvertido = convertValue(aposta.valor_retorno, moeda, convert);
+
   return {
     id: aposta.id,
     data_hora: aposta.data_aposta,
@@ -215,11 +259,11 @@ export function transformApostaToExport(
     mercado: aposta.mercado || '-',
     selecao: aposta.selecao || '-',
     odd: aposta.odd || 0,
-    stake: stake,
-    retorno: aposta.valor_retorno ?? '-',
+    stake: stakeConvertido,
+    retorno: retornoConvertido,
     resultado: aposta.resultado || 'PENDENTE',
     status: aposta.status,
-    lucro_prejuizo: aposta.lucro_prejuizo ?? '-',
+    lucro_prejuizo: lucroConvertido,
     observacoes: aposta.observacoes || '',
   };
 }
