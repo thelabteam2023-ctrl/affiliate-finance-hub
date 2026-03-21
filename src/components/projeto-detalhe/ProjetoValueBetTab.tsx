@@ -72,7 +72,7 @@ import { OperationsSubTabHeader, type HistorySubTab, SuspiciousDateFilterButton,
 import { ExportMenu, transformApostaToExport } from "./ExportMenu";
 import { SaldoOperavelCard } from "./SaldoOperavelCard";
 // FinancialSummaryCompact removed — now integrated into Lucro KPI popover
-import { useCalendarApostas, transformCalendarApostasForCharts } from "@/hooks/useCalendarApostas";
+import { useCalendarApostasRpc, transformRpcDailyForCharts } from "@/hooks/useCalendarApostasRpc";
 
 interface ProjetoValueBetTabProps {
   projetoId: string;
