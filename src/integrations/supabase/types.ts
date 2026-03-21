@@ -13227,26 +13227,16 @@ export type Database = {
           user_id: string
         }[]
       }
-      get_projeto_apostas_resumo:
-        | {
-            Args: {
-              p_data_fim?: string
-              p_data_inicio?: string
-              p_estrategia?: string
-              p_projeto_id: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_cotacao_usd?: number
-              p_data_fim?: string
-              p_data_inicio?: string
-              p_estrategia?: string
-              p_projeto_id: string
-            }
-            Returns: Json
-          }
+      get_projeto_apostas_resumo: {
+        Args: {
+          p_cotacao_usd?: number
+          p_data_fim?: string
+          p_data_inicio?: string
+          p_estrategia?: string
+          p_projeto_id: string
+        }
+        Returns: Json
+      }
       get_projeto_dashboard_data: {
         Args: { p_projeto_id: string }
         Returns: Json
