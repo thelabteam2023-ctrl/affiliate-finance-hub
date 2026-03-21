@@ -648,24 +648,37 @@ export default function ProjetoDetalhe() {
               breakdown={kpiBreakdowns?.apostas || null}
               title="Entradas por Módulo"
             >
-              <div className="flex flex-col cursor-help min-w-[70px]">
-                <span className="text-xs text-muted-foreground leading-tight">Apostas</span>
-                <span className="text-base md:text-lg font-bold leading-tight">{apostasResumo?.total_apostas || 0}</span>
-                <div className="flex items-center gap-2 text-xs leading-tight mt-0.5">
-                  <span className="inline-flex items-center gap-0.5 text-emerald-500 font-semibold">
-                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                    {apostasResumo?.greens || 0}
-                  </span>
-                  <span className="inline-flex items-center gap-0.5 text-red-500 font-semibold">
-                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500" />
-                    {apostasResumo?.reds || 0}
-                  </span>
-                  <span className="inline-flex items-center gap-0.5 text-muted-foreground font-semibold">
-                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-muted-foreground/60" />
-                    {apostasResumo?.voids || 0}
-                  </span>
-                </div>
-              </div>
+              {(() => {
+                // Derive greens/reds/voids from kpiBreakdowns (source of truth)
+                const apostasContrib = kpiBreakdowns?.apostas?.contributions?.find(c => c.moduleId === 'apostas');
+                const details = apostasContrib?.details || '';
+                const gMatch = details.match(/(\d+)G/);
+                const rMatch = details.match(/(\d+)R/);
+                const vMatch = details.match(/(\d+)V/);
+                const greens = gMatch ? Number(gMatch[1]) : 0;
+                const reds = rMatch ? Number(rMatch[1]) : 0;
+                const voids = vMatch ? Number(vMatch[1]) : 0;
+                return (
+                  <div className="flex flex-col cursor-help min-w-[70px]">
+                    <span className="text-xs text-muted-foreground leading-tight">Apostas</span>
+                    <span className="text-base md:text-lg font-bold leading-tight">{kpiBreakdowns?.apostas?.total || 0}</span>
+                    <div className="flex items-center gap-2 text-xs leading-tight mt-0.5">
+                      <span className="inline-flex items-center gap-0.5 text-emerald-500 font-semibold">
+                        <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        {greens}
+                      </span>
+                      <span className="inline-flex items-center gap-0.5 text-red-500 font-semibold">
+                        <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500" />
+                        {reds}
+                      </span>
+                      <span className="inline-flex items-center gap-0.5 text-muted-foreground font-semibold">
+                        <span className="inline-block w-1.5 h-1.5 rounded-full bg-muted-foreground/60" />
+                        {voids}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })()}
             </CountBreakdownTooltip>
 
             <div className="h-8 w-px bg-border/50 hidden sm:block flex-shrink-0" />
