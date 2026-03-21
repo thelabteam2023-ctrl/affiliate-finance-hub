@@ -338,7 +338,7 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
   }
 
   // Distinguir entre "projeto sem apostas" e "filtro sem resultados"
-  const hasAnyBetsInProject = apostasCalendario.length > 0;
+  const hasAnyBetsInProject = calendarDaily.length > 0 || (calendarResumo?.total_apostas ?? 0) > 0;
 
   if (!hasAnyBetsInProject && apostasUnificadas.length === 0) {
     return (
