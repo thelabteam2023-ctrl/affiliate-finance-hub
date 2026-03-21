@@ -106,27 +106,29 @@ export function useHistoricoCaptacao() {
           valor_parceiro,
           valor_fornecedor,
           workspace_id
-        `).eq("workspace_id", workspaceId),
+        `).eq("workspace_id", workspaceId).limit(10000),
         // Parceiros - filtrar por workspace_id
-        supabase.from("parceiros").select("id, nome, workspace_id").eq("workspace_id", workspaceId),
+        supabase.from("parceiros").select("id, nome, workspace_id").eq("workspace_id", workspaceId).limit(10000),
         // Indicações - filtrar por workspace_id
-        supabase.from("indicacoes").select("id, indicador_id, workspace_id").eq("workspace_id", workspaceId),
+        supabase.from("indicacoes").select("id, indicador_id, workspace_id").eq("workspace_id", workspaceId).limit(10000),
         // Indicadores - filtrar por workspace_id
-        supabase.from("indicadores_referral").select("id, nome, workspace_id").eq("workspace_id", workspaceId),
+        supabase.from("indicadores_referral").select("id, nome, workspace_id").eq("workspace_id", workspaceId).limit(10000),
         // Fornecedores - filtrar por workspace_id
-        supabase.from("fornecedores").select("id, nome, workspace_id").eq("workspace_id", workspaceId),
+        supabase.from("fornecedores").select("id, nome, workspace_id").eq("workspace_id", workspaceId).limit(10000),
         // Movimentações - filtrar por workspace_id
         supabase.from("movimentacoes_indicacao")
           .select("parceria_id, parceiro_id, tipo, valor, status, workspace_id")
           .eq("workspace_id", workspaceId)
-          .eq("status", "CONFIRMADO"),
+          .eq("status", "CONFIRMADO")
+          .limit(10000),
         // Apostas - filtrar por workspace_id
         supabase.from("apostas_unificada")
           .select("bookmaker_id, lucro_prejuizo, resultado, workspace_id")
           .eq("workspace_id", workspaceId)
-          .not("resultado", "in", "(PENDENTE,VOID)"),
+          .not("resultado", "in", "(PENDENTE,VOID)")
+          .limit(10000),
         // Bookmakers - filtrar por workspace_id
-        supabase.from("bookmakers").select("id, parceiro_id, workspace_id").eq("workspace_id", workspaceId),
+        supabase.from("bookmakers").select("id, parceiro_id, workspace_id").eq("workspace_id", workspaceId).limit(10000),
       ]);
 
       if (parceriasResult.error) throw parceriasResult.error;

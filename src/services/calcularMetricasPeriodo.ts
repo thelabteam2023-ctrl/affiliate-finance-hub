@@ -150,7 +150,7 @@ export async function calcularMetricasPeriodo({
       : Promise.resolve({ data: null, error: null }),
 
     incluirDetalhePerdas
-      ? supabase.from("bookmakers").select("id, nome")
+      ? supabase.from("bookmakers").select("id, nome").limit(10000)
       : Promise.resolve({ data: null, error: null }),
 
     // Saques confirmados no período (cash_ledger usa UTC midnight)

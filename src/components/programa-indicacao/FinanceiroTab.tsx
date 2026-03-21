@@ -193,14 +193,13 @@ export function FinanceiroTab() {
 
       // Fetch all data in parallel - use workspace-scoped views to prevent data leakage
       const [movResult, custosResult, acordosResult, parceriasResult, indicacoesResult, indicadoresResult, parceirosResult, parceirosNomesResult, fornecedoresParceriasResult, fornecedoresNomesResult] = await Promise.all([
-        // Use workspace-scoped view for movimentacoes
         supabase
           .from("v_movimentacoes_indicacao_workspace")
           .select("*")
-          .order("data_movimentacao", { ascending: false }),
-        supabase.from("v_custos_aquisicao").select("*"),
-        supabase.from("indicador_acordos").select("*").eq("ativo", true),
-        // Fetch parcerias with comissão pendente - exclude dispensed
+          .order("data_movimentacao", { ascending: false })
+          .limit(10000),
+        supabase.from("v_custos_aquisicao").select("*").limit(10000),
+        supabase.from("indicador_acordos").select("*").eq("ativo", true).limit(10000),
         supabase
           .from("parcerias")
           .select(`
@@ -215,16 +214,16 @@ export function FinanceiroTab() {
           .eq("comissao_paga", false)
           .eq("pagamento_dispensado", false)
           .not("valor_comissao_indicador", "is", null)
-          .gt("valor_comissao_indicador", 0),
-        // Use workspace-scoped view for indicacoes
+          .gt("valor_comissao_indicador", 0)
+          .limit(10000),
         supabase
           .from("v_indicacoes_workspace")
-          .select("id, parceiro_id, indicador_id"),
-        // indicadores_referral has workspace RLS
+          .select("id, parceiro_id, indicador_id")
+          .limit(10000),
         supabase
           .from("indicadores_referral")
-          .select("id, nome"),
-        // parcerias table has workspace RLS
+          .select("id, nome")
+          .limit(10000),
         supabase
           .from("parcerias")
           .select(`
@@ -239,10 +238,9 @@ export function FinanceiroTab() {
           .in("status", ["ATIVA", "EM_ENCERRAMENTO"])
           .or("custo_aquisicao_isento.is.null,custo_aquisicao_isento.eq.false")
           .gt("valor_parceiro", 0)
-          .eq("pagamento_dispensado", false),
-        // Fetch all parceiros for name resolution in history
-        supabase.from("parceiros").select("id, nome"),
-        // Fetch parcerias com fornecedor (valor_fornecedor > 0)
+          .eq("pagamento_dispensado", false)
+          .limit(10000),
+        supabase.from("parceiros").select("id, nome").limit(10000),
         supabase
           .from("parcerias")
           .select(`
@@ -253,9 +251,9 @@ export function FinanceiroTab() {
           `)
           .in("status", ["ATIVA", "EM_ENCERRAMENTO"])
           .not("fornecedor_id", "is", null)
-          .gt("valor_fornecedor", 0),
-        // Fetch fornecedores names
-        supabase.from("fornecedores").select("id, nome"),
+          .gt("valor_fornecedor", 0)
+          .limit(10000),
+        supabase.from("fornecedores").select("id, nome").limit(10000),
       ]);
 
       if (movResult.error) throw movResult.error;

@@ -35,9 +35,9 @@ export function usePerformanceConsolidada(periodo: PeriodoAnalise): UsePerforman
     }
 
     const [projetos, bookmakers, operadores] = await Promise.all([
-      supabase.from('projetos').select('id, status').eq('workspace_id', workspaceId),
-      supabase.from('bookmakers').select('id').eq('workspace_id', workspaceId),
-      supabase.from('operador_projetos').select('id').eq('status', 'ATIVO'),
+      supabase.from('projetos').select('id, status').eq('workspace_id', workspaceId).limit(10000),
+      supabase.from('bookmakers').select('id').eq('workspace_id', workspaceId).limit(10000),
+      supabase.from('operador_projetos').select('id').eq('status', 'ATIVO').limit(10000),
     ]);
 
     return {

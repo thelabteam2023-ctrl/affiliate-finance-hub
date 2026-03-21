@@ -67,28 +67,28 @@ async function fetchFinancialMetricsRaw(projetoId: string): Promise<FinancialMet
   const [depositos, saques, saquesPend, cashbackM, cashbackE, giros, ajustes, perdasOp, perdasFx, ganhosFx] = await Promise.all([
     supabase.from("cash_ledger").select("valor, moeda")
       .in("tipo_transacao", ["DEPOSITO", "DEPOSITO_VIRTUAL"])
-      .eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId),
+      .eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId).limit(10000),
     supabase.from("cash_ledger").select("valor, valor_confirmado, moeda")
       .in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])
-      .eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId),
+      .eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId).limit(10000),
     supabase.from("cash_ledger").select("valor, moeda")
       .in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])
-      .eq("status", "PENDENTE").eq("projeto_id_snapshot", projetoId),
+      .eq("status", "PENDENTE").eq("projeto_id_snapshot", projetoId).limit(10000),
     // Reconciliation components
     supabase.from("cash_ledger").select("valor, moeda")
-      .eq("tipo_transacao", "CASHBACK_MANUAL").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId),
+      .eq("tipo_transacao", "CASHBACK_MANUAL").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId).limit(10000),
     supabase.from("cash_ledger").select("valor, moeda")
-      .eq("tipo_transacao", "CASHBACK_ESTORNO").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId),
+      .eq("tipo_transacao", "CASHBACK_ESTORNO").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId).limit(10000),
     supabase.from("cash_ledger").select("valor, moeda")
-      .eq("tipo_transacao", "GIRO_GRATIS").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId),
+      .eq("tipo_transacao", "GIRO_GRATIS").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId).limit(10000),
     supabase.from("cash_ledger").select("valor, moeda, ajuste_direcao")
-      .eq("tipo_transacao", "AJUSTE_SALDO").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId),
+      .eq("tipo_transacao", "AJUSTE_SALDO").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId).limit(10000),
     supabase.from("cash_ledger").select("valor, moeda")
-      .eq("tipo_transacao", "PERDA_OPERACIONAL").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId),
+      .eq("tipo_transacao", "PERDA_OPERACIONAL").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId).limit(10000),
     supabase.from("cash_ledger").select("valor, moeda")
-      .eq("tipo_transacao", "PERDA_CAMBIAL").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId),
+      .eq("tipo_transacao", "PERDA_CAMBIAL").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId).limit(10000),
     supabase.from("cash_ledger").select("valor, moeda")
-      .eq("tipo_transacao", "GANHO_CAMBIAL").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId),
+      .eq("tipo_transacao", "GANHO_CAMBIAL").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId).limit(10000),
   ]);
 
   // Timeline: all deposits and withdrawals with dates for break-even calculation
@@ -98,7 +98,8 @@ async function fetchFinancialMetricsRaw(projetoId: string): Promise<FinancialMet
     .in("tipo_transacao", ["DEPOSITO", "DEPOSITO_VIRTUAL", "SAQUE", "SAQUE_VIRTUAL"])
     .eq("status", "CONFIRMADO")
     .eq("projeto_id_snapshot", projetoId)
-    .order("data_transacao", { ascending: true });
+    .order("data_transacao", { ascending: true })
+    .limit(10000);
 
   return {
     bookmakerSaldos,

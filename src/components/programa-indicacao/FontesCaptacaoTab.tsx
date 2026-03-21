@@ -216,14 +216,14 @@ export function FontesCaptacaoTab() {
       setLoading(true);
       
       const [indicadoresRes, acordosRes, fornecedoresRes, parceriasRes, custosDiretosRes, lucrosDiretosRes, pagamentosRes, indicacoesRes] = await Promise.all([
-        supabase.from("v_indicador_performance").select("*"),
-        supabase.from("indicador_acordos").select("*").eq("ativo", true),
-        supabase.from("fornecedores").select("*").order("nome"),
-        supabase.from("parcerias").select("id, fornecedor_id, valor_fornecedor, pagamento_dispensado, dispensa_motivo, parceiro:parceiros!parcerias_parceiro_id_fkey(nome)").eq("origem_tipo", "FORNECEDOR"),
-        supabase.from("v_custos_aquisicao").select("parceiro_id, custo_total").eq("origem_tipo", "DIRETO"),
-        supabase.from("v_parceiro_lucro_total").select("parceiro_id, lucro_projetos"),
-        supabase.from("movimentacoes_indicacao").select("parceria_id, valor, tipo, status").eq("tipo", "PAGTO_FORNECEDOR").eq("status", "CONFIRMADO"),
-        supabase.from("indicacoes").select("indicador_id, parceiro:parceiros!indicacoes_parceiro_id_fkey(nome)"),
+        supabase.from("v_indicador_performance").select("*").limit(10000),
+        supabase.from("indicador_acordos").select("*").eq("ativo", true).limit(10000),
+        supabase.from("fornecedores").select("*").order("nome").limit(10000),
+        supabase.from("parcerias").select("id, fornecedor_id, valor_fornecedor, pagamento_dispensado, dispensa_motivo, parceiro:parceiros!parcerias_parceiro_id_fkey(nome)").eq("origem_tipo", "FORNECEDOR").limit(10000),
+        supabase.from("v_custos_aquisicao").select("parceiro_id, custo_total").eq("origem_tipo", "DIRETO").limit(10000),
+        supabase.from("v_parceiro_lucro_total").select("parceiro_id, lucro_projetos").limit(10000),
+        supabase.from("movimentacoes_indicacao").select("parceria_id, valor, tipo, status").eq("tipo", "PAGTO_FORNECEDOR").eq("status", "CONFIRMADO").limit(10000),
+        supabase.from("indicacoes").select("indicador_id, parceiro:parceiros!indicacoes_parceiro_id_fkey(nome)").limit(10000),
       ]);
 
       if (indicadoresRes.error) throw indicadoresRes.error;
