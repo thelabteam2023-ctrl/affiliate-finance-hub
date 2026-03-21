@@ -486,14 +486,6 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
             <Link2 className="h-4 w-4" />
             Ativos ({vinculos.length})
           </TabsTrigger>
-          <TabsTrigger value="historico" className="flex items-center gap-2">
-            <History className="h-4 w-4" />
-            Histórico ({historicoCount.total})
-          </TabsTrigger>
-          <TabsTrigger value="conciliacoes" className="flex items-center gap-2">
-            <ArrowRightLeft className="h-4 w-4" />
-            Ajustes
-          </TabsTrigger>
           <TabsTrigger value="extrato" className="flex items-center gap-2">
             <ArrowUpFromLine className="h-4 w-4" />
             {isBroker ? "Extrato Broker" : "Extrato"}
