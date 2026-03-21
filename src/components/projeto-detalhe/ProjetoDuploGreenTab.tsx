@@ -194,8 +194,8 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
   // Hook global de logos de bookmakers (busca do catálogo)
   const { logoMap: catalogLogoMap } = useBookmakerLogoMap();
   
-  // DESACOPLAMENTO CALENDÁRIO: Dados separados para o calendário (sem filtro de período)
-  const { apostas: calendarApostas, refetch: refetchCalendar } = useCalendarApostas({
+  // DESACOPLAMENTO CALENDÁRIO: Dados via RPC (sem truncamento, timezone correto)
+  const { daily: calendarDaily, refetch: refetchCalendar } = useCalendarApostasRpc({
     projetoId,
     estrategia: "DUPLO_GREEN",
   });
