@@ -50,6 +50,21 @@ const defaultFormatCurrencyFull = (value: number): string => {
   }).format(value);
 };
 
+/** Formata valor compacto para caber na célula do calendário */
+function formatCompactValue(value: number): string {
+  const abs = Math.abs(value);
+  if (abs >= 1000) {
+    return `${value < 0 ? "-" : ""}${(abs / 1000).toFixed(1).replace(/\.0$/, "")}k`;
+  }
+  if (abs >= 100) {
+    return `${value < 0 ? "-" : ""}${Math.round(abs)}`;
+  }
+  if (abs >= 10) {
+    return `${value < 0 ? "-" : ""}${abs.toFixed(0)}`;
+  }
+  return `${value < 0 ? "-" : ""}${abs.toFixed(1)}`;
+}
+
 /** Calcula a intensidade do heatmap (0-4) com base no valor */
 function getIntensityLevel(value: number, maxAbsValue: number): number {
   if (maxAbsValue === 0) return 0;
