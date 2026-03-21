@@ -109,8 +109,8 @@ export async function calcularMetricasPeriodo({
   const [
     // 1. Lucro Operacional (DELEGADO ao KPI canônico com filtro de data)
     lucroKpiResult,
-    // 2. Apostas (para contagem, volume e lucro bruto)
-    apostasResult,
+    // 2. Apostas resumo via RPC (elimina truncamento de 1000 linhas)
+    apostasRpcResult,
     // 3. Perdas (para detalhes na UI)
     perdasResult,
     // 4. Bookmakers (nomes para perdas)
@@ -130,14 +130,12 @@ export async function calcularMetricasPeriodo({
       dataFim,
     }),
 
-    // Apostas: para contagem e volume (mesma query do dashboard ProjetoDetalhe)
-    supabase
-      .from("apostas_unificada")
-      .select("id, lucro_prejuizo, pl_consolidado, lucro_prejuizo_brl_referencia, stake, stake_total, stake_consolidado, status, forma_registro, moeda_operacao, consolidation_currency")
-      .eq("projeto_id", projetoId)
-      .is("cancelled_at", null)
-      .gte("data_aposta", startUTC)
-      .lte("data_aposta", endUTC),
+    // RPC server-side: contagem + volume + resultados sem truncamento
+    supabase.rpc('get_projeto_apostas_resumo', {
+      p_projeto_id: projetoId,
+      p_data_inicio: dataInicio,
+      p_data_fim: dataFim,
+    }),
 
     // Perdas (detalhes para UI)
     incluirDetalhePerdas
@@ -174,31 +172,20 @@ export async function calcularMetricasPeriodo({
       .lte("data_transacao", cashLedgerEnd),
   ]);
 
-  if (apostasResult.error) console.error("[calcularMetricasPeriodo] Erro apostas:", apostasResult.error);
+  if (apostasRpcResult.error) console.error("[calcularMetricasPeriodo] Erro RPC apostas:", apostasRpcResult.error);
 
-  const apostas = apostasResult.data || [];
+  const rpcData = (apostasRpcResult.data as any) || {};
   const bookmakerMap = new Map((bookmakersResult.data || []).map((b: any) => [b.id, b.nome]));
 
   // ═══════════════════════════════════════════════════════════════════
-  // CONTAGEM DE APOSTAS (mesma lógica do dashboard ProjetoDetalhe.tsx)
-  // Simples/Múltiplas: 1 por registro | Arbitragem: 1 por perna
+  // CONTAGEM DE APOSTAS (via RPC — sem truncamento)
   // ═══════════════════════════════════════════════════════════════════
-  const arbitragemIds = apostas
-    .filter(a => a.forma_registro === "ARBITRAGEM")
-    .map(a => a.id);
-  const apostasNaoArbitragem = apostas.filter(a => a.forma_registro !== "ARBITRAGEM").length;
+  const qtdApostas = Number(rpcData.total_apostas || 0);
 
-  let pernasCount = 0;
-  let pernasData: Array<{ aposta_id: string; stake: number; moeda: string }> = [];
-  if (arbitragemIds.length > 0) {
-    const { data: fetchedPernas, count } = await supabase
-      .from("apostas_pernas")
-      .select("aposta_id, stake, moeda", { count: "exact" })
-      .in("aposta_id", arbitragemIds);
-    pernasCount = count || 0;
-    pernasData = fetchedPernas || [];
-  }
-  const qtdApostas = apostasNaoArbitragem + pernasCount;
+  // ═══════════════════════════════════════════════════════════════════
+  // VOLUME (via RPC total_stake — sem truncamento)
+  // ═══════════════════════════════════════════════════════════════════
+  const volume = Number(rpcData.total_stake || 0);
 
   // Build pernas map for per-leg volume consolidation
   const pernasMap = new Map<string, Array<{ stake: number; moeda: string }>>();
