@@ -72,7 +72,7 @@ import { OperationsSubTabHeader, type HistorySubTab, SuspiciousDateFilterButton,
 import { ExportMenu, transformApostaToExport } from "./ExportMenu";
 import { SaldoOperavelCard } from "./SaldoOperavelCard";
 // FinancialSummaryCompact removed — now integrated into Lucro KPI popover
-import { useCalendarApostas, transformCalendarApostasForCharts } from "@/hooks/useCalendarApostas";
+import { useCalendarApostasRpc, transformRpcDailyForCharts } from "@/hooks/useCalendarApostasRpc";
 
 interface ProjetoValueBetTabProps {
   projetoId: string;
@@ -193,8 +193,8 @@ export function ProjetoValueBetTab({
   // Hook para invalidar cache de saldos
   const invalidateSaldos = useInvalidateBookmakerSaldos();
   
-  // DESACOPLAMENTO CALENDÁRIO: Dados separados para o calendário (sem filtro de período)
-  const { apostas: calendarApostas, refetch: refetchCalendar } = useCalendarApostas({
+  // DESACOPLAMENTO CALENDÁRIO: Dados via RPC (sem truncamento, timezone correto)
+  const { daily: calendarDaily, refetch: refetchCalendar } = useCalendarApostasRpc({
     projetoId,
     estrategia: "VALUEBET",
   });
@@ -1088,7 +1088,7 @@ export function ProjetoValueBetTab({
         <>
           <VisaoGeralCharts 
             apostas={apostas} 
-            apostasCalendario={transformCalendarApostasForCharts(calendarApostas)}
+            apostasCalendario={transformRpcDailyForCharts(calendarDaily)}
             logoMap={logoMap}
             isSingleDayPeriod={tabFilters.period === "1dia"}
             periodStart={dateRange?.start}

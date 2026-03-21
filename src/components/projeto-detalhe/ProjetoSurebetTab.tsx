@@ -72,7 +72,7 @@ import { OperationsSubTabHeader, type HistorySubTab, SuspiciousDateFilterButton,
 import { ExportMenu, transformSurebetToExport, transformApostaToExport } from "./ExportMenu";
 import { SaldoOperavelCard } from "./SaldoOperavelCard";
 // FinancialSummaryCompact removed — now integrated into Lucro KPI popover
-import { useCalendarApostas, transformCalendarApostasForCharts } from "@/hooks/useCalendarApostas";
+import { useCalendarApostasRpc, transformRpcDailyForCharts } from "@/hooks/useCalendarApostasRpc";
 import { ChartEmptyState } from "@/components/ui/chart-empty-state";
 
 interface ProjetoSurebetTabProps {
@@ -218,8 +218,8 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
   const { getRate, lastUpdate: rateLastUpdate } = useCotacoes();
   const currencySymbol = getSymbol();
   
-  // DESACOPLAMENTO CALENDÁRIO: Dados separados para o calendário (sem filtro de período)
-  const { apostas: calendarApostas, refetch: refetchCalendar } = useCalendarApostas({
+  // DESACOPLAMENTO CALENDÁRIO: Dados via RPC (sem truncamento, timezone correto)
+  const { daily: calendarDaily, refetch: refetchCalendar } = useCalendarApostasRpc({
     projetoId,
     estrategia: "SUREBET",
   });
@@ -1264,7 +1264,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
                       }))
                 };
               })}
-              apostasCalendario={transformCalendarApostasForCharts(calendarApostas)}
+              apostasCalendario={transformRpcDailyForCharts(calendarDaily)}
               accentColor="hsl(var(--primary))"
               logoMap={logoMap}
               showCasasCard={false}

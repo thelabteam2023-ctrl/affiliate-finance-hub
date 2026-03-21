@@ -20,7 +20,7 @@ import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { VisaoGeralCharts } from "./VisaoGeralCharts";
 import { fetchProjetoExtras, type ProjetoExtraEntry } from "@/services/fetchProjetoExtras";
-import { useCalendarApostas, transformCalendarApostasForCharts } from "@/hooks/useCalendarApostas";
+import { useCalendarApostasRpc, transformRpcDailyForCharts } from "@/hooks/useCalendarApostasRpc";
 
 import { PerformancePorCasaCard } from "./PerformancePorCasaCard";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod } from "./StandardTimeFilter";
@@ -180,9 +180,8 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
     return `${dateRange.start.toISOString()}_${dateRange.end.toISOString()}`;
   }, [dateRange]);
 
-  // ---- useCalendarApostas: Calendar apostas (no period filter, with operacoes) ----
-  const { apostas: calendarApostasRaw = [] } = useCalendarApostas({ projetoId });
-  const apostasCalendario = calendarApostasRaw;
+  // ---- useCalendarApostasRpc: Calendar data via RPC (sem truncamento, timezone correto) ----
+  const { daily: calendarDaily, resumo: calendarResumo } = useCalendarApostasRpc({ projetoId });
 
   // ---- useQuery: Filtered apostas (with period) ----
   const { 
@@ -339,7 +338,7 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
   }
 
   // Distinguir entre "projeto sem apostas" e "filtro sem resultados"
-  const hasAnyBetsInProject = apostasCalendario.length > 0;
+  const hasAnyBetsInProject = calendarDaily.length > 0 || (calendarResumo?.total_apostas ?? 0) > 0;
 
   if (!hasAnyBetsInProject && apostasUnificadas.length === 0) {
     return (
@@ -378,7 +377,7 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
 
       <VisaoGeralCharts 
         apostas={apostasParaGraficos}
-        apostasCalendario={transformCalendarApostasForCharts(calendarApostasRaw)}
+        apostasCalendario={transformRpcDailyForCharts(calendarDaily)}
         extrasLucro={extrasLucro}
         accentColor="hsl(var(--primary))"
         logoMap={catalogLogoMap}
