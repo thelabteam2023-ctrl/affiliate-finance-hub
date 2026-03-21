@@ -1,4 +1,5 @@
 import { useParams } from "react-router-dom";
+import labbetLogo from "@/assets/labbet-logo.png";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Lock, Clock, AlertTriangle, TrendingUp, TrendingDown, BarChart3, Target } from "lucide-react";
