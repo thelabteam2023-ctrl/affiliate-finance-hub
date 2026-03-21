@@ -1491,7 +1491,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                           stake: p.stake,
                           moeda: p.moeda,
                         })),
-                      }, s.estrategia || "SUREBET", convertToConsolidationOficial);
+                      }, s.estrategia || "SUREBET", convertToConsolidation);
                     }
                     const a = u.data as Aposta | ApostaMultipla;
                     return transformApostaToExport({
