@@ -569,10 +569,16 @@ export default function SystemAdmin() {
                       <CardTitle>Gestão de Workspaces</CardTitle>
                       <CardDescription>Gerencie todos os workspaces e planos</CardDescription>
                     </div>
-                    <Button variant="outline" size="sm" onClick={() => fetchWorkspaces()} disabled={loading}>
-                      <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                      Atualizar
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" onClick={() => fetchWorkspaces()} disabled={loading}>
+                        <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                        Atualizar
+                      </Button>
+                      <Button size="sm" onClick={() => setCreateWorkspaceDialog({ open: true, userId: '', userName: '' })}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Novo Workspace
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
