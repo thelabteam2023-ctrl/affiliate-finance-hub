@@ -1566,11 +1566,13 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
         <HistoricoConciliacoesTab projetoId={projetoId} />
       </TabsContent>
 
-      {isBroker && (
-        <TabsContent value="saques-broker">
+      <TabsContent value="extrato">
+        {isBroker ? (
           <SaquesBrokerTab projetoId={projetoId} />
-        </TabsContent>
-      )}
+        ) : (
+          <ExtratoProjetoTab projetoId={projetoId} />
+        )}
+      </TabsContent>
 
       <ConciliacaoVinculoDialog
         open={conciliacaoDialogOpen}
