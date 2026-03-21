@@ -1241,6 +1241,83 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
               showViewToggle={true}
               searchQuery={searchTerm}
               onSearchChange={setSearchTerm}
+              extraActions={
+                <ExportMenu
+                  getData={() => {
+                    const convertFn = (valor: number, moeda: string) => {
+                      if (!moeda || moeda === moedaConsolidacao) return valor;
+                      return convertToConsolidation(valor, moeda);
+                    };
+                    const listaAtual = subTab === "abertas" ? apostasAbertas : apostasHistoricoFiltered;
+                    return listaAtual.map(item => {
+                      if (item.tipo === "surebet") {
+                        const sb = item.data as Surebet;
+                        return transformSurebetToExport({
+                          id: sb.id,
+                          data_operacao: sb.data_operacao,
+                          evento: sb.evento,
+                          esporte: sb.esporte,
+                          mercado: sb.mercado,
+                          modelo: sb.modelo,
+                          stake_total: sb.stake_total,
+                          spread_calculado: sb.spread_calculado,
+                          resultado: sb.resultado,
+                          status: sb.status,
+                          lucro_real: sb.lucro_real,
+                          observacoes: sb.observacoes,
+                          moeda_operacao: sb.pernas?.[0]?.moeda || null,
+                          pernas: sb.pernas?.map(p => ({
+                            bookmaker_nome: p.bookmaker_nome || p.bookmaker?.nome,
+                            selecao: p.selecao,
+                            odd: p.odd,
+                            stake: p.stake,
+                            moeda: p.moeda,
+                          })),
+                        }, "BONUS", convertFn);
+                      }
+                      if (item.tipo === "multipla") {
+                        const am = item.data as ApostaMultipla;
+                        return transformApostaToExport({
+                          id: am.id,
+                          data_aposta: am.data_aposta,
+                          evento: am.selecoes?.map(s => s.descricao).join(' / ') || '-',
+                          selecao: am.selecoes?.map(s => s.descricao).join(' / ') || '-',
+                          odd: am.odd_final,
+                          stake: am.stake,
+                          resultado: am.resultado,
+                          status: am.status,
+                          lucro_prejuizo: am.lucro_prejuizo,
+                          valor_retorno: am.valor_retorno,
+                          bookmaker_nome: am.bookmaker?.nome || '-',
+                          estrategia: "BONUS",
+                          moeda_operacao: am.moeda_operacao || null,
+                        }, "Bônus", convertFn);
+                      }
+                      const ap = item.data as Aposta;
+                      return transformApostaToExport({
+                        id: ap.id,
+                        data_aposta: ap.data_aposta,
+                        evento: ap.evento,
+                        mercado: ap.mercado,
+                        selecao: ap.selecao,
+                        odd: ap.odd,
+                        stake: ap.stake,
+                        resultado: ap.resultado,
+                        status: ap.status,
+                        lucro_prejuizo: ap.lucro_prejuizo,
+                        valor_retorno: ap.valor_retorno,
+                        observacoes: ap.observacoes,
+                        bookmaker_nome: ap.bookmaker?.nome || '-',
+                        estrategia: "BONUS",
+                        moeda_operacao: ap.moeda_operacao || null,
+                      }, "Bônus", convertFn);
+                    });
+                  }}
+                  abaOrigem="Bônus"
+                  filename={`bonus-${projetoId}-${format(new Date(), 'yyyy-MM-dd')}`}
+                  filtrosAplicados={{}}
+                />
+              }
             />
           </div>
           <div className="flex flex-wrap items-center gap-4">
