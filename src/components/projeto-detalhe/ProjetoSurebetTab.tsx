@@ -218,8 +218,8 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
   const { getRate, lastUpdate: rateLastUpdate } = useCotacoes();
   const currencySymbol = getSymbol();
   
-  // DESACOPLAMENTO CALENDÁRIO: Dados separados para o calendário (sem filtro de período)
-  const { apostas: calendarApostas, refetch: refetchCalendar } = useCalendarApostas({
+  // DESACOPLAMENTO CALENDÁRIO: Dados via RPC (sem truncamento, timezone correto)
+  const { daily: calendarDaily, refetch: refetchCalendar } = useCalendarApostasRpc({
     projetoId,
     estrategia: "SUREBET",
   });
