@@ -569,10 +569,16 @@ export default function SystemAdmin() {
                       <CardTitle>Gestão de Workspaces</CardTitle>
                       <CardDescription>Gerencie todos os workspaces e planos</CardDescription>
                     </div>
-                    <Button variant="outline" size="sm" onClick={() => fetchWorkspaces()} disabled={loading}>
-                      <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                      Atualizar
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" onClick={() => fetchWorkspaces()} disabled={loading}>
+                        <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                        Atualizar
+                      </Button>
+                      <Button size="sm" onClick={() => setCreateWorkspaceDialog({ open: true, userId: '', userName: '' })}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Novo Workspace
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -738,10 +744,40 @@ export default function SystemAdmin() {
           <DialogHeader>
             <DialogTitle>Criar Workspace</DialogTitle>
             <DialogDescription>
-              Criando workspace para: <strong>{createWorkspaceDialog.userName}</strong>
+              {createWorkspaceDialog.userId 
+                ? <>Criando workspace para: <strong>{createWorkspaceDialog.userName}</strong></>
+                : 'Selecione o usuário e configure o novo workspace'
+              }
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            {!createWorkspaceDialog.userId && (
+              <div className="space-y-2">
+                <Label>Usuário</Label>
+                <Select 
+                  value={createWorkspaceDialog.userId} 
+                  onValueChange={(val) => {
+                    const selectedUser = users.find(u => u.id === val);
+                    setCreateWorkspaceDialog(prev => ({ 
+                      ...prev, 
+                      userId: val, 
+                      userName: selectedUser?.full_name || selectedUser?.email || '' 
+                    }));
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um usuário..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {users.map((u) => (
+                      <SelectItem key={u.id} value={u.id}>
+                        {u.full_name || u.email} — {u.email}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="space-y-2">
               <Label>Nome do Workspace</Label>
               <Input
@@ -781,7 +817,7 @@ export default function SystemAdmin() {
             <Button variant="outline" onClick={() => setCreateWorkspaceDialog({ open: false, userId: '', userName: '' })}>
               Cancelar
             </Button>
-            <Button onClick={handleCreateWorkspace} disabled={!newWorkspaceName.trim()}>
+            <Button onClick={handleCreateWorkspace} disabled={!newWorkspaceName.trim() || !createWorkspaceDialog.userId}>
               Criar Workspace
             </Button>
           </DialogFooter>
