@@ -457,10 +457,13 @@ export default function ProjetoDetalhe() {
             </Tooltip>
           </TooltipProvider>
           {canEdit('projetos', 'projetos.edit') && (
-            <Button variant="ghost" size="sm" className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground" onClick={() => setEditDialogOpen(true)}>
-              <Edit className="mr-1 h-3 w-3" />
-              Editar
-            </Button>
+            <>
+              <ShareLinkDialog projetoId={id!} projetoNome={projeto.nome} />
+              <Button variant="ghost" size="sm" className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground" onClick={() => setEditDialogOpen(true)}>
+                <Edit className="mr-1 h-3 w-3" />
+                Editar
+              </Button>
+            </>
           )}
         </div>
       </div>

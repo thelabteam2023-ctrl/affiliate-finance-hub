@@ -141,6 +141,11 @@ const App = () => (
             <Route path="/landing" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/accept-invite" element={<AcceptInvite />} />
+            <Route path="/shared/:token" element={
+              <Suspense fallback={<PageLoader />}>
+                <SharedProject />
+              </Suspense>
+            } />
 
             {/* Protected routes with layout */}
             {/* Central - Acessível por todos os roles autenticados */}
