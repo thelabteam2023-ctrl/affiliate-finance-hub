@@ -197,7 +197,7 @@ export function ProjetoValueBetTab({
   const { daily: calendarDaily, refetch: refetchCalendar } = useCalendarApostasRpc({
     projetoId,
     estrategia: "VALUEBET",
-    cotacaoUSD: convertFnOficial(1, "USD"),
+    cotacaoUSD: convertToConsolidationOficialFn(1, "USD"),
   });
   
   // Hook para gerenciamento de rollover (bônus)
