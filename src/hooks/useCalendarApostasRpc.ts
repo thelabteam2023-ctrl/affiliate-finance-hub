@@ -58,12 +58,15 @@ export function useCalendarApostasRpc({
   projetoId,
   estrategia,
   autoFetch = true,
+  cotacaoUSD,
 }: UseCalendarApostasRpcOptions) {
   const estrategiaKey = estrategia || "all";
+  // Round cotacao to avoid unnecessary refetches from floating point noise
+  const cotacaoKey = cotacaoUSD ? Math.round(cotacaoUSD * 100) : 0;
 
   const { data, isLoading: loading, refetch } = useQuery({
-    queryKey: ["calendar-apostas-rpc", projetoId, estrategiaKey],
-    queryFn: () => fetchCalendarRpc(projetoId, estrategia),
+    queryKey: ["calendar-apostas-rpc", projetoId, estrategiaKey, cotacaoKey],
+    queryFn: () => fetchCalendarRpc(projetoId, estrategia, cotacaoUSD),
     enabled: autoFetch && !!projetoId,
     staleTime: 0,
     gcTime: 5 * 60 * 1000,
