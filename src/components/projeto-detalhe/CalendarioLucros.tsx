@@ -1,7 +1,8 @@
 import { useMemo, useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { ChevronLeft, ChevronRight, Calendar, Flame, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { 
   format, 
   startOfMonth, 
@@ -16,48 +17,31 @@ import {
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { parseLocalDateTime, extractLocalDateKey, extractCivilDateKey } from "@/utils/dateUtils";
+import { extractLocalDateKey } from "@/utils/dateUtils";
+import { parseLocalDateTime } from "@/utils/dateUtils";
 
 interface ApostaData {
   data_aposta: string;
   resultado: string | null;
   lucro_prejuizo: number | null;
-  /** Número de operações que esta entrada representa (pernas de arbitragem, etc). Default: 1 */
   operacoes?: number;
 }
 
-/** Entrada extra de lucro (cashback, giros grátis, etc.) por competência */
 export interface ExtraLucroCalendarioEntry {
-  data: string; // YYYY-MM-DD (data de competência)
+  data: string;
   valor: number;
 }
 
 interface CalendarioLucrosProps {
   apostas: ApostaData[];
-  /** Entradas extras de lucro (cashback, giros grátis) para consolidar no calendário */
   extrasLucro?: ExtraLucroCalendarioEntry[];
   titulo?: string;
   accentColor?: string;
   compact?: boolean;
   formatCurrency?: (value: number) => string;
-  /** Callback disparado quando o lucro total do mês exibido muda (navegação ou dados) */
   onMonthTotalChange?: (total: number) => void;
-  /** Mês inicial para exibição (ex: abrir no mês do filtro ativo). Não filtra dados. */
   initialMonth?: Date;
 }
-
-// Fallback para formatação de moeda
-const defaultFormatCurrencyCompact = (value: number): string => {
-  if (Math.abs(value) >= 1000) {
-    return `${value >= 0 ? "" : "-"}R$ ${(Math.abs(value) / 1000).toFixed(1)}K`;
-  }
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
-  }).format(value);
-};
 
 const defaultFormatCurrencyFull = (value: number): string => {
   return new Intl.NumberFormat("pt-BR", {
@@ -65,6 +49,16 @@ const defaultFormatCurrencyFull = (value: number): string => {
     currency: "BRL",
   }).format(value);
 };
+
+/** Calcula a intensidade do heatmap (0-4) com base no valor */
+function getIntensityLevel(value: number, maxAbsValue: number): number {
+  if (maxAbsValue === 0) return 0;
+  const ratio = Math.abs(value) / maxAbsValue;
+  if (ratio < 0.15) return 1;
+  if (ratio < 0.4) return 2;
+  if (ratio < 0.7) return 3;
+  return 4;
+}
 
 export function CalendarioLucros({ 
   apostas, 
@@ -78,322 +72,368 @@ export function CalendarioLucros({
 }: CalendarioLucrosProps) {
   const [currentMonth, setCurrentMonth] = useState(initialMonth ?? new Date());
 
-  // Atualiza o mês exibido quando initialMonth muda (ex: troca de filtro)
   useEffect(() => {
     if (initialMonth) {
       setCurrentMonth(initialMonth);
     }
   }, [initialMonth]);
 
-  // Agrupar lucro por dia (apostas + extras por competência)
+  // Agrupar lucro por dia
   const lucroPorDia = useMemo(() => {
     const mapa = new Map<string, { lucro: number; count: number }>();
     
-    // 1. Apostas liquidadas
     apostas.forEach((aposta) => {
       const isLiquidada = aposta.resultado 
         ? aposta.resultado !== "PENDENTE" 
         : aposta.lucro_prejuizo !== null && aposta.lucro_prejuizo !== undefined;
-      
       if (!isLiquidada) return;
       
       const dataKey = extractLocalDateKey(aposta.data_aposta);
       const atual = mapa.get(dataKey) || { lucro: 0, count: 0 };
-      // Usar operacoes (pernas) quando disponível, senão 1
       const ops = aposta.operacoes ?? 1;
-      
       mapa.set(dataKey, {
         lucro: atual.lucro + (aposta.lucro_prejuizo || 0),
         count: atual.count + ops
       });
     });
 
-    // 2. Extras (cashback, giros grátis) por data de competência
     extrasLucro.forEach((extra) => {
-      // extra.data já vem como YYYY-MM-DD (civil date key), usar diretamente
       const dataKey = extra.data;
       if (!dataKey) return;
       const atual = mapa.get(dataKey) || { lucro: 0, count: 0 };
       mapa.set(dataKey, {
         lucro: atual.lucro + extra.valor,
-        count: atual.count > 0 ? atual.count : 1, // garante que o dia apareça no calendário
+        count: atual.count > 0 ? atual.count : 1,
       });
     });
     
     return mapa;
   }, [apostas, extrasLucro]);
 
-  // Calcular dias do mês para exibição
+  // Dias do mês para exibição
   const diasDoMes = useMemo(() => {
     const inicio = startOfMonth(currentMonth);
     const fim = endOfMonth(currentMonth);
-    
-    // Pegar o início da semana do primeiro dia do mês
-    const inicioSemana = startOfWeek(inicio, { weekStartsOn: 0 }); // Domingo
-    // Pegar o fim da semana do último dia do mês
+    const inicioSemana = startOfWeek(inicio, { weekStartsOn: 0 });
     const fimSemana = endOfWeek(fim, { weekStartsOn: 0 });
-    
     return eachDayOfInterval({ start: inicioSemana, end: fimSemana });
   }, [currentMonth]);
 
-  // Estatísticas do mês (apostas + extras por competência)
+  // Max valor absoluto do mês (para calcular intensidade relativa)
+  const maxAbsLucro = useMemo(() => {
+    let max = 0;
+    const mesAno = format(currentMonth, "yyyy-MM");
+    lucroPorDia.forEach((dados, key) => {
+      if (key.startsWith(mesAno)) {
+        max = Math.max(max, Math.abs(dados.lucro));
+      }
+    });
+    return max;
+  }, [lucroPorDia, currentMonth]);
+
+  // Estatísticas do mês
   const estatisticasMes = useMemo(() => {
     let lucroTotal = 0;
     let totalApostas = 0;
+    let diasPositivos = 0;
+    let diasNegativos = 0;
+    let diasNeutros = 0;
+    let streakAtual = 0;
+    let melhorStreak = 0;
     
-    // 1. Apostas liquidadas no mês
+    const mesAno = format(currentMonth, "yyyy-MM");
+    const diasOrdenados: { key: string; lucro: number }[] = [];
+    
     apostas.forEach((aposta) => {
       const dataAposta = parseLocalDateTime(aposta.data_aposta);
       if (isSameMonth(dataAposta, currentMonth)) {
         const isLiquidada = aposta.resultado 
           ? aposta.resultado !== "PENDENTE" 
           : aposta.lucro_prejuizo !== null && aposta.lucro_prejuizo !== undefined;
-        
         if (isLiquidada) {
           lucroTotal += aposta.lucro_prejuizo || 0;
-          // Usar operacoes (pernas) quando disponível, senão 1
           totalApostas += aposta.operacoes ?? 1;
         }
       }
     });
 
-    // 2. Extras (cashback, giros grátis) com competência no mês
-    const mesAno = format(currentMonth, "yyyy-MM");
     extrasLucro.forEach((extra) => {
-      const extraDate = extra.data;
-      if (extraDate && extraDate.startsWith(mesAno)) {
+      if (extra.data && extra.data.startsWith(mesAno)) {
         lucroTotal += extra.valor;
       }
     });
-    
-    return { lucroTotal, totalApostas };
-  }, [apostas, extrasLucro, currentMonth]);
 
-  // Notifica o pai quando o lucro do mês muda
+    // Contar dias por tipo
+    lucroPorDia.forEach((dados, key) => {
+      if (key.startsWith(mesAno) && dados.count > 0) {
+        diasOrdenados.push({ key, lucro: dados.lucro });
+        if (dados.lucro > 0) diasPositivos++;
+        else if (dados.lucro < 0) diasNegativos++;
+        else diasNeutros++;
+      }
+    });
+
+    // Calcular melhor streak
+    diasOrdenados.sort((a, b) => a.key.localeCompare(b.key));
+    diasOrdenados.forEach(d => {
+      if (d.lucro > 0) {
+        streakAtual++;
+        melhorStreak = Math.max(melhorStreak, streakAtual);
+      } else {
+        streakAtual = 0;
+      }
+    });
+    
+    return { lucroTotal, totalApostas, diasPositivos, diasNegativos, diasNeutros, melhorStreak };
+  }, [apostas, extrasLucro, currentMonth, lucroPorDia]);
+
   useEffect(() => {
     onMonthTotalChange?.(estatisticasMes.lucroTotal);
   }, [estatisticasMes.lucroTotal, onMonthTotalChange]);
 
-  const formatCurrencyValue = formatCurrencyProp || defaultFormatCurrencyCompact;
   const formatFullCurrency = formatCurrencyProp || defaultFormatCurrencyFull;
-
   const hoje = new Date();
-  const diasSemana = ["D", "S", "T", "Q", "Q", "S", "S"];
+  const diasSemana = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+  const diasSemanaShort = ["D", "S", "T", "Q", "Q", "S", "S"];
 
-  const irParaHoje = () => {
-    setCurrentMonth(new Date());
+  const irParaHoje = () => setCurrentMonth(new Date());
+
+  /** Retorna classes de cor do heatmap baseado no lucro e intensidade */
+  const getHeatmapColor = (lucro: number, temDados: boolean): string => {
+    if (!temDados) return "bg-muted/20";
+    if (lucro === 0) return "bg-muted/40";
+    
+    const level = getIntensityLevel(lucro, maxAbsLucro);
+    
+    if (lucro > 0) {
+      switch (level) {
+        case 1: return "bg-emerald-500/15";
+        case 2: return "bg-emerald-500/30";
+        case 3: return "bg-emerald-500/50";
+        case 4: return "bg-emerald-500/70";
+        default: return "bg-emerald-500/15";
+      }
+    } else {
+      switch (level) {
+        case 1: return "bg-red-500/15";
+        case 2: return "bg-red-500/30";
+        case 3: return "bg-red-500/50";
+        case 4: return "bg-red-500/70";
+        default: return "bg-red-500/15";
+      }
+    }
   };
 
-  const accentClasses = {
-    purple: "border-purple-500/20",
-    emerald: "border-emerald-500/20",
-    blue: "border-blue-500/20",
-    amber: "border-amber-500/20"
+  const renderDayTooltip = (dia: Date, dadosDia: { lucro: number; count: number } | undefined) => {
+    const dataFormatada = format(dia, "dd 'de' MMMM, yyyy", { locale: ptBR });
+    if (!dadosDia || dadosDia.count === 0) {
+      return (
+        <div className="space-y-1">
+          <p className="text-xs font-medium text-foreground">{dataFormatada}</p>
+          <p className="text-xs text-muted-foreground">Sem operações</p>
+        </div>
+      );
+    }
+    return (
+      <div className="space-y-2 min-w-[160px]">
+        <p className="text-xs font-medium text-foreground">{dataFormatada}</p>
+        <div className="h-px bg-border" />
+        <div className="flex items-center justify-between gap-4">
+          <span className="text-xs text-muted-foreground">Lucro/Prejuízo</span>
+          <span className={cn(
+            "text-xs font-semibold tabular-nums",
+            dadosDia.lucro > 0 ? "text-emerald-400" : dadosDia.lucro < 0 ? "text-red-400" : "text-muted-foreground"
+          )}>
+            {formatFullCurrency(dadosDia.lucro)}
+          </span>
+        </div>
+        <div className="flex items-center justify-between gap-4">
+          <span className="text-xs text-muted-foreground">Operações</span>
+          <span className="text-xs font-semibold tabular-nums text-foreground">{dadosDia.count}</span>
+        </div>
+      </div>
+    );
   };
 
+  // ─── Render Heatmap Grid ───
+  const renderHeatmapGrid = (isCompact: boolean) => (
+    <TooltipProvider delayDuration={100}>
+      <div className="grid grid-cols-7 gap-[3px]">
+        {/* Header dias da semana */}
+        {(isCompact ? diasSemanaShort : diasSemana).map((dia, idx) => (
+          <div key={idx} className="text-center text-[10px] text-muted-foreground/60 font-medium pb-1 select-none">
+            {dia}
+          </div>
+        ))}
+
+        {/* Cells do heatmap */}
+        {diasDoMes.map((dia, idx) => {
+          const dataKey = format(dia, "yyyy-MM-dd");
+          const dadosDia = lucroPorDia.get(dataKey);
+          const temDados = dadosDia != null && dadosDia.count > 0;
+          const isMesAtual = isSameMonth(dia, currentMonth);
+          const isHoje = isSameDay(dia, hoje);
+          const lucro = dadosDia?.lucro || 0;
+
+          if (!isMesAtual) {
+            return (
+              <div key={idx} className="aspect-square rounded-[4px] bg-transparent" />
+            );
+          }
+
+          const bgClass = getHeatmapColor(lucro, temDados);
+
+          return (
+            <Tooltip key={idx}>
+              <TooltipTrigger asChild>
+                <div
+                  className={cn(
+                    "aspect-square rounded-[4px] flex items-center justify-center cursor-default transition-all duration-200",
+                    bgClass,
+                    isHoje && "ring-1.5 ring-primary ring-offset-1 ring-offset-background",
+                    "hover:ring-1 hover:ring-foreground/20 hover:scale-110"
+                  )}
+                >
+                  <span className={cn(
+                    "text-[10px] font-medium leading-none select-none",
+                    temDados
+                      ? lucro > 0 ? "text-emerald-300" : lucro < 0 ? "text-red-300" : "text-muted-foreground"
+                      : "text-muted-foreground/40"
+                  )}>
+                    {format(dia, "d")}
+                  </span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="bg-popover border-border shadow-xl">
+                {renderDayTooltip(dia, dadosDia)}
+              </TooltipContent>
+            </Tooltip>
+          );
+        })}
+      </div>
+    </TooltipProvider>
+  );
+
+  // ─── Legenda de intensidade ───
+  const renderLegend = () => (
+    <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/60">
+      <span>Menos</span>
+      <div className="w-2.5 h-2.5 rounded-[2px] bg-muted/20" />
+      <div className="w-2.5 h-2.5 rounded-[2px] bg-emerald-500/15" />
+      <div className="w-2.5 h-2.5 rounded-[2px] bg-emerald-500/30" />
+      <div className="w-2.5 h-2.5 rounded-[2px] bg-emerald-500/50" />
+      <div className="w-2.5 h-2.5 rounded-[2px] bg-emerald-500/70" />
+      <span>Mais</span>
+    </div>
+  );
+
+  // ─── Stats Cards ───
+  const renderStats = () => (
+    <div className="grid grid-cols-4 gap-2 mt-4">
+      <div className="bg-muted/20 rounded-lg px-3 py-2.5 text-center">
+        <div className={cn(
+          "text-sm font-bold tabular-nums",
+          estatisticasMes.lucroTotal > 0 ? "text-emerald-400" : 
+          estatisticasMes.lucroTotal < 0 ? "text-red-400" : "text-muted-foreground"
+        )}>
+          {formatFullCurrency(estatisticasMes.lucroTotal)}
+        </div>
+        <div className="text-[10px] text-muted-foreground/60 mt-0.5">Lucro</div>
+      </div>
+      <div className="bg-muted/20 rounded-lg px-3 py-2.5 text-center">
+        <div className="text-sm font-bold tabular-nums text-foreground">
+          {estatisticasMes.totalApostas}
+        </div>
+        <div className="text-[10px] text-muted-foreground/60 mt-0.5">Operações</div>
+      </div>
+      <div className="bg-muted/20 rounded-lg px-3 py-2.5 text-center">
+        <div className="flex items-center justify-center gap-1">
+          <span className="text-sm font-bold tabular-nums text-emerald-400">{estatisticasMes.diasPositivos}</span>
+          <span className="text-muted-foreground/40">/</span>
+          <span className="text-sm font-bold tabular-nums text-red-400">{estatisticasMes.diasNegativos}</span>
+        </div>
+        <div className="text-[10px] text-muted-foreground/60 mt-0.5">Green / Red</div>
+      </div>
+      <div className="bg-muted/20 rounded-lg px-3 py-2.5 text-center">
+        <div className="flex items-center justify-center gap-1">
+          <Flame className="h-3.5 w-3.5 text-amber-400" />
+          <span className="text-sm font-bold tabular-nums text-foreground">{estatisticasMes.melhorStreak}</span>
+        </div>
+        <div className="text-[10px] text-muted-foreground/60 mt-0.5">Streak</div>
+      </div>
+    </div>
+  );
+
+  // ─── Navegação ───
+  const renderNav = () => (
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-1">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 text-muted-foreground hover:text-foreground"
+          onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
+        >
+          <ChevronLeft className="h-3.5 w-3.5" />
+        </Button>
+        <span className="text-sm font-semibold min-w-[120px] text-center capitalize text-foreground">
+          {format(currentMonth, "MMMM yyyy", { locale: ptBR })}
+        </span>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 text-muted-foreground hover:text-foreground"
+          onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
+        >
+          <ChevronRight className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+      <div className="flex items-center gap-2">
+        {renderLegend()}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-6 text-[10px] text-muted-foreground hover:text-foreground px-2"
+          onClick={irParaHoje}
+        >
+          Hoje
+        </Button>
+      </div>
+    </div>
+  );
+
+  // ═══════════════════════════════════════
+  // COMPACT MODE
+  // ═══════════════════════════════════════
   if (compact) {
     return (
       <div className="p-4 min-w-[320px]">
-        {/* Navegação do mês */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <span className="text-sm font-medium min-w-[120px] text-center capitalize">
-              {format(currentMonth, "MMMM yyyy", { locale: ptBR })}
-            </span>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-7 text-xs"
-            onClick={irParaHoje}
-          >
-            Hoje
-          </Button>
+        {renderNav()}
+        <div className="mt-3">
+          {renderHeatmapGrid(true)}
         </div>
-
-        {/* Calendário */}
-        <div className="grid grid-cols-7 gap-1">
-          {diasSemana.map((dia, idx) => (
-            <div key={idx} className="text-center text-xs text-muted-foreground font-medium py-1">{dia}</div>
-          ))}
-          {diasDoMes.map((dia, idx) => {
-            const dataKey = format(dia, "yyyy-MM-dd");
-            const dadosDia = lucroPorDia.get(dataKey);
-            const lucro = dadosDia?.lucro || 0;
-            const temApostas = dadosDia && dadosDia.count > 0;
-            const isHoje = isSameDay(dia, hoje);
-            const isMesAtual = isSameMonth(dia, currentMonth);
-            let bgClass = "";
-            let textClass = "text-muted-foreground";
-            if (temApostas && isMesAtual) {
-              if (lucro > 0) { bgClass = "bg-emerald-500/20"; textClass = "text-emerald-400"; }
-              else if (lucro < 0) { bgClass = "bg-red-500/20"; textClass = "text-red-400"; }
-              else { bgClass = "bg-muted/40"; }
-            }
-            return (
-              <div key={idx} className={cn("relative aspect-square flex flex-col items-center justify-center rounded text-xs p-0.5", bgClass, isHoje && "ring-1 ring-primary", !isMesAtual && "opacity-30")}>
-                <span className={cn("font-medium", !isMesAtual ? "text-muted-foreground/50" : "text-foreground")}>{format(dia, "d")}</span>
-                {temApostas && isMesAtual && <span className={cn("text-[10px] font-medium tabular-nums", textClass)}>{formatCurrencyValue(lucro)}</span>}
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Resumo */}
-        <div className="grid grid-cols-2 gap-2 mt-4">
-          <div className="bg-muted/40 rounded px-3 py-2">
-            <div className="text-xs text-muted-foreground">Lucro do mês</div>
-            <div className={cn("text-sm font-semibold tabular-nums", estatisticasMes.lucroTotal > 0 ? "text-emerald-400" : estatisticasMes.lucroTotal < 0 ? "text-red-400" : "text-muted-foreground")}>{formatFullCurrency(estatisticasMes.lucroTotal)}</div>
-          </div>
-          <div className="bg-muted/40 rounded px-3 py-2">
-            <div className="text-xs text-muted-foreground">Apostas do mês</div>
-            <div className="text-sm font-semibold tabular-nums text-foreground">{estatisticasMes.totalApostas}</div>
-          </div>
-        </div>
+        {renderStats()}
       </div>
     );
   }
 
+  // ═══════════════════════════════════════
+  // FULL MODE
+  // ═══════════════════════════════════════
   return (
-    <Card className={cn("", accentClasses[accentColor as keyof typeof accentClasses] || accentClasses.purple)}>
+    <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
       <CardHeader className="py-3 pb-2">
-        <CardTitle className="text-sm font-medium flex items-center gap-2">
-          <Calendar className="h-4 w-4 text-muted-foreground" />
+        <CardTitle className="text-sm font-medium flex items-center gap-2 text-muted-foreground">
+          <Calendar className="h-4 w-4" />
           {titulo}
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-0 pb-4">
-        {/* Navegação do mês */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <span className="text-sm font-medium min-w-[120px] text-center capitalize">
-              {format(currentMonth, "MMMM yyyy", { locale: ptBR })}
-            </span>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-7 text-xs"
-            onClick={irParaHoje}
-          >
-            Hoje
-          </Button>
+        {renderNav()}
+        <div className="mt-3">
+          {renderHeatmapGrid(false)}
         </div>
-
-        {/* Calendário */}
-        <div className="grid grid-cols-7 gap-1">
-          {/* Cabeçalho dos dias da semana */}
-          {diasSemana.map((dia, idx) => (
-            <div 
-              key={idx} 
-              className="text-center text-xs text-muted-foreground font-medium py-1"
-            >
-              {dia}
-            </div>
-          ))}
-
-          {/* Dias do mês */}
-          {diasDoMes.map((dia, idx) => {
-            const dataKey = format(dia, "yyyy-MM-dd");
-            const dadosDia = lucroPorDia.get(dataKey);
-            const lucro = dadosDia?.lucro || 0;
-            const temApostas = dadosDia && dadosDia.count > 0;
-            const isHoje = isSameDay(dia, hoje);
-            const isMesAtual = isSameMonth(dia, currentMonth);
-
-            let bgClass = "";
-            let textClass = "text-muted-foreground";
-
-            if (temApostas && isMesAtual) {
-              if (lucro > 0) {
-                bgClass = "bg-emerald-500/20";
-                textClass = "text-emerald-400";
-              } else if (lucro < 0) {
-                bgClass = "bg-red-500/20";
-                textClass = "text-red-400";
-              } else {
-                bgClass = "bg-muted/40";
-                textClass = "text-muted-foreground";
-              }
-            }
-
-            return (
-              <div
-                key={idx}
-                className={cn(
-                  "relative aspect-square flex flex-col items-center justify-center rounded text-xs p-0.5",
-                  bgClass,
-                  isHoje && "ring-1 ring-primary",
-                  !isMesAtual && "opacity-30"
-                )}
-              >
-                <span className={cn(
-                  "font-medium",
-                  !isMesAtual ? "text-muted-foreground/50" : "text-foreground"
-                )}>
-                  {format(dia, "d")}
-                </span>
-                {temApostas && isMesAtual && (
-                  <span className={cn("text-[10px] font-medium tabular-nums", textClass)}>
-                    {formatCurrencyValue(lucro)}
-                  </span>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Resumo do mês */}
-        <div className="grid grid-cols-2 gap-2 mt-4">
-          <div className="bg-muted/40 rounded px-3 py-2">
-            <div className="text-xs text-muted-foreground">Lucro do mês</div>
-            <div className={cn(
-              "text-sm font-semibold tabular-nums",
-              estatisticasMes.lucroTotal > 0 ? "text-emerald-400" : 
-              estatisticasMes.lucroTotal < 0 ? "text-red-400" : "text-muted-foreground"
-            )}>
-              {formatFullCurrency(estatisticasMes.lucroTotal)}
-            </div>
-          </div>
-          <div className="bg-muted/40 rounded px-3 py-2">
-            <div className="text-xs text-muted-foreground">Apostas do mês</div>
-            <div className="text-sm font-semibold tabular-nums text-foreground">
-              {estatisticasMes.totalApostas}
-            </div>
-          </div>
-        </div>
+        {renderStats()}
       </CardContent>
     </Card>
   );
