@@ -571,7 +571,11 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
                           <p className="text-xs text-muted-foreground truncate">
                             {t.bookmaker_nome || "—"}
                             {t.parceiro_nome && ` · ${t.parceiro_nome}`}
-                            {t.descricao && ` · ${t.descricao}`}
+                            {t.tipo_transacao === "DEPOSITO_VIRTUAL" 
+                              ? " · Saldo existente incorporado ao projeto na vinculação"
+                              : t.tipo_transacao === "SAQUE_VIRTUAL"
+                              ? " · Saldo transferido para fora do projeto na desvinculação"
+                              : t.descricao ? ` · ${t.descricao}` : ""}
                             {t.ajuste_motivo && ` · ${t.ajuste_motivo}`}
                           </p>
                         </div>
