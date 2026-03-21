@@ -555,7 +555,11 @@ export function SaquesBrokerTab({ projetoId }: SaquesBrokerTabProps) {
                         </div>
                         <p className="text-xs text-muted-foreground truncate">
                           {t.bookmaker_nome || "—"}
-                          {t.descricao && ` · ${t.descricao}`}
+                          {t.tipo_transacao === "DEPOSITO_VIRTUAL" 
+                            ? " · Saldo existente incorporado ao projeto na vinculação"
+                            : t.tipo_transacao === "SAQUE_VIRTUAL"
+                            ? " · Saldo transferido para fora do projeto na desvinculação"
+                            : t.descricao ? ` · ${t.descricao}` : ""}
                         </p>
                       </div>
 
