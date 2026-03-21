@@ -139,6 +139,9 @@ export function useInvalidateBonusQueries() {
     queryClient.invalidateQueries({ queryKey: ["projeto-resultado", projectId] });
     queryClient.invalidateQueries({ queryKey: ["projeto-breakdowns", projectId] });
     
+    // Calendário RPC
+    queryClient.invalidateQueries({ queryKey: ["calendar-apostas-rpc", projectId] });
+    
     // Exposição
     queryClient.invalidateQueries({ queryKey: ["exposicao-projeto", projectId] });
     

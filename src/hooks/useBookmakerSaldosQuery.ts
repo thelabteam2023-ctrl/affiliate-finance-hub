@@ -212,6 +212,11 @@ export function useInvalidateBookmakerSaldos() {
         queryClient.invalidateQueries({ queryKey: [KEYS.APOSTAS, projetoId] })
       );
       
+      // 5. Calendário RPC
+      invalidations.push(
+        queryClient.invalidateQueries({ queryKey: ["calendar-apostas-rpc", projetoId] })
+      );
+      
       // 5. Bonus bets (juice/performance/analytics) - CRÍTICO para refletir mudanças
       invalidations.push(
         queryClient.invalidateQueries({ queryKey: ["bonus-bets-juice", projetoId] }),

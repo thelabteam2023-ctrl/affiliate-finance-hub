@@ -61,7 +61,7 @@ export function useCalendarApostasRpc({
     queryKey: ["calendar-apostas-rpc", projetoId, estrategiaKey],
     queryFn: () => fetchCalendarRpc(projetoId, estrategia),
     enabled: autoFetch && !!projetoId,
-    staleTime: 10 * 1000,
+    staleTime: 0,
     gcTime: 5 * 60 * 1000,
   });
 

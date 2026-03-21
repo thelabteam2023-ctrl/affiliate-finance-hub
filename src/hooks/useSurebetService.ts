@@ -82,6 +82,9 @@ export function useSurebetService(): UseSurebetServiceReturn {
     queryClient.invalidateQueries({ queryKey: ["parceiro-financeiro"] });
     queryClient.invalidateQueries({ queryKey: ["parceiro-consolidado"] });
     
+    // Calendário RPC
+    queryClient.invalidateQueries({ queryKey: ["calendar-apostas-rpc", projetoId] });
+    
     console.log(`[useSurebetService] Invalidated FINANCIAL_STATE for project ${projetoId}`);
   }, [queryClient]);
 
