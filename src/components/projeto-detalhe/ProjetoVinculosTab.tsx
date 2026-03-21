@@ -25,6 +25,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { HistoricoVinculosTab } from "./HistoricoVinculosTab";
 import { HistoricoConciliacoesTab } from "./HistoricoConciliacoesTab";
 import { SaquesBrokerTab } from "./SaquesBrokerTab";
+import { ExtratoProjetoTab } from "./ExtratoProjetoTab";
 
 import { ContasNoProjetoCard } from "./ContasNoProjetoCard";
 import { SaldoOperavelCard } from "./SaldoOperavelCard";
