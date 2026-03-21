@@ -225,7 +225,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
     >
       <div className="flex items-center justify-center gap-2">
         <span className="text-lg md:text-2xl font-bold text-primary">
-          {formatCurrency(saldoOperavel)}
+          {formatCurrency(saldoAtualTotal)}
         </span>
         {casasComRollover > 0 && (
           <TooltipProvider>
