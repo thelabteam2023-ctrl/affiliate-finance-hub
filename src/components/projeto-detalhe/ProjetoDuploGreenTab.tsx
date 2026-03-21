@@ -1120,7 +1120,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
       {metricas.total > 0 && (
         <VisaoGeralCharts 
           apostas={apostas} 
-          apostasCalendario={transformCalendarApostasForCharts(calendarApostas)}
+          apostasCalendario={transformRpcDailyForCharts(calendarDaily)}
           accentColor="#84cc16" 
           logoMap={logoMap} 
           isSingleDayPeriod={tabFilters.period === "1dia"} 

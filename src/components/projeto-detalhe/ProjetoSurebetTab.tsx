@@ -1264,7 +1264,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
                       }))
                 };
               })}
-              apostasCalendario={transformCalendarApostasForCharts(calendarApostas)}
+              apostasCalendario={transformRpcDailyForCharts(calendarDaily)}
               accentColor="hsl(var(--primary))"
               logoMap={logoMap}
               showCasasCard={false}
