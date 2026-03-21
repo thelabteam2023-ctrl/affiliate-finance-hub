@@ -1483,13 +1483,15 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                         status: s.status,
                         lucro_real: s.lucro_prejuizo,
                         observacoes: s.observacoes,
+                        moeda_operacao: (s as any).moeda_operacao,
                         pernas: s.pernas?.map(p => ({
                           bookmaker_nome: p.bookmaker?.nome,
                           selecao: p.selecao,
                           odd: p.odd,
                           stake: p.stake,
+                          moeda: p.moeda,
                         })),
-                      }, s.estrategia || "SUREBET");
+                      }, s.estrategia || "SUREBET", convertToConsolidation);
                     }
                     const a = u.data as Aposta | ApostaMultipla;
                     return transformApostaToExport({
@@ -1506,7 +1508,8 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                       observacoes: a.observacoes,
                       bookmaker_nome: a.bookmaker?.nome,
                       estrategia: 'estrategia' in a ? a.estrategia : null,
-                    }, "Apostas");
+                      moeda_operacao: (a as any).moeda_operacao,
+                    }, "Apostas", convertToConsolidation);
                   })}
                   abaOrigem="Apostas"
                   filename={`apostas-${projetoId}-${format(new Date(), 'yyyy-MM-dd')}`}
