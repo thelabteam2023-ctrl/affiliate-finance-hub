@@ -158,7 +158,7 @@ export default function SharedProject() {
 
       {/* Footer */}
       <footer className="border-t mt-12 py-6 text-center text-xs text-muted-foreground">
-        Dados atualizados em tempo real • Compartilhado via StakeSync
+        Dados atualizados em tempo real
       </footer>
     </div>
   );
