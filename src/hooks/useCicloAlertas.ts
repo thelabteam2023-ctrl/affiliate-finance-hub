@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { differenceInDays } from "date-fns";
 import { calcularMetricasPeriodo } from "@/services/calcularMetricasPeriodo";
 import { toast } from "sonner";
