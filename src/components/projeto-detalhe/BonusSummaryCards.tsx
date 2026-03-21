@@ -50,7 +50,8 @@ export function BonusSummaryCards({ projetoId, compact = false }: BonusSummaryCa
         .eq("projeto_id", projetoId)
         .eq("status", "LIQUIDADA")
         .gte("data_aposta", startDateStr)
-        .not("bonus_id", "is", null);
+        .not("bonus_id", "is", null)
+        .limit(10000);
 
       // Query 2: apostas com estratégia EXTRACAO_BONUS (mesmo sem bonus_id)
       const queryEstrategia = supabase
@@ -59,7 +60,8 @@ export function BonusSummaryCards({ projetoId, compact = false }: BonusSummaryCa
         .eq("projeto_id", projetoId)
         .eq("status", "LIQUIDADA")
         .gte("data_aposta", startDateStr)
-        .eq("estrategia", "EXTRACAO_BONUS");
+        .eq("estrategia", "EXTRACAO_BONUS")
+        .limit(10000);
 
       const [resBonusId, resEstrategia] = await Promise.all([queryBonusId, queryEstrategia]);
       
