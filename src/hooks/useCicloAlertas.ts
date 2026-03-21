@@ -170,7 +170,7 @@ export function useCicloAlertas() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [workspaceId]);
 
   const dismissCiclo = useCallback(async (cicloId: string) => {
     try {
