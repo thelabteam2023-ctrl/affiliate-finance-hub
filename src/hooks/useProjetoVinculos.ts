@@ -104,6 +104,9 @@ function invalidateAllVinculoRelatedQueries(
   queryClient.invalidateQueries({ queryKey: ["projeto-dashboard-extras", projetoId] });
   queryClient.invalidateQueries({ queryKey: ["projeto-dashboard-apostas", projetoId] });
   queryClient.invalidateQueries({ queryKey: ["projeto-dashboard-calendario", projetoId] });
+  
+  // 12. Calendário RPC (nova arquitetura)
+  queryClient.invalidateQueries({ queryKey: ["calendar-apostas-rpc", projetoId] });
 
   console.log(`[useProjetoVinculos] Invalidated ALL vinculo-related queries for project ${projetoId}`);
 }

@@ -443,6 +443,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
       refetchSurebets();
       queryClient.invalidateQueries({ queryKey: ["projeto-resultado", projetoId] });
       queryClient.invalidateQueries({ queryKey: ["bookmaker-saldos"] });
+      queryClient.invalidateQueries({ queryKey: ["calendar-apostas-rpc", projetoId] });
     }, [queryClient, projetoId, refetchSurebets]),
   });
 

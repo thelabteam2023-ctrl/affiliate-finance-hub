@@ -106,6 +106,8 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
     // Invalidar KPIs financeiros
     queryClient.invalidateQueries({ queryKey: ["projeto-resultado", projetoId] });
     queryClient.invalidateQueries({ queryKey: ["bookmaker-saldos"] });
+    // Calendário RPC
+    queryClient.invalidateQueries({ queryKey: ["calendar-apostas-rpc", projetoId] });
   }, [queryClient, projetoId]);
 
   // Hook centralizado para sincronização cross-window

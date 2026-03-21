@@ -123,6 +123,9 @@ export function useResetOperacional(): UseResetOperacionalReturn {
         await queryClient.invalidateQueries({ queryKey: ['giros-gratis'] });
         await queryClient.invalidateQueries({ queryKey: ['bonus'] });
         
+        // Calendário RPC
+        await queryClient.invalidateQueries({ queryKey: ['calendar-apostas-rpc', projetoId] });
+        
         // Disparar evento global para componentes com state local
         window.dispatchEvent(new CustomEvent('lovable:reset-operacional-completed', {
           detail: { projetoId, bookmakers: result.bookmakers_afetados }
