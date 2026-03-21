@@ -1,4 +1,5 @@
 import { useParams } from "react-router-dom";
+import labbetLogo from "@/assets/labbet-logo.png";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Lock, Clock, AlertTriangle, TrendingUp, TrendingDown, BarChart3, Target } from "lucide-react";
@@ -100,12 +101,16 @@ export default function SharedProject() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold">{projeto.nome}</h1>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Visualização compartilhada • Somente leitura
-            </p>
+        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <img src={labbetLogo} alt="LABBET" className="h-8" />
+            <div className="h-6 w-px bg-border" />
+            <div>
+              <h1 className="text-lg font-bold">{projeto.nome}</h1>
+              <p className="text-[11px] text-muted-foreground">
+                Visualização compartilhada • Somente leitura
+              </p>
+            </div>
           </div>
           <Badge variant="outline" className="gap-1.5">
             <Lock className="h-3 w-3" />
