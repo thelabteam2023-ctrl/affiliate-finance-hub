@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { differenceInDays } from "date-fns";
 import { calcularMetricasPeriodo } from "@/services/calcularMetricasPeriodo";
 import { toast } from "sonner";
@@ -26,12 +27,14 @@ export interface AlertaCiclo {
 }
 
 export function useCicloAlertas() {
+  const { workspaceId } = useAuth();
   const [allAlertas, setAllAlertas] = useState<AlertaCiclo[]>([]);
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [showDismissed, setShowDismissed] = useState(false);
 
   const fetchAlertas = useCallback(async () => {
+    if (!workspaceId) return;
     try {
       setLoading(true);
       const hoje = new Date();
@@ -47,7 +50,8 @@ export function useCicloAlertas() {
             valor_acumulado, metrica_acumuladora,
             projeto:projetos(nome, metrica_lucro_ciclo)
           `)
-          .eq("status", "EM_ANDAMENTO"),
+          .eq("status", "EM_ANDAMENTO")
+          .eq("workspace_id", workspaceId) as any,
         supabase
           .from("ciclo_alert_dismissals")
           .select("ciclo_id"),
@@ -166,7 +170,7 @@ export function useCicloAlertas() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [workspaceId]);
 
   const dismissCiclo = useCallback(async (cicloId: string) => {
     try {
