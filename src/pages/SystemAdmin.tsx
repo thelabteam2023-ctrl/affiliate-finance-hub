@@ -817,7 +817,7 @@ export default function SystemAdmin() {
             <Button variant="outline" onClick={() => setCreateWorkspaceDialog({ open: false, userId: '', userName: '' })}>
               Cancelar
             </Button>
-            <Button onClick={handleCreateWorkspace} disabled={!newWorkspaceName.trim()}>
+            <Button onClick={handleCreateWorkspace} disabled={!newWorkspaceName.trim() || !createWorkspaceDialog.userId}>
               Criar Workspace
             </Button>
           </DialogFooter>
