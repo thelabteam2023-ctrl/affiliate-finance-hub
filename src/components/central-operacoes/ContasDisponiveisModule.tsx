@@ -107,45 +107,57 @@ export function ContasDisponiveisModule() {
   const { data: contas, isLoading, refetch } = useQuery({
     queryKey: ["contas-disponiveis", workspaceId],
     queryFn: async (): Promise<ContaDisponivel[]> => {
-      // Get bookmakers without project
+      // Fonte de verdade: view que já filtra apenas casas realmente disponíveis
+      // (sem projeto, sem ack, fora de aguardando saque e com saldo/freebet positivo)
       const { data: bookmakers, error } = await supabase
-        .from("bookmakers")
+        .from("v_bookmakers_desvinculados")
         .select(`
           id, nome, status, saldo_atual, saldo_freebet, saldo_usd, moeda,
-          parceiro_id,
-          parceiro:parceiros!bookmakers_parceiro_id_fkey (nome),
-          catalogo:bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url)
+          parceiro_id, parceiro_nome
         `)
-        .eq("workspace_id", workspaceId!)
-        .is("projeto_id", null)
-        .is("investidor_id", null) // Excluir contas de investidores - não pertencem ao pool interno
-        .not("status", "in", '("encerrada","bloqueada")')
         .order("nome");
 
       if (error) throw error;
 
-      // Get last project info from historico
+      // Enriquecimento visual: logo do catálogo
       const bookmakerIds = (bookmakers || []).map((b: any) => b.id);
+      const bookmakerNames = [...new Set((bookmakers || []).map((b: any) => b.nome).filter(Boolean))];
       
+      let logoMap = new Map<string, string | null>();
       let historicoMap = new Map<string, { projeto_nome: string; projeto_id: string; data_desvinculacao: string }>();
       
-      if (bookmakerIds.length > 0) {
-        const { data: historico } = await supabase
-          .from("projeto_bookmaker_historico")
-          .select("bookmaker_id, projeto_id, data_desvinculacao, projeto:projetos!projeto_bookmaker_historico_projeto_id_fkey (nome)")
-          .in("bookmaker_id", bookmakerIds)
-          .not("data_desvinculacao", "is", null)
-          .order("data_desvinculacao", { ascending: false });
+      if (bookmakerIds.length > 0 || bookmakerNames.length > 0) {
+        const [historicoResult, catalogoResult] = await Promise.all([
+          bookmakerIds.length > 0
+            ? supabase
+                .from("projeto_bookmaker_historico")
+                .select("bookmaker_id, projeto_id, data_desvinculacao, projeto:projetos!projeto_bookmaker_historico_projeto_id_fkey (nome)")
+                .in("bookmaker_id", bookmakerIds)
+                .not("data_desvinculacao", "is", null)
+                .order("data_desvinculacao", { ascending: false })
+            : Promise.resolve({ data: [], error: null }),
+          bookmakerNames.length > 0
+            ? supabase
+                .from("bookmakers_catalogo")
+                .select("nome, logo_url")
+                .in("nome", bookmakerNames)
+            : Promise.resolve({ data: [], error: null }),
+        ]);
 
-        if (historico) {
-          for (const h of historico as any[]) {
-            if (!historicoMap.has(h.bookmaker_id)) {
-              historicoMap.set(h.bookmaker_id, {
-                projeto_nome: h.projeto?.nome || "N/A",
-                projeto_id: h.projeto_id,
-                data_desvinculacao: h.data_desvinculacao,
-              });
-            }
+        if (historicoResult.error) throw historicoResult.error;
+        if (catalogoResult.error) throw catalogoResult.error;
+
+        for (const c of (catalogoResult.data || []) as any[]) {
+          logoMap.set(c.nome, c.logo_url ?? null);
+        }
+
+        for (const h of (historicoResult.data || []) as any[]) {
+          if (!historicoMap.has(h.bookmaker_id)) {
+            historicoMap.set(h.bookmaker_id, {
+              projeto_nome: h.projeto?.nome || "N/A",
+              projeto_id: h.projeto_id,
+              data_desvinculacao: h.data_desvinculacao,
+            });
           }
         }
       }
@@ -161,8 +173,8 @@ export function ContasDisponiveisModule() {
           saldo_usd: Number(b.saldo_usd) || 0,
           moeda: b.moeda || "BRL",
           parceiro_id: b.parceiro_id,
-          parceiro_nome: b.parceiro?.nome || null,
-          logo_url: b.catalogo?.logo_url || null,
+          parceiro_nome: b.parceiro_nome || null,
+          logo_url: logoMap.get(b.nome) || null,
           ultimo_projeto_nome: hist?.projeto_nome || null,
           ultimo_projeto_id: hist?.projeto_id || null,
           data_desvinculacao: hist?.data_desvinculacao || null,
