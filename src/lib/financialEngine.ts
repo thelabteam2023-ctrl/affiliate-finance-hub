@@ -489,7 +489,7 @@ export async function getFinancialAudit(workspaceId?: string): Promise<{
       query = query.eq('workspace_id', workspaceId);
     }
 
-    const { data, error } = await query;
+    const { data, error } = await query.limit(10000);
 
     if (error) {
       return { success: false, error: error.message };

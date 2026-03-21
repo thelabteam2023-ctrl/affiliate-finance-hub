@@ -60,7 +60,8 @@ export function usePendingTransactions() {
         .select("*")
         .in("tipo_transacao", [...CASH_REAL_TYPES])
         .in("status", ["pendente", "PENDENTE"])
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(10000);
 
       if (error) {
         console.error("Erro ao buscar transações pendentes:", error);

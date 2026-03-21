@@ -82,23 +82,23 @@ async function fetchFinancialMetricsRaw(projetoId: string, dateRange?: { from: s
   );
 
   const [depositos, saques, saquesPend, cashbackM, cashbackE, giros, ajustes, perdasOp, perdasFx, ganhosFx] = await Promise.all([
-    depositoQ,
-    saqueQ,
-    saquePendQ,
+    depositoQ.limit(10000),
+    saqueQ.limit(10000),
+    saquePendQ.limit(10000),
     applyDateFilter(supabase.from("cash_ledger").select("valor, moeda")
-      .eq("tipo_transacao", "CASHBACK_MANUAL").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId), dateRange),
+      .eq("tipo_transacao", "CASHBACK_MANUAL").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId), dateRange).limit(10000),
     applyDateFilter(supabase.from("cash_ledger").select("valor, moeda")
-      .eq("tipo_transacao", "CASHBACK_ESTORNO").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId), dateRange),
+      .eq("tipo_transacao", "CASHBACK_ESTORNO").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId), dateRange).limit(10000),
     applyDateFilter(supabase.from("cash_ledger").select("valor, moeda")
-      .eq("tipo_transacao", "GIRO_GRATIS").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId), dateRange),
+      .eq("tipo_transacao", "GIRO_GRATIS").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId), dateRange).limit(10000),
     applyDateFilter(supabase.from("cash_ledger").select("valor, moeda, ajuste_direcao")
-      .eq("tipo_transacao", "AJUSTE_SALDO").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId), dateRange),
+      .eq("tipo_transacao", "AJUSTE_SALDO").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId), dateRange).limit(10000),
     applyDateFilter(supabase.from("cash_ledger").select("valor, moeda")
-      .eq("tipo_transacao", "PERDA_OPERACIONAL").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId), dateRange),
+      .eq("tipo_transacao", "PERDA_OPERACIONAL").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId), dateRange).limit(10000),
     applyDateFilter(supabase.from("cash_ledger").select("valor, moeda")
-      .eq("tipo_transacao", "PERDA_CAMBIAL").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId), dateRange),
+      .eq("tipo_transacao", "PERDA_CAMBIAL").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId), dateRange).limit(10000),
     applyDateFilter(supabase.from("cash_ledger").select("valor, moeda")
-      .eq("tipo_transacao", "GANHO_CAMBIAL").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId), dateRange),
+      .eq("tipo_transacao", "GANHO_CAMBIAL").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId), dateRange).limit(10000),
   ]);
 
   // Include bookmaker IDs in timeline for internal-only break-even
@@ -111,7 +111,7 @@ async function fetchFinancialMetricsRaw(projetoId: string, dateRange?: { from: s
       .eq("projeto_id_snapshot", projetoId)
       .order("data_transacao", { ascending: true }),
     dateRange
-  );
+  ).limit(10000);
 
   const { data: timelineData } = await timelineQ;
 

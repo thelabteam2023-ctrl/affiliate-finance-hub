@@ -103,7 +103,7 @@ export function useApostasPernas(options: UseApostasPernasOptions = {}) {
         query = query.in("resultado", resultados);
       }
 
-      query = query.order("created_at", { ascending: false });
+      query = query.order("created_at", { ascending: false }).limit(10000);
 
       const { data, error } = await query;
 
