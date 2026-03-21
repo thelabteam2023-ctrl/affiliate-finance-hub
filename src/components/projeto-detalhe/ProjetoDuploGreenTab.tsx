@@ -198,6 +198,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
   const { daily: calendarDaily, refetch: refetchCalendar } = useCalendarApostasRpc({
     projetoId,
     estrategia: "DUPLO_GREEN",
+    cotacaoUSD: convertFnOficial(1, "USD"),
   });
   // Estados removidos - dialogs agora abrem em janelas externas
   // const [dialogOpen, setDialogOpen] = useState(false);

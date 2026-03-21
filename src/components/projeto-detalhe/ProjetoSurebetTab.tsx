@@ -222,6 +222,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
   const { daily: calendarDaily, refetch: refetchCalendar } = useCalendarApostasRpc({
     projetoId,
     estrategia: "SUREBET",
+    cotacaoUSD: convertFnOficial(1, "USD"),
   });
   
   // Sub-abas Abertas/Histórico - usa tipo padronizado

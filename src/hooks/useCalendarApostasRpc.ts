@@ -19,6 +19,8 @@ interface UseCalendarApostasRpcOptions {
   projetoId: string;
   estrategia?: string;
   autoFetch?: boolean;
+  /** Cotação USD para conversão multimoeda — deve ser a mesma usada nos KPIs */
+  cotacaoUSD?: number;
 }
 
 interface RpcResult {
@@ -39,11 +41,13 @@ interface RpcResult {
 
 async function fetchCalendarRpc(
   projetoId: string,
-  estrategia?: string
+  estrategia?: string,
+  cotacaoUSD?: number
 ): Promise<RpcResult> {
   const { data, error } = await supabase.rpc('get_projeto_apostas_resumo', {
     p_projeto_id: projetoId,
     ...(estrategia ? { p_estrategia: estrategia } : {}),
+    ...(cotacaoUSD && cotacaoUSD > 0 ? { p_cotacao_usd: cotacaoUSD } : {}),
   } as any);
   if (error) throw error;
   
@@ -54,12 +58,15 @@ export function useCalendarApostasRpc({
   projetoId,
   estrategia,
   autoFetch = true,
+  cotacaoUSD,
 }: UseCalendarApostasRpcOptions) {
   const estrategiaKey = estrategia || "all";
+  // Round cotacao to avoid unnecessary refetches from floating point noise
+  const cotacaoKey = cotacaoUSD ? Math.round(cotacaoUSD * 100) : 0;
 
   const { data, isLoading: loading, refetch } = useQuery({
-    queryKey: ["calendar-apostas-rpc", projetoId, estrategiaKey],
-    queryFn: () => fetchCalendarRpc(projetoId, estrategia),
+    queryKey: ["calendar-apostas-rpc", projetoId, estrategiaKey, cotacaoKey],
+    queryFn: () => fetchCalendarRpc(projetoId, estrategia, cotacaoUSD),
     enabled: autoFetch && !!projetoId,
     staleTime: 0,
     gcTime: 5 * 60 * 1000,

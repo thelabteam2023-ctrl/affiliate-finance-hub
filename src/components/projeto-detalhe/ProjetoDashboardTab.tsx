@@ -164,7 +164,7 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>(undefined);
   
   // Hook de formatação de moeda do projeto
-  const { formatCurrency, formatChartAxis, convertToConsolidation, convertToConsolidationOficial, moedaConsolidacao } = useProjetoCurrency(projetoId);
+  const { formatCurrency, formatChartAxis, convertToConsolidation, convertToConsolidationOficial, moedaConsolidacao, cotacaoOficialUSD } = useProjetoCurrency(projetoId);
   
   // Hook global de logos
   const { logoMap: catalogLogoMap, getLogoUrl: getCatalogLogoUrl } = useBookmakerLogoMap();
@@ -181,7 +181,7 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
   }, [dateRange]);
 
   // ---- useCalendarApostasRpc: Calendar data via RPC (sem truncamento, timezone correto) ----
-  const { daily: calendarDaily, resumo: calendarResumo } = useCalendarApostasRpc({ projetoId });
+  const { daily: calendarDaily, resumo: calendarResumo } = useCalendarApostasRpc({ projetoId, cotacaoUSD: cotacaoOficialUSD });
 
   // ---- useQuery: Filtered apostas (with period) ----
   const { 
