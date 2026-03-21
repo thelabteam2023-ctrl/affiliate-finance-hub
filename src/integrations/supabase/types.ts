@@ -13597,6 +13597,10 @@ export type Database = {
         Args: { p_email: string; p_ip_address?: string; p_success: boolean }
         Returns: undefined
       }
+      regenerar_eventos_apostas_workspace: {
+        Args: { p_workspace_id: string }
+        Returns: Json
+      }
       reliquidar_aposta_v5: {
         Args: {
           p_aposta_id: string
