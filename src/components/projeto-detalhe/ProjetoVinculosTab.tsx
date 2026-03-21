@@ -494,12 +494,10 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
             <ArrowRightLeft className="h-4 w-4" />
             Ajustes
           </TabsTrigger>
-          {isBroker && (
-            <TabsTrigger value="saques-broker" className="flex items-center gap-2">
-              <ArrowUpFromLine className="h-4 w-4" />
-              Extrato Broker
-            </TabsTrigger>
-          )}
+          <TabsTrigger value="extrato" className="flex items-center gap-2">
+            <ArrowUpFromLine className="h-4 w-4" />
+            {isBroker ? "Extrato Broker" : "Extrato"}
+          </TabsTrigger>
         </TabsList>
       </div>
 
