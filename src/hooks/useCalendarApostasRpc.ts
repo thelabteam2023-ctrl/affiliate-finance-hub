@@ -41,15 +41,10 @@ async function fetchCalendarRpc(
   projetoId: string,
   estrategia?: string
 ): Promise<RpcResult> {
-  const params: Record<string, any> = {
+  const { data, error } = await supabase.rpc('get_projeto_apostas_resumo', {
     p_projeto_id: projetoId,
-    // Sem filtro de data — calendário precisa de todos os dados
-  };
-  if (estrategia) {
-    params.p_estrategia = estrategia;
-  }
-
-  const { data, error } = await supabase.rpc('get_projeto_apostas_resumo', params);
+    ...(estrategia ? { p_estrategia: estrategia } : {}),
+  } as any);
   if (error) throw error;
   
   return data as unknown as RpcResult;
