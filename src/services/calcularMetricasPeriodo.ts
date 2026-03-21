@@ -187,52 +187,14 @@ export async function calcularMetricasPeriodo({
   // ═══════════════════════════════════════════════════════════════════
   const volume = Number(rpcData.total_stake || 0);
 
-  // Build pernas map for per-leg volume consolidation
-  const pernasMap = new Map<string, Array<{ stake: number; moeda: string }>>();
-  pernasData.forEach(p => {
-    if (!pernasMap.has(p.aposta_id)) pernasMap.set(p.aposta_id, []);
-    pernasMap.get(p.aposta_id)!.push({ stake: p.stake, moeda: p.moeda });
-  });
-
-  // ═══════════════════════════════════════════════════════════════════
-  // VOLUME (consolidação por perna para arbitragem multi-moeda)
-  // ═══════════════════════════════════════════════════════════════════
-  const volume = apostas.reduce((acc, a: any) => {
-    // Para arbitragem com pernas, consolidar cada perna individualmente
-    const pernas = pernasMap.get(a.id);
-    if (a.forma_registro === "ARBITRAGEM" && pernas && pernas.length > 0) {
-      return acc + pernas.reduce((sum, p) => {
-        const moeda = (p.moeda || a.moeda_operacao || 'BRL').toUpperCase();
-        return sum + convert(Number(p.stake || 0), moeda);
-      }, 0);
-    }
-
-    if (a.stake_consolidado != null && a.consolidation_currency === moedaConsolidacao) {
-      return acc + Number(a.stake_consolidado);
-    }
-    const valorOriginal = a.forma_registro === "ARBITRAGEM"
-      ? Number(a.stake_total || 0)
-      : Number(a.stake || 0);
-    return acc + convert(valorOriginal, a.moeda_operacao || 'BRL');
-  }, 0);
 
   // ═══════════════════════════════════════════════════════════════════
   // LUCRO OPERACIONAL (DELEGADO ao KPI — já inclui TODOS os extras)
   // ═══════════════════════════════════════════════════════════════════
   const lucroLiquido = lucroKpiResult[projetoId]?.consolidado || 0;
 
-  // Lucro bruto das apostas (para exibição separada)
-  const lucroApostas = apostas
-    .filter(a => a.status === "LIQUIDADA")
-    .reduce((acc, a: any) => {
-      if (a.pl_consolidado != null && a.consolidation_currency === moedaConsolidacao) {
-        return acc + Number(a.pl_consolidado);
-      }
-      if (a.lucro_prejuizo_brl_referencia != null) {
-        return acc + Number(a.lucro_prejuizo_brl_referencia);
-      }
-      return acc + convert(Number(a.lucro_prejuizo || 0), a.moeda_operacao || 'BRL');
-    }, 0);
+  // Lucro bruto das apostas (via RPC — sem truncamento)
+  const lucroApostas = Number(rpcData.lucro_apostas || 0);
 
   // Cashback e giros (para exibição informativa — já inclusos no KPI)
   const lucroCashback = 0; // Incluído no lucroLiquido via KPI
