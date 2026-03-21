@@ -68,6 +68,7 @@ import { ProjetoBonusArea } from "@/components/projeto-detalhe/bonus";
 import { ProjetoCashbackTab } from "@/components/projeto-detalhe/ProjetoCashbackTab";
 import { SaldoOperavelCard } from "@/components/projeto-detalhe/SaldoOperavelCard";
 import { ProjetoGestaoTab } from "@/components/projeto-detalhe/ProjetoGestaoTab";
+import { ShareLinkDialog } from "@/components/shared/ShareLinkDialog";
 
 import { ProjetoDialog } from "@/components/projetos/ProjetoDialog";
 import { GlobalActionsBar } from "@/components/projeto-detalhe/GlobalActionsBar";
