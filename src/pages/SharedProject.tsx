@@ -21,6 +21,11 @@ interface SharedData {
     greens: number;
     reds: number;
     voids: number;
+    lucro_apostas: number;
+    lucro_cashback: number;
+    lucro_giros: number;
+    lucro_bonus: number;
+    lucro_ajustes: number;
     lucro_total: number;
     total_stake: number;
     apostas_pendentes: number;
