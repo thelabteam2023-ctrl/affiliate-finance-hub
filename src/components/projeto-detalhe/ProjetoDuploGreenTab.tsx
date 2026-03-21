@@ -1198,7 +1198,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
                           stake: p.stake,
                           moeda: p.moeda,
                         })),
-                      }, "DUPLO_GREEN", convertToConsolidationOficial);
+                      }, "DUPLO_GREEN", convertFnOficial);
                     }
                     return transformApostaToExport({
                       ...a,
