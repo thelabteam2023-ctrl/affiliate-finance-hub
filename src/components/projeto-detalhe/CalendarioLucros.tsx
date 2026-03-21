@@ -303,7 +303,7 @@ export function CalendarioLucros({
               <TooltipTrigger asChild>
                 <div
                   className={cn(
-                    "aspect-square rounded-[4px] flex items-center justify-center cursor-default transition-all duration-200",
+                    "aspect-square rounded-[4px] flex flex-col items-center justify-center cursor-default transition-all duration-200 gap-0",
                     bgClass,
                     isHoje && "ring-1.5 ring-primary ring-offset-1 ring-offset-background",
                     "hover:ring-1 hover:ring-foreground/20 hover:scale-110"
@@ -317,6 +317,14 @@ export function CalendarioLucros({
                   )}>
                     {format(dia, "d")}
                   </span>
+                  {temDados && lucro !== 0 && (
+                    <span className={cn(
+                      "text-[7px] font-semibold leading-none select-none mt-0.5 tabular-nums",
+                      lucro > 0 ? "text-emerald-200/80" : "text-red-200/80"
+                    )}>
+                      {formatCompactValue(lucro)}
+                    </span>
+                  )}
                 </div>
               </TooltipTrigger>
               <TooltipContent side="top" className="bg-popover border-border shadow-xl">
