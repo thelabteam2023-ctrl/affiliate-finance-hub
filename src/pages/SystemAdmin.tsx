@@ -751,6 +751,33 @@ export default function SystemAdmin() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            {!createWorkspaceDialog.userId && (
+              <div className="space-y-2">
+                <Label>Usuário</Label>
+                <Select 
+                  value={createWorkspaceDialog.userId} 
+                  onValueChange={(val) => {
+                    const selectedUser = users.find(u => u.id === val);
+                    setCreateWorkspaceDialog(prev => ({ 
+                      ...prev, 
+                      userId: val, 
+                      userName: selectedUser?.full_name || selectedUser?.email || '' 
+                    }));
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um usuário..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {users.map((u) => (
+                      <SelectItem key={u.id} value={u.id}>
+                        {u.full_name || u.email} — {u.email}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="space-y-2">
               <Label>Nome do Workspace</Label>
               <Input
