@@ -145,7 +145,8 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
         .eq("projeto_id", projetoId)
         .eq("status", "LIQUIDADA")
         .gte("data_aposta", startDate.split('T')[0])
-        .not("bonus_id", "is", null);
+        .not("bonus_id", "is", null)
+        .limit(10000);
 
       let queryEstrategia = supabase
         .from("apostas_unificada")
@@ -153,7 +154,8 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
         .eq("projeto_id", projetoId)
         .eq("status", "LIQUIDADA")
         .gte("data_aposta", startDate.split('T')[0])
-        .eq("estrategia", "EXTRACAO_BONUS");
+        .eq("estrategia", "EXTRACAO_BONUS")
+        .limit(10000);
 
       if (dateRange?.end) {
         queryBonusId = queryBonusId.lte("data_aposta", dateRange.end.toISOString());
