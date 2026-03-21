@@ -1149,7 +1149,7 @@ export function ProjetoValueBetTab({
                     ...a,
                     data_aposta: a.data_aposta,
                     estrategia: "VALUEBET",
-                  }, "ValueBet", convertToConsolidationOficial))}
+                  }, "ValueBet", convertToConsolidationOficialFn))}
                   abaOrigem="ValueBet"
                 filename={`valuebets-${projetoId}-${format(new Date(), 'yyyy-MM-dd')}`}
                 filtrosAplicados={{

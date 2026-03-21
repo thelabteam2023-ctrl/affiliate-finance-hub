@@ -1509,7 +1509,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                       bookmaker_nome: a.bookmaker?.nome,
                       estrategia: 'estrategia' in a ? a.estrategia : null,
                       moeda_operacao: (a as any).moeda_operacao,
-                    }, "Apostas", convertToConsolidationOficial);
+                    }, "Apostas", convertToConsolidation);
                   })}
                   abaOrigem="Apostas"
                   filename={`apostas-${projetoId}-${format(new Date(), 'yyyy-MM-dd')}`}

@@ -1203,7 +1203,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
                     return transformApostaToExport({
                       ...a,
                       estrategia: "DUPLO_GREEN",
-                    }, "Duplo Green", convertToConsolidationOficial);
+                    }, "Duplo Green", convertFnOficial);
                   })}
                   abaOrigem="Duplo Green"
                   filename={`duplogreen-${projetoId}-${format(new Date(), 'yyyy-MM-dd')}`}
