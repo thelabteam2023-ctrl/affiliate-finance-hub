@@ -581,15 +581,32 @@ export function VisaoGeralCharts({
   });
   const [calendarOpen, setCalendarOpen] = useState(false);
 
-  // Badge: soma lucro das apostas filtradas pelo período ativo + extras no mesmo período
+  // Badge: soma lucro do período ativo
+  // PRIORIDADE: Se apostasCalendario (RPC, sem truncamento) está disponível, usa como fonte da verdade
+  // filtrando pelo período. Caso contrário, usa apostas (REST, já filtrada pelo período).
   const periodTotal = useMemo(() => {
     let total = 0;
 
-    // apostas já vem filtrada pelo período selecionado (mês atual, anterior, ano, etc.)
-    // CRÍTICO: Usar consolidação multi-moeda para não somar EUR + USD brutos
-    apostas.forEach((a) => {
-      total += consolidateLucro(a);
-    });
+    // Fonte de apostas: apostasCalendario (RPC completa) ou apostas (REST filtrada)
+    const sourceData = apostasCalendario ?? apostas;
+    
+    if (apostasCalendario && periodStart && periodEnd) {
+      // RPC data: filtrar pelo período manualmente (RPC retorna todos os dados)
+      const pStart = startOfDay(periodStart);
+      apostasCalendario.forEach((a) => {
+        const dateStr = a.data_aposta.includes('T') ? extractLocalDateKey(a.data_aposta) : a.data_aposta;
+        const apostaDate = new Date(dateStr + 'T12:00:00');
+        if (apostaDate >= pStart && apostaDate <= periodEnd) {
+          // RPC data já vem com lucro consolidado (agregado server-side)
+          total += a.lucro_prejuizo || 0;
+        }
+      });
+    } else {
+      // REST data: já vem filtrada pelo período
+      apostas.forEach((a) => {
+        total += consolidateLucro(a);
+      });
+    }
 
     // Extras: filtrar pelo período selecionado (periodStart/periodEnd)
     // CRÍTICO: Converter extras para moeda de consolidação
@@ -608,7 +625,7 @@ export function VisaoGeralCharts({
     });
 
     return total;
-  }, [apostas, extrasLucro, periodStart, periodEnd]);
+  }, [apostas, apostasCalendario, extrasLucro, periodStart, periodEnd]);
 
   const isPositiveBadge = periodTotal >= 0;
   
