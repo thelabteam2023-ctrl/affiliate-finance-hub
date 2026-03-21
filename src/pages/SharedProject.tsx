@@ -108,14 +108,10 @@ export default function SharedProject() {
             <div>
               <h1 className="text-lg font-bold">{projeto.nome}</h1>
               <p className="text-[11px] text-muted-foreground">
-                Visualização compartilhada • Somente leitura
+                Visualização compartilhada
               </p>
             </div>
           </div>
-          <Badge variant="outline" className="gap-1.5">
-            <Lock className="h-3 w-3" />
-            Read-only
-          </Badge>
         </div>
       </header>
 
