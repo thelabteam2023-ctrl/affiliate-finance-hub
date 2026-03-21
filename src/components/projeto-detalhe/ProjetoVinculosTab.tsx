@@ -1550,13 +1550,6 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
       </TabsContent>
 
 
-      <TabsContent value="historico">
-        <HistoricoVinculosTab projetoId={projetoId} />
-      </TabsContent>
-
-      <TabsContent value="conciliacoes">
-        <HistoricoConciliacoesTab projetoId={projetoId} />
-      </TabsContent>
 
       <TabsContent value="extrato">
         {isBroker ? (
