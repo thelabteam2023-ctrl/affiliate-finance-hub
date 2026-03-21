@@ -193,8 +193,8 @@ export function ProjetoValueBetTab({
   // Hook para invalidar cache de saldos
   const invalidateSaldos = useInvalidateBookmakerSaldos();
   
-  // DESACOPLAMENTO CALENDÁRIO: Dados separados para o calendário (sem filtro de período)
-  const { apostas: calendarApostas, refetch: refetchCalendar } = useCalendarApostas({
+  // DESACOPLAMENTO CALENDÁRIO: Dados via RPC (sem truncamento, timezone correto)
+  const { daily: calendarDaily, refetch: refetchCalendar } = useCalendarApostasRpc({
     projetoId,
     estrategia: "VALUEBET",
   });
