@@ -13174,6 +13174,14 @@ export type Database = {
         Args: { p_projeto_id: string }
         Returns: Json
       }
+      get_projetos_lucro_operacional: {
+        Args: {
+          p_data_fim?: string
+          p_data_inicio?: string
+          p_projeto_ids: string[]
+        }
+        Returns: Json
+      }
       get_public_plans: { Args: never; Returns: Json }
       get_remaining_days: { Args: { p_expires_at: string }; Returns: number }
       get_saldo_disponivel_com_reservas: {
