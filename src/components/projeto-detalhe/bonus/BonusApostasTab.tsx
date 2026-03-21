@@ -28,6 +28,7 @@ import {
   Gift
 } from "lucide-react";
 import { liquidarSurebet, deletarAposta, reliquidarAposta, liquidarPernaSurebet, type LiquidarSurebetPernaInput } from "@/services/aposta";
+import { ExportMenu, transformSurebetToExport, transformApostaToExport } from "../ExportMenu";
 import { calcularImpactoResultado } from "@/lib/bookmakerBalanceHelper";
 import { getConsolidatedStake, getConsolidatedLucro } from "@/utils/consolidatedValues";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
