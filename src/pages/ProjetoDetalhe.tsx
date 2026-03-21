@@ -471,150 +471,37 @@ export default function ProjetoDetalhe() {
   
   const fetchApostasResumo = async () => {
     try {
-      const { start, end } = getDateRangeFromFilter();
-      
-      // Build query for apostas_unificada (ALL strategies: Surebet, ValueBet, Bônus, etc.)
-      let apostasQuery = supabase
-        .from("apostas_unificada")
-        .select("id, stake, lucro_prejuizo, lucro_prejuizo_brl_referencia, moeda_operacao, status, resultado, forma_registro, estrategia")
-        .eq("projeto_id", id)
-        .is("cancelled_at", null);
-      
-      // Build query for cashback_manual
-      let cashbackQuery = supabase
-        .from("cashback_manual")
-        .select("valor, moeda_operacao, valor_brl_referencia")
-        .eq("projeto_id", id);
-      
-      // Build query for giros_gratis (fórmula canônica: LUCRO = APOSTAS + CASHBACK + GIROS)
-      let girosQuery = supabase
-        .from("giros_gratis")
-        .select("valor_retorno, moeda, valor_retorno_brl_referencia")
-        .eq("projeto_id", id)
-        .eq("status", "CONFIRMADO");
-      
-      // CRÍTICO: Usar getOperationalDateRangeForQuery para garantir timezone operacional (São Paulo)
-      if (start && end) {
-        const { startUTC, endUTC } = getOperationalDateRangeForQuery(start, end);
-        apostasQuery = apostasQuery.gte("data_aposta", startUTC);
-        apostasQuery = apostasQuery.lte("data_aposta", endUTC);
-        // Cashback e Giros usam data (não timestamp), então mantém formato YYYY-MM-DD
-        const startDateStr = start.toISOString().split("T")[0];
-        const endDateStr = end.toISOString().split("T")[0];
-        cashbackQuery = cashbackQuery.gte("data_credito", startDateStr);
-        cashbackQuery = cashbackQuery.lte("data_credito", endDateStr);
-        girosQuery = girosQuery.gte("data_credito", startDateStr);
-        girosQuery = girosQuery.lte("data_credito", endDateStr);
-      } else if (start) {
-        const { startUTC } = getOperationalDateRangeForQuery(start, start);
-        apostasQuery = apostasQuery.gte("data_aposta", startUTC);
-        cashbackQuery = cashbackQuery.gte("data_credito", start.toISOString().split("T")[0]);
-        girosQuery = girosQuery.gte("data_credito", start.toISOString().split("T")[0]);
-      } else if (end) {
-        const { endUTC } = getOperationalDateRangeForQuery(end, end);
-        apostasQuery = apostasQuery.lte("data_aposta", endUTC);
-        cashbackQuery = cashbackQuery.lte("data_credito", end.toISOString().split("T")[0]);
-        girosQuery = girosQuery.lte("data_credito", end.toISOString().split("T")[0]);
-      }
-      
-      const [apostasResult, cashbackResult, girosResult] = await Promise.all([
-        apostasQuery,
-        cashbackQuery,
-        girosQuery
-      ]);
-      
-      if (apostasResult.error) throw apostasResult.error;
-      
-      const todasApostas = apostasResult.data || [];
-      const cashbacks = cashbackResult.data || [];
-      const giros = girosResult.data || [];
-      
-      // Para ARBITRAGEM, contar pernas individuais como operações separadas
-      const arbitragemIds = todasApostas
-        .filter(a => a.forma_registro === "ARBITRAGEM")
-        .map(a => a.id);
-      
-      let pernasCount = 0;
-      if (arbitragemIds.length > 0) {
-        const { count } = await supabase
-          .from("apostas_pernas")
-          .select("*", { count: "exact", head: true })
-          .in("aposta_id", arbitragemIds);
-        pernasCount = count || 0;
-      }
-      
-      // Total = apostas simples/múltiplas + pernas de arbitragem
-      const apostasNaoArbitragem = todasApostas.filter(a => a.forma_registro !== "ARBITRAGEM").length;
-      const totalOperacoes = apostasNaoArbitragem + pernasCount;
-      
-      // Calculate lucro from apostas (com conversão de moeda via getRate)
-      const lucroApostas = todasApostas.reduce((acc, a) => {
-        if (a.lucro_prejuizo_brl_referencia != null) {
-          return acc + Number(a.lucro_prejuizo_brl_referencia);
-        }
-        const lucroRaw = Number(a.lucro_prejuizo || 0);
-        const moedaOp = a.moeda_operacao || 'BRL';
-        if (moedaOp === 'BRL') return acc + lucroRaw;
-        // Converter usando taxa da API
-        const taxa = getRate(moedaOp);
-        return acc + (lucroRaw * taxa);
-      }, 0);
-      
-      // Calculate lucro from cashback manual (é lucro!)
-      const lucroCashback = cashbacks.reduce((acc, cb) => {
-        const valor = cb.valor_brl_referencia ?? Number(cb.valor || 0);
-        return acc + valor;
-      }, 0);
-      
-      // Calculate lucro from giros grátis (fórmula canônica)
-      const lucroGiros = giros.reduce((acc: number, g: any) => {
-        if (g.valor_retorno_brl_referencia != null) {
-          return acc + Number(g.valor_retorno_brl_referencia);
-        }
-        const valorRaw = Number(g.valor_retorno || 0);
-        const moedaGiro = g.moeda || 'BRL';
-        if (moedaGiro === 'BRL') return acc + valorRaw;
-        const taxa = getRate(moedaGiro);
-        return acc + (valorRaw * taxa);
-      }, 0);
-      
-      // Para resultados de pernas de arbitragem, buscar resultados individuais
-      let pernasGreens = 0, pernasReds = 0, pernasVoids = 0, pernasMeioGreens = 0, pernasMeioReds = 0;
-      if (arbitragemIds.length > 0) {
-        const { data: pernasData } = await supabase
-          .from("apostas_pernas")
-          .select("resultado")
-          .in("aposta_id", arbitragemIds);
-        if (pernasData) {
-          pernasGreens = pernasData.filter(p => p.resultado === "GREEN").length;
-          pernasReds = pernasData.filter(p => p.resultado === "RED").length;
-          pernasVoids = pernasData.filter(p => p.resultado === "VOID").length;
-          pernasMeioGreens = pernasData.filter(p => p.resultado === "MEIO_GREEN" || p.resultado === "HALF").length;
-          pernasMeioReds = pernasData.filter(p => p.resultado === "MEIO_RED").length;
-        }
-      }
-      
-      // Resultados de apostas não-arbitragem + pernas de arbitragem
-      const naoArb = todasApostas.filter(a => a.forma_registro !== "ARBITRAGEM");
-      
+      // ══════════════════════════════════════════════════════════════
+      // RPC server-side: elimina truncamento de 1000 linhas do PostgREST
+      // Todos os cálculos (contagem, resultados, lucro) são feitos no banco
+      // ══════════════════════════════════════════════════════════════
+      const { data, error } = await supabase.rpc('get_projeto_apostas_resumo', {
+        p_projeto_id: id,
+        p_data_inicio: null,
+        p_data_fim: null,
+      });
+
+      if (error) throw error;
+      if (!data) return;
+
+      const rpcResult = data as any;
+
+      const totalStake = Number(rpcResult.total_stake || 0);
+      const lucroTotal = Number(rpcResult.lucro_total || 0);
+
       const summary: ApostasResumo = {
-        total_apostas: totalOperacoes,
-        apostas_pendentes: todasApostas.filter(a => a.status === "PENDENTE").length,
-        greens: naoArb.filter(a => a.resultado === "GREEN").length + pernasGreens,
-        reds: naoArb.filter(a => a.resultado === "RED").length + pernasReds,
-        voids: naoArb.filter(a => a.resultado === "VOID").length + pernasVoids,
-        meio_greens: naoArb.filter(a => a.resultado === "MEIO_GREEN" || a.resultado === "HALF").length + pernasMeioGreens,
-        meio_reds: naoArb.filter(a => a.resultado === "MEIO_RED").length + pernasMeioReds,
-        total_stake: todasApostas.reduce((acc, a) => acc + Number(a.stake || 0), 0),
-        lucro_total: lucroApostas + lucroCashback + lucroGiros,
-        roi_percentual: 0
+        total_apostas: Number(rpcResult.total_apostas || 0),
+        apostas_pendentes: Number(rpcResult.apostas_pendentes || 0),
+        greens: Number(rpcResult.greens || 0),
+        reds: Number(rpcResult.reds || 0),
+        voids: Number(rpcResult.voids || 0),
+        meio_greens: Number(rpcResult.meio_greens || 0),
+        meio_reds: Number(rpcResult.meio_reds || 0),
+        total_stake: totalStake,
+        lucro_total: lucroTotal,
+        roi_percentual: totalStake > 0 ? (lucroTotal / totalStake) * 100 : 0,
       };
-      
-      // Calculate ROI
-      if (summary.total_stake > 0) {
-        summary.roi_percentual = (summary.lucro_total / summary.total_stake) * 100;
-      }
-      
+
       setApostasResumo(summary);
     } catch (error: any) {
       console.error("Erro ao carregar resumo de apostas:", error.message);
