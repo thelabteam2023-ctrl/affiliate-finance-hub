@@ -1190,18 +1190,20 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
                         status: a.status,
                         lucro_real: a.lucro_prejuizo,
                         observacoes: a.observacoes,
+                        moeda_operacao: a.moeda_operacao,
                         pernas: a.pernas?.map(p => ({
                           bookmaker_nome: p.bookmaker_nome,
                           selecao: p.selecao,
                           odd: p.odd,
                           stake: p.stake,
+                          moeda: p.moeda,
                         })),
-                      }, "DUPLO_GREEN");
+                      }, "DUPLO_GREEN", convertToConsolidationOficial);
                     }
                     return transformApostaToExport({
                       ...a,
                       estrategia: "DUPLO_GREEN",
-                    }, "Duplo Green");
+                    }, "Duplo Green", convertToConsolidationOficial);
                   })}
                   abaOrigem="Duplo Green"
                   filename={`duplogreen-${projetoId}-${format(new Date(), 'yyyy-MM-dd')}`}

@@ -1394,8 +1394,9 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
                           observacoes: s.observacoes,
                           bookmaker_nome: s.bookmaker_nome,
                           estrategia: "SUREBET",
-                        }, "Surebet")
-                      : transformSurebetToExport(s, "SUREBET")
+                          moeda_operacao: s.moeda_operacao,
+                        }, "Surebet", convertFnOficial)
+                      : transformSurebetToExport(s, "SUREBET", convertFnOficial)
                   )}
                   abaOrigem="Surebet"
                   filename={`surebets-${projetoId}-${format(new Date(), 'yyyy-MM-dd')}`}
