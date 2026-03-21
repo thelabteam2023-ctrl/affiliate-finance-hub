@@ -22,8 +22,6 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { CaixaTransacaoDialog } from "@/components/caixa/CaixaTransacaoDialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { HistoricoVinculosTab } from "./HistoricoVinculosTab";
-import { HistoricoConciliacoesTab } from "./HistoricoConciliacoesTab";
 import { SaquesBrokerTab } from "./SaquesBrokerTab";
 import { ExtratoProjetoTab } from "./ExtratoProjetoTab";
 
@@ -485,14 +483,6 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
           <TabsTrigger value="ativos" className="flex items-center gap-2">
             <Link2 className="h-4 w-4" />
             Ativos ({vinculos.length})
-          </TabsTrigger>
-          <TabsTrigger value="historico" className="flex items-center gap-2">
-            <History className="h-4 w-4" />
-            Histórico ({historicoCount.total})
-          </TabsTrigger>
-          <TabsTrigger value="conciliacoes" className="flex items-center gap-2">
-            <ArrowRightLeft className="h-4 w-4" />
-            Ajustes
           </TabsTrigger>
           <TabsTrigger value="extrato" className="flex items-center gap-2">
             <ArrowUpFromLine className="h-4 w-4" />
@@ -1558,13 +1548,6 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
       </TabsContent>
 
 
-      <TabsContent value="historico">
-        <HistoricoVinculosTab projetoId={projetoId} />
-      </TabsContent>
-
-      <TabsContent value="conciliacoes">
-        <HistoricoConciliacoesTab projetoId={projetoId} />
-      </TabsContent>
 
       <TabsContent value="extrato">
         {isBroker ? (
