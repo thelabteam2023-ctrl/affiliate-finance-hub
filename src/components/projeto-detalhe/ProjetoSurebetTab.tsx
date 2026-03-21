@@ -72,7 +72,7 @@ import { OperationsSubTabHeader, type HistorySubTab, SuspiciousDateFilterButton,
 import { ExportMenu, transformSurebetToExport, transformApostaToExport } from "./ExportMenu";
 import { SaldoOperavelCard } from "./SaldoOperavelCard";
 // FinancialSummaryCompact removed — now integrated into Lucro KPI popover
-import { useCalendarApostas, transformCalendarApostasForCharts } from "@/hooks/useCalendarApostas";
+import { useCalendarApostasRpc, transformRpcDailyForCharts } from "@/hooks/useCalendarApostasRpc";
 import { ChartEmptyState } from "@/components/ui/chart-empty-state";
 
 interface ProjetoSurebetTabProps {
