@@ -34,6 +34,7 @@ export function useCicloAlertas() {
   const [showDismissed, setShowDismissed] = useState(false);
 
   const fetchAlertas = useCallback(async () => {
+    if (!workspaceId) return;
     try {
       setLoading(true);
       const hoje = new Date();
@@ -49,10 +50,12 @@ export function useCicloAlertas() {
             valor_acumulado, metrica_acumuladora,
             projeto:projetos(nome, metrica_lucro_ciclo)
           `)
-          .eq("status", "EM_ANDAMENTO"),
+          .eq("status", "EM_ANDAMENTO")
+          .eq("workspace_id", workspaceId),
         supabase
           .from("ciclo_alert_dismissals")
-          .select("ciclo_id"),
+          .select("ciclo_id")
+          .eq("workspace_id", workspaceId),
       ]);
 
       if (ciclosResult.error) throw ciclosResult.error;
