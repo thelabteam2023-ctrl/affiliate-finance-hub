@@ -51,11 +51,10 @@ export function useCicloAlertas() {
             projeto:projetos(nome, metrica_lucro_ciclo)
           `)
           .eq("status", "EM_ANDAMENTO")
-          .eq("workspace_id", workspaceId),
+          .eq("workspace_id", workspaceId) as any,
         supabase
           .from("ciclo_alert_dismissals")
-          .select("ciclo_id")
-          .eq("workspace_id", workspaceId),
+          .select("ciclo_id"),
       ]);
 
       if (ciclosResult.error) throw ciclosResult.error;
