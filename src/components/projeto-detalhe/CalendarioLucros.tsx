@@ -50,6 +50,21 @@ const defaultFormatCurrencyFull = (value: number): string => {
   }).format(value);
 };
 
+/** Formata valor compacto para caber na célula do calendário */
+function formatCompactValue(value: number): string {
+  const abs = Math.abs(value);
+  if (abs >= 1000) {
+    return `${value < 0 ? "-" : ""}${(abs / 1000).toFixed(1).replace(/\.0$/, "")}k`;
+  }
+  if (abs >= 100) {
+    return `${value < 0 ? "-" : ""}${Math.round(abs)}`;
+  }
+  if (abs >= 10) {
+    return `${value < 0 ? "-" : ""}${abs.toFixed(0)}`;
+  }
+  return `${value < 0 ? "-" : ""}${abs.toFixed(1)}`;
+}
+
 /** Calcula a intensidade do heatmap (0-4) com base no valor */
 function getIntensityLevel(value: number, maxAbsValue: number): number {
   if (maxAbsValue === 0) return 0;
@@ -288,7 +303,7 @@ export function CalendarioLucros({
               <TooltipTrigger asChild>
                 <div
                   className={cn(
-                    "aspect-square rounded-[4px] flex items-center justify-center cursor-default transition-all duration-200",
+                    "aspect-square rounded-[4px] flex flex-col items-center justify-center cursor-default transition-all duration-200 gap-0",
                     bgClass,
                     isHoje && "ring-1.5 ring-primary ring-offset-1 ring-offset-background",
                     "hover:ring-1 hover:ring-foreground/20 hover:scale-110"
@@ -302,6 +317,14 @@ export function CalendarioLucros({
                   )}>
                     {format(dia, "d")}
                   </span>
+                  {temDados && lucro !== 0 && (
+                    <span className={cn(
+                      "text-[7px] font-semibold leading-none select-none mt-0.5 tabular-nums",
+                      lucro > 0 ? "text-emerald-200/80" : "text-red-200/80"
+                    )}>
+                      {formatCompactValue(lucro)}
+                    </span>
+                  )}
                 </div>
               </TooltipTrigger>
               <TooltipContent side="top" className="bg-popover border-border shadow-xl">
