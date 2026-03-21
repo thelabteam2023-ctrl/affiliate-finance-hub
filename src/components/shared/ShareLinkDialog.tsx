@@ -124,9 +124,8 @@ export function ShareLinkDialog({ projetoId, projetoNome }: ShareLinkDialogProps
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-1.5">
+        <Button variant="outline" size="icon" className="h-7 w-7">
           <Share2 className="h-3.5 w-3.5" />
-          Compartilhar
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-lg">
