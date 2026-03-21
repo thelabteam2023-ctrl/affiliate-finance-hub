@@ -180,9 +180,8 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
     return `${dateRange.start.toISOString()}_${dateRange.end.toISOString()}`;
   }, [dateRange]);
 
-  // ---- useCalendarApostas: Calendar apostas (no period filter, with operacoes) ----
-  const { apostas: calendarApostasRaw = [] } = useCalendarApostas({ projetoId });
-  const apostasCalendario = calendarApostasRaw;
+  // ---- useCalendarApostasRpc: Calendar data via RPC (sem truncamento, timezone correto) ----
+  const { daily: calendarDaily, resumo: calendarResumo } = useCalendarApostasRpc({ projetoId });
 
   // ---- useQuery: Filtered apostas (with period) ----
   const { 
