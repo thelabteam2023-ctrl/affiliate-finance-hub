@@ -8040,6 +8040,63 @@ export type Database = {
           },
         ]
       }
+      projeto_shared_links: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          expires_at: string | null
+          id: string
+          label: string | null
+          last_viewed_at: string | null
+          projeto_id: string
+          revoked_at: string | null
+          token: string
+          view_count: number | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          expires_at?: string | null
+          id?: string
+          label?: string | null
+          last_viewed_at?: string | null
+          projeto_id: string
+          revoked_at?: string | null
+          token: string
+          view_count?: number | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          expires_at?: string | null
+          id?: string
+          label?: string | null
+          last_viewed_at?: string | null
+          projeto_id?: string
+          revoked_at?: string | null
+          token?: string
+          view_count?: number | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projeto_shared_links_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projeto_shared_links_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projetos: {
         Row: {
           archived_at: string | null
@@ -13221,6 +13278,7 @@ export type Database = {
           total_bookmakers: number
         }[]
       }
+      get_shared_project_data: { Args: { p_token: string }; Returns: Json }
       get_subscription_details: {
         Args: { p_workspace_id: string }
         Returns: {
