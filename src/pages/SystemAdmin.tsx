@@ -744,7 +744,10 @@ export default function SystemAdmin() {
           <DialogHeader>
             <DialogTitle>Criar Workspace</DialogTitle>
             <DialogDescription>
-              Criando workspace para: <strong>{createWorkspaceDialog.userName}</strong>
+              {createWorkspaceDialog.userId 
+                ? <>Criando workspace para: <strong>{createWorkspaceDialog.userName}</strong></>
+                : 'Selecione o usuário e configure o novo workspace'
+              }
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
