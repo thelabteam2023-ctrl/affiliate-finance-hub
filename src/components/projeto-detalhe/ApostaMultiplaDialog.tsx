@@ -1542,7 +1542,7 @@ export function ApostaMultiplaDialog({
               </div>
               <div className="flex items-center gap-1">
                 <span className="text-[10px] text-muted-foreground">P/L:</span>
-                <span className={`font-medium text-xs ${previewCalculo.lucro >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                <span className={`font-medium text-xs ${previewCalculo.lucro >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
                   {previewCalculo.lucro >= 0 ? "+" : ""}{formatCurrency(previewCalculo.lucro)}
                 </span>
               </div>
