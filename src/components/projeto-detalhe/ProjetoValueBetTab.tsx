@@ -974,7 +974,31 @@ export function ProjetoValueBetTab({
       {/* KPIs - Faixa compacta */}
       <KpiSummaryBar
         actions={actionsSlot}
-        leading={<SaldoOperavelCard projetoId={projetoId} variant="compact" />}
+        leading={
+          <>
+            <SaldoOperavelCard projetoId={projetoId} variant="compact" />
+            <div className="h-8 w-px bg-border/50 hidden sm:block flex-shrink-0" />
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 text-[11px] px-2.5 flex-shrink-0"
+              onClick={() => {
+                const width = 420;
+                const height = 580;
+                const left = Math.round(window.screenX + (window.outerWidth - width) / 2);
+                const top = Math.round(window.screenY + (window.outerHeight - height) / 2);
+                window.open(
+                  `/ferramentas/calculadora-ev`,
+                  'calculadora-ev',
+                  `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
+                );
+              }}
+            >
+              <TrendingUp className="mr-1 h-3 w-3" />
+              Calculadora EV
+            </Button>
+          </>
+        }
         items={[
           {
             label: "Apostas ValueBet",
