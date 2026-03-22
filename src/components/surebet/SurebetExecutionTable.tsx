@@ -401,7 +401,7 @@ export function SurebetExecutionTable({
                   <td className="py-1 px-1 text-right">
                     <span className={cn(
                       "text-[10px] tabular-nums",
-                      hasData ? (isPositive ? "text-emerald-400" : "text-red-400") : "text-muted-foreground"
+                      hasData ? (isPositive ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400") : "text-muted-foreground"
                     )}>
                       {hasData ? `${formatValue(roi, true)}%` : "—"}
                     </span>
