@@ -438,8 +438,17 @@ export function parseOcrMarket(
   
   if (type === "TOTAL" && domain) {
     displayName = `Total de ${DOMAIN_LABELS[domain]}`;
-  } else if (type === "HANDICAP" && domain) {
-    displayName = `Handicap de ${DOMAIN_LABELS[domain]}`;
+  } else if (type === "HANDICAP") {
+    // Se detectou handicap asiático (split line ou padrão asiático), usar nome específico
+    const isAsian = !!(splitHandicapFromSelection || splitHandicapFromMarket || teamHandicap) 
+      || /asi[aá]tic/i.test(combinedText) || /\bah\b/i.test(combinedText);
+    if (isAsian) {
+      displayName = "Handicap Asiático";
+    } else if (domain) {
+      displayName = `Handicap de ${DOMAIN_LABELS[domain]}`;
+    } else {
+      displayName = "Handicap Asiático";
+    }
   } else {
     // Mapeamento simples para outros tipos
     const typeDisplayMap: Record<MarketType, string> = {
