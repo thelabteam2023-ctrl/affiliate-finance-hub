@@ -13263,6 +13263,15 @@ export type Database = {
         Args: { p_projeto_id: string }
         Returns: Json
       }
+      get_projeto_lucro_operacional_daily: {
+        Args: {
+          p_cotacoes?: Json
+          p_data_fim?: string
+          p_data_inicio?: string
+          p_projeto_id: string
+        }
+        Returns: Json
+      }
       get_projetos_lucro_operacional: {
         Args: {
           p_data_fim?: string

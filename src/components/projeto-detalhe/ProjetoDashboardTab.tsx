@@ -20,7 +20,8 @@ import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { VisaoGeralCharts } from "./VisaoGeralCharts";
 import { fetchProjetoExtras, type ProjetoExtraEntry } from "@/services/fetchProjetoExtras";
-import { useCalendarApostasRpc, transformRpcDailyForCharts } from "@/hooks/useCalendarApostasRpc";
+import { useCalendarApostasRpc } from "@/hooks/useCalendarApostasRpc";
+import { useCanonicalCalendarDaily, transformCanonicalDailyForCharts } from "@/hooks/useCanonicalCalendarDaily";
 import { fetchProjetosLucroOperacionalKpi, derivarCotacoesFromConvertFn } from "@/services/fetchProjetosLucroOperacionalKpi";
 import { useCotacoes } from "@/hooks/useCotacoes";
 
@@ -183,7 +184,13 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
     return `${dateRange.start.toISOString()}_${dateRange.end.toISOString()}`;
   }, [dateRange]);
 
-  // ---- useCalendarApostasRpc: Calendar data via RPC (sem truncamento, timezone correto) ----
+  // ---- Canonical Calendar Daily: mesma lógica do badge (Lucro Operacional completo) ----
+  const { daily: canonicalDaily } = useCanonicalCalendarDaily({
+    projetoId,
+    convertToConsolidation: convertToConsolidationOficial,
+  });
+
+  // ---- useCalendarApostasRpc: ainda usado para contagens (greens/reds/operações) ----
   const cotacoesCalendario = useMemo(() => ({
     EUR: cotacaoEUR,
     GBP: cotacaoGBP,
@@ -258,8 +265,9 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
     queryClient.invalidateQueries({ queryKey: ["projeto-dashboard-extras", projetoId] });
     queryClient.invalidateQueries({ queryKey: ["projeto-resultado", projetoId] });
     queryClient.invalidateQueries({ queryKey: ["bookmaker-saldos"] });
-    // CRÍTICO: Invalidar calendário RPC (nova arquitetura)
+    // CRÍTICO: Invalidar calendário RPC e canônico
     queryClient.invalidateQueries({ queryKey: ["calendar-apostas-rpc", projetoId] });
+    queryClient.invalidateQueries({ queryKey: ["canonical-calendar-daily", projetoId] });
     queryClient.invalidateQueries({ queryKey: ["projeto-lucro-kpi-canonical", projetoId] });
   }, [queryClient, projetoId]);
 
@@ -420,7 +428,7 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
 
       <VisaoGeralCharts 
         apostas={apostasParaGraficos}
-        apostasCalendario={transformRpcDailyForCharts(calendarDaily)}
+        apostasCalendario={transformCanonicalDailyForCharts(canonicalDaily)}
         extrasLucro={extrasLucro}
         accentColor="hsl(var(--primary))"
         logoMap={catalogLogoMap}
