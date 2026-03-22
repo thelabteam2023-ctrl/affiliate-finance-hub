@@ -443,7 +443,7 @@ export function CalendarioLucros({
   // ═══════════════════════════════════════
   if (compact) {
     return (
-      <div className="p-4 min-w-[320px]">
+      <div className="min-w-[440px] rounded-2xl bg-popover p-4 text-popover-foreground">
         {renderNav()}
         <div className="mt-3">
           {renderHeatmapGrid(true)}
