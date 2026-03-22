@@ -1004,7 +1004,7 @@ export function VisaoGeralCharts({
             </div>
             <div className="flex items-center gap-2">
               {showCalendar && (
-                <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                <Popover open={calendarOpen} onOpenChange={handleCalendarOpenChange}>
                   <PopoverTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-7 w-7">
                       <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -1031,7 +1031,7 @@ export function VisaoGeralCharts({
               )}
               <Badge
                 variant="outline"
-                className={isPositive ? "border-emerald-500/30 text-emerald-500" : "border-red-500/30 text-red-500"}
+                className={isPositive ? "border-success/30 text-success" : "border-destructive/30 text-destructive"}
               >
                 {formatCurrency(periodTotal)}
               </Badge>
