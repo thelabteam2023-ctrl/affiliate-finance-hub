@@ -223,6 +223,14 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
     projetoId,
     estrategia: "SUREBET",
     cotacaoUSD: convertFnOficial(1, "USD"),
+    cotacoes: {
+      EUR: getRate("EUR"),
+      GBP: getRate("GBP"),
+      MYR: getRate("MYR"),
+      MXN: getRate("MXN"),
+      ARS: getRate("ARS"),
+      COP: getRate("COP"),
+    },
   });
   
   // Sub-abas Abertas/Histórico - usa tipo padronizado
