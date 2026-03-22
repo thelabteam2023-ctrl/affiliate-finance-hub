@@ -430,7 +430,7 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
         apostas={apostasParaGraficos}
         apostasCalendario={transformCanonicalDailyForCharts(canonicalDaily)}
         extrasLucro={extrasLucro}
-        calendarUsesCanonicalDaily={true}
+        accentColor="hsl(var(--primary))"
         logoMap={catalogLogoMap}
         showCalendar={true}
         showEvolucaoChart={true}
