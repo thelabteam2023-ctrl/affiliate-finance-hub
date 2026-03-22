@@ -44,7 +44,8 @@ const SPORTS_LIST = [
 ];
 
 const MARKETS_KEYWORDS = {
-  "Moneyline / 1X2": ["1x2", "moneyline", "match winner", "vencedor"],
+  "Vencedor da Partida": ["moneyline", "match winner", "winner", "vencedor", "para ganhar", "to win", "ganha o jogo", "ganha a partida", "win match"],
+  "Moneyline / 1X2": ["1x2", "resultado da partida", "resultado final", "match odds"],
   "Over (Gols)": ["over", "acima", "mais de"],
   "Under (Gols)": ["under", "abaixo", "menos de"],
   "Handicap Asiático": ["handicap asiático", "asian handicap", "ah"],
