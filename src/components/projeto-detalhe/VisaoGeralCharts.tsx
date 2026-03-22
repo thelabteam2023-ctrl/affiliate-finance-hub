@@ -1018,7 +1018,8 @@ export function VisaoGeralCharts({
                       accentColor="purple"
                       compact
                       formatCurrency={formatCurrency}
-                      initialMonth={periodStart}
+                      initialMonth={calendarInitialMonth}
+                      onMonthTotalChange={setCalendarMonthTotal}
                     />
                   </PopoverContent>
                 </Popover>
