@@ -1012,7 +1012,7 @@ export function VisaoGeralCharts({
                         lucro_prejuizo: calendarIsRpc ? (a.lucro_prejuizo || 0) : consolidateLucro(a),
                         operacoes: (a as any).operacoes,
                       }))} 
-                      extrasLucro={extrasConvertidos}
+                      extrasLucro={calendarIsRpc ? [] : extrasConvertidos}
                       titulo="Calendário de Lucros"
                       accentColor="purple"
                       compact
@@ -1077,7 +1077,7 @@ export function VisaoGeralCharts({
                         lucro_prejuizo: calendarIsRpc ? (a.lucro_prejuizo || 0) : consolidateLucro(a),
                         operacoes: (a as any).operacoes,
                       }))} 
-                      extrasLucro={extrasConvertidos}
+                      extrasLucro={calendarIsRpc ? [] : extrasConvertidos}
                       titulo="Calendário de Lucros"
                       accentColor="purple"
                       compact

@@ -180,6 +180,11 @@ export function BonusResultadoLiquidoChart({
     bonusBets.forEach(bet => {
       const isBonusBet = bet.bonus_id || bet.estrategia === "EXTRACAO_BONUS";
       if (!isBonusBet) return;
+
+      if (dateRange) {
+        const betDate = new Date(extractLocalDateKey(bet.data_aposta) + "T12:00:00");
+        if (betDate < startOfDay(dateRange.start) || betDate > dateRange.end) return;
+      }
       
       // Se filtro por bookmaker ativo, filtrar juice também
       if (selectedBookmaker && bet.bonus_id) {
