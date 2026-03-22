@@ -21,6 +21,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { PERIOD_STALE_TIME, PERIOD_GC_TIME } from "@/lib/query-cache-config";
 import { BonusResultadoLiquidoChart } from "./BonusResultadoLiquidoChart";
 import { CurrencyBreakdownTooltip } from "@/components/ui/currency-breakdown-tooltip";
+import { extractCivilDateKey } from "@/utils/dateUtils";
 
 interface DateRangeResult {
   start: Date;
