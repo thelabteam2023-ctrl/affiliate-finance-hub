@@ -150,6 +150,7 @@ function getHeatmapTone(lucro: number, temDados: boolean, maxAbsLucro: number) {
         value: "text-white dark:text-destructive-foreground",
       };
   }
+}
 
 export function CalendarioLucros({ 
   apostas, 
