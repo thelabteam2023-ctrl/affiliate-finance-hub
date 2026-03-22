@@ -141,9 +141,9 @@ export function SharedCalendar({ daily, currencySymbol }: Props) {
 
         {/* Heatmap Grid */}
         <TooltipProvider delayDuration={100}>
-          <div className="grid grid-cols-7 gap-[3px] mt-3">
+          <div className="grid grid-cols-7 gap-[2px] mt-3">
             {["D", "S", "T", "Q", "Q", "S", "S"].map((d, idx) => (
-              <div key={idx} className="text-center text-[10px] text-muted-foreground/60 font-medium pb-1 select-none">{d}</div>
+              <div key={idx} className="text-center text-[11px] text-muted-foreground/60 font-medium pb-1 select-none">{d}</div>
             ))}
 
             {/* Empty cells */}
