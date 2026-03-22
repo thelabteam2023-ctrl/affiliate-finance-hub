@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useCallback } from 'react';
-import { Copy, Check, History, TrendingUp, AlertTriangle, XCircle, Zap, HelpCircle } from 'lucide-react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { Copy, Check, History, TrendingUp, AlertTriangle, XCircle, Zap, HelpCircle, ClipboardPaste, X, Loader2, Image as ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -7,6 +7,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface SimulationResult {
   id: number;
@@ -89,9 +91,101 @@ export const CalculadoraEVContent: React.FC = () => {
   const [showHistory, setShowHistory] = useState(false);
   const [simCounter, setSimCounter] = useState(0);
 
+  // OCR state
+  const [pastedImage, setPastedImage] = useState<string | null>(null);
+  const [isParsing, setIsParsing] = useState(false);
+  const [parsedInfo, setParsedInfo] = useState<string | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
   const parseNum = (v: string) => {
     const n = parseFloat(v.replace(',', '.'));
     return isNaN(n) ? null : n;
+  };
+
+  // Paste handler
+  useEffect(() => {
+    const handlePaste = async (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      for (const item of Array.from(items)) {
+        if (item.type.startsWith('image/')) {
+          e.preventDefault();
+          const file = item.getAsFile();
+          if (!file) return;
+
+          const reader = new FileReader();
+          reader.onload = async (ev) => {
+            const base64 = ev.target?.result as string;
+            if (!base64) return;
+            setPastedImage(base64);
+            setParsedInfo(null);
+            await parseImage(base64);
+          };
+          reader.readAsDataURL(file);
+          break;
+        }
+      }
+    };
+
+    document.addEventListener('paste', handlePaste);
+    return () => document.removeEventListener('paste', handlePaste);
+  }, []);
+
+  const parseImage = async (imageBase64: string) => {
+    setIsParsing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('parse-ev-print', {
+        body: { imageBase64 },
+      });
+
+      if (error) {
+        toast.error('Erro ao interpretar print', { description: error.message });
+        setIsParsing(false);
+        return;
+      }
+
+      if (!data?.success || !data?.data) {
+        toast.error('Não foi possível interpretar o print', { description: data?.error || 'Tente outro print.' });
+        setIsParsing(false);
+        return;
+      }
+
+      const d = data.data;
+      const infoParts: string[] = [];
+
+      if (d.odd_atual && d.odd_atual > 1) {
+        setOddAtual(String(d.odd_atual));
+      }
+      if (d.odd_justa && d.odd_justa > 1) {
+        setOddJusta(String(d.odd_justa));
+      }
+      if (d.stake && d.stake > 0) {
+        setStakeBase(String(d.stake));
+      }
+
+      if (d.evento) infoParts.push(d.evento);
+      if (d.mercado) infoParts.push(d.mercado);
+      if (d.selecao) infoParts.push(d.selecao);
+      if (d.bookmaker) infoParts.push(d.bookmaker);
+      if (d.limite) infoParts.push(`Limite: R$ ${d.limite}`);
+
+      setParsedInfo(infoParts.length > 0 ? infoParts.join(' • ') : null);
+
+      toast.success('Print interpretado!', {
+        description: `Odd: ${d.odd_atual || '?'} | Justa: ${d.odd_justa || '?'}${d.ev_percent ? ` | EV: ${d.ev_percent}%` : ''}`,
+      });
+    } catch (err) {
+      console.error('[EV Calculator] Parse error:', err);
+      toast.error('Erro ao processar print');
+    } finally {
+      setIsParsing(false);
+    }
+  };
+
+  const clearImage = () => {
+    setPastedImage(null);
+    setParsedInfo(null);
   };
 
   const results = useMemo(() => {
@@ -168,10 +262,56 @@ export const CalculadoraEVContent: React.FC = () => {
     setOddJusta('');
     setStakeBase('');
     setOddInicial('');
+    clearImage();
   };
 
   return (
-    <div className="p-3 space-y-2.5">
+    <div ref={containerRef} className="p-3 space-y-2.5">
+      {/* Paste zone */}
+      {!pastedImage && !isParsing && (
+        <div className="border border-dashed border-muted-foreground/30 rounded-md p-2 text-center hover:border-primary/50 transition-colors cursor-default">
+          <div className="flex items-center justify-center gap-1.5 text-muted-foreground">
+            <ClipboardPaste className="h-3.5 w-3.5" />
+            <span className="text-[10px]">Cole um print (Ctrl+V) para preencher automaticamente</span>
+          </div>
+        </div>
+      )}
+
+      {/* Parsing loader */}
+      {isParsing && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="p-2.5 flex items-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin text-primary" />
+            <span className="text-xs text-primary font-medium">Interpretando print...</span>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Pasted image preview + parsed info */}
+      {pastedImage && !isParsing && (
+        <div className="space-y-1.5">
+          <div className="relative">
+            <img
+              src={pastedImage}
+              alt="Print colado"
+              className="w-full max-h-28 object-contain rounded-md border border-border bg-muted/30"
+            />
+            <button
+              onClick={clearImage}
+              className="absolute top-1 right-1 p-0.5 rounded-full bg-background/80 hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </div>
+          {parsedInfo && (
+            <p className="text-[9px] text-muted-foreground truncate px-1">
+              <ImageIcon className="h-2.5 w-2.5 inline mr-1" />
+              {parsedInfo}
+            </p>
+          )}
+        </div>
+      )}
+
       {/* Inputs */}
       <div className="grid grid-cols-2 gap-2">
         <div className="space-y-1">
@@ -343,7 +483,7 @@ export const CalculadoraEVContent: React.FC = () => {
       )}
 
       {/* EV Explanation */}
-      {!results && (
+      {!results && !pastedImage && !isParsing && (
         <Card className="border-dashed">
           <CardContent className="p-2.5">
             <div className="flex items-start gap-2">
