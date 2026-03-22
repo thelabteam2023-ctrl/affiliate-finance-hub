@@ -586,40 +586,33 @@ export function VisaoGeralCharts({
   });
   const [calendarOpen, setCalendarOpen] = useState(false);
 
-  // Badge: soma lucro do período ativo
-  // PRIORIDADE: Se lucroOperacionalKpi (RPC canônico server-side) está disponível
-  // e NÃO há filtro de período (todo_periodo), usa como fonte única da verdade.
-  // Caso contrário, calcula client-side com filtro de período.
+  // Badge: Lucro do período ativo
+  // PRIORIDADE: Se lucroOperacionalKpi (RPC canônico server-side) está disponível,
+  // usa como fonte única da verdade (já filtrado por período no server).
+  // Fallback: calcula client-side.
   const periodTotal = useMemo(() => {
-    // Se o KPI canônico está disponível e não há filtro de período,
-    // usar diretamente (paridade absoluta com KPI card)
-    if (lucroOperacionalKpi != null && !periodStart && !periodEnd) {
+    // KPI canônico: paridade absoluta com KPI card
+    if (lucroOperacionalKpi != null) {
       return lucroOperacionalKpi;
     }
 
     let total = 0;
 
-    // Fonte de apostas: apostasCalendario (RPC completa) ou apostas (REST filtrada)
     if (apostasCalendario && periodStart && periodEnd) {
-      // RPC data: filtrar pelo período manualmente (RPC retorna todos os dados)
       const pStart = startOfDay(periodStart);
       apostasCalendario.forEach((a) => {
         const dateStr = a.data_aposta.includes('T') ? extractLocalDateKey(a.data_aposta) : a.data_aposta;
         const apostaDate = new Date(dateStr + 'T12:00:00');
         if (apostaDate >= pStart && apostaDate <= periodEnd) {
-          // RPC data já vem com lucro consolidado (agregado server-side)
           total += a.lucro_prejuizo || 0;
         }
       });
     } else {
-      // REST data: já vem filtrada pelo período
       apostas.forEach((a) => {
         total += consolidateLucro(a);
       });
     }
 
-    // Extras: filtrar pelo período selecionado (periodStart/periodEnd)
-    // CRÍTICO: Converter extras para moeda de consolidação
     extrasLucro.forEach((e) => {
       const dateStr = e.data.includes('T') ? extractLocalDateKey(e.data) : e.data;
       if (periodStart && periodEnd) {
