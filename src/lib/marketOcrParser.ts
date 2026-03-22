@@ -591,4 +591,3 @@ export function formatSelectionFromOcrResult(result: OcrMarketResult): string {
   // Retornar seleção original se não conseguir formatar
   return result.rawSelection;
 }
-}
