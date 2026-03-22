@@ -204,11 +204,16 @@ REGRAS IMPORTANTES:
    - Valores próximos a símbolos de moeda (R$, $, €)
    - IMPORTANTE: O valor 120.00 visível na imagem é o STAKE, não o retorno!
 4. O RETORNO é o valor total a receber se ganhar (stake * odd) - normalmente maior que stake
-5. O RESULTADO pode ser: "GREEN" (ganhou), "RED" (perdeu), "VOID" (cancelado), ou null se pendente
-   - GREEN: "GANHOU", "VENCIDO", "VITÓRIA", "VITORIA", "WON", "WIN", "ACERTOU", "GANHO", "VENCEU", badge verde
+ 5. O RESULTADO pode ser: "GREEN" (ganhou), "RED" (perdeu), "VOID" (cancelado), ou null se pendente
+   - GREEN: "GANHOU", "VENCIDO", "VITÓRIA", "VITORIA", "WON", "WIN", "ACERTOU", "VENCEU", badge verde com texto de vitória
    - RED: "PERDIDO", "PERDEU", "DERROTA", "DEFEAT", "LOST", "LOSE", "ERROU", "PERDA", badge vermelho
    - VOID: "CANCELADO", "DEVOLVIDO", "ANULADO", "REEMBOLSO", "REFUND", "VOID"
    - null: se o resultado ainda está pendente
+   REGRA CRÍTICA DE RESULTADO:
+   - "Aposta Feita", "Aposta Realizada", "Aposta Confirmada", "Bet Placed", "Bet Accepted" = aposta PENDENTE → resultado = null
+   - "Retornos Potenciais", "Possíveis Ganhos", "Potential Returns", "To Return", "Est. Returns" = retorno ESTIMADO, NÃO significa que ganhou
+   - Se o bilhete mostra APENAS a confirmação da aposta com retorno potencial, o resultado é SEMPRE null (pendente)
+   - Só marque GREEN se houver indicação EXPLÍCITA de que a aposta foi RESOLVIDA como vitória (ex: "Ganhou", "Won", badge de vitória)
 6. O BOOKMAKER/CASA é o nome da casa de apostas (ex: "Bet365", "Betano", "EstrelaBet")
    - Geralmente aparece no topo ou rodapé do bilhete
    - Pode ser logo ou texto

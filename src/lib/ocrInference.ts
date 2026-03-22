@@ -170,10 +170,18 @@ function normalizeRetornoAndOdd(data: NormalizedBetData): void {
 
 /**
  * Rules 5-8: Infer result from stake vs return comparison
- * - return > stake → Green
- * - return === 0 → Red
- * - 0 < return < stake → Half Red
- * - return === stake → Void
+ * 
+ * REGRA CRÍTICA: NÃO inferir resultado quando o retorno é apenas POTENCIAL.
+ * "Retornos Potenciais" = quanto o apostador GANHARIA se a aposta der certo.
+ * Isso NÃO significa que a aposta já foi resolvida.
+ * 
+ * A inferência de resultado SÓ deve acontecer quando:
+ * - O retorno foi explicitamente marcado como "realizado" pela IA
+ * - OU o resultado já veio preenchido pela IA com confiança adequada
+ * 
+ * Quando retorno ≈ stake * odd, isso geralmente indica retorno POTENCIAL,
+ * não retorno real. Retornos reais costumam vir acompanhados de status
+ * como "Ganhou", "Won", "Settled".
  */
 function inferResult(data: NormalizedBetData): void {
   // Only infer if result is missing or low confidence
@@ -188,6 +196,19 @@ function inferResult(data: NormalizedBetData): void {
   if (stake === null || retorno === null) return;
   if (stake <= 0) return;
 
+  // GUARD: Se retorno ≈ stake * odd, é provavelmente retorno POTENCIAL, não real.
+  // Não inferir resultado neste caso - a aposta está pendente.
+  if (odd !== null && odd > 1) {
+    const expectedPotentialReturn = stake * odd;
+    const ratio = retorno / expectedPotentialReturn;
+    // Se o retorno é muito próximo do retorno potencial (stake * odd),
+    // isso indica que a IA extraiu "Retornos Potenciais", não um retorno real.
+    if (ratio >= 0.90 && ratio <= 1.10) {
+      console.log(`[ocrInference] Skipping result inference: retorno (${retorno}) ≈ stake*odd (${expectedPotentialReturn.toFixed(2)}) — likely potential return, not settled`);
+      return;
+    }
+  }
+
   let resultado: string;
   let confidence: "high" | "medium" = "medium";
 
@@ -198,20 +219,9 @@ function inferResult(data: NormalizedBetData): void {
     resultado = "Void";
     confidence = "high";
   } else if (retorno > stake) {
-    if (odd !== null && odd > 1) {
-      const expectedFullReturn = stake * odd;
-      const ratio = retorno / expectedFullReturn;
-      if (ratio >= 0.95) {
-        resultado = "Green";
-        confidence = "high";
-      } else {
-        resultado = "Half Green";
-        confidence = "medium";
-      }
-    } else {
-      resultado = "Green";
-      confidence = "medium";
-    }
+    // Retorno > stake mas NÃO é potencial (já foi filtrado acima)
+    resultado = "Green";
+    confidence = "medium";
   } else {
     resultado = "Half Red";
     confidence = "medium";
