@@ -22,6 +22,7 @@ import { VisaoGeralCharts } from "./VisaoGeralCharts";
 import { fetchProjetoExtras, type ProjetoExtraEntry } from "@/services/fetchProjetoExtras";
 import { useCalendarApostasRpc, transformRpcDailyForCharts } from "@/hooks/useCalendarApostasRpc";
 import { fetchProjetosLucroOperacionalKpi, derivarCotacoesFromConvertFn } from "@/services/fetchProjetosLucroOperacionalKpi";
+import { useCotacoes } from "@/hooks/useCotacoes";
 
 import { PerformancePorCasaCard } from "./PerformancePorCasaCard";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod } from "./StandardTimeFilter";
@@ -166,6 +167,7 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
   
   // Hook de formatação de moeda do projeto
   const { formatCurrency, formatChartAxis, convertToConsolidation, convertToConsolidationOficial, moedaConsolidacao, cotacaoOficialUSD } = useProjetoCurrency(projetoId);
+  const { cotacaoEUR, cotacaoGBP, cotacaoMYR, cotacaoMXN, cotacaoARS, cotacaoCOP } = useCotacoes();
   
   // Hook global de logos
   const { logoMap: catalogLogoMap, getLogoUrl: getCatalogLogoUrl } = useBookmakerLogoMap();
@@ -182,7 +184,20 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
   }, [dateRange]);
 
   // ---- useCalendarApostasRpc: Calendar data via RPC (sem truncamento, timezone correto) ----
-  const { daily: calendarDaily, resumo: calendarResumo } = useCalendarApostasRpc({ projetoId, cotacaoUSD: cotacaoOficialUSD });
+  const cotacoesCalendario = useMemo(() => ({
+    EUR: cotacaoEUR,
+    GBP: cotacaoGBP,
+    MYR: cotacaoMYR,
+    MXN: cotacaoMXN,
+    ARS: cotacaoARS,
+    COP: cotacaoCOP,
+  }), [cotacaoEUR, cotacaoGBP, cotacaoMYR, cotacaoMXN, cotacaoARS, cotacaoCOP]);
+
+  const { daily: calendarDaily, resumo: calendarResumo } = useCalendarApostasRpc({
+    projetoId,
+    cotacaoUSD: cotacaoOficialUSD,
+    cotacoes: cotacoesCalendario,
+  });
 
   // ---- useQuery: Filtered apostas (with period) ----
   const { 

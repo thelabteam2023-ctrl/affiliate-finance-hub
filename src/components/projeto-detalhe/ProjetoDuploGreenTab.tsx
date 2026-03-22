@@ -199,6 +199,14 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
     projetoId,
     estrategia: "DUPLO_GREEN",
     cotacaoUSD: convertFnOficial(1, "USD"),
+    cotacoes: {
+      EUR: getRate("EUR"),
+      GBP: getRate("GBP"),
+      MYR: getRate("MYR"),
+      MXN: getRate("MXN"),
+      ARS: getRate("ARS"),
+      COP: getRate("COP"),
+    },
   });
   // Estados removidos - dialogs agora abrem em janelas externas
   // const [dialogOpen, setDialogOpen] = useState(false);

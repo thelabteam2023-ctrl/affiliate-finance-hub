@@ -21,6 +21,8 @@ interface UseCalendarApostasRpcOptions {
   autoFetch?: boolean;
   /** Cotação USD para conversão multimoeda — deve ser a mesma usada nos KPIs */
   cotacaoUSD?: number;
+  /** Cotações adicionais em BRL para moedas além de USD/BRL (ex: EUR, GBP) */
+  cotacoes?: Record<string, number>;
 }
 
 interface RpcResult {
@@ -42,12 +44,14 @@ interface RpcResult {
 async function fetchCalendarRpc(
   projetoId: string,
   estrategia?: string,
-  cotacaoUSD?: number
+   cotacaoUSD?: number,
+   cotacoes?: Record<string, number>
 ): Promise<RpcResult> {
   const { data, error } = await supabase.rpc('get_projeto_apostas_resumo', {
     p_projeto_id: projetoId,
     ...(estrategia ? { p_estrategia: estrategia } : {}),
     ...(cotacaoUSD && cotacaoUSD > 0 ? { p_cotacao_usd: cotacaoUSD } : {}),
+    ...(cotacoes && Object.keys(cotacoes).length > 0 ? { p_cotacoes: cotacoes } : {}),
   } as any);
   if (error) throw error;
   
@@ -59,14 +63,20 @@ export function useCalendarApostasRpc({
   estrategia,
   autoFetch = true,
   cotacaoUSD,
+  cotacoes,
 }: UseCalendarApostasRpcOptions) {
   const estrategiaKey = estrategia || "all";
   // Round cotacao to avoid unnecessary refetches from floating point noise
   const cotacaoKey = cotacaoUSD ? Math.round(cotacaoUSD * 100) : 0;
+  const cotacoesKey = JSON.stringify(
+    Object.entries(cotacoes || {})
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([moeda, valor]) => [moeda, Math.round(valor * 10000)])
+  );
 
   const { data, isLoading: loading, refetch } = useQuery({
-    queryKey: ["calendar-apostas-rpc", projetoId, estrategiaKey, cotacaoKey],
-    queryFn: () => fetchCalendarRpc(projetoId, estrategia, cotacaoUSD),
+    queryKey: ["calendar-apostas-rpc", projetoId, estrategiaKey, cotacaoKey, cotacoesKey],
+    queryFn: () => fetchCalendarRpc(projetoId, estrategia, cotacaoUSD, cotacoes),
     enabled: autoFetch && !!projetoId,
     staleTime: 0,
     gcTime: 5 * 60 * 1000,
