@@ -137,9 +137,9 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
   // Fetch apostas com bônus (juice/custo operacional) - inclui apostas com bonus_id OU estratégia EXTRACAO_BONUS
   // IMPORTANTE: Buscar moeda_operacao para converter corretamente para moeda de consolidação
   const { data: bonusBetsWithPernas = { bets: [], pernasMap: {} }, isLoading: betsLoading } = useQuery({
-    queryKey: ["bonus-bets-juice-pernas", projetoId, dateRange?.start?.toISOString(), dateRange?.end?.toISOString()],
+    queryKey: ["bonus-bets-juice-pernas", projetoId],
     queryFn: async () => {
-      const startDate = dateRange?.start?.toISOString() || subDays(new Date(), 365).toISOString();
+      const startDate = subDays(new Date(), 365).toISOString();
       
       let queryBonusId = supabase
         .from("apostas_unificada")
@@ -158,11 +158,6 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
         .gte("data_aposta", startDate.split('T')[0])
         .eq("estrategia", "EXTRACAO_BONUS")
         .limit(10000);
-
-      if (dateRange?.end) {
-        queryBonusId = queryBonusId.lte("data_aposta", dateRange.end.toISOString());
-        queryEstrategia = queryEstrategia.lte("data_aposta", dateRange.end.toISOString());
-      }
 
       const [resBonusId, resEstrategia] = await Promise.all([queryBonusId, queryEstrategia]);
       
@@ -401,6 +396,11 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
     const juiceBets = bonusBetsFlat.reduce((acc, bet) => {
       const isBonusBet = bet.bonus_id || bet.estrategia === "EXTRACAO_BONUS";
       if (!isBonusBet) return acc;
+
+      if (dateRange) {
+        const betDate = new Date(extractCivilDateKey(bet.data_aposta) + "T12:00:00");
+        if (betDate < startOfDay(dateRange.start) || betDate > dateRange.end) return acc;
+      }
       
       return acc + getConsolidatedLucroDirect(
         {
