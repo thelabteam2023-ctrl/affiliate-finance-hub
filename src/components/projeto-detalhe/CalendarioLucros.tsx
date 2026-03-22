@@ -53,16 +53,17 @@ const defaultFormatCurrencyFull = (value: number): string => {
 /** Formata valor compacto para caber na célula do calendário */
 function formatCompactValue(value: number): string {
   const abs = Math.abs(value);
+  const sign = value < 0 ? "-" : "";
+  const formatter = new Intl.NumberFormat("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
   if (abs >= 1000) {
-    return `${value < 0 ? "-" : ""}${(abs / 1000).toFixed(1).replace(/\.0$/, "")}k`;
+    return `${sign}${formatter.format(abs / 1000)}k`;
   }
-  if (abs >= 100) {
-    return `${value < 0 ? "-" : ""}${Math.round(abs)}`;
-  }
-  if (abs >= 10) {
-    return `${value < 0 ? "-" : ""}${abs.toFixed(0)}`;
-  }
-  return `${value < 0 ? "-" : ""}${abs.toFixed(1)}`;
+
+  return `${sign}${formatter.format(abs)}`;
 }
 
 /** Calcula a intensidade do heatmap (0-4) com base no valor */
@@ -73,6 +74,50 @@ function getIntensityLevel(value: number, maxAbsValue: number): number {
   if (ratio < 0.4) return 2;
   if (ratio < 0.7) return 3;
   return 4;
+}
+
+function getHeatmapTone(lucro: number, temDados: boolean, maxAbsLucro: number) {
+  if (!temDados) {
+    return {
+      cell: "bg-muted/15 border border-border/20",
+      day: "text-muted-foreground/55",
+      value: "text-muted-foreground/55",
+    };
+  }
+
+  if (lucro === 0) {
+    return {
+      cell: "bg-secondary/70 border border-border/35",
+      day: "text-foreground/80",
+      value: "text-muted-foreground",
+    };
+  }
+
+  const level = getIntensityLevel(lucro, maxAbsLucro);
+
+  if (lucro > 0) {
+    switch (level) {
+      case 1:
+        return { cell: "bg-success/14 border border-success/20", day: "text-success", value: "text-success" };
+      case 2:
+        return { cell: "bg-success/24 border border-success/25", day: "text-success", value: "text-success" };
+      case 3:
+        return { cell: "bg-success/38 border border-success/30", day: "text-foreground", value: "text-foreground" };
+      default:
+        return { cell: "bg-success/58 border border-success/35 shadow-soft", day: "text-primary-foreground", value: "text-primary-foreground" };
+    }
+  }
+
+  switch (level) {
+    case 1:
+      return { cell: "bg-destructive/12 border border-destructive/18", day: "text-destructive", value: "text-destructive" };
+    case 2:
+      return { cell: "bg-destructive/22 border border-destructive/22", day: "text-destructive", value: "text-destructive" };
+    case 3:
+      return { cell: "bg-destructive/34 border border-destructive/28", day: "text-foreground", value: "text-foreground" };
+    default:
+      return { cell: "bg-destructive/48 border border-destructive/32 shadow-soft", day: "text-destructive-foreground", value: "text-destructive-foreground" };
+  }
 }
 
 export function CalendarioLucros({ 
@@ -213,58 +258,32 @@ export function CalendarioLucros({
 
   const irParaHoje = () => setCurrentMonth(new Date());
 
-  /** Retorna classes de cor do heatmap baseado no lucro e intensidade */
-  const getHeatmapColor = (lucro: number, temDados: boolean): string => {
-    if (!temDados) return "bg-muted/20";
-    if (lucro === 0) return "bg-muted/40";
-    
-    const level = getIntensityLevel(lucro, maxAbsLucro);
-    
-    if (lucro > 0) {
-      switch (level) {
-        case 1: return "bg-emerald-500/15";
-        case 2: return "bg-emerald-500/30";
-        case 3: return "bg-emerald-500/50";
-        case 4: return "bg-emerald-500/70";
-        default: return "bg-emerald-500/15";
-      }
-    } else {
-      switch (level) {
-        case 1: return "bg-red-500/15";
-        case 2: return "bg-red-500/30";
-        case 3: return "bg-red-500/50";
-        case 4: return "bg-red-500/70";
-        default: return "bg-red-500/15";
-      }
-    }
-  };
-
   const renderDayTooltip = (dia: Date, dadosDia: { lucro: number; count: number } | undefined) => {
     const dataFormatada = format(dia, "dd 'de' MMMM, yyyy", { locale: ptBR });
     if (!dadosDia || dadosDia.count === 0) {
       return (
-        <div className="space-y-1">
-          <p className="text-xs font-medium text-foreground">{dataFormatada}</p>
+        <div className="space-y-1.5">
+          <p className="text-xs font-medium text-popover-foreground">{dataFormatada}</p>
           <p className="text-xs text-muted-foreground">Sem operações</p>
         </div>
       );
     }
     return (
-      <div className="space-y-2 min-w-[160px]">
-        <p className="text-xs font-medium text-foreground">{dataFormatada}</p>
+      <div className="space-y-2 min-w-[176px]">
+        <p className="text-xs font-medium text-popover-foreground">{dataFormatada}</p>
         <div className="h-px bg-border" />
         <div className="flex items-center justify-between gap-4">
           <span className="text-xs text-muted-foreground">Lucro/Prejuízo</span>
           <span className={cn(
             "text-xs font-semibold tabular-nums",
-            dadosDia.lucro > 0 ? "text-emerald-400" : dadosDia.lucro < 0 ? "text-red-400" : "text-muted-foreground"
+            dadosDia.lucro > 0 ? "text-success" : dadosDia.lucro < 0 ? "text-destructive" : "text-muted-foreground"
           )}>
             {formatFullCurrency(dadosDia.lucro)}
           </span>
         </div>
         <div className="flex items-center justify-between gap-4">
           <span className="text-xs text-muted-foreground">Operações</span>
-          <span className="text-xs font-semibold tabular-nums text-foreground">{dadosDia.count}</span>
+          <span className="text-xs font-semibold tabular-nums text-popover-foreground">{dadosDia.count}</span>
         </div>
       </div>
     );
@@ -273,15 +292,13 @@ export function CalendarioLucros({
   // ─── Render Heatmap Grid ───
   const renderHeatmapGrid = (isCompact: boolean) => (
     <TooltipProvider delayDuration={100}>
-      <div className="grid grid-cols-7 gap-[3px]">
-        {/* Header dias da semana */}
+      <div className="grid grid-cols-7 gap-[4px]">
         {(isCompact ? diasSemanaShort : diasSemana).map((dia, idx) => (
-          <div key={idx} className="text-center text-[10px] text-muted-foreground/60 font-medium pb-1 select-none">
+          <div key={idx} className="pb-1 text-center text-[10px] font-semibold text-muted-foreground/75 select-none">
             {dia}
           </div>
         ))}
 
-        {/* Cells do heatmap */}
         {diasDoMes.map((dia, idx) => {
           const dataKey = format(dia, "yyyy-MM-dd");
           const dadosDia = lucroPorDia.get(dataKey);
@@ -291,43 +308,41 @@ export function CalendarioLucros({
           const lucro = dadosDia?.lucro || 0;
 
           if (!isMesAtual) {
-            return (
-              <div key={idx} className="aspect-square rounded-[4px] bg-transparent" />
-            );
+            return <div key={idx} className="aspect-square rounded-md bg-transparent" />;
           }
 
-          const bgClass = getHeatmapColor(lucro, temDados);
+          const tone = getHeatmapTone(lucro, temDados, maxAbsLucro);
 
           return (
             <Tooltip key={idx}>
               <TooltipTrigger asChild>
                 <div
                   className={cn(
-                    "aspect-square rounded-[4px] flex flex-col items-center justify-center cursor-default transition-all duration-200 gap-0",
-                    bgClass,
-                    isHoje && "ring-1.5 ring-primary ring-offset-1 ring-offset-background",
-                    "hover:ring-1 hover:ring-foreground/20 hover:scale-110"
+                    "aspect-square rounded-md flex flex-col items-center justify-center cursor-default transition-all duration-200 px-1",
+                    tone.cell,
+                    isHoje && "ring-2 ring-primary/60 ring-offset-2 ring-offset-popover",
+                    "hover:scale-[1.04] hover:shadow-soft"
                   )}
                 >
                   <span className={cn(
-                    "text-[10px] font-medium leading-none select-none",
-                    temDados
-                      ? lucro > 0 ? "text-emerald-300" : lucro < 0 ? "text-red-300" : "text-muted-foreground"
-                      : "text-muted-foreground/40"
+                    isCompact ? "text-[11px]" : "text-[12px]",
+                    "font-semibold leading-none select-none tabular-nums",
+                    tone.day
                   )}>
                     {format(dia, "d")}
                   </span>
                   {temDados && lucro !== 0 && (
                     <span className={cn(
-                      "text-[7px] font-semibold leading-none select-none mt-0.5 tabular-nums",
-                      lucro > 0 ? "text-emerald-200/80" : "text-red-200/80"
+                      isCompact ? "text-[9px]" : "text-[10px]",
+                      "mt-1 font-bold leading-none select-none tabular-nums tracking-tight",
+                      tone.value
                     )}>
                       {formatCompactValue(lucro)}
                     </span>
                   )}
                 </div>
               </TooltipTrigger>
-              <TooltipContent side="top" className="bg-popover border-border shadow-xl">
+              <TooltipContent side="top" className="border-border bg-popover shadow-xl">
                 {renderDayTooltip(dia, dadosDia)}
               </TooltipContent>
             </Tooltip>
@@ -337,52 +352,50 @@ export function CalendarioLucros({
     </TooltipProvider>
   );
 
-  // ─── Legenda de intensidade ───
   const renderLegend = () => (
-    <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/60">
+    <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/75">
       <span>Menos</span>
-      <div className="w-2.5 h-2.5 rounded-[2px] bg-muted/20" />
-      <div className="w-2.5 h-2.5 rounded-[2px] bg-emerald-500/15" />
-      <div className="w-2.5 h-2.5 rounded-[2px] bg-emerald-500/30" />
-      <div className="w-2.5 h-2.5 rounded-[2px] bg-emerald-500/50" />
-      <div className="w-2.5 h-2.5 rounded-[2px] bg-emerald-500/70" />
+      <div className="h-2.5 w-2.5 rounded-[3px] border border-border/20 bg-muted/15" />
+      <div className="h-2.5 w-2.5 rounded-[3px] border border-success/20 bg-success/14" />
+      <div className="h-2.5 w-2.5 rounded-[3px] border border-success/25 bg-success/24" />
+      <div className="h-2.5 w-2.5 rounded-[3px] border border-success/30 bg-success/38" />
+      <div className="h-2.5 w-2.5 rounded-[3px] border border-success/35 bg-success/58" />
       <span>Mais</span>
     </div>
   );
 
-  // ─── Stats Cards ───
   const renderStats = () => (
-    <div className="grid grid-cols-4 gap-2 mt-4">
-      <div className="bg-muted/20 rounded-lg px-3 py-2.5 text-center">
+    <div className="mt-4 grid grid-cols-4 gap-2.5">
+      <div className="rounded-xl border border-border/40 bg-card-elevated px-3 py-2.5 text-center shadow-soft">
         <div className={cn(
-          "text-sm font-bold tabular-nums",
-          estatisticasMes.lucroTotal > 0 ? "text-emerald-400" : 
-          estatisticasMes.lucroTotal < 0 ? "text-red-400" : "text-muted-foreground"
+          "text-base font-bold tabular-nums",
+          estatisticasMes.lucroTotal > 0 ? "text-success" : 
+          estatisticasMes.lucroTotal < 0 ? "text-destructive" : "text-muted-foreground"
         )}>
           {formatFullCurrency(estatisticasMes.lucroTotal)}
         </div>
-        <div className="text-[10px] text-muted-foreground/60 mt-0.5">Lucro</div>
+        <div className="mt-0.5 text-[10px] text-muted-foreground/70">Lucro</div>
       </div>
-      <div className="bg-muted/20 rounded-lg px-3 py-2.5 text-center">
-        <div className="text-sm font-bold tabular-nums text-foreground">
+      <div className="rounded-xl border border-border/40 bg-card-elevated px-3 py-2.5 text-center shadow-soft">
+        <div className="text-base font-bold tabular-nums text-foreground">
           {estatisticasMes.totalApostas}
         </div>
-        <div className="text-[10px] text-muted-foreground/60 mt-0.5">Operações</div>
+        <div className="mt-0.5 text-[10px] text-muted-foreground/70">Operações</div>
       </div>
-      <div className="bg-muted/20 rounded-lg px-3 py-2.5 text-center">
+      <div className="rounded-xl border border-border/40 bg-card-elevated px-3 py-2.5 text-center shadow-soft">
         <div className="flex items-center justify-center gap-1">
-          <span className="text-sm font-bold tabular-nums text-emerald-400">{estatisticasMes.diasPositivos}</span>
+          <span className="text-base font-bold tabular-nums text-success">{estatisticasMes.diasPositivos}</span>
           <span className="text-muted-foreground/40">/</span>
-          <span className="text-sm font-bold tabular-nums text-red-400">{estatisticasMes.diasNegativos}</span>
+          <span className="text-base font-bold tabular-nums text-destructive">{estatisticasMes.diasNegativos}</span>
         </div>
-        <div className="text-[10px] text-muted-foreground/60 mt-0.5">Green / Red</div>
+        <div className="mt-0.5 text-[10px] text-muted-foreground/70">Green / Red</div>
       </div>
-      <div className="bg-muted/20 rounded-lg px-3 py-2.5 text-center">
+      <div className="rounded-xl border border-border/40 bg-card-elevated px-3 py-2.5 text-center shadow-soft">
         <div className="flex items-center justify-center gap-1">
-          <Flame className="h-3.5 w-3.5 text-amber-400" />
-          <span className="text-sm font-bold tabular-nums text-foreground">{estatisticasMes.melhorStreak}</span>
+          <Flame className="h-3.5 w-3.5 text-warning" />
+          <span className="text-base font-bold tabular-nums text-foreground">{estatisticasMes.melhorStreak}</span>
         </div>
-        <div className="text-[10px] text-muted-foreground/60 mt-0.5">Streak</div>
+        <div className="mt-0.5 text-[10px] text-muted-foreground/70">Streak</div>
       </div>
     </div>
   );
@@ -430,7 +443,7 @@ export function CalendarioLucros({
   // ═══════════════════════════════════════
   if (compact) {
     return (
-      <div className="p-4 min-w-[320px]">
+      <div className="min-w-[440px] rounded-2xl bg-popover p-4 text-popover-foreground">
         {renderNav()}
         <div className="mt-3">
           {renderHeatmapGrid(true)}

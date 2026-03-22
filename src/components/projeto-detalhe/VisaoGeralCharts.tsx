@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { addDays, startOfDay } from "date-fns";
+import { addDays, startOfDay, startOfMonth, endOfMonth } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -585,14 +585,32 @@ export function VisaoGeralCharts({
     return `${prefix}R$${absVal.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}`;
   });
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [calendarMonthTotal, setCalendarMonthTotal] = useState<number | null>(null);
 
-  // Badge: Lucro do período ativo
-  // PRIORIDADE: Se lucroOperacionalKpi (RPC canônico server-side) está disponível,
-  // usa como fonte única da verdade (já filtrado por período no server).
-  // Fallback: calcula client-side.
+  const handleCalendarOpenChange = (open: boolean) => {
+    setCalendarOpen(open);
+    if (!open) setCalendarMonthTotal(null);
+  };
+
+  const calendarInitialMonth = periodStart ?? new Date();
+
   const periodTotal = useMemo(() => {
-    // KPI canônico: paridade absoluta com KPI card
-    if (lucroOperacionalKpi != null) {
+    if (calendarMonthTotal != null) {
+      return calendarMonthTotal;
+    }
+
+    if (lucroOperacionalKpi != null && periodStart && periodEnd) {
+      const sameMonthRange =
+        format(periodStart, "yyyy-MM") === format(periodEnd, "yyyy-MM") &&
+        periodStart.getTime() === startOfMonth(periodStart).getTime() &&
+        periodEnd.getTime() === startOfDay(endOfMonth(periodStart)).getTime();
+
+      if (!sameMonthRange) {
+        return lucroOperacionalKpi;
+      }
+    }
+
+    if (lucroOperacionalKpi != null && !periodStart && !periodEnd) {
       return lucroOperacionalKpi;
     }
 
@@ -628,7 +646,7 @@ export function VisaoGeralCharts({
     });
 
     return total;
-  }, [apostas, apostasCalendario, extrasLucro, periodStart, periodEnd, lucroOperacionalKpi]);
+  }, [apostas, apostasCalendario, extrasLucro, periodStart, periodEnd, lucroOperacionalKpi, calendarMonthTotal, convertToConsolidation, moedaConsolidacao]);
 
   const isPositiveBadge = periodTotal >= 0;
   
@@ -975,9 +993,9 @@ export function VisaoGeralCharts({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               {isPositive ? (
-                <TrendingUp className="h-4 w-4 text-emerald-500" />
+                <TrendingUp className="h-4 w-4 text-success" />
               ) : (
-                <TrendingDown className="h-4 w-4 text-red-500" />
+                <TrendingDown className="h-4 w-4 text-destructive" />
               )}
               <CardTitle className="text-sm font-medium">
                 Evolução do Lucro Geral
@@ -986,7 +1004,7 @@ export function VisaoGeralCharts({
             </div>
             <div className="flex items-center gap-2">
               {showCalendar && (
-                <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                <Popover open={calendarOpen} onOpenChange={handleCalendarOpenChange}>
                   <PopoverTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-7 w-7">
                       <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -1005,14 +1023,15 @@ export function VisaoGeralCharts({
                       accentColor="purple"
                       compact
                       formatCurrency={formatCurrency}
-                      initialMonth={periodStart}
+                      initialMonth={calendarInitialMonth}
+                      onMonthTotalChange={setCalendarMonthTotal}
                     />
                   </PopoverContent>
                 </Popover>
               )}
               <Badge
                 variant="outline"
-                className={isPositive ? "border-emerald-500/30 text-emerald-500" : "border-red-500/30 text-red-500"}
+                className={isPositive ? "border-success/30 text-success" : "border-destructive/30 text-destructive"}
               >
                 {formatCurrency(periodTotal)}
               </Badge>
@@ -1043,15 +1062,15 @@ export function VisaoGeralCharts({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               {isPositive ? (
-                <TrendingUp className="h-4 w-4 text-emerald-500" />
+                <TrendingUp className="h-4 w-4 text-success" />
               ) : (
-                <TrendingDown className="h-4 w-4 text-red-500" />
+                <TrendingDown className="h-4 w-4 text-destructive" />
               )}
               <CardTitle className="text-sm font-medium">Evolução do Lucro</CardTitle>
             </div>
             <div className="flex items-center gap-2">
               {showCalendar && (
-                <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                <Popover open={calendarOpen} onOpenChange={handleCalendarOpenChange}>
                   <PopoverTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-7 w-7">
                       <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -1070,14 +1089,15 @@ export function VisaoGeralCharts({
                       accentColor="purple"
                       compact
                       formatCurrency={formatCurrency}
-                      initialMonth={periodStart}
+                      initialMonth={calendarInitialMonth}
+                      onMonthTotalChange={setCalendarMonthTotal}
                     />
                   </PopoverContent>
                 </Popover>
               )}
               <Badge
                 variant="outline"
-                className={isPositive ? "border-emerald-500/30 text-emerald-500" : "border-red-500/30 text-red-500"}
+                className={isPositive ? "border-success/30 text-success" : "border-destructive/30 text-destructive"}
               >
                 {formatCurrency(periodTotal)}
               </Badge>
