@@ -99,25 +99,25 @@ function getHeatmapTone(lucro: number, temDados: boolean, maxAbsLucro: number) {
     switch (level) {
       case 1:
         return {
-          cell: "bg-success/10 dark:bg-success/14 border border-success/15 dark:border-success/20",
-          day: "text-success dark:text-success",
-          value: "text-success dark:text-success",
+          cell: "bg-emerald-100 dark:bg-success/14 border border-emerald-200 dark:border-success/20",
+          day: "text-emerald-700 dark:text-success",
+          value: "text-emerald-700 dark:text-success",
         };
       case 2:
         return {
-          cell: "bg-success/18 dark:bg-success/24 border border-success/20 dark:border-success/25",
-          day: "text-success dark:text-success",
-          value: "text-success dark:text-success",
+          cell: "bg-emerald-200 dark:bg-success/24 border border-emerald-300 dark:border-success/25",
+          day: "text-emerald-800 dark:text-success",
+          value: "text-emerald-800 dark:text-success",
         };
       case 3:
         return {
-          cell: "bg-success/30 dark:bg-success/38 border border-success/25 dark:border-success/30",
+          cell: "bg-emerald-300 dark:bg-success/38 border border-emerald-400 dark:border-success/30",
           day: "text-emerald-900 dark:text-foreground",
           value: "text-emerald-900 dark:text-foreground",
         };
       default:
         return {
-          cell: "bg-success/45 dark:bg-success/58 border border-success/30 dark:border-success/35 shadow-soft",
+          cell: "bg-emerald-500 dark:bg-success/58 border border-emerald-600 dark:border-success/35 shadow-soft",
           day: "text-white dark:text-primary-foreground",
           value: "text-white dark:text-primary-foreground",
         };
@@ -127,25 +127,25 @@ function getHeatmapTone(lucro: number, temDados: boolean, maxAbsLucro: number) {
   switch (level) {
     case 1:
       return {
-        cell: "bg-destructive/8 dark:bg-destructive/12 border border-destructive/12 dark:border-destructive/18",
-        day: "text-destructive dark:text-destructive",
-        value: "text-destructive dark:text-destructive",
+        cell: "bg-red-100 dark:bg-destructive/12 border border-red-200 dark:border-destructive/18",
+        day: "text-red-700 dark:text-destructive",
+        value: "text-red-700 dark:text-destructive",
       };
     case 2:
       return {
-        cell: "bg-destructive/16 dark:bg-destructive/22 border border-destructive/18 dark:border-destructive/22",
-        day: "text-destructive dark:text-destructive",
-        value: "text-destructive dark:text-destructive",
+        cell: "bg-red-200 dark:bg-destructive/22 border border-red-300 dark:border-destructive/22",
+        day: "text-red-800 dark:text-destructive",
+        value: "text-red-800 dark:text-destructive",
       };
     case 3:
       return {
-        cell: "bg-destructive/26 dark:bg-destructive/34 border border-destructive/22 dark:border-destructive/28",
+        cell: "bg-red-300 dark:bg-destructive/34 border border-red-400 dark:border-destructive/28",
         day: "text-red-900 dark:text-foreground",
         value: "text-red-900 dark:text-foreground",
       };
     default:
       return {
-        cell: "bg-destructive/38 dark:bg-destructive/48 border border-destructive/28 dark:border-destructive/32 shadow-soft",
+        cell: "bg-red-500 dark:bg-destructive/48 border border-red-600 dark:border-destructive/32 shadow-soft",
         day: "text-white dark:text-destructive-foreground",
         value: "text-white dark:text-destructive-foreground",
       };
@@ -388,10 +388,10 @@ export function CalendarioLucros({
     <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/75">
       <span>Menos</span>
       <div className="h-2.5 w-2.5 rounded-[3px] border border-border/20 bg-muted/15" />
-      <div className="h-2.5 w-2.5 rounded-[3px] border border-success/20 bg-success/14" />
-      <div className="h-2.5 w-2.5 rounded-[3px] border border-success/25 bg-success/24" />
-      <div className="h-2.5 w-2.5 rounded-[3px] border border-success/30 bg-success/38" />
-      <div className="h-2.5 w-2.5 rounded-[3px] border border-success/35 bg-success/58" />
+      <div className="h-2.5 w-2.5 rounded-[3px] border border-emerald-200 dark:border-success/20 bg-emerald-100 dark:bg-success/14" />
+      <div className="h-2.5 w-2.5 rounded-[3px] border border-emerald-300 dark:border-success/25 bg-emerald-200 dark:bg-success/24" />
+      <div className="h-2.5 w-2.5 rounded-[3px] border border-emerald-400 dark:border-success/30 bg-emerald-300 dark:bg-success/38" />
+      <div className="h-2.5 w-2.5 rounded-[3px] border border-emerald-600 dark:border-success/35 bg-emerald-500 dark:bg-success/58" />
       <span>Mais</span>
     </div>
   );
