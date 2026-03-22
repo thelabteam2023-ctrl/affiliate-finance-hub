@@ -79,7 +79,7 @@ function getIntensityLevel(value: number, maxAbsValue: number): number {
 function getHeatmapTone(lucro: number, temDados: boolean, maxAbsLucro: number) {
   if (!temDados) {
     return {
-      cell: "bg-muted/15 border border-border/20",
+      cell: "bg-muted/15 dark:bg-muted/15 border border-border/20",
       day: "text-muted-foreground/55",
       value: "text-muted-foreground/55",
     };
@@ -87,7 +87,7 @@ function getHeatmapTone(lucro: number, temDados: boolean, maxAbsLucro: number) {
 
   if (lucro === 0) {
     return {
-      cell: "bg-secondary/70 border border-border/35",
+      cell: "bg-secondary/70 dark:bg-secondary/70 border border-border/35",
       day: "text-foreground/80",
       value: "text-muted-foreground",
     };
@@ -98,25 +98,57 @@ function getHeatmapTone(lucro: number, temDados: boolean, maxAbsLucro: number) {
   if (lucro > 0) {
     switch (level) {
       case 1:
-        return { cell: "bg-success/14 border border-success/20", day: "text-success", value: "text-success" };
+        return {
+          cell: "bg-success/10 dark:bg-success/14 border border-success/15 dark:border-success/20",
+          day: "text-success dark:text-success",
+          value: "text-success dark:text-success",
+        };
       case 2:
-        return { cell: "bg-success/24 border border-success/25", day: "text-success", value: "text-success" };
+        return {
+          cell: "bg-success/18 dark:bg-success/24 border border-success/20 dark:border-success/25",
+          day: "text-success dark:text-success",
+          value: "text-success dark:text-success",
+        };
       case 3:
-        return { cell: "bg-success/38 border border-success/30", day: "text-foreground", value: "text-foreground" };
+        return {
+          cell: "bg-success/30 dark:bg-success/38 border border-success/25 dark:border-success/30",
+          day: "text-emerald-900 dark:text-foreground",
+          value: "text-emerald-900 dark:text-foreground",
+        };
       default:
-        return { cell: "bg-success/58 border border-success/35 shadow-soft", day: "text-primary-foreground", value: "text-primary-foreground" };
+        return {
+          cell: "bg-success/45 dark:bg-success/58 border border-success/30 dark:border-success/35 shadow-soft",
+          day: "text-white dark:text-primary-foreground",
+          value: "text-white dark:text-primary-foreground",
+        };
     }
   }
 
   switch (level) {
     case 1:
-      return { cell: "bg-destructive/12 border border-destructive/18", day: "text-destructive", value: "text-destructive" };
+      return {
+        cell: "bg-destructive/8 dark:bg-destructive/12 border border-destructive/12 dark:border-destructive/18",
+        day: "text-destructive dark:text-destructive",
+        value: "text-destructive dark:text-destructive",
+      };
     case 2:
-      return { cell: "bg-destructive/22 border border-destructive/22", day: "text-destructive", value: "text-destructive" };
+      return {
+        cell: "bg-destructive/16 dark:bg-destructive/22 border border-destructive/18 dark:border-destructive/22",
+        day: "text-destructive dark:text-destructive",
+        value: "text-destructive dark:text-destructive",
+      };
     case 3:
-      return { cell: "bg-destructive/34 border border-destructive/28", day: "text-foreground", value: "text-foreground" };
+      return {
+        cell: "bg-destructive/26 dark:bg-destructive/34 border border-destructive/22 dark:border-destructive/28",
+        day: "text-red-900 dark:text-foreground",
+        value: "text-red-900 dark:text-foreground",
+      };
     default:
-      return { cell: "bg-destructive/48 border border-destructive/32 shadow-soft", day: "text-destructive-foreground", value: "text-destructive-foreground" };
+      return {
+        cell: "bg-destructive/38 dark:bg-destructive/48 border border-destructive/28 dark:border-destructive/32 shadow-soft",
+        day: "text-white dark:text-destructive-foreground",
+        value: "text-white dark:text-destructive-foreground",
+      };
   }
 }
 
