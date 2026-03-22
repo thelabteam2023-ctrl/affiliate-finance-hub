@@ -328,6 +328,15 @@ const App = () => (
               </ProtectedRoute>
             } />
             
+            {/* Calculadora EV - standalone */}
+            <Route path="/ferramentas/calculadora-ev" element={
+              <ProtectedRoute>
+                <Suspense fallback={<PageLoader />}>
+                  <CalculadoraEV />
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            
             {/* Janela Surebet - standalone, para abrir em nova janela */}
             <Route path="/janela/surebet/novo" element={
               <ProtectedRoute>
