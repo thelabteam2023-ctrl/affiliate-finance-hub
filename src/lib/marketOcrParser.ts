@@ -124,7 +124,14 @@ const HANDICAP_MARKET_PATTERNS = [
   /puck\s*line/i,                     // "Puck Line"
   /\bah\b/i,                          // "AH" (Asian Handicap)
   /\beh\b/i,                          // "EH" (European Handicap)
+  /\bh\.?\s*a\.?\b/i,                // "H.A." or "HA"
 ];
+
+// Padrão para detectar linha DIVIDIDA de handicap asiático (ex: "0.0, -0.5" ou "0.0,-0.5")
+const SPLIT_HANDICAP_PATTERN = /([+-]?\d+[.,]?\d*)\s*[,\/]\s*([+-]?\d+[.,]?\d*)/;
+
+// Padrão para detectar nome de time + números (forte indicador de handicap)
+const TEAM_WITH_NUMBERS_PATTERN = /([a-zA-ZÀ-ÿ][\w\s]*?)\s+([+-]?\d+[.,]?\d*(?:\s*[,\/]\s*[+-]?\d+[.,]?\d*)?)\s*$/;
 
 // Padrão para extrair linha de handicap da seleção
 const HANDICAP_LINE_PATTERNS = [
