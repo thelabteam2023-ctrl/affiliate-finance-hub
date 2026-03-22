@@ -247,6 +247,19 @@ REGRAS IMPORTANTES:
     - Ex: "Live Quarter 2 Moneyline" → mercado = "QUARTER 2 MONEYLINE" (NÃO "Moneyline" do jogo)
     - Ex: "3º Quarto" → mercado = "3º Quarto" (NÃO resultado final)
     - IMPORTANTE: No campo "mercado", SEMPRE inclua o contexto temporal no texto (ex: "Quarter 3 Moneyline", "1st Half Total", "1st Set Winner")
+18. REGRA CRÍTICA — HANDICAP ASIÁTICO vs TOTAL DE GOLS:
+    - Se a seleção contém NOME DE TIME + NÚMEROS (ex: "Modbury Jets 0.0,-0.5"), é SEMPRE Handicap Asiático, NUNCA Total de Gols
+    - Se houver DOIS números separados por vírgula (ex: "0.0,-0.5", "+0.5,+1.0"), é Handicap Asiático com linha dividida (split line)
+    - Normalização de split line: a linha final é a MÉDIA dos dois valores (ex: 0.0 e -0.5 → -0.25)
+    - Termos que indicam Handicap: "Handicap", "Asian Handicap", "H.A.", "AH", "Handicap Asiático"
+    - Números NEGATIVOS associados a times são SEMPRE handicap, NUNCA total de gols
+    - Só classifique como "Total de Gols" se houver termos explícitos: "Over", "Under", "Mais de", "Menos de", "Gols", "Goals"
+    - Se o print mostra "Handicap Asiático" no mercado, retorne EXATAMENTE "Handicap Asiático" (ou com contexto temporal se aplicável)
+    - Exemplos:
+      * "Modbury Jets 0.0,-0.5" → mercado: "Handicap Asiático", selecao: "Modbury Jets -0.25"
+      * "Team A +0.5,+1.0" → mercado: "Handicap Asiático", selecao: "Team A +0.75"
+      * "AH -1.0" → mercado: "Handicap Asiático", selecao com linha -1.0
+      * "Over 2.5 Goals" → mercado: "Total de Gols" (TEM termos Over/Goals)
 17. FAMÍLIAS DE MERCADO para referência (ajuda a classificar corretamente):
     - MATCH_ODDS: Match Odds, 1X2, Resultado da Partida, Resultado Final, FT Result, Moneyline Soccer, Três Vias
     - MONEYLINE/MATCH_WINNER: Moneyline, ML, Vencedor, Winner (2 vias, sem empate — basquete, tênis, MMA)
