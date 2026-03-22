@@ -1593,11 +1593,11 @@ export function ApostaMultiplaDialog({
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm text-muted-foreground">Resultado:</span>
                   <Badge className={`${
-                    resultadoCalculado === "GREEN" ? "bg-emerald-500/20 text-emerald-400" :
-                    resultadoCalculado === "MEIO_GREEN" ? "bg-emerald-500/10 text-emerald-300" :
-                    resultadoCalculado === "RED" ? "bg-red-500/20 text-red-400" :
-                    resultadoCalculado === "MEIO_RED" ? "bg-red-500/10 text-red-300" :
-                    "bg-gray-500/20 text-gray-400"
+                    resultadoCalculado === "GREEN" ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-400" :
+                    resultadoCalculado === "MEIO_GREEN" ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-300" :
+                    resultadoCalculado === "RED" ? "bg-red-500/20 text-red-700 dark:text-red-400" :
+                    resultadoCalculado === "MEIO_RED" ? "bg-red-500/10 text-red-600 dark:text-red-300" :
+                    "bg-gray-500/20 text-gray-600 dark:text-gray-400"
                   }`}>
                     {resultadoCalculado === "MEIO_GREEN" ? "MEIO GREEN" : 
                      resultadoCalculado === "MEIO_RED" ? "MEIO RED" : 
