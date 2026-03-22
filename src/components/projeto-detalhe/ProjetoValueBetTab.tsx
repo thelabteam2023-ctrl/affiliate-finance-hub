@@ -198,6 +198,14 @@ export function ProjetoValueBetTab({
     projetoId,
     estrategia: "VALUEBET",
     cotacaoUSD: convertToConsolidationOficialFn(1, "USD"),
+    cotacoes: {
+      EUR: getRate("EUR"),
+      GBP: getRate("GBP"),
+      MYR: getRate("MYR"),
+      MXN: getRate("MXN"),
+      ARS: getRate("ARS"),
+      COP: getRate("COP"),
+    },
   });
   
   // Hook para gerenciamento de rollover (bônus)
