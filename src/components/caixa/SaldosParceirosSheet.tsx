@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { FIAT_CURRENCIES, CURRENCY_SYMBOLS } from "@/types/currency";
 import { getFirstLastName } from "@/lib/utils";
 import { useExchangeRates } from "@/contexts/ExchangeRatesContext";
@@ -900,8 +901,8 @@ export function SaldosParceirosSheet() {
                           {/* Bookmaker Cell - Multi-currency + Pendentes */}
                           <TableCell className="py-2.5 text-right">
                             {hasBookmakerBalance || parceiro.pendentes_bookmakers.length > 0 ? (
-                              <HoverCard openDelay={100} closeDelay={50}>
-                                <HoverCardTrigger asChild>
+                              <Popover>
+                                <PopoverTrigger asChild>
                                   <button className="inline-flex flex-col items-end gap-0.5 hover:opacity-80 transition-opacity cursor-pointer">
                                     {/* Saldos confirmados */}
                                     {bookmakerEntries.slice(0, 2).map(([moeda, valor]) => (
@@ -922,14 +923,14 @@ export function SaldosParceirosSheet() {
                                       </span>
                                     )}
                                   </button>
-                                </HoverCardTrigger>
-                                <HoverCardContent align="end" className="w-80">
+                                </PopoverTrigger>
+                                <PopoverContent align="end" className="w-80">
                                   <BookmakerHoverContent 
                                     saldos={parceiro.saldos_bookmakers} 
                                     pendentes={parceiro.pendentes_bookmakers}
                                   />
-                                </HoverCardContent>
-                              </HoverCard>
+                                </PopoverContent>
+                              </Popover>
                             ) : (
                               <span className="text-muted-foreground/50">—</span>
                             )}
