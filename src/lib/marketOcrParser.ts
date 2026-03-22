@@ -223,10 +223,70 @@ function isTotalMarket(text: string): boolean {
 }
 
 /**
- * Verifica se o texto indica um mercado HANDICAP
+ * Verifica se o texto indica um mercado HANDICAP (explícito)
  */
 function isHandicapMarket(text: string): boolean {
   return HANDICAP_MARKET_PATTERNS.some(p => p.test(text));
+}
+
+/**
+ * Verifica se o texto contém termos explícitos de Over/Under
+ */
+function hasExplicitTotalTerms(text: string): boolean {
+  return /\b(over|under|mais\s+de|menos\s+de|acima|abaixo|o\/u|gols?|goals?)\b/i.test(text);
+}
+
+/**
+ * Detecta handicap asiático com linha dividida (split line)
+ * Ex: "0.0, -0.5" → -0.25, "Team +0.5, +1.0" → +0.75
+ */
+function detectSplitHandicap(text: string): { line: number; team: string | null } | null {
+  const match = text.match(SPLIT_HANDICAP_PATTERN);
+  if (!match) return null;
+  
+  const val1 = parseFloat(match[1].replace(",", "."));
+  const val2 = parseFloat(match[2].replace(",", "."));
+  
+  if (isNaN(val1) || isNaN(val2)) return null;
+  
+  const avgLine = (val1 + val2) / 2;
+  
+  // Extrair nome do time (texto antes dos números)
+  const teamMatch = text.match(/^([a-zA-ZÀ-ÿ][\w\s]*?)\s+[+-]?\d/);
+  const team = teamMatch ? teamMatch[1].trim() : null;
+  
+  return { line: Math.round(avgLine * 100) / 100, team };
+}
+
+/**
+ * Detecta se a seleção contém padrão de handicap com nome de time
+ * Ex: "Modbury Jets 0.0,-0.5" → handicap pertence ao Modbury Jets
+ */
+function detectTeamHandicap(text: string): { line: number; team: string } | null {
+  const match = text.match(TEAM_WITH_NUMBERS_PATTERN);
+  if (!match) return null;
+  
+  const teamName = match[1].trim();
+  const numbersStr = match[2];
+  
+  // Tentar split handicap primeiro (ex: "0.0,-0.5")
+  const splitMatch = numbersStr.match(SPLIT_HANDICAP_PATTERN);
+  if (splitMatch) {
+    const val1 = parseFloat(splitMatch[1].replace(",", "."));
+    const val2 = parseFloat(splitMatch[2].replace(",", "."));
+    if (!isNaN(val1) && !isNaN(val2)) {
+      const avgLine = (val1 + val2) / 2;
+      return { line: Math.round(avgLine * 100) / 100, team: teamName };
+    }
+  }
+  
+  // Handicap simples (ex: "Team -1.5")
+  const val = parseFloat(numbersStr.replace(",", "."));
+  if (!isNaN(val)) {
+    return { line: val, team: teamName };
+  }
+  
+  return null;
 }
 
 /**
