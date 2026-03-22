@@ -10,7 +10,8 @@ import {
   Layers, 
   ArrowLeftRight,
   Coins,
-  ChevronDown
+  ChevronDown,
+  TrendingUp
 } from "lucide-react";
 import {
   DropdownMenu,
