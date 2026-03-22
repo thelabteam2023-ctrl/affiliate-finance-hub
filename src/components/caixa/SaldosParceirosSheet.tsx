@@ -584,13 +584,13 @@ export function SaldosParceirosSheet() {
           {sortToggle}
         </div>
         <Tabs defaultValue={defaultMoeda} className="w-full">
-          <TabsList className="w-full h-7 bg-muted/50 p-0.5 gap-0.5">
+          <TabsList className="w-full h-7 bg-muted/50 p-0.5 gap-0.5 border-none [&>span:last-child]:hidden">
             {moedas.map(moeda => {
               return (
                 <TabsTrigger 
                   key={moeda} 
                   value={moeda} 
-                  className="flex-1 text-[10px] h-6 px-2 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                  className="flex-1 text-[10px] h-6 px-2 rounded-sm data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
                 >
                   {CURRENCY_SYMBOLS[moeda] || moeda} {moeda}
                   <span className="ml-1 opacity-60">({(bookmakersPorMoeda[moeda] || []).length})</span>
