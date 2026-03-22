@@ -1620,7 +1620,7 @@ export function ApostaMultiplaDialog({
                   <span className="text-sm text-muted-foreground">
                     Lucro Potencial:
                   </span>
-                  <span className="text-lg font-bold text-emerald-400">
+                  <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
                     {formatCurrency(lucroPotencial)}
                   </span>
                 </div>
