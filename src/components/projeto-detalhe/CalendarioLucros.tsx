@@ -53,16 +53,17 @@ const defaultFormatCurrencyFull = (value: number): string => {
 /** Formata valor compacto para caber na célula do calendário */
 function formatCompactValue(value: number): string {
   const abs = Math.abs(value);
+  const sign = value < 0 ? "-" : "";
+  const formatter = new Intl.NumberFormat("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
   if (abs >= 1000) {
-    return `${value < 0 ? "-" : ""}${(abs / 1000).toFixed(1).replace(/\.0$/, "")}k`;
+    return `${sign}${formatter.format(abs / 1000)}k`;
   }
-  if (abs >= 100) {
-    return `${value < 0 ? "-" : ""}${Math.round(abs)}`;
-  }
-  if (abs >= 10) {
-    return `${value < 0 ? "-" : ""}${abs.toFixed(0)}`;
-  }
-  return `${value < 0 ? "-" : ""}${abs.toFixed(1)}`;
+
+  return `${sign}${formatter.format(abs)}`;
 }
 
 /** Calcula a intensidade do heatmap (0-4) com base no valor */
@@ -73,6 +74,50 @@ function getIntensityLevel(value: number, maxAbsValue: number): number {
   if (ratio < 0.4) return 2;
   if (ratio < 0.7) return 3;
   return 4;
+}
+
+function getHeatmapTone(lucro: number, temDados: boolean, maxAbsLucro: number) {
+  if (!temDados) {
+    return {
+      cell: "bg-muted/15 border border-border/20",
+      day: "text-muted-foreground/55",
+      value: "text-muted-foreground/55",
+    };
+  }
+
+  if (lucro === 0) {
+    return {
+      cell: "bg-secondary/70 border border-border/35",
+      day: "text-foreground/80",
+      value: "text-muted-foreground",
+    };
+  }
+
+  const level = getIntensityLevel(lucro, maxAbsLucro);
+
+  if (lucro > 0) {
+    switch (level) {
+      case 1:
+        return { cell: "bg-success/14 border border-success/20", day: "text-success", value: "text-success" };
+      case 2:
+        return { cell: "bg-success/24 border border-success/25", day: "text-success", value: "text-success" };
+      case 3:
+        return { cell: "bg-success/38 border border-success/30", day: "text-foreground", value: "text-foreground" };
+      default:
+        return { cell: "bg-success/58 border border-success/35 shadow-soft", day: "text-primary-foreground", value: "text-primary-foreground" };
+    }
+  }
+
+  switch (level) {
+    case 1:
+      return { cell: "bg-destructive/12 border border-destructive/18", day: "text-destructive", value: "text-destructive" };
+    case 2:
+      return { cell: "bg-destructive/22 border border-destructive/22", day: "text-destructive", value: "text-destructive" };
+    case 3:
+      return { cell: "bg-destructive/34 border border-destructive/28", day: "text-foreground", value: "text-foreground" };
+    default:
+      return { cell: "bg-destructive/48 border border-destructive/32 shadow-soft", day: "text-destructive-foreground", value: "text-destructive-foreground" };
+  }
 }
 
 export function CalendarioLucros({ 
