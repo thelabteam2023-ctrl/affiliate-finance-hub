@@ -5,7 +5,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 
@@ -34,7 +33,7 @@ function getClassification(ev: number): Classification {
     color: 'text-emerald-700 dark:text-emerald-400',
     bgColor: 'bg-emerald-50 dark:bg-emerald-950/40',
     borderColor: 'border-emerald-200 dark:border-emerald-800',
-    icon: <TrendingUp className="h-5 w-5" />,
+    icon: <TrendingUp className="h-4 w-4" />,
     description: 'Entrada forte recomendada',
   };
   if (ev > 2) return {
@@ -42,7 +41,7 @@ function getClassification(ev: number): Classification {
     color: 'text-amber-700 dark:text-amber-400',
     bgColor: 'bg-amber-50 dark:bg-amber-950/40',
     borderColor: 'border-amber-200 dark:border-amber-800',
-    icon: <Zap className="h-5 w-5" />,
+    icon: <Zap className="h-4 w-4" />,
     description: 'Entrada reduzida sugerida',
   };
   if (ev > 0) return {
@@ -50,7 +49,7 @@ function getClassification(ev: number): Classification {
     color: 'text-orange-700 dark:text-orange-400',
     bgColor: 'bg-orange-50 dark:bg-orange-950/40',
     borderColor: 'border-orange-200 dark:border-orange-800',
-    icon: <AlertTriangle className="h-5 w-5" />,
+    icon: <AlertTriangle className="h-4 w-4" />,
     description: 'Entrada cautelosa',
   };
   return {
@@ -58,7 +57,7 @@ function getClassification(ev: number): Classification {
     color: 'text-red-700 dark:text-red-400',
     bgColor: 'bg-red-50 dark:bg-red-950/40',
     borderColor: 'border-red-200 dark:border-red-800',
-    icon: <XCircle className="h-5 w-5" />,
+    icon: <XCircle className="h-4 w-4" />,
     description: 'Não apostar',
   };
 }
@@ -69,7 +68,7 @@ function InfoTooltip({ text }: { text: string }) {
       <Tooltip>
         <TooltipTrigger asChild>
           <button type="button" className="ml-1 text-muted-foreground hover:text-foreground transition-colors">
-            <HelpCircle className="h-3.5 w-3.5" />
+            <HelpCircle className="h-3 w-3" />
           </button>
         </TooltipTrigger>
         <TooltipContent side="top" className="max-w-xs">
@@ -172,207 +171,194 @@ export const CalculadoraEVContent: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <ScrollArea className="flex-1">
-        <div className="p-4 space-y-4 max-w-2xl mx-auto">
+    <div className="p-3 space-y-2.5">
+      {/* Inputs */}
+      <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-1">
+          <Label className="text-[10px] font-medium flex items-center">
+            Odd Atual *
+            <InfoTooltip text="A odd disponível agora na casa de apostas." />
+          </Label>
+          <Input
+            placeholder="ex: 1.83"
+            value={oddAtual}
+            onChange={e => setOddAtual(e.target.value)}
+            className="text-right font-mono h-8 text-sm"
+          />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-[10px] font-medium flex items-center">
+            Odd Justa *
+            <InfoTooltip text="A odd que representa a probabilidade real do evento." />
+          </Label>
+          <Input
+            placeholder="ex: 1.77"
+            value={oddJusta}
+            onChange={e => setOddJusta(e.target.value)}
+            className="text-right font-mono h-8 text-sm"
+          />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-[10px] font-medium flex items-center">
+            Stake Base
+            <InfoTooltip text="Valor padrão de aposta." />
+          </Label>
+          <Input
+            placeholder="ex: 100"
+            value={stakeBase}
+            onChange={e => setStakeBase(e.target.value)}
+            className="text-right font-mono h-8 text-sm"
+          />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-[10px] font-medium flex items-center">
+            Odd Inicial
+            <InfoTooltip text="Odd quando a oportunidade foi identificada." />
+          </Label>
+          <Input
+            placeholder="ex: 1.90"
+            value={oddInicial}
+            onChange={e => setOddInicial(e.target.value)}
+            className="text-right font-mono h-8 text-sm"
+          />
+        </div>
+      </div>
 
-          {/* Inputs */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium flex items-center">
-                Odd Atual *
-                <InfoTooltip text="A odd disponível agora na casa de apostas." />
-              </Label>
-              <Input
-                placeholder="ex: 1.83"
-                value={oddAtual}
-                onChange={e => setOddAtual(e.target.value)}
-                className="text-right font-mono"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium flex items-center">
-                Odd Justa *
-                <InfoTooltip text="A odd que representa a probabilidade real do evento (sem margem da casa)." />
-              </Label>
-              <Input
-                placeholder="ex: 1.77"
-                value={oddJusta}
-                onChange={e => setOddJusta(e.target.value)}
-                className="text-right font-mono"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium flex items-center">
-                Stake Base
-                <InfoTooltip text="Valor padrão de aposta. Usado para calcular o ajuste de stake." />
-              </Label>
-              <Input
-                placeholder="ex: 100"
-                value={stakeBase}
-                onChange={e => setStakeBase(e.target.value)}
-                className="text-right font-mono"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium flex items-center">
-                Odd Inicial
-                <InfoTooltip text="A odd quando a oportunidade foi identificada. Usada para medir deterioração." />
-              </Label>
-              <Input
-                placeholder="ex: 1.90"
-                value={oddInicial}
-                onChange={e => setOddInicial(e.target.value)}
-                className="text-right font-mono"
-              />
-            </div>
-          </div>
-
-          {/* Results */}
-          {results && (
-            <div className="space-y-3 animate-in fade-in-0 duration-200">
-              {/* Classification Banner */}
-              <Card className={cn('border-2', results.classification.borderColor, results.classification.bgColor)}>
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className={results.classification.color}>
-                        {results.classification.icon}
-                      </div>
-                      <div>
-                        <p className={cn('font-bold text-lg', results.classification.color)}>
-                          {results.classification.label}
-                        </p>
-                        <p className="text-xs text-muted-foreground">{results.classification.description}</p>
-                      </div>
-                    </div>
-                    <div className={cn('text-2xl font-bold font-mono', results.classification.color)}>
-                      {results.ev > 0 ? '+' : ''}{results.ev}%
-                    </div>
+      {/* Results */}
+      {results && (
+        <div className="space-y-2 animate-in fade-in-0 duration-200">
+          <Card className={cn('border-2', results.classification.borderColor, results.classification.bgColor)}>
+            <CardContent className="p-2.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className={results.classification.color}>
+                    {results.classification.icon}
                   </div>
-                </CardContent>
-              </Card>
-
-              {/* Metrics Grid */}
-              <div className="grid grid-cols-2 gap-3">
-                <Card>
-                  <CardContent className="p-3">
-                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Prob. Implícita</p>
-                    <p className="text-lg font-bold font-mono text-foreground">{results.probAtual}%</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="p-3">
-                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Prob. Justa</p>
-                    <p className="text-lg font-bold font-mono text-foreground">{results.probJusta}%</p>
-                  </CardContent>
-                </Card>
-                {results.stakeSugerida !== null && (
-                  <>
-                    <Card>
-                      <CardContent className="p-3">
-                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Stake Sugerida</p>
-                        <p className="text-lg font-bold font-mono text-foreground">
-                          R$ {results.stakeSugerida.toFixed(2)}
-                        </p>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardContent className="p-3">
-                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Valor Restante</p>
-                        <p className="text-lg font-bold font-mono text-foreground">{results.valorRestante}%</p>
-                      </CardContent>
-                    </Card>
-                  </>
-                )}
-              </div>
-
-              {/* Action buttons */}
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={handleCopy} className="gap-2 flex-1">
-                  {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                  {copied ? 'Copiado!' : 'Copiar resultado'}
-                </Button>
-                <Button variant="outline" size="sm" onClick={handleSaveToHistory} className="gap-2 flex-1">
-                  <History className="h-4 w-4" />
-                  Salvar simulação
-                </Button>
-                <Button variant="ghost" size="sm" onClick={handleReset}>
-                  Limpar
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* History */}
-          {history.length > 0 && (
-            <>
-              <Separator />
-              <div>
-                <button
-                  onClick={() => setShowHistory(!showHistory)}
-                  className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors w-full"
-                >
-                  <History className="h-3.5 w-3.5" />
-                  Últimas {history.length} simulações
-                  <span className="ml-auto text-[10px]">{showHistory ? '▲' : '▼'}</span>
-                </button>
-                {showHistory && (
-                  <div className="mt-2 space-y-1.5 animate-in fade-in-0 duration-150">
-                    {history.map(h => {
-                      const cls = getClassification(h.ev);
-                      return (
-                        <div key={h.id} className={cn(
-                          'flex items-center justify-between p-2 rounded-md text-xs border',
-                          cls.bgColor, cls.borderColor
-                        )}>
-                          <div className="flex items-center gap-2">
-                            <span className={cn('font-mono font-bold', cls.color)}>
-                              {h.ev > 0 ? '+' : ''}{h.ev}%
-                            </span>
-                            <span className="text-muted-foreground">
-                              {h.oddAtual} / {h.oddJusta}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {h.stakeSugerida !== null && (
-                              <span className="text-muted-foreground">R$ {h.stakeSugerida.toFixed(2)}</span>
-                            )}
-                            <span className="text-muted-foreground/60">
-                              {h.timestamp.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-
-          {/* EV Explanation */}
-          {!results && (
-            <Card className="border-dashed">
-              <CardContent className="p-4">
-                <div className="flex items-start gap-3">
-                  <HelpCircle className="h-5 w-5 text-muted-foreground mt-0.5 shrink-0" />
-                  <div className="space-y-2 text-xs text-muted-foreground">
-                    <p className="font-medium text-sm text-foreground">O que é Expected Value (EV)?</p>
-                    <p>
-                      EV mede se uma aposta tem valor positivo a longo prazo. Se a odd oferecida é maior que a odd justa, 
-                      você tem uma vantagem estatística — semelhante a como casinos operam, mas ao seu favor.
+                  <div>
+                    <p className={cn('font-bold text-sm', results.classification.color)}>
+                      {results.classification.label}
                     </p>
-                    <p>
-                      <strong>EV+ = lucro esperado.</strong> Quanto maior o EV%, mais forte a oportunidade.
-                    </p>
+                    <p className="text-[10px] text-muted-foreground">{results.classification.description}</p>
                   </div>
                 </div>
+                <div className={cn('text-lg font-bold font-mono', results.classification.color)}>
+                  {results.ev > 0 ? '+' : ''}{results.ev}%
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="grid grid-cols-2 gap-2">
+            <Card>
+              <CardContent className="p-2">
+                <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-medium">Prob. Implícita</p>
+                <p className="text-sm font-bold font-mono text-foreground">{results.probAtual}%</p>
               </CardContent>
             </Card>
-          )}
+            <Card>
+              <CardContent className="p-2">
+                <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-medium">Prob. Justa</p>
+                <p className="text-sm font-bold font-mono text-foreground">{results.probJusta}%</p>
+              </CardContent>
+            </Card>
+            {results.stakeSugerida !== null && (
+              <>
+                <Card>
+                  <CardContent className="p-2">
+                    <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-medium">Stake Sugerida</p>
+                    <p className="text-sm font-bold font-mono text-foreground">R$ {results.stakeSugerida.toFixed(2)}</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-2">
+                    <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-medium">Valor Restante</p>
+                    <p className="text-sm font-bold font-mono text-foreground">{results.valorRestante}%</p>
+                  </CardContent>
+                </Card>
+              </>
+            )}
+          </div>
+
+          <div className="flex gap-1.5">
+            <Button variant="outline" size="sm" onClick={handleCopy} className="gap-1 flex-1 h-7 text-[11px]">
+              {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+              {copied ? 'Copiado!' : 'Copiar resultado'}
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleSaveToHistory} className="gap-1 flex-1 h-7 text-[11px]">
+              <History className="h-3 w-3" />
+              Salvar simulação
+            </Button>
+            <Button variant="ghost" size="sm" onClick={handleReset} className="h-7 text-[11px]">
+              Limpar
+            </Button>
+          </div>
         </div>
-      </ScrollArea>
+      )}
+
+      {/* History */}
+      {history.length > 0 && (
+        <>
+          <Separator />
+          <div>
+            <button
+              onClick={() => setShowHistory(!showHistory)}
+              className="flex items-center gap-2 text-[10px] text-muted-foreground hover:text-foreground transition-colors w-full"
+            >
+              <History className="h-3 w-3" />
+              Últimas {history.length} simulações
+              <span className="ml-auto text-[9px]">{showHistory ? '▲' : '▼'}</span>
+            </button>
+            {showHistory && (
+              <div className="mt-1.5 space-y-1 animate-in fade-in-0 duration-150">
+                {history.map(h => {
+                  const cls = getClassification(h.ev);
+                  return (
+                    <div key={h.id} className={cn(
+                      'flex items-center justify-between p-1.5 rounded-md text-[10px] border',
+                      cls.bgColor, cls.borderColor
+                    )}>
+                      <div className="flex items-center gap-1.5">
+                        <span className={cn('font-mono font-bold', cls.color)}>
+                          {h.ev > 0 ? '+' : ''}{h.ev}%
+                        </span>
+                        <span className="text-muted-foreground">
+                          {h.oddAtual} / {h.oddJusta}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        {h.stakeSugerida !== null && (
+                          <span className="text-muted-foreground">R$ {h.stakeSugerida.toFixed(2)}</span>
+                        )}
+                        <span className="text-muted-foreground/60">
+                          {h.timestamp.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* EV Explanation */}
+      {!results && (
+        <Card className="border-dashed">
+          <CardContent className="p-2.5">
+            <div className="flex items-start gap-2">
+              <HelpCircle className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />
+              <div className="space-y-1 text-[10px] text-muted-foreground">
+                <p className="font-medium text-xs text-foreground">O que é Expected Value (EV)?</p>
+                <p>
+                  EV mede se uma aposta tem valor positivo a longo prazo. Odd oferecida maior que a justa = vantagem estatística.
+                </p>
+                <p><strong>EV+ = lucro esperado.</strong> Quanto maior, mais forte a oportunidade.</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

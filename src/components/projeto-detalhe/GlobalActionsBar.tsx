@@ -253,8 +253,8 @@ export function GlobalActionsBar({
             size="sm" 
             className="h-6 text-[11px] px-2"
             onClick={() => {
-              const width = 480;
-              const height = 720;
+              const width = 420;
+              const height = 580;
               const left = Math.round(window.screenX + (window.outerWidth - width) / 2);
               const top = Math.round(window.screenY + (window.outerHeight - height) / 2);
               window.open(
