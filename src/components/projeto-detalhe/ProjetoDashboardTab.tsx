@@ -206,7 +206,31 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
     cotacoes: cotacoesCalendario,
   });
 
-  // ---- useQuery: Filtered apostas (with period) ----
+  // ---- Mesclar: lucro canônico + contagens da RPC de apostas ----
+  const mergedCalendarData = useMemo(() => {
+    // Criar mapa de operações por dia a partir do calendarDaily (RPC apostas)
+    const qtdMap = new Map<string, number>();
+    calendarDaily.forEach(d => qtdMap.set(d.dia, d.qtd));
+
+    // Usar canonical daily para lucro, mas enriquecer com qtd do calendarDaily
+    return canonicalDaily.map(d => ({
+      data_aposta: d.dia,
+      lucro_prejuizo: d.lucro,
+      stake: 0,
+      stake_total: null as number | null,
+      bookmaker_nome: '',
+      parceiro_nome: null as string | null,
+      bookmaker_id: null as string | null,
+      pl_consolidado: d.lucro,
+      moeda_operacao: null as string | null,
+      stake_consolidado: null as number | null,
+      lucro_prejuizo_brl_referencia: null as number | null,
+      valor_brl_referencia: null as number | null,
+      operacoes: qtdMap.get(d.dia) ?? 0,
+    }));
+  }, [canonicalDaily, calendarDaily]);
+
+
   const { 
     data: apostasUnificadas = [], 
     isLoading: isLoadingApostas,
@@ -428,7 +452,7 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
 
       <VisaoGeralCharts 
         apostas={apostasParaGraficos}
-        apostasCalendario={transformCanonicalDailyForCharts(canonicalDaily)}
+        apostasCalendario={mergedCalendarData}
         extrasLucro={extrasLucro}
         accentColor="hsl(var(--primary))"
         logoMap={catalogLogoMap}
