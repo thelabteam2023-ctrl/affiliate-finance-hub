@@ -585,20 +585,14 @@ export function VisaoGeralCharts({
     return `${prefix}R$${absVal.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}`;
   });
   const [calendarOpen, setCalendarOpen] = useState(false);
-  const [calendarMonthTotal, setCalendarMonthTotal] = useState<number | null>(null);
 
   const handleCalendarOpenChange = (open: boolean) => {
     setCalendarOpen(open);
-    if (!open) setCalendarMonthTotal(null);
   };
 
   const calendarInitialMonth = periodStart ?? new Date();
 
   const periodTotal = useMemo(() => {
-    if (calendarMonthTotal != null) {
-      return calendarMonthTotal;
-    }
-
     if (lucroOperacionalKpi != null && periodStart && periodEnd) {
       const sameMonthRange =
         format(periodStart, "yyyy-MM") === format(periodEnd, "yyyy-MM") &&
@@ -646,7 +640,7 @@ export function VisaoGeralCharts({
     });
 
     return total;
-  }, [apostas, apostasCalendario, extrasLucro, periodStart, periodEnd, lucroOperacionalKpi, calendarMonthTotal, convertToConsolidation, moedaConsolidacao]);
+  }, [apostas, apostasCalendario, extrasLucro, periodStart, periodEnd, lucroOperacionalKpi, convertToConsolidation, moedaConsolidacao]);
 
   const isPositiveBadge = periodTotal >= 0;
   
@@ -1024,7 +1018,6 @@ export function VisaoGeralCharts({
                       compact
                       formatCurrency={formatCurrency}
                       initialMonth={calendarInitialMonth}
-                      onMonthTotalChange={setCalendarMonthTotal}
                     />
                   </PopoverContent>
                 </Popover>
@@ -1090,7 +1083,6 @@ export function VisaoGeralCharts({
                       compact
                       formatCurrency={formatCurrency}
                       initialMonth={calendarInitialMonth}
-                      onMonthTotalChange={setCalendarMonthTotal}
                     />
                   </PopoverContent>
                 </Popover>
