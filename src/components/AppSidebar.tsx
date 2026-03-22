@@ -104,6 +104,7 @@ const menuGroups: MenuGroup[] = [
     label: "FERRAMENTAS",
     items: [
       { title: "Prot. Progressiva", url: "#calculadora-lay", icon: Calculator, iconName: "Calculator", moduleKey: "ferramentas" },
+      { title: "Calculadora EV", url: "#calculadora-ev", icon: Calculator, iconName: "Calculator", moduleKey: "ferramentas" },
     ],
   },
   {
@@ -226,15 +227,20 @@ export function AppSidebar() {
 
   // Abre calculadora em janela externa
   const handleMenuItemClick = (item: MenuItem, e: React.MouseEvent) => {
-    if (item.url === '#calculadora-lay') {
+    const toolMap: Record<string, { url: string; name: string }> = {
+      '#calculadora-lay': { url: '/ferramentas/protecao-progressiva', name: 'calculadora-protecao' },
+      '#calculadora-ev': { url: '/ferramentas/calculadora-ev', name: 'calculadora-ev' },
+    };
+    const tool = toolMap[item.url];
+    if (tool) {
       e.preventDefault();
       const width = 900;
       const height = 750;
       const left = Math.max(0, (window.screen.width - width) / 2);
       const top = Math.max(0, (window.screen.height - height) / 2);
       window.open(
-        '/ferramentas/protecao-progressiva',
-        'calculadora-protecao',
+        tool.url,
+        tool.name,
         `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
       );
     }
