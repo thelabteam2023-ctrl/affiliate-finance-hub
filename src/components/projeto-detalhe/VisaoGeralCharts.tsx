@@ -135,6 +135,8 @@ interface VisaoGeralChartsProps {
   convertToConsolidation?: (valor: number, moedaOrigem: string) => number;
   /** Moeda de consolidação do projeto */
   moedaConsolidacao?: string;
+  /** Lucro Operacional canônico (via RPC server-side) — se fornecido, usado como badge total */
+  lucroOperacionalKpi?: number | null;
 }
 
 // =====================================================
@@ -555,6 +557,7 @@ export function VisaoGeralCharts({
   showScopeToggle = false,
   convertToConsolidation,
   moedaConsolidacao,
+  lucroOperacionalKpi,
 }: VisaoGeralChartsProps) {
   
   // DESACOPLAMENTO: O calendário usa seus próprios dados (sem filtro de período)
@@ -583,35 +586,33 @@ export function VisaoGeralCharts({
   });
   const [calendarOpen, setCalendarOpen] = useState(false);
 
-  // Badge: soma lucro do período ativo
-  // PRIORIDADE: Se apostasCalendario (RPC, sem truncamento) está disponível, usa como fonte da verdade
-  // filtrando pelo período. Caso contrário, usa apostas (REST, já filtrada pelo período).
+  // Badge: Lucro do período ativo
+  // PRIORIDADE: Se lucroOperacionalKpi (RPC canônico server-side) está disponível,
+  // usa como fonte única da verdade (já filtrado por período no server).
+  // Fallback: calcula client-side.
   const periodTotal = useMemo(() => {
+    // KPI canônico: paridade absoluta com KPI card
+    if (lucroOperacionalKpi != null) {
+      return lucroOperacionalKpi;
+    }
+
     let total = 0;
 
-    // Fonte de apostas: apostasCalendario (RPC completa) ou apostas (REST filtrada)
-    const sourceData = apostasCalendario ?? apostas;
-    
     if (apostasCalendario && periodStart && periodEnd) {
-      // RPC data: filtrar pelo período manualmente (RPC retorna todos os dados)
       const pStart = startOfDay(periodStart);
       apostasCalendario.forEach((a) => {
         const dateStr = a.data_aposta.includes('T') ? extractLocalDateKey(a.data_aposta) : a.data_aposta;
         const apostaDate = new Date(dateStr + 'T12:00:00');
         if (apostaDate >= pStart && apostaDate <= periodEnd) {
-          // RPC data já vem com lucro consolidado (agregado server-side)
           total += a.lucro_prejuizo || 0;
         }
       });
     } else {
-      // REST data: já vem filtrada pelo período
       apostas.forEach((a) => {
         total += consolidateLucro(a);
       });
     }
 
-    // Extras: filtrar pelo período selecionado (periodStart/periodEnd)
-    // CRÍTICO: Converter extras para moeda de consolidação
     extrasLucro.forEach((e) => {
       const dateStr = e.data.includes('T') ? extractLocalDateKey(e.data) : e.data;
       if (periodStart && periodEnd) {
@@ -627,7 +628,7 @@ export function VisaoGeralCharts({
     });
 
     return total;
-  }, [apostas, apostasCalendario, extrasLucro, periodStart, periodEnd]);
+  }, [apostas, apostasCalendario, extrasLucro, periodStart, periodEnd, lucroOperacionalKpi]);
 
   const isPositiveBadge = periodTotal >= 0;
   

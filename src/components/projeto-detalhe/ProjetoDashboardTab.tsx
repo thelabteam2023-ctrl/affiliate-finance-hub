@@ -21,12 +21,13 @@ import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { VisaoGeralCharts } from "./VisaoGeralCharts";
 import { fetchProjetoExtras, type ProjetoExtraEntry } from "@/services/fetchProjetoExtras";
 import { useCalendarApostasRpc, transformRpcDailyForCharts } from "@/hooks/useCalendarApostasRpc";
+import { fetchProjetosLucroOperacionalKpi, derivarCotacoesFromConvertFn } from "@/services/fetchProjetosLucroOperacionalKpi";
 
 import { PerformancePorCasaCard } from "./PerformancePorCasaCard";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod } from "./StandardTimeFilter";
 import { PERIOD_STALE_TIME, PERIOD_GC_TIME } from "@/lib/query-cache-config";
 import { DateRange } from "react-day-picker";
-import { isSameDay } from "date-fns";
+import { isSameDay, format } from "date-fns";
 import { getOperationalDateRangeForQuery, extractLocalDateKey, extractCivilDateKey } from "@/utils/dateUtils";
 
 interface ProjetoDashboardTabProps {
@@ -205,6 +206,30 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
     gcTime: GC_TIME,
   });
 
+  // ---- useQuery: Lucro Operacional KPI canônico (server-side, paridade com KPI card) ----
+  // Usa a mesma RPC de agregação, com filtro de período, para badge do calendário
+  const { data: lucroKpiData } = useQuery({
+    queryKey: ["projeto-lucro-kpi-canonical", projetoId, cotacaoOficialUSD, dateRangeKey],
+    queryFn: async () => {
+      const cotacoes = convertToConsolidationOficial
+        ? derivarCotacoesFromConvertFn(convertToConsolidationOficial)
+        : {};
+      const dataInicio = dateRange ? format(dateRange.start, 'yyyy-MM-dd') : undefined;
+      const dataFim = dateRange ? format(dateRange.end, 'yyyy-MM-dd') : undefined;
+      const result = await fetchProjetosLucroOperacionalKpi({
+        projetoIds: [projetoId],
+        cotacaoUSD: cotacaoOficialUSD || 5.0,
+        cotacoes,
+        moedaConsolidacao: moedaConsolidacao || "BRL",
+        dataInicio,
+        dataFim,
+      });
+      return result[projetoId]?.consolidado ?? null;
+    },
+    staleTime: STALE_TIME,
+    gcTime: GC_TIME,
+  });
+
   const loading = isLoadingApostas; // Only true on first load (no cached data)
   const isTransitioning = isFetchingApostas && !isLoadingApostas; // Fetching new period but showing previous data
 
@@ -220,6 +245,7 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
     queryClient.invalidateQueries({ queryKey: ["bookmaker-saldos"] });
     // CRÍTICO: Invalidar calendário RPC (nova arquitetura)
     queryClient.invalidateQueries({ queryKey: ["calendar-apostas-rpc", projetoId] });
+    queryClient.invalidateQueries({ queryKey: ["projeto-lucro-kpi-canonical", projetoId] });
   }, [queryClient, projetoId]);
 
   // Hook centralizado para sincronização cross-window
@@ -394,6 +420,7 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
         showScopeToggle={false}
         convertToConsolidation={convertToConsolidationOficial}
         moedaConsolidacao={moedaConsolidacao}
+        lucroOperacionalKpi={lucroKpiData ?? undefined}
       />
 
       {/* Performance por Casa - Componente com visões alternáveis */}
