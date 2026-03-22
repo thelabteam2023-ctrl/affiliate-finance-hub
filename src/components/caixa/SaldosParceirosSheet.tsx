@@ -107,6 +107,176 @@ interface ParceiroSaldoAgrupado {
   total_pendente_por_moeda: SaldosPorMoeda;
 }
 
+const BOOKMAKER_MOEDA_PRIORITY = ["BRL", "USD", "EUR"];
+
+const sortMoedas = (moedas: string[]) =>
+  [...moedas].sort((a, b) => {
+    const priorityA = BOOKMAKER_MOEDA_PRIORITY.indexOf(a);
+    const priorityB = BOOKMAKER_MOEDA_PRIORITY.indexOf(b);
+
+    if (priorityA !== -1 || priorityB !== -1) {
+      if (priorityA === -1) return 1;
+      if (priorityB === -1) return -1;
+      return priorityA - priorityB;
+    }
+
+    return a.localeCompare(b);
+  });
+
+const BookmakerListByMoeda = ({
+  bookmakers,
+  pendentes,
+  ascending = false,
+}: {
+  bookmakers: ParceiroSaldoAgrupado["saldos_bookmakers"];
+  pendentes: ParceiroSaldoAgrupado["pendentes_bookmakers"];
+  ascending?: boolean;
+}) => {
+  const sorted = [...bookmakers].sort((a, b) =>
+    ascending ? a.saldo_operavel - b.saldo_operavel : b.saldo_operavel - a.saldo_operavel,
+  );
+
+  return (
+    <>
+      {sorted.map((s, idx) => (
+        <div key={`${s.nome}-${s.moeda}-${idx}`} className="flex justify-between items-center gap-4 py-0.5">
+          <div className="flex items-center gap-1.5 truncate max-w-[160px]">
+            <span className="text-[13px] font-medium tracking-wide uppercase text-foreground/90 truncate leading-tight">{s.nome}</span>
+            {s.has_bonus && (
+              <span className="text-[10px] text-primary" title="Inclui bônus/freebet">🎁</span>
+            )}
+          </div>
+          <span className="text-[13px] font-mono font-medium text-chart-4 whitespace-nowrap tabular-nums leading-tight">
+            {CURRENCY_SYMBOLS[s.moeda] || s.moeda} {s.saldo_operavel.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+          </span>
+        </div>
+      ))}
+      {pendentes.length > 0 && (
+        <div className="pt-1.5 mt-1.5 border-t border-border/30">
+          <p className="text-[11px] font-medium text-chart-3/80 mb-1">⏳ Em Trânsito</p>
+          {pendentes.map((p, idx) => (
+            <div key={`${p.bookmaker_nome}-${p.moeda}-${idx}`} className="flex justify-between items-center gap-4 py-0.5">
+              <span className="text-[13px] tracking-wide uppercase text-muted-foreground/70 truncate max-w-[160px] leading-tight">{p.bookmaker_nome}</span>
+              <span className="text-[13px] font-mono font-medium text-chart-3 whitespace-nowrap tabular-nums leading-tight">
+                +{CURRENCY_SYMBOLS[p.moeda] || p.moeda} {p.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  );
+};
+
+const BookmakerHoverContent = ({
+  saldos,
+  pendentes,
+}: {
+  saldos: ParceiroSaldoAgrupado["saldos_bookmakers"];
+  pendentes: ParceiroSaldoAgrupado["pendentes_bookmakers"];
+}) => {
+  const [ascending, setAscending] = useState(false);
+
+  const saldosFiltrados = useMemo(() => saldos.filter((s) => s.saldo_operavel > 0.5), [saldos]);
+
+  const bookmakersPorMoeda = useMemo(
+    () =>
+      saldosFiltrados.reduce<Record<string, typeof saldosFiltrados>>((acc, s) => {
+        const moeda = s.moeda || "USD";
+        if (!acc[moeda]) acc[moeda] = [];
+        acc[moeda].push(s);
+        return acc;
+      }, {}),
+    [saldosFiltrados],
+  );
+
+  const pendentesPorMoeda = useMemo(
+    () =>
+      pendentes.reduce<Record<string, typeof pendentes>>((acc, p) => {
+        const moeda = p.moeda || "USD";
+        if (!acc[moeda]) acc[moeda] = [];
+        acc[moeda].push(p);
+        return acc;
+      }, {}),
+    [pendentes],
+  );
+
+  const moedas = useMemo(
+    () => sortMoedas([...new Set([...Object.keys(bookmakersPorMoeda), ...Object.keys(pendentesPorMoeda)])]),
+    [bookmakersPorMoeda, pendentesPorMoeda],
+  );
+
+  const defaultMoeda = moedas[0] || "USD";
+  const [activeMoeda, setActiveMoeda] = useState(defaultMoeda);
+
+  useEffect(() => {
+    setActiveMoeda((current) => (moedas.includes(current) ? current : defaultMoeda));
+  }, [moedas, defaultMoeda]);
+
+  const sortToggle = (
+    <button type="button" onClick={() => setAscending(!ascending)} className="text-muted-foreground/60 hover:text-foreground transition-colors">
+      <ArrowUpDown className="h-3 w-3" />
+    </button>
+  );
+
+  if (moedas.length <= 1) {
+    return (
+      <div className="space-y-1">
+        <div className="flex items-center justify-between pb-1 mb-1 border-b border-border/30">
+          <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">
+            Saldo por Bookmaker {moedas[0] && <span className="text-primary">• {moedas[0]}</span>}
+          </p>
+          {sortToggle}
+        </div>
+        <BookmakerListByMoeda bookmakers={saldosFiltrados} pendentes={pendentes} ascending={ascending} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between pb-1">
+        <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">Saldo por Bookmaker</p>
+        {sortToggle}
+      </div>
+
+      <Tabs value={activeMoeda} onValueChange={setActiveMoeda} className="w-full">
+        <TabsList className="w-full h-7 bg-muted/50 p-0.5 gap-0.5 border-none [&>span:last-child]:hidden">
+          {moedas.map((moeda) => (
+            <TabsTrigger
+              key={moeda}
+              value={moeda}
+              className="flex-1 text-[10px] h-6 px-2 rounded-sm data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+            >
+              {CURRENCY_SYMBOLS[moeda] || moeda} {moeda}
+              <span className="ml-1 opacity-60">({(bookmakersPorMoeda[moeda] || []).length})</span>
+            </TabsTrigger>
+          ))}
+        </TabsList>
+
+        {moedas.map((moeda) => (
+          <TabsContent key={moeda} value={moeda} className="mt-2 space-y-2">
+            <div className="flex justify-between items-center text-xs text-muted-foreground border-b border-border/30 pb-1">
+              <span>Total {moeda}</span>
+              <span className="font-mono font-medium text-foreground">
+                {CURRENCY_SYMBOLS[moeda] || moeda}{" "}
+                {(bookmakersPorMoeda[moeda] || []).reduce((sum, bookmaker) => sum + bookmaker.saldo_operavel, 0).toLocaleString("pt-BR", {
+                  minimumFractionDigits: 2,
+                })}
+              </span>
+            </div>
+            <BookmakerListByMoeda
+              bookmakers={bookmakersPorMoeda[moeda] || []}
+              pendentes={pendentesPorMoeda[moeda] || []}
+              ascending={ascending}
+            />
+          </TabsContent>
+        ))}
+      </Tabs>
+    </div>
+  );
+};
+
 export function SaldosParceirosSheet() {
   const [open, setOpen] = useState(false);
   const [parceirosAgrupados, setParceirosAgrupados] = useState<ParceiroSaldoAgrupado[]>([]);
@@ -519,144 +689,6 @@ export function SaldosParceirosSheet() {
           </div>
         )}
       </div>
-      </>
-    );
-  };
-
-  const BookmakerHoverContent = ({ 
-    saldos, 
-    pendentes 
-  }: { 
-    saldos: ParceiroSaldoAgrupado["saldos_bookmakers"]; 
-    pendentes: ParceiroSaldoAgrupado["pendentes_bookmakers"];
-  }) => {
-    const [ascending, setAscending] = useState(false);
-    const saldosFiltrados = saldos.filter(s => s.saldo_operavel > 0.50);
-    
-    // Group bookmakers by currency
-    const bookmakersPorMoeda = saldosFiltrados.reduce<Record<string, typeof saldosFiltrados>>((acc, s) => {
-      const moeda = s.moeda || "USD";
-      if (!acc[moeda]) acc[moeda] = [];
-      acc[moeda].push(s);
-      return acc;
-    }, {});
-
-    // Group pendentes by currency
-    const pendentesPorMoeda = pendentes.reduce<Record<string, typeof pendentes>>((acc, p) => {
-      const moeda = p.moeda || "USD";
-      if (!acc[moeda]) acc[moeda] = [];
-      acc[moeda].push(p);
-      return acc;
-    }, {});
-
-    const moedas = [...new Set([...Object.keys(bookmakersPorMoeda), ...Object.keys(pendentesPorMoeda)])];
-    const defaultMoeda = moedas[0] || "USD";
-
-    const sortToggle = (
-      <button onClick={() => setAscending(!ascending)} className="text-muted-foreground/60 hover:text-foreground transition-colors">
-        <ArrowUpDown className="h-3 w-3" />
-      </button>
-    );
-
-    // If only one currency, show flat list (no tabs needed)
-    if (moedas.length <= 1) {
-      return (
-        <div className="space-y-1">
-          <div className="flex items-center justify-between pb-1 mb-1 border-b border-border/30">
-            <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">
-              Saldo por Bookmaker {moedas[0] && <span className="text-primary">• {moedas[0]}</span>}
-            </p>
-            {sortToggle}
-          </div>
-          <BookmakerListByMoeda 
-            bookmakers={saldosFiltrados} 
-            pendentes={pendentes}
-            ascending={ascending}
-          />
-        </div>
-      );
-    }
-
-    // Multiple currencies: show tabs
-    return (
-      <div className="space-y-1">
-        <div className="flex items-center justify-between pb-1">
-          <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">Saldo por Bookmaker</p>
-          {sortToggle}
-        </div>
-        <Tabs defaultValue={defaultMoeda} className="w-full">
-          <TabsList className="w-full h-7 bg-muted/50 p-0.5 gap-0.5 border-none [&>span:last-child]:hidden">
-            {moedas.map(moeda => {
-              return (
-                <TabsTrigger 
-                  key={moeda} 
-                  value={moeda} 
-                  className="flex-1 text-[10px] h-6 px-2 rounded-sm data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
-                >
-                  {CURRENCY_SYMBOLS[moeda] || moeda} {moeda}
-                  <span className="ml-1 opacity-60">({(bookmakersPorMoeda[moeda] || []).length})</span>
-                </TabsTrigger>
-              );
-            })}
-          </TabsList>
-          {moedas.map(moeda => (
-            <TabsContent key={moeda} value={moeda} className="mt-2 space-y-2">
-              <div className="flex justify-between items-center text-xs text-muted-foreground border-b border-border/30 pb-1">
-                <span>Total {moeda}</span>
-                <span className="font-mono font-medium text-foreground">
-                  {CURRENCY_SYMBOLS[moeda] || moeda} {(bookmakersPorMoeda[moeda] || []).reduce((s, b) => s + b.saldo_operavel, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </span>
-              </div>
-              <BookmakerListByMoeda 
-                bookmakers={bookmakersPorMoeda[moeda] || []} 
-                pendentes={pendentesPorMoeda[moeda] || []}
-                ascending={ascending}
-              />
-            </TabsContent>
-          ))}
-        </Tabs>
-      </div>
-    );
-  };
-
-  const BookmakerListByMoeda = ({ 
-    bookmakers, 
-    pendentes,
-    ascending = false,
-  }: { 
-    bookmakers: ParceiroSaldoAgrupado["saldos_bookmakers"]; 
-    pendentes: ParceiroSaldoAgrupado["pendentes_bookmakers"];
-    ascending?: boolean;
-  }) => {
-    const sorted = [...bookmakers].sort((a, b) => ascending ? a.saldo_operavel - b.saldo_operavel : b.saldo_operavel - a.saldo_operavel);
-    return (
-      <>
-        {sorted.map((s, idx) => (
-          <div key={idx} className="flex justify-between items-center gap-4 py-0.5">
-            <div className="flex items-center gap-1.5 truncate max-w-[160px]">
-              <span className="text-[13px] font-medium tracking-wide uppercase text-foreground/90 truncate leading-tight">{s.nome}</span>
-              {s.has_bonus && (
-                <span className="text-[10px] text-primary" title="Inclui bônus/freebet">🎁</span>
-              )}
-            </div>
-            <span className="text-[13px] font-mono font-medium text-chart-4 whitespace-nowrap tabular-nums leading-tight">
-              {CURRENCY_SYMBOLS[s.moeda] || s.moeda} {s.saldo_operavel.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-            </span>
-          </div>
-        ))}
-        {pendentes.length > 0 && (
-          <div className="pt-1.5 mt-1.5 border-t border-border/30">
-            <p className="text-[11px] font-medium text-chart-3/80 mb-1">⏳ Em Trânsito</p>
-            {pendentes.map((p, idx) => (
-              <div key={idx} className="flex justify-between items-center gap-4 py-0.5">
-                <span className="text-[13px] tracking-wide uppercase text-muted-foreground/70 truncate max-w-[160px] leading-tight">{p.bookmaker_nome}</span>
-                <span className="text-[13px] font-mono font-medium text-chart-3 whitespace-nowrap tabular-nums leading-tight">
-                  +{CURRENCY_SYMBOLS[p.moeda] || p.moeda} {p.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
       </>
     );
   };
