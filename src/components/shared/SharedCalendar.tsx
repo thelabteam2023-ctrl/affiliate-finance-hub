@@ -141,9 +141,9 @@ export function SharedCalendar({ daily, currencySymbol }: Props) {
 
         {/* Heatmap Grid */}
         <TooltipProvider delayDuration={100}>
-          <div className="grid grid-cols-7 gap-[3px] mt-3">
+          <div className="grid grid-cols-7 gap-[2px] mt-3">
             {["D", "S", "T", "Q", "Q", "S", "S"].map((d, idx) => (
-              <div key={idx} className="text-center text-[10px] text-muted-foreground/60 font-medium pb-1 select-none">{d}</div>
+              <div key={idx} className="text-center text-[11px] text-muted-foreground/60 font-medium pb-1 select-none">{d}</div>
             ))}
 
             {/* Empty cells */}
@@ -164,13 +164,13 @@ export function SharedCalendar({ daily, currencySymbol }: Props) {
                 <Tooltip key={day}>
                   <TooltipTrigger asChild>
                     <div className={cn(
-                      "aspect-square rounded-[4px] flex flex-col items-center justify-center cursor-default transition-all duration-200 gap-0",
+                      "aspect-[1.4] rounded-[3px] flex flex-col items-center justify-center cursor-default transition-all duration-200 gap-0",
                       bgClass,
                       isToday && "ring-1.5 ring-primary ring-offset-1 ring-offset-background",
-                      "hover:ring-1 hover:ring-foreground/20 hover:scale-110"
+                      "hover:ring-1 hover:ring-foreground/20 hover:scale-105"
                     )}>
                       <span className={cn(
-                        "text-[10px] font-medium leading-none select-none",
+                        "text-[12px] font-semibold leading-none select-none",
                         hasData
                           ? lucro > 0 ? "text-emerald-300" : lucro < 0 ? "text-red-300" : "text-muted-foreground"
                           : "text-muted-foreground/40"
@@ -179,7 +179,7 @@ export function SharedCalendar({ daily, currencySymbol }: Props) {
                       </span>
                       {hasData && lucro !== 0 && (
                         <span className={cn(
-                          "text-[7px] font-semibold leading-none select-none mt-0.5 tabular-nums",
+                          "text-[9px] font-semibold leading-none select-none mt-0.5 tabular-nums",
                           lucro > 0 ? "text-emerald-200/80" : "text-red-200/80"
                         )}>
                           {formatCompactValue(lucro)}
