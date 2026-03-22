@@ -1139,12 +1139,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
 
   // Nota: NÃO resetar mercado ao mudar esporte - o usuário pode preencher em qualquer ordem
 
-  // Reset selecao when mercado changes (only for new bets AND not from print)
-  useEffect(() => {
-    if (!aposta && !selecaoFromPrint) {
-      setSelecao("");
-    }
-  }, [mercado, aposta, selecaoFromPrint]);
+  // NOTE: selecao (Linha) is NOT reset when mercado changes.
+  // Users frequently edit mercado without wanting to lose the Linha value.
+  // Selecao is only reset on full form reset (resetForm) or new print import.
 
   // Calcular Lay Stake e Liability para modo Bookmaker + Lay
   useEffect(() => {
