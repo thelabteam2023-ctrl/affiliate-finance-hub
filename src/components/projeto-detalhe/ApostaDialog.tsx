@@ -4354,7 +4354,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
               <div className="p-3 rounded-lg bg-muted/50 border">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">Retorno Calculado:</span>
-                  <span className="font-medium text-emerald-500">
+                  <span className="font-medium text-emerald-600 dark:text-emerald-500">
                     {formatCurrencyWithSymbol(calculateValorRetorno() || 0, getSelectedBookmakerMoeda())}
                   </span>
                 </div>
