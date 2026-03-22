@@ -136,10 +136,10 @@ export function SurebetTableRow({
 
   // Cores por posição da perna
   const getPernaColor = () => {
-    if (pernaIndex === 0) return "bg-blue-500/20 text-blue-400";
-    if (pernaIndex === numPernas - 1) return "bg-emerald-500/20 text-emerald-400";
-    if (numPernas === 3 && pernaIndex === 1) return "bg-amber-500/20 text-amber-400";
-    return "bg-purple-500/20 text-purple-400";
+    if (pernaIndex === 0) return "bg-blue-500/20 text-blue-600 dark:text-blue-400";
+    if (pernaIndex === numPernas - 1) return "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400";
+    if (numPernas === 3 && pernaIndex === 1) return "bg-amber-500/20 text-amber-600 dark:text-amber-400";
+    return "bg-purple-500/20 text-purple-600 dark:text-purple-400";
   };
   
   // Componente de botão de resultado - estilo padronizado igual ao Aposta Simples
