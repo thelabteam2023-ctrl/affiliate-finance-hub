@@ -557,6 +557,7 @@ export function VisaoGeralCharts({
   showScopeToggle = false,
   convertToConsolidation,
   moedaConsolidacao,
+  lucroOperacionalKpi,
 }: VisaoGeralChartsProps) {
   
   // DESACOPLAMENTO: O calendário usa seus próprios dados (sem filtro de período)
