@@ -576,6 +576,19 @@ export function formatSelectionFromOcrResult(result: OcrMarketResult): string {
     return `${sideLabel} ${result.line} ${DOMAIN_LABELS[result.domain]}`;
   }
   
+  // Para HANDICAP, formatar com o sinal correto da linha
+  if (result.type === "HANDICAP" && result.line !== undefined && result.side) {
+    const sign = result.side === "NEGATIVE" ? "-" : "+";
+    const lineStr = `${sign}${result.line}`;
+    // Se a seleção original contém nome de time, preservar
+    const teamMatch = result.rawSelection.match(/^([a-zA-ZÀ-ÿ][\w\s]*?)\s+[+-]?\d/);
+    if (teamMatch) {
+      return `${teamMatch[1].trim()} ${lineStr}`;
+    }
+    return lineStr;
+  }
+  
   // Retornar seleção original se não conseguir formatar
   return result.rawSelection;
+}
 }
