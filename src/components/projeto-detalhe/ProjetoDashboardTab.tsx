@@ -20,7 +20,8 @@ import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { VisaoGeralCharts } from "./VisaoGeralCharts";
 import { fetchProjetoExtras, type ProjetoExtraEntry } from "@/services/fetchProjetoExtras";
-import { useCalendarApostasRpc, transformRpcDailyForCharts } from "@/hooks/useCalendarApostasRpc";
+import { useCalendarApostasRpc } from "@/hooks/useCalendarApostasRpc";
+import { useCanonicalCalendarDaily, transformCanonicalDailyForCharts } from "@/hooks/useCanonicalCalendarDaily";
 import { fetchProjetosLucroOperacionalKpi, derivarCotacoesFromConvertFn } from "@/services/fetchProjetosLucroOperacionalKpi";
 import { useCotacoes } from "@/hooks/useCotacoes";
 
