@@ -104,6 +104,7 @@ const menuGroups: MenuGroup[] = [
     label: "FERRAMENTAS",
     items: [
       { title: "Prot. Progressiva", url: "#calculadora-lay", icon: Calculator, iconName: "Calculator", moduleKey: "ferramentas" },
+      { title: "Calculadora EV", url: "#calculadora-ev", icon: Calculator, iconName: "Calculator", moduleKey: "ferramentas" },
     ],
   },
   {
