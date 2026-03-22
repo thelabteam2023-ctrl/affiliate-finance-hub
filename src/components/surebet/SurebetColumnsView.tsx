@@ -538,7 +538,7 @@ export function SurebetColumnsView({
                         <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Lucro</span>
                         <span className={cn(
                           "text-sm font-bold tabular-nums",
-                          hasData && scenario ? (isPositive ? "text-emerald-500" : "text-red-500") : "text-muted-foreground"
+                          hasData && scenario ? (isPositive ? "text-emerald-600 dark:text-emerald-500" : "text-red-600 dark:text-red-500") : "text-muted-foreground"
                         )}>
                           {hasData && scenario ? formatCompactValue(lucro) : "—"}
                         </span>
