@@ -4361,7 +4361,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                 {calculateLucroPrejuizo() !== null && (
                   <div className="flex justify-between items-center mt-1">
                     <span className="text-sm text-muted-foreground">Lucro/Prejuízo:</span>
-                    <span className={`font-medium ${calculateLucroPrejuizo()! >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                    <span className={`font-medium ${calculateLucroPrejuizo()! >= 0 ? 'text-emerald-600 dark:text-emerald-500' : 'text-red-600 dark:text-red-500'}`}>
                       {formatCurrencyWithSymbol(calculateLucroPrejuizo()!, getSelectedBookmakerMoeda())}
                     </span>
                   </div>
