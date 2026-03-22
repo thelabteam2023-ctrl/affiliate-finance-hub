@@ -44,7 +44,8 @@ const SPORTS_LIST = [
 ];
 
 const MARKETS_KEYWORDS = {
-  "Moneyline / 1X2": ["1x2", "moneyline", "match winner", "vencedor"],
+  "Vencedor da Partida": ["moneyline", "match winner", "winner", "vencedor", "para ganhar", "to win", "ganha o jogo", "ganha a partida", "win match"],
+  "Moneyline / 1X2": ["1x2", "resultado da partida", "resultado final", "match odds"],
   "Over (Gols)": ["over", "acima", "mais de"],
   "Under (Gols)": ["under", "abaixo", "menos de"],
   "Handicap Asiático": ["handicap asiático", "asian handicap", "ah"],
@@ -225,6 +226,14 @@ REGRAS IMPORTANTES:
     - NÃO substitua por nomenclaturas padrão como "1X2" ou "Moneyline"
 11. Identifique o esporte a partir de indicadores visuais ou textuais
 12. Para a seleção, extraia o que foi apostado (ex: "Over 2.5", "Team Name", "1")
+12b. REGRA CRÍTICA — VENCEDOR DA PARTIDA (Match Winner / Moneyline):
+    - Se o print contém termos como "Para ganhar", "Para ganhar a partida", "To Win", "Match Winner", "Winner", "Vencedor", "Ganha o jogo", "Ganha a partida":
+      → O mercado DEVE ser retornado como "Vencedor da Partida" ou o texto exato do print
+      → NUNCA classificar como "Outro"
+    - Se há apenas nome de jogador/time + odd, SEM linha numérica (sem 2.5, -1.5, etc): forte indicador de Vencedor da Partida
+    - Exemplos:
+      * "Masamichi Imamura / Para Ganhar a Partida" → mercado: "Para Ganhar a Partida", seleção: "Masamichi Imamura"
+      * "Team A - Winner" → mercado: "Winner", seleção: "Team A"
 13. REGRA IMPORTANTE para mercado 1X2/MATCH_ODDS (Match Odds, Resultado da Partida, Resultado Final, Full Time Result, 1X2, Três Vias, Main Line, Moneyline Soccer):
     - Se a seleção for apenas "1", substitua pelo nome do time mandante (primeiro time)
     - Se a seleção for apenas "2", substitua pelo nome do time visitante (segundo time)
