@@ -265,8 +265,9 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
     queryClient.invalidateQueries({ queryKey: ["projeto-dashboard-extras", projetoId] });
     queryClient.invalidateQueries({ queryKey: ["projeto-resultado", projetoId] });
     queryClient.invalidateQueries({ queryKey: ["bookmaker-saldos"] });
-    // CRÍTICO: Invalidar calendário RPC (nova arquitetura)
+    // CRÍTICO: Invalidar calendário RPC e canônico
     queryClient.invalidateQueries({ queryKey: ["calendar-apostas-rpc", projetoId] });
+    queryClient.invalidateQueries({ queryKey: ["canonical-calendar-daily", projetoId] });
     queryClient.invalidateQueries({ queryKey: ["projeto-lucro-kpi-canonical", projetoId] });
   }, [queryClient, projetoId]);
 
