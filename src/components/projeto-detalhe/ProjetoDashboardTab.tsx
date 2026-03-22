@@ -245,6 +245,7 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
     queryClient.invalidateQueries({ queryKey: ["bookmaker-saldos"] });
     // CRÍTICO: Invalidar calendário RPC (nova arquitetura)
     queryClient.invalidateQueries({ queryKey: ["calendar-apostas-rpc", projetoId] });
+    queryClient.invalidateQueries({ queryKey: ["projeto-lucro-kpi-canonical", projetoId] });
   }, [queryClient, projetoId]);
 
   // Hook centralizado para sincronização cross-window
