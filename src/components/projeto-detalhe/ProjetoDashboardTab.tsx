@@ -206,6 +206,25 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
     gcTime: GC_TIME,
   });
 
+  // ---- useQuery: Lucro Operacional KPI canônico (server-side, paridade com KPI card) ----
+  const { data: lucroKpiData } = useQuery({
+    queryKey: ["projeto-lucro-kpi-canonical", projetoId, cotacaoOficialUSD],
+    queryFn: async () => {
+      const cotacoes = convertToConsolidationOficial
+        ? derivarCotacoesFromConvertFn(convertToConsolidationOficial)
+        : {};
+      const result = await fetchProjetosLucroOperacionalKpi({
+        projetoIds: [projetoId],
+        cotacaoUSD: cotacaoOficialUSD || 5.0,
+        cotacoes,
+        moedaConsolidacao: moedaConsolidacao || "BRL",
+      });
+      return result[projetoId]?.consolidado ?? null;
+    },
+    staleTime: STALE_TIME,
+    gcTime: GC_TIME,
+  });
+
   const loading = isLoadingApostas; // Only true on first load (no cached data)
   const isTransitioning = isFetchingApostas && !isLoadingApostas; // Fetching new period but showing previous data
 
