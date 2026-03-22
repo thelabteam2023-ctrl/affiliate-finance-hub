@@ -319,36 +319,45 @@ export function parseOcrMarket(
   let type: MarketType = "OTHER";
   let confidence: "exact" | "high" | "medium" | "low" = "low";
   
+  // Pre-detect: split handicap in selection (ex: "Modbury Jets 0.0,-0.5")
+  const splitHandicapFromSelection = detectSplitHandicap(rawSelection);
+  const splitHandicapFromMarket = detectSplitHandicap(rawMarket);
+  const teamHandicap = detectTeamHandicap(rawSelection) || detectTeamHandicap(rawMarket);
+  
   // Extract side/line for potential TOTAL detection
   const sideLineFromSelection = extractSideAndLine(rawSelection);
   const sideLineFromMarket = extractSideAndLine(rawMarket);
   const sideLine = sideLineFromSelection || sideLineFromMarket;
   
-  // ================================================================
-  // TAXONOMIA 1X2 / MATCH_ODDS - Sinônimos e erros comuns de OCR
-  // ================================================================
-  // Inclui: Match Odds, 1X2, 1 X 2, Resultado da Partida, Resultado Final,
-  //         Full Time Result, FT Result, Moneyline Soccer, Três Vias
-  // Erros OCR comuns: "lX2", "IX2", "1×2", "1 X 2"
   const MATCH_ODDS_PATTERN = /(?:^|\s|[^a-z0-9])(?:1\s*[x×X]\s*2|[1Il]\s*[xX×]\s*2|match\s*odds?|resultado\s*(?:da\s*)?(?:partida|final)|final\s*(?:da|de)\s*partida|full\s*time\s*result|ft\s*result|tres\s*vias|três\s*vias|three\s*way|vencedor\s*(?:da\s*)?(?:partida|match)|match\s*(?:winner|result)|main\s*line)/i;
 
   // Prioridade 0: Se o texto do MERCADO explicitamente contém padrões 1X2
-  // Isso evita que nomes de times com números (ex: "Como 1907") confundam o parser
   if (MATCH_ODDS_PATTERN.test(marketTextLower)) {
     type = "1X2";
     confidence = "high";
   }
-  // Prioridade 1: Verificar se é TOTAL (Over/Under)
+  // Prioridade 1: HANDICAP EXPLÍCITO no texto do mercado (ex: "Handicap Asiático")
+  else if (isHandicapMarket(marketTextLower)) {
+    type = "HANDICAP";
+    confidence = "high";
+  }
+  // Prioridade 2: Split handicap detectado na seleção (ex: "Team 0.0,-0.5")
+  // MAS só se NÃO houver termos explícitos de Over/Under
+  else if ((splitHandicapFromSelection || splitHandicapFromMarket || teamHandicap) && !hasExplicitTotalTerms(combinedText)) {
+    type = "HANDICAP";
+    confidence = "high";
+  }
+  // Prioridade 3: HANDICAP explícito no texto combinado
+  else if (isHandicapMarket(combinedText) && !hasExplicitTotalTerms(combinedText)) {
+    type = "HANDICAP";
+    confidence = "high";
+  }
+  // Prioridade 4: Verificar se é TOTAL (Over/Under) - só se não for handicap
   else if (sideLine || isTotalMarket(combinedText)) {
     type = "TOTAL";
     confidence = sideLine ? "high" : "medium";
   }
-  // Prioridade 2: Verificar se é HANDICAP
-  else if (isHandicapMarket(combinedText)) {
-    type = "HANDICAP";
-    confidence = "high";
-  }
-  // Prioridade 3: Verificar 1X2 no texto combinado (mercado + seleção)
+  // Prioridade 5: Verificar 1X2 no texto combinado
   else if (MATCH_ODDS_PATTERN.test(combinedText)) {
     type = "1X2";
     confidence = "high";
