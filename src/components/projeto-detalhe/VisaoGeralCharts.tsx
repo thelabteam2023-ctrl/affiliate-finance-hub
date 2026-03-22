@@ -996,7 +996,7 @@ export function VisaoGeralCharts({
                       apostas={calendarData.map(a => ({
                         data_aposta: a.data_aposta,
                         resultado: null,
-                        lucro_prejuizo: consolidateLucro(a),
+                        lucro_prejuizo: calendarIsRpc ? (a.lucro_prejuizo || 0) : consolidateLucro(a),
                         operacoes: (a as any).operacoes,
                       }))} 
                       extrasLucro={extrasConvertidos}
