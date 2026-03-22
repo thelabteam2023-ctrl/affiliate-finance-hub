@@ -294,7 +294,7 @@ export function SimpleMultiEntryTable({
                 </td>
                 {/* Retorno */}
                 <td className="px-2 py-3 text-center">
-                  <div className="h-8 flex items-center justify-center rounded-md bg-muted/30 px-2 text-sm font-medium text-emerald-500 tabular-nums">
+                  <div className="h-8 flex items-center justify-center rounded-md bg-muted/30 px-2 text-sm font-medium text-emerald-600 dark:text-emerald-500 tabular-nums">
                     {retorno !== null ? fmtCurrency(retorno, bk?.moeda) : '—'}
                   </div>
                 </td>

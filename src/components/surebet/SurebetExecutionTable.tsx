@@ -390,7 +390,7 @@ export function SurebetExecutionTable({
                   <td className="py-1 px-1 text-right">
                     <span className={cn(
                       "font-medium tabular-nums",
-                      hasData ? (isPositive ? "text-emerald-500" : "text-red-500") : "text-muted-foreground",
+                      hasData ? (isPositive ? "text-emerald-600 dark:text-emerald-500" : "text-red-600 dark:text-red-500") : "text-muted-foreground",
                       hasData && Math.abs(lucro) >= 100000 ? "text-[10px]" : "text-xs"
                     )}>
                       {hasData ? formatCompactValue(lucro, true) : "—"}
@@ -401,7 +401,7 @@ export function SurebetExecutionTable({
                   <td className="py-1 px-1 text-right">
                     <span className={cn(
                       "text-[10px] tabular-nums",
-                      hasData ? (isPositive ? "text-emerald-400" : "text-red-400") : "text-muted-foreground"
+                      hasData ? (isPositive ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400") : "text-muted-foreground"
                     )}>
                       {hasData ? `${formatValue(roi, true)}%` : "—"}
                     </span>
@@ -462,7 +462,7 @@ export function SurebetExecutionTable({
             <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Lucro Total</p>
             <p className={cn(
               "text-base font-bold tabular-nums",
-              lucroTotal >= 0 ? "text-emerald-500" : "text-red-500"
+              lucroTotal >= 0 ? "text-emerald-600 dark:text-emerald-500" : "text-red-600 dark:text-red-500"
             )}>
               {stakeTotal > 0 ? formatValue(lucroTotal, true) : "—"}
             </p>

@@ -1524,11 +1524,11 @@ export function ApostaMultiplaDialog({
               <div className="flex items-center gap-1">
                 <span className="text-[10px] text-muted-foreground">Resultado:</span>
                 <Badge className={`text-[10px] px-1.5 py-0 ${
-                  previewCalculo.resultado === "GREEN" ? "bg-emerald-500/20 text-emerald-400" :
-                  previewCalculo.resultado === "MEIO_GREEN" ? "bg-emerald-500/10 text-emerald-300" :
-                  previewCalculo.resultado === "RED" ? "bg-red-500/20 text-red-400" :
-                  previewCalculo.resultado === "MEIO_RED" ? "bg-red-500/10 text-red-300" :
-                  previewCalculo.resultado === "VOID" ? "bg-gray-500/20 text-gray-400" :
+                  previewCalculo.resultado === "GREEN" ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-400" :
+                  previewCalculo.resultado === "MEIO_GREEN" ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-300" :
+                  previewCalculo.resultado === "RED" ? "bg-red-500/20 text-red-700 dark:text-red-400" :
+                  previewCalculo.resultado === "MEIO_RED" ? "bg-red-500/10 text-red-600 dark:text-red-300" :
+                  previewCalculo.resultado === "VOID" ? "bg-gray-500/20 text-gray-600 dark:text-gray-400" :
                   "bg-muted text-muted-foreground"
                 }`}>
                   {previewCalculo.resultado === "MEIO_GREEN" ? "MEIO GREEN" :
@@ -1542,7 +1542,7 @@ export function ApostaMultiplaDialog({
               </div>
               <div className="flex items-center gap-1">
                 <span className="text-[10px] text-muted-foreground">P/L:</span>
-                <span className={`font-medium text-xs ${previewCalculo.lucro >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                <span className={`font-medium text-xs ${previewCalculo.lucro >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
                   {previewCalculo.lucro >= 0 ? "+" : ""}{formatCurrency(previewCalculo.lucro)}
                 </span>
               </div>
@@ -1593,11 +1593,11 @@ export function ApostaMultiplaDialog({
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm text-muted-foreground">Resultado:</span>
                   <Badge className={`${
-                    resultadoCalculado === "GREEN" ? "bg-emerald-500/20 text-emerald-400" :
-                    resultadoCalculado === "MEIO_GREEN" ? "bg-emerald-500/10 text-emerald-300" :
-                    resultadoCalculado === "RED" ? "bg-red-500/20 text-red-400" :
-                    resultadoCalculado === "MEIO_RED" ? "bg-red-500/10 text-red-300" :
-                    "bg-gray-500/20 text-gray-400"
+                    resultadoCalculado === "GREEN" ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-400" :
+                    resultadoCalculado === "MEIO_GREEN" ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-300" :
+                    resultadoCalculado === "RED" ? "bg-red-500/20 text-red-700 dark:text-red-400" :
+                    resultadoCalculado === "MEIO_RED" ? "bg-red-500/10 text-red-600 dark:text-red-300" :
+                    "bg-gray-500/20 text-gray-600 dark:text-gray-400"
                   }`}>
                     {resultadoCalculado === "MEIO_GREEN" ? "MEIO GREEN" : 
                      resultadoCalculado === "MEIO_RED" ? "MEIO RED" : 
@@ -1620,7 +1620,7 @@ export function ApostaMultiplaDialog({
                   <span className="text-sm text-muted-foreground">
                     Lucro Potencial:
                   </span>
-                  <span className="text-lg font-bold text-emerald-400">
+                  <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
                     {formatCurrency(lucroPotencial)}
                   </span>
                 </div>

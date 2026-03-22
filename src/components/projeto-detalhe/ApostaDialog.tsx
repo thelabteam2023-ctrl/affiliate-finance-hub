@@ -3079,7 +3079,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           {/* Badge de sucesso - centralizado */}
           <div className="flex items-center gap-1.5">
             <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-            <span className="text-xs text-emerald-400 font-medium">Print importado</span>
+            <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Print importado</span>
           </div>
           
           {/* Botão limpar */}
@@ -3330,7 +3330,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                               className={cn(
                                 "flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium transition-all",
                                 usarFreebetBookmaker
-                                  ? "bg-purple-500/20 text-purple-400 border border-purple-500/40"
+                                  ? "bg-purple-500/20 text-purple-700 dark:text-purple-400 border border-purple-500/40"
                                   : "bg-muted/40 text-muted-foreground hover:bg-muted/60 border border-transparent"
                               )}
                             >
@@ -3435,7 +3435,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                     </td>
                     {/* Retorno */}
                     <td className="px-2 py-3 text-center">
-                      <div className="h-8 flex items-center justify-center rounded-md bg-muted/30 px-2 text-sm font-medium text-emerald-500 tabular-nums">
+                      <div className="h-8 flex items-center justify-center rounded-md bg-muted/30 px-2 text-sm font-medium text-emerald-600 dark:text-emerald-500 tabular-nums">
                         {(() => {
                           const oddNum = parseFloat(odd);
                           const stakeReal = parseFloat(stake) || 0;
@@ -3562,7 +3562,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                                 className={cn(
                                   "flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium transition-all",
                                   entry.usar_freebet
-                                    ? "bg-purple-500/20 text-purple-400 border border-purple-500/40"
+                                    ? "bg-purple-500/20 text-purple-700 dark:text-purple-400 border border-purple-500/40"
                                     : "bg-muted/40 text-muted-foreground hover:bg-muted/60 border border-transparent"
                                 )}
                               >
@@ -3653,7 +3653,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                         </td>
                         {/* Retorno */}
                         <td className="px-2 py-3 text-center">
-                          <div className="h-8 flex items-center justify-center rounded-md bg-muted/30 px-2 text-sm font-medium text-emerald-500 tabular-nums">
+                          <div className="h-8 flex items-center justify-center rounded-md bg-muted/30 px-2 text-sm font-medium text-emerald-600 dark:text-emerald-500 tabular-nums">
                             {entryRetorno !== null ? formatCurrencyWithSymbol(entryRetorno, entryBk?.moeda || 'BRL') : '—'}
                           </div>
                         </td>
@@ -4354,14 +4354,14 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
               <div className="p-3 rounded-lg bg-muted/50 border">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">Retorno Calculado:</span>
-                  <span className="font-medium text-emerald-500">
+                  <span className="font-medium text-emerald-600 dark:text-emerald-500">
                     {formatCurrencyWithSymbol(calculateValorRetorno() || 0, getSelectedBookmakerMoeda())}
                   </span>
                 </div>
                 {calculateLucroPrejuizo() !== null && (
                   <div className="flex justify-between items-center mt-1">
                     <span className="text-sm text-muted-foreground">Lucro/Prejuízo:</span>
-                    <span className={`font-medium ${calculateLucroPrejuizo()! >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                    <span className={`font-medium ${calculateLucroPrejuizo()! >= 0 ? 'text-emerald-600 dark:text-emerald-500' : 'text-red-600 dark:text-red-500'}`}>
                       {formatCurrencyWithSymbol(calculateLucroPrejuizo()!, getSelectedBookmakerMoeda())}
                     </span>
                   </div>
