@@ -412,10 +412,24 @@ export function parseOcrMarket(
     side = sideLine.side;
     line = sideLine.line;
   } else if (type === "HANDICAP") {
-    const handicapLine = extractHandicapLine(rawSelection) || extractHandicapLine(rawMarket);
-    if (handicapLine !== null) {
-      line = Math.abs(handicapLine);
-      side = handicapLine >= 0 ? "POSITIVE" : "NEGATIVE";
+    // Prioridade 1: Split handicap (ex: "0.0,-0.5" → -0.25)
+    const splitResult = splitHandicapFromSelection || splitHandicapFromMarket;
+    if (splitResult) {
+      line = Math.abs(splitResult.line);
+      side = splitResult.line >= 0 ? "POSITIVE" : "NEGATIVE";
+    }
+    // Prioridade 2: Team handicap (ex: "Modbury Jets 0.0,-0.5")
+    else if (teamHandicap) {
+      line = Math.abs(teamHandicap.line);
+      side = teamHandicap.line >= 0 ? "POSITIVE" : "NEGATIVE";
+    }
+    // Prioridade 3: Handicap simples (ex: "-1.5")
+    else {
+      const handicapLine = extractHandicapLine(rawSelection) || extractHandicapLine(rawMarket);
+      if (handicapLine !== null) {
+        line = Math.abs(handicapLine);
+        side = handicapLine >= 0 ? "POSITIVE" : "NEGATIVE";
+      }
     }
   }
   
