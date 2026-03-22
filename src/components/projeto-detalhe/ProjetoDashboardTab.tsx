@@ -414,6 +414,7 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
         showScopeToggle={false}
         convertToConsolidation={convertToConsolidationOficial}
         moedaConsolidacao={moedaConsolidacao}
+        lucroOperacionalKpi={lucroKpiData ?? undefined}
       />
 
       {/* Performance por Casa - Componente com visões alternáveis */}
