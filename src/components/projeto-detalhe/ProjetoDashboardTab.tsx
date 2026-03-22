@@ -27,7 +27,7 @@ import { PerformancePorCasaCard } from "./PerformancePorCasaCard";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod } from "./StandardTimeFilter";
 import { PERIOD_STALE_TIME, PERIOD_GC_TIME } from "@/lib/query-cache-config";
 import { DateRange } from "react-day-picker";
-import { isSameDay } from "date-fns";
+import { isSameDay, format } from "date-fns";
 import { getOperationalDateRangeForQuery, extractLocalDateKey, extractCivilDateKey } from "@/utils/dateUtils";
 
 interface ProjetoDashboardTabProps {
