@@ -556,7 +556,7 @@ export function resolveOcrResultToOption(
       }
     }
     if (result.type === "MONEYLINE") {
-      if (normalizedOption.includes("moneyline") || normalizedOption.includes("vencedor")) {
+      if (normalizedOption.includes("moneyline") || normalizedOption.includes("vencedor") || normalizedOption.includes("winner") || normalizedOption.includes("ganhar")) {
         return option;
       }
     }
