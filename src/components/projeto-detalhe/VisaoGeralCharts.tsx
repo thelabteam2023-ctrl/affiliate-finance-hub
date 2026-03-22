@@ -560,6 +560,8 @@ export function VisaoGeralCharts({
   // DESACOPLAMENTO: O calendário usa seus próprios dados (sem filtro de período)
   // Se apostasCalendario não for fornecido, usa apostas como fallback
   const calendarData = apostasCalendario ?? apostas;
+  // Flag: calendarData vem de RPC (já consolidado server-side, NÃO aplicar conversão novamente)
+  const calendarIsRpc = !!apostasCalendario;
 
   // Helper de consolidação multi-moeda — usado em periodTotal, evolução e calendário
   // MULTICURRENCY: usa pernas inline para conversão direta (evita cross-rate via BRL pivot)
