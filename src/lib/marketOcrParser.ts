@@ -329,20 +329,22 @@ export function parseOcrMarket(
   const sideLineFromMarket = extractSideAndLine(rawMarket);
   const sideLine = sideLineFromSelection || sideLineFromMarket;
   
-  const MATCH_ODDS_PATTERN = /(?:^|\s|[^a-z0-9])(?:1\s*[x×X]\s*2|[1Il]\s*[xX×]\s*2|match\s*odds?|resultado\s*(?:da\s*)?(?:partida|final)|final\s*(?:da|de)\s*partida|full\s*time\s*result|ft\s*result|tres\s*vias|três\s*vias|three\s*way|vencedor\s*(?:da\s*)?(?:partida|match)|match\s*(?:winner|result)|main\s*line)/i;
+  const MATCH_ODDS_PATTERN = /(?:^|\s|[^a-z0-9])(?:1\s*[x×X]\s*2|[1Il]\s*[xX×]\s*2|match\s*odds?|resultado\s*(?:da\s*)?(?:partida|final)|final\s*(?:da|de)\s*partida|full\s*time\s*result|ft\s*result|tres\s*vias|três\s*vias|three\s*way|match\s*(?:result)|main\s*line)/i;
+
+  // Padrão expandido para MATCH WINNER / MONEYLINE / VENCEDOR
+  const MATCH_WINNER_PATTERN = /(?:para\s+ganhar|to\s+win|match\s*winner|winner|vencedor|moneyline|money\s*line|\bml\b|ganha\s+(?:o\s+)?(?:jogo|partida|match)|win\s+match|vencedor\s*(?:da\s*)?(?:partida|match))/i;
 
   // Prioridade 0: Se o texto do MERCADO explicitamente contém padrões 1X2
   if (MATCH_ODDS_PATTERN.test(marketTextLower)) {
     type = "1X2";
     confidence = "high";
   }
-  // Prioridade 1: HANDICAP EXPLÍCITO no texto do mercado (ex: "Handicap Asiático")
+  // Prioridade 1: HANDICAP EXPLÍCITO no texto do mercado
   else if (isHandicapMarket(marketTextLower)) {
     type = "HANDICAP";
     confidence = "high";
   }
-  // Prioridade 2: Split handicap detectado na seleção (ex: "Team 0.0,-0.5")
-  // MAS só se NÃO houver termos explícitos de Over/Under
+  // Prioridade 2: Split handicap detectado na seleção
   else if ((splitHandicapFromSelection || splitHandicapFromMarket || teamHandicap) && !hasExplicitTotalTerms(combinedText)) {
     type = "HANDICAP";
     confidence = "high";
@@ -352,17 +354,18 @@ export function parseOcrMarket(
     type = "HANDICAP";
     confidence = "high";
   }
-  // Prioridade 4: Verificar se é TOTAL (Over/Under) - só se não for handicap
+  // Prioridade 4: Verificar se é TOTAL (Over/Under)
   else if (sideLine || isTotalMarket(combinedText)) {
     type = "TOTAL";
     confidence = sideLine ? "high" : "medium";
   }
-  // Prioridade 5: Verificar 1X2 no texto combinado
+  // Prioridade 5: 1X2 no texto combinado
   else if (MATCH_ODDS_PATTERN.test(combinedText)) {
     type = "1X2";
     confidence = "high";
   }
-  else if (/moneyline|money\s*line|\bml\b|vencedor/i.test(combinedText)) {
+  // Prioridade 6: MATCH WINNER / MONEYLINE / VENCEDOR (mercado OU seleção OU combinado)
+  else if (MATCH_WINNER_PATTERN.test(combinedText)) {
     type = "MONEYLINE";
     confidence = "high";
   }
