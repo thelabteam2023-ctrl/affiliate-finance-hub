@@ -207,17 +207,22 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
   });
 
   // ---- useQuery: Lucro Operacional KPI canônico (server-side, paridade com KPI card) ----
+  // Usa a mesma RPC de agregação, com filtro de período, para badge do calendário
   const { data: lucroKpiData } = useQuery({
-    queryKey: ["projeto-lucro-kpi-canonical", projetoId, cotacaoOficialUSD],
+    queryKey: ["projeto-lucro-kpi-canonical", projetoId, cotacaoOficialUSD, dateRangeKey],
     queryFn: async () => {
       const cotacoes = convertToConsolidationOficial
         ? derivarCotacoesFromConvertFn(convertToConsolidationOficial)
         : {};
+      const dataInicio = dateRange ? format(dateRange.start, 'yyyy-MM-dd') : undefined;
+      const dataFim = dateRange ? format(dateRange.end, 'yyyy-MM-dd') : undefined;
       const result = await fetchProjetosLucroOperacionalKpi({
         projetoIds: [projetoId],
         cotacaoUSD: cotacaoOficialUSD || 5.0,
         cotacoes,
         moedaConsolidacao: moedaConsolidacao || "BRL",
+        dataInicio,
+        dataFim,
       });
       return result[projetoId]?.consolidado ?? null;
     },
