@@ -148,7 +148,7 @@ export function SharedCalendar({ daily, currencySymbol }: Props) {
 
             {/* Empty cells */}
             {Array.from({ length: firstDayOfWeek }).map((_, i) => (
-              <div key={`e-${i}`} className="aspect-square rounded-[4px] bg-transparent" />
+              <div key={`e-${i}`} className="aspect-[1.6] rounded-[2px] bg-transparent" />
             ))}
 
             {/* Day cells */}
