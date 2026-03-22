@@ -993,9 +993,9 @@ export function VisaoGeralCharts({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               {isPositive ? (
-                <TrendingUp className="h-4 w-4 text-emerald-500" />
+                <TrendingUp className="h-4 w-4 text-success" />
               ) : (
-                <TrendingDown className="h-4 w-4 text-red-500" />
+                <TrendingDown className="h-4 w-4 text-destructive" />
               )}
               <CardTitle className="text-sm font-medium">
                 Evolução do Lucro Geral
