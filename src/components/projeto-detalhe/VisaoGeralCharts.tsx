@@ -585,14 +585,27 @@ export function VisaoGeralCharts({
     return `${prefix}R$${absVal.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}`;
   });
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [calendarMonthTotal, setCalendarMonthTotal] = useState<number | null>(null);
 
-  // Badge: Lucro do período ativo
-  // PRIORIDADE: Se lucroOperacionalKpi (RPC canônico server-side) está disponível,
-  // usa como fonte única da verdade (já filtrado por período no server).
-  // Fallback: calcula client-side.
+  const calendarInitialMonth = periodStart ?? new Date();
+
   const periodTotal = useMemo(() => {
-    // KPI canônico: paridade absoluta com KPI card
-    if (lucroOperacionalKpi != null) {
+    if (calendarMonthTotal != null) {
+      return calendarMonthTotal;
+    }
+
+    if (lucroOperacionalKpi != null && periodStart && periodEnd) {
+      const sameMonthRange =
+        format(periodStart, "yyyy-MM") === format(periodEnd, "yyyy-MM") &&
+        periodStart.getTime() === startOfMonth(periodStart).getTime() &&
+        periodEnd.getTime() === startOfDay(endOfMonth(periodStart)).getTime();
+
+      if (!sameMonthRange) {
+        return lucroOperacionalKpi;
+      }
+    }
+
+    if (lucroOperacionalKpi != null && !periodStart && !periodEnd) {
       return lucroOperacionalKpi;
     }
 
@@ -628,7 +641,7 @@ export function VisaoGeralCharts({
     });
 
     return total;
-  }, [apostas, apostasCalendario, extrasLucro, periodStart, periodEnd, lucroOperacionalKpi]);
+  }, [apostas, apostasCalendario, extrasLucro, periodStart, periodEnd, lucroOperacionalKpi, calendarMonthTotal, convertToConsolidation, moedaConsolidacao]);
 
   const isPositiveBadge = periodTotal >= 0;
   
