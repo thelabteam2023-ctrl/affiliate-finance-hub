@@ -88,9 +88,18 @@ export async function fetchProjetosLucroOperacionalKpi({
 }: Params): Promise<Record<string, LucroProjetoResumo>> {
   if (projetoIds.length === 0) return {};
 
+  const consolidUpper = moedaConsolidacao.toUpperCase();
+  const consolidIsUsd = isUsdLike(consolidUpper);
+
   const convertToConsolidation = (valor: number, moedaOrigem: string) => {
     const m = (moedaOrigem || "BRL").toUpperCase();
-    if (isUsdLike(m)) return valor * cotacaoUSD;
+    // Se a moeda de origem é a mesma da consolidação → identidade
+    if (m === consolidUpper) return valor;
+    // USD-like → aplicar cotação USD (mas só se consolidação NÃO é USD)
+    if (isUsdLike(m)) {
+      if (consolidIsUsd) return valor; // USD→USD = identidade
+      return valor * cotacaoUSD;
+    }
     if (cotacoes[m] != null) return valor * cotacoes[m];
     return valor;
   };
