@@ -547,7 +547,7 @@ export function SurebetColumnsView({
                         <span className="text-[10px] text-muted-foreground uppercase tracking-wide">ROI</span>
                         <span className={cn(
                           "text-[11px] tabular-nums",
-                          hasData && scenario ? (isPositive ? "text-emerald-400" : "text-red-400") : "text-muted-foreground"
+                          hasData && scenario ? (isPositive ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400") : "text-muted-foreground"
                         )}>
                           {hasData && scenario ? `${roi > 0 ? "+" : ""}${roi.toFixed(2)}%` : "—"}
                         </span>
