@@ -273,7 +273,7 @@ export function SurebetColumnsView({
                                 className={cn(
                                   "shrink-0 px-1.5 py-1 rounded text-[9px] font-bold transition-colors border",
                                   entry.fonteSaldo === 'FREEBET'
-                                    ? "bg-purple-500/20 text-purple-400 border-purple-500/40"
+                                    ? "bg-purple-500/20 text-purple-700 dark:text-purple-400 border-purple-500/40"
                                     : "text-muted-foreground/40 border-transparent hover:text-muted-foreground/60"
                                 )}
                                 title={entry.fonteSaldo === 'FREEBET' ? "FB ativo" : "Usar Freebet"}
