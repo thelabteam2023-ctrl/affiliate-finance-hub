@@ -184,7 +184,13 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
     return `${dateRange.start.toISOString()}_${dateRange.end.toISOString()}`;
   }, [dateRange]);
 
-  // ---- useCalendarApostasRpc: Calendar data via RPC (sem truncamento, timezone correto) ----
+  // ---- Canonical Calendar Daily: mesma lógica do badge (Lucro Operacional completo) ----
+  const { daily: canonicalDaily } = useCanonicalCalendarDaily({
+    projetoId,
+    convertToConsolidation: convertToConsolidationOficial,
+  });
+
+  // ---- useCalendarApostasRpc: ainda usado para contagens (greens/reds/operações) ----
   const cotacoesCalendario = useMemo(() => ({
     EUR: cotacaoEUR,
     GBP: cotacaoGBP,
