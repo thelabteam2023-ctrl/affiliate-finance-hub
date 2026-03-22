@@ -587,6 +587,11 @@ export function VisaoGeralCharts({
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [calendarMonthTotal, setCalendarMonthTotal] = useState<number | null>(null);
 
+  const handleCalendarOpenChange = (open: boolean) => {
+    setCalendarOpen(open);
+    if (!open) setCalendarMonthTotal(null);
+  };
+
   const calendarInitialMonth = periodStart ?? new Date();
 
   const periodTotal = useMemo(() => {
