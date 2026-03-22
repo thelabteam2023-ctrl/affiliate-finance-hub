@@ -388,10 +388,10 @@ export function CalendarioLucros({
     <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/75">
       <span>Menos</span>
       <div className="h-2.5 w-2.5 rounded-[3px] border border-border/20 bg-muted/15" />
-      <div className="h-2.5 w-2.5 rounded-[3px] border border-success/20 bg-success/14" />
-      <div className="h-2.5 w-2.5 rounded-[3px] border border-success/25 bg-success/24" />
-      <div className="h-2.5 w-2.5 rounded-[3px] border border-success/30 bg-success/38" />
-      <div className="h-2.5 w-2.5 rounded-[3px] border border-success/35 bg-success/58" />
+      <div className="h-2.5 w-2.5 rounded-[3px] border border-emerald-200 dark:border-success/20 bg-emerald-100 dark:bg-success/14" />
+      <div className="h-2.5 w-2.5 rounded-[3px] border border-emerald-300 dark:border-success/25 bg-emerald-200 dark:bg-success/24" />
+      <div className="h-2.5 w-2.5 rounded-[3px] border border-emerald-400 dark:border-success/30 bg-emerald-300 dark:bg-success/38" />
+      <div className="h-2.5 w-2.5 rounded-[3px] border border-emerald-600 dark:border-success/35 bg-emerald-500 dark:bg-success/58" />
       <span>Mais</span>
     </div>
   );
