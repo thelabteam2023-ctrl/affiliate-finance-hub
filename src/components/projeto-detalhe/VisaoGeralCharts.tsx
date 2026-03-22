@@ -587,14 +587,19 @@ export function VisaoGeralCharts({
   const [calendarOpen, setCalendarOpen] = useState(false);
 
   // Badge: soma lucro do período ativo
-  // PRIORIDADE: Se apostasCalendario (RPC, sem truncamento) está disponível, usa como fonte da verdade
-  // filtrando pelo período. Caso contrário, usa apostas (REST, já filtrada pelo período).
+  // PRIORIDADE: Se lucroOperacionalKpi (RPC canônico server-side) está disponível
+  // e NÃO há filtro de período (todo_periodo), usa como fonte única da verdade.
+  // Caso contrário, calcula client-side com filtro de período.
   const periodTotal = useMemo(() => {
+    // Se o KPI canônico está disponível e não há filtro de período,
+    // usar diretamente (paridade absoluta com KPI card)
+    if (lucroOperacionalKpi != null && !periodStart && !periodEnd) {
+      return lucroOperacionalKpi;
+    }
+
     let total = 0;
 
     // Fonte de apostas: apostasCalendario (RPC completa) ou apostas (REST filtrada)
-    const sourceData = apostasCalendario ?? apostas;
-    
     if (apostasCalendario && periodStart && periodEnd) {
       // RPC data: filtrar pelo período manualmente (RPC retorna todos os dados)
       const pStart = startOfDay(periodStart);
@@ -630,7 +635,7 @@ export function VisaoGeralCharts({
     });
 
     return total;
-  }, [apostas, apostasCalendario, extrasLucro, periodStart, periodEnd]);
+  }, [apostas, apostasCalendario, extrasLucro, periodStart, periodEnd, lucroOperacionalKpi]);
 
   const isPositiveBadge = periodTotal >= 0;
   
