@@ -455,7 +455,7 @@ export function parseOcrMarket(
   } else {
     // Mapeamento simples para outros tipos
     const typeDisplayMap: Record<MarketType, string> = {
-      "MONEYLINE": "Moneyline / Vencedor",
+      "MONEYLINE": "Vencedor da Partida",
       "1X2": "1X2 (Resultado)",
       "BTTS": "Ambas Marcam",
       "CORRECT_SCORE": "Placar Exato",
