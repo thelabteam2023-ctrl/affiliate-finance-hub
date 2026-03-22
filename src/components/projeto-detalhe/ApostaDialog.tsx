@@ -3006,7 +3006,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
       onEventoChange: setEvento,
       onMercadoChange: (val: string) => {
         setMercado(val);
-        setSelecao("");
+        // Don't clear selecao (Linha) when user edits mercado manually
         if (mercadoFromPrint) setMercadoFromPrint(false);
       },
       onDataApostaChange: setDataAposta,
