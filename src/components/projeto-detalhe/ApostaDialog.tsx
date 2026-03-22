@@ -3079,7 +3079,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           {/* Badge de sucesso - centralizado */}
           <div className="flex items-center gap-1.5">
             <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-            <span className="text-xs text-emerald-400 font-medium">Print importado</span>
+            <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Print importado</span>
           </div>
           
           {/* Botão limpar */}
