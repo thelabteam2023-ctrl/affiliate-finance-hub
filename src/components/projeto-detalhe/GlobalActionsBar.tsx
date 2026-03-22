@@ -246,28 +246,8 @@ export function GlobalActionsBar({
           </DropdownMenu>
         )}
 
-        {/* Calculadora EV - only visible on ValueBet tab */}
-        {activeTab === "valuebet" && (
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="h-6 text-[11px] px-2"
-            onClick={() => {
-              const width = 420;
-              const height = 580;
-              const left = Math.round(window.screenX + (window.outerWidth - width) / 2);
-              const top = Math.round(window.screenY + (window.outerHeight - height) / 2);
-              window.open(
-                `/ferramentas/calculadora-ev`,
-                'calculadora-ev',
-                `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
-              );
-            }}
-          >
-            <TrendingUp className="mr-0.5 h-3 w-3" />
-            Calculadora EV
-          </Button>
-        )}
+
+
 
         {activeTab === "bonus" && (
           <Button 
