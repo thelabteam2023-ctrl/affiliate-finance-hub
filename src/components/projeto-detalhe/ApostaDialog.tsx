@@ -3330,7 +3330,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                               className={cn(
                                 "flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium transition-all",
                                 usarFreebetBookmaker
-                                  ? "bg-purple-500/20 text-purple-400 border border-purple-500/40"
+                                  ? "bg-purple-500/20 text-purple-700 dark:text-purple-400 border border-purple-500/40"
                                   : "bg-muted/40 text-muted-foreground hover:bg-muted/60 border border-transparent"
                               )}
                             >
