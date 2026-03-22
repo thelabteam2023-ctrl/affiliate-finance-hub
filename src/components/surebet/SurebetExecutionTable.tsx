@@ -462,7 +462,7 @@ export function SurebetExecutionTable({
             <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Lucro Total</p>
             <p className={cn(
               "text-base font-bold tabular-nums",
-              lucroTotal >= 0 ? "text-emerald-500" : "text-red-500"
+              lucroTotal >= 0 ? "text-emerald-600 dark:text-emerald-500" : "text-red-600 dark:text-red-500"
             )}>
               {stakeTotal > 0 ? formatValue(lucroTotal, true) : "—"}
             </p>
