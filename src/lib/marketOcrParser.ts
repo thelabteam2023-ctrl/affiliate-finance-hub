@@ -124,7 +124,14 @@ const HANDICAP_MARKET_PATTERNS = [
   /puck\s*line/i,                     // "Puck Line"
   /\bah\b/i,                          // "AH" (Asian Handicap)
   /\beh\b/i,                          // "EH" (European Handicap)
+  /\bh\.?\s*a\.?\b/i,                // "H.A." or "HA"
 ];
+
+// Padrão para detectar linha DIVIDIDA de handicap asiático (ex: "0.0, -0.5" ou "0.0,-0.5")
+const SPLIT_HANDICAP_PATTERN = /([+-]?\d+[.,]?\d*)\s*[,\/]\s*([+-]?\d+[.,]?\d*)/;
+
+// Padrão para detectar nome de time + números (forte indicador de handicap)
+const TEAM_WITH_NUMBERS_PATTERN = /([a-zA-ZÀ-ÿ][\w\s]*?)\s+([+-]?\d+[.,]?\d*(?:\s*[,\/]\s*[+-]?\d+[.,]?\d*)?)\s*$/;
 
 // Padrão para extrair linha de handicap da seleção
 const HANDICAP_LINE_PATTERNS = [
@@ -216,10 +223,70 @@ function isTotalMarket(text: string): boolean {
 }
 
 /**
- * Verifica se o texto indica um mercado HANDICAP
+ * Verifica se o texto indica um mercado HANDICAP (explícito)
  */
 function isHandicapMarket(text: string): boolean {
   return HANDICAP_MARKET_PATTERNS.some(p => p.test(text));
+}
+
+/**
+ * Verifica se o texto contém termos explícitos de Over/Under
+ */
+function hasExplicitTotalTerms(text: string): boolean {
+  return /\b(over|under|mais\s+de|menos\s+de|acima|abaixo|o\/u|gols?|goals?)\b/i.test(text);
+}
+
+/**
+ * Detecta handicap asiático com linha dividida (split line)
+ * Ex: "0.0, -0.5" → -0.25, "Team +0.5, +1.0" → +0.75
+ */
+function detectSplitHandicap(text: string): { line: number; team: string | null } | null {
+  const match = text.match(SPLIT_HANDICAP_PATTERN);
+  if (!match) return null;
+  
+  const val1 = parseFloat(match[1].replace(",", "."));
+  const val2 = parseFloat(match[2].replace(",", "."));
+  
+  if (isNaN(val1) || isNaN(val2)) return null;
+  
+  const avgLine = (val1 + val2) / 2;
+  
+  // Extrair nome do time (texto antes dos números)
+  const teamMatch = text.match(/^([a-zA-ZÀ-ÿ][\w\s]*?)\s+[+-]?\d/);
+  const team = teamMatch ? teamMatch[1].trim() : null;
+  
+  return { line: Math.round(avgLine * 100) / 100, team };
+}
+
+/**
+ * Detecta se a seleção contém padrão de handicap com nome de time
+ * Ex: "Modbury Jets 0.0,-0.5" → handicap pertence ao Modbury Jets
+ */
+function detectTeamHandicap(text: string): { line: number; team: string } | null {
+  const match = text.match(TEAM_WITH_NUMBERS_PATTERN);
+  if (!match) return null;
+  
+  const teamName = match[1].trim();
+  const numbersStr = match[2];
+  
+  // Tentar split handicap primeiro (ex: "0.0,-0.5")
+  const splitMatch = numbersStr.match(SPLIT_HANDICAP_PATTERN);
+  if (splitMatch) {
+    const val1 = parseFloat(splitMatch[1].replace(",", "."));
+    const val2 = parseFloat(splitMatch[2].replace(",", "."));
+    if (!isNaN(val1) && !isNaN(val2)) {
+      const avgLine = (val1 + val2) / 2;
+      return { line: Math.round(avgLine * 100) / 100, team: teamName };
+    }
+  }
+  
+  // Handicap simples (ex: "Team -1.5")
+  const val = parseFloat(numbersStr.replace(",", "."));
+  if (!isNaN(val)) {
+    return { line: val, team: teamName };
+  }
+  
+  return null;
 }
 
 /**
@@ -252,36 +319,45 @@ export function parseOcrMarket(
   let type: MarketType = "OTHER";
   let confidence: "exact" | "high" | "medium" | "low" = "low";
   
+  // Pre-detect: split handicap in selection (ex: "Modbury Jets 0.0,-0.5")
+  const splitHandicapFromSelection = detectSplitHandicap(rawSelection);
+  const splitHandicapFromMarket = detectSplitHandicap(rawMarket);
+  const teamHandicap = detectTeamHandicap(rawSelection) || detectTeamHandicap(rawMarket);
+  
   // Extract side/line for potential TOTAL detection
   const sideLineFromSelection = extractSideAndLine(rawSelection);
   const sideLineFromMarket = extractSideAndLine(rawMarket);
   const sideLine = sideLineFromSelection || sideLineFromMarket;
   
-  // ================================================================
-  // TAXONOMIA 1X2 / MATCH_ODDS - Sinônimos e erros comuns de OCR
-  // ================================================================
-  // Inclui: Match Odds, 1X2, 1 X 2, Resultado da Partida, Resultado Final,
-  //         Full Time Result, FT Result, Moneyline Soccer, Três Vias
-  // Erros OCR comuns: "lX2", "IX2", "1×2", "1 X 2"
   const MATCH_ODDS_PATTERN = /(?:^|\s|[^a-z0-9])(?:1\s*[x×X]\s*2|[1Il]\s*[xX×]\s*2|match\s*odds?|resultado\s*(?:da\s*)?(?:partida|final)|final\s*(?:da|de)\s*partida|full\s*time\s*result|ft\s*result|tres\s*vias|três\s*vias|three\s*way|vencedor\s*(?:da\s*)?(?:partida|match)|match\s*(?:winner|result)|main\s*line)/i;
 
   // Prioridade 0: Se o texto do MERCADO explicitamente contém padrões 1X2
-  // Isso evita que nomes de times com números (ex: "Como 1907") confundam o parser
   if (MATCH_ODDS_PATTERN.test(marketTextLower)) {
     type = "1X2";
     confidence = "high";
   }
-  // Prioridade 1: Verificar se é TOTAL (Over/Under)
+  // Prioridade 1: HANDICAP EXPLÍCITO no texto do mercado (ex: "Handicap Asiático")
+  else if (isHandicapMarket(marketTextLower)) {
+    type = "HANDICAP";
+    confidence = "high";
+  }
+  // Prioridade 2: Split handicap detectado na seleção (ex: "Team 0.0,-0.5")
+  // MAS só se NÃO houver termos explícitos de Over/Under
+  else if ((splitHandicapFromSelection || splitHandicapFromMarket || teamHandicap) && !hasExplicitTotalTerms(combinedText)) {
+    type = "HANDICAP";
+    confidence = "high";
+  }
+  // Prioridade 3: HANDICAP explícito no texto combinado
+  else if (isHandicapMarket(combinedText) && !hasExplicitTotalTerms(combinedText)) {
+    type = "HANDICAP";
+    confidence = "high";
+  }
+  // Prioridade 4: Verificar se é TOTAL (Over/Under) - só se não for handicap
   else if (sideLine || isTotalMarket(combinedText)) {
     type = "TOTAL";
     confidence = sideLine ? "high" : "medium";
   }
-  // Prioridade 2: Verificar se é HANDICAP
-  else if (isHandicapMarket(combinedText)) {
-    type = "HANDICAP";
-    confidence = "high";
-  }
-  // Prioridade 3: Verificar 1X2 no texto combinado (mercado + seleção)
+  // Prioridade 5: Verificar 1X2 no texto combinado
   else if (MATCH_ODDS_PATTERN.test(combinedText)) {
     type = "1X2";
     confidence = "high";
@@ -336,10 +412,24 @@ export function parseOcrMarket(
     side = sideLine.side;
     line = sideLine.line;
   } else if (type === "HANDICAP") {
-    const handicapLine = extractHandicapLine(rawSelection) || extractHandicapLine(rawMarket);
-    if (handicapLine !== null) {
-      line = Math.abs(handicapLine);
-      side = handicapLine >= 0 ? "POSITIVE" : "NEGATIVE";
+    // Prioridade 1: Split handicap (ex: "0.0,-0.5" → -0.25)
+    const splitResult = splitHandicapFromSelection || splitHandicapFromMarket;
+    if (splitResult) {
+      line = Math.abs(splitResult.line);
+      side = splitResult.line >= 0 ? "POSITIVE" : "NEGATIVE";
+    }
+    // Prioridade 2: Team handicap (ex: "Modbury Jets 0.0,-0.5")
+    else if (teamHandicap) {
+      line = Math.abs(teamHandicap.line);
+      side = teamHandicap.line >= 0 ? "POSITIVE" : "NEGATIVE";
+    }
+    // Prioridade 3: Handicap simples (ex: "-1.5")
+    else {
+      const handicapLine = extractHandicapLine(rawSelection) || extractHandicapLine(rawMarket);
+      if (handicapLine !== null) {
+        line = Math.abs(handicapLine);
+        side = handicapLine >= 0 ? "POSITIVE" : "NEGATIVE";
+      }
     }
   }
   
@@ -348,8 +438,17 @@ export function parseOcrMarket(
   
   if (type === "TOTAL" && domain) {
     displayName = `Total de ${DOMAIN_LABELS[domain]}`;
-  } else if (type === "HANDICAP" && domain) {
-    displayName = `Handicap de ${DOMAIN_LABELS[domain]}`;
+  } else if (type === "HANDICAP") {
+    // Se detectou handicap asiático (split line ou padrão asiático), usar nome específico
+    const isAsian = !!(splitHandicapFromSelection || splitHandicapFromMarket || teamHandicap) 
+      || /asi[aá]tic/i.test(combinedText) || /\bah\b/i.test(combinedText);
+    if (isAsian) {
+      displayName = "Handicap Asiático";
+    } else if (domain) {
+      displayName = `Handicap de ${DOMAIN_LABELS[domain]}`;
+    } else {
+      displayName = "Handicap Asiático";
+    }
   } else {
     // Mapeamento simples para outros tipos
     const typeDisplayMap: Record<MarketType, string> = {
@@ -431,6 +530,10 @@ export function resolveOcrResultToOption(
     // Match por inclusão para HANDICAP
     if (result.type === "HANDICAP") {
       if (normalizedOption.includes("handicap") || normalizedOption.includes("spread")) {
+        // Match "Handicap Asiático" diretamente
+        if (normalizedOption.includes("asiatico") || normalizedOption.includes("asian")) {
+          return option;
+        }
         // Verificar se o domínio bate
         if (result.domain) {
           const domainLabel = DOMAIN_LABELS[result.domain].toLowerCase();
@@ -438,6 +541,8 @@ export function resolveOcrResultToOption(
             return option;
           }
         }
+        // Fallback: aceitar qualquer handicap
+        return option;
       }
     }
     
@@ -469,6 +574,18 @@ export function formatSelectionFromOcrResult(result: OcrMarketResult): string {
   if (result.type === "TOTAL" && result.side && result.line !== undefined && result.domain) {
     const sideLabel = result.side === "OVER" ? "Mais" : "Menos";
     return `${sideLabel} ${result.line} ${DOMAIN_LABELS[result.domain]}`;
+  }
+  
+  // Para HANDICAP, formatar com o sinal correto da linha
+  if (result.type === "HANDICAP" && result.line !== undefined && result.side) {
+    const sign = result.side === "NEGATIVE" ? "-" : "+";
+    const lineStr = `${sign}${result.line}`;
+    // Se a seleção original contém nome de time, preservar
+    const teamMatch = result.rawSelection.match(/^([a-zA-ZÀ-ÿ][\w\s]*?)\s+[+-]?\d/);
+    if (teamMatch) {
+      return `${teamMatch[1].trim()} ${lineStr}`;
+    }
+    return lineStr;
   }
   
   // Retornar seleção original se não conseguir formatar
