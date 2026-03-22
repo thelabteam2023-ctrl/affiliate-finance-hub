@@ -390,7 +390,7 @@ export function SurebetExecutionTable({
                   <td className="py-1 px-1 text-right">
                     <span className={cn(
                       "font-medium tabular-nums",
-                      hasData ? (isPositive ? "text-emerald-500" : "text-red-500") : "text-muted-foreground",
+                      hasData ? (isPositive ? "text-emerald-600 dark:text-emerald-500" : "text-red-600 dark:text-red-500") : "text-muted-foreground",
                       hasData && Math.abs(lucro) >= 100000 ? "text-[10px]" : "text-xs"
                     )}>
                       {hasData ? formatCompactValue(lucro, true) : "—"}
