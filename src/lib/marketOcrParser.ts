@@ -530,6 +530,10 @@ export function resolveOcrResultToOption(
     // Match por inclusão para HANDICAP
     if (result.type === "HANDICAP") {
       if (normalizedOption.includes("handicap") || normalizedOption.includes("spread")) {
+        // Match "Handicap Asiático" diretamente
+        if (normalizedOption.includes("asiatico") || normalizedOption.includes("asian")) {
+          return option;
+        }
         // Verificar se o domínio bate
         if (result.domain) {
           const domainLabel = DOMAIN_LABELS[result.domain].toLowerCase();
@@ -537,6 +541,8 @@ export function resolveOcrResultToOption(
             return option;
           }
         }
+        // Fallback: aceitar qualquer handicap
+        return option;
       }
     }
     
