@@ -1709,16 +1709,23 @@ export function ApostaMultiplaDialog({
             <div className="space-y-0.5">
               <Label className="text-[10px] text-muted-foreground font-normal uppercase tracking-wider">Resultado da Múltipla</Label>
               <Select 
-                value={resultadoManual || previewCalculo.resultado} 
+                value={resultadoCalculado} 
                 onValueChange={(v) => {
-                  if (v === previewCalculo.resultado) {
+                  if (hasPerLegResults) return; // Locked — per-leg drives result
+                  
+                  if (v === "PENDENTE") {
                     setResultadoManual(null);
+                    // Reset all legs to PENDENTE
+                    setSelecoes(prev => prev.map(s => ({ ...s, resultado: "PENDENTE" })));
                   } else {
                     setResultadoManual(v);
+                    // Apply result to ALL legs (shortcut)
+                    setSelecoes(prev => prev.map(s => ({ ...s, resultado: v })));
                   }
                 }}
+                disabled={hasPerLegResults}
               >
-                <SelectTrigger className="h-7 text-xs">
+                <SelectTrigger className={`h-7 text-xs ${hasPerLegResults ? 'opacity-70' : ''}`}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -1731,9 +1738,11 @@ export function ApostaMultiplaDialog({
                 </SelectContent>
               </Select>
               <p className="text-[9px] text-muted-foreground">
-                {resultadoManual 
-                  ? `Manual (auto: ${previewCalculo.resultado})`
-                  : "Calculado automaticamente"
+                {hasPerLegResults 
+                  ? "🔒 Calculado pelas seleções individuais"
+                  : resultadoManual 
+                    ? "Aplicado a todas as seleções"
+                    : "Edite as seleções ou escolha aqui"
                 }
               </p>
             </div>
