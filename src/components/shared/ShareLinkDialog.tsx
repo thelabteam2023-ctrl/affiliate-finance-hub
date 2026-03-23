@@ -45,6 +45,15 @@ function generateToken(): string {
     .substring(0, 48);
 }
 
+function getPublicOrigin(): string {
+  const origin = window.location.origin;
+  // Preview domains (preview--xxx.lovable.app) must use the published domain
+  if (origin.includes("preview--")) {
+    return origin.replace(/preview--/, "");
+  }
+  return origin;
+}
+
 export function ShareLinkDialog({ projetoId, projetoNome }: ShareLinkDialogProps) {
   const { user } = useAuth();
   const { workspaceId } = useWorkspace();
