@@ -152,6 +152,7 @@ export function ApostaMultiplaDialog({
   rascunho = null,
 }: ApostaMultiplaDialogProps) {
   const { workspaceId } = useWorkspace();
+  const { favoriteSource } = useWorkspaceBetSources(workspaceId);
   const exchangeRates = useExchangeRatesSafe();
   // REGRA UNIFICADA: formulários SEMPRE usam cotação de trabalho (se configurada)
   const { cotacaoAtual: cotacaoUsdFormulario } = useProjetoConsolidacao({ projetoId });
