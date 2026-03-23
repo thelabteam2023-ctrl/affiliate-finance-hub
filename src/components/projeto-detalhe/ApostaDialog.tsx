@@ -1114,6 +1114,13 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
     }
   }, [open, aposta, activeTab, registroValues.estrategia]);
 
+  // Auto-select favorite source when opening new ValueBet
+  useEffect(() => {
+    if (open && !aposta && fonteEntrada === null && favoriteSource && registroValues.estrategia === 'VALUEBET') {
+      setFonteEntrada(favoriteSource.name);
+    }
+  }, [open, aposta, favoriteSource, registroValues.estrategia, fonteEntrada]);
+
   // Atualizar saldo quando bookmakerId mudar ou bookmakers forem carregados
   useEffect(() => {
     if (bookmakerId && bookmakers.length > 0) {
