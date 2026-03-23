@@ -349,6 +349,33 @@ function ViewPorParceiro() {
   );
 }
 
+        <div className="flex flex-col gap-1">
+          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Regulamentação</span>
+          <div className="flex items-center gap-1 h-9">
+            <button
+              onClick={() => setRegulamentacaoFilter(regulamentacaoFilter === "REGULAMENTADA" ? "todas" : "REGULAMENTADA")}
+              className={cn(
+                "h-8 px-3 rounded-md text-xs font-medium tracking-wide transition-colors uppercase border",
+                regulamentacaoFilter === "REGULAMENTADA"
+                  ? "bg-success/15 border-success/40 text-success"
+                  : "border-border text-muted-foreground hover:text-foreground hover:bg-muted/50"
+              )}
+            >
+              Regulamentada
+            </button>
+            <button
+              onClick={() => setRegulamentacaoFilter(regulamentacaoFilter === "NAO_REGULAMENTADA" ? "todas" : "NAO_REGULAMENTADA")}
+              className={cn(
+                "h-8 px-3 rounded-md text-xs font-medium tracking-wide transition-colors uppercase border",
+                regulamentacaoFilter === "NAO_REGULAMENTADA"
+                  ? "bg-warning/15 border-warning/40 text-warning"
+                  : "border-border text-muted-foreground hover:text-foreground hover:bg-muted/50"
+              )}
+            >
+              Não Regulamentada
+            </button>
+          </div>
+        </div>
 
 // ─── Sub-component: View "Por Bookmaker" (original) ───
 function ViewPorBookmaker() {
