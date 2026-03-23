@@ -619,6 +619,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
   const [statusResultado, setStatusResultado] = useState("PENDENTE");
   const [valorRetorno, setValorRetorno] = useState("");
   const [observacoes, setObservacoes] = useState("");
+  const [fonteEntrada, setFonteEntrada] = useState<string | null>(null);
 
   // Check if current mercado is Moneyline (uses select instead of free text)
   const isMoneyline = isMoneylineMercado(mercado);
