@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-const DEFAULT_SOURCES = ["OddsNotifier", "RebelBetting", "Manual"];
+const DEFAULT_SOURCES = ["OddsNotifier", "RebelBetting"];
 
 export function useWorkspaceBetSources(workspaceId: string | null) {
   const queryClient = useQueryClient();
