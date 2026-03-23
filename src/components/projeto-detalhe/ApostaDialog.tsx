@@ -75,6 +75,7 @@ import { FreebetToggle, SaldoWaterfallPreview } from "@/components/apostas/water
 import { Plus, Trash2 as Trash2Entry, Layers } from "lucide-react";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { FonteEntradaSelector } from "@/components/apostas/FonteEntradaSelector";
+import { useWorkspaceBetSources } from "@/hooks/useWorkspaceBetSources";
 
 // Multi-entry para aposta simples (mesma seleção, múltiplas bookmakers)
 interface AdditionalEntry {
