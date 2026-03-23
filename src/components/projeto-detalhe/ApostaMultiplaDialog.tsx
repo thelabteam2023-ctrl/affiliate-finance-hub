@@ -695,7 +695,6 @@ export function ApostaMultiplaDialog({
 
   // Contar seleções válidas (descrição + odd > 1)
   const selecoesValidasCount = useMemo(() => {
-    const numSelecoes = tipoMultipla === "DUPLA" ? 2 : 3;
     let count = 0;
     for (let i = 0; i < numSelecoes; i++) {
       const sel = selecoes[i];
@@ -704,11 +703,10 @@ export function ApostaMultiplaDialog({
       }
     }
     return count;
-  }, [selecoes, tipoMultipla]);
+  }, [selecoes, numSelecoes]);
 
   // Verificar se formulário está pronto para salvar
   const canSave = useMemo(() => {
-    const numSelecoes = tipoMultipla === "DUPLA" ? 2 : 3;
     const stakeNum = parseFloat(stake);
     return (
       bookmakerId && 
@@ -719,7 +717,7 @@ export function ApostaMultiplaDialog({
       registroValues.estrategia &&
       registroValues.contexto_operacional
     );
-  }, [bookmakerId, stake, selecoesValidasCount, tipoMultipla, registroValues]);
+  }, [bookmakerId, stake, selecoesValidasCount, numSelecoes, registroValues]);
 
   // Verificar se tem dados parciais (para salvar como rascunho)
   const temDadosParciais = useMemo(() => {
