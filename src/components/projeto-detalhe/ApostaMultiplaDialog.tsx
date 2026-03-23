@@ -1381,7 +1381,7 @@ export function ApostaMultiplaDialog({
               <div className="space-y-0.5">
                 <Label className="text-[10px] text-muted-foreground font-normal uppercase tracking-wider">Tipo de Múltipla</Label>
                 <Select value={tipoMultipla} onValueChange={(v) => setTipoMultipla(v as TipoMultipla)}>
-                  <SelectTrigger className="h-8 text-xs font-semibold border-primary/30 bg-primary/5">
+                  <SelectTrigger className="h-8 text-xs font-semibold border-primary/30 bg-primary/5 justify-center [&>svg]:ml-1">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="min-w-[180px]">
@@ -1428,7 +1428,7 @@ export function ApostaMultiplaDialog({
                       const selectedBk = bookmakerId ? bookmakers.find(b => b.id === bookmakerId) : null;
                       if (selectedBk) {
                         return (
-                          <div className="flex items-center gap-1.5 w-full min-w-0">
+                          <div className="flex items-center gap-1.5 w-full min-w-0 justify-center">
                             {selectedBk.logo_url && (
                               <img src={selectedBk.logo_url} alt="" className="h-4 w-4 rounded object-contain flex-shrink-0" />
                             )}
