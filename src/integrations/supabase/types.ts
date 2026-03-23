@@ -386,6 +386,7 @@ export type Database = {
           esporte: string | null
           estrategia: string
           evento: string | null
+          fonte_entrada: string | null
           fonte_saldo: string | null
           forma_registro: string
           gerou_freebet: boolean | null
@@ -459,6 +460,7 @@ export type Database = {
           esporte?: string | null
           estrategia?: string
           evento?: string | null
+          fonte_entrada?: string | null
           fonte_saldo?: string | null
           forma_registro?: string
           gerou_freebet?: boolean | null
@@ -532,6 +534,7 @@ export type Database = {
           esporte?: string | null
           estrategia?: string
           evento?: string | null
+          fonte_entrada?: string | null
           fonte_saldo?: string | null
           forma_registro?: string
           gerou_freebet?: boolean | null
@@ -9474,6 +9477,38 @@ export type Database = {
             columns: ["rede_id"]
             isOneToOne: false
             referencedRelation: "redes_crypto"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workspace_bet_sources: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          name: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          name: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          name?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_bet_sources_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
         ]
