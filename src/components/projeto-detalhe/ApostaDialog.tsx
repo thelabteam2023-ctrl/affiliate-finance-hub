@@ -421,6 +421,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
   const { workspaceId } = useWorkspace();
   const { convertToConsolidation } = useProjetoCurrency(projetoId);
   const [loading, setLoading] = useState(false);
+  const { favoriteSource } = useWorkspaceBetSources(workspaceId);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   // ========== HOOK CANÔNICO DE SALDOS ==========
