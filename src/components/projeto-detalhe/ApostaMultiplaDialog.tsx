@@ -915,6 +915,10 @@ export function ApostaMultiplaDialog({
       // Usar valores do previewCalculo que já calcula corretamente com fatores
       let lucroPrejuizo: number | null = null;
       let valorRetorno: number | null = null;
+      
+      // Para apostas liquidadas, usar oddFinalReal (que considera VOID=1)
+      // Para pendentes, usar oddFinal nominal
+      const oddFinalParaSalvar = resultadoFinal !== "PENDENTE" ? oddFinalReal : oddFinal;
 
       if (resultadoFinal !== "PENDENTE") {
         lucroPrejuizo = previewCalculo.lucro;
