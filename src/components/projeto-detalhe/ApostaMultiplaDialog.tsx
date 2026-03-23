@@ -1327,19 +1327,15 @@ export function ApostaMultiplaDialog({
     }
   };
 
-  return (
+  const innerContent = (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent 
-          className={`max-w-[480px] w-[95vw] max-h-[90vh] overflow-y-auto p-0 ${isDragging ? 'ring-2 ring-primary ring-offset-2' : ''} ${embedded ? '!relative !transform-none !max-w-none !max-h-none !w-full !border-0 !shadow-none !rounded-none !p-0' : ''}`}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          onPointerDownOutside={(e) => e.preventDefault()}
-          onInteractOutside={(e) => e.preventDefault()}
-          hideOverlay={embedded}
-          hideCloseButton={embedded}
-        >
+          {/* Wrapper for drag events */}
+          <div
+            className={isDragging ? 'ring-2 ring-primary ring-offset-2' : ''}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          >
           {/* HEADER UNIFICADO */}
           <BetFormHeader
             formType="multipla"
@@ -1738,6 +1734,55 @@ export function ApostaMultiplaDialog({
               Salvar
             </Button>
           </DialogFooter>
+          </div>
+    </>
+  );
+
+  // Embedded mode: render content directly without Dialog wrapper
+  if (embedded) {
+    return (
+      <>
+        <div className="p-0">
+          {innerContent}
+        </div>
+
+        {/* Delete Confirmation */}
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Excluir aposta múltipla?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta ação não pode ser desfeita. A aposta será removida
+                permanentemente.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDelete}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Excluir
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent 
+          className={`max-w-[480px] w-[95vw] max-h-[90vh] overflow-y-auto p-0 ${isDragging ? 'ring-2 ring-primary ring-offset-2' : ''}`}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onInteractOutside={(e) => e.preventDefault()}
+        >
+          {innerContent}
         </DialogContent>
       </Dialog>
 
