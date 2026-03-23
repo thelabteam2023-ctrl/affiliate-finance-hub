@@ -1252,6 +1252,7 @@ export const MERCADOS_COM_EMPATE_POR_ESPORTE: Record<string, string[]> = {
   "Golfe": [],
   "League of Legends": [],
   "Counter-Strike": [],
+  "Valorant": [],
   "Dota 2": [],
   "Outro": [],
 };
