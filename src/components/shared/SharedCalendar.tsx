@@ -44,10 +44,14 @@ function getHeatmapColor(lucro: number, temDados: boolean, maxAbs: number): stri
 
 function formatCompactValue(value: number): string {
   const abs = Math.abs(value);
-  if (abs >= 1000) return `${value < 0 ? "-" : ""}${(abs / 1000).toFixed(1).replace(/\.0$/, "")}k`;
-  if (abs >= 100) return `${value < 0 ? "-" : ""}${Math.round(abs)}`;
-  if (abs >= 10) return `${value < 0 ? "-" : ""}${abs.toFixed(0)}`;
-  return `${value < 0 ? "-" : ""}${abs.toFixed(1)}`;
+  const sign = value < 0 ? "-" : "";
+  if (abs >= 1000) {
+    const k = abs / 1000;
+    return `${sign}${k.toFixed(2).replace(".", ",")}k`;
+  }
+  if (abs >= 100) return `${sign}${Math.round(abs)}`;
+  if (abs >= 10) return `${sign}${abs.toFixed(0)}`;
+  return `${sign}${abs.toFixed(1)}`;
 }
 
 export function SharedCalendar({ daily, currencySymbol }: Props) {
