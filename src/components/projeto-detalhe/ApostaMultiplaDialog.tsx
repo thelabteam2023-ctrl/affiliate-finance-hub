@@ -463,8 +463,11 @@ export function ApostaMultiplaDialog({
     }
   }, [aposta, open, rascunho]);
 
-  // Atualizar número de seleções quando tipo muda
+  // Atualizar número de seleções quando tipo muda (user interaction only)
   useEffect(() => {
+    // Skip during initialization from aposta/rascunho to avoid overwriting loaded data
+    if (isInitializingRef.current) return;
+    
     const n = numSelecoes;
     setSelecoes((prev) => {
       if (prev.length === n) return prev;
