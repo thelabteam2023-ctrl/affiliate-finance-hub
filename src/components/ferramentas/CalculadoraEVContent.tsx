@@ -135,12 +135,51 @@ export const CalculadoraEVContent: React.FC = () => {
   const parseImage = async (imageBase64: string) => {
     setIsParsing(true);
     try {
-      const { data, error } = await supabase.functions.invoke('parse-ev-print', {
-        body: { imageBase64 },
+      // Validate image size (max ~4MB base64)
+      if (imageBase64.length > 4 * 1024 * 1024) {
+        toast.error('Imagem muito grande', { description: 'Use uma imagem menor (máx ~3MB).' });
+        setIsParsing(false);
+        return;
+      }
+
+      if (!imageBase64.startsWith('data:image/')) {
+        toast.error('Formato inválido', { description: 'Cole uma imagem válida (PNG, JPEG).' });
+        setIsParsing(false);
+        return;
+      }
+
+      console.log('[EV Calculator] Sending image to parse-ev-print, size:', imageBase64.length, 'chars');
+
+      // Use direct fetch instead of supabase.functions.invoke for better error handling
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+      const response = await fetch(`${supabaseUrl}/functions/v1/parse-ev-print`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseKey}`,
+          'apikey': supabaseKey,
+        },
+        body: JSON.stringify({ imageBase64 }),
       });
 
-      if (error) {
-        toast.error('Erro ao interpretar print', { description: error.message });
+      const responseText = await response.text();
+      console.log('[EV Calculator] Response status:', response.status, 'body length:', responseText.length);
+
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch {
+        console.error('[EV Calculator] Invalid JSON response:', responseText.substring(0, 500));
+        toast.error('Resposta inválida do servidor');
+        setIsParsing(false);
+        return;
+      }
+
+      if (!response.ok) {
+        const errorMsg = data?.error || `Erro ${response.status}`;
+        toast.error('Erro ao interpretar print', { description: errorMsg });
         setIsParsing(false);
         return;
       }
@@ -177,7 +216,9 @@ export const CalculadoraEVContent: React.FC = () => {
       });
     } catch (err) {
       console.error('[EV Calculator] Parse error:', err);
-      toast.error('Erro ao processar print');
+      toast.error('Erro ao processar print', { 
+        description: err instanceof Error ? err.message : 'Verifique sua conexão.' 
+      });
     } finally {
       setIsParsing(false);
     }
