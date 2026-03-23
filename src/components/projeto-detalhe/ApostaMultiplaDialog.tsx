@@ -1423,7 +1423,7 @@ export function ApostaMultiplaDialog({
             }
           />
 
-          <div className="space-y-2 py-2 px-4">
+          <div className="space-y-2 py-2 px-2 sm:px-4">
 
             {/* Casa / Vínculo — centralizado, label inline */}
             <div className="flex items-center justify-center gap-2 max-w-[600px] mx-auto">
