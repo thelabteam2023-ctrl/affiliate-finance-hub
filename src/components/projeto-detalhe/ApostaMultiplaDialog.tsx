@@ -477,6 +477,7 @@ export function ApostaMultiplaDialog({
     setBookmakerId("");
     setTipoMultipla("DUPLA");
     setStake("");
+    setBoostPercent("");
     setResultadoManual(null);
     setStatusResultado("PENDENTE");
     setDataAposta(getLocalDateTimeString());
