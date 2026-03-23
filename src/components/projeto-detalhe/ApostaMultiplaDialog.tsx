@@ -1331,7 +1331,7 @@ export function ApostaMultiplaDialog({
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent 
-          className={`max-w-lg w-[95vw] max-h-[90vh] overflow-y-auto ${isDragging ? 'ring-2 ring-primary ring-offset-2' : ''} ${embedded ? 'fixed inset-0 !max-w-none !max-h-none !translate-x-0 !translate-y-0 !left-0 !top-0 !rounded-none !border-0' : ''}`}
+          className={`max-w-[480px] w-[95vw] max-h-[90vh] overflow-y-auto p-0 ${isDragging ? 'ring-2 ring-primary ring-offset-2' : ''} ${embedded ? 'fixed inset-0 !max-w-none !max-h-none !translate-x-0 !translate-y-0 !left-0 !top-0 !rounded-none !border-0' : ''}`}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
@@ -1423,56 +1423,54 @@ export function ApostaMultiplaDialog({
             }
           />
 
-          <div className="space-y-2 py-2 px-2 sm:px-4">
+          <div className="space-y-1.5 py-1.5 px-3">
 
-            {/* Casa / Vínculo — centralizado, label inline */}
-            <div className="flex items-center justify-center gap-2 max-w-[600px] mx-auto">
-              <Label className="text-xs text-muted-foreground font-normal whitespace-nowrap shrink-0">Casa / Vínculo</Label>
-              <div className="flex-1 min-w-0 max-w-[420px]">
-                <Select value={bookmakerId} onValueChange={setBookmakerId}>
-                  <SelectTrigger className="h-7 text-xs font-medium border-border/50">
-                    {(() => {
-                      const selectedBk = bookmakerId ? bookmakers.find(b => b.id === bookmakerId) : null;
-                      if (selectedBk) {
-                        return (
-                          <div className="flex items-center justify-center gap-2 w-full">
-                            {selectedBk.logo_url && (
-                              <img src={selectedBk.logo_url} alt="" className="h-4 w-4 rounded object-contain flex-shrink-0" />
-                            )}
-                            <span className="uppercase text-xs font-medium truncate">{selectedBk.nome}</span>
-                            <CurrencyBadge moeda={selectedBk.moeda} size="xs" />
-                          </div>
-                        );
-                      }
-                      return <SelectValue placeholder="Selecione a casa..." />;
-                    })()}
-                  </SelectTrigger>
-                  <BookmakerSearchableSelectContent
-                    bookmakers={bookmakers.map(bk => ({
-                      id: bk.id,
-                      nome: bk.nome,
-                      parceiro_nome: bk.parceiro_nome,
-                      moeda: bk.moeda,
-                      saldo_operavel: bk.saldo_operavel,
-                      saldo_disponivel: bk.saldo_atual,
-                      saldo_freebet: bk.saldo_freebet,
-                      saldo_bonus: bk.saldo_bonus,
-                      logo_url: bk.logo_url,
-                      bonus_rollover_started: bk.bonus_rollover_started,
-                    }))}
-                    className="z-50 w-[var(--radix-select-trigger-width)] min-w-[300px]"
-                  />
-                </Select>
-                {bookmakerSaldo && (
-                  <SaldoBreakdownDisplay
-                    saldoReal={bookmakerSaldo.saldo}
-                    saldoFreebet={bookmakerSaldo.saldoFreebet}
-                    saldoBonus={bookmakerSaldo.saldoBonus}
-                    saldoOperavel={bookmakerSaldo.saldoOperavel}
-                    moeda={bookmakerSaldo.moeda}
-                  />
-                )}
-              </div>
+            {/* Casa / Vínculo */}
+            <div className="space-y-0.5">
+              <Label className="text-[10px] text-muted-foreground font-normal uppercase tracking-wider">Casa / Vínculo</Label>
+              <Select value={bookmakerId} onValueChange={setBookmakerId}>
+                <SelectTrigger className="h-7 text-xs font-medium border-border/50">
+                  {(() => {
+                    const selectedBk = bookmakerId ? bookmakers.find(b => b.id === bookmakerId) : null;
+                    if (selectedBk) {
+                      return (
+                        <div className="flex items-center gap-2 w-full">
+                          {selectedBk.logo_url && (
+                            <img src={selectedBk.logo_url} alt="" className="h-4 w-4 rounded object-contain flex-shrink-0" />
+                          )}
+                          <span className="uppercase text-xs font-medium truncate">{selectedBk.nome}</span>
+                          <CurrencyBadge moeda={selectedBk.moeda} size="xs" />
+                        </div>
+                      );
+                    }
+                    return <SelectValue placeholder="Selecione a casa..." />;
+                  })()}
+                </SelectTrigger>
+                <BookmakerSearchableSelectContent
+                  bookmakers={bookmakers.map(bk => ({
+                    id: bk.id,
+                    nome: bk.nome,
+                    parceiro_nome: bk.parceiro_nome,
+                    moeda: bk.moeda,
+                    saldo_operavel: bk.saldo_operavel,
+                    saldo_disponivel: bk.saldo_atual,
+                    saldo_freebet: bk.saldo_freebet,
+                    saldo_bonus: bk.saldo_bonus,
+                    logo_url: bk.logo_url,
+                    bonus_rollover_started: bk.bonus_rollover_started,
+                  }))}
+                  className="z-50 w-[var(--radix-select-trigger-width)] min-w-[300px]"
+                />
+              </Select>
+              {bookmakerSaldo && (
+                <SaldoBreakdownDisplay
+                  saldoReal={bookmakerSaldo.saldo}
+                  saldoFreebet={bookmakerSaldo.saldoFreebet}
+                  saldoBonus={bookmakerSaldo.saldoBonus}
+                  saldoOperavel={bookmakerSaldo.saldoOperavel}
+                  moeda={bookmakerSaldo.moeda}
+                />
+              )}
             </div>
 
             {/* Toggle Usar Freebet */}
@@ -1497,27 +1495,27 @@ export function ApostaMultiplaDialog({
               )}
 
             {/* Seleções */}
-            <div className="space-y-1">
-              <Label className="text-xs">Seleções</Label>
-              <div className="space-y-1.5">
+            <div className="space-y-0.5">
+              <Label className="text-[10px] text-muted-foreground font-normal uppercase tracking-wider">Seleções</Label>
+              <div className="space-y-1">
                 {selecoes.map((selecao, index) => (
                   <div 
                     key={index}
-                    className={`flex flex-wrap items-center gap-1.5 px-2 py-1.5 rounded-md border transition-all duration-150 ${
+                    className={`flex items-center gap-1 px-1.5 py-1 rounded border transition-colors ${
                       selecao.resultado === "GREEN" ? "bg-emerald-500/10 border-emerald-500/30" :
                       selecao.resultado === "RED" ? "bg-red-500/10 border-red-500/30" :
                       selecao.resultado === "MEIO_GREEN" ? "bg-emerald-500/5 border-emerald-500/20" :
                       selecao.resultado === "MEIO_RED" ? "bg-red-500/5 border-red-500/20" :
                       selecao.resultado === "VOID" ? "bg-muted/50 border-muted-foreground/20" :
-                      "border-border/40"
+                      "border-border/30"
                     }`}
                   >
-                    <span className="text-[9px] font-bold text-muted-foreground w-3 shrink-0">{index + 1}</span>
+                    <span className="text-[9px] font-bold text-muted-foreground w-3 shrink-0 text-center">{index + 1}</span>
                     <Input
                       placeholder="Evento - Seleção"
                       value={selecao.descricao}
                       onChange={(e) => handleSelecaoChange(index, "descricao", e.target.value)}
-                      className="uppercase text-xs h-7 flex-1 min-w-[100px] border-0 bg-transparent px-0 focus-visible:ring-0 shadow-none"
+                      className="uppercase text-[11px] h-6 flex-1 min-w-0 border-0 bg-transparent px-1 focus-visible:ring-0 shadow-none"
                     />
                     <Input
                       type="number"
@@ -1525,22 +1523,22 @@ export function ApostaMultiplaDialog({
                       placeholder="Odd"
                       value={selecao.odd}
                       onChange={(e) => handleSelecaoChange(index, "odd", e.target.value)}
-                      className="text-xs h-7 w-[60px] shrink-0 text-center font-semibold"
+                      className="text-[11px] h-6 w-[52px] shrink-0 text-center font-semibold border-border/30"
                     />
                     <Select 
                       value={selecao.resultado || "PENDENTE"} 
                       onValueChange={(v) => handleSelecaoChange(index, "resultado", v)}
                     >
-                      <SelectTrigger className="w-[80px] h-7 text-[10px] shrink-0 border-0 bg-muted/50">
+                      <SelectTrigger className="w-[70px] h-6 text-[9px] shrink-0 border-0 bg-muted/40 px-1.5">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="PENDENTE">Pendente</SelectItem>
-                        <SelectItem value="GREEN" className="hover:bg-emerald-500/20 hover:text-emerald-500 focus:bg-emerald-500/20 focus:text-emerald-500">Green</SelectItem>
-                        <SelectItem value="MEIO_GREEN" className="hover:bg-teal-500/20 hover:text-teal-500 focus:bg-teal-500/20 focus:text-teal-500">½ Green</SelectItem>
-                        <SelectItem value="RED" className="hover:bg-red-500/20 hover:text-red-500 focus:bg-red-500/20 focus:text-red-500">Red</SelectItem>
-                        <SelectItem value="MEIO_RED" className="hover:bg-orange-500/20 hover:text-orange-500 focus:bg-orange-500/20 focus:text-orange-500">½ Red</SelectItem>
-                        <SelectItem value="VOID" className="hover:bg-slate-500/20 hover:text-slate-400 focus:bg-slate-500/20 focus:text-slate-400">Void</SelectItem>
+                        <SelectItem value="GREEN">Green</SelectItem>
+                        <SelectItem value="MEIO_GREEN">½ Green</SelectItem>
+                        <SelectItem value="RED">Red</SelectItem>
+                        <SelectItem value="MEIO_RED">½ Red</SelectItem>
+                        <SelectItem value="VOID">Void</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -1548,145 +1546,120 @@ export function ApostaMultiplaDialog({
               </div>
             </div>
 
-            {/* Preview em Tempo Real da Múltipla */}
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-2 py-1.5 rounded-md border border-blue-500/30 bg-blue-500/5 text-sm">
-              <span className="text-[10px] text-muted-foreground shrink-0">Preview</span>
-              <div className="flex items-center gap-1">
-                <span className="text-[10px] text-muted-foreground">Resultado:</span>
-                <Badge className={`text-[10px] px-1.5 py-0 ${
+            {/* Preview compacto */}
+            <div className="flex items-center justify-between px-2 py-1 rounded bg-muted/30 border border-border/20">
+              <div className="flex items-center gap-2">
+                <Badge className={`text-[9px] px-1.5 py-0 h-4 ${
                   previewCalculo.resultado === "GREEN" ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-400" :
-                  previewCalculo.resultado === "MEIO_GREEN" ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-300" :
                   previewCalculo.resultado === "RED" ? "bg-red-500/20 text-red-700 dark:text-red-400" :
+                  previewCalculo.resultado === "MEIO_GREEN" ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-300" :
                   previewCalculo.resultado === "MEIO_RED" ? "bg-red-500/10 text-red-600 dark:text-red-300" :
                   previewCalculo.resultado === "VOID" ? "bg-gray-500/20 text-gray-600 dark:text-gray-400" :
                   "bg-muted text-muted-foreground"
                 }`}>
-                  {previewCalculo.resultado === "MEIO_GREEN" ? "MEIO GREEN" :
-                   previewCalculo.resultado === "MEIO_RED" ? "MEIO RED" :
+                  {previewCalculo.resultado === "MEIO_GREEN" ? "½ GREEN" :
+                   previewCalculo.resultado === "MEIO_RED" ? "½ RED" :
                    previewCalculo.resultado}
                 </Badge>
               </div>
-              <div className="flex items-center gap-1">
-                <span className="text-[10px] text-muted-foreground">Retorno:</span>
-                <span className="font-medium text-xs">{formatCurrency(previewCalculo.retorno)}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <span className="text-[10px] text-muted-foreground">P/L:</span>
-                <span className={`font-medium text-xs ${previewCalculo.lucro >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
-                  {previewCalculo.lucro >= 0 ? "+" : ""}{formatCurrency(previewCalculo.lucro)}
+              <div className="flex items-center gap-3 text-[10px]">
+                <span className="text-muted-foreground">Ret: <span className="text-foreground font-medium">{formatCurrency(previewCalculo.retorno)}</span></span>
+                <span className={`font-semibold ${previewCalculo.lucro >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
+                  P/L: {previewCalculo.lucro >= 0 ? "+" : ""}{formatCurrency(previewCalculo.lucro)}
                 </span>
               </div>
             </div>
 
-            {/* Boost + Stake e Cálculos */}
-            <div className="grid grid-cols-2 gap-2">
+            {/* Stake + Boost + Odd Final + Retorno — grid 2x2 */}
+            <div className="grid grid-cols-2 gap-x-2 gap-y-1">
               <div className="space-y-0.5">
-                <Label className="text-xs">Stake ({bookmakerSaldo?.moeda || 'R$'}) *</Label>
+                <Label className="text-[10px] text-muted-foreground">Stake ({bookmakerSaldo?.moeda || 'R$'}) *</Label>
                 <Input
                   type="number"
                   step="0.01"
                   placeholder="0.00"
                   value={stake}
                   onChange={(e) => setStake(e.target.value)}
-                  className="h-8 text-xs"
+                  className="h-7 text-xs"
                 />
               </div>
               <div className="space-y-0.5">
-                <Label className="text-xs">Boost %</Label>
+                <Label className="text-[10px] text-muted-foreground">Boost %</Label>
                 <Input
                   type="number"
                   step="0.1"
                   placeholder="0"
                   value={boostPercent}
                   onChange={(e) => setBoostPercent(e.target.value)}
-                  className="h-8 text-xs"
+                  className="h-7 text-xs"
                 />
               </div>
               <div className="space-y-0.5">
-                <Label className="text-xs">Odd Final{boostMultiplier > 1 ? ' 🚀' : ''}</Label>
+                <Label className="text-[10px] text-muted-foreground">Odd Final{boostMultiplier > 1 ? ' 🚀' : ''}</Label>
                 <Input
                   value={oddFinal > 0 ? oddFinal.toFixed(3) : "-"}
                   disabled
-                  className={`bg-muted/50 h-8 text-xs ${boostMultiplier > 1 ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : ''}`}
+                  className={`bg-muted/50 h-7 text-xs ${boostMultiplier > 1 ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : ''}`}
                 />
                 {boostMultiplier > 1 && oddFinalSemBoost > 0 && (
-                  <p className="text-[9px] text-muted-foreground">
-                    Base: {oddFinalSemBoost.toFixed(3)} → +{boostPercent}%
+                  <p className="text-[8px] text-muted-foreground">
+                    {oddFinalSemBoost.toFixed(3)} → +{boostPercent}%
                   </p>
                 )}
               </div>
               <div className="space-y-0.5">
-                <Label className="text-xs">Retorno Potencial</Label>
+                <Label className="text-[10px] text-muted-foreground">Retorno</Label>
                 <Input
-                  value={
-                    retornoPotencial > 0 ? formatCurrency(retornoPotencial) : "-"
-                  }
+                  value={retornoPotencial > 0 ? formatCurrency(retornoPotencial) : "-"}
                   disabled
-                  className="bg-muted/50 h-8 text-xs"
+                  className="bg-muted/50 h-7 text-xs"
                 />
               </div>
             </div>
 
-            {/* Resultado Calculado e Lucro */}
+            {/* Resultado calculado (quando não pendente) */}
             {resultadoCalculado !== "PENDENTE" && (
-              <div className={`p-3 rounded-lg border ${
+              <div className={`flex items-center justify-between px-2 py-1.5 rounded border ${
                 resultadoCalculado === "GREEN" ? "bg-emerald-500/10 border-emerald-500/30" :
                 resultadoCalculado === "MEIO_GREEN" ? "bg-emerald-500/5 border-emerald-500/20" :
                 resultadoCalculado === "RED" ? "bg-red-500/10 border-red-500/30" :
                 resultadoCalculado === "MEIO_RED" ? "bg-red-500/5 border-red-500/20" :
                 "bg-gray-500/10 border-gray-500/30"
               }`}>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-muted-foreground">Resultado:</span>
-                  <Badge className={`${
-                    resultadoCalculado === "GREEN" ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-400" :
-                    resultadoCalculado === "MEIO_GREEN" ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-300" :
-                    resultadoCalculado === "RED" ? "bg-red-500/20 text-red-700 dark:text-red-400" :
-                    resultadoCalculado === "MEIO_RED" ? "bg-red-500/10 text-red-600 dark:text-red-300" :
-                    "bg-gray-500/20 text-gray-600 dark:text-gray-400"
-                  }`}>
-                    {resultadoCalculado === "MEIO_GREEN" ? "MEIO GREEN" : 
-                     resultadoCalculado === "MEIO_RED" ? "MEIO RED" : 
-                     resultadoCalculado}
-                  </Badge>
-                </div>
+                <span className="text-xs text-muted-foreground">Resultado:</span>
+                <Badge className={`text-[10px] ${
+                  resultadoCalculado === "GREEN" ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-400" :
+                  resultadoCalculado === "MEIO_GREEN" ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-300" :
+                  resultadoCalculado === "RED" ? "bg-red-500/20 text-red-700 dark:text-red-400" :
+                  resultadoCalculado === "MEIO_RED" ? "bg-red-500/10 text-red-600 dark:text-red-300" :
+                  "bg-gray-500/20 text-gray-600 dark:text-gray-400"
+                }`}>
+                  {resultadoCalculado === "MEIO_GREEN" ? "½ GREEN" : 
+                   resultadoCalculado === "MEIO_RED" ? "½ RED" : 
+                   resultadoCalculado}
+                </Badge>
                 {(resultadoCalculado === "GREEN" || resultadoCalculado === "MEIO_GREEN") && oddFinalReal !== oddFinal && (
-                  <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
-                    <span>Odd Ajustada (VOIDs = 1.00):</span>
-                    <span className="font-medium text-foreground">{oddFinalReal.toFixed(3)}</span>
-                  </div>
+                  <span className="text-[10px] text-muted-foreground">Odd ajust.: <span className="font-medium text-foreground">{oddFinalReal.toFixed(3)}</span></span>
                 )}
               </div>
             )}
 
-            {/* Lucro Potencial (apenas se pendente) */}
+            {/* Lucro potencial */}
             {lucroPotencial > 0 && resultadoCalculado === "PENDENTE" && (
-              <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">
-                    Lucro Potencial:
-                  </span>
-                  <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
-                    {formatCurrency(lucroPotencial)}
-                  </span>
-                </div>
+              <div className="flex items-center justify-between px-2 py-1.5 rounded bg-emerald-500/10 border border-emerald-500/30">
+                <span className="text-xs text-muted-foreground">Lucro Potencial:</span>
+                <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                  {formatCurrency(lucroPotencial)}
+                </span>
               </div>
             )}
 
-            {/* Data/Hora - metadado discreto, registrada automaticamente */}
-            <div className="flex items-center justify-end">
-              <span className="text-[10px] text-muted-foreground">
-                Registrado em: {dataAposta ? new Date(dataAposta).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })} (Horário de Brasília)
-              </span>
-            </div>
-
-            {/* Resultado - Calculado automaticamente ou manual */}
-            <div className="space-y-1">
-              <Label className="text-xs">Resultado da Múltipla</Label>
+            {/* Resultado da Múltipla */}
+            <div className="space-y-0.5">
+              <Label className="text-[10px] text-muted-foreground font-normal uppercase tracking-wider">Resultado da Múltipla</Label>
               <Select 
                 value={resultadoManual || previewCalculo.resultado} 
                 onValueChange={(v) => {
-                  // Se selecionar o mesmo que o automático, limpa o manual
                   if (v === previewCalculo.resultado) {
                     setResultadoManual(null);
                   } else {
@@ -1694,66 +1667,73 @@ export function ApostaMultiplaDialog({
                   }
                 }}
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="h-7 text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="PENDENTE" className="hover:bg-muted hover:text-foreground focus:bg-muted focus:text-foreground">Pendente</SelectItem>
-                  <SelectItem value="GREEN" className="hover:bg-emerald-500/20 hover:text-emerald-500 focus:bg-emerald-500/20 focus:text-emerald-500">Green</SelectItem>
-                  <SelectItem value="MEIO_GREEN" className="hover:bg-teal-500/20 hover:text-teal-500 focus:bg-teal-500/20 focus:text-teal-500">Meio Green</SelectItem>
-                  <SelectItem value="RED" className="hover:bg-red-500/20 hover:text-red-500 focus:bg-red-500/20 focus:text-red-500">Red</SelectItem>
-                  <SelectItem value="MEIO_RED" className="hover:bg-orange-500/20 hover:text-orange-500 focus:bg-orange-500/20 focus:text-orange-500">Meio Red</SelectItem>
-                  <SelectItem value="VOID" className="hover:bg-slate-500/20 hover:text-slate-400 focus:bg-slate-500/20 focus:text-slate-400">Void</SelectItem>
+                  <SelectItem value="PENDENTE">Pendente</SelectItem>
+                  <SelectItem value="GREEN">Green</SelectItem>
+                  <SelectItem value="MEIO_GREEN">Meio Green</SelectItem>
+                  <SelectItem value="RED">Red</SelectItem>
+                  <SelectItem value="MEIO_RED">Meio Red</SelectItem>
+                  <SelectItem value="VOID">Void</SelectItem>
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-[9px] text-muted-foreground">
                 {resultadoManual 
-                  ? `Resultado manual selecionado (automático seria: ${previewCalculo.resultado})`
-                  : "Calculado automaticamente com base nos resultados individuais"
+                  ? `Manual (auto: ${previewCalculo.resultado})`
+                  : "Calculado automaticamente"
                 }
               </p>
             </div>
 
-            {/* Gerou Freebet removido - funcionalidade desativada */}
+            {/* Timestamp discreto */}
+            <p className="text-[9px] text-muted-foreground text-right">
+              {dataAposta ? new Date(dataAposta).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+            </p>
           </div>
 
-          <DialogFooter className="flex-col sm:flex-row gap-2">
+          <DialogFooter className="flex-col sm:flex-row gap-1.5 px-3 pb-3 pt-1">
             {aposta && (
               <Button
                 type="button"
                 variant="destructive"
+                size="sm"
                 onClick={() => setDeleteDialogOpen(true)}
                 disabled={loading}
-                className="sm:mr-auto"
+                className="sm:mr-auto h-7 text-xs"
               >
-                <Trash2 className="mr-2 h-4 w-4" />
+                <Trash2 className="mr-1 h-3 w-3" />
                 Excluir
               </Button>
             )}
             <Button
               type="button"
               variant="outline"
+              size="sm"
               onClick={() => onOpenChange(false)}
               disabled={loading}
+              className="h-7 text-xs"
             >
               Cancelar
             </Button>
-            {/* Botão de Rascunho: aparece quando tem dados mas não pode salvar como aposta real */}
             {podeSalvarRascunho && (
               <Button 
                 variant="secondary"
+                size="sm"
                 onClick={handleSalvarRascunho}
                 disabled={loading}
+                className="h-7 text-xs"
               >
-                <FileText className="h-4 w-4 mr-1" />
-                Salvar Rascunho
+                <FileText className="h-3 w-3 mr-1" />
+                Rascunho
               </Button>
             )}
-            <Button type="button" onClick={handleSubmit} disabled={loading || !canSave}>
+            <Button type="button" size="sm" onClick={handleSubmit} disabled={loading || !canSave} className="h-7 text-xs">
               {loading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
               ) : (
-                <Save className="mr-2 h-4 w-4" />
+                <Save className="mr-1 h-3 w-3" />
               )}
               Salvar
             </Button>
