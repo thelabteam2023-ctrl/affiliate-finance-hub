@@ -1423,7 +1423,7 @@ export function ApostaMultiplaDialog({
             }
           />
 
-          <div className="space-y-1.5 py-1.5 px-3">
+          <div className={`space-y-1.5 py-1.5 px-3 ${embedded ? 'max-w-[720px] mx-auto w-full' : ''}`}>
 
             {/* Casa / Vínculo */}
             <div className="space-y-0.5">
