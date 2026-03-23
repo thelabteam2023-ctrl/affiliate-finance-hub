@@ -131,12 +131,12 @@ function ViewPorParceiro() {
 
     return catalogoBookmakers.filter((bk) => {
       if (contasSet.has(bk.id)) return false;
-      // Only show bookmakers that belong to at least one group
       if (!allGroupedCatalogoIds.has(bk.id)) return false;
       if (grupoIds && !grupoIds.has(bk.id)) return false;
+      if (regulamentacaoFilter !== "todas" && bk.status !== regulamentacaoFilter) return false;
       return true;
     });
-  }, [catalogoBookmakers, contasSet, grupoFilter, getCatalogoIdsByGrupo, selectedParceiroId, allGroupedCatalogoIds]);
+  }, [catalogoBookmakers, contasSet, grupoFilter, getCatalogoIdsByGrupo, selectedParceiroId, allGroupedCatalogoIds, regulamentacaoFilter]);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return missingBookmakers;
