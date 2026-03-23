@@ -359,6 +359,16 @@ export function ApostaCard({
   const moeda = aposta.moeda || "BRL";
   const displayCurrency = isMultiCurrency ? (moedaConsolidacao || "BRL") : moeda;
   const isForeignCurrency = moeda !== "BRL";
+  const boostPct = aposta.boost_percentual;
+  
+  // Calcular odd das seleções (produto das odds individuais)
+  const calculatedMultiplaOdd = isMultipla && aposta.selecoes?.length 
+    ? aposta.selecoes.reduce((acc, s) => acc * Number(s.odd || 1), 1)
+    : null;
+  const oddMultiplaBase = calculatedMultiplaOdd ?? displayOdd;
+  const oddMultiplaFinal = boostPct && boostPct > 0 
+    ? oddMultiplaBase * (1 + boostPct / 100)
+    : oddMultiplaBase;
   
   // Para apostas múltiplas, exibir "MÚLTIPLA" como título
   const displayEvento = isMultipla ? 'MÚLTIPLA' : (aposta.evento || '');
