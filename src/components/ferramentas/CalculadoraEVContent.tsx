@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { Copy, Check, History, TrendingUp, AlertTriangle, XCircle, Zap, HelpCircle, ClipboardPaste, X, Loader2, Image as ImageIcon } from 'lucide-react';
+import { Copy, Check, History, TrendingUp, AlertTriangle, XCircle, Zap, HelpCircle, ClipboardPaste, X, Loader2, Image as ImageIcon, ZoomIn } from 'lucide-react';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -118,6 +119,7 @@ export const CalculadoraEVContent: React.FC = () => {
 
   // OCR state
   const [pastedImage, setPastedImage] = useState<string | null>(null);
+  const [imageDialogOpen, setImageDialogOpen] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
   const [parsedInfo, setParsedInfo] = useState<string | null>(null);
   const [dualOdds, setDualOdds] = useState<OcrDualOdds | null>(null);
@@ -418,19 +420,32 @@ export const CalculadoraEVContent: React.FC = () => {
       {/* Pasted image preview + parsed info */}
       {pastedImage && !isParsing && (
         <div className="space-y-1.5">
-          <div className="relative">
+          <div className="relative group cursor-pointer" onClick={() => setImageDialogOpen(true)}>
             <img
               src={pastedImage}
               alt="Print colado"
-              className="w-full max-h-28 object-contain rounded-md border border-border bg-muted/30"
+              className="w-full max-h-28 object-contain rounded-md border border-border bg-muted/30 transition-opacity group-hover:opacity-80"
             />
+            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-background/40 rounded-md">
+              <ZoomIn className="h-5 w-5 text-foreground" />
+            </div>
             <button
-              onClick={clearImage}
+              onClick={(e) => { e.stopPropagation(); clearImage(); }}
               className="absolute top-1 right-1 p-0.5 rounded-full bg-background/80 hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors"
             >
               <X className="h-3 w-3" />
             </button>
           </div>
+          <Dialog open={imageDialogOpen} onOpenChange={setImageDialogOpen}>
+            <DialogContent className="max-w-4xl p-2">
+              <DialogTitle className="sr-only">Print colado</DialogTitle>
+              <img
+                src={pastedImage}
+                alt="Print colado"
+                className="w-full h-auto max-h-[85vh] object-contain rounded-md"
+              />
+            </DialogContent>
+          </Dialog>
           {parsedInfo && (
             <p className="text-[9px] text-muted-foreground truncate px-1">
               <ImageIcon className="h-2.5 w-2.5 inline mr-1" />
