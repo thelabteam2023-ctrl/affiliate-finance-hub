@@ -30,12 +30,15 @@ function hexFromHsl(hslStr: string): { r: number; g: number; b: number } | null 
   return { r: Math.round(f(0) * 255), g: Math.round(f(8) * 255), b: Math.round(f(4) * 255) };
 }
 
-function getSourceStyle(source: BetSource, isActive: boolean) {
+function getSourceStyle(source: BetSource, isActive: boolean, hasSelection: boolean) {
   const rgb = hexFromHsl(source.color);
+  // When another source is selected and this one isn't, dim it
+  const isDimmed = hasSelection && !isActive;
+
   if (!rgb) {
-    return isActive
-      ? "bg-primary/15 border-primary/40 text-primary"
-      : "bg-muted/30 border-border/40 text-muted-foreground hover:bg-muted/50";
+    if (isActive) return "bg-primary/15 border-primary/40 text-primary";
+    if (isDimmed) return "bg-muted/20 border-border/20 text-muted-foreground/40 opacity-50";
+    return "bg-muted/30 border-border/40 text-muted-foreground hover:bg-muted/50";
   }
   const { r, g, b } = rgb;
   if (isActive) {
@@ -44,6 +47,14 @@ function getSourceStyle(source: BetSource, isActive: boolean) {
       borderColor: `rgba(${r},${g},${b},0.45)`,
       color: `rgb(${r},${g},${b})`,
       boxShadow: `0 0 8px -2px rgba(${r},${g},${b},0.25)`,
+    };
+  }
+  if (isDimmed) {
+    return {
+      backgroundColor: `rgba(${r},${g},${b},0.03)`,
+      borderColor: `rgba(${r},${g},${b},0.08)`,
+      color: `rgba(${r},${g},${b},0.35)`,
+      opacity: '0.6',
     };
   }
   return {
