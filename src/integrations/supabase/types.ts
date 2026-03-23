@@ -12698,6 +12698,7 @@ export type Database = {
       atualizar_aposta_liquidada_atomica_v2: {
         Args: {
           p_aposta_id: string
+          p_lucro_prejuizo?: number
           p_nova_moeda?: string
           p_nova_odd?: number
           p_novo_bookmaker_id?: string
