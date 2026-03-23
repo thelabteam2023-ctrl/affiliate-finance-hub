@@ -1804,7 +1804,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         // VERDADE FINANCEIRA: usar_freebet toggle determina fonte de saldo
         fonte_saldo: usarFreebetBookmaker ? 'FREEBET' : 'REAL',
         usar_freebet: usarFreebetBookmaker,
-        fonte_entrada: registroValues.estrategia === 'VALUEBET' ? fonteEntrada : null,
+        fonte_entrada: registroValues.estrategia === 'VALUEBET' ? (fonteEntrada || 'Manual') : null,
         // CRÍTICO: Moeda da operação = moeda nativa da bookmaker
         moeda_operacao: moedaOperacao,
       };

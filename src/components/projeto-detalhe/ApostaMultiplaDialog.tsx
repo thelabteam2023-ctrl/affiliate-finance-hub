@@ -929,7 +929,7 @@ export function ApostaMultiplaDialog({
         forma_registro: registroValues.forma_registro,
         contexto_operacional: registroValues.contexto_operacional,
         boost_percentual: !isNaN(boostVal) && boostVal > 0 ? boostVal : null,
-        fonte_entrada: registroValues.estrategia === 'VALUEBET' ? fonteEntrada : null,
+        fonte_entrada: registroValues.estrategia === 'VALUEBET' ? (fonteEntrada || 'Manual') : null,
         // Multi-moeda
         moeda_operacao: moedaOpEdit,
         cotacao_snapshot: cotacaoSnapEdit,
