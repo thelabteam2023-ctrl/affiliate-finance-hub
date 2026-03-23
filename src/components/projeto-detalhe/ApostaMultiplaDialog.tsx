@@ -323,6 +323,10 @@ export function ApostaMultiplaDialog({
     { descricao: "", odd: "", resultado: "PENDENTE" },
   ]);
 
+  // Número de seleções derivado do tipo
+  const numSelecoes = useMemo(() => getNumFromTipo(tipoMultipla), [tipoMultipla]);
+  const is4Plus = numSelecoes >= 4;
+
   // Freebet state
   const [usarFreebet, setUsarFreebet] = useState(false);
   const [valorFreebetUsar, setValorFreebetUsar] = useState(0);
