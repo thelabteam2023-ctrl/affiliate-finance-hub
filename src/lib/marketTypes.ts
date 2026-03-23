@@ -112,6 +112,7 @@ export const DOMAINS_BY_SPORT: Record<string, MarketDomain[]> = {
   // eSports
   "League of Legends": ["MAPS", "KILLS", "TOWERS"],
   "Counter-Strike": ["MAPS", "ROUNDS"],
+  "Valorant": ["MAPS", "ROUNDS"],
   "Dota 2": ["MAPS", "KILLS", "TOWERS"],
   
   // Fallback
