@@ -127,26 +127,28 @@ export function FonteEntradaSelector({
               <button
                 type="button"
                 onClick={() => onChange(isActive ? null : source.name)}
+                onDoubleClick={(e) => { e.preventDefault(); toggleFavorite.mutate(source.id); }}
                 style={isStyleObj ? style as React.CSSProperties : undefined}
                 className={cn(
                   "px-2.5 py-1 rounded-[5px] text-[11px] font-medium border backdrop-blur-sm transition-all duration-200 cursor-pointer select-none",
                   !isStyleObj && style,
                   isActive && "ring-1 ring-current/20"
                 )}
+                title="Clique para selecionar · Duplo-clique para favoritar"
               >
                 <span className="flex items-center gap-1">
                   {source.is_favorite && <Star className="h-2.5 w-2.5 fill-current" />}
                   {source.name}
                 </span>
               </button>
-              {/* Favorite toggle on hover */}
+              {/* Favorite toggle on hover - larger hit area */}
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); toggleFavorite.mutate(source.id); }}
-                className="absolute -top-1.5 -right-1.5 h-4 w-4 rounded-full bg-background border border-border/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-muted"
+                className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-background border border-border/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-muted z-10"
                 title={source.is_favorite ? "Remover favorita" : "Definir como padrão"}
               >
-                <Star className={cn("h-2.5 w-2.5", source.is_favorite ? "fill-amber-400 text-amber-400" : "text-muted-foreground")} />
+                <Star className={cn("h-3 w-3", source.is_favorite ? "fill-amber-400 text-amber-400" : "text-muted-foreground")} />
               </button>
             </div>
           );
