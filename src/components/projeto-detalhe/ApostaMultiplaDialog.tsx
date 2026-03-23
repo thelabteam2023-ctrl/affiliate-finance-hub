@@ -717,8 +717,15 @@ export function ApostaMultiplaDialog({
     return { resultado, retorno, lucro };
   }, [selecoes, stake, usarFreebet, calcularResultadoMultipla, boostMultiplier]);
 
-  // Resultado final considerando override manual
-  const resultadoCalculado = resultadoManual || previewCalculo.resultado;
+  // Detectar se alguma perna tem resultado individual definido
+  const hasPerLegResults = useMemo(() => {
+    return selecoes.slice(0, numSelecoes).some(s => s.resultado && s.resultado !== "PENDENTE");
+  }, [selecoes, numSelecoes]);
+
+  // Resultado final: se há resultados por perna, auto-calcula. Senão, permite override manual.
+  const resultadoCalculado = hasPerLegResults 
+    ? previewCalculo.resultado  // Auto-calculado das pernas (locked)
+    : (resultadoManual || previewCalculo.resultado);
 
   // Calcular retorno potencial
   const retornoPotencial = useMemo(() => {
