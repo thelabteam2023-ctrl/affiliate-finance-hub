@@ -1210,6 +1210,10 @@ export const MERCADOS_POR_ESPORTE: Record<string, string[]> = {
     "Placar Exato", "Over/Under Rounds", "Primeiro a 10 Rounds",
     "Total de Kills", "Handicap de Rounds", "Outro"
   ],
+  "Valorant": [
+    "Vencedor do Mapa", "Handicap de Mapas", "Total de Mapas", "Vencedor da Série",
+    "Total de Rounds", "Handicap de Rounds", "Outro"
+  ],
   "Dota 2": [
     "Vencedor do Mapa", "Handicap de Mapas", "Total de Mapas", "Vencedor da Série",
     "Placar Exato", "Over/Under Kills", "Primeiro Objetivo", "Total de Torres",
