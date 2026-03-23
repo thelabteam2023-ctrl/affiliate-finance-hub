@@ -788,9 +788,10 @@ export function ApostaCard({
             getLogoUrl={getLogoUrl}
           />
         ) : hasSelecoes ? (
-          <div className="space-y-1.5 mb-3">
+          <div className="space-y-1 mb-3">
             {aposta.selecoes!.map((sel, idx) => (
-              <div key={idx} className="flex justify-between items-center text-sm gap-2">
+              <div key={idx} className="flex items-center gap-2 text-sm">
+                <span className="text-[10px] text-muted-foreground/50 font-mono w-4 shrink-0">{idx + 1}</span>
                 <span className="text-muted-foreground truncate flex-1 uppercase">{sel.descricao}</span>
                 <div className="flex items-center gap-2 shrink-0">
                   <span className="font-medium">@{Number(sel.odd).toFixed(2)}</span>
@@ -798,8 +799,18 @@ export function ApostaCard({
                 </div>
               </div>
             ))}
-            <div className="flex justify-end pt-1 border-t border-border/50">
-              <span className="text-xs font-medium">Odd Final: @{displayOdd.toFixed(2)}</span>
+            <div className="flex items-center justify-between pt-1.5 mt-1 border-t border-border/50">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold">@{oddMultiplaFinal.toFixed(2)}</span>
+                {boostPct && boostPct > 0 && (
+                  <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10">
+                    +{boostPct}% boost
+                  </Badge>
+                )}
+              </div>
+              <span className="text-xs text-muted-foreground">
+                Retorno: {formatTotal(oddMultiplaFinal * stakeDisplay)}
+              </span>
             </div>
           </div>
         ) : (
