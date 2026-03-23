@@ -126,7 +126,7 @@ export function ShareLinkDialog({ projetoId, projetoNome }: ShareLinkDialogProps
   });
 
   const copyLink = (token: string) => {
-    navigator.clipboard.writeText(`${window.location.origin}/shared/${token}`);
+    navigator.clipboard.writeText(`${getPublicOrigin()}/shared/${token}`);
     toast.success("Link copiado!");
   };
 
