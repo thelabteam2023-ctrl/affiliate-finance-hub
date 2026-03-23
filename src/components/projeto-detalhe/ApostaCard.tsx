@@ -589,6 +589,11 @@ export function ApostaCard({
                 </>
               ) : null}
               <span className="text-xs text-muted-foreground whitespace-nowrap">{formatTotal(stakeDisplay)}</span>
+              {isMultipla && aposta.status !== 'PENDENTE' && lucroDisplay !== null && lucroDisplay !== undefined && (
+                <span className={cn("text-xs font-semibold whitespace-nowrap", lucroDisplay >= 0 ? "text-emerald-500" : "text-red-500")}>
+                  {lucroDisplay >= 0 ? '+' : ''}{formatTotal(lucroDisplay)}
+                </span>
+              )}
             </div>
           </div>
           
