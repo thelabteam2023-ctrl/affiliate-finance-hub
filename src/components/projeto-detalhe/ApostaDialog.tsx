@@ -2078,7 +2078,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
       const oddAnterior = aposta?.odd || 0;
       const bookmakerAnteriorId = aposta?.bookmaker_id;
 
-      if (aposta) {
+      if (aposta?.id) {
         // Verificar se gerouFreebet mudou de false para true na edição
         const gerouFreebetAnterior = aposta.gerou_freebet || false;
         const valorFreebetAnterior = aposta.valor_freebet_gerada || 0;
