@@ -1499,8 +1499,62 @@ export function ApostaMultiplaDialog({
             {/* Seleções */}
             <div className="space-y-1">
               <Label className="text-xs">Seleções</Label>
-              <div className={`grid gap-2 ${tipoMultipla === "TRIPLA" ? "grid-cols-1 md:grid-cols-3" : "grid-cols-1 md:grid-cols-2"}`}>
+              <div className={`grid gap-2 ${
+                is4Plus ? "grid-cols-1" :
+                tipoMultipla === "TRIPLA" ? "grid-cols-1 md:grid-cols-3" : 
+                "grid-cols-1 md:grid-cols-2"
+              }`}>
                 {selecoes.map((selecao, index) => {
+                  // Layout compacto para 4+ (inline em uma linha)
+                  if (is4Plus) {
+                    return (
+                      <div 
+                        key={index}
+                        className={`flex items-center gap-2 px-3 py-1.5 rounded-md border transition-all duration-150 ${
+                          selecao.resultado === "GREEN" ? "bg-emerald-500/10 border-emerald-500/30" :
+                          selecao.resultado === "RED" ? "bg-red-500/10 border-red-500/30" :
+                          selecao.resultado === "MEIO_GREEN" ? "bg-emerald-500/5 border-emerald-500/20" :
+                          selecao.resultado === "MEIO_RED" ? "bg-red-500/5 border-red-500/20" :
+                          selecao.resultado === "VOID" ? "bg-muted/50 border-muted-foreground/20" :
+                          "bg-muted/30 border-border/50"
+                        }`}
+                      >
+                        <span className="text-[9px] font-medium text-muted-foreground w-4 shrink-0">{index + 1}</span>
+                        <Input
+                          placeholder="Evento - Seleção"
+                          value={selecao.descricao}
+                          onChange={(e) => handleSelecaoChange(index, "descricao", e.target.value)}
+                          className="uppercase text-xs h-7 flex-1 min-w-0"
+                        />
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="Odd"
+                          value={selecao.odd}
+                          onChange={(e) => handleSelecaoChange(index, "odd", e.target.value)}
+                          className="text-xs h-7 w-[70px] shrink-0"
+                        />
+                        <Select 
+                          value={selecao.resultado || "PENDENTE"} 
+                          onValueChange={(v) => handleSelecaoChange(index, "resultado", v)}
+                        >
+                          <SelectTrigger className="w-[100px] h-7 text-[10px] shrink-0">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="PENDENTE">Pendente</SelectItem>
+                            <SelectItem value="GREEN" className="hover:bg-emerald-500/20 hover:text-emerald-500 focus:bg-emerald-500/20 focus:text-emerald-500">Green</SelectItem>
+                            <SelectItem value="MEIO_GREEN" className="hover:bg-teal-500/20 hover:text-teal-500 focus:bg-teal-500/20 focus:text-teal-500">½ Green</SelectItem>
+                            <SelectItem value="RED" className="hover:bg-red-500/20 hover:text-red-500 focus:bg-red-500/20 focus:text-red-500">Red</SelectItem>
+                            <SelectItem value="MEIO_RED" className="hover:bg-orange-500/20 hover:text-orange-500 focus:bg-orange-500/20 focus:text-orange-500">½ Red</SelectItem>
+                            <SelectItem value="VOID" className="hover:bg-slate-500/20 hover:text-slate-400 focus:bg-slate-500/20 focus:text-slate-400">Void</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    );
+                  }
+
+                  // Layout card padrão para dupla/tripla
                   return (
                   <Card 
                     key={index} 
@@ -1509,12 +1563,10 @@ export function ApostaMultiplaDialog({
                             selecao.resultado === "MEIO_GREEN" ? "bg-emerald-500/5 border-emerald-500/20" :
                             selecao.resultado === "RED" ? "bg-red-500/10 border-red-500/30" :
                             selecao.resultado === "MEIO_RED" ? "bg-red-500/5 border-red-500/20" :
-                            selecao.resultado === "VOID" ? "bg-gray-500/10 border-gray-500/30" :
+                            selecao.resultado === "VOID" ? "bg-muted/50 border-muted-foreground/20" :
                             "bg-muted/30"
                     }`}
                   >
-                    
-                    
                     <CardContent className="pt-2 pb-2 px-3">
                       <div className="flex items-center justify-between gap-2 mb-1.5">
                         <span className="text-[10px] font-medium text-muted-foreground">
@@ -1557,7 +1609,6 @@ export function ApostaMultiplaDialog({
                           className="text-xs h-8"
                         />
                       </div>
-                      
                     </CardContent>
                   </Card>
                   );
