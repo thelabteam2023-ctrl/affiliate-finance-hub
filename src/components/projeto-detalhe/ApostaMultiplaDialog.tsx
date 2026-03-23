@@ -1503,7 +1503,7 @@ export function ApostaMultiplaDialog({
                 {selecoes.map((selecao, index) => (
                   <div 
                     key={index}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-md border transition-all duration-150 ${
+                    className={`flex flex-wrap items-center gap-1.5 px-2 py-1.5 rounded-md border transition-all duration-150 ${
                       selecao.resultado === "GREEN" ? "bg-emerald-500/10 border-emerald-500/30" :
                       selecao.resultado === "RED" ? "bg-red-500/10 border-red-500/30" :
                       selecao.resultado === "MEIO_GREEN" ? "bg-emerald-500/5 border-emerald-500/20" :
@@ -1517,7 +1517,7 @@ export function ApostaMultiplaDialog({
                       placeholder="Evento - Seleção"
                       value={selecao.descricao}
                       onChange={(e) => handleSelecaoChange(index, "descricao", e.target.value)}
-                      className="uppercase text-xs h-7 flex-1 min-w-0 border-0 bg-transparent px-0 focus-visible:ring-0 shadow-none"
+                      className="uppercase text-xs h-7 flex-1 min-w-[100px] border-0 bg-transparent px-0 focus-visible:ring-0 shadow-none"
                     />
                     <Input
                       type="number"
@@ -1525,13 +1525,13 @@ export function ApostaMultiplaDialog({
                       placeholder="Odd"
                       value={selecao.odd}
                       onChange={(e) => handleSelecaoChange(index, "odd", e.target.value)}
-                      className="text-xs h-7 w-[70px] shrink-0 text-center font-semibold"
+                      className="text-xs h-7 w-[60px] shrink-0 text-center font-semibold"
                     />
                     <Select 
                       value={selecao.resultado || "PENDENTE"} 
                       onValueChange={(v) => handleSelecaoChange(index, "resultado", v)}
                     >
-                      <SelectTrigger className="w-[100px] h-7 text-[10px] shrink-0 border-0 bg-muted/50">
+                      <SelectTrigger className="w-[80px] h-7 text-[10px] shrink-0 border-0 bg-muted/50">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
