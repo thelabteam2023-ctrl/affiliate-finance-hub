@@ -703,7 +703,8 @@ export function ApostaMultiplaDialog({
       }
     }
 
-    const retorno = stakeNum * fatorTotal;
+    // Aplicar boost ao retorno (boost incrementa o payout total)
+    const retorno = stakeNum * fatorTotal * boostMultiplier;
     const lucro = usarFreebet
       ? retorno > stakeNum
         ? retorno - stakeNum
@@ -714,7 +715,7 @@ export function ApostaMultiplaDialog({
     const resultado = calcularResultadoMultipla(selecoes);
 
     return { resultado, retorno, lucro };
-  }, [selecoes, stake, usarFreebet, calcularResultadoMultipla]);
+  }, [selecoes, stake, usarFreebet, calcularResultadoMultipla, boostMultiplier]);
 
   // Resultado final considerando override manual
   const resultadoCalculado = resultadoManual || previewCalculo.resultado;
