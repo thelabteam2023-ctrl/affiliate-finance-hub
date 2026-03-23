@@ -178,8 +178,9 @@ export function ApostaMultiplaDialog({
   
   // Mapear saldos canônicos para formato local (retrocompatibilidade)
    const bookmakers = useMemo((): Bookmaker[] => {
+    const currentBookmakerId = aposta?.bookmaker_id;
     return bookmakerSaldos
-      .filter(bk => bk.saldo_operavel >= 0.50) // Mostrar apenas casas com saldo disponível
+      .filter(bk => bk.saldo_operavel >= 0.50 || bk.id === currentBookmakerId) // Sempre manter a casa da aposta em edição
       .map(bk => ({
       id: bk.id,
       nome: bk.nome,
@@ -193,7 +194,7 @@ export function ApostaMultiplaDialog({
       logo_url: bk.logo_url,
       bonus_rollover_started: bk.bonus_rollover_started
     }));
-  }, [bookmakerSaldos]);
+  }, [bookmakerSaldos, aposta?.bookmaker_id]);
 
   // ========== HOOK DE RASCUNHOS (LOCALSTORAGE) ==========
   // Permite salvar múltiplas incompletas (sem casa, sem stake, 1 seleção) sem tocar no banco
@@ -914,6 +915,10 @@ export function ApostaMultiplaDialog({
       // Usar valores do previewCalculo que já calcula corretamente com fatores
       let lucroPrejuizo: number | null = null;
       let valorRetorno: number | null = null;
+      
+      // Para apostas liquidadas, usar oddFinalReal (que considera VOID=1)
+      // Para pendentes, usar oddFinal nominal
+      const oddFinalParaSalvar = resultadoFinal !== "PENDENTE" ? oddFinalReal : oddFinal;
 
       if (resultadoFinal !== "PENDENTE") {
         lucroPrejuizo = previewCalculo.lucro;
@@ -957,7 +962,7 @@ export function ApostaMultiplaDialog({
         bookmaker_id: bookmakerId,
         tipo_multipla: tipoMultipla,
         stake: stakeNum,
-        odd_final: oddFinal,
+        odd_final: oddFinalParaSalvar,
         retorno_potencial: retornoPotencial,
         lucro_prejuizo: lucroPrejuizo,
         valor_retorno: valorRetorno,
@@ -990,10 +995,38 @@ export function ApostaMultiplaDialog({
         const bookmakerMudou = bookmakerId !== aposta.bookmaker_id;
         const houveMudancaFinanceira = resultadoMudou || stakeMudou || oddMudou || bookmakerMudou;
 
-        // Se resultado vai para PENDENTE a partir de liquidada: reverter
-        if (resultadoMudou && resultadoAnterior !== "PENDENTE" && resultadoAnterior !== null && resultadoFinal === "PENDENTE") {
+        // Campos suplementares que o RPC não cobre
+        const camposSuplementares = {
+            selecoes: selecoesFormatadas,
+            tipo_multipla: tipoMultipla,
+            retorno_potencial: retornoPotencial,
+            lucro_prejuizo: lucroPrejuizo,
+            valor_retorno: valorRetorno,
+            resultado: resultadoFinal,
+            status: resultadoFinal === "PENDENTE" ? "PENDENTE" : "LIQUIDADA",
+            odd_final: oddFinal,
+            boost_percentual: apostaData.boost_percentual,
+            fonte_entrada: apostaData.fonte_entrada,
+            data_aposta: apostaData.data_aposta,
+            observacoes: apostaData.observacoes,
+            estrategia: apostaData.estrategia,
+            forma_registro: apostaData.forma_registro,
+            contexto_operacional: apostaData.contexto_operacional,
+            tipo_freebet: apostaData.tipo_freebet,
+            gerou_freebet: apostaData.gerou_freebet,
+            valor_freebet_gerada: apostaData.valor_freebet_gerada,
+            moeda_operacao: apostaData.moeda_operacao,
+            cotacao_snapshot: apostaData.cotacao_snapshot,
+            valor_brl_referencia: apostaData.valor_brl_referencia,
+        };
+
+        // Determinar tipo de transição
+        const eraLiquidada = resultadoAnterior !== "PENDENTE" && resultadoAnterior !== null;
+        const seraLiquidada = resultadoFinal !== "PENDENTE";
+
+        // CASO 1: LIQUIDADA → PENDENTE (reverter)
+        if (resultadoMudou && eraLiquidada && !seraLiquidada) {
           await supabase.rpc('reverter_liquidacao_v4', { p_aposta_id: aposta.id });
-          // Atualizar campos não-financeiros após reversão
           await supabase.from("apostas_unificada").update({
             ...apostaData,
             resultado: "PENDENTE",
@@ -1001,8 +1034,32 @@ export function ApostaMultiplaDialog({
             lucro_prejuizo: null,
             valor_retorno: null,
           }).eq("id", aposta.id);
-        } else if (houveMudancaFinanceira) {
-          // Usar RPC atômico para qualquer mudança financeira (PENDENTE ou LIQUIDADA)
+        }
+        // CASO 2: PENDENTE → LIQUIDADA (primeira liquidação)
+        else if (resultadoMudou && !eraLiquidada && seraLiquidada) {
+          // Atualizar metadados ANTES de liquidar (stake, odd, bookmaker podem ter mudado)
+          if (stakeMudou || oddMudou || bookmakerMudou) {
+            await supabase.from("apostas_unificada").update({
+              ...apostaData,
+              resultado: "PENDENTE",
+              status: "PENDENTE",
+            }).eq("id", aposta.id);
+          }
+          // Liquidar via motor v7 (gera financial_events corretamente)
+          const liquidResult = await liquidarAposta({
+            id: aposta.id,
+            resultado: resultadoFinal as any,
+            lucro_prejuizo: lucroPrejuizo != null && lucroPrejuizo !== 0 ? lucroPrejuizo : undefined,
+          });
+          if (!liquidResult.success) {
+            console.error("[ApostaMultiplaDialog] Erro ao liquidar:", liquidResult.error);
+            throw new Error(liquidResult.error?.message || 'Erro ao liquidar aposta');
+          }
+          // Atualizar campos suplementares
+          await supabase.from("apostas_unificada").update(camposSuplementares).eq("id", aposta.id);
+        }
+        // CASO 3: LIQUIDADA → LIQUIDADA (reliquidação) ou mudança de stake/odd
+        else if (eraLiquidada && houveMudancaFinanceira) {
           console.log("[ApostaMultiplaDialog] Edição financeira via RPC atômico:", {
             stakeMudou: stakeMudou ? `${aposta.stake} → ${stakeNum}` : false,
             oddMudou: oddMudou ? `${aposta.odd_final} → ${oddFinal}` : false,
@@ -1032,32 +1089,17 @@ export function ApostaMultiplaDialog({
             throw new Error(result.error || 'Erro desconhecido ao atualizar aposta');
           }
 
-          // Atualizar campos que o RPC não cobre (seleções, observações, P/L calculado por seleção, boost)
+          // Atualizar campos suplementares
+          await supabase.from("apostas_unificada").update(camposSuplementares).eq("id", aposta.id);
+        }
+        // CASO 4: Mudança de stake/odd/bookmaker em aposta PENDENTE (sem liquidação)
+        else if (!eraLiquidada && houveMudancaFinanceira) {
           await supabase.from("apostas_unificada").update({
-            selecoes: selecoesFormatadas,
-            tipo_multipla: tipoMultipla,
-            retorno_potencial: retornoPotencial,
-            lucro_prejuizo: lucroPrejuizo,
-            valor_retorno: valorRetorno,
-            resultado: resultadoFinal,
-            status: resultadoFinal === "PENDENTE" ? "PENDENTE" : "LIQUIDADA",
-            odd_final: oddFinal,
-            boost_percentual: apostaData.boost_percentual,
-            fonte_entrada: apostaData.fonte_entrada,
-            data_aposta: apostaData.data_aposta,
-            observacoes: apostaData.observacoes,
-            estrategia: apostaData.estrategia,
-            forma_registro: apostaData.forma_registro,
-            contexto_operacional: apostaData.contexto_operacional,
-            tipo_freebet: apostaData.tipo_freebet,
-            gerou_freebet: apostaData.gerou_freebet,
-            valor_freebet_gerada: apostaData.valor_freebet_gerada,
-            moeda_operacao: apostaData.moeda_operacao,
-            cotacao_snapshot: apostaData.cotacao_snapshot,
-            valor_brl_referencia: apostaData.valor_brl_referencia,
+            ...apostaData,
           }).eq("id", aposta.id);
-        } else {
-          // Sem mudança financeira: update direto de metadados
+        }
+        // CASO 5: Sem mudança financeira - update direto de metadados
+        else {
           const { error } = await supabase.from("apostas_unificada").update({
             ...apostaData,
           }).eq("id", aposta.id);
@@ -1131,6 +1173,7 @@ export function ApostaMultiplaDialog({
           : null;
         const valorBrlRef = isForeign && cotacaoSnap ? stakeNum * cotacaoSnap : null;
 
+        const boostVal = parseFloat(boostPercent);
         const result = await criarAposta({
           projeto_id: projetoId,
           workspace_id: workspaceId,
@@ -1154,6 +1197,9 @@ export function ApostaMultiplaDialog({
           moeda_operacao: moedaOp,
           cotacao_snapshot: cotacaoSnap,
           valor_brl_referencia: valorBrlRef,
+          // Boost e fonte
+          boost_percentual: !isNaN(boostVal) && boostVal > 0 ? boostVal : null,
+          fonte_entrada: registroValues.estrategia === 'VALUEBET' ? (fonteEntrada || 'Manual') : null,
         });
 
         if (!result.success) {
