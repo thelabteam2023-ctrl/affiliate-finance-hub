@@ -7,7 +7,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 interface SimulationResult {
@@ -102,7 +101,6 @@ export const CalculadoraEVContent: React.FC = () => {
     return isNaN(n) ? null : n;
   };
 
-  // Parse image using supabase.functions.invoke (stable pattern)
   const parseImage = useCallback(async (imageBase64: string) => {
     setIsParsing(true);
     try {
@@ -116,18 +114,43 @@ export const CalculadoraEVContent: React.FC = () => {
         return;
       }
 
-      console.log('[EV Calculator] Sending to parse-ev-print, size:', imageBase64.length);
+      const endpoint = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parse-ev-print`;
+      const payload = { imageBase64 };
 
-      const { data, error } = await supabase.functions.invoke('parse-ev-print', {
-        body: { imageBase64 },
+      console.log('[EV Calculator] Sending to parse-ev-print, size:', imageBase64.length);
+      console.log('[EV Calculator] Endpoint:', endpoint);
+      console.log('[EV Calculator] Payload chars:', JSON.stringify(payload).length);
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify(payload),
       });
 
-      if (error) {
-        console.error('[EV Calculator] Invoke error:', error);
-        const msg = error.message?.includes('Failed to send')
-          ? 'Erro de conexão. Verifique sua internet.'
-          : error.message || 'Erro ao processar imagem';
-        toast.error('Erro ao interpretar print', { description: msg });
+      const rawText = await response.text();
+      console.log('[EV Calculator] Raw response status:', response.status);
+      console.log('[EV Calculator] Raw response body:', rawText);
+
+      let data: any = null;
+      try {
+        data = rawText ? JSON.parse(rawText) : null;
+      } catch {
+        throw new Error('Resposta inválida do servidor de OCR.');
+      }
+
+      if (!response.ok) {
+        const message = data?.error
+          || (response.status === 402
+            ? 'Créditos de IA insuficientes.'
+            : response.status === 429
+              ? 'Limite de requisições excedido. Tente novamente em alguns segundos.'
+              : `Erro ao processar imagem (código ${response.status}).`);
+
+        toast.error('Erro ao interpretar print', { description: message });
         return;
       }
 
