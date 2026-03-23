@@ -1639,15 +1639,6 @@ export function ApostaMultiplaDialog({
               </div>
             )}
 
-            {/* Lucro potencial */}
-            {lucroPotencial > 0 && resultadoCalculado === "PENDENTE" && (
-              <div className="flex items-center justify-between px-2 py-1.5 rounded bg-emerald-500/10 border border-emerald-500/30">
-                <span className="text-xs text-muted-foreground">Lucro Potencial:</span>
-                <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
-                  {formatCurrency(lucroPotencial)}
-                </span>
-              </div>
-            )}
 
             {/* Resultado da Múltipla */}
             <div className="space-y-0.5">
