@@ -364,7 +364,14 @@ function ViewPorBookmaker() {
   const [grupoFilter, setGrupoFilter] = useState("todos");
   const [sortOrigem, setSortOrigem] = useState<"asc" | "desc" | null>(null);
   const [sortDias, setSortDias] = useState<"asc" | "desc" | null>(null);
-  const { getCatalogoIdsByGrupo } = useBookmakerGrupos();
+  const { getCatalogoIdsByGrupo, membros: membrosVPB } = useBookmakerGrupos();
+
+  // Set of all catalogo IDs that belong to at least one group
+  const allGroupedCatalogoIdsVPB = useMemo(() => {
+    const ids = new Set<string>();
+    (membrosVPB ?? []).forEach((m) => ids.add(m.bookmaker_catalogo_id));
+    return ids;
+  }, [membrosVPB]);
 
   const [criarDialog, setCriarDialog] = useState<{
     open: boolean;
