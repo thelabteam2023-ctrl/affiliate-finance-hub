@@ -127,6 +127,30 @@ function ViewPorParceiro() {
 
   const contasSet = useMemo(() => new Set(contasExistentes ?? []), [contasExistentes]);
 
+  // Fetch indisponibilidade records for this parceiro
+  const indisponiveisKey = ["bookmaker-indisponiveis-parceiro", workspaceId, selectedParceiroId];
+  const { data: indisponiveisData } = useQuery({
+    queryKey: indisponiveisKey,
+    queryFn: async (): Promise<{ id: string; bookmaker_catalogo_id: string }[]> => {
+      if (!workspaceId || !selectedParceiroId) return [];
+      const { data, error } = await (supabase as any)
+        .from("bookmaker_indisponiveis")
+        .select("id, bookmaker_catalogo_id")
+        .eq("workspace_id", workspaceId)
+        .eq("parceiro_id", selectedParceiroId);
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!workspaceId && !!selectedParceiroId,
+    staleTime: 60_000,
+  });
+
+  const indisponiveisMap = useMemo(() => {
+    const map = new Map<string, string>();
+    (indisponiveisData ?? []).forEach((r) => map.set(r.bookmaker_catalogo_id, r.id));
+    return map;
+  }, [indisponiveisData]);
+
   // Compute missing bookmakers
   const missingBookmakers = useMemo(() => {
     if (!catalogoBookmakers || !selectedParceiroId) return [];
@@ -141,11 +165,24 @@ function ViewPorParceiro() {
     });
   }, [catalogoBookmakers, contasSet, grupoFilter, getCatalogoIdsByGrupo, selectedParceiroId, allGroupedCatalogoIds, regulamentacaoFilter]);
 
+  // Split into disponiveis / descartados
+  const { disponiveis, descartados } = useMemo(() => {
+    const disp: typeof missingBookmakers = [];
+    const desc: typeof missingBookmakers = [];
+    missingBookmakers.forEach((bk) => {
+      if (indisponiveisMap.has(bk.id)) desc.push(bk);
+      else disp.push(bk);
+    });
+    return { disponiveis: disp, descartados: desc };
+  }, [missingBookmakers, indisponiveisMap]);
+
+  const visibleList = showDescartados ? descartados : disponiveis;
+
   const filtered = useMemo(() => {
-    if (!search.trim()) return missingBookmakers;
+    if (!search.trim()) return visibleList;
     const q = search.toLowerCase();
-    return missingBookmakers.filter((bk) => bk.nome.toLowerCase().includes(q));
-  }, [missingBookmakers, search]);
+    return visibleList.filter((bk) => bk.nome.toLowerCase().includes(q));
+  }, [visibleList, search]);
 
   const handleCriar = (catalogoId: string) => {
     setCriarDialog({ open: true, parceiroId: selectedParceiroId, catalogoId });
@@ -156,6 +193,82 @@ function ViewPorParceiro() {
   const handleCreated = () => {
     handleDialogClose();
     queryClient.invalidateQueries({ queryKey: ["parceiro-contas-existentes", workspaceId, selectedParceiroId] });
+  };
+
+  const resetSelection = useCallback(() => setSelectedIds(new Set()), []);
+
+  const marcarIndisponivel = useCallback(async (catalogoIds: string[]) => {
+    if (!workspaceId || !selectedParceiroId || !userId) return;
+    try {
+      const rows = catalogoIds.map((cid) => ({
+        workspace_id: workspaceId,
+        parceiro_id: selectedParceiroId,
+        bookmaker_catalogo_id: cid,
+        marcado_por: userId,
+      }));
+      const { error } = await (supabase as any)
+        .from("bookmaker_indisponiveis")
+        .upsert(rows, { onConflict: "workspace_id,parceiro_id,bookmaker_catalogo_id" });
+      if (error) throw error;
+      toast.success(
+        catalogoIds.length === 1
+          ? "Bookmaker marcada como indisponível"
+          : `${catalogoIds.length} bookmakers marcadas como indisponíveis`
+      );
+      queryClient.invalidateQueries({ queryKey: indisponiveisKey });
+      resetSelection();
+    } catch (err) {
+      console.error(err);
+      toast.error("Erro ao marcar indisponibilidade");
+    }
+  }, [workspaceId, selectedParceiroId, userId, queryClient, indisponiveisKey, resetSelection]);
+
+  const restaurarDisponibilidade = useCallback(async (catalogoIds: string[]) => {
+    if (!workspaceId || !selectedParceiroId) return;
+    try {
+      const recordIds = catalogoIds
+        .map((cid) => indisponiveisMap.get(cid))
+        .filter(Boolean) as string[];
+      if (recordIds.length === 0) return;
+      const { error } = await (supabase as any)
+        .from("bookmaker_indisponiveis")
+        .delete()
+        .in("id", recordIds);
+      if (error) throw error;
+      toast.success(
+        catalogoIds.length === 1
+          ? "Bookmaker restaurada"
+          : `${catalogoIds.length} bookmakers restauradas`
+      );
+      queryClient.invalidateQueries({ queryKey: indisponiveisKey });
+      resetSelection();
+    } catch (err) {
+      console.error(err);
+      toast.error("Erro ao restaurar disponibilidade");
+    }
+  }, [workspaceId, selectedParceiroId, indisponiveisMap, queryClient, indisponiveisKey, resetSelection]);
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filtered.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filtered.map((bk) => bk.id)));
+    }
+  };
+
+  const handleBatchAction = () => {
+    const ids = Array.from(selectedIds);
+    if (showDescartados) restaurarDisponibilidade(ids);
+    else marcarIndisponivel(ids);
   };
 
   const isLoading = loadingContas || loadingCatalogo;
@@ -173,7 +286,7 @@ function ViewPorParceiro() {
       <div className="flex flex-wrap items-center gap-4">
         <BookmakerGrupoFilter
           value={grupoFilter}
-          onChange={(v) => { setGrupoFilter(v); }}
+          onChange={(v) => { setGrupoFilter(v); resetSelection(); }}
           className="w-[200px]"
         />
 
@@ -181,7 +294,7 @@ function ViewPorParceiro() {
           <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Regulamentação</span>
           <div className="flex items-center gap-1 h-9">
             <button
-              onClick={() => setRegulamentacaoFilter(regulamentacaoFilter === "REGULAMENTADA" ? "todas" : "REGULAMENTADA")}
+              onClick={() => { setRegulamentacaoFilter(regulamentacaoFilter === "REGULAMENTADA" ? "todas" : "REGULAMENTADA"); resetSelection(); }}
               className={cn(
                 "h-8 px-3 rounded-md text-xs font-medium tracking-wide transition-colors uppercase border",
                 regulamentacaoFilter === "REGULAMENTADA"
@@ -192,7 +305,7 @@ function ViewPorParceiro() {
               Regulamentada
             </button>
             <button
-              onClick={() => setRegulamentacaoFilter(regulamentacaoFilter === "NAO_REGULAMENTADA" ? "todas" : "NAO_REGULAMENTADA")}
+              onClick={() => { setRegulamentacaoFilter(regulamentacaoFilter === "NAO_REGULAMENTADA" ? "todas" : "NAO_REGULAMENTADA"); resetSelection(); }}
               className={cn(
                 "h-8 px-3 rounded-md text-xs font-medium tracking-wide transition-colors uppercase border",
                 regulamentacaoFilter === "NAO_REGULAMENTADA"
@@ -244,6 +357,8 @@ function ViewPorParceiro() {
                       setSelectedParceiroId(p.id);
                       setParceiroPopoverOpen(false);
                       setParceiroSearch("");
+                      resetSelection();
+                      setShowDescartados(false);
                     }}
                     className={cn(
                       "flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground transition-colors",
@@ -263,7 +378,7 @@ function ViewPorParceiro() {
         {selectedParceiroId && !isLoading && (
           <Badge variant="outline" className="text-xs font-mono gap-1">
             <Building2 className="h-3 w-3" />
-            {filtered.length} casa{filtered.length !== 1 ? "s" : ""} não criada{filtered.length !== 1 ? "s" : ""}
+            {disponiveis.length} casa{disponiveis.length !== 1 ? "s" : ""} não criada{disponiveis.length !== 1 ? "s" : ""}
           </Badge>
         )}
       </div>
@@ -295,27 +410,63 @@ function ViewPorParceiro() {
             </div>
           ) : (
             <>
-              <div className="relative w-full max-w-sm">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar bookmaker..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-9"
-                />
+              <div className="flex items-center justify-between gap-4">
+                <div className="relative w-full max-w-sm">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar bookmaker..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {descartados.length > 0 && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          size="sm"
+                          variant={showDescartados ? "secondary" : "outline"}
+                          className="gap-1.5 text-xs"
+                          onClick={() => { setShowDescartados(!showDescartados); resetSelection(); }}
+                        >
+                          {showDescartados ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                          {showDescartados ? "Ver disponíveis" : `Indisponíveis (${descartados.length})`}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>{showDescartados ? "Voltar à lista de disponíveis" : "Ver bookmakers marcadas como indisponíveis"}</TooltipContent>
+                    </Tooltip>
+                  )}
+
+                  {selectedIds.size > 0 && (
+                    <Button
+                      size="sm"
+                      variant={showDescartados ? "outline" : "destructive"}
+                      className="gap-1.5 text-xs"
+                      onClick={handleBatchAction}
+                    >
+                      {showDescartados ? <Undo2 className="h-3.5 w-3.5" /> : <Ban className="h-3.5 w-3.5" />}
+                      {showDescartados ? `Restaurar (${selectedIds.size})` : `Indisponível (${selectedIds.size})`}
+                    </Button>
+                  )}
+                </div>
               </div>
 
               <div className="rounded-md border border-border overflow-hidden">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-border bg-muted/30">
+                      <th className="w-[40px] px-3 py-3">
+                        <Checkbox
+                          checked={filtered.length > 0 && selectedIds.size === filtered.length}
+                          onCheckedChange={toggleSelectAll}
+                        />
+                      </th>
                       <th className="text-left px-4 py-3 font-medium text-muted-foreground uppercase text-xs tracking-wide">
                         Bookmaker
                       </th>
-                      <th className="text-left px-4 py-3 font-medium text-muted-foreground uppercase text-xs tracking-wide">
-                        Regulamentação
-                      </th>
-                      <th className="text-right px-4 py-3 font-medium text-muted-foreground uppercase text-xs tracking-wide w-[180px]">
+                      <th className="text-right px-4 py-3 font-medium text-muted-foreground uppercase text-xs tracking-wide w-[240px]">
                         Ações
                       </th>
                     </tr>
@@ -323,6 +474,12 @@ function ViewPorParceiro() {
                   <tbody>
                     {filtered.map((bk) => (
                       <tr key={bk.id} className="border-b border-border/50 hover:bg-muted/20 transition-colors">
+                        <td className="px-3 py-3">
+                          <Checkbox
+                            checked={selectedIds.has(bk.id)}
+                            onCheckedChange={() => toggleSelect(bk.id)}
+                          />
+                        </td>
                         <td className="px-4 py-3">
                           <span className="flex items-center gap-2.5">
                             {bk.logo_url && (
@@ -331,30 +488,52 @@ function ViewPorParceiro() {
                             <span className="font-medium">{bk.nome}</span>
                           </span>
                         </td>
-                        <td className="px-4 py-3">
-                          {bk.status === "REGULAMENTADA" ? (
-                            <Badge variant="outline" className="text-xs border-success/30 text-success">Regulamentada</Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-xs border-warning/30 text-warning">Não Regulamentada</Badge>
-                          )}
-                        </td>
                         <td className="px-4 py-3 text-right">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="gap-1.5 text-xs"
-                            onClick={() => handleCriar(bk.id)}
-                          >
-                            <UserPlus className="h-3.5 w-3.5" />
-                            Criar conta
-                          </Button>
+                          <div className="flex items-center justify-end gap-2">
+                            {showDescartados ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="gap-1.5 text-xs"
+                                onClick={() => restaurarDisponibilidade([bk.id])}
+                              >
+                                <Undo2 className="h-3.5 w-3.5" />
+                                Restaurar
+                              </Button>
+                            ) : (
+                              <>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="gap-1 text-xs text-muted-foreground hover:text-destructive"
+                                      onClick={() => marcarIndisponivel([bk.id])}
+                                    >
+                                      <Ban className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Marcar como indisponível</TooltipContent>
+                                </Tooltip>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="gap-1.5 text-xs"
+                                  onClick={() => handleCriar(bk.id)}
+                                >
+                                  <UserPlus className="h-3.5 w-3.5" />
+                                  Criar conta
+                                </Button>
+                              </>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
                     {filtered.length === 0 && (
                       <tr>
                         <td colSpan={3} className="px-4 py-8 text-center text-muted-foreground">
-                          Nenhuma bookmaker encontrada para a busca
+                          {showDescartados ? "Nenhuma bookmaker indisponível" : "Nenhuma bookmaker encontrada para a busca"}
                         </td>
                       </tr>
                     )}
