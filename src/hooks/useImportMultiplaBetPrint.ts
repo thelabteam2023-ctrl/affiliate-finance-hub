@@ -42,7 +42,7 @@ interface UseImportMultiplaBetPrintReturn {
   processFromClipboard: (event: ClipboardEvent) => Promise<void>;
   clearParsedData: () => void;
   applyParsedData: () => {
-    tipo: "DUPLA" | "TRIPLA";
+    tipo: "DUPLA" | "TRIPLA" | "QUADRUPLA" | "QUINTUPLA" | "SEXTUPLA";
     stake: string;
     selecoes: { descricao: string; odd: string }[];
   };
