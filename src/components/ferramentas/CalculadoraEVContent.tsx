@@ -19,6 +19,13 @@ interface SimulationResult {
   timestamp: Date;
 }
 
+interface OcrDualOdds {
+  trueOddsPinnacle: number | null;
+  fairOdds: number | null;
+  evVsPinnacle: number | null;
+  evVsFairOdds: number | null;
+}
+
 type Classification = {
   label: string;
   color: string;
@@ -113,6 +120,7 @@ export const CalculadoraEVContent: React.FC = () => {
   const [pastedImage, setPastedImage] = useState<string | null>(null);
   const [isParsing, setIsParsing] = useState(false);
   const [parsedInfo, setParsedInfo] = useState<string | null>(null);
+  const [dualOdds, setDualOdds] = useState<OcrDualOdds | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const parseNum = (v: string) => {
@@ -122,8 +130,8 @@ export const CalculadoraEVContent: React.FC = () => {
 
   const parseImage = useCallback(async (imageBase64: string) => {
     setIsParsing(true);
+    setDualOdds(null);
     try {
-      // Validações de entrada
       if (imageBase64.length > 6 * 1024 * 1024) {
         toast.error('Imagem muito grande', { description: 'Use uma imagem menor (máx ~4MB).' });
         return;
@@ -137,33 +145,25 @@ export const CalculadoraEVContent: React.FC = () => {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-      console.log('[EV OCR] 1. Env check — URL:', supabaseUrl ? 'OK' : 'MISSING', '| Key:', supabaseKey ? 'OK' : 'MISSING');
-
       if (!supabaseUrl || !supabaseKey) {
         toast.error('Configuração ausente', { description: 'Variáveis de ambiente não encontradas.' });
         return;
       }
 
       const endpoint = `${supabaseUrl}/functions/v1/parse-ev-print`;
-      console.log('[EV OCR] 2. Endpoint:', endpoint);
-      console.log('[EV OCR] 3. Image base64 length:', imageBase64.length);
 
-      // Comprimir imagem se muito grande (reduz para ~800px de largura)
+      // Compress image
       let processedBase64 = imageBase64;
       try {
         const compressed = await compressImage(imageBase64, 800, 0.8);
         if (compressed && compressed.length < imageBase64.length) {
-          console.log('[EV OCR] 4. Compressed:', imageBase64.length, '->', compressed.length);
           processedBase64 = compressed;
-        } else {
-          console.log('[EV OCR] 4. No compression needed');
         }
-      } catch (compErr) {
-        console.warn('[EV OCR] 4. Compression failed, using original:', compErr);
+      } catch {
+        // Use original
       }
 
       const payload = JSON.stringify({ imageBase64: processedBase64 });
-      console.log('[EV OCR] 5. Payload size:', payload.length, 'bytes');
 
       let response: Response;
       try {
@@ -177,25 +177,18 @@ export const CalculadoraEVContent: React.FC = () => {
           body: payload,
         });
       } catch (fetchError) {
-        console.error('[EV OCR] 6. FETCH FAILED:', fetchError);
-        console.error('[EV OCR] 6. Error type:', (fetchError as Error)?.name);
-        console.error('[EV OCR] 6. Error message:', (fetchError as Error)?.message);
+        console.error('[EV OCR] FETCH FAILED:', fetchError);
         toast.error('Erro de conexão', {
           description: 'Não foi possível conectar ao servidor. Verifique sua internet e tente novamente.',
         });
         return;
       }
 
-      console.log('[EV OCR] 7. Response status:', response.status);
-
       const rawText = await response.text();
-      console.log('[EV OCR] 8. Response body:', rawText.substring(0, 500));
-
       let data: any = null;
       try {
         data = rawText ? JSON.parse(rawText) : null;
       } catch {
-        console.error('[EV OCR] 9. JSON parse failed, raw:', rawText.substring(0, 200));
         toast.error('Resposta inválida', { description: 'O servidor retornou dados inválidos.' });
         return;
       }
@@ -217,33 +210,39 @@ export const CalculadoraEVContent: React.FC = () => {
       }
 
       if (!data?.success || !data?.data) {
-        console.error('[EV OCR] 10. Unexpected structure:', data);
         toast.error('Não foi possível interpretar o print', { description: 'Tente outro print.' });
         return;
       }
 
       const d = data.data;
-      console.log('[EV OCR] 11. Parsed data:', JSON.stringify(d));
 
-      // Aplicar dados nos campos
+      // Set fields - usar fair_odds como padrão para "Odd Justa"
       let fieldsSet = 0;
       if (d.odd_atual && d.odd_atual > 1) {
-        console.log('[EV OCR] 12. Setting oddAtual:', d.odd_atual);
         setOddAtual(String(d.odd_atual));
         fieldsSet++;
       }
-      if (d.odd_justa && d.odd_justa > 1) {
-        console.log('[EV OCR] 12. Setting oddJusta:', d.odd_justa);
-        setOddJusta(String(d.odd_justa));
+      // Prioridade: fair_odds > true_odds_pinnacle > odd_justa (legacy)
+      const bestOddJusta = d.fair_odds || d.true_odds_pinnacle || d.odd_justa;
+      if (bestOddJusta && bestOddJusta > 1) {
+        setOddJusta(String(bestOddJusta));
         fieldsSet++;
       }
       if (d.stake && d.stake > 0) {
-        console.log('[EV OCR] 12. Setting stakeBase:', d.stake);
         setStakeBase(String(d.stake));
         fieldsSet++;
       }
 
-      console.log('[EV OCR] 13. Fields set:', fieldsSet);
+      // Dual odds display
+      const hasDual = d.true_odds_pinnacle && d.fair_odds && d.true_odds_pinnacle !== d.fair_odds;
+      if (hasDual || d.true_odds_pinnacle || d.fair_odds) {
+        setDualOdds({
+          trueOddsPinnacle: d.true_odds_pinnacle || null,
+          fairOdds: d.fair_odds || null,
+          evVsPinnacle: d.ev_vs_pinnacle || null,
+          evVsFairOdds: d.ev_vs_fair_odds || null,
+        });
+      }
 
       const infoParts: string[] = [];
       if (d.evento) infoParts.push(d.evento);
@@ -255,7 +254,7 @@ export const CalculadoraEVContent: React.FC = () => {
       setParsedInfo(infoParts.length > 0 ? infoParts.join(' • ') : null);
 
       toast.success('Print interpretado!', {
-        description: `Odd: ${d.odd_atual || '?'} | Justa: ${d.odd_justa || '?'}${d.ev_percent ? ` | EV: ${d.ev_percent}%` : ''} | ${fieldsSet} campos preenchidos`,
+        description: `Odd: ${d.odd_atual || '?'} | Justa: ${bestOddJusta || '?'}${d.ev_percent ? ` | EV: ${d.ev_percent}%` : ''} | ${fieldsSet} campos`,
       });
     } catch (err) {
       console.error('[EV OCR] UNEXPECTED ERROR:', err);
@@ -285,6 +284,7 @@ export const CalculadoraEVContent: React.FC = () => {
             if (!base64) return;
             setPastedImage(base64);
             setParsedInfo(null);
+            setDualOdds(null);
             try {
               await parseImage(base64);
             } catch (err) {
@@ -304,6 +304,7 @@ export const CalculadoraEVContent: React.FC = () => {
   const clearImage = () => {
     setPastedImage(null);
     setParsedInfo(null);
+    setDualOdds(null);
   };
 
   const results = useMemo(() => {
@@ -367,20 +368,29 @@ export const CalculadoraEVContent: React.FC = () => {
       `Prob. Atual: ${results.probAtual}%  |  Prob. Justa: ${results.probJusta}%`,
       `EV: ${results.ev > 0 ? '+' : ''}${results.ev}%  →  ${results.classification.label}`,
     ];
+    if (dualOdds?.trueOddsPinnacle && dualOdds?.fairOdds) {
+      lines.push(`Pinnacle: ${dualOdds.trueOddsPinnacle} (EV ${dualOdds.evVsPinnacle ? (dualOdds.evVsPinnacle > 0 ? '+' : '') + dualOdds.evVsPinnacle + '%' : '?'}) | Fair: ${dualOdds.fairOdds} (EV ${dualOdds.evVsFairOdds ? (dualOdds.evVsFairOdds > 0 ? '+' : '') + dualOdds.evVsFairOdds + '%' : '?'})`);
+    }
     if (results.stakeSugerida !== null) {
       lines.push(`Stake Sugerida: R$ ${results.stakeSugerida.toFixed(2)} (${results.valorRestante}% do valor restante)`);
     }
     navigator.clipboard.writeText(lines.join('\n'));
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-  }, [results, oddAtual, oddJusta]);
+  }, [results, oddAtual, oddJusta, dualOdds]);
 
   const handleReset = () => {
     setOddAtual('');
     setOddJusta('');
     setStakeBase('');
     setOddInicial('');
+    setDualOdds(null);
     clearImage();
+  };
+
+  // Helper to switch odd justa source
+  const switchToOddSource = (value: number) => {
+    setOddJusta(String(value));
   };
 
   return (
@@ -430,6 +440,55 @@ export const CalculadoraEVContent: React.FC = () => {
         </div>
       )}
 
+      {/* Dual odds comparison (when OCR detected both) */}
+      {dualOdds && dualOdds.trueOddsPinnacle && dualOdds.fairOdds && dualOdds.trueOddsPinnacle !== dualOdds.fairOdds && (
+        <Card className="border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/30">
+          <CardContent className="p-2">
+            <p className="text-[9px] uppercase tracking-wider text-blue-600 dark:text-blue-400 font-semibold mb-1.5">
+              Comparação de Odds Justas
+            </p>
+            <div className="grid grid-cols-2 gap-1.5">
+              {/* Pinnacle */}
+              <button
+                onClick={() => switchToOddSource(dualOdds.trueOddsPinnacle!)}
+                className={cn(
+                  'rounded-md p-1.5 text-left transition-all border',
+                  parseNum(oddJusta) === dualOdds.trueOddsPinnacle
+                    ? 'border-blue-400 dark:border-blue-500 bg-blue-100 dark:bg-blue-900/50'
+                    : 'border-transparent hover:border-blue-300 dark:hover:border-blue-700 hover:bg-blue-100/50 dark:hover:bg-blue-900/30'
+                )}
+              >
+                <p className="text-[9px] text-muted-foreground">Pinnacle</p>
+                <p className="text-xs font-bold font-mono text-foreground">{dualOdds.trueOddsPinnacle}</p>
+                {dualOdds.evVsPinnacle !== null && (
+                  <p className={cn('text-[9px] font-mono font-medium', dualOdds.evVsPinnacle > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400')}>
+                    EV {dualOdds.evVsPinnacle > 0 ? '+' : ''}{dualOdds.evVsPinnacle}%
+                  </p>
+                )}
+              </button>
+              {/* Fair Odds (média sharp) */}
+              <button
+                onClick={() => switchToOddSource(dualOdds.fairOdds!)}
+                className={cn(
+                  'rounded-md p-1.5 text-left transition-all border',
+                  parseNum(oddJusta) === dualOdds.fairOdds
+                    ? 'border-blue-400 dark:border-blue-500 bg-blue-100 dark:bg-blue-900/50'
+                    : 'border-transparent hover:border-blue-300 dark:hover:border-blue-700 hover:bg-blue-100/50 dark:hover:bg-blue-900/30'
+                )}
+              >
+                <p className="text-[9px] text-muted-foreground">Fair Odds (média sharp)</p>
+                <p className="text-xs font-bold font-mono text-foreground">{dualOdds.fairOdds}</p>
+                {dualOdds.evVsFairOdds !== null && (
+                  <p className={cn('text-[9px] font-mono font-medium', dualOdds.evVsFairOdds > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400')}>
+                    EV {dualOdds.evVsFairOdds > 0 ? '+' : ''}{dualOdds.evVsFairOdds}%
+                  </p>
+                )}
+              </button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Inputs */}
       <div className="grid grid-cols-2 gap-2">
         <div className="space-y-1">
@@ -447,7 +506,7 @@ export const CalculadoraEVContent: React.FC = () => {
         <div className="space-y-1">
           <Label className="text-[10px] font-medium flex items-center">
             Odd Justa *
-            <InfoTooltip text="A odd que representa a probabilidade real do evento." />
+            <InfoTooltip text="A odd que representa a probabilidade real do evento. Quando detectado no print, usa Fair Odds (média sharp) como padrão." />
           </Label>
           <Input
             placeholder="ex: 1.77"

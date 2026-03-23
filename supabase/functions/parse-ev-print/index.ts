@@ -27,62 +27,54 @@ serve(async (req) => {
 
     console.log("[parse-ev-print] Processing image...", imageBase64.length, "chars");
 
-    const systemPrompt = `Você é um especialista em interpretar prints de ferramentas de Value Betting (OddsNotifier, Bet365 Extended, RebelBetting, OddsBoom, etc) e interfaces de confirmação de aposta.
+    const systemPrompt = `Você é um especialista em interpretar prints de ferramentas de Value Betting (OddsNotifier, Bet365 Extended, RebelBetting, OddsBoom, etc).
 
 Sua tarefa é extrair os seguintes campos do print:
 
-1. **odd_atual** (OBRIGATÓRIO): A odd oferecida pela casa de apostas. Pode aparecer como:
-   - "Odds: 1.83"
-   - "Odd oferecida: 2.75"
-   - Número em destaque (geralmente verde) próximo ao topo
-   - Campo "Odds" com valor numérico
+1. **odd_atual** (OBRIGATÓRIO): A odd oferecida pela casa de apostas. Aparece como "Odds: 1.83", número em destaque verde, etc.
 
-2. **odd_justa** (OBRIGATÓRIO): A odd justa/real. Pode aparecer como:
-   - "Fair odds: 1.758" ou "Fair odds 2.883"
-   - "True odds: 1.694" ou "True odds Pinnacle @ 2.70"
-   - "Odd justa: 2.43"
-   - Derivada da probabilidade justa: odd_justa = 1 / (prob_justa / 100)
+2. **true_odds_pinnacle**: A odd real APENAS da Pinnacle. Aparece como:
+   - "True odds Pinnacle @ 1.729" → o valor é 1.729
+   - "True odds Pinnacle @ 2.70" → o valor é 2.70
+   - Sempre vem com a palavra "Pinnacle" explícita
 
-3. **ev_percent**: O valor esperado em %. Pode aparecer como:
-   - "Value: 4.1%"
-   - "+13.19% valor"
-   - "Edge: 3.2%"
-   - "Margin: 4.28%"
+3. **fair_odds**: A odd justa calculada por média de múltiplas casas sharp (não apenas Pinnacle). Aparece como:
+   - "Fair odds 1.783"
+   - "Fair odds: 2.883"
+   - NÃO contém a palavra "Pinnacle" — é uma média ponderada
 
-4. **stake**: O valor de stake. Pode aparecer como:
-   - "Stake BRL: 15"
-   - "Stake: 300"
+REGRA CRÍTICA: "True odds Pinnacle @ X.XX" e "Fair odds Y.YY" são valores DIFERENTES.
+- true_odds_pinnacle = odds da Pinnacle sozinha
+- fair_odds = média de casas sharp (inclui Pinnacle + outras)
+- Quando ambos aparecem no mesmo print, extraia AMBOS separadamente
 
-5. **probabilidade_justa**: Probabilidade justa em %. Pode aparecer como:
-   - "Prob: 56.9%"
-   - "Prob. justa: 41.2%"
-   - "Prob 34.7%"
+4. **ev_percent**: Valor esperado em %. "Value: 4.1%", "+13.19%", "Edge: 3.2%", "Margin: 4.28%"
 
-6. **evento**: Nome do evento (ex: "Corentin Moutet vs Jannik Sinner")
+5. **stake**: Valor de stake. "Stake BRL: 15", "Stake: 300"
 
-7. **mercado**: Tipo de mercado detectado:
+6. **probabilidade_justa**: Probabilidade justa em %. "Prob: 56.9%", "Prob. justa: 41.2%"
+
+7. **evento**: Nome do evento (ex: "LA Clippers vs Milwaukee Bucks")
+
+8. **mercado**: Tipo de mercado:
    - Over/Under → "Total"
    - AH, Asian handicap → "Handicap Asiático"
-   - To Win, Para ganhar, Match Winner, Vencedor → "Vencedor da Partida"
+   - To Win, Match Winner → "Vencedor da Partida"
    - 1X2, Resultado Final → "Resultado Final"
 
-8. **selecao**: A seleção específica (ex: "Over 8.5", "Falcons -1.5", "Tsitsipas vence")
+9. **selecao**: Seleção específica (ex: "Over 8.5", "LA Clippers -11.5")
 
-9. **bookmaker**: Nome da casa (ex: "Bet365", "Pinnacle")
+10. **bookmaker**: Nome da casa (ex: "Bet365")
 
-10. **linha**: Linha numérica se houver (ex: 8.5, -1.5, 2.5)
+11. **linha**: Linha numérica se houver (ex: -11.5, 2.5)
 
-11. **limite**: Limite em BRL se visível (ex: "Limit: 4459 BRL" → 4459)
+12. **limite**: Limite em BRL se visível (ex: "Limit: 18 452 BRL" → 18452)
 
-REGRAS CRÍTICAS:
-- Se encontrar "True odds Pinnacle @ X.XX", o valor X.XX é a odd justa
-- Se encontrar "Fair odds X.XX", esse é a odd justa
-- Se não encontrar odd_justa explicitamente mas tiver probabilidade justa, calcule: odd_justa = 1 / (prob_justa / 100)
-- Se não encontrar EV explicitamente mas tiver odd_atual e odd_justa, calcule: ev = (odd_atual / odd_justa - 1) * 100
-- Números negativos em contexto de seleção (ex: -1.5) são linhas de handicap, NÃO odds
+REGRAS:
+- Se não encontrar fair_odds mas tiver probabilidade justa, calcule: fair_odds = 1 / (prob_justa / 100)
 - Odds são SEMPRE > 1.0
-
-Retorne APENAS um JSON válido com os campos encontrados. Use null para campos não detectados.`;
+- Números negativos em contexto de seleção (ex: -1.5) são linhas de handicap, NÃO odds
+- Retorne APENAS JSON válido com campos encontrados. Use null para campos não detectados.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -97,7 +89,7 @@ Retorne APENAS um JSON válido com os campos encontrados. Use null para campos n
           {
             role: "user",
             content: [
-              { type: "text", text: "Extraia os dados deste print de ferramenta de Value Betting. Retorne APENAS o JSON." },
+              { type: "text", text: "Extraia os dados deste print de Value Betting. IMPORTANTE: diferencie 'True odds Pinnacle' de 'Fair odds'. Retorne APENAS o JSON." },
               { type: "image_url", image_url: { url: imageBase64 } }
             ]
           }
@@ -150,27 +142,46 @@ Retorne APENAS um JSON válido com os campos encontrados. Use null para campos n
       );
     }
 
-    // Post-process: derive missing values
+    // Post-process: extract both odds
     const oddAtual = parseFloat(parsed.odd_atual) || null;
-    const oddJusta = parseFloat(parsed.odd_justa) || null;
+    const trueOddsPinnacle = parseFloat(parsed.true_odds_pinnacle) || null;
+    const fairOdds = parseFloat(parsed.fair_odds) || null;
     const probJusta = parseFloat(parsed.probabilidade_justa) || null;
     let evPercent = parseFloat(parsed.ev_percent) || null;
-    let derivedOddJusta = oddJusta;
 
-    // If no odd_justa but have prob_justa, derive it
-    if (!derivedOddJusta && probJusta && probJusta > 0) {
-      derivedOddJusta = Math.round((1 / (probJusta / 100)) * 1000) / 1000;
+    // Fallback: derive fair_odds from probability if missing
+    let derivedFairOdds = fairOdds;
+    if (!derivedFairOdds && probJusta && probJusta > 0) {
+      derivedFairOdds = Math.round((1 / (probJusta / 100)) * 1000) / 1000;
     }
 
-    // If no EV but have both odds, calculate
-    if (!evPercent && oddAtual && derivedOddJusta && derivedOddJusta > 0) {
-      evPercent = Math.round((oddAtual / derivedOddJusta - 1) * 100 * 100) / 100;
+    // Legacy compatibility: odd_justa = fair_odds prioritário, fallback para pinnacle
+    const oddJusta = derivedFairOdds || trueOddsPinnacle;
+
+    // Calculate EV based on fair odds (primary) if not explicit
+    if (!evPercent && oddAtual && oddJusta && oddJusta > 0) {
+      evPercent = Math.round((oddAtual / oddJusta - 1) * 100 * 100) / 100;
+    }
+
+    // Calculate individual EVs for dual display
+    let evVsPinnacle: number | null = null;
+    let evVsFairOdds: number | null = null;
+    
+    if (oddAtual && trueOddsPinnacle && trueOddsPinnacle > 0) {
+      evVsPinnacle = Math.round((oddAtual / trueOddsPinnacle - 1) * 100 * 100) / 100;
+    }
+    if (oddAtual && derivedFairOdds && derivedFairOdds > 0) {
+      evVsFairOdds = Math.round((oddAtual / derivedFairOdds - 1) * 100 * 100) / 100;
     }
 
     const result = {
       odd_atual: oddAtual,
-      odd_justa: derivedOddJusta,
+      odd_justa: oddJusta, // backward compat: best available fair odd
+      true_odds_pinnacle: trueOddsPinnacle,
+      fair_odds: derivedFairOdds,
       ev_percent: evPercent,
+      ev_vs_pinnacle: evVsPinnacle,
+      ev_vs_fair_odds: evVsFairOdds,
       stake: parseFloat(parsed.stake) || null,
       probabilidade_justa: probJusta,
       evento: parsed.evento || null,
