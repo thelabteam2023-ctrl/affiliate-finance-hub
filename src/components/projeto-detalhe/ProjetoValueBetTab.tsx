@@ -1158,12 +1158,6 @@ export function ProjetoValueBetTab({
   // Render Apostas
   const renderApostas = () => (
     <div className="space-y-4">
-      {/* Actions Slot - botões de ação */}
-      {actionsSlot && (
-        <div className="flex items-center gap-2 pt-1 pb-2 border-b border-border/50 flex-shrink-0">
-          {actionsSlot}
-        </div>
-      )}
       {/* Card de Histórico com Filtros Internos */}
       <Card>
         <CardHeader className="pb-3">
