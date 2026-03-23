@@ -873,7 +873,7 @@ export function ApostaMultiplaDialog({
       }
 
       const selecoesFormatadas = selecoes
-        .slice(0, tipoMultipla === "DUPLA" ? 2 : 3)
+        .slice(0, numSelecoes)
         .map((s) => ({
           descricao: s.descricao.trim(),
           odd: parseFloat(s.odd),
