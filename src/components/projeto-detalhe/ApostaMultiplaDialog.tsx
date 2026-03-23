@@ -633,35 +633,48 @@ export function ApostaMultiplaDialog({
     };
   }, [selecoes, boostMultiplier]);
 
-  // Função hierárquica para calcular resultado da múltipla
-  // Regras de prioridade: RED > MEIO_RED > all GREEN > MEIO_GREEN+GREEN > VOID > PENDENTE
+  // Função para calcular resultado da múltipla baseada no IMPACTO FINANCEIRO REAL
+  // O resultado é derivado do fator combinado das pernas, não de hierarquia simplista
   const calcularResultadoMultipla = useCallback((sels: Selecao[]): string => {
     const resultados = sels.map(s => s.resultado || "PENDENTE");
     
-    // 1. Qualquer RED → RED
-    if (resultados.includes("RED")) return "RED";
+    // Se alguma perna ainda está pendente → PENDENTE
+    if (resultados.includes("PENDENTE")) return "PENDENTE";
     
-    // 2. Qualquer MEIO_RED (sem RED) → MEIO_RED
-    if (resultados.includes("MEIO_RED")) return "MEIO_RED";
-    
-    // 3. Todas GREEN → GREEN
-    if (resultados.every(r => r === "GREEN")) return "GREEN";
-    
-    // 4. Mix de GREEN + MEIO_GREEN (ou VOID) → MEIO_GREEN
-    if (resultados.includes("MEIO_GREEN")) return "MEIO_GREEN";
-    
-    // 5. Todas VOID → VOID
+    // Todas VOID → VOID (retorno = stake, sem lucro nem prejuízo)
     if (resultados.every(r => r === "VOID")) return "VOID";
     
-    // 6. GREEN + VOID (sem pendente) → MEIO_GREEN
-    const nonPendente = resultados.filter(r => r !== "PENDENTE");
-    if (nonPendente.length === resultados.length && 
-        nonPendente.every(r => r === "GREEN" || r === "VOID")) {
-      return "MEIO_GREEN";
+    // Qualquer RED → RED (fator = 0, perda total)
+    if (resultados.includes("RED")) return "RED";
+    
+    // Todas GREEN → GREEN (lucro máximo)
+    if (resultados.every(r => r === "GREEN")) return "GREEN";
+    
+    // Para combinações mistas (MEIO_RED, MEIO_GREEN, GREEN, VOID):
+    // Calcular o fator combinado real para determinar o resultado
+    let fatorTotal = 1;
+    for (const s of sels) {
+      const odd = parseFloat(s.odd) || 1;
+      const res = s.resultado || "PENDENTE";
+      switch (res) {
+        case "GREEN": fatorTotal *= odd; break;
+        case "VOID": fatorTotal *= 1; break;
+        case "MEIO_GREEN": fatorTotal *= (odd + 1) / 2; break;
+        case "MEIO_RED": fatorTotal *= 0.5; break;
+        default: fatorTotal *= odd; break;
+      }
     }
     
-    // 7. Default → PENDENTE
-    return "PENDENTE";
+    // Derivar resultado do fator financeiro real
+    if (fatorTotal > 1) {
+      // Lucro positivo: se todas as pernas resolvidas são GREEN/VOID → MEIO_GREEN
+      return "MEIO_GREEN";
+    } else if (fatorTotal === 1) {
+      return "VOID"; // Break-even exato
+    } else {
+      // Prejuízo (fator < 1)
+      return "MEIO_RED";
+    }
   }, []);
 
   // Calcular preview em tempo real com fatores corretos
