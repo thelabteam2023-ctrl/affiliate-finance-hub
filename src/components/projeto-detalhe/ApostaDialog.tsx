@@ -901,6 +901,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         setStatusResultado(aposta.resultado || aposta.status);
         setValorRetorno(aposta.valor_retorno?.toString() || "");
         setObservacoes(aposta.observacoes || "");
+        setFonteEntrada((aposta as any).fonte_entrada || null);
 
         // Parse handicap selection if applicable
         const savedMercado = aposta.mercado || "";
