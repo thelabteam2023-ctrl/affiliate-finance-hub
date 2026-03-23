@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface BetSource {
@@ -8,9 +9,7 @@ export interface BetSource {
   is_favorite: boolean;
 }
 
-// Generate a unique, vibrant color from source name hash
 function generateColor(name: string, index: number): string {
-  // Use golden angle for max hue separation between sources
   const hue = (index * 137.508 + hashCode(name) * 47) % 360;
   return `hsl(${Math.round(hue)}, 70%, 55%)`;
 }
@@ -54,23 +53,26 @@ export function useWorkspaceBetSources(workspaceId: string | null) {
     staleTime: 5 * 60 * 1000,
   });
 
-  const favoriteSource = sources.find(s => s.is_favorite) || null;
+  const favoriteSource = sources.find((s) => s.is_favorite) || null;
 
   const addSource = useMutation({
     mutationFn: async ({ name, makeFavorite }: { name: string; makeFavorite?: boolean }) => {
       if (!workspaceId) throw new Error("No workspace");
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
       const color = generateColor(name, sources.length);
 
-      // If making favorite, unset existing favorite first
       if (makeFavorite) {
-        await supabase
+        const { error: clearError } = await supabase
           .from("workspace_bet_sources" as any)
           .update({ is_favorite: false } as any)
           .eq("workspace_id", workspaceId)
           .eq("is_favorite", true);
+
+        if (clearError) throw clearError;
       }
 
       const { error } = await supabase
@@ -93,26 +95,52 @@ export function useWorkspaceBetSources(workspaceId: string | null) {
     mutationFn: async (sourceId: string) => {
       if (!workspaceId) throw new Error("No workspace");
 
-      const source = sources.find(s => s.id === sourceId);
+      const source = sources.find((s) => s.id === sourceId);
       if (!source) throw new Error("Source not found");
 
       const newFav = !source.is_favorite;
 
-      // Unset all favorites first
       if (newFav) {
-        await supabase
+        const { error: clearError } = await supabase
           .from("workspace_bet_sources" as any)
           .update({ is_favorite: false } as any)
           .eq("workspace_id", workspaceId)
           .eq("is_favorite", true);
+
+        if (clearError) throw clearError;
       }
 
-      await supabase
+      const { error: updateError } = await supabase
         .from("workspace_bet_sources" as any)
         .update({ is_favorite: newFav } as any)
         .eq("id", sourceId);
+
+      if (updateError) throw updateError;
+
+      return { sourceId, newFav };
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey }),
+    onMutate: async (sourceId) => {
+      await queryClient.cancelQueries({ queryKey });
+      const previousSources = queryClient.getQueryData<BetSource[]>(queryKey) || [];
+
+      queryClient.setQueryData<BetSource[]>(queryKey, (current = []) =>
+        current.map((source) => ({
+          ...source,
+          is_favorite: source.id === sourceId ? !source.is_favorite : false,
+        }))
+      );
+
+      return { previousSources };
+    },
+    onError: (_error, _sourceId, context) => {
+      if (context?.previousSources) {
+        queryClient.setQueryData(queryKey, context.previousSources);
+      }
+      toast.error("Não foi possível definir a fonte favorita");
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey });
+    },
   });
 
   return { sources, isLoading, addSource, toggleFavorite, favoriteSource };

@@ -145,7 +145,12 @@ export function FonteEntradaSelector({
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); toggleFavorite.mutate(source.id); }}
-                className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-background border border-border/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-muted z-10"
+                className={cn(
+                  "absolute -top-2 -right-2 h-5 w-5 rounded-full border flex items-center justify-center transition-all z-10",
+                  source.is_favorite
+                    ? "opacity-100 bg-background border-border shadow-sm"
+                    : "opacity-0 group-hover:opacity-100 bg-background border-border/50 hover:bg-muted"
+                )}
                 title={source.is_favorite ? "Remover favorita" : "Definir como padrão"}
               >
                 <Star className={cn("h-3 w-3", source.is_favorite ? "fill-amber-400 text-amber-400" : "text-muted-foreground")} />
