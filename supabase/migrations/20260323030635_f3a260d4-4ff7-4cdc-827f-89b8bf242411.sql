@@ -1,0 +1,2 @@
+ALTER TABLE public.apostas_unificada ADD COLUMN IF NOT EXISTS boost_percentual numeric DEFAULT NULL;
+COMMENT ON COLUMN public.apostas_unificada.boost_percentual IS 'Percentual de boost aplicado sobre a odd final combinada da múltipla';
