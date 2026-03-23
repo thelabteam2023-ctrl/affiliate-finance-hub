@@ -65,7 +65,14 @@ function ViewPorParceiro() {
   const [parceiroPopoverOpen, setParceiroPopoverOpen] = useState(false);
   const [grupoFilter, setGrupoFilter] = useState("todos");
   const [search, setSearch] = useState("");
-  const { getCatalogoIdsByGrupo } = useBookmakerGrupos();
+  const { getCatalogoIdsByGrupo, membros } = useBookmakerGrupos();
+
+  // Set of all catalogo IDs that belong to at least one group
+  const allGroupedCatalogoIds = useMemo(() => {
+    const ids = new Set<string>();
+    (membros ?? []).forEach((m) => ids.add(m.bookmaker_catalogo_id));
+    return ids;
+  }, [membros]);
 
   const [criarDialog, setCriarDialog] = useState<{
     open: boolean;
