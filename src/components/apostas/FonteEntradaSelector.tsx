@@ -119,7 +119,7 @@ export function FonteEntradaSelector({
       <div className="flex items-center gap-1.5 flex-wrap">
         {sources.map((source) => {
           const isActive = value === source.name;
-          const style = getSourceStyle(source, isActive);
+          const style = getSourceStyle(source, isActive, value !== null);
           const isStyleObj = typeof style === "object";
 
           return (
