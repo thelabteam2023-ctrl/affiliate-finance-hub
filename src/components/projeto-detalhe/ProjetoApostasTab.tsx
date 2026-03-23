@@ -1415,7 +1415,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
   const handleOpenMultiplaDialog = (aposta: ApostaMultipla | null) => {
     const apostaId = aposta?.id || 'novo';
     const url = `/janela/multipla/${apostaId}?projetoId=${encodeURIComponent(projetoId)}&tab=apostas&estrategia=PUNTER`;
-    window.open(url, '_blank', 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
+    window.open(url, '_blank', 'width=540,height=750,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
   };
 
   if (loading) {

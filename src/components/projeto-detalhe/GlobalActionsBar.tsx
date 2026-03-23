@@ -161,7 +161,7 @@ export function GlobalActionsBar({
     if (rascunhoId) {
       url += `&rascunhoId=${encodeURIComponent(rascunhoId)}`;
     }
-    const windowFeatures = 'width=900,height=700,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes';
+    const windowFeatures = 'width=540,height=750,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes';
     window.open(url, '_blank', windowFeatures);
   };
 

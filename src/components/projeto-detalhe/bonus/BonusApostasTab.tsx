@@ -858,7 +858,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
   const handleOpenMultiplaDialog = (aposta: ApostaMultipla | null) => {
     const apostaId = aposta?.id || 'novo';
     const url = `/janela/multipla/${apostaId}?projetoId=${encodeURIComponent(projetoId)}&tab=bonus&estrategia=EXTRACAO_BONUS`;
-    window.open(url, '_blank', 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
+    window.open(url, '_blank', 'width=540,height=750,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
   };
 
   // Handler para liquidação granular por perna (inline pill) - Motor Financeiro Unificado
