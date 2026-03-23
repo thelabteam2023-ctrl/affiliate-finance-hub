@@ -811,9 +811,17 @@ export function ApostaCard({
                   </Badge>
                 )}
               </div>
-              <span className="text-xs text-muted-foreground">
-                Retorno: {formatTotal(oddMultiplaFinal * stakeDisplay)}
-              </span>
+              <div className="flex items-center gap-2">
+                {aposta.status !== 'PENDENTE' && lucroDisplay !== null && lucroDisplay !== undefined ? (
+                  <span className={cn("text-xs font-semibold", lucroDisplay >= 0 ? "text-emerald-500" : "text-red-500")}>
+                    P/L: {lucroDisplay >= 0 ? '+' : ''}{formatTotal(lucroDisplay)}
+                  </span>
+                ) : (
+                  <span className="text-xs text-muted-foreground">
+                    Retorno: {formatTotal(oddMultiplaFinal * stakeDisplay)}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         ) : (
