@@ -1371,55 +1371,28 @@ export function ApostaMultiplaDialog({
                 </div>
               )
             }
-            extraHeaderContent={
-              <div className="flex items-center gap-3">
-                <RadioGroup
-                  value={is4Plus ? "4PLUS" : tipoMultipla}
-                  onValueChange={(v) => {
-                    if (v === "4PLUS") {
-                      setTipoMultipla("QUADRUPLA");
-                    } else {
-                      setTipoMultipla(v as TipoMultipla);
-                    }
-                  }}
-                  className="flex gap-3"
-                >
-                  <div className="flex items-center space-x-1.5">
-                    <RadioGroupItem value="DUPLA" id="dupla" />
-                    <Label htmlFor="dupla" className="cursor-pointer text-xs whitespace-nowrap">
-                      Dupla (2)
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-1.5">
-                    <RadioGroupItem value="TRIPLA" id="tripla" />
-                    <Label htmlFor="tripla" className="cursor-pointer text-xs whitespace-nowrap">
-                      Tripla (3)
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-1.5">
-                    <RadioGroupItem value="4PLUS" id="4plus" />
-                    <Label htmlFor="4plus" className="cursor-pointer text-xs whitespace-nowrap">
-                      4+
-                    </Label>
-                  </div>
-                </RadioGroup>
-                {is4Plus && (
-                  <Select value={tipoMultipla} onValueChange={(v) => setTipoMultipla(v as TipoMultipla)}>
-                    <SelectTrigger className="h-6 w-[80px] text-[10px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="QUADRUPLA">4 sel.</SelectItem>
-                      <SelectItem value="QUINTUPLA">5 sel.</SelectItem>
-                      <SelectItem value="SEXTUPLA">6 sel.</SelectItem>
-                    </SelectContent>
-                  </Select>
-                )}
-              </div>
-            }
+            extraHeaderContent={null}
           />
 
           <div className="space-y-1.5 py-1.5 px-3">
+
+            {/* Tipo de Múltipla + Casa na mesma linha */}
+            <div className="grid grid-cols-[100px_1fr] gap-2">
+              <div className="space-y-0.5">
+                <Label className="text-[10px] text-muted-foreground font-normal uppercase tracking-wider">Seleções</Label>
+                <Select value={tipoMultipla} onValueChange={(v) => setTipoMultipla(v as TipoMultipla)}>
+                  <SelectTrigger className="h-7 text-xs font-medium border-border/50">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="DUPLA">2 - Dupla</SelectItem>
+                    <SelectItem value="TRIPLA">3 - Tripla</SelectItem>
+                    <SelectItem value="QUADRUPLA">4 - Quádrupla</SelectItem>
+                    <SelectItem value="QUINTUPLA">5 - Quíntupla</SelectItem>
+                    <SelectItem value="SEXTUPLA">6 - Sêxtupla</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
             {/* Casa / Vínculo */}
             <div className="space-y-0.5">
@@ -1458,17 +1431,18 @@ export function ApostaMultiplaDialog({
                   className="z-50 w-[var(--radix-select-trigger-width)] min-w-[300px]"
                 />
               </Select>
-              {bookmakerSaldo && (
-                <SaldoBreakdownDisplay
-                  saldoReal={bookmakerSaldo.saldo}
-                  saldoFreebet={bookmakerSaldo.saldoFreebet}
-                  saldoBonus={bookmakerSaldo.saldoBonus}
-                  saldoOperavel={bookmakerSaldo.saldoOperavel}
-                  moeda={bookmakerSaldo.moeda}
-                />
-              )}
             </div>
-
+            </div>
+            {/* Saldo breakdown - full width */}
+            {bookmakerSaldo && (
+              <SaldoBreakdownDisplay
+                saldoReal={bookmakerSaldo.saldo}
+                saldoFreebet={bookmakerSaldo.saldoFreebet}
+                saldoBonus={bookmakerSaldo.saldoBonus}
+                saldoOperavel={bookmakerSaldo.saldoOperavel}
+                moeda={bookmakerSaldo.moeda}
+              />
+            )}
             {/* Toggle Usar Freebet */}
             {bookmakerSaldo &&
               bookmakerSaldo.saldoFreebet > 0 &&
