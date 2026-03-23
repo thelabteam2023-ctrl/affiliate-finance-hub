@@ -1759,6 +1759,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                lucro_prejuizo: multipla.lucro_prejuizo,
                estrategia: multipla.estrategia,
                tipo_multipla: multipla.tipo_multipla,
+               boost_percentual: (multipla as any).boost_percentual ?? null,
                selecoes: multipla.selecoes.map(s => ({
                  descricao: s.descricao,
                  odd: parseFloat(s.odd),

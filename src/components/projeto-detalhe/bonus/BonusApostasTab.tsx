@@ -1198,6 +1198,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
            lucro_prejuizo: multipla.lucro_prejuizo,
            estrategia: multipla.estrategia,
            tipo_multipla: multipla.tipo_multipla,
+           boost_percentual: (multipla as any).boost_percentual ?? null,
            selecoes: multipla.selecoes,
            bookmaker_nome: bookmakerBaseMultipla,
            parceiro_nome: parceiroNomeMultipla,
