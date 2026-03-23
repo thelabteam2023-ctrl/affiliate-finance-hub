@@ -74,6 +74,7 @@ export interface ApostaCardData {
   pernas?: Perna[];
   selecoes?: Selecao[];
   tipo_multipla?: string;
+  boost_percentual?: number | null;
   bookmaker_nome?: string;
   parceiro_nome?: string;
   operador_nome?: string;
