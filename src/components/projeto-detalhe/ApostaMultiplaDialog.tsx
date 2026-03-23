@@ -1558,7 +1558,7 @@ export function ApostaMultiplaDialog({
                 </Badge>
               </div>
               <div className="flex items-center gap-3 text-[10px]">
-                <span className="text-muted-foreground">Ret: <span className="text-foreground font-medium">{formatCurrency(previewCalculo.retorno)}</span></span>
+                <span className="text-muted-foreground">Retorno: <span className="text-foreground font-medium">{formatCurrency(previewCalculo.retorno)}</span></span>
                 <span className={`font-semibold ${previewCalculo.lucro >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
                   P/L: {previewCalculo.lucro >= 0 ? "+" : ""}{formatCurrency(previewCalculo.lucro)}
                 </span>
