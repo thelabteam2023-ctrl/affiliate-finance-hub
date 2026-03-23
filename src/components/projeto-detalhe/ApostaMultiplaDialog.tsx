@@ -328,7 +328,6 @@ export function ApostaMultiplaDialog({
   ]);
   // Guard: skip tipo-change effect during initial load from aposta/rascunho
   const isInitializingRef = useRef(false);
-  ]);
 
   // Número de seleções derivado do tipo
   const numSelecoes = useMemo(() => getNumFromTipo(tipoMultipla), [tipoMultipla]);
