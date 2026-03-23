@@ -1377,7 +1377,7 @@ export function ApostaMultiplaDialog({
           <div className="space-y-1.5 py-1.5 px-3">
 
             {/* Tipo de Múltipla + Casa na mesma linha */}
-            <div className="grid grid-cols-[1.3fr_1fr] gap-2">
+            <div className="grid grid-cols-[1fr_1fr] gap-2">
               <div className="space-y-0.5">
                 <Label className="text-[10px] text-muted-foreground font-normal uppercase tracking-wider">Tipo de Múltipla</Label>
                 <Select value={tipoMultipla} onValueChange={(v) => setTipoMultipla(v as TipoMultipla)}>
