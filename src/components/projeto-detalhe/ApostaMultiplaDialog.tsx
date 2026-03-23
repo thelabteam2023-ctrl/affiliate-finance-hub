@@ -1331,7 +1331,7 @@ export function ApostaMultiplaDialog({
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent 
-          className={`max-w-[480px] w-[95vw] max-h-[90vh] overflow-y-auto p-0 ${isDragging ? 'ring-2 ring-primary ring-offset-2' : ''} ${embedded ? 'fixed inset-y-0 left-1/2 -translate-x-1/2 !max-w-[460px] !w-full !max-h-none !translate-y-0 !top-0 !rounded-none !border-x border-border/30' : ''}`}
+          className={`max-w-[480px] w-[95vw] max-h-[90vh] overflow-y-auto p-0 ${isDragging ? 'ring-2 ring-primary ring-offset-2' : ''} ${embedded ? '!relative !transform-none !max-w-none !max-h-none !w-full !border-0 !shadow-none !rounded-none !p-0' : ''}`}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
@@ -1423,7 +1423,7 @@ export function ApostaMultiplaDialog({
             }
           />
 
-          <div className={`space-y-1.5 py-1.5 px-3 ${embedded ? 'max-w-[720px] mx-auto w-full' : ''}`}>
+          <div className="space-y-1.5 py-1.5 px-3">
 
             {/* Casa / Vínculo */}
             <div className="space-y-0.5">
@@ -1693,7 +1693,7 @@ export function ApostaMultiplaDialog({
             </p>
           </div>
 
-          <DialogFooter className={`flex-col sm:flex-row gap-1.5 px-3 pb-3 pt-1 ${embedded ? 'max-w-[720px] mx-auto w-full' : ''}`}>
+          <DialogFooter className="flex-col sm:flex-row gap-1.5 px-3 pb-3 pt-1">
             {aposta && (
               <Button
                 type="button"
