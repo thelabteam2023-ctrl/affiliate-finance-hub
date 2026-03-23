@@ -170,7 +170,7 @@ export function SharedCalendar({ daily, currencySymbol }: Props) {
                       "hover:ring-1 hover:ring-foreground/20 hover:scale-105"
                     )}>
                       <span className={cn(
-                        "text-[10px] font-semibold leading-none select-none",
+                        "text-xs font-semibold leading-none select-none",
                         hasData
                           ? lucro > 0 ? "text-emerald-300" : lucro < 0 ? "text-red-300" : "text-muted-foreground"
                           : "text-muted-foreground/40"
@@ -179,8 +179,8 @@ export function SharedCalendar({ daily, currencySymbol }: Props) {
                       </span>
                       {hasData && lucro !== 0 && (
                         <span className={cn(
-                          "text-[8px] font-semibold leading-none select-none mt-0.5 tabular-nums",
-                          lucro > 0 ? "text-emerald-200/80" : "text-red-200/80"
+                          "text-[18px] font-bold leading-none select-none mt-1 tabular-nums",
+                          lucro > 0 ? "text-emerald-200/90" : "text-red-200/90"
                         )}>
                           {formatCompactValue(lucro)}
                         </span>
