@@ -75,6 +75,14 @@ interface Selecao {
   resultado?: "PENDENTE" | "GREEN" | "RED" | "MEIO_GREEN" | "MEIO_RED" | "VOID";
 }
 
+type TipoMultipla = "DUPLA" | "TRIPLA" | "QUADRUPLA" | "QUINTUPLA" | "SEXTUPLA";
+
+const TIPO_NUM_MAP: Record<TipoMultipla, number> = {
+  DUPLA: 2, TRIPLA: 3, QUADRUPLA: 4, QUINTUPLA: 5, SEXTUPLA: 6,
+};
+
+const getNumFromTipo = (tipo: string): number => TIPO_NUM_MAP[tipo as TipoMultipla] || 2;
+
 interface ApostaMultipla {
   id: string;
   tipo_multipla: string;
