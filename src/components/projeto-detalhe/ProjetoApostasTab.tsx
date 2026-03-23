@@ -1692,6 +1692,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                     onQuickResolve={handleQuickResolveSurebet}
                     onPernaResultChange={handleSurebetPernaResolve}
                     onDelete={prepareDeleteSimples}
+                    onDuplicate={handleDuplicateSimples}
                     formatCurrency={formatCurrency}
                     convertToConsolidation={convertToConsolidation}
                     bookmakerNomeMap={bookmakerNomeMap}
