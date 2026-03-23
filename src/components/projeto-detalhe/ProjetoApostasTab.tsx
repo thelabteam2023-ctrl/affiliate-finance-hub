@@ -1418,6 +1418,22 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
     window.open(url, '_blank', 'width=540,height=750,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
   };
 
+  // === DUPLICAR APOSTAS ===
+  const handleDuplicateSimples = (apostaId: string) => {
+    const url = `/janela/aposta/novo?projetoId=${encodeURIComponent(projetoId)}&tab=apostas&duplicateFrom=${apostaId}`;
+    window.open(url, '_blank', 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
+  };
+
+  const handleDuplicateMultipla = (apostaId: string) => {
+    const url = `/janela/multipla/novo?projetoId=${encodeURIComponent(projetoId)}&tab=apostas&duplicateFrom=${apostaId}`;
+    window.open(url, '_blank', 'width=540,height=750,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
+  };
+
+  const handleDuplicateSurebet = (surebetId: string) => {
+    const url = `/janela/surebet/novo?projetoId=${encodeURIComponent(projetoId)}&tab=apostas&duplicateFrom=${surebetId}`;
+    window.open(url, '_blank', 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
+  };
+
   if (loading) {
     return (
       <div className="space-y-4">
@@ -1612,6 +1628,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                   onQuickResolve={handleQuickResolveSurebet}
                   onPernaResultChange={handleSurebetPernaResolve}
                   onDelete={prepareDeleteSurebet}
+                  onDuplicate={handleDuplicateSurebet}
                   formatCurrency={formatCurrency}
                   convertToConsolidation={convertToConsolidation}
                   bookmakerNomeMap={bookmakerNomeMap}
@@ -1675,6 +1692,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                     onQuickResolve={handleQuickResolveSurebet}
                     onPernaResultChange={handleSurebetPernaResolve}
                     onDelete={prepareDeleteSimples}
+                    onDuplicate={handleDuplicateSimples}
                     formatCurrency={formatCurrency}
                     convertToConsolidation={convertToConsolidation}
                     bookmakerNomeMap={bookmakerNomeMap}
@@ -1726,6 +1744,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                   }}
                    onQuickResolve={handleQuickResolve}
                    onDelete={prepareDeleteSimples}
+                   onDuplicate={handleDuplicateSimples}
                    formatCurrency={formatCurrency}
                    convertToConsolidation={convertToConsolidation}
                    moedaConsolidacao={moedaConsolidacao}
@@ -1778,6 +1797,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                 onEdit={() => handleOpenMultiplaDialog(multipla)}
                  onQuickResolve={handleQuickResolve}
                  onDelete={prepareDeleteMultipla}
+                 onDuplicate={handleDuplicateMultipla}
                  formatCurrency={formatCurrency}
                  convertToConsolidation={convertToConsolidation}
                  moedaConsolidacao={moedaConsolidacao}

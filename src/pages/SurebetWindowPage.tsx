@@ -30,12 +30,14 @@ export default function SurebetWindowPage() {
   const projetoId = searchParams.get("projetoId") || "";
   const activeTab = searchParams.get("tab") || "surebet";
   const rascunhoId = searchParams.get("rascunhoId");
+  const duplicateFrom = searchParams.get("duplicateFrom") || null;
   
-  const isEditing = !!id && id !== "novo";
+  const isEditing = !!id && id !== "novo" && !duplicateFrom;
+  const isDuplicating = !!duplicateFrom;
   const isFromRascunho = !!rascunhoId && !isEditing;
   
   const [surebet, setSurebet] = useState<any>(null);
-  const [loading, setLoading] = useState(isEditing);
+  const [loading, setLoading] = useState(isEditing || isDuplicating);
   const [error, setError] = useState<string | null>(null);
   const [formKey, setFormKey] = useState(0);
   const [saveCount, setSaveCount] = useState(0); // Contador de salvamentos
@@ -61,9 +63,10 @@ export default function SurebetWindowPage() {
     }
   }, [rascunhoId, isFromRascunho, workspaceId, buscarRascunho]);
   
-  // Buscar dados da surebet se estiver editando
+  // Buscar dados da surebet se estiver editando OU duplicando
   useEffect(() => {
-    if (!isEditing || !id) {
+    const fetchId = isEditing ? id : duplicateFrom;
+    if (!fetchId) {
       setLoading(false);
       return;
     }
@@ -95,7 +98,7 @@ export default function SurebetWindowPage() {
             estrategia,
             contexto_operacional
           `)
-          .eq("id", id)
+          .eq("id", fetchId)
           .maybeSingle();
         
         if (fetchError) throw fetchError;
@@ -105,28 +108,48 @@ export default function SurebetWindowPage() {
           return;
         }
         
-        // Mapear para formato esperado pelo SurebetDialog
-        setSurebet({
-          id: data.id,
-          data_operacao: data.data_aposta,
-          evento: data.evento || "",
-          esporte: data.esporte || "Futebol",
-          modelo: data.modelo || "1-2",
-          mercado: data.mercado,
-          stake_total: data.stake_total || 0,
-          spread_calculado: data.spread_calculado,
-          roi_esperado: data.roi_esperado,
-          lucro_esperado: data.lucro_esperado,
-          lucro_real: data.lucro_prejuizo,
-          roi_real: data.roi_real,
-          status: data.status || "PENDENTE",
-          resultado: data.resultado,
-          observacoes: data.observacoes,
-          // CRÍTICO: manter contexto/estratégia original como fonte da verdade
-          forma_registro: data.forma_registro,
-          estrategia: data.estrategia,
-          contexto_operacional: data.contexto_operacional,
-        });
+        if (isDuplicating) {
+          // Strip identity/result for duplication
+          setSurebet({
+            data_operacao: new Date().toISOString().split('T')[0],
+            evento: data.evento || "",
+            esporte: data.esporte || "Futebol",
+            modelo: data.modelo || "1-2",
+            mercado: data.mercado,
+            stake_total: data.stake_total || 0,
+            spread_calculado: data.spread_calculado,
+            roi_esperado: data.roi_esperado,
+            lucro_esperado: data.lucro_esperado,
+            status: "PENDENTE",
+            resultado: null,
+            observacoes: data.observacoes,
+            forma_registro: data.forma_registro,
+            estrategia: data.estrategia,
+            contexto_operacional: data.contexto_operacional,
+          });
+        } else {
+          // Normal edit mapping
+          setSurebet({
+            id: data.id,
+            data_operacao: data.data_aposta,
+            evento: data.evento || "",
+            esporte: data.esporte || "Futebol",
+            modelo: data.modelo || "1-2",
+            mercado: data.mercado,
+            stake_total: data.stake_total || 0,
+            spread_calculado: data.spread_calculado,
+            roi_esperado: data.roi_esperado,
+            lucro_esperado: data.lucro_esperado,
+            lucro_real: data.lucro_prejuizo,
+            roi_real: data.roi_real,
+            status: data.status || "PENDENTE",
+            resultado: data.resultado,
+            observacoes: data.observacoes,
+            forma_registro: data.forma_registro,
+            estrategia: data.estrategia,
+            contexto_operacional: data.contexto_operacional,
+          });
+        }
       } catch (err: any) {
         console.error("Erro ao buscar surebet:", err);
         setError(err.message || "Erro ao carregar operação");
@@ -136,7 +159,7 @@ export default function SurebetWindowPage() {
     };
     
     fetchSurebet();
-  }, [id, isEditing]);
+  }, [id, isEditing, duplicateFrom, isDuplicating]);
   
   // FLUXO DISTINTO: Criação mantém aberto, Edição fecha automaticamente
   const handleSuccess = useCallback((action?: SurebetActionType) => {

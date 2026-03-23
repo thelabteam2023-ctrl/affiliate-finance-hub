@@ -27,12 +27,14 @@ export default function ApostaMultiplaWindowPage() {
   const activeTab = searchParams.get('tab') || 'apostas';
   const estrategia = searchParams.get('estrategia') || null;
   const rascunhoId = searchParams.get('rascunhoId');
+  const duplicateFrom = searchParams.get('duplicateFrom') || null;
   
-  const isEditing = id && id !== 'novo';
+  const isEditing = id && id !== 'novo' && !duplicateFrom;
+  const isDuplicating = !!duplicateFrom;
   const isFromRascunho = !!rascunhoId && !isEditing;
   
   const [aposta, setAposta] = useState<any>(null);
-  const [loading, setLoading] = useState(!!isEditing);
+  const [loading, setLoading] = useState(!!isEditing || isDuplicating);
   const [error, setError] = useState<string | null>(null);
   const [formKey, setFormKey] = useState(0);
   const [saveCount, setSaveCount] = useState(0);
@@ -55,9 +57,10 @@ export default function ApostaMultiplaWindowPage() {
     }
   }, [rascunhoId, isFromRascunho, workspaceId, buscarRascunho]);
 
-  // Buscar dados da aposta se estiver editando
+  // Buscar dados da aposta se estiver editando OU duplicando
   useEffect(() => {
-    if (!isEditing) {
+    const fetchId = isEditing ? id : duplicateFrom;
+    if (!fetchId) {
       setLoading(false);
       return;
     }
@@ -68,11 +71,24 @@ export default function ApostaMultiplaWindowPage() {
         const { data, error: fetchError } = await supabase
           .from('apostas_unificada')
           .select('*')
-          .eq('id', id)
+          .eq('id', fetchId)
           .single();
 
         if (fetchError) throw fetchError;
-        setAposta(data);
+        
+        if (isDuplicating && data) {
+          // Strip identity/result fields for duplication
+          const { id: _id, created_at, updated_at, status, resultado, lucro_prejuizo, lucro_prejuizo_brl_referencia, pl_consolidado, retorno_consolidado, roi_real, valor_retorno, ...rest } = data;
+          setAposta({
+            ...rest,
+            data_aposta: new Date().toISOString().split('T')[0],
+            status: 'PENDENTE',
+            resultado: null,
+            lucro_prejuizo: null,
+          });
+        } else {
+          setAposta(data);
+        }
       } catch (err: any) {
         console.error('Erro ao buscar aposta múltipla:', err);
         setError(err.message || 'Erro ao carregar aposta');
@@ -82,7 +98,7 @@ export default function ApostaMultiplaWindowPage() {
     };
 
     fetchAposta();
-  }, [id, isEditing]);
+  }, [id, isEditing, duplicateFrom, isDuplicating]);
 
   // FLUXO DISTINTO: Criação mantém aberto, Edição fecha automaticamente
   const handleSuccess = useCallback((action?: ApostaMultiplaActionType) => {
