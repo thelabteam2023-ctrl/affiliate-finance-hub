@@ -75,6 +75,7 @@ import { FreebetToggle, SaldoWaterfallPreview } from "@/components/apostas/water
 import { Plus, Trash2 as Trash2Entry, Layers } from "lucide-react";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { FonteEntradaSelector } from "@/components/apostas/FonteEntradaSelector";
+import { useWorkspaceBetSources } from "@/hooks/useWorkspaceBetSources";
 
 // Multi-entry para aposta simples (mesma seleção, múltiplas bookmakers)
 interface AdditionalEntry {
@@ -420,6 +421,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
   const { workspaceId } = useWorkspace();
   const { convertToConsolidation } = useProjetoCurrency(projetoId);
   const [loading, setLoading] = useState(false);
+  const { favoriteSource } = useWorkspaceBetSources(workspaceId);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   // ========== HOOK CANÔNICO DE SALDOS ==========
@@ -1111,6 +1113,13 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
       });
     }
   }, [open, aposta, activeTab, registroValues.estrategia]);
+
+  // Auto-select favorite source when opening new ValueBet
+  useEffect(() => {
+    if (open && !aposta && fonteEntrada === null && favoriteSource && registroValues.estrategia === 'VALUEBET') {
+      setFonteEntrada(favoriteSource.name);
+    }
+  }, [open, aposta, favoriteSource, registroValues.estrategia, fonteEntrada]);
 
   // Atualizar saldo quando bookmakerId mudar ou bookmakers forem carregados
   useEffect(() => {

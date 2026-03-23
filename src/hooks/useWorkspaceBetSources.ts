@@ -1,7 +1,27 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-const DEFAULT_SOURCES = ["OddsNotifier", "RebelBetting"];
+export interface BetSource {
+  id: string;
+  name: string;
+  color: string;
+  is_favorite: boolean;
+}
+
+// Generate a unique, vibrant color from source name hash
+function generateColor(name: string, index: number): string {
+  // Use golden angle for max hue separation between sources
+  const hue = (index * 137.508 + hashCode(name) * 47) % 360;
+  return `hsl(${Math.round(hue)}, 70%, 55%)`;
+}
+
+function hashCode(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash);
+}
 
 export function useWorkspaceBetSources(workspaceId: string | null) {
   const queryClient = useQueryClient();
@@ -9,65 +29,91 @@ export function useWorkspaceBetSources(workspaceId: string | null) {
 
   const { data: sources = [], isLoading } = useQuery({
     queryKey,
-    queryFn: async () => {
-      if (!workspaceId) return DEFAULT_SOURCES;
-      
+    queryFn: async (): Promise<BetSource[]> => {
+      if (!workspaceId) return [];
+
       const { data, error } = await supabase
         .from("workspace_bet_sources" as any)
-        .select("name")
+        .select("id, name, color, is_favorite")
         .eq("workspace_id", workspaceId)
         .order("created_at", { ascending: true });
 
       if (error) {
         console.error("[useWorkspaceBetSources] Error:", error);
-        return DEFAULT_SOURCES;
+        return [];
       }
 
-      const dbSources = (data as any[])?.map((s: any) => s.name) || [];
-      
-      // If no sources in DB yet, seed defaults
-      if (dbSources.length === 0) {
-        await seedDefaults(workspaceId);
-        return DEFAULT_SOURCES;
-      }
-      
-      return dbSources;
+      return ((data as any[]) || []).map((s: any) => ({
+        id: s.id,
+        name: s.name,
+        color: s.color || generateColor(s.name, 0),
+        is_favorite: s.is_favorite || false,
+      }));
     },
     enabled: !!workspaceId,
     staleTime: 5 * 60 * 1000,
   });
 
-  const seedDefaults = async (wsId: string) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const rows = DEFAULT_SOURCES.map(name => ({
-      workspace_id: wsId,
-      name,
-      created_by: user.id,
-    }));
-
-    await supabase.from("workspace_bet_sources" as any).insert(rows as any);
-    queryClient.invalidateQueries({ queryKey });
-  };
+  const favoriteSource = sources.find(s => s.is_favorite) || null;
 
   const addSource = useMutation({
-    mutationFn: async (name: string) => {
+    mutationFn: async ({ name, makeFavorite }: { name: string; makeFavorite?: boolean }) => {
       if (!workspaceId) throw new Error("No workspace");
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
+      const color = generateColor(name, sources.length);
+
+      // If making favorite, unset existing favorite first
+      if (makeFavorite) {
+        await supabase
+          .from("workspace_bet_sources" as any)
+          .update({ is_favorite: false } as any)
+          .eq("workspace_id", workspaceId)
+          .eq("is_favorite", true);
+      }
+
       const { error } = await supabase
         .from("workspace_bet_sources" as any)
-        .insert({ workspace_id: workspaceId, name: name.trim(), created_by: user.id } as any);
+        .insert({
+          workspace_id: workspaceId,
+          name: name.trim(),
+          color,
+          is_favorite: makeFavorite || false,
+          created_by: user.id,
+        } as any);
 
       if (error) throw error;
       return name.trim();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey });
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey }),
   });
 
-  return { sources, isLoading, addSource };
+  const toggleFavorite = useMutation({
+    mutationFn: async (sourceId: string) => {
+      if (!workspaceId) throw new Error("No workspace");
+
+      const source = sources.find(s => s.id === sourceId);
+      if (!source) throw new Error("Source not found");
+
+      const newFav = !source.is_favorite;
+
+      // Unset all favorites first
+      if (newFav) {
+        await supabase
+          .from("workspace_bet_sources" as any)
+          .update({ is_favorite: false } as any)
+          .eq("workspace_id", workspaceId)
+          .eq("is_favorite", true);
+      }
+
+      await supabase
+        .from("workspace_bet_sources" as any)
+        .update({ is_favorite: newFav } as any)
+        .eq("id", sourceId);
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey }),
+  });
+
+  return { sources, isLoading, addSource, toggleFavorite, favoriteSource };
 }

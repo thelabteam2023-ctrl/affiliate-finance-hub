@@ -69,6 +69,7 @@ import { useImportMultiplaBetPrint } from "@/hooks/useImportMultiplaBetPrint";
 import { GerouFreebetInput } from "./GerouFreebetInput";
 import { FreebetToggle } from "@/components/apostas/waterfall";
 import { FonteEntradaSelector } from "@/components/apostas/FonteEntradaSelector";
+import { useWorkspaceBetSources } from "@/hooks/useWorkspaceBetSources";
 
 interface Selecao {
   descricao: string;
@@ -151,6 +152,7 @@ export function ApostaMultiplaDialog({
   rascunho = null,
 }: ApostaMultiplaDialogProps) {
   const { workspaceId } = useWorkspace();
+  const { favoriteSource } = useWorkspaceBetSources(workspaceId);
   const exchangeRates = useExchangeRatesSafe();
   // REGRA UNIFICADA: formulários SEMPRE usam cotação de trabalho (se configurada)
   const { cotacaoAtual: cotacaoUsdFormulario } = useProjetoConsolidacao({ projetoId });
@@ -556,6 +558,13 @@ export function ApostaMultiplaDialog({
       });
     }
   }, [open, aposta, activeTab, registroValues.estrategia]);
+
+  // Auto-select favorite source for ValueBet
+  useEffect(() => {
+    if (open && !aposta && fonteEntrada === null && favoriteSource && registroValues.estrategia === 'VALUEBET') {
+      setFonteEntrada(favoriteSource.name);
+    }
+  }, [open, aposta, favoriteSource, registroValues.estrategia, fonteEntrada]);
 
   const getLocalDateTimeString = () => {
     const now = new Date();

@@ -9483,23 +9483,29 @@ export type Database = {
       }
       workspace_bet_sources: {
         Row: {
+          color: string | null
           created_at: string
           created_by: string
           id: string
+          is_favorite: boolean
           name: string
           workspace_id: string
         }
         Insert: {
+          color?: string | null
           created_at?: string
           created_by: string
           id?: string
+          is_favorite?: boolean
           name: string
           workspace_id: string
         }
         Update: {
+          color?: string | null
           created_at?: string
           created_by?: string
           id?: string
+          is_favorite?: boolean
           name?: string
           workspace_id?: string
         }
