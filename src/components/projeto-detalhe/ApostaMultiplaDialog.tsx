@@ -290,12 +290,13 @@ export function ApostaMultiplaDialog({
 
   // Form state
   const [bookmakerId, setBookmakerId] = useState("");
-  const [tipoMultipla, setTipoMultipla] = useState<"DUPLA" | "TRIPLA">("DUPLA");
+  const [tipoMultipla, setTipoMultipla] = useState<TipoMultipla>("DUPLA");
   const [stake, setStake] = useState("");
   const [resultadoManual, setResultadoManual] = useState<string | null>(null);
   const [statusResultado, setStatusResultado] = useState("PENDENTE");
   const [dataAposta, setDataAposta] = useState("");
   const [observacoes, setObservacoes] = useState("");
+  const [boostPercent, setBoostPercent] = useState("");
 
   // Registro explícito - estratégia NUNCA é inferida automaticamente
   // Se a aba não define estratégia (ex: Apostas Livres), fica null e o usuário DEVE escolher
