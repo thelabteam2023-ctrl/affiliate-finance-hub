@@ -347,9 +347,11 @@ export function ApostaCard({
   const isSimples = !isMultipla && !hasPernas;
   const [isSubEntriesOpen, setIsSubEntriesOpen] = useState(false);
   
-  // Label para múltiplas: DUPLA, TRIPLA, etc.
-  const numSelecoes = aposta.selecoes?.length || (aposta.tipo_multipla === 'DUPLA' ? 2 : aposta.tipo_multipla === 'TRIPLA' ? 3 : 2);
-  const tipoMultiplaLabel = numSelecoes === 2 ? 'DUPLA' : numSelecoes === 3 ? 'TRIPLA' : `${numSelecoes}x`;
+  // Label para múltiplas: DUPLA, TRIPLA, QUÁDRUPLA, etc.
+  const TIPO_NUM: Record<string, number> = { DUPLA: 2, TRIPLA: 3, QUADRUPLA: 4, QUINTUPLA: 5, SEXTUPLA: 6 };
+  const numSelecoes = aposta.selecoes?.length || TIPO_NUM[aposta.tipo_multipla || ''] || 2;
+  const TIPO_LABEL: Record<number, string> = { 2: 'DUPLA', 3: 'TRIPLA', 4: 'QUÁDRUPLA', 5: 'QUÍNTUPLA', 6: 'SÊXTUPLA' };
+  const tipoMultiplaLabel = TIPO_LABEL[numSelecoes] || `${numSelecoes}x`;
   
   const stake = hasPernas ? (aposta.stake_total ?? aposta.stake) : aposta.stake;
   const displayOdd = aposta.odd_final ?? aposta.odd ?? 0;
@@ -546,11 +548,16 @@ export function ApostaCard({
               </div>
             ) : hasSelecoes ? (
               <div className="flex flex-col gap-0.5 flex-1 min-w-0 overflow-hidden">
-                {aposta.selecoes!.map((s, idx) => (
+                {aposta.selecoes!.slice(0, 3).map((s, idx) => (
                   <p key={idx} className="text-xs text-muted-foreground truncate uppercase">
                     {s.descricao} @{Number(s.odd).toFixed(2)}
                   </p>
                 ))}
+                {aposta.selecoes!.length > 3 && (
+                  <p className="text-[10px] text-muted-foreground/60">
+                    +{aposta.selecoes!.length - 3} seleção(ões)
+                  </p>
+                )}
               </div>
             ) : null}
             
