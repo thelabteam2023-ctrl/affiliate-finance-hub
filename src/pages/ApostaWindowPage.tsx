@@ -26,11 +26,13 @@ export default function ApostaWindowPage() {
   const projetoId = searchParams.get('projetoId') || '';
   const activeTab = searchParams.get('tab') || 'apostas';
   const estrategia = searchParams.get('estrategia') || null;
+  const duplicateFrom = searchParams.get('duplicateFrom') || null;
   
-  const isEditing = id && id !== 'novo';
+  const isEditing = id && id !== 'novo' && !duplicateFrom;
+  const isDuplicating = !!duplicateFrom;
   
   const [aposta, setAposta] = useState<any>(null);
-  const [loading, setLoading] = useState(!!isEditing);
+  const [loading, setLoading] = useState(!!isEditing || isDuplicating);
   const [error, setError] = useState<string | null>(null);
   const [formKey, setFormKey] = useState(0);
   const [saveCount, setSaveCount] = useState(0);
