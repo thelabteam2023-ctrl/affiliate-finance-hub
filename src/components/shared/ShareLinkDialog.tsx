@@ -45,6 +45,15 @@ function generateToken(): string {
     .substring(0, 48);
 }
 
+function getPublicOrigin(): string {
+  const origin = window.location.origin;
+  // Preview domains (preview--xxx.lovable.app) must use the published domain
+  if (origin.includes("preview--")) {
+    return origin.replace(/preview--/, "");
+  }
+  return origin;
+}
+
 export function ShareLinkDialog({ projetoId, projetoNome }: ShareLinkDialogProps) {
   const { user } = useAuth();
   const { workspaceId } = useWorkspace();
@@ -92,7 +101,7 @@ export function ShareLinkDialog({ projetoId, projetoNome }: ShareLinkDialogProps
       return token;
     },
     onSuccess: (token) => {
-      const url = `${window.location.origin}/shared/${token}`;
+      const url = `${getPublicOrigin()}/shared/${token}`;
       navigator.clipboard.writeText(url);
       toast.success("Link criado e copiado!");
       setLabel("");
@@ -117,7 +126,7 @@ export function ShareLinkDialog({ projetoId, projetoNome }: ShareLinkDialogProps
   });
 
   const copyLink = (token: string) => {
-    navigator.clipboard.writeText(`${window.location.origin}/shared/${token}`);
+    navigator.clipboard.writeText(`${getPublicOrigin()}/shared/${token}`);
     toast.success("Link copiado!");
   };
 
