@@ -64,6 +64,7 @@ function ViewPorParceiro() {
   const [parceiroSearch, setParceiroSearch] = useState("");
   const [parceiroPopoverOpen, setParceiroPopoverOpen] = useState(false);
   const [grupoFilter, setGrupoFilter] = useState("todos");
+  const [regulamentacaoFilter, setRegulamentacaoFilter] = useState<"todas" | "REGULAMENTADA" | "NAO_REGULAMENTADA">("todas");
   const [search, setSearch] = useState("");
   const { getCatalogoIdsByGrupo, membros } = useBookmakerGrupos();
 
@@ -130,12 +131,12 @@ function ViewPorParceiro() {
 
     return catalogoBookmakers.filter((bk) => {
       if (contasSet.has(bk.id)) return false;
-      // Only show bookmakers that belong to at least one group
       if (!allGroupedCatalogoIds.has(bk.id)) return false;
       if (grupoIds && !grupoIds.has(bk.id)) return false;
+      if (regulamentacaoFilter !== "todas" && bk.status !== regulamentacaoFilter) return false;
       return true;
     });
-  }, [catalogoBookmakers, contasSet, grupoFilter, getCatalogoIdsByGrupo, selectedParceiroId, allGroupedCatalogoIds]);
+  }, [catalogoBookmakers, contasSet, grupoFilter, getCatalogoIdsByGrupo, selectedParceiroId, allGroupedCatalogoIds, regulamentacaoFilter]);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return missingBookmakers;
@@ -172,6 +173,34 @@ function ViewPorParceiro() {
           onChange={(v) => { setGrupoFilter(v); }}
           className="w-[200px]"
         />
+
+        <div className="flex flex-col gap-1">
+          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Regulamentação</span>
+          <div className="flex items-center gap-1 h-9">
+            <button
+              onClick={() => setRegulamentacaoFilter(regulamentacaoFilter === "REGULAMENTADA" ? "todas" : "REGULAMENTADA")}
+              className={cn(
+                "h-8 px-3 rounded-md text-xs font-medium tracking-wide transition-colors uppercase border",
+                regulamentacaoFilter === "REGULAMENTADA"
+                  ? "bg-success/15 border-success/40 text-success"
+                  : "border-border text-muted-foreground hover:text-foreground hover:bg-muted/50"
+              )}
+            >
+              Regulamentada
+            </button>
+            <button
+              onClick={() => setRegulamentacaoFilter(regulamentacaoFilter === "NAO_REGULAMENTADA" ? "todas" : "NAO_REGULAMENTADA")}
+              className={cn(
+                "h-8 px-3 rounded-md text-xs font-medium tracking-wide transition-colors uppercase border",
+                regulamentacaoFilter === "NAO_REGULAMENTADA"
+                  ? "bg-warning/15 border-warning/40 text-warning"
+                  : "border-border text-muted-foreground hover:text-foreground hover:bg-muted/50"
+              )}
+            >
+              Não Regulamentada
+            </button>
+          </div>
+        </div>
 
         <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium uppercase tracking-wide">
           <User className="h-4 w-4" />
@@ -281,7 +310,7 @@ function ViewPorParceiro() {
                         Bookmaker
                       </th>
                       <th className="text-left px-4 py-3 font-medium text-muted-foreground uppercase text-xs tracking-wide">
-                        Status
+                        Regulamentação
                       </th>
                       <th className="text-right px-4 py-3 font-medium text-muted-foreground uppercase text-xs tracking-wide w-[180px]">
                         Ações
@@ -300,10 +329,10 @@ function ViewPorParceiro() {
                           </span>
                         </td>
                         <td className="px-4 py-3">
-                          {bk.status === "ativa" ? (
-                            <Badge variant="outline" className="text-xs text-green-400 border-green-500/30">Ativa</Badge>
+                          {bk.status === "REGULAMENTADA" ? (
+                            <Badge variant="outline" className="text-xs border-success/30 text-success">Regulamentada</Badge>
                           ) : (
-                            <Badge variant="secondary" className="text-xs">{bk.status}</Badge>
+                            <Badge variant="outline" className="text-xs border-warning/30 text-warning">Não Regulamentada</Badge>
                           )}
                         </td>
                         <td className="px-4 py-3 text-right">
@@ -362,11 +391,11 @@ function ViewPorBookmaker() {
   const [showDescartados, setShowDescartados] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [grupoFilter, setGrupoFilter] = useState("todos");
+  const [regulamentacaoFilter, setRegulamentacaoFilter] = useState<"todas" | "REGULAMENTADA" | "NAO_REGULAMENTADA">("todas");
   const [sortOrigem, setSortOrigem] = useState<"asc" | "desc" | null>(null);
   const [sortDias, setSortDias] = useState<"asc" | "desc" | null>(null);
   const { getCatalogoIdsByGrupo, membros: membrosVPB } = useBookmakerGrupos();
 
-  // Set of all catalogo IDs that belong to at least one group
   const allGroupedCatalogoIdsVPB = useMemo(() => {
     const ids = new Set<string>();
     (membrosVPB ?? []).forEach((m) => ids.add(m.bookmaker_catalogo_id));
@@ -621,6 +650,15 @@ function ViewPorBookmaker() {
     else marcarIndisponivel(ids);
   };
 
+  // Filter bookmakers in dropdown: must belong to a group + regulamentação
+  const dropdownBookmakers = useMemo(() => {
+    const grupoIds = grupoFilter !== "todos" ? getCatalogoIdsByGrupo(grupoFilter) : null;
+    return (catalogoBookmakers ?? [])
+      .filter((bk) => allGroupedCatalogoIdsVPB.has(bk.id))
+      .filter((bk) => regulamentacaoFilter === "todas" || bk.status === regulamentacaoFilter)
+      .filter((bk) => !grupoIds || grupoIds.has(bk.id));
+  }, [catalogoBookmakers, allGroupedCatalogoIdsVPB, regulamentacaoFilter, grupoFilter, getCatalogoIdsByGrupo]);
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-4">
@@ -631,6 +669,35 @@ function ViewPorBookmaker() {
             className="w-[200px]"
           />
         )}
+
+        <div className="flex flex-col gap-1">
+          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Regulamentação</span>
+          <div className="flex items-center gap-1 h-9">
+            <button
+              onClick={() => { setRegulamentacaoFilter(regulamentacaoFilter === "REGULAMENTADA" ? "todas" : "REGULAMENTADA"); setSelectedCatalogoId(""); resetSelection(); }}
+              className={cn(
+                "h-8 px-3 rounded-md text-xs font-medium tracking-wide transition-colors uppercase border",
+                regulamentacaoFilter === "REGULAMENTADA"
+                  ? "bg-success/15 border-success/40 text-success"
+                  : "border-border text-muted-foreground hover:text-foreground hover:bg-muted/50"
+              )}
+            >
+              Regulamentada
+            </button>
+            <button
+              onClick={() => { setRegulamentacaoFilter(regulamentacaoFilter === "NAO_REGULAMENTADA" ? "todas" : "NAO_REGULAMENTADA"); setSelectedCatalogoId(""); resetSelection(); }}
+              className={cn(
+                "h-8 px-3 rounded-md text-xs font-medium tracking-wide transition-colors uppercase border",
+                regulamentacaoFilter === "NAO_REGULAMENTADA"
+                  ? "bg-warning/15 border-warning/40 text-warning"
+                  : "border-border text-muted-foreground hover:text-foreground hover:bg-muted/50"
+              )}
+            >
+              Não Regulamentada
+            </button>
+          </div>
+        </div>
+
         <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium uppercase tracking-wide">
           <Building2 className="h-4 w-4" />
           Bookmaker
@@ -665,13 +732,8 @@ function ViewPorBookmaker() {
               {loadingCatalogo ? (
                 <div className="p-2"><Skeleton className="h-6 w-full" /></div>
               ) : (
-                (() => {
-                  const grupoIds = grupoFilter !== "todos" ? getCatalogoIdsByGrupo(grupoFilter) : null;
-                  return (catalogoBookmakers ?? [])
-                    .filter((bk) => allGroupedCatalogoIdsVPB.has(bk.id))
-                    .filter((bk) => bk.nome.toLowerCase().includes(bkSearch.toLowerCase()))
-                    .filter((bk) => !grupoIds || grupoIds.has(bk.id));
-                })()
+                dropdownBookmakers
+                  .filter((bk) => bk.nome.toLowerCase().includes(bkSearch.toLowerCase()))
                   .map((bk) => (
                     <button
                       key={bk.id}
