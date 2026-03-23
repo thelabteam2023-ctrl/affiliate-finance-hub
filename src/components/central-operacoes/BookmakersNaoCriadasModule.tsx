@@ -668,6 +668,7 @@ function ViewPorBookmaker() {
                 (() => {
                   const grupoIds = grupoFilter !== "todos" ? getCatalogoIdsByGrupo(grupoFilter) : null;
                   return (catalogoBookmakers ?? [])
+                    .filter((bk) => allGroupedCatalogoIdsVPB.has(bk.id))
                     .filter((bk) => bk.nome.toLowerCase().includes(bkSearch.toLowerCase()))
                     .filter((bk) => !grupoIds || grupoIds.has(bk.id));
                 })()
