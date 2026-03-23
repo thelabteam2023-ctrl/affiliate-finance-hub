@@ -415,18 +415,18 @@ export function ApostaMultiplaDialog({
       setGerouFreebet(aposta.gerou_freebet || false);
       setValorFreebetGerada(aposta.valor_freebet_gerada?.toString() || "");
       
-      // Verificar se o resultado salvo é diferente do calculado automaticamente
-      // Se for, significa que foi um resultado manual
+      // Resultado manual: só usar se NENHUMA perna tem resultado individual
       const savedResultado = aposta.resultado || "PENDENTE";
-      // Vamos verificar depois que as seleções forem carregadas
-      setTimeout(() => {
-        // Se o resultado salvo for MEIO_GREEN ou MEIO_RED, é certamente manual
-        if (savedResultado === "MEIO_GREEN" || savedResultado === "MEIO_RED") {
-          setResultadoManual(savedResultado);
-        } else {
-          setResultadoManual(null);
-        }
-      }, 100);
+      const parsedSels = aposta.selecoes || [];
+      const anyLegHasResult = parsedSels.some((s: any) => s.resultado && s.resultado !== "PENDENTE");
+      
+      if (!anyLegHasResult && savedResultado !== "PENDENTE") {
+        // Resultado foi definido globalmente (sem per-leg)
+        setResultadoManual(savedResultado);
+      } else {
+        // Per-leg results drive the overall — no manual override
+        setResultadoManual(null);
+      }
     } else if (rascunho && rascunho.tipo === 'MULTIPLA' && open && !aposta) {
       // Set guard for rascunho too
       isInitializingRef.current = true;
@@ -703,7 +703,8 @@ export function ApostaMultiplaDialog({
       }
     }
 
-    const retorno = stakeNum * fatorTotal;
+    // Aplicar boost ao retorno (boost incrementa o payout total)
+    const retorno = stakeNum * fatorTotal * boostMultiplier;
     const lucro = usarFreebet
       ? retorno > stakeNum
         ? retorno - stakeNum
@@ -714,10 +715,17 @@ export function ApostaMultiplaDialog({
     const resultado = calcularResultadoMultipla(selecoes);
 
     return { resultado, retorno, lucro };
-  }, [selecoes, stake, usarFreebet, calcularResultadoMultipla]);
+  }, [selecoes, stake, usarFreebet, calcularResultadoMultipla, boostMultiplier]);
 
-  // Resultado final considerando override manual
-  const resultadoCalculado = resultadoManual || previewCalculo.resultado;
+  // Detectar se alguma perna tem resultado individual definido
+  const hasPerLegResults = useMemo(() => {
+    return selecoes.slice(0, numSelecoes).some(s => s.resultado && s.resultado !== "PENDENTE");
+  }, [selecoes, numSelecoes]);
+
+  // Resultado final: se há resultados por perna, auto-calcula. Senão, permite override manual.
+  const resultadoCalculado = hasPerLegResults 
+    ? previewCalculo.resultado  // Auto-calculado das pernas (locked)
+    : (resultadoManual || previewCalculo.resultado);
 
   // Calcular retorno potencial
   const retornoPotencial = useMemo(() => {
@@ -1024,7 +1032,7 @@ export function ApostaMultiplaDialog({
             throw new Error(result.error || 'Erro desconhecido ao atualizar aposta');
           }
 
-          // Atualizar campos que o RPC não cobre (seleções, observações, P/L calculado por seleção)
+          // Atualizar campos que o RPC não cobre (seleções, observações, P/L calculado por seleção, boost)
           await supabase.from("apostas_unificada").update({
             selecoes: selecoesFormatadas,
             tipo_multipla: tipoMultipla,
@@ -1034,6 +1042,8 @@ export function ApostaMultiplaDialog({
             resultado: resultadoFinal,
             status: resultadoFinal === "PENDENTE" ? "PENDENTE" : "LIQUIDADA",
             odd_final: oddFinal,
+            boost_percentual: apostaData.boost_percentual,
+            fonte_entrada: apostaData.fonte_entrada,
             data_aposta: apostaData.data_aposta,
             observacoes: apostaData.observacoes,
             estrategia: apostaData.estrategia,
@@ -1699,16 +1709,24 @@ export function ApostaMultiplaDialog({
             <div className="space-y-0.5">
               <Label className="text-[10px] text-muted-foreground font-normal uppercase tracking-wider">Resultado da Múltipla</Label>
               <Select 
-                value={resultadoManual || previewCalculo.resultado} 
+                value={resultadoCalculado} 
                 onValueChange={(v) => {
-                  if (v === previewCalculo.resultado) {
+                  if (hasPerLegResults) return; // Locked — per-leg drives result
+                  
+                  if (v === "PENDENTE") {
                     setResultadoManual(null);
+                    // Reset all legs to PENDENTE
+                    setSelecoes(prev => prev.map(s => ({ ...s, resultado: "PENDENTE" as const })));
                   } else {
                     setResultadoManual(v);
+                    // Apply result to ALL legs (shortcut)
+                    const typedResult = v as Selecao['resultado'];
+                    setSelecoes(prev => prev.map(s => ({ ...s, resultado: typedResult })));
                   }
                 }}
+                disabled={hasPerLegResults}
               >
-                <SelectTrigger className="h-7 text-xs">
+                <SelectTrigger className={`h-7 text-xs ${hasPerLegResults ? 'opacity-70' : ''}`}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -1721,9 +1739,11 @@ export function ApostaMultiplaDialog({
                 </SelectContent>
               </Select>
               <p className="text-[9px] text-muted-foreground">
-                {resultadoManual 
-                  ? `Manual (auto: ${previewCalculo.resultado})`
-                  : "Calculado automaticamente"
+                {hasPerLegResults 
+                  ? "🔒 Calculado pelas seleções individuais"
+                  : resultadoManual 
+                    ? "Aplicado a todas as seleções"
+                    : "Edite as seleções ou escolha aqui"
                 }
               </p>
             </div>
