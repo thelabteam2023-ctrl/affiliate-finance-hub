@@ -114,7 +114,7 @@ export interface CriarApostaInput {
   stake?: number | null;
   
   // Para apostas múltiplas (forma_registro = MULTIPLA)
-  tipo_multipla?: 'DUPLA' | 'TRIPLA' | null;
+  tipo_multipla?: 'DUPLA' | 'TRIPLA' | 'QUADRUPLA' | 'QUINTUPLA' | 'SEXTUPLA' | null;
   selecoes?: SelecaoMultipla[] | null;
   odd_final?: number | null;
   retorno_potencial?: number | null;
