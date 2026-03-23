@@ -102,91 +102,42 @@ export const CalculadoraEVContent: React.FC = () => {
     return isNaN(n) ? null : n;
   };
 
-  // Paste handler
-  useEffect(() => {
-    const handlePaste = async (e: ClipboardEvent) => {
-      const items = e.clipboardData?.items;
-      if (!items) return;
-
-      for (const item of Array.from(items)) {
-        if (item.type.startsWith('image/')) {
-          e.preventDefault();
-          const file = item.getAsFile();
-          if (!file) return;
-
-          const reader = new FileReader();
-          reader.onload = async (ev) => {
-            const base64 = ev.target?.result as string;
-            if (!base64) return;
-            setPastedImage(base64);
-            setParsedInfo(null);
-            await parseImage(base64);
-          };
-          reader.readAsDataURL(file);
-          break;
-        }
-      }
-    };
-
-    document.addEventListener('paste', handlePaste);
-    return () => document.removeEventListener('paste', handlePaste);
-  }, []);
-
-  const parseImage = async (imageBase64: string) => {
+  // Parse image using supabase.functions.invoke (stable pattern)
+  const parseImage = useCallback(async (imageBase64: string) => {
     setIsParsing(true);
     try {
-      // Validate image size (max ~4MB base64)
-      if (imageBase64.length > 4 * 1024 * 1024) {
-        toast.error('Imagem muito grande', { description: 'Use uma imagem menor (máx ~3MB).' });
-        setIsParsing(false);
+      if (imageBase64.length > 6 * 1024 * 1024) {
+        toast.error('Imagem muito grande', { description: 'Use uma imagem menor (máx ~4MB).' });
         return;
       }
 
       if (!imageBase64.startsWith('data:image/')) {
         toast.error('Formato inválido', { description: 'Cole uma imagem válida (PNG, JPEG).' });
-        setIsParsing(false);
         return;
       }
 
-      console.log('[EV Calculator] Sending image to parse-ev-print, size:', imageBase64.length, 'chars');
+      console.log('[EV Calculator] Sending to parse-ev-print, size:', imageBase64.length);
 
-      // Use direct fetch instead of supabase.functions.invoke for better error handling
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-
-      const response = await fetch(`${supabaseUrl}/functions/v1/parse-ev-print`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseKey}`,
-          'apikey': supabaseKey,
-        },
-        body: JSON.stringify({ imageBase64 }),
+      const { data, error } = await supabase.functions.invoke('parse-ev-print', {
+        body: { imageBase64 },
       });
 
-      const responseText = await response.text();
-      console.log('[EV Calculator] Response status:', response.status, 'body length:', responseText.length);
-
-      let data;
-      try {
-        data = JSON.parse(responseText);
-      } catch {
-        console.error('[EV Calculator] Invalid JSON response:', responseText.substring(0, 500));
-        toast.error('Resposta inválida do servidor');
-        setIsParsing(false);
+      if (error) {
+        console.error('[EV Calculator] Invoke error:', error);
+        const msg = error.message?.includes('Failed to send')
+          ? 'Erro de conexão. Verifique sua internet.'
+          : error.message || 'Erro ao processar imagem';
+        toast.error('Erro ao interpretar print', { description: msg });
         return;
       }
 
-      if (!response.ok) {
-        const errorMsg = data?.error || `Erro ${response.status}`;
-        toast.error('Erro ao interpretar print', { description: errorMsg });
-        setIsParsing(false);
+      if (data?.error) {
+        toast.error('Erro ao interpretar print', { description: data.error });
         return;
       }
 
       if (!data?.success || !data?.data) {
-        toast.error('Não foi possível interpretar o print', { description: data?.error || 'Tente outro print.' });
-        setIsParsing(false);
+        toast.error('Não foi possível interpretar o print', { description: 'Tente outro print.' });
         return;
       }
 
@@ -216,13 +167,47 @@ export const CalculadoraEVContent: React.FC = () => {
       });
     } catch (err) {
       console.error('[EV Calculator] Parse error:', err);
-      toast.error('Erro ao processar print', { 
-        description: err instanceof Error ? err.message : 'Verifique sua conexão.' 
+      toast.error('Erro ao processar print', {
+        description: err instanceof Error ? err.message : 'Verifique sua conexão.',
       });
     } finally {
       setIsParsing(false);
     }
-  };
+  }, []);
+
+  // Paste handler
+  useEffect(() => {
+    const handlePaste = async (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      for (const item of Array.from(items)) {
+        if (item.type.startsWith('image/')) {
+          e.preventDefault();
+          const file = item.getAsFile();
+          if (!file) return;
+
+          const reader = new FileReader();
+          reader.onload = async (ev) => {
+            const base64 = ev.target?.result as string;
+            if (!base64) return;
+            setPastedImage(base64);
+            setParsedInfo(null);
+            try {
+              await parseImage(base64);
+            } catch (err) {
+              console.error('[EV Calculator] Unhandled parse error:', err);
+            }
+          };
+          reader.readAsDataURL(file);
+          break;
+        }
+      }
+    };
+
+    document.addEventListener('paste', handlePaste);
+    return () => document.removeEventListener('paste', handlePaste);
+  }, [parseImage]);
 
   const clearImage = () => {
     setPastedImage(null);
