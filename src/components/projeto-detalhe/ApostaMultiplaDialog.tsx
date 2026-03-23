@@ -1431,17 +1431,18 @@ export function ApostaMultiplaDialog({
                   className="z-50 w-[var(--radix-select-trigger-width)] min-w-[300px]"
                 />
               </Select>
-              {bookmakerSaldo && (
-                <SaldoBreakdownDisplay
-                  saldoReal={bookmakerSaldo.saldo}
-                  saldoFreebet={bookmakerSaldo.saldoFreebet}
-                  saldoBonus={bookmakerSaldo.saldoBonus}
-                  saldoOperavel={bookmakerSaldo.saldoOperavel}
-                  moeda={bookmakerSaldo.moeda}
-                />
-              )}
             </div>
-
+            </div>
+            {/* Saldo breakdown - full width */}
+            {bookmakerSaldo && (
+              <SaldoBreakdownDisplay
+                saldoReal={bookmakerSaldo.saldo}
+                saldoFreebet={bookmakerSaldo.saldoFreebet}
+                saldoBonus={bookmakerSaldo.saldoBonus}
+                saldoOperavel={bookmakerSaldo.saldoOperavel}
+                moeda={bookmakerSaldo.moeda}
+              />
+            )}
             {/* Toggle Usar Freebet */}
             {bookmakerSaldo &&
               bookmakerSaldo.saldoFreebet > 0 &&
