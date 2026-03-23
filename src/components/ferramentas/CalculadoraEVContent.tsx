@@ -119,6 +119,7 @@ export const CalculadoraEVContent: React.FC = () => {
 
   // OCR state
   const [pastedImage, setPastedImage] = useState<string | null>(null);
+  const [imageDialogOpen, setImageDialogOpen] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
   const [parsedInfo, setParsedInfo] = useState<string | null>(null);
   const [dualOdds, setDualOdds] = useState<OcrDualOdds | null>(null);
