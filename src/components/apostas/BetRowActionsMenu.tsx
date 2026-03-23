@@ -149,7 +149,7 @@ export function BetRowActionsMenu({
             Alterar Resultado
           </DropdownMenuSubTrigger>
           <DropdownMenuSubContent>
-            {RESULTADO_OPTIONS.map((option) => {
+            {(apostaType === "multipla" ? MULTIPLA_RESULTADO_OPTIONS : ALL_RESULTADO_OPTIONS).map((option) => {
               const Icon = option.icon;
               const isCurrentResult = resultado === option.value;
               return (
@@ -171,6 +171,11 @@ export function BetRowActionsMenu({
                 </DropdownMenuItem>
               );
             })}
+            {apostaType === "multipla" && (
+              <DropdownMenuItem disabled className="text-xs text-muted-foreground italic">
+                Para ½Green/½Red/Void, use Editar
+              </DropdownMenuItem>
+            )}
           </DropdownMenuSubContent>
         </DropdownMenuSub>
 
