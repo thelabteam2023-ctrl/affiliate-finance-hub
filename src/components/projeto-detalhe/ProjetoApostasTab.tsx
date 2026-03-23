@@ -1797,6 +1797,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                 onEdit={() => handleOpenMultiplaDialog(multipla)}
                  onQuickResolve={handleQuickResolve}
                  onDelete={prepareDeleteMultipla}
+                 onDuplicate={handleDuplicateMultipla}
                  formatCurrency={formatCurrency}
                  convertToConsolidation={convertToConsolidation}
                  moedaConsolidacao={moedaConsolidacao}
