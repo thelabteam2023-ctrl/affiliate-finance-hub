@@ -365,6 +365,7 @@ export function ApostaMultiplaDialog({
       setStatusResultado(aposta.resultado || "PENDENTE");
       setDataAposta(dbTimestampToDatetimeLocal(aposta.data_aposta));
       setObservacoes(aposta.observacoes || "");
+      setFonteEntrada((aposta as any).fonte_entrada || null);
 
       // Restaurar campos de registro (incluindo fonte_saldo)
       const suggestions = getSuggestionsForTab(activeTab);
