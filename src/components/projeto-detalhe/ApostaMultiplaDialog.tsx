@@ -1423,7 +1423,7 @@ export function ApostaMultiplaDialog({
             }
           />
 
-          <div className="space-y-2 py-2 px-4">
+          <div className="space-y-2 py-2 px-2 sm:px-4">
 
             {/* Casa / Vínculo — centralizado, label inline */}
             <div className="flex items-center justify-center gap-2 max-w-[600px] mx-auto">
@@ -1503,7 +1503,7 @@ export function ApostaMultiplaDialog({
                 {selecoes.map((selecao, index) => (
                   <div 
                     key={index}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-md border transition-all duration-150 ${
+                    className={`flex flex-wrap items-center gap-1.5 px-2 py-1.5 rounded-md border transition-all duration-150 ${
                       selecao.resultado === "GREEN" ? "bg-emerald-500/10 border-emerald-500/30" :
                       selecao.resultado === "RED" ? "bg-red-500/10 border-red-500/30" :
                       selecao.resultado === "MEIO_GREEN" ? "bg-emerald-500/5 border-emerald-500/20" :
@@ -1517,7 +1517,7 @@ export function ApostaMultiplaDialog({
                       placeholder="Evento - Seleção"
                       value={selecao.descricao}
                       onChange={(e) => handleSelecaoChange(index, "descricao", e.target.value)}
-                      className="uppercase text-xs h-7 flex-1 min-w-0 border-0 bg-transparent px-0 focus-visible:ring-0 shadow-none"
+                      className="uppercase text-xs h-7 flex-1 min-w-[100px] border-0 bg-transparent px-0 focus-visible:ring-0 shadow-none"
                     />
                     <Input
                       type="number"
@@ -1525,13 +1525,13 @@ export function ApostaMultiplaDialog({
                       placeholder="Odd"
                       value={selecao.odd}
                       onChange={(e) => handleSelecaoChange(index, "odd", e.target.value)}
-                      className="text-xs h-7 w-[70px] shrink-0 text-center font-semibold"
+                      className="text-xs h-7 w-[60px] shrink-0 text-center font-semibold"
                     />
                     <Select 
                       value={selecao.resultado || "PENDENTE"} 
                       onValueChange={(v) => handleSelecaoChange(index, "resultado", v)}
                     >
-                      <SelectTrigger className="w-[100px] h-7 text-[10px] shrink-0 border-0 bg-muted/50">
+                      <SelectTrigger className="w-[80px] h-7 text-[10px] shrink-0 border-0 bg-muted/50">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -1549,7 +1549,7 @@ export function ApostaMultiplaDialog({
             </div>
 
             {/* Preview em Tempo Real da Múltipla */}
-            <div className="flex items-center gap-4 px-3 py-2 rounded-md border border-blue-500/30 bg-blue-500/5 text-sm">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-2 py-1.5 rounded-md border border-blue-500/30 bg-blue-500/5 text-sm">
               <span className="text-[10px] text-muted-foreground shrink-0">Preview</span>
               <div className="flex items-center gap-1">
                 <span className="text-[10px] text-muted-foreground">Resultado:</span>
@@ -1579,7 +1579,7 @@ export function ApostaMultiplaDialog({
             </div>
 
             {/* Boost + Stake e Cálculos */}
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               <div className="space-y-0.5">
                 <Label className="text-xs">Stake ({bookmakerSaldo?.moeda || 'R$'}) *</Label>
                 <Input
