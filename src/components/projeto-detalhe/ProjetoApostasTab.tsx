@@ -1418,6 +1418,22 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
     window.open(url, '_blank', 'width=540,height=750,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
   };
 
+  // === DUPLICAR APOSTAS ===
+  const handleDuplicateSimples = (apostaId: string) => {
+    const url = `/janela/aposta/novo?projetoId=${encodeURIComponent(projetoId)}&tab=apostas&duplicateFrom=${apostaId}`;
+    window.open(url, '_blank', 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
+  };
+
+  const handleDuplicateMultipla = (apostaId: string) => {
+    const url = `/janela/multipla/novo?projetoId=${encodeURIComponent(projetoId)}&tab=apostas&duplicateFrom=${apostaId}`;
+    window.open(url, '_blank', 'width=540,height=750,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
+  };
+
+  const handleDuplicateSurebet = (surebetId: string) => {
+    const url = `/janela/surebet/novo?projetoId=${encodeURIComponent(projetoId)}&tab=apostas&duplicateFrom=${surebetId}`;
+    window.open(url, '_blank', 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
+  };
+
   if (loading) {
     return (
       <div className="space-y-4">
