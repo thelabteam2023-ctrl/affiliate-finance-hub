@@ -1693,43 +1693,47 @@ export function ApostaMultiplaDialog({
             </p>
           </div>
 
-          <DialogFooter className="flex-col sm:flex-row gap-2">
+          <DialogFooter className="flex-col sm:flex-row gap-1.5 px-3 pb-3 pt-1">
             {aposta && (
               <Button
                 type="button"
                 variant="destructive"
+                size="sm"
                 onClick={() => setDeleteDialogOpen(true)}
                 disabled={loading}
-                className="sm:mr-auto"
+                className="sm:mr-auto h-7 text-xs"
               >
-                <Trash2 className="mr-2 h-4 w-4" />
+                <Trash2 className="mr-1 h-3 w-3" />
                 Excluir
               </Button>
             )}
             <Button
               type="button"
               variant="outline"
+              size="sm"
               onClick={() => onOpenChange(false)}
               disabled={loading}
+              className="h-7 text-xs"
             >
               Cancelar
             </Button>
-            {/* Botão de Rascunho: aparece quando tem dados mas não pode salvar como aposta real */}
             {podeSalvarRascunho && (
               <Button 
                 variant="secondary"
+                size="sm"
                 onClick={handleSalvarRascunho}
                 disabled={loading}
+                className="h-7 text-xs"
               >
-                <FileText className="h-4 w-4 mr-1" />
-                Salvar Rascunho
+                <FileText className="h-3 w-3 mr-1" />
+                Rascunho
               </Button>
             )}
-            <Button type="button" onClick={handleSubmit} disabled={loading || !canSave}>
+            <Button type="button" size="sm" onClick={handleSubmit} disabled={loading || !canSave} className="h-7 text-xs">
               {loading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
               ) : (
-                <Save className="mr-2 h-4 w-4" />
+                <Save className="mr-1 h-3 w-3" />
               )}
               Salvar
             </Button>
