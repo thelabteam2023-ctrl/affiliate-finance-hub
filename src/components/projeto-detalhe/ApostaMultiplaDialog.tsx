@@ -415,18 +415,18 @@ export function ApostaMultiplaDialog({
       setGerouFreebet(aposta.gerou_freebet || false);
       setValorFreebetGerada(aposta.valor_freebet_gerada?.toString() || "");
       
-      // Verificar se o resultado salvo é diferente do calculado automaticamente
-      // Se for, significa que foi um resultado manual
+      // Resultado manual: só usar se NENHUMA perna tem resultado individual
       const savedResultado = aposta.resultado || "PENDENTE";
-      // Vamos verificar depois que as seleções forem carregadas
-      setTimeout(() => {
-        // Se o resultado salvo for MEIO_GREEN ou MEIO_RED, é certamente manual
-        if (savedResultado === "MEIO_GREEN" || savedResultado === "MEIO_RED") {
-          setResultadoManual(savedResultado);
-        } else {
-          setResultadoManual(null);
-        }
-      }, 100);
+      const parsedSels = aposta.selecoes || [];
+      const anyLegHasResult = parsedSels.some((s: any) => s.resultado && s.resultado !== "PENDENTE");
+      
+      if (!anyLegHasResult && savedResultado !== "PENDENTE") {
+        // Resultado foi definido globalmente (sem per-leg)
+        setResultadoManual(savedResultado);
+      } else {
+        // Per-leg results drive the overall — no manual override
+        setResultadoManual(null);
+      }
     } else if (rascunho && rascunho.tipo === 'MULTIPLA' && open && !aposta) {
       // Set guard for rascunho too
       isInitializingRef.current = true;
