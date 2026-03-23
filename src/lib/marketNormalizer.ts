@@ -1381,6 +1381,7 @@ export function normalizeSport(rawSport: string): { normalized: string; confiden
     "Golfe": ["golf", "golfe"],
     "League of Legends": ["lol", "league"],
     "Counter-Strike": ["cs", "csgo", "cs2", "counter strike"],
+    "Valorant": ["valorant", "valo"],
     "Dota 2": ["dota"],
     "eFootball": ["efootball", "pes", "fifa", "ea fc", "ea sports fc"]
   };

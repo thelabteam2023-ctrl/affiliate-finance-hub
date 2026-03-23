@@ -322,6 +322,15 @@ const MERCADOS_POR_ESPORTE: Record<string, string[]> = {
     "Handicap de Rounds",
     "Outro"
   ],
+  "Valorant": [
+    "Vencedor do Mapa",
+    "Vencedor da Série",
+    "Total de Mapas",
+    "Total de Rounds",
+    "Handicap de Mapas",
+    "Handicap de Rounds",
+    "Outro"
+  ],
   "Dota 2": [
     "Vencedor do Mapa",
     "Vencedor da Série",
