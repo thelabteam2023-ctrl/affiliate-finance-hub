@@ -428,16 +428,18 @@ export function ApostaMultiplaDialog({
         }
       }, 100);
     } else if (rascunho && rascunho.tipo === 'MULTIPLA' && open && !aposta) {
+      // Set guard for rascunho too
+      isInitializingRef.current = true;
+      
       // PRÉ-PREENCHER COM DADOS DO RASCUNHO
       setBookmakerId(rascunho.bookmaker_id || "");
-      setTipoMultipla((rascunho.tipo_multipla as TipoMultipla) || "DUPLA");
       setStake(rascunho.stake?.toString() || "");
       setObservacoes(rascunho.observacoes || "");
       setBoostPercent("");
       setDataAposta(getLocalDateTimeString());
       setStatusResultado("PENDENTE");
       
-      // Preencher seleções
+      // Preencher seleções BEFORE setting tipoMultipla
       if (rascunho.selecoes && rascunho.selecoes.length > 0) {
         const novasSelecoes: Selecao[] = rascunho.selecoes.map(sel => ({
           descricao: sel.descricao?.toUpperCase() || "",
@@ -453,7 +455,13 @@ export function ApostaMultiplaDialog({
         const n = rascunho.selecoes.length;
         const tipoMap: Record<number, TipoMultipla> = { 2: "DUPLA", 3: "TRIPLA", 4: "QUADRUPLA", 5: "QUINTUPLA", 6: "SEXTUPLA" };
         setTipoMultipla(tipoMap[Math.min(n, 6)] || (n >= 4 ? "QUADRUPLA" : n >= 3 ? "TRIPLA" : "DUPLA"));
+      } else {
+        setTipoMultipla((rascunho.tipo_multipla as TipoMultipla) || "DUPLA");
       }
+      
+      requestAnimationFrame(() => {
+        isInitializingRef.current = false;
+      });
 
       setUsarFreebet(false);
       setValorFreebetUsar(0);
