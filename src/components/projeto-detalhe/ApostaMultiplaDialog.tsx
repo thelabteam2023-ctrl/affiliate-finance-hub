@@ -1376,6 +1376,24 @@ export function ApostaMultiplaDialog({
 
           <div className="space-y-1.5 py-1.5 px-3">
 
+            {/* Tipo de Múltipla + Casa na mesma linha */}
+            <div className="grid grid-cols-[100px_1fr] gap-2">
+              <div className="space-y-0.5">
+                <Label className="text-[10px] text-muted-foreground font-normal uppercase tracking-wider">Seleções</Label>
+                <Select value={tipoMultipla} onValueChange={(v) => setTipoMultipla(v as TipoMultipla)}>
+                  <SelectTrigger className="h-7 text-xs font-medium border-border/50">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="DUPLA">2 - Dupla</SelectItem>
+                    <SelectItem value="TRIPLA">3 - Tripla</SelectItem>
+                    <SelectItem value="QUADRUPLA">4 - Quádrupla</SelectItem>
+                    <SelectItem value="QUINTUPLA">5 - Quíntupla</SelectItem>
+                    <SelectItem value="SEXTUPLA">6 - Sêxtupla</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
             {/* Casa / Vínculo */}
             <div className="space-y-0.5">
               <Label className="text-[10px] text-muted-foreground font-normal uppercase tracking-wider">Casa / Vínculo</Label>
