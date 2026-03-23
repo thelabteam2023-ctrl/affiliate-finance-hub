@@ -1377,61 +1377,86 @@ export function ApostaMultiplaDialog({
           <div className="space-y-1.5 py-1.5 px-3">
 
             {/* Tipo de Múltipla + Casa na mesma linha */}
-            <div className="grid grid-cols-[100px_1fr] gap-2">
+            <div className="grid grid-cols-[1.3fr_1fr] gap-2">
               <div className="space-y-0.5">
-                <Label className="text-[10px] text-muted-foreground font-normal uppercase tracking-wider">Seleções</Label>
+                <Label className="text-[10px] text-muted-foreground font-normal uppercase tracking-wider">Tipo de Múltipla</Label>
                 <Select value={tipoMultipla} onValueChange={(v) => setTipoMultipla(v as TipoMultipla)}>
-                  <SelectTrigger className="h-7 text-xs font-medium border-border/50">
+                  <SelectTrigger className="h-8 text-xs font-semibold border-primary/30 bg-primary/5">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="DUPLA">2 - Dupla</SelectItem>
-                    <SelectItem value="TRIPLA">3 - Tripla</SelectItem>
-                    <SelectItem value="QUADRUPLA">4 - Quádrupla</SelectItem>
-                    <SelectItem value="QUINTUPLA">5 - Quíntupla</SelectItem>
-                    <SelectItem value="SEXTUPLA">6 - Sêxtupla</SelectItem>
+                  <SelectContent className="min-w-[180px]">
+                    <SelectItem value="DUPLA">
+                      <span className="flex items-center justify-between w-full gap-3">
+                        <span>Dupla</span>
+                        <span className="text-[10px] font-mono bg-muted px-1.5 py-0.5 rounded">2</span>
+                      </span>
+                    </SelectItem>
+                    <SelectItem value="TRIPLA">
+                      <span className="flex items-center justify-between w-full gap-3">
+                        <span>Tripla</span>
+                        <span className="text-[10px] font-mono bg-muted px-1.5 py-0.5 rounded">3</span>
+                      </span>
+                    </SelectItem>
+                    <SelectItem value="QUADRUPLA">
+                      <span className="flex items-center justify-between w-full gap-3">
+                        <span>Quádrupla</span>
+                        <span className="text-[10px] font-mono bg-muted px-1.5 py-0.5 rounded">4</span>
+                      </span>
+                    </SelectItem>
+                    <SelectItem value="QUINTUPLA">
+                      <span className="flex items-center justify-between w-full gap-3">
+                        <span>Quíntupla</span>
+                        <span className="text-[10px] font-mono bg-muted px-1.5 py-0.5 rounded">5</span>
+                      </span>
+                    </SelectItem>
+                    <SelectItem value="SEXTUPLA">
+                      <span className="flex items-center justify-between w-full gap-3">
+                        <span>Sêxtupla</span>
+                        <span className="text-[10px] font-mono bg-muted px-1.5 py-0.5 rounded">6</span>
+                      </span>
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-            {/* Casa / Vínculo */}
-            <div className="space-y-0.5">
-              <Label className="text-[10px] text-muted-foreground font-normal uppercase tracking-wider">Casa / Vínculo</Label>
-              <Select value={bookmakerId} onValueChange={setBookmakerId}>
-                <SelectTrigger className="h-7 text-xs font-medium border-border/50">
-                  {(() => {
-                    const selectedBk = bookmakerId ? bookmakers.find(b => b.id === bookmakerId) : null;
-                    if (selectedBk) {
-                      return (
-                        <div className="flex items-center gap-2 w-full">
-                          {selectedBk.logo_url && (
-                            <img src={selectedBk.logo_url} alt="" className="h-4 w-4 rounded object-contain flex-shrink-0" />
-                          )}
-                          <span className="uppercase text-xs font-medium truncate">{selectedBk.nome}</span>
-                          <CurrencyBadge moeda={selectedBk.moeda} size="xs" />
-                        </div>
-                      );
-                    }
-                    return <SelectValue placeholder="Selecione a casa..." />;
-                  })()}
-                </SelectTrigger>
-                <BookmakerSearchableSelectContent
-                  bookmakers={bookmakers.map(bk => ({
-                    id: bk.id,
-                    nome: bk.nome,
-                    parceiro_nome: bk.parceiro_nome,
-                    moeda: bk.moeda,
-                    saldo_operavel: bk.saldo_operavel,
-                    saldo_disponivel: bk.saldo_atual,
-                    saldo_freebet: bk.saldo_freebet,
-                    saldo_bonus: bk.saldo_bonus,
-                    logo_url: bk.logo_url,
-                    bonus_rollover_started: bk.bonus_rollover_started,
-                  }))}
-                  className="z-50 w-[var(--radix-select-trigger-width)] min-w-[300px]"
-                />
-              </Select>
-            </div>
+              {/* Casa */}
+              <div className="space-y-0.5">
+                <Label className="text-[10px] text-muted-foreground font-normal uppercase tracking-wider">Casa</Label>
+                <Select value={bookmakerId} onValueChange={setBookmakerId}>
+                  <SelectTrigger className="h-8 text-xs font-medium border-border/50">
+                    {(() => {
+                      const selectedBk = bookmakerId ? bookmakers.find(b => b.id === bookmakerId) : null;
+                      if (selectedBk) {
+                        return (
+                          <div className="flex items-center gap-1.5 w-full min-w-0">
+                            {selectedBk.logo_url && (
+                              <img src={selectedBk.logo_url} alt="" className="h-4 w-4 rounded object-contain flex-shrink-0" />
+                            )}
+                            <span className="uppercase text-[11px] font-medium truncate">{selectedBk.nome}</span>
+                            <CurrencyBadge moeda={selectedBk.moeda} size="xs" />
+                          </div>
+                        );
+                      }
+                      return <SelectValue placeholder="Selecione..." />;
+                    })()}
+                  </SelectTrigger>
+                  <BookmakerSearchableSelectContent
+                    bookmakers={bookmakers.map(bk => ({
+                      id: bk.id,
+                      nome: bk.nome,
+                      parceiro_nome: bk.parceiro_nome,
+                      moeda: bk.moeda,
+                      saldo_operavel: bk.saldo_operavel,
+                      saldo_disponivel: bk.saldo_atual,
+                      saldo_freebet: bk.saldo_freebet,
+                      saldo_bonus: bk.saldo_bonus,
+                      logo_url: bk.logo_url,
+                      bonus_rollover_started: bk.bonus_rollover_started,
+                    }))}
+                    className="z-50 w-[var(--radix-select-trigger-width)] min-w-[300px]"
+                  />
+                </Select>
+              </div>
             </div>
             {/* Saldo breakdown - full width */}
             {bookmakerSaldo && (
