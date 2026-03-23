@@ -183,6 +183,10 @@ export async function criarAposta(
     lay_stake: input.lay_stake,
     lay_liability: input.lay_liability,
     lay_comissao: input.lay_comissao,
+    
+    // Boost e fonte de entrada
+    boost_percentual: input.boost_percentual || null,
+    fonte_entrada: input.fonte_entrada || null,
   };
 
   // ================================================================

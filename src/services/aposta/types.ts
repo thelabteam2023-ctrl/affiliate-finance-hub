@@ -141,6 +141,10 @@ export interface CriarApostaInput {
   is_multicurrency?: boolean;
   cotacao_snapshot?: number | null;
   valor_brl_referencia?: number | null;
+  
+  // Boost e fonte
+  boost_percentual?: number | null;
+  fonte_entrada?: string | null;
 }
 
 /**
