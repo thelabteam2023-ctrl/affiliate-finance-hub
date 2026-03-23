@@ -69,6 +69,7 @@ import { useImportMultiplaBetPrint } from "@/hooks/useImportMultiplaBetPrint";
 import { GerouFreebetInput } from "./GerouFreebetInput";
 import { FreebetToggle } from "@/components/apostas/waterfall";
 import { FonteEntradaSelector } from "@/components/apostas/FonteEntradaSelector";
+import { useWorkspaceBetSources } from "@/hooks/useWorkspaceBetSources";
 
 interface Selecao {
   descricao: string;
