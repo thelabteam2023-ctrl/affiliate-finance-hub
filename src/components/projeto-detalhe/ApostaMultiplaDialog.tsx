@@ -321,11 +321,13 @@ export function ApostaMultiplaDialog({
     };
   });
 
-  // Seleções
+   // Seleções
   const [selecoes, setSelecoes] = useState<Selecao[]>([
     { descricao: "", odd: "", resultado: "PENDENTE" },
     { descricao: "", odd: "", resultado: "PENDENTE" },
   ]);
+  // Guard: skip tipo-change effect during initial load from aposta/rascunho
+  const isInitializingRef = useRef(false);
 
   // Número de seleções derivado do tipo
   const numSelecoes = useMemo(() => getNumFromTipo(tipoMultipla), [tipoMultipla]);
@@ -360,8 +362,10 @@ export function ApostaMultiplaDialog({
   // Preencher form com dados da aposta existente
   useEffect(() => {
     if (aposta && open) {
+      // Set guard to prevent tipo-change effect from overwriting selecoes
+      isInitializingRef.current = true;
+      
       setBookmakerId(aposta.bookmaker_id);
-      setTipoMultipla((aposta.tipo_multipla as TipoMultipla) || "DUPLA");
       setBoostPercent((aposta as any).boost_percentual?.toString() || "");
       setStake(aposta.stake.toString());
       setStatusResultado(aposta.resultado || "PENDENTE");
@@ -375,20 +379,32 @@ export function ApostaMultiplaDialog({
         forma_registro: (aposta.forma_registro as FormaRegistro) || "MULTIPLA",
         estrategia: (aposta.estrategia as ApostaEstrategia) || (suggestions.estrategia || (defaultEstrategia as ApostaEstrategia)),
         contexto_operacional: (aposta.contexto_operacional as ContextoOperacional) || (suggestions.contexto_operacional || "NORMAL"),
-        fonte_saldo: ((aposta as any).fonte_saldo as FonteSaldo) || 'REAL', // Legado: default REAL
+        fonte_saldo: ((aposta as any).fonte_saldo as FonteSaldo) || 'REAL',
       });
 
-      // Parse selecoes from JSONB
+      // Parse selecoes from JSONB — SET SELECOES BEFORE tipoMultipla
+      // so the tipo-change effect (when it runs) sees correct length
       const parsedSelecoes = aposta.selecoes || [];
       if (parsedSelecoes.length > 0) {
-        setSelecoes(
-          parsedSelecoes.map((s: any) => ({
-            descricao: s.descricao || "",
-            odd: s.odd?.toString() || "",
-            resultado: s.resultado || "PENDENTE",
-          }))
-        );
+        const mapped = parsedSelecoes.map((s: any) => ({
+          descricao: s.descricao || "",
+          odd: s.odd?.toString() || "",
+          resultado: s.resultado || "PENDENTE",
+        }));
+        setSelecoes(mapped);
+        
+        // Derive tipo from actual selecoes count (source of truth)
+        const n = mapped.length;
+        const tipoMap: Record<number, TipoMultipla> = { 2: "DUPLA", 3: "TRIPLA", 4: "QUADRUPLA", 5: "QUINTUPLA", 6: "SEXTUPLA" };
+        setTipoMultipla(tipoMap[Math.min(Math.max(n, 2), 6)] || "DUPLA");
+      } else {
+        setTipoMultipla((aposta.tipo_multipla as TipoMultipla) || "DUPLA");
       }
+      
+      // Release guard after React processes the batched state updates
+      requestAnimationFrame(() => {
+        isInitializingRef.current = false;
+      });
 
       // Freebet
       if (aposta.tipo_freebet && aposta.tipo_freebet !== "normal") {
@@ -412,16 +428,18 @@ export function ApostaMultiplaDialog({
         }
       }, 100);
     } else if (rascunho && rascunho.tipo === 'MULTIPLA' && open && !aposta) {
+      // Set guard for rascunho too
+      isInitializingRef.current = true;
+      
       // PRÉ-PREENCHER COM DADOS DO RASCUNHO
       setBookmakerId(rascunho.bookmaker_id || "");
-      setTipoMultipla((rascunho.tipo_multipla as TipoMultipla) || "DUPLA");
       setStake(rascunho.stake?.toString() || "");
       setObservacoes(rascunho.observacoes || "");
       setBoostPercent("");
       setDataAposta(getLocalDateTimeString());
       setStatusResultado("PENDENTE");
       
-      // Preencher seleções
+      // Preencher seleções BEFORE setting tipoMultipla
       if (rascunho.selecoes && rascunho.selecoes.length > 0) {
         const novasSelecoes: Selecao[] = rascunho.selecoes.map(sel => ({
           descricao: sel.descricao?.toUpperCase() || "",
@@ -437,7 +455,13 @@ export function ApostaMultiplaDialog({
         const n = rascunho.selecoes.length;
         const tipoMap: Record<number, TipoMultipla> = { 2: "DUPLA", 3: "TRIPLA", 4: "QUADRUPLA", 5: "QUINTUPLA", 6: "SEXTUPLA" };
         setTipoMultipla(tipoMap[Math.min(n, 6)] || (n >= 4 ? "QUADRUPLA" : n >= 3 ? "TRIPLA" : "DUPLA"));
+      } else {
+        setTipoMultipla((rascunho.tipo_multipla as TipoMultipla) || "DUPLA");
       }
+      
+      requestAnimationFrame(() => {
+        isInitializingRef.current = false;
+      });
 
       setUsarFreebet(false);
       setValorFreebetUsar(0);
@@ -447,8 +471,11 @@ export function ApostaMultiplaDialog({
     }
   }, [aposta, open, rascunho]);
 
-  // Atualizar número de seleções quando tipo muda
+  // Atualizar número de seleções quando tipo muda (user interaction only)
   useEffect(() => {
+    // Skip during initialization from aposta/rascunho to avoid overwriting loaded data
+    if (isInitializingRef.current) return;
+    
     const n = numSelecoes;
     setSelecoes((prev) => {
       if (prev.length === n) return prev;
