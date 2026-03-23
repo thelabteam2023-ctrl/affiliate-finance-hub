@@ -1092,9 +1092,10 @@ export function ApostaMultiplaDialog({
               p_aposta_id: aposta.id,
               p_novo_bookmaker_id: bookmakerMudou ? bookmakerId : null,
               p_novo_stake: stakeMudou ? stakeNum : null,
-              p_nova_odd: oddMudou ? oddFinal : null,
+              p_nova_odd: oddMudou ? oddFinalParaSalvar : null,
               p_novo_resultado: resultadoMudou && resultadoFinal !== "PENDENTE" ? resultadoFinal : null,
               p_nova_moeda: null,
+              p_lucro_prejuizo: lucroPrejuizo,
             }
           );
           
