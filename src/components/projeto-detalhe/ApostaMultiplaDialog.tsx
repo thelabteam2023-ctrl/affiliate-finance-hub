@@ -321,10 +321,13 @@ export function ApostaMultiplaDialog({
     };
   });
 
-  // Seleções
+   // Seleções
   const [selecoes, setSelecoes] = useState<Selecao[]>([
     { descricao: "", odd: "", resultado: "PENDENTE" },
     { descricao: "", odd: "", resultado: "PENDENTE" },
+  ]);
+  // Guard: skip tipo-change effect during initial load from aposta/rascunho
+  const isInitializingRef = useRef(false);
   ]);
 
   // Número de seleções derivado do tipo
