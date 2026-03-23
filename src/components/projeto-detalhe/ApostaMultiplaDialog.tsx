@@ -68,6 +68,7 @@ import { BookmakerSearchableSelectContent } from "@/components/bookmakers/Bookma
 import { useImportMultiplaBetPrint } from "@/hooks/useImportMultiplaBetPrint";
 import { GerouFreebetInput } from "./GerouFreebetInput";
 import { FreebetToggle } from "@/components/apostas/waterfall";
+import { FonteEntradaSelector } from "@/components/apostas/FonteEntradaSelector";
 
 interface Selecao {
   descricao: string;
@@ -297,6 +298,7 @@ export function ApostaMultiplaDialog({
   const [dataAposta, setDataAposta] = useState("");
   const [observacoes, setObservacoes] = useState("");
   const [boostPercent, setBoostPercent] = useState("");
+  const [fonteEntrada, setFonteEntrada] = useState<string | null>(null);
 
   // Registro explícito - estratégia NUNCA é inferida automaticamente
   // Se a aba não define estratégia (ex: Apostas Livres), fica null e o usuário DEVE escolher
@@ -363,6 +365,7 @@ export function ApostaMultiplaDialog({
       setStatusResultado(aposta.resultado || "PENDENTE");
       setDataAposta(dbTimestampToDatetimeLocal(aposta.data_aposta));
       setObservacoes(aposta.observacoes || "");
+      setFonteEntrada((aposta as any).fonte_entrada || null);
 
       // Restaurar campos de registro (incluindo fonte_saldo)
       const suggestions = getSuggestionsForTab(activeTab);
@@ -491,6 +494,7 @@ export function ApostaMultiplaDialog({
     setGerouFreebet(false);
     setValorFreebetGerada("");
     setBookmakerSaldo(null);
+    setFonteEntrada(null);
     // Reset registro values (incluindo fonte_saldo)
     const suggestions = getSuggestionsForTab(activeTab);
     const inferredFonteSaldo = (() => {
@@ -925,6 +929,7 @@ export function ApostaMultiplaDialog({
         forma_registro: registroValues.forma_registro,
         contexto_operacional: registroValues.contexto_operacional,
         boost_percentual: !isNaN(boostVal) && boostVal > 0 ? boostVal : null,
+        fonte_entrada: registroValues.estrategia === 'VALUEBET' ? fonteEntrada : null,
         // Multi-moeda
         moeda_operacao: moedaOpEdit,
         cotacao_snapshot: cotacaoSnapEdit,
@@ -1375,6 +1380,15 @@ export function ApostaMultiplaDialog({
           />
 
           <div className="space-y-1.5 py-1.5 px-3">
+
+            {/* Fonte da Entrada - só aparece para ValueBet */}
+            {registroValues.estrategia === 'VALUEBET' && (
+              <FonteEntradaSelector
+                workspaceId={workspaceId}
+                value={fonteEntrada}
+                onChange={setFonteEntrada}
+              />
+            )}
 
             {/* Tipo de Múltipla + Casa na mesma linha */}
             <div className="grid grid-cols-[1fr_1fr] gap-2">

@@ -74,6 +74,7 @@ import { BonusImpactAlert } from "./BonusImpactAlert";
 import { FreebetToggle, SaldoWaterfallPreview } from "@/components/apostas/waterfall";
 import { Plus, Trash2 as Trash2Entry, Layers } from "lucide-react";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
+import { FonteEntradaSelector } from "@/components/apostas/FonteEntradaSelector";
 
 // Multi-entry para aposta simples (mesma seleção, múltiplas bookmakers)
 interface AdditionalEntry {
@@ -618,6 +619,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
   const [statusResultado, setStatusResultado] = useState("PENDENTE");
   const [valorRetorno, setValorRetorno] = useState("");
   const [observacoes, setObservacoes] = useState("");
+  const [fonteEntrada, setFonteEntrada] = useState<string | null>(null);
 
   // Check if current mercado is Moneyline (uses select instead of free text)
   const isMoneyline = isMoneylineMercado(mercado);
@@ -899,6 +901,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         setStatusResultado(aposta.resultado || aposta.status);
         setValorRetorno(aposta.valor_retorno?.toString() || "");
         setObservacoes(aposta.observacoes || "");
+        setFonteEntrada((aposta as any).fonte_entrada || null);
 
         // Parse handicap selection if applicable
         const savedMercado = aposta.mercado || "";
@@ -1436,6 +1439,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
       contexto_operacional: null,
       fonte_saldo: null, // Será inferido automaticamente baseado na aba/estratégia
     });
+    setFonteEntrada(null);
     // Clear print import data
     clearPrintData();
     setMercadoFromPrint(false);
@@ -1800,6 +1804,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         // VERDADE FINANCEIRA: usar_freebet toggle determina fonte de saldo
         fonte_saldo: usarFreebetBookmaker ? 'FREEBET' : 'REAL',
         usar_freebet: usarFreebetBookmaker,
+        fonte_entrada: registroValues.estrategia === 'VALUEBET' ? fonteEntrada : null,
         // CRÍTICO: Moeda da operação = moeda nativa da bookmaker
         moeda_operacao: moedaOperacao,
       };
@@ -3163,6 +3168,17 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
             {/* HEADER UNIFICADO V2 - 3 linhas fixas (sem padding, full width) */}
             <BetFormHeaderV2 {...headerProps} />
 
+            {/* Fonte da Entrada - só aparece para ValueBet */}
+            {registroValues.estrategia === 'VALUEBET' && (
+              <div className="px-4 pt-2">
+                <FonteEntradaSelector
+                  workspaceId={workspaceId}
+                  value={fonteEntrada}
+                  onChange={setFonteEntrada}
+                />
+              </div>
+            )}
+
             {/* CONTENT - com scroll e padding interno */}
             <div className="p-4">
               <div className="grid gap-5">
@@ -4468,6 +4484,17 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
 
           {/* HEADER UNIFICADO V2 - 3 linhas fixas (full width, sem padding do DialogContent) */}
           <BetFormHeaderV2 {...headerProps} />
+
+          {/* Fonte da Entrada - só aparece para ValueBet (embedded) */}
+          {registroValues.estrategia === 'VALUEBET' && (
+            <div className="px-4 pt-2">
+              <FonteEntradaSelector
+                workspaceId={workspaceId}
+                value={fonteEntrada}
+                onChange={setFonteEntrada}
+              />
+            </div>
+          )}
 
           {/* CONTENT - com padding interno */}
           <div className="grid gap-5 p-4">
