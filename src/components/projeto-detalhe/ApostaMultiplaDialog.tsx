@@ -1381,6 +1381,15 @@ export function ApostaMultiplaDialog({
 
           <div className="space-y-1.5 py-1.5 px-3">
 
+            {/* Fonte da Entrada - só aparece para ValueBet */}
+            {registroValues.estrategia === 'VALUEBET' && (
+              <FonteEntradaSelector
+                workspaceId={workspaceId}
+                value={fonteEntrada}
+                onChange={setFonteEntrada}
+              />
+            )}
+
             {/* Tipo de Múltipla + Casa na mesma linha */}
             <div className="grid grid-cols-[1fr_1fr] gap-2">
               <div className="space-y-0.5">
