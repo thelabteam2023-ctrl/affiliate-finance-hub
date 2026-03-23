@@ -962,7 +962,7 @@ export function ApostaMultiplaDialog({
         bookmaker_id: bookmakerId,
         tipo_multipla: tipoMultipla,
         stake: stakeNum,
-        odd_final: oddFinal,
+        odd_final: oddFinalParaSalvar,
         retorno_potencial: retornoPotencial,
         lucro_prejuizo: lucroPrejuizo,
         valor_retorno: valorRetorno,
