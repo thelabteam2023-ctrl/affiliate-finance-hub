@@ -65,7 +65,14 @@ function ViewPorParceiro() {
   const [parceiroPopoverOpen, setParceiroPopoverOpen] = useState(false);
   const [grupoFilter, setGrupoFilter] = useState("todos");
   const [search, setSearch] = useState("");
-  const { getCatalogoIdsByGrupo } = useBookmakerGrupos();
+  const { getCatalogoIdsByGrupo, membros } = useBookmakerGrupos();
+
+  // Set of all catalogo IDs that belong to at least one group
+  const allGroupedCatalogoIds = useMemo(() => {
+    const ids = new Set<string>();
+    (membros ?? []).forEach((m) => ids.add(m.bookmaker_catalogo_id));
+    return ids;
+  }, [membros]);
 
   const [criarDialog, setCriarDialog] = useState<{
     open: boolean;
@@ -123,10 +130,12 @@ function ViewPorParceiro() {
 
     return catalogoBookmakers.filter((bk) => {
       if (contasSet.has(bk.id)) return false;
+      // Only show bookmakers that belong to at least one group
+      if (!allGroupedCatalogoIds.has(bk.id)) return false;
       if (grupoIds && !grupoIds.has(bk.id)) return false;
       return true;
     });
-  }, [catalogoBookmakers, contasSet, grupoFilter, getCatalogoIdsByGrupo, selectedParceiroId]);
+  }, [catalogoBookmakers, contasSet, grupoFilter, getCatalogoIdsByGrupo, selectedParceiroId, allGroupedCatalogoIds]);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return missingBookmakers;
@@ -355,7 +364,14 @@ function ViewPorBookmaker() {
   const [grupoFilter, setGrupoFilter] = useState("todos");
   const [sortOrigem, setSortOrigem] = useState<"asc" | "desc" | null>(null);
   const [sortDias, setSortDias] = useState<"asc" | "desc" | null>(null);
-  const { getCatalogoIdsByGrupo } = useBookmakerGrupos();
+  const { getCatalogoIdsByGrupo, membros: membrosVPB } = useBookmakerGrupos();
+
+  // Set of all catalogo IDs that belong to at least one group
+  const allGroupedCatalogoIdsVPB = useMemo(() => {
+    const ids = new Set<string>();
+    (membrosVPB ?? []).forEach((m) => ids.add(m.bookmaker_catalogo_id));
+    return ids;
+  }, [membrosVPB]);
 
   const [criarDialog, setCriarDialog] = useState<{
     open: boolean;
@@ -652,6 +668,7 @@ function ViewPorBookmaker() {
                 (() => {
                   const grupoIds = grupoFilter !== "todos" ? getCatalogoIdsByGrupo(grupoFilter) : null;
                   return (catalogoBookmakers ?? [])
+                    .filter((bk) => allGroupedCatalogoIdsVPB.has(bk.id))
                     .filter((bk) => bk.nome.toLowerCase().includes(bkSearch.toLowerCase()))
                     .filter((bk) => !grupoIds || grupoIds.has(bk.id));
                 })()
