@@ -1744,6 +1744,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                   }}
                    onQuickResolve={handleQuickResolve}
                    onDelete={prepareDeleteSimples}
+                   onDuplicate={handleDuplicateSimples}
                    formatCurrency={formatCurrency}
                    convertToConsolidation={convertToConsolidation}
                    moedaConsolidacao={moedaConsolidacao}
