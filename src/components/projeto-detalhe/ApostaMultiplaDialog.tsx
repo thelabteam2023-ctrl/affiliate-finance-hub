@@ -1381,7 +1381,7 @@ export function ApostaMultiplaDialog({
               <div className="space-y-0.5">
                 <Label className="text-[10px] text-muted-foreground font-normal uppercase tracking-wider">Tipo de Múltipla</Label>
                 <Select value={tipoMultipla} onValueChange={(v) => setTipoMultipla(v as TipoMultipla)}>
-                  <SelectTrigger className="h-8 text-xs font-semibold border-primary/30 bg-primary/5">
+                  <SelectTrigger className="h-8 text-xs font-semibold border-primary/30 bg-primary/5 justify-center [&>svg]:ml-1">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="min-w-[180px]">
