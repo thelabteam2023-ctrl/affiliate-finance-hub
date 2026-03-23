@@ -74,6 +74,7 @@ export interface ApostaCardData {
   pernas?: Perna[];
   selecoes?: Selecao[];
   tipo_multipla?: string;
+  boost_percentual?: number | null;
   bookmaker_nome?: string;
   parceiro_nome?: string;
   operador_nome?: string;
@@ -358,6 +359,16 @@ export function ApostaCard({
   const moeda = aposta.moeda || "BRL";
   const displayCurrency = isMultiCurrency ? (moedaConsolidacao || "BRL") : moeda;
   const isForeignCurrency = moeda !== "BRL";
+  const boostPct = aposta.boost_percentual;
+  
+  // Calcular odd das seleções (produto das odds individuais)
+  const calculatedMultiplaOdd = isMultipla && aposta.selecoes?.length 
+    ? aposta.selecoes.reduce((acc, s) => acc * Number(s.odd || 1), 1)
+    : null;
+  const oddMultiplaBase = calculatedMultiplaOdd ?? displayOdd;
+  const oddMultiplaFinal = boostPct && boostPct > 0 
+    ? oddMultiplaBase * (1 + boostPct / 100)
+    : oddMultiplaBase;
   
   // Para apostas múltiplas, exibir "MÚLTIPLA" como título
   const displayEvento = isMultipla ? 'MÚLTIPLA' : (aposta.evento || '');
@@ -548,41 +559,55 @@ export function ApostaCard({
               </div>
             ) : hasSelecoes ? (
               <div className="flex flex-col gap-0.5 flex-1 min-w-0 overflow-hidden">
-                {aposta.selecoes!.slice(0, 3).map((s, idx) => (
-                  <p key={idx} className="text-xs text-muted-foreground truncate uppercase">
-                    {s.descricao} @{Number(s.odd).toFixed(2)}
-                  </p>
+                {aposta.selecoes!.map((s, idx) => (
+                  <div key={idx} className="flex items-center gap-2 text-xs overflow-hidden">
+                    <span className="text-[10px] text-muted-foreground/50 font-mono w-3 shrink-0">{idx + 1}</span>
+                    <span className="truncate flex-1 text-muted-foreground uppercase">{s.descricao}</span>
+                    <span className="font-medium shrink-0">@{Number(s.odd).toFixed(2)}</span>
+                    {s.resultado && s.resultado !== "PENDENTE" && (
+                      <ResultadoBadge resultado={s.resultado} />
+                    )}
+                  </div>
                 ))}
-                {aposta.selecoes!.length > 3 && (
-                  <p className="text-[10px] text-muted-foreground/60">
-                    +{aposta.selecoes!.length - 3} seleção(ões)
-                  </p>
-                )}
+                {/* Linha resumo: Odd final + boost + stake */}
+                <div className="flex items-center justify-between pt-1 mt-0.5 border-t border-border/30">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm font-semibold">@{oddMultiplaFinal.toFixed(2)}</span>
+                    {boostPct && boostPct > 0 && (
+                      <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10">
+                        +{boostPct}% boost
+                      </Badge>
+                    )}
+                  </div>
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">{formatTotal(stakeDisplay)}</span>
+                </div>
               </div>
             ) : null}
             
-            {/* Odd + Stake à direita */}
-            <div className="flex items-center gap-2 shrink-0 justify-end sm:justify-start">
-              {isSimples && (
-                <>
-                  {hasSubEntries ? (
-                    <>
-                      <span className="text-[10px] text-muted-foreground">Odd ø</span>
-                      <span className="text-sm font-semibold">@{displayOdd.toFixed(2)}</span>
-                    </>
-                  ) : (
-                    <span className="text-sm font-medium">@{displayOdd.toFixed(2)}</span>
-                  )}
-                  {hasSubEntries && (
-                    <span className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground">
-                      <Layers className="h-3 w-3" />
-                      <span>{aposta.sub_entries!.length + 1}</span>
-                    </span>
-                  )}
-                </>
-              )}
-              <span className="text-xs text-muted-foreground whitespace-nowrap">{formatTotal(stakeDisplay)}</span>
-            </div>
+            {/* Odd + Stake à direita (apenas para simples) */}
+            {!hasSelecoes && (
+              <div className="flex items-center gap-2 shrink-0 justify-end sm:justify-start">
+                {isSimples && (
+                  <>
+                    {hasSubEntries ? (
+                      <>
+                        <span className="text-[10px] text-muted-foreground">Odd ø</span>
+                        <span className="text-sm font-semibold">@{displayOdd.toFixed(2)}</span>
+                      </>
+                    ) : (
+                      <span className="text-sm font-medium">@{displayOdd.toFixed(2)}</span>
+                    )}
+                    {hasSubEntries && (
+                      <span className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground">
+                        <Layers className="h-3 w-3" />
+                        <span>{aposta.sub_entries!.length + 1}</span>
+                      </span>
+                    )}
+                  </>
+                )}
+                <span className="text-xs text-muted-foreground whitespace-nowrap">{formatTotal(stakeDisplay)}</span>
+              </div>
+            )}
           </div>
           
           {/* MULTI-ENTRY: All entries listed equally */}
@@ -763,9 +788,10 @@ export function ApostaCard({
             getLogoUrl={getLogoUrl}
           />
         ) : hasSelecoes ? (
-          <div className="space-y-1.5 mb-3">
+          <div className="space-y-1 mb-3">
             {aposta.selecoes!.map((sel, idx) => (
-              <div key={idx} className="flex justify-between items-center text-sm gap-2">
+              <div key={idx} className="flex items-center gap-2 text-sm">
+                <span className="text-[10px] text-muted-foreground/50 font-mono w-4 shrink-0">{idx + 1}</span>
                 <span className="text-muted-foreground truncate flex-1 uppercase">{sel.descricao}</span>
                 <div className="flex items-center gap-2 shrink-0">
                   <span className="font-medium">@{Number(sel.odd).toFixed(2)}</span>
@@ -773,8 +799,18 @@ export function ApostaCard({
                 </div>
               </div>
             ))}
-            <div className="flex justify-end pt-1 border-t border-border/50">
-              <span className="text-xs font-medium">Odd Final: @{displayOdd.toFixed(2)}</span>
+            <div className="flex items-center justify-between pt-1.5 mt-1 border-t border-border/50">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold">@{oddMultiplaFinal.toFixed(2)}</span>
+                {boostPct && boostPct > 0 && (
+                  <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10">
+                    +{boostPct}% boost
+                  </Badge>
+                )}
+              </div>
+              <span className="text-xs text-muted-foreground">
+                Retorno: {formatTotal(oddMultiplaFinal * stakeDisplay)}
+              </span>
             </div>
           </div>
         ) : (
