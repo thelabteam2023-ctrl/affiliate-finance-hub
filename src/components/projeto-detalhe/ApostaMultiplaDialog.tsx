@@ -1693,7 +1693,7 @@ export function ApostaMultiplaDialog({
             </p>
           </div>
 
-          <DialogFooter className={`flex-col sm:flex-row gap-1.5 px-3 pb-3 pt-1 ${embedded ? 'max-w-[720px] mx-auto w-full' : ''}`}>
+          <DialogFooter className="flex-col sm:flex-row gap-1.5 px-3 pb-3 pt-1">
             {aposta && (
               <Button
                 type="button"
