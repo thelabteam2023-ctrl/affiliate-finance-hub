@@ -3168,6 +3168,17 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
             {/* HEADER UNIFICADO V2 - 3 linhas fixas (sem padding, full width) */}
             <BetFormHeaderV2 {...headerProps} />
 
+            {/* Fonte da Entrada - só aparece para ValueBet */}
+            {registroValues.estrategia === 'VALUEBET' && (
+              <div className="px-4 pt-2">
+                <FonteEntradaSelector
+                  workspaceId={workspaceId}
+                  value={fonteEntrada}
+                  onChange={setFonteEntrada}
+                />
+              </div>
+            )}
+
             {/* CONTENT - com scroll e padding interno */}
             <div className="p-4">
               <div className="grid gap-5">
