@@ -901,6 +901,7 @@ export function ApostaMultiplaDialog({
         : null;
       const valorBrlRefEdit = isForeignEdit && cotacaoSnapEdit ? stakeNum * cotacaoSnapEdit : null;
 
+      const boostVal = parseFloat(boostPercent);
       const apostaData = {
         user_id: user.id,
         workspace_id: workspaceId,
@@ -923,6 +924,7 @@ export function ApostaMultiplaDialog({
         estrategia: registroValues.estrategia,
         forma_registro: registroValues.forma_registro,
         contexto_operacional: registroValues.contexto_operacional,
+        boost_percentual: !isNaN(boostVal) && boostVal > 0 ? boostVal : null,
         // Multi-moeda
         moeda_operacao: moedaOpEdit,
         cotacao_snapshot: cotacaoSnapEdit,
