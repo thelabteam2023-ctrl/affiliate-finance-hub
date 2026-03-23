@@ -1428,7 +1428,7 @@ export function ApostaMultiplaDialog({
                       const selectedBk = bookmakerId ? bookmakers.find(b => b.id === bookmakerId) : null;
                       if (selectedBk) {
                         return (
-                          <div className="flex items-center gap-1.5 w-full min-w-0">
+                          <div className="flex items-center gap-1.5 w-full min-w-0 justify-center">
                             {selectedBk.logo_url && (
                               <img src={selectedBk.logo_url} alt="" className="h-4 w-4 rounded object-contain flex-shrink-0" />
                             )}
