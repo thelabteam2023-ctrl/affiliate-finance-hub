@@ -1549,7 +1549,7 @@ export function ApostaMultiplaDialog({
             </div>
 
             {/* Preview em Tempo Real da Múltipla */}
-            <div className="flex items-center gap-4 px-3 py-2 rounded-md border border-blue-500/30 bg-blue-500/5 text-sm">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-2 py-1.5 rounded-md border border-blue-500/30 bg-blue-500/5 text-sm">
               <span className="text-[10px] text-muted-foreground shrink-0">Preview</span>
               <div className="flex items-center gap-1">
                 <span className="text-[10px] text-muted-foreground">Resultado:</span>
