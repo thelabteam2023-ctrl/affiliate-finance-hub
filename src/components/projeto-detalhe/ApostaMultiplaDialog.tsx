@@ -565,26 +565,32 @@ export function ApostaMultiplaDialog({
 
   // fetchBookmakers REMOVIDO - agora usa useBookmakerSaldosQuery como fonte canônica
 
-  // Calcular odd final (produto das odds) - considerando VOIDs como odd 1.00
-  const { oddFinal, oddFinalReal } = useMemo(() => {
+  // Calcular odd final (produto das odds) - considerando VOIDs como odd 1.00 e boost
+  const boostMultiplier = useMemo(() => {
+    const bp = parseFloat(boostPercent);
+    return !isNaN(bp) && bp > 0 ? 1 + bp / 100 : 1;
+  }, [boostPercent]);
+
+  const { oddFinal, oddFinalReal, oddFinalSemBoost } = useMemo(() => {
     const selecoesValidas = selecoes.filter((s) => {
       const oddNum = parseFloat(s.odd);
       return !isNaN(oddNum) && oddNum > 0;
     });
     
-    if (selecoesValidas.length === 0) return { oddFinal: 0, oddFinalReal: 0 };
+    if (selecoesValidas.length === 0) return { oddFinal: 0, oddFinalReal: 0, oddFinalSemBoost: 0 };
     
-    // Odd final nominal (todas as odds)
     const oddNominal = selecoesValidas.reduce((acc, s) => acc * parseFloat(s.odd), 1);
-    
-    // Odd final real (excluindo VOIDs que são tratados como 1.00)
     const oddReal = selecoesValidas.reduce((acc, s) => {
-      if (s.resultado === "VOID") return acc * 1; // VOID = odd 1.00
+      if (s.resultado === "VOID") return acc * 1;
       return acc * parseFloat(s.odd);
     }, 1);
     
-    return { oddFinal: oddNominal, oddFinalReal: oddReal };
-  }, [selecoes]);
+    return {
+      oddFinal: oddNominal * boostMultiplier,
+      oddFinalReal: oddReal * boostMultiplier,
+      oddFinalSemBoost: oddNominal,
+    };
+  }, [selecoes, boostMultiplier]);
 
   // Função hierárquica para calcular resultado da múltipla
   // Regras de prioridade: RED > MEIO_RED > all GREEN > MEIO_GREEN+GREEN > VOID > PENDENTE
