@@ -559,6 +559,13 @@ export function ApostaMultiplaDialog({
     }
   }, [open, aposta, activeTab, registroValues.estrategia]);
 
+  // Auto-select favorite source for ValueBet
+  useEffect(() => {
+    if (open && !aposta && fonteEntrada === null && favoriteSource && registroValues.estrategia === 'VALUEBET') {
+      setFonteEntrada(favoriteSource.name);
+    }
+  }, [open, aposta, favoriteSource, registroValues.estrategia, fonteEntrada]);
+
   const getLocalDateTimeString = () => {
     const now = new Date();
     const year = now.getFullYear();
