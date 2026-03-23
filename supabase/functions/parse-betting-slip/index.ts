@@ -40,7 +40,7 @@ interface ParsedMultiplaBetSlip {
 const SPORTS_LIST = [
   "Futebol", "Basquete", "Tênis", "Baseball", "Hockey", 
   "Futebol Americano", "Vôlei", "MMA/UFC", "League of Legends", 
-  "Counter-Strike", "Dota 2", "eFootball"
+  "Counter-Strike", "Dota 2", "Valorant", "eFootball"
 ];
 
 const MARKETS_KEYWORDS = {

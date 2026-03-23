@@ -112,6 +112,7 @@ export const DOMAINS_BY_SPORT: Record<string, MarketDomain[]> = {
   // eSports
   "League of Legends": ["MAPS", "KILLS", "TOWERS"],
   "Counter-Strike": ["MAPS", "ROUNDS"],
+  "Valorant": ["MAPS", "ROUNDS"],
   "Dota 2": ["MAPS", "KILLS", "TOWERS"],
   
   // Fallback
@@ -182,6 +183,7 @@ export const MARKET_TYPES_BY_SPORT: Record<string, MarketType[]> = {
   "Boxe": ["MONEYLINE", "TOTAL", "METHOD_OF_VICTORY", "ROUND_FINISH", "OTHER"],
   "League of Legends": ["MONEYLINE", "TOTAL", "HANDICAP", "OTHER"],
   "Counter-Strike": ["MONEYLINE", "TOTAL", "HANDICAP", "OTHER"],
+  "Valorant": ["MONEYLINE", "TOTAL", "HANDICAP", "OTHER"],
   "Dota 2": ["MONEYLINE", "TOTAL", "HANDICAP", "OTHER"],
   "eFootball": ["1X2", "TOTAL", "HANDICAP", "BTTS", "CORRECT_SCORE", "OTHER"],
   "Outro": ["MONEYLINE", "TOTAL", "HANDICAP", "OTHER"],

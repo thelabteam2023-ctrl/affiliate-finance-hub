@@ -1210,6 +1210,10 @@ export const MERCADOS_POR_ESPORTE: Record<string, string[]> = {
     "Placar Exato", "Over/Under Rounds", "Primeiro a 10 Rounds",
     "Total de Kills", "Handicap de Rounds", "Outro"
   ],
+  "Valorant": [
+    "Vencedor do Mapa", "Handicap de Mapas", "Total de Mapas", "Vencedor da Série",
+    "Total de Rounds", "Handicap de Rounds", "Outro"
+  ],
   "Dota 2": [
     "Vencedor do Mapa", "Handicap de Mapas", "Total de Mapas", "Vencedor da Série",
     "Placar Exato", "Over/Under Kills", "Primeiro Objetivo", "Total de Torres",
@@ -1248,6 +1252,7 @@ export const MERCADOS_COM_EMPATE_POR_ESPORTE: Record<string, string[]> = {
   "Golfe": [],
   "League of Legends": [],
   "Counter-Strike": [],
+  "Valorant": [],
   "Dota 2": [],
   "Outro": [],
 };
@@ -1376,6 +1381,7 @@ export function normalizeSport(rawSport: string): { normalized: string; confiden
     "Golfe": ["golf", "golfe"],
     "League of Legends": ["lol", "league"],
     "Counter-Strike": ["cs", "csgo", "cs2", "counter strike"],
+    "Valorant": ["valorant", "valo"],
     "Dota 2": ["dota"],
     "eFootball": ["efootball", "pes", "fifa", "ea fc", "ea sports fc"]
   };

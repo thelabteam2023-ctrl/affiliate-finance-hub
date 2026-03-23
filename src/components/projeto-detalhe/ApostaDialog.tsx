@@ -167,6 +167,7 @@ const ESPORTES_BASE = [
   "League of Legends",
   "Counter-Strike",
   "Dota 2",
+  "Valorant",
   "eFootball",
   "Outro"
 ];
@@ -317,6 +318,15 @@ const MERCADOS_POR_ESPORTE: Record<string, string[]> = {
     "Vencedor da Série",
     "Total de Mapas",
     "Total de Rounds",      // ANTES: "Over (Rounds)" + "Under (Rounds)"
+    "Handicap de Mapas",
+    "Handicap de Rounds",
+    "Outro"
+  ],
+  "Valorant": [
+    "Vencedor do Mapa",
+    "Vencedor da Série",
+    "Total de Mapas",
+    "Total de Rounds",
     "Handicap de Mapas",
     "Handicap de Rounds",
     "Outro"

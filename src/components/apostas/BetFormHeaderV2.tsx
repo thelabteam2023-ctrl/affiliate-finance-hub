@@ -44,7 +44,7 @@ export type BetFormType = "simples" | "multipla" | "arbitragem";
 const ESPORTES_BASE = [
   "Futebol", "Basquete", "Tênis", "Baseball", "Hockey",
   "Futebol Americano", "Vôlei", "MMA/UFC", "Boxe", "Golfe",
-  "League of Legends", "Counter-Strike", "Dota 2", "eFootball", "Outro"
+  "League of Legends", "Counter-Strike", "Dota 2", "Valorant", "eFootball", "Outro"
 ];
 
 interface GameFields {
