@@ -548,11 +548,16 @@ export function ApostaCard({
               </div>
             ) : hasSelecoes ? (
               <div className="flex flex-col gap-0.5 flex-1 min-w-0 overflow-hidden">
-                {aposta.selecoes!.map((s, idx) => (
+                {aposta.selecoes!.slice(0, 3).map((s, idx) => (
                   <p key={idx} className="text-xs text-muted-foreground truncate uppercase">
                     {s.descricao} @{Number(s.odd).toFixed(2)}
                   </p>
                 ))}
+                {aposta.selecoes!.length > 3 && (
+                  <p className="text-[10px] text-muted-foreground/60">
+                    +{aposta.selecoes!.length - 3} seleção(ões)
+                  </p>
+                )}
               </div>
             ) : null}
             
