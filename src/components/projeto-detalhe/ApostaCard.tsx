@@ -489,7 +489,7 @@ export function ApostaCard({
             </div>
           </div>
           
-          {/* LINHA 2: Badge Seleção + Logo + Casa + Odd + Stake - Responsivo */}
+          {/* LINHA 2: Logo + Casa + Odd + Stake */}
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 overflow-hidden">
             {/* Top row on mobile: Logo + Casa */}
             <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 overflow-hidden">
@@ -557,58 +557,55 @@ export function ApostaCard({
               <div className="hidden sm:block flex-1 min-w-0 overflow-hidden">
                 <ApostaPernasInline pernas={aposta.pernas as Perna[]} className="truncate" getLogoUrl={getLogoUrl} />
               </div>
-            ) : hasSelecoes ? (
-              <div className="flex flex-col gap-0.5 flex-1 min-w-0 overflow-hidden">
-                {aposta.selecoes!.map((s, idx) => (
-                  <div key={idx} className="flex items-center gap-2 text-xs overflow-hidden">
-                    <span className="text-[10px] text-muted-foreground/50 font-mono w-3 shrink-0">{idx + 1}</span>
-                    <span className="truncate flex-1 text-muted-foreground uppercase">{s.descricao}</span>
-                    <span className="font-medium shrink-0">@{Number(s.odd).toFixed(2)}</span>
-                    {s.resultado && s.resultado !== "PENDENTE" && (
-                      <ResultadoBadge resultado={s.resultado} />
-                    )}
-                  </div>
-                ))}
-                {/* Linha resumo: Odd final + boost + stake */}
-                <div className="flex items-center justify-between pt-1 mt-0.5 border-t border-border/30">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-sm font-semibold">@{oddMultiplaFinal.toFixed(2)}</span>
-                    {boostPct && boostPct > 0 && (
-                      <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10">
-                        +{boostPct}% boost
-                      </Badge>
-                    )}
-                  </div>
-                  <span className="text-xs text-muted-foreground whitespace-nowrap">{formatTotal(stakeDisplay)}</span>
-                </div>
-              </div>
             ) : null}
             
-            {/* Odd + Stake à direita (apenas para simples) */}
-            {!hasSelecoes && (
-              <div className="flex items-center gap-2 shrink-0 justify-end sm:justify-start">
-                {isSimples && (
-                  <>
-                    {hasSubEntries ? (
-                      <>
-                        <span className="text-[10px] text-muted-foreground">Odd ø</span>
-                        <span className="text-sm font-semibold">@{displayOdd.toFixed(2)}</span>
-                      </>
-                    ) : (
-                      <span className="text-sm font-medium">@{displayOdd.toFixed(2)}</span>
-                    )}
-                    {hasSubEntries && (
-                      <span className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground">
-                        <Layers className="h-3 w-3" />
-                        <span>{aposta.sub_entries!.length + 1}</span>
-                      </span>
-                    )}
-                  </>
-                )}
-                <span className="text-xs text-muted-foreground whitespace-nowrap">{formatTotal(stakeDisplay)}</span>
-              </div>
-            )}
+            {/* Odd + Stake à direita - para múltiplas mostra odd final, para simples a odd normal */}
+            <div className="flex items-center gap-2 shrink-0 justify-end sm:justify-start">
+              {isMultipla ? (
+                <>
+                  <span className="text-sm font-semibold">@{oddMultiplaFinal.toFixed(2)}</span>
+                  {boostPct && boostPct > 0 && (
+                    <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10">
+                      +{boostPct}%
+                    </Badge>
+                  )}
+                </>
+              ) : isSimples ? (
+                <>
+                  {hasSubEntries ? (
+                    <>
+                      <span className="text-[10px] text-muted-foreground">Odd ø</span>
+                      <span className="text-sm font-semibold">@{displayOdd.toFixed(2)}</span>
+                    </>
+                  ) : (
+                    <span className="text-sm font-medium">@{displayOdd.toFixed(2)}</span>
+                  )}
+                  {hasSubEntries && (
+                    <span className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground">
+                      <Layers className="h-3 w-3" />
+                      <span>{aposta.sub_entries!.length + 1}</span>
+                    </span>
+                  )}
+                </>
+              ) : null}
+              <span className="text-xs text-muted-foreground whitespace-nowrap">{formatTotal(stakeDisplay)}</span>
+            </div>
           </div>
+          
+          {/* SELEÇÕES DA MÚLTIPLA - abaixo da casa, com borda lateral */}
+          {hasSelecoes && (
+            <div className="ml-6 sm:ml-8 border-l-2 border-border/40 pl-3 space-y-0.5">
+              {aposta.selecoes!.map((s, idx) => (
+                <div key={idx} className="flex items-center gap-2 text-xs py-0.5 overflow-hidden">
+                  <span className="truncate flex-1 text-muted-foreground uppercase">{s.descricao}</span>
+                  <span className="font-medium shrink-0">@{Number(s.odd).toFixed(2)}</span>
+                  {s.resultado && s.resultado !== "PENDENTE" && (
+                    <ResultadoBadge resultado={s.resultado} />
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
           
           {/* MULTI-ENTRY: All entries listed equally */}
           {hasSubEntries && (
