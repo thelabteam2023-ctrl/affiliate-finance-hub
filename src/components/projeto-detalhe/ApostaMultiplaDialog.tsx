@@ -830,7 +830,6 @@ export function ApostaMultiplaDialog({
     }
 
     // Validar seleções
-    const numSelecoes = tipoMultipla === "DUPLA" ? 2 : 3;
     for (let i = 0; i < numSelecoes; i++) {
       if (!selecoes[i]?.descricao?.trim()) {
         toast.error(`Preencha a descrição da seleção ${i + 1}`);
