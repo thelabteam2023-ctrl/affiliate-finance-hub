@@ -80,6 +80,25 @@ function InfoTooltip({ text }: { text: string }) {
   );
 }
 
+/** Comprime imagem via canvas para reduzir payload */
+function compressImage(base64: string, maxWidth: number, quality: number): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxWidth / img.width);
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      const ctx = canvas.getContext('2d');
+      if (!ctx) { resolve(base64); return; }
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = reject;
+    img.src = base64;
+  });
+}
+
 export const CalculadoraEVContent: React.FC = () => {
   const [oddAtual, setOddAtual] = useState('');
   const [oddJusta, setOddJusta] = useState('');
