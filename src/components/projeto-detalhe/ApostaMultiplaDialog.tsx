@@ -1646,8 +1646,8 @@ export function ApostaMultiplaDialog({
               </div>
             </div>
 
-            {/* Stake e Cálculos */}
-            <div className="grid grid-cols-3 gap-2">
+            {/* Boost + Stake e Cálculos */}
+            <div className="grid grid-cols-4 gap-2">
               <div className="space-y-0.5">
                 <Label className="text-xs">Stake ({bookmakerSaldo?.moeda || 'R$'}) *</Label>
                 <Input
@@ -1660,12 +1660,28 @@ export function ApostaMultiplaDialog({
                 />
               </div>
               <div className="space-y-0.5">
-                <Label className="text-xs">Odd Final</Label>
+                <Label className="text-xs">Boost %</Label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  placeholder="0"
+                  value={boostPercent}
+                  onChange={(e) => setBoostPercent(e.target.value)}
+                  className="h-8 text-xs"
+                />
+              </div>
+              <div className="space-y-0.5">
+                <Label className="text-xs">Odd Final{boostMultiplier > 1 ? ' 🚀' : ''}</Label>
                 <Input
                   value={oddFinal > 0 ? oddFinal.toFixed(3) : "-"}
                   disabled
-                  className="bg-muted/50 h-8 text-xs"
+                  className={`bg-muted/50 h-8 text-xs ${boostMultiplier > 1 ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : ''}`}
                 />
+                {boostMultiplier > 1 && oddFinalSemBoost > 0 && (
+                  <p className="text-[9px] text-muted-foreground">
+                    Base: {oddFinalSemBoost.toFixed(3)} → +{boostPercent}%
+                  </p>
+                )}
               </div>
               <div className="space-y-0.5">
                 <Label className="text-xs">Retorno Potencial</Label>
