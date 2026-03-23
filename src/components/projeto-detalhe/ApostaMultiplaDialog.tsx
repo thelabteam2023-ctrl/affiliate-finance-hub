@@ -1024,11 +1024,16 @@ export function ApostaMultiplaDialog({
             throw new Error(result.error || 'Erro desconhecido ao atualizar aposta');
           }
 
-          // Atualizar campos que o RPC não cobre (seleções, observações, etc.)
+          // Atualizar campos que o RPC não cobre (seleções, observações, P/L calculado por seleção)
           await supabase.from("apostas_unificada").update({
             selecoes: selecoesFormatadas,
             tipo_multipla: tipoMultipla,
             retorno_potencial: retornoPotencial,
+            lucro_prejuizo: lucroPrejuizo,
+            valor_retorno: valorRetorno,
+            resultado: resultadoFinal,
+            status: resultadoFinal === "PENDENTE" ? "PENDENTE" : "LIQUIDADA",
+            odd_final: oddFinal,
             data_aposta: apostaData.data_aposta,
             observacoes: apostaData.observacoes,
             estrategia: apostaData.estrategia,
