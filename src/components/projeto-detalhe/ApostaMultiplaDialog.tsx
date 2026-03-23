@@ -1716,11 +1716,12 @@ export function ApostaMultiplaDialog({
                   if (v === "PENDENTE") {
                     setResultadoManual(null);
                     // Reset all legs to PENDENTE
-                    setSelecoes(prev => prev.map(s => ({ ...s, resultado: "PENDENTE" })));
+                    setSelecoes(prev => prev.map(s => ({ ...s, resultado: "PENDENTE" as const })));
                   } else {
                     setResultadoManual(v);
                     // Apply result to ALL legs (shortcut)
-                    setSelecoes(prev => prev.map(s => ({ ...s, resultado: v })));
+                    const typedResult = v as Selecao['resultado'];
+                    setSelecoes(prev => prev.map(s => ({ ...s, resultado: typedResult })));
                   }
                 }}
                 disabled={hasPerLegResults}
