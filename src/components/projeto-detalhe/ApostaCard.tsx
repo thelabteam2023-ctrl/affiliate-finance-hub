@@ -594,7 +594,8 @@ export function ApostaCard({
           
           {/* SELEÇÕES DA MÚLTIPLA - abaixo da casa, com borda lateral */}
           {hasSelecoes && (
-            <div className="ml-6 sm:ml-8 border-l-2 border-border/40 pl-3 space-y-0.5">
+            <div className="ml-6 sm:ml-8 relative pl-3 space-y-0.5">
+              <div className="absolute left-0 top-0 bottom-0 w-[2px] rounded-full bg-gradient-to-b from-primary/60 via-primary/25 to-transparent" />
               {aposta.selecoes!.map((s, idx) => (
                 <div key={idx} className="flex items-center gap-2 text-xs py-0.5 overflow-hidden">
                   <span className="truncate flex-1 text-muted-foreground uppercase">{s.descricao}</span>
