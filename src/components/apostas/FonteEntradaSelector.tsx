@@ -1,5 +1,5 @@
 /**
- * FonteEntradaSelector - Pill-style selector for bet source tracking
+ * FonteEntradaSelector - Filter-style buttons for bet source tracking
  * Only shown when estrategia = VALUEBET
  */
 import { useState } from "react";
@@ -16,6 +16,26 @@ interface FonteEntradaSelectorProps {
   value: string | null;
   onChange: (value: string | null) => void;
   className?: string;
+}
+
+const SOURCE_COLORS: Record<string, { active: string; idle: string }> = {
+  OddsNotifier: {
+    active: "bg-blue-500/15 border-blue-500/40 text-blue-400 shadow-[0_0_8px_-2px_rgba(59,130,246,0.2)]",
+    idle: "text-blue-400/60 hover:bg-blue-500/8 hover:border-blue-500/25",
+  },
+  RebelBetting: {
+    active: "bg-emerald-500/15 border-emerald-500/40 text-emerald-400 shadow-[0_0_8px_-2px_rgba(16,185,129,0.2)]",
+    idle: "text-emerald-400/60 hover:bg-emerald-500/8 hover:border-emerald-500/25",
+  },
+};
+
+const DEFAULT_COLORS = {
+  active: "bg-primary/15 border-primary/40 text-primary shadow-[0_0_8px_-2px_hsl(var(--primary)/0.2)]",
+  idle: "text-muted-foreground hover:bg-muted/60 hover:border-border",
+};
+
+function getColors(name: string) {
+  return SOURCE_COLORS[name] || DEFAULT_COLORS;
 }
 
 export function FonteEntradaSelector({
@@ -51,22 +71,26 @@ export function FonteEntradaSelector({
         Fonte da Entrada
       </Label>
       <div className="flex items-center gap-1.5 flex-wrap">
-        {sources.map((source) => (
-          <button
-            key={source}
-            type="button"
-            onClick={() => onChange(value === source ? null : source)}
-            className={cn(
-              "px-2.5 py-1 rounded-full text-[11px] font-medium border transition-all duration-150",
-              "hover:shadow-sm cursor-pointer",
-              value === source
-                ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                : "bg-muted/50 text-muted-foreground border-border/50 hover:border-border hover:bg-muted"
-            )}
-          >
-            {source}
-          </button>
-        ))}
+        {sources.map((source) => {
+          const isActive = value === source;
+          const colors = getColors(source);
+          return (
+            <button
+              key={source}
+              type="button"
+              onClick={() => onChange(isActive ? null : source)}
+              className={cn(
+                "px-2.5 py-1 rounded-[5px] text-[11px] font-medium border backdrop-blur-sm transition-all duration-200",
+                "cursor-pointer select-none",
+                isActive
+                  ? colors.active
+                  : cn("bg-muted/30 border-border/40", colors.idle)
+              )}
+            >
+              {source}
+            </button>
+          );
+        })}
 
         {adding ? (
           <div className="flex items-center gap-1">
@@ -79,7 +103,7 @@ export function FonteEntradaSelector({
                 if (e.key === "Escape") { setAdding(false); setNewName(""); }
               }}
               placeholder="Nova fonte..."
-              className="h-6 w-[120px] text-[11px] px-2 py-0"
+              className="h-6 w-[120px] text-[11px] px-2 py-0 rounded-[5px]"
             />
             <Button
               type="button"
@@ -105,9 +129,9 @@ export function FonteEntradaSelector({
           <button
             type="button"
             onClick={() => setAdding(true)}
-            className="px-2 py-1 rounded-full text-[11px] font-medium border border-dashed border-border/60 text-muted-foreground hover:border-primary/50 hover:text-primary transition-colors"
+            className="px-1.5 py-1 rounded-[5px] text-[11px] border border-dashed border-border/40 text-muted-foreground/60 hover:border-border hover:text-muted-foreground hover:bg-muted/30 transition-all duration-200 backdrop-blur-sm"
           >
-            <Plus className="h-3 w-3 inline mr-0.5" />
+            <Plus className="h-3 w-3" />
           </button>
         )}
       </div>
