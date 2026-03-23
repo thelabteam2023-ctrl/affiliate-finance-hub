@@ -58,7 +58,8 @@ type ViewMode = "por-bookmaker" | "por-parceiro";
 
 // ─── Sub-component: View "Por Parceiro" ───
 function ViewPorParceiro() {
-  const { workspaceId } = useAuth();
+  const { workspaceId, user } = useAuth();
+  const userId = user?.id;
   const queryClient = useQueryClient();
   const [selectedParceiroId, setSelectedParceiroId] = useState("");
   const [parceiroSearch, setParceiroSearch] = useState("");
@@ -66,6 +67,8 @@ function ViewPorParceiro() {
   const [grupoFilter, setGrupoFilter] = useState("todos");
   const [regulamentacaoFilter, setRegulamentacaoFilter] = useState<"todas" | "REGULAMENTADA" | "NAO_REGULAMENTADA">("todas");
   const [search, setSearch] = useState("");
+  const [showDescartados, setShowDescartados] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const { getCatalogoIdsByGrupo, membros } = useBookmakerGrupos();
 
   // Set of all catalogo IDs that belong to at least one group
