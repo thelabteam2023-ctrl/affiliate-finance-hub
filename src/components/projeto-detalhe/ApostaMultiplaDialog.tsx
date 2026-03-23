@@ -1371,52 +1371,7 @@ export function ApostaMultiplaDialog({
                 </div>
               )
             }
-            extraHeaderContent={
-              <div className="flex items-center gap-3">
-                <RadioGroup
-                  value={is4Plus ? "4PLUS" : tipoMultipla}
-                  onValueChange={(v) => {
-                    if (v === "4PLUS") {
-                      setTipoMultipla("QUADRUPLA");
-                    } else {
-                      setTipoMultipla(v as TipoMultipla);
-                    }
-                  }}
-                  className="flex gap-3"
-                >
-                  <div className="flex items-center space-x-1.5">
-                    <RadioGroupItem value="DUPLA" id="dupla" />
-                    <Label htmlFor="dupla" className="cursor-pointer text-xs whitespace-nowrap">
-                      Dupla (2)
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-1.5">
-                    <RadioGroupItem value="TRIPLA" id="tripla" />
-                    <Label htmlFor="tripla" className="cursor-pointer text-xs whitespace-nowrap">
-                      Tripla (3)
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-1.5">
-                    <RadioGroupItem value="4PLUS" id="4plus" />
-                    <Label htmlFor="4plus" className="cursor-pointer text-xs whitespace-nowrap">
-                      4+
-                    </Label>
-                  </div>
-                </RadioGroup>
-                {is4Plus && (
-                  <Select value={tipoMultipla} onValueChange={(v) => setTipoMultipla(v as TipoMultipla)}>
-                    <SelectTrigger className="h-6 w-[80px] text-[10px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="QUADRUPLA">4 sel.</SelectItem>
-                      <SelectItem value="QUINTUPLA">5 sel.</SelectItem>
-                      <SelectItem value="SEXTUPLA">6 sel.</SelectItem>
-                    </SelectContent>
-                  </Select>
-                )}
-              </div>
-            }
+            extraHeaderContent={null}
           />
 
           <div className="space-y-1.5 py-1.5 px-3">
