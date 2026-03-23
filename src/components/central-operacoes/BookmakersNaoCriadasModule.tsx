@@ -1,9 +1,9 @@
 /**
  * Módulo "Bookmakers Não Criadas"
  *
- * Dado uma bookmaker do catálogo, lista todos os parceiros que NÃO possuem
- * conta (instância) nessa casa. Permite marcar parceiros como "indisponível"
- * (já usaram fora do sistema) para limpar a lista, com opção de reverter.
+ * Duas visões:
+ * 1. Por Bookmaker: seleciona casa do catálogo → lista parceiros sem conta.
+ * 2. Por Parceiro: seleciona parceiro → lista casas (filtradas por grupo) que o parceiro não possui.
  */
 
 import { useState, useMemo, useCallback } from "react";
@@ -16,6 +16,7 @@ import { getFirstLastName, cn } from "@/lib/utils";
 import {
   Search, UserPlus, Building2, Users, ChevronsUpDown, Check,
   Ban, Undo2, Eye, EyeOff, CheckSquare, ArrowUpDown, ArrowUp, ArrowDown, Clock,
+  ToggleLeft, User,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -32,6 +33,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import BookmakerDialog from "@/components/bookmakers/BookmakerDialog";
 import type { VinculoCriadoContext } from "@/components/bookmakers/BookmakerDialog";
 import { toast } from "sonner";
@@ -44,7 +46,7 @@ interface ParceiroSemConta {
   cpf: string;
   status: string;
   origem?: string;
-  diasRestantes?: number | null; // null = sem parceria ativa ou sem data_fim_prevista
+  diasRestantes?: number | null;
 }
 
 interface IndisponibilidadeRecord {
@@ -52,7 +54,294 @@ interface IndisponibilidadeRecord {
   parceiro_id: string;
 }
 
-export default function BookmakersNaoCriadasModule() {
+type ViewMode = "por-bookmaker" | "por-parceiro";
+
+// ─── Sub-component: View "Por Parceiro" ───
+function ViewPorParceiro() {
+  const { workspaceId } = useAuth();
+  const queryClient = useQueryClient();
+  const [selectedParceiroId, setSelectedParceiroId] = useState("");
+  const [parceiroSearch, setParceiroSearch] = useState("");
+  const [parceiroPopoverOpen, setParceiroPopoverOpen] = useState(false);
+  const [grupoFilter, setGrupoFilter] = useState("todos");
+  const [search, setSearch] = useState("");
+  const { getCatalogoIdsByGrupo } = useBookmakerGrupos();
+
+  const [criarDialog, setCriarDialog] = useState<{
+    open: boolean;
+    parceiroId: string;
+    catalogoId: string;
+  }>({ open: false, parceiroId: "", catalogoId: "" });
+
+  // Fetch all active parceiros
+  const { data: parceiros, isLoading: loadingParceiros } = useQuery({
+    queryKey: ["parceiros-ativos", workspaceId],
+    queryFn: async () => {
+      if (!workspaceId) return [];
+      const { data, error } = await supabase
+        .from("parceiros")
+        .select("id, nome, cpf, status")
+        .eq("workspace_id", workspaceId)
+        .eq("status", "ativo")
+        .order("nome");
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!workspaceId,
+    staleTime: 2 * 60_000,
+  });
+
+  const selectedParceiro = parceiros?.find((p) => p.id === selectedParceiroId);
+
+  // Fetch catalog bookmakers
+  const { data: catalogoBookmakers, isLoading: loadingCatalogo } = useWorkspaceBookmakers();
+
+  // Fetch existing accounts for the selected parceiro
+  const { data: contasExistentes, isLoading: loadingContas } = useQuery({
+    queryKey: ["parceiro-contas-existentes", workspaceId, selectedParceiroId],
+    queryFn: async () => {
+      if (!workspaceId || !selectedParceiroId) return [];
+      const { data, error } = await supabase
+        .from("bookmakers")
+        .select("bookmaker_catalogo_id")
+        .eq("workspace_id", workspaceId)
+        .eq("parceiro_id", selectedParceiroId)
+        .not("bookmaker_catalogo_id", "is", null);
+      if (error) throw error;
+      return (data ?? []).map((d: any) => d.bookmaker_catalogo_id as string);
+    },
+    enabled: !!workspaceId && !!selectedParceiroId,
+    staleTime: 60_000,
+  });
+
+  const contasSet = useMemo(() => new Set(contasExistentes ?? []), [contasExistentes]);
+
+  // Compute missing bookmakers
+  const missingBookmakers = useMemo(() => {
+    if (!catalogoBookmakers || !selectedParceiroId) return [];
+    const grupoIds = grupoFilter !== "todos" ? getCatalogoIdsByGrupo(grupoFilter) : null;
+
+    return catalogoBookmakers.filter((bk) => {
+      if (contasSet.has(bk.id)) return false;
+      if (grupoIds && !grupoIds.has(bk.id)) return false;
+      return true;
+    });
+  }, [catalogoBookmakers, contasSet, grupoFilter, getCatalogoIdsByGrupo, selectedParceiroId]);
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return missingBookmakers;
+    const q = search.toLowerCase();
+    return missingBookmakers.filter((bk) => bk.nome.toLowerCase().includes(q));
+  }, [missingBookmakers, search]);
+
+  const handleCriar = (catalogoId: string) => {
+    setCriarDialog({ open: true, parceiroId: selectedParceiroId, catalogoId });
+  };
+
+  const handleDialogClose = () => setCriarDialog({ open: false, parceiroId: "", catalogoId: "" });
+
+  const handleCreated = () => {
+    handleDialogClose();
+    queryClient.invalidateQueries({ queryKey: ["parceiro-contas-existentes", workspaceId, selectedParceiroId] });
+  };
+
+  const isLoading = loadingContas || loadingCatalogo;
+
+  // Filtered parceiros for combobox
+  const filteredParceiros = useMemo(() => {
+    if (!parceiros) return [];
+    if (!parceiroSearch.trim()) return parceiros;
+    const q = parceiroSearch.toLowerCase();
+    return parceiros.filter((p) => p.nome.toLowerCase().includes(q) || p.cpf?.includes(q));
+  }, [parceiros, parceiroSearch]);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-4">
+        <BookmakerGrupoFilter
+          value={grupoFilter}
+          onChange={(v) => { setGrupoFilter(v); }}
+          className="w-[200px]"
+        />
+
+        <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium uppercase tracking-wide">
+          <User className="h-4 w-4" />
+          Parceiro
+        </div>
+
+        <Popover open={parceiroPopoverOpen} onOpenChange={(open) => { setParceiroPopoverOpen(open); if (!open) setParceiroSearch(""); }}>
+          <PopoverTrigger asChild>
+            <Button variant="outline" role="combobox" className="w-[280px] justify-center font-normal">
+              {selectedParceiro ? (
+                <span className="truncate">{getFirstLastName(selectedParceiro.nome)}</span>
+              ) : (
+                <span className="text-muted-foreground">Selecionar parceiro</span>
+              )}
+              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[280px] p-0" align="start">
+            <div className="flex items-center border-b border-border px-3 py-2">
+              <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+              <input
+                placeholder="Buscar parceiro..."
+                value={parceiroSearch}
+                onChange={(e) => setParceiroSearch(e.target.value)}
+                className="flex h-8 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+              />
+            </div>
+            <div className="max-h-[260px] overflow-y-auto p-1">
+              {loadingParceiros ? (
+                <div className="p-2"><Skeleton className="h-6 w-full" /></div>
+              ) : filteredParceiros.length === 0 ? (
+                <div className="p-3 text-sm text-muted-foreground text-center">Nenhum parceiro encontrado</div>
+              ) : (
+                filteredParceiros.map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => {
+                      setSelectedParceiroId(p.id);
+                      setParceiroPopoverOpen(false);
+                      setParceiroSearch("");
+                    }}
+                    className={cn(
+                      "flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground transition-colors",
+                      selectedParceiroId === p.id && "bg-accent"
+                    )}
+                  >
+                    <Check className={cn("h-4 w-4 shrink-0", selectedParceiroId === p.id ? "opacity-100" : "opacity-0")} />
+                    <span className="truncate">{getFirstLastName(p.nome)}</span>
+                    {p.cpf && <span className="text-xs text-muted-foreground ml-auto font-mono">{p.cpf.slice(-4)}</span>}
+                  </button>
+                ))
+              )}
+            </div>
+          </PopoverContent>
+        </Popover>
+
+        {selectedParceiroId && !isLoading && (
+          <Badge variant="outline" className="text-xs font-mono gap-1">
+            <Building2 className="h-3 w-3" />
+            {filtered.length} casa{filtered.length !== 1 ? "s" : ""} não criada{filtered.length !== 1 ? "s" : ""}
+          </Badge>
+        )}
+      </div>
+
+      {!selectedParceiroId && (
+        <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-2">
+          <User className="h-10 w-10 opacity-30" />
+          <p className="text-sm">Selecione um parceiro para ver as bookmakers não criadas</p>
+        </div>
+      )}
+
+      {selectedParceiroId && isLoading && (
+        <div className="space-y-2">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-12 w-full" />
+          ))}
+        </div>
+      )}
+
+      {selectedParceiroId && !isLoading && (
+        <>
+          {missingBookmakers.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-2">
+              <Building2 className="h-10 w-10 opacity-30" />
+              <p className="text-sm">
+                <span className="font-semibold text-foreground">{getFirstLastName(selectedParceiro?.nome ?? "")}</span>
+                {" "}já possui conta em todas as bookmakers{grupoFilter !== "todos" ? " deste grupo" : ""}
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="relative w-full max-w-sm">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar bookmaker..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+
+              <div className="rounded-md border border-border overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border bg-muted/30">
+                      <th className="text-left px-4 py-3 font-medium text-muted-foreground uppercase text-xs tracking-wide">
+                        Bookmaker
+                      </th>
+                      <th className="text-left px-4 py-3 font-medium text-muted-foreground uppercase text-xs tracking-wide">
+                        Status
+                      </th>
+                      <th className="text-right px-4 py-3 font-medium text-muted-foreground uppercase text-xs tracking-wide w-[180px]">
+                        Ações
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.map((bk) => (
+                      <tr key={bk.id} className="border-b border-border/50 hover:bg-muted/20 transition-colors">
+                        <td className="px-4 py-3">
+                          <span className="flex items-center gap-2.5">
+                            {bk.logo_url && (
+                              <img src={bk.logo_url} alt="" className="h-6 w-6 rounded object-contain flex-shrink-0" />
+                            )}
+                            <span className="font-medium">{bk.nome}</span>
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          {bk.status === "ativa" ? (
+                            <Badge variant="outline" className="text-xs text-green-400 border-green-500/30">Ativa</Badge>
+                          ) : (
+                            <Badge variant="secondary" className="text-xs">{bk.status}</Badge>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="gap-1.5 text-xs"
+                            onClick={() => handleCriar(bk.id)}
+                          >
+                            <UserPlus className="h-3.5 w-3.5" />
+                            Criar conta
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                    {filtered.length === 0 && (
+                      <tr>
+                        <td colSpan={3} className="px-4 py-8 text-center text-muted-foreground">
+                          Nenhuma bookmaker encontrada para a busca
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </>
+      )}
+
+      <BookmakerDialog
+        open={criarDialog.open}
+        onClose={handleDialogClose}
+        onCreated={handleCreated}
+        bookmaker={null}
+        defaultParceiroId={criarDialog.parceiroId}
+        defaultBookmakerId={criarDialog.catalogoId}
+        lockParceiro
+        lockBookmaker
+      />
+    </div>
+  );
+}
+
+
+// ─── Sub-component: View "Por Bookmaker" (original) ───
+function ViewPorBookmaker() {
   const { workspaceId, user } = useAuth();
   const { isOperator } = useRole();
   const userId = user?.id;
@@ -68,21 +357,18 @@ export default function BookmakersNaoCriadasModule() {
   const [sortDias, setSortDias] = useState<"asc" | "desc" | null>(null);
   const { getCatalogoIdsByGrupo } = useBookmakerGrupos();
 
-  // Dialog state for creating a new bookmaker account
   const [criarDialog, setCriarDialog] = useState<{
     open: boolean;
     parceiroId: string;
     catalogoId: string;
   }>({ open: false, parceiroId: "", catalogoId: "" });
 
-  // Fetch catalog bookmakers for the dropdown
   const { data: catalogoBookmakers, isLoading: loadingCatalogo } = useWorkspaceBookmakers();
 
   const selectedBookmaker = catalogoBookmakers?.find(
     (b) => b.id === selectedCatalogoId
   );
 
-  // Fetch indisponiveis for the selected bookmaker
   const indisponiveisKey = ["bookmaker-indisponiveis", workspaceId, selectedCatalogoId];
   const { data: indisponiveisData } = useQuery({
     queryKey: indisponiveisKey,
@@ -106,7 +392,6 @@ export default function BookmakersNaoCriadasModule() {
     return map;
   }, [indisponiveisData]);
 
-  // Fetch parceiros that do NOT have an account for the selected bookmaker
   const { data: parceirosResult, isLoading: loadingParceiros, refetch } = useQuery({
     queryKey: ["parceiros-sem-bookmaker", workspaceId, selectedCatalogoId],
     queryFn: async (): Promise<ParceiroSemConta[]> => {
@@ -142,15 +427,12 @@ export default function BookmakersNaoCriadasModule() {
         (accountsRes.data ?? []).map((a: any) => a.parceiro_id)
       );
 
-      // Build origem map and dias restantes map
       const origemMap = new Map<string, string>();
       const diasRestantesMap = new Map<string, number | null>();
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      // From parcerias (fornecedor or indicador)
       (parceriasRes.data ?? []).forEach((p: any) => {
-        // Origem (first match wins)
         if (!origemMap.has(p.parceiro_id)) {
           if (p.origem_tipo === "FORNECEDOR" && p.fornecedor) {
             origemMap.set(p.parceiro_id, p.fornecedor.nome);
@@ -160,7 +442,6 @@ export default function BookmakersNaoCriadasModule() {
             origemMap.set(p.parceiro_id, "Direto");
           }
         }
-        // Dias restantes (keep the active partnership with nearest end date)
         if (p.status?.toUpperCase() === "ATIVA" && p.data_fim_prevista) {
           const fim = new Date(p.data_fim_prevista);
           fim.setHours(0, 0, 0, 0);
@@ -172,7 +453,6 @@ export default function BookmakersNaoCriadasModule() {
         }
       });
 
-      // From indicacoes table (fallback)
       (indicacoesRes.data ?? []).forEach((ind: any) => {
         if (!origemMap.has(ind.parceiro_id) && ind.indicador) {
           origemMap.set(ind.parceiro_id, ind.indicador.nome);
@@ -193,7 +473,6 @@ export default function BookmakersNaoCriadasModule() {
 
   const allParceiros = parceirosResult ?? [];
 
-  // Split into available vs descartados
   const { disponiveis, descartados } = useMemo(() => {
     const disp: ParceiroSemConta[] = [];
     const desc: ParceiroSemConta[] = [];
@@ -206,7 +485,6 @@ export default function BookmakersNaoCriadasModule() {
 
   const visibleList = showDescartados ? descartados : disponiveis;
 
-  // Filter by search and sort
   const filtered = useMemo(() => {
     let result = visibleList;
     if (search.trim()) {
@@ -238,7 +516,6 @@ export default function BookmakersNaoCriadasModule() {
     return result;
   }, [visibleList, search, sortOrigem, sortDias]);
 
-  // Clear selection when switching views or bookmaker
   const resetSelection = useCallback(() => setSelectedIds(new Set()), []);
 
   const handleCriarConta = (parceiroId: string) => {
@@ -254,7 +531,6 @@ export default function BookmakersNaoCriadasModule() {
     refetch();
   };
 
-  // Mark as indisponível
   const marcarIndisponivel = useCallback(async (parceiroIds: string[]) => {
     if (!workspaceId || !selectedCatalogoId || !userId) return;
     try {
@@ -281,7 +557,6 @@ export default function BookmakersNaoCriadasModule() {
     }
   }, [workspaceId, selectedCatalogoId, userId, queryClient, indisponiveisKey, resetSelection]);
 
-  // Restore (remove indisponibilidade)
   const restaurarDisponibilidade = useCallback(async (parceiroIds: string[]) => {
     if (!workspaceId || !selectedCatalogoId) return;
     try {
@@ -332,7 +607,6 @@ export default function BookmakersNaoCriadasModule() {
 
   return (
     <div className="space-y-4">
-      {/* Header: Bookmaker selector */}
       <div className="flex flex-wrap items-center gap-4">
         {!isOperator && (
           <BookmakerGrupoFilter
@@ -439,7 +713,6 @@ export default function BookmakersNaoCriadasModule() {
         )}
       </div>
 
-      {/* Batch action bar */}
       {selectedIds.size > 0 && (
         <div className="flex items-center gap-3 rounded-md border border-border bg-muted/40 px-4 py-2">
           <span className="text-sm font-medium">
@@ -463,7 +736,6 @@ export default function BookmakersNaoCriadasModule() {
         </div>
       )}
 
-      {/* No bookmaker selected */}
       {!selectedCatalogoId && (
         <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-2">
           <Building2 className="h-10 w-10 opacity-30" />
@@ -471,7 +743,6 @@ export default function BookmakersNaoCriadasModule() {
         </div>
       )}
 
-      {/* Loading */}
       {selectedCatalogoId && loadingParceiros && (
         <div className="space-y-2">
           {Array.from({ length: 6 }).map((_, i) => (
@@ -480,7 +751,6 @@ export default function BookmakersNaoCriadasModule() {
         </div>
       )}
 
-      {/* Results */}
       {selectedCatalogoId && !loadingParceiros && (
         <>
           {visibleList.length === 0 ? (
@@ -497,7 +767,6 @@ export default function BookmakersNaoCriadasModule() {
             </div>
           ) : (
             <>
-              {/* Search */}
               <div className="relative w-full max-w-sm">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -508,7 +777,6 @@ export default function BookmakersNaoCriadasModule() {
                 />
               </div>
 
-              {/* Table */}
               <div className="rounded-md border border-border overflow-hidden">
                 <table className="w-full text-sm">
                   <thead>
@@ -646,7 +914,6 @@ export default function BookmakersNaoCriadasModule() {
         </>
       )}
 
-      {/* BookmakerDialog for creating account */}
       <BookmakerDialog
         open={criarDialog.open}
         onClose={handleDialogClose}
@@ -657,6 +924,31 @@ export default function BookmakersNaoCriadasModule() {
         lockParceiro
         lockBookmaker
       />
+    </div>
+  );
+}
+
+
+// ─── Main Module ───
+export default function BookmakersNaoCriadasModule() {
+  const [viewMode, setViewMode] = useState<ViewMode>("por-bookmaker");
+
+  return (
+    <div className="space-y-4">
+      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
+        <TabsList className="h-9">
+          <TabsTrigger value="por-bookmaker" className="gap-1.5 text-xs">
+            <Building2 className="h-3.5 w-3.5" />
+            Por Bookmaker
+          </TabsTrigger>
+          <TabsTrigger value="por-parceiro" className="gap-1.5 text-xs">
+            <User className="h-3.5 w-3.5" />
+            Por Parceiro
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+
+      {viewMode === "por-bookmaker" ? <ViewPorBookmaker /> : <ViewPorParceiro />}
     </div>
   );
 }
