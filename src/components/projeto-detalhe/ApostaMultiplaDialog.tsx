@@ -444,15 +444,16 @@ export function ApostaMultiplaDialog({
 
   // Atualizar número de seleções quando tipo muda
   useEffect(() => {
-    const numSelecoes = tipoMultipla === "DUPLA" ? 2 : 3;
+    const n = numSelecoes;
     setSelecoes((prev) => {
-      if (prev.length === numSelecoes) return prev;
-      if (prev.length < numSelecoes) {
-        return [...prev, { descricao: "", odd: "", resultado: "PENDENTE" }];
+      if (prev.length === n) return prev;
+      if (prev.length < n) {
+        const extras = Array.from({ length: n - prev.length }, () => ({ descricao: "", odd: "", resultado: "PENDENTE" as const }));
+        return [...prev, ...extras];
       }
-      return prev.slice(0, numSelecoes);
+      return prev.slice(0, n);
     });
-  }, [tipoMultipla]);
+  }, [numSelecoes]);
 
   // Atualizar saldo quando bookmaker muda
   useEffect(() => {
