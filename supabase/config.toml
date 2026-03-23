@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.sync-bookmaker-logos]
 verify_jwt = false
+
+[functions.parse-ev-print]
+verify_jwt = false
