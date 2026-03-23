@@ -178,8 +178,9 @@ export function ApostaMultiplaDialog({
   
   // Mapear saldos canônicos para formato local (retrocompatibilidade)
    const bookmakers = useMemo((): Bookmaker[] => {
+    const currentBookmakerId = aposta?.bookmaker_id;
     return bookmakerSaldos
-      .filter(bk => bk.saldo_operavel >= 0.50) // Mostrar apenas casas com saldo disponível
+      .filter(bk => bk.saldo_operavel >= 0.50 || bk.id === currentBookmakerId) // Sempre manter a casa da aposta em edição
       .map(bk => ({
       id: bk.id,
       nome: bk.nome,
@@ -193,7 +194,7 @@ export function ApostaMultiplaDialog({
       logo_url: bk.logo_url,
       bonus_rollover_started: bk.bonus_rollover_started
     }));
-  }, [bookmakerSaldos]);
+  }, [bookmakerSaldos, aposta?.bookmaker_id]);
 
   // ========== HOOK DE RASCUNHOS (LOCALSTORAGE) ==========
   // Permite salvar múltiplas incompletas (sem casa, sem stake, 1 seleção) sem tocar no banco
