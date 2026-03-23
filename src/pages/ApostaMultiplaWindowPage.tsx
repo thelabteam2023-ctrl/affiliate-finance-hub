@@ -27,8 +27,10 @@ export default function ApostaMultiplaWindowPage() {
   const activeTab = searchParams.get('tab') || 'apostas';
   const estrategia = searchParams.get('estrategia') || null;
   const rascunhoId = searchParams.get('rascunhoId');
+  const duplicateFrom = searchParams.get('duplicateFrom') || null;
   
-  const isEditing = id && id !== 'novo';
+  const isEditing = id && id !== 'novo' && !duplicateFrom;
+  const isDuplicating = !!duplicateFrom;
   const isFromRascunho = !!rascunhoId && !isEditing;
   
   const [aposta, setAposta] = useState<any>(null);
