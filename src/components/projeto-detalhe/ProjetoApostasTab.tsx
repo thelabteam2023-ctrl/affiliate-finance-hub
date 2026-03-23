@@ -1433,21 +1433,19 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
 
   return (
     <div className="space-y-4">
-      {/* Actions Slot - botões de ação dentro da aba */}
-      {actionsSlot && (
-        <div className="flex items-center gap-2 pt-1 pb-2 border-b border-border/50 flex-shrink-0">
-          {actionsSlot}
+      {/* Filtro de período + Actions na mesma linha */}
+      <div className="flex items-center gap-3">
+        <div className="flex-1">
+          <StandardTimeFilter
+            period={tabFilters.period}
+            onPeriodChange={tabFilters.setPeriod}
+            customDateRange={tabFilters.customDateRange}
+            onCustomDateRangeChange={tabFilters.setCustomDateRange}
+            projetoId={projetoId}
+          />
         </div>
-      )}
-
-      {/* Filtro de período padronizado com suporte a Ciclos */}
-      <StandardTimeFilter
-        period={tabFilters.period}
-        onPeriodChange={tabFilters.setPeriod}
-        customDateRange={tabFilters.customDateRange}
-        onCustomDateRangeChange={tabFilters.setCustomDateRange}
-        projetoId={projetoId}
-      />
+        {actionsSlot && <div className="shrink-0">{actionsSlot}</div>}
+      </div>
 
       {/* Card de Histórico com Filtros */}
       <Card>

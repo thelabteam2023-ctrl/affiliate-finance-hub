@@ -1158,12 +1158,6 @@ export function ProjetoValueBetTab({
   // Render Apostas
   const renderApostas = () => (
     <div className="space-y-4">
-      {/* Actions Slot - botões de ação */}
-      {actionsSlot && (
-        <div className="flex items-center gap-2 pt-1 pb-2 border-b border-border/50 flex-shrink-0">
-          {actionsSlot}
-        </div>
-      )}
       {/* Card de Histórico com Filtros Internos */}
       <Card>
         <CardHeader className="pb-3">
@@ -1563,7 +1557,12 @@ export function ProjetoValueBetTab({
     return (
       <div className={cn("min-h-[400px]", contentClass)}>
         {activeNavTab === "visao-geral" && renderVisaoGeral()}
-        {activeNavTab !== "visao-geral" && <div className="mb-4">{periodFilterComponent}</div>}
+        {activeNavTab !== "visao-geral" && (
+          <div className="flex items-center gap-3 mb-4">
+            <div className="flex-1">{periodFilterComponent}</div>
+            {actionsSlot && <div className="shrink-0">{actionsSlot}</div>}
+          </div>
+        )}
         {activeNavTab === "apostas" && renderApostas()}
         {activeNavTab === "por-casa" && renderPorCasa()}
       </div>
