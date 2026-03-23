@@ -167,6 +167,7 @@ const ESPORTES_BASE = [
   "League of Legends",
   "Counter-Strike",
   "Dota 2",
+  "Valorant",
   "eFootball",
   "Outro"
 ];
