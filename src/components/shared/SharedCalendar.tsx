@@ -179,7 +179,7 @@ export function SharedCalendar({ daily, currencySymbol }: Props) {
                       </span>
                       {hasData && lucro !== 0 && (
                         <span className={cn(
-                          "text-[18px] font-bold leading-none select-none mt-1 tabular-nums",
+                          "text-[16px] font-bold leading-none select-none mt-1 tabular-nums",
                           lucro > 0 ? "text-emerald-200/90" : "text-red-200/90"
                         )}>
                           {formatCompactValue(lucro)}
