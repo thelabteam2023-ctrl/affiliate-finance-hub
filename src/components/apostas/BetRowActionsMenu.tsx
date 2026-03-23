@@ -46,7 +46,7 @@ export interface BetRowActionsMenuProps {
   className?: string;
 }
 
-const RESULTADO_OPTIONS: {
+const ALL_RESULTADO_OPTIONS: {
   value: BetResultado;
   label: string;
   icon: typeof CheckCircle2;
@@ -58,6 +58,12 @@ const RESULTADO_OPTIONS: {
   { value: "MEIO_RED", label: "½ Red", icon: X, className: "text-orange-400 focus:text-orange-400 focus:bg-orange-500/10" },
   { value: "VOID", label: "Void", icon: CircleSlash, className: "text-gray-400 focus:text-gray-400 focus:bg-gray-500/10" },
 ];
+
+/** Múltiplas: apenas GREEN total e RED total via menu rápido.
+ *  Para resultados parciais (½Green, ½Red, Void), o usuário deve usar Editar. */
+const MULTIPLA_RESULTADO_OPTIONS = ALL_RESULTADO_OPTIONS.filter(
+  (o) => o.value === "GREEN" || o.value === "RED"
+);
 
 export function BetRowActionsMenu({
   apostaId,
@@ -143,7 +149,7 @@ export function BetRowActionsMenu({
             Alterar Resultado
           </DropdownMenuSubTrigger>
           <DropdownMenuSubContent>
-            {RESULTADO_OPTIONS.map((option) => {
+            {(apostaType === "multipla" ? MULTIPLA_RESULTADO_OPTIONS : ALL_RESULTADO_OPTIONS).map((option) => {
               const Icon = option.icon;
               const isCurrentResult = resultado === option.value;
               return (
@@ -165,6 +171,11 @@ export function BetRowActionsMenu({
                 </DropdownMenuItem>
               );
             })}
+            {apostaType === "multipla" && (
+              <DropdownMenuItem disabled className="text-xs text-muted-foreground italic">
+                Para ½Green/½Red/Void, use Editar
+              </DropdownMenuItem>
+            )}
           </DropdownMenuSubContent>
         </DropdownMenuSub>
 
