@@ -42,7 +42,7 @@ interface UseImportMultiplaBetPrintReturn {
   processFromClipboard: (event: ClipboardEvent) => Promise<void>;
   clearParsedData: () => void;
   applyParsedData: () => {
-    tipo: "DUPLA" | "TRIPLA";
+    tipo: "DUPLA" | "TRIPLA" | "QUADRUPLA" | "QUINTUPLA" | "SEXTUPLA";
     stake: string;
     selecoes: { descricao: string; odd: string }[];
   };
@@ -253,9 +253,11 @@ export function useImportMultiplaBetPrint(): UseImportMultiplaBetPrintReturn {
       };
     }
 
-    // Determine tipo based on number of selections
     const numSelecoes = parsedData.selecoes?.length || 0;
-    const tipo: "DUPLA" | "TRIPLA" = numSelecoes >= 3 ? "TRIPLA" : "DUPLA";
+    const tipoMap: Record<number, "DUPLA" | "TRIPLA" | "QUADRUPLA" | "QUINTUPLA" | "SEXTUPLA"> = {
+      2: "DUPLA", 3: "TRIPLA", 4: "QUADRUPLA", 5: "QUINTUPLA", 6: "SEXTUPLA"
+    };
+    const tipo = tipoMap[Math.min(numSelecoes, 6)] || (numSelecoes >= 4 ? "QUADRUPLA" : numSelecoes >= 3 ? "TRIPLA" : "DUPLA");
     
     // Map selections to form format
     const selecoes = (parsedData.selecoes || []).slice(0, tipo === "TRIPLA" ? 3 : 2).map(sel => {

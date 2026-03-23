@@ -75,6 +75,14 @@ interface Selecao {
   resultado?: "PENDENTE" | "GREEN" | "RED" | "MEIO_GREEN" | "MEIO_RED" | "VOID";
 }
 
+type TipoMultipla = "DUPLA" | "TRIPLA" | "QUADRUPLA" | "QUINTUPLA" | "SEXTUPLA";
+
+const TIPO_NUM_MAP: Record<TipoMultipla, number> = {
+  DUPLA: 2, TRIPLA: 3, QUADRUPLA: 4, QUINTUPLA: 5, SEXTUPLA: 6,
+};
+
+const getNumFromTipo = (tipo: string): number => TIPO_NUM_MAP[tipo as TipoMultipla] || 2;
+
 interface ApostaMultipla {
   id: string;
   tipo_multipla: string;
@@ -282,12 +290,13 @@ export function ApostaMultiplaDialog({
 
   // Form state
   const [bookmakerId, setBookmakerId] = useState("");
-  const [tipoMultipla, setTipoMultipla] = useState<"DUPLA" | "TRIPLA">("DUPLA");
+  const [tipoMultipla, setTipoMultipla] = useState<TipoMultipla>("DUPLA");
   const [stake, setStake] = useState("");
   const [resultadoManual, setResultadoManual] = useState<string | null>(null);
   const [statusResultado, setStatusResultado] = useState("PENDENTE");
   const [dataAposta, setDataAposta] = useState("");
   const [observacoes, setObservacoes] = useState("");
+  const [boostPercent, setBoostPercent] = useState("");
 
   // Registro explícito - estratégia NUNCA é inferida automaticamente
   // Se a aba não define estratégia (ex: Apostas Livres), fica null e o usuário DEVE escolher
@@ -313,6 +322,10 @@ export function ApostaMultiplaDialog({
     { descricao: "", odd: "", resultado: "PENDENTE" },
     { descricao: "", odd: "", resultado: "PENDENTE" },
   ]);
+
+  // Número de seleções derivado do tipo
+  const numSelecoes = useMemo(() => getNumFromTipo(tipoMultipla), [tipoMultipla]);
+  const is4Plus = numSelecoes >= 4;
 
   // Freebet state
   const [usarFreebet, setUsarFreebet] = useState(false);
@@ -344,7 +357,8 @@ export function ApostaMultiplaDialog({
   useEffect(() => {
     if (aposta && open) {
       setBookmakerId(aposta.bookmaker_id);
-      setTipoMultipla(aposta.tipo_multipla as "DUPLA" | "TRIPLA");
+      setTipoMultipla((aposta.tipo_multipla as TipoMultipla) || "DUPLA");
+      setBoostPercent((aposta as any).boost_percentual?.toString() || "");
       setStake(aposta.stake.toString());
       setStatusResultado(aposta.resultado || "PENDENTE");
       setDataAposta(dbTimestampToDatetimeLocal(aposta.data_aposta));
@@ -395,9 +409,10 @@ export function ApostaMultiplaDialog({
     } else if (rascunho && rascunho.tipo === 'MULTIPLA' && open && !aposta) {
       // PRÉ-PREENCHER COM DADOS DO RASCUNHO
       setBookmakerId(rascunho.bookmaker_id || "");
-      setTipoMultipla((rascunho.tipo_multipla as "DUPLA" | "TRIPLA") || "DUPLA");
+      setTipoMultipla((rascunho.tipo_multipla as TipoMultipla) || "DUPLA");
       setStake(rascunho.stake?.toString() || "");
       setObservacoes(rascunho.observacoes || "");
+      setBoostPercent("");
       setDataAposta(getLocalDateTimeString());
       setStatusResultado("PENDENTE");
       
@@ -408,18 +423,17 @@ export function ApostaMultiplaDialog({
           odd: sel.odd?.toString() || "",
           resultado: "PENDENTE" as const
         }));
-        // Garantir número mínimo de seleções
         while (novasSelecoes.length < 2) {
           novasSelecoes.push({ descricao: "", odd: "", resultado: "PENDENTE" });
         }
         setSelecoes(novasSelecoes);
         
         // Ajustar tipo de múltipla baseado no número de seleções
-        if (rascunho.selecoes.length >= 3) {
-          setTipoMultipla("TRIPLA");
-        }
+        const n = rascunho.selecoes.length;
+        const tipoMap: Record<number, TipoMultipla> = { 2: "DUPLA", 3: "TRIPLA", 4: "QUADRUPLA", 5: "QUINTUPLA", 6: "SEXTUPLA" };
+        setTipoMultipla(tipoMap[Math.min(n, 6)] || (n >= 4 ? "QUADRUPLA" : n >= 3 ? "TRIPLA" : "DUPLA"));
       }
-      
+
       setUsarFreebet(false);
       setValorFreebetUsar(0);
       setGerouFreebet(false);
@@ -430,15 +444,16 @@ export function ApostaMultiplaDialog({
 
   // Atualizar número de seleções quando tipo muda
   useEffect(() => {
-    const numSelecoes = tipoMultipla === "DUPLA" ? 2 : 3;
+    const n = numSelecoes;
     setSelecoes((prev) => {
-      if (prev.length === numSelecoes) return prev;
-      if (prev.length < numSelecoes) {
-        return [...prev, { descricao: "", odd: "", resultado: "PENDENTE" }];
+      if (prev.length === n) return prev;
+      if (prev.length < n) {
+        const extras = Array.from({ length: n - prev.length }, () => ({ descricao: "", odd: "", resultado: "PENDENTE" as const }));
+        return [...prev, ...extras];
       }
-      return prev.slice(0, numSelecoes);
+      return prev.slice(0, n);
     });
-  }, [tipoMultipla]);
+  }, [numSelecoes]);
 
   // Atualizar saldo quando bookmaker muda
   useEffect(() => {
@@ -462,6 +477,7 @@ export function ApostaMultiplaDialog({
     setBookmakerId("");
     setTipoMultipla("DUPLA");
     setStake("");
+    setBoostPercent("");
     setResultadoManual(null);
     setStatusResultado("PENDENTE");
     setDataAposta(getLocalDateTimeString());
@@ -549,26 +565,32 @@ export function ApostaMultiplaDialog({
 
   // fetchBookmakers REMOVIDO - agora usa useBookmakerSaldosQuery como fonte canônica
 
-  // Calcular odd final (produto das odds) - considerando VOIDs como odd 1.00
-  const { oddFinal, oddFinalReal } = useMemo(() => {
+  // Calcular odd final (produto das odds) - considerando VOIDs como odd 1.00 e boost
+  const boostMultiplier = useMemo(() => {
+    const bp = parseFloat(boostPercent);
+    return !isNaN(bp) && bp > 0 ? 1 + bp / 100 : 1;
+  }, [boostPercent]);
+
+  const { oddFinal, oddFinalReal, oddFinalSemBoost } = useMemo(() => {
     const selecoesValidas = selecoes.filter((s) => {
       const oddNum = parseFloat(s.odd);
       return !isNaN(oddNum) && oddNum > 0;
     });
     
-    if (selecoesValidas.length === 0) return { oddFinal: 0, oddFinalReal: 0 };
+    if (selecoesValidas.length === 0) return { oddFinal: 0, oddFinalReal: 0, oddFinalSemBoost: 0 };
     
-    // Odd final nominal (todas as odds)
     const oddNominal = selecoesValidas.reduce((acc, s) => acc * parseFloat(s.odd), 1);
-    
-    // Odd final real (excluindo VOIDs que são tratados como 1.00)
     const oddReal = selecoesValidas.reduce((acc, s) => {
-      if (s.resultado === "VOID") return acc * 1; // VOID = odd 1.00
+      if (s.resultado === "VOID") return acc * 1;
       return acc * parseFloat(s.odd);
     }, 1);
     
-    return { oddFinal: oddNominal, oddFinalReal: oddReal };
-  }, [selecoes]);
+    return {
+      oddFinal: oddNominal * boostMultiplier,
+      oddFinalReal: oddReal * boostMultiplier,
+      oddFinalSemBoost: oddNominal,
+    };
+  }, [selecoes, boostMultiplier]);
 
   // Função hierárquica para calcular resultado da múltipla
   // Regras de prioridade: RED > MEIO_RED > all GREEN > MEIO_GREEN+GREEN > VOID > PENDENTE
@@ -673,7 +695,6 @@ export function ApostaMultiplaDialog({
 
   // Contar seleções válidas (descrição + odd > 1)
   const selecoesValidasCount = useMemo(() => {
-    const numSelecoes = tipoMultipla === "DUPLA" ? 2 : 3;
     let count = 0;
     for (let i = 0; i < numSelecoes; i++) {
       const sel = selecoes[i];
@@ -682,11 +703,10 @@ export function ApostaMultiplaDialog({
       }
     }
     return count;
-  }, [selecoes, tipoMultipla]);
+  }, [selecoes, numSelecoes]);
 
   // Verificar se formulário está pronto para salvar
   const canSave = useMemo(() => {
-    const numSelecoes = tipoMultipla === "DUPLA" ? 2 : 3;
     const stakeNum = parseFloat(stake);
     return (
       bookmakerId && 
@@ -697,7 +717,7 @@ export function ApostaMultiplaDialog({
       registroValues.estrategia &&
       registroValues.contexto_operacional
     );
-  }, [bookmakerId, stake, selecoesValidasCount, tipoMultipla, registroValues]);
+  }, [bookmakerId, stake, selecoesValidasCount, numSelecoes, registroValues]);
 
   // Verificar se tem dados parciais (para salvar como rascunho)
   const temDadosParciais = useMemo(() => {
@@ -810,7 +830,6 @@ export function ApostaMultiplaDialog({
     }
 
     // Validar seleções
-    const numSelecoes = tipoMultipla === "DUPLA" ? 2 : 3;
     for (let i = 0; i < numSelecoes; i++) {
       if (!selecoes[i]?.descricao?.trim()) {
         toast.error(`Preencha a descrição da seleção ${i + 1}`);
@@ -854,7 +873,7 @@ export function ApostaMultiplaDialog({
       }
 
       const selecoesFormatadas = selecoes
-        .slice(0, tipoMultipla === "DUPLA" ? 2 : 3)
+        .slice(0, numSelecoes)
         .map((s) => ({
           descricao: s.descricao.trim(),
           odd: parseFloat(s.odd),
@@ -882,6 +901,7 @@ export function ApostaMultiplaDialog({
         : null;
       const valorBrlRefEdit = isForeignEdit && cotacaoSnapEdit ? stakeNum * cotacaoSnapEdit : null;
 
+      const boostVal = parseFloat(boostPercent);
       const apostaData = {
         user_id: user.id,
         workspace_id: workspaceId,
@@ -904,6 +924,7 @@ export function ApostaMultiplaDialog({
         estrategia: registroValues.estrategia,
         forma_registro: registroValues.forma_registro,
         contexto_operacional: registroValues.contexto_operacional,
+        boost_percentual: !isNaN(boostVal) && boostVal > 0 ? boostVal : null,
         // Multi-moeda
         moeda_operacao: moedaOpEdit,
         cotacao_snapshot: cotacaoSnapEdit,
@@ -1355,24 +1376,50 @@ export function ApostaMultiplaDialog({
               )
             }
             extraHeaderContent={
-              <RadioGroup
-                value={tipoMultipla}
-                onValueChange={(v) => setTipoMultipla(v as "DUPLA" | "TRIPLA")}
-                className="flex gap-3"
-              >
-                <div className="flex items-center space-x-1.5">
-                  <RadioGroupItem value="DUPLA" id="dupla" />
-                  <Label htmlFor="dupla" className="cursor-pointer text-xs whitespace-nowrap">
-                    Dupla (2)
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-1.5">
-                  <RadioGroupItem value="TRIPLA" id="tripla" />
-                  <Label htmlFor="tripla" className="cursor-pointer text-xs whitespace-nowrap">
-                    Tripla (3)
-                  </Label>
-                </div>
-              </RadioGroup>
+              <div className="flex items-center gap-3">
+                <RadioGroup
+                  value={is4Plus ? "4PLUS" : tipoMultipla}
+                  onValueChange={(v) => {
+                    if (v === "4PLUS") {
+                      setTipoMultipla("QUADRUPLA");
+                    } else {
+                      setTipoMultipla(v as TipoMultipla);
+                    }
+                  }}
+                  className="flex gap-3"
+                >
+                  <div className="flex items-center space-x-1.5">
+                    <RadioGroupItem value="DUPLA" id="dupla" />
+                    <Label htmlFor="dupla" className="cursor-pointer text-xs whitespace-nowrap">
+                      Dupla (2)
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-1.5">
+                    <RadioGroupItem value="TRIPLA" id="tripla" />
+                    <Label htmlFor="tripla" className="cursor-pointer text-xs whitespace-nowrap">
+                      Tripla (3)
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-1.5">
+                    <RadioGroupItem value="4PLUS" id="4plus" />
+                    <Label htmlFor="4plus" className="cursor-pointer text-xs whitespace-nowrap">
+                      4+
+                    </Label>
+                  </div>
+                </RadioGroup>
+                {is4Plus && (
+                  <Select value={tipoMultipla} onValueChange={(v) => setTipoMultipla(v as TipoMultipla)}>
+                    <SelectTrigger className="h-6 w-[80px] text-[10px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="QUADRUPLA">4 sel.</SelectItem>
+                      <SelectItem value="QUINTUPLA">5 sel.</SelectItem>
+                      <SelectItem value="SEXTUPLA">6 sel.</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
             }
           />
 
@@ -1452,8 +1499,62 @@ export function ApostaMultiplaDialog({
             {/* Seleções */}
             <div className="space-y-1">
               <Label className="text-xs">Seleções</Label>
-              <div className={`grid gap-2 ${tipoMultipla === "TRIPLA" ? "grid-cols-1 md:grid-cols-3" : "grid-cols-1 md:grid-cols-2"}`}>
+              <div className={`grid gap-2 ${
+                is4Plus ? "grid-cols-1" :
+                tipoMultipla === "TRIPLA" ? "grid-cols-1 md:grid-cols-3" : 
+                "grid-cols-1 md:grid-cols-2"
+              }`}>
                 {selecoes.map((selecao, index) => {
+                  // Layout compacto para 4+ (inline em uma linha)
+                  if (is4Plus) {
+                    return (
+                      <div 
+                        key={index}
+                        className={`flex items-center gap-2 px-3 py-1.5 rounded-md border transition-all duration-150 ${
+                          selecao.resultado === "GREEN" ? "bg-emerald-500/10 border-emerald-500/30" :
+                          selecao.resultado === "RED" ? "bg-red-500/10 border-red-500/30" :
+                          selecao.resultado === "MEIO_GREEN" ? "bg-emerald-500/5 border-emerald-500/20" :
+                          selecao.resultado === "MEIO_RED" ? "bg-red-500/5 border-red-500/20" :
+                          selecao.resultado === "VOID" ? "bg-muted/50 border-muted-foreground/20" :
+                          "bg-muted/30 border-border/50"
+                        }`}
+                      >
+                        <span className="text-[9px] font-medium text-muted-foreground w-4 shrink-0">{index + 1}</span>
+                        <Input
+                          placeholder="Evento - Seleção"
+                          value={selecao.descricao}
+                          onChange={(e) => handleSelecaoChange(index, "descricao", e.target.value)}
+                          className="uppercase text-xs h-7 flex-1 min-w-0"
+                        />
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="Odd"
+                          value={selecao.odd}
+                          onChange={(e) => handleSelecaoChange(index, "odd", e.target.value)}
+                          className="text-xs h-7 w-[70px] shrink-0"
+                        />
+                        <Select 
+                          value={selecao.resultado || "PENDENTE"} 
+                          onValueChange={(v) => handleSelecaoChange(index, "resultado", v)}
+                        >
+                          <SelectTrigger className="w-[100px] h-7 text-[10px] shrink-0">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="PENDENTE">Pendente</SelectItem>
+                            <SelectItem value="GREEN" className="hover:bg-emerald-500/20 hover:text-emerald-500 focus:bg-emerald-500/20 focus:text-emerald-500">Green</SelectItem>
+                            <SelectItem value="MEIO_GREEN" className="hover:bg-teal-500/20 hover:text-teal-500 focus:bg-teal-500/20 focus:text-teal-500">½ Green</SelectItem>
+                            <SelectItem value="RED" className="hover:bg-red-500/20 hover:text-red-500 focus:bg-red-500/20 focus:text-red-500">Red</SelectItem>
+                            <SelectItem value="MEIO_RED" className="hover:bg-orange-500/20 hover:text-orange-500 focus:bg-orange-500/20 focus:text-orange-500">½ Red</SelectItem>
+                            <SelectItem value="VOID" className="hover:bg-slate-500/20 hover:text-slate-400 focus:bg-slate-500/20 focus:text-slate-400">Void</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    );
+                  }
+
+                  // Layout card padrão para dupla/tripla
                   return (
                   <Card 
                     key={index} 
@@ -1462,12 +1563,10 @@ export function ApostaMultiplaDialog({
                             selecao.resultado === "MEIO_GREEN" ? "bg-emerald-500/5 border-emerald-500/20" :
                             selecao.resultado === "RED" ? "bg-red-500/10 border-red-500/30" :
                             selecao.resultado === "MEIO_RED" ? "bg-red-500/5 border-red-500/20" :
-                            selecao.resultado === "VOID" ? "bg-gray-500/10 border-gray-500/30" :
+                            selecao.resultado === "VOID" ? "bg-muted/50 border-muted-foreground/20" :
                             "bg-muted/30"
                     }`}
                   >
-                    
-                    
                     <CardContent className="pt-2 pb-2 px-3">
                       <div className="flex items-center justify-between gap-2 mb-1.5">
                         <span className="text-[10px] font-medium text-muted-foreground">
@@ -1510,7 +1609,6 @@ export function ApostaMultiplaDialog({
                           className="text-xs h-8"
                         />
                       </div>
-                      
                     </CardContent>
                   </Card>
                   );
@@ -1548,8 +1646,8 @@ export function ApostaMultiplaDialog({
               </div>
             </div>
 
-            {/* Stake e Cálculos */}
-            <div className="grid grid-cols-3 gap-2">
+            {/* Boost + Stake e Cálculos */}
+            <div className="grid grid-cols-4 gap-2">
               <div className="space-y-0.5">
                 <Label className="text-xs">Stake ({bookmakerSaldo?.moeda || 'R$'}) *</Label>
                 <Input
@@ -1562,12 +1660,28 @@ export function ApostaMultiplaDialog({
                 />
               </div>
               <div className="space-y-0.5">
-                <Label className="text-xs">Odd Final</Label>
+                <Label className="text-xs">Boost %</Label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  placeholder="0"
+                  value={boostPercent}
+                  onChange={(e) => setBoostPercent(e.target.value)}
+                  className="h-8 text-xs"
+                />
+              </div>
+              <div className="space-y-0.5">
+                <Label className="text-xs">Odd Final{boostMultiplier > 1 ? ' 🚀' : ''}</Label>
                 <Input
                   value={oddFinal > 0 ? oddFinal.toFixed(3) : "-"}
                   disabled
-                  className="bg-muted/50 h-8 text-xs"
+                  className={`bg-muted/50 h-8 text-xs ${boostMultiplier > 1 ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : ''}`}
                 />
+                {boostMultiplier > 1 && oddFinalSemBoost > 0 && (
+                  <p className="text-[9px] text-muted-foreground">
+                    Base: {oddFinalSemBoost.toFixed(3)} → +{boostPercent}%
+                  </p>
+                )}
               </div>
               <div className="space-y-0.5">
                 <Label className="text-xs">Retorno Potencial</Label>

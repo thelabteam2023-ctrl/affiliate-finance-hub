@@ -371,6 +371,7 @@ export type Database = {
           back_em_exchange: boolean | null
           bonus_id: string | null
           bookmaker_id: string | null
+          boost_percentual: number | null
           cancel_reason: string | null
           cancelled_at: string | null
           cancelled_by: string | null
@@ -443,6 +444,7 @@ export type Database = {
           back_em_exchange?: boolean | null
           bonus_id?: string | null
           bookmaker_id?: string | null
+          boost_percentual?: number | null
           cancel_reason?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
@@ -515,6 +517,7 @@ export type Database = {
           back_em_exchange?: boolean | null
           bonus_id?: string | null
           bookmaker_id?: string | null
+          boost_percentual?: number | null
           cancel_reason?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
