@@ -357,7 +357,8 @@ export function ApostaMultiplaDialog({
   useEffect(() => {
     if (aposta && open) {
       setBookmakerId(aposta.bookmaker_id);
-      setTipoMultipla(aposta.tipo_multipla as "DUPLA" | "TRIPLA");
+      setTipoMultipla((aposta.tipo_multipla as TipoMultipla) || "DUPLA");
+      setBoostPercent((aposta as any).boost_percentual?.toString() || "");
       setStake(aposta.stake.toString());
       setStatusResultado(aposta.resultado || "PENDENTE");
       setDataAposta(dbTimestampToDatetimeLocal(aposta.data_aposta));
