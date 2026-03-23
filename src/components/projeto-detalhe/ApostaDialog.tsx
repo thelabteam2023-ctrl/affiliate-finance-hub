@@ -1439,6 +1439,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
       contexto_operacional: null,
       fonte_saldo: null, // Será inferido automaticamente baseado na aba/estratégia
     });
+    setFonteEntrada(null);
     // Clear print import data
     clearPrintData();
     setMercadoFromPrint(false);
