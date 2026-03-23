@@ -1377,7 +1377,7 @@ export function ApostaMultiplaDialog({
           <div className="space-y-1.5 py-1.5 px-3">
 
             {/* Tipo de Múltipla + Casa na mesma linha */}
-            <div className="grid grid-cols-[1.3fr_1fr] gap-2">
+            <div className="grid grid-cols-[1fr_1fr] gap-2">
               <div className="space-y-0.5">
                 <Label className="text-[10px] text-muted-foreground font-normal uppercase tracking-wider">Tipo de Múltipla</Label>
                 <Select value={tipoMultipla} onValueChange={(v) => setTipoMultipla(v as TipoMultipla)}>
@@ -1558,7 +1558,7 @@ export function ApostaMultiplaDialog({
                 </Badge>
               </div>
               <div className="flex items-center gap-3 text-[10px]">
-                <span className="text-muted-foreground">Ret: <span className="text-foreground font-medium">{formatCurrency(previewCalculo.retorno)}</span></span>
+                <span className="text-muted-foreground">Retorno: <span className="text-foreground font-medium">{formatCurrency(previewCalculo.retorno)}</span></span>
                 <span className={`font-semibold ${previewCalculo.lucro >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
                   P/L: {previewCalculo.lucro >= 0 ? "+" : ""}{formatCurrency(previewCalculo.lucro)}
                 </span>
@@ -1639,15 +1639,6 @@ export function ApostaMultiplaDialog({
               </div>
             )}
 
-            {/* Lucro potencial */}
-            {lucroPotencial > 0 && resultadoCalculado === "PENDENTE" && (
-              <div className="flex items-center justify-between px-2 py-1.5 rounded bg-emerald-500/10 border border-emerald-500/30">
-                <span className="text-xs text-muted-foreground">Lucro Potencial:</span>
-                <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
-                  {formatCurrency(lucroPotencial)}
-                </span>
-              </div>
-            )}
 
             {/* Resultado da Múltipla */}
             <div className="space-y-0.5">
