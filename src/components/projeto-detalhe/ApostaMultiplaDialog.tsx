@@ -68,6 +68,7 @@ import { BookmakerSearchableSelectContent } from "@/components/bookmakers/Bookma
 import { useImportMultiplaBetPrint } from "@/hooks/useImportMultiplaBetPrint";
 import { GerouFreebetInput } from "./GerouFreebetInput";
 import { FreebetToggle } from "@/components/apostas/waterfall";
+import { FonteEntradaSelector } from "@/components/apostas/FonteEntradaSelector";
 
 interface Selecao {
   descricao: string;
