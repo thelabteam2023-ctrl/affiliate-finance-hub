@@ -1169,6 +1169,7 @@ export function ApostaMultiplaDialog({
           : null;
         const valorBrlRef = isForeign && cotacaoSnap ? stakeNum * cotacaoSnap : null;
 
+        const boostVal = parseFloat(boostPercent);
         const result = await criarAposta({
           projeto_id: projetoId,
           workspace_id: workspaceId,
@@ -1192,6 +1193,9 @@ export function ApostaMultiplaDialog({
           moeda_operacao: moedaOp,
           cotacao_snapshot: cotacaoSnap,
           valor_brl_referencia: valorBrlRef,
+          // Boost e fonte
+          boost_percentual: !isNaN(boostVal) && boostVal > 0 ? boostVal : null,
+          fonte_entrada: registroValues.estrategia === 'VALUEBET' ? (fonteEntrada || 'Manual') : null,
         });
 
         if (!result.success) {
