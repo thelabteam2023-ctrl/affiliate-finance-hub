@@ -80,6 +80,25 @@ function InfoTooltip({ text }: { text: string }) {
   );
 }
 
+/** Comprime imagem via canvas para reduzir payload */
+function compressImage(base64: string, maxWidth: number, quality: number): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxWidth / img.width);
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      const ctx = canvas.getContext('2d');
+      if (!ctx) { resolve(base64); return; }
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = reject;
+    img.src = base64;
+  });
+}
+
 export const CalculadoraEVContent: React.FC = () => {
   const [oddAtual, setOddAtual] = useState('');
   const [oddJusta, setOddJusta] = useState('');
@@ -104,6 +123,7 @@ export const CalculadoraEVContent: React.FC = () => {
   const parseImage = useCallback(async (imageBase64: string) => {
     setIsParsing(true);
     try {
+      // Validações de entrada
       if (imageBase64.length > 6 * 1024 * 1024) {
         toast.error('Imagem muito grande', { description: 'Use uma imagem menor (máx ~4MB).' });
         return;
@@ -114,32 +134,70 @@ export const CalculadoraEVContent: React.FC = () => {
         return;
       }
 
-      const endpoint = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parse-ev-print`;
-      const payload = { imageBase64 };
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-      console.log('[EV Calculator] Sending to parse-ev-print, size:', imageBase64.length);
-      console.log('[EV Calculator] Endpoint:', endpoint);
-      console.log('[EV Calculator] Payload chars:', JSON.stringify(payload).length);
+      console.log('[EV OCR] 1. Env check — URL:', supabaseUrl ? 'OK' : 'MISSING', '| Key:', supabaseKey ? 'OK' : 'MISSING');
 
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
-        body: JSON.stringify(payload),
-      });
+      if (!supabaseUrl || !supabaseKey) {
+        toast.error('Configuração ausente', { description: 'Variáveis de ambiente não encontradas.' });
+        return;
+      }
+
+      const endpoint = `${supabaseUrl}/functions/v1/parse-ev-print`;
+      console.log('[EV OCR] 2. Endpoint:', endpoint);
+      console.log('[EV OCR] 3. Image base64 length:', imageBase64.length);
+
+      // Comprimir imagem se muito grande (reduz para ~800px de largura)
+      let processedBase64 = imageBase64;
+      try {
+        const compressed = await compressImage(imageBase64, 800, 0.8);
+        if (compressed && compressed.length < imageBase64.length) {
+          console.log('[EV OCR] 4. Compressed:', imageBase64.length, '->', compressed.length);
+          processedBase64 = compressed;
+        } else {
+          console.log('[EV OCR] 4. No compression needed');
+        }
+      } catch (compErr) {
+        console.warn('[EV OCR] 4. Compression failed, using original:', compErr);
+      }
+
+      const payload = JSON.stringify({ imageBase64: processedBase64 });
+      console.log('[EV OCR] 5. Payload size:', payload.length, 'bytes');
+
+      let response: Response;
+      try {
+        response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': supabaseKey,
+            'Authorization': `Bearer ${supabaseKey}`,
+          },
+          body: payload,
+        });
+      } catch (fetchError) {
+        console.error('[EV OCR] 6. FETCH FAILED:', fetchError);
+        console.error('[EV OCR] 6. Error type:', (fetchError as Error)?.name);
+        console.error('[EV OCR] 6. Error message:', (fetchError as Error)?.message);
+        toast.error('Erro de conexão', {
+          description: 'Não foi possível conectar ao servidor. Verifique sua internet e tente novamente.',
+        });
+        return;
+      }
+
+      console.log('[EV OCR] 7. Response status:', response.status);
 
       const rawText = await response.text();
-      console.log('[EV Calculator] Raw response status:', response.status);
-      console.log('[EV Calculator] Raw response body:', rawText);
+      console.log('[EV OCR] 8. Response body:', rawText.substring(0, 500));
 
       let data: any = null;
       try {
         data = rawText ? JSON.parse(rawText) : null;
       } catch {
-        throw new Error('Resposta inválida do servidor de OCR.');
+        console.error('[EV OCR] 9. JSON parse failed, raw:', rawText.substring(0, 200));
+        toast.error('Resposta inválida', { description: 'O servidor retornou dados inválidos.' });
+        return;
       }
 
       if (!response.ok) {
@@ -147,9 +205,8 @@ export const CalculadoraEVContent: React.FC = () => {
           || (response.status === 402
             ? 'Créditos de IA insuficientes.'
             : response.status === 429
-              ? 'Limite de requisições excedido. Tente novamente em alguns segundos.'
-              : `Erro ao processar imagem (código ${response.status}).`);
-
+              ? 'Limite de requisições. Tente em alguns segundos.'
+              : `Erro ao processar (código ${response.status}).`);
         toast.error('Erro ao interpretar print', { description: message });
         return;
       }
@@ -160,23 +217,35 @@ export const CalculadoraEVContent: React.FC = () => {
       }
 
       if (!data?.success || !data?.data) {
+        console.error('[EV OCR] 10. Unexpected structure:', data);
         toast.error('Não foi possível interpretar o print', { description: 'Tente outro print.' });
         return;
       }
 
       const d = data.data;
-      const infoParts: string[] = [];
+      console.log('[EV OCR] 11. Parsed data:', JSON.stringify(d));
 
+      // Aplicar dados nos campos
+      let fieldsSet = 0;
       if (d.odd_atual && d.odd_atual > 1) {
+        console.log('[EV OCR] 12. Setting oddAtual:', d.odd_atual);
         setOddAtual(String(d.odd_atual));
+        fieldsSet++;
       }
       if (d.odd_justa && d.odd_justa > 1) {
+        console.log('[EV OCR] 12. Setting oddJusta:', d.odd_justa);
         setOddJusta(String(d.odd_justa));
+        fieldsSet++;
       }
       if (d.stake && d.stake > 0) {
+        console.log('[EV OCR] 12. Setting stakeBase:', d.stake);
         setStakeBase(String(d.stake));
+        fieldsSet++;
       }
 
+      console.log('[EV OCR] 13. Fields set:', fieldsSet);
+
+      const infoParts: string[] = [];
       if (d.evento) infoParts.push(d.evento);
       if (d.mercado) infoParts.push(d.mercado);
       if (d.selecao) infoParts.push(d.selecao);
@@ -186,12 +255,12 @@ export const CalculadoraEVContent: React.FC = () => {
       setParsedInfo(infoParts.length > 0 ? infoParts.join(' • ') : null);
 
       toast.success('Print interpretado!', {
-        description: `Odd: ${d.odd_atual || '?'} | Justa: ${d.odd_justa || '?'}${d.ev_percent ? ` | EV: ${d.ev_percent}%` : ''}`,
+        description: `Odd: ${d.odd_atual || '?'} | Justa: ${d.odd_justa || '?'}${d.ev_percent ? ` | EV: ${d.ev_percent}%` : ''} | ${fieldsSet} campos preenchidos`,
       });
     } catch (err) {
-      console.error('[EV Calculator] Parse error:', err);
+      console.error('[EV OCR] UNEXPECTED ERROR:', err);
       toast.error('Erro ao processar print', {
-        description: err instanceof Error ? err.message : 'Verifique sua conexão.',
+        description: err instanceof Error ? err.message : 'Erro inesperado.',
       });
     } finally {
       setIsParsing(false);
