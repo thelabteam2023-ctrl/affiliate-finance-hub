@@ -622,8 +622,14 @@ export function ApostaMultiplaDialog({
     
     const oddNominal = selecoesValidas.reduce((acc, s) => acc * parseFloat(s.odd), 1);
     const oddReal = selecoesValidas.reduce((acc, s) => {
-      if (s.resultado === "VOID") return acc * 1;
-      return acc * parseFloat(s.odd);
+      const odd = parseFloat(s.odd);
+      switch (s.resultado) {
+        case "VOID": return acc * 1;
+        case "MEIO_RED": return acc * 0.5;
+        case "MEIO_GREEN": return acc * (odd + 1) / 2;
+        case "RED": return acc * 0;
+        default: return acc * odd; // GREEN, PENDENTE
+      }
     }, 1);
     
     return {
