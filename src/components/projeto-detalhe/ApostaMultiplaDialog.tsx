@@ -298,6 +298,7 @@ export function ApostaMultiplaDialog({
   const [dataAposta, setDataAposta] = useState("");
   const [observacoes, setObservacoes] = useState("");
   const [boostPercent, setBoostPercent] = useState("");
+  const [fonteEntrada, setFonteEntrada] = useState<string | null>(null);
 
   // Registro explícito - estratégia NUNCA é inferida automaticamente
   // Se a aba não define estratégia (ex: Apostas Livres), fica null e o usuário DEVE escolher
