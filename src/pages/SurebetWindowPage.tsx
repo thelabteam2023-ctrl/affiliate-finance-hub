@@ -30,12 +30,14 @@ export default function SurebetWindowPage() {
   const projetoId = searchParams.get("projetoId") || "";
   const activeTab = searchParams.get("tab") || "surebet";
   const rascunhoId = searchParams.get("rascunhoId");
+  const duplicateFrom = searchParams.get("duplicateFrom") || null;
   
-  const isEditing = !!id && id !== "novo";
+  const isEditing = !!id && id !== "novo" && !duplicateFrom;
+  const isDuplicating = !!duplicateFrom;
   const isFromRascunho = !!rascunhoId && !isEditing;
   
   const [surebet, setSurebet] = useState<any>(null);
-  const [loading, setLoading] = useState(isEditing);
+  const [loading, setLoading] = useState(isEditing || isDuplicating);
   const [error, setError] = useState<string | null>(null);
   const [formKey, setFormKey] = useState(0);
   const [saveCount, setSaveCount] = useState(0); // Contador de salvamentos
