@@ -64,6 +64,7 @@ function ViewPorParceiro() {
   const [parceiroSearch, setParceiroSearch] = useState("");
   const [parceiroPopoverOpen, setParceiroPopoverOpen] = useState(false);
   const [grupoFilter, setGrupoFilter] = useState("todos");
+  const [regulamentacaoFilter, setRegulamentacaoFilter] = useState<"todas" | "REGULAMENTADA" | "NAO_REGULAMENTADA">("todas");
   const [search, setSearch] = useState("");
   const { getCatalogoIdsByGrupo, membros } = useBookmakerGrupos();
 
