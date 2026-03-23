@@ -1226,11 +1226,23 @@ export function ApostaMultiplaDialog({
         const novaApostaId = result.data?.id;
 
         // Se resultado não é PENDENTE, liquidar via motor v7
-         if (novaApostaId && resultadoFinal && resultadoFinal !== "PENDENTE") {
+        if (novaApostaId && resultadoFinal && resultadoFinal !== "PENDENTE") {
+          // CRÍTICO: Antes de liquidar, atualizar odd_final para oddFinalReal (considera VOID=1)
+          // e salvar lucro/retorno calculados pelo previewCalculo (que usa fatores por perna)
+          // Sem isso, a RPC usa odd_final nominal e calcula P/L errado para MEIO_GREEN/MEIO_RED
+          if (oddFinalParaSalvar !== oddFinal || lucroPrejuizo != null) {
+            await supabase.from("apostas_unificada").update({
+              odd_final: oddFinalParaSalvar,
+              lucro_prejuizo: lucroPrejuizo,
+              valor_retorno: valorRetorno,
+              retorno_potencial: retornoPotencial,
+            }).eq("id", novaApostaId);
+          }
+
           const liquidResult = await liquidarAposta({
             id: novaApostaId,
             resultado: resultadoFinal as any,
-            lucro_prejuizo: undefined, // Delegar cálculo à RPC (usa odd_final para múltiplas)
+            lucro_prejuizo: lucroPrejuizo != null && lucroPrejuizo !== 0 ? lucroPrejuizo : undefined,
           });
           
           if (!liquidResult.success) {
