@@ -1274,6 +1274,7 @@ export function ApostaMultiplaDialog({
         }
       }
 
+      invalidateCanonicalCaches(queryClient, projetoId);
       onSuccess('save');
       if (!embedded) onOpenChange(false);
     } catch (error: any) {
