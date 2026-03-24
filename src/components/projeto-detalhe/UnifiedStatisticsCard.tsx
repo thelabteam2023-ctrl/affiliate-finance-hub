@@ -830,6 +830,61 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
     </div>
   );
 
+  // Aba Por Fonte
+  const renderPorFonte = () => (
+    <div className="space-y-4">
+      {stats.porFonte.length === 0 ? (
+        <div className="text-center py-8 text-muted-foreground text-sm">
+          Nenhuma fonte registrada
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-border/50">
+                <th className="text-left py-2 px-2 text-muted-foreground font-medium">Fonte</th>
+                <th className="text-right py-2 px-1 text-muted-foreground font-medium">Apostas</th>
+                <th className="text-right py-2 px-1 text-muted-foreground font-medium">G</th>
+                <th className="text-right py-2 px-1 text-muted-foreground font-medium">P</th>
+                <th className="text-right py-2 px-1 text-muted-foreground font-medium">R</th>
+                <th className="text-right py-2 px-2 text-muted-foreground font-medium">Volume</th>
+                <th className="text-right py-2 px-2 text-muted-foreground font-medium">Lucro</th>
+                <th className="text-right py-2 px-2 text-muted-foreground font-medium">ROI</th>
+                <th className="text-right py-2 px-2 text-muted-foreground font-medium">%</th>
+              </tr>
+            </thead>
+            <tbody>
+              {stats.porFonte.map((row, i) => (
+                <tr key={row.fonte} className={i % 2 === 0 ? "bg-muted/20" : ""}>
+                  <td className="py-2 px-2 font-medium truncate max-w-[120px]" title={row.fonte}>
+                    <div className="flex items-center gap-1.5">
+                      <Zap className="h-3 w-3 text-purple-400 shrink-0" />
+                      {row.fonte}
+                    </div>
+                  </td>
+                  <td className="py-2 px-1 text-right tabular-nums">{row.apostas}</td>
+                  <td className="py-2 px-1 text-right tabular-nums text-emerald-400">{row.ganhas}</td>
+                  <td className="py-2 px-1 text-right tabular-nums text-red-400">{row.perdidas}</td>
+                  <td className="py-2 px-1 text-right tabular-nums text-muted-foreground">{row.reembolsadas}</td>
+                  <td className="py-2 px-2 text-right tabular-nums">{formatCurrency(row.volume)}</td>
+                  <td className={`py-2 px-2 text-right tabular-nums font-medium ${row.lucro >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                    {formatCurrency(row.lucro)}
+                  </td>
+                  <td className={`py-2 px-2 text-right tabular-nums ${row.roi >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                    {formatPercent(row.roi)}
+                  </td>
+                  <td className={`py-2 px-2 text-right tabular-nums ${row.sucesso >= 50 ? "text-emerald-400" : "text-amber-400"}`}>
+                    {row.sucesso.toFixed(0)}%
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <Card className="border-purple-500/20">
       <CardHeader className="py-3 pb-0">
@@ -840,7 +895,7 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
       </CardHeader>
       <CardContent className="pt-2 pb-4">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full grid grid-cols-4 h-9 mb-4 bg-transparent gap-1 p-0" accentColor="bg-purple-500">
+          <TabsList className="w-full grid grid-cols-5 h-9 mb-4 bg-transparent gap-1 p-0" accentColor="bg-purple-500">
             <TabsTrigger 
               value="resumo" 
               className="text-xs rounded-lg transition-all duration-200 bg-transparent data-[state=inactive]:text-muted-foreground data-[state=active]:text-foreground data-[state=active]:font-medium hover:text-foreground/80"
@@ -865,6 +920,12 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
             >
               Por Esporte
             </TabsTrigger>
+            <TabsTrigger 
+              value="por-fonte" 
+              className="text-xs rounded-lg transition-all duration-200 bg-transparent data-[state=inactive]:text-muted-foreground data-[state=active]:text-foreground data-[state=active]:font-medium hover:text-foreground/80"
+            >
+              Por Fonte
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="resumo" className="mt-0">
@@ -881,6 +942,10 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
 
           <TabsContent value="por-esporte" className="mt-0">
             {renderPorEsporte()}
+          </TabsContent>
+
+          <TabsContent value="por-fonte" className="mt-0">
+            {renderPorFonte()}
           </TabsContent>
         </Tabs>
       </CardContent>
