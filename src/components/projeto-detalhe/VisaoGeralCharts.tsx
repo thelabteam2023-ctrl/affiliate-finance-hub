@@ -947,7 +947,8 @@ export function VisaoGeralCharts({
     };
 
     return Array.from(casaMap.entries()).map(([casa, data]) => {
-      const roi = data.volume > 0 ? (data.lucro / data.volume) * 100 : 0;
+      // ROI usa volume LIQUIDADO — apostas pendentes não têm resultado
+      const roi = data.volumeLiquidado > 0 ? (data.lucro / data.volumeLiquidado) * 100 : 0;
       return {
         casa,
         apostas: data.apostas,
@@ -957,7 +958,7 @@ export function VisaoGeralCharts({
         moeda: data.moeda,
         logo_url: findLogoForCasa(casa),
         vinculos: Array.from(data.vinculos.entries()).map(([vinculo, v]) => {
-          const vinculoRoi = v.volume > 0 ? (v.lucro / v.volume) * 100 : 0;
+          const vinculoRoi = v.volumeLiquidado > 0 ? (v.lucro / v.volumeLiquidado) * 100 : 0;
           return {
             vinculo,
             apostas: v.apostas,
