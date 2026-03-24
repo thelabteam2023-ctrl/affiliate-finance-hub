@@ -363,6 +363,43 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
       }))
       .sort((a, b) => b.lucro - a.lucro);
 
+    // === POR FONTE ===
+    const fonteMap = new Map<string, {
+      apostas: number;
+      ganhas: number;
+      perdidas: number;
+      reembolsadas: number;
+      volume: number;
+      lucro: number;
+    }>();
+
+    apostas.forEach(a => {
+      const fonte = (a as any).fonte_entrada || "Manual";
+      if (!fonteMap.has(fonte)) {
+        fonteMap.set(fonte, { apostas: 0, ganhas: 0, perdidas: 0, reembolsadas: 0, volume: 0, lucro: 0 });
+      }
+      const entry = fonteMap.get(fonte)!;
+      entry.apostas++;
+      entry.volume += getStake(a);
+      if (a.resultado === "GREEN" || a.resultado === "MEIO_GREEN") entry.ganhas++;
+      else if (a.resultado === "RED" || a.resultado === "MEIO_RED") entry.perdidas++;
+      else if (a.resultado === "VOID") entry.reembolsadas++;
+      if (a.resultado && a.resultado !== "PENDENTE") {
+        entry.lucro += a.lucro_prejuizo || 0;
+      }
+    });
+
+    const porFonte = Array.from(fonteMap.entries())
+      .map(([fonte, data]) => ({
+        fonte,
+        ...data,
+        roi: data.volume > 0 ? (data.lucro / data.volume) * 100 : 0,
+        sucesso: (data.ganhas + data.perdidas + data.reembolsadas) > 0 
+          ? (data.ganhas / (data.ganhas + data.perdidas + data.reembolsadas)) * 100 
+          : 0,
+      }))
+      .sort((a, b) => b.lucro - a.lucro);
+
     // === AVANÇADO ===
     const lucros = liquidadas.map(a => a.lucro_prejuizo || 0);
     const maiorLucro = lucros.length > 0 ? Math.max(...lucros, 0) : 0;
