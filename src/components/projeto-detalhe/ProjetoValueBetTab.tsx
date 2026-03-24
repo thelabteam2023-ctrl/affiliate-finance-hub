@@ -753,7 +753,7 @@ export function ProjetoValueBetTab({
       })
       .sort((a, b) => b.volume - a.volume)
       .slice(0, 8);
-  }, [apostas]);
+  }, [apostasParaKpi, convertToConsolidationOficialFn, moedaConsolidacaoVal]);
 
   // Mapa de logos combinando catálogo global + bookmakers do projeto
   const logoMap = useMemo(() => {
