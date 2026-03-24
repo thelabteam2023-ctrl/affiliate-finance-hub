@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, Fragment } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -234,6 +234,8 @@ const ODD_RANGES = [
 export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60%)", formatCurrency: formatCurrencyProp, currencySymbol = "R$" }: UnifiedStatisticsCardProps) {
   const formatCurrency = formatCurrencyProp || defaultFormatCurrency;
   const [activeTab, setActiveTab] = useState("resumo");
+  const [expandedFonte, setExpandedFonte] = useState<string | null>(null);
+  const [fonteDetailTab, setFonteDetailTab] = useState<"esporte" | "odds">("esporte");
   
   // Gerar faixas de valor com o símbolo correto da moeda
   const VALUE_RANGES = useMemo(() => getValueRanges(currencySymbol), [currencySymbol]);
@@ -363,41 +365,64 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
       }))
       .sort((a, b) => b.lucro - a.lucro);
 
-    // === POR FONTE ===
-    const fonteMap = new Map<string, {
-      apostas: number;
-      ganhas: number;
-      perdidas: number;
-      reembolsadas: number;
-      volume: number;
-      lucro: number;
-    }>();
-
+    // === POR FONTE (com sub-análises) ===
+    const fonteApostasMap = new Map<string, Aposta[]>();
     apostas.forEach(a => {
-      const fonte = (a as any).fonte_entrada || "Manual";
-      if (!fonteMap.has(fonte)) {
-        fonteMap.set(fonte, { apostas: 0, ganhas: 0, perdidas: 0, reembolsadas: 0, volume: 0, lucro: 0 });
-      }
-      const entry = fonteMap.get(fonte)!;
-      entry.apostas++;
-      entry.volume += getStake(a);
-      if (a.resultado === "GREEN" || a.resultado === "MEIO_GREEN") entry.ganhas++;
-      else if (a.resultado === "RED" || a.resultado === "MEIO_RED") entry.perdidas++;
-      else if (a.resultado === "VOID") entry.reembolsadas++;
-      if (a.resultado && a.resultado !== "PENDENTE") {
-        entry.lucro += a.lucro_prejuizo || 0;
-      }
+      const fonte = a.fonte_entrada || "Manual";
+      if (!fonteApostasMap.has(fonte)) fonteApostasMap.set(fonte, []);
+      fonteApostasMap.get(fonte)!.push(a);
     });
 
-    const porFonte = Array.from(fonteMap.entries())
-      .map(([fonte, data]) => ({
-        fonte,
-        ...data,
-        roi: data.volume > 0 ? (data.lucro / data.volume) * 100 : 0,
-        sucesso: (data.ganhas + data.perdidas + data.reembolsadas) > 0 
-          ? (data.ganhas / (data.ganhas + data.perdidas + data.reembolsadas)) * 100 
-          : 0,
-      }))
+    const porFonte = Array.from(fonteApostasMap.entries())
+      .map(([fonte, items]) => {
+        const ganhas = items.filter(a => a.resultado === "GREEN" || a.resultado === "MEIO_GREEN").length;
+        const perdidas = items.filter(a => a.resultado === "RED" || a.resultado === "MEIO_RED").length;
+        const reemb = items.filter(a => a.resultado === "VOID").length;
+        const liq = items.filter(a => a.resultado && a.resultado !== "PENDENTE");
+        const volume = items.reduce((acc, a) => acc + getStake(a), 0);
+        const lucro = liq.reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0);
+
+        // Sub-análise por esporte
+        const esporteSubMap = new Map<string, { apostas: number; ganhas: number; perdidas: number; volume: number; lucro: number }>();
+        items.forEach(a => {
+          const esp = a.esporte || "Não informado";
+          if (!esporteSubMap.has(esp)) esporteSubMap.set(esp, { apostas: 0, ganhas: 0, perdidas: 0, volume: 0, lucro: 0 });
+          const e = esporteSubMap.get(esp)!;
+          e.apostas++;
+          e.volume += getStake(a);
+          if (a.resultado === "GREEN" || a.resultado === "MEIO_GREEN") e.ganhas++;
+          else if (a.resultado === "RED" || a.resultado === "MEIO_RED") e.perdidas++;
+          if (a.resultado && a.resultado !== "PENDENTE") e.lucro += a.lucro_prejuizo || 0;
+        });
+        const porEsporteSub = Array.from(esporteSubMap.entries())
+          .map(([esporte, d]) => ({ esporte, ...d, roi: d.volume > 0 ? (d.lucro / d.volume) * 100 : 0 }))
+          .sort((a, b) => b.lucro - a.lucro);
+
+        // Sub-análise por faixa de odds
+        const porOddsSub = ODD_RANGES.map(range => {
+          const filtered = items.filter(a => { const o = getOdd(a); return o >= range.min && o < range.max; });
+          const fLiq = filtered.filter(a => a.resultado && a.resultado !== "PENDENTE");
+          const fG = fLiq.filter(a => a.resultado === "GREEN" || a.resultado === "MEIO_GREEN").length;
+          const fP = fLiq.filter(a => a.resultado === "RED" || a.resultado === "MEIO_RED").length;
+          const fVol = fLiq.reduce((acc, a) => acc + getStake(a), 0);
+          const fLuc = fLiq.reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0);
+          return { faixa: range.label, apostas: fLiq.length, ganhas: fG, perdidas: fP, volume: fVol, lucro: fLuc };
+        }).filter(r => r.apostas > 0);
+
+        return {
+          fonte,
+          apostas: items.length,
+          ganhas,
+          perdidas,
+          reembolsadas: reemb,
+          volume,
+          lucro,
+          roi: volume > 0 ? (lucro / volume) * 100 : 0,
+          sucesso: (ganhas + perdidas + reemb) > 0 ? (ganhas / (ganhas + perdidas + reemb)) * 100 : 0,
+          porEsporteSub,
+          porOddsSub,
+        };
+      })
       .sort((a, b) => b.lucro - a.lucro);
 
     // === AVANÇADO ===
@@ -830,7 +855,7 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
     </div>
   );
 
-  // Aba Por Fonte
+  // Aba Por Fonte (com detalhes expandíveis)
   const renderPorFonte = () => (
     <div className="space-y-4">
       {stats.porFonte.length === 0 ? (
@@ -854,30 +879,147 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
               </tr>
             </thead>
             <tbody>
-              {stats.porFonte.map((row, i) => (
-                <tr key={row.fonte} className={i % 2 === 0 ? "bg-muted/20" : ""}>
-                  <td className="py-2 px-2 font-medium truncate max-w-[120px]" title={row.fonte}>
-                    <div className="flex items-center gap-1.5">
-                      <Zap className="h-3 w-3 text-purple-400 shrink-0" />
-                      {row.fonte}
-                    </div>
-                  </td>
-                  <td className="py-2 px-1 text-right tabular-nums">{row.apostas}</td>
-                  <td className="py-2 px-1 text-right tabular-nums text-emerald-400">{row.ganhas}</td>
-                  <td className="py-2 px-1 text-right tabular-nums text-red-400">{row.perdidas}</td>
-                  <td className="py-2 px-1 text-right tabular-nums text-muted-foreground">{row.reembolsadas}</td>
-                  <td className="py-2 px-2 text-right tabular-nums">{formatCurrency(row.volume)}</td>
-                  <td className={`py-2 px-2 text-right tabular-nums font-medium ${row.lucro >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-                    {formatCurrency(row.lucro)}
-                  </td>
-                  <td className={`py-2 px-2 text-right tabular-nums ${row.roi >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-                    {formatPercent(row.roi)}
-                  </td>
-                  <td className={`py-2 px-2 text-right tabular-nums ${row.sucesso >= 50 ? "text-emerald-400" : "text-amber-400"}`}>
-                    {row.sucesso.toFixed(0)}%
-                  </td>
-                </tr>
-              ))}
+              {stats.porFonte.map((row, i) => {
+                const isExpanded = expandedFonte === row.fonte;
+                return (
+                  <Fragment key={row.fonte}>
+                    <tr 
+                      className={`cursor-pointer transition-colors hover:bg-muted/40 ${isExpanded ? "bg-purple-500/10" : i % 2 === 0 ? "bg-muted/20" : ""}`}
+                      onClick={() => {
+                        setExpandedFonte(isExpanded ? null : row.fonte);
+                        setFonteDetailTab("esporte");
+                      }}
+                    >
+                      <td className="py-2 px-2 font-medium truncate max-w-[120px]" title={row.fonte}>
+                        <div className="flex items-center gap-1.5">
+                          <Zap className="h-3 w-3 text-purple-400 shrink-0" />
+                          {row.fonte}
+                          <span className={`ml-auto text-[10px] transition-transform ${isExpanded ? "rotate-180" : ""}`}>▼</span>
+                        </div>
+                      </td>
+                      <td className="py-2 px-1 text-right tabular-nums">{row.apostas}</td>
+                      <td className="py-2 px-1 text-right tabular-nums text-emerald-400">{row.ganhas}</td>
+                      <td className="py-2 px-1 text-right tabular-nums text-red-400">{row.perdidas}</td>
+                      <td className="py-2 px-1 text-right tabular-nums text-muted-foreground">{row.reembolsadas}</td>
+                      <td className="py-2 px-2 text-right tabular-nums">{formatCurrency(row.volume)}</td>
+                      <td className={`py-2 px-2 text-right tabular-nums font-medium ${row.lucro >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                        {formatCurrency(row.lucro)}
+                      </td>
+                      <td className={`py-2 px-2 text-right tabular-nums ${row.roi >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                        {formatPercent(row.roi)}
+                      </td>
+                      <td className={`py-2 px-2 text-right tabular-nums ${row.sucesso >= 50 ? "text-emerald-400" : "text-amber-400"}`}>
+                        {row.sucesso.toFixed(0)}%
+                      </td>
+                    </tr>
+                    {isExpanded && (
+                      <tr>
+                        <td colSpan={9} className="p-0">
+                          <div className="bg-muted/20 border-y border-border/30 px-3 py-3 space-y-3">
+                            {/* Sub-tabs */}
+                            <div className="flex gap-1">
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setFonteDetailTab("esporte"); }}
+                                className={`px-3 py-1 rounded-md text-[11px] font-medium transition-colors ${
+                                  fonteDetailTab === "esporte" 
+                                    ? "bg-purple-500/20 text-purple-300 border border-purple-500/30" 
+                                    : "text-muted-foreground hover:text-foreground"
+                                }`}
+                              >
+                                Por Esporte
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setFonteDetailTab("odds"); }}
+                                className={`px-3 py-1 rounded-md text-[11px] font-medium transition-colors ${
+                                  fonteDetailTab === "odds" 
+                                    ? "bg-purple-500/20 text-purple-300 border border-purple-500/30" 
+                                    : "text-muted-foreground hover:text-foreground"
+                                }`}
+                              >
+                                Por Faixa de Odds
+                              </button>
+                            </div>
+
+                            {fonteDetailTab === "esporte" && (
+                              <div className="overflow-x-auto">
+                                {row.porEsporteSub.length === 0 ? (
+                                  <p className="text-muted-foreground text-[11px] py-2">Sem dados de esporte</p>
+                                ) : (
+                                  <table className="w-full text-[11px]">
+                                    <thead>
+                                      <tr className="border-b border-border/30">
+                                        <th className="text-left py-1.5 px-2 text-muted-foreground font-medium">Esporte</th>
+                                        <th className="text-right py-1.5 px-1 text-muted-foreground font-medium">Apostas</th>
+                                        <th className="text-right py-1.5 px-1 text-muted-foreground font-medium">G</th>
+                                        <th className="text-right py-1.5 px-1 text-muted-foreground font-medium">P</th>
+                                        <th className="text-right py-1.5 px-2 text-muted-foreground font-medium">Volume</th>
+                                        <th className="text-right py-1.5 px-2 text-muted-foreground font-medium">Lucro</th>
+                                        <th className="text-right py-1.5 px-2 text-muted-foreground font-medium">ROI</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {row.porEsporteSub.map((s, si) => (
+                                        <tr key={s.esporte} className={si % 2 === 0 ? "bg-muted/10" : ""}>
+                                          <td className="py-1.5 px-2 font-medium truncate max-w-[100px]" title={s.esporte}>{s.esporte}</td>
+                                          <td className="py-1.5 px-1 text-right tabular-nums">{s.apostas}</td>
+                                          <td className="py-1.5 px-1 text-right tabular-nums text-emerald-400">{s.ganhas}</td>
+                                          <td className="py-1.5 px-1 text-right tabular-nums text-red-400">{s.perdidas}</td>
+                                          <td className="py-1.5 px-2 text-right tabular-nums">{formatCurrency(s.volume)}</td>
+                                          <td className={`py-1.5 px-2 text-right tabular-nums font-medium ${s.lucro >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                                            {formatCurrency(s.lucro)}
+                                          </td>
+                                          <td className={`py-1.5 px-2 text-right tabular-nums ${s.roi >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                                            {formatPercent(s.roi)}
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                )}
+                              </div>
+                            )}
+
+                            {fonteDetailTab === "odds" && (
+                              <div className="overflow-x-auto">
+                                {row.porOddsSub.length === 0 ? (
+                                  <p className="text-muted-foreground text-[11px] py-2">Sem dados de odds</p>
+                                ) : (
+                                  <table className="w-full text-[11px]">
+                                    <thead>
+                                      <tr className="border-b border-border/30">
+                                        <th className="text-left py-1.5 px-2 text-muted-foreground font-medium">Faixa</th>
+                                        <th className="text-right py-1.5 px-1 text-muted-foreground font-medium">Apostas</th>
+                                        <th className="text-right py-1.5 px-1 text-muted-foreground font-medium">G</th>
+                                        <th className="text-right py-1.5 px-1 text-muted-foreground font-medium">P</th>
+                                        <th className="text-right py-1.5 px-2 text-muted-foreground font-medium">Volume</th>
+                                        <th className="text-right py-1.5 px-2 text-muted-foreground font-medium">Lucro</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {row.porOddsSub.map((o, oi) => (
+                                        <tr key={o.faixa} className={oi % 2 === 0 ? "bg-muted/10" : ""}>
+                                          <td className="py-1.5 px-2 font-medium">{o.faixa}</td>
+                                          <td className="py-1.5 px-1 text-right tabular-nums">{o.apostas}</td>
+                                          <td className="py-1.5 px-1 text-right tabular-nums text-emerald-400">{o.ganhas}</td>
+                                          <td className="py-1.5 px-1 text-right tabular-nums text-red-400">{o.perdidas}</td>
+                                          <td className="py-1.5 px-2 text-right tabular-nums">{formatCurrency(o.volume)}</td>
+                                          <td className={`py-1.5 px-2 text-right tabular-nums font-medium ${o.lucro >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                                            {formatCurrency(o.lucro)}
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                );
+              })}
             </tbody>
           </table>
         </div>
