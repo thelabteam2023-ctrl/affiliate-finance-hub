@@ -855,7 +855,7 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
     </div>
   );
 
-  // Aba Por Fonte
+  // Aba Por Fonte (com detalhes expandíveis)
   const renderPorFonte = () => (
     <div className="space-y-4">
       {stats.porFonte.length === 0 ? (
@@ -879,30 +879,147 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
               </tr>
             </thead>
             <tbody>
-              {stats.porFonte.map((row, i) => (
-                <tr key={row.fonte} className={i % 2 === 0 ? "bg-muted/20" : ""}>
-                  <td className="py-2 px-2 font-medium truncate max-w-[120px]" title={row.fonte}>
-                    <div className="flex items-center gap-1.5">
-                      <Zap className="h-3 w-3 text-purple-400 shrink-0" />
-                      {row.fonte}
-                    </div>
-                  </td>
-                  <td className="py-2 px-1 text-right tabular-nums">{row.apostas}</td>
-                  <td className="py-2 px-1 text-right tabular-nums text-emerald-400">{row.ganhas}</td>
-                  <td className="py-2 px-1 text-right tabular-nums text-red-400">{row.perdidas}</td>
-                  <td className="py-2 px-1 text-right tabular-nums text-muted-foreground">{row.reembolsadas}</td>
-                  <td className="py-2 px-2 text-right tabular-nums">{formatCurrency(row.volume)}</td>
-                  <td className={`py-2 px-2 text-right tabular-nums font-medium ${row.lucro >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-                    {formatCurrency(row.lucro)}
-                  </td>
-                  <td className={`py-2 px-2 text-right tabular-nums ${row.roi >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-                    {formatPercent(row.roi)}
-                  </td>
-                  <td className={`py-2 px-2 text-right tabular-nums ${row.sucesso >= 50 ? "text-emerald-400" : "text-amber-400"}`}>
-                    {row.sucesso.toFixed(0)}%
-                  </td>
-                </tr>
-              ))}
+              {stats.porFonte.map((row, i) => {
+                const isExpanded = expandedFonte === row.fonte;
+                return (
+                  <Fragment key={row.fonte}>
+                    <tr 
+                      className={`cursor-pointer transition-colors hover:bg-muted/40 ${isExpanded ? "bg-purple-500/10" : i % 2 === 0 ? "bg-muted/20" : ""}`}
+                      onClick={() => {
+                        setExpandedFonte(isExpanded ? null : row.fonte);
+                        setFonteDetailTab("esporte");
+                      }}
+                    >
+                      <td className="py-2 px-2 font-medium truncate max-w-[120px]" title={row.fonte}>
+                        <div className="flex items-center gap-1.5">
+                          <Zap className="h-3 w-3 text-purple-400 shrink-0" />
+                          {row.fonte}
+                          <span className={`ml-auto text-[10px] transition-transform ${isExpanded ? "rotate-180" : ""}`}>▼</span>
+                        </div>
+                      </td>
+                      <td className="py-2 px-1 text-right tabular-nums">{row.apostas}</td>
+                      <td className="py-2 px-1 text-right tabular-nums text-emerald-400">{row.ganhas}</td>
+                      <td className="py-2 px-1 text-right tabular-nums text-red-400">{row.perdidas}</td>
+                      <td className="py-2 px-1 text-right tabular-nums text-muted-foreground">{row.reembolsadas}</td>
+                      <td className="py-2 px-2 text-right tabular-nums">{formatCurrency(row.volume)}</td>
+                      <td className={`py-2 px-2 text-right tabular-nums font-medium ${row.lucro >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                        {formatCurrency(row.lucro)}
+                      </td>
+                      <td className={`py-2 px-2 text-right tabular-nums ${row.roi >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                        {formatPercent(row.roi)}
+                      </td>
+                      <td className={`py-2 px-2 text-right tabular-nums ${row.sucesso >= 50 ? "text-emerald-400" : "text-amber-400"}`}>
+                        {row.sucesso.toFixed(0)}%
+                      </td>
+                    </tr>
+                    {isExpanded && (
+                      <tr>
+                        <td colSpan={9} className="p-0">
+                          <div className="bg-muted/20 border-y border-border/30 px-3 py-3 space-y-3">
+                            {/* Sub-tabs */}
+                            <div className="flex gap-1">
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setFonteDetailTab("esporte"); }}
+                                className={`px-3 py-1 rounded-md text-[11px] font-medium transition-colors ${
+                                  fonteDetailTab === "esporte" 
+                                    ? "bg-purple-500/20 text-purple-300 border border-purple-500/30" 
+                                    : "text-muted-foreground hover:text-foreground"
+                                }`}
+                              >
+                                Por Esporte
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setFonteDetailTab("odds"); }}
+                                className={`px-3 py-1 rounded-md text-[11px] font-medium transition-colors ${
+                                  fonteDetailTab === "odds" 
+                                    ? "bg-purple-500/20 text-purple-300 border border-purple-500/30" 
+                                    : "text-muted-foreground hover:text-foreground"
+                                }`}
+                              >
+                                Por Faixa de Odds
+                              </button>
+                            </div>
+
+                            {fonteDetailTab === "esporte" && (
+                              <div className="overflow-x-auto">
+                                {row.porEsporteSub.length === 0 ? (
+                                  <p className="text-muted-foreground text-[11px] py-2">Sem dados de esporte</p>
+                                ) : (
+                                  <table className="w-full text-[11px]">
+                                    <thead>
+                                      <tr className="border-b border-border/30">
+                                        <th className="text-left py-1.5 px-2 text-muted-foreground font-medium">Esporte</th>
+                                        <th className="text-right py-1.5 px-1 text-muted-foreground font-medium">Apostas</th>
+                                        <th className="text-right py-1.5 px-1 text-muted-foreground font-medium">G</th>
+                                        <th className="text-right py-1.5 px-1 text-muted-foreground font-medium">P</th>
+                                        <th className="text-right py-1.5 px-2 text-muted-foreground font-medium">Volume</th>
+                                        <th className="text-right py-1.5 px-2 text-muted-foreground font-medium">Lucro</th>
+                                        <th className="text-right py-1.5 px-2 text-muted-foreground font-medium">ROI</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {row.porEsporteSub.map((s, si) => (
+                                        <tr key={s.esporte} className={si % 2 === 0 ? "bg-muted/10" : ""}>
+                                          <td className="py-1.5 px-2 font-medium truncate max-w-[100px]" title={s.esporte}>{s.esporte}</td>
+                                          <td className="py-1.5 px-1 text-right tabular-nums">{s.apostas}</td>
+                                          <td className="py-1.5 px-1 text-right tabular-nums text-emerald-400">{s.ganhas}</td>
+                                          <td className="py-1.5 px-1 text-right tabular-nums text-red-400">{s.perdidas}</td>
+                                          <td className="py-1.5 px-2 text-right tabular-nums">{formatCurrency(s.volume)}</td>
+                                          <td className={`py-1.5 px-2 text-right tabular-nums font-medium ${s.lucro >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                                            {formatCurrency(s.lucro)}
+                                          </td>
+                                          <td className={`py-1.5 px-2 text-right tabular-nums ${s.roi >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                                            {formatPercent(s.roi)}
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                )}
+                              </div>
+                            )}
+
+                            {fonteDetailTab === "odds" && (
+                              <div className="overflow-x-auto">
+                                {row.porOddsSub.length === 0 ? (
+                                  <p className="text-muted-foreground text-[11px] py-2">Sem dados de odds</p>
+                                ) : (
+                                  <table className="w-full text-[11px]">
+                                    <thead>
+                                      <tr className="border-b border-border/30">
+                                        <th className="text-left py-1.5 px-2 text-muted-foreground font-medium">Faixa</th>
+                                        <th className="text-right py-1.5 px-1 text-muted-foreground font-medium">Apostas</th>
+                                        <th className="text-right py-1.5 px-1 text-muted-foreground font-medium">G</th>
+                                        <th className="text-right py-1.5 px-1 text-muted-foreground font-medium">P</th>
+                                        <th className="text-right py-1.5 px-2 text-muted-foreground font-medium">Volume</th>
+                                        <th className="text-right py-1.5 px-2 text-muted-foreground font-medium">Lucro</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {row.porOddsSub.map((o, oi) => (
+                                        <tr key={o.faixa} className={oi % 2 === 0 ? "bg-muted/10" : ""}>
+                                          <td className="py-1.5 px-2 font-medium">{o.faixa}</td>
+                                          <td className="py-1.5 px-1 text-right tabular-nums">{o.apostas}</td>
+                                          <td className="py-1.5 px-1 text-right tabular-nums text-emerald-400">{o.ganhas}</td>
+                                          <td className="py-1.5 px-1 text-right tabular-nums text-red-400">{o.perdidas}</td>
+                                          <td className="py-1.5 px-2 text-right tabular-nums">{formatCurrency(o.volume)}</td>
+                                          <td className={`py-1.5 px-2 text-right tabular-nums font-medium ${o.lucro >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                                            {formatCurrency(o.lucro)}
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                );
+              })}
             </tbody>
           </table>
         </div>
