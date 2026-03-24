@@ -498,7 +498,7 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
       perdedoras,
       reembolsadas,
       emCurso,
-      valorTotal,
+      valorTotal: valorTotalGeral,
       valorEmCurso,
       lucroTotal,
       roi,
