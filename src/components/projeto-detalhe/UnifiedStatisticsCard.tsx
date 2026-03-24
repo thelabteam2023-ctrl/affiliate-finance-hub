@@ -407,7 +407,7 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
           e.volume += getStake(a);
           if (a.resultado === "GREEN" || a.resultado === "MEIO_GREEN") e.ganhas++;
           else if (a.resultado === "RED" || a.resultado === "MEIO_RED") e.perdidas++;
-          if (a.resultado && a.resultado !== "PENDENTE") e.lucro += a.lucro_prejuizo || 0;
+          if (a.resultado && a.resultado !== "PENDENTE") e.lucro += getLucro(a);
         });
         const porEsporteSub = Array.from(esporteSubMap.entries())
           .map(([esporte, d]) => ({ esporte, ...d, roi: d.volume > 0 ? (d.lucro / d.volume) * 100 : 0 }))
