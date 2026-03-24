@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { TrendingUp, TrendingDown, Building2, Users, Calendar, Globe, FolderOpen, BarChart3, Activity } from "lucide-react";
+import { TrendingUp, TrendingDown, Building2, Users, Calendar, Globe, FolderOpen, BarChart3 } from "lucide-react";
 import { ChartEmptyState } from "@/components/ui/chart-empty-state";
 import {
   ResponsiveContainer,
