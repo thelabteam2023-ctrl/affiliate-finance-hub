@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
@@ -438,6 +439,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
     currentBookmakerId: aposta?.bookmaker_id || null
   });
   const invalidateSaldos = useInvalidateBookmakerSaldos();
+  const queryClient = useQueryClient();
   
   // Hook para validação pré-commit (anti-concorrência)
   const { validateAndReserve, showValidationErrors, validating } = usePreCommitValidation();
@@ -2750,6 +2752,12 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
       // CRITICAL FIX: Aguardar invalidação completar ANTES de fechar o dialog
       // Isso garante que os novos saldos sejam buscados do servidor
       await invalidateSaldos(projetoId);
+      
+      // CRÍTICO: Invalidar caches canônicos (same-window — BroadcastChannel não alcança)
+      queryClient.invalidateQueries({ queryKey: ["canonical-calendar-daily", projetoId] });
+      queryClient.invalidateQueries({ queryKey: ["projeto-lucro-kpi-canonical", projetoId] });
+      queryClient.invalidateQueries({ queryKey: ["projeto-dashboard-data", projetoId] });
+      queryClient.invalidateQueries({ queryKey: ["projeto-resultado", projetoId] });
 
       onSuccess('save');
       if (!embedded) onOpenChange(false);
@@ -2969,6 +2977,12 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
       }
       
       invalidateSaldos(projetoId);
+      
+      // CRÍTICO: Invalidar caches canônicos (same-window)
+      queryClient.invalidateQueries({ queryKey: ["canonical-calendar-daily", projetoId] });
+      queryClient.invalidateQueries({ queryKey: ["projeto-lucro-kpi-canonical", projetoId] });
+      queryClient.invalidateQueries({ queryKey: ["projeto-dashboard-data", projetoId] });
+      queryClient.invalidateQueries({ queryKey: ["projeto-resultado", projetoId] });
       
       // Broadcast para sincronização cross-window
       try {
