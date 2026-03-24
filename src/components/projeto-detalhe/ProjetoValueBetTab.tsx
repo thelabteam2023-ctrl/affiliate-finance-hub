@@ -264,7 +264,6 @@ export function ProjetoValueBetTab({
     { value: "visao-geral" as NavTabValue, label: "Visão Geral", icon: LayoutDashboard },
     { value: "apostas" as NavTabValue, label: "Apostas", icon: Target, showBadge: true, count: openOperationsCount },
     { value: "por-casa" as NavTabValue, label: "Por Casa", icon: Building2 },
-    { value: "por-fonte" as NavTabValue, label: "Por Fonte", icon: Zap },
   ], [openOperationsCount]);
 
   // Save nav mode preference
