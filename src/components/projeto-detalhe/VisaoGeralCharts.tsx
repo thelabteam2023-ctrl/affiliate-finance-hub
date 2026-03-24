@@ -837,12 +837,11 @@ export function VisaoGeralCharts({
       vinculos: Map<string, { apostas: number; volume: number; volumeLiquidado: number; lucro: number }> 
     }>();
 
-    const processEntry = (bookmakerNome: string, parceiroNome: string | null | undefined, stake: number, lucro: number, moeda: string) => {
+    const processEntry = (bookmakerNome: string, parceiroNome: string | null | undefined, stake: number, lucro: number, moeda: string, isLiquidada: boolean) => {
       let casa: string;
       let vinculo: string;
       
       if (parceiroNome) {
-        // Se bookmakerNome contém "CASA - PARCEIRO", extrair apenas a casa
         const separatorIdx = bookmakerNome.indexOf(" - ");
         casa = separatorIdx > 0 ? bookmakerNome.substring(0, separatorIdx).trim() : bookmakerNome;
         vinculo = getFirstLastName(parceiroNome);
@@ -859,19 +858,25 @@ export function VisaoGeralCharts({
       }
 
       if (!casaMap.has(casa)) {
-        casaMap.set(casa, { apostas: 0, volume: 0, lucro: 0, moeda, vinculos: new Map() });
+        casaMap.set(casa, { apostas: 0, volume: 0, volumeLiquidado: 0, lucro: 0, moeda, vinculos: new Map() });
       }
       const casaData = casaMap.get(casa)!;
       casaData.apostas += 1;
       casaData.volume += stake;
+      if (isLiquidada) {
+        casaData.volumeLiquidado += stake;
+      }
       casaData.lucro += lucro;
 
       if (!casaData.vinculos.has(vinculo)) {
-        casaData.vinculos.set(vinculo, { apostas: 0, volume: 0, lucro: 0 });
+        casaData.vinculos.set(vinculo, { apostas: 0, volume: 0, volumeLiquidado: 0, lucro: 0 });
       }
       const vinculoData = casaData.vinculos.get(vinculo)!;
       vinculoData.apostas += 1;
       vinculoData.volume += stake;
+      if (isLiquidada) {
+        vinculoData.volumeLiquidado += stake;
+      }
       vinculoData.lucro += lucro;
     };
 
