@@ -715,12 +715,15 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
   const kpisGlobal = useMemo(() => {
     const total = surebets.length;
     const pendentes = surebets.filter(s => s.status === "PENDENTE").length;
-    const liquidadas = surebets.filter(s => s.status === "LIQUIDADA").length;
+    const surebetsLiquidadasArr = surebets.filter(s => s.status === "LIQUIDADA");
+    const liquidadas = surebetsLiquidadasArr.length;
     const greens = surebets.filter(s => s.resultado === "GREEN").length;
     const reds = surebets.filter(s => s.resultado === "RED").length;
-    const lucroTotal = surebets.reduce((acc, s) => acc + getConsolidatedLucro(s, convertFnOficial, moedaConsolidacao), 0);
+    const lucroTotal = surebetsLiquidadasArr.reduce((acc, s) => acc + getConsolidatedLucro(s, convertFnOficial, moedaConsolidacao), 0);
     const stakeTotal = surebets.reduce((acc, s) => acc + getConsolidatedStake(s, convertFnOficial, moedaConsolidacao), 0);
-    const roi = stakeTotal > 0 ? (lucroTotal / stakeTotal) * 100 : 0;
+    const volumeLiquidado = surebetsLiquidadasArr.reduce((acc, s) => acc + getConsolidatedStake(s, convertFnOficial, moedaConsolidacao), 0);
+    // ROI usa volume LIQUIDADO — apostas pendentes não têm resultado
+    const roi = volumeLiquidado > 0 ? (lucroTotal / volumeLiquidado) * 100 : 0;
 
     // Breakdown de volume por moeda original
     const volumePorMoeda = new Map<string, number>();
@@ -780,13 +783,15 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
   // KPIs FILTRADOS (para Operações) - Aplicam filtros dimensionais
   const kpisOperacoes = useMemo(() => {
     const total = filteredSurebetsForOperacoes.length;
+    const filtLiquidadasArr = filteredSurebetsForOperacoes.filter(s => s.status === "LIQUIDADA");
     const pendentes = filteredSurebetsForOperacoes.filter(s => s.status === "PENDENTE").length;
-    const liquidadas = filteredSurebetsForOperacoes.filter(s => s.status === "LIQUIDADA").length;
+    const liquidadas = filtLiquidadasArr.length;
     const greens = filteredSurebetsForOperacoes.filter(s => s.resultado === "GREEN").length;
     const reds = filteredSurebetsForOperacoes.filter(s => s.resultado === "RED").length;
-    const lucroTotal = filteredSurebetsForOperacoes.reduce((acc, s) => acc + getConsolidatedLucro(s, convertFnOficial, moedaConsolidacao), 0);
+    const lucroTotal = filtLiquidadasArr.reduce((acc, s) => acc + getConsolidatedLucro(s, convertFnOficial, moedaConsolidacao), 0);
     const stakeTotal = filteredSurebetsForOperacoes.reduce((acc, s) => acc + getConsolidatedStake(s, convertFnOficial, moedaConsolidacao), 0);
-    const roi = stakeTotal > 0 ? (lucroTotal / stakeTotal) * 100 : 0;
+    const volumeLiquidado = filtLiquidadasArr.reduce((acc, s) => acc + getConsolidatedStake(s, convertFnOficial, moedaConsolidacao), 0);
+    const roi = volumeLiquidado > 0 ? (lucroTotal / volumeLiquidado) * 100 : 0;
     
     return { total, pendentes, liquidadas, greens, reds, lucroTotal, stakeTotal, roi };
   }, [filteredSurebetsForOperacoes, convertFnOficial, moedaConsolidacao]);
