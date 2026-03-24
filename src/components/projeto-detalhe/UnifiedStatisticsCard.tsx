@@ -468,6 +468,8 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
       porCotacao,
       // Por Esporte
       porEsporte,
+      // Por Fonte
+      porFonte,
       // Avançado
       maiorLucro,
       maiorPerda,
