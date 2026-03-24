@@ -395,7 +395,7 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
         const reemb = items.filter(a => a.resultado === "VOID").length;
         const liq = items.filter(a => a.resultado && a.resultado !== "PENDENTE");
         const volume = items.reduce((acc, a) => acc + getStake(a), 0);
-        const lucro = liq.reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0);
+        const lucro = liq.reduce((acc, a) => acc + getLucro(a), 0);
 
         // Sub-análise por esporte
         const esporteSubMap = new Map<string, { apostas: number; ganhas: number; perdidas: number; volume: number; lucro: number }>();
