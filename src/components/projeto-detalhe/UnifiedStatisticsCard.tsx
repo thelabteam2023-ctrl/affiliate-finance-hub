@@ -244,7 +244,7 @@ const ODD_RANGES = [
   { min: 6.00, max: Infinity, label: "6+" },
 ];
 
-export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60%)", formatCurrency: formatCurrencyProp, currencySymbol = "R$" }: UnifiedStatisticsCardProps) {
+export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60%)", formatCurrency: formatCurrencyProp, currencySymbol = "R$", convertToConsolidation, moedaConsolidacao }: UnifiedStatisticsCardProps) {
   const formatCurrency = formatCurrencyProp || defaultFormatCurrency;
   const [activeTab, setActiveTab] = useState("resumo");
   const [expandedFonte, setExpandedFonte] = useState<string | null>(null);
@@ -255,7 +255,9 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
 
   // ==================== CÁLCULOS DE ESTATÍSTICAS ====================
   const stats = useMemo(() => {
-    const getStake = (a: Aposta) => typeof a.stake_total === "number" ? a.stake_total : a.stake;
+    // CRÍTICO: Usar valores consolidados (multi-moeda) para garantir paridade com KPI bar
+    const getStake = (a: Aposta) => getConsolidatedStake(a, convertToConsolidation, moedaConsolidacao);
+    const getLucro = (a: Aposta) => getConsolidatedLucro(a, convertToConsolidation, moedaConsolidacao);
     const getOdd = (a: Aposta) => a.odd_final ?? a.odd ?? 0;
 
     // Apostas liquidadas vs abertas
