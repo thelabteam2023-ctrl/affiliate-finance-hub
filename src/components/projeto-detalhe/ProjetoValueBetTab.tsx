@@ -73,7 +73,6 @@ import { ExportMenu, transformApostaToExport } from "./ExportMenu";
 import { SaldoOperavelCard } from "./SaldoOperavelCard";
 // FinancialSummaryCompact removed — now integrated into Lucro KPI popover
 import { useCalendarApostasRpc, transformRpcDailyForCharts } from "@/hooks/useCalendarApostasRpc";
-import { ValueBetFonteSection } from "./ValueBetFonteSection";
 
 interface ProjetoValueBetTabProps {
   projetoId: string;
