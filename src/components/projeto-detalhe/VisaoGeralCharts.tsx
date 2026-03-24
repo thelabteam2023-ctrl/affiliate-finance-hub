@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { TrendingUp, TrendingDown, Building2, Users, Calendar, Globe, FolderOpen, BarChart3 } from "lucide-react";
+import { TrendingUp, TrendingDown, Building2, Users, Calendar, Globe, FolderOpen, BarChart3, Activity } from "lucide-react";
 import { ChartEmptyState } from "@/components/ui/chart-empty-state";
 import {
   ResponsiveContainer,
@@ -818,7 +818,39 @@ export function VisaoGeralCharts({
     });
   }, [apostas, isSingleDayPeriod, extrasMap, periodStart, periodEnd]);
 
-  // Helpers locais de consolidação para casas
+  // ==================== MODO DO GRÁFICO ====================
+  // Auto-detecta o melhor modo baseado na densidade de atividade
+  const activityDensity = useMemo(() => {
+    if (isSingleDayPeriod || evolucaoData.length === 0) return 1;
+    const diasComAtividade = evolucaoData.filter(d => (d.apostasNoDia ?? 0) > 0 || (d.incluiExtras)).length;
+    return evolucaoData.length > 0 ? diasComAtividade / evolucaoData.length : 1;
+  }, [evolucaoData, isSingleDayPeriod]);
+
+  const autoMode = activityDensity < 0.4 ? 'atividade' : 'calendario';
+  const [chartModeOverride, setChartModeOverride] = useState<'calendario' | 'atividade' | null>(null);
+  const chartMode = isSingleDayPeriod ? 'calendario' : (chartModeOverride ?? autoMode);
+
+  // Dados filtrados para o modo atividade (remove dias sem apostas, recalcula acumulado)
+  const chartDisplayData = useMemo((): EvolucaoData[] => {
+    if (chartMode === 'calendario' || isSingleDayPeriod) return evolucaoData;
+    
+    // Modo Atividade: apenas dias com atividade real
+    const activeDays = evolucaoData.filter(d => (d.apostasNoDia ?? 0) > 0 || d.incluiExtras);
+    
+    // Recalcular acumulado sequencialmente
+    let acumulado = 0;
+    return activeDays.map((day, index) => {
+      acumulado += day.impacto;
+      return { ...day, acumulado, entrada: index + 1 };
+    });
+  }, [evolucaoData, chartMode, isSingleDayPeriod]);
+
+  const diasAtivos = useMemo(() => 
+    evolucaoData.filter(d => (d.apostasNoDia ?? 0) > 0 || d.incluiExtras).length,
+    [evolucaoData]
+  );
+
+
   const getConsolidatedStakeLocal = (a: ApostaBase): number => {
     return getConsolidatedStake(a, convertToConsolidation, moedaConsolidacao);
   };
@@ -1033,20 +1065,53 @@ export function VisaoGeralCharts({
                 variant="outline"
                 className={isPositive ? "border-success/30 text-success" : "border-destructive/30 text-destructive"}
               >
-                {formatCurrency(periodTotal)}
+               {formatCurrency(periodTotal)}
               </Badge>
             </div>
           </div>
-          <CardDescription className="text-xs">
-            {isSingleDayPeriod 
-              ? `Evolução por entrada (${apostas.length} apostas)` 
-              : `Acumulado diário (${evolucaoData.length} dias • ${apostas.length} apostas)`
-            }
-          </CardDescription>
+          {!isSingleDayPeriod && (
+            <div className="flex items-center justify-between">
+              <CardDescription className="text-xs">
+                {chartMode === 'atividade'
+                  ? `${diasAtivos} dias ativos • ${apostas.length} apostas`
+                  : `${chartDisplayData.length} dias • ${apostas.length} apostas`
+                }
+              </CardDescription>
+              <div className="flex items-center gap-1 bg-muted/50 rounded-md p-0.5">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => setChartModeOverride('calendario')}
+                      className={`p-1 rounded transition-colors ${chartMode === 'calendario' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                    >
+                      <Calendar className="h-3.5 w-3.5" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="text-xs">Calendário (período completo)</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => setChartModeOverride('atividade')}
+                      className={`p-1 rounded transition-colors ${chartMode === 'atividade' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                    >
+                      <Activity className="h-3.5 w-3.5" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="text-xs">Atividade (apenas dias com apostas)</TooltipContent>
+                </Tooltip>
+              </div>
+            </div>
+          )}
+          {isSingleDayPeriod && (
+            <CardDescription className="text-xs">
+              Evolução por entrada ({apostas.length} apostas)
+            </CardDescription>
+          )}
         </CardHeader>
         <CardContent className="pt-0">
           <div className="h-[280px]">
-            <EvolucaoLucroChart data={evolucaoData} accentColor={accentColor} isSingleDayPeriod={isSingleDayPeriod} formatCurrency={formatCurrency} formatChartAxis={axisFormatter} />
+            <EvolucaoLucroChart data={chartDisplayData} accentColor={accentColor} isSingleDayPeriod={isSingleDayPeriod} formatCurrency={formatCurrency} formatChartAxis={axisFormatter} />
           </div>
         </CardContent>
       </Card>
@@ -1102,16 +1167,49 @@ export function VisaoGeralCharts({
               </Badge>
             </div>
           </div>
-          <CardDescription className="text-xs">
-            {isSingleDayPeriod 
-              ? `Evolução por entrada (${apostas.length} apostas)` 
-              : `Acumulado diário (${evolucaoData.length} dias • ${apostas.length} apostas)`
-            }
-          </CardDescription>
+          {!isSingleDayPeriod && (
+            <div className="flex items-center justify-between">
+              <CardDescription className="text-xs">
+                {chartMode === 'atividade'
+                  ? `${diasAtivos} dias ativos • ${apostas.length} apostas`
+                  : `${chartDisplayData.length} dias • ${apostas.length} apostas`
+                }
+              </CardDescription>
+              <div className="flex items-center gap-1 bg-muted/50 rounded-md p-0.5">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => setChartModeOverride('calendario')}
+                      className={`p-1 rounded transition-colors ${chartMode === 'calendario' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                    >
+                      <Calendar className="h-3.5 w-3.5" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="text-xs">Calendário (período completo)</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => setChartModeOverride('atividade')}
+                      className={`p-1 rounded transition-colors ${chartMode === 'atividade' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                    >
+                      <Activity className="h-3.5 w-3.5" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="text-xs">Atividade (apenas dias com apostas)</TooltipContent>
+                </Tooltip>
+              </div>
+            </div>
+          )}
+          {isSingleDayPeriod && (
+            <CardDescription className="text-xs">
+              Evolução por entrada ({apostas.length} apostas)
+            </CardDescription>
+          )}
         </CardHeader>
         <CardContent className="pt-0">
           <div className="h-[280px]">
-            <EvolucaoLucroChart data={evolucaoData} accentColor={accentColor} isSingleDayPeriod={isSingleDayPeriod} formatCurrency={formatCurrency} formatChartAxis={axisFormatter} />
+            <EvolucaoLucroChart data={chartDisplayData} accentColor={accentColor} isSingleDayPeriod={isSingleDayPeriod} formatCurrency={formatCurrency} formatChartAxis={axisFormatter} />
           </div>
         </CardContent>
       </Card>
