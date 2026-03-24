@@ -330,7 +330,7 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
       const perdidas = filteredLiquidadas.filter(a => a.resultado === "RED" || a.resultado === "MEIO_RED").length;
       const reemb = filteredLiquidadas.filter(a => a.resultado === "VOID").length;
       const volume = filteredLiquidadas.reduce((acc, a) => acc + getStake(a), 0);
-      const lucro = filteredLiquidadas.reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0);
+      const lucro = filteredLiquidadas.reduce((acc, a) => acc + getLucro(a), 0);
 
       return {
         faixa: range.label,
