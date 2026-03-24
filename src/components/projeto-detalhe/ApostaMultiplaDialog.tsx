@@ -1131,6 +1131,7 @@ export function ApostaMultiplaDialog({
 
         // Invalidar saldos após qualquer edição financeira
         await invalidateSaldos(projetoId);
+        invalidateCanonicalCaches(queryClient, projetoId);
 
         // Registrar freebet gerada (se mudou de não-gerou para gerou)
         if (gerouFreebet && valorFreebetGerada && !aposta.gerou_freebet) {
