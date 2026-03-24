@@ -2755,10 +2755,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
       await invalidateSaldos(projetoId);
       
       // CRÍTICO: Invalidar caches canônicos (same-window — BroadcastChannel não alcança)
-      queryClient.invalidateQueries({ queryKey: ["canonical-calendar-daily", projetoId] });
-      queryClient.invalidateQueries({ queryKey: ["projeto-lucro-kpi-canonical", projetoId] });
-      queryClient.invalidateQueries({ queryKey: ["projeto-dashboard-data", projetoId] });
-      queryClient.invalidateQueries({ queryKey: ["projeto-resultado", projetoId] });
+      invalidateCanonicalCaches(queryClient, projetoId);
 
       onSuccess('save');
       if (!embedded) onOpenChange(false);
