@@ -2752,6 +2752,12 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
       // CRITICAL FIX: Aguardar invalidação completar ANTES de fechar o dialog
       // Isso garante que os novos saldos sejam buscados do servidor
       await invalidateSaldos(projetoId);
+      
+      // CRÍTICO: Invalidar caches canônicos (same-window — BroadcastChannel não alcança)
+      queryClient.invalidateQueries({ queryKey: ["canonical-calendar-daily", projetoId] });
+      queryClient.invalidateQueries({ queryKey: ["projeto-lucro-kpi-canonical", projetoId] });
+      queryClient.invalidateQueries({ queryKey: ["projeto-dashboard-data", projetoId] });
+      queryClient.invalidateQueries({ queryKey: ["projeto-resultado", projetoId] });
 
       onSuccess('save');
       if (!embedded) onOpenChange(false);
