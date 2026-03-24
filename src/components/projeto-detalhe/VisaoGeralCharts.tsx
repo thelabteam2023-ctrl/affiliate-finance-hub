@@ -45,6 +45,7 @@ interface Perna {
 interface ApostaBase {
   data_aposta: string;
   lucro_prejuizo: number | null;
+  resultado?: string | null;
   stake: number;
   stake_total?: number | null;
   bookmaker_nome?: string;
