@@ -218,26 +218,32 @@ const createCustomTooltip = (formatCurrency: (value: number) => string, isSingle
 };
 
 function EvolucaoLucroChart({ data, accentColor, isSingleDayPeriod, formatCurrency, formatChartAxis }: EvolucaoLucroChartProps) {
-  // Adaptive X-axis: for long periods, show monthly markers instead of daily labels
   const MONTH_NAMES_SHORT = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-  const useMonthlyTicks = !isSingleDayPeriod && data.length > 20;
-  
-  // Build set of indices that should show a tick (first day of each month)
-  const monthlyTickIndices = useMemo(() => {
-    if (!useMonthlyTicks) return null;
-    const indices = new Set<number>();
+
+  // Detect distinct months and build boundary indices for smart X-axis labels
+  const { useMonthLabels, monthBoundaryIndices } = useMemo(() => {
+    if (isSingleDayPeriod || data.length === 0) {
+      return { useMonthLabels: false, monthBoundaryIndices: new Set<number>() };
+    }
+    const months = new Set<string>();
+    const boundaries = new Set<number>();
     let lastMonth = '';
     data.forEach((d, i) => {
       if (d.dateKey) {
         const month = d.dateKey.substring(0, 7);
+        months.add(month);
         if (month !== lastMonth) {
-          indices.add(i);
+          boundaries.add(i);
           lastMonth = month;
         }
       }
     });
-    return indices;
-  }, [data, useMonthlyTicks]);
+    // Use month names when spanning 2+ months OR many data points
+    return {
+      useMonthLabels: months.size >= 2 || data.length > 20,
+      monthBoundaryIndices: boundaries,
+    };
+  }, [data, isSingleDayPeriod]);
 
   if (data.length === 0) {
     return <ChartEmptyState isSingleDayPeriod={isSingleDayPeriod} />;
@@ -252,7 +258,7 @@ function EvolucaoLucroChart({ data, accentColor, isSingleDayPeriod, formatCurren
 
   const tickInterval = isSingleDayPeriod 
     ? (data.length > 50 ? Math.floor(data.length / 10) : data.length > 20 ? 5 : 0)
-    : useMonthlyTicks ? 0 : 0;
+    : useMonthLabels ? 0 : (data.length > 15 ? Math.ceil(data.length / 8) : 0);
 
   return (
     <ResponsiveContainer width="100%" height="100%">
@@ -270,37 +276,22 @@ function EvolucaoLucroChart({ data, accentColor, isSingleDayPeriod, formatCurren
           fontSize={11}
           tickLine={false}
           axisLine={false}
-          interval={useMonthlyTicks ? 0 : tickInterval}
+          interval={useMonthLabels ? 0 : tickInterval}
           tick={({ x, y, payload, index }: { x: number; y: number; payload: { value: string }; index: number }) => {
-            if (useMonthlyTicks && monthlyTickIndices) {
-              // Only render ticks at month boundaries
-              if (!monthlyTickIndices.has(index)) return <text />;
+            if (useMonthLabels) {
+              if (!monthBoundaryIndices.has(index)) return <text />;
               const entry = data[index];
               const monthIdx = entry?.dateKey ? parseInt(entry.dateKey.substring(5, 7), 10) - 1 : -1;
               const label = monthIdx >= 0 ? MONTH_NAMES_SHORT[monthIdx] : '';
               return (
-                <text 
-                  x={x} 
-                  y={y + 10} 
-                  textAnchor="middle" 
-                  fill="hsl(var(--muted-foreground))" 
-                  fontSize={11}
-                  fontWeight={500}
-                >
+                <text x={x} y={y + 10} textAnchor="middle" fill="hsl(var(--muted-foreground))" fontSize={11} fontWeight={500}>
                   {label}
                 </text>
               );
             }
-            // Default: render if label is non-empty
             if (!payload.value) return <text />;
             return (
-              <text 
-                x={x} 
-                y={y + 10} 
-                textAnchor="middle" 
-                fill="hsl(var(--muted-foreground))" 
-                fontSize={11}
-              >
+              <text x={x} y={y + 10} textAnchor="middle" fill="hsl(var(--muted-foreground))" fontSize={11}>
                 {payload.value}
               </text>
             );
