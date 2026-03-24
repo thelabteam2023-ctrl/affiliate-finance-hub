@@ -153,7 +153,7 @@ function deriveApostasModule(
   }));
   const lucroPorMoeda = agregarPorMoeda(lucroItems);
 
-  return { count: apostas.length, volume, lucro, countDetails, volumePorMoeda, lucroPorMoeda, lucroPorEstrategia };
+  return { count: apostas.length, volume, volumeLiquidado, lucro, countDetails, volumePorMoeda, lucroPorMoeda, lucroPorEstrategia };
 }
 
 function deriveGirosGratisModule(
