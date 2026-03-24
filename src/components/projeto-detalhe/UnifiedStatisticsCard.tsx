@@ -302,7 +302,7 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
       const filteredLiquidadas = filtered.filter(a => a.resultado && a.resultado !== "PENDENTE");
       const ganhas = filtered.filter(a => a.resultado === "GREEN" || a.resultado === "MEIO_GREEN").length;
       const volume = filtered.reduce((acc, a) => acc + getStake(a), 0);
-      const lucro = filteredLiquidadas.reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0);
+      const lucro = filteredLiquidadas.reduce((acc, a) => acc + getLucro(a), 0);
       const roiFaixa = volume > 0 ? (lucro / volume) * 100 : 0;
       const sucesso = filteredLiquidadas.length > 0 ? (ganhas / filteredLiquidadas.length) * 100 : 0;
 
