@@ -737,7 +737,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
 
     // Breakdown de volume por moeda original
     const volumePorMoeda = new Map<string, number>();
-    surebets.forEach(s => {
+    surebetsParaKpi.forEach(s => {
       const moeda = s.moeda_operacao || "BRL";
       const rawStake = s.forma_registro === "ARBITRAGEM" ? (s.stake_total || 0) : (s.stake || s.stake_total || 0);
       volumePorMoeda.set(moeda, (volumePorMoeda.get(moeda) || 0) + rawStake);
@@ -748,7 +748,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
 
     // Breakdown de LUCRO por moeda original
     const lucroPorMoedaMap = new Map<string, number>();
-    surebets.forEach(s => {
+    surebetsParaKpi.forEach(s => {
       const moeda = s.moeda_operacao || "BRL";
       const rawLucro = s.lucro_real || 0;
       lucroPorMoedaMap.set(moeda, (lucroPorMoedaMap.get(moeda) || 0) + rawLucro);
@@ -761,7 +761,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
     const datasUnicas = new Set<string>();
     let dataMin: string | null = null;
     let dataMax: string | null = null;
-    surebets.forEach(s => {
+    surebetsParaKpi.forEach(s => {
       const d = s.data_operacao?.slice(0, 10);
       if (d) {
         datasUnicas.add(d);
@@ -788,7 +788,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
     const lucroPorDiaTrabalhado = diasTrabalhados > 0 ? lucroTotal / diasTrabalhados : 0;
     
     return { total, pendentes, liquidadas, greens, reds, lucroTotal, stakeTotal, roi, currencyBreakdown, lucroPorMoeda, lucroPorDia, lucroPorDiaTrabalhado, diasCorridos, diasTrabalhados };
-  }, [surebets, convertFnOficial, moedaConsolidacao, dateRange]);
+  }, [surebetsParaKpi, convertFnOficial, moedaConsolidacao, dateRange]);
 
   // KPIs FILTRADOS (para Operações) - Aplicam filtros dimensionais
   const kpisOperacoes = useMemo(() => {
