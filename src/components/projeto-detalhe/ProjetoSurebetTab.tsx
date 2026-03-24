@@ -1156,7 +1156,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
             tooltip: (
               <div className="space-y-1">
                 <p className="font-semibold text-foreground">Retorno sobre Investimento</p>
-                <p className="text-muted-foreground">Lucro dividido pelo volume total apostado no período.</p>
+                <p className="text-muted-foreground">Lucro dividido pelo volume apostado no período. Considera apenas apostas com resultado definido.</p>
               </div>
             ),
             valueClassName: kpis.roi >= 0 ? "text-emerald-500" : "text-red-500",
