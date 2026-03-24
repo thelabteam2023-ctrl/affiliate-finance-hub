@@ -45,6 +45,7 @@ interface Perna {
 interface ApostaBase {
   data_aposta: string;
   lucro_prejuizo: number | null;
+  resultado?: string | null;
   stake: number;
   stake_total?: number | null;
   bookmaker_nome?: string;
@@ -831,17 +832,17 @@ export function VisaoGeralCharts({
     const casaMap = new Map<string, { 
       apostas: number; 
       volume: number;
+      volumeLiquidado: number;
       lucro: number;
       moeda: string;
-      vinculos: Map<string, { apostas: number; volume: number; lucro: number }> 
+      vinculos: Map<string, { apostas: number; volume: number; volumeLiquidado: number; lucro: number }> 
     }>();
 
-    const processEntry = (bookmakerNome: string, parceiroNome: string | null | undefined, stake: number, lucro: number, moeda: string) => {
+    const processEntry = (bookmakerNome: string, parceiroNome: string | null | undefined, stake: number, lucro: number, moeda: string, isLiquidada: boolean) => {
       let casa: string;
       let vinculo: string;
       
       if (parceiroNome) {
-        // Se bookmakerNome contém "CASA - PARCEIRO", extrair apenas a casa
         const separatorIdx = bookmakerNome.indexOf(" - ");
         casa = separatorIdx > 0 ? bookmakerNome.substring(0, separatorIdx).trim() : bookmakerNome;
         vinculo = getFirstLastName(parceiroNome);
@@ -858,19 +859,25 @@ export function VisaoGeralCharts({
       }
 
       if (!casaMap.has(casa)) {
-        casaMap.set(casa, { apostas: 0, volume: 0, lucro: 0, moeda, vinculos: new Map() });
+        casaMap.set(casa, { apostas: 0, volume: 0, volumeLiquidado: 0, lucro: 0, moeda, vinculos: new Map() });
       }
       const casaData = casaMap.get(casa)!;
       casaData.apostas += 1;
       casaData.volume += stake;
+      if (isLiquidada) {
+        casaData.volumeLiquidado += stake;
+      }
       casaData.lucro += lucro;
 
       if (!casaData.vinculos.has(vinculo)) {
-        casaData.vinculos.set(vinculo, { apostas: 0, volume: 0, lucro: 0 });
+        casaData.vinculos.set(vinculo, { apostas: 0, volume: 0, volumeLiquidado: 0, lucro: 0 });
       }
       const vinculoData = casaData.vinculos.get(vinculo)!;
       vinculoData.apostas += 1;
       vinculoData.volume += stake;
+      if (isLiquidada) {
+        vinculoData.volumeLiquidado += stake;
+      }
       vinculoData.lucro += lucro;
     };
 
@@ -884,6 +891,7 @@ export function VisaoGeralCharts({
 
     apostas.forEach((a) => {
       const moedaOp = a.moeda_operacao || "BRL";
+      const isLiquidada = !!(a.resultado && a.resultado !== "PENDENTE");
       
       if (a.pernas && Array.isArray(a.pernas) && a.pernas.length > 0) {
         a.pernas.forEach((perna) => {
@@ -892,22 +900,20 @@ export function VisaoGeralCharts({
           const pernaMoeda = perna.moeda || moedaOp;
           const pernaStakeRaw = typeof perna.stake === "number" ? perna.stake : 0;
           const pernaLucroRaw = typeof perna.lucro_prejuizo === "number" ? perna.lucro_prejuizo : 0;
-          // Converter para moeda de consolidação
           const pernaStake = (moedaConsolidacao === "BRL" && typeof perna.stake_brl_referencia === "number")
             ? perna.stake_brl_referencia
             : convertPernaStake(pernaStakeRaw, pernaMoeda);
           const pernaLucro = (moedaConsolidacao === "BRL" && typeof perna.lucro_prejuizo_brl_referencia === "number")
             ? perna.lucro_prejuizo_brl_referencia
             : convertPernaStake(pernaLucroRaw, pernaMoeda);
-          processEntry(nomeCompleto, parceiroNome, pernaStake, pernaLucro, moedaConsolidacao || "BRL");
+          processEntry(nomeCompleto, parceiroNome, pernaStake, pernaLucro, moedaConsolidacao || "BRL", isLiquidada);
         });
       } else {
         const nomeCompleto = a.bookmaker_nome || "Desconhecida";
         const parceiroNome = a.parceiro_nome;
-        // Usar valores consolidados na moeda do projeto
         const stakeConsolidado = getConsolidatedStakeLocal(a);
         const lucroConsolidado = getConsolidatedLucroLocal(a);
-        processEntry(nomeCompleto, parceiroNome, stakeConsolidado, lucroConsolidado, moedaConsolidacao || "BRL");
+        processEntry(nomeCompleto, parceiroNome, stakeConsolidado, lucroConsolidado, moedaConsolidacao || "BRL", isLiquidada);
       }
     });
 
@@ -941,7 +947,8 @@ export function VisaoGeralCharts({
     };
 
     return Array.from(casaMap.entries()).map(([casa, data]) => {
-      const roi = data.volume > 0 ? (data.lucro / data.volume) * 100 : 0;
+      // ROI usa volume LIQUIDADO — apostas pendentes não têm resultado
+      const roi = data.volumeLiquidado > 0 ? (data.lucro / data.volumeLiquidado) * 100 : 0;
       return {
         casa,
         apostas: data.apostas,
@@ -951,7 +958,7 @@ export function VisaoGeralCharts({
         moeda: data.moeda,
         logo_url: findLogoForCasa(casa),
         vinculos: Array.from(data.vinculos.entries()).map(([vinculo, v]) => {
-          const vinculoRoi = v.volume > 0 ? (v.lucro / v.volume) * 100 : 0;
+          const vinculoRoi = v.volumeLiquidado > 0 ? (v.lucro / v.volumeLiquidado) * 100 : 0;
           return {
             vinculo,
             apostas: v.apostas,
