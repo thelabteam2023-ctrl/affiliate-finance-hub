@@ -845,7 +845,7 @@ export function SaldosParceirosSheet() {
                 )}
               </div>
 
-              <ScrollArea className="h-[calc(100vh-180px)]">
+              <ScrollArea className="h-[calc(100vh-320px)]">
                 <Table>
                   <TableHeader>
                     <TableRow className="hover:bg-transparent border-border/50">
