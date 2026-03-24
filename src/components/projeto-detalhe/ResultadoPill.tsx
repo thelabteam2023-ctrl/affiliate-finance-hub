@@ -676,16 +676,10 @@ export function ResultadoPill({
       // Invalidar cache de saldos para atualizar todas as UIs
       invalidateSaldos(projetoId);
       
-      // CRÍTICO: Invalidar caches canônicos de Visão Geral (same-window)
+      // CRÍTICO: Invalidar caches canônicos (same-window)
       // BroadcastChannel só envia para OUTRAS janelas — sem isso,
       // o badge "Evolução de Lucro" fica estale ao voltar para Visão Geral.
-      queryClient.invalidateQueries({ queryKey: ["canonical-calendar-daily", projetoId] });
-      queryClient.invalidateQueries({ queryKey: ["projeto-lucro-kpi-canonical", projetoId] });
-      queryClient.invalidateQueries({ queryKey: ["projeto-dashboard-apostas", projetoId] });
-      queryClient.invalidateQueries({ queryKey: ["projeto-dashboard-calendario", projetoId] });
-      queryClient.invalidateQueries({ queryKey: ["projeto-dashboard-extras", projetoId] });
-      queryClient.invalidateQueries({ queryKey: ["projeto-resultado", projetoId] });
-      queryClient.invalidateQueries({ queryKey: ["projeto-dashboard-data", projetoId] });
+      invalidateCanonicalCaches(queryClient, projetoId);
       
       // CRÍTICO: Broadcast para sincronizar outras janelas/abas (Bônus, Freebet, etc.)
       try {
