@@ -272,7 +272,7 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
 
     const valorTotal = liquidadas.reduce((acc, a) => acc + getStake(a), 0);
     const valorEmCurso = abertas.reduce((acc, a) => acc + getStake(a), 0);
-    const lucroTotal = liquidadas.reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0);
+    const lucroTotal = liquidadas.reduce((acc, a) => acc + getLucro(a), 0);
     const roi = valorTotal > 0 ? (lucroTotal / valorTotal) * 100 : 0;
     const taxaAcerto = liquidadas.length > 0 ? (vencedoras / liquidadas.length) * 100 : 0;
 
