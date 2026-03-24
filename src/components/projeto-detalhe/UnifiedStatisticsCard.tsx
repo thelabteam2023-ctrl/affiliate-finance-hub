@@ -476,7 +476,7 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
     const taxaAcertoOddsAltas = oddsAltasLiquidadas > 0 ? (oddsAltasGanhas / oddsAltasLiquidadas) * 100 : 0;
 
     // Lucro por 1.000 apostados (moeda do projeto)
-    const lucroPorMil = valorTotal > 0 ? (lucroTotal / valorTotal) * 1000 : 0;
+    const lucroPorMil = valorTotalGeral > 0 ? (lucroTotal / valorTotalGeral) * 1000 : 0;
 
     // Stake média
     const stakeMedia = apostas.length > 0 
