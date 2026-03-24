@@ -2738,6 +2738,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
       
       // Invalidar cache de saldos para atualizar todas as UIs
       invalidateSaldos(projetoId);
+      invalidateCanonicalCaches(queryClient, projetoId);
 
       // Atualizar estados locais
       setOdds(prev => prev.map((o, idx) => 
