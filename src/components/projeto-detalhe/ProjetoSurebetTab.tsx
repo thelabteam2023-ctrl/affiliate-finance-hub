@@ -851,9 +851,8 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
       vinculoEntry.lucro += lucro;
     };
 
-    // ISOLAMENTO: casaData usa dados GLOBAIS (surebets), sem filtro dimensional
-    // Isso garante que "Por Casa" sempre mostre TODAS as casas
-    surebets.forEach((surebet) => {
+    // ISOLAMENTO: casaData usa dados filtrados por período (surebetsParaKpi)
+    surebetsParaKpi.forEach((surebet) => {
       // Apostas simples (sem pernas) - usar bookmaker_nome direto
       if (surebet.forma_registro === "SIMPLES" || !surebet.pernas?.length) {
         const nomeCompleto = surebet.bookmaker_nome || "Desconhecida";
