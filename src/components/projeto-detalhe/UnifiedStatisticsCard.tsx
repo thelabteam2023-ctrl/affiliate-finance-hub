@@ -522,7 +522,7 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
       stakeMaxima,
       maiorCotacaoGanha,
     };
-  }, [apostas]);
+  }, [apostas, convertToConsolidation, moedaConsolidacao]);
 
   if (apostas.length === 0) {
     return null;
