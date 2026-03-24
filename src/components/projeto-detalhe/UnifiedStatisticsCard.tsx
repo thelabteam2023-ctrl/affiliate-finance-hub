@@ -11,6 +11,7 @@ import {
 import { ModernBarChart } from "@/components/ui/modern-bar-chart";
 import { parseLocalDateTime, extractLocalDateKey } from "@/utils/dateUtils";
 import { ChartEmptyState } from "@/components/ui/chart-empty-state";
+import { getConsolidatedStake, getConsolidatedLucro } from "@/utils/consolidatedValues";
 
 interface Aposta {
   id: string;
@@ -24,6 +25,14 @@ interface Aposta {
   status: string;
   esporte?: string | null;
   fonte_entrada?: string | null;
+  // Campos de consolidação multi-moeda
+  moeda_operacao?: string | null;
+  stake_consolidado?: number | null;
+  pl_consolidado?: number | null;
+  consolidation_currency?: string | null;
+  valor_brl_referencia?: number | null;
+  lucro_prejuizo_brl_referencia?: number | null;
+  forma_registro?: string | null;
 }
 
 interface UnifiedStatisticsCardProps {
@@ -33,6 +42,10 @@ interface UnifiedStatisticsCardProps {
   formatCurrency?: (value: number) => string;
   /** Símbolo da moeda do projeto (ex: "$", "R$") */
   currencySymbol?: string;
+  /** Função de conversão para moeda de consolidação do projeto */
+  convertToConsolidation?: (valor: number, moedaOrigem: string) => number;
+  /** Moeda de consolidação do projeto (ex: "BRL", "USD") */
+  moedaConsolidacao?: string;
 }
 
 // Componente de KPI âncora (destaque máximo)
@@ -231,7 +244,7 @@ const ODD_RANGES = [
   { min: 6.00, max: Infinity, label: "6+" },
 ];
 
-export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60%)", formatCurrency: formatCurrencyProp, currencySymbol = "R$" }: UnifiedStatisticsCardProps) {
+export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60%)", formatCurrency: formatCurrencyProp, currencySymbol = "R$", convertToConsolidation, moedaConsolidacao }: UnifiedStatisticsCardProps) {
   const formatCurrency = formatCurrencyProp || defaultFormatCurrency;
   const [activeTab, setActiveTab] = useState("resumo");
   const [expandedFonte, setExpandedFonte] = useState<string | null>(null);
@@ -242,7 +255,9 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
 
   // ==================== CÁLCULOS DE ESTATÍSTICAS ====================
   const stats = useMemo(() => {
-    const getStake = (a: Aposta) => typeof a.stake_total === "number" ? a.stake_total : a.stake;
+    // CRÍTICO: Usar valores consolidados (multi-moeda) para garantir paridade com KPI bar
+    const getStake = (a: Aposta) => getConsolidatedStake(a, convertToConsolidation, moedaConsolidacao);
+    const getLucro = (a: Aposta) => getConsolidatedLucro(a, convertToConsolidation, moedaConsolidacao);
     const getOdd = (a: Aposta) => a.odd_final ?? a.odd ?? 0;
 
     // Apostas liquidadas vs abertas
@@ -257,7 +272,7 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
 
     const valorTotal = liquidadas.reduce((acc, a) => acc + getStake(a), 0);
     const valorEmCurso = abertas.reduce((acc, a) => acc + getStake(a), 0);
-    const lucroTotal = liquidadas.reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0);
+    const lucroTotal = liquidadas.reduce((acc, a) => acc + getLucro(a), 0);
     const roi = valorTotal > 0 ? (lucroTotal / valorTotal) * 100 : 0;
     const taxaAcerto = liquidadas.length > 0 ? (vencedoras / liquidadas.length) * 100 : 0;
 
@@ -287,7 +302,7 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
       const filteredLiquidadas = filtered.filter(a => a.resultado && a.resultado !== "PENDENTE");
       const ganhas = filtered.filter(a => a.resultado === "GREEN" || a.resultado === "MEIO_GREEN").length;
       const volume = filtered.reduce((acc, a) => acc + getStake(a), 0);
-      const lucro = filteredLiquidadas.reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0);
+      const lucro = filteredLiquidadas.reduce((acc, a) => acc + getLucro(a), 0);
       const roiFaixa = volume > 0 ? (lucro / volume) * 100 : 0;
       const sucesso = filteredLiquidadas.length > 0 ? (ganhas / filteredLiquidadas.length) * 100 : 0;
 
@@ -315,7 +330,7 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
       const perdidas = filteredLiquidadas.filter(a => a.resultado === "RED" || a.resultado === "MEIO_RED").length;
       const reemb = filteredLiquidadas.filter(a => a.resultado === "VOID").length;
       const volume = filteredLiquidadas.reduce((acc, a) => acc + getStake(a), 0);
-      const lucro = filteredLiquidadas.reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0);
+      const lucro = filteredLiquidadas.reduce((acc, a) => acc + getLucro(a), 0);
 
       return {
         faixa: range.label,
@@ -350,7 +365,7 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
       else if (a.resultado === "RED" || a.resultado === "MEIO_RED") entry.perdidas++;
       else if (a.resultado === "VOID") entry.reembolsadas++;
       if (a.resultado && a.resultado !== "PENDENTE") {
-        entry.lucro += a.lucro_prejuizo || 0;
+        entry.lucro += getLucro(a);
       }
     });
 
@@ -380,7 +395,7 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
         const reemb = items.filter(a => a.resultado === "VOID").length;
         const liq = items.filter(a => a.resultado && a.resultado !== "PENDENTE");
         const volume = items.reduce((acc, a) => acc + getStake(a), 0);
-        const lucro = liq.reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0);
+        const lucro = liq.reduce((acc, a) => acc + getLucro(a), 0);
 
         // Sub-análise por esporte
         const esporteSubMap = new Map<string, { apostas: number; ganhas: number; perdidas: number; volume: number; lucro: number }>();
@@ -392,7 +407,7 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
           e.volume += getStake(a);
           if (a.resultado === "GREEN" || a.resultado === "MEIO_GREEN") e.ganhas++;
           else if (a.resultado === "RED" || a.resultado === "MEIO_RED") e.perdidas++;
-          if (a.resultado && a.resultado !== "PENDENTE") e.lucro += a.lucro_prejuizo || 0;
+          if (a.resultado && a.resultado !== "PENDENTE") e.lucro += getLucro(a);
         });
         const porEsporteSub = Array.from(esporteSubMap.entries())
           .map(([esporte, d]) => ({ esporte, ...d, roi: d.volume > 0 ? (d.lucro / d.volume) * 100 : 0 }))
@@ -405,7 +420,7 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
           const fG = fLiq.filter(a => a.resultado === "GREEN" || a.resultado === "MEIO_GREEN").length;
           const fP = fLiq.filter(a => a.resultado === "RED" || a.resultado === "MEIO_RED").length;
           const fVol = fLiq.reduce((acc, a) => acc + getStake(a), 0);
-          const fLuc = fLiq.reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0);
+          const fLuc = fLiq.reduce((acc, a) => acc + getLucro(a), 0);
           return { faixa: range.label, apostas: fLiq.length, ganhas: fG, perdidas: fP, volume: fVol, lucro: fLuc };
         }).filter(r => r.apostas > 0);
 
@@ -426,7 +441,7 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
       .sort((a, b) => b.lucro - a.lucro);
 
     // === AVANÇADO ===
-    const lucros = liquidadas.map(a => a.lucro_prejuizo || 0);
+    const lucros = liquidadas.map(a => getLucro(a));
     const maiorLucro = lucros.length > 0 ? Math.max(...lucros, 0) : 0;
     // Só considera prejuízos reais (valores negativos)
     const prejuizos = lucros.filter(v => v < 0);
@@ -437,7 +452,7 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
     liquidadas.forEach(a => {
       // Usar extractLocalDateKey para garantir agrupamento por dia civil correto
       const dia = extractLocalDateKey(a.data_aposta);
-      lucroPorDia.set(dia, (lucroPorDia.get(dia) || 0) + (a.lucro_prejuizo || 0));
+      lucroPorDia.set(dia, (lucroPorDia.get(dia) || 0) + getLucro(a));
     });
     const diasValues = Array.from(lucroPorDia.values());
     const maiorPrejuizoDiario = diasValues.length > 0 
@@ -507,7 +522,7 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
       stakeMaxima,
       maiorCotacaoGanha,
     };
-  }, [apostas]);
+  }, [apostas, convertToConsolidation, moedaConsolidacao]);
 
   if (apostas.length === 0) {
     return null;

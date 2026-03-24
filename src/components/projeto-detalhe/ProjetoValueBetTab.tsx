@@ -1133,7 +1133,7 @@ export function ProjetoValueBetTab({
             convertToConsolidation={convertToConsolidationOficialFn}
             moedaConsolidacao={moedaConsolidacaoVal}
           />
-          <UnifiedStatisticsCard apostas={apostas} formatCurrency={formatCurrency} currencySymbol={currencySymbol} />
+          <UnifiedStatisticsCard apostas={apostas} formatCurrency={formatCurrency} currencySymbol={currencySymbol} convertToConsolidation={convertToConsolidationOficialFn} moedaConsolidacao={moedaConsolidacaoVal} />
         </>
       ) : (
         <Card>
