@@ -270,10 +270,13 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
     const reembolsadas = apostas.filter(a => a.resultado === "VOID").length;
     const emCurso = abertas.length;
 
-    const valorTotal = liquidadas.reduce((acc, a) => acc + getStake(a), 0);
+    // CRÍTICO: Volume total inclui TODAS as apostas (inclusive pendentes) para paridade com KPI bar
+    const valorTotalGeral = apostas.reduce((acc, a) => acc + getStake(a), 0);
     const valorEmCurso = abertas.reduce((acc, a) => acc + getStake(a), 0);
+    const valorLiquidado = liquidadas.reduce((acc, a) => acc + getStake(a), 0);
     const lucroTotal = liquidadas.reduce((acc, a) => acc + getLucro(a), 0);
-    const roi = valorTotal > 0 ? (lucroTotal / valorTotal) * 100 : 0;
+    // ROI usa volume TOTAL (incluindo pendentes) para paridade com KPI bar principal
+    const roi = valorTotalGeral > 0 ? (lucroTotal / valorTotalGeral) * 100 : 0;
     const taxaAcerto = liquidadas.length > 0 ? (vencedoras / liquidadas.length) * 100 : 0;
 
     // Séries
