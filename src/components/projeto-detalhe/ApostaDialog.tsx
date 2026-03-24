@@ -439,6 +439,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
     currentBookmakerId: aposta?.bookmaker_id || null
   });
   const invalidateSaldos = useInvalidateBookmakerSaldos();
+  const queryClient = useQueryClient();
   
   // Hook para validação pré-commit (anti-concorrência)
   const { validateAndReserve, showValidationErrors, validating } = usePreCommitValidation();
