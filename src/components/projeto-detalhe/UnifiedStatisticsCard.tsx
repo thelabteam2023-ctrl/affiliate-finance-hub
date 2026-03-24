@@ -363,41 +363,64 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
       }))
       .sort((a, b) => b.lucro - a.lucro);
 
-    // === POR FONTE ===
-    const fonteMap = new Map<string, {
-      apostas: number;
-      ganhas: number;
-      perdidas: number;
-      reembolsadas: number;
-      volume: number;
-      lucro: number;
-    }>();
-
+    // === POR FONTE (com sub-análises) ===
+    const fonteApostasMap = new Map<string, Aposta[]>();
     apostas.forEach(a => {
-      const fonte = (a as any).fonte_entrada || "Manual";
-      if (!fonteMap.has(fonte)) {
-        fonteMap.set(fonte, { apostas: 0, ganhas: 0, perdidas: 0, reembolsadas: 0, volume: 0, lucro: 0 });
-      }
-      const entry = fonteMap.get(fonte)!;
-      entry.apostas++;
-      entry.volume += getStake(a);
-      if (a.resultado === "GREEN" || a.resultado === "MEIO_GREEN") entry.ganhas++;
-      else if (a.resultado === "RED" || a.resultado === "MEIO_RED") entry.perdidas++;
-      else if (a.resultado === "VOID") entry.reembolsadas++;
-      if (a.resultado && a.resultado !== "PENDENTE") {
-        entry.lucro += a.lucro_prejuizo || 0;
-      }
+      const fonte = a.fonte_entrada || "Manual";
+      if (!fonteApostasMap.has(fonte)) fonteApostasMap.set(fonte, []);
+      fonteApostasMap.get(fonte)!.push(a);
     });
 
-    const porFonte = Array.from(fonteMap.entries())
-      .map(([fonte, data]) => ({
-        fonte,
-        ...data,
-        roi: data.volume > 0 ? (data.lucro / data.volume) * 100 : 0,
-        sucesso: (data.ganhas + data.perdidas + data.reembolsadas) > 0 
-          ? (data.ganhas / (data.ganhas + data.perdidas + data.reembolsadas)) * 100 
-          : 0,
-      }))
+    const porFonte = Array.from(fonteApostasMap.entries())
+      .map(([fonte, items]) => {
+        const ganhas = items.filter(a => a.resultado === "GREEN" || a.resultado === "MEIO_GREEN").length;
+        const perdidas = items.filter(a => a.resultado === "RED" || a.resultado === "MEIO_RED").length;
+        const reemb = items.filter(a => a.resultado === "VOID").length;
+        const liq = items.filter(a => a.resultado && a.resultado !== "PENDENTE");
+        const volume = items.reduce((acc, a) => acc + getStake(a), 0);
+        const lucro = liq.reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0);
+
+        // Sub-análise por esporte
+        const esporteSubMap = new Map<string, { apostas: number; ganhas: number; perdidas: number; volume: number; lucro: number }>();
+        items.forEach(a => {
+          const esp = a.esporte || "Não informado";
+          if (!esporteSubMap.has(esp)) esporteSubMap.set(esp, { apostas: 0, ganhas: 0, perdidas: 0, volume: 0, lucro: 0 });
+          const e = esporteSubMap.get(esp)!;
+          e.apostas++;
+          e.volume += getStake(a);
+          if (a.resultado === "GREEN" || a.resultado === "MEIO_GREEN") e.ganhas++;
+          else if (a.resultado === "RED" || a.resultado === "MEIO_RED") e.perdidas++;
+          if (a.resultado && a.resultado !== "PENDENTE") e.lucro += a.lucro_prejuizo || 0;
+        });
+        const porEsporteSub = Array.from(esporteSubMap.entries())
+          .map(([esporte, d]) => ({ esporte, ...d, roi: d.volume > 0 ? (d.lucro / d.volume) * 100 : 0 }))
+          .sort((a, b) => b.lucro - a.lucro);
+
+        // Sub-análise por faixa de odds
+        const porOddsSub = ODD_RANGES.map(range => {
+          const filtered = items.filter(a => { const o = getOdd(a); return o >= range.min && o < range.max; });
+          const fLiq = filtered.filter(a => a.resultado && a.resultado !== "PENDENTE");
+          const fG = fLiq.filter(a => a.resultado === "GREEN" || a.resultado === "MEIO_GREEN").length;
+          const fP = fLiq.filter(a => a.resultado === "RED" || a.resultado === "MEIO_RED").length;
+          const fVol = fLiq.reduce((acc, a) => acc + getStake(a), 0);
+          const fLuc = fLiq.reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0);
+          return { faixa: range.label, apostas: fLiq.length, ganhas: fG, perdidas: fP, volume: fVol, lucro: fLuc };
+        }).filter(r => r.apostas > 0);
+
+        return {
+          fonte,
+          apostas: items.length,
+          ganhas,
+          perdidas,
+          reembolsadas: reemb,
+          volume,
+          lucro,
+          roi: volume > 0 ? (lucro / volume) * 100 : 0,
+          sucesso: (ganhas + perdidas + reemb) > 0 ? (ganhas / (ganhas + perdidas + reemb)) * 100 : 0,
+          porEsporteSub,
+          porOddsSub,
+        };
+      })
       .sort((a, b) => b.lucro - a.lucro);
 
     // === AVANÇADO ===
