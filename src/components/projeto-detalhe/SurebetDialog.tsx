@@ -2474,6 +2474,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
         toast.success("Operação registrada com sucesso!");
       }
 
+      invalidateCanonicalCaches(queryClient, projetoId);
       onSuccess();
       onOpenChange(false);
     } catch (error: any) {
