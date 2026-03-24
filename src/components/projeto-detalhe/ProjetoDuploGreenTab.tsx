@@ -50,6 +50,7 @@ import {
 import { format, startOfDay, endOfDay, subDays, startOfMonth, startOfYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { getOperationalDateRangeForQuery } from "@/utils/dateUtils";
+import { filterForKpis } from "@/utils/filterPendingByPeriod";
 // Removido: Dialogs agora abrem em janelas externas
 // import { ApostaDialog } from "./ApostaDialog";
 // import { SurebetDialog } from "./SurebetDialog";
@@ -669,8 +670,14 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
     }
   }, [projetoId, invalidateSaldos, onDataChange]);
 
+  // Filtrar pendentes fora do período para KPIs
+  const apostasParaKpi = useMemo(() => 
+    filterForKpis(apostas, dateRange?.start, dateRange?.end),
+    [apostas, dateRange]
+  );
+
   const metricas = useMemo(() => {
-    const total = apostas.length;
+    const total = apostasParaKpi.length;
 
     // CORREÇÃO: para apostas multi-pernas (ARBITRAGEM), o volume fica em stake_total.
     // A estratégia define a contabilização; a forma_registro define apenas a estrutura.
@@ -680,13 +687,13 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
       return Number.isFinite(value) ? value : 0;
     };
 
-    const apostasLiquidadas = apostas.filter((a) => a.resultado && a.resultado !== "PENDENTE");
-    const totalStake = apostas.reduce((acc, a) => acc + getConsolidatedStake(a, convertFnOficial, moedaConsol), 0);
+    const apostasLiquidadas = apostasParaKpi.filter((a) => a.resultado && a.resultado !== "PENDENTE");
+    const totalStake = apostasParaKpi.reduce((acc, a) => acc + getConsolidatedStake(a, convertFnOficial, moedaConsol), 0);
     const volumeLiquidado = apostasLiquidadas.reduce((acc, a) => acc + getConsolidatedStake(a, convertFnOficial, moedaConsol), 0);
     const lucroTotal = apostasLiquidadas.reduce((acc, a) => acc + getConsolidatedLucro(a, convertFnOficial, moedaConsol), 0);
-    const pendentes = apostas.filter((a) => !a.resultado || a.resultado === "PENDENTE").length;
-    const greens = apostas.filter((a) => a.resultado === "GREEN" || a.resultado === "MEIO_GREEN").length;
-    const reds = apostas.filter((a) => a.resultado === "RED" || a.resultado === "MEIO_RED").length;
+    const pendentes = apostasParaKpi.filter((a) => !a.resultado || a.resultado === "PENDENTE").length;
+    const greens = apostasParaKpi.filter((a) => a.resultado === "GREEN" || a.resultado === "MEIO_GREEN").length;
+    const reds = apostasParaKpi.filter((a) => a.resultado === "RED" || a.resultado === "MEIO_RED").length;
     const liquidadas = apostasLiquidadas.length;
     const taxaAcerto = liquidadas > 0 ? (greens / liquidadas) * 100 : 0;
     // ROI usa volume LIQUIDADO — apostas pendentes não têm resultado
@@ -694,7 +701,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
 
     // Breakdown de volume por moeda original
     const volumePorMoeda = new Map<string, number>();
-    apostas.forEach(a => {
+    apostasParaKpi.forEach(a => {
       const moeda = a.moeda_operacao || "BRL";
       const rawStake = a.forma_registro === "ARBITRAGEM" ? (a.stake_total || 0) : (a.stake || 0);
       volumePorMoeda.set(moeda, (volumePorMoeda.get(moeda) || 0) + rawStake);
@@ -705,7 +712,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
 
     // Breakdown de LUCRO por moeda original
     const lucroPorMoedaMap = new Map<string, number>();
-    apostas.forEach(a => {
+    apostasParaKpi.forEach(a => {
       const moeda = a.moeda_operacao || "BRL";
       const rawLucro = a.lucro_prejuizo ?? 0;
       lucroPorMoedaMap.set(moeda, (lucroPorMoedaMap.get(moeda) || 0) + rawLucro);
@@ -715,7 +722,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
       .filter(item => Math.abs(item.valor) > 0.01);
 
     const porCasa: Record<string, { stake: number; lucro: number; count: number }> = {};
-    apostas.forEach((a) => {
+    apostasParaKpi.forEach((a) => {
       const pernas = Array.isArray(a.pernas) ? a.pernas : [];
 
       // Multi-pernas: cada perna conta separadamente para a casa correspondente
@@ -745,7 +752,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
     });
 
     return { total, totalStake, lucroTotal, pendentes, greens, reds, taxaAcerto, roi, porCasa, currencyBreakdown, lucroPorMoeda };
-  }, [apostas, convertFnOficial, moedaConsol]);
+  }, [apostasParaKpi, convertFnOficial, moedaConsol]);
 
   // Interface para vínculos dentro de cada casa
   interface VinculoData {
@@ -807,7 +814,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
       vinculoEntry.lucro += lucro;
     };
 
-    apostas.forEach((a) => {
+    apostasParaKpi.forEach((a) => {
       const pernas = Array.isArray(a.pernas) ? a.pernas : [];
 
       if (pernas.length > 0) {
@@ -851,7 +858,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
       })
       .sort((a, b) => b.volume - a.volume)
       .slice(0, 8);
-  }, [apostas]);
+  }, [apostasParaKpi]);
 
   // Mapa de bookmaker_id -> nome completo com parceiro para enriquecer dados no SurebetCard
   const bookmakerNomeMap = useMemo(() => {

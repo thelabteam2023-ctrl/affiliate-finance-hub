@@ -46,6 +46,7 @@ import {
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { getOperationalDateRangeForQuery } from "@/utils/dateUtils";
+import { filterForKpis } from "@/utils/filterPendingByPeriod";
 // Removido: Dialogs agora abrem em janelas externas
 // import { ApostaDialog } from "./ApostaDialog";
 // import { ApostaMultiplaDialog } from "./ApostaMultiplaDialog";
@@ -621,17 +622,23 @@ export function ProjetoValueBetTab({
     return map;
   }, [bookmakers]);
 
+  // Filtrar pendentes fora do período para KPIs (pendentes são injetadas para visibilidade na lista, mas não devem inflar métricas)
+  const apostasParaKpi = useMemo(() => 
+    filterForKpis(apostas, dateRange?.start, dateRange?.end),
+    [apostas, dateRange]
+  );
+
   const metricas = useMemo(() => {
     const { convertToConsolidation, moedaConsolidacao } = { convertToConsolidation: convertToConsolidationOficialFn, moedaConsolidacao: moedaConsolidacaoVal };
     
-    const total = apostas.length;
-    const apostasLiquidadas = apostas.filter(a => a.resultado && a.resultado !== "PENDENTE");
-    const totalStake = apostas.reduce((acc, a) => acc + getConsolidatedStake(a, convertToConsolidation, moedaConsolidacao), 0);
+    const total = apostasParaKpi.length;
+    const apostasLiquidadas = apostasParaKpi.filter(a => a.resultado && a.resultado !== "PENDENTE");
+    const totalStake = apostasParaKpi.reduce((acc, a) => acc + getConsolidatedStake(a, convertToConsolidation, moedaConsolidacao), 0);
     const volumeLiquidado = apostasLiquidadas.reduce((acc, a) => acc + getConsolidatedStake(a, convertToConsolidation, moedaConsolidacao), 0);
     const lucroTotal = apostasLiquidadas.reduce((acc, a) => acc + getConsolidatedLucro(a, convertToConsolidation, moedaConsolidacao), 0);
-    const pendentes = apostas.filter(a => !a.resultado || a.resultado === "PENDENTE").length;
-    const greens = apostas.filter(a => a.resultado === "GREEN" || a.resultado === "MEIO_GREEN").length;
-    const reds = apostas.filter(a => a.resultado === "RED" || a.resultado === "MEIO_RED").length;
+    const pendentes = apostasParaKpi.filter(a => !a.resultado || a.resultado === "PENDENTE").length;
+    const greens = apostasParaKpi.filter(a => a.resultado === "GREEN" || a.resultado === "MEIO_GREEN").length;
+    const reds = apostasParaKpi.filter(a => a.resultado === "RED" || a.resultado === "MEIO_RED").length;
     const liquidadas = apostasLiquidadas.length;
     const taxaAcerto = liquidadas > 0 ? (greens / liquidadas) * 100 : 0;
     // ROI usa volume LIQUIDADO — apostas pendentes não têm resultado e podem ser anuladas
@@ -639,7 +646,7 @@ export function ProjetoValueBetTab({
 
     // Breakdown de volume por moeda original
     const volumePorMoeda = new Map<string, number>();
-    apostas.forEach(a => {
+    apostasParaKpi.forEach(a => {
       const moeda = a.moeda_operacao || "BRL";
       const rawStake = a.forma_registro === "ARBITRAGEM" ? (a.stake_total || 0) : (a.stake || 0);
       volumePorMoeda.set(moeda, (volumePorMoeda.get(moeda) || 0) + rawStake);
@@ -650,7 +657,7 @@ export function ProjetoValueBetTab({
 
     // Breakdown de LUCRO por moeda original
     const lucroPorMoedaMap = new Map<string, number>();
-    apostas.forEach(a => {
+    apostasParaKpi.forEach(a => {
       const moeda = a.moeda_operacao || "BRL";
       const rawLucro = a.lucro_prejuizo ?? 0;
       lucroPorMoedaMap.set(moeda, (lucroPorMoedaMap.get(moeda) || 0) + rawLucro);
@@ -660,7 +667,7 @@ export function ProjetoValueBetTab({
       .filter(item => Math.abs(item.valor) > 0.01);
 
     const porCasa: Record<string, { stake: number; lucro: number; count: number }> = {};
-    apostas.forEach(a => {
+    apostasParaKpi.forEach(a => {
       const casa = a.bookmaker_nome || "Desconhecida";
       if (!porCasa[casa]) porCasa[casa] = { stake: 0, lucro: 0, count: 0 };
       porCasa[casa].stake += getConsolidatedStake(a, convertToConsolidation, moedaConsolidacao);
@@ -669,7 +676,7 @@ export function ProjetoValueBetTab({
     });
 
     return { total, totalStake, lucroTotal, pendentes, greens, reds, taxaAcerto, roi, porCasa, currencyBreakdown, lucroPorMoeda };
-  }, [apostas, convertToConsolidationOficialFn, moedaConsolidacaoVal]);
+  }, [apostasParaKpi, convertToConsolidationOficialFn, moedaConsolidacaoVal]);
 
   // casaData agregado por CASA (não por vínculo) - Padrão unificado
   const casaData = useMemo((): CasaAgregada[] => {
@@ -717,7 +724,7 @@ export function ProjetoValueBetTab({
       vinculoEntry.lucro += lucro;
     };
 
-    apostas.forEach((a) => {
+    apostasParaKpi.forEach((a) => {
       const bookmakerNome = a.bookmaker_nome || "Desconhecida";
       const stake = getConsolidatedStake(a, convertToConsolidationOficialFn, moedaConsolidacaoVal);
       const lucro = getConsolidatedLucro(a, convertToConsolidationOficialFn, moedaConsolidacaoVal);
@@ -746,7 +753,7 @@ export function ProjetoValueBetTab({
       })
       .sort((a, b) => b.volume - a.volume)
       .slice(0, 8);
-  }, [apostas]);
+  }, [apostasParaKpi, convertToConsolidationOficialFn, moedaConsolidacaoVal]);
 
   // Mapa de logos combinando catálogo global + bookmakers do projeto
   const logoMap = useMemo(() => {

@@ -42,6 +42,7 @@ import {
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { getOperationalDateRangeForQuery } from "@/utils/dateUtils";
+import { filterForKpis } from "@/utils/filterPendingByPeriod";
 import { toast } from "sonner";
 import { SurebetDialog } from "./SurebetDialog";
 import { SurebetCard, SurebetData, SurebetPerna } from "./SurebetCard";
@@ -712,22 +713,31 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
 
   // KPIs GLOBAIS (para Visão Geral) - NUNCA filtrados por Casa/Parceiro
   // Usa `surebets` diretamente (já filtrado por data no fetch)
+  // Filtrar pendentes fora do período para KPIs
+  const surebetsParaKpi = useMemo(() => 
+    filterForKpis(surebets, dateRange?.start, dateRange?.end, {
+      getDate: (s) => s.data_operacao,
+      isPending: (s) => s.status === "PENDENTE",
+    }),
+    [surebets, dateRange]
+  );
+
   const kpisGlobal = useMemo(() => {
-    const total = surebets.length;
-    const pendentes = surebets.filter(s => s.status === "PENDENTE").length;
-    const surebetsLiquidadasArr = surebets.filter(s => s.status === "LIQUIDADA");
+    const total = surebetsParaKpi.length;
+    const pendentes = surebetsParaKpi.filter(s => s.status === "PENDENTE").length;
+    const surebetsLiquidadasArr = surebetsParaKpi.filter(s => s.status === "LIQUIDADA");
     const liquidadas = surebetsLiquidadasArr.length;
-    const greens = surebets.filter(s => s.resultado === "GREEN").length;
-    const reds = surebets.filter(s => s.resultado === "RED").length;
+    const greens = surebetsParaKpi.filter(s => s.resultado === "GREEN").length;
+    const reds = surebetsParaKpi.filter(s => s.resultado === "RED").length;
     const lucroTotal = surebetsLiquidadasArr.reduce((acc, s) => acc + getConsolidatedLucro(s, convertFnOficial, moedaConsolidacao), 0);
-    const stakeTotal = surebets.reduce((acc, s) => acc + getConsolidatedStake(s, convertFnOficial, moedaConsolidacao), 0);
+    const stakeTotal = surebetsParaKpi.reduce((acc, s) => acc + getConsolidatedStake(s, convertFnOficial, moedaConsolidacao), 0);
     const volumeLiquidado = surebetsLiquidadasArr.reduce((acc, s) => acc + getConsolidatedStake(s, convertFnOficial, moedaConsolidacao), 0);
     // ROI usa volume LIQUIDADO — apostas pendentes não têm resultado
     const roi = volumeLiquidado > 0 ? (lucroTotal / volumeLiquidado) * 100 : 0;
 
     // Breakdown de volume por moeda original
     const volumePorMoeda = new Map<string, number>();
-    surebets.forEach(s => {
+    surebetsParaKpi.forEach(s => {
       const moeda = s.moeda_operacao || "BRL";
       const rawStake = s.forma_registro === "ARBITRAGEM" ? (s.stake_total || 0) : (s.stake || s.stake_total || 0);
       volumePorMoeda.set(moeda, (volumePorMoeda.get(moeda) || 0) + rawStake);
@@ -738,7 +748,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
 
     // Breakdown de LUCRO por moeda original
     const lucroPorMoedaMap = new Map<string, number>();
-    surebets.forEach(s => {
+    surebetsParaKpi.forEach(s => {
       const moeda = s.moeda_operacao || "BRL";
       const rawLucro = s.lucro_real || 0;
       lucroPorMoedaMap.set(moeda, (lucroPorMoedaMap.get(moeda) || 0) + rawLucro);
@@ -751,7 +761,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
     const datasUnicas = new Set<string>();
     let dataMin: string | null = null;
     let dataMax: string | null = null;
-    surebets.forEach(s => {
+    surebetsParaKpi.forEach(s => {
       const d = s.data_operacao?.slice(0, 10);
       if (d) {
         datasUnicas.add(d);
@@ -778,7 +788,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
     const lucroPorDiaTrabalhado = diasTrabalhados > 0 ? lucroTotal / diasTrabalhados : 0;
     
     return { total, pendentes, liquidadas, greens, reds, lucroTotal, stakeTotal, roi, currencyBreakdown, lucroPorMoeda, lucroPorDia, lucroPorDiaTrabalhado, diasCorridos, diasTrabalhados };
-  }, [surebets, convertFnOficial, moedaConsolidacao, dateRange]);
+  }, [surebetsParaKpi, convertFnOficial, moedaConsolidacao, dateRange]);
 
   // KPIs FILTRADOS (para Operações) - Aplicam filtros dimensionais
   const kpisOperacoes = useMemo(() => {
@@ -841,9 +851,8 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
       vinculoEntry.lucro += lucro;
     };
 
-    // ISOLAMENTO: casaData usa dados GLOBAIS (surebets), sem filtro dimensional
-    // Isso garante que "Por Casa" sempre mostre TODAS as casas
-    surebets.forEach((surebet) => {
+    // ISOLAMENTO: casaData usa dados filtrados por período (surebetsParaKpi)
+    surebetsParaKpi.forEach((surebet) => {
       // Apostas simples (sem pernas) - usar bookmaker_nome direto
       if (surebet.forma_registro === "SIMPLES" || !surebet.pernas?.length) {
         const nomeCompleto = surebet.bookmaker_nome || "Desconhecida";
@@ -882,7 +891,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
       })
       .sort((a, b) => b.volume - a.volume)
       .slice(0, 8);
-  }, [surebets]);
+  }, [surebetsParaKpi]);
 
   // Mapa de logos combinando catálogo global + bookmakers do projeto
   // Prioridade: catálogo global (mais completo e confiável)
