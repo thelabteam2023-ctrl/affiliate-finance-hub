@@ -452,7 +452,7 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
     liquidadas.forEach(a => {
       // Usar extractLocalDateKey para garantir agrupamento por dia civil correto
       const dia = extractLocalDateKey(a.data_aposta);
-      lucroPorDia.set(dia, (lucroPorDia.get(dia) || 0) + (a.lucro_prejuizo || 0));
+      lucroPorDia.set(dia, (lucroPorDia.get(dia) || 0) + getLucro(a));
     });
     const diasValues = Array.from(lucroPorDia.values());
     const maiorPrejuizoDiario = diasValues.length > 0 
