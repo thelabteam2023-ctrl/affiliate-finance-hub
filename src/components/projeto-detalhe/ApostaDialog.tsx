@@ -2563,7 +2563,11 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           }
         }
 
-        toast.success("Aposta atualizada com sucesso!");
+        // Toast de sucesso: só dispara em modo inline (não-embedded)
+        // Em modo embedded (janela standalone), o caller (WindowPage) controla o toast
+        if (!embedded) {
+          toast.success("Aposta atualizada com sucesso!");
+        }
         
         // CRITICAL FIX: Aguardar invalidação completar ANTES de fechar o dialog
         // Isso garante que os novos saldos sejam buscados do servidor
