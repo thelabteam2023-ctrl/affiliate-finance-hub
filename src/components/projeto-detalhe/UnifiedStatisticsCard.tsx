@@ -365,7 +365,7 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
       else if (a.resultado === "RED" || a.resultado === "MEIO_RED") entry.perdidas++;
       else if (a.resultado === "VOID") entry.reembolsadas++;
       if (a.resultado && a.resultado !== "PENDENTE") {
-        entry.lucro += a.lucro_prejuizo || 0;
+        entry.lucro += getLucro(a);
       }
     });
 
