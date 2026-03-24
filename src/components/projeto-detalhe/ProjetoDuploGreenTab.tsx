@@ -680,14 +680,17 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
       return Number.isFinite(value) ? value : 0;
     };
 
+    const apostasLiquidadas = apostas.filter((a) => a.resultado && a.resultado !== "PENDENTE");
     const totalStake = apostas.reduce((acc, a) => acc + getConsolidatedStake(a, convertFnOficial, moedaConsol), 0);
-    const lucroTotal = apostas.reduce((acc, a) => acc + getConsolidatedLucro(a, convertFnOficial, moedaConsol), 0);
+    const volumeLiquidado = apostasLiquidadas.reduce((acc, a) => acc + getConsolidatedStake(a, convertFnOficial, moedaConsol), 0);
+    const lucroTotal = apostasLiquidadas.reduce((acc, a) => acc + getConsolidatedLucro(a, convertFnOficial, moedaConsol), 0);
     const pendentes = apostas.filter((a) => !a.resultado || a.resultado === "PENDENTE").length;
     const greens = apostas.filter((a) => a.resultado === "GREEN" || a.resultado === "MEIO_GREEN").length;
     const reds = apostas.filter((a) => a.resultado === "RED" || a.resultado === "MEIO_RED").length;
-    const liquidadas = apostas.filter((a) => a.resultado && a.resultado !== "PENDENTE").length;
+    const liquidadas = apostasLiquidadas.length;
     const taxaAcerto = liquidadas > 0 ? (greens / liquidadas) * 100 : 0;
-    const roi = totalStake > 0 ? (lucroTotal / totalStake) * 100 : 0;
+    // ROI usa volume LIQUIDADO — apostas pendentes não têm resultado
+    const roi = volumeLiquidado > 0 ? (lucroTotal / volumeLiquidado) * 100 : 0;
 
     // Breakdown de volume por moeda original
     const volumePorMoeda = new Map<string, number>();
