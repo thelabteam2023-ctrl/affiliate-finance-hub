@@ -715,12 +715,15 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
   const kpisGlobal = useMemo(() => {
     const total = surebets.length;
     const pendentes = surebets.filter(s => s.status === "PENDENTE").length;
-    const liquidadas = surebets.filter(s => s.status === "LIQUIDADA").length;
+    const surebetsLiquidadasArr = surebets.filter(s => s.status === "LIQUIDADA");
+    const liquidadas = surebetsLiquidadasArr.length;
     const greens = surebets.filter(s => s.resultado === "GREEN").length;
     const reds = surebets.filter(s => s.resultado === "RED").length;
-    const lucroTotal = surebets.reduce((acc, s) => acc + getConsolidatedLucro(s, convertFnOficial, moedaConsolidacao), 0);
+    const lucroTotal = surebetsLiquidadasArr.reduce((acc, s) => acc + getConsolidatedLucro(s, convertFnOficial, moedaConsolidacao), 0);
     const stakeTotal = surebets.reduce((acc, s) => acc + getConsolidatedStake(s, convertFnOficial, moedaConsolidacao), 0);
-    const roi = stakeTotal > 0 ? (lucroTotal / stakeTotal) * 100 : 0;
+    const volumeLiquidado = surebetsLiquidadasArr.reduce((acc, s) => acc + getConsolidatedStake(s, convertFnOficial, moedaConsolidacao), 0);
+    // ROI usa volume LIQUIDADO — apostas pendentes não têm resultado
+    const roi = volumeLiquidado > 0 ? (lucroTotal / volumeLiquidado) * 100 : 0;
 
     // Breakdown de volume por moeda original
     const volumePorMoeda = new Map<string, number>();
