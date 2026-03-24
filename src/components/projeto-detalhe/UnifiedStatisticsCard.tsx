@@ -420,7 +420,7 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
           const fG = fLiq.filter(a => a.resultado === "GREEN" || a.resultado === "MEIO_GREEN").length;
           const fP = fLiq.filter(a => a.resultado === "RED" || a.resultado === "MEIO_RED").length;
           const fVol = fLiq.reduce((acc, a) => acc + getStake(a), 0);
-          const fLuc = fLiq.reduce((acc, a) => acc + (a.lucro_prejuizo || 0), 0);
+          const fLuc = fLiq.reduce((acc, a) => acc + getLucro(a), 0);
           return { faixa: range.label, apostas: fLiq.length, ganhas: fG, perdidas: fP, volume: fVol, lucro: fLuc };
         }).filter(r => r.apostas > 0);
 
