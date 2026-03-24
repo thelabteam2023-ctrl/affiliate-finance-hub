@@ -818,23 +818,11 @@ export function VisaoGeralCharts({
     });
   }, [apostas, isSingleDayPeriod, extrasMap, periodStart, periodEnd]);
 
-  // ==================== MODO DO GRÁFICO ====================
-  // Auto-detecta o melhor modo baseado na densidade de atividade
-  const activityDensity = useMemo(() => {
-    if (isSingleDayPeriod || evolucaoData.length === 0) return 1;
-    const diasComAtividade = evolucaoData.filter(d => (d.apostasNoDia ?? 0) > 0 || (d.incluiExtras)).length;
-    return evolucaoData.length > 0 ? diasComAtividade / evolucaoData.length : 1;
-  }, [evolucaoData, isSingleDayPeriod]);
-
-  const autoMode = activityDensity < 0.4 ? 'atividade' : 'calendario';
-  const [chartModeOverride, setChartModeOverride] = useState<'calendario' | 'atividade' | null>(null);
-  const chartMode = isSingleDayPeriod ? 'calendario' : (chartModeOverride ?? autoMode);
-
-  // Dados filtrados para o modo atividade (remove dias sem apostas, recalcula acumulado)
+  // ==================== DADOS DO GRÁFICO ====================
+  // Sempre usa modo atividade: apenas dias com atividade real
   const chartDisplayData = useMemo((): EvolucaoData[] => {
-    if (chartMode === 'calendario' || isSingleDayPeriod) return evolucaoData;
+    if (isSingleDayPeriod) return evolucaoData;
     
-    // Modo Atividade: apenas dias com atividade real
     const activeDays = evolucaoData.filter(d => (d.apostasNoDia ?? 0) > 0 || d.incluiExtras);
     
     // Recalcular acumulado sequencialmente
@@ -843,7 +831,7 @@ export function VisaoGeralCharts({
       acumulado += day.impacto;
       return { ...day, acumulado, entrada: index + 1 };
     });
-  }, [evolucaoData, chartMode, isSingleDayPeriod]);
+  }, [evolucaoData, isSingleDayPeriod]);
 
   const diasAtivos = useMemo(() => 
     evolucaoData.filter(d => (d.apostasNoDia ?? 0) > 0 || d.incluiExtras).length,
