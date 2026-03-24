@@ -23,6 +23,7 @@ interface Aposta {
   lucro_prejuizo: number | null;
   status: string;
   esporte?: string | null;
+  fonte_entrada?: string | null;
 }
 
 interface UnifiedStatisticsCardProps {
