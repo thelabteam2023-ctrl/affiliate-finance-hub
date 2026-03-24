@@ -234,6 +234,8 @@ const ODD_RANGES = [
 export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60%)", formatCurrency: formatCurrencyProp, currencySymbol = "R$" }: UnifiedStatisticsCardProps) {
   const formatCurrency = formatCurrencyProp || defaultFormatCurrency;
   const [activeTab, setActiveTab] = useState("resumo");
+  const [expandedFonte, setExpandedFonte] = useState<string | null>(null);
+  const [fonteDetailTab, setFonteDetailTab] = useState<"esporte" | "odds">("esporte");
   
   // Gerar faixas de valor com o símbolo correto da moeda
   const VALUE_RANGES = useMemo(() => getValueRanges(currencySymbol), [currencySymbol]);
