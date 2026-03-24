@@ -61,7 +61,8 @@ import { useApostaRascunho, type RascunhoPernaData, type ApostaRascunho } from "
 import { toLocalTimestamp } from "@/utils/dateUtils";
 import { convertCurrency, calcularStakesMultiCurrency, type GetEffectiveRateFn } from "@/utils/convertCurrency";
 import { useCotacoes } from "@/hooks/useCotacoes";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { invalidateCanonicalCaches } from "@/lib/invalidateCanonicalCaches";
 import { MERCADOS_POR_ESPORTE, getMarketsForSport, getMarketsForSportAndModel, isMercadoCompativelComModelo, mercadoAdmiteEmpate, resolveMarketToOptions, type ModeloAposta } from "@/lib/marketNormalizer";
 import { 
   BookmakerSelectOption, 
