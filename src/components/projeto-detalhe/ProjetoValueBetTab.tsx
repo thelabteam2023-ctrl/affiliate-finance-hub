@@ -41,8 +41,7 @@ import {
   Clock,
   History,
   ArrowUpDown,
-  Users,
-  Zap
+  Users
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -74,7 +73,6 @@ import { ExportMenu, transformApostaToExport } from "./ExportMenu";
 import { SaldoOperavelCard } from "./SaldoOperavelCard";
 // FinancialSummaryCompact removed — now integrated into Lucro KPI popover
 import { useCalendarApostasRpc, transformRpcDailyForCharts } from "@/hooks/useCalendarApostasRpc";
-import { ValueBetFonteSection } from "./ValueBetFonteSection";
 
 interface ProjetoValueBetTabProps {
   projetoId: string;
@@ -139,7 +137,7 @@ interface Aposta {
 }
 
 type NavigationMode = "tabs" | "sidebar";
-type NavTabValue = "visao-geral" | "apostas" | "por-casa" | "por-fonte";
+type NavTabValue = "visao-geral" | "apostas" | "por-casa";
 
 const NAV_STORAGE_KEY = "valuebet-nav-mode";
 
@@ -264,7 +262,6 @@ export function ProjetoValueBetTab({
     { value: "visao-geral" as NavTabValue, label: "Visão Geral", icon: LayoutDashboard },
     { value: "apostas" as NavTabValue, label: "Apostas", icon: Target, showBadge: true, count: openOperationsCount },
     { value: "por-casa" as NavTabValue, label: "Por Casa", icon: Building2 },
-    { value: "por-fonte" as NavTabValue, label: "Por Fonte", icon: Zap },
   ], [openOperationsCount]);
 
   // Save nav mode preference
@@ -1571,9 +1568,6 @@ export function ProjetoValueBetTab({
         )}
         {activeNavTab === "apostas" && renderApostas()}
         {activeNavTab === "por-casa" && renderPorCasa()}
-        {activeNavTab === "por-fonte" && (
-          <ValueBetFonteSection apostas={apostas} formatCurrency={formatCurrency} projetoId={projetoId} />
-        )}
       </div>
     );
   };
