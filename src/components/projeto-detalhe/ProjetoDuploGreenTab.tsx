@@ -814,7 +814,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
       vinculoEntry.lucro += lucro;
     };
 
-    apostas.forEach((a) => {
+    apostasParaKpi.forEach((a) => {
       const pernas = Array.isArray(a.pernas) ? a.pernas : [];
 
       if (pernas.length > 0) {
