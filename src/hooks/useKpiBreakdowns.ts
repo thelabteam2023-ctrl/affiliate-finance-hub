@@ -577,9 +577,11 @@ function deriveBreakdowns(
   );
 
   // === ROI ===
+  // ROI usa volume LIQUIDADO — apostas pendentes não têm resultado definido
   const lucroTotal = lucroCanonicoTotal;
   const volumeTotal = volumeBreakdown.total;
-  const roiTotal = volumeTotal > 0 ? (lucroTotal / volumeTotal) * 100 : null;
+  const volumeLiquidadoTotal = apostasData.volumeLiquidado ?? volumeTotal;
+  const roiTotal = volumeLiquidadoTotal > 0 ? (lucroTotal / volumeLiquidadoTotal) * 100 : null;
 
   return {
     apostas: apostasBreakdown,
@@ -587,7 +589,7 @@ function deriveBreakdowns(
     lucro: lucroBreakdown,
     roi: {
       total: roiTotal,
-      volumeTotal,
+      volumeTotal: volumeLiquidadoTotal,
       lucroTotal,
       currency: moedaConsolidacao,
     },
