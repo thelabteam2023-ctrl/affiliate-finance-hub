@@ -2563,7 +2563,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           }
         }
 
-        toast.success("Aposta atualizada com sucesso!");
+        // Toast de sucesso delegado ao caller (ApostaWindowPage/ProjetoApostasTab)
         
         // CRITICAL FIX: Aguardar invalidação completar ANTES de fechar o dialog
         // Isso garante que os novos saldos sejam buscados do servidor
