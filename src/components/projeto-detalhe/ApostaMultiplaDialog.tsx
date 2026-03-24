@@ -177,6 +177,7 @@ export function ApostaMultiplaDialog({
     currentBookmakerId: aposta?.bookmaker_id || null
   });
   const invalidateSaldos = useInvalidateBookmakerSaldos();
+  const queryClient = useQueryClient();
   
   // Mapear saldos canônicos para formato local (retrocompatibilidade)
    const bookmakers = useMemo((): Bookmaker[] => {

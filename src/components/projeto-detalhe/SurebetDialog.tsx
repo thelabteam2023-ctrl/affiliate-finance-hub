@@ -640,6 +640,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
     includeZeroBalance: isEditing || isBonusContext, // Em edição ou contexto bônus, mostrar todos
   });
   const invalidateSaldos = useInvalidateBookmakerSaldos();
+  const queryClient = useQueryClient();
   
   // ========== HOOK DE GERENCIAMENTO DE BÔNUS/ROLLOVER ==========
   const { atualizarProgressoRollover, reverterProgressoRollover, hasActiveRolloverBonus } = useBonusBalanceManager();
