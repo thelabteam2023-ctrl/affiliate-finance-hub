@@ -2978,6 +2978,12 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
       
       invalidateSaldos(projetoId);
       
+      // CRÍTICO: Invalidar caches canônicos (same-window)
+      queryClient.invalidateQueries({ queryKey: ["canonical-calendar-daily", projetoId] });
+      queryClient.invalidateQueries({ queryKey: ["projeto-lucro-kpi-canonical", projetoId] });
+      queryClient.invalidateQueries({ queryKey: ["projeto-dashboard-data", projetoId] });
+      queryClient.invalidateQueries({ queryKey: ["projeto-resultado", projetoId] });
+      
       // Broadcast para sincronização cross-window
       try {
         const channel = new BroadcastChannel("aposta_channel");
