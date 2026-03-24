@@ -712,15 +712,24 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
 
   // KPIs GLOBAIS (para Visão Geral) - NUNCA filtrados por Casa/Parceiro
   // Usa `surebets` diretamente (já filtrado por data no fetch)
+  // Filtrar pendentes fora do período para KPIs
+  const surebetsParaKpi = useMemo(() => 
+    filterForKpis(surebets, dateRange?.start, dateRange?.end, {
+      getDate: (s) => s.data_operacao,
+      isPending: (s) => s.status === "PENDENTE",
+    }),
+    [surebets, dateRange]
+  );
+
   const kpisGlobal = useMemo(() => {
-    const total = surebets.length;
-    const pendentes = surebets.filter(s => s.status === "PENDENTE").length;
-    const surebetsLiquidadasArr = surebets.filter(s => s.status === "LIQUIDADA");
+    const total = surebetsParaKpi.length;
+    const pendentes = surebetsParaKpi.filter(s => s.status === "PENDENTE").length;
+    const surebetsLiquidadasArr = surebetsParaKpi.filter(s => s.status === "LIQUIDADA");
     const liquidadas = surebetsLiquidadasArr.length;
-    const greens = surebets.filter(s => s.resultado === "GREEN").length;
-    const reds = surebets.filter(s => s.resultado === "RED").length;
+    const greens = surebetsParaKpi.filter(s => s.resultado === "GREEN").length;
+    const reds = surebetsParaKpi.filter(s => s.resultado === "RED").length;
     const lucroTotal = surebetsLiquidadasArr.reduce((acc, s) => acc + getConsolidatedLucro(s, convertFnOficial, moedaConsolidacao), 0);
-    const stakeTotal = surebets.reduce((acc, s) => acc + getConsolidatedStake(s, convertFnOficial, moedaConsolidacao), 0);
+    const stakeTotal = surebetsParaKpi.reduce((acc, s) => acc + getConsolidatedStake(s, convertFnOficial, moedaConsolidacao), 0);
     const volumeLiquidado = surebetsLiquidadasArr.reduce((acc, s) => acc + getConsolidatedStake(s, convertFnOficial, moedaConsolidacao), 0);
     // ROI usa volume LIQUIDADO — apostas pendentes não têm resultado
     const roi = volumeLiquidado > 0 ? (lucroTotal / volumeLiquidado) * 100 : 0;

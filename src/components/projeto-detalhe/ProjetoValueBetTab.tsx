@@ -621,15 +621,21 @@ export function ProjetoValueBetTab({
     return map;
   }, [bookmakers]);
 
+  // Filtrar pendentes fora do período para KPIs (pendentes são injetadas para visibilidade na lista, mas não devem inflar métricas)
+  const apostasParaKpi = useMemo(() => 
+    filterForKpis(apostas, dateRange?.start, dateRange?.end),
+    [apostas, dateRange]
+  );
+
   const metricas = useMemo(() => {
     const { convertToConsolidation, moedaConsolidacao } = { convertToConsolidation: convertToConsolidationOficialFn, moedaConsolidacao: moedaConsolidacaoVal };
     
-    const total = apostas.length;
-    const apostasLiquidadas = apostas.filter(a => a.resultado && a.resultado !== "PENDENTE");
-    const totalStake = apostas.reduce((acc, a) => acc + getConsolidatedStake(a, convertToConsolidation, moedaConsolidacao), 0);
+    const total = apostasParaKpi.length;
+    const apostasLiquidadas = apostasParaKpi.filter(a => a.resultado && a.resultado !== "PENDENTE");
+    const totalStake = apostasParaKpi.reduce((acc, a) => acc + getConsolidatedStake(a, convertToConsolidation, moedaConsolidacao), 0);
     const volumeLiquidado = apostasLiquidadas.reduce((acc, a) => acc + getConsolidatedStake(a, convertToConsolidation, moedaConsolidacao), 0);
     const lucroTotal = apostasLiquidadas.reduce((acc, a) => acc + getConsolidatedLucro(a, convertToConsolidation, moedaConsolidacao), 0);
-    const pendentes = apostas.filter(a => !a.resultado || a.resultado === "PENDENTE").length;
+    const pendentes = apostasParaKpi.filter(a => !a.resultado || a.resultado === "PENDENTE").length;
     const greens = apostas.filter(a => a.resultado === "GREEN" || a.resultado === "MEIO_GREEN").length;
     const reds = apostas.filter(a => a.resultado === "RED" || a.resultado === "MEIO_RED").length;
     const liquidadas = apostasLiquidadas.length;
