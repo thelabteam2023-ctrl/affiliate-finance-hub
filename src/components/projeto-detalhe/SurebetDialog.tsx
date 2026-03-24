@@ -2501,6 +2501,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
       
       // Invalidar cache de saldos
       invalidateSaldos(projetoId);
+      invalidateCanonicalCaches(queryClient, projetoId);
       
       // Broadcast para sincronização cross-window
       try {
