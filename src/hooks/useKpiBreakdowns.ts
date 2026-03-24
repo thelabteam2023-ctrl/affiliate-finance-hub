@@ -48,6 +48,7 @@ type ConvertFn = (valor: number, moedaOrigem: string) => number;
 interface ModuleDataWithCurrency {
   count: number;
   volume: number;
+  volumeLiquidado?: number;
   lucro: number;
   countDetails?: string;
   valorTotal?: number;
