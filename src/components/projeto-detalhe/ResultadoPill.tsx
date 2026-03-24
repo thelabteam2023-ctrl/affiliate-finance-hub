@@ -96,6 +96,7 @@ export function ResultadoPill({
   onResultadoUpdated,
   onEditClick,
 }: ResultadoPillProps) {
+  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   
