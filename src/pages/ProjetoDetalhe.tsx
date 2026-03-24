@@ -754,6 +754,7 @@ export default function ProjetoDetalhe() {
                           {(kpiBreakdowns?.roi?.total || 0).toFixed(2)}%
                         </span>
                       </div>
+                      <p className="text-muted-foreground/70 mt-1.5 text-[10px] leading-snug">Considera apenas apostas com resultado definido.</p>
                     </div>
                   </div>
                 </TooltipContent>

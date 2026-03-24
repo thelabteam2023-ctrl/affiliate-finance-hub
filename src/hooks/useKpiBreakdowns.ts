@@ -48,6 +48,7 @@ type ConvertFn = (valor: number, moedaOrigem: string) => number;
 interface ModuleDataWithCurrency {
   count: number;
   volume: number;
+  volumeLiquidado?: number;
   lucro: number;
   countDetails?: string;
   valorTotal?: number;
@@ -95,11 +96,23 @@ function deriveApostasModule(
   const voids = apostas.filter(a => a.resultado === 'VOID' || a.resultado === 'REEMBOLSO').length;
   const countDetails = `${greens}G ${reds}R ${voids}V`;
 
-  // Volume: para arbitragem com pernas, consolidar por perna individual
+  // Volume TOTAL (incluindo pendentes) — para KPI de Volume
   const volume = apostas.reduce((acc, a) => {
     const pernas = pernasMap.get(a.id);
     if (a.forma_registro === 'ARBITRAGEM' && pernas && pernas.length > 0) {
-      // Consolidar cada perna individualmente para evitar soma nominal de moedas diferentes
+      return acc + pernas.reduce((sum, p) => {
+        const moeda = (p.moeda || a.moeda_operacao || 'BRL').toUpperCase();
+        return sum + convert(Number(p.stake || 0), moeda);
+      }, 0);
+    }
+    return acc + getConsolidatedStake(a as any, convert, moedaConsolidacao);
+  }, 0);
+
+  // Volume LIQUIDADO (apenas apostas com resultado definido) — para ROI
+  const apostasLiquidadas = apostas.filter(a => a.status === 'LIQUIDADA');
+  const volumeLiquidado = apostasLiquidadas.reduce((acc, a) => {
+    const pernas = pernasMap.get(a.id);
+    if (a.forma_registro === 'ARBITRAGEM' && pernas && pernas.length > 0) {
       return acc + pernas.reduce((sum, p) => {
         const moeda = (p.moeda || a.moeda_operacao || 'BRL').toUpperCase();
         return sum + convert(Number(p.stake || 0), moeda);
@@ -141,7 +154,7 @@ function deriveApostasModule(
   }));
   const lucroPorMoeda = agregarPorMoeda(lucroItems);
 
-  return { count: apostas.length, volume, lucro, countDetails, volumePorMoeda, lucroPorMoeda, lucroPorEstrategia };
+  return { count: apostas.length, volume, volumeLiquidado, lucro, countDetails, volumePorMoeda, lucroPorMoeda, lucroPorEstrategia };
 }
 
 function deriveGirosGratisModule(
@@ -564,9 +577,11 @@ function deriveBreakdowns(
   );
 
   // === ROI ===
+  // ROI usa volume LIQUIDADO — apostas pendentes não têm resultado definido
   const lucroTotal = lucroCanonicoTotal;
   const volumeTotal = volumeBreakdown.total;
-  const roiTotal = volumeTotal > 0 ? (lucroTotal / volumeTotal) * 100 : null;
+  const volumeLiquidadoTotal = apostasData.volumeLiquidado ?? volumeTotal;
+  const roiTotal = volumeLiquidadoTotal > 0 ? (lucroTotal / volumeLiquidadoTotal) * 100 : null;
 
   return {
     apostas: apostasBreakdown,
@@ -574,7 +589,7 @@ function deriveBreakdowns(
     lucro: lucroBreakdown,
     roi: {
       total: roiTotal,
-      volumeTotal,
+      volumeTotal: volumeLiquidadoTotal,
       lucroTotal,
       currency: moedaConsolidacao,
     },
