@@ -890,6 +890,7 @@ export function VisaoGeralCharts({
 
     apostas.forEach((a) => {
       const moedaOp = a.moeda_operacao || "BRL";
+      const isLiquidada = !!(a.resultado && a.resultado !== "PENDENTE");
       
       if (a.pernas && Array.isArray(a.pernas) && a.pernas.length > 0) {
         a.pernas.forEach((perna) => {
@@ -898,22 +899,20 @@ export function VisaoGeralCharts({
           const pernaMoeda = perna.moeda || moedaOp;
           const pernaStakeRaw = typeof perna.stake === "number" ? perna.stake : 0;
           const pernaLucroRaw = typeof perna.lucro_prejuizo === "number" ? perna.lucro_prejuizo : 0;
-          // Converter para moeda de consolidação
           const pernaStake = (moedaConsolidacao === "BRL" && typeof perna.stake_brl_referencia === "number")
             ? perna.stake_brl_referencia
             : convertPernaStake(pernaStakeRaw, pernaMoeda);
           const pernaLucro = (moedaConsolidacao === "BRL" && typeof perna.lucro_prejuizo_brl_referencia === "number")
             ? perna.lucro_prejuizo_brl_referencia
             : convertPernaStake(pernaLucroRaw, pernaMoeda);
-          processEntry(nomeCompleto, parceiroNome, pernaStake, pernaLucro, moedaConsolidacao || "BRL");
+          processEntry(nomeCompleto, parceiroNome, pernaStake, pernaLucro, moedaConsolidacao || "BRL", isLiquidada);
         });
       } else {
         const nomeCompleto = a.bookmaker_nome || "Desconhecida";
         const parceiroNome = a.parceiro_nome;
-        // Usar valores consolidados na moeda do projeto
         const stakeConsolidado = getConsolidatedStakeLocal(a);
         const lucroConsolidado = getConsolidatedLucroLocal(a);
-        processEntry(nomeCompleto, parceiroNome, stakeConsolidado, lucroConsolidado, moedaConsolidacao || "BRL");
+        processEntry(nomeCompleto, parceiroNome, stakeConsolidado, lucroConsolidado, moedaConsolidacao || "BRL", isLiquidada);
       }
     });
 
