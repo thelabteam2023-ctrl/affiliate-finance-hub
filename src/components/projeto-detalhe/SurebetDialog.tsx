@@ -61,7 +61,8 @@ import { useApostaRascunho, type RascunhoPernaData, type ApostaRascunho } from "
 import { toLocalTimestamp } from "@/utils/dateUtils";
 import { convertCurrency, calcularStakesMultiCurrency, type GetEffectiveRateFn } from "@/utils/convertCurrency";
 import { useCotacoes } from "@/hooks/useCotacoes";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { invalidateCanonicalCaches } from "@/lib/invalidateCanonicalCaches";
 import { MERCADOS_POR_ESPORTE, getMarketsForSport, getMarketsForSportAndModel, isMercadoCompativelComModelo, mercadoAdmiteEmpate, resolveMarketToOptions, type ModeloAposta } from "@/lib/marketNormalizer";
 import { 
   BookmakerSelectOption, 
@@ -639,6 +640,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
     includeZeroBalance: isEditing || isBonusContext, // Em edição ou contexto bônus, mostrar todos
   });
   const invalidateSaldos = useInvalidateBookmakerSaldos();
+  const queryClient = useQueryClient();
   
   // ========== HOOK DE GERENCIAMENTO DE BÔNUS/ROLLOVER ==========
   const { atualizarProgressoRollover, reverterProgressoRollover, hasActiveRolloverBonus } = useBonusBalanceManager();
@@ -2263,6 +2265,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
         
         // Invalidar cache de saldos
         invalidateSaldos(projetoId);
+        invalidateCanonicalCaches(queryClient, projetoId);
         
         toast.success("Operação atualizada!");
       } else {
@@ -2471,6 +2474,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
         toast.success("Operação registrada com sucesso!");
       }
 
+      invalidateCanonicalCaches(queryClient, projetoId);
       onSuccess();
       onOpenChange(false);
     } catch (error: any) {
@@ -2498,6 +2502,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
       
       // Invalidar cache de saldos
       invalidateSaldos(projetoId);
+      invalidateCanonicalCaches(queryClient, projetoId);
       
       // Broadcast para sincronização cross-window
       try {
@@ -2734,6 +2739,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
       
       // Invalidar cache de saldos para atualizar todas as UIs
       invalidateSaldos(projetoId);
+      invalidateCanonicalCaches(queryClient, projetoId);
 
       // Atualizar estados locais
       setOdds(prev => prev.map((o, idx) => 

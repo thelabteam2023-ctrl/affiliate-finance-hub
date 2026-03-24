@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { invalidateCanonicalCaches } from "@/lib/invalidateCanonicalCaches";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
@@ -2754,10 +2755,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
       await invalidateSaldos(projetoId);
       
       // CRÍTICO: Invalidar caches canônicos (same-window — BroadcastChannel não alcança)
-      queryClient.invalidateQueries({ queryKey: ["canonical-calendar-daily", projetoId] });
-      queryClient.invalidateQueries({ queryKey: ["projeto-lucro-kpi-canonical", projetoId] });
-      queryClient.invalidateQueries({ queryKey: ["projeto-dashboard-data", projetoId] });
-      queryClient.invalidateQueries({ queryKey: ["projeto-resultado", projetoId] });
+      invalidateCanonicalCaches(queryClient, projetoId);
 
       onSuccess('save');
       if (!embedded) onOpenChange(false);
@@ -2979,10 +2977,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
       invalidateSaldos(projetoId);
       
       // CRÍTICO: Invalidar caches canônicos (same-window)
-      queryClient.invalidateQueries({ queryKey: ["canonical-calendar-daily", projetoId] });
-      queryClient.invalidateQueries({ queryKey: ["projeto-lucro-kpi-canonical", projetoId] });
-      queryClient.invalidateQueries({ queryKey: ["projeto-dashboard-data", projetoId] });
-      queryClient.invalidateQueries({ queryKey: ["projeto-resultado", projetoId] });
+      invalidateCanonicalCaches(queryClient, projetoId);
       
       // Broadcast para sincronização cross-window
       try {

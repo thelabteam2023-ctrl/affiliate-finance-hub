@@ -1,4 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { invalidateCanonicalCaches } from "@/lib/invalidateCanonicalCaches";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
@@ -175,6 +177,7 @@ export function ApostaMultiplaDialog({
     currentBookmakerId: aposta?.bookmaker_id || null
   });
   const invalidateSaldos = useInvalidateBookmakerSaldos();
+  const queryClient = useQueryClient();
   
   // Mapear saldos canônicos para formato local (retrocompatibilidade)
    const bookmakers = useMemo((): Bookmaker[] => {
@@ -1128,6 +1131,7 @@ export function ApostaMultiplaDialog({
 
         // Invalidar saldos após qualquer edição financeira
         await invalidateSaldos(projetoId);
+        invalidateCanonicalCaches(queryClient, projetoId);
 
         // Registrar freebet gerada (se mudou de não-gerou para gerou)
         if (gerouFreebet && valorFreebetGerada && !aposta.gerou_freebet) {
@@ -1270,6 +1274,7 @@ export function ApostaMultiplaDialog({
         }
       }
 
+      invalidateCanonicalCaches(queryClient, projetoId);
       onSuccess('save');
       if (!embedded) onOpenChange(false);
     } catch (error: any) {
@@ -1435,7 +1440,7 @@ export function ApostaMultiplaDialog({
       // CRÍTICO: Invalidar saldos imediatamente após exclusão
       // Garante que o "Saldo Operável" no formulário reflita o valor atualizado
       invalidateSaldos(projetoId);
-      
+      invalidateCanonicalCaches(queryClient, projetoId);
       // Broadcast para sincronização cross-window
       try {
         const channel = new BroadcastChannel("aposta_channel");
