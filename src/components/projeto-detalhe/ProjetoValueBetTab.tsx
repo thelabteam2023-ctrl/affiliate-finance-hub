@@ -1570,9 +1570,6 @@ export function ProjetoValueBetTab({
         )}
         {activeNavTab === "apostas" && renderApostas()}
         {activeNavTab === "por-casa" && renderPorCasa()}
-        {activeNavTab === "por-fonte" && (
-          <ValueBetFonteSection apostas={apostas} formatCurrency={formatCurrency} projetoId={projetoId} />
-        )}
       </div>
     );
   };
