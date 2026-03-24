@@ -11,6 +11,7 @@ import {
 import { ModernBarChart } from "@/components/ui/modern-bar-chart";
 import { parseLocalDateTime, extractLocalDateKey } from "@/utils/dateUtils";
 import { ChartEmptyState } from "@/components/ui/chart-empty-state";
+import { getConsolidatedStake, getConsolidatedLucro } from "@/utils/consolidatedValues";
 
 interface Aposta {
   id: string;
@@ -24,6 +25,14 @@ interface Aposta {
   status: string;
   esporte?: string | null;
   fonte_entrada?: string | null;
+  // Campos de consolidação multi-moeda
+  moeda_operacao?: string | null;
+  stake_consolidado?: number | null;
+  pl_consolidado?: number | null;
+  consolidation_currency?: string | null;
+  valor_brl_referencia?: number | null;
+  lucro_prejuizo_brl_referencia?: number | null;
+  forma_registro?: string | null;
 }
 
 interface UnifiedStatisticsCardProps {
@@ -33,6 +42,10 @@ interface UnifiedStatisticsCardProps {
   formatCurrency?: (value: number) => string;
   /** Símbolo da moeda do projeto (ex: "$", "R$") */
   currencySymbol?: string;
+  /** Função de conversão para moeda de consolidação do projeto */
+  convertToConsolidation?: (valor: number, moedaOrigem: string) => number;
+  /** Moeda de consolidação do projeto (ex: "BRL", "USD") */
+  moedaConsolidacao?: string;
 }
 
 // Componente de KPI âncora (destaque máximo)
