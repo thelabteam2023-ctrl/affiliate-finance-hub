@@ -891,7 +891,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
       })
       .sort((a, b) => b.volume - a.volume)
       .slice(0, 8);
-  }, [surebets]);
+  }, [surebetsParaKpi]);
 
   // Mapa de logos combinando catálogo global + bookmakers do projeto
   // Prioridade: catálogo global (mais completo e confiável)

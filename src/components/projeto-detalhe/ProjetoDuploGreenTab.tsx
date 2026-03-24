@@ -858,7 +858,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
       })
       .sort((a, b) => b.volume - a.volume)
       .slice(0, 8);
-  }, [apostas]);
+  }, [apostasParaKpi]);
 
   // Mapa de bookmaker_id -> nome completo com parceiro para enriquecer dados no SurebetCard
   const bookmakerNomeMap = useMemo(() => {
