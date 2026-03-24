@@ -41,7 +41,8 @@ import {
   Clock,
   History,
   ArrowUpDown,
-  Users
+  Users,
+  Zap
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -73,6 +74,7 @@ import { ExportMenu, transformApostaToExport } from "./ExportMenu";
 import { SaldoOperavelCard } from "./SaldoOperavelCard";
 // FinancialSummaryCompact removed — now integrated into Lucro KPI popover
 import { useCalendarApostasRpc, transformRpcDailyForCharts } from "@/hooks/useCalendarApostasRpc";
+import { ValueBetFonteSection } from "./ValueBetFonteSection";
 
 interface ProjetoValueBetTabProps {
   projetoId: string;
@@ -133,10 +135,11 @@ interface Aposta {
   valor_brl_referencia?: number | null;
   lucro_prejuizo_brl_referencia?: number | null;
   workspace_id?: string;
+  fonte_entrada?: string | null;
 }
 
 type NavigationMode = "tabs" | "sidebar";
-type NavTabValue = "visao-geral" | "apostas" | "por-casa";
+type NavTabValue = "visao-geral" | "apostas" | "por-casa" | "por-fonte";
 
 const NAV_STORAGE_KEY = "valuebet-nav-mode";
 
@@ -261,6 +264,7 @@ export function ProjetoValueBetTab({
     { value: "visao-geral" as NavTabValue, label: "Visão Geral", icon: LayoutDashboard },
     { value: "apostas" as NavTabValue, label: "Apostas", icon: Target, showBadge: true, count: openOperationsCount },
     { value: "por-casa" as NavTabValue, label: "Por Casa", icon: Building2 },
+    { value: "por-fonte" as NavTabValue, label: "Por Fonte", icon: Zap },
   ], [openOperationsCount]);
 
   // Save nav mode preference
@@ -305,7 +309,8 @@ export function ProjetoValueBetTab({
           modo_entrada, gerou_freebet, valor_freebet_gerada, tipo_freebet, forma_registro,
           contexto_operacional, lay_exchange, lay_odd, lay_stake, lay_liability, lay_comissao,
           back_em_exchange, back_comissao, pernas, modelo, selecoes, tipo_multipla, odd_final,
-          moeda_operacao, stake_consolidado, pl_consolidado, valor_brl_referencia, lucro_prejuizo_brl_referencia
+          moeda_operacao, stake_consolidado, pl_consolidado, valor_brl_referencia, lucro_prejuizo_brl_referencia,
+          fonte_entrada
         `)
         .eq("projeto_id", projetoId)
         .eq("estrategia", APOSTA_ESTRATEGIA.VALUEBET)
@@ -333,7 +338,8 @@ export function ProjetoValueBetTab({
             modo_entrada, gerou_freebet, valor_freebet_gerada, tipo_freebet, forma_registro,
             contexto_operacional, lay_exchange, lay_odd, lay_stake, lay_liability, lay_comissao,
             back_em_exchange, back_comissao, pernas, modelo, selecoes, tipo_multipla, odd_final,
-            moeda_operacao, stake_consolidado, pl_consolidado, valor_brl_referencia, lucro_prejuizo_brl_referencia
+            moeda_operacao, stake_consolidado, pl_consolidado, valor_brl_referencia, lucro_prejuizo_brl_referencia,
+            fonte_entrada
           `)
           .eq("projeto_id", projetoId)
           .eq("estrategia", APOSTA_ESTRATEGIA.VALUEBET)
@@ -1565,6 +1571,9 @@ export function ProjetoValueBetTab({
         )}
         {activeNavTab === "apostas" && renderApostas()}
         {activeNavTab === "por-casa" && renderPorCasa()}
+        {activeNavTab === "por-fonte" && (
+          <ValueBetFonteSection apostas={apostas} formatCurrency={formatCurrency} projetoId={projetoId} />
+        )}
       </div>
     );
   };
