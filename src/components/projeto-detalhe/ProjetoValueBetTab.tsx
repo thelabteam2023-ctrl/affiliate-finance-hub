@@ -724,7 +724,7 @@ export function ProjetoValueBetTab({
       vinculoEntry.lucro += lucro;
     };
 
-    apostas.forEach((a) => {
+    apostasParaKpi.forEach((a) => {
       const bookmakerNome = a.bookmaker_nome || "Desconhecida";
       const stake = getConsolidatedStake(a, convertToConsolidationOficialFn, moedaConsolidacaoVal);
       const lucro = getConsolidatedLucro(a, convertToConsolidationOficialFn, moedaConsolidacaoVal);
