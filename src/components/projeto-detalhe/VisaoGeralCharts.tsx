@@ -900,7 +900,19 @@ export function VisaoGeralCharts({
       return valor;
     };
 
-    apostas.forEach((a) => {
+    // Filtra apostas pendentes que não pertencem ao período selecionado
+    // (pendentes são injetadas independente do período para visibilidade operacional,
+    // mas NÃO devem inflar métricas de períodos onde não ocorreram)
+    const apostasParaCasas = apostas.filter((a) => {
+      const isPendente = !a.resultado || a.resultado === "PENDENTE";
+      if (!isPendente) return true; // liquidadas já foram filtradas pelo período
+      if (!periodStart || !periodEnd) return true; // sem filtro de período, inclui tudo
+      const dateStr = a.data_aposta.includes('T') ? a.data_aposta.substring(0, 10) : a.data_aposta;
+      const apostaDate = new Date(dateStr + 'T12:00:00');
+      return apostaDate >= startOfDay(periodStart) && apostaDate <= periodEnd;
+    });
+
+    apostasParaCasas.forEach((a) => {
       const moedaOp = a.moeda_operacao || "BRL";
       const isLiquidada = !!(a.resultado && a.resultado !== "PENDENTE");
       
