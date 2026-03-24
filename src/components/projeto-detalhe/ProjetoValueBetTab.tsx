@@ -133,10 +133,11 @@ interface Aposta {
   valor_brl_referencia?: number | null;
   lucro_prejuizo_brl_referencia?: number | null;
   workspace_id?: string;
+  fonte_entrada?: string | null;
 }
 
 type NavigationMode = "tabs" | "sidebar";
-type NavTabValue = "visao-geral" | "apostas" | "por-casa";
+type NavTabValue = "visao-geral" | "apostas" | "por-casa" | "por-fonte";
 
 const NAV_STORAGE_KEY = "valuebet-nav-mode";
 
