@@ -1108,6 +1108,12 @@ export function VisaoGeralCharts({
               Evolução por entrada ({apostas.length} apostas)
             </CardDescription>
           )}
+        </CardHeader>
+        <CardContent className="pt-0">
+          <div className="h-[280px]">
+            <EvolucaoLucroChart data={chartDisplayData} accentColor={accentColor} isSingleDayPeriod={isSingleDayPeriod} formatCurrency={formatCurrency} formatChartAxis={axisFormatter} />
+          </div>
+        </CardContent>
       </Card>
     );
   }
