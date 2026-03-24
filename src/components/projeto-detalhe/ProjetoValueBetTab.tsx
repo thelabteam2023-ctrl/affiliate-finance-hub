@@ -46,6 +46,7 @@ import {
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { getOperationalDateRangeForQuery } from "@/utils/dateUtils";
+import { filterForKpis } from "@/utils/filterPendingByPeriod";
 // Removido: Dialogs agora abrem em janelas externas
 // import { ApostaDialog } from "./ApostaDialog";
 // import { ApostaMultiplaDialog } from "./ApostaMultiplaDialog";

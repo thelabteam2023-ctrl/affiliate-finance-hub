@@ -50,6 +50,7 @@ import {
 import { format, startOfDay, endOfDay, subDays, startOfMonth, startOfYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { getOperationalDateRangeForQuery } from "@/utils/dateUtils";
+import { filterForKpis } from "@/utils/filterPendingByPeriod";
 // Removido: Dialogs agora abrem em janelas externas
 // import { ApostaDialog } from "./ApostaDialog";
 // import { SurebetDialog } from "./SurebetDialog";

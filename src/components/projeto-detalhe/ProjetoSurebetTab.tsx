@@ -42,6 +42,7 @@ import {
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { getOperationalDateRangeForQuery } from "@/utils/dateUtils";
+import { filterForKpis } from "@/utils/filterPendingByPeriod";
 import { toast } from "sonner";
 import { SurebetDialog } from "./SurebetDialog";
 import { SurebetCard, SurebetData, SurebetPerna } from "./SurebetCard";
