@@ -1167,16 +1167,49 @@ export function VisaoGeralCharts({
               </Badge>
             </div>
           </div>
-          <CardDescription className="text-xs">
-            {isSingleDayPeriod 
-              ? `Evolução por entrada (${apostas.length} apostas)` 
-              : `Acumulado diário (${evolucaoData.length} dias • ${apostas.length} apostas)`
-            }
-          </CardDescription>
+          {!isSingleDayPeriod && (
+            <div className="flex items-center justify-between">
+              <CardDescription className="text-xs">
+                {chartMode === 'atividade'
+                  ? `${diasAtivos} dias ativos • ${apostas.length} apostas`
+                  : `${chartDisplayData.length} dias • ${apostas.length} apostas`
+                }
+              </CardDescription>
+              <div className="flex items-center gap-1 bg-muted/50 rounded-md p-0.5">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => setChartModeOverride('calendario')}
+                      className={`p-1 rounded transition-colors ${chartMode === 'calendario' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                    >
+                      <Calendar className="h-3.5 w-3.5" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="text-xs">Calendário (período completo)</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => setChartModeOverride('atividade')}
+                      className={`p-1 rounded transition-colors ${chartMode === 'atividade' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                    >
+                      <Activity className="h-3.5 w-3.5" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="text-xs">Atividade (apenas dias com apostas)</TooltipContent>
+                </Tooltip>
+              </div>
+            </div>
+          )}
+          {isSingleDayPeriod && (
+            <CardDescription className="text-xs">
+              Evolução por entrada ({apostas.length} apostas)
+            </CardDescription>
+          )}
         </CardHeader>
         <CardContent className="pt-0">
           <div className="h-[280px]">
-            <EvolucaoLucroChart data={evolucaoData} accentColor={accentColor} isSingleDayPeriod={isSingleDayPeriod} formatCurrency={formatCurrency} formatChartAxis={axisFormatter} />
+            <EvolucaoLucroChart data={chartDisplayData} accentColor={accentColor} isSingleDayPeriod={isSingleDayPeriod} formatCurrency={formatCurrency} formatChartAxis={axisFormatter} />
           </div>
         </CardContent>
       </Card>
