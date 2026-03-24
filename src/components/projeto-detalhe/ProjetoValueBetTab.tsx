@@ -139,7 +139,7 @@ interface Aposta {
 }
 
 type NavigationMode = "tabs" | "sidebar";
-type NavTabValue = "visao-geral" | "apostas" | "por-casa" | "por-fonte";
+type NavTabValue = "visao-geral" | "apostas" | "por-casa";
 
 const NAV_STORAGE_KEY = "valuebet-nav-mode";
 
