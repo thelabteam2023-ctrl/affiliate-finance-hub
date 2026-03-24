@@ -95,11 +95,23 @@ function deriveApostasModule(
   const voids = apostas.filter(a => a.resultado === 'VOID' || a.resultado === 'REEMBOLSO').length;
   const countDetails = `${greens}G ${reds}R ${voids}V`;
 
-  // Volume: para arbitragem com pernas, consolidar por perna individual
+  // Volume TOTAL (incluindo pendentes) — para KPI de Volume
   const volume = apostas.reduce((acc, a) => {
     const pernas = pernasMap.get(a.id);
     if (a.forma_registro === 'ARBITRAGEM' && pernas && pernas.length > 0) {
-      // Consolidar cada perna individualmente para evitar soma nominal de moedas diferentes
+      return acc + pernas.reduce((sum, p) => {
+        const moeda = (p.moeda || a.moeda_operacao || 'BRL').toUpperCase();
+        return sum + convert(Number(p.stake || 0), moeda);
+      }, 0);
+    }
+    return acc + getConsolidatedStake(a as any, convert, moedaConsolidacao);
+  }, 0);
+
+  // Volume LIQUIDADO (apenas apostas com resultado definido) — para ROI
+  const apostasLiquidadas = apostas.filter(a => a.status === 'LIQUIDADA');
+  const volumeLiquidado = apostasLiquidadas.reduce((acc, a) => {
+    const pernas = pernasMap.get(a.id);
+    if (a.forma_registro === 'ARBITRAGEM' && pernas && pernas.length > 0) {
       return acc + pernas.reduce((sum, p) => {
         const moeda = (p.moeda || a.moeda_operacao || 'BRL').toUpperCase();
         return sum + convert(Number(p.stake || 0), moeda);
