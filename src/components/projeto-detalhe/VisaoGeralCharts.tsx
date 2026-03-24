@@ -831,9 +831,10 @@ export function VisaoGeralCharts({
     const casaMap = new Map<string, { 
       apostas: number; 
       volume: number;
+      volumeLiquidado: number;
       lucro: number;
       moeda: string;
-      vinculos: Map<string, { apostas: number; volume: number; lucro: number }> 
+      vinculos: Map<string, { apostas: number; volume: number; volumeLiquidado: number; lucro: number }> 
     }>();
 
     const processEntry = (bookmakerNome: string, parceiroNome: string | null | undefined, stake: number, lucro: number, moeda: string) => {
