@@ -112,43 +112,33 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
 
   // Sync a fornecedor from Captação → create workspace + supplier_profile
   const syncFornecedor = async (fornecedor: { id: string; nome: string; documento?: string }) => {
-    if (!user?.id) return;
-    setSyncingId(fornecedor.id);
-    try {
-      // 1. Create workspace
-      const { data: ws, error: wsError } = await supabase
-        .from("workspaces")
-        .insert({
-          name: `Fornecedor: ${fornecedor.nome}`,
-          owner_id: user.id,
-          parent_workspace_id: workspaceId,
-          tipo: "fornecedor",
-        })
-        .select("id")
-        .single();
-      if (wsError) throw wsError;
+    if (!user?.id) throw new Error("Usuário não autenticado");
 
-      // 2. Create supplier_profile linked to fornecedor mestre
-      const { error: spError } = await supabase
-        .from("supplier_profiles")
-        .insert({
-          workspace_id: ws.id,
-          parent_workspace_id: workspaceId,
-          nome: fornecedor.nome,
-          contato: fornecedor.documento || null,
-          created_by: user.id,
-          fornecedor_id: fornecedor.id,
-        });
-      if (spError) throw spError;
+    // 1. Create workspace
+    const { data: ws, error: wsError } = await supabase
+      .from("workspaces")
+      .insert({
+        name: `Fornecedor: ${fornecedor.nome}`,
+        owner_id: user.id,
+        parent_workspace_id: workspaceId,
+        tipo: "fornecedor",
+      })
+      .select("id")
+      .single();
+    if (wsError) throw wsError;
 
-      toast.success(`${fornecedor.nome} ativado no portal`);
-      queryClient.invalidateQueries({ queryKey: ["admin-suppliers"] });
-      queryClient.invalidateQueries({ queryKey: ["unlinked-fornecedores"] });
-    } catch (e: any) {
-      toast.error(e.message);
-    } finally {
-      setSyncingId(null);
-    }
+    // 2. Create supplier_profile linked to fornecedor mestre
+    const { error: spError } = await supabase
+      .from("supplier_profiles")
+      .insert({
+        workspace_id: ws.id,
+        parent_workspace_id: workspaceId,
+        nome: fornecedor.nome,
+        contato: fornecedor.documento || null,
+        created_by: user.id,
+        fornecedor_id: fornecedor.id,
+      });
+    if (spError) throw spError;
   };
 
   // Create supplier (from existing fornecedor or new)
