@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import {
   Plus, User, Phone, Mail, MapPin, Calendar, Pencil, Lock, Loader2, Clock,
+  Landmark, ChevronRight, ChevronLeft,
 } from "lucide-react";
 import { toast } from "sonner";
 import { SwipeableCard } from "./SwipeableCard";
