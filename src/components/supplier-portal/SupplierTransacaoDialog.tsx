@@ -19,7 +19,6 @@ interface Props {
   accounts: any[];
   saldoDisponivel: number;
   valorSugerido?: number;
-  token: string;
   onSuccess: () => void;
 }
 
