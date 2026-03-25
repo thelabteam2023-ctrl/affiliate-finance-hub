@@ -281,6 +281,13 @@ export function SupplierDashboard({ session }: Props) {
         valorSugerido={alocacao?.valor_sugerido_deposito ? Number(alocacao.valor_sugerido_deposito) : undefined}
         onSuccess={handleRefresh}
       />
+
+      <SupplierBancosModal
+        open={bancosModalOpen}
+        onOpenChange={setBancosModalOpen}
+        bancos={bancos || []}
+        total={saldoBancos}
+      />
     </div>
   );
 }
