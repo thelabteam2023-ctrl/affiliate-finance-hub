@@ -422,8 +422,20 @@ export function SupplierTransacaoDialog({
                 <SelectContent>
                   {accounts.map((a: any) => (
                     <SelectItem key={a.id} value={a.id}>
-                      {a.bookmakers_catalogo?.nome || "Casa"} - {a.login_username}
-                      {!isDeposito && ` (${formatCurrency(Number(a.saldo_atual))})`}
+                      <div className="flex items-center gap-2">
+                        {a.bookmakers_catalogo?.logo_url ? (
+                          <img
+                            src={a.bookmakers_catalogo.logo_url}
+                            alt=""
+                            className="h-5 w-5 rounded object-contain shrink-0"
+                          />
+                        ) : (
+                          <div className="h-5 w-5 rounded bg-muted/30 shrink-0" />
+                        )}
+                        <span className="uppercase text-xs font-medium">
+                          {a.bookmakers_catalogo?.nome || "Casa"}
+                        </span>
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
