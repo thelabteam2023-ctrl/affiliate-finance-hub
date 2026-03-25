@@ -15,6 +15,7 @@ import {
 import { toast } from "sonner";
 import { SwipeableCard } from "./SwipeableCard";
 import { EditLedgerDialog } from "./EditLedgerDialog";
+import { PagamentosTab } from "./PagamentosTab";
 
 interface Props {
   open: boolean;
