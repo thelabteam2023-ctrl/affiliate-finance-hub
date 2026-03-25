@@ -602,16 +602,16 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Also fetch TRANSFERENCIA_BANCO entries linked via metadata.titular_id
-      const { data: bankTransfers } = await supabaseAdmin
+      // Also fetch TRANSFERENCIA_BANCO and PAGAMENTO_TITULAR entries linked via metadata.titular_id
+      const { data: metadataEntries } = await supabaseAdmin
         .from("supplier_ledger")
         .select("id, tipo, direcao, valor, descricao, created_at, bookmaker_account_id, metadata")
         .eq("supplier_workspace_id", validation.supplier_workspace_id)
-        .eq("tipo", "TRANSFERENCIA_BANCO")
+        .in("tipo", ["TRANSFERENCIA_BANCO", "PAGAMENTO_TITULAR"])
         .order("created_at", { ascending: false })
         .limit(200);
 
-      const titularBankTransfers = (bankTransfers || [])
+      const titularBankTransfers = (metadataEntries || [])
         .filter((e: any) => String(e.metadata?.titular_id) === String(titular_id))
         .map((e: any) => ({
           id: e.id,
@@ -977,6 +977,159 @@ Deno.serve(async (req) => {
         valor_novo: numNovoValor,
         delta,
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // ── pay-titular: register payment to a titular ──
+    if (action === "pay-titular") {
+      const { token, titular_id, valor, fonte, banco_id, descricao } = body;
+      if (!token || !titular_id || !valor || !fonte) {
+        return new Response(JSON.stringify({ error: "Dados incompletos" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      const tokenHash = await hashToken(token);
+      const { data: validation, error: valError } = await supabaseAdmin.rpc("validate_supplier_token", { p_token_hash: tokenHash });
+      if (valError || !validation?.valid) {
+        return new Response(JSON.stringify({ error: "Token inválido" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      const numValor = Number(valor);
+      if (numValor <= 0) {
+        return new Response(JSON.stringify({ error: "Valor deve ser positivo" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      // Verify titular belongs to workspace
+      const { data: titular } = await supabaseAdmin
+        .from("supplier_titulares")
+        .select("id, nome")
+        .eq("id", titular_id)
+        .eq("supplier_workspace_id", validation.supplier_workspace_id)
+        .single();
+      if (!titular) {
+        return new Response(JSON.stringify({ error: "Titular não encontrado" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      const metadata: Record<string, any> = {
+        titular_id,
+        titular_nome: titular.nome,
+        fonte,
+        tipo_pagamento: "PAGAMENTO_TITULAR",
+      };
+
+      if (fonte === "CENTRAL") {
+        // Debit from saldo central via ledger RPC
+        const { data: result, error: ledgerErr } = await supabaseAdmin.rpc("supplier_ledger_insert", {
+          p_supplier_workspace_id: validation.supplier_workspace_id,
+          p_bookmaker_account_id: null,
+          p_tipo: "PAGAMENTO_TITULAR",
+          p_direcao: "DEBIT",
+          p_valor: numValor,
+          p_descricao: descricao || `Pagamento ao titular: ${titular.nome}`,
+          p_created_by: "SUPPLIER",
+          p_idempotency_key: `PAG_TIT_${titular_id}_${Date.now()}`,
+          p_metadata: metadata,
+        });
+        if (ledgerErr) throw ledgerErr;
+        const res = result as any;
+        if (!res?.success) {
+          return new Response(JSON.stringify({ error: res?.error || "Saldo insuficiente" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+      } else if (fonte === "BANCO") {
+        if (!banco_id) {
+          return new Response(JSON.stringify({ error: "Banco não informado" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+
+        // Verify bank belongs to this titular
+        const { data: banco } = await supabaseAdmin
+          .from("supplier_titular_bancos")
+          .select("id, saldo, banco_nome, titular_id")
+          .eq("id", banco_id)
+          .eq("supplier_workspace_id", validation.supplier_workspace_id)
+          .single();
+        if (!banco) {
+          return new Response(JSON.stringify({ error: "Banco não encontrado" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        if (String(banco.titular_id) !== String(titular_id)) {
+          return new Response(JSON.stringify({ error: "Este banco não pertence ao titular selecionado" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+
+        const saldoBanco = Number(banco.saldo);
+        if (numValor > saldoBanco) {
+          return new Response(JSON.stringify({ error: `Saldo insuficiente no banco. Disponível: R$ ${saldoBanco.toFixed(2)}` }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+
+        // Debit bank balance
+        const novoSaldo = saldoBanco - numValor;
+        const { error: updateErr } = await supabaseAdmin
+          .from("supplier_titular_bancos")
+          .update({ saldo: novoSaldo, updated_at: new Date().toISOString() })
+          .eq("id", banco_id);
+        if (updateErr) throw updateErr;
+
+        metadata.banco_id = banco_id;
+        metadata.banco_nome = banco.banco_nome;
+
+        // Register in ledger (non-central, no bookmaker_account)
+        const { data: result, error: ledgerErr } = await supabaseAdmin.rpc("supplier_ledger_insert", {
+          p_supplier_workspace_id: validation.supplier_workspace_id,
+          p_bookmaker_account_id: null,
+          p_tipo: "PAGAMENTO_TITULAR",
+          p_direcao: "DEBIT",
+          p_valor: numValor,
+          p_descricao: descricao || `Pagamento ao titular: ${titular.nome} (via ${banco.banco_nome})`,
+          p_created_by: "SUPPLIER",
+          p_idempotency_key: `PAG_TIT_BANCO_${banco_id}_${Date.now()}`,
+          p_metadata: metadata,
+        });
+        if (ledgerErr) throw ledgerErr;
+        const res = result as any;
+        if (!res?.success) {
+          // Rollback bank
+          await supabaseAdmin
+            .from("supplier_titular_bancos")
+            .update({ saldo: saldoBanco })
+            .eq("id", banco_id);
+          return new Response(JSON.stringify({ error: res?.error || "Erro ao processar" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+      } else {
+        return new Response(JSON.stringify({ error: "Fonte inválida" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      return new Response(JSON.stringify({ success: true }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // ── get-titular-pagamentos: list payments for a titular ──
+    if (action === "get-titular-pagamentos") {
+      const { token, titular_id } = body;
+      if (!token || !titular_id) {
+        return new Response(JSON.stringify({ error: "Dados inválidos" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      const tokenHash = await hashToken(token);
+      const { data: validation, error: valError } = await supabaseAdmin.rpc("validate_supplier_token", { p_token_hash: tokenHash });
+      if (valError || !validation?.valid) {
+        return new Response(JSON.stringify({ error: "Token inválido" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      const { data: entries } = await supabaseAdmin
+        .from("supplier_ledger")
+        .select("id, tipo, direcao, valor, descricao, created_at, metadata")
+        .eq("supplier_workspace_id", validation.supplier_workspace_id)
+        .eq("tipo", "PAGAMENTO_TITULAR")
+        .order("created_at", { ascending: false })
+        .limit(200);
+
+      const pagamentos = (entries || [])
+        .filter((e: any) => String((e.metadata as any)?.titular_id) === String(titular_id))
+        .map((e: any) => ({
+          id: e.id,
+          valor: e.valor,
+          descricao: e.descricao,
+          created_at: e.created_at,
+          fonte: (e.metadata as any)?.fonte || "CENTRAL",
+          banco_nome: (e.metadata as any)?.banco_nome || null,
+        }));
+
+      return new Response(JSON.stringify({ pagamentos }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     return new Response(

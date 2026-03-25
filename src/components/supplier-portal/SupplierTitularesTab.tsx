@@ -447,6 +447,7 @@ export function SupplierTitularesTab({ supplierWorkspaceId }: Props) {
         onOpenChange={setDetailDialogOpen}
         titular={viewingTitular}
         supplierToken={supplierToken}
+        supplierWorkspaceId={supplierWorkspaceId}
         onEditTitular={() => {
           setDetailDialogOpen(false);
           if (viewingTitular) openEdit(viewingTitular);

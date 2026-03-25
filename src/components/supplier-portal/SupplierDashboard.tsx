@@ -46,7 +46,7 @@ export function SupplierDashboard({ session }: Props) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("supplier_ledger")
-        .select("tipo, direcao, valor, created_at, bookmaker_account_id")
+        .select("tipo, direcao, valor, created_at, bookmaker_account_id, metadata")
         .eq("supplier_workspace_id", session.supplier_workspace_id)
         .order("sequencia", { ascending: false });
 
@@ -129,7 +129,14 @@ export function SupplierDashboard({ session }: Props) {
     // ALOCACAO CREDIT → +central (money enters workspace)
     // TRANSFERENCIA_BANCO DEBIT → -central (money sent to bank)
     // DEVOLUCAO DEBIT → -central (money returned to admin)
-    const centralEntries = ledgerData.filter(e => !e.bookmaker_account_id);
+    // PAGAMENTO_TITULAR DEBIT (fonte=CENTRAL) → -central
+    // PAGAMENTO_TITULAR DEBIT (fonte=BANCO) → NOT central (debits bank directly)
+    const centralEntries = ledgerData.filter(e => {
+      if (e.bookmaker_account_id) return false;
+      // Exclude PAGAMENTO_TITULAR from banco (doesn't affect central saldo)
+      if (e.tipo === "PAGAMENTO_TITULAR" && (e.metadata as any)?.fonte === "BANCO") return false;
+      return true;
+    });
     const centralCredits = centralEntries
       .filter(e => e.direcao === "CREDIT")
       .reduce((s, e) => s + Number(e.valor), 0);

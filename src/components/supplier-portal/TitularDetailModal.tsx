@@ -15,12 +15,14 @@ import {
 import { toast } from "sonner";
 import { SwipeableCard } from "./SwipeableCard";
 import { EditLedgerDialog } from "./EditLedgerDialog";
+import { PagamentosTab } from "./PagamentosTab";
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   titular: any;
   supplierToken: string;
+  supplierWorkspaceId: string;
   onEditTitular: () => void;
 }
 
@@ -89,6 +91,7 @@ function HistoryTab({ titular, supplierToken }: { titular: any; supplierToken: s
     if (tipo === "TRANSFERENCIA_BANCO" && direcao === "DEBIT") return "Enviado ao banco";
     if (tipo === "ALOCACAO") return "Alocação de capital";
     if (tipo === "DEVOLUCAO") return "Devolução";
+    if (tipo === "PAGAMENTO_TITULAR") return "Pagamento ao titular";
     return tipo?.replace(/_/g, " ");
   }
 
@@ -328,7 +331,7 @@ function BancosTab({ titular, supplierToken }: { titular: any; supplierToken: st
   );
 }
 // ─── Main Modal ───
-export function TitularDetailModal({ open, onOpenChange, titular, supplierToken, onEditTitular }: Props) {
+export function TitularDetailModal({ open, onOpenChange, titular, supplierToken, supplierWorkspaceId, onEditTitular }: Props) {
   if (!titular) return null;
 
   return (
@@ -346,12 +349,15 @@ export function TitularDetailModal({ open, onOpenChange, titular, supplierToken,
         </DialogHeader>
 
         <Tabs defaultValue="historico" className="mt-2 flex-1 flex flex-col min-h-0">
-          <TabsList className="grid w-full grid-cols-2 shrink-0">
+          <TabsList className="grid w-full grid-cols-3 shrink-0">
             <TabsTrigger value="historico" className="text-xs sm:text-sm gap-1.5">
               <Clock className="h-3.5 w-3.5" /> Histórico
             </TabsTrigger>
             <TabsTrigger value="bancos" className="text-xs sm:text-sm gap-1.5">
               <Landmark className="h-3.5 w-3.5" /> Bancos
+            </TabsTrigger>
+            <TabsTrigger value="pagamentos" className="text-xs sm:text-sm gap-1.5">
+              <CreditCard className="h-3.5 w-3.5" /> Pagamentos
             </TabsTrigger>
           </TabsList>
 
@@ -361,6 +367,10 @@ export function TitularDetailModal({ open, onOpenChange, titular, supplierToken,
 
           <TabsContent value="bancos" className="mt-3 flex-1 min-h-0 overflow-y-auto">
             <BancosTab titular={titular} supplierToken={supplierToken} />
+          </TabsContent>
+
+          <TabsContent value="pagamentos" className="mt-3 flex-1 min-h-0 overflow-y-auto">
+            <PagamentosTab titular={titular} supplierToken={supplierToken} supplierWorkspaceId={supplierWorkspaceId} />
           </TabsContent>
         </Tabs>
 
