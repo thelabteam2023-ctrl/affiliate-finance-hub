@@ -13424,6 +13424,21 @@ export type Database = {
         }
         Returns: string
       }
+      create_titular_with_parceiro: {
+        Args: {
+          p_cep?: string
+          p_cidade?: string
+          p_cpf?: string
+          p_data_nascimento?: string
+          p_email?: string
+          p_endereco?: string
+          p_nome: string
+          p_observacoes?: string
+          p_supplier_workspace_id: string
+          p_telefone?: string
+        }
+        Returns: Json
+      }
       create_workspace_invite: {
         Args: {
           _email: string
