@@ -139,6 +139,8 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
   }
 
   function goToStep2() {
+    const titular = titulares.find((t: any) => t.id === titularId);
+    const titularEmail = titular?.email || "";
     const entries: ContaEntry[] = Array.from(selectedCasaIds).map(id => {
       const casa = catalogo.find((c: any) => c.id === id);
       const existing = contas.find(c => c.catalogoId === id);
@@ -150,10 +152,11 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
         username: existing?.username || "",
         password: existing?.password || "",
         showPassword: existing?.showPassword || false,
-        loginEmail: existing?.loginEmail || "",
+        loginEmail: existing?.loginEmail || titularEmail,
       };
     }).sort((a, b) => a.catalogoNome.localeCompare(b.catalogoNome));
     setContas(entries);
+    setCurrentCardIndex(0);
     setStep(2);
   }
 
