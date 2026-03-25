@@ -15,6 +15,7 @@ import {
   Building2, Users, Clock, CheckCircle2, XCircle, AlertTriangle, Zap,
   Search, Check
 } from "lucide-react";
+import { SupplierBookmakerConfigDialog } from "./SupplierBookmakerConfigDialog";
 import { Separator } from "@/components/ui/separator";
 import { OrigemPagamentoSelect, OrigemPagamentoData } from "@/components/programa-indicacao/OrigemPagamentoSelect";
 import { format } from "date-fns";
