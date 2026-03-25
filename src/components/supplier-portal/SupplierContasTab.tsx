@@ -2,8 +2,9 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, ArrowUpRight, ArrowDownRight, Building2 } from "lucide-react";
+import { Plus, ArrowUpRight, ArrowDownRight, Building2, Pencil } from "lucide-react";
 import { SupplierNovaContaDialog } from "./SupplierNovaContaDialog";
+import { SupplierEditContaDialog } from "./SupplierEditContaDialog";
 
 interface Props {
   supplierWorkspaceId: string;
@@ -31,6 +32,7 @@ export function SupplierContasTab({
   onSacar,
 }: Props) {
   const [novaContaOpen, setNovaContaOpen] = useState(false);
+  const [editAccount, setEditAccount] = useState<any | null>(null);
 
   return (
     <div className="space-y-4">
@@ -66,7 +68,11 @@ export function SupplierContasTab({
       ) : (
         <div className="grid gap-3">
           {accounts.map((account) => (
-            <Card key={account.id} className="hover:border-primary/30 transition-colors">
+            <Card
+              key={account.id}
+              className="hover:border-primary/30 transition-colors cursor-pointer group"
+              onClick={() => setEditAccount(account)}
+            >
               <CardContent className="py-3 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   {account.bookmakers_catalogo?.logo_url ? (
@@ -92,13 +98,16 @@ export function SupplierContasTab({
                     </p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm font-semibold text-foreground">
-                    {formatCurrency(Number(account.saldo_atual), account.moeda)}
-                  </p>
-                  <Badge variant="outline" className="text-[10px]">
-                    {account.moeda}
-                  </Badge>
+                <div className="flex items-center gap-3">
+                  <div className="text-right">
+                    <p className="text-sm font-semibold text-foreground">
+                      {formatCurrency(Number(account.saldo_atual), account.moeda)}
+                    </p>
+                    <Badge variant="outline" className="text-[10px]">
+                      {account.moeda}
+                    </Badge>
+                  </div>
+                  <Pencil className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
               </CardContent>
             </Card>
@@ -112,6 +121,15 @@ export function SupplierContasTab({
         supplierWorkspaceId={supplierWorkspaceId}
         onSuccess={onRefresh}
       />
+
+      {editAccount && (
+        <SupplierEditContaDialog
+          open={!!editAccount}
+          onOpenChange={(open) => { if (!open) setEditAccount(null); }}
+          account={editAccount}
+          onSuccess={onRefresh}
+        />
+      )}
     </div>
   );
 }
