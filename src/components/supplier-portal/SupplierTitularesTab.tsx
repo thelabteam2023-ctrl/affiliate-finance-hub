@@ -279,7 +279,8 @@ export function SupplierTitularesTab({ supplierWorkspaceId }: Props) {
   function openEdit(titular: any) {
     setEditingTitular(titular);
     setNome(titular.nome || "");
-    setCpf(titular.documento ? formatCPF(titular.documento) : "");
+    const docStr = String(titular.documento ?? "").replace(/\D/g, "");
+    setCpf(docStr.length === 11 ? formatCPF(docStr) : docStr ? formatCPF(docStr) : "");
     setEmail(titular.email || "");
     setTelefone(titular.telefone ? formatPhone(titular.telefone) : "");
     setDataNascimento(titular.data_nascimento || "");
