@@ -77,36 +77,50 @@ function HistoryTab({ titular, supplierToken }: { titular: any; supplierToken: s
     );
   }
 
+  function tipoLabel(tipo: string, direcao: string) {
+    if (tipo === "DEPOSITO") return "Depósito em casa";
+    if (tipo === "SAQUE") return "Saque de casa";
+    if (tipo === "TRANSFERENCIA_BANCO" && direcao === "CREDIT") return "Recebido no banco";
+    if (tipo === "TRANSFERENCIA_BANCO" && direcao === "DEBIT") return "Enviado ao banco";
+    if (tipo === "ALOCACAO") return "Alocação de capital";
+    if (tipo === "DEVOLUCAO") return "Devolução";
+    return tipo?.replace(/_/g, " ");
+  }
+
   return (
     <div className="space-y-1 max-h-[50vh] overflow-y-auto">
       {transactions.map((tx: any) => {
-        const isIncoming = tx.destino_tipo === "PARCEIRO" || tx.tipo_transacao === "DEPOSITO";
+        const isCredit = tx.direcao === "CREDIT";
         return (
           <div
             key={tx.id}
-            className="flex items-center gap-3 py-2.5 px-2 rounded-md hover:bg-muted/50 transition-colors"
+            className="flex items-center gap-3 py-2.5 px-2 rounded-md hover:bg-muted/30 transition-colors"
           >
-            <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
-              isIncoming ? "bg-emerald-500/15" : "bg-orange-500/15"
-            }`}>
-              {isIncoming
-                ? <ArrowDownLeft className="h-3.5 w-3.5 text-emerald-600" />
-                : <ArrowUpRight className="h-3.5 w-3.5 text-orange-600" />
-              }
-            </div>
+            {tx.casa_logo ? (
+              <img src={tx.casa_logo} alt="" className="w-7 h-7 rounded-full object-contain shrink-0" />
+            ) : (
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
+                isCredit ? "bg-emerald-500/15" : "bg-orange-500/15"
+              }`}>
+                {isCredit
+                  ? <ArrowDownLeft className="h-3.5 w-3.5 text-emerald-600" />
+                  : <ArrowUpRight className="h-3.5 w-3.5 text-orange-600" />
+                }
+              </div>
+            )}
             <div className="min-w-0 flex-1">
               <p className="text-sm font-medium text-foreground truncate">
-                {tx.tipo_transacao?.replace(/_/g, " ")}
+                {tipoLabel(tx.tipo, tx.direcao)}
               </p>
               <p className="text-[11px] text-muted-foreground truncate">
-                {tx.descricao || formatDateBR(tx.data_transacao)}
+                {tx.casa_nome ? tx.casa_nome.toUpperCase() : tx.descricao || "—"}
               </p>
             </div>
             <div className="text-right shrink-0">
-              <p className={`text-sm font-semibold ${isIncoming ? "text-emerald-600" : "text-orange-600"}`}>
-                {isIncoming ? "+" : "−"}{formatCurrency(Math.abs(tx.valor), tx.moeda)}
+              <p className={`text-sm font-semibold ${isCredit ? "text-emerald-600" : "text-orange-600"}`}>
+                {isCredit ? "+" : "−"}{formatCurrency(Math.abs(tx.valor))}
               </p>
-              <p className="text-[10px] text-muted-foreground">{formatDateBR(tx.data_transacao)}</p>
+              <p className="text-[10px] text-muted-foreground">{formatDateBR(tx.created_at)}</p>
             </div>
           </div>
         );
