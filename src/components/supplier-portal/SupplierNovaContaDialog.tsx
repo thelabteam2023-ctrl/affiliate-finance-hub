@@ -37,6 +37,7 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
   const [selectedCasaIds, setSelectedCasaIds] = useState<Set<string>>(new Set());
   const [contas, setContas] = useState<ContaEntry[]>([]);
   const [casaSearch, setCasaSearch] = useState("");
+  const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const queryClient = useQueryClient();
 
   const { data: allowedIds } = useQuery({
