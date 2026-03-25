@@ -165,8 +165,30 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
     setStep(2);
   }
 
+  function updateContaManual(index: number, field: keyof ContaEntry, value: string | boolean) {
+    setContas(prev => prev.map((c, i) => i === index ? { ...c, [field]: value, manuallyEdited: true } : c));
+  }
+
   function updateConta(index: number, field: keyof ContaEntry, value: string | boolean) {
     setContas(prev => prev.map((c, i) => i === index ? { ...c, [field]: value } : c));
+  }
+
+  function handleGlobalLoginChange(value: string) {
+    setGlobalLogin(value);
+    setContas(prev => prev.map(c => c.manuallyEdited ? c : { ...c, username: value }));
+  }
+
+  function handleGlobalPasswordChange(value: string) {
+    setGlobalPassword(value);
+    setContas(prev => prev.map(c => c.manuallyEdited ? c : { ...c, password: value }));
+  }
+
+  function applyGlobalToEmpty() {
+    setContas(prev => prev.map(c => ({
+      ...c,
+      username: c.username.trim() ? c.username : globalLogin,
+      password: c.password.trim() ? c.password : globalPassword,
+    })));
   }
 
   const allContasFilled = contas.every(c => c.username.trim() && c.password.trim());
