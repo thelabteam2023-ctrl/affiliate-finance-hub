@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import labbetLogo from "@/assets/labbet-logo.png";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
