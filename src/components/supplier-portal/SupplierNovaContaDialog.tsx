@@ -439,10 +439,14 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
                 </Button>
                 <Button
                   onClick={goToStep2}
-                  disabled={!titularId || selectedCasaIds.size === 0}
+                  disabled={!titularId || selectedCasaIds.size === 0 || isDecrypting}
                   className="flex-1 h-11 gap-1.5 font-semibold"
                 >
-                  Próximo <ChevronRight className="h-4 w-4" />
+                  {isDecrypting ? (
+                    <><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</>
+                  ) : (
+                    <>Próximo <ChevronRight className="h-4 w-4" /></>
+                  )}
                 </Button>
               </div>
             </div>
