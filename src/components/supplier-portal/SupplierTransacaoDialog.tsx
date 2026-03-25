@@ -527,7 +527,7 @@ export function SupplierTransacaoDialog({
           {step === 2 && isTransferenciaBanco && (
             <Button
               onClick={() => transferMutation.mutate()}
-              disabled={transferMutation.isPending || !valor || !bancoId}
+              disabled={transferMutation.isPending || !valor || !bancoId || parseFloat(valor) > saldoDisponivel}
             >
               {transferMutation.isPending ? "Processando..." : "Enviar ao Banco"}
             </Button>
