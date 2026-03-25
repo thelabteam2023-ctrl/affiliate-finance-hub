@@ -411,32 +411,68 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
         </div>
       )}
 
-      {/* Dialog: Novo Fornecedor */}
-      <Dialog open={novoFornecedorOpen} onOpenChange={setNovoFornecedorOpen}>
+      {/* Dialog: Ativar Fornecedor no Portal */}
+      <Dialog open={novoFornecedorOpen} onOpenChange={(open) => {
+        setNovoFornecedorOpen(open);
+        if (!open) { setSelectedFornecedorId("new"); setNome(""); setContato(""); setObservacoes(""); }
+      }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Novo Fornecedor</DialogTitle>
+            <DialogTitle>Ativar Fornecedor no Portal</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
+          <div className="space-y-4">
+            {/* Select existing or create new */}
             <div>
-              <Label>Nome *</Label>
-              <Input value={nome} onChange={e => setNome(e.target.value)} placeholder="Nome do fornecedor" />
+              <Label>Fornecedor</Label>
+              <Select value={selectedFornecedorId} onValueChange={setSelectedFornecedorId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um fornecedor" />
+                </SelectTrigger>
+                <SelectContent>
+                  {unlinkedFornecedores.map((f: any) => (
+                    <SelectItem key={f.id} value={f.id}>
+                      {f.nome} {f.documento ? `(${f.documento})` : ""}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value="new">+ Criar novo fornecedor</SelectItem>
+                </SelectContent>
+              </Select>
+              {unlinkedFornecedores.length > 0 && selectedFornecedorId === "new" && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  {unlinkedFornecedores.length} fornecedor{unlinkedFornecedores.length > 1 ? "es" : ""} da Captação disponíve{unlinkedFornecedores.length > 1 ? "is" : "l"}
+                </p>
+              )}
             </div>
-            <div>
-              <Label>Contato</Label>
-              <Input value={contato} onChange={e => setContato(e.target.value)} placeholder="Telefone, e-mail, etc." />
-            </div>
-            <div>
-              <Label>Observações</Label>
-              <Textarea value={observacoes} onChange={e => setObservacoes(e.target.value)} rows={2} />
-            </div>
+
+            {/* Show form fields only for new supplier */}
+            {selectedFornecedorId === "new" && (
+              <>
+                <div>
+                  <Label>Nome *</Label>
+                  <Input value={nome} onChange={e => setNome(e.target.value)} placeholder="Nome do fornecedor" />
+                </div>
+                <div>
+                  <Label>Contato</Label>
+                  <Input value={contato} onChange={e => setContato(e.target.value)} placeholder="Telefone, e-mail, etc." />
+                </div>
+                <div>
+                  <Label>Observações</Label>
+                  <Textarea value={observacoes} onChange={e => setObservacoes(e.target.value)} rows={2} />
+                </div>
+              </>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setNovoFornecedorOpen(false)}>Cancelar</Button>
-            <Button onClick={() => createSupplierMutation.mutate()} disabled={!nome.trim() || createSupplierMutation.isPending}>
-              {createSupplierMutation.isPending ? "Criando..." : "Criar"}
+            <Button
+              onClick={() => createSupplierMutation.mutate()}
+              disabled={(selectedFornecedorId === "new" && !nome.trim()) || createSupplierMutation.isPending}
+            >
+              {createSupplierMutation.isPending ? "Ativando..." : selectedFornecedorId === "new" ? "Criar e Ativar" : "Ativar no Portal"}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
         </DialogContent>
       </Dialog>
 
