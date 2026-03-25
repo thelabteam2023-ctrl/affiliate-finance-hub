@@ -385,6 +385,72 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (action === "update-titular") {
+      const { token, titular_id, nome, email, telefone, data_nascimento, endereco, cep, cidade, observacoes } = await req.json();
+
+      if (!token || typeof token !== "string" || token.length < 32 || !titular_id) {
+        return new Response(
+          JSON.stringify({ error: "Dados inválidos" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const tokenHash = await hashToken(token);
+      const { data: validation, error: valError } = await supabaseAdmin.rpc("validate_supplier_token", {
+        p_token_hash: tokenHash,
+      });
+      if (valError || !validation?.valid) {
+        return new Response(
+          JSON.stringify({ error: "Token inválido" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Verify titular belongs to this supplier workspace
+      const { data: titular, error: titError } = await supabaseAdmin
+        .from("supplier_titulares")
+        .select("id, supplier_workspace_id")
+        .eq("id", titular_id)
+        .eq("supplier_workspace_id", validation.supplier_workspace_id)
+        .single();
+
+      if (titError || !titular) {
+        return new Response(
+          JSON.stringify({ error: "Titular não encontrado" }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const updates: Record<string, any> = { updated_at: new Date().toISOString() };
+      if (nome && typeof nome === "string") {
+        const trimmed = nome.trim();
+        if (trimmed.length < 2 || trimmed.length > 200) throw new Error("Nome inválido");
+        updates.nome = trimmed;
+      }
+      if (email !== undefined) updates.email = email?.trim() || null;
+      if (telefone !== undefined) updates.telefone = telefone?.trim() || null;
+      if (observacoes !== undefined) updates.observacoes = observacoes?.trim() || null;
+      // Note: CPF (documento) is intentionally NOT updatable
+
+      const { error: updateError } = await supabaseAdmin
+        .from("supplier_titulares")
+        .update(updates)
+        .eq("id", titular_id);
+
+      if (updateError) {
+        console.error("update-titular error:", updateError);
+        return new Response(
+          JSON.stringify({ error: "Erro ao atualizar titular" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(JSON.stringify({ success: true }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     if (action === "generate") {
       const authHeader = req.headers.get("Authorization");
       if (!authHeader?.startsWith("Bearer ")) {
