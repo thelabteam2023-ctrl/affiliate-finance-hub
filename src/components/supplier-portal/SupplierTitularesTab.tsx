@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { SwipeableCard } from "./SwipeableCard";
+import { TitularDetailModal } from "./TitularDetailModal";
 
 interface Props {
   supplierWorkspaceId: string;
@@ -42,27 +43,19 @@ const formatCEP = (value: string) => {
   return digits.replace(/(\d{5})(\d)/, "$1-$2").slice(0, 9);
 };
 
-/**
- * Calcula os dias restantes de parceria usando timezone America/Sao_Paulo.
- * Retorna null se não houver data de fim, ou o número de dias restantes (pode ser negativo).
- */
 function calcRemainingDays(dataFim: string | null): number | null {
   if (!dataFim) return null;
-  // Extrair a data civil sem conversão de timezone
   const [year, month, day] = dataFim.split("-").map(Number);
   const fimDate = new Date(year, month - 1, day);
-
-  // Hoje em São Paulo (data civil)
   const nowSP = new Date(
     new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" })
   );
   const todaySP = new Date(nowSP.getFullYear(), nowSP.getMonth(), nowSP.getDate());
-
   const diffMs = fimDate.getTime() - todaySP.getTime();
   return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
 }
 
-function RemainingDaysBadge({ dataInicio, dataFim }: { dataInicio: string | null; dataFim: string | null }) {
+function RemainingDaysBadge({ dataFim }: { dataFim: string | null }) {
   if (!dataFim) return null;
   const remaining = calcRemainingDays(dataFim);
   if (remaining === null) return null;
@@ -72,19 +65,19 @@ function RemainingDaysBadge({ dataInicio, dataFim }: { dataInicio: string | null
 
   if (remaining < 0) {
     color = "bg-destructive/15 text-destructive border-destructive/20";
-    label = `Expirada há ${Math.abs(remaining)} dia${Math.abs(remaining) !== 1 ? "s" : ""}`;
+    label = `Expirada há ${Math.abs(remaining)}d`;
   } else if (remaining === 0) {
     color = "bg-destructive/15 text-destructive border-destructive/20";
     label = "Expira hoje";
   } else if (remaining <= 7) {
     color = "bg-orange-500/15 text-orange-600 border-orange-500/20";
-    label = `${remaining} dia${remaining !== 1 ? "s" : ""} restante${remaining !== 1 ? "s" : ""}`;
+    label = `${remaining}d restante${remaining !== 1 ? "s" : ""}`;
   } else if (remaining <= 30) {
     color = "bg-yellow-500/15 text-yellow-600 border-yellow-500/20";
-    label = `${remaining} dias restantes`;
+    label = `${remaining}d restantes`;
   } else {
     color = "bg-emerald-500/15 text-emerald-600 border-emerald-500/20";
-    label = `${remaining} dias restantes`;
+    label = `${remaining}d restantes`;
   }
 
   return (
@@ -101,12 +94,14 @@ function formatDateBR(dateStr: string | null): string {
   return `${d}/${m}/${y}`;
 }
 
-// Titular card extracted as stable component
+// Titular card - click opens detail, swipe opens edit
 function TitularCard({
   titular,
+  onClickDetail,
   onEdit,
 }: {
   titular: any;
+  onClickDetail: (t: any) => void;
   onEdit: (t: any) => void;
 }) {
   return (
@@ -122,7 +117,7 @@ function TitularCard({
     >
       <Card
         className="border-0 rounded-none shadow-none cursor-pointer group"
-        onClick={() => onEdit(titular)}
+        onClick={() => onClickDetail(titular)}
       >
         <CardContent className="py-3 px-3 sm:px-4">
           <div className="flex items-center justify-between">
@@ -140,18 +135,13 @@ function TitularCard({
               </div>
             </div>
             <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-              <RemainingDaysBadge
-                dataInicio={titular.data_inicio_parceria}
-                dataFim={titular.data_fim_parceria}
-              />
+              <RemainingDaysBadge dataFim={titular.data_fim_parceria} />
               <div className="hidden sm:flex items-center gap-2 text-muted-foreground">
                 {titular.email && <Mail className="h-3.5 w-3.5" />}
                 {titular.telefone && <Phone className="h-3.5 w-3.5" />}
-                <Pencil className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
             </div>
           </div>
-          {/* Mobile: show dates below the name */}
           {(titular.data_inicio_parceria || titular.data_fim_parceria) && (
             <div className="mt-1.5 ml-[38px] sm:ml-[44px] flex items-center gap-2 text-[11px] text-muted-foreground">
               <Calendar className="h-3 w-3 shrink-0" />
@@ -167,8 +157,10 @@ function TitularCard({
 }
 
 export function SupplierTitularesTab({ supplierWorkspaceId }: Props) {
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [editingTitular, setEditingTitular] = useState<any | null>(null);
+  const [viewingTitular, setViewingTitular] = useState<any | null>(null);
   const [nome, setNome] = useState("");
   const [cpf, setCpf] = useState("");
   const [email, setEmail] = useState("");
@@ -225,7 +217,6 @@ export function SupplierTitularesTab({ supplierWorkspaceId }: Props) {
       const result = data as any;
       if (!result?.success) throw new Error(result?.error || "Erro ao criar titular");
 
-      // Update partnership dates separately if provided
       if (result.titular_id && (dataInicioParceria || dataFimParceria)) {
         await supabase
           .from("supplier_titulares")
@@ -280,6 +271,11 @@ export function SupplierTitularesTab({ supplierWorkspaceId }: Props) {
     onError: (e: any) => toast.error(e.message),
   });
 
+  function openDetail(titular: any) {
+    setViewingTitular(titular);
+    setDetailDialogOpen(true);
+  }
+
   function openEdit(titular: any) {
     setEditingTitular(titular);
     setNome(titular.nome || "");
@@ -293,33 +289,25 @@ export function SupplierTitularesTab({ supplierWorkspaceId }: Props) {
     setObservacoes(titular.observacoes || "");
     setDataInicioParceria(titular.data_inicio_parceria || "");
     setDataFimParceria(titular.data_fim_parceria || "");
-    setDialogOpen(true);
+    setEditDialogOpen(true);
   }
 
   function openCreate() {
     setEditingTitular(null);
     resetFormFields();
-    setDialogOpen(true);
+    setEditDialogOpen(true);
   }
 
   function resetFormFields() {
-    setNome("");
-    setCpf("");
-    setEmail("");
-    setTelefone("");
-    setDataNascimento("");
-    setEndereco("");
-    setCep("");
-    setCidade("");
-    setObservacoes("");
-    setDataInicioParceria("");
-    setDataFimParceria("");
+    setNome(""); setCpf(""); setEmail(""); setTelefone("");
+    setDataNascimento(""); setEndereco(""); setCep(""); setCidade("");
+    setObservacoes(""); setDataInicioParceria(""); setDataFimParceria("");
   }
 
   function resetForm() {
     resetFormFields();
     setEditingTitular(null);
-    setDialogOpen(false);
+    setEditDialogOpen(false);
   }
 
   const isEditing = !!editingTitular;
@@ -331,7 +319,6 @@ export function SupplierTitularesTab({ supplierWorkspaceId }: Props) {
         <Plus className="h-3.5 w-3.5" /> Novo Titular
       </Button>
 
-      {/* Swipe hint - mobile only */}
       {titulares.length > 0 && (
         <p className="text-[11px] text-muted-foreground sm:hidden">
           ← Deslize para editar →
@@ -348,12 +335,25 @@ export function SupplierTitularesTab({ supplierWorkspaceId }: Props) {
       ) : (
         <div className="rounded-lg border overflow-hidden divide-y divide-border">
           {titulares.map((t: any) => (
-            <TitularCard key={t.id} titular={t} onEdit={openEdit} />
+            <TitularCard key={t.id} titular={t} onClickDetail={openDetail} onEdit={openEdit} />
           ))}
         </div>
       )}
 
-      <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) resetForm(); else setDialogOpen(true); }}>
+      {/* Detail / History Modal */}
+      <TitularDetailModal
+        open={detailDialogOpen}
+        onOpenChange={setDetailDialogOpen}
+        titular={viewingTitular}
+        supplierToken={supplierToken}
+        onEditTitular={() => {
+          setDetailDialogOpen(false);
+          if (viewingTitular) openEdit(viewingTitular);
+        }}
+      />
+
+      {/* Edit / Create Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={(open) => { if (!open) resetForm(); else setEditDialogOpen(true); }}>
         <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -369,17 +369,10 @@ export function SupplierTitularesTab({ supplierWorkspaceId }: Props) {
           </DialogHeader>
 
           <div className="space-y-4">
-            {/* Dados básicos */}
             <div className="space-y-3">
               <div>
                 <Label>Nome Completo <span className="text-destructive">*</span></Label>
-                <Input
-                  value={nome}
-                  onChange={e => setNome(e.target.value)}
-                  placeholder="Nome completo"
-                  autoFocus
-                  disabled={isPending}
-                />
+                <Input value={nome} onChange={e => setNome(e.target.value)} placeholder="Nome completo" autoFocus disabled={isPending} />
               </div>
 
               <div>
@@ -392,10 +385,8 @@ export function SupplierTitularesTab({ supplierWorkspaceId }: Props) {
                   )}
                 </Label>
                 <Input
-                  value={cpf}
-                  onChange={e => setCpf(formatCPF(e.target.value))}
-                  placeholder="000.000.000-00"
-                  maxLength={14}
+                  value={cpf} onChange={e => setCpf(formatCPF(e.target.value))}
+                  placeholder="000.000.000-00" maxLength={14}
                   disabled={isEditing || isPending}
                   className={isEditing ? "opacity-60 cursor-not-allowed" : ""}
                 />
@@ -407,26 +398,14 @@ export function SupplierTitularesTab({ supplierWorkspaceId }: Props) {
                     <Mail className="h-3.5 w-3.5 text-muted-foreground" /> E-mail
                     <span className="text-xs font-normal text-muted-foreground">(opcional)</span>
                   </Label>
-                  <Input
-                    type="email"
-                    value={email}
-                    onChange={e => setEmail(e.target.value)}
-                    placeholder="email@exemplo.com"
-                    disabled={isPending}
-                  />
+                  <Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="email@exemplo.com" disabled={isPending} />
                 </div>
                 <div>
                   <Label className="flex items-center gap-1.5">
                     <Phone className="h-3.5 w-3.5 text-muted-foreground" /> Telefone
                     <span className="text-xs font-normal text-muted-foreground">(opcional)</span>
                   </Label>
-                  <Input
-                    value={telefone}
-                    onChange={e => setTelefone(formatPhone(e.target.value))}
-                    placeholder="(11) 99999-9999"
-                    maxLength={15}
-                    disabled={isPending}
-                  />
+                  <Input value={telefone} onChange={e => setTelefone(formatPhone(e.target.value))} placeholder="(11) 99999-9999" maxLength={15} disabled={isPending} />
                 </div>
               </div>
 
@@ -436,49 +415,28 @@ export function SupplierTitularesTab({ supplierWorkspaceId }: Props) {
                     <Calendar className="h-3.5 w-3.5 text-muted-foreground" /> Data de Nascimento
                     <span className="text-xs font-normal text-muted-foreground">(opcional)</span>
                   </Label>
-                  <Input
-                    type="date"
-                    value={dataNascimento}
-                    onChange={e => setDataNascimento(e.target.value)}
-                    disabled={isPending}
-                  />
+                  <Input type="date" value={dataNascimento} onChange={e => setDataNascimento(e.target.value)} disabled={isPending} />
                 </div>
               )}
             </div>
 
-            {/* Datas da Parceria */}
+            {/* Período da Parceria */}
             <div className="space-y-3 border-t border-border/40 pt-4">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
                 <Clock className="h-3.5 w-3.5" /> Período da Parceria
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <Label className="flex items-center gap-1.5">
-                    Data de Início
-                  </Label>
-                  <Input
-                    type="date"
-                    value={dataInicioParceria}
-                    onChange={e => setDataInicioParceria(e.target.value)}
-                    disabled={isPending}
-                  />
+                  <Label>Data de Início</Label>
+                  <Input type="date" value={dataInicioParceria} onChange={e => setDataInicioParceria(e.target.value)} disabled={isPending} />
                 </div>
                 <div>
-                  <Label className="flex items-center gap-1.5">
-                    Data de Fim Prevista
-                  </Label>
-                  <Input
-                    type="date"
-                    value={dataFimParceria}
-                    onChange={e => setDataFimParceria(e.target.value)}
-                    disabled={isPending}
-                  />
+                  <Label>Data de Fim Prevista</Label>
+                  <Input type="date" value={dataFimParceria} onChange={e => setDataFimParceria(e.target.value)} disabled={isPending} />
                 </div>
               </div>
               {dataFimParceria && (
-                <div className="flex items-center">
-                  <RemainingDaysBadge dataInicio={dataInicioParceria} dataFim={dataFimParceria} />
-                </div>
+                <RemainingDaysBadge dataFim={dataFimParceria} />
               )}
             </div>
 
@@ -492,54 +450,29 @@ export function SupplierTitularesTab({ supplierWorkspaceId }: Props) {
                   <Label className="flex items-center gap-1.5">
                     <MapPin className="h-3.5 w-3.5 text-muted-foreground" /> Endereço
                   </Label>
-                  <Input
-                    value={endereco}
-                    onChange={e => setEndereco(e.target.value)}
-                    placeholder="Rua, número, complemento"
-                    disabled={isPending}
-                  />
+                  <Input value={endereco} onChange={e => setEndereco(e.target.value)} placeholder="Rua, número, complemento" disabled={isPending} />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label>CEP</Label>
-                    <Input
-                      value={cep}
-                      onChange={e => setCep(formatCEP(e.target.value))}
-                      placeholder="00000-000"
-                      maxLength={9}
-                      disabled={isPending}
-                    />
+                    <Input value={cep} onChange={e => setCep(formatCEP(e.target.value))} placeholder="00000-000" maxLength={9} disabled={isPending} />
                   </div>
                   <div>
                     <Label>Cidade</Label>
-                    <Input
-                      value={cidade}
-                      onChange={e => setCidade(e.target.value)}
-                      placeholder="Cidade / UF"
-                      disabled={isPending}
-                    />
+                    <Input value={cidade} onChange={e => setCidade(e.target.value)} placeholder="Cidade / UF" disabled={isPending} />
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Observações */}
             <div>
               <Label>Observações <span className="text-xs font-normal text-muted-foreground">(opcional)</span></Label>
-              <Textarea
-                value={observacoes}
-                onChange={e => setObservacoes(e.target.value)}
-                rows={2}
-                placeholder="Notas internas (opcional)"
-                disabled={isPending}
-              />
+              <Textarea value={observacoes} onChange={e => setObservacoes(e.target.value)} rows={2} placeholder="Notas internas (opcional)" disabled={isPending} />
             </div>
           </div>
 
           <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button variant="outline" onClick={() => resetForm()} disabled={isPending}>
-              Cancelar
-            </Button>
+            <Button variant="outline" onClick={() => resetForm()} disabled={isPending}>Cancelar</Button>
             <Button
               onClick={() => isEditing ? updateMutation.mutate() : createMutation.mutate()}
               disabled={!nome.trim() || (!isEditing && !cpf.replace(/\D/g, "")) || isPending}

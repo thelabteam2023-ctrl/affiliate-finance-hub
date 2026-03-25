@@ -526,6 +526,165 @@ Deno.serve(async (req) => {
       );
     }
 
+    // ── get-titular-history: fetch transactions for a titular's linked parceiro ──
+    if (action === "get-titular-history") {
+      const { token, titular_id } = await req.json();
+      if (!token || !titular_id) {
+        return new Response(JSON.stringify({ error: "Dados inválidos" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      const tokenHash = await hashToken(token);
+      const { data: validation, error: valError } = await supabaseAdmin.rpc("validate_supplier_token", { p_token_hash: tokenHash });
+      if (valError || !validation?.valid) {
+        return new Response(JSON.stringify({ error: "Token inválido" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      // Verify titular belongs to workspace
+      const { data: titular } = await supabaseAdmin
+        .from("supplier_titulares")
+        .select("id, nome")
+        .eq("id", titular_id)
+        .eq("supplier_workspace_id", validation.supplier_workspace_id)
+        .single();
+      if (!titular) {
+        return new Response(JSON.stringify({ error: "Titular não encontrado" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      // Find linked parceiro
+      const { data: parceiro } = await supabaseAdmin
+        .from("parceiros")
+        .select("id, nome")
+        .eq("supplier_titular_id", titular_id)
+        .maybeSingle();
+
+      if (!parceiro) {
+        return new Response(JSON.stringify({ transactions: [], bancos: [] }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      // Fetch transactions (last 200)
+      const { data: transactions } = await supabaseAdmin
+        .from("cash_ledger")
+        .select("id, tipo_transacao, data_transacao, valor, moeda, status, descricao, created_at, destino_tipo, origem_tipo")
+        .or(`origem_parceiro_id.eq.${parceiro.id},destino_parceiro_id.eq.${parceiro.id}`)
+        .eq("workspace_id", validation.supplier_workspace_id)
+        .order("data_transacao", { ascending: false })
+        .limit(200);
+
+      // Fetch contas bancarias
+      const { data: contasBancarias } = await supabaseAdmin
+        .from("contas_bancarias")
+        .select("id, banco, agencia, conta, tipo_conta, titular, pix_key, moeda")
+        .eq("parceiro_id", parceiro.id);
+
+      return new Response(JSON.stringify({
+        parceiro_id: parceiro.id,
+        parceiro_nome: parceiro.nome,
+        transactions: transactions || [],
+        contas_bancarias: contasBancarias || [],
+      }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // ── CRUD for supplier_titular_bancos ──
+    if (action === "manage-banco") {
+      const { token, titular_id, operation, banco_id, banco_nome, agencia, conta, tipo_conta, pix_key, pix_tipo, titular_conta, observacoes } = await req.json();
+      if (!token || !titular_id || !operation) {
+        return new Response(JSON.stringify({ error: "Dados inválidos" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      const tokenHash = await hashToken(token);
+      const { data: validation, error: valError } = await supabaseAdmin.rpc("validate_supplier_token", { p_token_hash: tokenHash });
+      if (valError || !validation?.valid) {
+        return new Response(JSON.stringify({ error: "Token inválido" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      // Verify titular belongs to workspace
+      const { data: titular } = await supabaseAdmin
+        .from("supplier_titulares")
+        .select("id")
+        .eq("id", titular_id)
+        .eq("supplier_workspace_id", validation.supplier_workspace_id)
+        .single();
+      if (!titular) {
+        return new Response(JSON.stringify({ error: "Titular não encontrado" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      if (operation === "list") {
+        const { data: bancos } = await supabaseAdmin
+          .from("supplier_titular_bancos")
+          .select("*")
+          .eq("titular_id", titular_id)
+          .eq("supplier_workspace_id", validation.supplier_workspace_id)
+          .order("created_at", { ascending: false });
+        return new Response(JSON.stringify({ bancos: bancos || [] }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      if (operation === "create") {
+        if (!banco_nome) {
+          return new Response(JSON.stringify({ error: "Nome do banco é obrigatório" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        const { error: insertErr } = await supabaseAdmin.from("supplier_titular_bancos").insert({
+          titular_id,
+          supplier_workspace_id: validation.supplier_workspace_id,
+          banco_nome: banco_nome.trim(),
+          agencia: agencia?.trim() || null,
+          conta: conta?.trim() || null,
+          tipo_conta: tipo_conta || "corrente",
+          pix_key: pix_key?.trim() || null,
+          pix_tipo: pix_tipo?.trim() || null,
+          titular_conta: titular_conta?.trim() || null,
+          observacoes: observacoes?.trim() || null,
+        });
+        if (insertErr) {
+          console.error("create-banco error:", insertErr);
+          return new Response(JSON.stringify({ error: "Erro ao criar banco" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        return new Response(JSON.stringify({ success: true }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      if (operation === "update") {
+        if (!banco_id) {
+          return new Response(JSON.stringify({ error: "banco_id obrigatório" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        const updates: Record<string, any> = { updated_at: new Date().toISOString() };
+        if (banco_nome !== undefined) updates.banco_nome = banco_nome?.trim() || null;
+        if (agencia !== undefined) updates.agencia = agencia?.trim() || null;
+        if (conta !== undefined) updates.conta = conta?.trim() || null;
+        if (tipo_conta !== undefined) updates.tipo_conta = tipo_conta;
+        if (pix_key !== undefined) updates.pix_key = pix_key?.trim() || null;
+        if (pix_tipo !== undefined) updates.pix_tipo = pix_tipo?.trim() || null;
+        if (titular_conta !== undefined) updates.titular_conta = titular_conta?.trim() || null;
+        if (observacoes !== undefined) updates.observacoes = observacoes?.trim() || null;
+
+        const { error: updateErr } = await supabaseAdmin
+          .from("supplier_titular_bancos")
+          .update(updates)
+          .eq("id", banco_id)
+          .eq("titular_id", titular_id);
+        if (updateErr) {
+          console.error("update-banco error:", updateErr);
+          return new Response(JSON.stringify({ error: "Erro ao atualizar banco" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        return new Response(JSON.stringify({ success: true }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      if (operation === "delete") {
+        if (!banco_id) {
+          return new Response(JSON.stringify({ error: "banco_id obrigatório" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        const { error: delErr } = await supabaseAdmin
+          .from("supplier_titular_bancos")
+          .delete()
+          .eq("id", banco_id)
+          .eq("titular_id", titular_id);
+        if (delErr) {
+          return new Response(JSON.stringify({ error: "Erro ao excluir banco" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        return new Response(JSON.stringify({ success: true }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      return new Response(JSON.stringify({ error: "Operação inválida" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     return new Response(
       JSON.stringify({ error: "Ação não reconhecida" }),
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
