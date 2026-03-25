@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { SwipeableCard } from "./SwipeableCard";
+import { EditLedgerDialog } from "./EditLedgerDialog";
 
 interface Props {
   open: boolean;
