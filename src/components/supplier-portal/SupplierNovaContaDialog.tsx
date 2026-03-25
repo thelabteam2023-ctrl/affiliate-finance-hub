@@ -77,7 +77,7 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
     queryFn: async () => {
       const { data, error } = await supabase
         .from("supplier_titulares")
-        .select("id, nome")
+        .select("id, nome, email")
         .eq("supplier_workspace_id", supplierWorkspaceId)
         .eq("status", "ATIVO")
         .order("nome");
