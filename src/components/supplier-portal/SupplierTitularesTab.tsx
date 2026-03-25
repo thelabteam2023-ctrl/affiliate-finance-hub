@@ -197,11 +197,8 @@ export function SupplierTitularesTab({ supplierWorkspaceId }: Props) {
   const [observacoes, setObservacoes] = useState("");
   const [dataInicioParceria, setDataInicioParceria] = useState("");
   const [diasParceria, setDiasParceria] = useState<number>(0);
-  // Step 2 fields (banco)
+  // Step 2 fields (banco - simplified)
   const [bancoNome, setBancoNome] = useState("");
-  const [bancoAgencia, setBancoAgencia] = useState("");
-  const [bancoConta, setBancoConta] = useState("");
-  const [bancoTipoPix, setBancoTipoPix] = useState("");
   const [bancoChavePix, setBancoChavePix] = useState("");
   const queryClient = useQueryClient();
 
@@ -275,10 +272,7 @@ export function SupplierTitularesTab({ supplierWorkspaceId }: Props) {
               operation: "create",
               titular_id: result.titular_id,
               banco_nome: bancoNome.trim(),
-              agencia: bancoAgencia.trim() || null,
-              conta: bancoConta.trim() || null,
-              tipo_pix: bancoTipoPix || null,
-              chave_pix: bancoChavePix.trim() || null,
+              pix_key: bancoChavePix.trim() || null,
             }),
           }
         );
@@ -367,8 +361,7 @@ export function SupplierTitularesTab({ supplierWorkspaceId }: Props) {
     setNome(""); setCpf(""); setEmail(""); setTelefone("");
     setDataNascimento(""); setEndereco(""); setCep(""); setCidade("");
     setObservacoes(""); setDataInicioParceria(""); setDiasParceria(0);
-    setBancoNome(""); setBancoAgencia(""); setBancoConta("");
-    setBancoTipoPix(""); setBancoChavePix("");
+    setBancoNome(""); setBancoChavePix("");
   }
 
   function resetForm() {
@@ -578,37 +571,9 @@ export function SupplierTitularesTab({ supplierWorkspaceId }: Props) {
                   <Label>Nome do Banco <span className="text-xs font-normal text-muted-foreground">(opcional)</span></Label>
                   <Input value={bancoNome} onChange={e => setBancoNome(e.target.value)} placeholder="Ex: Nubank, Bradesco" disabled={isPending} />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label>Agência</Label>
-                    <Input value={bancoAgencia} onChange={e => setBancoAgencia(e.target.value)} placeholder="0001" disabled={isPending} />
-                  </div>
-                  <div>
-                    <Label>Conta</Label>
-                    <Input value={bancoConta} onChange={e => setBancoConta(e.target.value)} placeholder="12345-6" disabled={isPending} />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <Label>Tipo PIX</Label>
-                    <select
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                      value={bancoTipoPix}
-                      onChange={e => setBancoTipoPix(e.target.value)}
-                      disabled={isPending}
-                    >
-                      <option value="">Selecione...</option>
-                      <option value="CPF">CPF</option>
-                      <option value="CNPJ">CNPJ</option>
-                      <option value="EMAIL">E-mail</option>
-                      <option value="TELEFONE">Telefone</option>
-                      <option value="ALEATORIA">Chave Aleatória</option>
-                    </select>
-                  </div>
-                  <div>
-                    <Label>Chave PIX</Label>
-                    <Input value={bancoChavePix} onChange={e => setBancoChavePix(e.target.value)} placeholder="Chave PIX" disabled={isPending} />
-                  </div>
+                <div>
+                  <Label>Chave PIX</Label>
+                  <Input value={bancoChavePix} onChange={e => setBancoChavePix(e.target.value)} placeholder="CPF, email, telefone, chave aleatória..." disabled={isPending} />
                 </div>
               </div>
             </div>

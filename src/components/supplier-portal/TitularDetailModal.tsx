@@ -9,9 +9,6 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-import {
   ArrowDownLeft, ArrowUpRight, Building2, Calendar, CreditCard, Loader2,
   Pencil, Plus, Trash2, Clock, Landmark,
 } from "lucide-react";
@@ -124,15 +121,8 @@ function BancosTab({ titular, supplierToken }: { titular: any; supplierToken: st
   const [showForm, setShowForm] = useState(false);
   const [editingBanco, setEditingBanco] = useState<any | null>(null);
 
-  // Form fields
   const [bancoNome, setBancoNome] = useState("");
-  const [agencia, setAgencia] = useState("");
-  const [conta, setConta] = useState("");
-  const [tipoConta, setTipoConta] = useState("corrente");
   const [pixKey, setPixKey] = useState("");
-  const [pixTipo, setPixTipo] = useState("");
-  const [titularConta, setTitularConta] = useState("");
-  const [observacoes, setObservacoes] = useState("");
 
   const { data, isLoading } = useQuery({
     queryKey: ["titular-bancos", titular.id],
@@ -146,9 +136,7 @@ function BancosTab({ titular, supplierToken }: { titular: any; supplierToken: st
         titular_id: titular.id,
         operation: editingBanco ? "update" : "create",
         banco_nome: bancoNome,
-        agencia, conta, tipo_conta: tipoConta,
-        pix_key: pixKey, pix_tipo: pixTipo,
-        titular_conta: titularConta, observacoes,
+        pix_key: pixKey || null,
       };
       if (editingBanco) payload.banco_id = editingBanco.id;
       return callEdge("manage-banco", payload);
@@ -174,21 +162,13 @@ function BancosTab({ titular, supplierToken }: { titular: any; supplierToken: st
   function openEditBanco(banco: any) {
     setEditingBanco(banco);
     setBancoNome(banco.banco_nome || "");
-    setAgencia(banco.agencia || "");
-    setConta(banco.conta || "");
-    setTipoConta(banco.tipo_conta || "corrente");
     setPixKey(banco.pix_key || "");
-    setPixTipo(banco.pix_tipo || "");
-    setTitularConta(banco.titular_conta || "");
-    setObservacoes(banco.observacoes || "");
     setShowForm(true);
   }
 
   function resetBancoForm() {
     setEditingBanco(null);
-    setBancoNome(""); setAgencia(""); setConta("");
-    setTipoConta("corrente"); setPixKey(""); setPixTipo("");
-    setTitularConta(""); setObservacoes("");
+    setBancoNome(""); setPixKey("");
     setShowForm(false);
   }
 
@@ -201,62 +181,14 @@ function BancosTab({ titular, supplierToken }: { titular: any; supplierToken: st
           {editingBanco ? "Editar Banco" : "Novo Banco"}
         </p>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <Label>Banco <span className="text-destructive">*</span></Label>
-            <Input value={bancoNome} onChange={e => setBancoNome(e.target.value)} placeholder="Ex: Nubank, Bradesco" />
-          </div>
-          <div>
-            <Label>Tipo de Conta</Label>
-            <Select value={tipoConta} onValueChange={setTipoConta}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="corrente">Corrente</SelectItem>
-                <SelectItem value="poupanca">Poupança</SelectItem>
-                <SelectItem value="pagamento">Pagamento</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <Label>Agência</Label>
-            <Input value={agencia} onChange={e => setAgencia(e.target.value)} placeholder="0001" />
-          </div>
-          <div>
-            <Label>Conta</Label>
-            <Input value={conta} onChange={e => setConta(e.target.value)} placeholder="12345-6" />
-          </div>
+        <div>
+          <Label>Banco <span className="text-destructive">*</span></Label>
+          <Input value={bancoNome} onChange={e => setBancoNome(e.target.value)} placeholder="Ex: Nubank, Bradesco" />
         </div>
 
         <div>
-          <Label>Titular da Conta</Label>
-          <Input value={titularConta} onChange={e => setTitularConta(e.target.value)} placeholder="Nome do titular" />
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <Label>Chave PIX</Label>
-            <Input value={pixKey} onChange={e => setPixKey(e.target.value)} placeholder="CPF, email, telefone..." />
-          </div>
-          <div>
-            <Label>Tipo PIX</Label>
-            <Select value={pixTipo || "cpf"} onValueChange={setPixTipo}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="cpf">CPF</SelectItem>
-                <SelectItem value="email">E-mail</SelectItem>
-                <SelectItem value="telefone">Telefone</SelectItem>
-                <SelectItem value="aleatoria">Chave aleatória</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        <div>
-          <Label>Observações</Label>
-          <Input value={observacoes} onChange={e => setObservacoes(e.target.value)} placeholder="Notas (opcional)" />
+          <Label>Chave PIX</Label>
+          <Input value={pixKey} onChange={e => setPixKey(e.target.value)} placeholder="CPF, email, telefone, chave aleatória..." />
         </div>
 
         <div className="flex gap-2 pt-2">
@@ -321,11 +253,11 @@ function BancosTab({ titular, supplierToken }: { titular: any; supplierToken: st
                   </div>
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-foreground truncate">{banco.banco_nome}</p>
-                    <p className="text-[11px] text-muted-foreground truncate">
-                      {banco.tipo_conta === "corrente" ? "CC" : banco.tipo_conta === "poupanca" ? "CP" : "CP"}
-                      {banco.agencia && ` • Ag ${banco.agencia}`}
-                      {banco.conta && ` • ${banco.conta}`}
-                    </p>
+                    {banco.pix_key && (
+                      <p className="text-[11px] text-muted-foreground truncate">
+                        PIX: {banco.pix_key}
+                      </p>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
@@ -334,7 +266,6 @@ function BancosTab({ titular, supplierToken }: { titular: any; supplierToken: st
                       <CreditCard className="h-2.5 w-2.5" /> PIX
                     </Badge>
                   )}
-                  <Pencil className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 hidden sm:block" />
                 </div>
               </div>
             </SwipeableCard>
@@ -344,7 +275,6 @@ function BancosTab({ titular, supplierToken }: { titular: any; supplierToken: st
     </div>
   );
 }
-
 // ─── Main Modal ───
 export function TitularDetailModal({ open, onOpenChange, titular, supplierToken, onEditTitular }: Props) {
   if (!titular) return null;
