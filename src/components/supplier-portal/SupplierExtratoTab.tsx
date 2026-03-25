@@ -50,7 +50,7 @@ export function SupplierExtratoTab({ supplierWorkspaceId }: Props) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("supplier_ledger")
-        .select("*, supplier_bookmaker_accounts(login_username, bookmakers_catalogo(nome))")
+        .select("*, supplier_bookmaker_accounts(login_username, bookmakers_catalogo(nome, logo_url), supplier_titulares(nome))")
         .eq("supplier_workspace_id", supplierWorkspaceId)
         .order("sequencia", { ascending: false })
         .limit(200);
