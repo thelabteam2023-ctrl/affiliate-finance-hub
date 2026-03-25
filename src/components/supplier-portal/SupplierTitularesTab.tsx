@@ -146,10 +146,6 @@ function TitularCard({
                 {formatCurrency(saldoTotal)}
               </span>
               <RemainingDaysBadge dataFim={titular.data_fim_parceria} />
-              <div className="hidden sm:flex items-center gap-2 text-muted-foreground">
-                {titular.email && <Mail className="h-3.5 w-3.5" />}
-                {titular.telefone && <Phone className="h-3.5 w-3.5" />}
-              </div>
             </div>
           </div>
           {(titular.data_inicio_parceria || titular.data_fim_parceria) && (
