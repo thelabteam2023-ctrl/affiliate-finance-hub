@@ -52,6 +52,7 @@ const SurebetWindowPage = lazy(() => import("./pages/SurebetWindowPage"));
 const ApostaWindowPage = lazy(() => import("./pages/ApostaWindowPage"));
 const ApostaMultiplaWindowPage = lazy(() => import("./pages/ApostaMultiplaWindowPage"));
 const SharedProject = lazy(() => import("./pages/SharedProject"));
+const SupplierPortal = lazy(() => import("./pages/SupplierPortal"));
 
 // ─── QueryClient com defaults globais de performance ───
 const queryClient = new QueryClient({
@@ -146,6 +147,11 @@ const App = () => (
             <Route path="/shared/:token" element={
               <Suspense fallback={<PageLoader />}>
                 <SharedProject />
+              </Suspense>
+            } />
+            <Route path="/portal/fornecedor" element={
+              <Suspense fallback={<PageLoader />}>
+                <SupplierPortal />
               </Suspense>
             } />
 

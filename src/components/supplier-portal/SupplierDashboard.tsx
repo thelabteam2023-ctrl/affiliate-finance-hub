@@ -189,7 +189,7 @@ export function SupplierDashboard({ session }: Props) {
                 {pnl >= 0 ? <TrendingUp className="h-3.5 w-3.5 text-success" /> : <TrendingDown className="h-3.5 w-3.5 text-destructive" />}
                 P&L
               </div>
-              <p className={`text-xl font-bold ${pnl >= 0 ? "text-emerald-500" : "text-destructive"}`}>
+              <p className={`text-xl font-bold ${pnl >= 0 ? "text-success" : "text-destructive"}`}>
                 {formatCurrency(pnl)}
               </p>
             </CardContent>

@@ -83,9 +83,9 @@ export function SupplierExtratoTab({ supplierWorkspaceId }: Props) {
             <CardContent className="py-3 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                  isCredit ? "bg-emerald-500/10" : "bg-destructive/10"
+                  isCredit ? "bg-success/10" : "bg-destructive/10"
                 }`}>
-                  <Icon className={`h-4 w-4 ${isCredit ? "text-emerald-500" : "text-destructive"}`} />
+                  <Icon className={`h-4 w-4 ${isCredit ? "text-success" : "text-destructive"}`} />
                 </div>
                 <div>
                   <p className="text-sm font-medium text-foreground">
@@ -103,7 +103,7 @@ export function SupplierExtratoTab({ supplierWorkspaceId }: Props) {
                 </div>
               </div>
               <div className="text-right">
-                <p className={`text-sm font-semibold ${isCredit ? "text-emerald-500" : "text-destructive"}`}>
+                <p className={`text-sm font-semibold ${isCredit ? "text-success" : "text-destructive"}`}>
                   {isCredit ? "+" : "-"}{formatCurrency(Number(entry.valor))}
                 </p>
                 <p className="text-[10px] text-muted-foreground">
