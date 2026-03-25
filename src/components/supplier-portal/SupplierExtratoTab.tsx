@@ -20,6 +20,7 @@ const TIPO_LABELS: Record<string, string> = {
   TRANSFERENCIA: "Transferência",
   DEVOLUCAO: "Devolução",
   AJUSTE: "Ajuste",
+  PAGAMENTO_TITULAR: "Pagamento ao Titular",
 };
 
 const TIPO_ICONS: Record<string, typeof ArrowUpRight> = {
@@ -30,6 +31,7 @@ const TIPO_ICONS: Record<string, typeof ArrowUpRight> = {
   TRANSFERENCIA: ArrowLeftRight,
   DEVOLUCAO: ArrowDownRight,
   AJUSTE: RefreshCw,
+  PAGAMENTO_TITULAR: ArrowDownRight,
 };
 
 const EDITABLE_TYPES = ["DEPOSITO", "SAQUE", "TRANSFERENCIA_BANCO"];

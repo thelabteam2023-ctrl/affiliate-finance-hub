@@ -31,6 +31,7 @@ const TIPO_LABELS: Record<string, string> = {
   TRANSFERENCIA_BANCO: "Transferência ao Banco",
   ALOCACAO: "Alocação",
   DEVOLUCAO: "Devolução",
+  PAGAMENTO_TITULAR: "Pagamento ao Titular",
 };
 
 export function EditLedgerDialog({ open, onOpenChange, entry, onSuccess }: Props) {
