@@ -134,7 +134,7 @@ export function SupplierDashboard({ session }: Props) {
 
   const saldoContas = (accounts || []).reduce((s, a) => s + Number(a.saldo_atual), 0);
   const saldoDisponivel = metrics.saldoCentral;
-  const pnl = (saldoContas + metrics.totalDevolvido + metrics.totalSacado) - metrics.totalAlocado;
+  
 
   const expiresAt = new Date(session.expires_at);
   const hoursRemaining = Math.max(0, Math.round((expiresAt.getTime() - Date.now()) / (1000 * 60 * 60)));
