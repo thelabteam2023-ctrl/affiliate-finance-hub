@@ -8901,6 +8901,435 @@ export type Database = {
           },
         ]
       }
+      supplier_access_tokens: {
+        Row: {
+          created_at: string
+          created_by: string
+          expires_at: string
+          id: string
+          label: string | null
+          last_used_at: string | null
+          max_uses: number | null
+          metadata: Json | null
+          revoked_at: string | null
+          supplier_profile_id: string
+          supplier_workspace_id: string
+          token_hash: string
+          use_count: number
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          expires_at: string
+          id?: string
+          label?: string | null
+          last_used_at?: string | null
+          max_uses?: number | null
+          metadata?: Json | null
+          revoked_at?: string | null
+          supplier_profile_id: string
+          supplier_workspace_id: string
+          token_hash: string
+          use_count?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          expires_at?: string
+          id?: string
+          label?: string | null
+          last_used_at?: string | null
+          max_uses?: number | null
+          metadata?: Json | null
+          revoked_at?: string | null
+          supplier_profile_id?: string
+          supplier_workspace_id?: string
+          token_hash?: string
+          use_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_access_tokens_supplier_profile_id_fkey"
+            columns: ["supplier_profile_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_access_tokens_supplier_workspace_id_fkey"
+            columns: ["supplier_workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_alocacoes: {
+        Row: {
+          created_at: string
+          created_by: string
+          descricao: string | null
+          id: string
+          moeda: string
+          parent_workspace_id: string
+          status: string
+          supplier_workspace_id: string
+          updated_at: string
+          valor: number
+          valor_sugerido_deposito: number | null
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          descricao?: string | null
+          id?: string
+          moeda?: string
+          parent_workspace_id: string
+          status?: string
+          supplier_workspace_id: string
+          updated_at?: string
+          valor: number
+          valor_sugerido_deposito?: number | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          descricao?: string | null
+          id?: string
+          moeda?: string
+          parent_workspace_id?: string
+          status?: string
+          supplier_workspace_id?: string
+          updated_at?: string
+          valor?: number
+          valor_sugerido_deposito?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_alocacoes_parent_workspace_id_fkey"
+            columns: ["parent_workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_alocacoes_supplier_workspace_id_fkey"
+            columns: ["supplier_workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_bookmaker_accounts: {
+        Row: {
+          bookmaker_catalogo_id: string
+          created_at: string
+          id: string
+          login_email: string | null
+          login_password_encrypted: string
+          login_username: string
+          moeda: string
+          observacoes: string | null
+          saldo_atual: number
+          status: string
+          supplier_workspace_id: string
+          titular_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          bookmaker_catalogo_id: string
+          created_at?: string
+          id?: string
+          login_email?: string | null
+          login_password_encrypted: string
+          login_username: string
+          moeda?: string
+          observacoes?: string | null
+          saldo_atual?: number
+          status?: string
+          supplier_workspace_id: string
+          titular_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          bookmaker_catalogo_id?: string
+          created_at?: string
+          id?: string
+          login_email?: string | null
+          login_password_encrypted?: string
+          login_username?: string
+          moeda?: string
+          observacoes?: string | null
+          saldo_atual?: number
+          status?: string
+          supplier_workspace_id?: string
+          titular_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_bookmaker_accounts_bookmaker_catalogo_id_fkey"
+            columns: ["bookmaker_catalogo_id"]
+            isOneToOne: false
+            referencedRelation: "bookmakers_catalogo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_bookmaker_accounts_bookmaker_catalogo_id_fkey"
+            columns: ["bookmaker_catalogo_id"]
+            isOneToOne: false
+            referencedRelation: "v_community_bookmaker_stats"
+            referencedColumns: ["bookmaker_catalogo_id"]
+          },
+          {
+            foreignKeyName: "supplier_bookmaker_accounts_supplier_workspace_id_fkey"
+            columns: ["supplier_workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_bookmaker_accounts_titular_id_fkey"
+            columns: ["titular_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_titulares"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_ledger: {
+        Row: {
+          bookmaker_account_id: string | null
+          created_at: string
+          created_by: string
+          descricao: string | null
+          direcao: string
+          id: string
+          idempotency_key: string | null
+          metadata: Json | null
+          saldo_antes: number
+          saldo_depois: number
+          sequencia: number
+          supplier_workspace_id: string
+          tipo: string
+          valor: number
+        }
+        Insert: {
+          bookmaker_account_id?: string | null
+          created_at?: string
+          created_by: string
+          descricao?: string | null
+          direcao: string
+          id?: string
+          idempotency_key?: string | null
+          metadata?: Json | null
+          saldo_antes: number
+          saldo_depois: number
+          sequencia: number
+          supplier_workspace_id: string
+          tipo: string
+          valor: number
+        }
+        Update: {
+          bookmaker_account_id?: string | null
+          created_at?: string
+          created_by?: string
+          descricao?: string | null
+          direcao?: string
+          id?: string
+          idempotency_key?: string | null
+          metadata?: Json | null
+          saldo_antes?: number
+          saldo_depois?: number
+          sequencia?: number
+          supplier_workspace_id?: string
+          tipo?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_ledger_bookmaker_account_id_fkey"
+            columns: ["bookmaker_account_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_bookmaker_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_ledger_supplier_workspace_id_fkey"
+            columns: ["supplier_workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_profiles: {
+        Row: {
+          contato: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          nome: string
+          observacoes: string | null
+          parent_workspace_id: string
+          status: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          contato?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          nome: string
+          observacoes?: string | null
+          parent_workspace_id: string
+          status?: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          contato?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          nome?: string
+          observacoes?: string | null
+          parent_workspace_id?: string
+          status?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_profiles_parent_workspace_id_fkey"
+            columns: ["parent_workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_profiles_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_reconciliacoes: {
+        Row: {
+          aprovado_at: string | null
+          aprovado_por: string | null
+          created_at: string
+          divergencia: number
+          id: string
+          observacoes: string | null
+          periodo_fim: string | null
+          periodo_inicio: string | null
+          pnl_calculado: number
+          saldo_consolidado_calculado: number
+          snapshot_contas: Json | null
+          status: string
+          supplier_workspace_id: string
+          total_alocado: number
+          total_devolvido: number
+        }
+        Insert: {
+          aprovado_at?: string | null
+          aprovado_por?: string | null
+          created_at?: string
+          divergencia?: number
+          id?: string
+          observacoes?: string | null
+          periodo_fim?: string | null
+          periodo_inicio?: string | null
+          pnl_calculado?: number
+          saldo_consolidado_calculado?: number
+          snapshot_contas?: Json | null
+          status?: string
+          supplier_workspace_id: string
+          total_alocado?: number
+          total_devolvido?: number
+        }
+        Update: {
+          aprovado_at?: string | null
+          aprovado_por?: string | null
+          created_at?: string
+          divergencia?: number
+          id?: string
+          observacoes?: string | null
+          periodo_fim?: string | null
+          periodo_inicio?: string | null
+          pnl_calculado?: number
+          saldo_consolidado_calculado?: number
+          snapshot_contas?: Json | null
+          status?: string
+          supplier_workspace_id?: string
+          total_alocado?: number
+          total_devolvido?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_reconciliacoes_supplier_workspace_id_fkey"
+            columns: ["supplier_workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_titulares: {
+        Row: {
+          created_at: string
+          documento: string | null
+          documento_tipo: string | null
+          email: string | null
+          id: string
+          nome: string
+          observacoes: string | null
+          status: string
+          supplier_workspace_id: string
+          telefone: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          documento?: string | null
+          documento_tipo?: string | null
+          email?: string | null
+          id?: string
+          nome: string
+          observacoes?: string | null
+          status?: string
+          supplier_workspace_id: string
+          telefone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          documento?: string | null
+          documento_tipo?: string | null
+          email?: string | null
+          id?: string
+          nome?: string
+          observacoes?: string | null
+          status?: string
+          supplier_workspace_id?: string
+          telefone?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_titulares_supplier_workspace_id_fkey"
+            columns: ["supplier_workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       transacoes_bookmakers: {
         Row: {
           bookmaker_id: string
@@ -9723,9 +10152,11 @@ export type Database = {
           max_active_partners: number
           max_users: number
           name: string
+          parent_workspace_id: string | null
           plan: string
           settings: Json | null
           slug: string | null
+          tipo: string
           updated_at: string
         }
         Insert: {
@@ -9737,9 +10168,11 @@ export type Database = {
           max_active_partners?: number
           max_users?: number
           name: string
+          parent_workspace_id?: string | null
           plan?: string
           settings?: Json | null
           slug?: string | null
+          tipo?: string
           updated_at?: string
         }
         Update: {
@@ -9751,12 +10184,22 @@ export type Database = {
           max_active_partners?: number
           max_users?: number
           name?: string
+          parent_workspace_id?: string | null
           plan?: string
           settings?: Json | null
           slug?: string | null
+          tipo?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "workspaces_parent_workspace_id_fkey"
+            columns: ["parent_workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -12274,6 +12717,26 @@ export type Database = {
         }
         Relationships: []
       }
+      v_supplier_pnl: {
+        Row: {
+          saldo_consolidado: number | null
+          supplier_nome: string | null
+          supplier_workspace_id: string | null
+          total_alocado: number | null
+          total_depositado_contas: number | null
+          total_devolvido: number | null
+          total_sacado: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_ledger_supplier_workspace_id_fkey"
+            columns: ["supplier_workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       v_user_last_login: {
         Row: {
           email: string | null
@@ -13746,6 +14209,20 @@ export type Database = {
         Args: { _workspace_id: string }
         Returns: boolean
       }
+      supplier_ledger_insert: {
+        Args: {
+          p_bookmaker_account_id: string
+          p_created_by?: string
+          p_descricao?: string
+          p_direcao: string
+          p_idempotency_key?: string
+          p_metadata?: Json
+          p_supplier_workspace_id: string
+          p_tipo: string
+          p_valor: number
+        }
+        Returns: Json
+      }
       sync_all_bonus_rollovers: {
         Args: never
         Returns: {
@@ -13854,6 +14331,7 @@ export type Database = {
         Args: { _user_id: string; _workspace_id: string }
         Returns: boolean
       }
+      validate_supplier_token: { Args: { p_token_hash: string }; Returns: Json }
       verificar_ciclos_vencidos: { Args: never; Returns: number }
       workspace_has_group_access: {
         Args: { _bookmaker_catalogo_id: string; _workspace_id: string }
