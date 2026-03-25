@@ -159,6 +159,7 @@ export function SupplierTransacaoDialog({
         p_descricao: descricao || `Envio para banco: ${selectedBanco?.banco_nome || "banco"}`,
         p_created_by: "SUPPLIER",
         p_idempotency_key: `TRANSF_BANCO_${bancoId}_${Date.now()}`,
+        p_metadata: { banco_id: bancoId, banco_nome: selectedBanco?.banco_nome, titular_id: titularId },
       });
 
       if (error) throw error;
