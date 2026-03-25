@@ -27,7 +27,7 @@ export function SupplierBookmakerConfigDialog({ open, onOpenChange, supplierWork
       const { data, error } = await supabase
         .from("bookmakers_catalogo")
         .select("id, nome, logo_url")
-        .eq("status", "ATIVO")
+        .in("status", ["REGULAMENTADA", "NAO_REGULAMENTADA"])
         .order("nome");
       if (error) throw error;
       return data || [];
