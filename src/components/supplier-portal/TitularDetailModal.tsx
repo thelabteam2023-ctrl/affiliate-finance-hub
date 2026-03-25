@@ -22,6 +22,7 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   titular: any;
   supplierToken: string;
+  supplierWorkspaceId: string;
   onEditTitular: () => void;
 }
 
@@ -90,6 +91,7 @@ function HistoryTab({ titular, supplierToken }: { titular: any; supplierToken: s
     if (tipo === "TRANSFERENCIA_BANCO" && direcao === "DEBIT") return "Enviado ao banco";
     if (tipo === "ALOCACAO") return "Alocação de capital";
     if (tipo === "DEVOLUCAO") return "Devolução";
+    if (tipo === "PAGAMENTO_TITULAR") return "Pagamento ao titular";
     return tipo?.replace(/_/g, " ");
   }
 
