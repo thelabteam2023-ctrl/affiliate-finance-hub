@@ -21,10 +21,14 @@ import { useAuth } from "@/hooks/useAuth";
 
 const NovoParceiro = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const { user, workspaceId } = useAuth();
   const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Pre-select fornecedor from query param
+  const fornecedorIdParam = searchParams.get("fornecedor_id") || "";
 
   const [formData, setFormData] = useState({
     nome: "",
@@ -39,6 +43,23 @@ const NovoParceiro = () => {
     senha: "",
     status: "ATIVO",
     notas: "",
+    fornecedorOrigemId: fornecedorIdParam,
+  });
+
+  // Fetch fornecedores for the dropdown
+  const { data: fornecedores = [] } = useQuery({
+    queryKey: ["fornecedores-lista", workspaceId],
+    queryFn: async () => {
+      if (!workspaceId) return [];
+      const { data } = await supabase
+        .from("fornecedores")
+        .select("id, nome")
+        .eq("workspace_id", workspaceId)
+        .eq("status", "ATIVO")
+        .order("nome");
+      return data || [];
+    },
+    enabled: !!workspaceId,
   });
 
   const handleChange = (field: string, value: string) => {
