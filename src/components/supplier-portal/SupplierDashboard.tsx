@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Wallet, Building2, Users, ScrollText, Shield,
-  TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight,
   Clock
 } from "lucide-react";
 import { SupplierContasTab } from "./SupplierContasTab";
