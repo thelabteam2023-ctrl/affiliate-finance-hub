@@ -65,8 +65,8 @@ export function SupplierTransacaoDialog({
   const { data: bancos, refetch: refetchBancos } = useQuery({
     queryKey: ["supplier-workspace-bancos", supplierWorkspaceId],
     queryFn: async () => {
-      const { data } = await supabase.functions.invoke("supplier-auth?action=list-workspace-bancos", {
-        body: { token },
+      const { data } = await supabase.functions.invoke("supplier-auth", {
+        body: { action: "list-workspace-bancos", token },
       });
       return (data?.bancos || []).map((b: any) => ({
         id: b.id,
@@ -159,8 +159,8 @@ export function SupplierTransacaoDialog({
       if (!result?.success) throw new Error(result?.error || "Erro ao processar");
 
       // 2. Credit bank balance
-      const { data: bancoResult } = await supabase.functions.invoke("supplier-auth?action=update-banco-saldo", {
-        body: {
+      const { data: bancoResult } = await supabase.functions.invoke("supplier-auth", {
+        body: { action: "update-banco-saldo",
           token,
           banco_id: bancoId,
           valor: numValor,
@@ -217,8 +217,8 @@ export function SupplierTransacaoDialog({
       const result = data as any;
       if (!result?.success) throw new Error(result?.error || "Erro ao processar");
 
-      const { data: bancoResult } = await supabase.functions.invoke("supplier-auth?action=update-banco-saldo", {
-        body: {
+      const { data: bancoResult } = await supabase.functions.invoke("supplier-auth", {
+        body: { action: "update-banco-saldo",
           token,
           banco_id: bancoId,
           valor: numValor,
