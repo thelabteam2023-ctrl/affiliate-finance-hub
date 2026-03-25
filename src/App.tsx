@@ -23,6 +23,7 @@ import { Loader2 } from "lucide-react";
 // ─── Eager imports: lightweight pages / public routes ───
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import ResetPassword from "./pages/ResetPassword";
 import AcceptInvite from "./pages/AcceptInvite";
 import NotFound from "./pages/NotFound";
 
@@ -144,6 +145,7 @@ const App = () => (
             {/* Public routes - no layout */}
             <Route path="/landing" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/accept-invite" element={<AcceptInvite />} />
             <Route path="/shared/:token" element={
               <Suspense fallback={<PageLoader />}>
