@@ -556,20 +556,36 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
 
       {/* Dialog: Alocar Capital */}
       <Dialog open={alocacaoOpen} onOpenChange={setAlocacaoOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Alocar Capital - {selectedSupplier?.nome}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Wallet className="h-5 w-5 text-emerald-400" />
+              Alocar Capital - {selectedSupplier?.nome}
+            </DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
+          <div className="space-y-4 py-2">
+            {/* Origem do Capital */}
+            <OrigemPagamentoSelect
+              value={origemData}
+              onChange={setOrigemData}
+              valorPagamento={valorAlocacaoNum}
+              disabled={allocateMutation.isPending}
+            />
+
+            {/* Valor */}
             <div>
-              <Label>Valor (R$) *</Label>
+              <Label>Valor ({origemData.moeda}) *</Label>
               <Input type="number" step="0.01" value={valorAlocacao} onChange={e => setValorAlocacao(e.target.value)} placeholder="10000.00" />
             </div>
+
+            {/* Valor sugerido por depósito */}
             <div>
               <Label>Valor Sugerido por Depósito</Label>
               <Input type="number" step="0.01" value={valorSugerido} onChange={e => setValorSugerido(e.target.value)} placeholder="1000.00 (opcional)" />
               <p className="text-xs text-muted-foreground mt-1">O fornecedor verá essa sugestão ao fazer depósitos</p>
             </div>
+
+            {/* Descrição */}
             <div>
               <Label>Descrição</Label>
               <Textarea value={descricaoAlocacao} onChange={e => setDescricaoAlocacao(e.target.value)} rows={2} placeholder="Motivo da alocação" />
@@ -577,7 +593,11 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAlocacaoOpen(false)}>Cancelar</Button>
-            <Button onClick={() => allocateMutation.mutate()} disabled={!valorAlocacao || allocateMutation.isPending}>
+            <Button
+              onClick={() => allocateMutation.mutate()}
+              disabled={!valorAlocacao || allocateMutation.isPending || isSaldoInsuficiente}
+              title={isSaldoInsuficiente ? "Saldo insuficiente para realizar esta alocação" : undefined}
+            >
               {allocateMutation.isPending ? "Alocando..." : "Alocar Capital"}
             </Button>
           </DialogFooter>
