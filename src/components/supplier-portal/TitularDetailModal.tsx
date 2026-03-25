@@ -333,7 +333,7 @@ export function TitularDetailModal({ open, onOpenChange, titular, supplierToken,
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base">
             {titular.nome}
