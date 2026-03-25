@@ -183,10 +183,8 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
           const encrypted = credMap.get(id)!.encryptedPassword;
           try {
             const decrypted = await decryptPassword(encrypted);
-            console.log(`[AutoFill] Decrypt for ${id}: success=${!!decrypted}, encrypted_len=${encrypted.length}`);
             return { id, decrypted };
-          } catch (err) {
-            console.error(`[AutoFill] Decrypt failed for ${id}:`, err);
+          } catch {
             return { id, decrypted: "" };
           }
         })
@@ -196,9 +194,6 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
           decryptedMap.set(r.value.id, r.value.decrypted);
         }
       });
-      if (decryptedMap.size === 0 && idsToDecrypt.length > 0) {
-        console.warn("[AutoFill] No passwords were decrypted. Edge function may be failing.");
-      }
     } catch (err) {
       console.error("[AutoFill] Batch decrypt error:", err);
       toast.error("Erro ao descriptografar algumas senhas");
@@ -254,10 +249,26 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
     })));
   }
 
-  const allContasFilled = contas.every(c => c.username.trim() && c.password.trim());
+  const MAX_USERNAME_LEN = 100;
+  const MAX_PASSWORD_LEN = 200;
+
+  const allContasFilled = contas.every(c => {
+    const u = c.username.trim();
+    const p = c.password.trim();
+    return u.length > 0 && u.length <= MAX_USERNAME_LEN && p.length > 0 && p.length <= MAX_PASSWORD_LEN;
+  });
 
   const createMutation = useMutation({
     mutationFn: async () => {
+      // Validate all entries before any encryption
+      for (const c of contas) {
+        const u = c.username.trim();
+        const p = c.password.trim();
+        if (!u || !p) throw new Error("Login e senha são obrigatórios para todas as contas.");
+        if (u.length > MAX_USERNAME_LEN) throw new Error(`Login muito longo para ${c.catalogoNome}`);
+        if (p.length > MAX_PASSWORD_LEN) throw new Error(`Senha muito longa para ${c.catalogoNome}`);
+      }
+
       // Encrypt passwords before saving
       const rows = await Promise.all(contas.map(async (c) => {
         const encryptedPw = await encryptPassword(c.password.trim());
