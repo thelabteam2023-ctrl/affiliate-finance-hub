@@ -168,7 +168,7 @@ export function SupplierDashboard({ session }: Props) {
 
       <div className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
         {/* KPI Cards */}
-        <div className="grid grid-cols-2 gap-2 sm:gap-4 md:grid-cols-4">
+        <div className="grid grid-cols-3 gap-2 sm:gap-4">
           <Card className="cursor-pointer hover:border-primary/30 transition-colors" onClick={() => { if (saldoDisponivel > 0) { setTransacaoTipo("TRANSFERENCIA_BANCO"); setTransacaoOpen(true); } }}>
             <CardContent className="pt-3 sm:pt-4 pb-2 sm:pb-3 px-3 sm:px-4">
               <div className="flex items-center gap-1.5 text-muted-foreground text-[10px] sm:text-xs mb-0.5 sm:mb-1">
@@ -195,22 +195,10 @@ export function SupplierDashboard({ session }: Props) {
           <Card>
             <CardContent className="pt-3 sm:pt-4 pb-2 sm:pb-3 px-3 sm:px-4">
               <div className="flex items-center gap-1.5 text-muted-foreground text-[10px] sm:text-xs mb-0.5 sm:mb-1">
-                <ArrowUpRight className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                Total Alocado
+                <Wallet className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                Em Bancos
               </div>
-              <p className="text-base sm:text-xl font-bold text-foreground tabular-nums">{formatCurrency(metrics.totalAlocado)}</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-3 sm:pt-4 pb-2 sm:pb-3 px-3 sm:px-4">
-              <div className="flex items-center gap-1.5 text-muted-foreground text-[10px] sm:text-xs mb-0.5 sm:mb-1">
-                {pnl >= 0 ? <TrendingUp className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-success" /> : <TrendingDown className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-destructive" />}
-                P&L
-              </div>
-              <p className={`text-base sm:text-xl font-bold tabular-nums ${pnl >= 0 ? "text-success" : "text-destructive"}`}>
-                {formatCurrency(pnl)}
-              </p>
+              <p className="text-base sm:text-xl font-bold text-foreground tabular-nums">{formatCurrency(saldoBancos)}</p>
             </CardContent>
           </Card>
         </div>
