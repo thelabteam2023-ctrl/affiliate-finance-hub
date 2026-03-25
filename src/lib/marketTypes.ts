@@ -90,6 +90,10 @@ export const DOMAINS_BY_SPORT: Record<string, MarketDomain[]> = {
   "Futebol Americano": ["POINTS"],
   "NFL": ["POINTS"],
   
+  // Handebol
+  "Handebol": ["GOALS"],
+  "Handball": ["GOALS"],
+  
   // Hockey
   "Hockey": ["GOALS"],
   "NHL": ["GOALS"],
@@ -174,6 +178,7 @@ export const MARKET_TYPES_BY_SPORT: Record<string, MarketType[]> = {
   "NBA": ["MONEYLINE", "TOTAL", "HANDICAP", "FIRST_HALF", "FIRST_QUARTER", "OTHER"],
   "Tênis": ["MONEYLINE", "TOTAL", "HANDICAP", "FIRST_SET", "CORRECT_SCORE", "OTHER"],
   "Baseball": ["MONEYLINE", "TOTAL", "HANDICAP", "FIRST_HALF", "OTHER"],
+  "Handebol": ["MONEYLINE", "TOTAL", "HANDICAP", "FIRST_HALF", "OTHER"],
   "Hockey": ["MONEYLINE", "TOTAL", "HANDICAP", "FIRST_PERIOD", "OTHER"],
   "NHL": ["MONEYLINE", "TOTAL", "HANDICAP", "FIRST_PERIOD", "OTHER"],
   "Futebol Americano": ["MONEYLINE", "TOTAL", "HANDICAP", "FIRST_HALF", "OTHER"],
