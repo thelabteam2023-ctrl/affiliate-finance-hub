@@ -197,6 +197,7 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
     setSelectedCasaIds(new Set());
     setContas([]);
     setCasaSearch("");
+    setCurrentCardIndex(0);
     onOpenChange(false);
   }
 
