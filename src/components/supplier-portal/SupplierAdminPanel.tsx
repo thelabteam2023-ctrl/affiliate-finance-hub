@@ -146,11 +146,7 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
     }
   };
 
-  const syncAllFornecedores = async () => {
-    for (const f of unlinkedFornecedores) {
-      await syncFornecedor(f);
-    }
-  };
+  // (syncAll removed — user prefers manual select)
 
   // Create supplier
   const createSupplierMutation = useMutation({
