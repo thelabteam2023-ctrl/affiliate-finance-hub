@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Building2, Eye, EyeOff, User, ChevronRight, ChevronLeft, Search, Loader2, Check, Sparkles } from "lucide-react";
+import { Building2, Eye, EyeOff, User, ChevronRight, ChevronLeft, Search, Loader2, Check, Sparkles, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { BookmakerLogo } from "@/components/ui/bookmaker-logo";
@@ -29,6 +29,7 @@ interface ContaEntry {
   password: string;
   showPassword: boolean;
   loginEmail: string;
+  manuallyEdited: boolean; // true when user typed directly on this card
 }
 
 export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceId, onSuccess }: Props) {
@@ -38,6 +39,9 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
   const [contas, setContas] = useState<ContaEntry[]>([]);
   const [casaSearch, setCasaSearch] = useState("");
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
+  const [globalLogin, setGlobalLogin] = useState("");
+  const [globalPassword, setGlobalPassword] = useState("");
+  const [showGlobalPassword, setShowGlobalPassword] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: allowedIds } = useQuery({
@@ -153,6 +157,7 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
         password: existing?.password || "",
         showPassword: existing?.showPassword || false,
         loginEmail: existing?.loginEmail || titularEmail,
+        manuallyEdited: existing?.manuallyEdited || false,
       };
     }).sort((a, b) => a.catalogoNome.localeCompare(b.catalogoNome));
     setContas(entries);
@@ -160,8 +165,30 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
     setStep(2);
   }
 
+  function updateContaManual(index: number, field: keyof ContaEntry, value: string | boolean) {
+    setContas(prev => prev.map((c, i) => i === index ? { ...c, [field]: value, manuallyEdited: true } : c));
+  }
+
   function updateConta(index: number, field: keyof ContaEntry, value: string | boolean) {
     setContas(prev => prev.map((c, i) => i === index ? { ...c, [field]: value } : c));
+  }
+
+  function handleGlobalLoginChange(value: string) {
+    setGlobalLogin(value);
+    setContas(prev => prev.map(c => c.manuallyEdited ? c : { ...c, username: value }));
+  }
+
+  function handleGlobalPasswordChange(value: string) {
+    setGlobalPassword(value);
+    setContas(prev => prev.map(c => c.manuallyEdited ? c : { ...c, password: value }));
+  }
+
+  function applyGlobalToEmpty() {
+    setContas(prev => prev.map(c => ({
+      ...c,
+      username: c.username.trim() ? c.username : globalLogin,
+      password: c.password.trim() ? c.password : globalPassword,
+    })));
   }
 
   const allContasFilled = contas.every(c => c.username.trim() && c.password.trim());
@@ -198,6 +225,9 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
     setContas([]);
     setCasaSearch("");
     setCurrentCardIndex(0);
+    setGlobalLogin("");
+    setGlobalPassword("");
+    setShowGlobalPassword(false);
     onOpenChange(false);
   }
 
@@ -384,6 +414,51 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
                 </span>
               </div>
 
+              {/* Global credentials */}
+              {contas.length > 1 && (
+                <div className="rounded-xl border border-border/60 bg-muted/20 p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Login & Senha padrão
+                    </p>
+                    <button
+                      type="button"
+                      onClick={applyGlobalToEmpty}
+                      className="flex items-center gap-1 text-[11px] font-semibold text-primary hover:text-primary/80 transition-colors"
+                    >
+                      <Copy className="h-3 w-3" /> Aplicar às vazias
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Input
+                      value={globalLogin}
+                      onChange={e => handleGlobalLoginChange(e.target.value)}
+                      placeholder="Login padrão"
+                      className="h-9 text-sm bg-background border-border/60"
+                    />
+                    <div className="relative">
+                      <Input
+                        type={showGlobalPassword ? "text" : "password"}
+                        value={globalPassword}
+                        onChange={e => handleGlobalPasswordChange(e.target.value)}
+                        placeholder="Senha padrão"
+                        className="h-9 text-sm pr-9 bg-background border-border/60"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowGlobalPassword(!showGlobalPassword)}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {showGlobalPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">
+                    Preenche automaticamente casas não editadas. Edite individualmente abaixo se necessário.
+                  </p>
+                </div>
+              )}
+
               {/* Card navigation */}
               {contas.length > 0 && (() => {
                 const conta = contas[currentCardIndex];
@@ -407,7 +482,6 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
                         <ChevronLeft className="h-4 w-4" /> Anterior
                       </button>
 
-                      {/* Dots indicator */}
                       <div className="flex items-center gap-1.5">
                         {contas.map((c, idx) => {
                           const isFilled = c.username.trim() && c.password.trim();
@@ -445,7 +519,10 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
                     </div>
 
                     {/* Single card */}
-                    <div className="rounded-xl border border-border/60 bg-card p-4 space-y-3">
+                    <div className={cn(
+                      "rounded-xl border bg-card p-4 space-y-3",
+                      conta.manuallyEdited ? "border-warning/40" : "border-border/60"
+                    )}>
                       <div className="flex items-center gap-3">
                         <BookmakerLogo
                           logoUrl={conta.logoUrl}
@@ -457,6 +534,11 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
                           <span className="text-sm font-bold">{conta.catalogoNome}</span>
                           <p className="text-[11px] text-muted-foreground">{currentCardIndex + 1} de {contas.length}</p>
                         </div>
+                        {conta.manuallyEdited && (
+                          <span className="text-[10px] font-medium text-warning bg-warning/10 px-2 py-0.5 rounded-full">
+                            Editado
+                          </span>
+                        )}
                         {filled && (
                           <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center">
                             <Check className="h-3.5 w-3.5 text-primary" />
@@ -473,7 +555,7 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
                           </Label>
                           <Input
                             value={conta.username}
-                            onChange={e => updateConta(i, "username", e.target.value)}
+                            onChange={e => updateContaManual(i, "username", e.target.value)}
                             placeholder="usuario123"
                             className="h-9 text-sm bg-background border-border/60"
                           />
@@ -487,7 +569,7 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
                             <Input
                               type={conta.showPassword ? "text" : "password"}
                               value={conta.password}
-                              onChange={e => updateConta(i, "password", e.target.value)}
+                              onChange={e => updateContaManual(i, "password", e.target.value)}
                               placeholder="••••••"
                               className="h-9 text-sm pr-9 bg-background border-border/60"
                             />
