@@ -111,6 +111,7 @@ const UNDER_PATTERNS = [
 
 // Padrões para detectar TOTAL de forma genérica
 const TOTAL_MARKET_PATTERNS = [
+  /total\s*[-–—]\s*\d+\s*op[çc][õo]es/i, // "Total - 2 Opções" (Brazilian bookmakers)
   /total\s*(de\s*)?([\w]+)/i,        // "Total de Games"
   /over\s*\/?\s*under/i,              // "Over/Under"
   /o\/u/i,                            // "O/U"

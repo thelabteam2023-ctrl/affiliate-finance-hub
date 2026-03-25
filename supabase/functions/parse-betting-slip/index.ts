@@ -46,7 +46,7 @@ const SPORTS_LIST = [
 const MARKETS_KEYWORDS = {
   "Vencedor da Partida": ["moneyline", "match winner", "winner", "vencedor", "para ganhar", "to win", "ganha o jogo", "ganha a partida", "win match"],
   "Moneyline / 1X2": ["1x2", "resultado da partida", "resultado final", "match odds"],
-  "Over (Gols)": ["over", "acima", "mais de"],
+  "Over (Gols)": ["over", "acima", "mais de", "total"],
   "Under (Gols)": ["under", "abaixo", "menos de"],
   "Handicap Asiático": ["handicap asiático", "asian handicap", "ah"],
   "Handicap Europeu": ["handicap europeu", "european handicap", "eh"],
@@ -262,13 +262,19 @@ REGRAS IMPORTANTES:
     - Normalização de split line: a linha final é a MÉDIA dos dois valores (ex: 0.0 e -0.5 → -0.25)
     - Termos que indicam Handicap: "Handicap", "Asian Handicap", "H.A.", "AH", "Handicap Asiático"
     - Números NEGATIVOS associados a times são SEMPRE handicap, NUNCA total de gols
-    - Só classifique como "Total de Gols" se houver termos explícitos: "Over", "Under", "Mais de", "Menos de", "Gols", "Goals"
+    - Só classifique como "Total de Gols" se houver termos explícitos: "Over", "Under", "Mais de", "Menos de", "Gols", "Goals", "Total"
+    - IMPORTANTE: "Total - 2 Opções", "Total - 2 Options" = mercado TOTAL. Combinado com "Mais de X" ou "Menos de X", classifique como "Total de Gols"
     - Se o print mostra "Handicap Asiático" no mercado, retorne EXATAMENTE "Handicap Asiático" (ou com contexto temporal se aplicável)
     - Exemplos:
       * "Modbury Jets 0.0,-0.5" → mercado: "Handicap Asiático", selecao: "Modbury Jets -0.25"
       * "Team A +0.5,+1.0" → mercado: "Handicap Asiático", selecao: "Team A +0.75"
       * "AH -1.0" → mercado: "Handicap Asiático", selecao com linha -1.0
       * "Over 2.5 Goals" → mercado: "Total de Gols" (TEM termos Over/Goals)
+      * "Total - 2 Opções" + "Mais de 59.5" → mercado: "Total de Gols", selecao: "Mais de 59.5" (Handebol tem linhas altas, é normal)
+19. REGRA — ESPORTES COM LINHAS ALTAS:
+    - Handebol: linhas de total entre 40-70 são NORMAIS (ex: Mais de 59.5, Under 52.5). Classificar como "Total de Gols"
+    - Basquete: linhas de total entre 150-250 são NORMAIS. Classificar como "Total de Pontos"
+    - NUNCA descarte uma linha alta como inválida — valide pelo contexto do esporte
 17. FAMÍLIAS DE MERCADO para referência (ajuda a classificar corretamente):
     - MATCH_ODDS: Match Odds, 1X2, Resultado da Partida, Resultado Final, FT Result, Moneyline Soccer, Três Vias
     - MONEYLINE/MATCH_WINNER: Moneyline, ML, Vencedor, Winner (2 vias, sem empate — basquete, tênis, MMA)
