@@ -59,6 +59,21 @@ export function SupplierExtratoTab({ supplierWorkspaceId }: Props) {
     },
   });
 
+  // Fetch titulares to resolve names from metadata.titular_id
+  const { data: titularesMap = {} } = useQuery({
+    queryKey: ["supplier-titulares-map", supplierWorkspaceId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("supplier_titulares")
+        .select("id, nome")
+        .eq("supplier_workspace_id", supplierWorkspaceId);
+      if (error) throw error;
+      const map: Record<string, string> = {};
+      (data || []).forEach(t => { map[t.id] = t.nome; });
+      return map;
+    },
+  });
+
   if (isLoading) {
     return (
       <Card>
@@ -90,7 +105,8 @@ export function SupplierExtratoTab({ supplierWorkspaceId }: Props) {
           const wasEdited = !!(entry.metadata as any)?.valor_original;
           const casaNome = entry.supplier_bookmaker_accounts?.bookmakers_catalogo?.nome;
           const casaLogo = entry.supplier_bookmaker_accounts?.bookmakers_catalogo?.logo_url;
-          const titularNome = entry.supplier_bookmaker_accounts?.supplier_titulares?.nome;
+          const titularNome = entry.supplier_bookmaker_accounts?.supplier_titulares?.nome
+            || ((entry.metadata as any)?.titular_id ? titularesMap[(entry.metadata as any).titular_id] : null);
           const bancoNome = (entry.metadata as any)?.banco_nome;
 
           // Build descriptive subtitle
