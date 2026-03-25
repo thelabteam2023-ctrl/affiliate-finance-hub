@@ -157,20 +157,27 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
   }
 
   function goToStep2() {
-    const titular = titulares.find((t: any) => t.id === titularId);
-    
+    // Build a map of existing credentials from main system
+    const credMap = new Map<string, { username: string; password: string }>();
+    mainCredentials.forEach((mc: any) => {
+      credMap.set(mc.bookmaker_catalogo_id, {
+        username: mc.login_username || "",
+        password: mc.login_password || "",
+      });
+    });
+
     const entries: ContaEntry[] = Array.from(selectedCasaIds).map(id => {
       const casa = catalogo.find((c: any) => c.id === id);
       const existing = contas.find(c => c.catalogoId === id);
+      const mainCred = credMap.get(id);
       return {
         catalogoId: id,
         catalogoNome: casa?.nome || "",
         moeda: casa?.moeda_padrao || "BRL",
         logoUrl: casa?.logo_url || null,
-        username: existing?.username || "",
-        password: existing?.password || "",
+        username: existing?.username || mainCred?.username || "",
+        password: existing?.password || mainCred?.password || "",
         showPassword: existing?.showPassword || false,
-        
         manuallyEdited: existing?.manuallyEdited || false,
       };
     }).sort((a, b) => a.catalogoNome.localeCompare(b.catalogoNome));
