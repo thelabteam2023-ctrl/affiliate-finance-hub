@@ -13366,6 +13366,10 @@ export type Database = {
           was_expired: boolean
         }[]
       }
+      check_supplier_workspace_access: {
+        Args: { p_supplier_workspace_id: string }
+        Returns: boolean
+      }
       check_user_limit: { Args: { workspace_uuid: string }; Returns: Json }
       cleanup_expired_chat_messages: { Args: never; Returns: number }
       cleanup_expired_reservations: { Args: never; Returns: number }
