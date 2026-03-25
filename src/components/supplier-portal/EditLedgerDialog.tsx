@@ -139,9 +139,21 @@ export function EditLedgerDialog({ open, onOpenChange, entry, onSuccess }: Props
         ) : (
           <div className="space-y-4">
             {/* Current info */}
-            <div className="bg-muted/50 rounded-lg p-3 text-xs space-y-1">
+            <div className="bg-muted/50 rounded-lg p-3 text-xs space-y-1.5">
               <p className="text-muted-foreground">Tipo: <span className="font-medium text-foreground">{tipoLabel}</span></p>
-              {entry.descricao && <p className="text-muted-foreground truncate">{entry.descricao}</p>}
+              {(() => {
+                const casaNome = entry.supplier_bookmaker_accounts?.bookmakers_catalogo?.nome || entry.casa_nome;
+                const titularNome = entry.supplier_bookmaker_accounts?.supplier_titulares?.nome;
+                const bancoNome = (entry.metadata as any)?.banco_nome;
+                const parts: string[] = [];
+                if (titularNome) parts.push(`Titular: ${titularNome}`);
+                if (entry.tipo === "DEPOSITO" && bancoNome && casaNome) parts.push(`Fluxo: ${bancoNome} → ${casaNome}`);
+                else if (entry.tipo === "SAQUE" && casaNome && bancoNome) parts.push(`Fluxo: ${casaNome} → ${bancoNome}`);
+                else if (entry.tipo === "TRANSFERENCIA_BANCO" && bancoNome) parts.push(`Fluxo: Saldo Disponível → ${bancoNome}`);
+                return parts.map((p, i) => (
+                  <p key={i} className="text-muted-foreground"><span className="font-medium text-foreground">{p}</span></p>
+                ));
+              })()}
             </div>
 
             {/* Value edit */}
