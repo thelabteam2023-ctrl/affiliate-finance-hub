@@ -28,7 +28,7 @@ interface ContaEntry {
   username: string;
   password: string;
   showPassword: boolean;
-  loginEmail: string;
+  
   manuallyEdited: boolean; // true when user typed directly on this card
 }
 
@@ -144,7 +144,7 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
 
   function goToStep2() {
     const titular = titulares.find((t: any) => t.id === titularId);
-    const titularEmail = titular?.email || "";
+    
     const entries: ContaEntry[] = Array.from(selectedCasaIds).map(id => {
       const casa = catalogo.find((c: any) => c.id === id);
       const existing = contas.find(c => c.catalogoId === id);
@@ -156,7 +156,7 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
         username: existing?.username || "",
         password: existing?.password || "",
         showPassword: existing?.showPassword || false,
-        loginEmail: existing?.loginEmail || titularEmail,
+        
         manuallyEdited: existing?.manuallyEdited || false,
       };
     }).sort((a, b) => a.catalogoNome.localeCompare(b.catalogoNome));
@@ -201,7 +201,7 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
         titular_id: titularId,
         login_username: c.username.trim(),
         login_password_encrypted: c.password,
-        login_email: c.loginEmail.trim() || null,
+        
         moeda: c.moeda,
       }));
       const { error } = await supabase.from("supplier_bookmaker_accounts").insert(rows);
@@ -584,26 +584,6 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
                         </div>
                       </div>
 
-                      <div className="space-y-1.5">
-                        <Label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                          E-mail de Login
-                        </Label>
-                        <Input
-                          value={conta.loginEmail}
-                          onChange={e => updateConta(i, "loginEmail", e.target.value)}
-                          placeholder="email@exemplo.com"
-                          className="h-9 text-sm bg-background border-border/60"
-                        />
-                        {selectedTitular?.email && conta.loginEmail !== selectedTitular.email && (
-                          <button
-                            type="button"
-                            onClick={() => updateConta(i, "loginEmail", selectedTitular.email)}
-                            className="text-[11px] text-primary hover:underline mt-0.5"
-                          >
-                            Usar e-mail do titular: {selectedTitular.email}
-                          </button>
-                        )}
-                      </div>
                     </div>
                   </div>
                 );
