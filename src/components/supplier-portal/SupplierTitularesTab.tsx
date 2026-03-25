@@ -86,11 +86,8 @@ export function SupplierTitularesTab({ supplierWorkspaceId }: Props) {
       if (!result?.success) throw new Error(result?.error || "Erro ao criar titular");
       return result;
     },
-    onSuccess: (result) => {
-      const msg = result.parceiro_id
-        ? "Titular cadastrado e parceiro criado no sistema"
-        : "Titular cadastrado (sem CPF, parceiro não criado)";
-      toast.success(msg);
+    onSuccess: () => {
+      toast.success("Titular e parceiro cadastrados com sucesso");
       queryClient.invalidateQueries({ queryKey: ["supplier-titulares"] });
       queryClient.invalidateQueries({ queryKey: ["parceiros"] });
       resetForm();
@@ -176,16 +173,13 @@ export function SupplierTitularesTab({ supplierWorkspaceId }: Props) {
               </div>
 
               <div>
-                <Label>CPF / Documento <span className="text-xs font-normal text-muted-foreground">(opcional)</span></Label>
+                <Label>CPF <span className="text-destructive">*</span></Label>
                 <Input
                   value={cpf}
                   onChange={e => setCpf(formatCPF(e.target.value))}
                   placeholder="000.000.000-00"
                   maxLength={14}
                 />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Com CPF, o titular será registrado como parceiro no sistema principal.
-                </p>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -275,7 +269,7 @@ export function SupplierTitularesTab({ supplierWorkspaceId }: Props) {
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
             <Button
               onClick={() => createMutation.mutate()}
-              disabled={!nome.trim() || createMutation.isPending}
+              disabled={!nome.trim() || !cpf.replace(/\D/g, "") || createMutation.isPending}
             >
               {createMutation.isPending ? "Salvando..." : "Salvar"}
             </Button>
