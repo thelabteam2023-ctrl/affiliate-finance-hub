@@ -88,16 +88,39 @@ export function SupplierExtratoTab({ supplierWorkspaceId }: Props) {
           const isCredit = entry.direcao === "CREDIT";
           const canEdit = EDITABLE_TYPES.includes(entry.tipo);
           const wasEdited = !!(entry.metadata as any)?.valor_original;
+          const casaNome = entry.supplier_bookmaker_accounts?.bookmakers_catalogo?.nome;
+          const casaLogo = entry.supplier_bookmaker_accounts?.bookmakers_catalogo?.logo_url;
+          const titularNome = entry.supplier_bookmaker_accounts?.supplier_titulares?.nome;
+          const bancoNome = (entry.metadata as any)?.banco_nome;
+
+          // Build descriptive subtitle
+          let subtitleParts: string[] = [];
+          if (entry.tipo === "DEPOSITO" && bancoNome && casaNome) {
+            subtitleParts.push(`${bancoNome} → ${casaNome}`);
+          } else if (entry.tipo === "SAQUE" && casaNome && bancoNome) {
+            subtitleParts.push(`${casaNome} → ${bancoNome}`);
+          } else if (entry.tipo === "TRANSFERENCIA_BANCO" && bancoNome) {
+            subtitleParts.push(`Saldo Disponível → ${bancoNome}`);
+          } else if (casaNome) {
+            subtitleParts.push(casaNome);
+          }
+          if (titularNome) {
+            subtitleParts.push(titularNome);
+          }
 
           return (
             <Card key={entry.id} className="hover:border-border/80 transition-colors group">
               <CardContent className="py-3 flex items-center justify-between">
                 <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-                    isCredit ? "bg-success/10" : "bg-destructive/10"
-                  }`}>
-                    <Icon className={`h-4 w-4 ${isCredit ? "text-success" : "text-destructive"}`} />
-                  </div>
+                  {casaLogo ? (
+                    <img src={casaLogo} alt="" className="w-8 h-8 rounded-full object-contain shrink-0" />
+                  ) : (
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                      isCredit ? "bg-success/10" : "bg-destructive/10"
+                    }`}>
+                      <Icon className={`h-4 w-4 ${isCredit ? "text-success" : "text-destructive"}`} />
+                    </div>
+                  )}
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
                       <p className="text-sm font-medium text-foreground">
@@ -109,15 +132,15 @@ export function SupplierExtratoTab({ supplierWorkspaceId }: Props) {
                         </Badge>
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      {format(new Date(entry.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                      {entry.supplier_bookmaker_accounts?.bookmakers_catalogo?.nome && (
-                        <span> · {entry.supplier_bookmaker_accounts.bookmakers_catalogo.nome}</span>
-                      )}
-                    </p>
-                    {entry.descricao && (
-                      <p className="text-xs text-muted-foreground/70 mt-0.5 truncate">{entry.descricao}</p>
+                    {subtitleParts.length > 0 && (
+                      <p className="text-xs text-foreground/80 font-medium">
+                        {subtitleParts[0]}
+                      </p>
                     )}
+                    <p className="text-[11px] text-muted-foreground">
+                      {format(new Date(entry.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                      {subtitleParts[1] && <span> · {subtitleParts[1]}</span>}
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
