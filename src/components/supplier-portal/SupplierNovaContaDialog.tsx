@@ -178,15 +178,29 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
 
     const decryptedMap = new Map<string, string>();
     try {
-      const results = await Promise.all(
+      const results = await Promise.allSettled(
         idsToDecrypt.map(async (id) => {
           const encrypted = credMap.get(id)!.encryptedPassword;
-          const decrypted = await decryptPassword(encrypted);
-          return { id, decrypted };
+          try {
+            const decrypted = await decryptPassword(encrypted);
+            console.log(`[AutoFill] Decrypt for ${id}: success=${!!decrypted}, encrypted_len=${encrypted.length}`);
+            return { id, decrypted };
+          } catch (err) {
+            console.error(`[AutoFill] Decrypt failed for ${id}:`, err);
+            return { id, decrypted: "" };
+          }
         })
       );
-      results.forEach(({ id, decrypted }) => decryptedMap.set(id, decrypted));
-    } catch {
+      results.forEach((r) => {
+        if (r.status === "fulfilled" && r.value.decrypted) {
+          decryptedMap.set(r.value.id, r.value.decrypted);
+        }
+      });
+      if (decryptedMap.size === 0 && idsToDecrypt.length > 0) {
+        console.warn("[AutoFill] No passwords were decrypted. Edge function may be failing.");
+      }
+    } catch (err) {
+      console.error("[AutoFill] Batch decrypt error:", err);
       toast.error("Erro ao descriptografar algumas senhas");
     }
     setIsDecrypting(false);
