@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,7 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
   const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
   const [generatedLink, setGeneratedLink] = useState<string | null>(null);
   const [syncingId, setSyncingId] = useState<string | null>(null);
+  const [selectedFornecedorId, setSelectedFornecedorId] = useState<string>("new");
 
   // Form state - Novo Fornecedor
   const [nome, setNome] = useState("");
@@ -145,17 +147,21 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
     }
   };
 
-  const syncAllFornecedores = async () => {
-    for (const f of unlinkedFornecedores) {
-      await syncFornecedor(f);
-    }
-  };
-
-  // Create supplier
+  // Create supplier (from existing fornecedor or new)
   const createSupplierMutation = useMutation({
     mutationFn: async () => {
-      if (!nome.trim()) throw new Error("Nome é obrigatório");
       if (!user?.id) throw new Error("Usuário não autenticado");
+
+      if (selectedFornecedorId !== "new") {
+        // Vincular fornecedor existente da Captação
+        const found = unlinkedFornecedores.find((f: any) => f.id === selectedFornecedorId);
+        if (!found) throw new Error("Fornecedor não encontrado");
+        await syncFornecedor(found);
+        return;
+      }
+
+      // Criar novo do zero
+      if (!nome.trim()) throw new Error("Nome é obrigatório");
 
       // 1. Create workspace for supplier
       const { data: ws, error: wsError } = await supabase
@@ -184,11 +190,13 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
       if (spError) throw spError;
     },
     onSuccess: () => {
-      toast.success("Fornecedor criado");
+      toast.success("Fornecedor ativado no portal");
       queryClient.invalidateQueries({ queryKey: ["admin-suppliers"] });
+      queryClient.invalidateQueries({ queryKey: ["unlinked-fornecedores"] });
       setNome("");
       setContato("");
       setObservacoes("");
+      setSelectedFornecedorId("new");
       setNovoFornecedorOpen(false);
     },
     onError: (e: any) => toast.error(e.message),
@@ -308,37 +316,6 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
         </Button>
       </div>
 
-      {/* Banner: Fornecedores da Captação não vinculados */}
-      {unlinkedFornecedores.length > 0 && (
-        <Card className="border-warning/30 bg-warning/5">
-          <CardContent className="py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-warning/10 flex items-center justify-center">
-                  <AlertTriangle className="h-5 w-5 text-warning" />
-                </div>
-                <div>
-                  <p className="font-medium text-foreground">
-                    {unlinkedFornecedores.length} fornecedor{unlinkedFornecedores.length > 1 ? "es" : ""} da Captação sem portal
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {unlinkedFornecedores.map((f: any) => f.nome).join(", ")}
-                  </p>
-                </div>
-              </div>
-              <Button
-                size="sm"
-                onClick={syncAllFornecedores}
-                disabled={!!syncingId}
-                className="gap-1.5"
-              >
-                <Zap className="h-3.5 w-3.5" />
-                {syncingId ? "Sincronizando..." : "Ativar Todos"}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Suppliers list */}
       {suppliers.length === 0 ? (
@@ -434,30 +411,64 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
         </div>
       )}
 
-      {/* Dialog: Novo Fornecedor */}
-      <Dialog open={novoFornecedorOpen} onOpenChange={setNovoFornecedorOpen}>
+      {/* Dialog: Ativar Fornecedor no Portal */}
+      <Dialog open={novoFornecedorOpen} onOpenChange={(open) => {
+        setNovoFornecedorOpen(open);
+        if (!open) { setSelectedFornecedorId("new"); setNome(""); setContato(""); setObservacoes(""); }
+      }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Novo Fornecedor</DialogTitle>
+            <DialogTitle>Ativar Fornecedor no Portal</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
+          <div className="space-y-4">
+            {/* Select existing or create new */}
             <div>
-              <Label>Nome *</Label>
-              <Input value={nome} onChange={e => setNome(e.target.value)} placeholder="Nome do fornecedor" />
+              <Label>Fornecedor</Label>
+              <Select value={selectedFornecedorId} onValueChange={setSelectedFornecedorId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um fornecedor" />
+                </SelectTrigger>
+                <SelectContent>
+                  {unlinkedFornecedores.map((f: any) => (
+                    <SelectItem key={f.id} value={f.id}>
+                      {f.nome} {f.documento ? `(${f.documento})` : ""}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value="new">+ Criar novo fornecedor</SelectItem>
+                </SelectContent>
+              </Select>
+              {unlinkedFornecedores.length > 0 && selectedFornecedorId === "new" && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  {unlinkedFornecedores.length} fornecedor{unlinkedFornecedores.length > 1 ? "es" : ""} da Captação disponíve{unlinkedFornecedores.length > 1 ? "is" : "l"}
+                </p>
+              )}
             </div>
-            <div>
-              <Label>Contato</Label>
-              <Input value={contato} onChange={e => setContato(e.target.value)} placeholder="Telefone, e-mail, etc." />
-            </div>
-            <div>
-              <Label>Observações</Label>
-              <Textarea value={observacoes} onChange={e => setObservacoes(e.target.value)} rows={2} />
-            </div>
+
+            {/* Show form fields only for new supplier */}
+            {selectedFornecedorId === "new" && (
+              <>
+                <div>
+                  <Label>Nome *</Label>
+                  <Input value={nome} onChange={e => setNome(e.target.value)} placeholder="Nome do fornecedor" />
+                </div>
+                <div>
+                  <Label>Contato</Label>
+                  <Input value={contato} onChange={e => setContato(e.target.value)} placeholder="Telefone, e-mail, etc." />
+                </div>
+                <div>
+                  <Label>Observações</Label>
+                  <Textarea value={observacoes} onChange={e => setObservacoes(e.target.value)} rows={2} />
+                </div>
+              </>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setNovoFornecedorOpen(false)}>Cancelar</Button>
-            <Button onClick={() => createSupplierMutation.mutate()} disabled={!nome.trim() || createSupplierMutation.isPending}>
-              {createSupplierMutation.isPending ? "Criando..." : "Criar"}
+            <Button
+              onClick={() => createSupplierMutation.mutate()}
+              disabled={(selectedFornecedorId === "new" && !nome.trim()) || createSupplierMutation.isPending}
+            >
+              {createSupplierMutation.isPending ? "Ativando..." : selectedFornecedorId === "new" ? "Criar e Ativar" : "Ativar no Portal"}
             </Button>
           </DialogFooter>
         </DialogContent>
