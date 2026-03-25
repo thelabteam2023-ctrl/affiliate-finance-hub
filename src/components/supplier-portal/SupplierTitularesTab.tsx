@@ -5,20 +5,48 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Plus, User, Phone, Mail } from "lucide-react";
+import { Plus, User, Phone, Mail, MapPin, Calendar } from "lucide-react";
 import { toast } from "sonner";
 
 interface Props {
   supplierWorkspaceId: string;
 }
 
+const formatCPF = (value: string) => {
+  const digits = value.replace(/\D/g, "");
+  return digits
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d{1,2})$/, "$1-$2")
+    .slice(0, 14);
+};
+
+const formatPhone = (value: string) => {
+  const digits = value.replace(/\D/g, "");
+  return digits
+    .replace(/(\d{2})(\d)/, "($1) $2")
+    .replace(/(\d{5})(\d)/, "$1-$2")
+    .slice(0, 15);
+};
+
+const formatCEP = (value: string) => {
+  const digits = value.replace(/\D/g, "");
+  return digits.replace(/(\d{5})(\d)/, "$1-$2").slice(0, 9);
+};
+
 export function SupplierTitularesTab({ supplierWorkspaceId }: Props) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [nome, setNome] = useState("");
-  const [documento, setDocumento] = useState("");
+  const [cpf, setCpf] = useState("");
   const [email, setEmail] = useState("");
   const [telefone, setTelefone] = useState("");
+  const [dataNascimento, setDataNascimento] = useState("");
+  const [endereco, setEndereco] = useState("");
+  const [cep, setCep] = useState("");
+  const [cidade, setCidade] = useState("");
+  const [observacoes, setObservacoes] = useState("");
   const queryClient = useQueryClient();
 
   const { data: titulares = [] } = useQuery({
@@ -37,18 +65,34 @@ export function SupplierTitularesTab({ supplierWorkspaceId }: Props) {
 
   const createMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("supplier_titulares").insert({
-        supplier_workspace_id: supplierWorkspaceId,
-        nome,
-        documento: documento || null,
-        email: email || null,
-        telefone: telefone || null,
+      const cpfDigits = cpf.replace(/\D/g, "") || null;
+      const cepDigits = cep.replace(/\D/g, "") || null;
+
+      const { data, error } = await supabase.rpc("create_titular_with_parceiro", {
+        p_supplier_workspace_id: supplierWorkspaceId,
+        p_nome: nome.trim(),
+        p_cpf: cpfDigits,
+        p_email: email.trim() || null,
+        p_telefone: telefone.trim() || null,
+        p_data_nascimento: dataNascimento || null,
+        p_endereco: endereco.trim() || null,
+        p_cep: cepDigits,
+        p_cidade: cidade.trim() || null,
+        p_observacoes: observacoes.trim() || null,
       });
+
       if (error) throw error;
+      const result = data as any;
+      if (!result?.success) throw new Error(result?.error || "Erro ao criar titular");
+      return result;
     },
-    onSuccess: () => {
-      toast.success("Titular cadastrado");
+    onSuccess: (result) => {
+      const msg = result.parceiro_id
+        ? "Titular cadastrado e parceiro criado no sistema"
+        : "Titular cadastrado (sem CPF, parceiro não criado)";
+      toast.success(msg);
       queryClient.invalidateQueries({ queryKey: ["supplier-titulares"] });
+      queryClient.invalidateQueries({ queryKey: ["parceiros"] });
       resetForm();
     },
     onError: (e: any) => toast.error(e.message),
@@ -56,9 +100,14 @@ export function SupplierTitularesTab({ supplierWorkspaceId }: Props) {
 
   function resetForm() {
     setNome("");
-    setDocumento("");
+    setCpf("");
     setEmail("");
     setTelefone("");
+    setDataNascimento("");
+    setEndereco("");
+    setCep("");
+    setCidade("");
+    setObservacoes("");
     setDialogOpen(false);
   }
 
@@ -102,31 +151,132 @@ export function SupplierTitularesTab({ supplierWorkspaceId }: Props) {
       )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Novo Titular</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <User className="h-5 w-5 text-primary" />
+              Novo Titular / Parceiro
+            </DialogTitle>
+            <p className="text-xs text-muted-foreground mt-1">
+              Os dados serão sincronizados automaticamente com o cadastro de parceiros do sistema.
+            </p>
           </DialogHeader>
-          <div className="space-y-3">
-            <div>
-              <Label>Nome *</Label>
-              <Input value={nome} onChange={e => setNome(e.target.value)} placeholder="Nome completo" />
+
+          <div className="space-y-4">
+            {/* Dados básicos */}
+            <div className="space-y-3">
+              <div>
+                <Label>Nome Completo *</Label>
+                <Input
+                  value={nome}
+                  onChange={e => setNome(e.target.value)}
+                  placeholder="Nome completo"
+                  autoFocus
+                />
+              </div>
+
+              <div>
+                <Label>CPF / Documento</Label>
+                <Input
+                  value={cpf}
+                  onChange={e => setCpf(formatCPF(e.target.value))}
+                  placeholder="000.000.000-00"
+                  maxLength={14}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Com CPF, o titular será registrado como parceiro no sistema principal.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="flex items-center gap-1.5">
+                    <Mail className="h-3.5 w-3.5 text-muted-foreground" /> E-mail
+                  </Label>
+                  <Input
+                    type="email"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    placeholder="email@exemplo.com"
+                  />
+                </div>
+                <div>
+                  <Label className="flex items-center gap-1.5">
+                    <Phone className="h-3.5 w-3.5 text-muted-foreground" /> Telefone
+                  </Label>
+                  <Input
+                    value={telefone}
+                    onChange={e => setTelefone(formatPhone(e.target.value))}
+                    placeholder="(11) 99999-9999"
+                    maxLength={15}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label className="flex items-center gap-1.5">
+                  <Calendar className="h-3.5 w-3.5 text-muted-foreground" /> Data de Nascimento
+                </Label>
+                <Input
+                  type="date"
+                  value={dataNascimento}
+                  onChange={e => setDataNascimento(e.target.value)}
+                />
+              </div>
             </div>
-            <div>
-              <Label>CPF / Documento</Label>
-              <Input value={documento} onChange={e => setDocumento(e.target.value)} placeholder="000.000.000-00" />
+
+            {/* Endereço */}
+            <div className="space-y-3 border-t border-border/40 pt-4">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Endereço</p>
+              <div>
+                <Label className="flex items-center gap-1.5">
+                  <MapPin className="h-3.5 w-3.5 text-muted-foreground" /> Endereço
+                </Label>
+                <Input
+                  value={endereco}
+                  onChange={e => setEndereco(e.target.value)}
+                  placeholder="Rua, número, complemento"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>CEP</Label>
+                  <Input
+                    value={cep}
+                    onChange={e => setCep(formatCEP(e.target.value))}
+                    placeholder="00000-000"
+                    maxLength={9}
+                  />
+                </div>
+                <div>
+                  <Label>Cidade</Label>
+                  <Input
+                    value={cidade}
+                    onChange={e => setCidade(e.target.value)}
+                    placeholder="Cidade / UF"
+                  />
+                </div>
+              </div>
             </div>
+
+            {/* Observações */}
             <div>
-              <Label>E-mail</Label>
-              <Input value={email} onChange={e => setEmail(e.target.value)} placeholder="email@exemplo.com" />
-            </div>
-            <div>
-              <Label>Telefone</Label>
-              <Input value={telefone} onChange={e => setTelefone(e.target.value)} placeholder="(11) 99999-9999" />
+              <Label>Observações</Label>
+              <Textarea
+                value={observacoes}
+                onChange={e => setObservacoes(e.target.value)}
+                rows={2}
+                placeholder="Notas internas (opcional)"
+              />
             </div>
           </div>
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={() => createMutation.mutate()} disabled={!nome.trim() || createMutation.isPending}>
+            <Button
+              onClick={() => createMutation.mutate()}
+              disabled={!nome.trim() || createMutation.isPending}
+            >
               {createMutation.isPending ? "Salvando..." : "Salvar"}
             </Button>
           </DialogFooter>
