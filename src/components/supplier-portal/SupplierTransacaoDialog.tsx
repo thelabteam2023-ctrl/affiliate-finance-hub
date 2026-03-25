@@ -224,6 +224,7 @@ export function SupplierTransacaoDialog({
         p_descricao: descricao || `${isDeposito ? "Depósito" : "Saque"} via ${selectedBanco?.banco_nome || "banco"}`,
         p_created_by: "SUPPLIER",
         p_idempotency_key: `${tipo}_${contaId}_${bancoId}_${Date.now()}`,
+        p_metadata: { banco_id: bancoId, banco_nome: selectedBanco?.banco_nome },
       });
 
       if (error) throw error;

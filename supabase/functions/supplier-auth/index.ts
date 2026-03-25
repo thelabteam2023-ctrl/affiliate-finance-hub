@@ -780,6 +780,176 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ success: true, saldo_anterior: Number(banco.saldo), saldo_novo: novoSaldo }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // ── Edit ledger entry (adjust delta on both bookmaker account and banco) ──
+    if (action === "edit-ledger-entry") {
+      const { token, entry_id, novo_valor } = body;
+      if (!token || !entry_id || novo_valor === undefined || novo_valor === null) {
+        return new Response(JSON.stringify({ error: "Dados incompletos" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      const tokenHash = await hashToken(token);
+      const { data: validation, error: valError } = await supabaseAdmin.rpc("validate_supplier_token", { p_token_hash: tokenHash });
+      if (valError || !validation?.valid) {
+        return new Response(JSON.stringify({ error: "Token inválido" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      const numNovoValor = Number(novo_valor);
+      if (numNovoValor <= 0) {
+        return new Response(JSON.stringify({ error: "O valor deve ser maior que zero" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      // Fetch original entry
+      const { data: entry, error: entryErr } = await supabaseAdmin
+        .from("supplier_ledger")
+        .select("*")
+        .eq("id", entry_id)
+        .eq("supplier_workspace_id", validation.supplier_workspace_id)
+        .single();
+
+      if (entryErr || !entry) {
+        return new Response(JSON.stringify({ error: "Lançamento não encontrado" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      const valorAntigo = Number(entry.valor);
+      const delta = numNovoValor - valorAntigo;
+
+      if (Math.abs(delta) < 0.01) {
+        return new Response(JSON.stringify({ success: true, message: "Sem alteração" }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      const tipo = entry.tipo;
+      const direcao = entry.direcao;
+      const metadata = entry.metadata || {};
+      const bancoId = (metadata as any).banco_id || null;
+
+      // === Update bookmaker account saldo ===
+      if (entry.bookmaker_account_id && (tipo === "DEPOSITO" || tipo === "SAQUE")) {
+        const { data: account } = await supabaseAdmin
+          .from("supplier_bookmaker_accounts")
+          .select("id, saldo_atual")
+          .eq("id", entry.bookmaker_account_id)
+          .single();
+
+        if (account) {
+          let novoSaldoConta: number;
+          if (tipo === "DEPOSITO") {
+            // DEPOSITO = CREDIT on account, delta positive means more deposit
+            novoSaldoConta = Number(account.saldo_atual) + delta;
+          } else {
+            // SAQUE = DEBIT on account, delta positive means more withdrawn
+            novoSaldoConta = Number(account.saldo_atual) - delta;
+          }
+
+          if (novoSaldoConta < 0) {
+            return new Response(JSON.stringify({ error: `Saldo insuficiente na conta. O ajuste geraria saldo negativo.` }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+          }
+
+          await supabaseAdmin
+            .from("supplier_bookmaker_accounts")
+            .update({ saldo_atual: novoSaldoConta, updated_at: new Date().toISOString() })
+            .eq("id", entry.bookmaker_account_id);
+        }
+      }
+
+      // === Update banco saldo (inverse of account) ===
+      if (bancoId && (tipo === "DEPOSITO" || tipo === "SAQUE")) {
+        const { data: banco } = await supabaseAdmin
+          .from("supplier_titular_bancos")
+          .select("id, saldo")
+          .eq("id", bancoId)
+          .single();
+
+        if (banco) {
+          let novoSaldoBanco: number;
+          if (tipo === "DEPOSITO") {
+            // DEPOSITO debits banco, more deposit = less banco saldo
+            novoSaldoBanco = Number(banco.saldo) - delta;
+          } else {
+            // SAQUE credits banco, more saque = more banco saldo
+            novoSaldoBanco = Number(banco.saldo) + delta;
+          }
+
+          if (novoSaldoBanco < 0) {
+            return new Response(JSON.stringify({ error: `Saldo insuficiente no banco. O ajuste geraria saldo negativo.` }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+          }
+
+          await supabaseAdmin
+            .from("supplier_titular_bancos")
+            .update({ saldo: novoSaldoBanco, updated_at: new Date().toISOString() })
+            .eq("id", bancoId);
+        }
+      }
+
+      // === TRANSFERENCIA_BANCO: adjust workspace saldo (via ledger recalc) and banco saldo ===
+      if (tipo === "TRANSFERENCIA_BANCO" && bancoId) {
+        const { data: banco } = await supabaseAdmin
+          .from("supplier_titular_bancos")
+          .select("id, saldo")
+          .eq("id", bancoId)
+          .single();
+
+        if (banco) {
+          // TRANSFERENCIA_BANCO DEBIT: more value = more sent to banco
+          const novoSaldoBanco = Number(banco.saldo) + delta;
+          if (novoSaldoBanco < 0) {
+            return new Response(JSON.stringify({ error: `Saldo insuficiente no banco para reduzir.` }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+          }
+          await supabaseAdmin
+            .from("supplier_titular_bancos")
+            .update({ saldo: novoSaldoBanco, updated_at: new Date().toISOString() })
+            .eq("id", bancoId);
+        }
+      }
+
+      // === Update the ledger entry valor and recalculate saldo_depois ===
+      const novoSaldoDepois = Number(entry.saldo_depois) + (direcao === "CREDIT" ? delta : -delta);
+
+      const { error: updateErr } = await supabaseAdmin
+        .from("supplier_ledger")
+        .update({
+          valor: numNovoValor,
+          saldo_depois: novoSaldoDepois,
+          metadata: { ...(metadata as any), editado_em: new Date().toISOString(), valor_original: valorAntigo },
+        })
+        .eq("id", entry_id);
+
+      if (updateErr) {
+        return new Response(JSON.stringify({ error: "Erro ao atualizar lançamento" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      // Recalculate saldo_depois for all subsequent entries
+      const { data: subsequentEntries } = await supabaseAdmin
+        .from("supplier_ledger")
+        .select("id, direcao, valor, saldo_antes, saldo_depois")
+        .eq("supplier_workspace_id", validation.supplier_workspace_id)
+        .gt("sequencia", entry.sequencia)
+        .order("sequencia", { ascending: true });
+
+      if (subsequentEntries && subsequentEntries.length > 0) {
+        let runningBalance = novoSaldoDepois;
+        for (const se of subsequentEntries) {
+          const seValor = Number(se.valor);
+          const newSaldoAntes = runningBalance;
+          const newSaldoDepois = se.direcao === "CREDIT"
+            ? runningBalance + seValor
+            : runningBalance - seValor;
+          runningBalance = newSaldoDepois;
+
+          await supabaseAdmin
+            .from("supplier_ledger")
+            .update({ saldo_antes: newSaldoAntes, saldo_depois: newSaldoDepois })
+            .eq("id", se.id);
+        }
+      }
+
+      return new Response(JSON.stringify({
+        success: true,
+        valor_anterior: valorAntigo,
+        valor_novo: numNovoValor,
+        delta,
+      }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     return new Response(
       JSON.stringify({ error: "Ação não reconhecida" }),
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
