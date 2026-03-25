@@ -83,7 +83,7 @@ export function PagamentosTab({ titular, supplierToken, supplierWorkspaceId }: P
     queryFn: async () => {
       const { data, error } = await supabase
         .from("supplier_ledger")
-        .select("tipo, direcao, valor, bookmaker_account_id")
+        .select("tipo, direcao, valor, bookmaker_account_id, metadata")
         .eq("supplier_workspace_id", supplierWorkspaceId);
       if (error) throw error;
       return data || [];
@@ -92,7 +92,11 @@ export function PagamentosTab({ titular, supplierToken, supplierWorkspaceId }: P
   });
 
   const saldoDisponivel = (ledgerData || [])
-    .filter((e: any) => !e.bookmaker_account_id)
+    .filter((e: any) => {
+      if (e.bookmaker_account_id) return false;
+      if (e.tipo === "PAGAMENTO_TITULAR" && (e.metadata as any)?.fonte === "BANCO") return false;
+      return true;
+    })
     .reduce((acc: number, e: any) => {
       const v = Number(e.valor);
       return e.direcao === "CREDIT" ? acc + v : acc - v;
