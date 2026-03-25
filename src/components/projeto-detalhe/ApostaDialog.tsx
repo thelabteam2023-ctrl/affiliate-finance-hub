@@ -165,6 +165,7 @@ const ESPORTES_BASE = [
   "Tênis",
   "Baseball",
   "Hockey",
+  "Handebol",
   "Futebol Americano",
   "Vôlei",
   "MMA/UFC",
