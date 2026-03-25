@@ -146,13 +146,21 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
     }
   };
 
-  // (syncAll removed — user prefers manual select)
-
-  // Create supplier
+  // Create supplier (from existing fornecedor or new)
   const createSupplierMutation = useMutation({
     mutationFn: async () => {
-      if (!nome.trim()) throw new Error("Nome é obrigatório");
       if (!user?.id) throw new Error("Usuário não autenticado");
+
+      if (selectedFornecedorId !== "new") {
+        // Vincular fornecedor existente da Captação
+        const found = unlinkedFornecedores.find((f: any) => f.id === selectedFornecedorId);
+        if (!found) throw new Error("Fornecedor não encontrado");
+        await syncFornecedor(found);
+        return;
+      }
+
+      // Criar novo do zero
+      if (!nome.trim()) throw new Error("Nome é obrigatório");
 
       // 1. Create workspace for supplier
       const { data: ws, error: wsError } = await supabase
@@ -181,11 +189,13 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
       if (spError) throw spError;
     },
     onSuccess: () => {
-      toast.success("Fornecedor criado");
+      toast.success("Fornecedor ativado no portal");
       queryClient.invalidateQueries({ queryKey: ["admin-suppliers"] });
+      queryClient.invalidateQueries({ queryKey: ["unlinked-fornecedores"] });
       setNome("");
       setContato("");
       setObservacoes("");
+      setSelectedFornecedorId("new");
       setNovoFornecedorOpen(false);
     },
     onError: (e: any) => toast.error(e.message),
