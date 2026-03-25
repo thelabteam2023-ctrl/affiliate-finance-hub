@@ -114,12 +114,11 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
   const syncFornecedor = async (fornecedor: { id: string; nome: string; documento?: string }) => {
     if (!user?.id) throw new Error("Usuário não autenticado");
 
-    // 1. Create workspace
+    // 1. Create workspace (no owner_id column exists)
     const { data: ws, error: wsError } = await supabase
       .from("workspaces")
       .insert({
         name: `Fornecedor: ${fornecedor.nome}`,
-        owner_id: user.id,
         parent_workspace_id: workspaceId,
         tipo: "fornecedor",
       })
@@ -127,7 +126,18 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
       .single();
     if (wsError) throw wsError;
 
-    // 2. Create supplier_profile linked to fornecedor mestre
+    // 2. Add current user as owner member of new workspace
+    const { error: wmError } = await supabase
+      .from("workspace_members")
+      .insert({
+        workspace_id: ws.id,
+        user_id: user.id,
+        role: "owner",
+        is_active: true,
+      });
+    if (wmError) throw wmError;
+
+    // 3. Create supplier_profile linked to fornecedor mestre
     const { error: spError } = await supabase
       .from("supplier_profiles")
       .insert({
@@ -162,7 +172,6 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
         .from("workspaces")
         .insert({
           name: `Fornecedor: ${nome}`,
-          owner_id: user.id,
           parent_workspace_id: workspaceId,
           tipo: "fornecedor",
         })
@@ -171,7 +180,18 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
 
       if (wsError) throw wsError;
 
-      // 2. Create supplier profile
+      // 2. Add current user as owner member
+      const { error: wmError } = await supabase
+        .from("workspace_members")
+        .insert({
+          workspace_id: ws.id,
+          user_id: user.id,
+          role: "owner",
+          is_active: true,
+        });
+      if (wmError) throw wmError;
+
+      // 3. Create supplier profile
       const { error: spError } = await supabase.from("supplier_profiles").insert({
         workspace_id: ws.id,
         parent_workspace_id: workspaceId,
