@@ -28,8 +28,8 @@ interface ContaEntry {
   username: string;
   password: string;
   showPassword: boolean;
-  
-  manuallyEdited: boolean; // true when user typed directly on this card
+  manuallyEdited: boolean;
+  autoFilled: boolean;
 }
 
 export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceId, onSuccess }: Props) {
