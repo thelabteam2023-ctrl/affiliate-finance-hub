@@ -225,6 +225,9 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
     setContas([]);
     setCasaSearch("");
     setCurrentCardIndex(0);
+    setGlobalLogin("");
+    setGlobalPassword("");
+    setShowGlobalPassword(false);
     onOpenChange(false);
   }
 
