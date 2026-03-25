@@ -402,6 +402,17 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
                           size="sm"
                           variant="outline"
                           onClick={() => {
+                            setCasasConfigSupplier(supplier);
+                            setCasasConfigOpen(true);
+                          }}
+                          className="gap-1 text-xs"
+                        >
+                          <Building2 className="h-3 w-3" /> Casas
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
                             setSelectedSupplier(supplier);
                             setAlocacaoOpen(true);
                           }}
