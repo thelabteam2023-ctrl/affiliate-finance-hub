@@ -217,14 +217,14 @@ export function SupplierDashboard({ session }: Props) {
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid grid-cols-3 w-full max-w-md">
-            <TabsTrigger value="visao-geral" className="gap-1.5 text-xs">
-              <Building2 className="h-3.5 w-3.5" /> Contas
+            <TabsTrigger value="visao-geral" className="gap-1 sm:gap-1.5 text-[11px] sm:text-xs">
+              <Building2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" /> Contas
             </TabsTrigger>
-            <TabsTrigger value="titulares" className="gap-1.5 text-xs">
-              <Users className="h-3.5 w-3.5" /> Titulares
+            <TabsTrigger value="titulares" className="gap-1 sm:gap-1.5 text-[11px] sm:text-xs">
+              <Users className="h-3 w-3 sm:h-3.5 sm:w-3.5" /> Titulares
             </TabsTrigger>
-            <TabsTrigger value="extrato" className="gap-1.5 text-xs">
-              <ScrollText className="h-3.5 w-3.5" /> Extrato
+            <TabsTrigger value="extrato" className="gap-1 sm:gap-1.5 text-[11px] sm:text-xs">
+              <ScrollText className="h-3 w-3 sm:h-3.5 sm:w-3.5" /> Extrato
             </TabsTrigger>
           </TabsList>
 
