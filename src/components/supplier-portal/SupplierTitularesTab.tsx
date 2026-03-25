@@ -166,7 +166,7 @@ export function SupplierTitularesTab({ supplierWorkspaceId }: Props) {
             {/* Dados básicos */}
             <div className="space-y-3">
               <div>
-                <Label>Nome Completo *</Label>
+                <Label>Nome Completo <span className="text-destructive">*</span></Label>
                 <Input
                   value={nome}
                   onChange={e => setNome(e.target.value)}
@@ -176,7 +176,7 @@ export function SupplierTitularesTab({ supplierWorkspaceId }: Props) {
               </div>
 
               <div>
-                <Label>CPF / Documento</Label>
+                <Label>CPF / Documento <span className="text-xs font-normal text-muted-foreground">(opcional)</span></Label>
                 <Input
                   value={cpf}
                   onChange={e => setCpf(formatCPF(e.target.value))}
@@ -191,7 +191,7 @@ export function SupplierTitularesTab({ supplierWorkspaceId }: Props) {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label className="flex items-center gap-1.5">
-                    <Mail className="h-3.5 w-3.5 text-muted-foreground" /> E-mail
+                    <Mail className="h-3.5 w-3.5 text-muted-foreground" /> E-mail <span className="text-xs font-normal text-muted-foreground">(opcional)</span>
                   </Label>
                   <Input
                     type="email"
@@ -202,7 +202,7 @@ export function SupplierTitularesTab({ supplierWorkspaceId }: Props) {
                 </div>
                 <div>
                   <Label className="flex items-center gap-1.5">
-                    <Phone className="h-3.5 w-3.5 text-muted-foreground" /> Telefone
+                    <Phone className="h-3.5 w-3.5 text-muted-foreground" /> Telefone <span className="text-xs font-normal text-muted-foreground">(opcional)</span>
                   </Label>
                   <Input
                     value={telefone}
@@ -215,7 +215,7 @@ export function SupplierTitularesTab({ supplierWorkspaceId }: Props) {
 
               <div>
                 <Label className="flex items-center gap-1.5">
-                  <Calendar className="h-3.5 w-3.5 text-muted-foreground" /> Data de Nascimento
+                  <Calendar className="h-3.5 w-3.5 text-muted-foreground" /> Data de Nascimento <span className="text-xs font-normal text-muted-foreground">(opcional)</span>
                 </Label>
                 <Input
                   type="date"
@@ -227,7 +227,7 @@ export function SupplierTitularesTab({ supplierWorkspaceId }: Props) {
 
             {/* Endereço */}
             <div className="space-y-3 border-t border-border/40 pt-4">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Endereço</p>
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Endereço <span className="normal-case font-normal">(opcional)</span></p>
               <div>
                 <Label className="flex items-center gap-1.5">
                   <MapPin className="h-3.5 w-3.5 text-muted-foreground" /> Endereço
@@ -261,7 +261,7 @@ export function SupplierTitularesTab({ supplierWorkspaceId }: Props) {
 
             {/* Observações */}
             <div>
-              <Label>Observações</Label>
+              <Label>Observações <span className="text-xs font-normal text-muted-foreground">(opcional)</span></Label>
               <Textarea
                 value={observacoes}
                 onChange={e => setObservacoes(e.target.value)}
