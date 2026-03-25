@@ -177,6 +177,8 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
             <Label>E-mail de Login</Label>
             <Input value={loginEmail} onChange={e => setLoginEmail(e.target.value)} placeholder="email@exemplo.com" />
           </div>
+          </>
+          )}
         </div>
 
         <DialogFooter>
