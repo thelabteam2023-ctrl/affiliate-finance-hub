@@ -151,13 +151,16 @@ export function SupplierDashboard({ session }: Props) {
       <div className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
         {/* KPI Cards */}
         <div className="grid grid-cols-2 gap-2 sm:gap-4 md:grid-cols-4">
-          <Card>
+          <Card className="cursor-pointer hover:border-primary/30 transition-colors" onClick={() => { if (saldoDisponivel > 0) { setTransacaoTipo("TRANSFERENCIA_BANCO"); setTransacaoOpen(true); } }}>
             <CardContent className="pt-3 sm:pt-4 pb-2 sm:pb-3 px-3 sm:px-4">
               <div className="flex items-center gap-1.5 text-muted-foreground text-[10px] sm:text-xs mb-0.5 sm:mb-1">
                 <Wallet className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                 Saldo Disponível
               </div>
               <p className="text-base sm:text-xl font-bold text-foreground tabular-nums">{formatCurrency(saldoDisponivel)}</p>
+              {saldoDisponivel > 0 && (
+                <p className="text-[10px] text-primary mt-0.5">Toque para enviar ao banco →</p>
+              )}
             </CardContent>
           </Card>
 
