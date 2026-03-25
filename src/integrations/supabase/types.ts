@@ -6421,11 +6421,13 @@ export type Database = {
           data_nascimento: string | null
           email: string | null
           endereco: string | null
+          fornecedor_origem_id: string | null
           id: string
           is_caixa_operacional: boolean
           nome: string
           observacoes: string | null
           status: string
+          supplier_titular_id: string | null
           telefone: string | null
           updated_at: string
           user_id: string
@@ -6439,11 +6441,13 @@ export type Database = {
           data_nascimento?: string | null
           email?: string | null
           endereco?: string | null
+          fornecedor_origem_id?: string | null
           id?: string
           is_caixa_operacional?: boolean
           nome: string
           observacoes?: string | null
           status?: string
+          supplier_titular_id?: string | null
           telefone?: string | null
           updated_at?: string
           user_id: string
@@ -6457,17 +6461,33 @@ export type Database = {
           data_nascimento?: string | null
           email?: string | null
           endereco?: string | null
+          fornecedor_origem_id?: string | null
           id?: string
           is_caixa_operacional?: boolean
           nome?: string
           observacoes?: string | null
           status?: string
+          supplier_titular_id?: string | null
           telefone?: string | null
           updated_at?: string
           user_id?: string
           workspace_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "parceiros_fornecedor_origem_id_fkey"
+            columns: ["fornecedor_origem_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parceiros_supplier_titular_id_fkey"
+            columns: ["supplier_titular_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_titulares"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "parceiros_user_id_fkey"
             columns: ["user_id"]
@@ -9169,6 +9189,7 @@ export type Database = {
           contato: string | null
           created_at: string
           created_by: string | null
+          fornecedor_id: string | null
           id: string
           nome: string
           observacoes: string | null
@@ -9181,6 +9202,7 @@ export type Database = {
           contato?: string | null
           created_at?: string
           created_by?: string | null
+          fornecedor_id?: string | null
           id?: string
           nome: string
           observacoes?: string | null
@@ -9193,6 +9215,7 @@ export type Database = {
           contato?: string | null
           created_at?: string
           created_by?: string | null
+          fornecedor_id?: string | null
           id?: string
           nome?: string
           observacoes?: string | null
@@ -9202,6 +9225,13 @@ export type Database = {
           workspace_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "supplier_profiles_fornecedor_id_fkey"
+            columns: ["fornecedor_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedores"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "supplier_profiles_parent_workspace_id_fkey"
             columns: ["parent_workspace_id"]

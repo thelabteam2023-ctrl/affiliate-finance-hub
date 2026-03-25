@@ -98,11 +98,42 @@ export function FornecedorDialog({ open, onOpenChange, fornecedor, isViewMode }:
         if (error) throw error;
         toast({ title: "Fornecedor atualizado com sucesso" });
       } else {
-        const { error } = await supabase
+        // 1. Criar fornecedor na tabela mestre
+        const { data: newFornecedor, error } = await supabase
           .from("fornecedores")
-          .insert(payload);
+          .insert(payload)
+          .select("id")
+          .single();
         if (error) throw error;
-        toast({ title: "Fornecedor criado com sucesso" });
+
+        // 2. Criar workspace isolado para o portal do fornecedor
+        const { data: ws, error: wsError } = await supabase
+          .from("workspaces")
+          .insert({
+            name: `Fornecedor: ${formData.nome}`,
+            owner_id: user.id,
+            parent_workspace_id: workspaceId,
+            tipo: "fornecedor",
+          })
+          .select("id")
+          .single();
+        if (wsError) throw wsError;
+
+        // 3. Criar supplier_profile vinculado ao fornecedor mestre
+        const { error: spError } = await supabase
+          .from("supplier_profiles")
+          .insert({
+            workspace_id: ws.id,
+            parent_workspace_id: workspaceId,
+            nome: formData.nome,
+            contato: formData.cpf || null,
+            observacoes: formData.observacoes || null,
+            created_by: user.id,
+            fornecedor_id: newFornecedor.id,
+          });
+        if (spError) throw spError;
+
+        toast({ title: "Fornecedor criado com sucesso (portal ativado)" });
       }
 
       onOpenChange(false);
