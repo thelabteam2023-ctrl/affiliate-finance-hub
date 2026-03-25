@@ -96,14 +96,20 @@ function formatDateBR(dateStr: string | null): string {
 }
 
 // Titular card - click opens detail, swipe opens edit
+function formatCurrency(value: number): string {
+  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
+}
+
 function TitularCard({
   titular,
   onClickDetail,
   onEdit,
+  saldoTotal,
 }: {
   titular: any;
   onClickDetail: (t: any) => void;
   onEdit: (t: any) => void;
+  saldoTotal: number;
 }) {
   return (
     <SwipeableCard
@@ -136,6 +142,9 @@ function TitularCard({
               </div>
             </div>
             <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+              <span className={`text-xs sm:text-sm font-semibold font-mono ${saldoTotal > 0 ? "text-emerald-500" : "text-muted-foreground"}`}>
+                {formatCurrency(saldoTotal)}
+              </span>
               <RemainingDaysBadge dataFim={titular.data_fim_parceria} />
               <div className="hidden sm:flex items-center gap-2 text-muted-foreground">
                 {titular.email && <Mail className="h-3.5 w-3.5" />}
@@ -208,6 +217,35 @@ export function SupplierTitularesTab({ supplierWorkspaceId }: Props) {
   );
   const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
   const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+  // Fetch all workspace banks to compute saldo per titular
+  const { data: allBancos = [] } = useQuery({
+    queryKey: ["supplier-workspace-bancos", supplierWorkspaceId, supplierToken],
+    queryFn: async () => {
+      const resp = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/supplier-auth?action=list-workspace-bancos`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", apikey: anonKey },
+          body: JSON.stringify({ token: supplierToken }),
+        }
+      );
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || "Erro");
+      return data.bancos || [];
+    },
+    enabled: !!supplierToken,
+  });
+
+  // Map titular_id -> total saldo across all banks
+  const saldoPorTitular = useMemo(() => {
+    const map = new Map<string, number>();
+    allBancos.forEach((b: any) => {
+      const current = map.get(b.titular_id) || 0;
+      map.set(b.titular_id, current + (Number(b.saldo) || 0));
+    });
+    return map;
+  }, [allBancos]);
 
   const dataFimCalculada = dataInicioParceria && diasParceria > 0
     ? calcDataFimFromDias(dataInicioParceria, diasParceria)
@@ -398,7 +436,7 @@ export function SupplierTitularesTab({ supplierWorkspaceId }: Props) {
       ) : (
         <div className="rounded-lg border overflow-hidden divide-y divide-border">
           {titulares.map((t: any) => (
-            <TitularCard key={t.id} titular={t} onClickDetail={openDetail} onEdit={openEdit} />
+            <TitularCard key={t.id} titular={t} onClickDetail={openDetail} onEdit={openEdit} saldoTotal={saldoPorTitular.get(t.id) || 0} />
           ))}
         </div>
       )}

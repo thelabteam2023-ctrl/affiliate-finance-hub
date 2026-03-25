@@ -261,6 +261,9 @@ function BancosTab({ titular, supplierToken }: { titular: any; supplierToken: st
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
+                  <span className={`text-xs font-semibold font-mono ${(Number(banco.saldo) || 0) > 0 ? "text-emerald-500" : "text-muted-foreground"}`}>
+                    {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(banco.saldo) || 0)}
+                  </span>
                   {banco.pix_key && (
                     <Badge variant="outline" className="text-[10px] gap-1">
                       <CreditCard className="h-2.5 w-2.5" /> PIX
