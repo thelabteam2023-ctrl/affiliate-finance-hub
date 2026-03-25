@@ -32,6 +32,7 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
   const [linkOpen, setLinkOpen] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
   const [generatedLink, setGeneratedLink] = useState<string | null>(null);
+  const [syncingId, setSyncingId] = useState<string | null>(null);
 
   // Form state - Novo Fornecedor
   const [nome, setNome] = useState("");
