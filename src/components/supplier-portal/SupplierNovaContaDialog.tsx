@@ -120,6 +120,17 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
         </DialogHeader>
 
         <div className="space-y-3">
+          {catalogo.length === 0 && allowedIds !== undefined ? (
+            <div className="text-center py-4">
+              <p className="text-sm text-muted-foreground">
+                Nenhuma casa de apostas foi configurada para este portal.
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Solicite ao administrador que configure as casas permitidas.
+              </p>
+            </div>
+          ) : (
+          <>
           <div>
             <Label>Casa de Apostas *</Label>
             <Select value={catalogoId} onValueChange={setCatalogoId}>
