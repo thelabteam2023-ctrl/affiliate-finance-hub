@@ -247,6 +247,15 @@ const App = () => (
               </ProtectedRoute>
             } />
             
+            {/* Portal do Fornecedor (admin) */}
+            <Route path="/fornecedores-portal" element={
+              <ProtectedRoute requiredPermission="captacao.read">
+                <AuthenticatedLayout>
+                  <FornecedoresPortal />
+                </AuthenticatedLayout>
+              </ProtectedRoute>
+            } />
+            
             {/* Caixa - Usa permission key do banco */}
             <Route path="/caixa" element={
               <ProtectedRoute requiredPermission="caixa.read">
