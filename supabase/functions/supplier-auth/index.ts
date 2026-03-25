@@ -44,10 +44,11 @@ Deno.serve(async (req) => {
     );
 
     const url = new URL(req.url);
-    const action = url.searchParams.get("action") || "validate";
+    const body = await req.json().catch(() => ({}));
+    const action = url.searchParams.get("action") || (body as any).action || "validate";
 
     if (action === "validate") {
-      const { token } = await req.json();
+      const { token } = body;
       if (!token || typeof token !== "string" || token.length < 32) {
         return new Response(
           JSON.stringify({ valid: false, error: "Token inválido" }),
@@ -82,7 +83,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "get-titular-credentials") {
-      const { token, titular_id } = await req.json();
+      const { token, titular_id } = body;
 
       if (!token || typeof token !== "string" || token.length < 32 || !titular_id) {
         return new Response(
@@ -138,7 +139,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "create-accounts") {
-      const { token, titular_id, accounts } = await req.json();
+      const { token, titular_id, accounts } = body;
 
       if (!token || typeof token !== "string" || token.length < 32 || !titular_id || !Array.isArray(accounts) || accounts.length === 0) {
         return new Response(
@@ -195,7 +196,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "update-account") {
-      const { token, account_id, login_username, password, observacoes } = await req.json();
+      const { token, account_id, login_username, password, observacoes } = body;
 
       if (!token || typeof token !== "string" || token.length < 32 || !account_id) {
         return new Response(
@@ -266,7 +267,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "delete-account") {
-      const { token, account_id } = await req.json();
+      const { token, account_id } = body;
 
       if (!token || typeof token !== "string" || token.length < 32 || !account_id) {
         return new Response(
@@ -329,7 +330,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "decrypt-password") {
-      const { token, account_id } = await req.json();
+      const { token, account_id } = body;
 
       if (!token || typeof token !== "string" || token.length < 32 || !account_id) {
         return new Response(
@@ -386,7 +387,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "update-titular") {
-      const { token, titular_id, nome, email, telefone, data_nascimento, endereco, cep, cidade, observacoes, data_inicio_parceria, data_fim_parceria } = await req.json();
+      const { token, titular_id, nome, email, telefone, data_nascimento, endereco, cep, cidade, observacoes, data_inicio_parceria, data_fim_parceria } = body;
 
       if (!token || typeof token !== "string" || token.length < 32 || !titular_id) {
         return new Response(
@@ -478,7 +479,7 @@ Deno.serve(async (req) => {
       }
 
       const userId = claimsData.claims.sub as string;
-      const { supplier_profile_id, supplier_workspace_id, ttl_hours, label, max_uses } = await req.json();
+      const { supplier_profile_id, supplier_workspace_id, ttl_hours, label, max_uses } = body;
 
       if (!supplier_profile_id || !supplier_workspace_id) {
         return new Response(
@@ -528,7 +529,7 @@ Deno.serve(async (req) => {
 
     // ── get-titular-history: fetch transactions for a titular's linked parceiro ──
     if (action === "get-titular-history") {
-      const { token, titular_id } = await req.json();
+      const { token, titular_id } = body;
       if (!token || !titular_id) {
         return new Response(JSON.stringify({ error: "Dados inválidos" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
@@ -586,7 +587,7 @@ Deno.serve(async (req) => {
 
     // ── CRUD for supplier_titular_bancos ──
     if (action === "manage-banco") {
-      const { token, titular_id, operation, banco_id, banco_nome, agencia, conta, tipo_conta, pix_key, pix_tipo, titular_conta, observacoes } = await req.json();
+      const { token, titular_id, operation, banco_id, banco_nome, agencia, conta, tipo_conta, pix_key, pix_tipo, titular_conta, observacoes } = body;
       if (!token || !titular_id || !operation) {
         return new Response(JSON.stringify({ error: "Dados inválidos" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
@@ -687,7 +688,7 @@ Deno.serve(async (req) => {
 
     // ── List ALL banks for a workspace (for transaction dialog) ──
     if (action === "list-workspace-bancos") {
-      const { token } = await req.json();
+      const { token } = body;
       if (!token) {
         return new Response(JSON.stringify({ error: "Token obrigatório" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
@@ -708,7 +709,7 @@ Deno.serve(async (req) => {
 
     // ── Update bank saldo (debit/credit on transactions) ──
     if (action === "update-banco-saldo") {
-      const { token, banco_id, valor, operacao } = await req.json();
+      const { token, banco_id, valor, operacao } = body;
       if (!token || !banco_id || !valor || !operacao) {
         return new Response(JSON.stringify({ error: "Dados incompletos" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
