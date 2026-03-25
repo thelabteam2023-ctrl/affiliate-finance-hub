@@ -13474,6 +13474,10 @@ export type Database = {
         }
         Returns: string
       }
+      create_supplier_bookmaker_accounts_by_token: {
+        Args: { p_accounts: Json; p_titular_id: string; p_token_hash: string }
+        Returns: number
+      }
       create_titular_with_parceiro: {
         Args: {
           p_cep?: string
@@ -13933,6 +13937,14 @@ export type Database = {
       }
       get_titular_existing_credentials: {
         Args: { p_titular_id: string }
+        Returns: {
+          bookmaker_catalogo_id: string
+          login_password: string
+          login_username: string
+        }[]
+      }
+      get_titular_existing_credentials_by_supplier_token: {
+        Args: { p_titular_id: string; p_token_hash: string }
         Returns: {
           bookmaker_catalogo_id: string
           login_password: string
