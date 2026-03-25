@@ -111,44 +111,24 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
   });
 
   // Sync a fornecedor from Captação → create workspace + supplier_profile
-  const syncFornecedor = async (fornecedor: { id: string; nome: string; documento?: string }) => {
-    if (!user?.id) throw new Error("Usuário não autenticado");
-
-    // 1. Create workspace (no owner_id column exists)
-    const { data: ws, error: wsError } = await supabase
-      .from("workspaces")
-      .insert({
-        name: `Fornecedor: ${fornecedor.nome}`,
-        parent_workspace_id: workspaceId,
-        tipo: "fornecedor",
-      })
-      .select("id")
-      .single();
-    if (wsError) throw wsError;
-
-    // 2. Add current user as owner member of new workspace
-    const { error: wmError } = await supabase
-      .from("workspace_members")
-      .insert({
-        workspace_id: ws.id,
-        user_id: user.id,
-        role: "owner",
-        is_active: true,
-      });
-    if (wmError) throw wmError;
-
-    // 3. Create supplier_profile linked to fornecedor mestre
-    const { error: spError } = await supabase
-      .from("supplier_profiles")
-      .insert({
-        workspace_id: ws.id,
-        parent_workspace_id: workspaceId,
-        nome: fornecedor.nome,
-        contato: fornecedor.documento || null,
-        created_by: user.id,
-        fornecedor_id: fornecedor.id,
-      });
-    if (spError) throw spError;
+  // Activate supplier via secure RPC (bypasses RLS)
+  const activateSupplierRpc = async (params: {
+    nome: string;
+    contato?: string | null;
+    observacoes?: string | null;
+    fornecedor_id?: string | null;
+  }) => {
+    const { data, error } = await supabase.rpc("activate_supplier_portal", {
+      p_parent_workspace_id: workspaceId,
+      p_nome: params.nome,
+      p_contato: params.contato || null,
+      p_observacoes: params.observacoes || null,
+      p_fornecedor_id: params.fornecedor_id || null,
+    });
+    if (error) throw error;
+    const result = data as any;
+    if (!result?.success) throw new Error(result?.error || "Erro ao ativar fornecedor");
+    return result;
   };
 
   // Create supplier (from existing fornecedor or new)
@@ -157,51 +137,22 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
       if (!user?.id) throw new Error("Usuário não autenticado");
 
       if (selectedFornecedorId !== "new") {
-        // Vincular fornecedor existente da Captação
         const found = unlinkedFornecedores.find((f: any) => f.id === selectedFornecedorId);
         if (!found) throw new Error("Fornecedor não encontrado");
-        await syncFornecedor(found);
+        await activateSupplierRpc({
+          nome: found.nome,
+          contato: found.documento,
+          fornecedor_id: found.id,
+        });
         return;
       }
 
-      // Criar novo do zero
       if (!nome.trim()) throw new Error("Nome é obrigatório");
-
-      // 1. Create workspace for supplier
-      const { data: ws, error: wsError } = await supabase
-        .from("workspaces")
-        .insert({
-          name: `Fornecedor: ${nome}`,
-          parent_workspace_id: workspaceId,
-          tipo: "fornecedor",
-        })
-        .select("id")
-        .single();
-
-      if (wsError) throw wsError;
-
-      // 2. Add current user as owner member
-      const { error: wmError } = await supabase
-        .from("workspace_members")
-        .insert({
-          workspace_id: ws.id,
-          user_id: user.id,
-          role: "owner",
-          is_active: true,
-        });
-      if (wmError) throw wmError;
-
-      // 3. Create supplier profile
-      const { error: spError } = await supabase.from("supplier_profiles").insert({
-        workspace_id: ws.id,
-        parent_workspace_id: workspaceId,
+      await activateSupplierRpc({
         nome,
-        contato: contato || null,
-        observacoes: observacoes || null,
-        created_by: user.id,
+        contato,
+        observacoes,
       });
-
-      if (spError) throw spError;
     },
     onSuccess: () => {
       toast.success("Fornecedor ativado no portal");
