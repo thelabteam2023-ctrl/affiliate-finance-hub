@@ -157,6 +157,7 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
         password: existing?.password || "",
         showPassword: existing?.showPassword || false,
         loginEmail: existing?.loginEmail || titularEmail,
+        manuallyEdited: existing?.manuallyEdited || false,
       };
     }).sort((a, b) => a.catalogoNome.localeCompare(b.catalogoNome));
     setContas(entries);
