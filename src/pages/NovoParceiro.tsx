@@ -334,24 +334,43 @@ const NovoParceiro = () => {
               </div>
             </Card>
 
-            {/* Status e Observações */}
+            {/* Status, Origem e Observações */}
             <Card className="border-border bg-gradient-surface p-6 shadow-soft">
               <h2 className="mb-6 text-xl font-semibold">Configurações</h2>
               <div className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="status">Status</Label>
-                  <Select
-                    value={formData.status}
-                    onValueChange={(value) => handleChange("status", value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ATIVO">Ativo</SelectItem>
-                      <SelectItem value="INATIVO">Inativo</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="grid gap-6 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="status">Status</Label>
+                    <Select
+                      value={formData.status}
+                      onValueChange={(value) => handleChange("status", value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ATIVO">Ativo</SelectItem>
+                        <SelectItem value="INATIVO">Inativo</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="fornecedorOrigem">Fornecedor de Origem</Label>
+                    <Select
+                      value={formData.fornecedorOrigemId || "none"}
+                      onValueChange={(value) => handleChange("fornecedorOrigemId", value === "none" ? "" : value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Nenhum (captação direta)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Nenhum (captação direta)</SelectItem>
+                        {fornecedores.map((f) => (
+                          <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="notas">Observações</Label>
