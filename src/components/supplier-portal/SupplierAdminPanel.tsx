@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -16,6 +16,8 @@ import {
   Search, Check
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { OrigemPagamentoSelect, OrigemPagamentoData } from "@/components/programa-indicacao/OrigemPagamentoSelect";
+import { format } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
@@ -49,6 +51,12 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
   const [valorAlocacao, setValorAlocacao] = useState("");
   const [valorSugerido, setValorSugerido] = useState("");
   const [descricaoAlocacao, setDescricaoAlocacao] = useState("");
+  const [origemData, setOrigemData] = useState<OrigemPagamentoData>({
+    origemTipo: "CAIXA_OPERACIONAL",
+    tipoMoeda: "FIAT",
+    moeda: "BRL",
+    saldoDisponivel: 0,
+  });
 
   // Form state - Link
   const [ttlHours, setTtlHours] = useState("72");
