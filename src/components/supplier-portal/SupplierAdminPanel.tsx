@@ -12,9 +12,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Textarea } from "@/components/ui/textarea";
 import { 
   Plus, Truck, Link2, Copy, ExternalLink, Wallet,
-  Building2, Users, Clock, CheckCircle2, XCircle, AlertTriangle, Zap
+  Building2, Users, Clock, CheckCircle2, XCircle, AlertTriangle, Zap,
+  Search, Check
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 
 interface Props {
