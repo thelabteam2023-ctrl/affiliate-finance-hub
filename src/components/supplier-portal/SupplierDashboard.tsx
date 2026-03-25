@@ -12,6 +12,7 @@ import { SupplierContasTab } from "./SupplierContasTab";
 import { SupplierTitularesTab } from "./SupplierTitularesTab";
 import { SupplierExtratoTab } from "./SupplierExtratoTab";
 import { SupplierTransacaoDialog } from "./SupplierTransacaoDialog";
+import { SupplierBancosModal } from "./SupplierBancosModal";
 
 interface SupplierSession {
   supplier_workspace_id: string;
@@ -37,6 +38,7 @@ export function SupplierDashboard({ session }: Props) {
   const [activeTab, setActiveTab] = useState("visao-geral");
   const [transacaoOpen, setTransacaoOpen] = useState(false);
   const [transacaoTipo, setTransacaoTipo] = useState<"DEPOSITO" | "SAQUE" | "TRANSFERENCIA_BANCO">("DEPOSITO");
+  const [bancosModalOpen, setBancosModalOpen] = useState(false);
 
   // Fetch ledger summary
   const { data: ledgerData, refetch: refetchLedger } = useQuery({
