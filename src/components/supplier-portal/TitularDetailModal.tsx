@@ -94,7 +94,7 @@ function HistoryTab({ titular, supplierToken }: { titular: any; supplierToken: s
 
   return (
     <>
-      <div className="space-y-1 max-h-[50vh] overflow-y-auto">
+      <div className="space-y-1">
         {transactions.map((tx: any) => {
           const isCredit = tx.direcao === "CREDIT";
           const canEdit = EDITABLE_TYPES.includes(tx.tipo);
@@ -333,7 +333,7 @@ export function TitularDetailModal({ open, onOpenChange, titular, supplierToken,
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base">
             {titular.nome}
@@ -345,8 +345,8 @@ export function TitularDetailModal({ open, onOpenChange, titular, supplierToken,
           </div>
         </DialogHeader>
 
-        <Tabs defaultValue="historico" className="mt-2">
-          <TabsList className="grid w-full grid-cols-2">
+        <Tabs defaultValue="historico" className="mt-2 flex-1 flex flex-col min-h-0">
+          <TabsList className="grid w-full grid-cols-2 shrink-0">
             <TabsTrigger value="historico" className="text-xs sm:text-sm gap-1.5">
               <Clock className="h-3.5 w-3.5" /> Histórico
             </TabsTrigger>
@@ -355,11 +355,11 @@ export function TitularDetailModal({ open, onOpenChange, titular, supplierToken,
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="historico" className="mt-3">
+          <TabsContent value="historico" className="mt-3 flex-1 min-h-0 overflow-y-auto">
             <HistoryTab titular={titular} supplierToken={supplierToken} />
           </TabsContent>
 
-          <TabsContent value="bancos" className="mt-3">
+          <TabsContent value="bancos" className="mt-3 flex-1 min-h-0 overflow-y-auto">
             <BancosTab titular={titular} supplierToken={supplierToken} />
           </TabsContent>
         </Tabs>
