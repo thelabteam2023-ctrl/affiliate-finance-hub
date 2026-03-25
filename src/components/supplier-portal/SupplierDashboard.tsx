@@ -45,7 +45,7 @@ export function SupplierDashboard({ session }: Props) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("supplier_ledger")
-        .select("tipo, direcao, valor, created_at")
+        .select("tipo, direcao, valor, created_at, bookmaker_account_id")
         .eq("supplier_workspace_id", session.supplier_workspace_id)
         .order("sequencia", { ascending: false });
 
@@ -103,16 +103,19 @@ export function SupplierDashboard({ session }: Props) {
       .filter(e => e.tipo === "SAQUE" && e.direcao === "DEBIT")
       .reduce((s, e) => s + Number(e.valor), 0);
 
-    // Saldo central = last saldo_depois from ledger (we get from the most recent entry)
-    // For now calculate from events
-    const credits = ledgerData
+    // Saldo central = only entries without bookmaker_account_id (central-level movements)
+    // ALOCACAO CREDIT → +central (money enters workspace)
+    // TRANSFERENCIA_BANCO DEBIT → -central (money sent to bank)
+    // DEVOLUCAO DEBIT → -central (money returned to admin)
+    const centralEntries = ledgerData.filter(e => !e.bookmaker_account_id);
+    const centralCredits = centralEntries
       .filter(e => e.direcao === "CREDIT")
       .reduce((s, e) => s + Number(e.valor), 0);
-    const debits = ledgerData
+    const centralDebits = centralEntries
       .filter(e => e.direcao === "DEBIT")
       .reduce((s, e) => s + Number(e.valor), 0);
 
-    return { totalAlocado, totalDevolvido, totalSacado, saldoCentral: credits - debits };
+    return { totalAlocado, totalDevolvido, totalSacado, saldoCentral: centralCredits - centralDebits };
   })();
 
   const saldoContas = (accounts || []).reduce((s, a) => s + Number(a.saldo_atual), 0);
