@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -16,6 +16,8 @@ import {
   Search, Check
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { OrigemPagamentoSelect, OrigemPagamentoData } from "@/components/programa-indicacao/OrigemPagamentoSelect";
+import { format } from "date-fns";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
@@ -49,6 +51,12 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
   const [valorAlocacao, setValorAlocacao] = useState("");
   const [valorSugerido, setValorSugerido] = useState("");
   const [descricaoAlocacao, setDescricaoAlocacao] = useState("");
+  const [origemData, setOrigemData] = useState<OrigemPagamentoData>({
+    origemTipo: "CAIXA_OPERACIONAL",
+    tipoMoeda: "FIAT",
+    moeda: "BRL",
+    saldoDisponivel: 0,
+  });
 
   // Form state - Link
   const [ttlHours, setTtlHours] = useState("72");
@@ -167,25 +175,67 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
     onError: (e: any) => toast.error(e.message),
   });
 
-  // Allocate capital
+  // Allocate capital - com rastreamento de origem real
+  const valorAlocacaoNum = parseFloat(valorAlocacao) || 0;
+  const isSaldoInsuficiente = Boolean(origemData.saldoInsuficiente) || (valorAlocacaoNum > 0 && origemData.saldoDisponivel < valorAlocacaoNum);
+
   const allocateMutation = useMutation({
     mutationFn: async () => {
       if (!selectedSupplier || !valorAlocacao) throw new Error("Dados incompletos");
       const numVal = parseFloat(valorAlocacao);
       if (!numVal || numVal <= 0) throw new Error("Valor inválido");
 
-      // 1. Create allocation record
+      const saldoRealInsuficiente = Boolean(origemData.saldoInsuficiente) || (numVal > 0 && origemData.saldoDisponivel < numVal);
+      if (saldoRealInsuficiente) {
+        throw new Error(`Saldo insuficiente. Disponível: R$ ${origemData.saldoDisponivel.toFixed(2)}`);
+      }
+
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (!currentUser) throw new Error("Não autenticado");
+
+      const isCrypto = origemData.tipoMoeda === "CRYPTO";
+      const cotacaoUSD = origemData.cotacao || 5.40;
+      const coinPriceUSD = origemData.coinPriceUSD || 1;
+      const valorUSD = isCrypto ? numVal / cotacaoUSD : null;
+      const qtdCoin = isCrypto && valorUSD ? valorUSD / coinPriceUSD : null;
+
+      // 1. Debitar da origem via cash_ledger (rastreamento real)
+      const { error: ledgerError } = await supabase
+        .from("cash_ledger")
+        .insert({
+          user_id: currentUser.id,
+          workspace_id: workspaceId,
+          tipo_transacao: "ALOCACAO_FORNECEDOR",
+          tipo_moeda: origemData.tipoMoeda,
+          moeda: isCrypto ? "BRL" : origemData.moeda,
+          valor: numVal,
+          coin: origemData.coin || null,
+          qtd_coin: qtdCoin,
+          valor_usd: valorUSD,
+          cotacao: isCrypto ? cotacaoUSD : null,
+          origem_tipo: origemData.origemTipo,
+          origem_parceiro_id: origemData.origemParceiroId || null,
+          origem_conta_bancaria_id: origemData.origemContaBancariaId || null,
+          origem_wallet_id: origemData.origemWalletId || null,
+          destino_tipo: "FORNECEDOR",
+          data_transacao: format(new Date(), "yyyy-MM-dd"),
+          descricao: descricaoAlocacao || `Alocação de capital para fornecedor ${selectedSupplier.nome}`,
+          status: "CONFIRMADO",
+        });
+      if (ledgerError) throw ledgerError;
+
+      // 2. Create allocation record
       const { error: alErr } = await supabase.from("supplier_alocacoes").insert({
         parent_workspace_id: workspaceId,
         supplier_workspace_id: selectedSupplier.workspace_id,
         valor: numVal,
         valor_sugerido_deposito: valorSugerido ? parseFloat(valorSugerido) : null,
         descricao: descricaoAlocacao || null,
-        created_by: user!.id,
+        created_by: currentUser.id,
       });
       if (alErr) throw alErr;
 
-      // 2. Record in ledger
+      // 3. Credit supplier ledger
       const { data, error } = await supabase.rpc("supplier_ledger_insert", {
         p_supplier_workspace_id: selectedSupplier.workspace_id,
         p_bookmaker_account_id: null,
@@ -193,7 +243,7 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
         p_direcao: "CREDIT",
         p_valor: numVal,
         p_descricao: descricaoAlocacao || `Alocação de capital: ${formatCurrency(numVal)}`,
-        p_created_by: `ADMIN:${user!.id}`,
+        p_created_by: `ADMIN:${currentUser.id}`,
         p_idempotency_key: `ALOC_${selectedSupplier.workspace_id}_${Date.now()}`,
       });
       if (error) throw error;
@@ -203,9 +253,11 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
     onSuccess: () => {
       toast.success("Capital alocado com sucesso");
       queryClient.invalidateQueries({ queryKey: ["admin-suppliers"] });
+      queryClient.invalidateQueries({ queryKey: ["financeiro-data"] });
       setValorAlocacao("");
       setValorSugerido("");
       setDescricaoAlocacao("");
+      setOrigemData({ origemTipo: "CAIXA_OPERACIONAL", tipoMoeda: "FIAT", moeda: "BRL", saldoDisponivel: 0 });
       setAlocacaoOpen(false);
     },
     onError: (e: any) => toast.error(e.message),
@@ -504,20 +556,36 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
 
       {/* Dialog: Alocar Capital */}
       <Dialog open={alocacaoOpen} onOpenChange={setAlocacaoOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Alocar Capital - {selectedSupplier?.nome}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Wallet className="h-5 w-5 text-emerald-400" />
+              Alocar Capital - {selectedSupplier?.nome}
+            </DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
+          <div className="space-y-4 py-2">
+            {/* Origem do Capital */}
+            <OrigemPagamentoSelect
+              value={origemData}
+              onChange={setOrigemData}
+              valorPagamento={valorAlocacaoNum}
+              disabled={allocateMutation.isPending}
+            />
+
+            {/* Valor */}
             <div>
-              <Label>Valor (R$) *</Label>
+              <Label>Valor ({origemData.moeda}) *</Label>
               <Input type="number" step="0.01" value={valorAlocacao} onChange={e => setValorAlocacao(e.target.value)} placeholder="10000.00" />
             </div>
+
+            {/* Valor sugerido por depósito */}
             <div>
               <Label>Valor Sugerido por Depósito</Label>
               <Input type="number" step="0.01" value={valorSugerido} onChange={e => setValorSugerido(e.target.value)} placeholder="1000.00 (opcional)" />
               <p className="text-xs text-muted-foreground mt-1">O fornecedor verá essa sugestão ao fazer depósitos</p>
             </div>
+
+            {/* Descrição */}
             <div>
               <Label>Descrição</Label>
               <Textarea value={descricaoAlocacao} onChange={e => setDescricaoAlocacao(e.target.value)} rows={2} placeholder="Motivo da alocação" />
@@ -525,7 +593,11 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAlocacaoOpen(false)}>Cancelar</Button>
-            <Button onClick={() => allocateMutation.mutate()} disabled={!valorAlocacao || allocateMutation.isPending}>
+            <Button
+              onClick={() => allocateMutation.mutate()}
+              disabled={!valorAlocacao || allocateMutation.isPending || isSaldoInsuficiente}
+              title={isSaldoInsuficiente ? "Saldo insuficiente para realizar esta alocação" : undefined}
+            >
               {allocateMutation.isPending ? "Alocando..." : "Alocar Capital"}
             </Button>
           </DialogFooter>
