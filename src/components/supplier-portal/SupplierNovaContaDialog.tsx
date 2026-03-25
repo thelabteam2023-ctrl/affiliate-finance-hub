@@ -12,7 +12,6 @@ import { Building2, Eye, EyeOff, User, ChevronRight, ChevronLeft, Search, Loader
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { BookmakerLogo } from "@/components/ui/bookmaker-logo";
-import { decryptPassword, encryptPassword } from "@/utils/cryptoPassword";
 
 interface Props {
   open: boolean;
@@ -44,6 +43,9 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
   const [globalPassword, setGlobalPassword] = useState("");
   const [showGlobalPassword, setShowGlobalPassword] = useState(false);
   const queryClient = useQueryClient();
+  const supplierToken = useMemo(() => new URLSearchParams(window.location.search).get("token") || "", []);
+  const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+  const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
   const { data: allowedIds } = useQuery({
     queryKey: ["supplier-allowed-bookmakers", supplierWorkspaceId],
@@ -104,17 +106,30 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
     },
   });
 
-  // Fetch existing credentials from main system for selected titular
-  const { data: mainCredentials = [] } = useQuery({
-    queryKey: ["titular-main-credentials", titularId],
+  // Fetch existing credentials from main system for selected titular via supplier token
+  const { data: mainCredentials = [], isLoading: isLoadingMainCredentials } = useQuery({
+    queryKey: ["titular-main-credentials", supplierWorkspaceId, titularId],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("get_titular_existing_credentials", {
-        p_titular_id: titularId,
-      });
-      if (error) throw error;
-      return data || [];
+      const resp = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/supplier-auth?action=get-titular-credentials`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: anonKey,
+          },
+          body: JSON.stringify({ token: supplierToken, titular_id: titularId }),
+        }
+      );
+
+      const data = await resp.json();
+      if (!resp.ok) {
+        throw new Error(data.error || "Erro ao buscar credenciais existentes");
+      }
+
+      return data.credentials || [];
     },
-    enabled: !!titularId,
+    enabled: !!titularId && !!supplierToken,
     staleTime: 5 * 60 * 1000,
   });
 
@@ -157,67 +172,44 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
     setSelectedCasaIds(new Set());
   }
 
-  const [isDecrypting, setIsDecrypting] = useState(false);
-
   async function goToStep2() {
-    // Build a map of existing credentials from main system
-    const credMap = new Map<string, { username: string; encryptedPassword: string }>();
+    if (!supplierToken) {
+      toast.error("Token do portal inválido ou ausente");
+      return;
+    }
+
+    if (isLoadingMainCredentials) {
+      toast.info("Carregando credenciais existentes...");
+      return;
+    }
+
+    const credMap = new Map<string, { username: string; password: string }>();
     mainCredentials.forEach((mc: any) => {
       credMap.set(mc.bookmaker_catalogo_id, {
         username: mc.login_username || "",
-        encryptedPassword: mc.login_password || "",
+        password: mc.login_password || "",
       });
     });
-
-    // Decrypt passwords in parallel
-    setIsDecrypting(true);
-    const idsToDecrypt = Array.from(selectedCasaIds).filter(id => {
-      const existing = contas.find(c => c.catalogoId === id);
-      return !existing?.password && credMap.has(id) && credMap.get(id)!.encryptedPassword;
-    });
-
-    const decryptedMap = new Map<string, string>();
-    try {
-      const results = await Promise.allSettled(
-        idsToDecrypt.map(async (id) => {
-          const encrypted = credMap.get(id)!.encryptedPassword;
-          try {
-            const decrypted = await decryptPassword(encrypted);
-            return { id, decrypted };
-          } catch {
-            return { id, decrypted: "" };
-          }
-        })
-      );
-      results.forEach((r) => {
-        if (r.status === "fulfilled" && r.value.decrypted) {
-          decryptedMap.set(r.value.id, r.value.decrypted);
-        }
-      });
-    } catch (err) {
-      console.error("[AutoFill] Batch decrypt error:", err);
-      toast.error("Erro ao descriptografar algumas senhas");
-    }
-    setIsDecrypting(false);
 
     const entries: ContaEntry[] = Array.from(selectedCasaIds).map(id => {
       const casa = catalogo.find((c: any) => c.id === id);
       const existing = contas.find(c => c.catalogoId === id);
       const mainCred = credMap.get(id);
-      const decryptedPw = decryptedMap.get(id) || "";
-      const hasMainCred = !!mainCred && !!(mainCred.username || decryptedPw);
+      const hasMainCred = !!mainCred && !!(mainCred.username || mainCred.password);
+
       return {
         catalogoId: id,
         catalogoNome: casa?.nome || "",
         moeda: casa?.moeda_padrao || "BRL",
         logoUrl: casa?.logo_url || null,
         username: existing?.username || mainCred?.username || "",
-        password: existing?.password || decryptedPw || "",
-        showPassword: existing?.showPassword || (!existing && !!decryptedPw),
+        password: existing?.password || mainCred?.password || "",
+        showPassword: existing?.showPassword || (!existing && !!mainCred?.password),
         manuallyEdited: existing?.manuallyEdited || false,
         autoFilled: existing?.autoFilled || (!existing && hasMainCred),
       };
     }).sort((a, b) => a.catalogoNome.localeCompare(b.catalogoNome));
+
     setContas(entries);
     setCurrentCardIndex(0);
     setStep(2);
@@ -260,7 +252,10 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
 
   const createMutation = useMutation({
     mutationFn: async () => {
-      // Validate all entries before any encryption
+      if (!supplierToken) {
+        throw new Error("Token do portal inválido ou ausente.");
+      }
+
       for (const c of contas) {
         const u = c.username.trim();
         const p = c.password.trim();
@@ -269,20 +264,30 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
         if (p.length > MAX_PASSWORD_LEN) throw new Error(`Senha muito longa para ${c.catalogoNome}`);
       }
 
-      // Encrypt passwords before saving
-      const rows = await Promise.all(contas.map(async (c) => {
-        const encryptedPw = await encryptPassword(c.password.trim());
-        return {
-          supplier_workspace_id: supplierWorkspaceId,
-          bookmaker_catalogo_id: c.catalogoId,
-          titular_id: titularId,
-          login_username: c.username.trim(),
-          login_password_encrypted: encryptedPw,
-          moeda: c.moeda,
-        };
-      }));
-      const { error } = await supabase.from("supplier_bookmaker_accounts").insert(rows);
-      if (error) throw error;
+      const resp = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/supplier-auth?action=create-accounts`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: anonKey,
+          },
+          body: JSON.stringify({
+            token: supplierToken,
+            titular_id: titularId,
+            accounts: contas.map((c) => ({
+              bookmaker_catalogo_id: c.catalogoId,
+              login_username: c.username.trim(),
+              password: c.password.trim(),
+            })),
+          }),
+        }
+      );
+
+      const data = await resp.json();
+      if (!resp.ok) {
+        throw new Error(data.error || "Erro ao criar conta");
+      }
     },
     onSuccess: () => {
       const count = contas.length;
@@ -467,10 +472,10 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
                 </Button>
                 <Button
                   onClick={goToStep2}
-                  disabled={!titularId || selectedCasaIds.size === 0 || isDecrypting}
+                  disabled={!titularId || selectedCasaIds.size === 0 || isLoadingMainCredentials}
                   className="flex-1 h-11 gap-1.5 font-semibold"
                 >
-                  {isDecrypting ? (
+                  {isLoadingMainCredentials ? (
                     <><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</>
                   ) : (
                     <>Próximo <ChevronRight className="h-4 w-4" /></>
