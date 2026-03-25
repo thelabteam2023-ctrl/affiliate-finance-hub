@@ -13927,6 +13927,14 @@ export type Database = {
           workspace_id: string
         }[]
       }
+      get_titular_existing_credentials: {
+        Args: { p_titular_id: string }
+        Returns: {
+          bookmaker_catalogo_id: string
+          login_password: string
+          login_username: string
+        }[]
+      }
       get_user_auth_version: { Args: { p_user_id: string }; Returns: number }
       get_user_project_responsibilities: {
         Args: { _projeto_id: string; _user_id: string }
