@@ -685,6 +685,74 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Operação inválida" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // ── List ALL banks for a workspace (for transaction dialog) ──
+    if (action === "list-workspace-bancos") {
+      const { token } = await req.json();
+      if (!token) {
+        return new Response(JSON.stringify({ error: "Token obrigatório" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const tokenHash = await hashToken(token);
+      const { data: validation, error: valError } = await supabaseAdmin.rpc("validate_supplier_token", { p_token_hash: tokenHash });
+      if (valError || !validation?.valid) {
+        return new Response(JSON.stringify({ error: "Token inválido" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      const { data: bancos } = await supabaseAdmin
+        .from("supplier_titular_bancos")
+        .select("id, banco_nome, pix_key, saldo, titular_id, supplier_titulares(nome)")
+        .eq("supplier_workspace_id", validation.supplier_workspace_id)
+        .order("banco_nome");
+
+      return new Response(JSON.stringify({ bancos: bancos || [] }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // ── Update bank saldo (debit/credit on transactions) ──
+    if (action === "update-banco-saldo") {
+      const { token, banco_id, valor, operacao } = await req.json();
+      if (!token || !banco_id || !valor || !operacao) {
+        return new Response(JSON.stringify({ error: "Dados incompletos" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const tokenHash = await hashToken(token);
+      const { data: validation, error: valError } = await supabaseAdmin.rpc("validate_supplier_token", { p_token_hash: tokenHash });
+      if (valError || !validation?.valid) {
+        return new Response(JSON.stringify({ error: "Token inválido" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      // Verify bank belongs to workspace
+      const { data: banco } = await supabaseAdmin
+        .from("supplier_titular_bancos")
+        .select("id, saldo")
+        .eq("id", banco_id)
+        .eq("supplier_workspace_id", validation.supplier_workspace_id)
+        .single();
+      if (!banco) {
+        return new Response(JSON.stringify({ error: "Banco não encontrado" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      const numValor = Number(valor);
+      let novoSaldo: number;
+      if (operacao === "CREDIT") {
+        novoSaldo = Number(banco.saldo) + numValor;
+      } else if (operacao === "DEBIT") {
+        novoSaldo = Number(banco.saldo) - numValor;
+        if (novoSaldo < 0) {
+          return new Response(JSON.stringify({ error: `Saldo insuficiente no banco. Disponível: R$ ${Number(banco.saldo).toFixed(2)}` }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+      } else {
+        return new Response(JSON.stringify({ error: "Operação inválida (CREDIT ou DEBIT)" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      const { error: updateErr } = await supabaseAdmin
+        .from("supplier_titular_bancos")
+        .update({ saldo: novoSaldo, updated_at: new Date().toISOString() })
+        .eq("id", banco_id);
+      if (updateErr) {
+        return new Response(JSON.stringify({ error: "Erro ao atualizar saldo do banco" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      return new Response(JSON.stringify({ success: true, saldo_anterior: Number(banco.saldo), saldo_novo: novoSaldo }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     return new Response(
       JSON.stringify({ error: "Ação não reconhecida" }),
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }

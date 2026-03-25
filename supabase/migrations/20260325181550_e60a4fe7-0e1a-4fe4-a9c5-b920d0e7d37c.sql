@@ -1,0 +1,1 @@
+ALTER TABLE public.supplier_titular_bancos ADD COLUMN saldo numeric NOT NULL DEFAULT 0;
