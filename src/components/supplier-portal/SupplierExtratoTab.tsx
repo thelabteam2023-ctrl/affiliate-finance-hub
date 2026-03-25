@@ -105,7 +105,8 @@ export function SupplierExtratoTab({ supplierWorkspaceId }: Props) {
           const wasEdited = !!(entry.metadata as any)?.valor_original;
           const casaNome = entry.supplier_bookmaker_accounts?.bookmakers_catalogo?.nome;
           const casaLogo = entry.supplier_bookmaker_accounts?.bookmakers_catalogo?.logo_url;
-          const titularNome = entry.supplier_bookmaker_accounts?.supplier_titulares?.nome;
+          const titularNome = entry.supplier_bookmaker_accounts?.supplier_titulares?.nome
+            || ((entry.metadata as any)?.titular_id ? titularesMap[(entry.metadata as any).titular_id] : null);
           const bancoNome = (entry.metadata as any)?.banco_nome;
 
           // Build descriptive subtitle
