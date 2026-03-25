@@ -12,6 +12,7 @@ import { Building2, Eye, EyeOff, User, ChevronRight, ChevronLeft, Search, Loader
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { BookmakerLogo } from "@/components/ui/bookmaker-logo";
+import { decryptPassword } from "@/utils/cryptoPassword";
 
 interface Props {
   open: boolean;
