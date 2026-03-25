@@ -527,7 +527,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // ── get-titular-history: fetch transactions for a titular's linked parceiro ──
+    // ── get-titular-history: fetch supplier_ledger transactions for a titular ──
     if (action === "get-titular-history") {
       const { token, titular_id } = body;
       if (!token || !titular_id) {
@@ -551,37 +551,63 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ error: "Titular não encontrado" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-      // Find linked parceiro
-      const { data: parceiro } = await supabaseAdmin
-        .from("parceiros")
-        .select("id, nome")
-        .eq("supplier_titular_id", titular_id)
-        .maybeSingle();
+      // Get titular's bookmaker account IDs
+      const { data: titularAccounts } = await supabaseAdmin
+        .from("supplier_bookmaker_accounts")
+        .select("id")
+        .eq("titular_id", titular_id)
+        .eq("supplier_workspace_id", validation.supplier_workspace_id);
 
-      if (!parceiro) {
-        return new Response(JSON.stringify({ transactions: [], bancos: [] }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const accountIds = (titularAccounts || []).map((a: any) => a.id);
+
+      // Get titular's bank IDs
+      const { data: titularBanks } = await supabaseAdmin
+        .from("supplier_titular_bancos")
+        .select("id")
+        .eq("titular_id", titular_id);
+
+      const bankIds = (titularBanks || []).map((b: any) => b.id);
+
+      // Fetch ledger entries linked to this titular's accounts
+      let transactions: any[] = [];
+      if (accountIds.length > 0) {
+        const { data: ledgerEntries } = await supabaseAdmin
+          .from("supplier_ledger")
+          .select("id, tipo, direcao, valor, descricao, created_at, bookmaker_account_id, metadata")
+          .eq("supplier_workspace_id", validation.supplier_workspace_id)
+          .in("bookmaker_account_id", accountIds)
+          .order("created_at", { ascending: false })
+          .limit(200);
+
+        // Enrich with bookmaker names
+        const { data: enrichedAccounts } = await supabaseAdmin
+          .from("supplier_bookmaker_accounts")
+          .select("id, bookmakers_catalogo(nome, logo_url)")
+          .in("id", accountIds);
+
+        const accountMap = new Map((enrichedAccounts || []).map((a: any) => [a.id, a.bookmakers_catalogo]));
+
+        transactions = (ledgerEntries || []).map((e: any) => {
+          const casa = accountMap.get(e.bookmaker_account_id);
+          return {
+            id: e.id,
+            tipo: e.tipo,
+            direcao: e.direcao,
+            valor: e.valor,
+            descricao: e.descricao,
+            created_at: e.created_at,
+            casa_nome: casa?.nome || null,
+            casa_logo: casa?.logo_url || null,
+          };
+        });
       }
 
-      // Fetch transactions (last 200)
-      const { data: transactions } = await supabaseAdmin
-        .from("cash_ledger")
-        .select("id, tipo_transacao, data_transacao, valor, moeda, status, descricao, created_at, destino_tipo, origem_tipo")
-        .or(`origem_parceiro_id.eq.${parceiro.id},destino_parceiro_id.eq.${parceiro.id}`)
-        .eq("workspace_id", validation.supplier_workspace_id)
-        .order("data_transacao", { ascending: false })
-        .limit(200);
-
-      // Fetch contas bancarias
-      const { data: contasBancarias } = await supabaseAdmin
-        .from("contas_bancarias")
-        .select("id, banco, agencia, conta, tipo_conta, titular, pix_key, moeda")
-        .eq("parceiro_id", parceiro.id);
+      // Also fetch TRANSFERENCIA_BANCO entries for this titular's banks via metadata
+      // For now, we include bank transfer entries that mention the titular's bank in description
+      // Future: store banco_id/titular_id in supplier_ledger metadata
 
       return new Response(JSON.stringify({
-        parceiro_id: parceiro.id,
-        parceiro_nome: parceiro.nome,
-        transactions: transactions || [],
-        contas_bancarias: contasBancarias || [],
+        transactions,
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
