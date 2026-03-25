@@ -305,37 +305,6 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
         </Button>
       </div>
 
-      {/* Banner: Fornecedores da Captação não vinculados */}
-      {unlinkedFornecedores.length > 0 && (
-        <Card className="border-warning/30 bg-warning/5">
-          <CardContent className="py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-warning/10 flex items-center justify-center">
-                  <AlertTriangle className="h-5 w-5 text-warning" />
-                </div>
-                <div>
-                  <p className="font-medium text-foreground">
-                    {unlinkedFornecedores.length} fornecedor{unlinkedFornecedores.length > 1 ? "es" : ""} da Captação sem portal
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {unlinkedFornecedores.map((f: any) => f.nome).join(", ")}
-                  </p>
-                </div>
-              </div>
-              <Button
-                size="sm"
-                onClick={syncAllFornecedores}
-                disabled={!!syncingId}
-                className="gap-1.5"
-              >
-                <Zap className="h-3.5 w-3.5" />
-                {syncingId ? "Sincronizando..." : "Ativar Todos"}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Suppliers list */}
       {suppliers.length === 0 ? (
