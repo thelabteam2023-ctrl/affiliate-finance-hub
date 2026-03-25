@@ -527,7 +527,7 @@ export function ApostaMultiplaDialog({
     setGerouFreebet(false);
     setValorFreebetGerada("");
     setBookmakerSaldo(null);
-    setFonteEntrada(null);
+    // fonte_entrada mantida para preservar última escolha na sessão
     // Reset registro values (incluindo fonte_saldo)
     const suggestions = getSuggestionsForTab(activeTab);
     const inferredFonteSaldo = (() => {
