@@ -473,8 +473,6 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-        </DialogContent>
-      </Dialog>
 
       {/* Dialog: Alocar Capital */}
       <Dialog open={alocacaoOpen} onOpenChange={setAlocacaoOpen}>
