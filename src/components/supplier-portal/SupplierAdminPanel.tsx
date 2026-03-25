@@ -11,8 +11,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Textarea } from "@/components/ui/textarea";
 import { 
   Plus, Truck, Link2, Copy, ExternalLink, Wallet,
-  Building2, Users, Clock, CheckCircle2, XCircle
+  Building2, Users, Clock, CheckCircle2, XCircle, AlertTriangle, Zap
 } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 
 interface Props {
@@ -31,6 +32,7 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
   const [linkOpen, setLinkOpen] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
   const [generatedLink, setGeneratedLink] = useState<string | null>(null);
+  const [syncingId, setSyncingId] = useState<string | null>(null);
 
   // Form state - Novo Fornecedor
   const [nome, setNome] = useState("");
@@ -73,6 +75,81 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
       }));
     },
   });
+
+  // Fetch fornecedores from Captação that don't have a portal profile yet
+  const linkedFornecedorIds = suppliers
+    .map((s: any) => s.fornecedor_id)
+    .filter(Boolean);
+
+  const { data: unlinkedFornecedores = [] } = useQuery({
+    queryKey: ["unlinked-fornecedores", workspaceId, linkedFornecedorIds],
+    queryFn: async () => {
+      let query = supabase
+        .from("fornecedores")
+        .select("id, nome, documento, status")
+        .eq("workspace_id", workspaceId)
+        .eq("status", "ATIVO")
+        .order("nome");
+
+      if (linkedFornecedorIds.length > 0) {
+        // Exclude already linked ones using NOT IN via filter
+        const { data } = await query;
+        return (data || []).filter(
+          (f: any) => !linkedFornecedorIds.includes(f.id)
+        );
+      }
+
+      const { data } = await query;
+      return data || [];
+    },
+  });
+
+  // Sync a fornecedor from Captação → create workspace + supplier_profile
+  const syncFornecedor = async (fornecedor: { id: string; nome: string; documento?: string }) => {
+    if (!user?.id) return;
+    setSyncingId(fornecedor.id);
+    try {
+      // 1. Create workspace
+      const { data: ws, error: wsError } = await supabase
+        .from("workspaces")
+        .insert({
+          name: `Fornecedor: ${fornecedor.nome}`,
+          owner_id: user.id,
+          parent_workspace_id: workspaceId,
+          tipo: "fornecedor",
+        })
+        .select("id")
+        .single();
+      if (wsError) throw wsError;
+
+      // 2. Create supplier_profile linked to fornecedor mestre
+      const { error: spError } = await supabase
+        .from("supplier_profiles")
+        .insert({
+          workspace_id: ws.id,
+          parent_workspace_id: workspaceId,
+          nome: fornecedor.nome,
+          contato: fornecedor.documento || null,
+          created_by: user.id,
+          fornecedor_id: fornecedor.id,
+        });
+      if (spError) throw spError;
+
+      toast.success(`${fornecedor.nome} ativado no portal`);
+      queryClient.invalidateQueries({ queryKey: ["admin-suppliers"] });
+      queryClient.invalidateQueries({ queryKey: ["unlinked-fornecedores"] });
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setSyncingId(null);
+    }
+  };
+
+  const syncAllFornecedores = async () => {
+    for (const f of unlinkedFornecedores) {
+      await syncFornecedor(f);
+    }
+  };
 
   // Create supplier
   const createSupplierMutation = useMutation({
@@ -230,6 +307,38 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
           <Plus className="h-4 w-4" /> Novo Fornecedor
         </Button>
       </div>
+
+      {/* Banner: Fornecedores da Captação não vinculados */}
+      {unlinkedFornecedores.length > 0 && (
+        <Card className="border-warning/30 bg-warning/5">
+          <CardContent className="py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-warning/10 flex items-center justify-center">
+                  <AlertTriangle className="h-5 w-5 text-warning" />
+                </div>
+                <div>
+                  <p className="font-medium text-foreground">
+                    {unlinkedFornecedores.length} fornecedor{unlinkedFornecedores.length > 1 ? "es" : ""} da Captação sem portal
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {unlinkedFornecedores.map((f: any) => f.nome).join(", ")}
+                  </p>
+                </div>
+              </div>
+              <Button
+                size="sm"
+                onClick={syncAllFornecedores}
+                disabled={!!syncingId}
+                className="gap-1.5"
+              >
+                <Zap className="h-3.5 w-3.5" />
+                {syncingId ? "Sincronizando..." : "Ativar Todos"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Suppliers list */}
       {suppliers.length === 0 ? (
