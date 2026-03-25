@@ -9366,6 +9366,7 @@ export type Database = {
           observacoes: string | null
           pix_key: string | null
           pix_tipo: string | null
+          saldo: number
           supplier_workspace_id: string
           tipo_conta: string
           titular_conta: string | null
@@ -9381,6 +9382,7 @@ export type Database = {
           observacoes?: string | null
           pix_key?: string | null
           pix_tipo?: string | null
+          saldo?: number
           supplier_workspace_id: string
           tipo_conta?: string
           titular_conta?: string | null
@@ -9396,6 +9398,7 @@ export type Database = {
           observacoes?: string | null
           pix_key?: string | null
           pix_tipo?: string | null
+          saldo?: number
           supplier_workspace_id?: string
           tipo_conta?: string
           titular_conta?: string | null
