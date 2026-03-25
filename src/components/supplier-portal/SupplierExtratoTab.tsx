@@ -59,6 +59,21 @@ export function SupplierExtratoTab({ supplierWorkspaceId }: Props) {
     },
   });
 
+  // Fetch titulares to resolve names from metadata.titular_id
+  const { data: titularesMap = {} } = useQuery({
+    queryKey: ["supplier-titulares-map", supplierWorkspaceId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("supplier_titulares")
+        .select("id, nome")
+        .eq("supplier_workspace_id", supplierWorkspaceId);
+      if (error) throw error;
+      const map: Record<string, string> = {};
+      (data || []).forEach(t => { map[t.id] = t.nome; });
+      return map;
+    },
+  });
+
   if (isLoading) {
     return (
       <Card>
