@@ -5,9 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
-  Wallet, Building2, Users, ScrollText, Shield,
+  Wallet, Building2, Users, ScrollText,
   Clock
 } from "lucide-react";
+import labestLogo from "@/assets/labest-logo.png";
 import { SupplierContasTab } from "./SupplierContasTab";
 import { SupplierTitularesTab } from "./SupplierTitularesTab";
 import { SupplierExtratoTab } from "./SupplierExtratoTab";
@@ -165,9 +166,7 @@ export function SupplierDashboard({ session }: Props) {
       <header className="border-b border-border bg-card">
         <div className="max-w-6xl mx-auto px-3 sm:px-4 py-3 sm:py-4 flex items-center justify-between">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-              <Shield className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-            </div>
+            <img src={labestLogo} alt="Labest" className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg shrink-0 object-cover" />
             <div className="min-w-0">
               <h1 className="text-sm sm:text-lg font-semibold text-foreground truncate">{session.supplier_nome}</h1>
               <p className="text-[10px] sm:text-xs text-muted-foreground">Portal do Fornecedor</p>
