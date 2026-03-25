@@ -76,6 +76,81 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
     },
   });
 
+  // Fetch fornecedores from Captação that don't have a portal profile yet
+  const linkedFornecedorIds = suppliers
+    .map((s: any) => s.fornecedor_id)
+    .filter(Boolean);
+
+  const { data: unlinkedFornecedores = [] } = useQuery({
+    queryKey: ["unlinked-fornecedores", workspaceId, linkedFornecedorIds],
+    queryFn: async () => {
+      let query = supabase
+        .from("fornecedores")
+        .select("id, nome, documento, status")
+        .eq("workspace_id", workspaceId)
+        .eq("status", "ATIVO")
+        .order("nome");
+
+      if (linkedFornecedorIds.length > 0) {
+        // Exclude already linked ones using NOT IN via filter
+        const { data } = await query;
+        return (data || []).filter(
+          (f: any) => !linkedFornecedorIds.includes(f.id)
+        );
+      }
+
+      const { data } = await query;
+      return data || [];
+    },
+  });
+
+  // Sync a fornecedor from Captação → create workspace + supplier_profile
+  const syncFornecedor = async (fornecedor: { id: string; nome: string; documento?: string }) => {
+    if (!user?.id) return;
+    setSyncingId(fornecedor.id);
+    try {
+      // 1. Create workspace
+      const { data: ws, error: wsError } = await supabase
+        .from("workspaces")
+        .insert({
+          name: `Fornecedor: ${fornecedor.nome}`,
+          owner_id: user.id,
+          parent_workspace_id: workspaceId,
+          tipo: "fornecedor",
+        })
+        .select("id")
+        .single();
+      if (wsError) throw wsError;
+
+      // 2. Create supplier_profile linked to fornecedor mestre
+      const { error: spError } = await supabase
+        .from("supplier_profiles")
+        .insert({
+          workspace_id: ws.id,
+          parent_workspace_id: workspaceId,
+          nome: fornecedor.nome,
+          contato: fornecedor.documento || null,
+          created_by: user.id,
+          fornecedor_id: fornecedor.id,
+        });
+      if (spError) throw spError;
+
+      toast.success(`${fornecedor.nome} ativado no portal`);
+      queryClient.invalidateQueries({ queryKey: ["admin-suppliers"] });
+      queryClient.invalidateQueries({ queryKey: ["unlinked-fornecedores"] });
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setSyncingId(null);
+    }
+  };
+
+  const syncAllFornecedores = async () => {
+    for (const f of unlinkedFornecedores) {
+      await syncFornecedor(f);
+    }
+  };
+
   // Create supplier
   const createSupplierMutation = useMutation({
     mutationFn: async () => {
