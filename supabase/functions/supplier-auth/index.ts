@@ -602,9 +602,38 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Also fetch TRANSFERENCIA_BANCO entries for this titular's banks via metadata
-      // For now, we include bank transfer entries that mention the titular's bank in description
-      // Future: store banco_id/titular_id in supplier_ledger metadata
+      // Also fetch TRANSFERENCIA_BANCO entries linked via metadata.titular_id
+      const { data: bankTransfers } = await supabaseAdmin
+        .from("supplier_ledger")
+        .select("id, tipo, direcao, valor, descricao, created_at, bookmaker_account_id, metadata")
+        .eq("supplier_workspace_id", validation.supplier_workspace_id)
+        .eq("tipo", "TRANSFERENCIA_BANCO")
+        .order("created_at", { ascending: false })
+        .limit(200);
+
+      const titularBankTransfers = (bankTransfers || [])
+        .filter((e: any) => String(e.metadata?.titular_id) === String(titular_id))
+        .map((e: any) => ({
+          id: e.id,
+          tipo: e.tipo,
+          direcao: e.direcao,
+          valor: e.valor,
+          descricao: e.descricao,
+          created_at: e.created_at,
+          casa_nome: null,
+          casa_logo: null,
+          banco_nome: e.metadata?.banco_nome || null,
+        }));
+
+      // Merge and deduplicate
+      const existingIds = new Set(transactions.map((t: any) => t.id));
+      for (const bt of titularBankTransfers) {
+        if (!existingIds.has(bt.id)) {
+          transactions.push(bt);
+        }
+      }
+      // Re-sort by date descending
+      transactions.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
       return new Response(JSON.stringify({
         transactions,
