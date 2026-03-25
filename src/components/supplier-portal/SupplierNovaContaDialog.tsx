@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -12,6 +12,7 @@ import { Building2, Eye, EyeOff, User, ChevronRight, ChevronLeft, Search, Loader
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { BookmakerLogo } from "@/components/ui/bookmaker-logo";
+import { decryptPassword } from "@/utils/cryptoPassword";
 
 interface Props {
   open: boolean;
@@ -156,28 +157,53 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
     setSelectedCasaIds(new Set());
   }
 
-  function goToStep2() {
+  const [isDecrypting, setIsDecrypting] = useState(false);
+
+  async function goToStep2() {
     // Build a map of existing credentials from main system
-    const credMap = new Map<string, { username: string; password: string }>();
+    const credMap = new Map<string, { username: string; encryptedPassword: string }>();
     mainCredentials.forEach((mc: any) => {
       credMap.set(mc.bookmaker_catalogo_id, {
         username: mc.login_username || "",
-        password: mc.login_password || "",
+        encryptedPassword: mc.login_password || "",
       });
     });
+
+    // Decrypt passwords in parallel
+    setIsDecrypting(true);
+    const idsToDecrypt = Array.from(selectedCasaIds).filter(id => {
+      const existing = contas.find(c => c.catalogoId === id);
+      return !existing?.password && credMap.has(id) && credMap.get(id)!.encryptedPassword;
+    });
+
+    const decryptedMap = new Map<string, string>();
+    try {
+      const results = await Promise.all(
+        idsToDecrypt.map(async (id) => {
+          const encrypted = credMap.get(id)!.encryptedPassword;
+          const decrypted = await decryptPassword(encrypted);
+          return { id, decrypted };
+        })
+      );
+      results.forEach(({ id, decrypted }) => decryptedMap.set(id, decrypted));
+    } catch {
+      toast.error("Erro ao descriptografar algumas senhas");
+    }
+    setIsDecrypting(false);
 
     const entries: ContaEntry[] = Array.from(selectedCasaIds).map(id => {
       const casa = catalogo.find((c: any) => c.id === id);
       const existing = contas.find(c => c.catalogoId === id);
       const mainCred = credMap.get(id);
-      const hasMainCred = !!mainCred && !!(mainCred.username || mainCred.password);
+      const decryptedPw = decryptedMap.get(id) || "";
+      const hasMainCred = !!mainCred && !!(mainCred.username || decryptedPw);
       return {
         catalogoId: id,
         catalogoNome: casa?.nome || "",
         moeda: casa?.moeda_padrao || "BRL",
         logoUrl: casa?.logo_url || null,
         username: existing?.username || mainCred?.username || "",
-        password: existing?.password || mainCred?.password || "",
+        password: existing?.password || decryptedPw || "",
         showPassword: existing?.showPassword || false,
         manuallyEdited: existing?.manuallyEdited || false,
         autoFilled: existing?.autoFilled || (!existing && hasMainCred),
@@ -413,10 +439,14 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
                 </Button>
                 <Button
                   onClick={goToStep2}
-                  disabled={!titularId || selectedCasaIds.size === 0}
+                  disabled={!titularId || selectedCasaIds.size === 0 || isDecrypting}
                   className="flex-1 h-11 gap-1.5 font-semibold"
                 >
-                  Próximo <ChevronRight className="h-4 w-4" />
+                  {isDecrypting ? (
+                    <><Loader2 className="h-4 w-4 animate-spin" /> Carregando...</>
+                  ) : (
+                    <>Próximo <ChevronRight className="h-4 w-4" /></>
+                  )}
                 </Button>
               </div>
             </div>
