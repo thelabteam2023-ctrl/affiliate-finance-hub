@@ -54,7 +54,9 @@ function formatCurrency(value: number, moeda = "BRL"): string {
 
 // ─── Transaction History Tab ───
 function HistoryTab({ titular, supplierToken }: { titular: any; supplierToken: string }) {
-  const { data, isLoading } = useQuery({
+  const [editEntry, setEditEntry] = useState<any>(null);
+  
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ["titular-history", titular.id],
     queryFn: () => callEdge("get-titular-history", { token: supplierToken, titular_id: titular.id }),
   });
@@ -78,6 +80,8 @@ function HistoryTab({ titular, supplierToken }: { titular: any; supplierToken: s
     );
   }
 
+  const EDITABLE_TYPES = ["DEPOSITO", "SAQUE", "TRANSFERENCIA_BANCO"];
+
   function tipoLabel(tipo: string, direcao: string) {
     if (tipo === "DEPOSITO") return "Depósito em casa";
     if (tipo === "SAQUE") return "Saque de casa";
@@ -89,44 +93,74 @@ function HistoryTab({ titular, supplierToken }: { titular: any; supplierToken: s
   }
 
   return (
-    <div className="space-y-1 max-h-[50vh] overflow-y-auto">
-      {transactions.map((tx: any) => {
-        const isCredit = tx.direcao === "CREDIT";
-        return (
-          <div
-            key={tx.id}
-            className="flex items-center gap-3 py-2.5 px-2 rounded-md hover:bg-muted/30 transition-colors"
-          >
-            {tx.casa_logo ? (
-              <img src={tx.casa_logo} alt="" className="w-7 h-7 rounded-full object-contain shrink-0" />
-            ) : (
-              <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
-                isCredit ? "bg-emerald-500/15" : "bg-orange-500/15"
-              }`}>
-                {isCredit
-                  ? <ArrowDownLeft className="h-3.5 w-3.5 text-emerald-600" />
-                  : <ArrowUpRight className="h-3.5 w-3.5 text-orange-600" />
-                }
+    <>
+      <div className="space-y-1 max-h-[50vh] overflow-y-auto">
+        {transactions.map((tx: any) => {
+          const isCredit = tx.direcao === "CREDIT";
+          const canEdit = EDITABLE_TYPES.includes(tx.tipo);
+          const wasEdited = !!(tx.metadata as any)?.valor_original;
+
+          return (
+            <div
+              key={tx.id}
+              className="flex items-center gap-3 py-2.5 px-2 rounded-md hover:bg-muted/30 transition-colors group"
+            >
+              {tx.casa_logo ? (
+                <img src={tx.casa_logo} alt="" className="w-7 h-7 rounded-full object-contain shrink-0" />
+              ) : (
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
+                  isCredit ? "bg-emerald-500/15" : "bg-orange-500/15"
+                }`}>
+                  {isCredit
+                    ? <ArrowDownLeft className="h-3.5 w-3.5 text-emerald-600" />
+                    : <ArrowUpRight className="h-3.5 w-3.5 text-orange-600" />
+                  }
+                </div>
+              )}
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <p className="text-sm font-medium text-foreground truncate">
+                    {tipoLabel(tx.tipo, tx.direcao)}
+                  </p>
+                  {wasEdited && (
+                    <Badge variant="outline" className="text-[9px] px-1 py-0 text-muted-foreground">
+                      editado
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-[11px] text-muted-foreground truncate">
+                  {tx.casa_nome ? tx.casa_nome.toUpperCase() : tx.descricao || "—"}
+                </p>
               </div>
-            )}
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-foreground truncate">
-                {tipoLabel(tx.tipo, tx.direcao)}
-              </p>
-              <p className="text-[11px] text-muted-foreground truncate">
-                {tx.casa_nome ? tx.casa_nome.toUpperCase() : tx.descricao || "—"}
-              </p>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <div className="text-right">
+                  <p className={`text-sm font-semibold ${isCredit ? "text-emerald-600" : "text-orange-600"}`}>
+                    {isCredit ? "+" : "−"}{formatCurrency(Math.abs(tx.valor))}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground">{formatDateBR(tx.created_at)}</p>
+                </div>
+                {canEdit && (
+                  <button
+                    onClick={() => setEditEntry(tx)}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md hover:bg-muted/50"
+                    title="Editar"
+                  >
+                    <Pencil className="h-3 w-3 text-muted-foreground" />
+                  </button>
+                )}
+              </div>
             </div>
-            <div className="text-right shrink-0">
-              <p className={`text-sm font-semibold ${isCredit ? "text-emerald-600" : "text-orange-600"}`}>
-                {isCredit ? "+" : "−"}{formatCurrency(Math.abs(tx.valor))}
-              </p>
-              <p className="text-[10px] text-muted-foreground">{formatDateBR(tx.created_at)}</p>
-            </div>
-          </div>
-        );
-      })}
-    </div>
+          );
+        })}
+      </div>
+
+      <EditLedgerDialog
+        open={!!editEntry}
+        onOpenChange={(open) => { if (!open) setEditEntry(null); }}
+        entry={editEntry}
+        onSuccess={() => { setEditEntry(null); refetch(); }}
+      />
+    </>
   );
 }
 
