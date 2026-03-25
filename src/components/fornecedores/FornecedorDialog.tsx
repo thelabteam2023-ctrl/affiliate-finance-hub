@@ -106,42 +106,17 @@ export function FornecedorDialog({ open, onOpenChange, fornecedor, isViewMode }:
           .single();
         if (error) throw error;
 
-        // 2. Criar workspace isolado para o portal do fornecedor
-        const { data: ws, error: wsError } = await supabase
-          .from("workspaces")
-          .insert({
-            name: `Fornecedor: ${formData.nome}`,
-            parent_workspace_id: workspaceId,
-            tipo: "fornecedor",
-          })
-          .select("id")
-          .single();
-        if (wsError) throw wsError;
-
-        // 3. Adicionar usuário como owner do workspace
-        const { error: wmError } = await supabase
-          .from("workspace_members")
-          .insert({
-            workspace_id: ws.id,
-            user_id: user.id,
-            role: "owner",
-            is_active: true,
-          });
-        if (wmError) throw wmError;
-
-        // 4. Criar supplier_profile vinculado ao fornecedor mestre
-        const { error: spError } = await supabase
-          .from("supplier_profiles")
-          .insert({
-            workspace_id: ws.id,
-            parent_workspace_id: workspaceId,
-            nome: formData.nome,
-            contato: formData.cpf || null,
-            observacoes: formData.observacoes || null,
-            created_by: user.id,
-            fornecedor_id: newFornecedor.id,
-          });
-        if (spError) throw spError;
+        // 2. Ativar portal do fornecedor via RPC segura
+        const { data: rpcResult, error: rpcError } = await supabase.rpc("activate_supplier_portal", {
+          p_parent_workspace_id: workspaceId,
+          p_nome: formData.nome,
+          p_contato: formData.cpf || null,
+          p_observacoes: formData.observacoes || null,
+          p_fornecedor_id: newFornecedor.id,
+        });
+        if (rpcError) throw rpcError;
+        const result = rpcResult as any;
+        if (!result?.success) throw new Error(result?.error || "Erro ao ativar portal");
 
         toast({ title: "Fornecedor criado com sucesso (portal ativado)" });
       }
