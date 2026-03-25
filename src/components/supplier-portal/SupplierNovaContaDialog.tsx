@@ -557,6 +557,11 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
                           <span className="text-sm font-bold">{conta.catalogoNome}</span>
                           <p className="text-[11px] text-muted-foreground">{currentCardIndex + 1} de {contas.length}</p>
                         </div>
+                        {conta.autoFilled && !conta.manuallyEdited && (
+                          <span className="text-[10px] font-medium text-info bg-info/10 px-2 py-0.5 rounded-full">
+                            Auto-preenchido
+                          </span>
+                        )}
                         {conta.manuallyEdited && (
                           <span className="text-[10px] font-medium text-warning bg-warning/10 px-2 py-0.5 rounded-full">
                             Editado
