@@ -12827,6 +12827,16 @@ export type Database = {
     }
     Functions: {
       accept_workspace_invite: { Args: { _token: string }; Returns: Json }
+      activate_supplier_portal: {
+        Args: {
+          p_contato?: string
+          p_fornecedor_id?: string
+          p_nome: string
+          p_observacoes?: string
+          p_parent_workspace_id: string
+        }
+        Returns: Json
+      }
       admin_add_user_to_workspace: {
         Args: {
           _role?: Database["public"]["Enums"]["app_role"]
