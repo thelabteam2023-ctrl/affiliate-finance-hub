@@ -345,8 +345,8 @@ export function TitularDetailModal({ open, onOpenChange, titular, supplierToken,
           </div>
         </DialogHeader>
 
-        <Tabs defaultValue="historico" className="mt-2">
-          <TabsList className="grid w-full grid-cols-2">
+        <Tabs defaultValue="historico" className="mt-2 flex-1 flex flex-col min-h-0">
+          <TabsList className="grid w-full grid-cols-2 shrink-0">
             <TabsTrigger value="historico" className="text-xs sm:text-sm gap-1.5">
               <Clock className="h-3.5 w-3.5" /> Histórico
             </TabsTrigger>
@@ -355,11 +355,11 @@ export function TitularDetailModal({ open, onOpenChange, titular, supplierToken,
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="historico" className="mt-3">
+          <TabsContent value="historico" className="mt-3 flex-1 min-h-0 overflow-y-auto">
             <HistoryTab titular={titular} supplierToken={supplierToken} />
           </TabsContent>
 
-          <TabsContent value="bancos" className="mt-3">
+          <TabsContent value="bancos" className="mt-3 flex-1 min-h-0 overflow-y-auto">
             <BancosTab titular={titular} supplierToken={supplierToken} />
           </TabsContent>
         </Tabs>
