@@ -43,7 +43,7 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
       let query = supabase
         .from("bookmakers_catalogo")
         .select("id, nome, logo_url, moeda_padrao")
-        .eq("status", "ATIVO")
+        .in("status", ["REGULAMENTADA", "NAO_REGULAMENTADA"])
         .order("nome");
 
       // If allowed list exists and has items, filter by it
