@@ -41,7 +41,7 @@ export function SupplierDashboard({ session }: Props) {
 
   // Fetch ledger summary
   const { data: ledgerData, refetch: refetchLedger } = useQuery({
-    queryKey: ["supplier-ledger-summary", session.supplier_workspace_id],
+    queryKey: ["supplier-ledger-summary-v2", session.supplier_workspace_id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("supplier_ledger")
