@@ -323,14 +323,17 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
-            <Truck className="h-5 w-5 text-primary" />
-            Portal do Fornecedor
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Gerencie fornecedores, aloque capital e gere links de acesso
-          </p>
+        <div className="flex items-center gap-4">
+          <img src={labbetLogo} alt="LABBET" className="h-8 object-contain" />
+          <div>
+            <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+              <Truck className="h-5 w-5 text-primary" />
+              Portal do Fornecedor
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Gerencie fornecedores, aloque capital e gere links de acesso
+            </p>
+          </div>
         </div>
         <Button onClick={() => setNovoFornecedorOpen(true)} className="gap-1.5">
           <Plus className="h-4 w-4" /> Novo Fornecedor
