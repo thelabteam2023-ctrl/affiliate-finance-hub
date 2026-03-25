@@ -386,7 +386,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "update-titular") {
-      const { token, titular_id, nome, email, telefone, data_nascimento, endereco, cep, cidade, observacoes } = await req.json();
+      const { token, titular_id, nome, email, telefone, data_nascimento, endereco, cep, cidade, observacoes, data_inicio_parceria, data_fim_parceria } = await req.json();
 
       if (!token || typeof token !== "string" || token.length < 32 || !titular_id) {
         return new Response(
@@ -430,6 +430,8 @@ Deno.serve(async (req) => {
       if (email !== undefined) updates.email = email?.trim() || null;
       if (telefone !== undefined) updates.telefone = telefone?.trim() || null;
       if (observacoes !== undefined) updates.observacoes = observacoes?.trim() || null;
+      if (data_inicio_parceria !== undefined) updates.data_inicio_parceria = data_inicio_parceria || null;
+      if (data_fim_parceria !== undefined) updates.data_fim_parceria = data_fim_parceria || null;
       // Note: CPF (documento) is intentionally NOT updatable
 
       const { error: updateError } = await supabaseAdmin
