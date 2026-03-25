@@ -9359,6 +9359,8 @@ export type Database = {
       supplier_titulares: {
         Row: {
           created_at: string
+          data_fim_parceria: string | null
+          data_inicio_parceria: string | null
           documento: string | null
           documento_tipo: string | null
           email: string | null
@@ -9372,6 +9374,8 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          data_fim_parceria?: string | null
+          data_inicio_parceria?: string | null
           documento?: string | null
           documento_tipo?: string | null
           email?: string | null
@@ -9385,6 +9389,8 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          data_fim_parceria?: string | null
+          data_inicio_parceria?: string | null
           documento?: string | null
           documento_tipo?: string | null
           email?: string | null
