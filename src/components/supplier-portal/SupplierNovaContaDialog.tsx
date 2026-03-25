@@ -28,8 +28,8 @@ interface ContaEntry {
   username: string;
   password: string;
   showPassword: boolean;
-  
-  manuallyEdited: boolean; // true when user typed directly on this card
+  manuallyEdited: boolean;
+  autoFilled: boolean;
 }
 
 export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceId, onSuccess }: Props) {
@@ -103,6 +103,20 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
     },
   });
 
+  // Fetch existing credentials from main system for selected titular
+  const { data: mainCredentials = [] } = useQuery({
+    queryKey: ["titular-main-credentials", titularId],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_titular_existing_credentials", {
+        p_titular_id: titularId,
+      });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!titularId,
+    staleTime: 5 * 60 * 1000,
+  });
+
   const availableCasas = useMemo(() => {
     if (!titularId) return catalogo;
     const usedCasaIds = new Set(
@@ -143,21 +157,30 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
   }
 
   function goToStep2() {
-    const titular = titulares.find((t: any) => t.id === titularId);
-    
+    // Build a map of existing credentials from main system
+    const credMap = new Map<string, { username: string; password: string }>();
+    mainCredentials.forEach((mc: any) => {
+      credMap.set(mc.bookmaker_catalogo_id, {
+        username: mc.login_username || "",
+        password: mc.login_password || "",
+      });
+    });
+
     const entries: ContaEntry[] = Array.from(selectedCasaIds).map(id => {
       const casa = catalogo.find((c: any) => c.id === id);
       const existing = contas.find(c => c.catalogoId === id);
+      const mainCred = credMap.get(id);
+      const hasMainCred = !!mainCred && !!(mainCred.username || mainCred.password);
       return {
         catalogoId: id,
         catalogoNome: casa?.nome || "",
         moeda: casa?.moeda_padrao || "BRL",
         logoUrl: casa?.logo_url || null,
-        username: existing?.username || "",
-        password: existing?.password || "",
+        username: existing?.username || mainCred?.username || "",
+        password: existing?.password || mainCred?.password || "",
         showPassword: existing?.showPassword || false,
-        
         manuallyEdited: existing?.manuallyEdited || false,
+        autoFilled: existing?.autoFilled || (!existing && hasMainCred),
       };
     }).sort((a, b) => a.catalogoNome.localeCompare(b.catalogoNome));
     setContas(entries);
@@ -534,6 +557,11 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
                           <span className="text-sm font-bold">{conta.catalogoNome}</span>
                           <p className="text-[11px] text-muted-foreground">{currentCardIndex + 1} de {contas.length}</p>
                         </div>
+                        {conta.autoFilled && !conta.manuallyEdited && (
+                          <span className="text-[10px] font-medium text-info bg-info/10 px-2 py-0.5 rounded-full">
+                            Auto-preenchido
+                          </span>
+                        )}
                         {conta.manuallyEdited && (
                           <span className="text-[10px] font-medium text-warning bg-warning/10 px-2 py-0.5 rounded-full">
                             Editado
