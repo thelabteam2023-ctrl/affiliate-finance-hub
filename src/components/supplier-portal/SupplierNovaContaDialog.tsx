@@ -103,6 +103,20 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
     },
   });
 
+  // Fetch existing credentials from main system for selected titular
+  const { data: mainCredentials = [] } = useQuery({
+    queryKey: ["titular-main-credentials", titularId],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_titular_existing_credentials", {
+        p_titular_id: titularId,
+      });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!titularId,
+    staleTime: 5 * 60 * 1000,
+  });
+
   const availableCasas = useMemo(() => {
     if (!titularId) return catalogo;
     const usedCasaIds = new Set(
