@@ -383,19 +383,84 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
                 </span>
               </div>
 
-              <ScrollArea className="max-h-[360px]">
-                <div className="space-y-3">
-                  {contas.map((conta, i) => (
-                    <div key={conta.catalogoId} className="rounded-xl border border-border/60 bg-card p-4 space-y-3">
-                      {/* Casa header */}
+              {/* Card navigation */}
+              {contas.length > 0 && (() => {
+                const conta = contas[currentCardIndex];
+                const i = currentCardIndex;
+                const filled = conta.username.trim() && conta.password.trim();
+                return (
+                  <div className="space-y-3">
+                    {/* Card counter + arrows */}
+                    <div className="flex items-center justify-between">
+                      <button
+                        type="button"
+                        onClick={() => setCurrentCardIndex(prev => prev - 1)}
+                        disabled={currentCardIndex === 0}
+                        className={cn(
+                          "flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors",
+                          currentCardIndex === 0
+                            ? "text-muted-foreground/40 cursor-not-allowed"
+                            : "text-foreground hover:bg-muted/50"
+                        )}
+                      >
+                        <ChevronLeft className="h-4 w-4" /> Anterior
+                      </button>
+
+                      {/* Dots indicator */}
+                      <div className="flex items-center gap-1.5">
+                        {contas.map((c, idx) => {
+                          const isFilled = c.username.trim() && c.password.trim();
+                          return (
+                            <button
+                              key={c.catalogoId}
+                              type="button"
+                              onClick={() => setCurrentCardIndex(idx)}
+                              className={cn(
+                                "w-2 h-2 rounded-full transition-all duration-200",
+                                idx === currentCardIndex
+                                  ? "w-5 bg-primary"
+                                  : isFilled
+                                    ? "bg-primary/40"
+                                    : "bg-muted-foreground/30"
+                              )}
+                            />
+                          );
+                        })}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setCurrentCardIndex(prev => prev + 1)}
+                        disabled={currentCardIndex === contas.length - 1}
+                        className={cn(
+                          "flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors",
+                          currentCardIndex === contas.length - 1
+                            ? "text-muted-foreground/40 cursor-not-allowed"
+                            : "text-foreground hover:bg-muted/50"
+                        )}
+                      >
+                        Próxima <ChevronRight className="h-4 w-4" />
+                      </button>
+                    </div>
+
+                    {/* Single card */}
+                    <div className="rounded-xl border border-border/60 bg-card p-4 space-y-3">
                       <div className="flex items-center gap-3">
                         <BookmakerLogo
                           logoUrl={conta.logoUrl}
-                          size="h-8 w-8"
+                          size="h-9 w-9"
                           iconSize="h-4 w-4"
                           className="border border-border/40"
                         />
-                        <span className="text-sm font-bold">{conta.catalogoNome}</span>
+                        <div className="flex-1">
+                          <span className="text-sm font-bold">{conta.catalogoNome}</span>
+                          <p className="text-[11px] text-muted-foreground">{currentCardIndex + 1} de {contas.length}</p>
+                        </div>
+                        {filled && (
+                          <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center">
+                            <Check className="h-3.5 w-3.5 text-primary" />
+                          </div>
+                        )}
                       </div>
 
                       <div className="h-px bg-border/40" />
@@ -446,11 +511,20 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
                           placeholder="email@exemplo.com"
                           className="h-9 text-sm bg-background border-border/60"
                         />
+                        {selectedTitular?.email && conta.loginEmail !== selectedTitular.email && (
+                          <button
+                            type="button"
+                            onClick={() => updateConta(i, "loginEmail", selectedTitular.email)}
+                            className="text-[11px] text-primary hover:underline mt-0.5"
+                          >
+                            Usar e-mail do titular: {selectedTitular.email}
+                          </button>
+                        )}
                       </div>
                     </div>
-                  ))}
-                </div>
-              </ScrollArea>
+                  </div>
+                );
+              })()}
 
               {/* Actions */}
               <div className="flex items-center gap-3 pt-1">
