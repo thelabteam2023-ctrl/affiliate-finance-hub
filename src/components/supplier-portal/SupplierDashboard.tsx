@@ -37,7 +37,7 @@ function formatCurrency(val: number, moeda = "BRL") {
 export function SupplierDashboard({ session }: Props) {
   const [activeTab, setActiveTab] = useState("visao-geral");
   const [transacaoOpen, setTransacaoOpen] = useState(false);
-  const [transacaoTipo, setTransacaoTipo] = useState<"DEPOSITO" | "SAQUE">("DEPOSITO");
+  const [transacaoTipo, setTransacaoTipo] = useState<"DEPOSITO" | "SAQUE" | "TRANSFERENCIA_BANCO">("DEPOSITO");
 
   // Fetch ledger summary
   const { data: ledgerData, refetch: refetchLedger } = useQuery({

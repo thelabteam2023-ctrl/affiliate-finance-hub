@@ -9,13 +9,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Building2, Landmark, ChevronLeft, Wallet, Check } from "lucide-react";
+import { Building2, Landmark, ChevronLeft, Wallet, Check, ArrowRightLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  tipo: "DEPOSITO" | "SAQUE";
+  tipo: "DEPOSITO" | "SAQUE" | "TRANSFERENCIA_BANCO";
   supplierWorkspaceId: string;
   accounts: any[];
   saldoDisponivel: number;
@@ -59,13 +59,14 @@ export function SupplierTransacaoDialog({
   const [descricao, setDescricao] = useState("");
 
   const isDeposito = tipo === "DEPOSITO";
+  const isTransferenciaBanco = tipo === "TRANSFERENCIA_BANCO";
 
-  // Fetch all workspace banks
+  // Fetch all workspace banks - action via query param
   const { data: bancos, refetch: refetchBancos } = useQuery({
     queryKey: ["supplier-workspace-bancos", supplierWorkspaceId],
     queryFn: async () => {
-      const { data } = await supabase.functions.invoke("supplier-auth", {
-        body: { action: "list-workspace-bancos", token },
+      const { data } = await supabase.functions.invoke("supplier-auth?action=list-workspace-bancos", {
+        body: { token },
       });
       return (data?.bancos || []).map((b: any) => ({
         id: b.id,
@@ -123,9 +124,66 @@ export function SupplierTransacaoDialog({
 
   const handleSelectBanco = (id: string) => {
     setBancoId(id);
-    setStep(2);
+    if (isTransferenciaBanco) {
+      // For bank transfer, step 2 only needs amount
+      setStep(2);
+    } else {
+      setStep(2);
+    }
   };
 
+  // ── TRANSFER TO BANK mutation ──
+  const transferMutation = useMutation({
+    mutationFn: async () => {
+      const numValor = parseFloat(valor);
+      if (!numValor || numValor <= 0) throw new Error("Valor inválido");
+      if (!bancoId) throw new Error("Selecione um banco");
+      if (numValor > saldoDisponivel) {
+        throw new Error(`Saldo disponível insuficiente: ${formatCurrency(saldoDisponivel)}`);
+      }
+
+      // 1. Register in supplier_ledger as DEBIT (money leaving available balance)
+      const { data, error } = await supabase.rpc("supplier_ledger_insert", {
+        p_supplier_workspace_id: supplierWorkspaceId,
+        p_bookmaker_account_id: null,
+        p_tipo: "TRANSFERENCIA_BANCO",
+        p_direcao: "DEBIT",
+        p_valor: numValor,
+        p_descricao: descricao || `Envio para banco: ${selectedBanco?.banco_nome || "banco"}`,
+        p_created_by: "SUPPLIER",
+        p_idempotency_key: `TRANSF_BANCO_${bancoId}_${Date.now()}`,
+      });
+
+      if (error) throw error;
+      const result = data as any;
+      if (!result?.success) throw new Error(result?.error || "Erro ao processar");
+
+      // 2. Credit bank balance
+      const { data: bancoResult } = await supabase.functions.invoke("supplier-auth?action=update-banco-saldo", {
+        body: {
+          token,
+          banco_id: bancoId,
+          valor: numValor,
+          operacao: "CREDIT",
+        },
+      });
+
+      if (bancoResult?.error) {
+        console.error("Erro ao atualizar saldo do banco:", bancoResult.error);
+        toast.warning("Transferência registrada, mas houve erro ao atualizar saldo do banco");
+      }
+
+      return result;
+    },
+    onSuccess: () => {
+      toast.success("Valor enviado ao banco com sucesso");
+      onOpenChange(false);
+      onSuccess();
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  // ── DEPOSIT/WITHDRAW mutation ──
   const mutation = useMutation({
     mutationFn: async () => {
       const numValor = parseFloat(valor);
@@ -159,9 +217,8 @@ export function SupplierTransacaoDialog({
       const result = data as any;
       if (!result?.success) throw new Error(result?.error || "Erro ao processar");
 
-      const { data: bancoResult } = await supabase.functions.invoke("supplier-auth", {
+      const { data: bancoResult } = await supabase.functions.invoke("supplier-auth?action=update-banco-saldo", {
         body: {
-          action: "update-banco-saldo",
           token,
           banco_id: bancoId,
           valor: numValor,
@@ -184,22 +241,25 @@ export function SupplierTransacaoDialog({
     onError: (e: any) => toast.error(e.message),
   });
 
+  const dialogTitle = isTransferenciaBanco
+    ? "Enviar ao Banco"
+    : isDeposito
+      ? "Depositar em Conta"
+      : "Sacar de Conta";
+
+  const dialogIcon = isTransferenciaBanco
+    ? <ArrowRightLeft className="h-5 w-5 text-primary" />
+    : isDeposito
+      ? <Landmark className="h-5 w-5 text-primary" />
+      : <Building2 className="h-5 w-5 text-primary" />;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            {isDeposito ? (
-              <>
-                <Landmark className="h-5 w-5 text-primary" />
-                Depositar em Conta
-              </>
-            ) : (
-              <>
-                <Building2 className="h-5 w-5 text-primary" />
-                Sacar de Conta
-              </>
-            )}
+            {dialogIcon}
+            {dialogTitle}
           </DialogTitle>
         </DialogHeader>
 
@@ -208,7 +268,7 @@ export function SupplierTransacaoDialog({
           <div className="space-y-4">
             {/* Titular selector */}
             <div>
-              <Label>Titular (Parceiro) *</Label>
+              <Label>Titular *</Label>
               <Select value={titularId} onValueChange={setTitularId}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o titular" />
@@ -231,7 +291,11 @@ export function SupplierTransacaoDialog({
             {/* Bank cards */}
             {titularId && (
               <div className="space-y-2">
-                <Label className="text-muted-foreground text-xs">Selecione o banco para {isDeposito ? "debitar" : "creditar"}:</Label>
+                <Label className="text-muted-foreground text-xs">
+                  {isTransferenciaBanco
+                    ? "Selecione o banco para receber o valor:"
+                    : `Selecione o banco para ${isDeposito ? "debitar" : "creditar"}:`}
+                </Label>
                 {titularBancos.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-4">
                     Nenhum banco cadastrado para este titular.
@@ -275,8 +339,64 @@ export function SupplierTransacaoDialog({
           </div>
         )}
 
-        {/* ── STEP 2: Account, Amount, Description ── */}
-        {step === 2 && selectedBanco && (
+        {/* ── STEP 2 for TRANSFERENCIA_BANCO: Amount only ── */}
+        {step === 2 && isTransferenciaBanco && selectedBanco && (
+          <div className="space-y-4">
+            {/* Selected bank summary */}
+            <div className="flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                <Check className="h-4 w-4 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-muted-foreground">{selectedBanco.titular_nome}</p>
+                <p className="font-medium text-sm text-foreground">{selectedBanco.banco_nome}</p>
+              </div>
+              <Badge variant="secondary" className="text-xs font-semibold">
+                {formatCurrency(selectedBanco.saldo)}
+              </Badge>
+            </div>
+
+            {/* Amount */}
+            <div>
+              <Label>Valor (R$) *</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0.01"
+                max={saldoDisponivel}
+                value={valor}
+                onChange={e => setValor(e.target.value)}
+                placeholder="0,00"
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Saldo disponível: {formatCurrency(saldoDisponivel)}
+              </p>
+            </div>
+
+            {/* Description */}
+            <div>
+              <Label>Descrição</Label>
+              <Textarea
+                value={descricao}
+                onChange={e => setDescricao(e.target.value)}
+                placeholder="Observações (opcional)"
+                rows={2}
+              />
+            </div>
+
+            {/* Flow summary */}
+            {valor && (
+              <div className="bg-muted/50 rounded-lg p-3 text-xs text-muted-foreground space-y-1">
+                <p className="font-medium text-foreground text-sm">Resumo da operação:</p>
+                <p>📉 <span className="font-medium">Saldo Disponível</span> será debitado em {formatCurrency(parseFloat(valor) || 0)}</p>
+                <p>📈 <span className="font-medium">{selectedBanco.banco_nome}</span> ({selectedBanco.titular_nome}) será creditado</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── STEP 2 for DEPOSITO/SAQUE: Account, Amount, Description ── */}
+        {step === 2 && !isTransferenciaBanco && selectedBanco && (
           <div className="space-y-4">
             {/* Selected bank summary */}
             <div className="flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
@@ -371,7 +491,15 @@ export function SupplierTransacaoDialog({
             </Button>
           )}
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          {step === 2 && (
+          {step === 2 && isTransferenciaBanco && (
+            <Button
+              onClick={() => transferMutation.mutate()}
+              disabled={transferMutation.isPending || !valor || !bancoId}
+            >
+              {transferMutation.isPending ? "Processando..." : "Enviar ao Banco"}
+            </Button>
+          )}
+          {step === 2 && !isTransferenciaBanco && (
             <Button
               onClick={() => mutation.mutate()}
               disabled={mutation.isPending || !valor || !contaId || !bancoId}
