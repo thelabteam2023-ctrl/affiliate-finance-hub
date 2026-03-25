@@ -194,6 +194,197 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (action === "update-account") {
+      const { token, account_id, login_username, password, observacoes } = await req.json();
+
+      if (!token || typeof token !== "string" || token.length < 32 || !account_id) {
+        return new Response(
+          JSON.stringify({ error: "Dados inválidos" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Validate token
+      const tokenHash = await hashToken(token);
+      const { data: validation, error: valError } = await supabaseAdmin.rpc("validate_supplier_token", {
+        p_token_hash: tokenHash,
+      });
+      if (valError || !validation?.valid) {
+        return new Response(
+          JSON.stringify({ error: "Token inválido" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Verify account belongs to this supplier workspace
+      const { data: account, error: accError } = await supabaseAdmin
+        .from("supplier_bookmaker_accounts")
+        .select("id, supplier_workspace_id")
+        .eq("id", account_id)
+        .eq("supplier_workspace_id", validation.supplier_workspace_id)
+        .single();
+
+      if (accError || !account) {
+        return new Response(
+          JSON.stringify({ error: "Conta não encontrada" }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const updates: Record<string, any> = { updated_at: new Date().toISOString() };
+      if (login_username && typeof login_username === "string") {
+        const trimmed = login_username.trim();
+        if (trimmed.length > 100) throw new Error("Login excede o limite");
+        updates.login_username = trimmed;
+      }
+      if (password && typeof password === "string") {
+        const trimmed = password.trim();
+        if (trimmed.length > 200) throw new Error("Senha excede o limite");
+        updates.login_password_encrypted = await encrypt(trimmed);
+      }
+      if (observacoes !== undefined) {
+        updates.observacoes = observacoes;
+      }
+
+      const { error: updateError } = await supabaseAdmin
+        .from("supplier_bookmaker_accounts")
+        .update(updates)
+        .eq("id", account_id);
+
+      if (updateError) {
+        console.error("update-account error:", updateError);
+        return new Response(
+          JSON.stringify({ error: "Erro ao atualizar conta" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(JSON.stringify({ success: true }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (action === "delete-account") {
+      const { token, account_id } = await req.json();
+
+      if (!token || typeof token !== "string" || token.length < 32 || !account_id) {
+        return new Response(
+          JSON.stringify({ error: "Dados inválidos" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const tokenHash = await hashToken(token);
+      const { data: validation, error: valError } = await supabaseAdmin.rpc("validate_supplier_token", {
+        p_token_hash: tokenHash,
+      });
+      if (valError || !validation?.valid) {
+        return new Response(
+          JSON.stringify({ error: "Token inválido" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Verify account belongs to this supplier workspace and has zero balance
+      const { data: account, error: accError } = await supabaseAdmin
+        .from("supplier_bookmaker_accounts")
+        .select("id, saldo_atual, supplier_workspace_id")
+        .eq("id", account_id)
+        .eq("supplier_workspace_id", validation.supplier_workspace_id)
+        .single();
+
+      if (accError || !account) {
+        return new Response(
+          JSON.stringify({ error: "Conta não encontrada" }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      if (Number(account.saldo_atual) !== 0) {
+        return new Response(
+          JSON.stringify({ error: "Não é possível excluir conta com saldo. Zere o saldo primeiro." }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Soft delete - set status to INATIVA
+      const { error: delError } = await supabaseAdmin
+        .from("supplier_bookmaker_accounts")
+        .update({ status: "INATIVA", updated_at: new Date().toISOString() })
+        .eq("id", account_id);
+
+      if (delError) {
+        console.error("delete-account error:", delError);
+        return new Response(
+          JSON.stringify({ error: "Erro ao excluir conta" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(JSON.stringify({ success: true }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (action === "decrypt-password") {
+      const { token, account_id } = await req.json();
+
+      if (!token || typeof token !== "string" || token.length < 32 || !account_id) {
+        return new Response(
+          JSON.stringify({ error: "Dados inválidos" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const tokenHash = await hashToken(token);
+      const { data: validation, error: valError } = await supabaseAdmin.rpc("validate_supplier_token", {
+        p_token_hash: tokenHash,
+      });
+      if (valError || !validation?.valid) {
+        return new Response(
+          JSON.stringify({ error: "Token inválido" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const { data: account, error: accError } = await supabaseAdmin
+        .from("supplier_bookmaker_accounts")
+        .select("login_password_encrypted, supplier_workspace_id")
+        .eq("id", account_id)
+        .eq("supplier_workspace_id", validation.supplier_workspace_id)
+        .single();
+
+      if (accError || !account) {
+        return new Response(
+          JSON.stringify({ error: "Conta não encontrada" }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      let password = "";
+      try {
+        const key = await getKey();
+        const combined = Uint8Array.from(atob(account.login_password_encrypted || ""), (c) => c.charCodeAt(0));
+        const iv = combined.slice(0, 12);
+        const ciphertext = combined.slice(12);
+        const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
+        password = new TextDecoder().decode(decrypted);
+      } catch {
+        try {
+          password = atob(account.login_password_encrypted || "");
+        } catch {
+          password = account.login_password_encrypted || "";
+        }
+      }
+
+      return new Response(JSON.stringify({ password }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     if (action === "generate") {
       const authHeader = req.headers.get("Authorization");
       if (!authHeader?.startsWith("Bearer ")) {
