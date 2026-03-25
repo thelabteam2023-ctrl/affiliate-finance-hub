@@ -197,11 +197,8 @@ export function SupplierTitularesTab({ supplierWorkspaceId }: Props) {
   const [observacoes, setObservacoes] = useState("");
   const [dataInicioParceria, setDataInicioParceria] = useState("");
   const [diasParceria, setDiasParceria] = useState<number>(0);
-  // Step 2 fields (banco)
+  // Step 2 fields (banco - simplified)
   const [bancoNome, setBancoNome] = useState("");
-  const [bancoAgencia, setBancoAgencia] = useState("");
-  const [bancoConta, setBancoConta] = useState("");
-  const [bancoTipoPix, setBancoTipoPix] = useState("");
   const [bancoChavePix, setBancoChavePix] = useState("");
   const queryClient = useQueryClient();
 
