@@ -52,11 +52,25 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("supplier_profiles")
-        .select("*, supplier_alocacoes(valor, status, created_at), supplier_access_tokens(id, expires_at, revoked_at, use_count, last_used_at, label)")
+        .select("*")
         .eq("parent_workspace_id", workspaceId)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data || [];
+
+      // Fetch related data separately to avoid deep type inference
+      const profiles = data || [];
+      const wsIds = profiles.map((p: any) => p.workspace_id);
+
+      const [alocRes, tokenRes] = await Promise.all([
+        supabase.from("supplier_alocacoes").select("supplier_workspace_id, valor, status, created_at").in("supplier_workspace_id", wsIds),
+        supabase.from("supplier_access_tokens").select("supplier_workspace_id, id, expires_at, revoked_at, use_count, last_used_at, label").in("supplier_workspace_id", wsIds),
+      ]);
+
+      return profiles.map((p: any) => ({
+        ...p,
+        supplier_alocacoes: (alocRes.data || []).filter((a: any) => a.supplier_workspace_id === p.workspace_id),
+        supplier_access_tokens: (tokenRes.data || []).filter((t: any) => t.supplier_workspace_id === p.workspace_id),
+      }));
     },
   });
 
