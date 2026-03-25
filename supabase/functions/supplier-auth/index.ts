@@ -602,16 +602,16 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Also fetch TRANSFERENCIA_BANCO entries linked via metadata.titular_id
-      const { data: bankTransfers } = await supabaseAdmin
+      // Also fetch TRANSFERENCIA_BANCO and PAGAMENTO_TITULAR entries linked via metadata.titular_id
+      const { data: metadataEntries } = await supabaseAdmin
         .from("supplier_ledger")
         .select("id, tipo, direcao, valor, descricao, created_at, bookmaker_account_id, metadata")
         .eq("supplier_workspace_id", validation.supplier_workspace_id)
-        .eq("tipo", "TRANSFERENCIA_BANCO")
+        .in("tipo", ["TRANSFERENCIA_BANCO", "PAGAMENTO_TITULAR"])
         .order("created_at", { ascending: false })
         .limit(200);
 
-      const titularBankTransfers = (bankTransfers || [])
+      const titularBankTransfers = (metadataEntries || [])
         .filter((e: any) => String(e.metadata?.titular_id) === String(titular_id))
         .map((e: any) => ({
           id: e.id,
