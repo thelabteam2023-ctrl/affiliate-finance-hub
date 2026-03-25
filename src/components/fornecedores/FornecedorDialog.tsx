@@ -111,7 +111,6 @@ export function FornecedorDialog({ open, onOpenChange, fornecedor, isViewMode }:
           .from("workspaces")
           .insert({
             name: `Fornecedor: ${formData.nome}`,
-            owner_id: user.id,
             parent_workspace_id: workspaceId,
             tipo: "fornecedor",
           })
@@ -119,7 +118,18 @@ export function FornecedorDialog({ open, onOpenChange, fornecedor, isViewMode }:
           .single();
         if (wsError) throw wsError;
 
-        // 3. Criar supplier_profile vinculado ao fornecedor mestre
+        // 3. Adicionar usuário como owner do workspace
+        const { error: wmError } = await supabase
+          .from("workspace_members")
+          .insert({
+            workspace_id: ws.id,
+            user_id: user.id,
+            role: "owner",
+            is_active: true,
+          });
+        if (wmError) throw wmError;
+
+        // 4. Criar supplier_profile vinculado ao fornecedor mestre
         const { error: spError } = await supabase
           .from("supplier_profiles")
           .insert({
