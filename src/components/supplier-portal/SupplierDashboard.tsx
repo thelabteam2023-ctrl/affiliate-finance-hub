@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
-  Wallet, Building2, Users, ScrollText, 
+  Wallet, Building2, Users, ScrollText, Shield,
   TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight,
   Clock
 } from "lucide-react";
@@ -186,7 +186,7 @@ export function SupplierDashboard({ session }: Props) {
           <Card>
             <CardContent className="pt-4 pb-3">
               <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
-                {pnl >= 0 ? <TrendingUp className="h-3.5 w-3.5 text-emerald-500" /> : <TrendingDown className="h-3.5 w-3.5 text-destructive" />}
+                {pnl >= 0 ? <TrendingUp className="h-3.5 w-3.5 text-success" /> : <TrendingDown className="h-3.5 w-3.5 text-destructive" />}
                 P&L
               </div>
               <p className={`text-xl font-bold ${pnl >= 0 ? "text-emerald-500" : "text-destructive"}`}>
