@@ -170,6 +170,7 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
       const casa = catalogo.find((c: any) => c.id === id);
       const existing = contas.find(c => c.catalogoId === id);
       const mainCred = credMap.get(id);
+      const hasMainCred = !!mainCred && !!(mainCred.username || mainCred.password);
       return {
         catalogoId: id,
         catalogoNome: casa?.nome || "",
@@ -179,6 +180,7 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
         password: existing?.password || mainCred?.password || "",
         showPassword: existing?.showPassword || false,
         manuallyEdited: existing?.manuallyEdited || false,
+        autoFilled: existing?.autoFilled || (!existing && hasMainCred),
       };
     }).sort((a, b) => a.catalogoNome.localeCompare(b.catalogoNome));
     setContas(entries);
