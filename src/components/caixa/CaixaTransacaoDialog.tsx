@@ -4482,11 +4482,21 @@ export function CaixaTransacaoDialog({
 
   // Função para determinar moedas disponíveis baseado no tipo de transação
   const getMoedasDisponiveis = () => {
-    // APORTE (Investidor → Caixa): todas as moedas
+    // APORTE (Investidor → Caixa): apenas moedas com contas/wallets cadastradas no Caixa Operacional
     if (tipoTransacao === "APORTE_FINANCEIRO" && fluxoAporte === "APORTE") {
+      const moedasContasCaixa = caixaParceiroId
+        ? [...new Set(contasBancarias.filter(c => c.parceiro_id === caixaParceiroId).map(c => c.moeda))]
+        : [];
+      const moedasWalletsCaixa = caixaParceiroId
+        ? [...new Set(walletsCrypto.filter(w => w.parceiro_id === caixaParceiroId).flatMap(w => w.moeda || []))]
+        : [];
       return {
-        fiat: MOEDAS_FIAT,
-        crypto: MOEDAS_CRYPTO
+        fiat: moedasContasCaixa.length > 0
+          ? MOEDAS_FIAT.filter(m => moedasContasCaixa.includes(m.value))
+          : MOEDAS_FIAT,
+        crypto: moedasWalletsCaixa.length > 0
+          ? MOEDAS_CRYPTO.filter(m => moedasWalletsCaixa.includes(m.value))
+          : MOEDAS_CRYPTO
       };
     }
     
