@@ -12,7 +12,7 @@ import { Building2, Eye, EyeOff, User, ChevronRight, ChevronLeft, Search, Loader
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { BookmakerLogo } from "@/components/ui/bookmaker-logo";
-import { decryptPassword } from "@/utils/cryptoPassword";
+import { decryptPassword, encryptPassword } from "@/utils/cryptoPassword";
 
 interface Props {
   open: boolean;
@@ -258,14 +258,17 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
 
   const createMutation = useMutation({
     mutationFn: async () => {
-      const rows = contas.map(c => ({
-        supplier_workspace_id: supplierWorkspaceId,
-        bookmaker_catalogo_id: c.catalogoId,
-        titular_id: titularId,
-        login_username: c.username.trim(),
-        login_password_encrypted: c.password,
-        
-        moeda: c.moeda,
+      // Encrypt passwords before saving
+      const rows = await Promise.all(contas.map(async (c) => {
+        const encryptedPw = await encryptPassword(c.password.trim());
+        return {
+          supplier_workspace_id: supplierWorkspaceId,
+          bookmaker_catalogo_id: c.catalogoId,
+          titular_id: titularId,
+          login_username: c.username.trim(),
+          login_password_encrypted: encryptedPw,
+          moeda: c.moeda,
+        };
       }));
       const { error } = await supabase.from("supplier_bookmaker_accounts").insert(rows);
       if (error) throw error;
