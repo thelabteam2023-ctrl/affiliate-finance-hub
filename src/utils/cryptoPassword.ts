@@ -56,7 +56,8 @@ export async function decryptPassword(encrypted: string | null): Promise<string>
   try {
     const data = await invokeWithRetry({ action: "decrypt", value: encrypted });
     return data.result || "";
-  } catch {
+  } catch (err) {
+    console.error("[decryptPassword] Failed to decrypt:", err, "encrypted_length:", encrypted.length);
     return "";
   }
 }
