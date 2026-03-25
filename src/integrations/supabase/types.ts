@@ -13262,6 +13262,10 @@ export type Database = {
         }
         Returns: number
       }
+      can_manage_workspace: {
+        Args: { _user_id: string; _workspace_id: string }
+        Returns: boolean
+      }
       can_moderate_community: { Args: { _user_id: string }; Returns: boolean }
       cancel_stake_reservation: {
         Args: { p_form_session_id: string }
