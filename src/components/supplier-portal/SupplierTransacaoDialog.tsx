@@ -102,6 +102,12 @@ export function SupplierTransacaoDialog({
     return bancos.filter(b => b.titular_id === titularId);
   }, [bancos, titularId]);
 
+  // Accounts (casas) for selected titular only
+  const titularAccounts = useMemo(() => {
+    if (!titularId) return [];
+    return accounts.filter((a: any) => a.titular_id === titularId);
+  }, [accounts, titularId]);
+
   const selectedBanco = bancos?.find(b => b.id === bancoId);
 
   // Reset on open
@@ -117,9 +123,10 @@ export function SupplierTransacaoDialog({
     }
   }, [open]);
 
-  // When titular changes, reset banco
+  // When titular changes, reset banco and conta
   useEffect(() => {
     setBancoId("");
+    setContaId("");
   }, [titularId]);
 
   const handleSelectBanco = (id: string) => {
@@ -190,6 +197,12 @@ export function SupplierTransacaoDialog({
       if (!numValor || numValor <= 0) throw new Error("Valor inválido");
       if (!contaId) throw new Error("Selecione uma conta");
       if (!bancoId) throw new Error("Selecione um banco");
+
+      // Validate same titular
+      const conta = accounts.find((a: any) => a.id === contaId);
+      if (conta && selectedBanco && conta.titular_id !== selectedBanco.titular_id) {
+        throw new Error("O banco e a conta devem pertencer ao mesmo titular");
+      }
 
       if (isDeposito) {
         if (selectedBanco && numValor > selectedBanco.saldo) {
@@ -420,7 +433,7 @@ export function SupplierTransacaoDialog({
                   <SelectValue placeholder="Selecione a conta" />
                 </SelectTrigger>
                 <SelectContent>
-                  {accounts.map((a: any) => (
+                  {titularAccounts.map((a: any) => (
                     <SelectItem key={a.id} value={a.id}>
                       <div className="flex items-center gap-2">
                         {a.bookmakers_catalogo?.logo_url ? (
