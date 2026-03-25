@@ -131,65 +131,63 @@ export function SupplierDashboard({ session }: Props) {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b border-border bg-card">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Shield className="h-5 w-5 text-primary" />
+        <div className="max-w-6xl mx-auto px-3 sm:px-4 py-3 sm:py-4 flex items-center justify-between">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+              <Shield className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
             </div>
-            <div>
-              <h1 className="text-lg font-semibold text-foreground">{session.supplier_nome}</h1>
-              <p className="text-xs text-muted-foreground">Portal do Fornecedor</p>
+            <div className="min-w-0">
+              <h1 className="text-sm sm:text-lg font-semibold text-foreground truncate">{session.supplier_nome}</h1>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">Portal do Fornecedor</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-xs gap-1">
-              <Clock className="h-3 w-3" />
-              {hoursRemaining}h restantes
-            </Badge>
-          </div>
+          <Badge variant="outline" className="text-[10px] sm:text-xs gap-1 shrink-0">
+            <Clock className="h-3 w-3" />
+            {hoursRemaining}h
+          </Badge>
         </div>
       </header>
 
-      <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
+      <div className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
         {/* KPI Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 gap-2 sm:gap-4 md:grid-cols-4">
           <Card>
-            <CardContent className="pt-4 pb-3">
-              <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
-                <Wallet className="h-3.5 w-3.5" />
+            <CardContent className="pt-3 sm:pt-4 pb-2 sm:pb-3 px-3 sm:px-4">
+              <div className="flex items-center gap-1.5 text-muted-foreground text-[10px] sm:text-xs mb-0.5 sm:mb-1">
+                <Wallet className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                 Saldo Disponível
               </div>
-              <p className="text-xl font-bold text-foreground">{formatCurrency(saldoDisponivel)}</p>
+              <p className="text-base sm:text-xl font-bold text-foreground tabular-nums">{formatCurrency(saldoDisponivel)}</p>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="pt-4 pb-3">
-              <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
-                <Building2 className="h-3.5 w-3.5" />
+            <CardContent className="pt-3 sm:pt-4 pb-2 sm:pb-3 px-3 sm:px-4">
+              <div className="flex items-center gap-1.5 text-muted-foreground text-[10px] sm:text-xs mb-0.5 sm:mb-1">
+                <Building2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                 Em Contas
               </div>
-              <p className="text-xl font-bold text-foreground">{formatCurrency(saldoContas)}</p>
+              <p className="text-base sm:text-xl font-bold text-foreground tabular-nums">{formatCurrency(saldoContas)}</p>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="pt-4 pb-3">
-              <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
-                <ArrowUpRight className="h-3.5 w-3.5" />
+            <CardContent className="pt-3 sm:pt-4 pb-2 sm:pb-3 px-3 sm:px-4">
+              <div className="flex items-center gap-1.5 text-muted-foreground text-[10px] sm:text-xs mb-0.5 sm:mb-1">
+                <ArrowUpRight className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                 Total Alocado
               </div>
-              <p className="text-xl font-bold text-foreground">{formatCurrency(metrics.totalAlocado)}</p>
+              <p className="text-base sm:text-xl font-bold text-foreground tabular-nums">{formatCurrency(metrics.totalAlocado)}</p>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="pt-4 pb-3">
-              <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
-                {pnl >= 0 ? <TrendingUp className="h-3.5 w-3.5 text-success" /> : <TrendingDown className="h-3.5 w-3.5 text-destructive" />}
+            <CardContent className="pt-3 sm:pt-4 pb-2 sm:pb-3 px-3 sm:px-4">
+              <div className="flex items-center gap-1.5 text-muted-foreground text-[10px] sm:text-xs mb-0.5 sm:mb-1">
+                {pnl >= 0 ? <TrendingUp className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-success" /> : <TrendingDown className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-destructive" />}
                 P&L
               </div>
-              <p className={`text-xl font-bold ${pnl >= 0 ? "text-success" : "text-destructive"}`}>
+              <p className={`text-base sm:text-xl font-bold tabular-nums ${pnl >= 0 ? "text-success" : "text-destructive"}`}>
                 {formatCurrency(pnl)}
               </p>
             </CardContent>
@@ -219,14 +217,14 @@ export function SupplierDashboard({ session }: Props) {
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid grid-cols-3 w-full max-w-md">
-            <TabsTrigger value="visao-geral" className="gap-1.5 text-xs">
-              <Building2 className="h-3.5 w-3.5" /> Contas
+            <TabsTrigger value="visao-geral" className="gap-1 sm:gap-1.5 text-[11px] sm:text-xs">
+              <Building2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" /> Contas
             </TabsTrigger>
-            <TabsTrigger value="titulares" className="gap-1.5 text-xs">
-              <Users className="h-3.5 w-3.5" /> Titulares
+            <TabsTrigger value="titulares" className="gap-1 sm:gap-1.5 text-[11px] sm:text-xs">
+              <Users className="h-3 w-3 sm:h-3.5 sm:w-3.5" /> Titulares
             </TabsTrigger>
-            <TabsTrigger value="extrato" className="gap-1.5 text-xs">
-              <ScrollText className="h-3.5 w-3.5" /> Extrato
+            <TabsTrigger value="extrato" className="gap-1 sm:gap-1.5 text-[11px] sm:text-xs">
+              <ScrollText className="h-3 w-3 sm:h-3.5 sm:w-3.5" /> Extrato
             </TabsTrigger>
           </TabsList>
 
