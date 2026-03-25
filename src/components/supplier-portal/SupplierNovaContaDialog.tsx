@@ -29,6 +29,7 @@ interface ContaEntry {
   password: string;
   showPassword: boolean;
   loginEmail: string;
+  manuallyEdited: boolean; // true when user typed directly on this card
 }
 
 export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceId, onSuccess }: Props) {
