@@ -662,6 +662,15 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
           )}
         </DialogContent>
       </Dialog>
+      {/* Dialog: Casas Permitidas */}
+      {casasConfigSupplier && (
+        <SupplierBookmakerConfigDialog
+          open={casasConfigOpen}
+          onOpenChange={setCasasConfigOpen}
+          supplierWorkspaceId={casasConfigSupplier.workspace_id}
+          supplierNome={casasConfigSupplier.nome}
+        />
+      )}
     </div>
   );
 }

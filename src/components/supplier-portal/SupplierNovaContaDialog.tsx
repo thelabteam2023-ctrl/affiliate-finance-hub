@@ -23,18 +23,42 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
   const [loginEmail, setLoginEmail] = useState("");
   const queryClient = useQueryClient();
 
-  // Fetch available bookmaker catalog
-  const { data: catalogo = [] } = useQuery({
-    queryKey: ["bookmakers-catalogo-supplier"],
+  // Fetch allowed bookmakers for this supplier
+  const { data: allowedIds } = useQuery({
+    queryKey: ["supplier-allowed-bookmakers", supplierWorkspaceId],
     queryFn: async () => {
       const { data, error } = await supabase
+        .from("supplier_allowed_bookmakers")
+        .select("bookmaker_catalogo_id")
+        .eq("supplier_workspace_id", supplierWorkspaceId);
+      if (error) throw error;
+      return (data || []).map((d: any) => d.bookmaker_catalogo_id);
+    },
+  });
+
+  // Fetch bookmaker catalog, filtered by allowed list
+  const { data: catalogo = [] } = useQuery({
+    queryKey: ["bookmakers-catalogo-supplier", supplierWorkspaceId, allowedIds],
+    queryFn: async () => {
+      let query = supabase
         .from("bookmakers_catalogo")
         .select("id, nome, logo_url, moeda_padrao")
         .eq("status", "ATIVO")
         .order("nome");
+
+      // If allowed list exists and has items, filter by it
+      if (allowedIds && allowedIds.length > 0) {
+        query = query.in("id", allowedIds);
+      } else if (allowedIds && allowedIds.length === 0) {
+        // No bookmakers configured = show nothing
+        return [];
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },
+    enabled: allowedIds !== undefined,
   });
 
   // Fetch titulares
