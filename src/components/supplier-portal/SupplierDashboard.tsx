@@ -69,6 +69,21 @@ export function SupplierDashboard({ session }: Props) {
     },
   });
 
+  // Fetch bank balances
+  const { data: bancos } = useQuery({
+    queryKey: ["supplier-bancos-saldo", session.supplier_workspace_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("supplier_titular_bancos")
+        .select("saldo")
+        .eq("supplier_workspace_id", session.supplier_workspace_id);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const saldoBancos = (bancos || []).reduce((s, b) => s + Number(b.saldo), 0);
+
   // Fetch alocação
   const { data: alocacao } = useQuery({
     queryKey: ["supplier-alocacao", session.supplier_workspace_id],
