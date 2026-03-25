@@ -218,7 +218,7 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
         logoUrl: casa?.logo_url || null,
         username: existing?.username || mainCred?.username || "",
         password: existing?.password || decryptedPw || "",
-        showPassword: existing?.showPassword || false,
+        showPassword: existing?.showPassword || (!existing && !!decryptedPw),
         manuallyEdited: existing?.manuallyEdited || false,
         autoFilled: existing?.autoFilled || (!existing && hasMainCred),
       };
