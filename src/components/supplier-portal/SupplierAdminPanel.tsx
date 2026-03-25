@@ -15,6 +15,7 @@ import {
   Building2, Users, Clock, CheckCircle2, XCircle, AlertTriangle, Zap,
   Search, Check
 } from "lucide-react";
+import { SupplierBookmakerConfigDialog } from "./SupplierBookmakerConfigDialog";
 import { Separator } from "@/components/ui/separator";
 import { OrigemPagamentoSelect, OrigemPagamentoData } from "@/components/programa-indicacao/OrigemPagamentoSelect";
 import { format } from "date-fns";
@@ -41,6 +42,8 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
   const [syncingId, setSyncingId] = useState<string | null>(null);
   const [selectedFornecedorId, setSelectedFornecedorId] = useState<string>("new");
   const [supplierSearch, setSupplierSearch] = useState("");
+  const [casasConfigOpen, setCasasConfigOpen] = useState(false);
+  const [casasConfigSupplier, setCasasConfigSupplier] = useState<any>(null);
 
   // Form state - Novo Fornecedor
   const [nome, setNome] = useState("");
@@ -399,6 +402,17 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
                           size="sm"
                           variant="outline"
                           onClick={() => {
+                            setCasasConfigSupplier(supplier);
+                            setCasasConfigOpen(true);
+                          }}
+                          className="gap-1 text-xs"
+                        >
+                          <Building2 className="h-3 w-3" /> Casas
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
                             setSelectedSupplier(supplier);
                             setAlocacaoOpen(true);
                           }}
@@ -648,6 +662,15 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
           )}
         </DialogContent>
       </Dialog>
+      {/* Dialog: Casas Permitidas */}
+      {casasConfigSupplier && (
+        <SupplierBookmakerConfigDialog
+          open={casasConfigOpen}
+          onOpenChange={setCasasConfigOpen}
+          supplierWorkspaceId={casasConfigSupplier.workspace_id}
+          supplierNome={casasConfigSupplier.nome}
+        />
+      )}
     </div>
   );
 }

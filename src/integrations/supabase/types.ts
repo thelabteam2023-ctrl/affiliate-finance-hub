@@ -8984,6 +8984,52 @@ export type Database = {
           },
         ]
       }
+      supplier_allowed_bookmakers: {
+        Row: {
+          added_by: string | null
+          bookmaker_catalogo_id: string
+          created_at: string
+          id: string
+          supplier_workspace_id: string
+        }
+        Insert: {
+          added_by?: string | null
+          bookmaker_catalogo_id: string
+          created_at?: string
+          id?: string
+          supplier_workspace_id: string
+        }
+        Update: {
+          added_by?: string | null
+          bookmaker_catalogo_id?: string
+          created_at?: string
+          id?: string
+          supplier_workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_allowed_bookmakers_bookmaker_catalogo_id_fkey"
+            columns: ["bookmaker_catalogo_id"]
+            isOneToOne: false
+            referencedRelation: "bookmakers_catalogo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_allowed_bookmakers_bookmaker_catalogo_id_fkey"
+            columns: ["bookmaker_catalogo_id"]
+            isOneToOne: false
+            referencedRelation: "v_community_bookmaker_stats"
+            referencedColumns: ["bookmaker_catalogo_id"]
+          },
+          {
+            foreignKeyName: "supplier_allowed_bookmakers_supplier_workspace_id_fkey"
+            columns: ["supplier_workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       supplier_alocacoes: {
         Row: {
           created_at: string
