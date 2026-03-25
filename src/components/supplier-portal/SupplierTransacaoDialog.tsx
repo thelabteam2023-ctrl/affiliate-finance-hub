@@ -9,7 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Building2, Landmark } from "lucide-react";
+import { Building2, Landmark, ChevronLeft, Wallet, Check } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface Props {
   open: boolean;
@@ -20,6 +21,15 @@ interface Props {
   saldoDisponivel: number;
   valorSugerido?: number;
   onSuccess: () => void;
+}
+
+interface BancoItem {
+  id: string;
+  banco_nome: string;
+  pix_key: string | null;
+  saldo: number;
+  titular_id: string;
+  titular_nome: string;
 }
 
 function formatCurrency(val: number) {
@@ -41,9 +51,11 @@ export function SupplierTransacaoDialog({
   onSuccess,
 }: Props) {
   const token = useMemo(() => new URLSearchParams(window.location.search).get("token") || "", []);
-  const [valor, setValor] = useState(valorSugerido?.toString() || "");
-  const [contaId, setContaId] = useState("");
+  const [step, setStep] = useState<1 | 2>(1);
+  const [titularId, setTitularId] = useState("");
   const [bancoId, setBancoId] = useState("");
+  const [contaId, setContaId] = useState("");
+  const [valor, setValor] = useState(valorSugerido?.toString() || "");
   const [descricao, setDescricao] = useState("");
 
   const isDeposito = tipo === "DEPOSITO";
@@ -55,30 +67,64 @@ export function SupplierTransacaoDialog({
       const { data } = await supabase.functions.invoke("supplier-auth", {
         body: { action: "list-workspace-bancos", token },
       });
-      return (data?.bancos || []) as Array<{
-        id: string;
-        banco_nome: string;
-        pix_key: string | null;
-        saldo: number;
-        titular_id: string;
-        supplier_titulares: { nome: string } | null;
-      }>;
+      return (data?.bancos || []).map((b: any) => ({
+        id: b.id,
+        banco_nome: b.banco_nome,
+        pix_key: b.pix_key,
+        saldo: Number(b.saldo) || 0,
+        titular_id: b.titular_id,
+        titular_nome: b.supplier_titulares?.nome || "—",
+      })) as BancoItem[];
     },
     enabled: open && !!token,
   });
 
+  // Derive titulares from bancos
+  const titulares = useMemo(() => {
+    if (!bancos) return [];
+    const map = new Map<string, { id: string; nome: string; totalSaldo: number; bankCount: number }>();
+    bancos.forEach(b => {
+      const existing = map.get(b.titular_id);
+      if (existing) {
+        existing.totalSaldo += b.saldo;
+        existing.bankCount += 1;
+      } else {
+        map.set(b.titular_id, { id: b.titular_id, nome: b.titular_nome, totalSaldo: b.saldo, bankCount: 1 });
+      }
+    });
+    return Array.from(map.values()).sort((a, b) => a.nome.localeCompare(b.nome));
+  }, [bancos]);
+
+  // Banks for selected titular
+  const titularBancos = useMemo(() => {
+    if (!bancos || !titularId) return [];
+    return bancos.filter(b => b.titular_id === titularId);
+  }, [bancos, titularId]);
+
+  const selectedBanco = bancos?.find(b => b.id === bancoId);
+
   // Reset on open
   useEffect(() => {
     if (open) {
-      setValor(valorSugerido?.toString() || "");
-      setContaId("");
+      setStep(1);
+      setTitularId("");
       setBancoId("");
+      setContaId("");
+      setValor(valorSugerido?.toString() || "");
       setDescricao("");
       refetchBancos();
     }
   }, [open]);
 
-  const selectedBanco = bancos?.find(b => b.id === bancoId);
+  // When titular changes, reset banco
+  useEffect(() => {
+    setBancoId("");
+  }, [titularId]);
+
+  const handleSelectBanco = (id: string) => {
+    setBancoId(id);
+    setStep(2);
+  };
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -88,19 +134,16 @@ export function SupplierTransacaoDialog({
       if (!bancoId) throw new Error("Selecione um banco");
 
       if (isDeposito) {
-        // Depositing to casa: money comes FROM banco
-        if (selectedBanco && numValor > Number(selectedBanco.saldo)) {
-          throw new Error(`Saldo insuficiente no banco "${selectedBanco.banco_nome}". Disponível: ${formatCurrency(Number(selectedBanco.saldo))}`);
+        if (selectedBanco && numValor > selectedBanco.saldo) {
+          throw new Error(`Saldo insuficiente no banco "${selectedBanco.banco_nome}". Disponível: ${formatCurrency(selectedBanco.saldo)}`);
         }
       } else {
-        // Withdrawing from casa: money goes TO banco
         const conta = accounts.find(a => a.id === contaId);
         if (conta && numValor > Number(conta.saldo_atual)) {
           throw new Error(`Saldo da conta insuficiente: ${formatCurrency(Number(conta.saldo_atual))}`);
         }
       }
 
-      // 1. Record ledger entry (saldo disponível ↔ casa)
       const { data, error } = await supabase.rpc("supplier_ledger_insert", {
         p_supplier_workspace_id: supplierWorkspaceId,
         p_bookmaker_account_id: contaId,
@@ -116,20 +159,18 @@ export function SupplierTransacaoDialog({
       const result = data as any;
       if (!result?.success) throw new Error(result?.error || "Erro ao processar");
 
-      // 2. Update bank saldo
       const { data: bancoResult } = await supabase.functions.invoke("supplier-auth", {
         body: {
           action: "update-banco-saldo",
           token,
           banco_id: bancoId,
           valor: numValor,
-          operacao: isDeposito ? "DEBIT" : "CREDIT", // Deposit: money leaves bank; Withdraw: money enters bank
+          operacao: isDeposito ? "DEBIT" : "CREDIT",
         },
       });
 
       if (bancoResult?.error) {
         console.error("Erro ao atualizar saldo do banco:", bancoResult.error);
-        // Non-fatal: ledger already recorded, but log the issue
         toast.warning("Transação registrada, mas houve erro ao atualizar saldo do banco");
       }
 
@@ -137,10 +178,6 @@ export function SupplierTransacaoDialog({
     },
     onSuccess: () => {
       toast.success(isDeposito ? "Depósito registrado" : "Saque registrado");
-      setValor("");
-      setContaId("");
-      setBancoId("");
-      setDescricao("");
       onOpenChange(false);
       onSuccess();
     },
@@ -149,7 +186,7 @@ export function SupplierTransacaoDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {isDeposito ? (
@@ -166,118 +203,182 @@ export function SupplierTransacaoDialog({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
-          {/* Bank selector */}
-          <div>
-            <Label>Banco do Titular *</Label>
-            <Select value={bancoId} onValueChange={setBancoId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o banco" />
-              </SelectTrigger>
-              <SelectContent>
-                {(bancos || []).map((b) => (
-                  <SelectItem key={b.id} value={b.id}>
-                    <div className="flex items-center gap-2">
-                      <span>{b.banco_nome}</span>
-                      <span className="text-muted-foreground text-xs">
-                        ({b.supplier_titulares?.nome || "—"})
-                      </span>
-                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0 ml-auto">
-                        {formatCurrency(Number(b.saldo))}
-                      </Badge>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {selectedBanco && (
-              <p className="text-xs text-muted-foreground mt-1">
-                Saldo no banco: <span className="font-semibold text-foreground">{formatCurrency(Number(selectedBanco.saldo))}</span>
-                {selectedBanco.pix_key && (
-                  <span className="ml-2">• PIX: {selectedBanco.pix_key}</span>
+        {/* ── STEP 1: Select Titular → Bank Card ── */}
+        {step === 1 && (
+          <div className="space-y-4">
+            {/* Titular selector */}
+            <div>
+              <Label>Titular (Parceiro) *</Label>
+              <Select value={titularId} onValueChange={setTitularId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o titular" />
+                </SelectTrigger>
+                <SelectContent>
+                  {titulares.map(t => (
+                    <SelectItem key={t.id} value={t.id}>
+                      <div className="flex items-center gap-2">
+                        <span>{t.nome}</span>
+                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                          {t.bankCount} banco{t.bankCount !== 1 ? "s" : ""}
+                        </Badge>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Bank cards */}
+            {titularId && (
+              <div className="space-y-2">
+                <Label className="text-muted-foreground text-xs">Selecione o banco para {isDeposito ? "debitar" : "creditar"}:</Label>
+                {titularBancos.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    Nenhum banco cadastrado para este titular.
+                  </p>
+                ) : (
+                  <div className="grid gap-2">
+                    {titularBancos.map(b => (
+                      <button
+                        key={b.id}
+                        type="button"
+                        onClick={() => handleSelectBanco(b.id)}
+                        className={cn(
+                          "w-full flex items-center gap-3 rounded-lg border p-3 text-left transition-all hover:border-primary/50 hover:bg-accent/30 cursor-pointer",
+                          bancoId === b.id && "border-primary bg-primary/5 ring-1 ring-primary/30"
+                        )}
+                      >
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                          <Wallet className="h-5 w-5 text-primary" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm text-foreground truncate">{b.banco_nome}</p>
+                          {b.pix_key && (
+                            <p className="text-[11px] text-muted-foreground truncate">PIX: {b.pix_key}</p>
+                          )}
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className={cn(
+                            "font-semibold text-sm",
+                            b.saldo > 0 ? "text-primary" : "text-muted-foreground"
+                          )}>
+                            {formatCurrency(b.saldo)}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground">saldo</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
                 )}
-              </p>
+              </div>
             )}
           </div>
+        )}
 
-          {/* Account selector */}
-          <div>
-            <Label>Conta (Casa) *</Label>
-            <Select value={contaId} onValueChange={setContaId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione a conta" />
-              </SelectTrigger>
-              <SelectContent>
-                {accounts.map((a: any) => (
-                  <SelectItem key={a.id} value={a.id}>
-                    {a.bookmakers_catalogo?.nome || "Casa"} - {a.login_username}
-                    {!isDeposito && ` (${formatCurrency(Number(a.saldo_atual))})`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        {/* ── STEP 2: Account, Amount, Description ── */}
+        {step === 2 && selectedBanco && (
+          <div className="space-y-4">
+            {/* Selected bank summary */}
+            <div className="flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                <Check className="h-4 w-4 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-muted-foreground">{selectedBanco.titular_nome}</p>
+                <p className="font-medium text-sm text-foreground">{selectedBanco.banco_nome}</p>
+              </div>
+              <Badge variant="secondary" className="text-xs font-semibold">
+                {formatCurrency(selectedBanco.saldo)}
+              </Badge>
+            </div>
 
-          {/* Amount */}
-          <div>
-            <Label>Valor (R$) *</Label>
-            <Input
-              type="number"
-              step="0.01"
-              min="0.01"
-              value={valor}
-              onChange={e => setValor(e.target.value)}
-              placeholder="0,00"
-            />
-            {valorSugerido && isDeposito && valor !== valorSugerido.toString() && (
-              <button
-                type="button"
-                onClick={() => setValor(valorSugerido.toString())}
-                className="text-xs text-primary mt-1 hover:underline"
-              >
-                Usar valor sugerido: {formatCurrency(valorSugerido)}
-              </button>
-            )}
-          </div>
+            {/* Account selector */}
+            <div>
+              <Label>Conta (Casa) *</Label>
+              <Select value={contaId} onValueChange={setContaId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a conta" />
+                </SelectTrigger>
+                <SelectContent>
+                  {accounts.map((a: any) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.bookmakers_catalogo?.nome || "Casa"} - {a.login_username}
+                      {!isDeposito && ` (${formatCurrency(Number(a.saldo_atual))})`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-          {/* Description */}
-          <div>
-            <Label>Descrição</Label>
-            <Textarea
-              value={descricao}
-              onChange={e => setDescricao(e.target.value)}
-              placeholder="Observações (opcional)"
-              rows={2}
-            />
-          </div>
-
-          {/* Flow summary */}
-          {bancoId && contaId && valor && (
-            <div className="bg-muted/50 rounded-lg p-3 text-xs text-muted-foreground space-y-1">
-              <p className="font-medium text-foreground text-sm">Resumo da operação:</p>
-              {isDeposito ? (
-                <>
-                  <p>📉 <span className="font-medium">{selectedBanco?.banco_nome}</span> será debitado em {formatCurrency(parseFloat(valor) || 0)}</p>
-                  <p>📈 <span className="font-medium">{accounts.find(a => a.id === contaId)?.bookmakers_catalogo?.nome || "Casa"}</span> será creditada</p>
-                </>
-              ) : (
-                <>
-                  <p>📉 <span className="font-medium">{accounts.find(a => a.id === contaId)?.bookmakers_catalogo?.nome || "Casa"}</span> será debitada em {formatCurrency(parseFloat(valor) || 0)}</p>
-                  <p>📈 <span className="font-medium">{selectedBanco?.banco_nome}</span> será creditado</p>
-                </>
+            {/* Amount */}
+            <div>
+              <Label>Valor (R$) *</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0.01"
+                value={valor}
+                onChange={e => setValor(e.target.value)}
+                placeholder="0,00"
+              />
+              {valorSugerido && isDeposito && valor !== valorSugerido.toString() && (
+                <button
+                  type="button"
+                  onClick={() => setValor(valorSugerido.toString())}
+                  className="text-xs text-primary mt-1 hover:underline"
+                >
+                  Usar valor sugerido: {formatCurrency(valorSugerido)}
+                </button>
               )}
             </div>
-          )}
-        </div>
 
-        <DialogFooter>
+            {/* Description */}
+            <div>
+              <Label>Descrição</Label>
+              <Textarea
+                value={descricao}
+                onChange={e => setDescricao(e.target.value)}
+                placeholder="Observações (opcional)"
+                rows={2}
+              />
+            </div>
+
+            {/* Flow summary */}
+            {contaId && valor && (
+              <div className="bg-muted/50 rounded-lg p-3 text-xs text-muted-foreground space-y-1">
+                <p className="font-medium text-foreground text-sm">Resumo da operação:</p>
+                {isDeposito ? (
+                  <>
+                    <p>📉 <span className="font-medium">{selectedBanco.banco_nome}</span> será debitado em {formatCurrency(parseFloat(valor) || 0)}</p>
+                    <p>📈 <span className="font-medium">{accounts.find(a => a.id === contaId)?.bookmakers_catalogo?.nome || "Casa"}</span> será creditada</p>
+                  </>
+                ) : (
+                  <>
+                    <p>📉 <span className="font-medium">{accounts.find(a => a.id === contaId)?.bookmakers_catalogo?.nome || "Casa"}</span> será debitada em {formatCurrency(parseFloat(valor) || 0)}</p>
+                    <p>📈 <span className="font-medium">{selectedBanco.banco_nome}</span> será creditado</p>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        <DialogFooter className="flex gap-2">
+          {step === 2 && (
+            <Button variant="ghost" size="sm" onClick={() => setStep(1)} className="mr-auto">
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Voltar
+            </Button>
+          )}
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button
-            onClick={() => mutation.mutate()}
-            disabled={mutation.isPending || !valor || !contaId || !bancoId}
-          >
-            {mutation.isPending ? "Processando..." : isDeposito ? "Depositar" : "Sacar"}
-          </Button>
+          {step === 2 && (
+            <Button
+              onClick={() => mutation.mutate()}
+              disabled={mutation.isPending || !valor || !contaId || !bancoId}
+            >
+              {mutation.isPending ? "Processando..." : isDeposito ? "Depositar" : "Sacar"}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
