@@ -53,6 +53,7 @@ const ApostaWindowPage = lazy(() => import("./pages/ApostaWindowPage"));
 const ApostaMultiplaWindowPage = lazy(() => import("./pages/ApostaMultiplaWindowPage"));
 const SharedProject = lazy(() => import("./pages/SharedProject"));
 const SupplierPortal = lazy(() => import("./pages/SupplierPortal"));
+const FornecedoresPortal = lazy(() => import("./pages/FornecedoresPortal"));
 
 // ─── QueryClient com defaults globais de performance ───
 const queryClient = new QueryClient({
