@@ -5,11 +5,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, Building2, Check } from "lucide-react";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Building2, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 
 interface Props {
   open: boolean;
@@ -23,9 +21,8 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
   const [titularId, setTitularId] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loginEmail, setLoginEmail] = useState("");
-  const [casaSearch, setCasaSearch] = useState("");
-  const [casaPickerOpen, setCasaPickerOpen] = useState(false);
   const queryClient = useQueryClient();
 
   // Fetch allowed bookmakers for this supplier
@@ -79,17 +76,47 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
     },
   });
 
+  // Fetch existing accounts to prevent duplicates (same casa + titular)
+  const { data: existingAccounts = [] } = useQuery({
+    queryKey: ["supplier-accounts-existing", supplierWorkspaceId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("supplier_bookmaker_accounts")
+        .select("bookmaker_catalogo_id, titular_id")
+        .eq("supplier_workspace_id", supplierWorkspaceId)
+        .eq("status", "ATIVA");
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
   const selectedCasa = catalogo.find((c: any) => c.id === catalogoId);
 
-  const filteredCasas = useMemo(() => {
-    if (!casaSearch) return catalogo;
-    const q = casaSearch.toLowerCase();
-    return catalogo.filter((c: any) => c.nome.toLowerCase().includes(q));
-  }, [catalogo, casaSearch]);
+  // Filter titulares: only show those who DON'T already have an account for the selected casa
+  const availableTitulares = useMemo(() => {
+    if (!catalogoId) return titulares;
+    const usedTitularIds = new Set(
+      existingAccounts
+        .filter((a: any) => a.bookmaker_catalogo_id === catalogoId && a.titular_id)
+        .map((a: any) => a.titular_id)
+    );
+    return titulares.filter((t: any) => !usedTitularIds.has(t.id));
+  }, [catalogoId, titulares, existingAccounts]);
+
+  // Check if ALL titulares already have accounts for the selected casa
+  const allTitularesUsed = catalogoId && availableTitulares.length === 0 && titulares.length > 0;
 
   const createMutation = useMutation({
     mutationFn: async () => {
       if (!catalogoId || !username || !password) throw new Error("Preencha os campos obrigatórios");
+
+      // Double-check for duplicate
+      if (titularId) {
+        const isDuplicate = existingAccounts.some(
+          (a: any) => a.bookmaker_catalogo_id === catalogoId && a.titular_id === titularId
+        );
+        if (isDuplicate) throw new Error("Este titular já possui conta nesta casa de apostas");
+      }
 
       const { error } = await supabase.from("supplier_bookmaker_accounts").insert({
         supplier_workspace_id: supplierWorkspaceId,
@@ -106,6 +133,7 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
     onSuccess: () => {
       toast.success("Conta criada com sucesso");
       queryClient.invalidateQueries({ queryKey: ["supplier-accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["supplier-accounts-existing"] });
       resetForm();
       onSuccess();
     },
@@ -117,30 +145,20 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
     setTitularId("");
     setUsername("");
     setPassword("");
+    setShowPassword(false);
     setLoginEmail("");
-    setCasaSearch("");
-    setCasaPickerOpen(false);
     onOpenChange(false);
   }
 
-  function BookmakerLogo({ url, nome }: { url: string | null; nome: string }) {
-    if (url) {
-      return (
-        <div className="w-7 h-7 rounded-md bg-muted/50 flex items-center justify-center overflow-hidden shrink-0 border border-border/30">
-          <img src={url} alt={nome} className="w-5 h-5 object-contain" />
-        </div>
-      );
-    }
-    return (
-      <div className="w-7 h-7 rounded-md bg-muted/50 flex items-center justify-center shrink-0 border border-border/30">
-        <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
-      </div>
-    );
+  // Reset titular when casa changes
+  function handleCasaChange(value: string) {
+    setCatalogoId(value);
+    setTitularId("");
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Nova Conta</DialogTitle>
         </DialogHeader>
@@ -158,111 +176,92 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
             </div>
           ) : (
           <>
-          {/* Casa de Apostas - Custom Picker */}
+          {/* Casa de Apostas */}
           <div className="space-y-1.5">
-            <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              Casa de Apostas <span className="text-destructive">*</span>
-            </Label>
-
-            {!casaPickerOpen && catalogoId ? (
-              <button
-                type="button"
-                onClick={() => setCasaPickerOpen(true)}
-                className="w-full flex items-center gap-3 rounded-lg border border-border bg-card px-3 py-2.5 text-left hover:border-primary/40 transition-colors"
-              >
-                <BookmakerLogo url={selectedCasa?.logo_url} nome={selectedCasa?.nome || ""} />
-                <span className="text-sm font-medium flex-1">{selectedCasa?.nome}</span>
-                <span className="text-xs text-muted-foreground">Alterar</span>
-              </button>
-            ) : (
-              <div className="space-y-2">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    value={casaSearch}
-                    onChange={e => setCasaSearch(e.target.value)}
-                    placeholder="Buscar casa de apostas..."
-                    className="pl-9"
-                    autoFocus={casaPickerOpen}
-                  />
-                </div>
-                <ScrollArea className="max-h-[200px]">
-                  <div className="space-y-0.5">
-                    {filteredCasas.map((c: any) => {
-                      const isSelected = catalogoId === c.id;
-                      return (
-                        <button
-                          key={c.id}
-                          type="button"
-                          onClick={() => {
-                            setCatalogoId(c.id);
-                            setCasaSearch("");
-                            setCasaPickerOpen(false);
-                          }}
-                          className={cn(
-                            "w-full flex items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors",
-                            isSelected
-                              ? "bg-primary/10 ring-1 ring-primary/30"
-                              : "hover:bg-muted/50"
-                          )}
-                        >
-                          <BookmakerLogo url={c.logo_url} nome={c.nome} />
-                          <span className="text-sm font-medium flex-1">{c.nome}</span>
-                          {isSelected && <Check className="h-4 w-4 text-primary" />}
-                        </button>
-                      );
-                    })}
-                    {filteredCasas.length === 0 && (
-                      <p className="text-sm text-muted-foreground text-center py-4">
-                        Nenhuma casa encontrada
-                      </p>
-                    )}
-                  </div>
-                </ScrollArea>
-              </div>
-            )}
-          </div>
-
-          {/* Titular */}
-          <div className="space-y-1.5">
-            <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              Titular
-            </Label>
-            <Select value={titularId} onValueChange={setTitularId}>
+            <Label>Casa de Apostas <span className="text-destructive">*</span></Label>
+            <Select value={catalogoId} onValueChange={handleCasaChange}>
               <SelectTrigger>
-                <SelectValue placeholder="Selecione o titular (opcional)" />
+                <SelectValue placeholder="Selecione a casa">
+                  {selectedCasa && (
+                    <span className="flex items-center gap-2">
+                      <BookmakerIcon url={selectedCasa.logo_url} />
+                      {selectedCasa.nome}
+                    </span>
+                  )}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                {titulares.map((t: any) => (
-                  <SelectItem key={t.id} value={t.id}>
-                    {t.nome}
-                  </SelectItem>
-                ))}
+                <SelectGroup>
+                  {catalogo.map((c: any) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      <span className="flex items-center gap-2">
+                        <BookmakerIcon url={c.logo_url} />
+                        {c.nome}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
               </SelectContent>
             </Select>
           </div>
 
+          {/* Titular */}
+          <div className="space-y-1.5">
+            <Label>
+              Titular <span className="text-destructive">*</span>
+            </Label>
+            {allTitularesUsed ? (
+              <div className="rounded-lg border border-border bg-muted/30 px-3 py-2.5">
+                <p className="text-xs text-muted-foreground">
+                  Todos os titulares já possuem conta nesta casa.
+                </p>
+              </div>
+            ) : (
+              <Select value={titularId} onValueChange={setTitularId} disabled={!catalogoId}>
+                <SelectTrigger>
+                  <SelectValue placeholder={catalogoId ? "Selecione o titular" : "Selecione a casa primeiro"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableTitulares.map((t: any) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+
           {/* Login */}
           <div className="space-y-1.5">
-            <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              Login / Username <span className="text-destructive">*</span>
-            </Label>
+            <Label>Login / Username <span className="text-destructive">*</span></Label>
             <Input value={username} onChange={e => setUsername(e.target.value)} placeholder="usuario123" />
           </div>
 
           {/* Senha */}
           <div className="space-y-1.5">
-            <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              Senha <span className="text-destructive">*</span>
-            </Label>
-            <Input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" />
+            <Label>Senha <span className="text-destructive">*</span></Label>
+            <div className="relative">
+              <Input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
           </div>
 
           {/* E-mail */}
           <div className="space-y-1.5">
-            <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              E-mail de Login
-            </Label>
+            <Label>E-mail de Login</Label>
             <Input value={loginEmail} onChange={e => setLoginEmail(e.target.value)} placeholder="email@exemplo.com" />
           </div>
           </>
@@ -273,7 +272,7 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
           <Button
             onClick={() => createMutation.mutate()}
-            disabled={!catalogoId || !username || !password || createMutation.isPending}
+            disabled={!catalogoId || !titularId || !username || !password || !!allTitularesUsed || createMutation.isPending}
           >
             {createMutation.isPending ? "Criando..." : "Criar Conta"}
           </Button>
@@ -281,4 +280,15 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
       </DialogContent>
     </Dialog>
   );
+}
+
+function BookmakerIcon({ url }: { url: string | null }) {
+  if (url) {
+    return (
+      <div className="w-5 h-5 rounded shrink-0 overflow-hidden bg-muted/50 flex items-center justify-center">
+        <img src={url} alt="" className="w-4 h-4 object-contain" />
+      </div>
+    );
+  }
+  return <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />;
 }
