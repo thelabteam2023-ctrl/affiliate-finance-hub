@@ -483,6 +483,16 @@ export function SupplierTransacaoDialog({
                   Usar valor sugerido: {formatCurrency(valorSugerido)}
                 </button>
               )}
+              {isDeposito && selectedBanco && parseFloat(valor) > selectedBanco.saldo && (
+                <p className="text-xs text-destructive mt-1">
+                  ⚠️ Valor excede o saldo do banco {selectedBanco.banco_nome} ({formatCurrency(selectedBanco.saldo)})
+                </p>
+              )}
+              {!isDeposito && !isTransferenciaBanco && contaId && parseFloat(valor) > Number(accounts.find(a => a.id === contaId)?.saldo_atual || 0) && (
+                <p className="text-xs text-destructive mt-1">
+                  ⚠️ Valor excede o saldo da conta ({formatCurrency(Number(accounts.find(a => a.id === contaId)?.saldo_atual || 0))})
+                </p>
+              )}
             </div>
 
             {/* Description */}
@@ -535,7 +545,11 @@ export function SupplierTransacaoDialog({
           {step === 2 && !isTransferenciaBanco && (
             <Button
               onClick={() => mutation.mutate()}
-              disabled={mutation.isPending || !valor || !contaId || !bancoId}
+              disabled={
+                mutation.isPending || !valor || !contaId || !bancoId ||
+                (isDeposito && selectedBanco && parseFloat(valor) > selectedBanco.saldo) ||
+                (!isDeposito && parseFloat(valor) > Number(accounts.find(a => a.id === contaId)?.saldo_atual || 0))
+              }
             >
               {mutation.isPending ? "Processando..." : isDeposito ? "Depositar" : "Sacar"}
             </Button>
