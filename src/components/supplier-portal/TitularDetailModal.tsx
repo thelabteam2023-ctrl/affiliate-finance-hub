@@ -94,7 +94,7 @@ function HistoryTab({ titular, supplierToken }: { titular: any; supplierToken: s
 
   return (
     <>
-      <div className="space-y-1 max-h-[50vh] overflow-y-auto">
+      <div className="space-y-1">
         {transactions.map((tx: any) => {
           const isCredit = tx.direcao === "CREDIT";
           const canEdit = EDITABLE_TYPES.includes(tx.tipo);
