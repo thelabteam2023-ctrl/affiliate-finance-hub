@@ -139,6 +139,7 @@ const NovoParceiro = () => {
         status: formData.status,
         user_id: user.id,
         workspace_id: workspaceId,
+        fornecedor_origem_id: formData.fornecedorOrigemId || null,
       });
 
       if (error) {
