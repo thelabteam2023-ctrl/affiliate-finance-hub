@@ -49,7 +49,7 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
 
   // Form state - Alocação
   const [valorAlocacao, setValorAlocacao] = useState("");
-  const [valorSugerido, setValorSugerido] = useState("");
+  
   const [descricaoAlocacao, setDescricaoAlocacao] = useState("");
   const [origemData, setOrigemData] = useState<OrigemPagamentoData>({
     origemTipo: "CAIXA_OPERACIONAL",
@@ -229,7 +229,7 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
         parent_workspace_id: workspaceId,
         supplier_workspace_id: selectedSupplier.workspace_id,
         valor: numVal,
-        valor_sugerido_deposito: valorSugerido ? parseFloat(valorSugerido) : null,
+        valor_sugerido_deposito: null,
         descricao: descricaoAlocacao || null,
         created_by: currentUser.id,
       });
@@ -255,7 +255,7 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
       queryClient.invalidateQueries({ queryKey: ["admin-suppliers"] });
       queryClient.invalidateQueries({ queryKey: ["financeiro-data"] });
       setValorAlocacao("");
-      setValorSugerido("");
+      
       setDescricaoAlocacao("");
       setOrigemData({ origemTipo: "CAIXA_OPERACIONAL", tipoMoeda: "FIAT", moeda: "BRL", saldoDisponivel: 0 });
       setAlocacaoOpen(false);
@@ -578,12 +578,6 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
               <Input type="number" step="0.01" value={valorAlocacao} onChange={e => setValorAlocacao(e.target.value)} placeholder="10000.00" />
             </div>
 
-            {/* Valor sugerido por depósito */}
-            <div>
-              <Label>Valor Sugerido por Depósito</Label>
-              <Input type="number" step="0.01" value={valorSugerido} onChange={e => setValorSugerido(e.target.value)} placeholder="1000.00 (opcional)" />
-              <p className="text-xs text-muted-foreground mt-1">O fornecedor verá essa sugestão ao fazer depósitos</p>
-            </div>
 
             {/* Descrição */}
             <div>
