@@ -12,9 +12,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Textarea } from "@/components/ui/textarea";
 import { 
   Plus, Truck, Link2, Copy, ExternalLink, Wallet,
-  Building2, Users, Clock, CheckCircle2, XCircle, AlertTriangle, Zap
+  Building2, Users, Clock, CheckCircle2, XCircle, AlertTriangle, Zap,
+  Search, Check
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 
 interface Props {
@@ -35,6 +38,7 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
   const [generatedLink, setGeneratedLink] = useState<string | null>(null);
   const [syncingId, setSyncingId] = useState<string | null>(null);
   const [selectedFornecedorId, setSelectedFornecedorId] = useState<string>("new");
+  const [supplierSearch, setSupplierSearch] = useState("");
 
   // Form state - Novo Fornecedor
   const [nome, setNome] = useState("");
@@ -414,39 +418,102 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
       {/* Dialog: Ativar Fornecedor no Portal */}
       <Dialog open={novoFornecedorOpen} onOpenChange={(open) => {
         setNovoFornecedorOpen(open);
-        if (!open) { setSelectedFornecedorId("new"); setNome(""); setContato(""); setObservacoes(""); }
+        if (!open) { setSelectedFornecedorId("new"); setNome(""); setContato(""); setObservacoes(""); setSupplierSearch(""); }
       }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Ativar Fornecedor no Portal</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            {/* Select existing or create new */}
-            <div>
-              <Label>Fornecedor</Label>
-              <Select value={selectedFornecedorId} onValueChange={setSelectedFornecedorId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione um fornecedor" />
-                </SelectTrigger>
-                <SelectContent>
-                  {unlinkedFornecedores.map((f: any) => (
-                    <SelectItem key={f.id} value={f.id}>
-                      {f.nome} {f.documento ? `(${f.documento})` : ""}
-                    </SelectItem>
-                  ))}
-                  <SelectItem value="new">+ Criar novo fornecedor</SelectItem>
-                </SelectContent>
-              </Select>
-              {unlinkedFornecedores.length > 0 && selectedFornecedorId === "new" && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  {unlinkedFornecedores.length} fornecedor{unlinkedFornecedores.length > 1 ? "es" : ""} da Captação disponíve{unlinkedFornecedores.length > 1 ? "is" : "l"}
-                </p>
-              )}
-            </div>
+            {/* Search */}
+            {unlinkedFornecedores.length > 3 && (
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  value={supplierSearch}
+                  onChange={e => setSupplierSearch(e.target.value)}
+                  placeholder="Buscar por nome ou CPF..."
+                  className="pl-9"
+                />
+              </div>
+            )}
 
-            {/* Show form fields only for new supplier */}
-            {selectedFornecedorId === "new" && (
+            {/* Supplier list */}
+            {unlinkedFornecedores.length > 0 && (
               <>
+                <Label className="text-xs text-muted-foreground uppercase tracking-wider">
+                  Fornecedores da Captação ({unlinkedFornecedores.length})
+                </Label>
+                <ScrollArea className="max-h-[220px] -mx-1 px-1">
+                  <div className="space-y-1">
+                    {unlinkedFornecedores
+                      .filter((f: any) => {
+                        if (!supplierSearch) return true;
+                        const q = supplierSearch.toLowerCase();
+                        return f.nome?.toLowerCase().includes(q) || f.documento?.includes(q);
+                      })
+                      .sort((a: any, b: any) => a.nome.localeCompare(b.nome))
+                      .map((f: any) => {
+                        const isSelected = selectedFornecedorId === f.id;
+                        return (
+                          <button
+                            key={f.id}
+                            type="button"
+                            onClick={() => setSelectedFornecedorId(f.id)}
+                            className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors
+                              ${isSelected
+                                ? "bg-primary/10 ring-1 ring-primary/30"
+                                : "hover:bg-muted/50"
+                              }`}
+                          >
+                            <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors
+                              ${isSelected ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground/30"}`}>
+                              {isSelected && <Check className="h-3 w-3" />}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <p className="text-sm font-semibold text-foreground truncate">
+                                    {f.nome}
+                                  </p>
+                                </TooltipTrigger>
+                                {f.nome.length > 30 && (
+                                  <TooltipContent side="top">{f.nome}</TooltipContent>
+                                )}
+                              </Tooltip>
+                              {f.documento && (
+                                <p className="text-xs text-muted-foreground mt-0.5">{f.documento}</p>
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })}
+                  </div>
+                </ScrollArea>
+                <Separator />
+              </>
+            )}
+
+            {/* Create new option */}
+            <button
+              type="button"
+              onClick={() => setSelectedFornecedorId("new")}
+              className={`w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors
+                ${selectedFornecedorId === "new"
+                  ? "bg-primary/10 ring-1 ring-primary/30"
+                  : "hover:bg-muted/50"
+                }`}
+            >
+              <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors
+                ${selectedFornecedorId === "new" ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground/30"}`}>
+                {selectedFornecedorId === "new" ? <Check className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
+              </div>
+              <p className="text-sm font-medium text-foreground">Criar novo fornecedor</p>
+            </button>
+
+            {/* Form fields for new supplier */}
+            {selectedFornecedorId === "new" && (
+              <div className="space-y-3 pl-8">
                 <div>
                   <Label>Nome *</Label>
                   <Input value={nome} onChange={e => setNome(e.target.value)} placeholder="Nome do fornecedor" />
@@ -459,7 +526,7 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
                   <Label>Observações</Label>
                   <Textarea value={observacoes} onChange={e => setObservacoes(e.target.value)} rows={2} />
                 </div>
-              </>
+              </div>
             )}
           </div>
           <DialogFooter>
