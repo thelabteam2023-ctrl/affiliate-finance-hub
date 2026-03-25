@@ -301,7 +301,7 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
                           />
                         </div>
                       )}
-                      <ScrollArea className="max-h-[240px]">
+                      <div className="max-h-[240px] overflow-y-auto rounded-lg border border-border/40 p-1">
                         <div className="space-y-1">
                           {filteredCasas.map((c: any) => {
                             const checked = selectedCasaIds.has(c.id);
@@ -335,7 +335,7 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
                             <p className="text-sm text-muted-foreground text-center py-6">Nenhuma casa encontrada</p>
                           )}
                         </div>
-                      </ScrollArea>
+                      </div>
 
                       {/* Counter badge */}
                       <div className="flex items-center justify-center">
