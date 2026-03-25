@@ -76,10 +76,16 @@ export function SupplierDashboard({ session }: Props) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("supplier_titular_bancos")
-        .select("saldo")
+        .select("id, banco_nome, saldo, pix_key, titular_id, supplier_titulares(nome)")
         .eq("supplier_workspace_id", session.supplier_workspace_id);
       if (error) throw error;
-      return data || [];
+      return (data || []).map((b: any) => ({
+        id: b.id,
+        banco_nome: b.banco_nome,
+        saldo: b.saldo,
+        pix_key: b.pix_key,
+        titular_nome: b.supplier_titulares?.nome || "Sem titular",
+      }));
     },
   });
 
@@ -193,13 +199,14 @@ export function SupplierDashboard({ session }: Props) {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="cursor-pointer hover:border-primary/30 transition-colors" onClick={() => setBancosModalOpen(true)}>
             <CardContent className="pt-3 sm:pt-4 pb-2 sm:pb-3 px-3 sm:px-4">
               <div className="flex items-center gap-1.5 text-muted-foreground text-[10px] sm:text-xs mb-0.5 sm:mb-1">
                 <Wallet className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                 Em Bancos
               </div>
               <p className="text-base sm:text-xl font-bold text-foreground tabular-nums">{formatCurrency(saldoBancos)}</p>
+              <p className="text-[10px] text-primary mt-0.5">Toque para ver detalhes →</p>
             </CardContent>
           </Card>
         </div>
