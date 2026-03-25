@@ -9356,6 +9356,69 @@ export type Database = {
           },
         ]
       }
+      supplier_titular_bancos: {
+        Row: {
+          agencia: string | null
+          banco_nome: string
+          conta: string | null
+          created_at: string
+          id: string
+          observacoes: string | null
+          pix_key: string | null
+          pix_tipo: string | null
+          supplier_workspace_id: string
+          tipo_conta: string
+          titular_conta: string | null
+          titular_id: string
+          updated_at: string
+        }
+        Insert: {
+          agencia?: string | null
+          banco_nome: string
+          conta?: string | null
+          created_at?: string
+          id?: string
+          observacoes?: string | null
+          pix_key?: string | null
+          pix_tipo?: string | null
+          supplier_workspace_id: string
+          tipo_conta?: string
+          titular_conta?: string | null
+          titular_id: string
+          updated_at?: string
+        }
+        Update: {
+          agencia?: string | null
+          banco_nome?: string
+          conta?: string | null
+          created_at?: string
+          id?: string
+          observacoes?: string | null
+          pix_key?: string | null
+          pix_tipo?: string | null
+          supplier_workspace_id?: string
+          tipo_conta?: string
+          titular_conta?: string | null
+          titular_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_titular_bancos_supplier_workspace_id_fkey"
+            columns: ["supplier_workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_titular_bancos_titular_id_fkey"
+            columns: ["titular_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_titulares"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       supplier_titulares: {
         Row: {
           created_at: string
