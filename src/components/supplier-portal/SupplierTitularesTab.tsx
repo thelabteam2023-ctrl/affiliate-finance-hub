@@ -11,7 +11,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import {
-  Plus, User, Phone, Mail, MapPin, Calendar, Pencil, Lock, Loader2,
+  Plus, User, Phone, Mail, MapPin, Calendar, Pencil, Lock, Loader2, Clock,
 } from "lucide-react";
 import { toast } from "sonner";
 import { SwipeableCard } from "./SwipeableCard";
@@ -42,6 +42,65 @@ const formatCEP = (value: string) => {
   return digits.replace(/(\d{5})(\d)/, "$1-$2").slice(0, 9);
 };
 
+/**
+ * Calcula os dias restantes de parceria usando timezone America/Sao_Paulo.
+ * Retorna null se não houver data de fim, ou o número de dias restantes (pode ser negativo).
+ */
+function calcRemainingDays(dataFim: string | null): number | null {
+  if (!dataFim) return null;
+  // Extrair a data civil sem conversão de timezone
+  const [year, month, day] = dataFim.split("-").map(Number);
+  const fimDate = new Date(year, month - 1, day);
+
+  // Hoje em São Paulo (data civil)
+  const nowSP = new Date(
+    new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" })
+  );
+  const todaySP = new Date(nowSP.getFullYear(), nowSP.getMonth(), nowSP.getDate());
+
+  const diffMs = fimDate.getTime() - todaySP.getTime();
+  return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+}
+
+function RemainingDaysBadge({ dataInicio, dataFim }: { dataInicio: string | null; dataFim: string | null }) {
+  if (!dataFim) return null;
+  const remaining = calcRemainingDays(dataFim);
+  if (remaining === null) return null;
+
+  let color: string;
+  let label: string;
+
+  if (remaining < 0) {
+    color = "bg-destructive/15 text-destructive border-destructive/20";
+    label = `Expirada há ${Math.abs(remaining)} dia${Math.abs(remaining) !== 1 ? "s" : ""}`;
+  } else if (remaining === 0) {
+    color = "bg-destructive/15 text-destructive border-destructive/20";
+    label = "Expira hoje";
+  } else if (remaining <= 7) {
+    color = "bg-orange-500/15 text-orange-600 border-orange-500/20";
+    label = `${remaining} dia${remaining !== 1 ? "s" : ""} restante${remaining !== 1 ? "s" : ""}`;
+  } else if (remaining <= 30) {
+    color = "bg-yellow-500/15 text-yellow-600 border-yellow-500/20";
+    label = `${remaining} dias restantes`;
+  } else {
+    color = "bg-emerald-500/15 text-emerald-600 border-emerald-500/20";
+    label = `${remaining} dias restantes`;
+  }
+
+  return (
+    <Badge variant="outline" className={`text-[10px] sm:text-xs gap-1 whitespace-nowrap ${color}`}>
+      <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+      {label}
+    </Badge>
+  );
+}
+
+function formatDateBR(dateStr: string | null): string {
+  if (!dateStr) return "—";
+  const [y, m, d] = dateStr.split("-");
+  return `${d}/${m}/${y}`;
+}
+
 // Titular card extracted as stable component
 function TitularCard({
   titular,
@@ -65,25 +124,42 @@ function TitularCard({
         className="border-0 rounded-none shadow-none cursor-pointer group"
         onClick={() => onEdit(titular)}
       >
-        <CardContent className="py-3 px-3 sm:px-4 flex items-center justify-between">
-          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-              <User className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
+        <CardContent className="py-3 px-3 sm:px-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <User className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-foreground truncate">{titular.nome}</p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {titular.documento && (
+                    <span>{titular.documento_tipo}: {titular.documento}</span>
+                  )}
+                </p>
+              </div>
             </div>
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-foreground truncate">{titular.nome}</p>
-              <p className="text-xs text-muted-foreground truncate">
-                {titular.documento && (
-                  <span>{titular.documento_tipo}: {titular.documento}</span>
-                )}
-              </p>
+            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+              <RemainingDaysBadge
+                dataInicio={titular.data_inicio_parceria}
+                dataFim={titular.data_fim_parceria}
+              />
+              <div className="hidden sm:flex items-center gap-2 text-muted-foreground">
+                {titular.email && <Mail className="h-3.5 w-3.5" />}
+                {titular.telefone && <Phone className="h-3.5 w-3.5" />}
+                <Pencil className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
             </div>
           </div>
-          <div className="flex items-center gap-2 sm:gap-3 text-muted-foreground shrink-0">
-            {titular.email && <Mail className="h-3.5 w-3.5 hidden sm:block" />}
-            {titular.telefone && <Phone className="h-3.5 w-3.5 hidden sm:block" />}
-            <Pencil className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity hidden sm:block" />
-          </div>
+          {/* Mobile: show dates below the name */}
+          {(titular.data_inicio_parceria || titular.data_fim_parceria) && (
+            <div className="mt-1.5 ml-[38px] sm:ml-[44px] flex items-center gap-2 text-[11px] text-muted-foreground">
+              <Calendar className="h-3 w-3 shrink-0" />
+              <span>
+                {formatDateBR(titular.data_inicio_parceria)} → {formatDateBR(titular.data_fim_parceria)}
+              </span>
+            </div>
+          )}
         </CardContent>
       </Card>
     </SwipeableCard>
@@ -102,6 +178,8 @@ export function SupplierTitularesTab({ supplierWorkspaceId }: Props) {
   const [cep, setCep] = useState("");
   const [cidade, setCidade] = useState("");
   const [observacoes, setObservacoes] = useState("");
+  const [dataInicioParceria, setDataInicioParceria] = useState("");
+  const [dataFimParceria, setDataFimParceria] = useState("");
   const queryClient = useQueryClient();
 
   const supplierToken = useMemo(
@@ -146,6 +224,18 @@ export function SupplierTitularesTab({ supplierWorkspaceId }: Props) {
       if (error) throw error;
       const result = data as any;
       if (!result?.success) throw new Error(result?.error || "Erro ao criar titular");
+
+      // Update partnership dates separately if provided
+      if (result.titular_id && (dataInicioParceria || dataFimParceria)) {
+        await supabase
+          .from("supplier_titulares")
+          .update({
+            data_inicio_parceria: dataInicioParceria || null,
+            data_fim_parceria: dataFimParceria || null,
+          })
+          .eq("id", result.titular_id);
+      }
+
       return result;
     },
     onSuccess: () => {
@@ -173,6 +263,8 @@ export function SupplierTitularesTab({ supplierWorkspaceId }: Props) {
             email: email.trim() || null,
             telefone: telefone.trim() || null,
             observacoes: observacoes.trim() || null,
+            data_inicio_parceria: dataInicioParceria || null,
+            data_fim_parceria: dataFimParceria || null,
           }),
         }
       );
@@ -199,6 +291,8 @@ export function SupplierTitularesTab({ supplierWorkspaceId }: Props) {
     setCep(titular.cep ? formatCEP(titular.cep) : "");
     setCidade(titular.cidade || "");
     setObservacoes(titular.observacoes || "");
+    setDataInicioParceria(titular.data_inicio_parceria || "");
+    setDataFimParceria(titular.data_fim_parceria || "");
     setDialogOpen(true);
   }
 
@@ -218,6 +312,8 @@ export function SupplierTitularesTab({ supplierWorkspaceId }: Props) {
     setCep("");
     setCidade("");
     setObservacoes("");
+    setDataInicioParceria("");
+    setDataFimParceria("");
   }
 
   function resetForm() {
@@ -346,6 +442,42 @@ export function SupplierTitularesTab({ supplierWorkspaceId }: Props) {
                     onChange={e => setDataNascimento(e.target.value)}
                     disabled={isPending}
                   />
+                </div>
+              )}
+            </div>
+
+            {/* Datas da Parceria */}
+            <div className="space-y-3 border-t border-border/40 pt-4">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                <Clock className="h-3.5 w-3.5" /> Período da Parceria
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <Label className="flex items-center gap-1.5">
+                    Data de Início
+                  </Label>
+                  <Input
+                    type="date"
+                    value={dataInicioParceria}
+                    onChange={e => setDataInicioParceria(e.target.value)}
+                    disabled={isPending}
+                  />
+                </div>
+                <div>
+                  <Label className="flex items-center gap-1.5">
+                    Data de Fim Prevista
+                  </Label>
+                  <Input
+                    type="date"
+                    value={dataFimParceria}
+                    onChange={e => setDataFimParceria(e.target.value)}
+                    disabled={isPending}
+                  />
+                </div>
+              </div>
+              {dataFimParceria && (
+                <div className="flex items-center">
+                  <RemainingDaysBadge dataInicio={dataInicioParceria} dataFim={dataFimParceria} />
                 </div>
               )}
             </div>
