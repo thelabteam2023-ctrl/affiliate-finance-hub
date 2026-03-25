@@ -157,11 +157,35 @@ function TitularCard({
   );
 }
 
+function calcDataFimFromDias(dataInicio: string, dias: number): string {
+  if (!dataInicio || dias <= 0) return "";
+  const [y, m, d] = dataInicio.split("-").map(Number);
+  const start = new Date(y, m - 1, d);
+  start.setDate(start.getDate() + dias);
+  const yy = start.getFullYear();
+  const mm = String(start.getMonth() + 1).padStart(2, "0");
+  const dd = String(start.getDate()).padStart(2, "0");
+  return `${yy}-${mm}-${dd}`;
+}
+
+function calcDiasFromDates(dataInicio: string, dataFim: string): number {
+  if (!dataInicio || !dataFim) return 0;
+  const [y1, m1, d1] = dataInicio.split("-").map(Number);
+  const [y2, m2, d2] = dataFim.split("-").map(Number);
+  const start = new Date(y1, m1 - 1, d1);
+  const end = new Date(y2, m2 - 1, d2);
+  const diff = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+  return diff > 0 ? diff : 0;
+}
+
 export function SupplierTitularesTab({ supplierWorkspaceId }: Props) {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [editingTitular, setEditingTitular] = useState<any | null>(null);
   const [viewingTitular, setViewingTitular] = useState<any | null>(null);
+  // Step control: 1 = dados pessoais, 2 = banco (only on create)
+  const [formStep, setFormStep] = useState(1);
+  // Step 1 fields
   const [nome, setNome] = useState("");
   const [cpf, setCpf] = useState("");
   const [email, setEmail] = useState("");
@@ -172,7 +196,13 @@ export function SupplierTitularesTab({ supplierWorkspaceId }: Props) {
   const [cidade, setCidade] = useState("");
   const [observacoes, setObservacoes] = useState("");
   const [dataInicioParceria, setDataInicioParceria] = useState("");
-  const [dataFimParceria, setDataFimParceria] = useState("");
+  const [diasParceria, setDiasParceria] = useState<number>(0);
+  // Step 2 fields (banco)
+  const [bancoNome, setBancoNome] = useState("");
+  const [bancoAgencia, setBancoAgencia] = useState("");
+  const [bancoConta, setBancoConta] = useState("");
+  const [bancoTipoPix, setBancoTipoPix] = useState("");
+  const [bancoChavePix, setBancoChavePix] = useState("");
   const queryClient = useQueryClient();
 
   const supplierToken = useMemo(
@@ -181,6 +211,10 @@ export function SupplierTitularesTab({ supplierWorkspaceId }: Props) {
   );
   const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
   const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+  const dataFimCalculada = dataInicioParceria && diasParceria > 0
+    ? calcDataFimFromDias(dataInicioParceria, diasParceria)
+    : "";
 
   const { data: titulares = [] } = useQuery({
     queryKey: ["supplier-titulares", supplierWorkspaceId],
@@ -218,14 +252,40 @@ export function SupplierTitularesTab({ supplierWorkspaceId }: Props) {
       const result = data as any;
       if (!result?.success) throw new Error(result?.error || "Erro ao criar titular");
 
-      if (result.titular_id && (dataInicioParceria || dataFimParceria)) {
+      // Update partnership dates
+      if (result.titular_id && (dataInicioParceria || dataFimCalculada)) {
         await supabase
           .from("supplier_titulares")
           .update({
             data_inicio_parceria: dataInicioParceria || null,
-            data_fim_parceria: dataFimParceria || null,
+            data_fim_parceria: dataFimCalculada || null,
           })
           .eq("id", result.titular_id);
+      }
+
+      // Create bank if filled
+      if (result.titular_id && bancoNome.trim()) {
+        const resp = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/supplier-auth?action=manage-banco`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json", apikey: anonKey },
+            body: JSON.stringify({
+              token: supplierToken,
+              operation: "create",
+              titular_id: result.titular_id,
+              banco_nome: bancoNome.trim(),
+              agencia: bancoAgencia.trim() || null,
+              conta: bancoConta.trim() || null,
+              tipo_pix: bancoTipoPix || null,
+              chave_pix: bancoChavePix.trim() || null,
+            }),
+          }
+        );
+        if (!resp.ok) {
+          const errData = await resp.json();
+          console.error("Erro ao criar banco:", errData.error);
+        }
       }
 
       return result;
@@ -256,7 +316,7 @@ export function SupplierTitularesTab({ supplierWorkspaceId }: Props) {
             telefone: telefone.trim() || null,
             observacoes: observacoes.trim() || null,
             data_inicio_parceria: dataInicioParceria || null,
-            data_fim_parceria: dataFimParceria || null,
+            data_fim_parceria: dataFimCalculada || null,
           }),
         }
       );
@@ -290,30 +350,38 @@ export function SupplierTitularesTab({ supplierWorkspaceId }: Props) {
     setCidade(titular.cidade || "");
     setObservacoes(titular.observacoes || "");
     setDataInicioParceria(titular.data_inicio_parceria || "");
-    setDataFimParceria(titular.data_fim_parceria || "");
+    const dias = calcDiasFromDates(titular.data_inicio_parceria, titular.data_fim_parceria);
+    setDiasParceria(dias);
+    setFormStep(1);
     setEditDialogOpen(true);
   }
 
   function openCreate() {
     setEditingTitular(null);
     resetFormFields();
+    setFormStep(1);
     setEditDialogOpen(true);
   }
 
   function resetFormFields() {
     setNome(""); setCpf(""); setEmail(""); setTelefone("");
     setDataNascimento(""); setEndereco(""); setCep(""); setCidade("");
-    setObservacoes(""); setDataInicioParceria(""); setDataFimParceria("");
+    setObservacoes(""); setDataInicioParceria(""); setDiasParceria(0);
+    setBancoNome(""); setBancoAgencia(""); setBancoConta("");
+    setBancoTipoPix(""); setBancoChavePix("");
   }
 
   function resetForm() {
     resetFormFields();
     setEditingTitular(null);
+    setFormStep(1);
     setEditDialogOpen(false);
   }
 
   const isEditing = !!editingTitular;
   const isPending = createMutation.isPending || updateMutation.isPending;
+  const canGoStep2 = !isEditing && nome.trim() && cpf.replace(/\D/g, "");
+  const totalSteps = isEditing ? 1 : 2;
 
   return (
     <div className="space-y-4">
@@ -360,128 +428,229 @@ export function SupplierTitularesTab({ supplierWorkspaceId }: Props) {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <User className="h-5 w-5 text-primary" />
-              {isEditing ? "Editar Titular" : "Novo Titular / Parceiro"}
+              {isEditing ? "Editar Titular" : formStep === 1 ? "Novo Titular / Parceiro" : "Dados Bancários"}
             </DialogTitle>
             <p className="text-xs text-muted-foreground mt-1">
               {isEditing
                 ? "Alterações são locais ao portal. O cadastro no sistema principal não será afetado."
-                : "Os dados serão sincronizados automaticamente com o cadastro de parceiros do sistema."
+                : formStep === 1
+                  ? "Os dados serão sincronizados automaticamente com o cadastro de parceiros do sistema."
+                  : "Cadastre uma conta bancária para este titular (opcional)."
               }
             </p>
+            {/* Step indicator for create */}
+            {!isEditing && (
+              <div className="flex items-center gap-2 mt-2">
+                <div className={`h-1.5 flex-1 rounded-full transition-colors ${formStep >= 1 ? "bg-primary" : "bg-muted"}`} />
+                <div className={`h-1.5 flex-1 rounded-full transition-colors ${formStep >= 2 ? "bg-primary" : "bg-muted"}`} />
+              </div>
+            )}
           </DialogHeader>
 
-          <div className="space-y-4">
-            <div className="space-y-3">
-              <div>
-                <Label>Nome Completo <span className="text-destructive">*</span></Label>
-                <Input value={nome} onChange={e => setNome(e.target.value)} placeholder="Nome completo" autoFocus disabled={isPending} />
-              </div>
+          {/* STEP 1 - Dados pessoais */}
+          {formStep === 1 && (
+            <div className="space-y-4">
+              <div className="space-y-3">
+                <div>
+                  <Label>Nome Completo <span className="text-destructive">*</span></Label>
+                  <Input value={nome} onChange={e => setNome(e.target.value)} placeholder="Nome completo" autoFocus disabled={isPending} />
+                </div>
 
-              <div>
-                <Label className="flex items-center gap-1.5">
-                  CPF <span className="text-destructive">*</span>
-                  {isEditing && (
-                    <Badge variant="secondary" className="text-[10px] gap-1">
-                      <Lock className="h-2.5 w-2.5" /> Imutável
-                    </Badge>
-                  )}
-                </Label>
-                <Input
-                  value={cpf} onChange={e => setCpf(formatCPF(e.target.value))}
-                  placeholder="000.000.000-00" maxLength={14}
-                  disabled={isEditing || isPending}
-                  className={isEditing ? "opacity-60 cursor-not-allowed" : ""}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <Label className="flex items-center gap-1.5">
-                    <Mail className="h-3.5 w-3.5 text-muted-foreground" /> E-mail
-                    <span className="text-xs font-normal text-muted-foreground">(opcional)</span>
+                    CPF <span className="text-destructive">*</span>
+                    {isEditing && (
+                      <Badge variant="secondary" className="text-[10px] gap-1">
+                        <Lock className="h-2.5 w-2.5" /> Imutável
+                      </Badge>
+                    )}
                   </Label>
-                  <Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="email@exemplo.com" disabled={isPending} />
+                  <Input
+                    value={cpf} onChange={e => setCpf(formatCPF(e.target.value))}
+                    placeholder="000.000.000-00" maxLength={14}
+                    disabled={isEditing || isPending}
+                    className={isEditing ? "opacity-60 cursor-not-allowed" : ""}
+                  />
                 </div>
-                <div>
-                  <Label className="flex items-center gap-1.5">
-                    <Phone className="h-3.5 w-3.5 text-muted-foreground" /> Telefone
-                    <span className="text-xs font-normal text-muted-foreground">(opcional)</span>
-                  </Label>
-                  <Input value={telefone} onChange={e => setTelefone(formatPhone(e.target.value))} placeholder="(11) 99999-9999" maxLength={15} disabled={isPending} />
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <Label className="flex items-center gap-1.5">
+                      <Mail className="h-3.5 w-3.5 text-muted-foreground" /> E-mail
+                      <span className="text-xs font-normal text-muted-foreground">(opcional)</span>
+                    </Label>
+                    <Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="email@exemplo.com" disabled={isPending} />
+                  </div>
+                  <div>
+                    <Label className="flex items-center gap-1.5">
+                      <Phone className="h-3.5 w-3.5 text-muted-foreground" /> Telefone
+                      <span className="text-xs font-normal text-muted-foreground">(opcional)</span>
+                    </Label>
+                    <Input value={telefone} onChange={e => setTelefone(formatPhone(e.target.value))} placeholder="(11) 99999-9999" maxLength={15} disabled={isPending} />
+                  </div>
                 </div>
+
+                {!isEditing && (
+                  <div>
+                    <Label className="flex items-center gap-1.5">
+                      <Calendar className="h-3.5 w-3.5 text-muted-foreground" /> Data de Nascimento
+                      <span className="text-xs font-normal text-muted-foreground">(opcional)</span>
+                    </Label>
+                    <Input type="date" value={dataNascimento} onChange={e => setDataNascimento(e.target.value)} disabled={isPending} />
+                  </div>
+                )}
               </div>
 
-              {!isEditing && (
-                <div>
-                  <Label className="flex items-center gap-1.5">
-                    <Calendar className="h-3.5 w-3.5 text-muted-foreground" /> Data de Nascimento
-                    <span className="text-xs font-normal text-muted-foreground">(opcional)</span>
-                  </Label>
-                  <Input type="date" value={dataNascimento} onChange={e => setDataNascimento(e.target.value)} disabled={isPending} />
-                </div>
-              )}
-            </div>
-
-            {/* Período da Parceria */}
-            <div className="space-y-3 border-t border-border/40 pt-4">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                <Clock className="h-3.5 w-3.5" /> Período da Parceria
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <Label>Data de Início</Label>
-                  <Input type="date" value={dataInicioParceria} onChange={e => setDataInicioParceria(e.target.value)} disabled={isPending} />
-                </div>
-                <div>
-                  <Label>Data de Fim Prevista</Label>
-                  <Input type="date" value={dataFimParceria} onChange={e => setDataFimParceria(e.target.value)} disabled={isPending} />
-                </div>
-              </div>
-              {dataFimParceria && (
-                <RemainingDaysBadge dataFim={dataFimParceria} />
-              )}
-            </div>
-
-            {/* Endereço - only on create */}
-            {!isEditing && (
+              {/* Período da Parceria */}
               <div className="space-y-3 border-t border-border/40 pt-4">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Endereço <span className="normal-case font-normal">(opcional)</span>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                  <Clock className="h-3.5 w-3.5" /> Período da Parceria
                 </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <Label>Data de Início</Label>
+                    <Input type="date" value={dataInicioParceria} onChange={e => setDataInicioParceria(e.target.value)} disabled={isPending} />
+                  </div>
+                  <div>
+                    <Label>Dias de Parceria</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={diasParceria || ""}
+                      onChange={e => setDiasParceria(parseInt(e.target.value) || 0)}
+                      placeholder="Ex: 60"
+                      disabled={isPending}
+                    />
+                  </div>
+                </div>
+                {dataFimCalculada && (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-xs text-muted-foreground">
+                      Fim previsto: <span className="font-medium text-foreground">{formatDateBR(dataFimCalculada)}</span>
+                    </p>
+                    <RemainingDaysBadge dataFim={dataFimCalculada} />
+                  </div>
+                )}
+              </div>
+
+              {/* Endereço - only on create */}
+              {!isEditing && (
+                <div className="space-y-3 border-t border-border/40 pt-4">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    Endereço <span className="normal-case font-normal">(opcional)</span>
+                  </p>
+                  <div>
+                    <Label className="flex items-center gap-1.5">
+                      <MapPin className="h-3.5 w-3.5 text-muted-foreground" /> Endereço
+                    </Label>
+                    <Input value={endereco} onChange={e => setEndereco(e.target.value)} placeholder="Rua, número, complemento" disabled={isPending} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label>CEP</Label>
+                      <Input value={cep} onChange={e => setCep(formatCEP(e.target.value))} placeholder="00000-000" maxLength={9} disabled={isPending} />
+                    </div>
+                    <div>
+                      <Label>Cidade</Label>
+                      <Input value={cidade} onChange={e => setCidade(e.target.value)} placeholder="Cidade / UF" disabled={isPending} />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <Label>Observações <span className="text-xs font-normal text-muted-foreground">(opcional)</span></Label>
+                <Textarea value={observacoes} onChange={e => setObservacoes(e.target.value)} rows={2} placeholder="Notas internas (opcional)" disabled={isPending} />
+              </div>
+            </div>
+          )}
+
+          {/* STEP 2 - Banco (create only) */}
+          {formStep === 2 && !isEditing && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Landmark className="h-4 w-4" />
+                <p className="text-xs">Você pode pular esta etapa e adicionar depois.</p>
+              </div>
+
+              <div className="space-y-3">
                 <div>
-                  <Label className="flex items-center gap-1.5">
-                    <MapPin className="h-3.5 w-3.5 text-muted-foreground" /> Endereço
-                  </Label>
-                  <Input value={endereco} onChange={e => setEndereco(e.target.value)} placeholder="Rua, número, complemento" disabled={isPending} />
+                  <Label>Nome do Banco <span className="text-xs font-normal text-muted-foreground">(opcional)</span></Label>
+                  <Input value={bancoNome} onChange={e => setBancoNome(e.target.value)} placeholder="Ex: Nubank, Bradesco" disabled={isPending} />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <Label>CEP</Label>
-                    <Input value={cep} onChange={e => setCep(formatCEP(e.target.value))} placeholder="00000-000" maxLength={9} disabled={isPending} />
+                    <Label>Agência</Label>
+                    <Input value={bancoAgencia} onChange={e => setBancoAgencia(e.target.value)} placeholder="0001" disabled={isPending} />
                   </div>
                   <div>
-                    <Label>Cidade</Label>
-                    <Input value={cidade} onChange={e => setCidade(e.target.value)} placeholder="Cidade / UF" disabled={isPending} />
+                    <Label>Conta</Label>
+                    <Input value={bancoConta} onChange={e => setBancoConta(e.target.value)} placeholder="12345-6" disabled={isPending} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <Label>Tipo PIX</Label>
+                    <select
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      value={bancoTipoPix}
+                      onChange={e => setBancoTipoPix(e.target.value)}
+                      disabled={isPending}
+                    >
+                      <option value="">Selecione...</option>
+                      <option value="CPF">CPF</option>
+                      <option value="CNPJ">CNPJ</option>
+                      <option value="EMAIL">E-mail</option>
+                      <option value="TELEFONE">Telefone</option>
+                      <option value="ALEATORIA">Chave Aleatória</option>
+                    </select>
+                  </div>
+                  <div>
+                    <Label>Chave PIX</Label>
+                    <Input value={bancoChavePix} onChange={e => setBancoChavePix(e.target.value)} placeholder="Chave PIX" disabled={isPending} />
                   </div>
                 </div>
               </div>
-            )}
-
-            <div>
-              <Label>Observações <span className="text-xs font-normal text-muted-foreground">(opcional)</span></Label>
-              <Textarea value={observacoes} onChange={e => setObservacoes(e.target.value)} rows={2} placeholder="Notas internas (opcional)" disabled={isPending} />
             </div>
-          </div>
+          )}
 
           <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button variant="outline" onClick={() => resetForm()} disabled={isPending}>Cancelar</Button>
-            <Button
-              onClick={() => isEditing ? updateMutation.mutate() : createMutation.mutate()}
-              disabled={!nome.trim() || (!isEditing && !cpf.replace(/\D/g, "")) || isPending}
-            >
-              {isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-              {isEditing ? "Salvar Alterações" : "Salvar"}
-            </Button>
+            {formStep === 1 && (
+              <>
+                <Button variant="outline" onClick={() => resetForm()} disabled={isPending}>Cancelar</Button>
+                {isEditing ? (
+                  <Button
+                    onClick={() => updateMutation.mutate()}
+                    disabled={!nome.trim() || isPending}
+                  >
+                    {isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                    Salvar Alterações
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={() => setFormStep(2)}
+                    disabled={!canGoStep2 || isPending}
+                    className="gap-1.5"
+                  >
+                    Próximo <ChevronRight className="h-4 w-4" />
+                  </Button>
+                )}
+              </>
+            )}
+            {formStep === 2 && !isEditing && (
+              <>
+                <Button variant="outline" onClick={() => setFormStep(1)} disabled={isPending} className="gap-1.5">
+                  <ChevronLeft className="h-4 w-4" /> Voltar
+                </Button>
+                <Button
+                  onClick={() => createMutation.mutate()}
+                  disabled={isPending}
+                >
+                  {isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                  Salvar
+                </Button>
+              </>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
