@@ -38,9 +38,9 @@ export function SupplierTransacaoDialog({
   accounts,
   saldoDisponivel,
   valorSugerido,
-  token,
   onSuccess,
 }: Props) {
+  const token = useMemo(() => new URLSearchParams(window.location.search).get("token") || "", []);
   const [valor, setValor] = useState(valorSugerido?.toString() || "");
   const [contaId, setContaId] = useState("");
   const [bancoId, setBancoId] = useState("");
