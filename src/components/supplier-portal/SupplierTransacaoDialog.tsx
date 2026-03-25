@@ -383,9 +383,15 @@ export function SupplierTransacaoDialog({
                 onChange={e => setValor(e.target.value)}
                 placeholder="0,00"
               />
-              <p className="text-[11px] text-muted-foreground mt-1">
-                Saldo disponível: {formatCurrency(saldoDisponivel)}
-              </p>
+              {parseFloat(valor) > saldoDisponivel ? (
+                <p className="text-[11px] text-destructive mt-1 font-medium">
+                  ⚠️ Valor excede o saldo disponível: {formatCurrency(saldoDisponivel)}
+                </p>
+              ) : (
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Saldo disponível: {formatCurrency(saldoDisponivel)}
+                </p>
+              )}
             </div>
 
             {/* Description */}
