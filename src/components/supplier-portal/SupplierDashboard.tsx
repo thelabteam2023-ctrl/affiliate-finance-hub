@@ -45,7 +45,7 @@ export function SupplierDashboard({ session }: Props) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("supplier_ledger")
-        .select("tipo, direcao, valor, created_at")
+        .select("tipo, direcao, valor, created_at, bookmaker_account_id")
         .eq("supplier_workspace_id", session.supplier_workspace_id)
         .order("sequencia", { ascending: false });
 
