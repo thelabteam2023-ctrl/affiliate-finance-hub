@@ -40,6 +40,7 @@ const PRIORIDADE_LABELS: Record<string, string> = {
 const STATUS_LABELS: Record<string, string> = {
   pendente: "Pendente",
   em_andamento: "Em Andamento",
+  aguardando_recebimento: "Aguardando Recebimento",
   concluido: "Concluído",
   rejeitado: "Rejeitado",
 };
@@ -54,6 +55,7 @@ const PRIORIDADE_COLORS: Record<string, string> = {
 const STATUS_COLORS: Record<string, string> = {
   pendente: "text-yellow-400 border-yellow-400/40 bg-yellow-400/10",
   em_andamento: "text-blue-400 border-blue-400/40 bg-blue-400/10",
+  aguardando_recebimento: "text-orange-400 border-orange-400/40 bg-orange-400/10",
   concluido: "text-emerald-400 border-emerald-400/40 bg-emerald-400/10",
   rejeitado: "text-muted-foreground border-muted-foreground/40 bg-muted/30",
 };
