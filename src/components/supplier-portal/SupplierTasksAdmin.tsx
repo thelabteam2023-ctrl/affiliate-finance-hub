@@ -175,7 +175,8 @@ export function SupplierTasksAdmin({ supplierWorkspaceId, supplierNome, parentWo
         logo_url: b.logo_url,
         saldo_atual: 0,
         valor_alocado: b.valor_alocado,
-      }));
+      }))
+      .sort((a: any, b: any) => (b.valor_alocado || 0) - (a.valor_alocado || 0));
   }, [titularId, tipo, allowedBookmakers, titularAccounts]);
 
   const casasForTitular = useMemo(() => {
