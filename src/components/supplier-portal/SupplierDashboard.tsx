@@ -242,7 +242,7 @@ export function SupplierDashboard({ session }: Props) {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b border-border bg-card">
-        <div className="max-w-6xl mx-auto px-3 sm:px-4 py-3 sm:py-4 flex items-center justify-between">
+        <div className="px-3 sm:px-4 py-3 sm:py-4 flex items-center justify-between">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <img src={labestLogo} alt="Labest" className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg shrink-0 object-cover" />
             <div className="min-w-0">
@@ -259,7 +259,7 @@ export function SupplierDashboard({ session }: Props) {
         </div>
       </header>
 
-      <div className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
+      <div className="px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
         {/* KPI Cards */}
         <div className="grid grid-cols-3 gap-2 sm:gap-4">
           <Card className="cursor-pointer hover:border-primary/30 transition-colors" onClick={() => { if (saldoDisponivel > 0) { setTransacaoTipo("TRANSFERENCIA_BANCO"); setTransacaoOpen(true); } }}>
