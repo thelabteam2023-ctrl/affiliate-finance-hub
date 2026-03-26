@@ -670,6 +670,7 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
           onOpenChange={setCasasConfigOpen}
           supplierWorkspaceId={casasConfigSupplier.workspace_id}
           supplierNome={casasConfigSupplier.nome}
+          parentWorkspaceId={workspaceId}
         />
       )}
     </div>
