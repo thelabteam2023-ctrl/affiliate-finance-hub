@@ -386,6 +386,7 @@ export function SupplierTasksAdmin({ supplierWorkspaceId, supplierNome, parentWo
     onError: (e: any) => toast.error(e.message),
   });
 
+  function handleTipoChange(newTipo: string) {
     setTipo(newTipo);
     setTitularId("");
     setSelectedCasas([]);
