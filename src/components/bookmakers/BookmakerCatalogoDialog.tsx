@@ -50,6 +50,7 @@ export default function BookmakerCatalogoDialog({
   const [operacional, setOperacional] = useState("ATIVA");
   const [verificacao, setVerificacao] = useState("OBRIGATORIA");
   const [links, setLinks] = useState<LinkItem[]>([{ id: crypto.randomUUID(), url: "", referencia: "PADRÃO" }]);
+  const [linkCriacaoFornecedor, setLinkCriacaoFornecedor] = useState("");
   const [bonusEnabled, setBonusEnabled] = useState(false);
   const [bonusList, setBonusList] = useState<BonusItem[]>([]);
   const [observacoes, setObservacoes] = useState("");
