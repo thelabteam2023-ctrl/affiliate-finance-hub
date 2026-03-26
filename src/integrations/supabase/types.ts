@@ -8990,21 +8990,27 @@ export type Database = {
           bookmaker_catalogo_id: string
           created_at: string
           id: string
+          status: string | null
           supplier_workspace_id: string
+          valor_alocado: number | null
         }
         Insert: {
           added_by?: string | null
           bookmaker_catalogo_id: string
           created_at?: string
           id?: string
+          status?: string | null
           supplier_workspace_id: string
+          valor_alocado?: number | null
         }
         Update: {
           added_by?: string | null
           bookmaker_catalogo_id?: string
           created_at?: string
           id?: string
+          status?: string | null
           supplier_workspace_id?: string
+          valor_alocado?: number | null
         }
         Relationships: [
           {
