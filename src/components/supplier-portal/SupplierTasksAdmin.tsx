@@ -517,12 +517,10 @@ export function SupplierTasksAdmin({ supplierWorkspaceId, supplierNome, parentWo
                       {/* Multi-casa items breakdown */}
                       {renderTaskCasasItems(task)}
 
-                      {/* Single allocation context */}
-                      {!task.casas_items && task.valor_alvo_casa != null && task.valor_atual_casa != null && (
+                      {/* Single allocation context — only show suggestion for new accounts */}
+                      {!task.casas_items && task.valor_alvo_casa != null && task.valor_atual_casa === 0 && (
                         <div className="flex items-center gap-2 mt-1.5 text-[10px]">
-                          <span className="text-muted-foreground">Atual: {formatCurrency(task.valor_atual_casa)}</span>
-                          <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                          <span className="text-primary">Alvo: {formatCurrency(task.valor_alvo_casa)}</span>
+                          <span className="text-primary">Sugestão: {formatCurrency(task.valor_alvo_casa)}</span>
                         </div>
                       )}
 
