@@ -343,6 +343,8 @@ export function SupplierDashboard({ session }: Props) {
               onRefresh={handleRefresh}
               onDepositar={() => { setTransacaoTipo("DEPOSITO"); setTransacaoOpen(true); }}
               onSacar={() => { setTransacaoTipo("SAQUE"); setTransacaoOpen(true); }}
+              prefillCreateAccount={prefillCreateAccount}
+              onClearPrefillCreate={() => setPrefillCreateAccount(null)}
             />
           </TabsContent>
 
