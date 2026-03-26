@@ -201,7 +201,8 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNav
   const pendentes = tasks.filter((t: any) => t.status === "pendente" || t.status === "em_andamento" || t.status === "aguardando_recebimento");
   const historico = tasks.filter((t: any) => t.status === "concluido" || t.status === "rejeitado");
 
-  function getDirectCTALabel(tipo: string) {
+  function getDirectCTALabel(tipo: string, status?: string) {
+    if (status === "aguardando_recebimento" && tipo === "saque") return "Confirmar Recebimento";
     if (tipo === "deposito") return "Depositar";
     if (tipo === "saque") return "Sacar";
     return null;
