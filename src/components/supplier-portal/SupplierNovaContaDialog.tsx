@@ -214,6 +214,7 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
         catalogoNome: casa?.nome || "",
         moeda: casa?.moeda_padrao || "BRL",
         logoUrl: casa?.logo_url || null,
+        linkCriacao: casa?.link_criacao || null,
         username: existing?.username || mainCred?.username || "",
         password: existing?.password || mainCred?.password || "",
         showPassword: existing?.showPassword || (!existing && !!mainCred?.password),
