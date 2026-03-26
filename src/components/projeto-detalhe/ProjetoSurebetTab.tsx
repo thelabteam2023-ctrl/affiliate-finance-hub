@@ -645,6 +645,17 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
     }
   }, [projetoId, invalidateSaldos, onDataChange, queryClient]);
 
+  // === DUPLICAR ===
+  const handleDuplicateSimples = useCallback((apostaId: string) => {
+    const url = `/janela/aposta/novo?projetoId=${encodeURIComponent(projetoId)}&tab=surebet&duplicateFrom=${apostaId}`;
+    window.open(url, '_blank', 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
+  }, [projetoId]);
+
+  const handleDuplicateSurebet = useCallback((surebetId: string) => {
+    const url = `/janela/surebet/novo?projetoId=${encodeURIComponent(projetoId)}&tab=surebet&duplicateFrom=${surebetId}`;
+    window.open(url, '_blank', 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
+  }, [projetoId]);
+
   // Usa a formatação do projeto (moeda de consolidação)
   const formatCurrency = projectFormatCurrency;
 

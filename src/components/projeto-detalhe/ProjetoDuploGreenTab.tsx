@@ -670,6 +670,17 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
     }
   }, [projetoId, invalidateSaldos, onDataChange]);
 
+  // === DUPLICAR ===
+  const handleDuplicateAposta = useCallback((apostaId: string) => {
+    const url = `/janela/aposta/novo?projetoId=${encodeURIComponent(projetoId)}&tab=duplogreen&duplicateFrom=${apostaId}`;
+    window.open(url, '_blank', 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
+  }, [projetoId]);
+
+  const handleDuplicateSurebet = useCallback((surebetId: string) => {
+    const url = `/janela/surebet/novo?projetoId=${encodeURIComponent(projetoId)}&tab=duplogreen&duplicateFrom=${surebetId}`;
+    window.open(url, '_blank', 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
+  }, [projetoId]);
+
   // Filtrar pendentes fora do período para KPIs
   const apostasParaKpi = useMemo(() => 
     filterForKpis(apostas, dateRange?.start, dateRange?.end),

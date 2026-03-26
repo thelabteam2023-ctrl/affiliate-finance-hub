@@ -847,6 +847,22 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
     }
   }, [handleApostaUpdated]);
 
+  // === DUPLICAR ===
+  const handleDuplicateSimples = useCallback((apostaId: string) => {
+    const url = `/janela/aposta/novo?projetoId=${encodeURIComponent(projetoId)}&tab=bonus&duplicateFrom=${apostaId}`;
+    window.open(url, '_blank', 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
+  }, [projetoId]);
+
+  const handleDuplicateMultipla = useCallback((apostaId: string) => {
+    const url = `/janela/multipla/novo?projetoId=${encodeURIComponent(projetoId)}&tab=bonus&duplicateFrom=${apostaId}`;
+    window.open(url, '_blank', 'width=540,height=750,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
+  }, [projetoId]);
+
+  const handleDuplicateSurebet = useCallback((surebetId: string) => {
+    const url = `/janela/surebet/novo?projetoId=${encodeURIComponent(projetoId)}&tab=bonus&duplicateFrom=${surebetId}`;
+    window.open(url, '_blank', 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
+  }, [projetoId]);
+
   // Abrir aposta simples em janela externa (mesmo comportamento do Surebet)
   const handleOpenDialog = (aposta: Aposta | null) => {
     const apostaId = aposta?.id || 'novo';
