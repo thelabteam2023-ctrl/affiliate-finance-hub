@@ -216,13 +216,13 @@ export function SupplierTasksAdmin({ supplierWorkspaceId, supplierNome, parentWo
 
       const autoTitulo = titulo.trim() || (() => {
         const parts = [TIPO_LABELS[tipo]];
-        if (titularNome) parts.push(titularNome);
+        if (titularNome) {
+          const primeiroNome = titularNome.split(" ")[0];
+          // Capitalize: "GLAYZA" -> "Glayza"
+          parts.push(primeiroNome.charAt(0).toUpperCase() + primeiroNome.slice(1).toLowerCase());
+        }
         if (casasCount === 1) {
           parts.push(selectedCasas[0].nome);
-          if (selectedCasas[0].valor) parts.push(formatCurrency(parseFloat(selectedCasas[0].valor)));
-        } else if (casasCount > 1) {
-          parts.push(`${casasCount} casas`);
-          parts.push(formatCurrency(totalValor));
         }
         return parts.join(" — ");
       })();
