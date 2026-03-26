@@ -47,36 +47,28 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
   const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
   const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-  const { data: allowedIds } = useQuery({
-    queryKey: ["supplier-allowed-bookmakers", supplierWorkspaceId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("supplier_allowed_bookmakers")
-        .select("bookmaker_catalogo_id")
-        .eq("supplier_workspace_id", supplierWorkspaceId);
-      if (error) throw error;
-      return (data || []).map((d: any) => d.bookmaker_catalogo_id);
-    },
-  });
-
+  // Fetch allowed bookmakers via edge function (bypasses RLS for GLOBAL_RESTRICTED)
   const { data: catalogo = [] } = useQuery({
-    queryKey: ["bookmakers-catalogo-supplier", supplierWorkspaceId, allowedIds],
+    queryKey: ["bookmakers-catalogo-supplier", supplierWorkspaceId],
     queryFn: async () => {
-      let query = supabase
-        .from("bookmakers_catalogo")
-        .select("id, nome, logo_url, moeda_padrao")
-        .in("status", ["REGULAMENTADA", "NAO_REGULAMENTADA"])
-        .order("nome");
-      if (allowedIds && allowedIds.length > 0) {
-        query = query.in("id", allowedIds);
-      } else if (allowedIds && allowedIds.length === 0) {
-        return [];
-      }
-      const { data, error } = await query;
-      if (error) throw error;
-      return data || [];
+      if (!supplierToken) return [];
+      const resp = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/supplier-auth?action=get-allowed-bookmakers`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: anonKey,
+          },
+          body: JSON.stringify({ token: supplierToken }),
+        }
+      );
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || "Erro ao buscar casas");
+      return data.bookmakers || [];
     },
-    enabled: allowedIds !== undefined,
+    enabled: !!supplierToken,
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: titulares = [] } = useQuery({
@@ -313,7 +305,7 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
     onOpenChange(false);
   }
 
-  const noConfig = catalogo.length === 0 && allowedIds !== undefined;
+  const noConfig = catalogo.length === 0;
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) resetForm(); else onOpenChange(v); }}>

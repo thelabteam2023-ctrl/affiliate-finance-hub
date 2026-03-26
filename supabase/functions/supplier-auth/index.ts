@@ -1132,6 +1132,50 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ pagamentos }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // ── get-allowed-bookmakers: return bookmakers allowed for supplier (bypasses RLS) ──
+    if (action === "get-allowed-bookmakers") {
+      const { token } = body;
+      if (!token) {
+        return new Response(JSON.stringify({ error: "Token obrigatório" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const tokenHash = await hashToken(token);
+      const { data: validation, error: valError } = await supabaseAdmin.rpc("validate_supplier_token", { p_token_hash: tokenHash });
+      if (valError || !validation?.valid) {
+        return new Response(JSON.stringify({ error: "Token inválido" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      // Use service role to bypass RLS on bookmakers_catalogo
+      const { data: allowed } = await supabaseAdmin
+        .from("supplier_allowed_bookmakers")
+        .select("bookmaker_catalogo_id, valor_alocado")
+        .eq("supplier_workspace_id", validation.supplier_workspace_id);
+
+      if (!allowed || allowed.length === 0) {
+        return new Response(JSON.stringify({ bookmakers: [] }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      const ids = allowed.map((a: any) => a.bookmaker_catalogo_id);
+      const { data: bookmakers } = await supabaseAdmin
+        .from("bookmakers_catalogo")
+        .select("id, nome, logo_url, moeda_padrao, status")
+        .in("id", ids)
+        .in("status", ["REGULAMENTADA", "NAO_REGULAMENTADA"])
+        .order("nome");
+
+      const alocMap = new Map(allowed.map((a: any) => [a.bookmaker_catalogo_id, a.valor_alocado || 0]));
+
+      const result = (bookmakers || []).map((b: any) => ({
+        id: b.id,
+        nome: b.nome,
+        logo_url: b.logo_url,
+        moeda_padrao: b.moeda_padrao,
+        status: b.status,
+        valor_alocado: alocMap.get(b.id) || 0,
+      }));
+
+      return new Response(JSON.stringify({ bookmakers: result }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     return new Response(
       JSON.stringify({ error: "Ação não reconhecida" }),
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
