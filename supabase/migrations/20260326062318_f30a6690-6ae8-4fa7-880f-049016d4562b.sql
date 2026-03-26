@@ -1,0 +1,1 @@
+ALTER TABLE public.supplier_access_tokens ADD COLUMN IF NOT EXISTS token_plain text;

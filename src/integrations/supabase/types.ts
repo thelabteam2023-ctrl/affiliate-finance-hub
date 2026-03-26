@@ -8935,6 +8935,7 @@ export type Database = {
           supplier_profile_id: string
           supplier_workspace_id: string
           token_hash: string
+          token_plain: string | null
           use_count: number
         }
         Insert: {
@@ -8950,6 +8951,7 @@ export type Database = {
           supplier_profile_id: string
           supplier_workspace_id: string
           token_hash: string
+          token_plain?: string | null
           use_count?: number
         }
         Update: {
@@ -8965,6 +8967,7 @@ export type Database = {
           supplier_profile_id?: string
           supplier_workspace_id?: string
           token_hash?: string
+          token_plain?: string | null
           use_count?: number
         }
         Relationships: [
