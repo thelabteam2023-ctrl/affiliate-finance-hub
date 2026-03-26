@@ -1303,10 +1303,14 @@ export function ProjetoValueBetTab({
                     if (a) openEditDialog(a);
                   }}
                   onQuickResolve={handleQuickResolveSurebet}
-                  onPernaResultChange={handleSurebetPernaResolve}
+                   onPernaResultChange={handleSurebetPernaResolve}
                    onDelete={handleDeleteAposta}
                    onDuplicate={handleDuplicateSurebet}
                    formatCurrency={formatCurrency}
+                   convertToConsolidation={convertToConsolidationOficialFn}
+                   bookmakerNomeMap={bookmakerNomeMap}
+                 />
+               );
             }
 
             return (
