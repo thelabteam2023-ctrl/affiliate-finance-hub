@@ -1241,6 +1241,63 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ success: true }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // ── complete-task-item: mark a specific bookmaker item as done, auto-complete task if all done ──
+    if (action === "complete-task-item") {
+      const { token, task_id, bookmaker_catalogo_id } = body;
+      if (!token || !task_id || !bookmaker_catalogo_id) {
+        return new Response(JSON.stringify({ error: "Dados incompletos" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const tokenHash = await hashToken(token);
+      const { data: validation, error: valError } = await supabaseAdmin.rpc("validate_supplier_token", { p_token_hash: tokenHash });
+      if (valError || !validation?.valid) {
+        return new Response(JSON.stringify({ error: "Token inválido" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      const { data: task } = await supabaseAdmin
+        .from("supplier_tasks")
+        .select("id, status, casas_items, bookmaker_catalogo_id")
+        .eq("id", task_id)
+        .eq("supplier_workspace_id", validation.supplier_workspace_id)
+        .single();
+
+      if (!task) {
+        return new Response(JSON.stringify({ error: "Tarefa não encontrada" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      // Single-casa task: just mark as concluido
+      if (!task.casas_items || (task.casas_items as any[]).length <= 1) {
+        await supabaseAdmin.from("supplier_tasks").update({
+          status: "concluido",
+          concluida_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }).eq("id", task_id);
+        return new Response(JSON.stringify({ success: true, auto_completed: true }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      // Multi-casa: mark the specific item as concluido
+      const items = (task.casas_items as any[]).map((item: any) => {
+        if (item.bookmaker_catalogo_id === bookmaker_catalogo_id) {
+          return { ...item, concluido: true };
+        }
+        return item;
+      });
+
+      const allDone = items.every((item: any) => item.concluido === true);
+      const updates: Record<string, any> = {
+        casas_items: items,
+        updated_at: new Date().toISOString(),
+      };
+      if (allDone) {
+        updates.status = "concluido";
+        updates.concluida_at = new Date().toISOString();
+      } else if (task.status === "pendente") {
+        updates.status = "em_andamento";
+      }
+
+      await supabaseAdmin.from("supplier_tasks").update(updates).eq("id", task_id);
+      return new Response(JSON.stringify({ success: true, auto_completed: allDone }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     // ── get-allowed-bookmakers: return bookmakers allowed for supplier (bypasses RLS) ──
     if (action === "get-allowed-bookmakers") {
       const { token } = body;

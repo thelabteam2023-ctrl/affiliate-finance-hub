@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useMemo, useCallback } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -44,6 +44,9 @@ export function SupplierDashboard({ session }: Props) {
   const [prefillTitularId, setPrefillTitularId] = useState<string | undefined>();
   const [prefillContaId, setPrefillContaId] = useState<string | undefined>();
   const [prefillValor, setPrefillValor] = useState<number | undefined>();
+  const [activeTaskId, setActiveTaskId] = useState<string | undefined>();
+  const [activeBookmakerCatalogoId, setActiveBookmakerCatalogoId] = useState<string | undefined>();
+  const queryClient = useQueryClient();
 
   // Get token from URL for edge function calls
   const supplierToken = useMemo(() => new URLSearchParams(window.location.search).get("token") || "", []);
@@ -166,17 +169,47 @@ export function SupplierDashboard({ session }: Props) {
     refetchAccounts();
   }
 
-  function handleTaskNavigate(tipo: "DEPOSITO" | "SAQUE", titularId: string, bookmakerCatalogoId: string, valor?: number) {
-    // Find the account ID for this titular + bookmaker combo
+  function handleTaskNavigate(tipo: "DEPOSITO" | "SAQUE", titularId: string, bookmakerCatalogoId: string, valor?: number, taskId?: string) {
     const conta = (accounts || []).find(
       (a: any) => a.titular_id === titularId && a.bookmaker_catalogo_id === bookmakerCatalogoId
     );
     setPrefillTitularId(titularId);
     setPrefillContaId(conta?.id);
     setPrefillValor(valor);
+    setActiveTaskId(taskId);
+    setActiveBookmakerCatalogoId(bookmakerCatalogoId);
     setTransacaoTipo(tipo);
     setTransacaoOpen(true);
   }
+
+  const handleTransactionSuccess = useCallback(async () => {
+    handleRefresh();
+    // If this came from a task, mark the item as done
+    if (activeTaskId && activeBookmakerCatalogoId && supplierToken) {
+      try {
+        const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+        await fetch(
+          `https://${projectId}.supabase.co/functions/v1/supplier-auth`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            },
+            body: JSON.stringify({
+              action: "complete-task-item",
+              token: supplierToken,
+              task_id: activeTaskId,
+              bookmaker_catalogo_id: activeBookmakerCatalogoId,
+            }),
+          }
+        );
+        queryClient.invalidateQueries({ queryKey: ["supplier-tasks-portal"] });
+      } catch (e) {
+        console.error("Error completing task item:", e);
+      }
+    }
+  }, [activeTaskId, activeBookmakerCatalogoId, supplierToken, queryClient]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -287,11 +320,11 @@ export function SupplierDashboard({ session }: Props) {
             <SupplierOperacoesTab
               supplierWorkspaceId={session.supplier_workspace_id}
               supplierToken={supplierToken}
-              onNavigateToDeposit={(titularId, bookmakerCatalogoId, valor) =>
-                handleTaskNavigate("DEPOSITO", titularId, bookmakerCatalogoId, valor)
+              onNavigateToDeposit={(titularId, bookmakerCatalogoId, valor, taskId) =>
+                handleTaskNavigate("DEPOSITO", titularId, bookmakerCatalogoId, valor, taskId)
               }
-              onNavigateToSaque={(titularId, bookmakerCatalogoId, valor) =>
-                handleTaskNavigate("SAQUE", titularId, bookmakerCatalogoId, valor)
+              onNavigateToSaque={(titularId, bookmakerCatalogoId, valor, taskId) =>
+                handleTaskNavigate("SAQUE", titularId, bookmakerCatalogoId, valor, taskId)
               }
             />
           </TabsContent>
@@ -319,6 +352,8 @@ export function SupplierDashboard({ session }: Props) {
             setPrefillTitularId(undefined);
             setPrefillContaId(undefined);
             setPrefillValor(undefined);
+            setActiveTaskId(undefined);
+            setActiveBookmakerCatalogoId(undefined);
           }
         }}
         tipo={transacaoTipo}
@@ -328,7 +363,7 @@ export function SupplierDashboard({ session }: Props) {
         valorSugerido={prefillValor ?? (alocacao?.valor_sugerido_deposito ? Number(alocacao.valor_sugerido_deposito) : undefined)}
         prefillTitularId={prefillTitularId}
         prefillContaId={prefillContaId}
-        onSuccess={handleRefresh}
+        onSuccess={handleTransactionSuccess}
       />
 
       <SupplierBancosModal

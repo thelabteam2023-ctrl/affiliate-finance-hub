@@ -18,8 +18,8 @@ import { toast } from "sonner";
 interface Props {
   supplierWorkspaceId: string;
   supplierToken: string;
-  onNavigateToDeposit?: (titularId: string, bookmakerCatalogoId: string, valor?: number) => void;
-  onNavigateToSaque?: (titularId: string, bookmakerCatalogoId: string, valor?: number) => void;
+  onNavigateToDeposit?: (titularId: string, bookmakerCatalogoId: string, valor?: number, taskId?: string) => void;
+  onNavigateToSaque?: (titularId: string, bookmakerCatalogoId: string, valor?: number, taskId?: string) => void;
 }
 
 const TIPO_LABELS: Record<string, string> = {
@@ -173,14 +173,12 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNav
     const valor = overrideValor ?? task.valor ?? undefined;
 
     if (task.tipo === "deposito" && onNavigateToDeposit && task.titular_id && catalogoId) {
-      // Mark as em_andamento first
       updateTaskMutation.mutate({ taskId: task.id, status: "em_andamento" });
-      onNavigateToDeposit(task.titular_id, catalogoId, valor);
+      onNavigateToDeposit(task.titular_id, catalogoId, valor, task.id);
     } else if (task.tipo === "saque" && onNavigateToSaque && task.titular_id && catalogoId) {
       updateTaskMutation.mutate({ taskId: task.id, status: "em_andamento" });
-      onNavigateToSaque(task.titular_id, catalogoId, valor);
+      onNavigateToSaque(task.titular_id, catalogoId, valor, task.id);
     } else {
-      // Open details dialog
       setSelectedTask(task);
       setActionType(null);
       setObservacoes("");
@@ -188,6 +186,7 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNav
     }
   }
 
+  const [activeSubTab, setActiveSubTab] = useState<"abertas" | "concluidas">("abertas");
   const pendentes = tasks.filter((t: any) => t.status === "pendente" || t.status === "em_andamento");
   const historico = tasks.filter((t: any) => t.status === "concluido" || t.status === "rejeitado");
 
@@ -199,192 +198,205 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNav
 
   return (
     <div className="space-y-4">
-      {/* KPIs */}
-      <div className="grid grid-cols-2 gap-2">
-        <Card>
-          <CardContent className="py-2.5 px-3">
-            <p className="text-[10px] text-muted-foreground">Pendentes</p>
-            <p className="text-lg font-bold text-yellow-400">{pendentes.length}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="py-2.5 px-3">
-            <p className="text-[10px] text-muted-foreground">Concluídas</p>
-            <p className="text-lg font-bold text-emerald-400">{historico.filter((t: any) => t.status === "concluido").length}</p>
-          </CardContent>
-        </Card>
+      {/* Tabs: Abertas / Concluídas */}
+      <div className="flex gap-1 p-1 bg-muted/50 rounded-lg">
+        <button
+          className={`flex-1 py-2 px-3 rounded-md text-xs font-medium transition-colors ${
+            activeSubTab === "abertas"
+              ? "bg-background text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+          onClick={() => setActiveSubTab("abertas")}
+        >
+          Abertas ({pendentes.length})
+        </button>
+        <button
+          className={`flex-1 py-2 px-3 rounded-md text-xs font-medium transition-colors ${
+            activeSubTab === "concluidas"
+              ? "bg-background text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+          onClick={() => setActiveSubTab("concluidas")}
+        >
+          Concluídas ({historico.length})
+        </button>
       </div>
 
-      {/* Pending tasks */}
       {isLoading ? (
         <div className="text-center text-muted-foreground text-sm py-8">Carregando...</div>
-      ) : pendentes.length === 0 ? (
-        <Card>
-          <CardContent className="py-10 text-center">
-            <CheckCircle2 className="h-8 w-8 text-emerald-400/30 mx-auto mb-2" />
-            <p className="text-sm text-muted-foreground">Nenhuma tarefa pendente</p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-2">
-          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            Tarefas Pendentes ({pendentes.length})
-          </h3>
-          {pendentes.map((task: any) => {
-            const casasItems = task.casas_items as any[] | null;
-            const isMultiCasa = casasItems && casasItems.length > 1;
-            const ctaLabel = getDirectCTALabel(task.tipo);
-            const canNavigate = !!onNavigateToDeposit || !!onNavigateToSaque;
-            const hasDirectAction = !isMultiCasa && ctaLabel && task.titular_id && task.bookmaker_catalogo_id && canNavigate;
-            const TipoIcon = TIPO_ICONS[task.tipo];
+      ) : activeSubTab === "abertas" ? (
+        // ===== ABERTAS =====
+        pendentes.length === 0 ? (
+          <Card>
+            <CardContent className="py-10 text-center">
+              <CheckCircle2 className="h-8 w-8 text-emerald-400/30 mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">Nenhuma tarefa pendente</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-2">
+            {pendentes.map((task: any) => {
+              const casasItems = task.casas_items as any[] | null;
+              const isMultiCasa = casasItems && casasItems.length > 1;
+              const ctaLabel = getDirectCTALabel(task.tipo);
+              const canNavigate = !!onNavigateToDeposit || !!onNavigateToSaque;
+              const hasDirectAction = !isMultiCasa && ctaLabel && task.titular_id && task.bookmaker_catalogo_id && canNavigate;
+              const TipoIcon = TIPO_ICONS[task.tipo];
 
-            return (
-              <Card
-                key={task.id}
-                className={`hover:border-primary/20 transition-colors ${
-                  task.prioridade === "urgente" ? "border-red-500/30" : ""
-                }`}
-              >
-                <CardContent className="py-3 px-4">
-                  <div className="flex items-start justify-between gap-2">
-                    <div
-                      className="flex-1 min-w-0 cursor-pointer"
-                      onClick={() => { setSelectedTask(task); setActionType(null); setObservacoes(""); setComprovanteFile(null); }}
-                    >
-                      <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-                        <Badge variant="outline" className={`text-[10px] ${PRIORIDADE_COLORS[task.prioridade]}`}>
-                          {task.prioridade === "urgente" && <Zap className="h-2.5 w-2.5 mr-0.5" />}
-                          {PRIORIDADE_LABELS[task.prioridade]}
-                        </Badge>
-                        <Badge variant="outline" className={`text-[10px] ${STATUS_COLORS[task.status]}`}>
-                          {STATUS_LABELS[task.status]}
-                        </Badge>
-                      </div>
-                      <p className="text-sm font-medium text-foreground">{task.titulo}</p>
-                      {task.descricao && (
-                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{task.descricao}</p>
-                      )}
-                      <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground flex-wrap">
-                        {task.titular_nome && (
-                          <span className="flex items-center gap-1.5">
-                            <User className="h-3.5 w-3.5" />
-                            {task.titular_nome}
-                          </span>
+              return (
+                <Card
+                  key={task.id}
+                  className={`hover:border-primary/20 transition-colors ${
+                    task.prioridade === "urgente" ? "border-red-500/30" : ""
+                  }`}
+                >
+                  <CardContent className="py-3 px-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <div
+                        className="flex-1 min-w-0 cursor-pointer"
+                        onClick={() => { setSelectedTask(task); setActionType(null); setObservacoes(""); setComprovanteFile(null); }}
+                      >
+                        <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                          <Badge variant="outline" className={`text-[10px] ${PRIORIDADE_COLORS[task.prioridade]}`}>
+                            {task.prioridade === "urgente" && <Zap className="h-2.5 w-2.5 mr-0.5" />}
+                            {PRIORIDADE_LABELS[task.prioridade]}
+                          </Badge>
+                          <Badge variant="outline" className={`text-[10px] ${STATUS_COLORS[task.status]}`}>
+                            {STATUS_LABELS[task.status]}
+                          </Badge>
+                        </div>
+                        <p className="text-sm font-medium text-foreground">{task.titulo}</p>
+                        {task.descricao && (
+                          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{task.descricao}</p>
                         )}
-                        {!isMultiCasa && task.casa_nome && (
-                          <span className="flex items-center gap-1.5">
-                            {task.casa_logo && <img src={task.casa_logo} alt="" className="h-4 w-4 rounded" />}
-                            {task.casa_nome}
-                          </span>
-                        )}
+                        <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground flex-wrap">
+                          {task.titular_nome && (
+                            <span className="flex items-center gap-1.5">
+                              <User className="h-3.5 w-3.5" />
+                              {task.titular_nome}
+                            </span>
+                          )}
+                          {!isMultiCasa && task.casa_nome && (
+                            <span className="flex items-center gap-1.5">
+                              {task.casa_logo && <img src={task.casa_logo} alt="" className="h-4 w-4 rounded" />}
+                              {task.casa_nome}
+                            </span>
+                          )}
+                          {isMultiCasa && (
+                            <span className="flex items-center gap-1.5">
+                              <Building2 className="h-3.5 w-3.5" />
+                              {casasItems!.length} casas
+                            </span>
+                          )}
+                          {task.valor && (
+                            <span className="font-semibold text-foreground">{formatCurrency(task.valor)}</span>
+                          )}
+                          {task.data_limite && (
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3.5 w-3.5" />
+                              {format(new Date(task.data_limite), "dd/MM HH:mm")}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Multi-casa breakdown */}
                         {isMultiCasa && (
-                          <span className="flex items-center gap-1.5">
-                            <Building2 className="h-3.5 w-3.5" />
-                            {casasItems!.length} casas
-                          </span>
+                          <div className="mt-2 space-y-1">
+                            {casasItems!.map((item: any, idx: number) => {
+                              const itemCtaLabel = getDirectCTALabel(task.tipo);
+                              const itemDone = item.concluido === true;
+                              const canExecItem = !itemDone && itemCtaLabel && task.titular_id && item.bookmaker_catalogo_id &&
+                                ((task.tipo === "deposito" && onNavigateToDeposit) || (task.tipo === "saque" && onNavigateToSaque));
+                              return (
+                                <div key={idx} className={`flex items-center justify-between text-xs py-2 px-3 rounded-md ${itemDone ? "bg-emerald-500/10 border border-emerald-500/20" : "bg-muted/30"}`}>
+                                  <div className="flex items-center gap-2">
+                                    {itemDone && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />}
+                                    {item.logo_url && <img src={item.logo_url} alt="" className="h-5 w-5 rounded" />}
+                                    <span className={`text-foreground font-medium ${itemDone ? "line-through opacity-60" : ""}`}>{item.nome}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-semibold text-foreground">{formatCurrency(item.valor)}</span>
+                                    {itemDone ? (
+                                      <span className="text-[10px] text-emerald-400">✓</span>
+                                    ) : canExecItem ? (
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-6 px-2 text-xs gap-1 text-primary hover:text-primary"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleDirectAction(task, item.bookmaker_catalogo_id, item.valor);
+                                        }}
+                                      >
+                                        {itemCtaLabel}
+                                      </Button>
+                                    ) : null}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
                         )}
-                        {task.valor && (
-                          <span className="font-semibold text-foreground">{formatCurrency(task.valor)}</span>
-                        )}
-                        {task.data_limite && (
-                          <span className="flex items-center gap-1">
-                            <Clock className="h-3.5 w-3.5" />
-                            {format(new Date(task.data_limite), "dd/MM HH:mm")}
-                          </span>
+
+                        {!isMultiCasa && task.valor_alvo_casa != null && task.valor_atual_casa != null && (
+                          <div className="flex items-center gap-2 mt-1 text-[10px]">
+                            <span className="text-muted-foreground">Atual: {formatCurrency(task.valor_atual_casa)}</span>
+                            <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                            <span className="text-primary">Alvo: {formatCurrency(task.valor_alvo_casa)}</span>
+                          </div>
                         )}
                       </div>
 
-                      {/* Multi-casa breakdown */}
-                      {isMultiCasa && (
-                        <div className="mt-2 space-y-1">
-                          {casasItems!.map((item: any, idx: number) => {
-                            const itemCtaLabel = getDirectCTALabel(task.tipo);
-                            const canExecItem = itemCtaLabel && task.titular_id && item.bookmaker_catalogo_id &&
-                              ((task.tipo === "deposito" && onNavigateToDeposit) || (task.tipo === "saque" && onNavigateToSaque));
-                            return (
-                              <div key={idx} className="flex items-center justify-between text-xs py-2 px-3 rounded-md bg-muted/30">
-                                <div className="flex items-center gap-2">
-                                  {item.logo_url && <img src={item.logo_url} alt="" className="h-5 w-5 rounded" />}
-                                  <span className="text-foreground font-medium">{item.nome}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <span className="font-semibold text-foreground">{formatCurrency(item.valor)}</span>
-                                  {canExecItem && (
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      className="h-6 px-2 text-xs gap-1 text-primary hover:text-primary"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleDirectAction(task, item.bookmaker_catalogo_id, item.valor);
-                                      }}
-                                    >
-                                      {itemCtaLabel}
-                                    </Button>
-                                  )}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-
-                      {!isMultiCasa && task.valor_alvo_casa != null && task.valor_atual_casa != null && (
-                        <div className="flex items-center gap-2 mt-1 text-[10px]">
-                          <span className="text-muted-foreground">Atual: {formatCurrency(task.valor_atual_casa)}</span>
-                          <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                          <span className="text-primary">Alvo: {formatCurrency(task.valor_alvo_casa)}</span>
-                        </div>
-                      )}
+                      {/* Direct CTA Button */}
+                      <div className="shrink-0 flex flex-col gap-1.5">
+                        {hasDirectAction ? (
+                          <Button
+                            size="sm"
+                            className="gap-1.5 text-xs"
+                            onClick={(e) => { e.stopPropagation(); handleDirectAction(task); }}
+                          >
+                            {TipoIcon && <TipoIcon className="h-3.5 w-3.5" />}
+                            {ctaLabel}
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="gap-1.5 text-xs"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedTask(task);
+                              setActionType(null);
+                              setObservacoes("");
+                              setComprovanteFile(null);
+                            }}
+                          >
+                            Detalhes
+                            <ArrowRight className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
-
-                    {/* Direct CTA Button */}
-                    <div className="shrink-0 flex flex-col gap-1.5">
-                      {hasDirectAction ? (
-                        <Button
-                          size="sm"
-                          className="gap-1.5 text-xs"
-                          onClick={(e) => { e.stopPropagation(); handleDirectAction(task); }}
-                        >
-                          {TipoIcon && <TipoIcon className="h-3.5 w-3.5" />}
-                          {ctaLabel}
-                        </Button>
-                      ) : (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="gap-1.5 text-xs"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedTask(task);
-                            setActionType(null);
-                            setObservacoes("");
-                            setComprovanteFile(null);
-                          }}
-                        >
-                          Detalhes
-                          <ArrowRight className="h-3 w-3" />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      )}
-
-      {/* History */}
-      {historico.length > 0 && (
-        <div className="space-y-2 pt-2">
-          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            Histórico ({historico.length})
-          </h3>
-          <ScrollArea className="max-h-[300px]">
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )
+      ) : (
+        // ===== CONCLUÍDAS =====
+        historico.length === 0 ? (
+          <Card>
+            <CardContent className="py-10 text-center">
+              <ClipboardList className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">Nenhuma tarefa concluída</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <ScrollArea className="max-h-[500px]">
             <div className="space-y-1.5">
               {historico.map((task: any) => (
-                <Card key={task.id} className="opacity-70">
+                <Card key={task.id} className="opacity-80">
                   <CardContent className="py-2.5 px-4">
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex-1 min-w-0">
@@ -413,7 +425,7 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNav
               ))}
             </div>
           </ScrollArea>
-        </div>
+        )
       )}
 
       {/* Task action dialog */}
