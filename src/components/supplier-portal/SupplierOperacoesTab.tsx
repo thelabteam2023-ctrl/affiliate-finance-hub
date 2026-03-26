@@ -207,6 +207,7 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNav
     if (status === "aguardando_recebimento" && tipo === "saque") return "Confirmar Recebimento";
     if (tipo === "deposito") return "Depositar";
     if (tipo === "saque") return "Sacar";
+    if (tipo === "criacao_conta") return "Criar";
     return null;
   }
 
