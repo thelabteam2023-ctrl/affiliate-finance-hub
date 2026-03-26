@@ -34,12 +34,13 @@ interface ContaEntry {
   autoFilled: boolean;
 }
 
-export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceId, onSuccess }: Props) {
+export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceId, onSuccess, prefillTitularId, prefillBookmakerIds }: Props) {
   const [step, setStep] = useState<1 | 2>(1);
   const [titularId, setTitularId] = useState("");
   const [selectedCasaIds, setSelectedCasaIds] = useState<Set<string>>(new Set());
   const [contas, setContas] = useState<ContaEntry[]>([]);
   const [casaSearch, setCasaSearch] = useState("");
+  const [prefillApplied, setPrefillApplied] = useState(false);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [globalLogin, setGlobalLogin] = useState("");
   const [globalPassword, setGlobalPassword] = useState("");
