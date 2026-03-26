@@ -66,6 +66,30 @@ export function SupplierDashboard({ session }: Props) {
     },
   });
 
+  // Count open tasks for badge on Operações tab
+  const { data: openTasksCount = 0 } = useQuery({
+    queryKey: ["supplier-tasks-open-count", session.supplier_workspace_id],
+    queryFn: async () => {
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const resp = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/supplier-auth`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({ action: "list-tasks", token: supplierToken }),
+        }
+      );
+      const data = await resp.json();
+      if (data.error) return 0;
+      const tasks = data.tasks || [];
+      return tasks.filter((t: any) => t.status !== "concluida" && t.status !== "cancelada").length;
+    },
+    refetchInterval: 30_000,
+  });
+
   // Fetch accounts
   const { data: accounts, refetch: refetchAccounts } = useQuery({
     queryKey: ["supplier-accounts", session.supplier_workspace_id],
