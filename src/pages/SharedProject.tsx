@@ -108,7 +108,7 @@ export default function SharedProject() {
       <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <img src={labbetLogo} alt="LABBET" className="h-8" />
+            <img src={labbetLogo} alt="LABBET" className="h-8 w-8 rounded-md object-contain" />
             <div className="h-6 w-px bg-border" />
             <div>
               <h1 className="text-lg font-bold">{projeto.nome}</h1>
