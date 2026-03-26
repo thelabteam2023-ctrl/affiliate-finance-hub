@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Building2, Eye, EyeOff, User, ChevronRight, ChevronLeft, Search, Loader2, Check, Sparkles, Copy } from "lucide-react";
+import { Building2, Eye, EyeOff, User, ChevronRight, ChevronLeft, Search, Loader2, Check, Sparkles, Copy, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { BookmakerLogo } from "@/components/ui/bookmaker-logo";
