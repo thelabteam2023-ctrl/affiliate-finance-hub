@@ -14,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { 
   Plus, Truck, Link2, Copy, ExternalLink, Wallet,
   Building2, Users, Clock, CheckCircle2, XCircle, AlertTriangle, Zap,
-  Search, Check, ClipboardList
+  Search, Check, ClipboardList, RefreshCw
 } from "lucide-react";
 import { SupplierBookmakerConfigDialog } from "./SupplierBookmakerConfigDialog";
 import { SupplierTasksAdmin } from "./SupplierTasksAdmin";
