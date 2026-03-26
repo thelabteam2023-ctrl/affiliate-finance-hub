@@ -23,6 +23,8 @@ interface Props {
     bookmakerIds: string[];
   } | null;
   onClearPrefillCreate?: () => void;
+  activeTaskId?: string;
+  onAccountCreatedForTask?: () => void;
 }
 
 function formatCurrency(val: number, moeda = "BRL") {
@@ -199,6 +201,8 @@ export function SupplierContasTab({
   onSacar,
   prefillCreateAccount,
   onClearPrefillCreate,
+  activeTaskId,
+  onAccountCreatedForTask,
 }: Props) {
   const [novaContaOpen, setNovaContaOpen] = useState(false);
   const [editAccount, setEditAccount] = useState<any | null>(null);
@@ -295,6 +299,8 @@ export function SupplierContasTab({
         onSuccess={onRefresh}
         prefillTitularId={prefillCreateAccount?.titularId}
         prefillBookmakerIds={prefillCreateAccount?.bookmakerIds}
+        activeTaskId={activeTaskId}
+        onTaskItemsCompleted={onAccountCreatedForTask}
       />
 
       {editAccount && (

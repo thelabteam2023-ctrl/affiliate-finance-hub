@@ -345,6 +345,11 @@ export function SupplierDashboard({ session }: Props) {
               onSacar={() => { setTransacaoTipo("SAQUE"); setTransacaoOpen(true); }}
               prefillCreateAccount={prefillCreateAccount}
               onClearPrefillCreate={() => setPrefillCreateAccount(null)}
+              activeTaskId={activeTaskId}
+              onAccountCreatedForTask={() => {
+                queryClient.invalidateQueries({ queryKey: ["supplier-tasks-portal"] });
+                setActiveTaskId(undefined);
+              }}
             />
           </TabsContent>
 
