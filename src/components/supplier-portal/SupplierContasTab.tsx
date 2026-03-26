@@ -300,7 +300,6 @@ export function SupplierContasTab({
         prefillTitularId={prefillCreateAccount?.titularId}
         prefillBookmakerIds={prefillCreateAccount?.bookmakerIds}
         activeTaskId={activeTaskId}
-        supplierToken={supplierToken}
         onTaskItemsCompleted={onAccountCreatedForTask}
       />
 
