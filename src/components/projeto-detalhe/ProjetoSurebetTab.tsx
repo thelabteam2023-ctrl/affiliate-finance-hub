@@ -1537,6 +1537,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
                     }}
                     onQuickResolve={handleQuickResolve}
                     onDelete={(apostaId) => handleSurebetDelete(apostaId)}
+                    onDuplicate={handleDuplicateSimples}
                     formatCurrency={formatCurrency}
                   />
                 );
@@ -1553,7 +1554,8 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
                   }}
                   onQuickResolve={handleSurebetQuickResolve}
                   onPernaResultChange={handleSurebetPernaResolve}
-                  onDelete={handleSurebetDelete}
+                   onDelete={handleSurebetDelete}
+                   onDuplicate={handleDuplicateSurebet}
                   formatCurrency={formatCurrency}
                   convertToConsolidation={convertFnOficial}
                   bookmakerNomeMap={bookmakerNomeMap}
