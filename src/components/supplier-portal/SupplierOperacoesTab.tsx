@@ -344,7 +344,11 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNav
                                     <span className={`text-foreground font-medium ${itemDone ? "line-through opacity-60" : ""}`}>{item.nome}</span>
                                   </div>
                                   <div className="flex items-center gap-2">
-                                    <span className="font-semibold text-foreground">{formatCurrency(item.valor)}</span>
+                                    {item.valor > 0 && (
+                                      <span className={`font-semibold ${task.tipo === "criacao_conta" ? "text-muted-foreground text-[10px]" : "text-foreground"}`}>
+                                        {task.tipo === "criacao_conta" ? `Dep. ${formatCurrency(item.valor)}` : formatCurrency(item.valor)}
+                                      </span>
+                                    )}
                                     {itemDone ? (
                                       <span className="text-[10px] text-emerald-400">✓</span>
                                     ) : canExecItem ? (
