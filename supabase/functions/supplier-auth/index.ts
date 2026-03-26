@@ -501,6 +501,7 @@ Deno.serve(async (req) => {
 
       const { error: insertError } = await supabaseAdmin.from("supplier_access_tokens").insert({
         token_hash: tokenHash,
+        token_plain: rawToken,
         supplier_workspace_id,
         supplier_profile_id,
         created_by: userId,

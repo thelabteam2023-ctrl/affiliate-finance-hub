@@ -685,6 +685,21 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
                         </div>
                       </div>
                       <div className="flex items-center gap-1">
+                        {token.token_plain && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 px-2 text-[10px] gap-1"
+                            onClick={() => {
+                              const origin = window.location.origin.replace("preview--", "");
+                              const url = `${origin}/portal/fornecedor?token=${token.token_plain}`;
+                              navigator.clipboard.writeText(url);
+                              toast.success("Link copiado!");
+                            }}
+                          >
+                            <Copy className="h-3 w-3" /> Copiar
+                          </Button>
+                        )}
                         <Button
                           size="sm"
                           variant="ghost"
