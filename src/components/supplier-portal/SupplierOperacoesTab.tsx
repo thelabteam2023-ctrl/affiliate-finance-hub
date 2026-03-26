@@ -18,6 +18,7 @@ import { toast } from "sonner";
 interface Props {
   supplierWorkspaceId: string;
   supplierToken: string;
+  existingAccounts?: any[];
   onNavigateToDeposit?: (titularId: string, bookmakerCatalogoId: string, valor?: number, taskId?: string) => void;
   onNavigateToSaque?: (titularId: string, bookmakerCatalogoId: string, valor?: number, taskId?: string) => void;
   onNavigateToCreateAccount?: (titularId: string, bookmakerCatalogoIds: string[], taskId?: string) => void;
@@ -71,7 +72,7 @@ function formatCurrency(val: number) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(val);
 }
 
-export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNavigateToDeposit, onNavigateToSaque, onNavigateToCreateAccount }: Props) {
+export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, existingAccounts = [], onNavigateToDeposit, onNavigateToSaque, onNavigateToCreateAccount }: Props) {
   const queryClient = useQueryClient();
   const [selectedTask, setSelectedTask] = useState<any>(null);
   const [actionType, setActionType] = useState<"concluir" | "rejeitar" | null>(null);
@@ -284,9 +285,19 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNav
           <div className="space-y-2">
             {pendentes.map((task: any) => {
               const rawCasasItems = task.casas_items as any[] | null;
+              // For criacao_conta tasks, auto-mark items as concluido if account already exists
+              const enrichedCasasItems = rawCasasItems && task.tipo === "criacao_conta"
+                ? rawCasasItems.map((item: any) => {
+                    if (item.concluido) return item;
+                    const alreadyExists = existingAccounts.some(
+                      (acc: any) => acc.bookmaker_catalogo_id === item.bookmaker_catalogo_id && acc.titular_id === task.titular_id
+                    );
+                    return alreadyExists ? { ...item, concluido: true } : item;
+                  })
+                : rawCasasItems;
               // Sort casas_items by valor descending (houses with deposit value first)
-              const casasItems = rawCasasItems
-                ? [...rawCasasItems].sort((a: any, b: any) => (b.valor || 0) - (a.valor || 0))
+              const casasItems = enrichedCasasItems
+                ? [...enrichedCasasItems].sort((a: any, b: any) => (b.valor || 0) - (a.valor || 0))
                 : null;
               const isMultiCasa = casasItems && casasItems.length > 1;
               const isAguardandoRecebimento = task.status === "aguardando_recebimento";

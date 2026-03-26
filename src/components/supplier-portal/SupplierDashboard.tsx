@@ -357,6 +357,7 @@ export function SupplierDashboard({ session }: Props) {
             <SupplierOperacoesTab
               supplierWorkspaceId={session.supplier_workspace_id}
               supplierToken={supplierToken}
+              existingAccounts={accounts || []}
               onNavigateToDeposit={(titularId, bookmakerCatalogoId, valor, taskId) =>
                 handleTaskNavigate("DEPOSITO", titularId, bookmakerCatalogoId, valor, taskId)
               }
