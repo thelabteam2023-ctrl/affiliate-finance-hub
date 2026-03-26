@@ -370,7 +370,22 @@ export function SupplierTasksAdmin({ supplierWorkspaceId, supplierNome, parentWo
     onError: (e: any) => toast.error(e.message),
   });
 
-  function handleTipoChange(newTipo: string) {
+  const deleteMutation = useMutation({
+    mutationFn: async (taskId: string) => {
+      const { error } = await (supabase as any)
+        .from("supplier_tasks")
+        .delete()
+        .eq("id", taskId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Tarefa excluída");
+      queryClient.invalidateQueries({ queryKey: ["supplier-tasks-admin", supplierWorkspaceId] });
+      setDeleteTask(null);
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
     setTipo(newTipo);
     setTitularId("");
     setSelectedCasas([]);
