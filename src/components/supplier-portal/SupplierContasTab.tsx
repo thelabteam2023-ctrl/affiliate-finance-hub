@@ -197,9 +197,18 @@ export function SupplierContasTab({
   onRefresh,
   onDepositar,
   onSacar,
+  prefillCreateAccount,
+  onClearPrefillCreate,
 }: Props) {
   const [novaContaOpen, setNovaContaOpen] = useState(false);
   const [editAccount, setEditAccount] = useState<any | null>(null);
+
+  // Auto-open Nova Conta dialog when prefill is set
+  useEffect(() => {
+    if (prefillCreateAccount) {
+      setNovaContaOpen(true);
+    }
+  }, [prefillCreateAccount]);
 
   const groups = useMemo(() => groupByTitular(accounts), [accounts]);
   const hasSingleTitular = groups.length <= 1;
