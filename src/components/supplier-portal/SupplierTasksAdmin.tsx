@@ -101,7 +101,7 @@ export function SupplierTasksAdmin({ supplierWorkspaceId, supplierNome, parentWo
         .from("supplier_titulares")
         .select("id, nome, documento, status")
         .eq("supplier_workspace_id", supplierWorkspaceId)
-        .eq("status", "ativo")
+        .in("status", ["ativo", "ATIVO"])
         .order("nome");
       if (error) throw error;
       return data || [];
