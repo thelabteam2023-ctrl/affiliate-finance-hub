@@ -173,14 +173,12 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNav
     const valor = overrideValor ?? task.valor ?? undefined;
 
     if (task.tipo === "deposito" && onNavigateToDeposit && task.titular_id && catalogoId) {
-      // Mark as em_andamento first
       updateTaskMutation.mutate({ taskId: task.id, status: "em_andamento" });
-      onNavigateToDeposit(task.titular_id, catalogoId, valor);
+      onNavigateToDeposit(task.titular_id, catalogoId, valor, task.id);
     } else if (task.tipo === "saque" && onNavigateToSaque && task.titular_id && catalogoId) {
       updateTaskMutation.mutate({ taskId: task.id, status: "em_andamento" });
-      onNavigateToSaque(task.titular_id, catalogoId, valor);
+      onNavigateToSaque(task.titular_id, catalogoId, valor, task.id);
     } else {
-      // Open details dialog
       setSelectedTask(task);
       setActionType(null);
       setObservacoes("");
