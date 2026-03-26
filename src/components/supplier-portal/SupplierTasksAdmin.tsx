@@ -176,14 +176,15 @@ export function SupplierTasksAdmin({ supplierWorkspaceId, supplierNome, parentWo
       }
       const alloc = allowedBookmakers.find((b: any) => b.bookmaker_catalogo_id === casa.bookmaker_catalogo_id);
       const valorAlocado = alloc?.valor_alocado || 0;
-      const diff = valorAlocado - casa.saldo_atual;
+      // Only pre-fill with suggestion when account is new (saldo = 0)
+      const isNewAccount = casa.saldo_atual === 0;
       return [...prev, {
         bookmaker_catalogo_id: casa.bookmaker_catalogo_id,
         nome: casa.nome,
         logo_url: casa.logo_url,
         saldo_atual: casa.saldo_atual,
         valor_alocado: valorAlocado,
-        valor: diff > 0 ? diff.toFixed(2) : "",
+        valor: isNewAccount && valorAlocado > 0 ? valorAlocado.toFixed(2) : "",
       }];
     });
   }
@@ -516,12 +517,10 @@ export function SupplierTasksAdmin({ supplierWorkspaceId, supplierNome, parentWo
                       {/* Multi-casa items breakdown */}
                       {renderTaskCasasItems(task)}
 
-                      {/* Single allocation context */}
-                      {!task.casas_items && task.valor_alvo_casa != null && task.valor_atual_casa != null && (
+                      {/* Single allocation context — only show suggestion for new accounts */}
+                      {!task.casas_items && task.valor_alvo_casa != null && task.valor_atual_casa === 0 && (
                         <div className="flex items-center gap-2 mt-1.5 text-[10px]">
-                          <span className="text-muted-foreground">Atual: {formatCurrency(task.valor_atual_casa)}</span>
-                          <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                          <span className="text-primary">Alvo: {formatCurrency(task.valor_alvo_casa)}</span>
+                          <span className="text-primary">Sugestão: {formatCurrency(task.valor_alvo_casa)}</span>
                         </div>
                       )}
 
@@ -636,13 +635,10 @@ export function SupplierTasksAdmin({ supplierWorkspaceId, supplierNome, parentWo
                             <p className="text-xs font-medium text-foreground">{casa.nome}</p>
                             <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
                               <span>Saldo: {formatCurrency(casa.saldo_atual)}</span>
-                              {valorAlvo > 0 && (
-                                <>
-                                  <span>Alvo: {formatCurrency(valorAlvo)}</span>
-                                  <span className={diff > 0 ? "text-orange-400" : "text-emerald-400"}>
-                                    ({diff > 0 ? "+" : ""}{formatCurrency(diff)})
-                                  </span>
-                                </>
+                              {valorAlvo > 0 && casa.saldo_atual === 0 && (
+                                <span className="text-primary">
+                                  Sugestão: {formatCurrency(valorAlvo)}
+                                </span>
                               )}
                             </div>
                           </div>
@@ -834,13 +830,10 @@ export function SupplierTasksAdmin({ supplierWorkspaceId, supplierNome, parentWo
                             <p className="text-xs font-medium text-foreground">{casa.nome}</p>
                             <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
                               <span>Saldo: {formatCurrency(casa.saldo_atual)}</span>
-                              {valorAlvo > 0 && (
-                                <>
-                                  <span>Alvo: {formatCurrency(valorAlvo)}</span>
-                                  <span className={diff > 0 ? "text-orange-400" : "text-emerald-400"}>
-                                    ({diff > 0 ? "+" : ""}{formatCurrency(diff)})
-                                  </span>
-                                </>
+                              {valorAlvo > 0 && casa.saldo_atual === 0 && (
+                                <span className="text-primary">
+                                  Sugestão: {formatCurrency(valorAlvo)}
+                                </span>
                               )}
                             </div>
                           </div>
