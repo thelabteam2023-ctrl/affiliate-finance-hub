@@ -543,9 +543,7 @@ export function AppSidebar() {
         {/* Logo/Brand Section */}
         <div className="flex items-center justify-center px-3 pb-4 bg-transparent shrink-0">
           {isCollapsed ? (
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-transparent p-1">
-              <img src="/favicon-sidebar.png" alt="LABBET" className="h-full w-full object-contain bg-transparent" />
-            </div>
+            <img src="/favicon-sidebar.png" alt="LABBET" className="h-10 w-10 shrink-0 object-contain" />
           ) : (
             <img src="/logo-horizontal.png" alt="LABBET" className="h-9 bg-transparent" />
           )}
