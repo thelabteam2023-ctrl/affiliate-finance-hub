@@ -217,19 +217,20 @@ export function SupplierTasksAdmin({ supplierWorkspaceId, supplierNome, parentWo
       }));
 
       const autoTitulo = titulo.trim() || (() => {
-        // "Depósito em Casa — Glayza — Betano" (single)
-        // "Depósito em Casas — Glayza" (multi)
-        const tipoBase = TIPO_LABELS[tipo] || tipo;
-        const tipoLabel = casasCount > 1 ? tipoBase.replace("Casa", "Casas") : tipoBase;
-        const parts = [tipoLabel];
+        // Simple: "Depósito — Glayza"
+        const tipoSimples: Record<string, string> = {
+          deposito: "Depósito",
+          saque: "Saque",
+          criacao_conta: "Criação de Conta",
+          ajuste_saldo: "Ajuste",
+          outros: "Tarefa",
+        };
+        const label = tipoSimples[tipo] || tipo;
         if (titularNome) {
           const primeiroNome = titularNome.split(" ")[0];
-          parts.push(primeiroNome.charAt(0).toUpperCase() + primeiroNome.slice(1).toLowerCase());
+          return `${label} — ${primeiroNome.charAt(0).toUpperCase() + primeiroNome.slice(1).toLowerCase()}`;
         }
-        if (casasCount === 1) {
-          parts.push(selectedCasas[0].nome);
-        }
-        return parts.join(" — ");
+        return label;
       })();
 
       // For single casa, keep backward compatibility with bookmaker_catalogo_id + valor
