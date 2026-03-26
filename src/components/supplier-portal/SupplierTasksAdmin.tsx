@@ -538,6 +538,17 @@ export function SupplierTasksAdmin({ supplierWorkspaceId, supplierNome, parentWo
                         </a>
                       )}
                     </div>
+                    {/* Edit button for non-concluded tasks */}
+                    {task.status !== "concluido" && task.status !== "rejeitado" && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 shrink-0"
+                        onClick={() => openEditTask(task)}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
