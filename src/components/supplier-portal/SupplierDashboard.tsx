@@ -346,7 +346,6 @@ export function SupplierDashboard({ session }: Props) {
               prefillCreateAccount={prefillCreateAccount}
               onClearPrefillCreate={() => setPrefillCreateAccount(null)}
               activeTaskId={activeTaskId}
-              supplierToken={supplierToken}
               onAccountCreatedForTask={() => {
                 queryClient.invalidateQueries({ queryKey: ["supplier-tasks-portal"] });
                 setActiveTaskId(undefined);
