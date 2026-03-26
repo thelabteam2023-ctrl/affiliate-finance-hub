@@ -290,11 +290,11 @@ export function SupplierTasksAdmin({ supplierWorkspaceId, supplierNome, parentWo
     const items = task.casas_items as any[] | null;
     if (!items || items.length <= 1) return null;
     return (
-      <div className="mt-2 space-y-1">
+      <div className="mt-2 space-y-1.5">
         {items.map((item: any, idx: number) => (
-          <div key={idx} className="flex items-center justify-between text-[10px] py-1 px-2 rounded bg-muted/30">
-            <div className="flex items-center gap-1.5">
-              {item.logo_url && <img src={item.logo_url} alt="" className="h-3.5 w-3.5 rounded" />}
+          <div key={idx} className="flex items-center justify-between text-xs py-2 px-3 rounded-md bg-muted/30">
+            <div className="flex items-center gap-2">
+              {item.logo_url && <img src={item.logo_url} alt="" className="h-5 w-5 rounded" />}
               <span className="text-foreground font-medium">{item.nome}</span>
             </div>
             <span className="font-semibold text-foreground">{formatCurrency(item.valor)}</span>
