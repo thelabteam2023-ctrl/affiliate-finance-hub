@@ -536,14 +536,16 @@ export function AppSidebar() {
 
   return (
     <Sidebar
-      className={isCollapsed ? "w-16" : "w-56"}
+      className={isCollapsed ? "w-[72px]" : "w-56"}
       collapsible="icon"
     >
       <SidebarContent className="relative py-4 flex flex-col overflow-hidden">
         {/* Logo/Brand Section */}
         <div className="flex items-center justify-center px-3 pb-4 bg-transparent shrink-0">
           {isCollapsed ? (
-            <img src="/favicon-sidebar.png" alt="LABBET" className="h-10 w-10 rounded-lg object-cover bg-transparent" />
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-transparent p-1">
+              <img src="/favicon-sidebar.png" alt="LABBET" className="h-full w-full object-contain bg-transparent" />
+            </div>
           ) : (
             <img src="/logo-horizontal.png" alt="LABBET" className="h-9 bg-transparent" />
           )}
