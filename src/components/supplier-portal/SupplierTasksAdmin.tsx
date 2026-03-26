@@ -668,6 +668,44 @@ export function SupplierTasksAdmin({ supplierWorkspaceId, supplierNome, parentWo
                   </div>
                 ) : (
                   <div className="space-y-1.5 border border-border rounded-lg p-2">
+                    {/* Select all / Deselect all */}
+                    {casasForTitular.length > 1 && (
+                      <div
+                        className="flex items-center gap-2 p-2 rounded-md cursor-pointer hover:bg-muted/50 border-b border-border mb-1"
+                        onClick={() => {
+                          const allSelected = casasForTitular.every((c: any) =>
+                            selectedCasas.some(s => s.bookmaker_catalogo_id === c.bookmaker_catalogo_id)
+                          );
+                          if (allSelected) {
+                            setSelectedCasas([]);
+                          } else {
+                            const all = casasForTitular.map((c: any) => {
+                              const alloc = allowedBookmakers.find((b: any) => b.bookmaker_catalogo_id === c.bookmaker_catalogo_id);
+                              return {
+                                bookmaker_catalogo_id: c.bookmaker_catalogo_id,
+                                nome: c.nome,
+                                logo_url: c.logo_url,
+                                saldo_atual: c.saldo_atual || 0,
+                                valor_alocado: alloc?.valor_alocado || 0,
+                              };
+                            });
+                            setSelectedCasas(all);
+                          }
+                        }}
+                      >
+                        <Checkbox
+                          checked={casasForTitular.length > 0 && casasForTitular.every((c: any) =>
+                            selectedCasas.some(s => s.bookmaker_catalogo_id === c.bookmaker_catalogo_id)
+                          )}
+                          className="pointer-events-none"
+                        />
+                        <span className="text-xs font-medium text-muted-foreground">
+                          {casasForTitular.every((c: any) => selectedCasas.some(s => s.bookmaker_catalogo_id === c.bookmaker_catalogo_id))
+                            ? "Desmarcar todas"
+                            : `Selecionar todas (${casasForTitular.length})`}
+                        </span>
+                      </div>
+                    )}
                     {casasForTitular.map((casa: any) => {
                       const alloc = allowedBookmakers.find((b: any) => b.bookmaker_catalogo_id === casa.bookmaker_catalogo_id);
                       const valorAlvo = alloc?.valor_alocado || 0;
