@@ -265,8 +265,11 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNav
               const isMultiCasa = casasItems && casasItems.length > 1;
               const isAguardandoRecebimento = task.status === "aguardando_recebimento";
               const ctaLabel = getDirectCTALabel(task.tipo, task.status);
-              const canNavigate = !!onNavigateToDeposit || !!onNavigateToSaque;
-              const hasDirectAction = !isMultiCasa && ctaLabel && task.titular_id && task.bookmaker_catalogo_id && (isAguardandoRecebimento || canNavigate);
+              const canNavigate = !!onNavigateToDeposit || !!onNavigateToSaque || !!onNavigateToCreateAccount;
+              const isCriacao = task.tipo === "criacao_conta";
+              const hasDirectAction = isCriacao
+                ? ctaLabel && task.titular_id && (casasItems?.length || task.bookmaker_catalogo_id) && canNavigate
+                : !isMultiCasa && ctaLabel && task.titular_id && task.bookmaker_catalogo_id && (isAguardandoRecebimento || canNavigate);
               const TipoIcon = TIPO_ICONS[task.tipo];
 
               return (
