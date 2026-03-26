@@ -9476,6 +9476,13 @@ export type Database = {
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "supplier_tasks_titular_id_fkey"
+            columns: ["titular_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_titulares"
+            referencedColumns: ["id"]
+          },
         ]
       }
       supplier_titular_bancos: {
