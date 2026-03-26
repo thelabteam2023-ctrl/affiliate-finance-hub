@@ -261,7 +261,11 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNav
         ) : (
           <div className="space-y-2">
             {pendentes.map((task: any) => {
-              const casasItems = task.casas_items as any[] | null;
+              const rawCasasItems = task.casas_items as any[] | null;
+              // Sort casas_items by valor descending (houses with deposit value first)
+              const casasItems = rawCasasItems
+                ? [...rawCasasItems].sort((a: any, b: any) => (b.valor || 0) - (a.valor || 0))
+                : null;
               const isMultiCasa = casasItems && casasItems.length > 1;
               const isAguardandoRecebimento = task.status === "aguardando_recebimento";
               const ctaLabel = getDirectCTALabel(task.tipo, task.status);
