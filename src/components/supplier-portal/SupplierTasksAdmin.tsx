@@ -13,7 +13,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Plus, ClipboardList, Clock, CheckCircle2, XCircle, AlertTriangle,
-  Zap, Building2, ArrowRight, User, Trash2
+  Zap, Building2, ArrowRight, User, Trash2, Pencil
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -76,6 +76,7 @@ function formatCurrency(val: number) {
 export function SupplierTasksAdmin({ supplierWorkspaceId, supplierNome, parentWorkspaceId }: Props) {
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
+  const [editTask, setEditTask] = useState<any>(null);
   const [filterStatus, setFilterStatus] = useState<string>("all");
 
   // Form state
@@ -273,6 +274,96 @@ export function SupplierTasksAdmin({ supplierWorkspaceId, supplierNome, parentWo
     setSelectedCasas([]);
   }
 
+  function openEditTask(task: any) {
+    setTipo(task.tipo || "deposito");
+    setTitularId(task.titular_id || "");
+    setTitulo(task.titulo || "");
+    setDescricao(task.descricao || "");
+    setPrioridade(task.prioridade || "media");
+    setDataLimite(task.data_limite ? task.data_limite.slice(0, 16) : "");
+    setObservacoesAdmin(task.observacoes_admin || "");
+    // Rebuild selectedCasas from casas_items
+    if (task.casas_items && Array.isArray(task.casas_items)) {
+      setSelectedCasas(task.casas_items.map((item: any) => ({
+        bookmaker_catalogo_id: item.bookmaker_catalogo_id,
+        nome: item.nome,
+        logo_url: item.logo_url,
+        saldo_atual: item.saldo_atual || 0,
+        valor_alocado: item.valor_alocado || 0,
+        valor: item.valor?.toString() || "",
+      })));
+    } else if (task.bookmaker_catalogo_id) {
+      setSelectedCasas([{
+        bookmaker_catalogo_id: task.bookmaker_catalogo_id,
+        nome: task.bookmakers_catalogo?.nome || "—",
+        logo_url: task.bookmakers_catalogo?.logo_url,
+        saldo_atual: task.valor_atual_casa || 0,
+        valor_alocado: task.valor_alvo_casa || 0,
+        valor: task.valor?.toString() || "",
+      }]);
+    } else {
+      setSelectedCasas([]);
+    }
+    setEditTask(task);
+  }
+
+  // Update task mutation
+  const updateMutation = useMutation({
+    mutationFn: async () => {
+      if (!editTask) throw new Error("Nenhuma tarefa selecionada");
+
+      const titularNome = selectedTitular?.nome || "";
+      const casasCount = selectedCasas.length;
+
+      const casasItems = selectedCasas.map(c => ({
+        bookmaker_catalogo_id: c.bookmaker_catalogo_id,
+        nome: c.nome,
+        logo_url: c.logo_url || null,
+        valor: parseFloat(c.valor) || 0,
+        saldo_atual: c.saldo_atual,
+        valor_alocado: c.valor_alocado,
+      }));
+
+      const autoTitulo = titulo.trim() || (() => {
+        const tipoBase = TIPO_LABELS[tipo] || tipo;
+        const tipoLabel = casasCount > 1 ? tipoBase.replace("Casa", "Casas") : tipoBase;
+        const parts = [tipoLabel];
+        if (titularNome) {
+          const primeiroNome = titularNome.split(" ")[0];
+          parts.push(primeiroNome.charAt(0).toUpperCase() + primeiroNome.slice(1).toLowerCase());
+        }
+        if (casasCount === 1) parts.push(selectedCasas[0].nome);
+        return parts.join(" — ");
+      })();
+
+      const singleCasa = casasItems.length === 1 ? casasItems[0] : null;
+
+      const { error } = await (supabase as any).from("supplier_tasks").update({
+        tipo,
+        titulo: autoTitulo,
+        descricao: descricao.trim() || null,
+        valor: totalValor || null,
+        prioridade,
+        data_limite: dataLimite || null,
+        bookmaker_catalogo_id: singleCasa?.bookmaker_catalogo_id || null,
+        titular_id: titularId || null,
+        observacoes_admin: observacoesAdmin.trim() || null,
+        valor_atual_casa: singleCasa ? singleCasa.saldo_atual : null,
+        valor_alvo_casa: singleCasa ? singleCasa.valor_alocado : null,
+        casas_items: casasItems.length > 0 ? casasItems : null,
+      }).eq("id", editTask.id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Tarefa atualizada");
+      queryClient.invalidateQueries({ queryKey: ["supplier-tasks-admin", supplierWorkspaceId] });
+      resetForm();
+      setEditTask(null);
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   function handleTipoChange(newTipo: string) {
     setTipo(newTipo);
     setTitularId("");
@@ -447,6 +538,17 @@ export function SupplierTasksAdmin({ supplierWorkspaceId, supplierNome, parentWo
                         </a>
                       )}
                     </div>
+                    {/* Edit button for non-concluded tasks */}
+                    {task.status !== "concluido" && task.status !== "rejeitado" && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 shrink-0"
+                        onClick={() => openEditTask(task)}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -649,6 +751,195 @@ export function SupplierTasksAdmin({ supplierWorkspaceId, supplierNome, parentWo
               disabled={createMutation.isPending || (needsTitular && !titularId) || (needsCasa && selectedCasas.length === 0)}
             >
               {createMutation.isPending ? "Criando..." : `Criar Tarefa${selectedCasas.length > 1 ? ` (${selectedCasas.length} casas)` : ""}`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit task dialog — reuses same form fields */}
+      <Dialog open={!!editTask} onOpenChange={(o) => { if (!o) { setEditTask(null); resetForm(); } }}>
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pencil className="h-5 w-5 text-primary" />
+              Editar Tarefa
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            {/* Tipo */}
+            <div>
+              <Label>Tipo de Tarefa *</Label>
+              <Select value={tipo} onValueChange={handleTipoChange}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(TIPO_LABELS).map(([k, v]) => (
+                    <SelectItem key={k} value={k}>{v}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Titular */}
+            {needsTitular && (
+              <div>
+                <Label>Titular (Pessoa) *</Label>
+                <Select value={titularId} onValueChange={handleTitularChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o titular" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {titulares.map((t: any) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        <div className="flex items-center gap-2">
+                          <User className="h-3.5 w-3.5 text-muted-foreground" />
+                          <span>{t.nome}</span>
+                          {t.documento && (
+                            <span className="text-muted-foreground text-[10px]">({t.documento})</span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Multi-casa selection */}
+            {needsCasa && titularId && (
+              <div>
+                <Label className="mb-2 block">Casas (selecione uma ou mais)</Label>
+                {casasForTitular.length === 0 ? (
+                  <div className="p-2.5 rounded-lg bg-muted/50 border border-border text-xs text-muted-foreground flex items-center gap-2">
+                    <AlertTriangle className="h-3.5 w-3.5 text-orange-400" />
+                    Este titular não possui casas vinculadas
+                  </div>
+                ) : (
+                  <div className="space-y-1.5 border border-border rounded-lg p-2">
+                    {casasForTitular.map((casa: any) => {
+                      const alloc = allowedBookmakers.find((b: any) => b.bookmaker_catalogo_id === casa.bookmaker_catalogo_id);
+                      const valorAlvo = alloc?.valor_alocado || 0;
+                      const diff = valorAlvo - casa.saldo_atual;
+                      const isSelected = selectedCasas.some(c => c.bookmaker_catalogo_id === casa.bookmaker_catalogo_id);
+                      return (
+                        <div
+                          key={casa.bookmaker_catalogo_id}
+                          className={`flex items-center gap-2 p-2 rounded-md cursor-pointer transition-colors ${
+                            isSelected ? "bg-primary/10 border border-primary/30" : "hover:bg-muted/50"
+                          }`}
+                          onClick={() => toggleCasa(casa)}
+                        >
+                          <Checkbox checked={isSelected} className="pointer-events-none" />
+                          {casa.logo_url && <img src={casa.logo_url} alt="" className="h-5 w-5 rounded" />}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium text-foreground">{casa.nome}</p>
+                            <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                              <span>Saldo: {formatCurrency(casa.saldo_atual)}</span>
+                              {valorAlvo > 0 && (
+                                <>
+                                  <span>Alvo: {formatCurrency(valorAlvo)}</span>
+                                  <span className={diff > 0 ? "text-orange-400" : "text-emerald-400"}>
+                                    ({diff > 0 ? "+" : ""}{formatCurrency(diff)})
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Valores por casa */}
+            {selectedCasas.length > 0 && (
+              <div>
+                <Label className="mb-2 block">
+                  Valores por Casa
+                  {selectedCasas.length > 1 && (
+                    <span className="ml-2 text-xs font-normal text-muted-foreground">
+                      Total: {formatCurrency(totalValor)}
+                    </span>
+                  )}
+                </Label>
+                <div className="space-y-2 border border-border rounded-lg p-2">
+                  {selectedCasas.map((casa) => {
+                    const diff = casa.valor_alocado - casa.saldo_atual;
+                    return (
+                      <div key={casa.bookmaker_catalogo_id} className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                          {casa.logo_url && <img src={casa.logo_url} alt="" className="h-4 w-4 rounded shrink-0" />}
+                          <span className="text-xs font-medium text-foreground truncate">{casa.nome}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            className="w-28 h-8 text-xs text-right"
+                            value={casa.valor}
+                            onChange={(e) => updateCasaValor(casa.bookmaker_catalogo_id, e.target.value)}
+                            placeholder={diff > 0 ? diff.toFixed(2) : "0.00"}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setSelectedCasas(prev => prev.filter(c => c.bookmaker_catalogo_id !== casa.bookmaker_catalogo_id))}
+                            className="text-muted-foreground hover:text-destructive transition-colors"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Título */}
+            <div>
+              <Label>Título (opcional — gerado automaticamente)</Label>
+              <Input value={titulo} onChange={e => setTitulo(e.target.value)} placeholder="Ex: Depositar em 3 casas — Glayza" />
+            </div>
+
+            {/* Descrição */}
+            <div>
+              <Label>Descrição / Instruções</Label>
+              <Textarea value={descricao} onChange={e => setDescricao(e.target.value)} rows={3} placeholder="Detalhes para o fornecedor..." />
+            </div>
+
+            {/* Prioridade */}
+            <div>
+              <Label>Prioridade</Label>
+              <Select value={prioridade} onValueChange={setPrioridade}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(PRIORIDADE_LABELS).map(([k, v]) => (
+                    <SelectItem key={k} value={k}>{v}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Data Limite */}
+            <div>
+              <Label>Data Limite (opcional)</Label>
+              <Input type="datetime-local" value={dataLimite} onChange={e => setDataLimite(e.target.value)} />
+            </div>
+
+            {/* Observações internas */}
+            <div>
+              <Label>Observações Internas (não visível ao fornecedor)</Label>
+              <Textarea value={observacoesAdmin} onChange={e => setObservacoesAdmin(e.target.value)} rows={2} placeholder="Notas internas..." />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setEditTask(null); resetForm(); }}>Cancelar</Button>
+            <Button
+              onClick={() => updateMutation.mutate()}
+              disabled={updateMutation.isPending || (needsTitular && !titularId) || (needsCasa && selectedCasas.length === 0)}
+            >
+              {updateMutation.isPending ? "Salvando..." : "Salvar Alterações"}
             </Button>
           </DialogFooter>
         </DialogContent>
