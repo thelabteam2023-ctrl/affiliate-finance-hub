@@ -188,10 +188,14 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNav
     const valor = overrideValor ?? task.valor ?? undefined;
 
     if (task.tipo === "deposito" && onNavigateToDeposit && task.titular_id && catalogoId) {
-      updateTaskMutation.mutate({ taskId: task.id, status: "em_andamento" });
+      if (task.status === "pendente") {
+        updateTaskMutation.mutate({ taskId: task.id, status: "em_andamento" });
+      }
       onNavigateToDeposit(task.titular_id, catalogoId, valor, task.id);
     } else if (task.tipo === "saque" && onNavigateToSaque && task.titular_id && catalogoId) {
-      updateTaskMutation.mutate({ taskId: task.id, status: "aguardando_recebimento" });
+      if (task.status === "pendente") {
+        updateTaskMutation.mutate({ taskId: task.id, status: "em_andamento" });
+      }
       onNavigateToSaque(task.titular_id, catalogoId, valor, task.id);
     } else if (task.tipo === "criacao_conta" && onNavigateToCreateAccount && task.titular_id) {
       const casasItems = task.casas_items as any[] | null;
@@ -204,7 +208,10 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNav
               .map((i: any) => i.bookmaker_catalogo_id)
           : catalogoId ? [catalogoId] : [];
       if (bookmakerIds.length > 0) {
-        updateTaskMutation.mutate({ taskId: task.id, status: "em_andamento" });
+        // Only update status if not already in progress — avoid invalid transition error
+        if (task.status === "pendente") {
+          updateTaskMutation.mutate({ taskId: task.id, status: "em_andamento" });
+        }
         onNavigateToCreateAccount(task.titular_id, bookmakerIds, task.id);
       }
     } else {
