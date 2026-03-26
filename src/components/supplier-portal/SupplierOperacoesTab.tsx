@@ -434,11 +434,63 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNav
                   </div>
                 )}
 
-                {selectedTask.casa_nome && (
+                {selectedTask.casa_nome && !selectedTask.casas_items && (
                   <div className="flex items-center gap-2 text-sm">
                     {selectedTask.casa_logo && <img src={selectedTask.casa_logo} alt="" className="h-5 w-5 rounded" />}
                     <Building2 className="h-4 w-4 text-muted-foreground" />
                     <span className="font-medium">{selectedTask.casa_nome}</span>
+                  </div>
+                )}
+
+                {/* Multi-casa items in detail */}
+                {selectedTask.casas_items && (selectedTask.casas_items as any[]).length > 0 && (
+                  <div className="space-y-1.5">
+                    <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
+                      Casas ({(selectedTask.casas_items as any[]).length})
+                    </p>
+                    <div className="space-y-1">
+                      {(selectedTask.casas_items as any[]).map((item: any, idx: number) => (
+                        <div key={idx} className="flex items-center justify-between py-1.5 px-2.5 rounded-md bg-muted/30 border border-border/50">
+                          <div className="flex items-center gap-2">
+                            {item.logo_url && <img src={item.logo_url} alt="" className="h-4 w-4 rounded" />}
+                            <span className="text-xs font-medium text-foreground">{item.nome}</span>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-xs font-semibold text-foreground">{formatCurrency(item.valor)}</span>
+                            {item.saldo_atual != null && (
+                              <p className="text-[9px] text-muted-foreground">Saldo: {formatCurrency(item.saldo_atual)}</p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex justify-end pt-1 border-t border-border/50">
+                      <span className="text-xs font-bold text-foreground">
+                        Total: {formatCurrency((selectedTask.casas_items as any[]).reduce((s: number, i: any) => s + (i.valor || 0), 0))}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {!selectedTask.casas_items && selectedTask.valor_alvo_casa != null && selectedTask.valor_atual_casa != null && (
+                  <div className="p-2.5 rounded-lg bg-primary/5 border border-primary/20">
+                    <p className="text-[10px] text-muted-foreground mb-1">Contexto de Alocação</p>
+                    <div className="grid grid-cols-3 gap-2 text-xs">
+                      <div>
+                        <p className="text-muted-foreground text-[10px]">Atual</p>
+                        <p className="font-semibold">{formatCurrency(selectedTask.valor_atual_casa)}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-[10px]">Alvo</p>
+                        <p className="font-semibold text-primary">{formatCurrency(selectedTask.valor_alvo_casa)}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-[10px]">Diferença</p>
+                        <p className="font-semibold text-orange-400">
+                          {formatCurrency(selectedTask.valor_alvo_casa - selectedTask.valor_atual_casa)}
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 )}
 
