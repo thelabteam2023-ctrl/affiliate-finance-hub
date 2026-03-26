@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useMemo, useCallback } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -44,6 +44,9 @@ export function SupplierDashboard({ session }: Props) {
   const [prefillTitularId, setPrefillTitularId] = useState<string | undefined>();
   const [prefillContaId, setPrefillContaId] = useState<string | undefined>();
   const [prefillValor, setPrefillValor] = useState<number | undefined>();
+  const [activeTaskId, setActiveTaskId] = useState<string | undefined>();
+  const [activeBookmakerCatalogoId, setActiveBookmakerCatalogoId] = useState<string | undefined>();
+  const queryClient = useQueryClient();
 
   // Get token from URL for edge function calls
   const supplierToken = useMemo(() => new URLSearchParams(window.location.search).get("token") || "", []);
