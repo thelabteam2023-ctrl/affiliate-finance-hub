@@ -13,7 +13,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Plus, ClipboardList, Clock, CheckCircle2, XCircle, AlertTriangle,
-  Zap, Building2, ArrowRight, User, Trash2
+  Zap, Building2, ArrowRight, User, Trash2, Pencil
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
