@@ -637,13 +637,10 @@ export function SupplierTasksAdmin({ supplierWorkspaceId, supplierNome, parentWo
                             <p className="text-xs font-medium text-foreground">{casa.nome}</p>
                             <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
                               <span>Saldo: {formatCurrency(casa.saldo_atual)}</span>
-                              {valorAlvo > 0 && (
-                                <>
-                                  <span>Alvo: {formatCurrency(valorAlvo)}</span>
-                                  <span className={diff > 0 ? "text-orange-400" : "text-emerald-400"}>
-                                    ({diff > 0 ? "+" : ""}{formatCurrency(diff)})
-                                  </span>
-                                </>
+                              {valorAlvo > 0 && casa.saldo_atual === 0 && (
+                                <span className="text-primary">
+                                  Sugestão: {formatCurrency(valorAlvo)}
+                                </span>
                               )}
                             </div>
                           </div>
