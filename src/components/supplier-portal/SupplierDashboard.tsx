@@ -326,6 +326,12 @@ export function SupplierDashboard({ session }: Props) {
               onNavigateToSaque={(titularId, bookmakerCatalogoId, valor, taskId) =>
                 handleTaskNavigate("SAQUE", titularId, bookmakerCatalogoId, valor, taskId)
               }
+              onNavigateToCreateAccount={(titularId, bookmakerCatalogoIds, taskId) => {
+                setPrefillTitularId(titularId);
+                setActiveTaskId(taskId);
+                // Navigate to Contas tab — the supplier will use the existing creation wizard
+                setActiveTab("visao-geral");
+              }}
             />
           </TabsContent>
 
