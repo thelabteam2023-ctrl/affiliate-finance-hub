@@ -204,7 +204,10 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNav
               .map((i: any) => i.bookmaker_catalogo_id)
           : catalogoId ? [catalogoId] : [];
       if (bookmakerIds.length > 0) {
-        updateTaskMutation.mutate({ taskId: task.id, status: "em_andamento" });
+        // Only update status if not already in progress — avoid invalid transition error
+        if (task.status === "pendente") {
+          updateTaskMutation.mutate({ taskId: task.id, status: "em_andamento" });
+        }
         onNavigateToCreateAccount(task.titular_id, bookmakerIds, task.id);
       }
     } else {
