@@ -195,10 +195,13 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNav
       onNavigateToSaque(task.titular_id, catalogoId, valor, task.id);
     } else if (task.tipo === "criacao_conta" && onNavigateToCreateAccount && task.titular_id) {
       const casasItems = task.casas_items as any[] | null;
+      const taskUnavailable = unavailableItems[task.id] || new Set();
       const bookmakerIds = overrideCatalogoId
         ? [overrideCatalogoId]
         : casasItems
-          ? casasItems.filter((i: any) => !i.concluido).map((i: any) => i.bookmaker_catalogo_id)
+          ? casasItems
+              .filter((i: any) => !i.concluido && !taskUnavailable.has(i.bookmaker_catalogo_id))
+              .map((i: any) => i.bookmaker_catalogo_id)
           : catalogoId ? [catalogoId] : [];
       if (bookmakerIds.length > 0) {
         updateTaskMutation.mutate({ taskId: task.id, status: "em_andamento" });
