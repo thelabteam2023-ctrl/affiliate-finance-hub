@@ -475,12 +475,23 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, exist
                                     onClick={(e) => { e.stopPropagation(); toggleUnavailable(task.id, item.bookmaker_catalogo_id); }}>
                                     Restaurar
                                   </Button>
-                                ) : canExecItem ? (
-                                  <Button size="sm" className="h-7 px-3 text-xs font-medium"
-                                    onClick={(e) => { e.stopPropagation(); handleDirectAction(task, item.bookmaker_catalogo_id, item.valor); }}>
-                                    {itemCtaLabel}
-                                  </Button>
-                                ) : null}
+                                ) : (
+                                  <div className="flex items-center gap-3">
+                                    {canExecItem && (
+                                      <Button size="sm" className="h-7 px-3 text-xs font-medium"
+                                        onClick={(e) => { e.stopPropagation(); handleDirectAction(task, item.bookmaker_catalogo_id, item.valor); }}>
+                                        {itemCtaLabel}
+                                      </Button>
+                                    )}
+                                    {!itemDone && isCriacao && (
+                                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                                        title="Marcar como indisponível"
+                                        onClick={(e) => { e.stopPropagation(); toggleUnavailable(task.id, item.bookmaker_catalogo_id); }}>
+                                        <Ban className="h-3.5 w-3.5" />
+                                      </Button>
+                                    )}
+                                  </div>
+                                )}
                               </div>
                             </div>
                           );
