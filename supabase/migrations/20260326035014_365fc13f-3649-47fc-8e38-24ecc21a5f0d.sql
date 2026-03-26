@@ -1,0 +1,1 @@
+ALTER TABLE supplier_tasks ADD COLUMN IF NOT EXISTS casas_items jsonb DEFAULT NULL;

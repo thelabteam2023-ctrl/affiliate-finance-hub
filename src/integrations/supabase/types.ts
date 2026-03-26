@@ -9366,6 +9366,7 @@ export type Database = {
         Row: {
           bookmaker_account_id: string | null
           bookmaker_catalogo_id: string | null
+          casas_items: Json | null
           comprovante_url: string | null
           concluida_at: string | null
           created_at: string
@@ -9393,6 +9394,7 @@ export type Database = {
         Insert: {
           bookmaker_account_id?: string | null
           bookmaker_catalogo_id?: string | null
+          casas_items?: Json | null
           comprovante_url?: string | null
           concluida_at?: string | null
           created_at?: string
@@ -9420,6 +9422,7 @@ export type Database = {
         Update: {
           bookmaker_account_id?: string | null
           bookmaker_catalogo_id?: string | null
+          casas_items?: Json | null
           comprovante_url?: string | null
           concluida_at?: string | null
           created_at?: string
