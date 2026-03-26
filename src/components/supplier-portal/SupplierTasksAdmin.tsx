@@ -10,9 +10,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Plus, ClipboardList, Clock, CheckCircle2, XCircle, AlertTriangle,
-  Zap, Building2, ArrowRight, User
+  Zap, Building2, ArrowRight, User, Trash2
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -21,6 +22,15 @@ interface Props {
   supplierWorkspaceId: string;
   supplierNome: string;
   parentWorkspaceId: string;
+}
+
+interface CasaItem {
+  bookmaker_catalogo_id: string;
+  nome: string;
+  logo_url?: string;
+  saldo_atual: number;
+  valor_alocado: number;
+  valor: string; // user input
 }
 
 const TIPO_LABELS: Record<string, string> = {
@@ -73,11 +83,12 @@ export function SupplierTasksAdmin({ supplierWorkspaceId, supplierNome, parentWo
   const [titularId, setTitularId] = useState("");
   const [titulo, setTitulo] = useState("");
   const [descricao, setDescricao] = useState("");
-  const [valor, setValor] = useState("");
   const [prioridade, setPrioridade] = useState("media");
   const [dataLimite, setDataLimite] = useState("");
-  const [bookmakerCatalogoId, setBookmakerCatalogoId] = useState("");
   const [observacoesAdmin, setObservacoesAdmin] = useState("");
+  
+  // Multi-casa state
+  const [selectedCasas, setSelectedCasas] = useState<CasaItem[]>([]);
 
   // Fetch tasks
   const { data: tasks = [], isLoading } = useQuery({
@@ -146,23 +157,43 @@ export function SupplierTasksAdmin({ supplierWorkspaceId, supplierNome, parentWo
     },
   });
 
-  // Derived: casas available filtered by titular
   const casasForTitular = useMemo(() => {
     if (!titularId) return [];
     return titularAccounts;
   }, [titularId, titularAccounts]);
 
-  const selectedCasa = casasForTitular.find((c: any) => c.bookmaker_catalogo_id === bookmakerCatalogoId);
-  const allocation = allowedBookmakers.find((b: any) => b.bookmaker_catalogo_id === bookmakerCatalogoId);
-  const currentBalance = selectedCasa?.saldo_atual || 0;
-  const targetBalance = allocation?.valor_alocado || 0;
-  const difference = targetBalance - currentBalance;
-
   const selectedTitular = titulares.find((t: any) => t.id === titularId);
-
   const needsCasa = tipo === "deposito" || tipo === "saque" || tipo === "ajuste_saldo";
   const needsTitular = tipo !== "outros";
-  const needsValor = tipo === "deposito" || tipo === "saque" || tipo === "ajuste_saldo";
+
+  // Toggle a casa in multi-select
+  function toggleCasa(casa: any) {
+    setSelectedCasas(prev => {
+      const exists = prev.find(c => c.bookmaker_catalogo_id === casa.bookmaker_catalogo_id);
+      if (exists) {
+        return prev.filter(c => c.bookmaker_catalogo_id !== casa.bookmaker_catalogo_id);
+      }
+      const alloc = allowedBookmakers.find((b: any) => b.bookmaker_catalogo_id === casa.bookmaker_catalogo_id);
+      const valorAlocado = alloc?.valor_alocado || 0;
+      const diff = valorAlocado - casa.saldo_atual;
+      return [...prev, {
+        bookmaker_catalogo_id: casa.bookmaker_catalogo_id,
+        nome: casa.nome,
+        logo_url: casa.logo_url,
+        saldo_atual: casa.saldo_atual,
+        valor_alocado: valorAlocado,
+        valor: diff > 0 ? diff.toFixed(2) : "",
+      }];
+    });
+  }
+
+  function updateCasaValor(catalogoId: string, valor: string) {
+    setSelectedCasas(prev => prev.map(c =>
+      c.bookmaker_catalogo_id === catalogoId ? { ...c, valor } : c
+    ));
+  }
+
+  const totalValor = selectedCasas.reduce((sum, c) => sum + (parseFloat(c.valor) || 0), 0);
 
   // Create task mutation
   const createMutation = useMutation({
@@ -171,16 +202,33 @@ export function SupplierTasksAdmin({ supplierWorkspaceId, supplierNome, parentWo
       if (!userData.user) throw new Error("Não autenticado");
 
       const titularNome = selectedTitular?.nome || "";
-      const casaNome = selectedCasa?.nome || "";
-      const valorFmt = valor ? formatCurrency(parseFloat(valor)) : "";
+      const casasCount = selectedCasas.length;
+
+      // Build casas_items for storage
+      const casasItems = selectedCasas.map(c => ({
+        bookmaker_catalogo_id: c.bookmaker_catalogo_id,
+        nome: c.nome,
+        logo_url: c.logo_url || null,
+        valor: parseFloat(c.valor) || 0,
+        saldo_atual: c.saldo_atual,
+        valor_alocado: c.valor_alocado,
+      }));
 
       const autoTitulo = titulo.trim() || (() => {
         const parts = [TIPO_LABELS[tipo]];
-        if (casaNome) parts.push(casaNome);
-        if (titularNome) parts.push(`(${titularNome})`);
-        if (valorFmt) parts.push(valorFmt);
+        if (titularNome) parts.push(titularNome);
+        if (casasCount === 1) {
+          parts.push(selectedCasas[0].nome);
+          if (selectedCasas[0].valor) parts.push(formatCurrency(parseFloat(selectedCasas[0].valor)));
+        } else if (casasCount > 1) {
+          parts.push(`${casasCount} casas`);
+          parts.push(formatCurrency(totalValor));
+        }
         return parts.join(" — ");
       })();
+
+      // For single casa, keep backward compatibility with bookmaker_catalogo_id + valor
+      const singleCasa = casasItems.length === 1 ? casasItems[0] : null;
 
       const { error } = await (supabase as any).from("supplier_tasks").insert({
         supplier_workspace_id: supplierWorkspaceId,
@@ -188,14 +236,15 @@ export function SupplierTasksAdmin({ supplierWorkspaceId, supplierNome, parentWo
         tipo,
         titulo: autoTitulo,
         descricao: descricao.trim() || null,
-        valor: valor ? parseFloat(valor) : null,
+        valor: totalValor || null,
         prioridade,
         data_limite: dataLimite || null,
-        bookmaker_catalogo_id: bookmakerCatalogoId || null,
+        bookmaker_catalogo_id: singleCasa?.bookmaker_catalogo_id || null,
         titular_id: titularId || null,
         observacoes_admin: observacoesAdmin.trim() || null,
-        valor_atual_casa: bookmakerCatalogoId ? currentBalance : null,
-        valor_alvo_casa: bookmakerCatalogoId ? targetBalance : null,
+        valor_atual_casa: singleCasa ? singleCasa.saldo_atual : null,
+        valor_alvo_casa: singleCasa ? singleCasa.valor_alocado : null,
+        casas_items: casasItems.length > 0 ? casasItems : null,
         created_by: userData.user.id,
         status: "pendente",
       });
@@ -215,32 +264,45 @@ export function SupplierTasksAdmin({ supplierWorkspaceId, supplierNome, parentWo
     setTitularId("");
     setTitulo("");
     setDescricao("");
-    setValor("");
     setPrioridade("media");
     setDataLimite("");
-    setBookmakerCatalogoId("");
     setObservacoesAdmin("");
+    setSelectedCasas([]);
   }
 
   function handleTipoChange(newTipo: string) {
     setTipo(newTipo);
     setTitularId("");
-    setBookmakerCatalogoId("");
-    setValor("");
+    setSelectedCasas([]);
   }
 
   function handleTitularChange(newTitularId: string) {
     setTitularId(newTitularId);
-    setBookmakerCatalogoId("");
-    setValor("");
+    setSelectedCasas([]);
   }
 
   const filteredTasks = filterStatus === "all" ? tasks : tasks.filter((t: any) => t.status === filterStatus);
-
-  // KPIs
   const pendentes = tasks.filter((t: any) => t.status === "pendente").length;
   const emAndamento = tasks.filter((t: any) => t.status === "em_andamento").length;
   const concluidas = tasks.filter((t: any) => t.status === "concluido").length;
+
+  function renderTaskCasasItems(task: any) {
+    const items = task.casas_items as any[] | null;
+    if (!items || items.length <= 1) return null;
+    return (
+      <div className="mt-2 space-y-1">
+        {items.map((item: any, idx: number) => (
+          <div key={idx} className="flex items-center justify-between text-[10px] py-1 px-2 rounded bg-muted/30">
+            <div className="flex items-center gap-1.5">
+              {item.logo_url && <img src={item.logo_url} alt="" className="h-3.5 w-3.5 rounded" />}
+              <span className="text-foreground font-medium">{item.nome}</span>
+            </div>
+            <span className="font-semibold text-foreground">{formatCurrency(item.valor)}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -331,10 +393,18 @@ export function SupplierTasksAdmin({ supplierWorkspaceId, supplierNome, parentWo
                             {task.supplier_titulares.nome}
                           </span>
                         )}
-                        {task.bookmakers_catalogo?.nome && (
+                        {/* Single casa display */}
+                        {!task.casas_items && task.bookmakers_catalogo?.nome && (
                           <span className="flex items-center gap-1">
                             <Building2 className="h-3 w-3" />
                             {task.bookmakers_catalogo.nome}
+                          </span>
+                        )}
+                        {/* Multi-casa count */}
+                        {task.casas_items && (task.casas_items as any[]).length > 1 && (
+                          <span className="flex items-center gap-1">
+                            <Building2 className="h-3 w-3" />
+                            {(task.casas_items as any[]).length} casas
                           </span>
                         )}
                         {task.valor && (
@@ -349,8 +419,11 @@ export function SupplierTasksAdmin({ supplierWorkspaceId, supplierNome, parentWo
                         <span>{format(new Date(task.created_at), "dd/MM HH:mm")}</span>
                       </div>
 
-                      {/* Allocation context */}
-                      {task.valor_alvo_casa != null && task.valor_atual_casa != null && (
+                      {/* Multi-casa items breakdown */}
+                      {renderTaskCasasItems(task)}
+
+                      {/* Single allocation context */}
+                      {!task.casas_items && task.valor_alvo_casa != null && task.valor_atual_casa != null && (
                         <div className="flex items-center gap-2 mt-1.5 text-[10px]">
                           <span className="text-muted-foreground">Atual: {formatCurrency(task.valor_atual_casa)}</span>
                           <ArrowRight className="h-3 w-3 text-muted-foreground" />
@@ -358,7 +431,6 @@ export function SupplierTasksAdmin({ supplierWorkspaceId, supplierNome, parentWo
                         </div>
                       )}
 
-                      {/* Supplier feedback */}
                       {task.observacoes_fornecedor && (
                         <div className="mt-2 p-2 rounded bg-muted/50 text-xs">
                           <span className="text-muted-foreground">Fornecedor: </span>
@@ -425,93 +497,115 @@ export function SupplierTasksAdmin({ supplierWorkspaceId, supplierNome, parentWo
                     ))}
                   </SelectContent>
                 </Select>
-                {titulares.length === 0 && (
-                  <p className="text-[10px] text-muted-foreground mt-1">Nenhum titular cadastrado</p>
-                )}
               </div>
             )}
 
-            {/* Step 3: Casa (filtered by titular) */}
+            {/* Step 3: Multi-casa selection */}
             {needsCasa && titularId && (
               <div>
-                <Label>Casa</Label>
+                <Label className="mb-2 block">Casas (selecione uma ou mais)</Label>
                 {casasForTitular.length === 0 ? (
                   <div className="p-2.5 rounded-lg bg-muted/50 border border-border text-xs text-muted-foreground flex items-center gap-2">
                     <AlertTriangle className="h-3.5 w-3.5 text-orange-400" />
                     Este titular não possui casas vinculadas
                   </div>
                 ) : (
-                  <>
-                    <Select value={bookmakerCatalogoId} onValueChange={setBookmakerCatalogoId}>
-                      <SelectTrigger><SelectValue placeholder="Selecione a casa" /></SelectTrigger>
-                      <SelectContent>
-                        {casasForTitular.map((c: any) => (
-                          <SelectItem key={c.bookmaker_catalogo_id} value={c.bookmaker_catalogo_id}>
-                            <div className="flex items-center gap-2">
-                              {c.logo_url && <img src={c.logo_url} alt="" className="h-4 w-4 rounded" />}
-                              <span>{c.nome}</span>
-                              <span className="text-muted-foreground text-[10px]">
-                                (Saldo: {formatCurrency(c.saldo_atual)})
-                              </span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  <div className="space-y-1.5 border border-border rounded-lg p-2">
+                    {casasForTitular.map((casa: any) => {
+                      const alloc = allowedBookmakers.find((b: any) => b.bookmaker_catalogo_id === casa.bookmaker_catalogo_id);
+                      const valorAlvo = alloc?.valor_alocado || 0;
+                      const diff = valorAlvo - casa.saldo_atual;
+                      const isSelected = selectedCasas.some(c => c.bookmaker_catalogo_id === casa.bookmaker_catalogo_id);
 
-                    {/* Allocation context */}
-                    {bookmakerCatalogoId && (
-                      <div className="mt-2 p-2.5 rounded-lg bg-muted/50 border border-border">
-                        <div className="grid grid-cols-3 gap-2 text-xs">
-                          <div>
-                            <p className="text-muted-foreground text-[10px]">Saldo Atual</p>
-                            <p className="font-semibold">{formatCurrency(currentBalance)}</p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground text-[10px]">Valor Alvo</p>
-                            <p className="font-semibold text-primary">{formatCurrency(targetBalance)}</p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground text-[10px]">Diferença</p>
-                            <p className={`font-semibold ${difference > 0 ? "text-orange-400" : "text-emerald-400"}`}>
-                              {difference > 0 ? "+" : ""}{formatCurrency(difference)}
-                            </p>
+                      return (
+                        <div
+                          key={casa.bookmaker_catalogo_id}
+                          className={`flex items-center gap-2 p-2 rounded-md cursor-pointer transition-colors ${
+                            isSelected ? "bg-primary/10 border border-primary/30" : "hover:bg-muted/50"
+                          }`}
+                          onClick={() => toggleCasa(casa)}
+                        >
+                          <Checkbox checked={isSelected} className="pointer-events-none" />
+                          {casa.logo_url && <img src={casa.logo_url} alt="" className="h-5 w-5 rounded" />}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium text-foreground">{casa.nome}</p>
+                            <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                              <span>Saldo: {formatCurrency(casa.saldo_atual)}</span>
+                              {valorAlvo > 0 && (
+                                <>
+                                  <span>Alvo: {formatCurrency(valorAlvo)}</span>
+                                  <span className={diff > 0 ? "text-orange-400" : "text-emerald-400"}>
+                                    ({diff > 0 ? "+" : ""}{formatCurrency(diff)})
+                                  </span>
+                                </>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    )}
-                  </>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
             )}
 
-            {/* Valor */}
-            {needsValor && (
+            {/* Individual values per selected casa */}
+            {selectedCasas.length > 0 && (
               <div>
-                <Label>Valor (R$)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={valor}
-                  onChange={e => setValor(e.target.value)}
-                  placeholder={difference > 0 ? difference.toFixed(2) : "0.00"}
-                />
-                {difference > 0 && !valor && (
-                  <button
-                    type="button"
-                    onClick={() => setValor(difference.toFixed(2))}
-                    className="text-[10px] text-primary mt-1 underline"
-                  >
-                    Usar diferença sugerida: {formatCurrency(difference)}
-                  </button>
-                )}
+                <Label className="mb-2 block">
+                  Valores por Casa
+                  {selectedCasas.length > 1 && (
+                    <span className="ml-2 text-xs font-normal text-muted-foreground">
+                      Total: {formatCurrency(totalValor)}
+                    </span>
+                  )}
+                </Label>
+                <div className="space-y-2 border border-border rounded-lg p-2">
+                  {selectedCasas.map((casa) => {
+                    const diff = casa.valor_alocado - casa.saldo_atual;
+                    return (
+                      <div key={casa.bookmaker_catalogo_id} className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                          {casa.logo_url && <img src={casa.logo_url} alt="" className="h-4 w-4 rounded shrink-0" />}
+                          <span className="text-xs font-medium text-foreground truncate">{casa.nome}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            className="w-28 h-8 text-xs text-right"
+                            value={casa.valor}
+                            onChange={(e) => updateCasaValor(casa.bookmaker_catalogo_id, e.target.value)}
+                            placeholder={diff > 0 ? diff.toFixed(2) : "0.00"}
+                          />
+                          {diff > 0 && !casa.valor && (
+                            <button
+                              type="button"
+                              onClick={() => updateCasaValor(casa.bookmaker_catalogo_id, diff.toFixed(2))}
+                              className="text-[9px] text-primary underline whitespace-nowrap"
+                            >
+                              Sugerir
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setSelectedCasas(prev => prev.filter(c => c.bookmaker_catalogo_id !== casa.bookmaker_catalogo_id))}
+                            className="text-muted-foreground hover:text-destructive transition-colors"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
 
-            {/* Titulo (auto-generated if empty) */}
+            {/* Titulo */}
             <div>
               <Label>Título (opcional — gerado automaticamente)</Label>
-              <Input value={titulo} onChange={e => setTitulo(e.target.value)} placeholder="Ex: Depositar R$ 5.000 na Bet365" />
+              <Input value={titulo} onChange={e => setTitulo(e.target.value)} placeholder="Ex: Depositar em 3 casas — Glayza" />
             </div>
 
             {/* Descrição */}
@@ -549,9 +643,9 @@ export function SupplierTasksAdmin({ supplierWorkspaceId, supplierNome, parentWo
             <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancelar</Button>
             <Button
               onClick={() => createMutation.mutate()}
-              disabled={createMutation.isPending || (needsTitular && !titularId)}
+              disabled={createMutation.isPending || (needsTitular && !titularId) || (needsCasa && selectedCasas.length === 0)}
             >
-              {createMutation.isPending ? "Criando..." : "Criar Tarefa"}
+              {createMutation.isPending ? "Criando..." : `Criar Tarefa${selectedCasas.length > 1 ? ` (${selectedCasas.length} casas)` : ""}`}
             </Button>
           </DialogFooter>
         </DialogContent>
