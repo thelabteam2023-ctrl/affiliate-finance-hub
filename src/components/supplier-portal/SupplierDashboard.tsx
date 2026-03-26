@@ -66,6 +66,30 @@ export function SupplierDashboard({ session }: Props) {
     },
   });
 
+  // Count open tasks for badge on Operações tab
+  const { data: openTasksCount = 0 } = useQuery({
+    queryKey: ["supplier-tasks-open-count", session.supplier_workspace_id],
+    queryFn: async () => {
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const resp = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/supplier-auth`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({ action: "list-tasks", token: supplierToken }),
+        }
+      );
+      const data = await resp.json();
+      if (data.error) return 0;
+      const tasks = data.tasks || [];
+      return tasks.filter((t: any) => t.status !== "concluida" && t.status !== "cancelada").length;
+    },
+    refetchInterval: 30_000,
+  });
+
   // Fetch accounts
   const { data: accounts, refetch: refetchAccounts } = useQuery({
     queryKey: ["supplier-accounts", session.supplier_workspace_id],
@@ -294,8 +318,13 @@ export function SupplierDashboard({ session }: Props) {
             <TabsTrigger value="visao-geral" className="gap-1 sm:gap-1.5 text-[11px] sm:text-xs">
               <Building2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" /> Contas
             </TabsTrigger>
-            <TabsTrigger value="operacoes" className="gap-1 sm:gap-1.5 text-[11px] sm:text-xs">
+            <TabsTrigger value="operacoes" className="gap-1 sm:gap-1.5 text-[11px] sm:text-xs relative">
               <ClipboardList className="h-3 w-3 sm:h-3.5 sm:w-3.5" /> Operações
+              {openTasksCount > 0 && (
+                <span className="ml-1 inline-flex items-center justify-center h-4 min-w-[16px] px-1 rounded-full bg-emerald-500 text-white text-[9px] font-bold leading-none">
+                  {openTasksCount}
+                </span>
+              )}
             </TabsTrigger>
             <TabsTrigger value="titulares" className="gap-1 sm:gap-1.5 text-[11px] sm:text-xs">
               <Users className="h-3 w-3 sm:h-3.5 sm:w-3.5" /> Titulares
