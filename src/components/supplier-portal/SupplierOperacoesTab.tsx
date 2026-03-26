@@ -10,7 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   ClipboardList, Clock, CheckCircle2, XCircle, Zap,
-  Building2, ArrowRight, Upload, User, Banknote, ArrowDownToLine, ArrowUpFromLine
+  Building2, ArrowRight, Upload, User, Banknote, ArrowDownToLine, ArrowUpFromLine, Ban
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
