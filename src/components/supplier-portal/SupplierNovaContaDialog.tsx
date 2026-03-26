@@ -20,6 +20,9 @@ interface Props {
   onSuccess: () => void;
   prefillTitularId?: string;
   prefillBookmakerIds?: string[];
+  activeTaskId?: string;
+  supplierToken?: string;
+  onTaskItemsCompleted?: () => void;
 }
 
 interface ContaEntry {
