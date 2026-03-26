@@ -145,29 +145,47 @@ export function SupplierTasksAdmin({ supplierWorkspaceId, supplierNome, parentWo
     },
   });
 
-  // Fetch allowed bookmakers for allocation context
+  // Fetch allowed bookmakers for allocation context (with catalog info for criacao_conta)
   const { data: allowedBookmakers = [] } = useQuery({
     queryKey: ["supplier-allowed-bookmakers-admin", supplierWorkspaceId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("supplier_allowed_bookmakers")
-        .select("bookmaker_catalogo_id, valor_alocado")
+        .select("bookmaker_catalogo_id, valor_alocado, bookmakers_catalogo(id, nome, logo_url)")
         .eq("supplier_workspace_id", supplierWorkspaceId);
       if (error) throw error;
       return (data || []).map((a: any) => ({
         bookmaker_catalogo_id: a.bookmaker_catalogo_id,
         valor_alocado: Number(a.valor_alocado) || 0,
+        nome: a.bookmakers_catalogo?.nome || "—",
+        logo_url: a.bookmakers_catalogo?.logo_url,
       }));
     },
   });
 
+  // For criacao_conta: show allowed bookmakers that the titular does NOT have yet
+  const casasForCriacao = useMemo(() => {
+    if (!titularId || tipo !== "criacao_conta") return [];
+    const existingIds = new Set(titularAccounts.map((a: any) => a.bookmaker_catalogo_id));
+    return allowedBookmakers
+      .filter((b: any) => !existingIds.has(b.bookmaker_catalogo_id))
+      .map((b: any) => ({
+        bookmaker_catalogo_id: b.bookmaker_catalogo_id,
+        nome: b.nome,
+        logo_url: b.logo_url,
+        saldo_atual: 0,
+        valor_alocado: b.valor_alocado,
+      }));
+  }, [titularId, tipo, allowedBookmakers, titularAccounts]);
+
   const casasForTitular = useMemo(() => {
     if (!titularId) return [];
+    if (tipo === "criacao_conta") return casasForCriacao;
     return titularAccounts;
-  }, [titularId, titularAccounts]);
+  }, [titularId, titularAccounts, tipo, casasForCriacao]);
 
   const selectedTitular = titulares.find((t: any) => t.id === titularId);
-  const needsCasa = tipo === "deposito" || tipo === "saque" || tipo === "ajuste_saldo";
+  const needsCasa = tipo === "deposito" || tipo === "saque" || tipo === "ajuste_saldo" || tipo === "criacao_conta";
   const needsTitular = tipo !== "outros";
 
   // Toggle a casa in multi-select

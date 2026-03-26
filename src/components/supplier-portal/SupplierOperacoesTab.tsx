@@ -20,6 +20,7 @@ interface Props {
   supplierToken: string;
   onNavigateToDeposit?: (titularId: string, bookmakerCatalogoId: string, valor?: number, taskId?: string) => void;
   onNavigateToSaque?: (titularId: string, bookmakerCatalogoId: string, valor?: number, taskId?: string) => void;
+  onNavigateToCreateAccount?: (titularId: string, bookmakerCatalogoIds: string[], taskId?: string) => void;
 }
 
 const TIPO_LABELS: Record<string, string> = {
