@@ -268,6 +268,13 @@ export function SupplierDashboard({ session }: Props) {
             />
           </TabsContent>
 
+          <TabsContent value="operacoes" className="mt-4">
+            <SupplierOperacoesTab
+              supplierWorkspaceId={session.supplier_workspace_id}
+              supplierToken={supplierToken}
+            />
+          </TabsContent>
+
           <TabsContent value="titulares" className="mt-4">
             <SupplierTitularesTab
               supplierWorkspaceId={session.supplier_workspace_id}
