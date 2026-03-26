@@ -76,6 +76,7 @@ function formatCurrency(val: number) {
 export function SupplierTasksAdmin({ supplierWorkspaceId, supplierNome, parentWorkspaceId }: Props) {
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
+  const [editTask, setEditTask] = useState<any>(null);
   const [filterStatus, setFilterStatus] = useState<string>("all");
 
   // Form state
