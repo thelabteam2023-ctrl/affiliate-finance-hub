@@ -320,11 +320,11 @@ export function SupplierDashboard({ session }: Props) {
             <SupplierOperacoesTab
               supplierWorkspaceId={session.supplier_workspace_id}
               supplierToken={supplierToken}
-              onNavigateToDeposit={(titularId, bookmakerCatalogoId, valor) =>
-                handleTaskNavigate("DEPOSITO", titularId, bookmakerCatalogoId, valor)
+              onNavigateToDeposit={(titularId, bookmakerCatalogoId, valor, taskId) =>
+                handleTaskNavigate("DEPOSITO", titularId, bookmakerCatalogoId, valor, taskId)
               }
-              onNavigateToSaque={(titularId, bookmakerCatalogoId, valor) =>
-                handleTaskNavigate("SAQUE", titularId, bookmakerCatalogoId, valor)
+              onNavigateToSaque={(titularId, bookmakerCatalogoId, valor, taskId) =>
+                handleTaskNavigate("SAQUE", titularId, bookmakerCatalogoId, valor, taskId)
               }
             />
           </TabsContent>
@@ -352,6 +352,8 @@ export function SupplierDashboard({ session }: Props) {
             setPrefillTitularId(undefined);
             setPrefillContaId(undefined);
             setPrefillValor(undefined);
+            setActiveTaskId(undefined);
+            setActiveBookmakerCatalogoId(undefined);
           }
         }}
         tipo={transacaoTipo}
@@ -361,7 +363,7 @@ export function SupplierDashboard({ session }: Props) {
         valorSugerido={prefillValor ?? (alocacao?.valor_sugerido_deposito ? Number(alocacao.valor_sugerido_deposito) : undefined)}
         prefillTitularId={prefillTitularId}
         prefillContaId={prefillContaId}
-        onSuccess={handleRefresh}
+        onSuccess={handleTransactionSuccess}
       />
 
       <SupplierBancosModal
