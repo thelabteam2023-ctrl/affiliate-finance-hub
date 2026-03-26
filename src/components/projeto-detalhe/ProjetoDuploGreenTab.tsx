@@ -670,6 +670,17 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
     }
   }, [projetoId, invalidateSaldos, onDataChange]);
 
+  // === DUPLICAR ===
+  const handleDuplicateAposta = useCallback((apostaId: string) => {
+    const url = `/janela/aposta/novo?projetoId=${encodeURIComponent(projetoId)}&tab=duplogreen&duplicateFrom=${apostaId}`;
+    window.open(url, '_blank', 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
+  }, [projetoId]);
+
+  const handleDuplicateSurebet = useCallback((surebetId: string) => {
+    const url = `/janela/surebet/novo?projetoId=${encodeURIComponent(projetoId)}&tab=duplogreen&duplicateFrom=${surebetId}`;
+    window.open(url, '_blank', 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
+  }, [projetoId]);
+
   // Filtrar pendentes fora do período para KPIs
   const apostasParaKpi = useMemo(() => 
     filterForKpis(apostas, dateRange?.start, dateRange?.end),
@@ -1328,7 +1339,8 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
                   onEdit={() => handleOpenAposta(aposta)}
                   onQuickResolve={handleQuickResolveSurebet}
                   onPernaResultChange={handleSurebetPernaResolve}
-                  onDelete={handleDeleteSurebet}
+                   onDelete={handleDeleteSurebet}
+                   onDuplicate={handleDuplicateSurebet}
                   formatCurrency={formatCurrency}
                   convertToConsolidation={convertFnOficial}
                   bookmakerNomeMap={bookmakerNomeMap}
@@ -1386,7 +1398,8 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
                         onEdit={() => handleOpenAposta(aposta)}
                         onQuickResolve={handleQuickResolveSurebet}
                         onPernaResultChange={handleSurebetPernaResolve}
-                        onDelete={handleDeleteAposta}
+                         onDelete={handleDeleteAposta}
+                         onDuplicate={handleDuplicateSurebet}
                         formatCurrency={formatCurrency}
                         convertToConsolidation={convertFnOficial}
                         bookmakerNomeMap={bookmakerNomeMap}
@@ -1401,7 +1414,8 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
                       estrategia="DUPLO_GREEN"
                       onEdit={(apostaId) => { const a = apostasFiltradas.find(ap => ap.id === apostaId); if (a) handleOpenAposta(a); }}
                       onQuickResolve={handleQuickResolve}
-                      onDelete={handleDeleteAposta}
+                       onDelete={handleDeleteAposta}
+                       onDuplicate={handleDuplicateAposta}
                       variant={viewMode === "cards" ? "card" : "list"}
                       formatCurrency={formatCurrency}
                       convertToConsolidation={convertFnOficial}
