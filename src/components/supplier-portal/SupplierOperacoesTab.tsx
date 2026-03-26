@@ -234,8 +234,8 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNav
             const casasItems = task.casas_items as any[] | null;
             const isMultiCasa = casasItems && casasItems.length > 1;
             const ctaLabel = getDirectCTALabel(task.tipo);
-            const hasDirectAction = !isMultiCasa && ctaLabel && task.titular_id && task.bookmaker_catalogo_id;
-            const TipoIcon = TIPO_ICONS[task.tipo];
+            const canNavigate = !!onNavigateToDeposit || !!onNavigateToSaque;
+            const hasDirectAction = !isMultiCasa && ctaLabel && task.titular_id && task.bookmaker_catalogo_id && canNavigate;
 
             return (
               <Card
