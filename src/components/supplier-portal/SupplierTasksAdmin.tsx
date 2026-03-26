@@ -504,10 +504,21 @@ export function SupplierTasksAdmin({ supplierWorkspaceId, supplierNome, parentWo
       ) : (
         <ScrollArea className="max-h-[500px]">
           <div className="space-y-2">
-            {filteredTasks.map((task: any) => (
-              <Card key={task.id} className="hover:border-primary/20 transition-colors">
-                <CardContent className="py-3 px-4">
-                  <div className="flex items-start justify-between gap-3">
+            {filteredTasks.map((task: any) => {
+              const isExpanded = expandedTasks[task.id] || false;
+              const casasItems = task.casas_items as any[] | null;
+              const isMultiCasa = casasItems && casasItems.length > 1;
+              const PREVIEW_COUNT = 3;
+              const previewItems = (casasItems || []).slice(0, PREVIEW_COUNT);
+              const remainingCount = Math.max(0, (casasItems || []).length - PREVIEW_COUNT);
+
+              return (
+                <Card key={task.id} className={`transition-colors ${isExpanded ? "border-primary/30" : "hover:border-primary/20"}`}>
+                  {/* Collapsible Header */}
+                  <div
+                    className="flex items-center justify-between gap-3 py-3 px-4 cursor-pointer select-none"
+                    onClick={() => toggleTaskExpanded(task.id)}
+                  >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <Badge variant="outline" className={`text-[10px] ${PRIORIDADE_COLORS[task.prioridade]}`}>
@@ -524,32 +535,24 @@ export function SupplierTasksAdmin({ supplierWorkspaceId, supplierNome, parentWo
                           {TIPO_LABELS[task.tipo] || task.tipo}
                         </Badge>
                       </div>
-
                       <p className="text-sm font-medium text-foreground truncate">{task.titulo}</p>
-
-                      {task.descricao && (
-                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{task.descricao}</p>
-                      )}
-
-                      <div className="flex items-center gap-3 mt-2 text-[10px] text-muted-foreground flex-wrap">
+                      <div className="flex items-center gap-3 mt-1.5 text-[10px] text-muted-foreground flex-wrap">
                         {task.supplier_titulares?.nome && (
                           <span className="flex items-center gap-1">
                             <User className="h-3 w-3" />
                             {task.supplier_titulares.nome}
                           </span>
                         )}
-                        {/* Single casa display */}
                         {!task.casas_items && task.bookmakers_catalogo?.nome && (
                           <span className="flex items-center gap-1">
                             <Building2 className="h-3 w-3" />
                             {task.bookmakers_catalogo.nome}
                           </span>
                         )}
-                        {/* Multi-casa count */}
-                        {task.casas_items && (task.casas_items as any[]).length > 1 && (
+                        {isMultiCasa && (
                           <span className="flex items-center gap-1">
                             <Building2 className="h-3 w-3" />
-                            {(task.casas_items as any[]).length} casas
+                            {casasItems!.length} casas
                           </span>
                         )}
                         {task.valor && (
@@ -564,10 +567,66 @@ export function SupplierTasksAdmin({ supplierWorkspaceId, supplierNome, parentWo
                         <span>{format(new Date(task.created_at), "dd/MM HH:mm")}</span>
                       </div>
 
-                      {/* Multi-casa items breakdown */}
-                      {renderTaskCasasItems(task)}
+                      {/* Preview when collapsed */}
+                      {!isExpanded && isMultiCasa && (
+                        <div className="mt-2 space-y-0.5">
+                          {previewItems.map((item: any, idx: number) => (
+                            <div key={idx} className="flex items-center gap-2 text-[11px] text-muted-foreground py-0.5">
+                              {item.logo_url && <img src={item.logo_url} alt="" className="h-4 w-4 rounded shrink-0" />}
+                              <span className="truncate font-medium text-foreground">{item.nome}</span>
+                              {item.valor > 0 && (
+                                <span className="ml-auto shrink-0 tabular-nums">{formatCurrency(item.valor)}</span>
+                              )}
+                            </div>
+                          ))}
+                          {remainingCount > 0 && (
+                            <p className="text-[10px] text-primary mt-1">+{remainingCount} casa{remainingCount > 1 ? "s" : ""}</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
 
-                      {/* Single allocation context — only show suggestion for new accounts */}
+                    {/* Right: Actions + Chevron */}
+                    <div className="flex items-center gap-1 shrink-0">
+                      {task.status !== "concluido" && task.status !== "rejeitado" && (
+                        <Button variant="ghost" size="icon" className="h-7 w-7"
+                          onClick={(e) => { e.stopPropagation(); openEditTask(task); }}>
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                        onClick={(e) => { e.stopPropagation(); setDeleteTask(task); }}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                      <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`} />
+                    </div>
+                  </div>
+
+                  {/* Expanded Content */}
+                  {isExpanded && (
+                    <CardContent className="pt-0 px-4 pb-3">
+                      {task.descricao && (
+                        <p className="text-xs text-muted-foreground mb-2">{task.descricao}</p>
+                      )}
+
+                      {/* Multi-casa items */}
+                      {isMultiCasa && (
+                        <ScrollArea className="max-h-[350px]">
+                          <div className="space-y-1.5">
+                            {casasItems!.map((item: any, idx: number) => (
+                              <div key={idx} className="flex items-center justify-between text-xs py-2 px-3 rounded-md bg-muted/30">
+                                <div className="flex items-center gap-2">
+                                  {item.logo_url && <img src={item.logo_url} alt="" className="h-5 w-5 rounded" />}
+                                  <span className="text-foreground font-medium">{item.nome}</span>
+                                </div>
+                                <span className="font-semibold text-foreground">{formatCurrency(item.valor)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </ScrollArea>
+                      )}
+
+                      {/* Single allocation context */}
                       {!task.casas_items && task.valor_alvo_casa != null && task.valor_atual_casa === 0 && (
                         <div className="flex items-center gap-2 mt-1.5 text-[10px]">
                           <span className="text-primary">Sugestão: {formatCurrency(task.valor_alvo_casa)}</span>
@@ -586,33 +645,11 @@ export function SupplierTasksAdmin({ supplierWorkspaceId, supplierNome, parentWo
                           Ver comprovante
                         </a>
                       )}
-                    </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      {/* Edit button for non-concluded tasks */}
-                      {task.status !== "concluido" && task.status !== "rejeitado" && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={() => openEditTask(task)}
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                      )}
-                      {/* Delete button */}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                        onClick={() => setDeleteTask(task)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                    </CardContent>
+                  )}
+                </Card>
+              );
+            })}
           </div>
         </ScrollArea>
       )}
