@@ -188,6 +188,8 @@ export function SupplierDashboard({ session }: Props) {
 
   const expiresAt = new Date(session.expires_at);
   const hoursRemaining = Math.max(0, Math.round((expiresAt.getTime() - Date.now()) / (1000 * 60 * 60)));
+  const daysRemaining = hoursRemaining / 24;
+  const showExpiry = daysRemaining <= 5;
 
   function handleRefresh() {
     refetchLedger();
