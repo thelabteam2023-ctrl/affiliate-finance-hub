@@ -20,6 +20,8 @@ interface Props {
   accounts: any[];
   saldoDisponivel: number;
   valorSugerido?: number;
+  prefillTitularId?: string;
+  prefillContaId?: string;
   onSuccess: () => void;
 }
 
