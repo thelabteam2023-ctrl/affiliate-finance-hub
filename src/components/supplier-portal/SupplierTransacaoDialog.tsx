@@ -288,8 +288,8 @@ export function SupplierTransacaoDialog({
             {/* Titular selector */}
             <div>
               <Label>Titular *</Label>
-              <Select value={titularId} onValueChange={setTitularId}>
-                <SelectTrigger>
+              <Select value={titularId} onValueChange={setTitularId} disabled={!!prefillTitularId}>
+                <SelectTrigger className={prefillTitularId ? "opacity-80" : ""}>
                   <SelectValue placeholder="Selecione o titular" />
                 </SelectTrigger>
                 <SelectContent>
@@ -440,8 +440,8 @@ export function SupplierTransacaoDialog({
             {/* Account selector */}
             <div>
               <Label>Conta (Casa) *</Label>
-              <Select value={contaId} onValueChange={setContaId}>
-                <SelectTrigger>
+              <Select value={contaId} onValueChange={prefillContaId ? undefined : setContaId} disabled={!!prefillContaId}>
+                <SelectTrigger className={prefillContaId ? "opacity-80 cursor-not-allowed" : ""}>
                   <SelectValue placeholder="Selecione a conta" />
                 </SelectTrigger>
                 <SelectContent>
