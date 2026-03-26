@@ -78,6 +78,17 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNav
   const [observacoes, setObservacoes] = useState("");
   const [uploading, setUploading] = useState(false);
   const [comprovanteFile, setComprovanteFile] = useState<File | null>(null);
+  // Track unavailable items per task: Record<taskId, Set<bookmaker_catalogo_id>>
+  const [unavailableItems, setUnavailableItems] = useState<Record<string, Set<string>>>({});
+
+  const toggleUnavailable = useCallback((taskId: string, catalogoId: string) => {
+    setUnavailableItems(prev => {
+      const current = new Set(prev[taskId] || []);
+      if (current.has(catalogoId)) current.delete(catalogoId);
+      else current.add(catalogoId);
+      return { ...prev, [taskId]: current };
+    });
+  }, []);
 
   // Fetch tasks via edge function
   const { data: tasks = [], isLoading } = useQuery({
