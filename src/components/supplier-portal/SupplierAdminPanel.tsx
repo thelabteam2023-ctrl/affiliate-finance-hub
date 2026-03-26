@@ -459,7 +459,7 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
                   />
                 </div>
               )}
-            </div>
+              </>
             );
           })}
         </div>
