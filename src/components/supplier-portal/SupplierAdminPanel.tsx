@@ -638,10 +638,98 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
 
       {/* Dialog: Gerar Link */}
       <Dialog open={linkOpen} onOpenChange={setLinkOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Gerar Link de Acesso - {selectedSupplier?.nome}</DialogTitle>
+            <DialogTitle>Links de Acesso — {selectedSupplier?.nome}</DialogTitle>
           </DialogHeader>
+
+          {/* Active links list */}
+          {(() => {
+            const activeTokens = (selectedSupplier?.supplier_access_tokens || [])
+              .filter((t: any) => !t.revoked_at && new Date(t.expires_at) > new Date())
+              .sort((a: any, b: any) => +new Date(a.expires_at) - +new Date(b.expires_at));
+
+            const formatRemaining = (expiresAt: string) => {
+              const diffMs = Math.max(0, +new Date(expiresAt) - Date.now());
+              const hours = Math.floor(diffMs / 3_600_000);
+              const minutes = Math.floor((diffMs % 3_600_000) / 60_000);
+              if (hours >= 24) {
+                const days = Math.floor(hours / 24);
+                const remHours = hours % 24;
+                return `${days}d ${remHours}h`;
+              }
+              return `${hours}h ${minutes}m`;
+            };
+
+            return activeTokens.length > 0 ? (
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground font-medium">Links ativos ({activeTokens.length})</p>
+                <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
+                  {activeTokens.map((token: any) => (
+                    <div key={token.id} className="flex items-center justify-between gap-2 py-2 px-3 rounded-md bg-muted/30 border border-border/50">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-foreground truncate">
+                          {token.label || "Sem rótulo"}
+                        </p>
+                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-0.5">
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-2.5 w-2.5" />
+                            {formatRemaining(token.expires_at)} restantes
+                          </span>
+                          {token.use_count > 0 && (
+                            <span>{token.use_count}x usado</span>
+                          )}
+                          {token.last_used_at && (
+                            <span>Último: {format(new Date(token.last_used_at), "dd/MM HH:mm")}</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 px-2 text-[10px] gap-1"
+                          onClick={async () => {
+                            const hoursStr = prompt("Nova duração em horas (a partir de agora):", "72");
+                            if (!hoursStr) return;
+                            const hours = parseInt(hoursStr);
+                            if (isNaN(hours) || hours <= 0) { toast.error("Valor inválido"); return; }
+                            const newExpiry = new Date(Date.now() + hours * 3_600_000).toISOString();
+                            const { error } = await supabase
+                              .from("supplier_access_tokens")
+                              .update({ expires_at: newExpiry })
+                              .eq("id", token.id);
+                            if (error) { toast.error("Erro ao renovar"); return; }
+                            toast.success(`Renovado por ${hours}h`);
+                            queryClient.invalidateQueries({ queryKey: ["admin-suppliers"] });
+                          }}
+                        >
+                          <RefreshCw className="h-3 w-3" /> Renovar
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 px-2 text-[10px] text-destructive hover:text-destructive gap-1"
+                          onClick={async () => {
+                            const { error } = await supabase
+                              .from("supplier_access_tokens")
+                              .update({ revoked_at: new Date().toISOString() })
+                              .eq("id", token.id);
+                            if (error) { toast.error("Erro ao revogar"); return; }
+                            toast.success("Link revogado");
+                            queryClient.invalidateQueries({ queryKey: ["admin-suppliers"] });
+                          }}
+                        >
+                          <XCircle className="h-3 w-3" /> Revogar
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="border-t border-border pt-3 mt-3" />
+              </div>
+            ) : null;
+          })()}
 
           {generatedLink ? (
             <div className="space-y-4">
@@ -664,6 +752,7 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
           ) : (
             <>
               <div className="space-y-3">
+                <p className="text-xs text-muted-foreground">Gerar novo link de acesso</p>
                 <div>
                   <Label>Validade (horas)</Label>
                   <Input type="number" value={ttlHours} onChange={e => setTtlHours(e.target.value)} />
