@@ -82,6 +82,18 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, exist
   // Track unavailable items per task: Record<taskId, Set<bookmaker_catalogo_id>>
   const [unavailableItems, setUnavailableItems] = useState<Record<string, Set<string>>>({});
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
+  // Track which task cards are expanded (collapsible accordion)
+  const [expandedTasks, setExpandedTasks] = useState<Record<string, boolean>>({});
+  
+  const toggleTaskExpanded = useCallback((taskId: string) => {
+    setExpandedTasks(prev => {
+      // Auto-collapse others (accordion behavior)
+      const isCurrentlyOpen = prev[taskId];
+      const next: Record<string, boolean> = {};
+      if (!isCurrentlyOpen) next[taskId] = true;
+      return next;
+    });
+  }, []);
 
   const toggleUnavailable = useCallback((taskId: string, catalogoId: string) => {
     setUnavailableItems(prev => {
@@ -309,134 +321,174 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, exist
                 : !isMultiCasa && ctaLabel && task.titular_id && task.bookmaker_catalogo_id && (isAguardandoRecebimento || canNavigate);
               const TipoIcon = TIPO_ICONS[task.tipo];
 
+              const isTaskExpanded = expandedTasks[task.id] || false;
+              const PREVIEW_COUNT = 3;
+              const allItems = casasItems || [];
+              const previewItems = allItems.slice(0, PREVIEW_COUNT);
+              const remainingCount = Math.max(0, allItems.length - PREVIEW_COUNT);
+
               return (
                 <Card
                   key={task.id}
-                  className={`hover:border-primary/20 transition-colors ${
+                  className={`transition-colors ${
                     task.prioridade === "urgente" ? "border-red-500/30" : ""
-                  }`}
+                  } ${isTaskExpanded ? "border-primary/30" : "hover:border-primary/20"}`}
                 >
-                  <CardContent className="py-3 px-4">
-                    <div className="flex items-start justify-between gap-2">
-                      <div
-                        className="flex-1 min-w-0 cursor-pointer"
-                        onClick={() => { setSelectedTask(task); setActionType(null); setObservacoes(""); setComprovanteFile(null); }}
-                      >
-                        <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-                          <Badge variant="outline" className={`text-[10px] ${PRIORIDADE_COLORS[task.prioridade]}`}>
-                            {task.prioridade === "urgente" && <Zap className="h-2.5 w-2.5 mr-0.5" />}
-                            {PRIORIDADE_LABELS[task.prioridade]}
+                  {/* Collapsible Header - Always visible */}
+                  <div
+                    className="flex items-center justify-between gap-3 py-3 px-4 cursor-pointer select-none"
+                    onClick={() => toggleTaskExpanded(task.id)}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                        <Badge variant="outline" className={`text-[10px] ${PRIORIDADE_COLORS[task.prioridade]}`}>
+                          {task.prioridade === "urgente" && <Zap className="h-2.5 w-2.5 mr-0.5" />}
+                          {PRIORIDADE_LABELS[task.prioridade]}
+                        </Badge>
+                        <Badge variant="outline" className={`text-[10px] ${STATUS_COLORS[task.status]}`}>
+                          {STATUS_LABELS[task.status]}
+                        </Badge>
+                        {task.tipo && (
+                          <Badge variant="outline" className="text-[10px]">
+                            {TIPO_LABELS[task.tipo] || task.tipo}
                           </Badge>
-                          <Badge variant="outline" className={`text-[10px] ${STATUS_COLORS[task.status]}`}>
-                            {STATUS_LABELS[task.status]}
-                          </Badge>
-                        </div>
-                        <p className="text-sm font-medium text-foreground">{task.titulo}</p>
-                        {task.descricao && (
-                          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{task.descricao}</p>
                         )}
-                        <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground flex-wrap">
-                          {task.titular_nome && (
-                            <span className="flex items-center gap-1.5">
-                              <User className="h-3.5 w-3.5" />
-                              {task.titular_nome}
-                            </span>
-                          )}
-                          {!isMultiCasa && task.casa_nome && (
-                            <span className="flex items-center gap-1.5">
-                              {task.casa_logo && <img src={task.casa_logo} alt="" className="h-4 w-4 rounded" />}
-                              {task.casa_nome}
-                            </span>
-                          )}
-                          {isMultiCasa && (
-                            <span className="flex items-center gap-1.5">
-                              <Building2 className="h-3.5 w-3.5" />
-                              {casasItems!.length} casas
-                            </span>
-                          )}
-                          {task.valor && (
-                            <span className="font-semibold text-foreground">{formatCurrency(task.valor)}</span>
-                          )}
-                          {task.data_limite && (
-                            <span className="flex items-center gap-1">
-                              <Clock className="h-3.5 w-3.5" />
-                              {format(new Date(task.data_limite), "dd/MM HH:mm")}
-                            </span>
+                      </div>
+                      <p className="text-sm font-medium text-foreground">{task.titulo}</p>
+                      <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground flex-wrap">
+                        {task.titular_nome && (
+                          <span className="flex items-center gap-1">
+                            <User className="h-3 w-3" />
+                            {task.titular_nome}
+                          </span>
+                        )}
+                        {isMultiCasa && (
+                          <span className="flex items-center gap-1">
+                            <Building2 className="h-3 w-3" />
+                            {casasItems!.length} casas
+                          </span>
+                        )}
+                        {!isMultiCasa && task.casa_nome && (
+                          <span className="flex items-center gap-1">
+                            {task.casa_logo && <img src={task.casa_logo} alt="" className="h-3.5 w-3.5 rounded" />}
+                            {task.casa_nome}
+                          </span>
+                        )}
+                        {task.valor && (
+                          <span className="font-semibold text-foreground">{formatCurrency(task.valor)}</span>
+                        )}
+                        {task.data_limite && (
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {format(new Date(task.data_limite), "dd/MM HH:mm")}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Preview when collapsed - show first 3 items */}
+                      {!isTaskExpanded && isMultiCasa && (
+                        <div className="mt-2 space-y-0.5">
+                          {previewItems.map((item: any, idx: number) => (
+                            <div key={idx} className="flex items-center gap-2 text-[11px] text-muted-foreground py-0.5">
+                              {item.logo_url && <img src={item.logo_url} alt="" className="h-4 w-4 rounded shrink-0" />}
+                              <span className={`truncate ${item.concluido ? "line-through opacity-50" : "font-medium text-foreground"}`}>{item.nome}</span>
+                              {item.valor > 0 && (
+                                <span className="ml-auto shrink-0 tabular-nums">{formatCurrency(item.valor)}</span>
+                              )}
+                            </div>
+                          ))}
+                          {remainingCount > 0 && (
+                            <p className="text-[10px] text-primary mt-1">+{remainingCount} casa{remainingCount > 1 ? "s" : ""}</p>
                           )}
                         </div>
+                      )}
+                    </div>
 
-                        {/* Multi-casa breakdown */}
-                        {isMultiCasa && (() => {
-                          const withDeposit = casasItems!.filter((item: any) => item.valor > 0 || item.concluido);
-                          const withoutDeposit = casasItems!.filter((item: any) => !item.valor && !item.concluido);
-                          const isExpanded = expandedCards[task.id];
+                    {/* Right: CTA + Chevron */}
+                    <div className="shrink-0 flex items-center gap-2">
+                      {hasDirectAction && (
+                        <Button
+                          size="sm"
+                          className={`gap-1.5 text-xs ${isAguardandoRecebimento ? "bg-orange-500 hover:bg-orange-600" : ""}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (isAguardandoRecebimento) {
+                              handleConfirmRecebimento(task);
+                            } else {
+                              handleDirectAction(task);
+                            }
+                          }}
+                        >
+                          {isAguardandoRecebimento ? (
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                          ) : (
+                            TipoIcon && <TipoIcon className="h-3.5 w-3.5" />
+                          )}
+                          {ctaLabel}
+                        </Button>
+                      )}
+                      <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${isTaskExpanded ? "rotate-180" : ""}`} />
+                    </div>
+                  </div>
 
-                          const renderItem = (item: any, idx: number) => {
-                            const itemCtaLabel = getDirectCTALabel(task.tipo);
-                            const itemDone = item.concluido === true;
-                            const taskUnavailable = unavailableItems[task.id] || new Set();
-                            const isItemUnavailable = taskUnavailable.has(item.bookmaker_catalogo_id);
-                            const canExecItem = !itemDone && !isItemUnavailable && itemCtaLabel && task.titular_id && item.bookmaker_catalogo_id &&
-                              ((task.tipo === "deposito" && onNavigateToDeposit) || (task.tipo === "saque" && onNavigateToSaque) || (task.tipo === "criacao_conta" && onNavigateToCreateAccount));
-                            return (
-                              <div key={idx} className={`flex items-center gap-3 text-xs py-2.5 px-3 rounded-md ${
-                                itemDone ? "bg-emerald-500/10 border border-emerald-500/20" 
-                                : isItemUnavailable ? "bg-muted/20 opacity-50 border border-dashed border-muted-foreground/20"
-                                : "bg-muted/30"
-                              }`}>
-                                {/* Left: Status icon + Logo + Name */}
-                                <div className="flex items-center gap-2 min-w-0 flex-1">
-                                  {itemDone && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />}
-                                  {isItemUnavailable && !itemDone && <Ban className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
-                                  {item.logo_url && <img src={item.logo_url} alt="" className="h-5 w-5 rounded shrink-0" />}
-                                  <span className={`font-medium truncate ${itemDone ? "line-through opacity-60" : ""} ${isItemUnavailable ? "line-through" : ""}`}>{item.nome}</span>
-                                </div>
-                                
-                                {/* Right: Value + Action (single clean group) */}
-                                <div className="flex items-center gap-2 shrink-0">
-                                  {item.valor > 0 && !isItemUnavailable && (
-                                    <span className={`font-semibold whitespace-nowrap ${task.tipo === "criacao_conta" ? "text-muted-foreground text-[10px]" : "text-foreground"}`}>
-                                      {task.tipo === "criacao_conta" ? `Dep. ${formatCurrency(item.valor)}` : formatCurrency(item.valor)}
-                                    </span>
-                                  )}
-                                  
-                                  {itemDone ? (
-                                    <span className="text-[10px] text-emerald-400 font-medium">Criada</span>
-                                  ) : isItemUnavailable ? (
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      className="h-7 px-2.5 text-[10px] text-muted-foreground hover:text-foreground"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        toggleUnavailable(task.id, item.bookmaker_catalogo_id);
-                                      }}
-                                    >
-                                      Restaurar
-                                    </Button>
-                                  ) : (
-                                    <>
-                                      {canExecItem && (
-                                        <Button
-                                          size="sm"
-                                          className="h-7 px-3 text-xs font-medium"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleDirectAction(task, item.bookmaker_catalogo_id, item.valor);
-                                          }}
-                                        >
-                                          {itemCtaLabel}
-                                        </Button>
-                                      )}
-                                    </>
-                                  )}
-                                </div>
-                              </div>
-                            );
-                          };
+                  {/* Expanded Content */}
+                  {isTaskExpanded && (
+                    <CardContent className="pt-0 px-4 pb-3">
+                      {task.descricao && (
+                        <p className="text-xs text-muted-foreground mb-2">{task.descricao}</p>
+                      )}
 
+                      {isMultiCasa && (() => {
+                        const withDeposit = casasItems!.filter((item: any) => item.valor > 0 || item.concluido);
+                        const withoutDeposit = casasItems!.filter((item: any) => !item.valor && !item.concluido);
+                        const isNoDepExpanded = expandedCards[task.id];
+
+                        const renderItem = (item: any, idx: number) => {
+                          const itemCtaLabel = getDirectCTALabel(task.tipo);
+                          const itemDone = item.concluido === true;
+                          const taskUnavailable = unavailableItems[task.id] || new Set();
+                          const isItemUnavailable = taskUnavailable.has(item.bookmaker_catalogo_id);
+                          const canExecItem = !itemDone && !isItemUnavailable && itemCtaLabel && task.titular_id && item.bookmaker_catalogo_id &&
+                            ((task.tipo === "deposito" && onNavigateToDeposit) || (task.tipo === "saque" && onNavigateToSaque) || (task.tipo === "criacao_conta" && onNavigateToCreateAccount));
                           return (
-                            <div className="mt-2 space-y-1">
+                            <div key={idx} className={`flex items-center gap-3 text-xs py-2.5 px-3 rounded-md ${
+                              itemDone ? "bg-emerald-500/10 border border-emerald-500/20" 
+                              : isItemUnavailable ? "bg-muted/20 opacity-50 border border-dashed border-muted-foreground/20"
+                              : "bg-muted/30"
+                            }`}>
+                              <div className="flex items-center gap-2 min-w-0 flex-1">
+                                {itemDone && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />}
+                                {isItemUnavailable && !itemDone && <Ban className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
+                                {item.logo_url && <img src={item.logo_url} alt="" className="h-5 w-5 rounded shrink-0" />}
+                                <span className={`font-medium truncate ${itemDone ? "line-through opacity-60" : ""} ${isItemUnavailable ? "line-through" : ""}`}>{item.nome}</span>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                {item.valor > 0 && !isItemUnavailable && (
+                                  <span className={`font-semibold whitespace-nowrap ${task.tipo === "criacao_conta" ? "text-muted-foreground text-[10px]" : "text-foreground"}`}>
+                                    {task.tipo === "criacao_conta" ? `Dep. ${formatCurrency(item.valor)}` : formatCurrency(item.valor)}
+                                  </span>
+                                )}
+                                {itemDone ? (
+                                  <span className="text-[10px] text-emerald-400 font-medium">Criada</span>
+                                ) : isItemUnavailable ? (
+                                  <Button size="sm" variant="ghost" className="h-7 px-2.5 text-[10px] text-muted-foreground hover:text-foreground"
+                                    onClick={(e) => { e.stopPropagation(); toggleUnavailable(task.id, item.bookmaker_catalogo_id); }}>
+                                    Restaurar
+                                  </Button>
+                                ) : canExecItem ? (
+                                  <Button size="sm" className="h-7 px-3 text-xs font-medium"
+                                    onClick={(e) => { e.stopPropagation(); handleDirectAction(task, item.bookmaker_catalogo_id, item.valor); }}>
+                                    {itemCtaLabel}
+                                  </Button>
+                                ) : null}
+                              </div>
+                            </div>
+                          );
+                        };
+
+                        return (
+                          <ScrollArea className="max-h-[350px]">
+                            <div className="space-y-1">
                               {withDeposit.map(renderItem)}
                               {withoutDeposit.length > 0 && (
                                 <>
@@ -448,69 +500,39 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, exist
                                       setExpandedCards(prev => ({ ...prev, [task.id]: !prev[task.id] }));
                                     }}
                                   >
-                                    <ChevronDown className={`h-3 w-3 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
-                                    <span>
-                                      {isExpanded ? "Ocultar" : `+${withoutDeposit.length} casa${withoutDeposit.length > 1 ? "s" : ""} sem depósito`}
-                                    </span>
+                                    <ChevronDown className={`h-3 w-3 transition-transform ${isNoDepExpanded ? "rotate-180" : ""}`} />
+                                    <span>{isNoDepExpanded ? "Ocultar" : `+${withoutDeposit.length} casa${withoutDeposit.length > 1 ? "s" : ""} sem depósito`}</span>
                                   </button>
-                                  {isExpanded && withoutDeposit.map(renderItem)}
+                                  {isNoDepExpanded && withoutDeposit.map(renderItem)}
                                 </>
                               )}
                             </div>
-                          );
-                        })()}
+                          </ScrollArea>
+                        );
+                      })()}
 
-                        {!isMultiCasa && task.valor_alvo_casa != null && task.valor_atual_casa != null && (
-                          <div className="flex items-center gap-2 mt-1 text-[10px]">
-                            <span className="text-muted-foreground">Atual: {formatCurrency(task.valor_atual_casa)}</span>
-                            <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                            <span className="text-primary">Alvo: {formatCurrency(task.valor_alvo_casa)}</span>
-                          </div>
-                        )}
-                      </div>
+                      {!isMultiCasa && task.valor_alvo_casa != null && task.valor_atual_casa != null && (
+                        <div className="flex items-center gap-2 mt-1 text-[10px]">
+                          <span className="text-muted-foreground">Atual: {formatCurrency(task.valor_atual_casa)}</span>
+                          <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                          <span className="text-primary">Alvo: {formatCurrency(task.valor_alvo_casa)}</span>
+                        </div>
+                      )}
 
-                      {/* Direct CTA Button */}
-                      <div className="shrink-0 flex flex-col gap-1.5">
-                        {hasDirectAction ? (
-                          <Button
-                            size="sm"
-                            className={`gap-1.5 text-xs ${isAguardandoRecebimento ? "bg-orange-500 hover:bg-orange-600" : ""}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (isAguardandoRecebimento) {
-                                handleConfirmRecebimento(task);
-                              } else {
-                                handleDirectAction(task);
-                              }
-                            }}
-                          >
-                            {isAguardandoRecebimento ? (
-                              <CheckCircle2 className="h-3.5 w-3.5" />
-                            ) : (
-                              TipoIcon && <TipoIcon className="h-3.5 w-3.5" />
-                            )}
-                            {ctaLabel}
-                          </Button>
-                        ) : (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="gap-1.5 text-xs"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedTask(task);
-                              setActionType(null);
-                              setObservacoes("");
-                              setComprovanteFile(null);
-                            }}
-                          >
-                            Detalhes
-                            <ArrowRight className="h-3 w-3" />
-                          </Button>
-                        )}
+                      {/* Details button */}
+                      <div className="mt-3 pt-2 border-t border-border/50 flex justify-end">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="gap-1.5 text-xs text-muted-foreground"
+                          onClick={() => { setSelectedTask(task); setActionType(null); setObservacoes(""); setComprovanteFile(null); }}
+                        >
+                          Ver detalhes
+                          <ArrowRight className="h-3 w-3" />
+                        </Button>
                       </div>
-                    </div>
-                  </CardContent>
+                    </CardContent>
+                  )}
                 </Card>
               );
             })}
