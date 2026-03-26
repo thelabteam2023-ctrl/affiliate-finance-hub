@@ -64,13 +64,14 @@ const STATUS_COLORS: Record<string, string> = {
 const TIPO_ICONS: Record<string, typeof Banknote> = {
   deposito: ArrowDownToLine,
   saque: ArrowUpFromLine,
+  criacao_conta: Building2,
 };
 
 function formatCurrency(val: number) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(val);
 }
 
-export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNavigateToDeposit, onNavigateToSaque }: Props) {
+export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNavigateToDeposit, onNavigateToSaque, onNavigateToCreateAccount }: Props) {
   const queryClient = useQueryClient();
   const [selectedTask, setSelectedTask] = useState<any>(null);
   const [actionType, setActionType] = useState<"concluir" | "rejeitar" | null>(null);
