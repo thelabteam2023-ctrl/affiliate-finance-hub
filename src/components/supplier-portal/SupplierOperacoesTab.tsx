@@ -335,7 +335,7 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNav
                               const itemCtaLabel = getDirectCTALabel(task.tipo);
                               const itemDone = item.concluido === true;
                               const canExecItem = !itemDone && itemCtaLabel && task.titular_id && item.bookmaker_catalogo_id &&
-                                ((task.tipo === "deposito" && onNavigateToDeposit) || (task.tipo === "saque" && onNavigateToSaque));
+                                ((task.tipo === "deposito" && onNavigateToDeposit) || (task.tipo === "saque" && onNavigateToSaque) || (task.tipo === "criacao_conta" && onNavigateToCreateAccount));
                               return (
                                 <div key={idx} className={`flex items-center justify-between text-xs py-2 px-3 rounded-md ${itemDone ? "bg-emerald-500/10 border border-emerald-500/20" : "bg-muted/30"}`}>
                                   <div className="flex items-center gap-2">
