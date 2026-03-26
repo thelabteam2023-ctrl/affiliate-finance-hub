@@ -46,6 +46,7 @@ export function SupplierDashboard({ session }: Props) {
   const [prefillValor, setPrefillValor] = useState<number | undefined>();
   const [activeTaskId, setActiveTaskId] = useState<string | undefined>();
   const [activeBookmakerCatalogoId, setActiveBookmakerCatalogoId] = useState<string | undefined>();
+  const [prefillCreateAccount, setPrefillCreateAccount] = useState<{ titularId: string; bookmakerIds: string[] } | null>(null);
   const queryClient = useQueryClient();
 
   // Get token from URL for edge function calls
@@ -342,6 +343,8 @@ export function SupplierDashboard({ session }: Props) {
               onRefresh={handleRefresh}
               onDepositar={() => { setTransacaoTipo("DEPOSITO"); setTransacaoOpen(true); }}
               onSacar={() => { setTransacaoTipo("SAQUE"); setTransacaoOpen(true); }}
+              prefillCreateAccount={prefillCreateAccount}
+              onClearPrefillCreate={() => setPrefillCreateAccount(null)}
             />
           </TabsContent>
 
@@ -356,9 +359,8 @@ export function SupplierDashboard({ session }: Props) {
                 handleTaskNavigate("SAQUE", titularId, bookmakerCatalogoId, valor, taskId)
               }
               onNavigateToCreateAccount={(titularId, bookmakerCatalogoIds, taskId) => {
-                setPrefillTitularId(titularId);
                 setActiveTaskId(taskId);
-                // Navigate to Contas tab — the supplier will use the existing creation wizard
+                setPrefillCreateAccount({ titularId, bookmakerIds: bookmakerCatalogoIds });
                 setActiveTab("visao-geral");
               }}
             />

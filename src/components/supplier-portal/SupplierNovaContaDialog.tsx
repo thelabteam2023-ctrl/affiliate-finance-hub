@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -18,6 +18,8 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   supplierWorkspaceId: string;
   onSuccess: () => void;
+  prefillTitularId?: string;
+  prefillBookmakerIds?: string[];
 }
 
 interface ContaEntry {
@@ -32,12 +34,13 @@ interface ContaEntry {
   autoFilled: boolean;
 }
 
-export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceId, onSuccess }: Props) {
+export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceId, onSuccess, prefillTitularId, prefillBookmakerIds }: Props) {
   const [step, setStep] = useState<1 | 2>(1);
   const [titularId, setTitularId] = useState("");
   const [selectedCasaIds, setSelectedCasaIds] = useState<Set<string>>(new Set());
   const [contas, setContas] = useState<ContaEntry[]>([]);
   const [casaSearch, setCasaSearch] = useState("");
+  const [prefillApplied, setPrefillApplied] = useState(false);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [globalLogin, setGlobalLogin] = useState("");
   const [globalPassword, setGlobalPassword] = useState("");
@@ -124,6 +127,20 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
     enabled: !!titularId && !!supplierToken,
     staleTime: 5 * 60 * 1000,
   });
+
+  // Apply prefill when dialog opens with prefill props
+  useEffect(() => {
+    if (open && prefillTitularId && !prefillApplied) {
+      setTitularId(prefillTitularId);
+      if (prefillBookmakerIds?.length) {
+        setSelectedCasaIds(new Set(prefillBookmakerIds));
+      }
+      setPrefillApplied(true);
+    }
+    if (!open) {
+      setPrefillApplied(false);
+    }
+  }, [open, prefillTitularId, prefillBookmakerIds, prefillApplied]);
 
   const availableCasas = useMemo(() => {
     if (!titularId) return catalogo;

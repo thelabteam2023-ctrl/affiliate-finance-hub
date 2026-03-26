@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +18,11 @@ interface Props {
   onRefresh: () => void;
   onDepositar: () => void;
   onSacar: () => void;
+  prefillCreateAccount?: {
+    titularId: string;
+    bookmakerIds: string[];
+  } | null;
+  onClearPrefillCreate?: () => void;
 }
 
 function formatCurrency(val: number, moeda = "BRL") {
@@ -192,9 +197,18 @@ export function SupplierContasTab({
   onRefresh,
   onDepositar,
   onSacar,
+  prefillCreateAccount,
+  onClearPrefillCreate,
 }: Props) {
   const [novaContaOpen, setNovaContaOpen] = useState(false);
   const [editAccount, setEditAccount] = useState<any | null>(null);
+
+  // Auto-open Nova Conta dialog when prefill is set
+  useEffect(() => {
+    if (prefillCreateAccount) {
+      setNovaContaOpen(true);
+    }
+  }, [prefillCreateAccount]);
 
   const groups = useMemo(() => groupByTitular(accounts), [accounts]);
   const hasSingleTitular = groups.length <= 1;
@@ -273,9 +287,14 @@ export function SupplierContasTab({
 
       <SupplierNovaContaDialog
         open={novaContaOpen}
-        onOpenChange={setNovaContaOpen}
+        onOpenChange={(open) => {
+          setNovaContaOpen(open);
+          if (!open) onClearPrefillCreate?.();
+        }}
         supplierWorkspaceId={supplierWorkspaceId}
         onSuccess={onRefresh}
+        prefillTitularId={prefillCreateAccount?.titularId}
+        prefillBookmakerIds={prefillCreateAccount?.bookmakerIds}
       />
 
       {editAccount && (
