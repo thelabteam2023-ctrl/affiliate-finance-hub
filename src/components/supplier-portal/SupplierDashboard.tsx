@@ -41,6 +41,9 @@ export function SupplierDashboard({ session }: Props) {
   const [transacaoOpen, setTransacaoOpen] = useState(false);
   const [transacaoTipo, setTransacaoTipo] = useState<"DEPOSITO" | "SAQUE" | "TRANSFERENCIA_BANCO">("DEPOSITO");
   const [bancosModalOpen, setBancosModalOpen] = useState(false);
+  const [prefillTitularId, setPrefillTitularId] = useState<string | undefined>();
+  const [prefillContaId, setPrefillContaId] = useState<string | undefined>();
+  const [prefillValor, setPrefillValor] = useState<number | undefined>();
 
   // Get token from URL for edge function calls
   const supplierToken = useMemo(() => new URLSearchParams(window.location.search).get("token") || "", []);
@@ -163,6 +166,18 @@ export function SupplierDashboard({ session }: Props) {
     refetchAccounts();
   }
 
+  function handleTaskNavigate(tipo: "DEPOSITO" | "SAQUE", titularId: string, bookmakerCatalogoId: string, valor?: number) {
+    // Find the account ID for this titular + bookmaker combo
+    const conta = (accounts || []).find(
+      (a: any) => a.titular_id === titularId && a.bookmaker_catalogo_id === bookmakerCatalogoId
+    );
+    setPrefillTitularId(titularId);
+    setPrefillContaId(conta?.id);
+    setPrefillValor(valor);
+    setTransacaoTipo(tipo);
+    setTransacaoOpen(true);
+  }
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -272,6 +287,12 @@ export function SupplierDashboard({ session }: Props) {
             <SupplierOperacoesTab
               supplierWorkspaceId={session.supplier_workspace_id}
               supplierToken={supplierToken}
+              onNavigateToDeposit={(titularId, bookmakerCatalogoId, valor) =>
+                handleTaskNavigate("DEPOSITO", titularId, bookmakerCatalogoId, valor)
+              }
+              onNavigateToSaque={(titularId, bookmakerCatalogoId, valor) =>
+                handleTaskNavigate("SAQUE", titularId, bookmakerCatalogoId, valor)
+              }
             />
           </TabsContent>
 
@@ -292,12 +313,21 @@ export function SupplierDashboard({ session }: Props) {
       {/* Transaction dialog */}
       <SupplierTransacaoDialog
         open={transacaoOpen}
-        onOpenChange={setTransacaoOpen}
+        onOpenChange={(open) => {
+          setTransacaoOpen(open);
+          if (!open) {
+            setPrefillTitularId(undefined);
+            setPrefillContaId(undefined);
+            setPrefillValor(undefined);
+          }
+        }}
         tipo={transacaoTipo}
         supplierWorkspaceId={session.supplier_workspace_id}
         accounts={accounts || []}
         saldoDisponivel={saldoDisponivel}
-        valorSugerido={alocacao?.valor_sugerido_deposito ? Number(alocacao.valor_sugerido_deposito) : undefined}
+        valorSugerido={prefillValor ?? (alocacao?.valor_sugerido_deposito ? Number(alocacao.valor_sugerido_deposito) : undefined)}
+        prefillTitularId={prefillTitularId}
+        prefillContaId={prefillContaId}
         onSuccess={handleRefresh}
       />
 

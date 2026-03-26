@@ -20,6 +20,8 @@ interface Props {
   accounts: any[];
   saldoDisponivel: number;
   valorSugerido?: number;
+  prefillTitularId?: string;
+  prefillContaId?: string;
   onSuccess: () => void;
 }
 
@@ -48,6 +50,8 @@ export function SupplierTransacaoDialog({
   accounts,
   saldoDisponivel,
   valorSugerido,
+  prefillTitularId,
+  prefillContaId,
   onSuccess,
 }: Props) {
   const token = useMemo(() => new URLSearchParams(window.location.search).get("token") || "", []);
@@ -113,10 +117,10 @@ export function SupplierTransacaoDialog({
   // Reset on open
   useEffect(() => {
     if (open) {
-      setStep(1);
-      setTitularId("");
+      setStep(prefillTitularId ? 1 : 1);
+      setTitularId(prefillTitularId || "");
       setBancoId("");
-      setContaId("");
+      setContaId(prefillContaId || "");
       setValor(valorSugerido?.toString() || "");
       setDescricao("");
       refetchBancos();

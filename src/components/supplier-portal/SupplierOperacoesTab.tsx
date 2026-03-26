@@ -168,14 +168,17 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNav
     });
   }
 
-  function handleDirectAction(task: any) {
-    if (task.tipo === "deposito" && onNavigateToDeposit && task.titular_id && task.bookmaker_catalogo_id) {
+  function handleDirectAction(task: any, overrideCatalogoId?: string, overrideValor?: number) {
+    const catalogoId = overrideCatalogoId || task.bookmaker_catalogo_id;
+    const valor = overrideValor ?? task.valor ?? undefined;
+
+    if (task.tipo === "deposito" && onNavigateToDeposit && task.titular_id && catalogoId) {
       // Mark as em_andamento first
       updateTaskMutation.mutate({ taskId: task.id, status: "em_andamento" });
-      onNavigateToDeposit(task.titular_id, task.bookmaker_catalogo_id, task.valor || undefined);
-    } else if (task.tipo === "saque" && onNavigateToSaque && task.titular_id && task.bookmaker_catalogo_id) {
+      onNavigateToDeposit(task.titular_id, catalogoId, valor);
+    } else if (task.tipo === "saque" && onNavigateToSaque && task.titular_id && catalogoId) {
       updateTaskMutation.mutate({ taskId: task.id, status: "em_andamento" });
-      onNavigateToSaque(task.titular_id, task.bookmaker_catalogo_id, task.valor || undefined);
+      onNavigateToSaque(task.titular_id, catalogoId, valor);
     } else {
       // Open details dialog
       setSelectedTask(task);
@@ -231,7 +234,8 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNav
             const casasItems = task.casas_items as any[] | null;
             const isMultiCasa = casasItems && casasItems.length > 1;
             const ctaLabel = getDirectCTALabel(task.tipo);
-            const hasDirectAction = !isMultiCasa && ctaLabel && task.titular_id && task.bookmaker_catalogo_id;
+            const canNavigate = !!onNavigateToDeposit || !!onNavigateToSaque;
+            const hasDirectAction = !isMultiCasa && ctaLabel && task.titular_id && task.bookmaker_catalogo_id && canNavigate;
             const TipoIcon = TIPO_ICONS[task.tipo];
 
             return (
@@ -293,15 +297,35 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNav
                       {/* Multi-casa breakdown */}
                       {isMultiCasa && (
                         <div className="mt-2 space-y-1">
-                          {casasItems!.map((item: any, idx: number) => (
-                            <div key={idx} className="flex items-center justify-between text-[10px] py-1 px-2 rounded bg-muted/30">
-                              <div className="flex items-center gap-1.5">
-                                {item.logo_url && <img src={item.logo_url} alt="" className="h-3.5 w-3.5 rounded" />}
-                                <span className="text-foreground font-medium">{item.nome}</span>
+                          {casasItems!.map((item: any, idx: number) => {
+                            const itemCtaLabel = getDirectCTALabel(task.tipo);
+                            const canExecItem = itemCtaLabel && task.titular_id && item.bookmaker_catalogo_id &&
+                              ((task.tipo === "deposito" && onNavigateToDeposit) || (task.tipo === "saque" && onNavigateToSaque));
+                            return (
+                              <div key={idx} className="flex items-center justify-between text-[10px] py-1.5 px-2 rounded bg-muted/30">
+                                <div className="flex items-center gap-1.5">
+                                  {item.logo_url && <img src={item.logo_url} alt="" className="h-3.5 w-3.5 rounded" />}
+                                  <span className="text-foreground font-medium">{item.nome}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-semibold text-foreground">{formatCurrency(item.valor)}</span>
+                                  {canExecItem && (
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-5 px-1.5 text-[10px] gap-0.5 text-primary hover:text-primary"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDirectAction(task, item.bookmaker_catalogo_id, item.valor);
+                                      }}
+                                    >
+                                      {itemCtaLabel}
+                                    </Button>
+                                  )}
+                                </div>
                               </div>
-                              <span className="font-semibold text-foreground">{formatCurrency(item.valor)}</span>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       )}
 
@@ -449,20 +473,39 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNav
                       Casas ({(selectedTask.casas_items as any[]).length})
                     </p>
                     <div className="space-y-1">
-                      {(selectedTask.casas_items as any[]).map((item: any, idx: number) => (
-                        <div key={idx} className="flex items-center justify-between py-1.5 px-2.5 rounded-md bg-muted/30 border border-border/50">
-                          <div className="flex items-center gap-2">
-                            {item.logo_url && <img src={item.logo_url} alt="" className="h-4 w-4 rounded" />}
-                            <span className="text-xs font-medium text-foreground">{item.nome}</span>
+                      {(selectedTask.casas_items as any[]).map((item: any, idx: number) => {
+                        const itemCta = getDirectCTALabel(selectedTask.tipo);
+                        const canExec = itemCta && selectedTask.titular_id && item.bookmaker_catalogo_id &&
+                          ((selectedTask.tipo === "deposito" && onNavigateToDeposit) || (selectedTask.tipo === "saque" && onNavigateToSaque));
+                        return (
+                          <div key={idx} className="flex items-center justify-between py-1.5 px-2.5 rounded-md bg-muted/30 border border-border/50">
+                            <div className="flex items-center gap-2">
+                              {item.logo_url && <img src={item.logo_url} alt="" className="h-4 w-4 rounded" />}
+                              <span className="text-xs font-medium text-foreground">{item.nome}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="text-right">
+                                <span className="text-xs font-semibold text-foreground">{formatCurrency(item.valor)}</span>
+                                {item.saldo_atual != null && (
+                                  <p className="text-[9px] text-muted-foreground">Saldo: {formatCurrency(item.saldo_atual)}</p>
+                                )}
+                              </div>
+                              {canExec && (selectedTask.status === "pendente" || selectedTask.status === "em_andamento") && (
+                                <Button
+                                  size="sm"
+                                  className="h-6 px-2 text-[10px] gap-1"
+                                  onClick={() => {
+                                    setSelectedTask(null);
+                                    handleDirectAction(selectedTask, item.bookmaker_catalogo_id, item.valor);
+                                  }}
+                                >
+                                  {itemCta}
+                                </Button>
+                              )}
+                            </div>
                           </div>
-                          <div className="text-right">
-                            <span className="text-xs font-semibold text-foreground">{formatCurrency(item.valor)}</span>
-                            {item.saldo_atual != null && (
-                              <p className="text-[9px] text-muted-foreground">Saldo: {formatCurrency(item.saldo_atual)}</p>
-                            )}
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                     <div className="flex justify-end pt-1 border-t border-border/50">
                       <span className="text-xs font-bold text-foreground">
@@ -494,27 +537,6 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNav
                   </div>
                 )}
 
-                {selectedTask.valor_alvo_casa != null && selectedTask.valor_atual_casa != null && (
-                  <div className="p-2.5 rounded-lg bg-primary/5 border border-primary/20">
-                    <p className="text-[10px] text-muted-foreground mb-1">Contexto de Alocação</p>
-                    <div className="grid grid-cols-3 gap-2 text-xs">
-                      <div>
-                        <p className="text-muted-foreground text-[10px]">Atual</p>
-                        <p className="font-semibold">{formatCurrency(selectedTask.valor_atual_casa)}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground text-[10px]">Alvo</p>
-                        <p className="font-semibold text-primary">{formatCurrency(selectedTask.valor_alvo_casa)}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground text-[10px]">Diferença</p>
-                        <p className="font-semibold text-orange-400">
-                          {formatCurrency(selectedTask.valor_alvo_casa - selectedTask.valor_atual_casa)}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
 
                 {selectedTask.data_limite && (
                   <div className="flex items-center gap-2 text-xs">
