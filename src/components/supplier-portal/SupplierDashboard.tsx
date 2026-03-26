@@ -14,6 +14,7 @@ import { SupplierTitularesTab } from "./SupplierTitularesTab";
 import { SupplierExtratoTab } from "./SupplierExtratoTab";
 import { SupplierTransacaoDialog } from "./SupplierTransacaoDialog";
 import { SupplierBancosModal } from "./SupplierBancosModal";
+import { SupplierOperacoesTab } from "./SupplierOperacoesTab";
 
 interface SupplierSession {
   supplier_workspace_id: string;
