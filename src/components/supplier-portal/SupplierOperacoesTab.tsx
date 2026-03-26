@@ -297,15 +297,35 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNav
                       {/* Multi-casa breakdown */}
                       {isMultiCasa && (
                         <div className="mt-2 space-y-1">
-                          {casasItems!.map((item: any, idx: number) => (
-                            <div key={idx} className="flex items-center justify-between text-[10px] py-1 px-2 rounded bg-muted/30">
-                              <div className="flex items-center gap-1.5">
-                                {item.logo_url && <img src={item.logo_url} alt="" className="h-3.5 w-3.5 rounded" />}
-                                <span className="text-foreground font-medium">{item.nome}</span>
+                          {casasItems!.map((item: any, idx: number) => {
+                            const itemCtaLabel = getDirectCTALabel(task.tipo);
+                            const canExecItem = itemCtaLabel && task.titular_id && item.bookmaker_catalogo_id &&
+                              ((task.tipo === "deposito" && onNavigateToDeposit) || (task.tipo === "saque" && onNavigateToSaque));
+                            return (
+                              <div key={idx} className="flex items-center justify-between text-[10px] py-1.5 px-2 rounded bg-muted/30">
+                                <div className="flex items-center gap-1.5">
+                                  {item.logo_url && <img src={item.logo_url} alt="" className="h-3.5 w-3.5 rounded" />}
+                                  <span className="text-foreground font-medium">{item.nome}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-semibold text-foreground">{formatCurrency(item.valor)}</span>
+                                  {canExecItem && (
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-5 px-1.5 text-[10px] gap-0.5 text-primary hover:text-primary"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDirectAction(task, item.bookmaker_catalogo_id, item.valor);
+                                      }}
+                                    >
+                                      {itemCtaLabel}
+                                    </Button>
+                                  )}
+                                </div>
                               </div>
-                              <span className="font-semibold text-foreground">{formatCurrency(item.valor)}</span>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       )}
 
