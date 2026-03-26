@@ -176,14 +176,15 @@ export function SupplierTasksAdmin({ supplierWorkspaceId, supplierNome, parentWo
       }
       const alloc = allowedBookmakers.find((b: any) => b.bookmaker_catalogo_id === casa.bookmaker_catalogo_id);
       const valorAlocado = alloc?.valor_alocado || 0;
-      const diff = valorAlocado - casa.saldo_atual;
+      // Only pre-fill with suggestion when account is new (saldo = 0)
+      const isNewAccount = casa.saldo_atual === 0;
       return [...prev, {
         bookmaker_catalogo_id: casa.bookmaker_catalogo_id,
         nome: casa.nome,
         logo_url: casa.logo_url,
         saldo_atual: casa.saldo_atual,
         valor_alocado: valorAlocado,
-        valor: diff > 0 ? diff.toFixed(2) : "",
+        valor: isNewAccount && valorAlocado > 0 ? valorAlocado.toFixed(2) : "",
       }];
     });
   }
