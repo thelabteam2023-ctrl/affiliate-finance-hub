@@ -166,6 +166,18 @@ export function SupplierDashboard({ session }: Props) {
     refetchAccounts();
   }
 
+  function handleTaskNavigate(tipo: "DEPOSITO" | "SAQUE", titularId: string, bookmakerCatalogoId: string, valor?: number) {
+    // Find the account ID for this titular + bookmaker combo
+    const conta = (accounts || []).find(
+      (a: any) => a.titular_id === titularId && a.bookmaker_catalogo_id === bookmakerCatalogoId
+    );
+    setPrefillTitularId(titularId);
+    setPrefillContaId(conta?.id);
+    setPrefillValor(valor);
+    setTransacaoTipo(tipo);
+    setTransacaoOpen(true);
+  }
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
