@@ -365,10 +365,21 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNav
                         {hasDirectAction ? (
                           <Button
                             size="sm"
-                            className="gap-1.5 text-xs"
-                            onClick={(e) => { e.stopPropagation(); handleDirectAction(task); }}
+                            className={`gap-1.5 text-xs ${isAguardandoRecebimento ? "bg-orange-500 hover:bg-orange-600" : ""}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (isAguardandoRecebimento) {
+                                handleConfirmRecebimento(task);
+                              } else {
+                                handleDirectAction(task);
+                              }
+                            }}
                           >
-                            {TipoIcon && <TipoIcon className="h-3.5 w-3.5" />}
+                            {isAguardandoRecebimento ? (
+                              <CheckCircle2 className="h-3.5 w-3.5" />
+                            ) : (
+                              TipoIcon && <TipoIcon className="h-3.5 w-3.5" />
+                            )}
                             {ctaLabel}
                           </Button>
                         ) : (
