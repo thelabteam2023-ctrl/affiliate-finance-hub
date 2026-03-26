@@ -168,14 +168,17 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNav
     });
   }
 
-  function handleDirectAction(task: any) {
-    if (task.tipo === "deposito" && onNavigateToDeposit && task.titular_id && task.bookmaker_catalogo_id) {
+  function handleDirectAction(task: any, overrideCatalogoId?: string, overrideValor?: number) {
+    const catalogoId = overrideCatalogoId || task.bookmaker_catalogo_id;
+    const valor = overrideValor ?? task.valor ?? undefined;
+
+    if (task.tipo === "deposito" && onNavigateToDeposit && task.titular_id && catalogoId) {
       // Mark as em_andamento first
       updateTaskMutation.mutate({ taskId: task.id, status: "em_andamento" });
-      onNavigateToDeposit(task.titular_id, task.bookmaker_catalogo_id, task.valor || undefined);
-    } else if (task.tipo === "saque" && onNavigateToSaque && task.titular_id && task.bookmaker_catalogo_id) {
+      onNavigateToDeposit(task.titular_id, catalogoId, valor);
+    } else if (task.tipo === "saque" && onNavigateToSaque && task.titular_id && catalogoId) {
       updateTaskMutation.mutate({ taskId: task.id, status: "em_andamento" });
-      onNavigateToSaque(task.titular_id, task.bookmaker_catalogo_id, task.valor || undefined);
+      onNavigateToSaque(task.titular_id, catalogoId, valor);
     } else {
       // Open details dialog
       setSelectedTask(task);
