@@ -361,7 +361,8 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
               .filter((t: any) => !t.revoked_at && new Date(t.expires_at) > new Date());
 
             return (
-              <Card key={supplier.id} className="hover:border-primary/20 transition-colors">
+              <div key={supplier.id} className="space-y-2">
+              <Card className="hover:border-primary/20 transition-colors">
                 <CardContent className="py-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
