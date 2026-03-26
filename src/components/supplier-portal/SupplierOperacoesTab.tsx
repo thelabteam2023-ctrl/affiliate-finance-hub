@@ -473,20 +473,39 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNav
                       Casas ({(selectedTask.casas_items as any[]).length})
                     </p>
                     <div className="space-y-1">
-                      {(selectedTask.casas_items as any[]).map((item: any, idx: number) => (
-                        <div key={idx} className="flex items-center justify-between py-1.5 px-2.5 rounded-md bg-muted/30 border border-border/50">
-                          <div className="flex items-center gap-2">
-                            {item.logo_url && <img src={item.logo_url} alt="" className="h-4 w-4 rounded" />}
-                            <span className="text-xs font-medium text-foreground">{item.nome}</span>
+                      {(selectedTask.casas_items as any[]).map((item: any, idx: number) => {
+                        const itemCta = getDirectCTALabel(selectedTask.tipo);
+                        const canExec = itemCta && selectedTask.titular_id && item.bookmaker_catalogo_id &&
+                          ((selectedTask.tipo === "deposito" && onNavigateToDeposit) || (selectedTask.tipo === "saque" && onNavigateToSaque));
+                        return (
+                          <div key={idx} className="flex items-center justify-between py-1.5 px-2.5 rounded-md bg-muted/30 border border-border/50">
+                            <div className="flex items-center gap-2">
+                              {item.logo_url && <img src={item.logo_url} alt="" className="h-4 w-4 rounded" />}
+                              <span className="text-xs font-medium text-foreground">{item.nome}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="text-right">
+                                <span className="text-xs font-semibold text-foreground">{formatCurrency(item.valor)}</span>
+                                {item.saldo_atual != null && (
+                                  <p className="text-[9px] text-muted-foreground">Saldo: {formatCurrency(item.saldo_atual)}</p>
+                                )}
+                              </div>
+                              {canExec && (selectedTask.status === "pendente" || selectedTask.status === "em_andamento") && (
+                                <Button
+                                  size="sm"
+                                  className="h-6 px-2 text-[10px] gap-1"
+                                  onClick={() => {
+                                    setSelectedTask(null);
+                                    handleDirectAction(selectedTask, item.bookmaker_catalogo_id, item.valor);
+                                  }}
+                                >
+                                  {itemCta}
+                                </Button>
+                              )}
+                            </div>
                           </div>
-                          <div className="text-right">
-                            <span className="text-xs font-semibold text-foreground">{formatCurrency(item.valor)}</span>
-                            {item.saldo_atual != null && (
-                              <p className="text-[9px] text-muted-foreground">Saldo: {formatCurrency(item.saldo_atual)}</p>
-                            )}
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                     <div className="flex justify-end pt-1 border-t border-border/50">
                       <span className="text-xs font-bold text-foreground">
