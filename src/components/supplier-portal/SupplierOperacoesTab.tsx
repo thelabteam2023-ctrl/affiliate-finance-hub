@@ -7,10 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   ClipboardList, Clock, CheckCircle2, XCircle, Zap,
-  Building2, ArrowRight, Upload, Image as ImageIcon, AlertTriangle
+  Building2, ArrowRight, Upload, User, Banknote, ArrowDownToLine, ArrowUpFromLine
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -18,6 +18,8 @@ import { toast } from "sonner";
 interface Props {
   supplierWorkspaceId: string;
   supplierToken: string;
+  onNavigateToDeposit?: (titularId: string, bookmakerCatalogoId: string, valor?: number) => void;
+  onNavigateToSaque?: (titularId: string, bookmakerCatalogoId: string, valor?: number) => void;
 }
 
 const TIPO_LABELS: Record<string, string> = {
@@ -56,11 +58,16 @@ const STATUS_COLORS: Record<string, string> = {
   rejeitado: "text-muted-foreground border-muted-foreground/40 bg-muted/30",
 };
 
+const TIPO_ICONS: Record<string, typeof Banknote> = {
+  deposito: ArrowDownToLine,
+  saque: ArrowUpFromLine,
+};
+
 function formatCurrency(val: number) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(val);
 }
 
-export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken }: Props) {
+export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNavigateToDeposit, onNavigateToSaque }: Props) {
   const queryClient = useQueryClient();
   const [selectedTask, setSelectedTask] = useState<any>(null);
   const [actionType, setActionType] = useState<"concluir" | "rejeitar" | null>(null);
@@ -133,7 +140,6 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken }: Pro
 
     let comprovanteUrl: string | undefined;
 
-    // Upload evidence if provided
     if (comprovanteFile) {
       setUploading(true);
       try {
@@ -162,8 +168,31 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken }: Pro
     });
   }
 
+  function handleDirectAction(task: any) {
+    if (task.tipo === "deposito" && onNavigateToDeposit && task.titular_id && task.bookmaker_catalogo_id) {
+      // Mark as em_andamento first
+      updateTaskMutation.mutate({ taskId: task.id, status: "em_andamento" });
+      onNavigateToDeposit(task.titular_id, task.bookmaker_catalogo_id, task.valor || undefined);
+    } else if (task.tipo === "saque" && onNavigateToSaque && task.titular_id && task.bookmaker_catalogo_id) {
+      updateTaskMutation.mutate({ taskId: task.id, status: "em_andamento" });
+      onNavigateToSaque(task.titular_id, task.bookmaker_catalogo_id, task.valor || undefined);
+    } else {
+      // Open details dialog
+      setSelectedTask(task);
+      setActionType(null);
+      setObservacoes("");
+      setComprovanteFile(null);
+    }
+  }
+
   const pendentes = tasks.filter((t: any) => t.status === "pendente" || t.status === "em_andamento");
   const historico = tasks.filter((t: any) => t.status === "concluido" || t.status === "rejeitado");
+
+  function getDirectCTALabel(tipo: string) {
+    if (tipo === "deposito") return "Depositar";
+    if (tipo === "saque") return "Sacar";
+    return null;
+  }
 
   return (
     <div className="space-y-4">
@@ -198,60 +227,103 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken }: Pro
           <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             Tarefas Pendentes ({pendentes.length})
           </h3>
-          {pendentes.map((task: any) => (
-            <Card
-              key={task.id}
-              className={`hover:border-primary/20 transition-colors cursor-pointer ${
-                task.prioridade === "urgente" ? "border-red-500/30" : ""
-              }`}
-              onClick={() => { setSelectedTask(task); setActionType(null); setObservacoes(""); setComprovanteFile(null); }}
-            >
-              <CardContent className="py-3 px-4">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <Badge variant="outline" className={`text-[10px] ${PRIORIDADE_COLORS[task.prioridade]}`}>
-                        {task.prioridade === "urgente" && <Zap className="h-2.5 w-2.5 mr-0.5" />}
-                        {PRIORIDADE_LABELS[task.prioridade]}
-                      </Badge>
-                      <Badge variant="outline" className={`text-[10px] ${STATUS_COLORS[task.status]}`}>
-                        {STATUS_LABELS[task.status]}
-                      </Badge>
-                    </div>
-                    <p className="text-sm font-medium text-foreground">{task.titulo}</p>
-                    {task.descricao && (
-                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{task.descricao}</p>
-                    )}
-                    <div className="flex items-center gap-3 mt-1.5 text-[10px] text-muted-foreground">
-                      {task.casa_nome && (
-                        <span className="flex items-center gap-1">
-                          {task.casa_logo && <img src={task.casa_logo} alt="" className="h-3 w-3 rounded" />}
-                          {task.casa_nome}
-                        </span>
-                      )}
-                      {task.valor && (
-                        <span className="font-semibold text-foreground">{formatCurrency(task.valor)}</span>
-                      )}
-                      {task.data_limite && (
-                        <span className="flex items-center gap-0.5">
-                          <Clock className="h-3 w-3" />
-                          {format(new Date(task.data_limite), "dd/MM HH:mm")}
-                        </span>
-                      )}
-                    </div>
-                    {task.valor_alvo_casa != null && task.valor_atual_casa != null && (
-                      <div className="flex items-center gap-2 mt-1 text-[10px]">
-                        <span className="text-muted-foreground">Atual: {formatCurrency(task.valor_atual_casa)}</span>
-                        <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-primary">Alvo: {formatCurrency(task.valor_alvo_casa)}</span>
+          {pendentes.map((task: any) => {
+            const ctaLabel = getDirectCTALabel(task.tipo);
+            const hasDirectAction = ctaLabel && task.titular_id && task.bookmaker_catalogo_id;
+            const TipoIcon = TIPO_ICONS[task.tipo];
+
+            return (
+              <Card
+                key={task.id}
+                className={`hover:border-primary/20 transition-colors ${
+                  task.prioridade === "urgente" ? "border-red-500/30" : ""
+                }`}
+              >
+                <CardContent className="py-3 px-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <div
+                      className="flex-1 min-w-0 cursor-pointer"
+                      onClick={() => { setSelectedTask(task); setActionType(null); setObservacoes(""); setComprovanteFile(null); }}
+                    >
+                      <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                        <Badge variant="outline" className={`text-[10px] ${PRIORIDADE_COLORS[task.prioridade]}`}>
+                          {task.prioridade === "urgente" && <Zap className="h-2.5 w-2.5 mr-0.5" />}
+                          {PRIORIDADE_LABELS[task.prioridade]}
+                        </Badge>
+                        <Badge variant="outline" className={`text-[10px] ${STATUS_COLORS[task.status]}`}>
+                          {STATUS_LABELS[task.status]}
+                        </Badge>
                       </div>
-                    )}
+                      <p className="text-sm font-medium text-foreground">{task.titulo}</p>
+                      {task.descricao && (
+                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{task.descricao}</p>
+                      )}
+                      <div className="flex items-center gap-3 mt-1.5 text-[10px] text-muted-foreground flex-wrap">
+                        {task.titular_nome && (
+                          <span className="flex items-center gap-1">
+                            <User className="h-3 w-3" />
+                            {task.titular_nome}
+                          </span>
+                        )}
+                        {task.casa_nome && (
+                          <span className="flex items-center gap-1">
+                            {task.casa_logo && <img src={task.casa_logo} alt="" className="h-3 w-3 rounded" />}
+                            {task.casa_nome}
+                          </span>
+                        )}
+                        {task.valor && (
+                          <span className="font-semibold text-foreground">{formatCurrency(task.valor)}</span>
+                        )}
+                        {task.data_limite && (
+                          <span className="flex items-center gap-0.5">
+                            <Clock className="h-3 w-3" />
+                            {format(new Date(task.data_limite), "dd/MM HH:mm")}
+                          </span>
+                        )}
+                      </div>
+                      {task.valor_alvo_casa != null && task.valor_atual_casa != null && (
+                        <div className="flex items-center gap-2 mt-1 text-[10px]">
+                          <span className="text-muted-foreground">Atual: {formatCurrency(task.valor_atual_casa)}</span>
+                          <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                          <span className="text-primary">Alvo: {formatCurrency(task.valor_alvo_casa)}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Direct CTA Button */}
+                    <div className="shrink-0 flex flex-col gap-1.5">
+                      {hasDirectAction ? (
+                        <Button
+                          size="sm"
+                          className="gap-1.5 text-xs"
+                          onClick={(e) => { e.stopPropagation(); handleDirectAction(task); }}
+                        >
+                          {TipoIcon && <TipoIcon className="h-3.5 w-3.5" />}
+                          {ctaLabel}
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1.5 text-xs"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedTask(task);
+                            setActionType(null);
+                            setObservacoes("");
+                            setComprovanteFile(null);
+                          }}
+                        >
+                          Detalhes
+                          <ArrowRight className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0 mt-1" />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
 
@@ -276,10 +348,16 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken }: Pro
                           </Badge>
                           <span className="text-xs text-foreground truncate">{task.titulo}</span>
                         </div>
-                        <p className="text-[10px] text-muted-foreground mt-0.5">
-                          {format(new Date(task.created_at), "dd/MM/yyyy")}
-                          {task.valor && ` — ${formatCurrency(task.valor)}`}
-                        </p>
+                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-0.5">
+                          {task.titular_nome && (
+                            <span className="flex items-center gap-1">
+                              <User className="h-2.5 w-2.5" />
+                              {task.titular_nome}
+                            </span>
+                          )}
+                          <span>{format(new Date(task.created_at), "dd/MM/yyyy")}</span>
+                          {task.valor && <span>{formatCurrency(task.valor)}</span>}
+                        </div>
                       </div>
                     </div>
                   </CardContent>
@@ -313,6 +391,17 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken }: Pro
                     </Badge>
                   )}
                 </div>
+
+                {/* Titular info */}
+                {selectedTask.titular_nome && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">{selectedTask.titular_nome}</span>
+                    {selectedTask.titular_documento && (
+                      <span className="text-xs text-muted-foreground">({selectedTask.titular_documento})</span>
+                    )}
+                  </div>
+                )}
 
                 {selectedTask.descricao && (
                   <div className="p-2.5 rounded-lg bg-muted/50 border border-border">
@@ -358,9 +447,22 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken }: Pro
                   </div>
                 )}
 
-                {/* Action buttons */}
+                {/* Direct CTA inside dialog */}
                 {(selectedTask.status === "pendente" || selectedTask.status === "em_andamento") && (
                   <>
+                    {/* Quick action CTA */}
+                    {getDirectCTALabel(selectedTask.tipo) && selectedTask.titular_id && selectedTask.bookmaker_catalogo_id && (
+                      <Button
+                        className="w-full gap-2"
+                        size="lg"
+                        onClick={() => handleDirectAction(selectedTask)}
+                      >
+                        {TIPO_ICONS[selectedTask.tipo] && (() => { const Icon = TIPO_ICONS[selectedTask.tipo]; return <Icon className="h-4 w-4" />; })()}
+                        {getDirectCTALabel(selectedTask.tipo)} — {selectedTask.casa_nome}
+                        {selectedTask.valor && ` (${formatCurrency(selectedTask.valor)})`}
+                      </Button>
+                    )}
+
                     <div className="flex gap-2 pt-2">
                       <Button
                         variant={actionType === "concluir" ? "default" : "outline"}
