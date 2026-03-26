@@ -448,6 +448,18 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Tasks panel for this supplier */}
+              {tasksSupplier?.id === supplier.id && (
+                <div className="ml-4 border-l-2 border-primary/20 pl-4">
+                  <SupplierTasksAdmin
+                    supplierWorkspaceId={supplier.workspace_id}
+                    supplierNome={supplier.nome}
+                    parentWorkspaceId={workspaceId}
+                  />
+                </div>
+              )}
+            </div>
             );
           })}
         </div>
