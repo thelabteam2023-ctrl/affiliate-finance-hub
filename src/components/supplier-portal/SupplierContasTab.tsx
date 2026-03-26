@@ -202,7 +202,6 @@ export function SupplierContasTab({
   prefillCreateAccount,
   onClearPrefillCreate,
   activeTaskId,
-  supplierToken,
   onAccountCreatedForTask,
 }: Props) {
   const [novaContaOpen, setNovaContaOpen] = useState(false);
