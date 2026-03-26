@@ -128,6 +128,20 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
     staleTime: 5 * 60 * 1000,
   });
 
+  // Apply prefill when dialog opens with prefill props
+  useEffect(() => {
+    if (open && prefillTitularId && !prefillApplied) {
+      setTitularId(prefillTitularId);
+      if (prefillBookmakerIds?.length) {
+        setSelectedCasaIds(new Set(prefillBookmakerIds));
+      }
+      setPrefillApplied(true);
+    }
+    if (!open) {
+      setPrefillApplied(false);
+    }
+  }, [open, prefillTitularId, prefillBookmakerIds, prefillApplied]);
+
   const availableCasas = useMemo(() => {
     if (!titularId) return catalogo;
     const usedCasaIds = new Set(
