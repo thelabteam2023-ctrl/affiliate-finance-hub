@@ -445,7 +445,7 @@ export function SupplierTasksAdmin({ supplierWorkspaceId, supplierNome, parentWo
         <div>
           <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
             <ClipboardList className="h-4 w-4 text-primary" />
-            Central de Operações — {supplierNome}
+            Central de Operações
           </h3>
           <p className="text-xs text-muted-foreground mt-0.5">
             Crie e acompanhe tarefas operacionais
