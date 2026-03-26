@@ -155,13 +155,6 @@ export function SupplierDashboard({ session }: Props) {
   const saldoContas = (accounts || []).reduce((s, a) => s + Number(a.saldo_atual), 0);
   const saldoDisponivel = metrics.saldoCentral;
 
-          <TabsContent value="operacoes" className="mt-4">
-            <SupplierOperacoesTab
-              supplierWorkspaceId={session.supplier_workspace_id}
-              supplierToken={supplierToken}
-            />
-          </TabsContent>
-
   const expiresAt = new Date(session.expires_at);
   const hoursRemaining = Math.max(0, Math.round((expiresAt.getTime() - Date.now()) / (1000 * 60 * 60)));
 
