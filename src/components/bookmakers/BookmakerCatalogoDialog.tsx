@@ -546,6 +546,29 @@ export default function BookmakerCatalogoDialog({
               ))}
             </div>
 
+            {/* Link de criação para fornecedores */}
+            {links.filter(l => l.url.trim()).length > 0 && (
+              <div className="space-y-2">
+                <Label className="text-sm">Link de Criação (Fornecedor)</Label>
+                <Select value={linkCriacaoFornecedor} onValueChange={setLinkCriacaoFornecedor}>
+                  <SelectTrigger className="h-10">
+                    <SelectValue placeholder="Selecione o link para fornecedores" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhum</SelectItem>
+                    {links.filter(l => l.url.trim()).map((link) => (
+                      <SelectItem key={link.id} value={link.url}>
+                        {link.referencia || "SEM REF"} — {link.url.length > 40 ? link.url.substring(0, 40) + "..." : link.url}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[10px] text-muted-foreground">
+                  Link exibido automaticamente ao fornecedor no wizard de criação de conta.
+                </p>
+              </div>
+            )}
+
             <div className="space-y-4">
               <div className="flex items-center justify-center gap-3">
                 <Label htmlFor="bonus">Bônus Disponível</Label>
