@@ -404,6 +404,14 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
                         <Button
                           size="sm"
                           variant="outline"
+                          onClick={() => setTasksSupplier(tasksSupplier?.id === supplier.id ? null : supplier)}
+                          className="gap-1 text-xs"
+                        >
+                          <ClipboardList className="h-3 w-3" /> Tarefas
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
                           onClick={() => {
                             setCasasConfigSupplier(supplier);
                             setCasasConfigOpen(true);
