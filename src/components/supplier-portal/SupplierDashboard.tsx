@@ -250,10 +250,12 @@ export function SupplierDashboard({ session }: Props) {
               <p className="text-[10px] sm:text-xs text-muted-foreground">Portal do Fornecedor</p>
             </div>
           </div>
-          <Badge variant="outline" className="text-[10px] sm:text-xs gap-1 shrink-0">
-            <Clock className="h-3 w-3" />
-            {hoursRemaining}h
-          </Badge>
+          {showExpiry && (
+            <Badge variant="outline" className={`text-[10px] sm:text-xs gap-1 shrink-0 ${daysRemaining <= 1 ? "border-destructive text-destructive" : "border-yellow-500/50 text-yellow-600 dark:text-yellow-400"}`}>
+              <Clock className="h-3 w-3" />
+              {hoursRemaining < 24 ? `${hoursRemaining}h` : `${Math.ceil(daysRemaining)}d`}
+            </Badge>
+          )}
         </div>
       </header>
 
