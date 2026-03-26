@@ -379,23 +379,23 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, exist
                             const canExecItem = !itemDone && !isItemUnavailable && itemCtaLabel && task.titular_id && item.bookmaker_catalogo_id &&
                               ((task.tipo === "deposito" && onNavigateToDeposit) || (task.tipo === "saque" && onNavigateToSaque) || (task.tipo === "criacao_conta" && onNavigateToCreateAccount));
                             return (
-                              <div key={idx} className={`flex items-center justify-between text-xs py-2 px-3 rounded-md ${
+                              <div key={idx} className={`flex items-center gap-2 text-xs py-2.5 px-3 rounded-md ${
                                 itemDone ? "bg-emerald-500/10 border border-emerald-500/20" 
                                 : isItemUnavailable ? "bg-muted/20 opacity-50 border border-dashed border-muted-foreground/20"
                                 : "bg-muted/30"
                               }`}>
-                                <div className="flex items-center gap-2">
-                                  {itemDone && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />}
-                                  {isItemUnavailable && !itemDone && <Ban className="h-3.5 w-3.5 text-muted-foreground" />}
-                                  {item.logo_url && <img src={item.logo_url} alt="" className="h-5 w-5 rounded" />}
-                                  <span className={`text-foreground font-medium ${itemDone ? "line-through opacity-60" : ""} ${isItemUnavailable ? "line-through" : ""}`}>{item.nome}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  {item.valor > 0 && !isItemUnavailable && (
-                                    <span className={`font-semibold ${task.tipo === "criacao_conta" ? "text-muted-foreground text-[10px]" : "text-foreground"}`}>
-                                      {task.tipo === "criacao_conta" ? `Dep. ${formatCurrency(item.valor)}` : formatCurrency(item.valor)}
-                                    </span>
-                                  )}
+                                {itemDone && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />}
+                                {isItemUnavailable && !itemDone && <Ban className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
+                                {item.logo_url && <img src={item.logo_url} alt="" className="h-5 w-5 rounded shrink-0" />}
+                                <span className={`font-medium truncate ${itemDone ? "line-through opacity-60" : ""} ${isItemUnavailable ? "line-through" : ""}`}>{item.nome}</span>
+                                
+                                {item.valor > 0 && !isItemUnavailable && (
+                                  <span className={`ml-auto shrink-0 font-semibold ${task.tipo === "criacao_conta" ? "text-muted-foreground text-[10px]" : "text-foreground"}`}>
+                                    {task.tipo === "criacao_conta" ? `Dep. ${formatCurrency(item.valor)}` : formatCurrency(item.valor)}
+                                  </span>
+                                )}
+                                
+                                <div className={`${item.valor > 0 && !isItemUnavailable ? "" : "ml-auto"} flex items-center gap-1 shrink-0`}>
                                   {itemDone ? (
                                     <span className="text-[10px] text-emerald-400">✓</span>
                                   ) : isItemUnavailable ? (
@@ -411,12 +411,12 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, exist
                                       Restaurar
                                     </Button>
                                   ) : (
-                                    <div className="flex items-center gap-1">
+                                    <>
                                       {canExecItem && (
                                         <Button
                                           size="sm"
                                           variant="ghost"
-                                          className="h-6 px-2 text-xs gap-1 text-primary hover:text-primary"
+                                          className="h-6 px-2 text-xs text-primary hover:text-primary"
                                           onClick={(e) => {
                                             e.stopPropagation();
                                             handleDirectAction(task, item.bookmaker_catalogo_id, item.valor);
@@ -439,7 +439,7 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, exist
                                           <Ban className="h-3 w-3" />
                                         </Button>
                                       )}
-                                    </div>
+                                    </>
                                   )}
                                 </div>
                               </div>
