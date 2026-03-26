@@ -80,6 +80,7 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNav
   const [comprovanteFile, setComprovanteFile] = useState<File | null>(null);
   // Track unavailable items per task: Record<taskId, Set<bookmaker_catalogo_id>>
   const [unavailableItems, setUnavailableItems] = useState<Record<string, Set<string>>>({});
+  const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
 
   const toggleUnavailable = useCallback((taskId: string, catalogoId: string) => {
     setUnavailableItems(prev => {
