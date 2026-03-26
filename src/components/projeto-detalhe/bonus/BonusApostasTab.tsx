@@ -1091,7 +1091,8 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
               }}
               onQuickResolve={(surebetId, result) => handleQuickResolveSurebet(surebetId, result)}
               onPernaResultChange={handleSurebetPernaResolve}
-              onDelete={handleDeleteSurebet}
+               onDelete={handleDeleteSurebet}
+               onDuplicate={handleDuplicateSurebet}
             />
           );
         }
@@ -1148,7 +1149,8 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
                 onEdit={() => handleOpenDialog(aposta)}
                 onQuickResolve={(surebetId, result) => handleQuickResolveSurebet(surebetId, result)}
                 onPernaResultChange={handleSurebetPernaResolve}
-                onDelete={handleDeleteAposta}
+                 onDelete={handleDeleteAposta}
+                 onDuplicate={handleDuplicateSurebet}
                 formatCurrency={formatProjectCurrency}
                 convertToConsolidation={convertToConsolidation}
                 bookmakerNomeMap={bookmakerNomeMap}
@@ -1187,7 +1189,8 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
                variant={viewMode === "cards" ? "card" : "list"}
                onEdit={() => handleOpenDialog(aposta)}
                onQuickResolve={handleQuickResolve}
-               onDelete={handleDeleteAposta}
+                onDelete={handleDeleteAposta}
+                onDuplicate={handleDuplicateSimples}
                formatCurrency={formatProjectCurrency}
                convertToConsolidation={convertToConsolidation}
                moedaConsolidacao={moedaConsolidacao}
@@ -1230,7 +1233,8 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
              variant={viewMode === "cards" ? "card" : "list"}
              onEdit={() => handleOpenMultiplaDialog(multipla)}
              onQuickResolve={handleQuickResolve}
-             onDelete={handleDeleteAposta}
+              onDelete={handleDeleteAposta}
+              onDuplicate={handleDuplicateMultipla}
              formatCurrency={formatProjectCurrency}
              convertToConsolidation={convertToConsolidation}
              moedaConsolidacao={moedaConsolidacao}
