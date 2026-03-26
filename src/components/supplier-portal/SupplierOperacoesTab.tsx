@@ -250,9 +250,10 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNav
             {pendentes.map((task: any) => {
               const casasItems = task.casas_items as any[] | null;
               const isMultiCasa = casasItems && casasItems.length > 1;
-              const ctaLabel = getDirectCTALabel(task.tipo);
+              const isAguardandoRecebimento = task.status === "aguardando_recebimento";
+              const ctaLabel = getDirectCTALabel(task.tipo, task.status);
               const canNavigate = !!onNavigateToDeposit || !!onNavigateToSaque;
-              const hasDirectAction = !isMultiCasa && ctaLabel && task.titular_id && task.bookmaker_catalogo_id && canNavigate;
+              const hasDirectAction = !isMultiCasa && ctaLabel && task.titular_id && task.bookmaker_catalogo_id && (isAguardandoRecebimento || canNavigate);
               const TipoIcon = TIPO_ICONS[task.tipo];
 
               return (
