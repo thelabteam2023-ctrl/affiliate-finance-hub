@@ -79,6 +79,7 @@ export function SupplierTasksAdmin({ supplierWorkspaceId, supplierNome, parentWo
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
   const [editTask, setEditTask] = useState<any>(null);
+  const [deleteTask, setDeleteTask] = useState<any>(null);
   const [filterStatus, setFilterStatus] = useState<string>("all");
 
   // Form state
