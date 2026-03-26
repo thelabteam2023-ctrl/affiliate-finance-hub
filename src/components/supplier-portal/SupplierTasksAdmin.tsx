@@ -79,6 +79,7 @@ export function SupplierTasksAdmin({ supplierWorkspaceId, supplierNome, parentWo
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
   const [editTask, setEditTask] = useState<any>(null);
+  const [deleteTask, setDeleteTask] = useState<any>(null);
   const [filterStatus, setFilterStatus] = useState<string>("all");
 
   // Form state
@@ -369,6 +370,22 @@ export function SupplierTasksAdmin({ supplierWorkspaceId, supplierNome, parentWo
     onError: (e: any) => toast.error(e.message),
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async (taskId: string) => {
+      const { error } = await (supabase as any)
+        .from("supplier_tasks")
+        .delete()
+        .eq("id", taskId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Tarefa excluída");
+      queryClient.invalidateQueries({ queryKey: ["supplier-tasks-admin", supplierWorkspaceId] });
+      setDeleteTask(null);
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   function handleTipoChange(newTipo: string) {
     setTipo(newTipo);
     setTitularId("");
@@ -541,17 +558,28 @@ export function SupplierTasksAdmin({ supplierWorkspaceId, supplierNome, parentWo
                         </a>
                       )}
                     </div>
-                    {/* Edit button for non-concluded tasks */}
-                    {task.status !== "concluido" && task.status !== "rejeitado" && (
+                    <div className="flex items-center gap-1 shrink-0">
+                      {/* Edit button for non-concluded tasks */}
+                      {task.status !== "concluido" && task.status !== "rejeitado" && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => openEditTask(task)}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                      {/* Delete button */}
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 shrink-0"
-                        onClick={() => openEditTask(task)}
+                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                        onClick={() => setDeleteTask(task)}
                       >
-                        <Pencil className="h-3.5 w-3.5" />
+                        <Trash2 className="h-3.5 w-3.5" />
                       </Button>
-                    )}
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -937,6 +965,31 @@ export function SupplierTasksAdmin({ supplierWorkspaceId, supplierNome, parentWo
               disabled={updateMutation.isPending || (needsTitular && !titularId) || (needsCasa && selectedCasas.length === 0)}
             >
               {updateMutation.isPending ? "Salvando..." : "Salvar Alterações"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirmation dialog */}
+      <Dialog open={!!deleteTask} onOpenChange={(o) => { if (!o) setDeleteTask(null); }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="h-5 w-5" />
+              Excluir Tarefa
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground py-2">
+            Tem certeza que deseja excluir a tarefa <strong className="text-foreground">{deleteTask?.titulo}</strong>? Esta ação não pode ser desfeita.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteTask(null)}>Cancelar</Button>
+            <Button
+              variant="destructive"
+              onClick={() => deleteTask && deleteMutation.mutate(deleteTask.id)}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? "Excluindo..." : "Excluir"}
             </Button>
           </DialogFooter>
         </DialogContent>
