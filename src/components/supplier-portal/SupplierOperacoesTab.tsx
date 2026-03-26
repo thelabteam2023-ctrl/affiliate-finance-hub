@@ -582,17 +582,34 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNav
                 )}
 
                 {/* Direct CTA inside dialog */}
-                {(selectedTask.status === "pendente" || selectedTask.status === "em_andamento") && (
+                {(selectedTask.status === "pendente" || selectedTask.status === "em_andamento" || selectedTask.status === "aguardando_recebimento") && (
                   <>
-                    {/* Quick action CTA */}
-                    {getDirectCTALabel(selectedTask.tipo) && selectedTask.titular_id && selectedTask.bookmaker_catalogo_id && (
+                    {/* Aguardando recebimento: show confirm receipt */}
+                    {selectedTask.status === "aguardando_recebimento" && (
+                      <div className="p-3 rounded-lg bg-orange-500/10 border border-orange-500/20">
+                        <p className="text-xs text-orange-400 font-medium mb-2">
+                          💰 Saque realizado — aguardando confirmação de recebimento no banco
+                        </p>
+                        <Button
+                          className="w-full gap-2 bg-orange-500 hover:bg-orange-600"
+                          size="lg"
+                          onClick={() => setActionType("concluir")}
+                        >
+                          <CheckCircle2 className="h-4 w-4" />
+                          Confirmar Recebimento no Banco
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* Quick action CTA (for non-aguardando states) */}
+                    {selectedTask.status !== "aguardando_recebimento" && getDirectCTALabel(selectedTask.tipo, selectedTask.status) && selectedTask.titular_id && selectedTask.bookmaker_catalogo_id && (
                       <Button
                         className="w-full gap-2"
                         size="lg"
                         onClick={() => handleDirectAction(selectedTask)}
                       >
                         {TIPO_ICONS[selectedTask.tipo] && (() => { const Icon = TIPO_ICONS[selectedTask.tipo]; return <Icon className="h-4 w-4" />; })()}
-                        {getDirectCTALabel(selectedTask.tipo)} — {selectedTask.casa_nome}
+                        {getDirectCTALabel(selectedTask.tipo, selectedTask.status)} — {selectedTask.casa_nome}
                         {selectedTask.valor && ` (${formatCurrency(selectedTask.valor)})`}
                       </Button>
                     )}
