@@ -287,9 +287,14 @@ export function SupplierContasTab({
 
       <SupplierNovaContaDialog
         open={novaContaOpen}
-        onOpenChange={setNovaContaOpen}
+        onOpenChange={(open) => {
+          setNovaContaOpen(open);
+          if (!open) onClearPrefillCreate?.();
+        }}
         supplierWorkspaceId={supplierWorkspaceId}
         onSuccess={onRefresh}
+        prefillTitularId={prefillCreateAccount?.titularId}
+        prefillBookmakerIds={prefillCreateAccount?.bookmakerIds}
       />
 
       {editAccount && (
