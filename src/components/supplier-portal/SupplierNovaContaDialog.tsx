@@ -305,7 +305,7 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
     onOpenChange(false);
   }
 
-  const noConfig = catalogo.length === 0 && allowedIds !== undefined;
+  const noConfig = catalogo.length === 0;
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) resetForm(); else onOpenChange(v); }}>
