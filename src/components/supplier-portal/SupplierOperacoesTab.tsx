@@ -20,6 +20,7 @@ interface Props {
   supplierToken: string;
   onNavigateToDeposit?: (titularId: string, bookmakerCatalogoId: string, valor?: number, taskId?: string) => void;
   onNavigateToSaque?: (titularId: string, bookmakerCatalogoId: string, valor?: number, taskId?: string) => void;
+  onNavigateToCreateAccount?: (titularId: string, bookmakerCatalogoIds: string[], taskId?: string) => void;
 }
 
 const TIPO_LABELS: Record<string, string> = {
@@ -63,13 +64,14 @@ const STATUS_COLORS: Record<string, string> = {
 const TIPO_ICONS: Record<string, typeof Banknote> = {
   deposito: ArrowDownToLine,
   saque: ArrowUpFromLine,
+  criacao_conta: Building2,
 };
 
 function formatCurrency(val: number) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(val);
 }
 
-export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNavigateToDeposit, onNavigateToSaque }: Props) {
+export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNavigateToDeposit, onNavigateToSaque, onNavigateToCreateAccount }: Props) {
   const queryClient = useQueryClient();
   const [selectedTask, setSelectedTask] = useState<any>(null);
   const [actionType, setActionType] = useState<"concluir" | "rejeitar" | null>(null);
@@ -178,9 +180,19 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNav
       updateTaskMutation.mutate({ taskId: task.id, status: "em_andamento" });
       onNavigateToDeposit(task.titular_id, catalogoId, valor, task.id);
     } else if (task.tipo === "saque" && onNavigateToSaque && task.titular_id && catalogoId) {
-      // Saque: transition to aguardando_recebimento (money left the casa but not yet in bank)
       updateTaskMutation.mutate({ taskId: task.id, status: "aguardando_recebimento" });
       onNavigateToSaque(task.titular_id, catalogoId, valor, task.id);
+    } else if (task.tipo === "criacao_conta" && onNavigateToCreateAccount && task.titular_id) {
+      const casasItems = task.casas_items as any[] | null;
+      const bookmakerIds = overrideCatalogoId
+        ? [overrideCatalogoId]
+        : casasItems
+          ? casasItems.filter((i: any) => !i.concluido).map((i: any) => i.bookmaker_catalogo_id)
+          : catalogoId ? [catalogoId] : [];
+      if (bookmakerIds.length > 0) {
+        updateTaskMutation.mutate({ taskId: task.id, status: "em_andamento" });
+        onNavigateToCreateAccount(task.titular_id, bookmakerIds, task.id);
+      }
     } else {
       setSelectedTask(task);
       setActionType(null);
@@ -205,6 +217,7 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNav
     if (status === "aguardando_recebimento" && tipo === "saque") return "Confirmar Recebimento";
     if (tipo === "deposito") return "Depositar";
     if (tipo === "saque") return "Sacar";
+    if (tipo === "criacao_conta") return "Criar";
     return null;
   }
 
@@ -252,8 +265,11 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNav
               const isMultiCasa = casasItems && casasItems.length > 1;
               const isAguardandoRecebimento = task.status === "aguardando_recebimento";
               const ctaLabel = getDirectCTALabel(task.tipo, task.status);
-              const canNavigate = !!onNavigateToDeposit || !!onNavigateToSaque;
-              const hasDirectAction = !isMultiCasa && ctaLabel && task.titular_id && task.bookmaker_catalogo_id && (isAguardandoRecebimento || canNavigate);
+              const canNavigate = !!onNavigateToDeposit || !!onNavigateToSaque || !!onNavigateToCreateAccount;
+              const isCriacao = task.tipo === "criacao_conta";
+              const hasDirectAction = isCriacao
+                ? ctaLabel && task.titular_id && (casasItems?.length || task.bookmaker_catalogo_id) && canNavigate
+                : !isMultiCasa && ctaLabel && task.titular_id && task.bookmaker_catalogo_id && (isAguardandoRecebimento || canNavigate);
               const TipoIcon = TIPO_ICONS[task.tipo];
 
               return (
@@ -319,7 +335,7 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNav
                               const itemCtaLabel = getDirectCTALabel(task.tipo);
                               const itemDone = item.concluido === true;
                               const canExecItem = !itemDone && itemCtaLabel && task.titular_id && item.bookmaker_catalogo_id &&
-                                ((task.tipo === "deposito" && onNavigateToDeposit) || (task.tipo === "saque" && onNavigateToSaque));
+                                ((task.tipo === "deposito" && onNavigateToDeposit) || (task.tipo === "saque" && onNavigateToSaque) || (task.tipo === "criacao_conta" && onNavigateToCreateAccount));
                               return (
                                 <div key={idx} className={`flex items-center justify-between text-xs py-2 px-3 rounded-md ${itemDone ? "bg-emerald-500/10 border border-emerald-500/20" : "bg-muted/30"}`}>
                                   <div className="flex items-center gap-2">
@@ -328,7 +344,11 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNav
                                     <span className={`text-foreground font-medium ${itemDone ? "line-through opacity-60" : ""}`}>{item.nome}</span>
                                   </div>
                                   <div className="flex items-center gap-2">
-                                    <span className="font-semibold text-foreground">{formatCurrency(item.valor)}</span>
+                                    {item.valor > 0 && (
+                                      <span className={`font-semibold ${task.tipo === "criacao_conta" ? "text-muted-foreground text-[10px]" : "text-foreground"}`}>
+                                        {task.tipo === "criacao_conta" ? `Dep. ${formatCurrency(item.valor)}` : formatCurrency(item.valor)}
+                                      </span>
+                                    )}
                                     {itemDone ? (
                                       <span className="text-[10px] text-emerald-400">✓</span>
                                     ) : canExecItem ? (
