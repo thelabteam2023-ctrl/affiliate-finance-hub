@@ -215,10 +215,13 @@ export function SupplierTasksAdmin({ supplierWorkspaceId, supplierNome, parentWo
       }));
 
       const autoTitulo = titulo.trim() || (() => {
-        const parts = [TIPO_LABELS[tipo]];
+        // "Depósito em Casa — Glayza — Betano" (single)
+        // "Depósito em Casas — Glayza" (multi)
+        const tipoBase = TIPO_LABELS[tipo] || tipo;
+        const tipoLabel = casasCount > 1 ? tipoBase.replace("Casa", "Casas") : tipoBase;
+        const parts = [tipoLabel];
         if (titularNome) {
           const primeiroNome = titularNome.split(" ")[0];
-          // Capitalize: "GLAYZA" -> "Glayza"
           parts.push(primeiroNome.charAt(0).toUpperCase() + primeiroNome.slice(1).toLowerCase());
         }
         if (casasCount === 1) {

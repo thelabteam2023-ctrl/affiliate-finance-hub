@@ -188,6 +188,7 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNav
     }
   }
 
+  const [activeSubTab, setActiveSubTab] = useState<"abertas" | "concluidas">("abertas");
   const pendentes = tasks.filter((t: any) => t.status === "pendente" || t.status === "em_andamento");
   const historico = tasks.filter((t: any) => t.status === "concluido" || t.status === "rejeitado");
 
