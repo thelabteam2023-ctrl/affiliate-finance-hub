@@ -18,8 +18,8 @@ import { toast } from "sonner";
 interface Props {
   supplierWorkspaceId: string;
   supplierToken: string;
-  onNavigateToDeposit?: (titularId: string, bookmakerCatalogoId: string, valor?: number) => void;
-  onNavigateToSaque?: (titularId: string, bookmakerCatalogoId: string, valor?: number) => void;
+  onNavigateToDeposit?: (titularId: string, bookmakerCatalogoId: string, valor?: number, taskId?: string) => void;
+  onNavigateToSaque?: (titularId: string, bookmakerCatalogoId: string, valor?: number, taskId?: string) => void;
 }
 
 const TIPO_LABELS: Record<string, string> = {
