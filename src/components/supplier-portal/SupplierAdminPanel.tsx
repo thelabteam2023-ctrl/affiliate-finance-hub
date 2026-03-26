@@ -14,9 +14,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { 
   Plus, Truck, Link2, Copy, ExternalLink, Wallet,
   Building2, Users, Clock, CheckCircle2, XCircle, AlertTriangle, Zap,
-  Search, Check
+  Search, Check, ClipboardList
 } from "lucide-react";
 import { SupplierBookmakerConfigDialog } from "./SupplierBookmakerConfigDialog";
+import { SupplierTasksAdmin } from "./SupplierTasksAdmin";
 import { Separator } from "@/components/ui/separator";
 import { OrigemPagamentoSelect, OrigemPagamentoData } from "@/components/programa-indicacao/OrigemPagamentoSelect";
 import { format } from "date-fns";
