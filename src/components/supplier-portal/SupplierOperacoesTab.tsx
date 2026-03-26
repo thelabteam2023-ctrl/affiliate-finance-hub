@@ -82,6 +82,18 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, exist
   // Track unavailable items per task: Record<taskId, Set<bookmaker_catalogo_id>>
   const [unavailableItems, setUnavailableItems] = useState<Record<string, Set<string>>>({});
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
+  // Track which task cards are expanded (collapsible accordion)
+  const [expandedTasks, setExpandedTasks] = useState<Record<string, boolean>>({});
+  
+  const toggleTaskExpanded = useCallback((taskId: string) => {
+    setExpandedTasks(prev => {
+      // Auto-collapse others (accordion behavior)
+      const isCurrentlyOpen = prev[taskId];
+      const next: Record<string, boolean> = {};
+      if (!isCurrentlyOpen) next[taskId] = true;
+      return next;
+    });
+  }, []);
 
   const toggleUnavailable = useCallback((taskId: string, catalogoId: string) => {
     setUnavailableItems(prev => {
