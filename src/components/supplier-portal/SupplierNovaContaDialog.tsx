@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Building2, Eye, EyeOff, User, ChevronRight, ChevronLeft, Search, Loader2, Check, Sparkles, Copy } from "lucide-react";
+import { Building2, Eye, EyeOff, User, ChevronRight, ChevronLeft, Search, Loader2, Check, Sparkles, Copy, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { BookmakerLogo } from "@/components/ui/bookmaker-logo";
@@ -29,6 +29,7 @@ interface ContaEntry {
   catalogoNome: string;
   moeda: string;
   logoUrl: string | null;
+  linkCriacao: string | null;
   username: string;
   password: string;
   showPassword: boolean;
@@ -213,6 +214,7 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
         catalogoNome: casa?.nome || "",
         moeda: casa?.moeda_padrao || "BRL",
         logoUrl: casa?.logo_url || null,
+        linkCriacao: casa?.link_criacao || null,
         username: existing?.username || mainCred?.username || "",
         password: existing?.password || mainCred?.password || "",
         showPassword: existing?.showPassword || (!existing && !!mainCred?.password),
@@ -672,6 +674,18 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
                           </div>
                         )}
                       </div>
+
+                      {conta.linkCriacao && (
+                        <a
+                          href={conta.linkCriacao}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 rounded-lg bg-primary/5 border border-primary/20 px-3 py-2 text-xs text-primary hover:bg-primary/10 transition-colors"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+                          <span className="truncate">{conta.linkCriacao.replace(/^https?:\/\//, '').substring(0, 45)}{conta.linkCriacao.length > 55 ? '...' : ''}</span>
+                        </a>
+                      )}
 
                       <div className="h-px bg-border/40" />
 

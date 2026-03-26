@@ -50,6 +50,7 @@ export default function BookmakerCatalogoDialog({
   const [operacional, setOperacional] = useState("ATIVA");
   const [verificacao, setVerificacao] = useState("OBRIGATORIA");
   const [links, setLinks] = useState<LinkItem[]>([{ id: crypto.randomUUID(), url: "", referencia: "PADRÃO" }]);
+  const [linkCriacaoFornecedor, setLinkCriacaoFornecedor] = useState("");
   const [bonusEnabled, setBonusEnabled] = useState(false);
   const [bonusList, setBonusList] = useState<BonusItem[]>([]);
   const [observacoes, setObservacoes] = useState("");
@@ -80,6 +81,7 @@ export default function BookmakerCatalogoDialog({
       }
       
       setObservacoes(bookmaker.observacoes || "");
+      setLinkCriacaoFornecedor(bookmaker.link_criacao_fornecedor || "");
     } else {
       resetForm();
     }
@@ -97,6 +99,7 @@ export default function BookmakerCatalogoDialog({
     setBonusEnabled(false);
     setBonusList([]);
     setObservacoes("");
+    setLinkCriacaoFornecedor("");
   };
 
   // Auto-sugerir moeda quando status muda
@@ -316,6 +319,7 @@ export default function BookmakerCatalogoDialog({
         bonus_simples_json: {} as any,
         bonus_multiplos_json: bonusEnabled ? bonusList.map(({ id, ...bonus }) => bonus) as any : [] as any,
         observacoes: observacoes || null,
+        link_criacao_fornecedor: linkCriacaoFornecedor && linkCriacaoFornecedor !== "none" ? linkCriacaoFornecedor : null,
       };
 
       if (bookmaker) {
@@ -541,6 +545,29 @@ export default function BookmakerCatalogoDialog({
                 </div>
               ))}
             </div>
+
+            {/* Link de criação para fornecedores */}
+            {links.filter(l => l.url.trim()).length > 0 && (
+              <div className="space-y-2">
+                <Label className="text-sm">Link de Criação (Fornecedor)</Label>
+                <Select value={linkCriacaoFornecedor} onValueChange={setLinkCriacaoFornecedor}>
+                  <SelectTrigger className="h-10">
+                    <SelectValue placeholder="Selecione o link para fornecedores" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhum</SelectItem>
+                    {links.filter(l => l.url.trim()).map((link) => (
+                      <SelectItem key={link.id} value={link.url}>
+                        {link.referencia || "SEM REF"} — {link.url.length > 40 ? link.url.substring(0, 40) + "..." : link.url}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[10px] text-muted-foreground">
+                  Link exibido automaticamente ao fornecedor no wizard de criação de conta.
+                </p>
+              </div>
+            )}
 
             <div className="space-y-4">
               <div className="flex items-center justify-center gap-3">
