@@ -37,7 +37,7 @@ interface ContaEntry {
   autoFilled: boolean;
 }
 
-export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceId, onSuccess, prefillTitularId, prefillBookmakerIds }: Props) {
+export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceId, onSuccess, prefillTitularId, prefillBookmakerIds, activeTaskId, supplierToken, onTaskItemsCompleted }: Props) {
   const [step, setStep] = useState<1 | 2>(1);
   const [titularId, setTitularId] = useState("");
   const [selectedCasaIds, setSelectedCasaIds] = useState<Set<string>>(new Set());
