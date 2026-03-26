@@ -81,6 +81,7 @@ export default function BookmakerCatalogoDialog({
       }
       
       setObservacoes(bookmaker.observacoes || "");
+      setLinkCriacaoFornecedor(bookmaker.link_criacao_fornecedor || "");
     } else {
       resetForm();
     }
@@ -98,6 +99,7 @@ export default function BookmakerCatalogoDialog({
     setBonusEnabled(false);
     setBonusList([]);
     setObservacoes("");
+    setLinkCriacaoFornecedor("");
   };
 
   // Auto-sugerir moeda quando status muda
