@@ -50,6 +50,8 @@ export function SupplierTransacaoDialog({
   accounts,
   saldoDisponivel,
   valorSugerido,
+  prefillTitularId,
+  prefillContaId,
   onSuccess,
 }: Props) {
   const token = useMemo(() => new URLSearchParams(window.location.search).get("token") || "", []);
