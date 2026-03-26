@@ -228,8 +228,10 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNav
             Tarefas Pendentes ({pendentes.length})
           </h3>
           {pendentes.map((task: any) => {
+            const casasItems = task.casas_items as any[] | null;
+            const isMultiCasa = casasItems && casasItems.length > 1;
             const ctaLabel = getDirectCTALabel(task.tipo);
-            const hasDirectAction = ctaLabel && task.titular_id && task.bookmaker_catalogo_id;
+            const hasDirectAction = !isMultiCasa && ctaLabel && task.titular_id && task.bookmaker_catalogo_id;
             const TipoIcon = TIPO_ICONS[task.tipo];
 
             return (
@@ -265,10 +267,16 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNav
                             {task.titular_nome}
                           </span>
                         )}
-                        {task.casa_nome && (
+                        {!isMultiCasa && task.casa_nome && (
                           <span className="flex items-center gap-1">
                             {task.casa_logo && <img src={task.casa_logo} alt="" className="h-3 w-3 rounded" />}
                             {task.casa_nome}
+                          </span>
+                        )}
+                        {isMultiCasa && (
+                          <span className="flex items-center gap-1">
+                            <Building2 className="h-3 w-3" />
+                            {casasItems!.length} casas
                           </span>
                         )}
                         {task.valor && (
@@ -281,7 +289,23 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNav
                           </span>
                         )}
                       </div>
-                      {task.valor_alvo_casa != null && task.valor_atual_casa != null && (
+
+                      {/* Multi-casa breakdown */}
+                      {isMultiCasa && (
+                        <div className="mt-2 space-y-1">
+                          {casasItems!.map((item: any, idx: number) => (
+                            <div key={idx} className="flex items-center justify-between text-[10px] py-1 px-2 rounded bg-muted/30">
+                              <div className="flex items-center gap-1.5">
+                                {item.logo_url && <img src={item.logo_url} alt="" className="h-3.5 w-3.5 rounded" />}
+                                <span className="text-foreground font-medium">{item.nome}</span>
+                              </div>
+                              <span className="font-semibold text-foreground">{formatCurrency(item.valor)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {!isMultiCasa && task.valor_alvo_casa != null && task.valor_atual_casa != null && (
                         <div className="flex items-center gap-2 mt-1 text-[10px]">
                           <span className="text-muted-foreground">Atual: {formatCurrency(task.valor_atual_casa)}</span>
                           <ArrowRight className="h-3 w-3 text-muted-foreground" />
