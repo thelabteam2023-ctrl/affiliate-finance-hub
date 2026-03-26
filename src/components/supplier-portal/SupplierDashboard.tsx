@@ -287,6 +287,12 @@ export function SupplierDashboard({ session }: Props) {
             <SupplierOperacoesTab
               supplierWorkspaceId={session.supplier_workspace_id}
               supplierToken={supplierToken}
+              onNavigateToDeposit={(titularId, bookmakerCatalogoId, valor) =>
+                handleTaskNavigate("DEPOSITO", titularId, bookmakerCatalogoId, valor)
+              }
+              onNavigateToSaque={(titularId, bookmakerCatalogoId, valor) =>
+                handleTaskNavigate("SAQUE", titularId, bookmakerCatalogoId, valor)
+              }
             />
           </TabsContent>
 
@@ -307,12 +313,21 @@ export function SupplierDashboard({ session }: Props) {
       {/* Transaction dialog */}
       <SupplierTransacaoDialog
         open={transacaoOpen}
-        onOpenChange={setTransacaoOpen}
+        onOpenChange={(open) => {
+          setTransacaoOpen(open);
+          if (!open) {
+            setPrefillTitularId(undefined);
+            setPrefillContaId(undefined);
+            setPrefillValor(undefined);
+          }
+        }}
         tipo={transacaoTipo}
         supplierWorkspaceId={session.supplier_workspace_id}
         accounts={accounts || []}
         saldoDisponivel={saldoDisponivel}
-        valorSugerido={alocacao?.valor_sugerido_deposito ? Number(alocacao.valor_sugerido_deposito) : undefined}
+        valorSugerido={prefillValor ?? (alocacao?.valor_sugerido_deposito ? Number(alocacao.valor_sugerido_deposito) : undefined)}
+        prefillTitularId={prefillTitularId}
+        prefillContaId={prefillContaId}
         onSuccess={handleRefresh}
       />
 
