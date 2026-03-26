@@ -300,11 +300,36 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
         throw new Error(data.error || "Erro ao criar conta");
       }
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       const count = contas.length;
       toast.success(`${count} conta${count > 1 ? "s" : ""} criada${count > 1 ? "s" : ""} com sucesso`);
       queryClient.invalidateQueries({ queryKey: ["supplier-accounts"] });
       queryClient.invalidateQueries({ queryKey: ["supplier-accounts-existing"] });
+
+      // Mark each created bookmaker as done on the task
+      if (activeTaskId && supplierToken) {
+        try {
+          for (const c of contas) {
+            await fetch(
+              `https://${projectId}.supabase.co/functions/v1/supplier-auth`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json", apikey: anonKey },
+                body: JSON.stringify({
+                  action: "complete-task-item",
+                  token: supplierToken,
+                  task_id: activeTaskId,
+                  bookmaker_catalogo_id: c.catalogoId,
+                }),
+              }
+            );
+          }
+          onTaskItemsCompleted?.();
+        } catch (e) {
+          console.error("Error completing task items:", e);
+        }
+      }
+
       resetForm();
       onSuccess();
     },
