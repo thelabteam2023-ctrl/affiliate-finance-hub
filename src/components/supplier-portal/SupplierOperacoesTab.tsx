@@ -264,22 +264,22 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNav
                       {task.descricao && (
                         <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{task.descricao}</p>
                       )}
-                      <div className="flex items-center gap-3 mt-1.5 text-[10px] text-muted-foreground flex-wrap">
+                      <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground flex-wrap">
                         {task.titular_nome && (
-                          <span className="flex items-center gap-1">
-                            <User className="h-3 w-3" />
+                          <span className="flex items-center gap-1.5">
+                            <User className="h-3.5 w-3.5" />
                             {task.titular_nome}
                           </span>
                         )}
                         {!isMultiCasa && task.casa_nome && (
-                          <span className="flex items-center gap-1">
-                            {task.casa_logo && <img src={task.casa_logo} alt="" className="h-3 w-3 rounded" />}
+                          <span className="flex items-center gap-1.5">
+                            {task.casa_logo && <img src={task.casa_logo} alt="" className="h-4 w-4 rounded" />}
                             {task.casa_nome}
                           </span>
                         )}
                         {isMultiCasa && (
-                          <span className="flex items-center gap-1">
-                            <Building2 className="h-3 w-3" />
+                          <span className="flex items-center gap-1.5">
+                            <Building2 className="h-3.5 w-3.5" />
                             {casasItems!.length} casas
                           </span>
                         )}
@@ -287,8 +287,8 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNav
                           <span className="font-semibold text-foreground">{formatCurrency(task.valor)}</span>
                         )}
                         {task.data_limite && (
-                          <span className="flex items-center gap-0.5">
-                            <Clock className="h-3 w-3" />
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-3.5 w-3.5" />
                             {format(new Date(task.data_limite), "dd/MM HH:mm")}
                           </span>
                         )}
@@ -302,9 +302,9 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNav
                             const canExecItem = itemCtaLabel && task.titular_id && item.bookmaker_catalogo_id &&
                               ((task.tipo === "deposito" && onNavigateToDeposit) || (task.tipo === "saque" && onNavigateToSaque));
                             return (
-                              <div key={idx} className="flex items-center justify-between text-[10px] py-1.5 px-2 rounded bg-muted/30">
-                                <div className="flex items-center gap-1.5">
-                                  {item.logo_url && <img src={item.logo_url} alt="" className="h-3.5 w-3.5 rounded" />}
+                              <div key={idx} className="flex items-center justify-between text-xs py-2 px-3 rounded-md bg-muted/30">
+                                <div className="flex items-center gap-2">
+                                  {item.logo_url && <img src={item.logo_url} alt="" className="h-5 w-5 rounded" />}
                                   <span className="text-foreground font-medium">{item.nome}</span>
                                 </div>
                                 <div className="flex items-center gap-2">
@@ -313,7 +313,7 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNav
                                     <Button
                                       size="sm"
                                       variant="ghost"
-                                      className="h-5 px-1.5 text-[10px] gap-0.5 text-primary hover:text-primary"
+                                      className="h-6 px-2 text-xs gap-1 text-primary hover:text-primary"
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         handleDirectAction(task, item.bookmaker_catalogo_id, item.valor);
