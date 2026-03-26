@@ -1,0 +1,1 @@
+ALTER TABLE public.bookmakers_catalogo ADD COLUMN IF NOT EXISTS link_criacao_fornecedor TEXT;

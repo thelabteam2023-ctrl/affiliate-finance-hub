@@ -1677,6 +1677,7 @@ export type Database = {
           created_at: string
           id: string
           is_system: boolean | null
+          link_criacao_fornecedor: string | null
           links_json: Json | null
           logo_url: string | null
           moeda_padrao: string
@@ -1698,6 +1699,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_system?: boolean | null
+          link_criacao_fornecedor?: string | null
           links_json?: Json | null
           logo_url?: string | null
           moeda_padrao?: string
@@ -1721,6 +1723,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_system?: boolean | null
+          link_criacao_fornecedor?: string | null
           links_json?: Json | null
           logo_url?: string | null
           moeda_padrao?: string
