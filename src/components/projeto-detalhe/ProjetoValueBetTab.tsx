@@ -1304,12 +1304,9 @@ export function ProjetoValueBetTab({
                   }}
                   onQuickResolve={handleQuickResolveSurebet}
                   onPernaResultChange={handleSurebetPernaResolve}
-                  onDelete={handleDeleteAposta}
-                  formatCurrency={formatCurrency}
-                  convertToConsolidation={convertToConsolidationOficialFn}
-                  bookmakerNomeMap={bookmakerNomeMap}
-                />
-              );
+                   onDelete={handleDeleteAposta}
+                   onDuplicate={handleDuplicateSurebet}
+                   formatCurrency={formatCurrency}
             }
 
             return (
