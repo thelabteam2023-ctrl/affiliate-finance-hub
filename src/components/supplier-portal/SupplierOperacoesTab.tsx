@@ -40,6 +40,7 @@ const PRIORIDADE_LABELS: Record<string, string> = {
 const STATUS_LABELS: Record<string, string> = {
   pendente: "Pendente",
   em_andamento: "Em Andamento",
+  aguardando_recebimento: "Aguardando Recebimento",
   concluido: "Concluído",
   rejeitado: "Rejeitado",
 };
@@ -54,6 +55,7 @@ const PRIORIDADE_COLORS: Record<string, string> = {
 const STATUS_COLORS: Record<string, string> = {
   pendente: "text-yellow-400 border-yellow-400/40 bg-yellow-400/10",
   em_andamento: "text-blue-400 border-blue-400/40 bg-blue-400/10",
+  aguardando_recebimento: "text-orange-400 border-orange-400/40 bg-orange-400/10",
   concluido: "text-emerald-400 border-emerald-400/40 bg-emerald-400/10",
   rejeitado: "text-muted-foreground border-muted-foreground/40 bg-muted/30",
 };
@@ -176,7 +178,8 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNav
       updateTaskMutation.mutate({ taskId: task.id, status: "em_andamento" });
       onNavigateToDeposit(task.titular_id, catalogoId, valor, task.id);
     } else if (task.tipo === "saque" && onNavigateToSaque && task.titular_id && catalogoId) {
-      updateTaskMutation.mutate({ taskId: task.id, status: "em_andamento" });
+      // Saque: transition to aguardando_recebimento (money left the casa but not yet in bank)
+      updateTaskMutation.mutate({ taskId: task.id, status: "aguardando_recebimento" });
       onNavigateToSaque(task.titular_id, catalogoId, valor, task.id);
     } else {
       setSelectedTask(task);
@@ -186,11 +189,20 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNav
     }
   }
 
+  // Handle confirming receipt of withdrawal funds into bank
+  function handleConfirmRecebimento(task: any) {
+    setSelectedTask(task);
+    setActionType("concluir");
+    setObservacoes("");
+    setComprovanteFile(null);
+  }
+
   const [activeSubTab, setActiveSubTab] = useState<"abertas" | "concluidas">("abertas");
-  const pendentes = tasks.filter((t: any) => t.status === "pendente" || t.status === "em_andamento");
+  const pendentes = tasks.filter((t: any) => t.status === "pendente" || t.status === "em_andamento" || t.status === "aguardando_recebimento");
   const historico = tasks.filter((t: any) => t.status === "concluido" || t.status === "rejeitado");
 
-  function getDirectCTALabel(tipo: string) {
+  function getDirectCTALabel(tipo: string, status?: string) {
+    if (status === "aguardando_recebimento" && tipo === "saque") return "Confirmar Recebimento";
     if (tipo === "deposito") return "Depositar";
     if (tipo === "saque") return "Sacar";
     return null;
@@ -238,9 +250,10 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNav
             {pendentes.map((task: any) => {
               const casasItems = task.casas_items as any[] | null;
               const isMultiCasa = casasItems && casasItems.length > 1;
-              const ctaLabel = getDirectCTALabel(task.tipo);
+              const isAguardandoRecebimento = task.status === "aguardando_recebimento";
+              const ctaLabel = getDirectCTALabel(task.tipo, task.status);
               const canNavigate = !!onNavigateToDeposit || !!onNavigateToSaque;
-              const hasDirectAction = !isMultiCasa && ctaLabel && task.titular_id && task.bookmaker_catalogo_id && canNavigate;
+              const hasDirectAction = !isMultiCasa && ctaLabel && task.titular_id && task.bookmaker_catalogo_id && (isAguardandoRecebimento || canNavigate);
               const TipoIcon = TIPO_ICONS[task.tipo];
 
               return (
@@ -352,10 +365,21 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNav
                         {hasDirectAction ? (
                           <Button
                             size="sm"
-                            className="gap-1.5 text-xs"
-                            onClick={(e) => { e.stopPropagation(); handleDirectAction(task); }}
+                            className={`gap-1.5 text-xs ${isAguardandoRecebimento ? "bg-orange-500 hover:bg-orange-600" : ""}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (isAguardandoRecebimento) {
+                                handleConfirmRecebimento(task);
+                              } else {
+                                handleDirectAction(task);
+                              }
+                            }}
                           >
-                            {TipoIcon && <TipoIcon className="h-3.5 w-3.5" />}
+                            {isAguardandoRecebimento ? (
+                              <CheckCircle2 className="h-3.5 w-3.5" />
+                            ) : (
+                              TipoIcon && <TipoIcon className="h-3.5 w-3.5" />
+                            )}
                             {ctaLabel}
                           </Button>
                         ) : (
@@ -558,17 +582,34 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNav
                 )}
 
                 {/* Direct CTA inside dialog */}
-                {(selectedTask.status === "pendente" || selectedTask.status === "em_andamento") && (
+                {(selectedTask.status === "pendente" || selectedTask.status === "em_andamento" || selectedTask.status === "aguardando_recebimento") && (
                   <>
-                    {/* Quick action CTA */}
-                    {getDirectCTALabel(selectedTask.tipo) && selectedTask.titular_id && selectedTask.bookmaker_catalogo_id && (
+                    {/* Aguardando recebimento: show confirm receipt */}
+                    {selectedTask.status === "aguardando_recebimento" && (
+                      <div className="p-3 rounded-lg bg-orange-500/10 border border-orange-500/20">
+                        <p className="text-xs text-orange-400 font-medium mb-2">
+                          💰 Saque realizado — aguardando confirmação de recebimento no banco
+                        </p>
+                        <Button
+                          className="w-full gap-2 bg-orange-500 hover:bg-orange-600"
+                          size="lg"
+                          onClick={() => setActionType("concluir")}
+                        >
+                          <CheckCircle2 className="h-4 w-4" />
+                          Confirmar Recebimento no Banco
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* Quick action CTA (for non-aguardando states) */}
+                    {selectedTask.status !== "aguardando_recebimento" && getDirectCTALabel(selectedTask.tipo, selectedTask.status) && selectedTask.titular_id && selectedTask.bookmaker_catalogo_id && (
                       <Button
                         className="w-full gap-2"
                         size="lg"
                         onClick={() => handleDirectAction(selectedTask)}
                       >
                         {TIPO_ICONS[selectedTask.tipo] && (() => { const Icon = TIPO_ICONS[selectedTask.tipo]; return <Icon className="h-4 w-4" />; })()}
-                        {getDirectCTALabel(selectedTask.tipo)} — {selectedTask.casa_nome}
+                        {getDirectCTALabel(selectedTask.tipo, selectedTask.status)} — {selectedTask.casa_nome}
                         {selectedTask.valor && ` (${formatCurrency(selectedTask.valor)})`}
                       </Button>
                     )}
