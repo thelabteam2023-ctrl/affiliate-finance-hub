@@ -675,6 +675,18 @@ export function SupplierNovaContaDialog({ open, onOpenChange, supplierWorkspaceI
                         )}
                       </div>
 
+                      {conta.linkCriacao && (
+                        <a
+                          href={conta.linkCriacao}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 rounded-lg bg-primary/5 border border-primary/20 px-3 py-2 text-xs text-primary hover:bg-primary/10 transition-colors"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+                          <span className="truncate">{conta.linkCriacao.replace(/^https?:\/\//, '').substring(0, 45)}{conta.linkCriacao.length > 55 ? '...' : ''}</span>
+                        </a>
+                      )}
+
                       <div className="h-px bg-border/40" />
 
                       <div className="grid grid-cols-2 gap-3">
