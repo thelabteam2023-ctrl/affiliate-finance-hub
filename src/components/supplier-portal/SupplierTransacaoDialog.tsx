@@ -117,10 +117,10 @@ export function SupplierTransacaoDialog({
   // Reset on open
   useEffect(() => {
     if (open) {
-      setStep(1);
-      setTitularId("");
+      setStep(prefillTitularId ? 1 : 1);
+      setTitularId(prefillTitularId || "");
       setBancoId("");
-      setContaId("");
+      setContaId(prefillContaId || "");
       setValor(valorSugerido?.toString() || "");
       setDescricao("");
       refetchBancos();
