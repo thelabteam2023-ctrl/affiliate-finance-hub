@@ -969,6 +969,31 @@ export function SupplierTasksAdmin({ supplierWorkspaceId, supplierNome, parentWo
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete confirmation dialog */}
+      <Dialog open={!!deleteTask} onOpenChange={(o) => { if (!o) setDeleteTask(null); }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="h-5 w-5" />
+              Excluir Tarefa
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground py-2">
+            Tem certeza que deseja excluir a tarefa <strong className="text-foreground">{deleteTask?.titulo}</strong>? Esta ação não pode ser desfeita.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteTask(null)}>Cancelar</Button>
+            <Button
+              variant="destructive"
+              onClick={() => deleteTask && deleteMutation.mutate(deleteTask.id)}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? "Excluindo..." : "Excluir"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
