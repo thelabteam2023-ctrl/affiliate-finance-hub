@@ -169,17 +169,47 @@ export function SupplierDashboard({ session }: Props) {
     refetchAccounts();
   }
 
-  function handleTaskNavigate(tipo: "DEPOSITO" | "SAQUE", titularId: string, bookmakerCatalogoId: string, valor?: number) {
-    // Find the account ID for this titular + bookmaker combo
+  function handleTaskNavigate(tipo: "DEPOSITO" | "SAQUE", titularId: string, bookmakerCatalogoId: string, valor?: number, taskId?: string) {
     const conta = (accounts || []).find(
       (a: any) => a.titular_id === titularId && a.bookmaker_catalogo_id === bookmakerCatalogoId
     );
     setPrefillTitularId(titularId);
     setPrefillContaId(conta?.id);
     setPrefillValor(valor);
+    setActiveTaskId(taskId);
+    setActiveBookmakerCatalogoId(bookmakerCatalogoId);
     setTransacaoTipo(tipo);
     setTransacaoOpen(true);
   }
+
+  const handleTransactionSuccess = useCallback(async () => {
+    handleRefresh();
+    // If this came from a task, mark the item as done
+    if (activeTaskId && activeBookmakerCatalogoId && supplierToken) {
+      try {
+        const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+        await fetch(
+          `https://${projectId}.supabase.co/functions/v1/supplier-auth`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            },
+            body: JSON.stringify({
+              action: "complete-task-item",
+              token: supplierToken,
+              task_id: activeTaskId,
+              bookmaker_catalogo_id: activeBookmakerCatalogoId,
+            }),
+          }
+        );
+        queryClient.invalidateQueries({ queryKey: ["supplier-tasks-portal"] });
+      } catch (e) {
+        console.error("Error completing task item:", e);
+      }
+    }
+  }, [activeTaskId, activeBookmakerCatalogoId, supplierToken, queryClient]);
 
   return (
     <div className="min-h-screen bg-background">
