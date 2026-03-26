@@ -502,7 +502,7 @@ export function SupplierTasksAdmin({ supplierWorkspaceId, supplierNome, parentWo
           </CardContent>
         </Card>
       ) : (
-        <ScrollArea className="max-h-[500px]">
+        <ScrollArea className="max-h-[700px]">
           <div className="space-y-2">
             {filteredTasks.map((task: any) => {
               const isExpanded = expandedTasks[task.id] || false;
@@ -611,19 +611,17 @@ export function SupplierTasksAdmin({ supplierWorkspaceId, supplierNome, parentWo
 
                       {/* Multi-casa items */}
                       {isMultiCasa && (
-                        <ScrollArea className="max-h-[350px]">
-                          <div className="space-y-1.5">
-                            {casasItems!.map((item: any, idx: number) => (
-                              <div key={idx} className="flex items-center justify-between text-xs py-2 px-3 rounded-md bg-muted/30">
-                                <div className="flex items-center gap-2">
-                                  {item.logo_url && <img src={item.logo_url} alt="" className="h-5 w-5 rounded" />}
-                                  <span className="text-foreground font-medium">{item.nome}</span>
-                                </div>
-                                <span className="font-semibold text-foreground">{formatCurrency(item.valor)}</span>
+                        <div className="max-h-[350px] overflow-y-auto pr-1 space-y-1.5">
+                          {casasItems!.map((item: any, idx: number) => (
+                            <div key={idx} className="flex items-center justify-between text-xs py-2 px-3 rounded-md bg-muted/30">
+                              <div className="flex items-center gap-2">
+                                {item.logo_url && <img src={item.logo_url} alt="" className="h-5 w-5 rounded" />}
+                                <span className="text-foreground font-medium">{item.nome}</span>
                               </div>
-                            ))}
-                          </div>
-                        </ScrollArea>
+                              <span className="font-semibold text-foreground">{formatCurrency(item.valor)}</span>
+                            </div>
+                          ))}
+                        </div>
                       )}
 
                       {/* Single allocation context */}
