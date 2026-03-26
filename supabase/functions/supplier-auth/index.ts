@@ -1324,7 +1324,7 @@ Deno.serve(async (req) => {
       const ids = allowed.map((a: any) => a.bookmaker_catalogo_id);
       const { data: bookmakers } = await supabaseAdmin
         .from("bookmakers_catalogo")
-        .select("id, nome, logo_url, moeda_padrao, status")
+        .select("id, nome, logo_url, moeda_padrao, status, link_criacao_fornecedor")
         .in("id", ids)
         .in("status", ["REGULAMENTADA", "NAO_REGULAMENTADA"])
         .order("nome");

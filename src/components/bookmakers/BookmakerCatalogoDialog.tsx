@@ -319,7 +319,7 @@ export default function BookmakerCatalogoDialog({
         bonus_simples_json: {} as any,
         bonus_multiplos_json: bonusEnabled ? bonusList.map(({ id, ...bonus }) => bonus) as any : [] as any,
         observacoes: observacoes || null,
-        link_criacao_fornecedor: linkCriacaoFornecedor || null,
+        link_criacao_fornecedor: linkCriacaoFornecedor && linkCriacaoFornecedor !== "none" ? linkCriacaoFornecedor : null,
       };
 
       if (bookmaker) {
