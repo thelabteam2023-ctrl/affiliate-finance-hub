@@ -1146,7 +1146,7 @@ Deno.serve(async (req) => {
 
       const { data: tasks } = await supabaseAdmin
         .from("supplier_tasks")
-        .select("id, tipo, titulo, descricao, valor, moeda, prioridade, data_limite, status, comprovante_url, observacoes_fornecedor, valor_atual_casa, valor_alvo_casa, created_at, concluida_at, recusada_at, recusa_motivo, bookmaker_catalogo_id")
+        .select("id, tipo, titulo, descricao, valor, moeda, prioridade, data_limite, status, comprovante_url, observacoes_fornecedor, valor_atual_casa, valor_alvo_casa, created_at, concluida_at, recusada_at, recusa_motivo, bookmaker_catalogo_id, titular_id")
         .eq("supplier_workspace_id", validation.supplier_workspace_id)
         .order("created_at", { ascending: false });
 
@@ -1161,12 +1161,26 @@ Deno.serve(async (req) => {
         catalogoMap = new Map((catalogos || []).map((c: any) => [c.id, c]));
       }
 
+      // Enrich with titular info
+      const titularIds = [...new Set((tasks || []).map((t: any) => t.titular_id).filter(Boolean))];
+      let titularMap = new Map();
+      if (titularIds.length > 0) {
+        const { data: titulares } = await supabaseAdmin
+          .from("supplier_titulares")
+          .select("id, nome, documento")
+          .in("id", titularIds);
+        titularMap = new Map((titulares || []).map((t: any) => [t.id, t]));
+      }
+
       const enriched = (tasks || []).map((t: any) => {
         const casa = catalogoMap.get(t.bookmaker_catalogo_id);
+        const titular = titularMap.get(t.titular_id);
         return {
           ...t,
           casa_nome: casa?.nome || null,
           casa_logo: casa?.logo_url || null,
+          titular_nome: titular?.nome || null,
+          titular_documento: titular?.documento || null,
         };
       });
 
