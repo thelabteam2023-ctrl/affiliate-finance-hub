@@ -46,6 +46,7 @@ export function SupplierDashboard({ session }: Props) {
   const [prefillValor, setPrefillValor] = useState<number | undefined>();
   const [activeTaskId, setActiveTaskId] = useState<string | undefined>();
   const [activeBookmakerCatalogoId, setActiveBookmakerCatalogoId] = useState<string | undefined>();
+  const [prefillCreateAccount, setPrefillCreateAccount] = useState<{ titularId: string; bookmakerIds: string[] } | null>(null);
   const queryClient = useQueryClient();
 
   // Get token from URL for edge function calls
