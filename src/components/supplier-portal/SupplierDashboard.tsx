@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Wallet, Building2, Users, ScrollText,
-  Clock
+  Clock, ClipboardList
 } from "lucide-react";
 import labestLogo from "@/assets/labest-logo.png";
 import { SupplierContasTab } from "./SupplierContasTab";
@@ -41,6 +41,9 @@ export function SupplierDashboard({ session }: Props) {
   const [transacaoOpen, setTransacaoOpen] = useState(false);
   const [transacaoTipo, setTransacaoTipo] = useState<"DEPOSITO" | "SAQUE" | "TRANSFERENCIA_BANCO">("DEPOSITO");
   const [bancosModalOpen, setBancosModalOpen] = useState(false);
+
+  // Get token from URL for edge function calls
+  const supplierToken = useMemo(() => new URLSearchParams(window.location.search).get("token") || "", []);
 
   // Fetch ledger summary
   const { data: ledgerData, refetch: refetchLedger } = useQuery({
