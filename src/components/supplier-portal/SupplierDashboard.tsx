@@ -318,8 +318,13 @@ export function SupplierDashboard({ session }: Props) {
             <TabsTrigger value="visao-geral" className="gap-1 sm:gap-1.5 text-[11px] sm:text-xs">
               <Building2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" /> Contas
             </TabsTrigger>
-            <TabsTrigger value="operacoes" className="gap-1 sm:gap-1.5 text-[11px] sm:text-xs">
+            <TabsTrigger value="operacoes" className="gap-1 sm:gap-1.5 text-[11px] sm:text-xs relative">
               <ClipboardList className="h-3 w-3 sm:h-3.5 sm:w-3.5" /> Operações
+              {openTasksCount > 0 && (
+                <span className="ml-1 inline-flex items-center justify-center h-4 min-w-[16px] px-1 rounded-full bg-emerald-500 text-white text-[9px] font-bold leading-none">
+                  {openTasksCount}
+                </span>
+              )}
             </TabsTrigger>
             <TabsTrigger value="titulares" className="gap-1 sm:gap-1.5 text-[11px] sm:text-xs">
               <Users className="h-3 w-3 sm:h-3.5 sm:w-3.5" /> Titulares
