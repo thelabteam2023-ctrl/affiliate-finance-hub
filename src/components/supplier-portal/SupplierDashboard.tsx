@@ -41,6 +41,9 @@ export function SupplierDashboard({ session }: Props) {
   const [transacaoOpen, setTransacaoOpen] = useState(false);
   const [transacaoTipo, setTransacaoTipo] = useState<"DEPOSITO" | "SAQUE" | "TRANSFERENCIA_BANCO">("DEPOSITO");
   const [bancosModalOpen, setBancosModalOpen] = useState(false);
+  const [prefillTitularId, setPrefillTitularId] = useState<string | undefined>();
+  const [prefillContaId, setPrefillContaId] = useState<string | undefined>();
+  const [prefillValor, setPrefillValor] = useState<number | undefined>();
 
   // Get token from URL for edge function calls
   const supplierToken = useMemo(() => new URLSearchParams(window.location.search).get("token") || "", []);
