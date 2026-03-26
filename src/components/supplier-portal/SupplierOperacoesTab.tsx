@@ -379,30 +379,34 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, exist
                             const canExecItem = !itemDone && !isItemUnavailable && itemCtaLabel && task.titular_id && item.bookmaker_catalogo_id &&
                               ((task.tipo === "deposito" && onNavigateToDeposit) || (task.tipo === "saque" && onNavigateToSaque) || (task.tipo === "criacao_conta" && onNavigateToCreateAccount));
                             return (
-                              <div key={idx} className={`flex items-center gap-2 text-xs py-2.5 px-3 rounded-md ${
+                              <div key={idx} className={`flex items-center gap-3 text-xs py-2.5 px-3 rounded-md ${
                                 itemDone ? "bg-emerald-500/10 border border-emerald-500/20" 
                                 : isItemUnavailable ? "bg-muted/20 opacity-50 border border-dashed border-muted-foreground/20"
                                 : "bg-muted/30"
                               }`}>
-                                {itemDone && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />}
-                                {isItemUnavailable && !itemDone && <Ban className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
-                                {item.logo_url && <img src={item.logo_url} alt="" className="h-5 w-5 rounded shrink-0" />}
-                                <span className={`font-medium truncate ${itemDone ? "line-through opacity-60" : ""} ${isItemUnavailable ? "line-through" : ""}`}>{item.nome}</span>
+                                {/* Left: Status icon + Logo + Name */}
+                                <div className="flex items-center gap-2 min-w-0 flex-1">
+                                  {itemDone && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />}
+                                  {isItemUnavailable && !itemDone && <Ban className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
+                                  {item.logo_url && <img src={item.logo_url} alt="" className="h-5 w-5 rounded shrink-0" />}
+                                  <span className={`font-medium truncate ${itemDone ? "line-through opacity-60" : ""} ${isItemUnavailable ? "line-through" : ""}`}>{item.nome}</span>
+                                </div>
                                 
-                                {item.valor > 0 && !isItemUnavailable && (
-                                  <span className={`ml-auto shrink-0 font-semibold ${task.tipo === "criacao_conta" ? "text-muted-foreground text-[10px]" : "text-foreground"}`}>
-                                    {task.tipo === "criacao_conta" ? `Dep. ${formatCurrency(item.valor)}` : formatCurrency(item.valor)}
-                                  </span>
-                                )}
-                                
-                                <div className={`${item.valor > 0 && !isItemUnavailable ? "" : "ml-auto"} flex items-center gap-1 shrink-0`}>
+                                {/* Right: Value + Action (single clean group) */}
+                                <div className="flex items-center gap-2 shrink-0">
+                                  {item.valor > 0 && !isItemUnavailable && (
+                                    <span className={`font-semibold whitespace-nowrap ${task.tipo === "criacao_conta" ? "text-muted-foreground text-[10px]" : "text-foreground"}`}>
+                                      {task.tipo === "criacao_conta" ? `Dep. ${formatCurrency(item.valor)}` : formatCurrency(item.valor)}
+                                    </span>
+                                  )}
+                                  
                                   {itemDone ? (
-                                    <span className="text-[10px] text-emerald-400">✓</span>
+                                    <span className="text-[10px] text-emerald-400 font-medium">Criada</span>
                                   ) : isItemUnavailable ? (
                                     <Button
                                       size="sm"
                                       variant="ghost"
-                                      className="h-6 px-2 text-[10px] text-muted-foreground hover:text-foreground"
+                                      className="h-7 px-2.5 text-[10px] text-muted-foreground hover:text-foreground"
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         toggleUnavailable(task.id, item.bookmaker_catalogo_id);
@@ -415,28 +419,13 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, exist
                                       {canExecItem && (
                                         <Button
                                           size="sm"
-                                          variant="ghost"
-                                          className="h-6 px-2 text-xs text-primary hover:text-primary"
+                                          className="h-7 px-3 text-xs font-medium"
                                           onClick={(e) => {
                                             e.stopPropagation();
                                             handleDirectAction(task, item.bookmaker_catalogo_id, item.valor);
                                           }}
                                         >
                                           {itemCtaLabel}
-                                        </Button>
-                                      )}
-                                      {!itemDone && isCriacao && (
-                                        <Button
-                                          size="sm"
-                                          variant="ghost"
-                                          className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
-                                          title="Marcar como indisponível"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            toggleUnavailable(task.id, item.bookmaker_catalogo_id);
-                                          }}
-                                        >
-                                          <Ban className="h-3 w-3" />
                                         </Button>
                                       )}
                                     </>
