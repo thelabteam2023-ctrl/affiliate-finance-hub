@@ -87,7 +87,7 @@ export function SupplierDashboard({ session }: Props) {
       const tasks = data.tasks || [];
       return tasks.filter((t: any) => t.status !== "concluida" && t.status !== "cancelada").length;
     },
-    refetchInterval: 30_000,
+    staleTime: Infinity,
   });
 
   // Fetch accounts
