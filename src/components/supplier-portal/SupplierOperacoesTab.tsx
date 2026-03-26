@@ -537,27 +537,6 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNav
                   </div>
                 )}
 
-                {selectedTask.valor_alvo_casa != null && selectedTask.valor_atual_casa != null && (
-                  <div className="p-2.5 rounded-lg bg-primary/5 border border-primary/20">
-                    <p className="text-[10px] text-muted-foreground mb-1">Contexto de Alocação</p>
-                    <div className="grid grid-cols-3 gap-2 text-xs">
-                      <div>
-                        <p className="text-muted-foreground text-[10px]">Atual</p>
-                        <p className="font-semibold">{formatCurrency(selectedTask.valor_atual_casa)}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground text-[10px]">Alvo</p>
-                        <p className="font-semibold text-primary">{formatCurrency(selectedTask.valor_alvo_casa)}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground text-[10px]">Diferença</p>
-                        <p className="font-semibold text-orange-400">
-                          {formatCurrency(selectedTask.valor_alvo_casa - selectedTask.valor_atual_casa)}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
 
                 {selectedTask.data_limite && (
                   <div className="flex items-center gap-2 text-xs">
