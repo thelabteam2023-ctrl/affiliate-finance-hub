@@ -1146,7 +1146,7 @@ Deno.serve(async (req) => {
 
       const { data: tasks } = await supabaseAdmin
         .from("supplier_tasks")
-        .select("id, tipo, titulo, descricao, valor, moeda, prioridade, data_limite, status, comprovante_url, observacoes_fornecedor, valor_atual_casa, valor_alvo_casa, created_at, concluida_at, recusada_at, recusa_motivo, bookmaker_catalogo_id, titular_id")
+        .select("id, tipo, titulo, descricao, valor, moeda, prioridade, data_limite, status, comprovante_url, observacoes_fornecedor, valor_atual_casa, valor_alvo_casa, created_at, concluida_at, recusada_at, recusa_motivo, bookmaker_catalogo_id, titular_id, casas_items")
         .eq("supplier_workspace_id", validation.supplier_workspace_id)
         .order("created_at", { ascending: false });
 
