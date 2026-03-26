@@ -81,6 +81,16 @@ export function SupplierTasksAdmin({ supplierWorkspaceId, supplierNome, parentWo
   const [editTask, setEditTask] = useState<any>(null);
   const [deleteTask, setDeleteTask] = useState<any>(null);
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [expandedTasks, setExpandedTasks] = useState<Record<string, boolean>>({});
+
+  const toggleTaskExpanded = useCallback((taskId: string) => {
+    setExpandedTasks(prev => {
+      const isOpen = prev[taskId];
+      const next: Record<string, boolean> = {};
+      if (!isOpen) next[taskId] = true;
+      return next;
+    });
+  }, []);
 
   // Form state
   const [tipo, setTipo] = useState("deposito");
