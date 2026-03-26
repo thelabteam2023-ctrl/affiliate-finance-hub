@@ -178,7 +178,8 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNav
       updateTaskMutation.mutate({ taskId: task.id, status: "em_andamento" });
       onNavigateToDeposit(task.titular_id, catalogoId, valor, task.id);
     } else if (task.tipo === "saque" && onNavigateToSaque && task.titular_id && catalogoId) {
-      updateTaskMutation.mutate({ taskId: task.id, status: "em_andamento" });
+      // Saque: transition to aguardando_recebimento (money left the casa but not yet in bank)
+      updateTaskMutation.mutate({ taskId: task.id, status: "aguardando_recebimento" });
       onNavigateToSaque(task.titular_id, catalogoId, valor, task.id);
     } else {
       setSelectedTask(task);
@@ -186,6 +187,14 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, onNav
       setObservacoes("");
       setComprovanteFile(null);
     }
+  }
+
+  // Handle confirming receipt of withdrawal funds into bank
+  function handleConfirmRecebimento(task: any) {
+    setSelectedTask(task);
+    setActionType("concluir");
+    setObservacoes("");
+    setComprovanteFile(null);
   }
 
   const [activeSubTab, setActiveSubTab] = useState<"abertas" | "concluidas">("abertas");
