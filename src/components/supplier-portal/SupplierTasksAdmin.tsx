@@ -541,17 +541,28 @@ export function SupplierTasksAdmin({ supplierWorkspaceId, supplierNome, parentWo
                         </a>
                       )}
                     </div>
-                    {/* Edit button for non-concluded tasks */}
-                    {task.status !== "concluido" && task.status !== "rejeitado" && (
+                    <div className="flex items-center gap-1 shrink-0">
+                      {/* Edit button for non-concluded tasks */}
+                      {task.status !== "concluido" && task.status !== "rejeitado" && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => openEditTask(task)}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                      {/* Delete button */}
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 shrink-0"
-                        onClick={() => openEditTask(task)}
+                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                        onClick={() => setDeleteTask(task)}
                       >
-                        <Pencil className="h-3.5 w-3.5" />
+                        <Trash2 className="h-3.5 w-3.5" />
                       </Button>
-                    )}
+                    </div>
                   </div>
                 </CardContent>
               </Card>
