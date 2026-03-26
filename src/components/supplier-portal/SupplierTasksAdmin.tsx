@@ -706,7 +706,7 @@ export function SupplierTasksAdmin({ supplierWorkspaceId, supplierNome, parentWo
             {selectedCasas.length > 0 && (
               <div>
                 <Label className="mb-2 block">
-                  Valores por Casa
+                  {tipo === "criacao_conta" ? "Depósito inicial por casa (opcional)" : "Valores por Casa"}
                   {selectedCasas.length > 1 && (
                     <span className="ml-2 text-xs font-normal text-muted-foreground">
                       Total: {formatCurrency(totalValor)}
