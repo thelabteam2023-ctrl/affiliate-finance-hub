@@ -29,6 +29,7 @@ interface ContaEntry {
   catalogoNome: string;
   moeda: string;
   logoUrl: string | null;
+  linkCriacao: string | null;
   username: string;
   password: string;
   showPassword: boolean;
