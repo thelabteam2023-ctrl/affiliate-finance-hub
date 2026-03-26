@@ -18,6 +18,8 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   supplierWorkspaceId: string;
   onSuccess: () => void;
+  prefillTitularId?: string;
+  prefillBookmakerIds?: string[];
 }
 
 interface ContaEntry {

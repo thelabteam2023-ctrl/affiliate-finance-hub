@@ -18,6 +18,11 @@ interface Props {
   onRefresh: () => void;
   onDepositar: () => void;
   onSacar: () => void;
+  prefillCreateAccount?: {
+    titularId: string;
+    bookmakerIds: string[];
+  } | null;
+  onClearPrefillCreate?: () => void;
 }
 
 function formatCurrency(val: number, moeda = "BRL") {
