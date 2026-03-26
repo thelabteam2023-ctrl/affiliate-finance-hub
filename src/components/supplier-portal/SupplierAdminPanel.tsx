@@ -46,6 +46,7 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
   const [supplierSearch, setSupplierSearch] = useState("");
   const [casasConfigOpen, setCasasConfigOpen] = useState(false);
   const [casasConfigSupplier, setCasasConfigSupplier] = useState<any>(null);
+  const [tasksSupplier, setTasksSupplier] = useState<any>(null);
 
   // Form state - Novo Fornecedor
   const [nome, setNome] = useState("");
