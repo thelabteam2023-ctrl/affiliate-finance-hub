@@ -285,9 +285,19 @@ export function SupplierOperacoesTab({ supplierWorkspaceId, supplierToken, exist
           <div className="space-y-2">
             {pendentes.map((task: any) => {
               const rawCasasItems = task.casas_items as any[] | null;
+              // For criacao_conta tasks, auto-mark items as concluido if account already exists
+              const enrichedCasasItems = rawCasasItems && task.tipo === "criacao_conta"
+                ? rawCasasItems.map((item: any) => {
+                    if (item.concluido) return item;
+                    const alreadyExists = existingAccounts.some(
+                      (acc: any) => acc.bookmaker_catalogo_id === item.bookmaker_catalogo_id && acc.titular_id === task.titular_id
+                    );
+                    return alreadyExists ? { ...item, concluido: true } : item;
+                  })
+                : rawCasasItems;
               // Sort casas_items by valor descending (houses with deposit value first)
-              const casasItems = rawCasasItems
-                ? [...rawCasasItems].sort((a: any, b: any) => (b.valor || 0) - (a.valor || 0))
+              const casasItems = enrichedCasasItems
+                ? [...enrichedCasasItems].sort((a: any, b: any) => (b.valor || 0) - (a.valor || 0))
                 : null;
               const isMultiCasa = casasItems && casasItems.length > 1;
               const isAguardandoRecebimento = task.status === "aguardando_recebimento";
