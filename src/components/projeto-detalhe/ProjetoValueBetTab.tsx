@@ -1331,6 +1331,7 @@ export function ProjetoValueBetTab({
                 }}
                 onQuickResolve={handleQuickResolve}
                 onDelete={handleDeleteAposta}
+                onDuplicate={handleDuplicateSimples}
                 variant="card"
                 formatCurrency={formatCurrency}
                 convertToConsolidation={convertToConsolidationOficialFn}
@@ -1393,7 +1394,8 @@ export function ProjetoValueBetTab({
                   }}
                   onQuickResolve={handleQuickResolveSurebet}
                   onPernaResultChange={handleSurebetPernaResolve}
-                  onDelete={handleDeleteAposta}
+                   onDelete={handleDeleteAposta}
+                   onDuplicate={handleDuplicateSurebet}
                   formatCurrency={formatCurrency}
                   convertToConsolidation={convertToConsolidationOficialFn}
                   bookmakerNomeMap={bookmakerNomeMap}
@@ -1419,6 +1421,7 @@ export function ProjetoValueBetTab({
                 }}
                 onQuickResolve={handleQuickResolve}
                 onDelete={handleDeleteAposta}
+                onDuplicate={handleDuplicateSimples}
                 variant="list"
                 formatCurrency={formatCurrency}
                 convertToConsolidation={convertToConsolidationOficialFn}
