@@ -21,7 +21,6 @@ interface Props {
   prefillTitularId?: string;
   prefillBookmakerIds?: string[];
   activeTaskId?: string;
-  supplierToken?: string;
   onTaskItemsCompleted?: () => void;
 }
 

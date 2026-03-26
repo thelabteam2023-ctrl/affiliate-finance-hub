@@ -24,7 +24,6 @@ interface Props {
   } | null;
   onClearPrefillCreate?: () => void;
   activeTaskId?: string;
-  supplierToken?: string;
   onAccountCreatedForTask?: () => void;
 }
 
