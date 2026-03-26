@@ -274,6 +274,96 @@ export function SupplierTasksAdmin({ supplierWorkspaceId, supplierNome, parentWo
     setSelectedCasas([]);
   }
 
+  function openEditTask(task: any) {
+    setTipo(task.tipo || "deposito");
+    setTitularId(task.titular_id || "");
+    setTitulo(task.titulo || "");
+    setDescricao(task.descricao || "");
+    setPrioridade(task.prioridade || "media");
+    setDataLimite(task.data_limite ? task.data_limite.slice(0, 16) : "");
+    setObservacoesAdmin(task.observacoes_admin || "");
+    // Rebuild selectedCasas from casas_items
+    if (task.casas_items && Array.isArray(task.casas_items)) {
+      setSelectedCasas(task.casas_items.map((item: any) => ({
+        bookmaker_catalogo_id: item.bookmaker_catalogo_id,
+        nome: item.nome,
+        logo_url: item.logo_url,
+        saldo_atual: item.saldo_atual || 0,
+        valor_alocado: item.valor_alocado || 0,
+        valor: item.valor?.toString() || "",
+      })));
+    } else if (task.bookmaker_catalogo_id) {
+      setSelectedCasas([{
+        bookmaker_catalogo_id: task.bookmaker_catalogo_id,
+        nome: task.bookmakers_catalogo?.nome || "—",
+        logo_url: task.bookmakers_catalogo?.logo_url,
+        saldo_atual: task.valor_atual_casa || 0,
+        valor_alocado: task.valor_alvo_casa || 0,
+        valor: task.valor?.toString() || "",
+      }]);
+    } else {
+      setSelectedCasas([]);
+    }
+    setEditTask(task);
+  }
+
+  // Update task mutation
+  const updateMutation = useMutation({
+    mutationFn: async () => {
+      if (!editTask) throw new Error("Nenhuma tarefa selecionada");
+
+      const titularNome = selectedTitular?.nome || "";
+      const casasCount = selectedCasas.length;
+
+      const casasItems = selectedCasas.map(c => ({
+        bookmaker_catalogo_id: c.bookmaker_catalogo_id,
+        nome: c.nome,
+        logo_url: c.logo_url || null,
+        valor: parseFloat(c.valor) || 0,
+        saldo_atual: c.saldo_atual,
+        valor_alocado: c.valor_alocado,
+      }));
+
+      const autoTitulo = titulo.trim() || (() => {
+        const tipoBase = TIPO_LABELS[tipo] || tipo;
+        const tipoLabel = casasCount > 1 ? tipoBase.replace("Casa", "Casas") : tipoBase;
+        const parts = [tipoLabel];
+        if (titularNome) {
+          const primeiroNome = titularNome.split(" ")[0];
+          parts.push(primeiroNome.charAt(0).toUpperCase() + primeiroNome.slice(1).toLowerCase());
+        }
+        if (casasCount === 1) parts.push(selectedCasas[0].nome);
+        return parts.join(" — ");
+      })();
+
+      const singleCasa = casasItems.length === 1 ? casasItems[0] : null;
+
+      const { error } = await (supabase as any).from("supplier_tasks").update({
+        tipo,
+        titulo: autoTitulo,
+        descricao: descricao.trim() || null,
+        valor: totalValor || null,
+        prioridade,
+        data_limite: dataLimite || null,
+        bookmaker_catalogo_id: singleCasa?.bookmaker_catalogo_id || null,
+        titular_id: titularId || null,
+        observacoes_admin: observacoesAdmin.trim() || null,
+        valor_atual_casa: singleCasa ? singleCasa.saldo_atual : null,
+        valor_alvo_casa: singleCasa ? singleCasa.valor_alocado : null,
+        casas_items: casasItems.length > 0 ? casasItems : null,
+      }).eq("id", editTask.id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Tarefa atualizada");
+      queryClient.invalidateQueries({ queryKey: ["supplier-tasks-admin", supplierWorkspaceId] });
+      resetForm();
+      setEditTask(null);
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   function handleTipoChange(newTipo: string) {
     setTipo(newTipo);
     setTitularId("");
