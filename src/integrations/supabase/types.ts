@@ -9362,6 +9362,119 @@ export type Database = {
           },
         ]
       }
+      supplier_tasks: {
+        Row: {
+          bookmaker_account_id: string | null
+          bookmaker_catalogo_id: string | null
+          comprovante_url: string | null
+          concluida_at: string | null
+          created_at: string
+          created_by: string
+          data_limite: string | null
+          descricao: string | null
+          id: string
+          moeda: string
+          observacoes_admin: string | null
+          observacoes_fornecedor: string | null
+          parent_workspace_id: string
+          prioridade: string
+          recusa_motivo: string | null
+          recusada_at: string | null
+          status: string
+          supplier_workspace_id: string
+          tipo: string
+          titular_id: string | null
+          titulo: string
+          updated_at: string
+          valor: number | null
+          valor_alvo_casa: number | null
+          valor_atual_casa: number | null
+        }
+        Insert: {
+          bookmaker_account_id?: string | null
+          bookmaker_catalogo_id?: string | null
+          comprovante_url?: string | null
+          concluida_at?: string | null
+          created_at?: string
+          created_by: string
+          data_limite?: string | null
+          descricao?: string | null
+          id?: string
+          moeda?: string
+          observacoes_admin?: string | null
+          observacoes_fornecedor?: string | null
+          parent_workspace_id: string
+          prioridade?: string
+          recusa_motivo?: string | null
+          recusada_at?: string | null
+          status?: string
+          supplier_workspace_id: string
+          tipo?: string
+          titular_id?: string | null
+          titulo: string
+          updated_at?: string
+          valor?: number | null
+          valor_alvo_casa?: number | null
+          valor_atual_casa?: number | null
+        }
+        Update: {
+          bookmaker_account_id?: string | null
+          bookmaker_catalogo_id?: string | null
+          comprovante_url?: string | null
+          concluida_at?: string | null
+          created_at?: string
+          created_by?: string
+          data_limite?: string | null
+          descricao?: string | null
+          id?: string
+          moeda?: string
+          observacoes_admin?: string | null
+          observacoes_fornecedor?: string | null
+          parent_workspace_id?: string
+          prioridade?: string
+          recusa_motivo?: string | null
+          recusada_at?: string | null
+          status?: string
+          supplier_workspace_id?: string
+          tipo?: string
+          titular_id?: string | null
+          titulo?: string
+          updated_at?: string
+          valor?: number | null
+          valor_alvo_casa?: number | null
+          valor_atual_casa?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_tasks_bookmaker_catalogo_id_fkey"
+            columns: ["bookmaker_catalogo_id"]
+            isOneToOne: false
+            referencedRelation: "bookmakers_catalogo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_tasks_bookmaker_catalogo_id_fkey"
+            columns: ["bookmaker_catalogo_id"]
+            isOneToOne: false
+            referencedRelation: "v_community_bookmaker_stats"
+            referencedColumns: ["bookmaker_catalogo_id"]
+          },
+          {
+            foreignKeyName: "supplier_tasks_parent_workspace_id_fkey"
+            columns: ["parent_workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_tasks_supplier_workspace_id_fkey"
+            columns: ["supplier_workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       supplier_titular_bancos: {
         Row: {
           agencia: string | null

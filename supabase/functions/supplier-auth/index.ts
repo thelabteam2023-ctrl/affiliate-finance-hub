@@ -1132,6 +1132,101 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ pagamentos }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // ── list-tasks: list supplier tasks ──
+    if (action === "list-tasks") {
+      const { token } = body;
+      if (!token) {
+        return new Response(JSON.stringify({ error: "Token obrigatório" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const tokenHash = await hashToken(token);
+      const { data: validation, error: valError } = await supabaseAdmin.rpc("validate_supplier_token", { p_token_hash: tokenHash });
+      if (valError || !validation?.valid) {
+        return new Response(JSON.stringify({ error: "Token inválido" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      const { data: tasks } = await supabaseAdmin
+        .from("supplier_tasks")
+        .select("id, tipo, titulo, descricao, valor, moeda, prioridade, data_limite, status, comprovante_url, observacoes_fornecedor, valor_atual_casa, valor_alvo_casa, created_at, concluida_at, recusada_at, recusa_motivo, bookmaker_catalogo_id")
+        .eq("supplier_workspace_id", validation.supplier_workspace_id)
+        .order("created_at", { ascending: false });
+
+      // Enrich with bookmaker info
+      const catalogoIds = [...new Set((tasks || []).map((t: any) => t.bookmaker_catalogo_id).filter(Boolean))];
+      let catalogoMap = new Map();
+      if (catalogoIds.length > 0) {
+        const { data: catalogos } = await supabaseAdmin
+          .from("bookmakers_catalogo")
+          .select("id, nome, logo_url")
+          .in("id", catalogoIds);
+        catalogoMap = new Map((catalogos || []).map((c: any) => [c.id, c]));
+      }
+
+      const enriched = (tasks || []).map((t: any) => {
+        const casa = catalogoMap.get(t.bookmaker_catalogo_id);
+        return {
+          ...t,
+          casa_nome: casa?.nome || null,
+          casa_logo: casa?.logo_url || null,
+        };
+      });
+
+      return new Response(JSON.stringify({ tasks: enriched }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // ── update-task: supplier updates task status ──
+    if (action === "update-task") {
+      const { token, task_id, status, observacoes_fornecedor, comprovante_url } = body;
+      if (!token || !task_id || !status) {
+        return new Response(JSON.stringify({ error: "Dados incompletos" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const tokenHash = await hashToken(token);
+      const { data: validation, error: valError } = await supabaseAdmin.rpc("validate_supplier_token", { p_token_hash: tokenHash });
+      if (valError || !validation?.valid) {
+        return new Response(JSON.stringify({ error: "Token inválido" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      // Verify task belongs to workspace
+      const { data: task } = await supabaseAdmin
+        .from("supplier_tasks")
+        .select("id, status")
+        .eq("id", task_id)
+        .eq("supplier_workspace_id", validation.supplier_workspace_id)
+        .single();
+      if (!task) {
+        return new Response(JSON.stringify({ error: "Tarefa não encontrada" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      const allowedTransitions: Record<string, string[]> = {
+        pendente: ["em_andamento", "concluido", "rejeitado"],
+        em_andamento: ["concluido", "rejeitado"],
+      };
+      if (!allowedTransitions[task.status]?.includes(status)) {
+        return new Response(JSON.stringify({ error: "Transição de status inválida" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      const updates: Record<string, any> = {
+        status,
+        updated_at: new Date().toISOString(),
+      };
+      if (observacoes_fornecedor) updates.observacoes_fornecedor = observacoes_fornecedor;
+      if (comprovante_url) updates.comprovante_url = comprovante_url;
+      if (status === "concluido") updates.concluida_at = new Date().toISOString();
+      if (status === "rejeitado") {
+        updates.recusada_at = new Date().toISOString();
+        updates.recusa_motivo = observacoes_fornecedor || null;
+      }
+
+      const { error: updateErr } = await supabaseAdmin
+        .from("supplier_tasks")
+        .update(updates)
+        .eq("id", task_id);
+      if (updateErr) {
+        return new Response(JSON.stringify({ error: "Erro ao atualizar tarefa" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      return new Response(JSON.stringify({ success: true }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     // ── get-allowed-bookmakers: return bookmakers allowed for supplier (bypasses RLS) ──
     if (action === "get-allowed-bookmakers") {
       const { token } = body;

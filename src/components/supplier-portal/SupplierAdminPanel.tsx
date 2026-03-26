@@ -14,9 +14,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { 
   Plus, Truck, Link2, Copy, ExternalLink, Wallet,
   Building2, Users, Clock, CheckCircle2, XCircle, AlertTriangle, Zap,
-  Search, Check
+  Search, Check, ClipboardList
 } from "lucide-react";
 import { SupplierBookmakerConfigDialog } from "./SupplierBookmakerConfigDialog";
+import { SupplierTasksAdmin } from "./SupplierTasksAdmin";
 import { Separator } from "@/components/ui/separator";
 import { OrigemPagamentoSelect, OrigemPagamentoData } from "@/components/programa-indicacao/OrigemPagamentoSelect";
 import { format } from "date-fns";
@@ -45,6 +46,7 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
   const [supplierSearch, setSupplierSearch] = useState("");
   const [casasConfigOpen, setCasasConfigOpen] = useState(false);
   const [casasConfigSupplier, setCasasConfigSupplier] = useState<any>(null);
+  const [tasksSupplier, setTasksSupplier] = useState<any>(null);
 
   // Form state - Novo Fornecedor
   const [nome, setNome] = useState("");
@@ -359,7 +361,8 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
               .filter((t: any) => !t.revoked_at && new Date(t.expires_at) > new Date());
 
             return (
-              <Card key={supplier.id} className="hover:border-primary/20 transition-colors">
+              <div key={supplier.id} className="space-y-2">
+              <Card className="hover:border-primary/20 transition-colors">
                 <CardContent className="py-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -402,6 +405,14 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
                         <Button
                           size="sm"
                           variant="outline"
+                          onClick={() => setTasksSupplier(tasksSupplier?.id === supplier.id ? null : supplier)}
+                          className="gap-1 text-xs"
+                        >
+                          <ClipboardList className="h-3 w-3" /> Tarefas
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
                           onClick={() => {
                             setCasasConfigSupplier(supplier);
                             setCasasConfigOpen(true);
@@ -438,6 +449,18 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Tasks panel for this supplier */}
+              {tasksSupplier?.id === supplier.id && (
+                <div className="ml-4 border-l-2 border-primary/20 pl-4">
+                  <SupplierTasksAdmin
+                    supplierWorkspaceId={supplier.workspace_id}
+                    supplierNome={supplier.nome}
+                    parentWorkspaceId={workspaceId}
+                  />
+                </div>
+              )}
+              </div>
             );
           })}
         </div>

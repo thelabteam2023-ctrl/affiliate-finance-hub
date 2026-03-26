@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Wallet, Building2, Users, ScrollText,
-  Clock
+  Clock, ClipboardList
 } from "lucide-react";
 import labestLogo from "@/assets/labest-logo.png";
 import { SupplierContasTab } from "./SupplierContasTab";
@@ -14,6 +14,7 @@ import { SupplierTitularesTab } from "./SupplierTitularesTab";
 import { SupplierExtratoTab } from "./SupplierExtratoTab";
 import { SupplierTransacaoDialog } from "./SupplierTransacaoDialog";
 import { SupplierBancosModal } from "./SupplierBancosModal";
+import { SupplierOperacoesTab } from "./SupplierOperacoesTab";
 
 interface SupplierSession {
   supplier_workspace_id: string;
@@ -40,6 +41,9 @@ export function SupplierDashboard({ session }: Props) {
   const [transacaoOpen, setTransacaoOpen] = useState(false);
   const [transacaoTipo, setTransacaoTipo] = useState<"DEPOSITO" | "SAQUE" | "TRANSFERENCIA_BANCO">("DEPOSITO");
   const [bancosModalOpen, setBancosModalOpen] = useState(false);
+
+  // Get token from URL for edge function calls
+  const supplierToken = useMemo(() => new URLSearchParams(window.location.search).get("token") || "", []);
 
   // Fetch ledger summary
   const { data: ledgerData, refetch: refetchLedger } = useQuery({
@@ -150,7 +154,6 @@ export function SupplierDashboard({ session }: Props) {
 
   const saldoContas = (accounts || []).reduce((s, a) => s + Number(a.saldo_atual), 0);
   const saldoDisponivel = metrics.saldoCentral;
-  
 
   const expiresAt = new Date(session.expires_at);
   const hoursRemaining = Math.max(0, Math.round((expiresAt.getTime() - Date.now()) / (1000 * 60 * 60)));
@@ -239,9 +242,12 @@ export function SupplierDashboard({ session }: Props) {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid grid-cols-3 w-full max-w-md">
+          <TabsList className="grid grid-cols-4 w-full max-w-lg">
             <TabsTrigger value="visao-geral" className="gap-1 sm:gap-1.5 text-[11px] sm:text-xs">
               <Building2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" /> Contas
+            </TabsTrigger>
+            <TabsTrigger value="operacoes" className="gap-1 sm:gap-1.5 text-[11px] sm:text-xs">
+              <ClipboardList className="h-3 w-3 sm:h-3.5 sm:w-3.5" /> Operações
             </TabsTrigger>
             <TabsTrigger value="titulares" className="gap-1 sm:gap-1.5 text-[11px] sm:text-xs">
               <Users className="h-3 w-3 sm:h-3.5 sm:w-3.5" /> Titulares
@@ -259,6 +265,13 @@ export function SupplierDashboard({ session }: Props) {
               onRefresh={handleRefresh}
               onDepositar={() => { setTransacaoTipo("DEPOSITO"); setTransacaoOpen(true); }}
               onSacar={() => { setTransacaoTipo("SAQUE"); setTransacaoOpen(true); }}
+            />
+          </TabsContent>
+
+          <TabsContent value="operacoes" className="mt-4">
+            <SupplierOperacoesTab
+              supplierWorkspaceId={session.supplier_workspace_id}
+              supplierToken={supplierToken}
             />
           </TabsContent>
 
