@@ -2189,6 +2189,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
               estrategia: apostaData.estrategia,
               contexto_operacional: apostaData.contexto_operacional,
               fonte_saldo: apostaData.fonte_saldo,
+              usar_freebet: apostaData.usar_freebet,
+              stake_real: apostaData.stake_real,
+              stake_total: apostaData.stake_total,
             })
             .eq("id", aposta.id);
           
@@ -2267,6 +2270,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
               gerou_freebet: apostaData.gerou_freebet,
               valor_freebet_gerada: apostaData.valor_freebet_gerada,
               tipo_freebet: apostaData.tipo_freebet,
+              usar_freebet: apostaData.usar_freebet,
+              fonte_saldo: apostaData.fonte_saldo,
+              stake_real: apostaData.stake_real,
+              stake_total: apostaData.stake_total,
             })
             .eq("id", aposta.id);
 
@@ -2342,6 +2349,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
               estrategia: apostaData.estrategia,
               contexto_operacional: apostaData.contexto_operacional,
               fonte_saldo: apostaData.fonte_saldo,
+              usar_freebet: apostaData.usar_freebet,
+              stake_real: apostaData.stake_real,
+              stake_total: apostaData.stake_total,
             })
             .eq("id", aposta.id);
           
