@@ -72,6 +72,7 @@ import { GerouFreebetInput } from "./GerouFreebetInput";
 import { FreebetToggle } from "@/components/apostas/waterfall";
 import { FonteEntradaSelector } from "@/components/apostas/FonteEntradaSelector";
 import { useWorkspaceBetSources } from "@/hooks/useWorkspaceBetSources";
+import { deriveStakeSplit } from "@/lib/freebetStake";
 
 interface Selecao {
   descricao: string;
@@ -91,6 +92,9 @@ interface ApostaMultipla {
   id: string;
   tipo_multipla: string;
   stake: number;
+  stake_real?: number | null;
+  stake_freebet?: number | null;
+  stake_total?: number | null;
   odd_final: number;
   retorno_potencial: number | null;
   lucro_prejuizo: number | null;
@@ -107,6 +111,8 @@ interface ApostaMultipla {
   estrategia?: string | null;
   forma_registro?: string | null;
   contexto_operacional?: string | null;
+  usar_freebet?: boolean | null;
+  fonte_saldo?: string | null;
 }
 
 // Interface de Bookmaker local (mapeada do hook canônico)
@@ -116,6 +122,7 @@ interface Bookmaker {
   parceiro_id: string | null;
   parceiro_nome: string | null;
   saldo_atual: number;
+  saldo_disponivel: number;
   saldo_freebet: number;
   saldo_bonus: number;
   saldo_operavel: number;
@@ -190,6 +197,7 @@ export function ApostaMultiplaDialog({
       parceiro_id: bk.parceiro_id,
       parceiro_nome: bk.parceiro_nome,
       saldo_atual: bk.saldo_real,
+      saldo_disponivel: bk.saldo_disponivel,
       saldo_freebet: bk.saldo_freebet,
       saldo_bonus: bk.saldo_bonus,
       saldo_operavel: bk.saldo_operavel,
@@ -371,7 +379,16 @@ export function ApostaMultiplaDialog({
       
       setBookmakerId(aposta.bookmaker_id);
       setBoostPercent((aposta as any).boost_percentual?.toString() || "");
-      setStake(aposta.stake.toString());
+      const persistedStakeSplit = deriveStakeSplit({
+        stake: aposta.stake,
+        stake_total: aposta.stake_total,
+        stake_real: aposta.stake_real,
+        stake_freebet: aposta.stake_freebet,
+        usar_freebet: aposta.usar_freebet,
+        fonte_saldo: aposta.fonte_saldo,
+      });
+
+      setStake((persistedStakeSplit.stakeTotal || aposta.stake || 0).toString());
       setStatusResultado(aposta.resultado || "PENDENTE");
       setDataAposta(dbTimestampToDatetimeLocal(aposta.data_aposta));
       setObservacoes(aposta.observacoes || "");
@@ -411,11 +428,10 @@ export function ApostaMultiplaDialog({
       });
 
       // Freebet
-      if (aposta.tipo_freebet && aposta.tipo_freebet !== "normal") {
-        setUsarFreebet(true);
-      } else {
-        setUsarFreebet(false);
-      }
+      setUsarFreebet(
+        persistedStakeSplit.usesFreebet || !!(aposta.tipo_freebet && aposta.tipo_freebet !== "normal")
+      );
+      setValorFreebetUsar(persistedStakeSplit.stakeFreebet);
       setGerouFreebet(aposta.gerou_freebet || false);
       setValorFreebetGerada(aposta.valor_freebet_gerada?.toString() || "");
       
@@ -900,6 +916,26 @@ export function ApostaMultiplaDialog({
       return;
     }
 
+    if (usarFreebet) {
+      if (valorFreebetUsar <= 0) {
+        toast.error("Informe um valor de freebet válido");
+        return;
+      }
+
+      if (valorFreebetUsar > stakeNum) {
+        toast.error("A freebet não pode ser maior que o stake total");
+        return;
+      }
+    }
+
+    const stakeSplit = deriveStakeSplit({
+      stake: stakeNum,
+      stake_total: stakeNum,
+      stake_freebet: usarFreebet ? valorFreebetUsar : 0,
+      usar_freebet: usarFreebet,
+      fonte_saldo: usarFreebet ? 'FREEBET' : (registroValues.fonte_saldo || 'REAL'),
+    });
+
     // Validar seleções
     for (let i = 0; i < numSelecoes; i++) {
       if (!selecoes[i]?.descricao?.trim()) {
@@ -913,14 +949,32 @@ export function ApostaMultiplaDialog({
       }
     }
 
-    // Validar saldo contra saldo operável (real + freebet + bonus)
-    // Em modo edição: a stake original já foi debitada, então devolver ao saldo disponível
-    const saldoDisponivel = bookmakerSaldo 
-      ? bookmakerSaldo.saldoOperavel + (aposta && aposta.bookmaker_id === bookmakerId ? aposta.stake : 0)
-      : Infinity;
-    if (bookmakerSaldo && stakeNum > saldoDisponivel) {
-      toast.error(`Stake maior que o saldo operável (${formatCurrency(saldoDisponivel)})`);
-      return;
+    const selectedBookmaker = bookmakers.find((b) => b.id === bookmakerId);
+    const sameBookmakerOnEdit = !!aposta && aposta.bookmaker_id === bookmakerId;
+    const previousStakeSplit = sameBookmakerOnEdit
+      ? deriveStakeSplit({
+          stake: aposta?.stake,
+          stake_total: aposta?.stake_total,
+          stake_real: aposta?.stake_real,
+          stake_freebet: aposta?.stake_freebet,
+          usar_freebet: aposta?.usar_freebet,
+          fonte_saldo: aposta?.fonte_saldo,
+        })
+      : null;
+
+    if (selectedBookmaker) {
+      const saldoRealDisponivel = selectedBookmaker.saldo_disponivel + (previousStakeSplit?.stakeReal ?? 0);
+      const saldoFreebetDisponivel = selectedBookmaker.saldo_freebet + (previousStakeSplit?.stakeFreebet ?? 0);
+
+      if (stakeSplit.stakeReal > saldoRealDisponivel) {
+        toast.error(`Stake real maior que o saldo disponível (${formatCurrency(saldoRealDisponivel)})`);
+        return;
+      }
+
+      if (stakeSplit.stakeFreebet > saldoFreebetDisponivel) {
+        toast.error(`Freebet maior que o saldo disponível (${formatCurrency(saldoFreebetDisponivel)})`);
+        return;
+      }
     }
 
     try {
@@ -983,7 +1037,10 @@ export function ApostaMultiplaDialog({
         projeto_id: projetoId,
         bookmaker_id: bookmakerId,
         tipo_multipla: tipoMultipla,
-        stake: stakeNum,
+        stake: stakeSplit.stakeTotal,
+        stake_real: stakeSplit.stakeReal,
+        stake_freebet: stakeSplit.stakeFreebet,
+        stake_total: stakeSplit.stakeTotal,
         odd_final: oddFinalParaSalvar,
         retorno_potencial: retornoPotencial,
         lucro_prejuizo: lucroPrejuizo,
@@ -991,7 +1048,9 @@ export function ApostaMultiplaDialog({
         selecoes: selecoesFormatadas,
         status: resultadoFinal === "PENDENTE" ? "PENDENTE" : "LIQUIDADA",
         resultado: resultadoFinal,
-        tipo_freebet: usarFreebet ? "freebet_snr" : null,
+        tipo_freebet: stakeSplit.usesFreebet ? "freebet_snr" : null,
+        usar_freebet: stakeSplit.usesFreebet,
+        fonte_saldo: stakeSplit.usesFreebet ? 'FREEBET' : (registroValues.fonte_saldo || 'REAL'),
         gerou_freebet: false,
         valor_freebet_gerada: null,
         data_aposta: toLocalTimestamp(dataAposta),
@@ -1012,7 +1071,15 @@ export function ApostaMultiplaDialog({
         // Detectar mudanças financeiras
         const resultadoAnterior = aposta.resultado;
         const resultadoMudou = resultadoAnterior !== resultadoFinal;
-        const stakeMudou = stakeNum !== aposta.stake;
+        const persistedStakeSplit = deriveStakeSplit({
+          stake: aposta.stake,
+          stake_total: aposta.stake_total,
+          stake_real: aposta.stake_real,
+          stake_freebet: aposta.stake_freebet,
+          usar_freebet: aposta.usar_freebet,
+          fonte_saldo: aposta.fonte_saldo,
+        });
+        const stakeMudou = stakeSplit.stakeTotal !== persistedStakeSplit.stakeTotal || stakeSplit.stakeReal !== persistedStakeSplit.stakeReal || stakeSplit.stakeFreebet !== persistedStakeSplit.stakeFreebet;
         const oddMudou = oddFinal !== aposta.odd_final;
         const bookmakerMudou = bookmakerId !== aposta.bookmaker_id;
         const houveMudancaFinanceira = resultadoMudou || stakeMudou || oddMudou || bookmakerMudou;
@@ -1034,7 +1101,12 @@ export function ApostaMultiplaDialog({
             estrategia: apostaData.estrategia,
             forma_registro: apostaData.forma_registro,
             contexto_operacional: apostaData.contexto_operacional,
+             usar_freebet: apostaData.usar_freebet,
+             fonte_saldo: apostaData.fonte_saldo,
             tipo_freebet: apostaData.tipo_freebet,
+             stake_real: apostaData.stake_real,
+             stake_freebet: apostaData.stake_freebet,
+             stake_total: apostaData.stake_total,
             gerou_freebet: apostaData.gerou_freebet,
             valor_freebet_gerada: apostaData.valor_freebet_gerada,
             moeda_operacao: apostaData.moeda_operacao,
@@ -1094,7 +1166,7 @@ export function ApostaMultiplaDialog({
             {
               p_aposta_id: aposta.id,
               p_novo_bookmaker_id: bookmakerMudou ? bookmakerId : null,
-              p_novo_stake: stakeMudou ? stakeNum : null,
+               p_novo_stake: stakeMudou ? stakeSplit.stakeTotal : null,
               p_nova_odd: oddMudou ? oddFinalParaSalvar : null,
               p_novo_resultado: resultadoMudou && resultadoFinal !== "PENDENTE" ? resultadoFinal : null,
               p_nova_moeda: null,
@@ -1205,15 +1277,19 @@ export function ApostaMultiplaDialog({
           forma_registro: 'MULTIPLA',
           estrategia: registroValues.estrategia as any,
           contexto_operacional: registroValues.contexto_operacional as any,
-          fonte_saldo: registroValues.fonte_saldo || 'REAL',
+          fonte_saldo: stakeSplit.usesFreebet ? 'FREEBET' : (registroValues.fonte_saldo || 'REAL'),
+          usar_freebet: stakeSplit.usesFreebet,
           data_aposta: toLocalTimestamp(dataAposta),
           bookmaker_id: bookmakerId,
-          stake: stakeNum,
+          stake: stakeSplit.stakeTotal,
+          stake_real: stakeSplit.stakeReal,
+          stake_freebet: stakeSplit.stakeFreebet,
+          stake_total: stakeSplit.stakeTotal,
           tipo_multipla: tipoMultipla,
           selecoes: selecoesFormatadas as SelecaoMultipla[],
           odd_final: oddFinal,
           retorno_potencial: retornoPotencial,
-          tipo_freebet: usarFreebet ? "freebet_snr" : null,
+          tipo_freebet: stakeSplit.usesFreebet ? "freebet_snr" : null,
           gerou_freebet: false,
           valor_freebet_gerada: null,
           observacoes: observacoes || null,
@@ -1595,7 +1671,7 @@ export function ApostaMultiplaDialog({
                       parceiro_nome: bk.parceiro_nome,
                       moeda: bk.moeda,
                       saldo_operavel: bk.saldo_operavel,
-                      saldo_disponivel: bk.saldo_atual,
+                       saldo_disponivel: bk.saldo_disponivel,
                       saldo_freebet: bk.saldo_freebet,
                       saldo_bonus: bk.saldo_bonus,
                       logo_url: bk.logo_url,
