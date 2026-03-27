@@ -1076,7 +1076,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           forma_registro: (aposta.forma_registro as FormaRegistro) || 'SIMPLES',
           estrategia: (aposta.estrategia as ApostaEstrategia) || null,
           contexto_operacional: (aposta.contexto_operacional as ContextoOperacional) || null,
-          fonte_saldo: ((aposta as any).fonte_saldo as FonteSaldo) || 'REAL', // Legado: default REAL
+          fonte_saldo: (aposta.fonte_saldo as FonteSaldo) || 'REAL', // Legado: default REAL
         });
       } else {
         resetForm();
