@@ -19,6 +19,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { pernasToInserts } from "@/types/apostasPernas";
+import { deriveStakeSplit } from "@/lib/freebetStake";
 import { validateInvariants, validateUpdateInvariants, formatViolations } from "./invariants";
 import type {
   CriarApostaInput,
@@ -84,6 +85,16 @@ export async function criarAposta(
   const isArbitragem = input.forma_registro === 'ARBITRAGEM';
   const isMultipla = input.forma_registro === 'MULTIPLA';
   const pernas = input.pernas || [];
+  const stakeSplit = !isArbitragem
+    ? deriveStakeSplit({
+        stake: input.stake,
+        stake_total: input.stake_total,
+        stake_real: input.stake_real,
+        stake_freebet: input.stake_freebet,
+        usar_freebet: input.usar_freebet,
+        fonte_saldo: input.fonte_saldo,
+      })
+    : null;
 
   // Calcular valores agregados para arbitragem
   let stakeTotal: number | null = null;
@@ -136,7 +147,7 @@ export async function criarAposta(
     estrategia: input.estrategia,
     contexto_operacional: input.contexto_operacional || 'NORMAL',
     fonte_saldo: input.fonte_saldo || inferFonteSaldo(input.contexto_operacional, input.estrategia, input.usar_freebet),
-    usar_freebet: input.usar_freebet || false,
+    usar_freebet: input.usar_freebet || (stakeSplit?.usesFreebet ?? false),
     data_aposta: input.data_aposta,
     evento: input.evento,
     esporte: input.esporte,
@@ -149,7 +160,9 @@ export async function criarAposta(
     bookmaker_id: isArbitragem ? null : input.bookmaker_id,
     selecao: isArbitragem || isMultipla ? null : input.selecao,
     odd: isArbitragem || isMultipla ? null : input.odd,
-    stake: isArbitragem ? null : input.stake,
+    stake: isArbitragem ? null : (stakeSplit?.stakeTotal ?? input.stake ?? null),
+    stake_real: isArbitragem ? null : (stakeSplit?.stakeReal ?? null),
+    stake_freebet: isArbitragem ? 0 : (stakeSplit?.stakeFreebet ?? 0),
     
     // Para múltipla (JSONB selecoes)
     tipo_multipla: isMultipla ? input.tipo_multipla : null,
@@ -164,7 +177,7 @@ export async function criarAposta(
     
     // Para arbitragem
     pernas: isArbitragem ? JSON.stringify(pernas) : null,
-    stake_total: stakeTotal,
+    stake_total: isArbitragem ? stakeTotal : (stakeSplit?.stakeTotal ?? input.stake ?? null),
     lucro_esperado: lucroEsperado,
     roi_esperado: roiEsperado,
     

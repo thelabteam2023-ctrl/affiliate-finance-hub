@@ -112,6 +112,9 @@ export interface CriarApostaInput {
   selecao?: string | null;
   odd?: number | null;
   stake?: number | null;
+  stake_real?: number | null;
+  stake_freebet?: number | null;
+  stake_total?: number | null;
   
   // Para apostas múltiplas (forma_registro = MULTIPLA)
   tipo_multipla?: 'DUPLA' | 'TRIPLA' | 'QUADRUPLA' | 'QUINTUPLA' | 'SEXTUPLA' | null;
