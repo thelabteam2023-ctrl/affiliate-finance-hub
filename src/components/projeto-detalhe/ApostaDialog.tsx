@@ -1064,8 +1064,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         setGerouFreebet(aposta.gerou_freebet || false);
         setValorFreebetGerada(aposta.valor_freebet_gerada?.toString() || "");
         
-        // Se a aposta usou freebet (bookmaker simples)
-        if (aposta.tipo_freebet && aposta.tipo_freebet !== "normal" && aposta.modo_entrada === "PADRAO") {
+        // Se a aposta usou freebet (bookmaker simples) - apenas se não foi já tratado acima
+        if (aposta.tipo_freebet && aposta.tipo_freebet !== "normal" && aposta.modo_entrada === "PADRAO" && !usarFreebetBookmaker) {
           setUsarFreebetBookmaker(true);
         }
         
