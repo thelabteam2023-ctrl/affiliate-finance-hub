@@ -128,6 +128,7 @@ interface Aposta {
   usar_freebet?: boolean | null;
   fonte_saldo?: string | null;
   stake_real?: number | null;
+  stake_freebet?: number | null;
   stake_total?: number | null;
 }
 
@@ -784,7 +785,16 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
       (aposta?.status === 'PENDENTE') || 
       (aposta?.status === 'LIQUIDADA' && (resultadoAnterior === 'RED' || resultadoAnterior === 'MEIO_RED'));
     
-    const stakeAnterior = aposta && mesmaBookmaker && deveAdicionarStake ? (aposta.stake || 0) : 0;
+    const stakeAnterior = aposta && mesmaBookmaker && deveAdicionarStake
+      ? deriveStakeSplit({
+          stake: aposta.stake,
+          stake_total: aposta.stake_total,
+          stake_real: aposta.stake_real,
+          stake_freebet: aposta.stake_freebet,
+          usar_freebet: aposta.usar_freebet,
+          fonte_saldo: aposta.fonte_saldo,
+        }).stakeReal
+      : 0;
     
     return {
       saldoOperavel: selectedBk.saldo_operavel + stakeAnterior,
@@ -912,6 +922,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           stake: aposta.stake,
           stake_total: aposta.stake_total,
           stake_real: aposta.stake_real,
+          stake_freebet: aposta.stake_freebet,
           usar_freebet: aposta.usar_freebet,
           fonte_saldo: aposta.fonte_saldo,
         });
@@ -1039,10 +1050,11 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
               setBookmakerId(primaryPerna.bookmaker_id);
               setOdd(primaryPerna.odd.toString());
               const primaryStakeSplit = deriveStakeSplit({
-                stake: aposta.stake,
-                stake_total: aposta.stake_total ?? aposta.stake,
-                stake_real: aposta.stake_real,
-                usar_freebet: aposta.usar_freebet,
+                stake: primaryPerna.stake,
+                stake_total: primaryPerna.stake,
+                stake_real: primaryPerna.stake_real,
+                stake_freebet: primaryPerna.stake_freebet,
+                usar_freebet: (primaryPerna.stake_freebet || 0) > 0,
                 fonte_saldo: aposta.fonte_saldo ?? primaryPerna.fonte_saldo,
               });
               setStake(primaryStakeSplit.stakeReal > 0 ? primaryStakeSplit.stakeReal.toString() : '0');
@@ -1053,7 +1065,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                 const split = deriveStakeSplit({
                   stake: p.stake,
                   stake_total: p.stake,
-                  stake_real: p.fonte_saldo === 'FREEBET' ? 0 : p.stake,
+                  stake_real: p.stake_real,
+                  stake_freebet: p.stake_freebet,
                   usar_freebet: p.fonte_saldo === 'FREEBET' || p.gerou_freebet === true,
                   fonte_saldo: p.fonte_saldo,
                 });
@@ -1948,14 +1961,17 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
 
         const bookmakerStakeReal = parseFloat(stake) || 0;
         const bookmakerStakeFreebet = usarFreebetBookmaker ? valorFreebetUsar : 0;
+        const additionalStakeReal = additionalEntries.reduce((sum, entry) => sum + (parseFloat(entry.stake) || 0), 0);
+        const additionalStakeFreebet = additionalEntries.reduce(
+          (sum, entry) => sum + (entry.usar_freebet ? (parseFloat(entry.valor_freebet) || 0) : 0),
+          0
+        );
 
         apostaData = {
           ...commonData,
           bookmaker_id: bookmakerId,
           odd: Math.round(effectiveOdd * 1000) / 1000, // 3 casas decimais
           stake: effectiveStake,
-          stake_real: bookmakerStakeReal,
-          stake_total: effectiveStake,
           modo_entrada: "PADRAO",
           valor_retorno: valorRetornoCalculado,
           lucro_prejuizo: lucroPrejuizo,
@@ -1967,8 +1983,11 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           back_em_exchange: false,
           back_comissao: null,
           tipo_freebet: (usarFreebetBookmaker || additionalEntries.some(e => e.usar_freebet)) ? "freebet_snr" : null,
+          stake_real: bookmakerStakeReal + additionalStakeReal,
+          stake_freebet: bookmakerStakeFreebet + additionalStakeFreebet,
+          stake_total: effectiveStake,
           // WATERFALL: Flag para indicar se freebet deve ser usado no waterfall
-          usar_freebet: bookmakerStakeFreebet > 0 || additionalEntries.some(e => e.usar_freebet),
+          usar_freebet: bookmakerStakeFreebet + additionalStakeFreebet > 0,
         };
       } else if (tipoOperacaoExchange === "cobertura") {
         // ===== MODO COBERTURA LAY =====
@@ -2025,6 +2044,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           bookmaker_id: coberturaBackBookmakerId,
           odd: backOdd,
           stake: backStake,
+          stake_real: tipoApostaBack === "normal" ? backStake : 0,
+          stake_freebet: tipoApostaBack === "normal" ? 0 : backStake,
+          stake_total: backStake,
           modo_entrada: "EXCHANGE",
           valor_retorno: valorRetornoCalculado,
           lucro_prejuizo: lucroPrejuizo,
@@ -2035,6 +2057,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           lay_comissao: parseFloat(coberturaLayComissao),
           back_em_exchange: tipoApostaBack !== "normal",
           back_comissao: null,
+          usar_freebet: tipoApostaBack !== "normal",
+          fonte_saldo: tipoApostaBack !== "normal" ? 'FREEBET' : 'REAL',
           tipo_freebet: tipoApostaBack,
           // Sobrescrever gerou_freebet para cobertura
           gerou_freebet: coberturaGerouFreebet,
@@ -2093,6 +2117,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           bookmaker_id: exchangeBookmakerId,
           odd: exchOdd,
           stake: exchStake,
+          stake_real: !isLay && tipoApostaExchangeBack !== "normal" ? 0 : exchStake,
+          stake_freebet: !isLay && tipoApostaExchangeBack !== "normal" ? exchStake : 0,
+          stake_total: exchStake,
           modo_entrada: "EXCHANGE",
           valor_retorno: valorRetornoCalculado,
           lucro_prejuizo: lucroPrejuizo,
@@ -2103,6 +2130,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           lay_comissao: parseFloat(exchangeComissao),
           back_em_exchange: true,
           back_comissao: parseFloat(exchangeComissao),
+          usar_freebet: !isLay && tipoApostaExchangeBack !== "normal",
+          fonte_saldo: !isLay && tipoApostaExchangeBack !== "normal" ? 'FREEBET' : 'REAL',
           tipo_freebet: (!isLay && tipoApostaExchangeBack !== "normal") ? tipoApostaExchangeBack : null,
         };
       }
@@ -2197,6 +2226,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
               fonte_saldo: apostaData.fonte_saldo,
               usar_freebet: apostaData.usar_freebet,
               stake_real: apostaData.stake_real,
+              stake_freebet: apostaData.stake_freebet,
               stake_total: apostaData.stake_total,
             })
             .eq("id", aposta.id);
@@ -2279,6 +2309,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
               usar_freebet: apostaData.usar_freebet,
               fonte_saldo: apostaData.fonte_saldo,
               stake_real: apostaData.stake_real,
+              stake_freebet: apostaData.stake_freebet,
               stake_total: apostaData.stake_total,
             })
             .eq("id", aposta.id);
@@ -2357,6 +2388,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
               fonte_saldo: apostaData.fonte_saldo,
               usar_freebet: apostaData.usar_freebet,
               stake_real: apostaData.stake_real,
+              stake_freebet: apostaData.stake_freebet,
               stake_total: apostaData.stake_total,
             })
             .eq("id", aposta.id);
@@ -2472,6 +2504,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                 selecao_livre: null as string | null,
                 odd: parseFloat(odd),
                 stake: stakeBookmakerEfetiva, // Total = real + FB
+                stake_real: parseFloat(stake) || 0,
+                stake_freebet: usarFreebetBookmaker ? valorFreebetUsar : 0,
                 moeda: moedaOperacao,
                 fonte_saldo: usarFreebetBookmaker ? 'FREEBET' : 'REAL',
               },
@@ -2485,6 +2519,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                   selecao_livre: e.selecao_livre || null,
                   odd: parseFloat(e.odd),
                   stake: (parseFloat(e.stake) || 0) + (e.usar_freebet ? (parseFloat(e.valor_freebet) || 0) : 0), // Total = real + FB
+                  stake_real: parseFloat(e.stake) || 0,
+                  stake_freebet: e.usar_freebet ? (parseFloat(e.valor_freebet) || 0) : 0,
                   moeda: bookmakers.find(b => b.id === e.bookmaker_id)?.moeda || moedaOperacao,
                   fonte_saldo: e.usar_freebet ? 'FREEBET' : 'REAL',
                 }))
@@ -2692,6 +2728,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
               selecao_livre: null as string | null,
               odd: parseFloat(odd),
               stake: stakeBookmakerEfetiva, // Total = real + FB
+              stake_real: parseFloat(stake) || 0,
+              stake_freebet: usarFreebetBookmaker ? valorFreebetUsar : 0,
               moeda: moedaOperacao,
               fonte_saldo: usarFreebetBookmaker ? 'FREEBET' : 'REAL',
             },
@@ -2705,6 +2743,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                 selecao_livre: e.selecao_livre || null,
                 odd: parseFloat(e.odd),
                 stake: (parseFloat(e.stake) || 0) + (e.usar_freebet ? (parseFloat(e.valor_freebet) || 0) : 0), // Total = real + FB
+                stake_real: parseFloat(e.stake) || 0,
+                stake_freebet: e.usar_freebet ? (parseFloat(e.valor_freebet) || 0) : 0,
                 moeda: bookmakers.find(b => b.id === e.bookmaker_id)?.moeda || moedaOperacao,
                 fonte_saldo: e.usar_freebet ? 'FREEBET' : 'REAL',
               }))

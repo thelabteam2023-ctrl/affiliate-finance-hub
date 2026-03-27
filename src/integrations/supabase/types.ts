@@ -237,6 +237,8 @@ export type Database = {
           selecao_livre: string | null
           stake: number
           stake_brl_referencia: number | null
+          stake_freebet: number
+          stake_real: number
           updated_at: string | null
           valor_freebet_gerada: number | null
         }
@@ -259,6 +261,8 @@ export type Database = {
           selecao_livre?: string | null
           stake: number
           stake_brl_referencia?: number | null
+          stake_freebet?: number
+          stake_real?: number
           updated_at?: string | null
           valor_freebet_gerada?: number | null
         }
@@ -281,6 +285,8 @@ export type Database = {
           selecao_livre?: string | null
           stake?: number
           stake_brl_referencia?: number | null
+          stake_freebet?: number
+          stake_real?: number
           updated_at?: string | null
           valor_freebet_gerada?: number | null
         }
@@ -425,6 +431,7 @@ export type Database = {
           stake: number | null
           stake_bonus: number | null
           stake_consolidado: number | null
+          stake_freebet: number
           stake_real: number | null
           stake_total: number | null
           status: string
@@ -499,6 +506,7 @@ export type Database = {
           stake?: number | null
           stake_bonus?: number | null
           stake_consolidado?: number | null
+          stake_freebet?: number
           stake_real?: number | null
           stake_total?: number | null
           status?: string
@@ -573,6 +581,7 @@ export type Database = {
           stake?: number | null
           stake_bonus?: number | null
           stake_consolidado?: number | null
+          stake_freebet?: number
           stake_real?: number | null
           stake_total?: number | null
           status?: string

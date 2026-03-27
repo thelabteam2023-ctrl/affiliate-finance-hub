@@ -94,6 +94,8 @@ interface Aposta {
   stake: number;
   // Quando a aposta é registrada como ARBITRAGEM (multi-pernas), o volume fica aqui
   stake_total?: number | null;
+  stake_real?: number | null;
+  stake_freebet?: number | null;
   estrategia: string | null;
   status: string;
   resultado: string | null;
@@ -302,7 +304,7 @@ export function ProjetoValueBetTab({
       let query = supabase
         .from("apostas_unificada")
         .select(`
-          id, created_at, data_aposta, esporte, evento, mercado, selecao, odd, stake, stake_total, stake_real, estrategia, 
+          id, created_at, data_aposta, esporte, evento, mercado, selecao, odd, stake, stake_total, stake_real, stake_freebet, estrategia, 
           status, resultado, lucro_prejuizo, valor_retorno, observacoes, bookmaker_id, workspace_id,
           modo_entrada, gerou_freebet, valor_freebet_gerada, tipo_freebet, forma_registro,
           contexto_operacional, lay_exchange, lay_odd, lay_stake, lay_liability, lay_comissao,
@@ -331,7 +333,7 @@ export function ProjetoValueBetTab({
         const { data: pendentesData } = await supabase
           .from("apostas_unificada")
           .select(`
-            id, created_at, data_aposta, esporte, evento, mercado, selecao, odd, stake, stake_total, stake_real, estrategia, 
+            id, created_at, data_aposta, esporte, evento, mercado, selecao, odd, stake, stake_total, stake_real, stake_freebet, estrategia, 
             status, resultado, lucro_prejuizo, valor_retorno, observacoes, bookmaker_id, workspace_id,
             modo_entrada, gerou_freebet, valor_freebet_gerada, tipo_freebet, forma_registro,
             contexto_operacional, lay_exchange, lay_odd, lay_stake, lay_liability, lay_comissao,
@@ -393,7 +395,7 @@ export function ProjetoValueBetTab({
         const { data: pernasData } = await supabase
           .from("apostas_pernas")
           .select(`
-            id, aposta_id, bookmaker_id, odd, stake, moeda, selecao, selecao_livre, ordem,
+            id, aposta_id, bookmaker_id, odd, stake, stake_real, stake_freebet, moeda, selecao, selecao_livre, ordem,
             resultado, lucro_prejuizo, fonte_saldo,
             bookmaker:bookmakers (
               nome, parceiro_id,
