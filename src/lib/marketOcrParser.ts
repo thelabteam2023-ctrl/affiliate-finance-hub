@@ -363,6 +363,11 @@ export function parseOcrMarket(
     type = "HANDICAP";
     confidence = "high";
   }
+  // Prioridade 3.5: Domínio explícito detectado no texto do mercado (ex: "Escanteios", "Cartões") + lado detectado na seleção
+  else if (detectDomain(rawMarket) && sideLine) {
+    type = "TOTAL";
+    confidence = "high";
+  }
   // Prioridade 4: Verificar se é TOTAL (Over/Under)
   else if (sideLine || isTotalMarket(combinedText)) {
     type = "TOTAL";
