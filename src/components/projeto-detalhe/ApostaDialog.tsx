@@ -124,6 +124,9 @@ interface Aposta {
   tipo_freebet?: string | null;
   forma_registro?: string | null;
   contexto_operacional?: string | null;
+  usar_freebet?: boolean | null;
+  fonte_saldo?: string | null;
+  stake_real?: number | null;
 }
 
 // Interface de Bookmaker local (mapeada do hook canônico)
