@@ -112,14 +112,14 @@ function getHeatmapTone(lucro: number, temDados: boolean, maxAbsLucro: number) {
       case 3:
         return {
           cell: "bg-emerald-300 dark:bg-success/38 border border-emerald-400 dark:border-success/30",
-          day: "text-emerald-900 dark:text-foreground",
-          value: "text-emerald-900 dark:text-foreground",
+          day: "text-emerald-900 dark:text-emerald-200",
+          value: "text-emerald-900 dark:text-emerald-200/90",
         };
       default:
         return {
           cell: "bg-emerald-500 dark:bg-success/58 border border-emerald-600 dark:border-success/35 shadow-soft",
-          day: "text-white dark:text-primary-foreground",
-          value: "text-white dark:text-primary-foreground",
+          day: "text-emerald-950 dark:text-emerald-100",
+          value: "text-emerald-950 dark:text-emerald-100/90",
         };
     }
   }
@@ -140,14 +140,14 @@ function getHeatmapTone(lucro: number, temDados: boolean, maxAbsLucro: number) {
     case 3:
       return {
         cell: "bg-red-300 dark:bg-destructive/34 border border-red-400 dark:border-destructive/28",
-        day: "text-red-900 dark:text-foreground",
-        value: "text-red-900 dark:text-foreground",
+        day: "text-red-900 dark:text-red-200",
+        value: "text-red-900 dark:text-red-200/90",
       };
     default:
       return {
         cell: "bg-red-500 dark:bg-destructive/48 border border-red-600 dark:border-destructive/32 shadow-soft",
-        day: "text-white dark:text-destructive-foreground",
-        value: "text-white dark:text-destructive-foreground",
+        day: "text-red-950 dark:text-red-100",
+        value: "text-red-950 dark:text-red-100/90",
       };
   }
 }
