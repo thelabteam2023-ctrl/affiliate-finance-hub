@@ -926,15 +926,12 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           usar_freebet: aposta.usar_freebet,
           fonte_saldo: aposta.fonte_saldo,
         });
-        console.log("[ApostaDialog] HYDRATION DEBUG", {
-          raw: { stake: aposta.stake, stake_total: aposta.stake_total, stake_real: aposta.stake_real, stake_freebet: aposta.stake_freebet, usar_freebet: aposta.usar_freebet, fonte_saldo: aposta.fonte_saldo },
-          derived: stakeSplit,
-          modo_entrada: aposta.modo_entrada,
-        });
         if (aposta.modo_entrada !== "EXCHANGE") {
-          setStake(stakeSplit.stakeReal > 0 ? stakeSplit.stakeReal.toString() : "0");
-          setValorFreebetUsar(stakeSplit.stakeFreebet);
-          setUsarFreebetBookmaker(stakeSplit.usesFreebet);
+          const persistedStakeReal = Number(aposta.stake_real ?? stakeSplit.stakeReal ?? 0);
+          const persistedStakeFreebet = Number(aposta.stake_freebet ?? stakeSplit.stakeFreebet ?? 0);
+          setStake(persistedStakeReal > 0 ? persistedStakeReal.toString() : "0");
+          setValorFreebetUsar(persistedStakeFreebet);
+          setUsarFreebetBookmaker(persistedStakeFreebet > 0 || aposta.usar_freebet === true);
         } else {
           setStake(aposta.stake?.toString() || "");
           setValorFreebetUsar(0);
@@ -1096,7 +1093,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         
         // Se a aposta usou freebet (bookmaker simples), restaurar flag sem sobrescrever split já hidratado
         if (aposta.tipo_freebet && aposta.tipo_freebet !== "normal" && aposta.modo_entrada === "PADRAO") {
-          setUsarFreebetBookmaker((prev) => prev || stakeSplit.usesFreebet);
+          setUsarFreebetBookmaker((prev) => prev || Number(aposta.stake_freebet ?? stakeSplit.stakeFreebet ?? 0) > 0);
         }
         
         // Restaurar campos de registro (estrategia, forma_registro, contexto_operacional, fonte_saldo)
@@ -1687,12 +1684,22 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
 
         // Para edição: stake anterior é "livre" apenas se a bookmaker não mudou
         const mesmaBookmaker = aposta?.bookmaker_id === bookmakerId;
-        const stakeAnterior = aposta && mesmaBookmaker ? (aposta.stake || 0) : 0;
-        const saldoOperavelParaValidar = selectedBookmaker.saldo_operavel + stakeAnterior;
+        const splitApostaAtual = aposta
+          ? deriveStakeSplit({
+              stake: aposta.stake,
+              stake_total: aposta.stake_total,
+              stake_real: aposta.stake_real,
+              stake_freebet: aposta.stake_freebet,
+              usar_freebet: aposta.usar_freebet,
+              fonte_saldo: aposta.fonte_saldo,
+            })
+          : null;
+        const stakeRealAnterior = aposta && mesmaBookmaker ? splitApostaAtual?.stakeReal ?? 0 : 0;
+        const saldoRealParaValidar = selectedBookmaker.saldo_disponivel + stakeRealAnterior;
         
-        if (stakeNum > saldoOperavelParaValidar) {
+        if (stakeNum > saldoRealParaValidar) {
           const moeda = selectedBookmaker.moeda;
-          toast.error(`Stake (${formatCurrencyWithSymbol(stakeNum, moeda)}) maior que o saldo operável (${formatCurrencyWithSymbol(saldoOperavelParaValidar, moeda)})`);
+          toast.error(`Stake (${formatCurrencyWithSymbol(stakeNum, moeda)}) maior que o saldo real disponível (${formatCurrencyWithSymbol(saldoRealParaValidar, moeda)})`);
           return;
         }
       }
@@ -3454,8 +3461,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                                 if (newUsarFb) {
                                   setGerouFreebet(false);
                                   setValorFreebetGerada("");
-                                  setValorFreebetUsar(fbDisponivel);
-                                  // NÃO auto-preencher stake - stake = saldo real
+                                  setValorFreebetUsar((atual) => Math.min(atual || 0, fbDisponivel));
                                 } else {
                                   setValorFreebetUsar(0);
                                 }
