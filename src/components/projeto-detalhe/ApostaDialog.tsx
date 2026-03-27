@@ -78,6 +78,7 @@ import { Plus, Trash2 as Trash2Entry, Layers } from "lucide-react";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { FonteEntradaSelector } from "@/components/apostas/FonteEntradaSelector";
 import { useWorkspaceBetSources } from "@/hooks/useWorkspaceBetSources";
+import { deriveStakeSplit } from "@/lib/freebetStake";
 
 // Multi-entry para aposta simples (mesma seleção, múltiplas bookmakers)
 interface AdditionalEntry {
@@ -127,6 +128,7 @@ interface Aposta {
   usar_freebet?: boolean | null;
   fonte_saldo?: string | null;
   stake_real?: number | null;
+  stake_total?: number | null;
 }
 
 // Interface de Bookmaker local (mapeada do hook canônico)
@@ -906,19 +908,15 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         // Usar evento direto (campo já unificado no banco)
         setEvento(aposta.evento || "");
         setOdd(aposta.odd?.toString() || "");
-        // CORREÇÃO FREEBET: Se a aposta usou freebet, o campo stake contém o valor da freebet.
-        // O stake_real (saldo real utilizado) deve ir para o campo Stake,
-        // e o valor da freebet deve ir para valorFreebetUsar.
-        const isFonteFreebet = aposta.fonte_saldo === 'FREEBET' || aposta.usar_freebet === true;
-        if (isFonteFreebet && aposta.modo_entrada !== "EXCHANGE") {
-          // Stake real = stake_real do banco (ou 0 se não existir)
-          const stakeReal = Number(aposta.stake_real) || 0;
-          setStake(stakeReal > 0 ? stakeReal.toString() : "0");
-          // Valor de freebet = stake total (que é o valor da freebet)
-          setValorFreebetUsar(Number(aposta.stake) || 0);
-          setUsarFreebetBookmaker(true);
+        const stakeSplit = deriveStakeSplit(aposta);
+        if (aposta.modo_entrada !== "EXCHANGE") {
+          setStake(stakeSplit.stakeReal > 0 ? stakeSplit.stakeReal.toString() : "0");
+          setValorFreebetUsar(stakeSplit.stakeFreebet);
+          setUsarFreebetBookmaker(stakeSplit.usesFreebet);
         } else {
           setStake(aposta.stake?.toString() || "");
+          setValorFreebetUsar(0);
+          setUsarFreebetBookmaker(false);
         }
         setStatusResultado(aposta.resultado || aposta.status);
         setValorRetorno(aposta.valor_retorno?.toString() || "");
@@ -1034,25 +1032,33 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
               // Atualizar primary com dados da perna (podem diferir do agregado)
               setBookmakerId(primaryPerna.bookmaker_id);
               setOdd(primaryPerna.odd.toString());
-              // Carregar stake como saldo real (total - FB se era freebet)
-              const primaryIsFb = primaryPerna.fonte_saldo === 'FREEBET';
-              setStake(primaryIsFb ? '0' : primaryPerna.stake.toString());
-              if (primaryIsFb) {
-                setUsarFreebetBookmaker(true);
-                setValorFreebetUsar(primaryPerna.stake);
-              }
+              const primaryStakeSplit = deriveStakeSplit({
+                stake: primaryPerna.stake,
+                stake_total: primaryPerna.stake,
+                stake_real: primaryPerna.fonte_saldo === 'FREEBET' ? 0 : primaryPerna.stake,
+                usar_freebet: primaryPerna.fonte_saldo === 'FREEBET',
+                fonte_saldo: primaryPerna.fonte_saldo,
+              });
+              setStake(primaryStakeSplit.stakeReal > 0 ? primaryStakeSplit.stakeReal.toString() : '0');
+              setUsarFreebetBookmaker(primaryStakeSplit.usesFreebet);
+              setValorFreebetUsar(primaryStakeSplit.stakeFreebet);
               
               const extras = pernas.slice(1).map(p => {
-                const isFb = p.fonte_saldo === 'FREEBET' || p.gerou_freebet === true;
+                const split = deriveStakeSplit({
+                  stake: p.stake,
+                  stake_total: p.stake,
+                  stake_real: p.fonte_saldo === 'FREEBET' ? 0 : p.stake,
+                  usar_freebet: p.fonte_saldo === 'FREEBET' || p.gerou_freebet === true,
+                  fonte_saldo: p.fonte_saldo,
+                });
                 return {
                   id: p.id,
                   bookmaker_id: p.bookmaker_id,
                   odd: p.odd.toString(),
-                  // Se era freebet puro, stake real = 0
-                  stake: isFb ? '0' : p.stake.toString(),
+                  stake: split.stakeReal > 0 ? split.stakeReal.toString() : '0',
                   selecao_livre: p.selecao_livre || '',
-                  usar_freebet: isFb,
-                  valor_freebet: isFb ? p.stake.toString() : '0',
+                  usar_freebet: split.usesFreebet,
+                  valor_freebet: split.stakeFreebet > 0 ? split.stakeFreebet.toString() : '0',
                 };
               });
               setAdditionalEntries(extras);
@@ -1934,11 +1940,16 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           }
         }
 
+        const bookmakerStakeReal = parseFloat(stake) || 0;
+        const bookmakerStakeFreebet = usarFreebetBookmaker ? valorFreebetUsar : 0;
+
         apostaData = {
           ...commonData,
           bookmaker_id: bookmakerId,
           odd: Math.round(effectiveOdd * 1000) / 1000, // 3 casas decimais
           stake: effectiveStake,
+          stake_real: bookmakerStakeReal,
+          stake_total: effectiveStake,
           modo_entrada: "PADRAO",
           valor_retorno: valorRetornoCalculado,
           lucro_prejuizo: lucroPrejuizo,
@@ -1951,7 +1962,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           back_comissao: null,
           tipo_freebet: (usarFreebetBookmaker || additionalEntries.some(e => e.usar_freebet)) ? "freebet_snr" : null,
           // WATERFALL: Flag para indicar se freebet deve ser usado no waterfall
-          usar_freebet: usarFreebetBookmaker || additionalEntries.some(e => e.usar_freebet),
+          usar_freebet: bookmakerStakeFreebet > 0 || additionalEntries.some(e => e.usar_freebet),
         };
       } else if (tipoOperacaoExchange === "cobertura") {
         // ===== MODO COBERTURA LAY =====
