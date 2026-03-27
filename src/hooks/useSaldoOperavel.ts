@@ -205,7 +205,7 @@ export function useSaldoOperavel(projetoId: string) {
         const saldoRealNativo = Number(bk.saldo_real) || 0;
         const saldoFreebetNativo = Number(bk.saldo_freebet) || 0;
         const saldoEmApostaNativo = Number(bk.saldo_em_aposta) || 0;
-        const saldoDisponivelNativo = Math.max(0, saldoRealNativo - saldoEmApostaNativo);
+        const saldoDisponivelNativo = Math.max(0, Number(bk.saldo_disponivel) || 0);
         
         // Rollover individual desta casa
         const rolloverInfo = rolloverPorCasa.get(bk.id);

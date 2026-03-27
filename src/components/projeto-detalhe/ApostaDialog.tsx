@@ -908,7 +908,13 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         // Usar evento direto (campo já unificado no banco)
         setEvento(aposta.evento || "");
         setOdd(aposta.odd?.toString() || "");
-        const stakeSplit = deriveStakeSplit(aposta);
+        const stakeSplit = deriveStakeSplit({
+          stake: aposta.stake,
+          stake_total: aposta.stake_total,
+          stake_real: aposta.stake_real,
+          usar_freebet: aposta.usar_freebet,
+          fonte_saldo: aposta.fonte_saldo,
+        });
         if (aposta.modo_entrada !== "EXCHANGE") {
           setStake(stakeSplit.stakeReal > 0 ? stakeSplit.stakeReal.toString() : "0");
           setValorFreebetUsar(stakeSplit.stakeFreebet);
@@ -1033,11 +1039,11 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
               setBookmakerId(primaryPerna.bookmaker_id);
               setOdd(primaryPerna.odd.toString());
               const primaryStakeSplit = deriveStakeSplit({
-                stake: primaryPerna.stake,
-                stake_total: primaryPerna.stake,
-                stake_real: primaryPerna.fonte_saldo === 'FREEBET' ? 0 : primaryPerna.stake,
-                usar_freebet: primaryPerna.fonte_saldo === 'FREEBET',
-                fonte_saldo: primaryPerna.fonte_saldo,
+                stake: aposta.stake,
+                stake_total: aposta.stake_total ?? aposta.stake,
+                stake_real: aposta.stake_real,
+                usar_freebet: aposta.usar_freebet,
+                fonte_saldo: aposta.fonte_saldo ?? primaryPerna.fonte_saldo,
               });
               setStake(primaryStakeSplit.stakeReal > 0 ? primaryStakeSplit.stakeReal.toString() : '0');
               setUsarFreebetBookmaker(primaryStakeSplit.usesFreebet);
@@ -1070,9 +1076,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         setGerouFreebet(aposta.gerou_freebet || false);
         setValorFreebetGerada(aposta.valor_freebet_gerada?.toString() || "");
         
-        // Se a aposta usou freebet (bookmaker simples) - apenas se não foi já tratado acima
-        if (aposta.tipo_freebet && aposta.tipo_freebet !== "normal" && aposta.modo_entrada === "PADRAO" && !usarFreebetBookmaker) {
-          setUsarFreebetBookmaker(true);
+        // Se a aposta usou freebet (bookmaker simples), restaurar flag sem sobrescrever split já hidratado
+        if (aposta.tipo_freebet && aposta.tipo_freebet !== "normal" && aposta.modo_entrada === "PADRAO") {
+          setUsarFreebetBookmaker((prev) => prev || stakeSplit.usesFreebet);
         }
         
         // Restaurar campos de registro (estrategia, forma_registro, contexto_operacional, fonte_saldo)
