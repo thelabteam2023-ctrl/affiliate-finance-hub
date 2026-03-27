@@ -926,6 +926,11 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           usar_freebet: aposta.usar_freebet,
           fonte_saldo: aposta.fonte_saldo,
         });
+        console.log("[ApostaDialog] HYDRATION DEBUG", {
+          raw: { stake: aposta.stake, stake_total: aposta.stake_total, stake_real: aposta.stake_real, stake_freebet: aposta.stake_freebet, usar_freebet: aposta.usar_freebet, fonte_saldo: aposta.fonte_saldo },
+          derived: stakeSplit,
+          modo_entrada: aposta.modo_entrada,
+        });
         if (aposta.modo_entrada !== "EXCHANGE") {
           setStake(stakeSplit.stakeReal > 0 ? stakeSplit.stakeReal.toString() : "0");
           setValorFreebetUsar(stakeSplit.stakeFreebet);
