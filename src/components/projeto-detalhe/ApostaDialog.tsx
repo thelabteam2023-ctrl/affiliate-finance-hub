@@ -909,10 +909,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         // CORREÇÃO FREEBET: Se a aposta usou freebet, o campo stake contém o valor da freebet.
         // O stake_real (saldo real utilizado) deve ir para o campo Stake,
         // e o valor da freebet deve ir para valorFreebetUsar.
-        const isFonteFreebet = (aposta as any).fonte_saldo === 'FREEBET' || aposta.usar_freebet === true;
+        const isFonteFreebet = aposta.fonte_saldo === 'FREEBET' || aposta.usar_freebet === true;
         if (isFonteFreebet && aposta.modo_entrada !== "EXCHANGE") {
           // Stake real = stake_real do banco (ou 0 se não existir)
-          const stakeReal = Number((aposta as any).stake_real) || 0;
+          const stakeReal = Number(aposta.stake_real) || 0;
           setStake(stakeReal > 0 ? stakeReal.toString() : "0");
           // Valor de freebet = stake total (que é o valor da freebet)
           setValorFreebetUsar(Number(aposta.stake) || 0);
