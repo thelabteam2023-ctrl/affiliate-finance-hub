@@ -53,7 +53,7 @@ const DOMAIN_PATTERNS: DomainPattern[] = [
   { domain: "GOALS", patterns: [/gols?/i, /goals?/i, /golo/i] },
   
   // Pontos
-  { domain: "POINTS", patterns: [/pont(o|os|uação)/i, /points?/i, /pts?/i] },
+  { domain: "POINTS", patterns: [/pont(o|os|uação)/i, /points?/i, /\bpts?\b/i] },
   
   // Games (Tênis)
   { domain: "GAMES", patterns: [/games?/i, /jog(o|os)/i] },
