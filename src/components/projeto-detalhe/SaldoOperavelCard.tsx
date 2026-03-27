@@ -305,10 +305,10 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
               <span className="font-semibold text-amber-500">{formatCurrency(saldoEmAposta)}</span>
             </div>
           )}
-          {/* Saldo Livre = Saldo Real + Freebet - Apostas em Aberto */}
+          {/* Saldo Livre = saldo disponível líquido + freebet */}
           <div className="flex items-center justify-between px-3 py-2.5 border-t border-border/50 bg-muted/30">
             <span className="font-semibold text-foreground">Saldo Livre</span>
-            <span className="font-bold text-foreground">{formatCurrency(Math.max(0, saldoReal + saldoFreebet - saldoEmAposta))}</span>
+            <span className="font-bold text-foreground">{formatCurrency(Math.max(0, saldoOperavel))}</span>
           </div>
         </div>
       </div>

@@ -63,4 +63,21 @@ describe("deriveStakeSplit", () => {
     expect(result.stakeFreebet).toBe(40);
     expect(result.stakeTotal).toBe(165);
   });
+
+  it("prioriza stake_freebet persistido quando disponível", () => {
+    expect(
+      deriveStakeSplit({
+        stake_total: 130,
+        stake_real: 100,
+        stake_freebet: 30,
+        usar_freebet: true,
+        fonte_saldo: "FREEBET",
+      })
+    ).toEqual({
+      stakeReal: 100,
+      stakeFreebet: 30,
+      stakeTotal: 130,
+      usesFreebet: true,
+    });
+  });
 });
