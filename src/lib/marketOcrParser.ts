@@ -114,15 +114,15 @@ const UNDER_PATTERNS = [
 
 // Padrões para detectar TOTAL de forma genérica
 const TOTAL_MARKET_PATTERNS = [
-  /total\s*[-–—]\s*\d+\s*op[çc][õo]es/i, // "Total - 2 Opções" (Brazilian bookmakers)
+  /total\s*[-–—]\s*\d+\s*(?:op[çc][õo]es|options?)/i, // "Total - 2 Opções" / "Total - 2 Options"
   /total\s*(de\s*)?([\w]+)/i,        // "Total de Games"
   /over\s*\/?\s*under/i,              // "Over/Under"
   /o\/u/i,                            // "O/U"
   // Domain-specific patterns that imply TOTAL market
-  /escanteio(s)?\s*[-–—]\s*\d+\s*op[çc][õo]es/i, // "Escanteios - 2 Opções"
-  /cart(ão|ao|ões|oes)\s*[-–—]\s*\d+\s*op[çc][õo]es/i, // "Cartões - 2 Opções"
-  /corner(s)?\s*[-–—]\s*\d+\s*op[çc][õo]es/i, // "Corners - 2 Options"
-  /canto(s)?\s*[-–—]\s*\d+\s*op[çc][õo]es/i,  // "Cantos - 2 Opções"
+  /escanteio(s)?\s*[-–—]\s*\d+\s*(?:op[çc][õo]es|options?)/i, // "Escanteios - 2 Opções"
+  /cart(ão|ao|ões|oes)\s*[-–—]\s*\d+\s*(?:op[çc][õo]es|options?)/i, // "Cartões - 2 Opções"
+  /corner(s)?\s*[-–—]\s*\d+\s*(?:op[çc][õo]es|options?)/i, // "Corners - 2 Options"
+  /canto(s)?\s*[-–—]\s*\d+\s*(?:op[çc][õo]es|options?)/i,  // "Cantos - 2 Opções"
 ];
 
 // Padrões para detectar HANDICAP
