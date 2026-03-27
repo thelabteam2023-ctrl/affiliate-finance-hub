@@ -53,7 +53,7 @@ const DOMAIN_PATTERNS: DomainPattern[] = [
   { domain: "GOALS", patterns: [/gols?/i, /goals?/i, /golo/i] },
   
   // Pontos
-  { domain: "POINTS", patterns: [/pont(o|os|uação)/i, /points?/i, /pts?/i] },
+  { domain: "POINTS", patterns: [/pont(o|os|uação)/i, /points?/i, /\bpts?\b/i] },
   
   // Games (Tênis)
   { domain: "GAMES", patterns: [/games?/i, /jog(o|os)/i] },
@@ -91,6 +91,7 @@ const DOMAIN_PATTERNS: DomainPattern[] = [
 // ========================================================================
 
 const OVER_PATTERNS = [
+  /mais\s+de\s+(\d+[.,]?\d*)/i,      // "Mais de 8.5" (com "de")
   /mais\s+(\d+[.,]?\d*)/i,           // "Mais 21.5"
   /over\s+(\d+[.,]?\d*)/i,           // "Over 21.5"
   /acima\s+(de\s+)?(\d+[.,]?\d*)/i,  // "Acima de 21.5"
@@ -98,9 +99,11 @@ const OVER_PATTERNS = [
   /\bo\s+(\d+[.,]?\d*)/i,              // "O 21.5" (word boundary to avoid matching inside words like "Como")
   />\s*(\d+[.,]?\d*)/,                // "> 21.5"
   /(\d+[.,]?\d*)\s*\+/,               // "21.5+"
+  /ma[i1l]s\s+(de\s+)?(\d+[.,]?\d*)/i, // OCR errors: "ma1s de", "mals de"
 ];
 
 const UNDER_PATTERNS = [
+  /menos\s+de\s+(\d+[.,]?\d*)/i,     // "Menos de 8.5" (com "de")
   /menos\s+(\d+[.,]?\d*)/i,          // "Menos 21.5"
   /under\s+(\d+[.,]?\d*)/i,          // "Under 21.5"
   /abaixo\s+(de\s+)?(\d+[.,]?\d*)/i, // "Abaixo de 21.5"
@@ -111,10 +114,15 @@ const UNDER_PATTERNS = [
 
 // Padrões para detectar TOTAL de forma genérica
 const TOTAL_MARKET_PATTERNS = [
-  /total\s*[-–—]\s*\d+\s*op[çc][õo]es/i, // "Total - 2 Opções" (Brazilian bookmakers)
+  /total\s*[-–—]\s*\d+\s*(?:op[çc][õo]es|options?)/i, // "Total - 2 Opções" / "Total - 2 Options"
   /total\s*(de\s*)?([\w]+)/i,        // "Total de Games"
   /over\s*\/?\s*under/i,              // "Over/Under"
   /o\/u/i,                            // "O/U"
+  // Domain-specific patterns that imply TOTAL market
+  /escanteio(s)?\s*[-–—]\s*\d+\s*(?:op[çc][õo]es|options?)/i, // "Escanteios - 2 Opções"
+  /cart(ão|ao|ões|oes)\s*[-–—]\s*\d+\s*(?:op[çc][õo]es|options?)/i, // "Cartões - 2 Opções"
+  /corner(s)?\s*[-–—]\s*\d+\s*(?:op[çc][õo]es|options?)/i, // "Corners - 2 Options"
+  /canto(s)?\s*[-–—]\s*\d+\s*(?:op[çc][õo]es|options?)/i,  // "Cantos - 2 Opções"
 ];
 
 // Padrões para detectar HANDICAP
@@ -234,7 +242,7 @@ function isHandicapMarket(text: string): boolean {
  * Verifica se o texto contém termos explícitos de Over/Under
  */
 function hasExplicitTotalTerms(text: string): boolean {
-  return /\b(over|under|mais\s+de|menos\s+de|acima|abaixo|o\/u|gols?|goals?)\b/i.test(text);
+  return /\b(over|under|mais\s+de|menos\s+de|acima|abaixo|o\/u|gols?|goals?|escanteio|corner|canto|cart[ãa]o|cart[õo]es|cards?)\b/i.test(text);
 }
 
 /**
@@ -353,6 +361,11 @@ export function parseOcrMarket(
   // Prioridade 3: HANDICAP explícito no texto combinado
   else if (isHandicapMarket(combinedText) && !hasExplicitTotalTerms(combinedText)) {
     type = "HANDICAP";
+    confidence = "high";
+  }
+  // Prioridade 3.5: Domínio explícito detectado no texto do mercado (ex: "Escanteios", "Cartões") + lado detectado na seleção
+  else if (detectDomain(rawMarket) && sideLine) {
+    type = "TOTAL";
     confidence = "high";
   }
   // Prioridade 4: Verificar se é TOTAL (Over/Under)
