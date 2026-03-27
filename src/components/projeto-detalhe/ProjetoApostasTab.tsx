@@ -414,12 +414,13 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
       let query = supabase
         .from("apostas_unificada")
         .select(`
-          id, created_at, data_aposta, esporte, evento, mercado, selecao, odd, stake, estrategia,
+          id, created_at, data_aposta, esporte, evento, mercado, selecao, odd, stake, stake_real, estrategia,
           status, resultado, valor_retorno, lucro_prejuizo, observacoes, bookmaker_id,
           modo_entrada, lay_exchange, lay_odd, lay_stake, lay_liability, lay_comissao,
           back_comissao, back_em_exchange, gerou_freebet, valor_freebet_gerada,
           tipo_freebet, is_bonus_bet, contexto_operacional, forma_registro, pernas,
-          moeda_operacao, stake_consolidado, pl_consolidado, valor_brl_referencia, lucro_prejuizo_brl_referencia
+          moeda_operacao, stake_consolidado, pl_consolidado, valor_brl_referencia, lucro_prejuizo_brl_referencia,
+          usar_freebet, fonte_saldo
         `)
         .eq("projeto_id", projetoId)
         .eq("forma_registro", "SIMPLES")
@@ -445,12 +446,13 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
         const { data: pendentesData } = await supabase
           .from("apostas_unificada")
           .select(`
-            id, created_at, data_aposta, esporte, evento, mercado, selecao, odd, stake, estrategia,
+            id, created_at, data_aposta, esporte, evento, mercado, selecao, odd, stake, stake_real, estrategia,
             status, resultado, valor_retorno, lucro_prejuizo, observacoes, bookmaker_id,
             modo_entrada, lay_exchange, lay_odd, lay_stake, lay_liability, lay_comissao,
             back_comissao, back_em_exchange, gerou_freebet, valor_freebet_gerada,
             tipo_freebet, is_bonus_bet, contexto_operacional, forma_registro, pernas,
-            moeda_operacao, stake_consolidado, pl_consolidado, valor_brl_referencia, lucro_prejuizo_brl_referencia
+            moeda_operacao, stake_consolidado, pl_consolidado, valor_brl_referencia, lucro_prejuizo_brl_referencia,
+            usar_freebet, fonte_saldo
           `)
           .eq("projeto_id", projetoId)
           .eq("forma_registro", "SIMPLES")

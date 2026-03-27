@@ -124,6 +124,9 @@ interface Aposta {
   tipo_freebet?: string | null;
   forma_registro?: string | null;
   contexto_operacional?: string | null;
+  usar_freebet?: boolean | null;
+  fonte_saldo?: string | null;
+  stake_real?: number | null;
 }
 
 // Interface de Bookmaker local (mapeada do hook canônico)
@@ -903,7 +906,20 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         // Usar evento direto (campo já unificado no banco)
         setEvento(aposta.evento || "");
         setOdd(aposta.odd?.toString() || "");
-        setStake(aposta.stake?.toString() || "");
+        // CORREÇÃO FREEBET: Se a aposta usou freebet, o campo stake contém o valor da freebet.
+        // O stake_real (saldo real utilizado) deve ir para o campo Stake,
+        // e o valor da freebet deve ir para valorFreebetUsar.
+        const isFonteFreebet = aposta.fonte_saldo === 'FREEBET' || aposta.usar_freebet === true;
+        if (isFonteFreebet && aposta.modo_entrada !== "EXCHANGE") {
+          // Stake real = stake_real do banco (ou 0 se não existir)
+          const stakeReal = Number(aposta.stake_real) || 0;
+          setStake(stakeReal > 0 ? stakeReal.toString() : "0");
+          // Valor de freebet = stake total (que é o valor da freebet)
+          setValorFreebetUsar(Number(aposta.stake) || 0);
+          setUsarFreebetBookmaker(true);
+        } else {
+          setStake(aposta.stake?.toString() || "");
+        }
         setStatusResultado(aposta.resultado || aposta.status);
         setValorRetorno(aposta.valor_retorno?.toString() || "");
         setObservacoes(aposta.observacoes || "");
@@ -1048,8 +1064,8 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         setGerouFreebet(aposta.gerou_freebet || false);
         setValorFreebetGerada(aposta.valor_freebet_gerada?.toString() || "");
         
-        // Se a aposta usou freebet (bookmaker simples)
-        if (aposta.tipo_freebet && aposta.tipo_freebet !== "normal" && aposta.modo_entrada === "PADRAO") {
+        // Se a aposta usou freebet (bookmaker simples) - apenas se não foi já tratado acima
+        if (aposta.tipo_freebet && aposta.tipo_freebet !== "normal" && aposta.modo_entrada === "PADRAO" && !usarFreebetBookmaker) {
           setUsarFreebetBookmaker(true);
         }
         
@@ -1060,7 +1076,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           forma_registro: (aposta.forma_registro as FormaRegistro) || 'SIMPLES',
           estrategia: (aposta.estrategia as ApostaEstrategia) || null,
           contexto_operacional: (aposta.contexto_operacional as ContextoOperacional) || null,
-          fonte_saldo: ((aposta as any).fonte_saldo as FonteSaldo) || 'REAL', // Legado: default REAL
+          fonte_saldo: (aposta.fonte_saldo as FonteSaldo) || 'REAL', // Legado: default REAL
         });
       } else {
         resetForm();
