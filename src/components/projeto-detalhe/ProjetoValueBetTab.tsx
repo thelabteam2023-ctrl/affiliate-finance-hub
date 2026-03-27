@@ -302,13 +302,13 @@ export function ProjetoValueBetTab({
       let query = supabase
         .from("apostas_unificada")
         .select(`
-          id, created_at, data_aposta, esporte, evento, mercado, selecao, odd, stake, stake_total, estrategia, 
+          id, created_at, data_aposta, esporte, evento, mercado, selecao, odd, stake, stake_total, stake_real, estrategia, 
           status, resultado, lucro_prejuizo, valor_retorno, observacoes, bookmaker_id, workspace_id,
           modo_entrada, gerou_freebet, valor_freebet_gerada, tipo_freebet, forma_registro,
           contexto_operacional, lay_exchange, lay_odd, lay_stake, lay_liability, lay_comissao,
           back_em_exchange, back_comissao, pernas, modelo, selecoes, tipo_multipla, odd_final,
           moeda_operacao, stake_consolidado, pl_consolidado, valor_brl_referencia, lucro_prejuizo_brl_referencia,
-          fonte_entrada
+          fonte_entrada, usar_freebet, fonte_saldo
         `)
         .eq("projeto_id", projetoId)
         .eq("estrategia", APOSTA_ESTRATEGIA.VALUEBET)
@@ -331,13 +331,13 @@ export function ProjetoValueBetTab({
         const { data: pendentesData } = await supabase
           .from("apostas_unificada")
           .select(`
-            id, created_at, data_aposta, esporte, evento, mercado, selecao, odd, stake, stake_total, estrategia, 
+            id, created_at, data_aposta, esporte, evento, mercado, selecao, odd, stake, stake_total, stake_real, estrategia, 
             status, resultado, lucro_prejuizo, valor_retorno, observacoes, bookmaker_id, workspace_id,
             modo_entrada, gerou_freebet, valor_freebet_gerada, tipo_freebet, forma_registro,
             contexto_operacional, lay_exchange, lay_odd, lay_stake, lay_liability, lay_comissao,
             back_em_exchange, back_comissao, pernas, modelo, selecoes, tipo_multipla, odd_final,
             moeda_operacao, stake_consolidado, pl_consolidado, valor_brl_referencia, lucro_prejuizo_brl_referencia,
-            fonte_entrada
+            fonte_entrada, usar_freebet, fonte_saldo
           `)
           .eq("projeto_id", projetoId)
           .eq("estrategia", APOSTA_ESTRATEGIA.VALUEBET)
