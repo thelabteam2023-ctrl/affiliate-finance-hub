@@ -91,6 +91,7 @@ const DOMAIN_PATTERNS: DomainPattern[] = [
 // ========================================================================
 
 const OVER_PATTERNS = [
+  /mais\s+de\s+(\d+[.,]?\d*)/i,      // "Mais de 8.5" (com "de")
   /mais\s+(\d+[.,]?\d*)/i,           // "Mais 21.5"
   /over\s+(\d+[.,]?\d*)/i,           // "Over 21.5"
   /acima\s+(de\s+)?(\d+[.,]?\d*)/i,  // "Acima de 21.5"
@@ -98,9 +99,11 @@ const OVER_PATTERNS = [
   /\bo\s+(\d+[.,]?\d*)/i,              // "O 21.5" (word boundary to avoid matching inside words like "Como")
   />\s*(\d+[.,]?\d*)/,                // "> 21.5"
   /(\d+[.,]?\d*)\s*\+/,               // "21.5+"
+  /ma[i1l]s\s+(de\s+)?(\d+[.,]?\d*)/i, // OCR errors: "ma1s de", "mals de"
 ];
 
 const UNDER_PATTERNS = [
+  /menos\s+de\s+(\d+[.,]?\d*)/i,     // "Menos de 8.5" (com "de")
   /menos\s+(\d+[.,]?\d*)/i,          // "Menos 21.5"
   /under\s+(\d+[.,]?\d*)/i,          // "Under 21.5"
   /abaixo\s+(de\s+)?(\d+[.,]?\d*)/i, // "Abaixo de 21.5"
@@ -115,6 +118,11 @@ const TOTAL_MARKET_PATTERNS = [
   /total\s*(de\s*)?([\w]+)/i,        // "Total de Games"
   /over\s*\/?\s*under/i,              // "Over/Under"
   /o\/u/i,                            // "O/U"
+  // Domain-specific patterns that imply TOTAL market
+  /escanteio(s)?\s*[-–—]\s*\d+\s*op[çc][õo]es/i, // "Escanteios - 2 Opções"
+  /cart(ão|ao|ões|oes)\s*[-–—]\s*\d+\s*op[çc][õo]es/i, // "Cartões - 2 Opções"
+  /corner(s)?\s*[-–—]\s*\d+\s*op[çc][õo]es/i, // "Corners - 2 Options"
+  /canto(s)?\s*[-–—]\s*\d+\s*op[çc][õo]es/i,  // "Cantos - 2 Opções"
 ];
 
 // Padrões para detectar HANDICAP
