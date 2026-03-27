@@ -242,7 +242,7 @@ function isHandicapMarket(text: string): boolean {
  * Verifica se o texto contém termos explícitos de Over/Under
  */
 function hasExplicitTotalTerms(text: string): boolean {
-  return /\b(over|under|mais\s+de|menos\s+de|acima|abaixo|o\/u|gols?|goals?)\b/i.test(text);
+  return /\b(over|under|mais\s+de|menos\s+de|acima|abaixo|o\/u|gols?|goals?|escanteio|corner|canto|cart[ãa]o|cart[õo]es|cards?)\b/i.test(text);
 }
 
 /**
