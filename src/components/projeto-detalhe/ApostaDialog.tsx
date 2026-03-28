@@ -138,6 +138,7 @@ interface Bookmaker {
   nome: string;
   parceiro_id: string | null;
   parceiro_nome: string | null;
+  instance_identifier: string | null;
   saldo_atual: number;
   saldo_total: number;
   saldo_disponivel: number;
@@ -491,6 +492,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         nome: bk.nome,
         parceiro_id: bk.parceiro_id,
         parceiro_nome: bk.parceiro_nome,
+        instance_identifier: bk.instance_identifier,
         saldo_atual: bk.saldo_real,
         saldo_total: bk.saldo_real,
         saldo_disponivel: bk.saldo_disponivel,

@@ -151,6 +151,7 @@ export function SurebetDialogCompact({
         id: bk.id,
         nome: bk.nome,
         parceiro_nome: bk.parceiro_nome,
+        instance_identifier: bk.instance_identifier,
         moeda: bk.moeda as SupportedCurrency,
         saldo_operavel: bk.saldo_operavel,
       }));
