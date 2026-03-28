@@ -42,6 +42,7 @@ interface BookmakerInfo {
   saldo_operavel: number;
   moeda: string;
   logo_url: string | null;
+  instance_identifier?: string | null;
 }
 
 interface SimpleMultiEntryTableProps {
