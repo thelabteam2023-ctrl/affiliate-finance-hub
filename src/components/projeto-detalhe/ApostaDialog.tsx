@@ -3392,6 +3392,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                                     moeda: selectedBk.moeda,
                                     saldo_operavel: selectedBk.saldo_operavel,
                                     logo_url: selectedBk.logo_url,
+                                    instance_identifier: selectedBk.instance_identifier,
                                   };
                                 }
                                 return null;
@@ -3621,12 +3622,13 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                             >
                               <SelectTrigger className="h-9 text-xs w-full border-dashed">
                                 <BookmakerSelectTrigger
-                                  bookmaker={entryBk ? {
+                                   bookmaker={entryBk ? {
                                     nome: entryBk.nome,
                                     parceiro_nome: entryBk.parceiro_nome,
                                     moeda: entryBk.moeda,
                                     saldo_operavel: entryBk.saldo_operavel,
                                     logo_url: entryBk.logo_url,
+                                    instance_identifier: entryBk.instance_identifier,
                                   } : null}
                                   placeholder="Selecione"
                                 />
@@ -4017,6 +4019,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                                             moeda: selectedBk.moeda,
                                             saldo_operavel: selectedBk.saldo_operavel,
                                             logo_url: selectedBk.logo_url,
+                                            instance_identifier: selectedBk.instance_identifier,
                                           };
                                         }
                                         return null;
@@ -4247,6 +4250,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                                             moeda: selectedBk.moeda,
                                             saldo_operavel: selectedBk.saldo_operavel,
                                             logo_url: selectedBk.logo_url,
+                                            instance_identifier: selectedBk.instance_identifier,
                                           };
                                         }
                                         return null;
@@ -4357,6 +4361,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                                             moeda: selectedBk.moeda,
                                             saldo_operavel: selectedBk.saldo_operavel,
                                             logo_url: selectedBk.logo_url,
+                                            instance_identifier: selectedBk.instance_identifier,
                                           };
                                         }
                                         return null;
@@ -4704,6 +4709,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                                         moeda: selectedBk.moeda,
                                         saldo_operavel: selectedBk.saldo_operavel,
                                         logo_url: selectedBk.logo_url,
+                                        instance_identifier: selectedBk.instance_identifier,
                                       };
                                     }
                                     return null;

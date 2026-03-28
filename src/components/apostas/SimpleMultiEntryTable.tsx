@@ -222,6 +222,7 @@ export function SimpleMultiEntryTable({
                             moeda: bk.moeda,
                             saldo_operavel: bk.saldo_operavel,
                             logo_url: bk.logo_url,
+                            instance_identifier: bk.instance_identifier,
                           } : null}
                           placeholder="Selecione"
                         />
