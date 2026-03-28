@@ -673,7 +673,9 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
     const map = new Map<string, string>();
     bookmakers.forEach(bk => {
       const shortName = getFirstLastName(bk.parceiro_nome || "");
-      const nomeCompleto = shortName ? `${bk.nome} - ${shortName}` : bk.nome;
+      const identifier = bk.instance_identifier;
+      let nomeCompleto = shortName ? `${bk.nome} - ${shortName}` : bk.nome;
+      if (identifier) nomeCompleto += ` (${identifier})`;
       map.set(bk.id, nomeCompleto);
     });
     return map;

@@ -77,6 +77,7 @@ export interface ApostaCardData {
   boost_percentual?: number | null;
   bookmaker_nome?: string;
   parceiro_nome?: string;
+  instance_identifier?: string | null;
   operador_nome?: string;
   moeda?: string; // Moeda da operação (moeda principal)
   logo_url?: string | null;
