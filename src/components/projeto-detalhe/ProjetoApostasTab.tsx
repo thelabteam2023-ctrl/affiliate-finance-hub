@@ -717,7 +717,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
       if (allBookmakerIds.size > 0) {
         const { data: bookmakers } = await supabase
           .from("bookmakers")
-          .select("id, nome, parceiro:parceiros (nome)")
+          .select("id, nome, instance_identifier, parceiro:parceiros (nome)")
           .in("id", Array.from(allBookmakerIds));
         
         bookmakerMap = new Map((bookmakers || []).map((b: any) => [b.id, { nome: b.nome, parceiro: b.parceiro }]));
