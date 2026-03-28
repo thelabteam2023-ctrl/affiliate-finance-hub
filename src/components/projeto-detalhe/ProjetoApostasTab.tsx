@@ -480,7 +480,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
         const { data: bookmakers } = await supabase
           .from("bookmakers")
           .select(`
-            id, nome, parceiro_id, bookmaker_catalogo_id,
+            id, nome, parceiro_id, bookmaker_catalogo_id, instance_identifier,
             parceiro:parceiros (nome),
             bookmakers_catalogo (logo_url)
           `)
@@ -527,7 +527,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
           .select(`
             aposta_id, id, bookmaker_id, odd, stake, stake_real, stake_freebet, moeda, selecao, selecao_livre, ordem, resultado, lucro_prejuizo, fonte_saldo,
             bookmaker:bookmakers (
-              nome, parceiro_id,
+              nome, parceiro_id, instance_identifier,
               parceiro:parceiros (nome),
               bookmakers_catalogo (logo_url)
             )
@@ -1734,6 +1734,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                  estrategia: aposta.estrategia,
                  bookmaker_nome: bookmakerBase,
                  parceiro_nome: parceiroNome,
+                 instance_identifier: aposta.bookmaker?.instance_identifier,
                  logo_url: logoUrl,
                  moeda: aposta.moeda_operacao || "BRL",
                  pl_consolidado: aposta.pl_consolidado ?? undefined,
