@@ -180,6 +180,7 @@ const ESPORTES_BASE = [
   "Dota 2",
   "Valorant",
   "eFootball",
+  "Rugby",
   "Outro"
 ];
 
