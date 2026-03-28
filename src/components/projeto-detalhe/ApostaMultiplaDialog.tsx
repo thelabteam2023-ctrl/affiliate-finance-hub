@@ -1681,6 +1681,7 @@ export function ApostaMultiplaDialog({
                       saldo_bonus: bk.saldo_bonus,
                       logo_url: bk.logo_url,
                       bonus_rollover_started: bk.bonus_rollover_started,
+                      instance_identifier: bk.instance_identifier,
                     }))}
                     className="z-50 w-[var(--radix-select-trigger-width)] min-w-[300px]"
                   />
