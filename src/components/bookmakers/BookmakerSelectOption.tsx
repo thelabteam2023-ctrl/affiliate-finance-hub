@@ -155,12 +155,12 @@ export function BookmakerSelectTrigger({
     );
   }
   
-  const { nome, logo_url } = bookmaker;
+  const { nome, logo_url, parceiro_nome } = bookmaker;
+  const parceiroShort = parceiro_nome ? getFirstLastName(parceiro_nome) : null;
   
-  // Trigger simplificado: apenas Logo + Nome
   return (
     <div className={cn(
-      "flex items-center justify-center gap-2 w-full",
+      "flex items-center justify-center gap-2 w-full min-w-0",
       className
     )}>
       {/* Logo */}
@@ -174,13 +174,20 @@ export function BookmakerSelectTrigger({
         <div className="h-5 w-5 flex-shrink-0" aria-hidden="true" />
       )}
       
-      {/* Nome */}
-      <span className="uppercase text-xs font-medium truncate">
-        {nome}
-        {bookmaker.instance_identifier && (
-          <span className="text-primary/80 ml-1 normal-case">({bookmaker.instance_identifier})</span>
+      {/* Nome + Parceiro */}
+      <div className="flex flex-col items-start min-w-0">
+        <span className="uppercase text-xs font-medium truncate">
+          {nome}
+          {bookmaker.instance_identifier && (
+            <span className="text-primary/80 ml-1 normal-case">({bookmaker.instance_identifier})</span>
+          )}
+        </span>
+        {parceiroShort && (
+          <span className="text-[10px] text-muted-foreground truncate">
+            {parceiroShort}
+          </span>
         )}
-      </span>
+      </div>
     </div>
   );
 }

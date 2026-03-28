@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Plus, Trash2, Check } from 'lucide-react';
 import { BookmakerSearchableSelectContent } from '@/components/bookmakers/BookmakerSearchableSelectContent';
 import { BookmakerMetaRow, formatCurrency } from '@/components/bookmakers/BookmakerSelectOption';
+import { getFirstLastName } from '@/lib/utils';
 import { type OddEntry, type LegScenario, calcularOddMedia } from '@/hooks/useSurebetCalculator';
 import { type SupportedCurrency } from '@/hooks/useCurrencySnapshot';
 import { useExchangeRatesSafe } from '@/contexts/ExchangeRatesContext';
@@ -202,12 +203,19 @@ export function SurebetColumnsView({
                   <SelectTrigger className="h-8 text-[10px] w-full">
                     <SelectValue placeholder="Selecione">
                       {selectedBookmaker?.nome && (
-                        <span className="truncate uppercase">
-                          {selectedBookmaker.nome}
-                          {selectedBookmaker.instance_identifier && (
-                            <span className="text-primary/80 ml-1 normal-case text-[9px]">({selectedBookmaker.instance_identifier})</span>
+                        <div className="flex flex-col items-start min-w-0">
+                          <span className="truncate uppercase text-[10px]">
+                            {selectedBookmaker.nome}
+                            {selectedBookmaker.instance_identifier && (
+                              <span className="text-primary/80 ml-1 normal-case text-[9px]">({selectedBookmaker.instance_identifier})</span>
+                            )}
+                          </span>
+                          {selectedBookmaker.parceiro_nome && (
+                            <span className="text-[9px] text-muted-foreground truncate normal-case">
+                              {getFirstLastName(selectedBookmaker.parceiro_nome)}
+                            </span>
                           )}
-                        </span>
+                        </div>
                       )}
                     </SelectValue>
                   </SelectTrigger>

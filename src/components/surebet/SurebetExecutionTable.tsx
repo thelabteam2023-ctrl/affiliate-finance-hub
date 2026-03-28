@@ -335,7 +335,12 @@ export function SurebetExecutionTable({
                       <SelectContent>
                         {bookmakers.map(bk => (
                           <SelectItem key={bk.id} value={bk.id} className="text-xs">
-                            <span className="truncate">{bk.nome}</span>
+                            <div className="flex flex-col min-w-0">
+                              <span className="truncate uppercase">{bk.nome}</span>
+                              {(bk as any).parceiro_nome && (
+                                <span className="text-[10px] text-muted-foreground truncate">{(bk as any).parceiro_nome}</span>
+                              )}
+                            </div>
                           </SelectItem>
                         ))}
                       </SelectContent>
