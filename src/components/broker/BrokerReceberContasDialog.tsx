@@ -173,7 +173,11 @@ export function BrokerReceberContasDialog({ open, onClose, onSuccess, projetoId 
             login_username: conta.login_username,
             login_password_encrypted: passwordToStore,
             moeda,
-            saldo_atual: saldoInicial,
+            // When projeto_id is set, insert with saldo_atual=0 because the
+            // tr_ensure_deposito_virtual_on_insert trigger will create a DEPOSITO_VIRTUAL
+            // that credits the balance via financial_events. Setting saldo_atual=saldoInicial
+            // AND having the trigger fire causes DOUBLE the balance.
+            saldo_atual: projetoId ? 0 : saldoInicial,
             saldo_freebet: 0,
             saldo_irrecuperavel: 0,
             saldo_usd: 0,
