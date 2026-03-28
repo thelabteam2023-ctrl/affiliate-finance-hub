@@ -22,7 +22,7 @@ interface SurebetCompactHeaderProps {
 
 const ESPORTES = [
   "Futebol", "Basquete", "Tênis", "Baseball", "Hockey", "Handebol",
-  "Futebol Americano", "Vôlei", "MMA/UFC", "Boxe", "Golfe",
+  "Futebol Americano", "Vôlei", "MMA/UFC", "Boxe", "Golfe", "Rugby",
   "League of Legends", "Counter-Strike", "Dota 2", "Valorant", "eFootball"
 ];
 

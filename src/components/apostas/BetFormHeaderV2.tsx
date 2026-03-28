@@ -43,7 +43,7 @@ export type BetFormType = "simples" | "multipla" | "arbitragem";
 // Lista de esportes padrão
 const ESPORTES_BASE = [
   "Futebol", "Basquete", "Tênis", "Baseball", "Hockey", "Handebol",
-  "Futebol Americano", "Vôlei", "MMA/UFC", "Boxe", "Golfe",
+  "Futebol Americano", "Vôlei", "MMA/UFC", "Boxe", "Golfe", "Rugby",
   "League of Legends", "Counter-Strike", "Dota 2", "Valorant", "eFootball", "Outro"
 ];
 
