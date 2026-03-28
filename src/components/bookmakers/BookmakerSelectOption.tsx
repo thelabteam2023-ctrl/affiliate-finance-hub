@@ -84,10 +84,12 @@ export function BookmakerSelectOption({
         <div className="flex items-center gap-1 min-w-0 max-w-full">
           <span className="uppercase text-xs font-medium truncate">
             {nome}
-            {instance_identifier && (
-              <span className="text-primary/80 ml-1 normal-case">({instance_identifier})</span>
-            )}
           </span>
+          {instance_identifier && (
+            <span className="text-[10px] text-primary font-medium truncate normal-case">
+              {instance_identifier}
+            </span>
+          )}
           <CurrencyBadge moeda={moeda} />
         </div>
         {parceiroShortName && (
@@ -174,14 +176,18 @@ export function BookmakerSelectTrigger({
         <div className="h-5 w-5 flex-shrink-0" aria-hidden="true" />
       )}
       
-      {/* Nome + Parceiro */}
+      {/* Nome + Identificador + Parceiro */}
       <div className="flex flex-col items-start min-w-0">
-        <span className="uppercase text-xs font-medium truncate">
-          {nome}
+        <div className="flex items-center gap-1 min-w-0">
+          <span className="uppercase text-xs font-medium truncate">
+            {nome}
+          </span>
           {bookmaker.instance_identifier && (
-            <span className="text-primary/80 ml-1 normal-case">({bookmaker.instance_identifier})</span>
+            <span className="text-[10px] text-primary font-medium truncate normal-case">
+              {bookmaker.instance_identifier}
+            </span>
           )}
-        </span>
+        </div>
         {parceiroShort && (
           <span className="text-[10px] text-muted-foreground truncate">
             {parceiroShort}
