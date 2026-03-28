@@ -129,7 +129,7 @@ interface Bookmaker {
   moeda: string;
   logo_url: string | null;
   bonus_rollover_started?: boolean;
-}
+  instance_identifier?: string | null;
 
 /** Tipo de ação executada para distinguir save de delete */
 export type ApostaMultiplaActionType = 'save' | 'delete';
@@ -203,7 +203,8 @@ export function ApostaMultiplaDialog({
       saldo_operavel: bk.saldo_operavel,
       moeda: bk.moeda,
       logo_url: bk.logo_url,
-      bonus_rollover_started: bk.bonus_rollover_started
+      bonus_rollover_started: bk.bonus_rollover_started,
+      instance_identifier: bk.instance_identifier,
     }));
   }, [bookmakerSaldos, aposta?.bookmaker_id]);
 
@@ -1657,6 +1658,9 @@ export function ApostaMultiplaDialog({
                               <img src={selectedBk.logo_url} alt="" className="h-4 w-4 rounded object-contain flex-shrink-0" />
                             )}
                             <span className="uppercase text-[11px] font-medium truncate">{selectedBk.nome}</span>
+                            {selectedBk.instance_identifier && (
+                              <span className="text-[10px] text-primary font-medium truncate normal-case">{selectedBk.instance_identifier}</span>
+                            )}
                             <CurrencyBadge moeda={selectedBk.moeda} size="xs" />
                           </div>
                         );
