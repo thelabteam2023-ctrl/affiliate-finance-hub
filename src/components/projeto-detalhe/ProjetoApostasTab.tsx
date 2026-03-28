@@ -1793,6 +1793,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                })),
                bookmaker_nome: bookmakerBaseMultipla,
                parceiro_nome: parceiroNomeMultipla,
+               instance_identifier: (multipla.bookmaker as any)?.instance_identifier,
                logo_url: logoUrlMultipla,
                moeda: multipla.moeda_operacao || "BRL",
              };
