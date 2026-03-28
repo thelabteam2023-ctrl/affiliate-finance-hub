@@ -162,6 +162,13 @@ export function BrokerReceberContasDialog({ open, onClose, onSuccess, projetoId 
         const saldoInicial = parseFloat(conta.saldo_inicial) || 0;
         const passwordToStore = conta.login_password || "***";
 
+        // CRITICAL: Insert WITHOUT projeto_id first, then UPDATE to set it.
+        // This avoids the double-balance bug where:
+        // 1. INSERT sets saldo_atual=5000
+        // 2. tr_ensure_deposito_virtual_on_insert creates DV=5000
+        // 3. financial_event adds +5000 → total becomes 10000 (WRONG)
+        // By inserting without projeto_id and then updating, the UPDATE trigger
+        // (tr_ensure_deposito_virtual_on_link) fires correctly using the existing saldo_atual.
         const { data: newBookmaker, error: bmError } = await supabase
           .from("bookmakers")
           .insert({
@@ -179,16 +186,26 @@ export function BrokerReceberContasDialog({ open, onClose, onSuccess, projetoId 
             saldo_usd: 0,
             status: "ativo",
             investidor_id: investidorId,
-            projeto_id: projetoId || null,
+            // Do NOT set projeto_id here to avoid double-balance trigger
+            projeto_id: null,
           })
           .select("id")
           .single();
 
         if (bmError) throw bmError;
 
-        // Se há saldo inicial e projeto vinculado, o trigger tr_ensure_deposito_virtual_on_link
-        // já gera o DEPOSITO_VIRTUAL automaticamente ao setar projeto_id.
-        // Se não há projeto, criar APORTE_DIRETO manual para registrar o capital.
+        // Now link to project via UPDATE — this fires tr_ensure_deposito_virtual_on_link
+        // which correctly uses the existing saldo_atual as the baseline
+        if (projetoId && newBookmaker) {
+          const { error: linkError } = await supabase
+            .from("bookmakers")
+            .update({ projeto_id: projetoId })
+            .eq("id", newBookmaker.id);
+
+          if (linkError) throw linkError;
+        }
+
+        // If no project, create APORTE_DIRETO to register the capital in the ledger
         if (saldoInicial > 0 && newBookmaker && !projetoId) {
           const { error: ledgerError } = await supabase
             .from("cash_ledger")
