@@ -150,6 +150,7 @@ export function SurebetDialogCompact({
       .map(bk => ({
         id: bk.id,
         nome: bk.nome,
+        parceiro_nome: bk.parceiro_nome,
         moeda: bk.moeda as SupportedCurrency,
         saldo_operavel: bk.saldo_operavel,
       }));
