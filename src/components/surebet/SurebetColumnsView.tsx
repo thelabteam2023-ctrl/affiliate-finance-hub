@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Plus, Trash2, Check } from 'lucide-react';
 import { BookmakerSearchableSelectContent } from '@/components/bookmakers/BookmakerSearchableSelectContent';
 import { BookmakerMetaRow, formatCurrency } from '@/components/bookmakers/BookmakerSelectOption';
+import { getFirstLastName } from '@/lib/utils';
 import { type OddEntry, type LegScenario, calcularOddMedia } from '@/hooks/useSurebetCalculator';
 import { type SupportedCurrency } from '@/hooks/useCurrencySnapshot';
 import { useExchangeRatesSafe } from '@/contexts/ExchangeRatesContext';
