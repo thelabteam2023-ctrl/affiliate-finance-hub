@@ -396,6 +396,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
           nome,
           saldo_atual,
           saldo_freebet,
+          instance_identifier,
           parceiro:parceiros (nome),
           bookmakers_catalogo (logo_url)
         `)
@@ -479,7 +480,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
         const { data: bookmakers } = await supabase
           .from("bookmakers")
           .select(`
-            id, nome, parceiro_id, bookmaker_catalogo_id,
+            id, nome, parceiro_id, bookmaker_catalogo_id, instance_identifier,
             parceiro:parceiros (nome),
             bookmakers_catalogo (logo_url)
           `)
@@ -526,7 +527,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
           .select(`
             aposta_id, id, bookmaker_id, odd, stake, stake_real, stake_freebet, moeda, selecao, selecao_livre, ordem, resultado, lucro_prejuizo, fonte_saldo,
             bookmaker:bookmakers (
-              nome, parceiro_id,
+              nome, parceiro_id, instance_identifier,
               parceiro:parceiros (nome),
               bookmakers_catalogo (logo_url)
             )
@@ -619,7 +620,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
         const { data: bookmakers } = await supabase
           .from("bookmakers")
           .select(`
-            id, nome, parceiro_id, bookmaker_catalogo_id,
+            id, nome, parceiro_id, bookmaker_catalogo_id, instance_identifier,
             parceiro:parceiros (nome),
             bookmakers_catalogo (logo_url)
           `)
@@ -716,7 +717,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
       if (allBookmakerIds.size > 0) {
         const { data: bookmakers } = await supabase
           .from("bookmakers")
-          .select("id, nome, parceiro:parceiros (nome)")
+          .select("id, nome, instance_identifier, parceiro:parceiros (nome)")
           .in("id", Array.from(allBookmakerIds));
         
         bookmakerMap = new Map((bookmakers || []).map((b: any) => [b.id, { nome: b.nome, parceiro: b.parceiro }]));
@@ -1283,7 +1284,9 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
     const map = new Map<string, string>();
     bookmakers.forEach(bk => {
       const shortName = getFirstLastName(bk.parceiro?.nome || "");
-      const nomeCompleto = shortName ? `${bk.nome} - ${shortName}` : bk.nome;
+      const identifier = bk.instance_identifier;
+      let nomeCompleto = shortName ? `${bk.nome} - ${shortName}` : bk.nome;
+      if (identifier) nomeCompleto += ` (${identifier})`;
       map.set(bk.id, nomeCompleto);
     });
     return map;
@@ -1731,6 +1734,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                  estrategia: aposta.estrategia,
                  bookmaker_nome: bookmakerBase,
                  parceiro_nome: parceiroNome,
+                 instance_identifier: (aposta.bookmaker as any)?.instance_identifier,
                  logo_url: logoUrl,
                  moeda: aposta.moeda_operacao || "BRL",
                  pl_consolidado: aposta.pl_consolidado ?? undefined,

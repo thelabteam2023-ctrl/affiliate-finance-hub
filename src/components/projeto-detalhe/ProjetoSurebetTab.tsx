@@ -364,7 +364,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
             id, aposta_id, bookmaker_id, moeda, selecao, selecao_livre, odd, stake,
             resultado, lucro_prejuizo, gerou_freebet, valor_freebet_gerada,
             stake_brl_referencia, lucro_prejuizo_brl_referencia, fonte_saldo,
-            bookmakers (nome, parceiro:parceiros(nome))
+            bookmakers (nome, instance_identifier, parceiro:parceiros(nome))
           `)
           .in("aposta_id", apostaIdsMultiLeg)
           .order("ordem", { ascending: true });
@@ -376,7 +376,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
           pernasMap[p.aposta_id].push({
             id: p.id,
             bookmaker_id: p.bookmaker_id,
-            bookmaker_nome: parceiroNome ? `${bookmaker?.nome || "—"} - ${parceiroNome}` : (bookmaker?.nome || "—"),
+            bookmaker_nome: parceiroNome ? `${bookmaker?.nome || "—"} - ${parceiroNome}${bookmaker?.instance_identifier ? ` (${bookmaker.instance_identifier})` : ''}` : `${bookmaker?.nome || "—"}${bookmaker?.instance_identifier ? ` (${bookmaker.instance_identifier})` : ''}`,
             parceiro_nome: parceiroNome || null,
             moeda: p.moeda || 'BRL',
             selecao: p.selecao, selecao_livre: p.selecao_livre, odd: p.odd, stake: p.stake,
@@ -673,7 +673,9 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
     const map = new Map<string, string>();
     bookmakers.forEach(bk => {
       const shortName = getFirstLastName(bk.parceiro_nome || "");
-      const nomeCompleto = shortName ? `${bk.nome} - ${shortName}` : bk.nome;
+      const identifier = bk.instance_identifier;
+      let nomeCompleto = shortName ? `${bk.nome} - ${shortName}` : bk.nome;
+      if (identifier) nomeCompleto += ` (${identifier})`;
       map.set(bk.id, nomeCompleto);
     });
     return map;

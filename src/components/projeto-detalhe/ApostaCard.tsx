@@ -77,6 +77,7 @@ export interface ApostaCardData {
   boost_percentual?: number | null;
   bookmaker_nome?: string;
   parceiro_nome?: string;
+  instance_identifier?: string | null;
   operador_nome?: string;
   moeda?: string; // Moeda da operação (moeda principal)
   logo_url?: string | null;
@@ -414,10 +415,11 @@ export function ApostaCard({
     // Abreviar para primeiro e último nome
     const vinculoAbreviado = vinculoFull ? getFirstLastName(vinculoFull) : null;
     
-    // Formato padronizado: "CASA - PARCEIRO ABREVIADO" (igual ao SurebetCard com pernas)
-    const bookmakerDisplay = vinculoAbreviado 
+    // Formato padronizado: "CASA - PARCEIRO ABREVIADO (IDENTIFICADOR)"
+    let bookmakerDisplay = vinculoAbreviado 
       ? `${bookmakerBase} - ${vinculoAbreviado}`
       : bookmakerBase;
+    if (aposta.instance_identifier) bookmakerDisplay += ` (${aposta.instance_identifier})`;
     
     // Para operações com múltiplas pernas (3+), usa layout vertical
     const hasMultipleLegs = hasPernas && (aposta.pernas?.length || 0) >= 3;
@@ -715,10 +717,11 @@ export function ApostaCard({
   // Abreviar para primeiro e último nome
   const vinculoAbreviadoCard = vinculoFullCard ? getFirstLastName(vinculoFullCard) : null;
   
-  // Formato padronizado: "CASA - PARCEIRO ABREVIADO" (igual ao SurebetCard com pernas)
-  const bookmakerDisplayCard = vinculoAbreviadoCard 
+  // Formato padronizado: "CASA - PARCEIRO ABREVIADO (IDENTIFICADOR)"
+  let bookmakerDisplayCard = vinculoAbreviadoCard 
     ? `${bookmakerBaseCard} - ${vinculoAbreviadoCard}`
     : bookmakerBaseCard;
+  if (aposta.instance_identifier) bookmakerDisplayCard += ` (${aposta.instance_identifier})`;
 
   return (
     <Card 
