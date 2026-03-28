@@ -218,10 +218,11 @@ export const CalculadoraEVContent: React.FC = () => {
 
       const d = data.data;
 
-      // Set fields - usar fair_odds como padrão para "Odd Justa"
+      // Set fields - odd oferecida vai para Odd Inicial, Odd Atual fica em branco para preenchimento manual
       let fieldsSet = 0;
       if (d.odd_atual && d.odd_atual > 1) {
-        setOddAtual(String(d.odd_atual));
+        setOddInicial(String(d.odd_atual));
+        setOddAtual(''); // usuário preenche manualmente com a odd que vê na bookmaker
         fieldsSet++;
       }
       // Prioridade: fair_odds > true_odds_pinnacle > odd_justa (legacy)
