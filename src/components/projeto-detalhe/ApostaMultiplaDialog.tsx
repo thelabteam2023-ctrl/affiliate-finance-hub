@@ -130,6 +130,7 @@ interface Bookmaker {
   logo_url: string | null;
   bonus_rollover_started?: boolean;
   instance_identifier?: string | null;
+}
 
 /** Tipo de ação executada para distinguir save de delete */
 export type ApostaMultiplaActionType = 'save' | 'delete';
