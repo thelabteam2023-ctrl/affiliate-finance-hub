@@ -720,7 +720,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
           .select("id, nome, instance_identifier, parceiro:parceiros (nome)")
           .in("id", Array.from(allBookmakerIds));
         
-        bookmakerMap = new Map((bookmakers || []).map((b: any) => [b.id, { nome: b.nome, parceiro: b.parceiro }]));
+        bookmakerMap = new Map((bookmakers || []).map((b: any) => [b.id, { nome: b.nome, instance_identifier: b.instance_identifier, parceiro: b.parceiro }]));
       }
       
       const surebetsFormatadas = allSurebetData.map((sb: any) => {
@@ -1793,6 +1793,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                })),
                bookmaker_nome: bookmakerBaseMultipla,
                parceiro_nome: parceiroNomeMultipla,
+               instance_identifier: (multipla.bookmaker as any)?.instance_identifier,
                logo_url: logoUrlMultipla,
                moeda: multipla.moeda_operacao || "BRL",
              };
