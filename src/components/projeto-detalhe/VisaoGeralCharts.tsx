@@ -443,6 +443,10 @@ function CasasMaisUtilizadasCard({ casas, casasGlobal, accentColor, logoMap, for
           const barWidth = (casa.volume / maxVolume) * 100;
           const roiColor = casa.roi >= 0 ? "text-emerald-500" : "text-red-500";
           const logoUrl = getLogoUrl(casa);
+          // Parse "BET365 (identifier)" format
+          const identifierMatch = casa.casa.match(/^(.+?)\s*\((.+)\)$/);
+          const displayName = identifierMatch ? identifierMatch[1] : casa.casa;
+          const displayIdentifier = identifierMatch ? identifierMatch[2] : null;
           return (
             <Tooltip key={casa.casa}>
               <TooltipTrigger asChild>
@@ -452,12 +456,15 @@ function CasasMaisUtilizadasCard({ casas, casasGlobal, accentColor, logoMap, for
                     <div className="flex flex-col items-center gap-1">
                       <div className="w-9 h-9 rounded-md bg-muted/50 flex items-center justify-center overflow-hidden shrink-0">
                         {logoUrl ? (
-                          <img src={logoUrl} alt={casa.casa} className="w-8 h-8 object-contain" />
+                          <img src={logoUrl} alt={displayName} className="w-8 h-8 object-contain" />
                         ) : (
                           <Building2 className="w-4 h-4 text-muted-foreground" />
                         )}
                       </div>
-                      <span className="text-[10px] font-semibold leading-tight text-center line-clamp-2 uppercase">{casa.casa}</span>
+                      <span className="text-[10px] font-semibold leading-tight text-center line-clamp-2 uppercase">{displayName}</span>
+                      {displayIdentifier && (
+                        <span className="text-[8px] text-muted-foreground font-medium -mt-1 text-center line-clamp-1">{displayIdentifier}</span>
+                      )}
                       <span className="text-[9px] text-muted-foreground/50 font-medium -mt-0.5">{idx + 1}º</span>
                     </div>
                     {/* Qtd */}
