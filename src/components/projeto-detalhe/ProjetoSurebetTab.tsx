@@ -872,18 +872,17 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
 
     // ISOLAMENTO: casaData usa dados filtrados por período (surebetsParaKpi)
     surebetsParaKpi.forEach((surebet) => {
-      // Apostas simples (sem pernas) - usar bookmaker_nome direto
+      const resolved = !!surebet.resultado && surebet.resultado !== "PENDENTE";
       if (surebet.forma_registro === "SIMPLES" || !surebet.pernas?.length) {
         const nomeCompleto = surebet.bookmaker_nome || "Desconhecida";
         const stake = surebet.stake || surebet.stake_total || 0;
         const lucro = surebet.lucro_real || 0;
-        processEntry(nomeCompleto, stake, lucro);
+        processEntry(nomeCompleto, stake, lucro, resolved);
       } else {
-        // Surebets com múltiplas pernas
         surebet.pernas.forEach(perna => {
           const nomeCompleto = perna.bookmaker_nome || "Desconhecida";
           const lucroPerna = getLucroPerna(perna);
-          processEntry(nomeCompleto, perna.stake, lucroPerna);
+          processEntry(nomeCompleto, perna.stake, lucroPerna, resolved);
         });
       }
     });
