@@ -937,14 +937,14 @@ export function VisaoGeralCharts({
           const pernaLucro = (moedaConsolidacao === "BRL" && typeof perna.lucro_prejuizo_brl_referencia === "number")
             ? perna.lucro_prejuizo_brl_referencia
             : convertPernaStake(pernaLucroRaw, pernaMoeda);
-          processEntry(nomeCompleto, parceiroNome, pernaStake, pernaLucro, moedaConsolidacao || "BRL", isLiquidada);
+          processEntry(nomeCompleto, parceiroNome, perna.instance_identifier, pernaStake, pernaLucro, moedaConsolidacao || "BRL", isLiquidada);
         });
       } else {
         const nomeCompleto = a.bookmaker_nome || "Desconhecida";
         const parceiroNome = a.parceiro_nome;
         const stakeConsolidado = getConsolidatedStakeLocal(a);
         const lucroConsolidado = getConsolidatedLucroLocal(a);
-        processEntry(nomeCompleto, parceiroNome, stakeConsolidado, lucroConsolidado, moedaConsolidacao || "BRL", isLiquidada);
+        processEntry(nomeCompleto, parceiroNome, a.instance_identifier, stakeConsolidado, lucroConsolidado, moedaConsolidacao || "BRL", isLiquidada);
       }
     });
 
