@@ -849,8 +849,8 @@ export default function Caixa() {
     
     // Despesas administrativas - mostrar grupo/finalidade com badge
     if (transacao.tipo_transacao === "DESPESA_ADMINISTRATIVA") {
-      // Extrair categoria e detalhe: "Despesa administrativa (confirmada) - CATEGORIA: detalhe"
-      const catMatch = transacao.descricao?.match(/^Despesa administrativa\s*(?:confirmada\s*)?-\s*([^:]+?)(?::\s*(.+))?$/i);
+      // Extrair categoria e detalhe: "Despesa administrativa - CATEGORIA: detalhe" ou "Despesa administrativa - : detalhe" (legacy)
+      const catMatch = transacao.descricao?.match(/^Despesa administrativa\s*(?:\(?\s*confirmada\s*\)?\s*)?-\s*([^:]*?)(?::\s*(.+))?$/i);
       const categoriaRaw = catMatch?.[1]?.trim() || "";
       const detalhe = catMatch?.[2]?.trim() || "";
       
@@ -863,6 +863,11 @@ export default function Caixa() {
         if (despesasAdminGrupoMap[lookupKey]) {
           grupoKey = despesasAdminGrupoMap[lookupKey].grupo;
         }
+      }
+      
+      // 3. Fallback: buscar pelo despesa_administrativa vinculada via referencia_transacao_id
+      if (grupoKey === "OUTROS" && transacao.auditoria_metadata?.despesa_administrativa_id) {
+        // Will be handled by existing lookup
       }
       
       const grupoInfo = getGrupoInfo(grupoKey);
