@@ -236,6 +236,7 @@ export function ProjetoValueBetTab({
   
   // Ordenação Por Casa
   const [porCasaSort, setPorCasaSort] = useState<SortField>("volume");
+  const [selectedPorCasa, setSelectedPorCasa] = useState<CasaAgregada | null>(null);
 
   // Navigation mode
   const [navMode, setNavMode] = useState<NavigationMode>(() => {
