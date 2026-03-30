@@ -1098,6 +1098,91 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ success: true }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // ── reverse-payment: reverse a titular payment with audit trail ──
+    if (action === "reverse-payment") {
+      const { token, pagamento_id, motivo } = body;
+      if (!token || !pagamento_id) {
+        return new Response(JSON.stringify({ error: "Dados incompletos" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      const tokenHash = await hashToken(token);
+      const { data: validation, error: valError } = await supabaseAdmin.rpc("validate_supplier_token", { p_token_hash: tokenHash });
+      if (valError || !validation?.valid) {
+        return new Response(JSON.stringify({ error: "Token inválido" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      // Fetch original payment
+      const { data: original, error: origErr } = await supabaseAdmin
+        .from("supplier_ledger")
+        .select("*")
+        .eq("id", pagamento_id)
+        .eq("supplier_workspace_id", validation.supplier_workspace_id)
+        .eq("tipo", "PAGAMENTO_TITULAR")
+        .single();
+
+      if (origErr || !original) {
+        return new Response(JSON.stringify({ error: "Pagamento não encontrado" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      const meta = (original.metadata || {}) as Record<string, any>;
+
+      // Check if already reversed
+      if (meta.revertido === true) {
+        return new Response(JSON.stringify({ error: "Este pagamento já foi revertido" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      const numValor = Number(original.valor);
+      const fonte = meta.fonte || "CENTRAL";
+
+      // If fonte was BANCO, credit bank balance back
+      if (fonte === "BANCO" && meta.banco_id) {
+        const { data: banco } = await supabaseAdmin
+          .from("supplier_titular_bancos")
+          .select("id, saldo")
+          .eq("id", meta.banco_id)
+          .single();
+
+        if (banco) {
+          const novoSaldo = Number(banco.saldo) + numValor;
+          await supabaseAdmin
+            .from("supplier_titular_bancos")
+            .update({ saldo: novoSaldo, updated_at: new Date().toISOString() })
+            .eq("id", meta.banco_id);
+        }
+      }
+
+      // Create reversal entry in ledger (CREDIT to return the money)
+      const reversalMetadata: Record<string, any> = {
+        ...meta,
+        tipo_pagamento: "ESTORNO_PAGAMENTO_TITULAR",
+        pagamento_original_id: pagamento_id,
+        motivo_reversao: motivo || "Pagamento revertido pelo operador",
+        revertido_em: new Date().toISOString(),
+      };
+
+      const { data: result, error: ledgerErr } = await supabaseAdmin.rpc("supplier_ledger_insert", {
+        p_supplier_workspace_id: validation.supplier_workspace_id,
+        p_bookmaker_account_id: null,
+        p_tipo: "ESTORNO_PAGAMENTO_TITULAR",
+        p_direcao: "CREDIT",
+        p_valor: numValor,
+        p_descricao: `Estorno: ${original.descricao || 'Pagamento ao titular'} — ${motivo || 'Reversão solicitada'}`,
+        p_created_by: "SUPPLIER",
+        p_idempotency_key: `ESTORNO_PAG_${pagamento_id}_${Date.now()}`,
+        p_metadata: reversalMetadata,
+      });
+      if (ledgerErr) throw ledgerErr;
+
+      // Mark original as reversed
+      const updatedMeta = { ...meta, revertido: true, revertido_em: new Date().toISOString(), motivo_reversao: motivo || "Reversão solicitada" };
+      await supabaseAdmin
+        .from("supplier_ledger")
+        .update({ metadata: updatedMeta })
+        .eq("id", pagamento_id);
+
+      return new Response(JSON.stringify({ success: true }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     // ── get-titular-pagamentos: list payments for a titular ──
     if (action === "get-titular-pagamentos") {
       const { token, titular_id } = body;
