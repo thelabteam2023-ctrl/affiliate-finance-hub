@@ -831,8 +831,9 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
     const casaMap = new Map<string, {
       apostas: number;
       volume: number;
+      volumeLiquidado: number;
       lucro: number;
-      vinculos: Map<string, { apostas: number; volume: number; lucro: number }>;
+      vinculos: Map<string, { apostas: number; volume: number; volumeLiquidado: number; lucro: number }>;
     }>();
 
     const extractCasaVinculo = (nomeCompleto: string) => {
@@ -847,47 +848,48 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
       return { casa: nomeCompleto, vinculo: "Principal" };
     };
 
-    const processEntry = (nomeCompleto: string, stake: number, lucro: number) => {
+    const processEntry = (nomeCompleto: string, stake: number, lucro: number, resolved: boolean) => {
       const { casa, vinculo } = extractCasaVinculo(nomeCompleto);
 
       if (!casaMap.has(casa)) {
-        casaMap.set(casa, { apostas: 0, volume: 0, lucro: 0, vinculos: new Map() });
+        casaMap.set(casa, { apostas: 0, volume: 0, volumeLiquidado: 0, lucro: 0, vinculos: new Map() });
       }
       const casaEntry = casaMap.get(casa)!;
       casaEntry.apostas += 1;
       casaEntry.volume += stake;
+      if (resolved) casaEntry.volumeLiquidado += stake;
       casaEntry.lucro += lucro;
 
       if (!casaEntry.vinculos.has(vinculo)) {
-        casaEntry.vinculos.set(vinculo, { apostas: 0, volume: 0, lucro: 0 });
+        casaEntry.vinculos.set(vinculo, { apostas: 0, volume: 0, volumeLiquidado: 0, lucro: 0 });
       }
       const vinculoEntry = casaEntry.vinculos.get(vinculo)!;
       vinculoEntry.apostas += 1;
       vinculoEntry.volume += stake;
+      if (resolved) vinculoEntry.volumeLiquidado += stake;
       vinculoEntry.lucro += lucro;
     };
 
     // ISOLAMENTO: casaData usa dados filtrados por período (surebetsParaKpi)
     surebetsParaKpi.forEach((surebet) => {
-      // Apostas simples (sem pernas) - usar bookmaker_nome direto
+      const resolved = !!surebet.resultado && surebet.resultado !== "PENDENTE";
       if (surebet.forma_registro === "SIMPLES" || !surebet.pernas?.length) {
         const nomeCompleto = surebet.bookmaker_nome || "Desconhecida";
         const stake = surebet.stake || surebet.stake_total || 0;
         const lucro = surebet.lucro_real || 0;
-        processEntry(nomeCompleto, stake, lucro);
+        processEntry(nomeCompleto, stake, lucro, resolved);
       } else {
-        // Surebets com múltiplas pernas
         surebet.pernas.forEach(perna => {
           const nomeCompleto = perna.bookmaker_nome || "Desconhecida";
           const lucroPerna = getLucroPerna(perna);
-          processEntry(nomeCompleto, perna.stake, lucroPerna);
+          processEntry(nomeCompleto, perna.stake, lucroPerna, resolved);
         });
       }
     });
 
     return Array.from(casaMap.entries())
       .map(([casa, data]) => {
-        const roi = data.volume > 0 ? (data.lucro / data.volume) * 100 : 0;
+        const roi = data.volumeLiquidado > 0 ? (data.lucro / data.volumeLiquidado) * 100 : 0;
         return {
           casa,
           apostas: data.apostas,
@@ -900,7 +902,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
               apostas: v.apostas,
               volume: v.volume,
               lucro: v.lucro,
-              roi: v.volume > 0 ? (v.lucro / v.volume) * 100 : 0,
+              roi: v.volumeLiquidado > 0 ? (v.lucro / v.volumeLiquidado) * 100 : 0,
             }))
             .sort((a, b) => b.volume - a.volume),
         };

@@ -72,11 +72,12 @@ export function PerformancePorCasaSection({ regFilter, regMap }: PerformancePorC
 
       const bookmakerIds = (bookmakersResult.data || []).map(b => b.id);
       let stakeMap = new Map<string, number>();
+      let stakeResolvedMap = new Map<string, number>();
       
       if (bookmakerIds.length > 0) {
         const { data: apostasData } = await supabase
           .from("apostas_unificada")
-          .select("bookmaker_id, stake")
+          .select("bookmaker_id, stake, resultado")
           .eq("workspace_id", workspaceId)
           .in("bookmaker_id", bookmakerIds)
           .not("status", "eq", "CANCELADA");
@@ -85,6 +86,9 @@ export function PerformancePorCasaSection({ regFilter, regMap }: PerformancePorC
           for (const a of apostasData) {
             if (a.bookmaker_id && a.stake) {
               stakeMap.set(a.bookmaker_id, (stakeMap.get(a.bookmaker_id) || 0) + Number(a.stake));
+              if (a.resultado && a.resultado !== "PENDENTE") {
+                stakeResolvedMap.set(a.bookmaker_id, (stakeResolvedMap.get(a.bookmaker_id) || 0) + Number(a.stake));
+              }
             }
           }
         }
@@ -106,22 +110,25 @@ export function PerformancePorCasaSection({ regFilter, regMap }: PerformancePorC
         const catalogo = bm.bookmakers_catalogo as { nome: string; logo_url: string | null } | null;
         const resultado = resultadoMap.get(bm.id);
         const volume = stakeMap.get(bm.id) || 0;
+        const volumeResolved = stakeResolvedMap.get(bm.id) || 0;
 
         const existing = catalogoMap.get(catId);
         if (existing) {
           existing.volume_total += volume;
+          (existing as any).volume_liquidado = ((existing as any).volume_liquidado || 0) + volumeResolved;
           existing.lucro_prejuizo += Number(resultado?.resultado_operacional_total || 0);
           existing.total_apostas += Number(resultado?.qtd_apostas || 0);
           existing.total_greens += Number(resultado?.qtd_greens || 0);
           existing.total_reds += Number(resultado?.qtd_reds || 0);
           existing.saldo_atual += Number(bm.saldo_atual || 0);
         } else {
-          catalogoMap.set(catId, {
+          const entry: any = {
             bookmaker_catalogo_id: catId,
             nome: catalogo?.nome || bm.nome,
             logo_url: catalogo?.logo_url || null,
             moeda: bm.moeda || "BRL",
             volume_total: volume,
+            volume_liquidado: volumeResolved,
             lucro_prejuizo: Number(resultado?.resultado_operacional_total || 0),
             roi: 0,
             total_apostas: Number(resultado?.qtd_apostas || 0),
@@ -129,13 +136,14 @@ export function PerformancePorCasaSection({ regFilter, regMap }: PerformancePorC
             total_reds: Number(resultado?.qtd_reds || 0),
             saldo_atual: Number(bm.saldo_atual || 0),
             ticket_medio: 0,
-          });
+          };
+          catalogoMap.set(catId, entry);
         }
       }
 
       const result = Array.from(catalogoMap.values()).map(p => ({
         ...p,
-        roi: p.volume_total > 0 ? (p.lucro_prejuizo / p.volume_total) * 100 : 0,
+        roi: ((p as any).volume_liquidado || 0) > 0 ? (p.lucro_prejuizo / (p as any).volume_liquidado) * 100 : 0,
         ticket_medio: p.total_apostas > 0 ? p.volume_total / p.total_apostas : 0,
       }));
 
