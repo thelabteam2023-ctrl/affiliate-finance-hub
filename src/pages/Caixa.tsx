@@ -865,10 +865,6 @@ export default function Caixa() {
         }
       }
       
-      // 3. Fallback: buscar pelo despesa_administrativa vinculada via referencia_transacao_id
-      if (grupoKey === "OUTROS" && transacao.auditoria_metadata?.despesa_administrativa_id) {
-        // Will be handled by existing lookup
-      }
       
       const grupoInfo = getGrupoInfo(grupoKey);
       return { 
