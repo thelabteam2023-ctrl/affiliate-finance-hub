@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { CasaDetailModal } from "./CasaDetailModal";
 import {
   Select,
   SelectContent,
@@ -230,6 +231,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
   
   // Ordenação Por Casa
   const [porCasaSort, setPorCasaSort] = useState<SortField>("volume");
+  const [selectedPorCasa, setSelectedPorCasa] = useState<CasaAgregada | null>(null);
 
   const [navMode, setNavMode] = useState<NavigationMode>(() => {
     const saved = localStorage.getItem(NAV_STORAGE_KEY);

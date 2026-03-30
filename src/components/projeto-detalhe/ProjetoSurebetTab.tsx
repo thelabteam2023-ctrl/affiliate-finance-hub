@@ -8,6 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { CasaDetailModal } from "./CasaDetailModal";
 import { LucroCurrencyTooltip } from "@/components/ui/lucro-currency-tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { FinancialMetricsPopover } from "./FinancialMetricsPopover";
@@ -240,6 +241,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
   
   // Ordenação Por Casa
   const [porCasaSort, setPorCasaSort] = useState<SortField>("volume");
+  const [selectedPorCasa, setSelectedPorCasa] = useState<CasaAgregada | null>(null);
 
   // Navigation mode
   const [navMode, setNavMode] = useState<NavigationMode>(() => {
