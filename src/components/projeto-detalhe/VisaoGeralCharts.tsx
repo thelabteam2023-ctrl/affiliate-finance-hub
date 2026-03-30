@@ -470,103 +470,12 @@ function CasasMaisUtilizadasCard({ casas, casasGlobal, accentColor, logoMap, for
       </Card>
 
       {/* Modal de detalhamento por vínculo */}
-      <Dialog open={!!selectedCasa} onOpenChange={(open) => !open && setSelectedCasa(null)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-3">
-              {selectedCasa && (() => {
-                const logoUrl = getLogoUrl(selectedCasa);
-                return (
-                  <>
-                    <div className="w-10 h-10 rounded-md bg-muted/50 flex items-center justify-center overflow-hidden shrink-0">
-                      {logoUrl ? (
-                        <img src={logoUrl} alt={selectedCasa.casa} className="w-9 h-9 object-contain" />
-                      ) : (
-                        <Building2 className="w-5 h-5 text-muted-foreground" />
-                      )}
-                    </div>
-                    <div>
-                      <span className="uppercase">{selectedCasa.casa}</span>
-                      <p className="text-xs text-muted-foreground font-normal mt-0.5">
-                        {selectedCasa.vinculos.length} contas · {selectedCasa.apostas} apostas
-                      </p>
-                    </div>
-                  </>
-                );
-              })()}
-            </DialogTitle>
-          </DialogHeader>
-
-          {selectedCasa && (
-            <div className="space-y-4">
-              {/* Resumo consolidado */}
-              <div className="grid grid-cols-4 gap-3">
-                <div className="bg-muted/30 rounded-lg p-3 text-center">
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Volume</p>
-                  <p className="text-sm font-semibold tabular-nums mt-1">{fmtMoedaOriginal(selectedCasa.volume, selectedCasa.moeda)}</p>
-                </div>
-                <div className="bg-muted/30 rounded-lg p-3 text-center">
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Média/Conta</p>
-                  <p className="text-sm font-semibold tabular-nums mt-1">
-                    {fmtMoedaOriginal(
-                      selectedCasa.vinculos.length > 0 ? selectedCasa.volume / selectedCasa.vinculos.length : 0,
-                      selectedCasa.moeda
-                    )}
-                  </p>
-                </div>
-                <div className="bg-muted/30 rounded-lg p-3 text-center">
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Lucro</p>
-                  <p className={`text-sm font-semibold tabular-nums mt-1 ${selectedCasa.lucro >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                    {selectedCasa.lucro >= 0 ? '+' : ''}{fmtMoedaOriginal(selectedCasa.lucro, selectedCasa.moeda)}
-                  </p>
-                </div>
-                <div className="bg-muted/30 rounded-lg p-3 text-center">
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide">ROI</p>
-                  <p className={`text-sm font-semibold tabular-nums mt-1 ${selectedCasa.roi >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                    {selectedCasa.roi >= 0 ? '+' : ''}{selectedCasa.roi.toFixed(2)}%
-                  </p>
-                </div>
-              </div>
-
-              {/* Breakdown por vínculo */}
-              <div className="space-y-1">
-                <div className="flex items-center gap-1.5 mb-2">
-                  <Users className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-xs font-medium text-muted-foreground">Detalhamento por conta</span>
-                </div>
-                <div className="grid grid-cols-[1fr_50px_80px_70px_50px] gap-x-2 text-[10px] text-muted-foreground uppercase tracking-wide border-b pb-1.5 mb-1">
-                  <span>Conta</span>
-                  <span className="text-center">Qtd</span>
-                  <span className="text-right">Volume</span>
-                  <span className="text-right">Lucro</span>
-                  <span className="text-right">ROI</span>
-                </div>
-                {selectedCasa.vinculos.map((v) => {
-                  const vRoiColor = v.roi >= 0 ? "text-emerald-500" : "text-red-500";
-                  const vLucroColor = v.lucro >= 0 ? "text-emerald-500" : "text-red-500";
-                  const volumeShare = selectedCasa.volume > 0 ? ((v.volume / selectedCasa.volume) * 100).toFixed(0) : "0";
-                  return (
-                    <div key={v.vinculo} className="grid grid-cols-[1fr_50px_80px_70px_50px] gap-x-2 items-center py-1.5 border-b border-border/30 last:border-0">
-                      <div className="flex flex-col">
-                        <span className="text-xs font-medium truncate">{v.vinculo}</span>
-                        <span className="text-[9px] text-muted-foreground">{volumeShare}% do volume</span>
-                      </div>
-                      <span className="text-center text-xs text-muted-foreground tabular-nums">{v.apostas}</span>
-                      <span className="text-right text-xs font-medium tabular-nums">{fmtMoedaOriginal(v.volume, selectedCasa.moeda)}</span>
-                      <span className={`text-right text-xs font-medium tabular-nums ${vLucroColor}`}>
-                        {v.lucro >= 0 ? '+' : ''}{fmtMoedaOriginal(v.lucro, selectedCasa.moeda)}
-                      </span>
-                      <span className={`text-right text-xs font-semibold tabular-nums ${vRoiColor}`}>
-                        {v.roi >= 0 ? '+' : ''}{v.roi.toFixed(1)}%
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      <CasaDetailModal
+        casa={selectedCasa}
+        onClose={() => setSelectedCasa(null)}
+        logoUrl={selectedCasa ? getLogoUrl(selectedCasa) : null}
+        formatValue={(v) => selectedCasa ? fmtMoedaOriginal(v, selectedCasa.moeda) : String(v)}
+      />
     </>
   );
 }
