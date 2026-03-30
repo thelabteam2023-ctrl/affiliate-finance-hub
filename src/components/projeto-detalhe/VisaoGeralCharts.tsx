@@ -851,11 +851,17 @@ export function VisaoGeralCharts({
       vinculos: Map<string, { apostas: number; volume: number; volumeLiquidado: number; lucro: number }> 
     }>();
 
-    const processEntry = (bookmakerNome: string, parceiroNome: string | null | undefined, stake: number, lucro: number, moeda: string, isLiquidada: boolean) => {
+    const processEntry = (bookmakerNome: string, parceiroNome: string | null | undefined, instanceIdentifier: string | null | undefined, stake: number, lucro: number, moeda: string, isLiquidada: boolean) => {
       let casa: string;
       let vinculo: string;
       
-      if (parceiroNome) {
+      // Se tiver instance_identifier, usar como chave principal (contexto Broker)
+      if (instanceIdentifier) {
+        const separatorIdx = bookmakerNome.indexOf(" - ");
+        const baseCasa = separatorIdx > 0 ? bookmakerNome.substring(0, separatorIdx).trim() : bookmakerNome;
+        casa = `${baseCasa} (${instanceIdentifier})`;
+        vinculo = parceiroNome ? getFirstLastName(parceiroNome) : instanceIdentifier;
+      } else if (parceiroNome) {
         const separatorIdx = bookmakerNome.indexOf(" - ");
         casa = separatorIdx > 0 ? bookmakerNome.substring(0, separatorIdx).trim() : bookmakerNome;
         vinculo = getFirstLastName(parceiroNome);
