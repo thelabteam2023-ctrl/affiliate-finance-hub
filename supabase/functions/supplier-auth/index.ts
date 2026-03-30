@@ -1204,16 +1204,32 @@ Deno.serve(async (req) => {
         .order("created_at", { ascending: false })
         .limit(200);
 
-      const pagamentos = (entries || [])
+      // Also fetch reversals
+      const { data: reversals } = await supabaseAdmin
+        .from("supplier_ledger")
+        .select("id, tipo, direcao, valor, descricao, created_at, metadata")
+        .eq("supplier_workspace_id", validation.supplier_workspace_id)
+        .eq("tipo", "ESTORNO_PAGAMENTO_TITULAR")
+        .order("created_at", { ascending: false })
+        .limit(200);
+
+      const allEntries = [...(entries || []), ...(reversals || [])];
+
+      const pagamentos = allEntries
         .filter((e: any) => String((e.metadata as any)?.titular_id) === String(titular_id))
         .map((e: any) => ({
           id: e.id,
+          tipo: e.tipo,
           valor: e.valor,
           descricao: e.descricao,
           created_at: e.created_at,
           fonte: (e.metadata as any)?.fonte || "CENTRAL",
           banco_nome: (e.metadata as any)?.banco_nome || null,
-        }));
+          revertido: (e.metadata as any)?.revertido || false,
+          pagamento_original_id: (e.metadata as any)?.pagamento_original_id || null,
+          motivo_reversao: (e.metadata as any)?.motivo_reversao || null,
+        }))
+        .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
       return new Response(JSON.stringify({ pagamentos }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
