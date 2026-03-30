@@ -258,7 +258,7 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
 
       // Buscar nomes dos bookmakers
       const bookmakerIds = [...new Set((apostasUnificadas || []).map((a: any) => a.bookmaker_id).filter(Boolean))];
-      let bookmakerMap = new Map<string, { nome: string; parceiro_nome: string | null; logo_url: string | null }>();
+      let bookmakerMap = new Map<string, { nome: string; parceiro_nome: string | null; logo_url: string | null; instance_identifier: string | null }>();
       
       if (bookmakerIds.length > 0) {
         const { data: bookmakers } = await supabase
