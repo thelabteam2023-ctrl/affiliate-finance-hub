@@ -862,26 +862,18 @@ export function VisaoGeralCharts({
       let casa: string;
       let vinculo: string;
       
-      // Se tiver instance_identifier, usar como chave principal (contexto Broker)
+      // Sempre agrupar pela casa BASE (ex: BET365), usando identifier ou parceiro como vínculo
+      const separatorIdx = bookmakerNome.indexOf(" - ");
+      casa = separatorIdx > 0 ? bookmakerNome.substring(0, separatorIdx).trim() : bookmakerNome;
+      
       if (instanceIdentifier) {
-        const separatorIdx = bookmakerNome.indexOf(" - ");
-        const baseCasa = separatorIdx > 0 ? bookmakerNome.substring(0, separatorIdx).trim() : bookmakerNome;
-        casa = `${baseCasa} (${instanceIdentifier})`;
-        vinculo = parceiroNome ? getFirstLastName(parceiroNome) : instanceIdentifier;
+        vinculo = instanceIdentifier;
       } else if (parceiroNome) {
-        const separatorIdx = bookmakerNome.indexOf(" - ");
-        casa = separatorIdx > 0 ? bookmakerNome.substring(0, separatorIdx).trim() : bookmakerNome;
         vinculo = getFirstLastName(parceiroNome);
+      } else if (separatorIdx > 0) {
+        vinculo = getFirstLastName(bookmakerNome.substring(separatorIdx + 3).trim());
       } else {
-        const separatorIdx = bookmakerNome.indexOf(" - ");
-        if (separatorIdx > 0) {
-          casa = bookmakerNome.substring(0, separatorIdx).trim();
-          const vinculoRaw = bookmakerNome.substring(separatorIdx + 3).trim();
-          vinculo = getFirstLastName(vinculoRaw);
-        } else {
-          casa = bookmakerNome;
-          vinculo = "Principal";
-        }
+        vinculo = "Principal";
       }
 
       if (!casaMap.has(casa)) {
