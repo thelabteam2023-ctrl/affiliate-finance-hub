@@ -102,7 +102,7 @@ async function fetchApostasFiltradas(
   if (apostaIds.length > 0) {
     const { data: pernasData } = await supabase
       .from("apostas_pernas")
-      .select(`aposta_id, bookmaker_id, selecao, odd, stake, moeda, resultado, lucro_prejuizo, gerou_freebet, valor_freebet_gerada, bookmakers (nome, parceiro_id, parceiros (nome), bookmakers_catalogo (logo_url))`)
+      .select(`aposta_id, bookmaker_id, selecao, odd, stake, moeda, resultado, lucro_prejuizo, gerou_freebet, valor_freebet_gerada, bookmakers (nome, instance_identifier, parceiro_id, parceiros (nome), bookmakers_catalogo (logo_url))`)
       .in("aposta_id", apostaIds)
       .order("ordem", { ascending: true });
     
@@ -112,6 +112,7 @@ async function fetchApostasFiltradas(
         bookmaker_id: p.bookmaker_id,
         bookmaker_nome: p.bookmakers?.nome || 'Desconhecida',
         parceiro_nome: p.bookmakers?.parceiros?.nome || null,
+        instance_identifier: p.bookmakers?.instance_identifier || null,
         logo_url: p.bookmakers?.bookmakers_catalogo?.logo_url || null,
         selecao: p.selecao, odd: p.odd, stake: p.stake, moeda: p.moeda,
         resultado: p.resultado, lucro_prejuizo: p.lucro_prejuizo,
