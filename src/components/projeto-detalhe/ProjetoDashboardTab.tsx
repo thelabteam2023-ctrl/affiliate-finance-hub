@@ -379,10 +379,12 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
     return apostasUnificadas.map(a => ({
       data_aposta: a.data_aposta,
       lucro_prejuizo: a.lucro_prejuizo,
+      resultado: a.resultado,
       stake: a.stake,
       stake_total: a.stake_total,
       bookmaker_nome: a.bookmaker_nome,
       parceiro_nome: a.parceiro_nome,
+      instance_identifier: a.instance_identifier,
       bookmaker_id: a.bookmaker_id,
       pernas: a.pernas,
       forma_registro: a.forma_registro ?? undefined,
