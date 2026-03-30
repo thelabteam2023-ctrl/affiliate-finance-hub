@@ -831,8 +831,9 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
     const casaMap = new Map<string, {
       apostas: number;
       volume: number;
+      volumeLiquidado: number;
       lucro: number;
-      vinculos: Map<string, { apostas: number; volume: number; lucro: number }>;
+      vinculos: Map<string, { apostas: number; volume: number; volumeLiquidado: number; lucro: number }>;
     }>();
 
     const extractCasaVinculo = (nomeCompleto: string) => {
@@ -847,23 +848,25 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
       return { casa: nomeCompleto, vinculo: "Principal" };
     };
 
-    const processEntry = (nomeCompleto: string, stake: number, lucro: number) => {
+    const processEntry = (nomeCompleto: string, stake: number, lucro: number, resolved: boolean) => {
       const { casa, vinculo } = extractCasaVinculo(nomeCompleto);
 
       if (!casaMap.has(casa)) {
-        casaMap.set(casa, { apostas: 0, volume: 0, lucro: 0, vinculos: new Map() });
+        casaMap.set(casa, { apostas: 0, volume: 0, volumeLiquidado: 0, lucro: 0, vinculos: new Map() });
       }
       const casaEntry = casaMap.get(casa)!;
       casaEntry.apostas += 1;
       casaEntry.volume += stake;
+      if (resolved) casaEntry.volumeLiquidado += stake;
       casaEntry.lucro += lucro;
 
       if (!casaEntry.vinculos.has(vinculo)) {
-        casaEntry.vinculos.set(vinculo, { apostas: 0, volume: 0, lucro: 0 });
+        casaEntry.vinculos.set(vinculo, { apostas: 0, volume: 0, volumeLiquidado: 0, lucro: 0 });
       }
       const vinculoEntry = casaEntry.vinculos.get(vinculo)!;
       vinculoEntry.apostas += 1;
       vinculoEntry.volume += stake;
+      if (resolved) vinculoEntry.volumeLiquidado += stake;
       vinculoEntry.lucro += lucro;
     };
 

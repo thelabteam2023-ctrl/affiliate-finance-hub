@@ -704,12 +704,12 @@ export function ProjetoValueBetTab({
     const casaMap = new Map<string, {
       apostas: number;
       volume: number;
+      volumeLiquidado: number;
       lucro: number;
-      vinculos: Map<string, { apostas: number; volume: number; lucro: number }>;
+      vinculos: Map<string, { apostas: number; volume: number; volumeLiquidado: number; lucro: number }>;
     }>();
 
     const extractCasaVinculo = (bookmakerNome: string, operadorNome?: string, instanceIdentifier?: string | null) => {
-      // Primeiro tenta extrair do formato "CASA - Operador" no nome do bookmaker
       const separatorIdx = bookmakerNome.indexOf(" - ");
       if (separatorIdx > 0) {
         const vinculoRaw = bookmakerNome.substring(separatorIdx + 3).trim();
@@ -718,7 +718,6 @@ export function ProjetoValueBetTab({
           vinculo: getFirstLastName(vinculoRaw)
         };
       }
-      // Prioriza instance_identifier (especialmente em Broker), depois operador_nome
       const vinculo = instanceIdentifier?.trim() || (operadorNome ? getFirstLastName(operadorNome) : null);
       return { 
         casa: bookmakerNome, 
@@ -726,23 +725,28 @@ export function ProjetoValueBetTab({
       };
     };
 
-    const processEntry = (bookmakerNome: string, operadorNome: string | undefined, instanceIdentifier: string | null | undefined, stake: number, lucro: number) => {
+    const isResolved = (resultado: string | null | undefined) => 
+      !!resultado && resultado !== "PENDENTE";
+
+    const processEntry = (bookmakerNome: string, operadorNome: string | undefined, instanceIdentifier: string | null | undefined, stake: number, lucro: number, resolved: boolean) => {
       const { casa, vinculo } = extractCasaVinculo(bookmakerNome, operadorNome, instanceIdentifier);
 
       if (!casaMap.has(casa)) {
-        casaMap.set(casa, { apostas: 0, volume: 0, lucro: 0, vinculos: new Map() });
+        casaMap.set(casa, { apostas: 0, volume: 0, volumeLiquidado: 0, lucro: 0, vinculos: new Map() });
       }
       const casaEntry = casaMap.get(casa)!;
       casaEntry.apostas += 1;
       casaEntry.volume += stake;
+      if (resolved) casaEntry.volumeLiquidado += stake;
       casaEntry.lucro += lucro;
 
       if (!casaEntry.vinculos.has(vinculo)) {
-        casaEntry.vinculos.set(vinculo, { apostas: 0, volume: 0, lucro: 0 });
+        casaEntry.vinculos.set(vinculo, { apostas: 0, volume: 0, volumeLiquidado: 0, lucro: 0 });
       }
       const vinculoEntry = casaEntry.vinculos.get(vinculo)!;
       vinculoEntry.apostas += 1;
       vinculoEntry.volume += stake;
+      if (resolved) vinculoEntry.volumeLiquidado += stake;
       vinculoEntry.lucro += lucro;
     };
 
@@ -750,12 +754,13 @@ export function ProjetoValueBetTab({
       const bookmakerNome = a.bookmaker_nome || "Desconhecida";
       const stake = getConsolidatedStake(a, convertToConsolidationOficialFn, moedaConsolidacaoVal);
       const lucro = getConsolidatedLucro(a, convertToConsolidationOficialFn, moedaConsolidacaoVal);
-      processEntry(bookmakerNome, a.operador_nome, a.instance_identifier, stake, lucro);
+      const resolved = isResolved(a.resultado);
+      processEntry(bookmakerNome, a.operador_nome, a.instance_identifier, stake, lucro, resolved);
     });
 
     return Array.from(casaMap.entries())
       .map(([casa, data]) => {
-        const roi = data.volume > 0 ? (data.lucro / data.volume) * 100 : 0;
+        const roi = data.volumeLiquidado > 0 ? (data.lucro / data.volumeLiquidado) * 100 : 0;
         return {
           casa,
           apostas: data.apostas,
@@ -768,7 +773,7 @@ export function ProjetoValueBetTab({
               apostas: v.apostas,
               volume: v.volume,
               lucro: v.lucro,
-              roi: v.volume > 0 ? (v.lucro / v.volume) * 100 : 0,
+              roi: v.volumeLiquidado > 0 ? (v.lucro / v.volumeLiquidado) * 100 : 0,
             }))
             .sort((a, b) => b.volume - a.volume),
         };
