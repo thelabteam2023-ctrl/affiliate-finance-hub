@@ -1256,6 +1256,17 @@ export function ProjetoValueBetTab({
             showResultadoFilter={true}
             className="flex-1"
           />
+          {/* Filtro por tipo: Simples / Múltipla */}
+          <Select value={tipoFilter} onValueChange={(v) => setTipoFilter(v as any)}>
+            <SelectTrigger className="h-8 w-auto min-w-[120px] text-xs">
+              <SelectValue placeholder="Tipo" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todas">Todas</SelectItem>
+              <SelectItem value="simples">Simples</SelectItem>
+              <SelectItem value="multiplas">Múltiplas</SelectItem>
+            </SelectContent>
+          </Select>
           <SuspiciousDateFilterButton
             active={suspiciousFilter.active}
             onToggle={suspiciousFilter.setActive}
