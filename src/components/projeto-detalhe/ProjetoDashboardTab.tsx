@@ -47,6 +47,7 @@ interface ApostaUnificada {
   bookmaker_id: string;
   bookmaker_nome: string;
   parceiro_nome: string | null;
+  instance_identifier: string | null;
   logo_url: string | null;
   forma_registro: string | null;
   estrategia?: string | null;
@@ -62,6 +63,7 @@ interface ApostaUnificada {
     bookmaker_id?: string;
     bookmaker_nome?: string;
     parceiro_nome?: string | null;
+    instance_identifier?: string | null;
     logo_url?: string | null;
     stake?: number;
     lucro_prejuizo?: number | null;
@@ -100,7 +102,7 @@ async function fetchApostasFiltradas(
   if (apostaIds.length > 0) {
     const { data: pernasData } = await supabase
       .from("apostas_pernas")
-      .select(`aposta_id, bookmaker_id, selecao, odd, stake, moeda, resultado, lucro_prejuizo, gerou_freebet, valor_freebet_gerada, bookmakers (nome, parceiro_id, parceiros (nome), bookmakers_catalogo (logo_url))`)
+      .select(`aposta_id, bookmaker_id, selecao, odd, stake, moeda, resultado, lucro_prejuizo, gerou_freebet, valor_freebet_gerada, bookmakers (nome, instance_identifier, parceiro_id, parceiros (nome), bookmakers_catalogo (logo_url))`)
       .in("aposta_id", apostaIds)
       .order("ordem", { ascending: true });
     
@@ -110,6 +112,7 @@ async function fetchApostasFiltradas(
         bookmaker_id: p.bookmaker_id,
         bookmaker_nome: p.bookmakers?.nome || 'Desconhecida',
         parceiro_nome: p.bookmakers?.parceiros?.nome || null,
+        instance_identifier: p.bookmakers?.instance_identifier || null,
         logo_url: p.bookmakers?.bookmakers_catalogo?.logo_url || null,
         selecao: p.selecao, odd: p.odd, stake: p.stake, moeda: p.moeda,
         resultado: p.resultado, lucro_prejuizo: p.lucro_prejuizo,
@@ -120,20 +123,20 @@ async function fetchApostasFiltradas(
 
   // Fetch bookmaker info
   const bookmakerIdsFromApostas = (data || []).filter(a => a.bookmaker_id).map(a => a.bookmaker_id as string);
-  let bookmakerMap: Record<string, { nome: string; parceiro_nome: string | null; logo_url: string | null }> = {};
+  let bookmakerMap: Record<string, { nome: string; parceiro_nome: string | null; logo_url: string | null; instance_identifier: string | null }> = {};
   if (bookmakerIdsFromApostas.length > 0) {
     const { data: bookmakers } = await supabase
       .from("bookmakers")
-      .select("id, nome, parceiros(nome), bookmakers_catalogo(logo_url)")
+      .select("id, nome, instance_identifier, parceiros(nome), bookmakers_catalogo(logo_url)")
       .in("id", bookmakerIdsFromApostas);
     bookmakerMap = (bookmakers || []).reduce((acc: any, bk: any) => {
-      acc[bk.id] = { nome: bk.nome, parceiro_nome: bk.parceiros?.nome || null, logo_url: bk.bookmakers_catalogo?.logo_url || null };
+      acc[bk.id] = { nome: bk.nome, parceiro_nome: bk.parceiros?.nome || null, logo_url: bk.bookmakers_catalogo?.logo_url || null, instance_identifier: bk.instance_identifier || null };
       return acc;
     }, {});
   }
 
   return (data || []).map((item: any) => {
-    const bkInfo = bookmakerMap[item.bookmaker_id] || { nome: 'Desconhecida', parceiro_nome: null, logo_url: null };
+    const bkInfo = bookmakerMap[item.bookmaker_id] || { nome: 'Desconhecida', parceiro_nome: null, logo_url: null, instance_identifier: null };
     return {
       id: item.id, data_aposta: item.data_aposta,
       lucro_prejuizo: item.lucro_prejuizo, pl_consolidado: item.pl_consolidado,
@@ -142,6 +145,7 @@ async function fetchApostasFiltradas(
       esporte: item.esporte || item.estrategia || 'N/A',
       bookmaker_id: item.bookmaker_id || 'unknown',
       bookmaker_nome: bkInfo.nome, parceiro_nome: bkInfo.parceiro_nome, logo_url: bkInfo.logo_url,
+      instance_identifier: bkInfo.instance_identifier,
       forma_registro: item.forma_registro, estrategia: item.estrategia, bonus_id: item.bonus_id,
       moeda_operacao: item.moeda_operacao,
       stake_consolidado: item.stake_consolidado,
@@ -378,10 +382,12 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
     return apostasUnificadas.map(a => ({
       data_aposta: a.data_aposta,
       lucro_prejuizo: a.lucro_prejuizo,
+      resultado: a.resultado,
       stake: a.stake,
       stake_total: a.stake_total,
       bookmaker_nome: a.bookmaker_nome,
       parceiro_nome: a.parceiro_nome,
+      instance_identifier: a.instance_identifier,
       bookmaker_id: a.bookmaker_id,
       pernas: a.pernas,
       forma_registro: a.forma_registro ?? undefined,
