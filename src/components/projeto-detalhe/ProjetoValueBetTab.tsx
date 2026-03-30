@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -1519,102 +1520,153 @@ export function ProjetoValueBetTab({
           {casaDataSorted.map((casa) => {
             const logoUrl = getLogoUrl(casa.casa);
             return (
-            <Tooltip key={casa.casa}>
-              <TooltipTrigger asChild>
-                <Card className={`cursor-default transition-colors hover:border-purple-500/30 ${casa.lucro >= 0 ? "border-emerald-500/20" : "border-red-500/20"}`}>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium flex items-center gap-3">
-                      <div className="w-8 h-8 rounded bg-muted/50 flex items-center justify-center overflow-hidden shrink-0">
-                        {logoUrl ? (
-                          <img src={logoUrl} alt={casa.casa} className="w-6 h-6 object-contain" />
-                        ) : (
-                          <Building2 className="w-4 h-4 text-muted-foreground" />
-                        )}
-                      </div>
+              <Card 
+                key={casa.casa}
+                className={`cursor-pointer transition-colors hover:border-purple-500/30 ${casa.lucro >= 0 ? "border-emerald-500/20" : "border-red-500/20"}`}
+                onClick={() => setSelectedPorCasa(casa)}
+              >
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium flex items-center gap-3">
+                    <div className="w-8 h-8 rounded bg-muted/50 flex items-center justify-center overflow-hidden shrink-0">
+                      {logoUrl ? (
+                        <img src={logoUrl} alt={casa.casa} className="w-6 h-6 object-contain" />
+                      ) : (
+                        <Building2 className="w-4 h-4 text-muted-foreground" />
+                      )}
+                    </div>
+                    <div className="flex flex-col min-w-0">
                       <span className="truncate">{casa.casa}</span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Apostas</span>
-                        <span className="font-medium tabular-nums">{casa.apostas}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Volume</span>
-                        <span className="font-medium tabular-nums">{formatCurrency(casa.volume)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Lucro</span>
-                        <span className={`font-medium tabular-nums ${casa.lucro >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                          {casa.lucro >= 0 ? '+' : ''}{formatCurrency(casa.lucro)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">ROI</span>
-                        <span className={`font-semibold tabular-nums ${casa.roi >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                          {formatPercent(casa.roi)}
-                        </span>
-                      </div>
+                      {casa.vinculos.length > 1 && (
+                        <span className="text-[10px] text-muted-foreground">{casa.vinculos.length} contas</span>
+                      )}
                     </div>
-                    {casa.vinculos.length > 1 && (
-                      <div className="mt-3 pt-2 border-t flex items-center gap-1 text-xs text-muted-foreground">
-                        <Users className="h-3 w-3" />
-                        <span>{casa.vinculos.length} vínculos</span>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </TooltipTrigger>
-              <TooltipContent side="right" className="text-xs max-w-[320px] space-y-2">
-                <p className="font-semibold border-b pb-1">{casa.casa}</p>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-muted-foreground">
-                  <span>Total Apostas:</span>
-                  <span className="text-right font-medium text-foreground">{casa.apostas}</span>
-                  <span>Volume Total:</span>
-                  <span className="text-right font-medium text-foreground">{formatCurrency(casa.volume)}</span>
-                  <span>Lucro Total:</span>
-                  <span className={`text-right font-medium ${casa.lucro >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                    {casa.lucro >= 0 ? '+' : ''}{formatCurrency(casa.lucro)}
-                  </span>
-                  <span>ROI:</span>
-                  <span className={`text-right font-semibold ${casa.roi >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                    {formatPercent(casa.roi)}
-                  </span>
-                </div>
-                {casa.vinculos.length > 0 && (
-                  <div className="space-y-1.5 pt-2 border-t">
-                    <div className="flex items-center gap-1 text-muted-foreground">
-                      <Users className="h-3 w-3" />
-                      <span className="font-medium">Detalhamento por vínculo:</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Apostas</span>
+                      <span className="font-medium tabular-nums">{casa.apostas}</span>
                     </div>
-                    <div className="grid grid-cols-[1fr_50px_70px_55px] gap-x-2 text-[10px] text-muted-foreground border-b pb-1">
-                      <span>Vínculo</span>
-                      <span className="text-right">Qtd</span>
-                      <span className="text-right">Volume</span>
-                      <span className="text-right">ROI</span>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Volume</span>
+                      <span className="font-medium tabular-nums">{formatCurrency(casa.volume)}</span>
                     </div>
-                    {casa.vinculos.slice(0, 5).map((v) => (
-                      <div key={v.vinculo} className="grid grid-cols-[1fr_50px_70px_55px] gap-x-2 items-center">
-                        <span className="truncate">{v.vinculo}</span>
-                        <span className="text-right text-muted-foreground tabular-nums">{v.apostas}</span>
-                        <span className="text-right text-muted-foreground tabular-nums">{formatCurrency(v.volume)}</span>
-                        <span className={`text-right font-medium tabular-nums ${v.roi >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                          {v.roi >= 0 ? '+' : ''}{v.roi.toFixed(1)}%
-                        </span>
-                      </div>
-                    ))}
-                    {casa.vinculos.length > 5 && (
-                      <div className="text-muted-foreground">+{casa.vinculos.length - 5} vínculos...</div>
-                    )}
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Lucro</span>
+                      <span className={`font-medium tabular-nums ${casa.lucro >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                        {casa.lucro >= 0 ? '+' : ''}{formatCurrency(casa.lucro)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">ROI</span>
+                      <span className={`font-semibold tabular-nums ${casa.roi >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                        {formatPercent(casa.roi)}
+                      </span>
+                    </div>
                   </div>
-                )}
-              </TooltipContent>
-            </Tooltip>
+                </CardContent>
+              </Card>
             );
           })}
         </div>
       )}
+
+      {/* Modal detalhamento por vínculo */}
+      <Dialog open={!!selectedPorCasa} onOpenChange={(open) => !open && setSelectedPorCasa(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3">
+              {selectedPorCasa && (() => {
+                const logoUrl = getLogoUrl(selectedPorCasa.casa);
+                return (
+                  <>
+                    <div className="w-10 h-10 rounded-lg bg-muted/50 flex items-center justify-center overflow-hidden shrink-0">
+                      {logoUrl ? (
+                        <img src={logoUrl} alt={selectedPorCasa.casa} className="w-8 h-8 object-contain" />
+                      ) : (
+                        <Building2 className="w-5 h-5 text-muted-foreground" />
+                      )}
+                    </div>
+                    <div>
+                      <span>{selectedPorCasa.casa}</span>
+                      <p className="text-xs text-muted-foreground font-normal mt-0.5">
+                        {selectedPorCasa.vinculos.length} {selectedPorCasa.vinculos.length === 1 ? 'conta' : 'contas'} · {selectedPorCasa.apostas} apostas
+                      </p>
+                    </div>
+                  </>
+                );
+              })()}
+            </DialogTitle>
+          </DialogHeader>
+
+          {selectedPorCasa && (
+            <div className="space-y-4">
+              {/* KPIs consolidados */}
+              <div className="grid grid-cols-4 gap-3">
+                <div className="bg-muted/30 rounded-lg p-3 text-center">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Volume</p>
+                  <p className="text-sm font-semibold tabular-nums mt-1">{formatCurrency(selectedPorCasa.volume)}</p>
+                </div>
+                <div className="bg-muted/30 rounded-lg p-3 text-center">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Média/Conta</p>
+                  <p className="text-sm font-semibold tabular-nums mt-1">
+                    {formatCurrency(selectedPorCasa.vinculos.length > 0 ? selectedPorCasa.volume / selectedPorCasa.vinculos.length : 0)}
+                  </p>
+                </div>
+                <div className="bg-muted/30 rounded-lg p-3 text-center">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Lucro</p>
+                  <p className={`text-sm font-semibold tabular-nums mt-1 ${selectedPorCasa.lucro >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                    {selectedPorCasa.lucro >= 0 ? '+' : ''}{formatCurrency(selectedPorCasa.lucro)}
+                  </p>
+                </div>
+                <div className="bg-muted/30 rounded-lg p-3 text-center">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide">ROI</p>
+                  <p className={`text-sm font-semibold tabular-nums mt-1 ${selectedPorCasa.roi >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                    {selectedPorCasa.roi >= 0 ? '+' : ''}{selectedPorCasa.roi.toFixed(2)}%
+                  </p>
+                </div>
+              </div>
+
+              {/* Breakdown por vínculo */}
+              <div className="space-y-1">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-xs font-medium text-muted-foreground">Detalhamento por conta</span>
+                </div>
+                <div className="grid grid-cols-[1fr_50px_80px_70px_50px] gap-x-2 text-[10px] text-muted-foreground uppercase tracking-wide border-b pb-1.5 mb-1">
+                  <span>Conta</span>
+                  <span className="text-center">Qtd</span>
+                  <span className="text-right">Volume</span>
+                  <span className="text-right">Lucro</span>
+                  <span className="text-right">ROI</span>
+                </div>
+                {selectedPorCasa.vinculos.map((v) => {
+                  const vRoiColor = v.roi >= 0 ? "text-emerald-500" : "text-red-500";
+                  const vLucroColor = v.lucro >= 0 ? "text-emerald-500" : "text-red-500";
+                  const volumeShare = selectedPorCasa.volume > 0 ? ((v.volume / selectedPorCasa.volume) * 100).toFixed(0) : "0";
+                  return (
+                    <div key={v.vinculo} className="grid grid-cols-[1fr_50px_80px_70px_50px] gap-x-2 items-center py-1.5 border-b border-border/30 last:border-0">
+                      <div className="flex flex-col">
+                        <span className="text-xs font-medium truncate">{v.vinculo}</span>
+                        <span className="text-[9px] text-muted-foreground">{volumeShare}% do volume</span>
+                      </div>
+                      <span className="text-center text-xs text-muted-foreground tabular-nums">{v.apostas}</span>
+                      <span className="text-right text-xs font-medium tabular-nums">{formatCurrency(v.volume)}</span>
+                      <span className={`text-right text-xs font-medium tabular-nums ${vLucroColor}`}>
+                        {v.lucro >= 0 ? '+' : ''}{formatCurrency(v.lucro)}
+                      </span>
+                      <span className={`text-right text-xs font-semibold tabular-nums ${vRoiColor}`}>
+                        {v.roi >= 0 ? '+' : ''}{v.roi.toFixed(1)}%
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 
