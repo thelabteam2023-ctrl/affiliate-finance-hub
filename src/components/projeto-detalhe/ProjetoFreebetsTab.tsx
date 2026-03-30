@@ -258,13 +258,13 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
 
       // Buscar nomes dos bookmakers
       const bookmakerIds = [...new Set((apostasUnificadas || []).map((a: any) => a.bookmaker_id).filter(Boolean))];
-      let bookmakerMap = new Map<string, { nome: string; parceiro_nome: string | null; logo_url: string | null }>();
+      let bookmakerMap = new Map<string, { nome: string; parceiro_nome: string | null; logo_url: string | null; instance_identifier: string | null }>();
       
       if (bookmakerIds.length > 0) {
         const { data: bookmakers } = await supabase
           .from("bookmakers")
           .select(`
-            id, nome,
+            id, nome, instance_identifier,
             parceiros!bookmakers_parceiro_id_fkey (nome),
             bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url)
           `)
@@ -275,7 +275,8 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
           { 
             nome: b.nome, 
             parceiro_nome: b.parceiros?.nome || null, 
-            logo_url: b.bookmakers_catalogo?.logo_url || null 
+            logo_url: b.bookmakers_catalogo?.logo_url || null,
+            instance_identifier: b.instance_identifier || null,
           }
         ]));
       }
@@ -307,6 +308,7 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
           bookmaker_nome: bkInfo?.nome || "Desconhecida",
           logo_url: bkInfo?.logo_url || null,
           parceiro_nome: bkInfo?.parceiro_nome || null,
+          instance_identifier: bkInfo?.instance_identifier || null,
           gerou_freebet: ap.gerou_freebet || false,
           valor_freebet_gerada: ap.valor_freebet_gerada || null,
           estrategia: ap.estrategia || null,
