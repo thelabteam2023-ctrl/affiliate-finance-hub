@@ -187,9 +187,26 @@ export const CATEGORIA_TO_GRUPO: Record<string, GrupoDespesa> = {
   ADIANTAMENTO: "RECURSOS_HUMANOS",
 };
 
-// Função helper para obter grupo a partir de categoria
+// Reverse lookup: label → grupo key (e.g. "Recursos Humanos" → "RECURSOS_HUMANOS")
+const LABEL_TO_GRUPO: Record<string, GrupoDespesa> = Object.entries(GRUPOS_DESPESA).reduce(
+  (acc, [key, info]) => {
+    acc[info.label] = key as GrupoDespesa;
+    acc[info.label.toLowerCase()] = key as GrupoDespesa;
+    return acc;
+  },
+  {} as Record<string, GrupoDespesa>
+);
+
+// Função helper para obter grupo a partir de categoria (enum key) ou label de exibição
 export function getGrupoFromCategoria(categoria: string): GrupoDespesa {
-  return CATEGORIA_TO_GRUPO[categoria] || "OUTROS";
+  // 1. Direct enum key match
+  if (CATEGORIA_TO_GRUPO[categoria]) return CATEGORIA_TO_GRUPO[categoria];
+  // 2. Direct grupo key match (e.g. "RECURSOS_HUMANOS")
+  if (GRUPOS_DESPESA[categoria as GrupoDespesa]) return categoria as GrupoDespesa;
+  // 3. Label match (e.g. "Recursos Humanos")
+  if (LABEL_TO_GRUPO[categoria]) return LABEL_TO_GRUPO[categoria];
+  if (LABEL_TO_GRUPO[categoria.toLowerCase()]) return LABEL_TO_GRUPO[categoria.toLowerCase()];
+  return "OUTROS";
 }
 
 // Função helper para obter info do grupo
