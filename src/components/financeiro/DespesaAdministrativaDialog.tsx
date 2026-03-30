@@ -504,7 +504,7 @@ export function DespesaAdministrativaDialog({
               origem_wallet_id: origemData.origemWalletId || null,
               // destino_tipo: NULL - despesas administrativas são externas ao sistema
               data_transacao: formData.data_despesa,
-              descricao: `Despesa administrativa - ${formData.categoria}${formData.descricao ? `: ${formData.descricao}` : ''}`,
+              descricao: `Despesa administrativa - ${categoriaLabel}${formData.descricao ? `: ${formData.descricao}` : ''}`,
               status: "CONFIRMADO",
             });
           
