@@ -72,11 +72,12 @@ export function PerformancePorCasaSection({ regFilter, regMap }: PerformancePorC
 
       const bookmakerIds = (bookmakersResult.data || []).map(b => b.id);
       let stakeMap = new Map<string, number>();
+      let stakeResolvedMap = new Map<string, number>();
       
       if (bookmakerIds.length > 0) {
         const { data: apostasData } = await supabase
           .from("apostas_unificada")
-          .select("bookmaker_id, stake")
+          .select("bookmaker_id, stake, resultado")
           .eq("workspace_id", workspaceId)
           .in("bookmaker_id", bookmakerIds)
           .not("status", "eq", "CANCELADA");
@@ -85,6 +86,9 @@ export function PerformancePorCasaSection({ regFilter, regMap }: PerformancePorC
           for (const a of apostasData) {
             if (a.bookmaker_id && a.stake) {
               stakeMap.set(a.bookmaker_id, (stakeMap.get(a.bookmaker_id) || 0) + Number(a.stake));
+              if (a.resultado && a.resultado !== "PENDENTE") {
+                stakeResolvedMap.set(a.bookmaker_id, (stakeResolvedMap.get(a.bookmaker_id) || 0) + Number(a.stake));
+              }
             }
           }
         }
