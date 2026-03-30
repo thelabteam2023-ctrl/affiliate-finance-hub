@@ -429,11 +429,12 @@ function CasasMaisUtilizadasCard({ casas, casasGlobal, accentColor, logoMap, for
             const roiColor = casa.roi >= 0 ? "text-emerald-500" : "text-red-500";
             const logoUrl = getLogoUrl(casa);
             const hasMultipleVinculos = casa.vinculos.length > 1;
+            const canOpenDetails = casa.vinculos.length >= 1;
             return (
               <div
                 key={casa.casa}
-                className={`space-y-1.5 ${hasMultipleVinculos ? 'cursor-pointer hover:bg-muted/30 rounded-md p-1 -m-1 transition-colors' : 'cursor-default'}`}
-                onClick={() => hasMultipleVinculos && setSelectedCasa(casa)}
+                className={`space-y-1.5 ${canOpenDetails ? 'cursor-pointer hover:bg-muted/30 rounded-md p-1 -m-1 transition-colors' : 'cursor-default'}`}
+                onClick={() => canOpenDetails && setSelectedCasa(casa)}
               >
                 <div className="grid grid-cols-[72px_40px_1fr_56px] gap-x-3 items-center">
                   <div className="flex flex-col items-center gap-1">
