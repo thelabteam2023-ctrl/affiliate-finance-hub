@@ -1256,17 +1256,27 @@ export function ProjetoValueBetTab({
             showResultadoFilter={true}
             className="flex-1"
           />
-          {/* Filtro por tipo: Simples / Múltipla */}
-          <Select value={tipoFilter} onValueChange={(v) => setTipoFilter(v as any)}>
-            <SelectTrigger className="h-8 w-auto min-w-[120px] text-xs">
-              <SelectValue placeholder="Tipo" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todas">Todas</SelectItem>
-              <SelectItem value="simples">Simples</SelectItem>
-              <SelectItem value="multiplas">Múltiplas</SelectItem>
-            </SelectContent>
-          </Select>
+          {/* Filtro por tipo: toggle buttons */}
+          <div className="flex items-center rounded-lg border border-border overflow-hidden">
+            {([
+              { value: "todas", label: "Todas" },
+              { value: "simples", label: "Simples" },
+              { value: "multiplas", label: "Múltiplas" },
+            ] as const).map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => setTipoFilter(opt.value)}
+                className={cn(
+                  "px-3 py-1.5 text-xs font-medium transition-all duration-200",
+                  tipoFilter === opt.value
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "bg-background text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                )}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
           <SuspiciousDateFilterButton
             active={suspiciousFilter.active}
             onToggle={suspiciousFilter.setActive}
