@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { TrendingUp, TrendingDown, Building2, Users, Calendar, Globe, FolderOpen, BarChart3 } from "lucide-react";
@@ -334,7 +335,6 @@ interface CasasMaisUtilizadasCardProps {
 }
 
 function CasasMaisUtilizadasCard({ casas, casasGlobal, accentColor, logoMap, formatCurrency, showScopeToggle }: CasasMaisUtilizadasCardProps) {
-  // Formata valor na moeda original da casa
   const fmtMoedaOriginal = (valor: number, moeda?: string) => {
     const m = moeda || "BRL";
     const simbolos: Record<string, string> = { BRL: "R$", USD: "$", EUR: "€", GBP: "£", USDT: "$", USDC: "$" };
@@ -342,6 +342,7 @@ function CasasMaisUtilizadasCard({ casas, casasGlobal, accentColor, logoMap, for
     return `${s} ${valor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
   const [scope, setScope] = useState<"projeto" | "global">("projeto");
+  const [selectedCasa, setSelectedCasa] = useState<CasaUsada | null>(null);
   
   const activeCasas = scope === "global" && casasGlobal ? casasGlobal : casas;
   
@@ -350,38 +351,21 @@ function CasasMaisUtilizadasCard({ casas, casasGlobal, accentColor, logoMap, for
     [activeCasas]
   );
 
-  // Normaliza nome para comparação: remove acentos, espaços extras, caracteres especiais
   const normalizeName = (name: string): string => {
-    return name
-      .toUpperCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "") // remove acentos
-      .replace(/[^A-Z0-9]/g, "") // mantém apenas letras e números
-      .trim();
+    return name.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Z0-9]/g, "").trim();
   };
 
   const getLogoUrl = (casaData: CasaUsada): string | null | undefined => {
-    // 1. Prioridade: logo_url já processado na agregação
     if (casaData.logo_url) return casaData.logo_url;
-    
-    // 2. Fallback: buscar no logoMap se disponível
     if (!logoMap) return null;
-    
     const normalizedInput = normalizeName(casaData.casa);
-    
-    // Match exato normalizado
     for (const [key, value] of logoMap.entries()) {
       if (normalizeName(key) === normalizedInput) return value;
     }
-    
-    // Match parcial (um contém o outro)
     for (const [key, value] of logoMap.entries()) {
       const normalizedKey = normalizeName(key);
-      if (normalizedInput.includes(normalizedKey) || normalizedKey.includes(normalizedInput)) {
-        return value;
-      }
+      if (normalizedInput.includes(normalizedKey) || normalizedKey.includes(normalizedInput)) return value;
     }
-    
     return null;
   };
 
@@ -406,133 +390,174 @@ function CasasMaisUtilizadasCard({ casas, casasGlobal, accentColor, logoMap, for
   const maxVolume = topCasas[0]?.volume || 1;
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Building2 className="h-4 w-4" style={{ color: accentColor }} />
-            <CardTitle className="text-sm font-medium">Casas Mais Utilizadas</CardTitle>
+    <>
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Building2 className="h-4 w-4" style={{ color: accentColor }} />
+              <CardTitle className="text-sm font-medium">Casas Mais Utilizadas</CardTitle>
+            </div>
+            {showScopeToggle && casasGlobal && casasGlobal.length > 0 && (
+              <ToggleGroup type="single" value={scope} onValueChange={(v) => v && setScope(v as "projeto" | "global")} size="sm">
+                <ToggleGroupItem value="projeto" aria-label="Projeto atual" className="h-7 px-2 text-xs">
+                  <FolderOpen className="h-3 w-3 mr-1" />
+                  Projeto
+                </ToggleGroupItem>
+                <ToggleGroupItem value="global" aria-label="Todos os projetos" className="h-7 px-2 text-xs">
+                  <Globe className="h-3 w-3 mr-1" />
+                  Global
+                </ToggleGroupItem>
+              </ToggleGroup>
+            )}
           </div>
-          {showScopeToggle && casasGlobal && casasGlobal.length > 0 && (
-            <ToggleGroup type="single" value={scope} onValueChange={(v) => v && setScope(v as "projeto" | "global")} size="sm">
-              <ToggleGroupItem value="projeto" aria-label="Projeto atual" className="h-7 px-2 text-xs">
-                <FolderOpen className="h-3 w-3 mr-1" />
-                Projeto
-              </ToggleGroupItem>
-              <ToggleGroupItem value="global" aria-label="Todos os projetos" className="h-7 px-2 text-xs">
-                <Globe className="h-3 w-3 mr-1" />
-                Global
-              </ToggleGroupItem>
-            </ToggleGroup>
-          )}
-        </div>
-        <CardDescription className="text-xs">
-          Por volume apostado {scope === "global" && "(Todos os projetos)"}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-2.5">
-        {/* Header row */}
-        <div className="grid grid-cols-[72px_40px_1fr_56px] gap-x-3 items-center text-[11px] text-muted-foreground border-b pb-2 uppercase tracking-wide">
-          <span className="text-center">Casa</span>
-          <span className="text-center">Qtd</span>
-          <span className="text-right">Volume</span>
-          <span className="text-right">ROI</span>
-        </div>
-        
-        {topCasas.map((casa, idx) => {
-          const barWidth = (casa.volume / maxVolume) * 100;
-          const roiColor = casa.roi >= 0 ? "text-emerald-500" : "text-red-500";
-          const logoUrl = getLogoUrl(casa);
-          // Parse "BET365 (identifier)" format
-          const identifierMatch = casa.casa.match(/^(.+?)\s*\((.+)\)$/);
-          const displayName = identifierMatch ? identifierMatch[1] : casa.casa;
-          const displayIdentifier = identifierMatch ? identifierMatch[2] : null;
-          return (
-            <Tooltip key={casa.casa}>
-              <TooltipTrigger asChild>
-                <div className="space-y-1.5 cursor-default">
-                  <div className="grid grid-cols-[72px_40px_1fr_56px] gap-x-3 items-center">
-                    {/* Icon above name, centered */}
-                    <div className="flex flex-col items-center gap-1">
-                      <div className="w-9 h-9 rounded-md bg-muted/50 flex items-center justify-center overflow-hidden shrink-0">
-                        {logoUrl ? (
-                          <img src={logoUrl} alt={displayName} className="w-8 h-8 object-contain" />
-                        ) : (
-                          <Building2 className="w-4 h-4 text-muted-foreground" />
-                        )}
-                      </div>
-                      <span className="text-[10px] font-semibold leading-tight text-center line-clamp-2 uppercase">{displayName}</span>
-                      {displayIdentifier && (
-                        <span className="text-[8px] text-muted-foreground font-medium -mt-1 text-center line-clamp-1">{displayIdentifier}</span>
+          <CardDescription className="text-xs">
+            Por volume apostado {scope === "global" && "(Todos os projetos)"}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2.5">
+          {/* Header row */}
+          <div className="grid grid-cols-[72px_40px_1fr_56px] gap-x-3 items-center text-[11px] text-muted-foreground border-b pb-2 uppercase tracking-wide">
+            <span className="text-center">Casa</span>
+            <span className="text-center">Qtd</span>
+            <span className="text-right">Volume</span>
+            <span className="text-right">ROI</span>
+          </div>
+          
+          {topCasas.map((casa, idx) => {
+            const barWidth = (casa.volume / maxVolume) * 100;
+            const roiColor = casa.roi >= 0 ? "text-emerald-500" : "text-red-500";
+            const logoUrl = getLogoUrl(casa);
+            const hasMultipleVinculos = casa.vinculos.length > 1;
+            return (
+              <div
+                key={casa.casa}
+                className={`space-y-1.5 ${hasMultipleVinculos ? 'cursor-pointer hover:bg-muted/30 rounded-md p-1 -m-1 transition-colors' : 'cursor-default'}`}
+                onClick={() => hasMultipleVinculos && setSelectedCasa(casa)}
+              >
+                <div className="grid grid-cols-[72px_40px_1fr_56px] gap-x-3 items-center">
+                  <div className="flex flex-col items-center gap-1">
+                    <div className="w-9 h-9 rounded-md bg-muted/50 flex items-center justify-center overflow-hidden shrink-0">
+                      {logoUrl ? (
+                        <img src={logoUrl} alt={casa.casa} className="w-8 h-8 object-contain" />
+                      ) : (
+                        <Building2 className="w-4 h-4 text-muted-foreground" />
                       )}
-                      <span className="text-[9px] text-muted-foreground/50 font-medium -mt-0.5">{idx + 1}º</span>
                     </div>
-                    {/* Qtd */}
-                    <span className="text-center text-xs text-muted-foreground tabular-nums">{casa.apostas}</span>
-                    {/* Volume */}
-                    <span className="text-right text-[11px] font-medium tabular-nums whitespace-nowrap">{fmtMoedaOriginal(casa.volume, casa.moeda)}</span>
-                    {/* ROI */}
-                    <span className={`text-right text-xs font-semibold tabular-nums whitespace-nowrap ${roiColor}`}>
-                      {casa.roi >= 0 ? '+' : ''}{casa.roi.toFixed(1)}%
-                    </span>
-                  </div>
-                  <div className="h-1 rounded-full bg-muted overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all duration-300"
-                      style={{
-                        width: `${barWidth}%`,
-                        backgroundColor: accentColor,
-                        opacity: 1 - idx * 0.08,
-                      }}
-                    />
-                  </div>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent side="left" className="text-xs space-y-2 max-w-[300px]">
-                <p className="font-semibold border-b pb-1 mb-1">{casa.casa}</p>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-muted-foreground">
-                  <span>Apostas:</span>
-                  <span className="text-right font-medium text-foreground">{casa.apostas}</span>
-                  <span>Volume:</span>
-                  <span className="text-right font-medium text-foreground">{fmtMoedaOriginal(casa.volume, casa.moeda)}</span>
-                  <span>Lucro:</span>
-                  <span className={`text-right font-medium ${casa.lucro >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                    {casa.lucro >= 0 ? '+' : ''}{fmtMoedaOriginal(casa.lucro, casa.moeda)}
-                  </span>
-                  <span>ROI:</span>
-                  <span className={`text-right font-semibold ${roiColor}`}>{casa.roi.toFixed(2)}%</span>
-                </div>
-                {casa.vinculos.length > 0 && (
-                  <div className="space-y-1.5 pt-2 border-t">
-                    <div className="flex items-center gap-1 text-muted-foreground mb-2">
-                      <Users className="h-3 w-3" />
-                      <span className="font-medium">Por vínculo:</span>
-                    </div>
-                    <div className="grid grid-cols-[1fr_60px_60px] gap-x-2 text-[10px] text-muted-foreground border-b pb-1 mb-1">
-                      <span>Vínculo</span>
-                      <span className="text-right">Volume</span>
-                      <span className="text-right">ROI</span>
-                    </div>
-                    {casa.vinculos.slice(0, 5).map((v) => (
-                      <div key={v.vinculo} className="grid grid-cols-[1fr_60px_60px] gap-x-2 items-center">
-                        <span className="truncate">{v.vinculo}</span>
-                        <span className="text-right text-muted-foreground tabular-nums">{fmtMoedaOriginal(v.volume, casa.moeda)}</span>
-                        <span className={`text-right font-medium tabular-nums ${v.roi >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                          {v.roi >= 0 ? '+' : ''}{v.roi.toFixed(1)}%
-                        </span>
-                      </div>
-                    ))}
-                    {casa.vinculos.length > 5 && (
-                      <div className="text-muted-foreground">+{casa.vinculos.length - 5} vínculos...</div>
+                    <span className="text-[10px] font-semibold leading-tight text-center line-clamp-2 uppercase">{casa.casa}</span>
+                    {hasMultipleVinculos && (
+                      <span className="text-[8px] text-muted-foreground font-medium -mt-1">{casa.vinculos.length} contas</span>
                     )}
+                    <span className="text-[9px] text-muted-foreground/50 font-medium -mt-0.5">{idx + 1}º</span>
                   </div>
-                )}
-              </TooltipContent>
-            </Tooltip>
-          );
-        })}
-      </CardContent>
-    </Card>
+                  <span className="text-center text-xs text-muted-foreground tabular-nums">{casa.apostas}</span>
+                  <span className="text-right text-[11px] font-medium tabular-nums whitespace-nowrap">{fmtMoedaOriginal(casa.volume, casa.moeda)}</span>
+                  <span className={`text-right text-xs font-semibold tabular-nums whitespace-nowrap ${roiColor}`}>
+                    {casa.roi >= 0 ? '+' : ''}{casa.roi.toFixed(1)}%
+                  </span>
+                </div>
+                <div className="h-1 rounded-full bg-muted overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-300"
+                    style={{ width: `${barWidth}%`, backgroundColor: accentColor, opacity: 1 - idx * 0.08 }}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </CardContent>
+      </Card>
+
+      {/* Modal de detalhamento por vínculo */}
+      <Dialog open={!!selectedCasa} onOpenChange={(open) => !open && setSelectedCasa(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3">
+              {selectedCasa && (() => {
+                const logoUrl = getLogoUrl(selectedCasa);
+                return (
+                  <>
+                    <div className="w-10 h-10 rounded-md bg-muted/50 flex items-center justify-center overflow-hidden shrink-0">
+                      {logoUrl ? (
+                        <img src={logoUrl} alt={selectedCasa.casa} className="w-9 h-9 object-contain" />
+                      ) : (
+                        <Building2 className="w-5 h-5 text-muted-foreground" />
+                      )}
+                    </div>
+                    <div>
+                      <span className="uppercase">{selectedCasa.casa}</span>
+                      <p className="text-xs text-muted-foreground font-normal mt-0.5">
+                        {selectedCasa.vinculos.length} contas · {selectedCasa.apostas} apostas
+                      </p>
+                    </div>
+                  </>
+                );
+              })()}
+            </DialogTitle>
+          </DialogHeader>
+
+          {selectedCasa && (
+            <div className="space-y-4">
+              {/* Resumo consolidado */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="bg-muted/30 rounded-lg p-3 text-center">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Volume</p>
+                  <p className="text-sm font-semibold tabular-nums mt-1">{fmtMoedaOriginal(selectedCasa.volume, selectedCasa.moeda)}</p>
+                </div>
+                <div className="bg-muted/30 rounded-lg p-3 text-center">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Lucro</p>
+                  <p className={`text-sm font-semibold tabular-nums mt-1 ${selectedCasa.lucro >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                    {selectedCasa.lucro >= 0 ? '+' : ''}{fmtMoedaOriginal(selectedCasa.lucro, selectedCasa.moeda)}
+                  </p>
+                </div>
+                <div className="bg-muted/30 rounded-lg p-3 text-center">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide">ROI</p>
+                  <p className={`text-sm font-semibold tabular-nums mt-1 ${selectedCasa.roi >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                    {selectedCasa.roi >= 0 ? '+' : ''}{selectedCasa.roi.toFixed(2)}%
+                  </p>
+                </div>
+              </div>
+
+              {/* Breakdown por vínculo */}
+              <div className="space-y-1">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-xs font-medium text-muted-foreground">Detalhamento por conta</span>
+                </div>
+                <div className="grid grid-cols-[1fr_50px_80px_70px_50px] gap-x-2 text-[10px] text-muted-foreground uppercase tracking-wide border-b pb-1.5 mb-1">
+                  <span>Conta</span>
+                  <span className="text-center">Qtd</span>
+                  <span className="text-right">Volume</span>
+                  <span className="text-right">Lucro</span>
+                  <span className="text-right">ROI</span>
+                </div>
+                {selectedCasa.vinculos.map((v) => {
+                  const vRoiColor = v.roi >= 0 ? "text-emerald-500" : "text-red-500";
+                  const vLucroColor = v.lucro >= 0 ? "text-emerald-500" : "text-red-500";
+                  const volumeShare = selectedCasa.volume > 0 ? ((v.volume / selectedCasa.volume) * 100).toFixed(0) : "0";
+                  return (
+                    <div key={v.vinculo} className="grid grid-cols-[1fr_50px_80px_70px_50px] gap-x-2 items-center py-1.5 border-b border-border/30 last:border-0">
+                      <div className="flex flex-col">
+                        <span className="text-xs font-medium truncate">{v.vinculo}</span>
+                        <span className="text-[9px] text-muted-foreground">{volumeShare}% do volume</span>
+                      </div>
+                      <span className="text-center text-xs text-muted-foreground tabular-nums">{v.apostas}</span>
+                      <span className="text-right text-xs font-medium tabular-nums">{fmtMoedaOriginal(v.volume, selectedCasa.moeda)}</span>
+                      <span className={`text-right text-xs font-medium tabular-nums ${vLucroColor}`}>
+                        {v.lucro >= 0 ? '+' : ''}{fmtMoedaOriginal(v.lucro, selectedCasa.moeda)}
+                      </span>
+                      <span className={`text-right text-xs font-semibold tabular-nums ${vRoiColor}`}>
+                        {v.roi >= 0 ? '+' : ''}{v.roi.toFixed(1)}%
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
@@ -862,26 +887,18 @@ export function VisaoGeralCharts({
       let casa: string;
       let vinculo: string;
       
-      // Se tiver instance_identifier, usar como chave principal (contexto Broker)
+      // Sempre agrupar pela casa BASE (ex: BET365), usando identifier ou parceiro como vínculo
+      const separatorIdx = bookmakerNome.indexOf(" - ");
+      casa = separatorIdx > 0 ? bookmakerNome.substring(0, separatorIdx).trim() : bookmakerNome;
+      
       if (instanceIdentifier) {
-        const separatorIdx = bookmakerNome.indexOf(" - ");
-        const baseCasa = separatorIdx > 0 ? bookmakerNome.substring(0, separatorIdx).trim() : bookmakerNome;
-        casa = `${baseCasa} (${instanceIdentifier})`;
-        vinculo = parceiroNome ? getFirstLastName(parceiroNome) : instanceIdentifier;
+        vinculo = instanceIdentifier;
       } else if (parceiroNome) {
-        const separatorIdx = bookmakerNome.indexOf(" - ");
-        casa = separatorIdx > 0 ? bookmakerNome.substring(0, separatorIdx).trim() : bookmakerNome;
         vinculo = getFirstLastName(parceiroNome);
+      } else if (separatorIdx > 0) {
+        vinculo = getFirstLastName(bookmakerNome.substring(separatorIdx + 3).trim());
       } else {
-        const separatorIdx = bookmakerNome.indexOf(" - ");
-        if (separatorIdx > 0) {
-          casa = bookmakerNome.substring(0, separatorIdx).trim();
-          const vinculoRaw = bookmakerNome.substring(separatorIdx + 3).trim();
-          vinculo = getFirstLastName(vinculoRaw);
-        } else {
-          casa = bookmakerNome;
-          vinculo = "Principal";
-        }
+        vinculo = "Principal";
       }
 
       if (!casaMap.has(casa)) {
@@ -968,9 +985,7 @@ export function VisaoGeralCharts({
           .trim();
       };
       
-      // Strip "(identifier)" suffix for logo lookup
-      const baseName = casaName.replace(/\s*\(.*\)$/, "");
-      const normalizedInput = normalizeName(baseName);
+      const normalizedInput = normalizeName(casaName);
       
       for (const [key, value] of logoMap.entries()) {
         if (normalizeName(key) === normalizedInput) return value ?? null;
