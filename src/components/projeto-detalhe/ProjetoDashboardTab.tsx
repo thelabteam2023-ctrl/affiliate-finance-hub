@@ -120,14 +120,14 @@ async function fetchApostasFiltradas(
 
   // Fetch bookmaker info
   const bookmakerIdsFromApostas = (data || []).filter(a => a.bookmaker_id).map(a => a.bookmaker_id as string);
-  let bookmakerMap: Record<string, { nome: string; parceiro_nome: string | null; logo_url: string | null }> = {};
+  let bookmakerMap: Record<string, { nome: string; parceiro_nome: string | null; logo_url: string | null; instance_identifier: string | null }> = {};
   if (bookmakerIdsFromApostas.length > 0) {
     const { data: bookmakers } = await supabase
       .from("bookmakers")
-      .select("id, nome, parceiros(nome), bookmakers_catalogo(logo_url)")
+      .select("id, nome, instance_identifier, parceiros(nome), bookmakers_catalogo(logo_url)")
       .in("id", bookmakerIdsFromApostas);
     bookmakerMap = (bookmakers || []).reduce((acc: any, bk: any) => {
-      acc[bk.id] = { nome: bk.nome, parceiro_nome: bk.parceiros?.nome || null, logo_url: bk.bookmakers_catalogo?.logo_url || null };
+      acc[bk.id] = { nome: bk.nome, parceiro_nome: bk.parceiros?.nome || null, logo_url: bk.bookmakers_catalogo?.logo_url || null, instance_identifier: bk.instance_identifier || null };
       return acc;
     }, {});
   }
