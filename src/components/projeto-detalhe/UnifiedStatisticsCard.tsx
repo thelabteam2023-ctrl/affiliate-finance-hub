@@ -1067,7 +1067,49 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
     </div>
   );
 
-  return (
+  // Aba Por Tipo (Simples vs Múltiplas)
+  const renderTipoBlock = (label: string, data: typeof stats.porTipo.simples) => (
+    <div className="space-y-2">
+      <h4 className="text-sm font-semibold text-foreground">{label}</h4>
+      <div className="grid grid-cols-3 gap-2">
+        <AnchorKPI 
+          label="Lucro / Prejuízo" 
+          value={formatCurrency(data.lucro)} 
+          valueClass={data.lucro >= 0 ? "text-emerald-400" : "text-red-400"} 
+        />
+        <AnchorKPI 
+          label="ROI" 
+          value={formatPercent(data.roi)} 
+          valueClass={data.roi >= 0 ? "text-emerald-400" : "text-red-400"}
+          tooltip="Lucro ÷ Volume liquidado"
+        />
+        <AnchorKPI 
+          label="Win Rate" 
+          value={formatPercent(data.winRate)}
+          tooltip="Apostas ganhas ÷ Apostas liquidadas"
+        />
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+        <StatCell label="Apostas" value={data.total} />
+        <StatCell label="Volume" value={formatCurrency(data.volume)} />
+        <StatCell label="Greens" value={data.ganhas} valueClass="text-emerald-500" />
+        <StatCell label="Reds" value={data.perdidas} valueClass="text-red-500" />
+      </div>
+      {data.pendentes > 0 && (
+        <StatCell label="Pendentes" value={data.pendentes} valueClass="text-blue-400" size="small" />
+      )}
+    </div>
+  );
+
+  const renderPorTipo = () => (
+    <div className="space-y-5">
+      {renderTipoBlock("Apostas Simples", stats.porTipo.simples)}
+      <div className="border-t border-border/40" />
+      {renderTipoBlock("Apostas Múltiplas", stats.porTipo.multiplas)}
+    </div>
+  );
+
+
     <Card className="border-purple-500/20">
       <CardHeader className="py-3 pb-0">
         <CardTitle className="text-sm font-medium flex items-center gap-2">
