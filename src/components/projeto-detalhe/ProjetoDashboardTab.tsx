@@ -47,6 +47,7 @@ interface ApostaUnificada {
   bookmaker_id: string;
   bookmaker_nome: string;
   parceiro_nome: string | null;
+  instance_identifier: string | null;
   logo_url: string | null;
   forma_registro: string | null;
   estrategia?: string | null;
@@ -62,6 +63,7 @@ interface ApostaUnificada {
     bookmaker_id?: string;
     bookmaker_nome?: string;
     parceiro_nome?: string | null;
+    instance_identifier?: string | null;
     logo_url?: string | null;
     stake?: number;
     lucro_prejuizo?: number | null;
