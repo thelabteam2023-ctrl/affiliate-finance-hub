@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { CasaDetailModal } from "./CasaDetailModal";
 import {
   Select,
   SelectContent,
@@ -1575,100 +1576,12 @@ export function ProjetoValueBetTab({
       )}
 
       {/* Modal detalhamento por vínculo */}
-      <Dialog open={!!selectedPorCasa} onOpenChange={(open) => !open && setSelectedPorCasa(null)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-3">
-              {selectedPorCasa && (() => {
-                const logoUrl = getLogoUrl(selectedPorCasa.casa);
-                return (
-                  <>
-                    <div className="w-10 h-10 rounded-lg bg-muted/50 flex items-center justify-center overflow-hidden shrink-0">
-                      {logoUrl ? (
-                        <img src={logoUrl} alt={selectedPorCasa.casa} className="w-8 h-8 object-contain" />
-                      ) : (
-                        <Building2 className="w-5 h-5 text-muted-foreground" />
-                      )}
-                    </div>
-                    <div>
-                      <span>{selectedPorCasa.casa}</span>
-                      <p className="text-xs text-muted-foreground font-normal mt-0.5">
-                        {selectedPorCasa.vinculos.length} {selectedPorCasa.vinculos.length === 1 ? 'conta' : 'contas'} · {selectedPorCasa.apostas} apostas
-                      </p>
-                    </div>
-                  </>
-                );
-              })()}
-            </DialogTitle>
-          </DialogHeader>
-
-          {selectedPorCasa && (
-            <div className="space-y-4">
-              {/* KPIs consolidados */}
-              <div className="grid grid-cols-4 gap-3">
-                <div className="bg-muted/30 rounded-lg p-3 text-center">
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Volume</p>
-                  <p className="text-sm font-semibold tabular-nums mt-1">{formatCurrency(selectedPorCasa.volume)}</p>
-                </div>
-                <div className="bg-muted/30 rounded-lg p-3 text-center">
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Média/Conta</p>
-                  <p className="text-sm font-semibold tabular-nums mt-1">
-                    {formatCurrency(selectedPorCasa.vinculos.length > 0 ? selectedPorCasa.volume / selectedPorCasa.vinculos.length : 0)}
-                  </p>
-                </div>
-                <div className="bg-muted/30 rounded-lg p-3 text-center">
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Lucro</p>
-                  <p className={`text-sm font-semibold tabular-nums mt-1 ${selectedPorCasa.lucro >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                    {selectedPorCasa.lucro >= 0 ? '+' : ''}{formatCurrency(selectedPorCasa.lucro)}
-                  </p>
-                </div>
-                <div className="bg-muted/30 rounded-lg p-3 text-center">
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide">ROI</p>
-                  <p className={`text-sm font-semibold tabular-nums mt-1 ${selectedPorCasa.roi >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                    {selectedPorCasa.roi >= 0 ? '+' : ''}{selectedPorCasa.roi.toFixed(2)}%
-                  </p>
-                </div>
-              </div>
-
-              {/* Breakdown por vínculo */}
-              <div className="space-y-1">
-                <div className="flex items-center gap-1.5 mb-2">
-                  <Users className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-xs font-medium text-muted-foreground">Detalhamento por conta</span>
-                </div>
-                <div className="grid grid-cols-[1fr_50px_80px_70px_50px] gap-x-2 text-[10px] text-muted-foreground uppercase tracking-wide border-b pb-1.5 mb-1">
-                  <span>Conta</span>
-                  <span className="text-center">Qtd</span>
-                  <span className="text-right">Volume</span>
-                  <span className="text-right">Lucro</span>
-                  <span className="text-right">ROI</span>
-                </div>
-                {selectedPorCasa.vinculos.map((v) => {
-                  const vRoiColor = v.roi >= 0 ? "text-emerald-500" : "text-red-500";
-                  const vLucroColor = v.lucro >= 0 ? "text-emerald-500" : "text-red-500";
-                  const volumeShare = selectedPorCasa.volume > 0 ? ((v.volume / selectedPorCasa.volume) * 100).toFixed(0) : "0";
-                  return (
-                    <div key={v.vinculo} className="grid grid-cols-[1fr_50px_80px_70px_50px] gap-x-2 items-center py-1.5 border-b border-border/30 last:border-0">
-                      <div className="flex flex-col">
-                        <span className="text-xs font-medium truncate">{v.vinculo}</span>
-                        <span className="text-[9px] text-muted-foreground">{volumeShare}% do volume</span>
-                      </div>
-                      <span className="text-center text-xs text-muted-foreground tabular-nums">{v.apostas}</span>
-                      <span className="text-right text-xs font-medium tabular-nums">{formatCurrency(v.volume)}</span>
-                      <span className={`text-right text-xs font-medium tabular-nums ${vLucroColor}`}>
-                        {v.lucro >= 0 ? '+' : ''}{formatCurrency(v.lucro)}
-                      </span>
-                      <span className={`text-right text-xs font-semibold tabular-nums ${vRoiColor}`}>
-                        {v.roi >= 0 ? '+' : ''}{v.roi.toFixed(1)}%
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      <CasaDetailModal
+        casa={selectedPorCasa}
+        onClose={() => setSelectedPorCasa(null)}
+        logoUrl={selectedPorCasa ? getLogoUrl(selectedPorCasa.casa) : null}
+        formatValue={formatCurrency}
+      />
     </div>
   );
 
