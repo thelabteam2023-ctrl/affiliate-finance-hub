@@ -963,12 +963,20 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
   // Suspicious date filter
   const suspiciousFilter = useSuspiciousDateFilter(apostasListaAtual);
 
-  const apostasFiltradas = useMemo(() => apostasListaAtual.filter(a => {
-    if (!suspiciousFilter.filterFn(a)) return false;
-    const matchesSearch = a.evento.toLowerCase().includes(searchTerm.toLowerCase()) || a.esporte.toLowerCase().includes(searchTerm.toLowerCase()) || a.selecao.toLowerCase().includes(searchTerm.toLowerCase()) || (a.bookmaker_nome || '').toLowerCase().includes(searchTerm.toLowerCase()) || (a.pernas || []).some((p: any) => (p?.bookmaker_nome || '').toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchesResultado = tabFilters.resultados.length === 0 || tabFilters.resultados.includes(a.resultado as any);
-    return matchesSearch && matchesResultado;
-  }), [apostasListaAtual, searchTerm, tabFilters.resultados, suspiciousFilter.active]);
+  const apostasFiltradas = useMemo(() => {
+    const term = searchTerm.toLowerCase();
+    return apostasListaAtual.filter(a => {
+      if (!suspiciousFilter.filterFn(a)) return false;
+      if (term) {
+        const matchesBase = (a.evento || '').toLowerCase().includes(term) || (a.esporte || '').toLowerCase().includes(term) || (a.selecao || '').toLowerCase().includes(term) || (a.bookmaker_nome || '').toLowerCase().includes(term);
+        const matchesPernas = (a.pernas || []).some((p: any) => (p?.bookmaker_nome || '').toLowerCase().includes(term) || (p?.selecao || '').toLowerCase().includes(term));
+        const matchesSelecoes = Array.isArray((a as any).selecoes) && (a as any).selecoes.some((s: any) => (s?.descricao || '').toLowerCase().includes(term));
+        if (!matchesBase && !matchesPernas && !matchesSelecoes) return false;
+      }
+      const matchesResultado = tabFilters.resultados.length === 0 || tabFilters.resultados.includes(a.resultado as any);
+      return matchesResultado;
+    });
+  }, [apostasListaAtual, searchTerm, tabFilters.resultados, suspiciousFilter.active]);
   
   // Ordenar casaData conforme filtro selecionado
   const casaDataSorted = useMemo(() => {
