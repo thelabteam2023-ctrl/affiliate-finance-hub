@@ -490,6 +490,28 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
       ? Math.max(...apostasGanhas.map(a => getOdd(a))) 
       : 0;
 
+    // === POR TIPO (Simples vs Múltiplas) ===
+    const calcTipoStats = (items: Aposta[]) => {
+      const liq = items.filter(a => a.resultado && a.resultado !== "PENDENTE");
+      const ganhas = liq.filter(a => a.resultado === "GREEN" || a.resultado === "MEIO_GREEN").length;
+      const perdidas = liq.filter(a => a.resultado === "RED" || a.resultado === "MEIO_RED").length;
+      const reemb = liq.filter(a => a.resultado === "VOID").length;
+      const pendentes = items.filter(a => !a.resultado || a.resultado === "PENDENTE").length;
+      const volume = items.reduce((acc, a) => acc + getStake(a), 0);
+      const volumeLiq = liq.reduce((acc, a) => acc + getStake(a), 0);
+      const lucro = liq.reduce((acc, a) => acc + getLucro(a), 0);
+      const roiVal = volumeLiq > 0 ? (lucro / volumeLiq) * 100 : 0;
+      const winRate = liq.length > 0 ? (ganhas / liq.length) * 100 : 0;
+      return { total: items.length, ganhas, perdidas, reembolsadas: reemb, pendentes, volume, volumeLiq, lucro, roi: roiVal, winRate };
+    };
+
+    const simplesApostas = apostas.filter(a => a.forma_registro === "SIMPLES" || !a.forma_registro);
+    const multiplasApostas = apostas.filter(a => a.forma_registro === "MULTIPLA");
+    const porTipo = {
+      simples: calcTipoStats(simplesApostas),
+      multiplas: calcTipoStats(multiplasApostas),
+    };
+
     return {
       // Resumo
       vencedoras,
@@ -511,6 +533,8 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
       porEsporte,
       // Por Fonte
       porFonte,
+      // Por Tipo
+      porTipo,
       // Avançado
       maiorLucro,
       maiorPerda,
