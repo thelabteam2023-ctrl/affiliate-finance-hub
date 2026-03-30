@@ -13846,6 +13846,18 @@ export type Database = {
         }
         Returns: Json
       }
+      editar_aposta_liquidada_v4: {
+        Args: {
+          p_aposta_id: string
+          p_lucro_prejuizo?: number
+          p_nova_moeda?: string
+          p_nova_odd?: number
+          p_novo_bookmaker_id?: string
+          p_novo_resultado?: string
+          p_novo_stake?: number
+        }
+        Returns: Json
+      }
       editar_perna_surebet_atomica: {
         Args: {
           p_new_bookmaker_id?: string
