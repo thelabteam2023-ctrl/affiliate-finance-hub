@@ -490,6 +490,28 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
       ? Math.max(...apostasGanhas.map(a => getOdd(a))) 
       : 0;
 
+    // === POR TIPO (Simples vs Múltiplas) ===
+    const calcTipoStats = (items: Aposta[]) => {
+      const liq = items.filter(a => a.resultado && a.resultado !== "PENDENTE");
+      const ganhas = liq.filter(a => a.resultado === "GREEN" || a.resultado === "MEIO_GREEN").length;
+      const perdidas = liq.filter(a => a.resultado === "RED" || a.resultado === "MEIO_RED").length;
+      const reemb = liq.filter(a => a.resultado === "VOID").length;
+      const pendentes = items.filter(a => !a.resultado || a.resultado === "PENDENTE").length;
+      const volume = items.reduce((acc, a) => acc + getStake(a), 0);
+      const volumeLiq = liq.reduce((acc, a) => acc + getStake(a), 0);
+      const lucro = liq.reduce((acc, a) => acc + getLucro(a), 0);
+      const roiVal = volumeLiq > 0 ? (lucro / volumeLiq) * 100 : 0;
+      const winRate = liq.length > 0 ? (ganhas / liq.length) * 100 : 0;
+      return { total: items.length, ganhas, perdidas, reembolsadas: reemb, pendentes, volume, volumeLiq, lucro, roi: roiVal, winRate };
+    };
+
+    const simplesApostas = apostas.filter(a => a.forma_registro === "SIMPLES" || !a.forma_registro);
+    const multiplasApostas = apostas.filter(a => a.forma_registro === "MULTIPLA");
+    const porTipo = {
+      simples: calcTipoStats(simplesApostas),
+      multiplas: calcTipoStats(multiplasApostas),
+    };
+
     return {
       // Resumo
       vencedoras,
@@ -511,6 +533,8 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
       porEsporte,
       // Por Fonte
       porFonte,
+      // Por Tipo
+      porTipo,
       // Avançado
       maiorLucro,
       maiorPerda,
@@ -1043,6 +1067,48 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
     </div>
   );
 
+  // Aba Por Tipo (Simples vs Múltiplas)
+  const renderTipoBlock = (label: string, data: typeof stats.porTipo.simples) => (
+    <div className="space-y-2">
+      <h4 className="text-sm font-semibold text-foreground">{label}</h4>
+      <div className="grid grid-cols-3 gap-2">
+        <AnchorKPI 
+          label="Lucro / Prejuízo" 
+          value={formatCurrency(data.lucro)} 
+          valueClass={data.lucro >= 0 ? "text-emerald-400" : "text-red-400"} 
+        />
+        <AnchorKPI 
+          label="ROI" 
+          value={formatPercent(data.roi)} 
+          valueClass={data.roi >= 0 ? "text-emerald-400" : "text-red-400"}
+          tooltip="Lucro ÷ Volume liquidado"
+        />
+        <AnchorKPI 
+          label="Win Rate" 
+          value={formatPercent(data.winRate)}
+          tooltip="Apostas ganhas ÷ Apostas liquidadas"
+        />
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+        <StatCell label="Apostas" value={data.total} />
+        <StatCell label="Volume" value={formatCurrency(data.volume)} />
+        <StatCell label="Greens" value={data.ganhas} valueClass="text-emerald-500" />
+        <StatCell label="Reds" value={data.perdidas} valueClass="text-red-500" />
+      </div>
+      {data.pendentes > 0 && (
+        <StatCell label="Pendentes" value={data.pendentes} valueClass="text-blue-400" size="small" />
+      )}
+    </div>
+  );
+
+  const renderPorTipo = () => (
+    <div className="space-y-5">
+      {renderTipoBlock("Apostas Simples", stats.porTipo.simples)}
+      <div className="border-t border-border/40" />
+      {renderTipoBlock("Apostas Múltiplas", stats.porTipo.multiplas)}
+    </div>
+  );
+
   return (
     <Card className="border-purple-500/20">
       <CardHeader className="py-3 pb-0">
@@ -1053,7 +1119,7 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
       </CardHeader>
       <CardContent className="pt-2 pb-4">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full grid grid-cols-5 h-9 mb-4 bg-transparent gap-1 p-0" accentColor="bg-purple-500">
+          <TabsList className="w-full grid grid-cols-6 h-9 mb-4 bg-transparent gap-1 p-0" accentColor="bg-purple-500">
             <TabsTrigger 
               value="resumo" 
               className="text-xs rounded-lg transition-all duration-200 bg-transparent data-[state=inactive]:text-muted-foreground data-[state=active]:text-foreground data-[state=active]:font-medium hover:text-foreground/80"
@@ -1084,6 +1150,12 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
             >
               Por Fonte
             </TabsTrigger>
+            <TabsTrigger 
+              value="por-tipo" 
+              className="text-xs rounded-lg transition-all duration-200 bg-transparent data-[state=inactive]:text-muted-foreground data-[state=active]:text-foreground data-[state=active]:font-medium hover:text-foreground/80"
+            >
+              Por Tipo
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="resumo" className="mt-0">
@@ -1104,6 +1176,10 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
 
           <TabsContent value="por-fonte" className="mt-0">
             {renderPorFonte()}
+          </TabsContent>
+
+          <TabsContent value="por-tipo" className="mt-0">
+            {renderPorTipo()}
           </TabsContent>
         </Tabs>
       </CardContent>
