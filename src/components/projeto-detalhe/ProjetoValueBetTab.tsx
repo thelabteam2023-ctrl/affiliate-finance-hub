@@ -356,11 +356,11 @@ export function ProjetoValueBetTab({
       
       const bookmakerIds = [...new Set(allData.map((a: { bookmaker_id: string | null }) => a.bookmaker_id).filter(Boolean))];
       
-      let bookmakerMap = new Map<string, { nome: string; loginUsername: string | null; parceiroNome: string | null; logoUrl: string | null }>();
+      let bookmakerMap = new Map<string, { nome: string; loginUsername: string | null; parceiroNome: string | null; logoUrl: string | null; instanceIdentifier: string | null }>();
       if (bookmakerIds.length > 0) {
         const { data: bookmakers } = await supabase
           .from("bookmakers")
-          .select("id, nome, login_username, parceiro:parceiros(nome), bookmakers_catalogo(logo_url)")
+          .select("id, nome, login_username, instance_identifier, parceiro:parceiros(nome), bookmakers_catalogo(logo_url)")
           .in("id", bookmakerIds);
 
         bookmakerMap = new Map(
@@ -371,6 +371,7 @@ export function ProjetoValueBetTab({
               loginUsername: b.login_username ?? null,
               parceiroNome: b.parceiro?.nome ?? null,
               logoUrl: b.bookmakers_catalogo?.logo_url ?? null,
+              instanceIdentifier: b.instance_identifier ?? null,
             },
           ])
         );
@@ -384,6 +385,7 @@ export function ProjetoValueBetTab({
           stake: a.stake ?? 0,
           bookmaker_nome: bkInfo?.nome ?? "Desconhecida",
           parceiro_nome: bkInfo?.parceiroNome ?? undefined,
+          instance_identifier: bkInfo?.instanceIdentifier ?? null,
           logo_url: bkInfo?.logoUrl ?? null,
           operador_nome: bkInfo?.parceiroNome ?? undefined,
         };

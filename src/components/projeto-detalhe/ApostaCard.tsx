@@ -416,10 +416,18 @@ export function ApostaCard({
     const vinculoAbreviado = vinculoFull ? getFirstLastName(vinculoFull) : null;
     
     // Formato padronizado: "CASA - PARCEIRO ABREVIADO (IDENTIFICADOR)"
+    // Evitar duplicação quando instance_identifier é igual ao primeiro nome do parceiro
+    const identifierDiffersFromParceiro = aposta.instance_identifier && 
+      vinculoAbreviado && 
+      aposta.instance_identifier.toUpperCase() !== vinculoAbreviado.split(" ")[0]?.toUpperCase();
     let bookmakerDisplay = vinculoAbreviado 
       ? `${bookmakerBase} - ${vinculoAbreviado}`
       : bookmakerBase;
-    if (aposta.instance_identifier) bookmakerDisplay += ` (${aposta.instance_identifier})`;
+    if (aposta.instance_identifier && !vinculoAbreviado) {
+      bookmakerDisplay += ` (${aposta.instance_identifier})`;
+    } else if (identifierDiffersFromParceiro) {
+      bookmakerDisplay += ` (${aposta.instance_identifier})`;
+    }
     
     // Para operações com múltiplas pernas (3+), usa layout vertical
     const hasMultipleLegs = hasPernas && (aposta.pernas?.length || 0) >= 3;
@@ -718,10 +726,18 @@ export function ApostaCard({
   const vinculoAbreviadoCard = vinculoFullCard ? getFirstLastName(vinculoFullCard) : null;
   
   // Formato padronizado: "CASA - PARCEIRO ABREVIADO (IDENTIFICADOR)"
+  // Evitar duplicação quando instance_identifier é igual ao primeiro nome do parceiro
+  const identifierDiffersFromParceiroCard = aposta.instance_identifier && 
+    vinculoAbreviadoCard && 
+    aposta.instance_identifier.toUpperCase() !== vinculoAbreviadoCard.split(" ")[0]?.toUpperCase();
   let bookmakerDisplayCard = vinculoAbreviadoCard 
     ? `${bookmakerBaseCard} - ${vinculoAbreviadoCard}`
     : bookmakerBaseCard;
-  if (aposta.instance_identifier) bookmakerDisplayCard += ` (${aposta.instance_identifier})`;
+  if (aposta.instance_identifier && !vinculoAbreviadoCard) {
+    bookmakerDisplayCard += ` (${aposta.instance_identifier})`;
+  } else if (identifierDiffersFromParceiroCard) {
+    bookmakerDisplayCard += ` (${aposta.instance_identifier})`;
+  }
 
   return (
     <Card 

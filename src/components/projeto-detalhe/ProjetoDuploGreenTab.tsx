@@ -328,11 +328,11 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
       }
       
       const bookmakerIds = [...new Set(allData.map((a: any) => a.bookmaker_id).filter(Boolean))];
-      let bookmakerMap = new Map<string, { nome: string; parceiroNome: string | null; logoUrl: string | null }>();
+      let bookmakerMap = new Map<string, { nome: string; parceiroNome: string | null; logoUrl: string | null; instanceIdentifier: string | null }>();
       if (bookmakerIds.length > 0) {
         const { data: bks } = await supabase
           .from("bookmakers")
-          .select("id, nome, parceiro:parceiros(nome), bookmakers_catalogo(logo_url)")
+          .select("id, nome, instance_identifier, parceiro:parceiros(nome), bookmakers_catalogo(logo_url)")
           .in("id", bookmakerIds);
 
         bookmakerMap = new Map(
@@ -342,6 +342,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
               nome: b.nome, 
               parceiroNome: b.parceiro?.nome ?? null,
               logoUrl: b.bookmakers_catalogo?.logo_url ?? null,
+              instanceIdentifier: b.instance_identifier ?? null,
             },
           ])
         );
@@ -353,6 +354,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
             ...a,
             bookmaker_nome: bkInfo?.nome ?? "Desconhecida",
             parceiro_nome: bkInfo?.parceiroNome ?? undefined,
+            instance_identifier: bkInfo?.instanceIdentifier ?? null,
             logo_url: bkInfo?.logoUrl ?? null,
             operador_nome: bkInfo?.parceiroNome ?? undefined,
           };
