@@ -32,6 +32,7 @@ interface Perna {
   bookmaker_id?: string;
   bookmaker_nome?: string;
   parceiro_nome?: string | null;
+  instance_identifier?: string | null;
   stake?: number;
   lucro_prejuizo?: number;
   resultado?: string;
@@ -50,6 +51,7 @@ interface ApostaBase {
   stake_total?: number | null;
   bookmaker_nome?: string;
   parceiro_nome?: string | null;
+  instance_identifier?: string | null;
   bookmaker_id?: string | null;
   pernas?: Perna[] | null;
   forma_registro?: string;
@@ -441,6 +443,10 @@ function CasasMaisUtilizadasCard({ casas, casasGlobal, accentColor, logoMap, for
           const barWidth = (casa.volume / maxVolume) * 100;
           const roiColor = casa.roi >= 0 ? "text-emerald-500" : "text-red-500";
           const logoUrl = getLogoUrl(casa);
+          // Parse "BET365 (identifier)" format
+          const identifierMatch = casa.casa.match(/^(.+?)\s*\((.+)\)$/);
+          const displayName = identifierMatch ? identifierMatch[1] : casa.casa;
+          const displayIdentifier = identifierMatch ? identifierMatch[2] : null;
           return (
             <Tooltip key={casa.casa}>
               <TooltipTrigger asChild>
@@ -450,12 +456,15 @@ function CasasMaisUtilizadasCard({ casas, casasGlobal, accentColor, logoMap, for
                     <div className="flex flex-col items-center gap-1">
                       <div className="w-9 h-9 rounded-md bg-muted/50 flex items-center justify-center overflow-hidden shrink-0">
                         {logoUrl ? (
-                          <img src={logoUrl} alt={casa.casa} className="w-8 h-8 object-contain" />
+                          <img src={logoUrl} alt={displayName} className="w-8 h-8 object-contain" />
                         ) : (
                           <Building2 className="w-4 h-4 text-muted-foreground" />
                         )}
                       </div>
-                      <span className="text-[10px] font-semibold leading-tight text-center line-clamp-2 uppercase">{casa.casa}</span>
+                      <span className="text-[10px] font-semibold leading-tight text-center line-clamp-2 uppercase">{displayName}</span>
+                      {displayIdentifier && (
+                        <span className="text-[8px] text-muted-foreground font-medium -mt-1 text-center line-clamp-1">{displayIdentifier}</span>
+                      )}
                       <span className="text-[9px] text-muted-foreground/50 font-medium -mt-0.5">{idx + 1}º</span>
                     </div>
                     {/* Qtd */}
@@ -849,11 +858,17 @@ export function VisaoGeralCharts({
       vinculos: Map<string, { apostas: number; volume: number; volumeLiquidado: number; lucro: number }> 
     }>();
 
-    const processEntry = (bookmakerNome: string, parceiroNome: string | null | undefined, stake: number, lucro: number, moeda: string, isLiquidada: boolean) => {
+    const processEntry = (bookmakerNome: string, parceiroNome: string | null | undefined, instanceIdentifier: string | null | undefined, stake: number, lucro: number, moeda: string, isLiquidada: boolean) => {
       let casa: string;
       let vinculo: string;
       
-      if (parceiroNome) {
+      // Se tiver instance_identifier, usar como chave principal (contexto Broker)
+      if (instanceIdentifier) {
+        const separatorIdx = bookmakerNome.indexOf(" - ");
+        const baseCasa = separatorIdx > 0 ? bookmakerNome.substring(0, separatorIdx).trim() : bookmakerNome;
+        casa = `${baseCasa} (${instanceIdentifier})`;
+        vinculo = parceiroNome ? getFirstLastName(parceiroNome) : instanceIdentifier;
+      } else if (parceiroNome) {
         const separatorIdx = bookmakerNome.indexOf(" - ");
         casa = separatorIdx > 0 ? bookmakerNome.substring(0, separatorIdx).trim() : bookmakerNome;
         vinculo = getFirstLastName(parceiroNome);
@@ -929,14 +944,14 @@ export function VisaoGeralCharts({
           const pernaLucro = (moedaConsolidacao === "BRL" && typeof perna.lucro_prejuizo_brl_referencia === "number")
             ? perna.lucro_prejuizo_brl_referencia
             : convertPernaStake(pernaLucroRaw, pernaMoeda);
-          processEntry(nomeCompleto, parceiroNome, pernaStake, pernaLucro, moedaConsolidacao || "BRL", isLiquidada);
+          processEntry(nomeCompleto, parceiroNome, perna.instance_identifier, pernaStake, pernaLucro, moedaConsolidacao || "BRL", isLiquidada);
         });
       } else {
         const nomeCompleto = a.bookmaker_nome || "Desconhecida";
         const parceiroNome = a.parceiro_nome;
         const stakeConsolidado = getConsolidatedStakeLocal(a);
         const lucroConsolidado = getConsolidatedLucroLocal(a);
-        processEntry(nomeCompleto, parceiroNome, stakeConsolidado, lucroConsolidado, moedaConsolidacao || "BRL", isLiquidada);
+        processEntry(nomeCompleto, parceiroNome, a.instance_identifier, stakeConsolidado, lucroConsolidado, moedaConsolidacao || "BRL", isLiquidada);
       }
     });
 
@@ -953,7 +968,9 @@ export function VisaoGeralCharts({
           .trim();
       };
       
-      const normalizedInput = normalizeName(casaName);
+      // Strip "(identifier)" suffix for logo lookup
+      const baseName = casaName.replace(/\s*\(.*\)$/, "");
+      const normalizedInput = normalizeName(baseName);
       
       for (const [key, value] of logoMap.entries()) {
         if (normalizeName(key) === normalizedInput) return value ?? null;
