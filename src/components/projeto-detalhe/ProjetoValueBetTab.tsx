@@ -188,6 +188,7 @@ export function ProjetoValueBetTab({
   const loadedOnceRef = useRef(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [resultadoFilter, setResultadoFilter] = useState<string>("all");
+  const [tipoFilter, setTipoFilter] = useState<"todas" | "simples" | "multiplas">("todas");
   const [viewMode, setViewMode] = useState<"cards" | "list">("list");
   
   // Hook de formatação de moeda do projeto
@@ -860,18 +861,34 @@ export function ProjetoValueBetTab({
   
   const apostasFiltradas = useMemo(() => {
     const { bookmakerIds, parceiroIds, resultados } = tabFilters;
+    const term = searchTerm.toLowerCase();
     
     return apostasListaAtual.filter(a => {
       // Filtro de datas suspeitas
       if (!suspiciousFilter.filterFn(a)) return false;
 
-      // Filtro por texto (busca)
-      const matchesSearch = 
-        (a.evento || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (a.esporte || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (a.selecao || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (a.bookmaker_nome || '').toLowerCase().includes(searchTerm.toLowerCase());
-      if (!matchesSearch) return false;
+      // Filtro por tipo (simples/múltipla)
+      if (tipoFilter !== "todas") {
+        const isMultipla = a.forma_registro === "MULTIPLA" || Boolean(a.tipo_multipla) || (Array.isArray(a.selecoes) && a.selecoes.length > 0);
+        if (tipoFilter === "multiplas" && !isMultipla) return false;
+        if (tipoFilter === "simples" && isMultipla) return false;
+      }
+
+      // Filtro por texto (busca) - inclui seleções de múltiplas
+      if (term) {
+        const matchesBase = 
+          (a.evento || '').toLowerCase().includes(term) ||
+          (a.esporte || '').toLowerCase().includes(term) ||
+          (a.selecao || '').toLowerCase().includes(term) ||
+          (a.bookmaker_nome || '').toLowerCase().includes(term);
+        const matchesSelecoes = Array.isArray(a.selecoes) && a.selecoes.some(
+          (s: any) => (s?.descricao || '').toLowerCase().includes(term)
+        );
+        const matchesPernas = Array.isArray(a.pernas) && (a.pernas as any[]).some(
+          (p: any) => (p?.bookmaker_nome || '').toLowerCase().includes(term) || (p?.selecao || '').toLowerCase().includes(term)
+        );
+        if (!matchesBase && !matchesSelecoes && !matchesPernas) return false;
+      }
 
       // Filtro por bookmaker (Casas)
       if (bookmakerIds.length > 0) {
@@ -888,7 +905,7 @@ export function ProjetoValueBetTab({
       const matchesResultado = resultados.length === 0 || resultados.includes(a.resultado as any);
       return matchesResultado;
     });
-  }, [apostasListaAtual, searchTerm, tabFilters.bookmakerIds, tabFilters.parceiroIds, tabFilters.resultados, bookmakers, suspiciousFilter.active]);
+  }, [apostasListaAtual, searchTerm, tabFilters.bookmakerIds, tabFilters.parceiroIds, tabFilters.resultados, bookmakers, suspiciousFilter.active, tipoFilter]);
 
   // Filtered counts per sub-tab for badge display
   const filteredAbertasCount = useMemo(() => apostasAbertas.filter(a => {
