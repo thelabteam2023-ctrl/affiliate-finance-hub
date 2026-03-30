@@ -706,7 +706,7 @@ export function ProjetoValueBetTab({
       vinculos: Map<string, { apostas: number; volume: number; lucro: number }>;
     }>();
 
-    const extractCasaVinculo = (bookmakerNome: string, operadorNome?: string) => {
+    const extractCasaVinculo = (bookmakerNome: string, operadorNome?: string, instanceIdentifier?: string | null) => {
       // Primeiro tenta extrair do formato "CASA - Operador" no nome do bookmaker
       const separatorIdx = bookmakerNome.indexOf(" - ");
       if (separatorIdx > 0) {
@@ -716,15 +716,16 @@ export function ProjetoValueBetTab({
           vinculo: getFirstLastName(vinculoRaw)
         };
       }
-      // Se não tem separador, usa o operador_nome como vínculo
+      // Prioriza instance_identifier (especialmente em Broker), depois operador_nome
+      const vinculo = instanceIdentifier?.trim() || (operadorNome ? getFirstLastName(operadorNome) : null);
       return { 
         casa: bookmakerNome, 
-        vinculo: operadorNome ? getFirstLastName(operadorNome) : "Sem vínculo" 
+        vinculo: vinculo || "Sem vínculo" 
       };
     };
 
-    const processEntry = (bookmakerNome: string, operadorNome: string | undefined, stake: number, lucro: number) => {
-      const { casa, vinculo } = extractCasaVinculo(bookmakerNome, operadorNome);
+    const processEntry = (bookmakerNome: string, operadorNome: string | undefined, instanceIdentifier: string | null | undefined, stake: number, lucro: number) => {
+      const { casa, vinculo } = extractCasaVinculo(bookmakerNome, operadorNome, instanceIdentifier);
 
       if (!casaMap.has(casa)) {
         casaMap.set(casa, { apostas: 0, volume: 0, lucro: 0, vinculos: new Map() });
@@ -747,7 +748,7 @@ export function ProjetoValueBetTab({
       const bookmakerNome = a.bookmaker_nome || "Desconhecida";
       const stake = getConsolidatedStake(a, convertToConsolidationOficialFn, moedaConsolidacaoVal);
       const lucro = getConsolidatedLucro(a, convertToConsolidationOficialFn, moedaConsolidacaoVal);
-      processEntry(bookmakerNome, a.operador_nome, stake, lucro);
+      processEntry(bookmakerNome, a.operador_nome, a.instance_identifier, stake, lucro);
     });
 
     return Array.from(casaMap.entries())
