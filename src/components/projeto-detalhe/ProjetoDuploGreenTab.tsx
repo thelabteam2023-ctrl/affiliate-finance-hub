@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { CasaDetailModal } from "./CasaDetailModal";
+import { CasaAnalyticsCard } from "./CasaAnalyticsCard";
 import {
   Select,
   SelectContent,
@@ -1477,58 +1478,17 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {casaDataSorted.map((casa) => {
-            const logoUrl = getLogoUrl(casa.casa);
-            return (
-              <Card
-                key={casa.casa}
-                className={`cursor-pointer transition-colors hover:border-lime-500/30 ${casa.lucro >= 0 ? "border-emerald-500/20" : "border-red-500/20"}`}
-                onClick={() => setSelectedPorCasa(casa)}
-              >
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium flex items-center gap-3">
-                    <div className="w-8 h-8 rounded bg-muted/50 flex items-center justify-center overflow-hidden shrink-0">
-                      {logoUrl ? (
-                        <img src={logoUrl} alt={casa.casa} className="w-6 h-6 object-contain" />
-                      ) : (
-                        <Building2 className="w-4 h-4 text-muted-foreground" />
-                      )}
-                    </div>
-                    <div className="flex flex-col min-w-0">
-                      <span className="truncate">{casa.casa}</span>
-                      {casa.vinculos.length > 1 && (
-                        <span className="text-[10px] text-muted-foreground">{casa.vinculos.length} contas</span>
-                      )}
-                    </div>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Apostas</span>
-                      <span className="font-medium tabular-nums">{casa.apostas}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Volume</span>
-                      <span className="font-medium tabular-nums">{formatCurrency(casa.volume)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Lucro</span>
-                      <span className={`font-medium tabular-nums ${casa.lucro >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                        {casa.lucro >= 0 ? '+' : ''}{formatCurrency(casa.lucro)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">ROI</span>
-                      <span className={`font-semibold tabular-nums ${casa.roi >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                        {formatPercent(casa.roi)}
-                      </span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+          {casaDataSorted.map((casa) => (
+            <CasaAnalyticsCard
+              key={casa.casa}
+              casa={casa}
+              logoUrl={getLogoUrl(casa.casa)}
+              formatValue={formatCurrency}
+              formatPercent={formatPercent}
+              onClick={() => setSelectedPorCasa(casa)}
+              accentHoverClass="hover:border-lime-500/40"
+            />
+          ))}
         </div>
       )}
 
