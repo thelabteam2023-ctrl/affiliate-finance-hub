@@ -500,10 +500,19 @@ function CasasMaisUtilizadasCard({ casas, casasGlobal, accentColor, logoMap, for
           {selectedCasa && (
             <div className="space-y-4">
               {/* Resumo consolidado */}
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-4 gap-3">
                 <div className="bg-muted/30 rounded-lg p-3 text-center">
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Volume</p>
                   <p className="text-sm font-semibold tabular-nums mt-1">{fmtMoedaOriginal(selectedCasa.volume, selectedCasa.moeda)}</p>
+                </div>
+                <div className="bg-muted/30 rounded-lg p-3 text-center">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Média/Conta</p>
+                  <p className="text-sm font-semibold tabular-nums mt-1">
+                    {fmtMoedaOriginal(
+                      selectedCasa.vinculos.length > 0 ? selectedCasa.volume / selectedCasa.vinculos.length : 0,
+                      selectedCasa.moeda
+                    )}
+                  </p>
                 </div>
                 <div className="bg-muted/30 rounded-lg p-3 text-center">
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Lucro</p>
