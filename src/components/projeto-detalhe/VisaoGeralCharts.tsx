@@ -985,9 +985,7 @@ export function VisaoGeralCharts({
           .trim();
       };
       
-      // Strip "(identifier)" suffix for logo lookup
-      const baseName = casaName.replace(/\s*\(.*\)$/, "");
-      const normalizedInput = normalizeName(baseName);
+      const normalizedInput = normalizeName(casaName);
       
       for (const [key, value] of logoMap.entries()) {
         if (normalizeName(key) === normalizedInput) return value ?? null;
