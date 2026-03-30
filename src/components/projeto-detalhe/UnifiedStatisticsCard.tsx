@@ -1114,7 +1114,6 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
             >
               Por Tipo
             </TabsTrigger>
-            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="resumo" className="mt-0">
@@ -1135,6 +1134,10 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
 
           <TabsContent value="por-fonte" className="mt-0">
             {renderPorFonte()}
+          </TabsContent>
+
+          <TabsContent value="por-tipo" className="mt-0">
+            {renderPorTipo()}
           </TabsContent>
         </Tabs>
       </CardContent>
