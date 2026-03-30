@@ -1109,7 +1109,7 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
     </div>
   );
 
-
+  return (
     <Card className="border-purple-500/20">
       <CardHeader className="py-3 pb-0">
         <CardTitle className="text-sm font-medium flex items-center gap-2">
