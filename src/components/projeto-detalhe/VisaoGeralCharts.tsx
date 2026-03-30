@@ -534,11 +534,10 @@ function CasasMaisUtilizadasCard({ casas, casasGlobal, accentColor, logoMap, for
                   <Users className="h-3.5 w-3.5 text-muted-foreground" />
                   <span className="text-xs font-medium text-muted-foreground">Detalhamento por conta</span>
                 </div>
-                <div className="grid grid-cols-[1fr_50px_80px_70px_70px_50px] gap-x-2 text-[10px] text-muted-foreground uppercase tracking-wide border-b pb-1.5 mb-1">
+                <div className="grid grid-cols-[1fr_50px_80px_70px_50px] gap-x-2 text-[10px] text-muted-foreground uppercase tracking-wide border-b pb-1.5 mb-1">
                   <span>Conta</span>
                   <span className="text-center">Qtd</span>
                   <span className="text-right">Volume</span>
-                  <span className="text-right">Média</span>
                   <span className="text-right">Lucro</span>
                   <span className="text-right">ROI</span>
                 </div>
@@ -546,16 +545,14 @@ function CasasMaisUtilizadasCard({ casas, casasGlobal, accentColor, logoMap, for
                   const vRoiColor = v.roi >= 0 ? "text-emerald-500" : "text-red-500";
                   const vLucroColor = v.lucro >= 0 ? "text-emerald-500" : "text-red-500";
                   const volumeShare = selectedCasa.volume > 0 ? ((v.volume / selectedCasa.volume) * 100).toFixed(0) : "0";
-                  const avgVolume = v.apostas > 0 ? v.volume / v.apostas : 0;
                   return (
-                    <div key={v.vinculo} className="grid grid-cols-[1fr_50px_80px_70px_70px_50px] gap-x-2 items-center py-1.5 border-b border-border/30 last:border-0">
+                    <div key={v.vinculo} className="grid grid-cols-[1fr_50px_80px_70px_50px] gap-x-2 items-center py-1.5 border-b border-border/30 last:border-0">
                       <div className="flex flex-col">
                         <span className="text-xs font-medium truncate">{v.vinculo}</span>
                         <span className="text-[9px] text-muted-foreground">{volumeShare}% do volume</span>
                       </div>
                       <span className="text-center text-xs text-muted-foreground tabular-nums">{v.apostas}</span>
                       <span className="text-right text-xs font-medium tabular-nums">{fmtMoedaOriginal(v.volume, selectedCasa.moeda)}</span>
-                      <span className="text-right text-xs text-muted-foreground tabular-nums">{fmtMoedaOriginal(avgVolume, selectedCasa.moeda)}</span>
                       <span className={`text-right text-xs font-medium tabular-nums ${vLucroColor}`}>
                         {v.lucro >= 0 ? '+' : ''}{fmtMoedaOriginal(v.lucro, selectedCasa.moeda)}
                       </span>
