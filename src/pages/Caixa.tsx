@@ -849,26 +849,19 @@ export default function Caixa() {
     
     // Despesas administrativas - mostrar grupo/finalidade com badge
     if (transacao.tipo_transacao === "DESPESA_ADMINISTRATIVA") {
-      // Extrair detalhe da descrição: "Despesa administrativa - CATEGORIA: detalhe" ou "Despesa administrativa - : detalhe"
-      const match = transacao.descricao?.match(/^Despesa administrativa\s*-\s*(?:.*?)(?::\s*(.+))?$/i);
-      const detalhe = match?.[1]?.trim();
+      // Extrair categoria e detalhe: "Despesa administrativa (confirmada) - CATEGORIA: detalhe"
+      const catMatch = transacao.descricao?.match(/^Despesa administrativa\s*(?:confirmada\s*)?-\s*([^:]+?)(?::\s*(.+))?$/i);
+      const categoriaRaw = catMatch?.[1]?.trim() || "";
+      const detalhe = catMatch?.[2]?.trim() || "";
       
-      // Buscar grupo pela descrição no mapa de despesas administrativas
-      let grupoKey = "OUTROS";
-      if (detalhe) {
+      // 1. Tentar resolver grupo pela categoria extraída da descrição (ex: "Recursos Humanos")
+      let grupoKey = categoriaRaw ? getGrupoFromCategoria(categoriaRaw) : "OUTROS";
+      
+      // 2. Fallback: buscar grupo pela descrição no mapa de despesas administrativas
+      if (grupoKey === "OUTROS" && detalhe) {
         const lookupKey = detalhe.trim().toLowerCase();
         if (despesasAdminGrupoMap[lookupKey]) {
           grupoKey = despesasAdminGrupoMap[lookupKey].grupo;
-        }
-      }
-      // Fallback: tentar extrair categoria do formato "Despesa administrativa - CATEGORIA: detalhe"
-      if (grupoKey === "OUTROS") {
-        const catMatch = transacao.descricao?.match(/^Despesa administrativa\s*-\s*([^:]+?)(?::\s*.+)?$/i);
-        if (catMatch) {
-          const categoriaRaw = catMatch[1].trim();
-          if (categoriaRaw) {
-            grupoKey = getGrupoFromCategoria(categoriaRaw);
-          }
         }
       }
       
