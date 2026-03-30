@@ -889,7 +889,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
 
     return Array.from(casaMap.entries())
       .map(([casa, data]) => {
-        const roi = data.volume > 0 ? (data.lucro / data.volume) * 100 : 0;
+        const roi = data.volumeLiquidado > 0 ? (data.lucro / data.volumeLiquidado) * 100 : 0;
         return {
           casa,
           apostas: data.apostas,
@@ -902,7 +902,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
               apostas: v.apostas,
               volume: v.volume,
               lucro: v.lucro,
-              roi: v.volume > 0 ? (v.lucro / v.volume) * 100 : 0,
+              roi: v.volumeLiquidado > 0 ? (v.lucro / v.volumeLiquidado) * 100 : 0,
             }))
             .sort((a, b) => b.volume - a.volume),
         };
