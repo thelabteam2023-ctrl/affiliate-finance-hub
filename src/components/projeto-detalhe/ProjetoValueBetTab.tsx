@@ -105,6 +105,7 @@ interface Aposta {
   bookmaker_id: string;
   bookmaker_nome?: string;
   parceiro_nome?: string;
+  instance_identifier?: string | null;
   logo_url?: string | null;
   operador_nome?: string;
   modo_entrada?: string;
