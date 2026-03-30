@@ -133,7 +133,7 @@ async function fetchApostasFiltradas(
   }
 
   return (data || []).map((item: any) => {
-    const bkInfo = bookmakerMap[item.bookmaker_id] || { nome: 'Desconhecida', parceiro_nome: null, logo_url: null };
+    const bkInfo = bookmakerMap[item.bookmaker_id] || { nome: 'Desconhecida', parceiro_nome: null, logo_url: null, instance_identifier: null };
     return {
       id: item.id, data_aposta: item.data_aposta,
       lucro_prejuizo: item.lucro_prejuizo, pl_consolidado: item.pl_consolidado,
@@ -142,6 +142,7 @@ async function fetchApostasFiltradas(
       esporte: item.esporte || item.estrategia || 'N/A',
       bookmaker_id: item.bookmaker_id || 'unknown',
       bookmaker_nome: bkInfo.nome, parceiro_nome: bkInfo.parceiro_nome, logo_url: bkInfo.logo_url,
+      instance_identifier: bkInfo.instance_identifier,
       forma_registro: item.forma_registro, estrategia: item.estrategia, bonus_id: item.bonus_id,
       moeda_operacao: item.moeda_operacao,
       stake_consolidado: item.stake_consolidado,
