@@ -921,13 +921,11 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         // Usar evento direto (campo já unificado no banco)
         setEvento(aposta.evento || "");
         setOdd(aposta.odd?.toString() || "");
-        const stakeSplit = deriveStakeSplit({
+        const stakeSplit = derivePersistedStakeSplit({
           stake: aposta.stake,
           stake_total: aposta.stake_total,
           stake_real: aposta.stake_real,
           stake_freebet: aposta.stake_freebet,
-          usar_freebet: aposta.usar_freebet,
-          fonte_saldo: aposta.fonte_saldo,
         });
         if (aposta.modo_entrada !== "EXCHANGE") {
           const persistedStakeReal = Number(aposta.stake_real ?? stakeSplit.stakeReal ?? 0);
