@@ -37,6 +37,7 @@ interface DespesaAdministrativa {
   categoria: string;
   grupo?: string;
   subcategoria_rh?: string | null;
+  operador_id?: string | null;
   descricao: string;
   valor: number;
   data_despesa: string;
