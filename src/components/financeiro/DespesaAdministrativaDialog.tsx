@@ -181,11 +181,20 @@ export function DespesaAdministrativaDialog({
       return;
     }
 
-    // Validação: RH requer subcategoria
+    // Validação: RH requer subcategoria e operador
     if (formData.grupo === "RECURSOS_HUMANOS" && !formData.subcategoria_rh) {
       toast({
         title: "Subcategoria obrigatória",
         description: "Para despesas de RH, selecione o tipo: Salário, Comissão, etc.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (formData.grupo === "RECURSOS_HUMANOS" && !formData.operador_id) {
+      toast({
+        title: "Operador obrigatório",
+        description: "Para despesas de RH, vincule o pagamento a um operador.",
         variant: "destructive",
       });
       return;
