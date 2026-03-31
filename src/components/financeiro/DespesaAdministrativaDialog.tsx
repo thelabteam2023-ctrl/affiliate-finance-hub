@@ -71,7 +71,7 @@ export function DespesaAdministrativaDialog({
   const { toast } = useToast();
   const { workspaceId } = useWorkspace();
   const [loading, setLoading] = useState(false);
-  
+  const [operadores, setOperadores] = useState<OperadorOption[]>([]);
   // Estado para redirecionamento ao PagamentoOperadorDialog
   const [showPagamentoOperador, setShowPagamentoOperador] = useState(false);
   
