@@ -76,9 +76,10 @@ export function DespesaAdministrativaDialog({
   const [showPagamentoOperador, setShowPagamentoOperador] = useState(false);
   
   const [formData, setFormData] = useState<DespesaAdministrativa>({
-    categoria: "", // Agora preenchido automaticamente pelo grupo
+    categoria: "",
     grupo: "UTILIDADES_E_SERVICOS_BASICOS",
     subcategoria_rh: null,
+    operador_id: null,
     descricao: "",
     valor: 0,
     data_despesa: new Date().toISOString().split("T")[0],
