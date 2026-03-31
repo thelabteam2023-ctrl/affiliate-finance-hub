@@ -220,6 +220,7 @@ export function OperadorDialog({
   };
 
   const fetchPagamentosOperador = async (operadorId: string) => {
+    // Fetch from pagamentos_operador
     const { data, error } = await supabase
       .from("pagamentos_operador")
       .select(`
@@ -238,14 +239,40 @@ export function OperadorDialog({
       .eq("operador_id", operadorId)
       .order("data_pagamento", { ascending: false });
 
-    if (!error && data) {
-      setPagamentos(
-        data.map((p: any) => ({
-          ...p,
-          projeto_nome: p.projetos?.nome || null,
-        }))
-      );
-    }
+    // Also fetch HR administrative expenses from cash_ledger
+    const { data: hrData } = await supabase
+      .from("cash_ledger")
+      .select("id, valor, moeda, data_transacao, descricao, status, auditoria_metadata")
+      .eq("operador_id", operadorId)
+      .eq("tipo_transacao", "DESPESA_ADMINISTRATIVA")
+      .order("data_transacao", { ascending: false });
+
+    const pagFromOperador = (data || []).map((p: any) => ({
+      ...p,
+      projeto_nome: p.projetos?.nome || null,
+    }));
+
+    const pagFromHR = (hrData || []).map((h: any) => {
+      const meta = h.auditoria_metadata || {};
+      return {
+        id: h.id,
+        operador_id: operadorId,
+        projeto_id: null,
+        tipo_pagamento: meta.detalhe || "SALARIO",
+        valor: Number(h.valor),
+        moeda: h.moeda || "BRL",
+        data_pagamento: h.data_transacao,
+        data_competencia: null,
+        descricao: h.descricao || `Despesa administrativa - ${meta.grupo || "RH"}`,
+        status: h.status === "CONFIRMADO" ? "CONFIRMADO" : h.status,
+        projeto_nome: null,
+      };
+    });
+
+    const allPagamentos = [...pagFromOperador, ...pagFromHR]
+      .sort((a: any, b: any) => new Date(b.data_pagamento).getTime() - new Date(a.data_pagamento).getTime());
+
+    setPagamentos(allPagamentos);
   };
 
   const validateCPFInput = async (cpf: string) => {

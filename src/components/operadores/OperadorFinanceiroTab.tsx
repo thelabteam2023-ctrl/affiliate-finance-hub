@@ -139,7 +139,7 @@ export function OperadorFinanceiroTab({ operadorId, operadorNome }: OperadorFina
       if (projError) throw projError;
       setProjetos(projData || []);
 
-      // Fetch pagamentos
+      // Fetch pagamentos from pagamentos_operador
       const { data: pagData, error: pagError } = await supabase
         .from("pagamentos_operador")
         .select(`
@@ -158,13 +158,43 @@ export function OperadorFinanceiroTab({ operadorId, operadorNome }: OperadorFina
         .order("data_pagamento", { ascending: false });
 
       if (pagError) throw pagError;
-      setPagamentos(
-        (pagData || []).map((p: any) => ({
-          ...p,
-          projeto_id: p.projeto_id || null,
-          projeto_nome: p.projetos?.nome || null,
-        }))
-      );
+
+      // Also fetch HR administrative expenses from cash_ledger
+      const { data: hrData } = await supabase
+        .from("cash_ledger")
+        .select("id, valor, moeda, data_transacao, descricao, status, auditoria_metadata")
+        .eq("operador_id", operadorId)
+        .eq("tipo_transacao", "DESPESA_ADMINISTRATIVA")
+        .order("data_transacao", { ascending: false });
+
+      const pagFromOperador = (pagData || []).map((p: any) => ({
+        ...p,
+        projeto_id: p.projeto_id || null,
+        projeto_nome: p.projetos?.nome || null,
+      }));
+
+      const pagFromHR = (hrData || []).map((h: any) => {
+        const meta = h.auditoria_metadata || {};
+        return {
+          id: h.id,
+          tipo_pagamento: meta.detalhe || "SALARIO",
+          valor: Number(h.valor),
+          moeda: h.moeda || "BRL",
+          data_pagamento: h.data_transacao,
+          data_competencia: null,
+          descricao: h.descricao || `Despesa administrativa - ${meta.grupo || "RH"}`,
+          status: h.status === "CONFIRMADO" ? "CONFIRMADO" : h.status,
+          projeto_id: null,
+          projeto_nome: null,
+          _source: "cash_ledger",
+        };
+      });
+
+      // Merge and sort by date desc
+      const allPagamentos = [...pagFromOperador, ...pagFromHR]
+        .sort((a, b) => new Date(b.data_pagamento).getTime() - new Date(a.data_pagamento).getTime());
+
+      setPagamentos(allPagamentos);
 
       // Fetch entregas do operador
       if (projData && projData.length > 0) {
