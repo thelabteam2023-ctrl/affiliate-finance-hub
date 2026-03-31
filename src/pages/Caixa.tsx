@@ -890,8 +890,14 @@ export default function Caixa() {
       
       
       const grupoInfo = getGrupoInfo(grupoKey);
+      
+      // Show operator name when linked (HR payments)
+      const operadorNome = meta?.operador_nome || 
+        (transacao.operador_id && operadoresMap[transacao.operador_id]) || null;
+      
       return { 
-        primary: detalhe || "Despesa",
+        primary: operadorNome || detalhe || "Despesa",
+        secondary: operadorNome ? (detalhe || undefined) : undefined,
         badgeLabel: grupoInfo.label,
         badgeColor: grupoInfo.color,
         BadgeIcon: grupoInfo.icon,
