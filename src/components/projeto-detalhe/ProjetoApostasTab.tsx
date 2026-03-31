@@ -1284,15 +1284,12 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
 
   // Mapa de bookmaker_id -> nome completo com parceiro para enriquecer nomes no SurebetCard
   const bookmakerNomeMap = useMemo(() => {
-    const map = new Map<string, string>();
-    bookmakers.forEach(bk => {
-      const shortName = getFirstLastName(bk.parceiro?.nome || "");
-      const identifier = bk.instance_identifier;
-      let nomeCompleto = shortName ? `${bk.nome} - ${shortName}` : bk.nome;
-      if (identifier) nomeCompleto += ` (${identifier})`;
-      map.set(bk.id, nomeCompleto);
-    });
-    return map;
+    return buildBookmakerNomeMap(bookmakers.map(bk => ({
+      id: bk.id,
+      nome: bk.nome,
+      parceiro_nome: bk.parceiro?.nome,
+      instance_identifier: bk.instance_identifier,
+    })));
   }, [bookmakers]);
 
   // formatCurrency definido no escopo do componente
