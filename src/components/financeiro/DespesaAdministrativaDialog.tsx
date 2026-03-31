@@ -21,17 +21,23 @@ import { Switch } from "@/components/ui/switch";
 import { DatePicker } from "@/components/ui/date-picker";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, Users } from "lucide-react";
 import { OrigemPagamentoSelect, OrigemPagamentoData } from "@/components/programa-indicacao/OrigemPagamentoSelect";
 import { PagamentoOperadorDialog } from "@/components/operadores/PagamentoOperadorDialog";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { GRUPOS_DESPESA_LIST, getGrupoInfo, SUBCATEGORIAS_RH_LIST, getSubcategoriaRHInfo } from "@/lib/despesaGrupos";
+
+interface OperadorOption {
+  operador_id: string;
+  nome: string;
+}
 
 interface DespesaAdministrativa {
   id?: string;
   categoria: string;
   grupo?: string;
   subcategoria_rh?: string | null;
+  operador_id?: string | null;
   descricao: string;
   valor: number;
   data_despesa: string;
@@ -65,14 +71,15 @@ export function DespesaAdministrativaDialog({
   const { toast } = useToast();
   const { workspaceId } = useWorkspace();
   const [loading, setLoading] = useState(false);
-  
+  const [operadores, setOperadores] = useState<OperadorOption[]>([]);
   // Estado para redirecionamento ao PagamentoOperadorDialog
   const [showPagamentoOperador, setShowPagamentoOperador] = useState(false);
   
   const [formData, setFormData] = useState<DespesaAdministrativa>({
-    categoria: "", // Agora preenchido automaticamente pelo grupo
+    categoria: "",
     grupo: "UTILIDADES_E_SERVICOS_BASICOS",
     subcategoria_rh: null,
+    operador_id: null,
     descricao: "",
     valor: 0,
     data_despesa: new Date().toISOString().split("T")[0],
@@ -91,6 +98,24 @@ export function DespesaAdministrativaDialog({
     cotacao: null,
   });
 
+  // Fetch operadores when dialog opens and group is RH
+  useEffect(() => {
+    if (open) {
+      const fetchOperadores = async () => {
+        const { data, error } = await supabase
+          .from("v_operadores_workspace")
+          .select("operador_id, nome")
+          .eq("is_active", true)
+          .not("operador_id", "is", null)
+          .order("nome");
+        if (!error && data) {
+          setOperadores(data.filter(op => op.operador_id) as OperadorOption[]);
+        }
+      };
+      fetchOperadores();
+    }
+  }, [open]);
+
   useEffect(() => {
     if (despesa) {
       setFormData({
@@ -98,8 +123,8 @@ export function DespesaAdministrativaDialog({
         data_despesa: despesa.data_despesa.split("T")[0],
         grupo: despesa.grupo || "OUTROS",
         subcategoria_rh: (despesa as any).subcategoria_rh || null,
+        operador_id: (despesa as any).operador_id || null,
       });
-      // Set origem data from existing despesa
       setOrigemData({
         origemTipo: (despesa.origem_tipo as "CAIXA_OPERACIONAL" | "PARCEIRO_CONTA" | "PARCEIRO_WALLET") || "CAIXA_OPERACIONAL",
         origemParceiroId: despesa.origem_parceiro_id || null,
@@ -116,6 +141,7 @@ export function DespesaAdministrativaDialog({
         categoria: "",
         grupo: "UTILIDADES_E_SERVICOS_BASICOS",
         subcategoria_rh: null,
+        operador_id: null,
         descricao: "",
         valor: 0,
         data_despesa: new Date().toISOString().split("T")[0],
@@ -155,11 +181,20 @@ export function DespesaAdministrativaDialog({
       return;
     }
 
-    // Validação: RH requer subcategoria
+    // Validação: RH requer subcategoria e operador
     if (formData.grupo === "RECURSOS_HUMANOS" && !formData.subcategoria_rh) {
       toast({
         title: "Subcategoria obrigatória",
         description: "Para despesas de RH, selecione o tipo: Salário, Comissão, etc.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (formData.grupo === "RECURSOS_HUMANOS" && !formData.operador_id) {
+      toast({
+        title: "Operador obrigatório",
+        description: "Para despesas de RH, vincule o pagamento a um operador.",
         variant: "destructive",
       });
       return;
@@ -188,6 +223,9 @@ export function DespesaAdministrativaDialog({
 
       const grupoInfo = getGrupoInfo(formData.grupo || "OUTROS");
       const subcategoriaInfo = formData.subcategoria_rh ? getSubcategoriaRHInfo(formData.subcategoria_rh) : null;
+      const operadorSelecionado = formData.operador_id 
+        ? operadores.find(op => op.operador_id === formData.operador_id) 
+        : null;
       
       // Categoria personalizada para RH incluindo subcategoria
       const categoriaLabel = formData.grupo === "RECURSOS_HUMANOS" && subcategoriaInfo
@@ -195,9 +233,10 @@ export function DespesaAdministrativaDialog({
         : grupoInfo.label;
       
       const payload: any = {
-        categoria: categoriaLabel, // Categoria recebe o label do grupo para compatibilidade
+        categoria: categoriaLabel,
         grupo: formData.grupo,
         subcategoria_rh: formData.grupo === "RECURSOS_HUMANOS" ? formData.subcategoria_rh : null,
+        operador_id: formData.grupo === "RECURSOS_HUMANOS" ? (formData.operador_id || null) : null,
         descricao: formData.descricao || null,
         valor: formData.valor,
         data_despesa: formData.data_despesa,
@@ -503,9 +542,10 @@ export function DespesaAdministrativaDialog({
               origem_conta_bancaria_id: origemData.origemContaBancariaId || null,
               origem_wallet_id: origemData.origemWalletId || null,
               data_transacao: formData.data_despesa,
-              descricao: `Despesa administrativa - ${categoriaLabel}${formData.descricao ? `: ${formData.descricao}` : ''}`,
+              descricao: `Despesa administrativa - ${categoriaLabel}${operadorSelecionado ? ` [${operadorSelecionado.nome}]` : ''}${formData.descricao ? `: ${formData.descricao}` : ''}`,
               status: "CONFIRMADO",
-              auditoria_metadata: { grupo: formData.grupo, categoria: categoriaLabel },
+              auditoria_metadata: { grupo: formData.grupo, categoria: categoriaLabel, operador_id: formData.operador_id, operador_nome: operadorSelecionado?.nome },
+              operador_id: formData.operador_id || null,
             });
           
           if (ledgerError) throw ledgerError;
@@ -608,8 +648,8 @@ export function DespesaAdministrativaDialog({
                   setFormData({ 
                     ...formData, 
                     grupo: value,
-                    // Limpar subcategoria se mudar de grupo
-                    subcategoria_rh: value === "RECURSOS_HUMANOS" ? formData.subcategoria_rh : null
+                    subcategoria_rh: value === "RECURSOS_HUMANOS" ? formData.subcategoria_rh : null,
+                    operador_id: value === "RECURSOS_HUMANOS" ? formData.operador_id : null,
                   });
                 }}
               >
@@ -673,6 +713,35 @@ export function DespesaAdministrativaDialog({
                     {getSubcategoriaRHInfo(formData.subcategoria_rh)?.description}
                   </p>
                 )}
+
+                {/* Seleção de Operador (destinatário) */}
+                <div className="space-y-2 mt-3">
+                  <Label className="flex items-center gap-1.5">
+                    <Users className="h-3.5 w-3.5" />
+                    Destinatário (Operador) *
+                  </Label>
+                  <Select
+                    value={formData.operador_id || "none"}
+                    onValueChange={(value) => {
+                      setFormData({ ...formData, operador_id: value === "none" ? null : value });
+                    }}
+                  >
+                    <SelectTrigger className={!formData.operador_id ? "border-destructive" : ""}>
+                      <SelectValue placeholder="Selecione o operador" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nenhum operador selecionado</SelectItem>
+                      {operadores.map((op) => (
+                        <SelectItem key={op.operador_id} value={op.operador_id}>
+                          {op.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Vincule o pagamento a um operador cadastrado para rastreabilidade
+                  </p>
+                </div>
               </div>
             )}
 

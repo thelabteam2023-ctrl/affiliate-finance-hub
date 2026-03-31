@@ -3135,6 +3135,7 @@ export type Database = {
           descricao: string | null
           grupo: string | null
           id: string
+          operador_id: string | null
           origem_caixa_operacional: boolean | null
           origem_conta_bancaria_id: string | null
           origem_parceiro_id: string | null
@@ -3159,6 +3160,7 @@ export type Database = {
           descricao?: string | null
           grupo?: string | null
           id?: string
+          operador_id?: string | null
           origem_caixa_operacional?: boolean | null
           origem_conta_bancaria_id?: string | null
           origem_parceiro_id?: string | null
@@ -3183,6 +3185,7 @@ export type Database = {
           descricao?: string | null
           grupo?: string | null
           id?: string
+          operador_id?: string | null
           origem_caixa_operacional?: boolean | null
           origem_conta_bancaria_id?: string | null
           origem_parceiro_id?: string | null
@@ -3199,6 +3202,34 @@ export type Database = {
           workspace_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "despesas_administrativas_operador_id_fkey"
+            columns: ["operador_id"]
+            isOneToOne: false
+            referencedRelation: "operadores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "despesas_administrativas_operador_id_fkey"
+            columns: ["operador_id"]
+            isOneToOne: false
+            referencedRelation: "v_operador_comparativo"
+            referencedColumns: ["operador_id"]
+          },
+          {
+            foreignKeyName: "despesas_administrativas_operador_id_fkey"
+            columns: ["operador_id"]
+            isOneToOne: false
+            referencedRelation: "v_operador_performance"
+            referencedColumns: ["operador_id"]
+          },
+          {
+            foreignKeyName: "despesas_administrativas_operador_id_fkey"
+            columns: ["operador_id"]
+            isOneToOne: false
+            referencedRelation: "v_operadores_workspace"
+            referencedColumns: ["operador_id"]
+          },
           {
             foreignKeyName: "despesas_administrativas_origem_conta_bancaria_id_fkey"
             columns: ["origem_conta_bancaria_id"]
