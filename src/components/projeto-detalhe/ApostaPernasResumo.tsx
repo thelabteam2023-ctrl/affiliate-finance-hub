@@ -1,6 +1,7 @@
 import { Badge, SelectionBadge } from "@/components/ui/badge";
 import { Building2 } from "lucide-react";
 import { cn, getFirstLastName } from "@/lib/utils";
+import { formatBookmakerDisplay } from "@/lib/bookmaker-display";
 
 export interface Perna {
   bookmaker_id?: string;
