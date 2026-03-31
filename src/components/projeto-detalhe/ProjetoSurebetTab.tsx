@@ -672,17 +672,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
   // "Visão Geral" e "Por Casa" usam TODOS os dados (apenas filtro de data)
   
   // Mapa de bookmaker_id -> nome completo com parceiro para enriquecer dados legados no SurebetCard
-  const bookmakerNomeMap = useMemo(() => {
-    const map = new Map<string, string>();
-    bookmakers.forEach(bk => {
-      const shortName = getFirstLastName(bk.parceiro_nome || "");
-      const identifier = bk.instance_identifier;
-      let nomeCompleto = shortName ? `${bk.nome} - ${shortName}` : bk.nome;
-      if (identifier) nomeCompleto += ` (${identifier})`;
-      map.set(bk.id, nomeCompleto);
-    });
-    return map;
-  }, [bookmakers]);
+  const bookmakerNomeMap = useMemo(() => buildBookmakerNomeMap(bookmakers), [bookmakers]);
 
   // FILTRO PARA OPERAÇÕES: Aplica filtros dimensionais (Casa/Parceiro)
   // Este filtro afeta APENAS a sub-aba "Operações"

@@ -633,15 +633,7 @@ export function ProjetoValueBetTab({
   }, [apostas, handleSurebetPernaResolve]);
 
   // Mapa de bookmaker_id -> nome completo com parceiro para SurebetCard
-  const bookmakerNomeMap = useMemo(() => {
-    const map = new Map<string, string>();
-    bookmakers.forEach(bk => {
-      const shortName = getFirstLastName(bk.parceiro?.nome || "");
-      const nomeCompleto = shortName ? `${bk.nome} - ${shortName}` : bk.nome;
-      map.set(bk.id, nomeCompleto);
-    });
-    return map;
-  }, [bookmakers]);
+  const bookmakerNomeMap = useMemo(() => buildBookmakerNomeMap(bookmakers), [bookmakers]);
 
   // Filtrar pendentes fora do período para KPIs (pendentes são injetadas para visibilidade na lista, mas não devem inflar métricas)
   const apostasParaKpi = useMemo(() => 
