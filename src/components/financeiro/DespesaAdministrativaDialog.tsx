@@ -699,6 +699,35 @@ export function DespesaAdministrativaDialog({
                     {getSubcategoriaRHInfo(formData.subcategoria_rh)?.description}
                   </p>
                 )}
+
+                {/* Seleção de Operador (destinatário) */}
+                <div className="space-y-2 mt-3">
+                  <Label className="flex items-center gap-1.5">
+                    <Users className="h-3.5 w-3.5" />
+                    Destinatário (Operador) *
+                  </Label>
+                  <Select
+                    value={formData.operador_id || "none"}
+                    onValueChange={(value) => {
+                      setFormData({ ...formData, operador_id: value === "none" ? null : value });
+                    }}
+                  >
+                    <SelectTrigger className={!formData.operador_id ? "border-destructive" : ""}>
+                      <SelectValue placeholder="Selecione o operador" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nenhum operador selecionado</SelectItem>
+                      {operadores.map((op) => (
+                        <SelectItem key={op.operador_id} value={op.operador_id}>
+                          {op.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Vincule o pagamento a um operador cadastrado para rastreabilidade
+                  </p>
+                </div>
               </div>
             )}
 
