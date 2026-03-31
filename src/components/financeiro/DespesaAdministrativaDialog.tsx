@@ -30,6 +30,19 @@ import { GRUPOS_DESPESA_LIST, getGrupoInfo, SUBCATEGORIAS_RH_LIST, getSubcategor
 interface OperadorOption {
   operador_id: string;
   nome: string;
+  email: string | null;
+  tipo_contrato: string | null;
+}
+
+function toTitleCase(str: string): string {
+  return str
+    .toLowerCase()
+    .split(" ")
+    .map((word) => {
+      if (["de", "da", "do", "dos", "das", "e"].includes(word)) return word;
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(" ");
 }
 
 interface DespesaAdministrativa {
