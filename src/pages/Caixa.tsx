@@ -861,8 +861,15 @@ export default function Caixa() {
       const categoriaRaw = catMatch?.[1]?.trim() || "";
       const detalhe = catMatch?.[2]?.trim() || "";
       
+      // 0. Prioridade máxima: auditoria_metadata.grupo (registros novos)
+      const meta = transacao.auditoria_metadata as any;
+      let grupoKey = meta?.grupo || "";
+      
       // 1. Tentar resolver grupo pela categoria extraída da descrição (ex: "Recursos Humanos")
-      let grupoKey = categoriaRaw ? getGrupoFromCategoria(categoriaRaw) : "OUTROS";
+      if (!grupoKey && categoriaRaw) {
+        grupoKey = getGrupoFromCategoria(categoriaRaw);
+      }
+      if (!grupoKey) grupoKey = "OUTROS";
       
       // 2. Fallback: buscar grupo pela descrição no mapa de despesas administrativas
       if (grupoKey === "OUTROS" && detalhe) {
