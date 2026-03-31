@@ -53,6 +53,7 @@ import { TabFiltersBar } from "./TabFiltersBar";
 import { StandardTimeFilter } from "./StandardTimeFilter";
 import { useTabFilters } from "@/hooks/useTabFilters";
 import { cn, getFirstLastName } from "@/lib/utils";
+import { formatBookmakerProjectName, buildBookmakerNomeMap } from "@/lib/bookmaker-display";
 import { parsePernaFromJson } from "@/types/apostasUnificada";
 import { OperationsSubTabHeader, type HistorySubTab, SuspiciousDateFilterButton, useSuspiciousDateFilter, isSuspiciousDate } from "./operations";
 import { parseLocalDateTime } from "@/utils/dateUtils";
@@ -1284,15 +1285,12 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
 
   // Mapa de bookmaker_id -> nome completo com parceiro para enriquecer nomes no SurebetCard
   const bookmakerNomeMap = useMemo(() => {
-    const map = new Map<string, string>();
-    bookmakers.forEach(bk => {
-      const shortName = getFirstLastName(bk.parceiro?.nome || "");
-      const identifier = bk.instance_identifier;
-      let nomeCompleto = shortName ? `${bk.nome} - ${shortName}` : bk.nome;
-      if (identifier) nomeCompleto += ` (${identifier})`;
-      map.set(bk.id, nomeCompleto);
-    });
-    return map;
+    return buildBookmakerNomeMap(bookmakers.map(bk => ({
+      id: bk.id,
+      nome: bk.nome,
+      parceiro_nome: bk.parceiro?.nome,
+      instance_identifier: bk.instance_identifier,
+    })));
   }, [bookmakers]);
 
   // formatCurrency definido no escopo do componente
@@ -1713,8 +1711,11 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
 
               // Single-entry simples → ApostaCard normal
               const displayInfo = getApostaDisplayInfo(aposta);
-              const bookmakerBase = aposta.bookmaker?.nome?.split(" - ")[0] || aposta.bookmaker?.nome;
-              const parceiroNome = aposta.bookmaker?.parceiro?.nome;
+              const bookmakerNomeFormatted = formatBookmakerProjectName(
+                aposta.bookmaker?.nome || "—",
+                aposta.bookmaker?.parceiro?.nome,
+                (aposta.bookmaker as any)?.instance_identifier,
+              );
               const logoUrl = aposta.bookmaker?.bookmakers_catalogo?.logo_url;
               
               let estrategia: string = aposta.estrategia || "NORMAL";
@@ -1735,9 +1736,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                  status: aposta.status,
                  lucro_prejuizo: aposta.lucro_prejuizo,
                  estrategia: aposta.estrategia,
-                 bookmaker_nome: bookmakerBase,
-                 parceiro_nome: parceiroNome,
-                 instance_identifier: (aposta.bookmaker as any)?.instance_identifier,
+                  bookmaker_nome: bookmakerNomeFormatted,
                  logo_url: logoUrl,
                  moeda: aposta.moeda_operacao || "BRL",
                  pl_consolidado: aposta.pl_consolidado ?? undefined,

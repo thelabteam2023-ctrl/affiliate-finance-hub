@@ -8,6 +8,7 @@ import { DateAnomalyBadge } from "@/components/ui/date-anomaly-alert";
 import { detectDateAnomaly } from "@/lib/dateAnomalyDetection";
 import { ApostaPernasResumo, ApostaPernasInline, getModeloOperacao, Perna } from "./ApostaPernasResumo";
 import { cn, getFirstLastName } from "@/lib/utils";
+import { formatBookmakerProjectName } from "@/lib/bookmaker-display";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { parseLocalDateTime } from "@/utils/dateUtils";
@@ -408,26 +409,14 @@ export function ApostaCard({
   };
   
   if (variant === "list") {
-    // Extrair nome base da casa (antes do " - ") para exibição limpa
-    const bookmakerBase = aposta.bookmaker_nome?.split(" - ")[0] || aposta.bookmaker_nome;
-    // Extrair vínculo (parceiro) - pode vir do parceiro_nome ou da parte após " - " no bookmaker_nome
-    const vinculoFull = aposta.parceiro_nome || aposta.bookmaker_nome?.split(" - ")[1]?.trim();
-    // Abreviar para primeiro e último nome
-    const vinculoAbreviado = vinculoFull ? getFirstLastName(vinculoFull) : null;
-    
-    // Formato padronizado: "CASA - PARCEIRO ABREVIADO (IDENTIFICADOR)"
-    // Evitar duplicação quando instance_identifier é igual ao primeiro nome do parceiro
-    const identifierDiffersFromParceiro = aposta.instance_identifier && 
-      vinculoAbreviado && 
-      aposta.instance_identifier.toUpperCase() !== vinculoAbreviado.split(" ")[0]?.toUpperCase();
-    let bookmakerDisplay = vinculoAbreviado 
-      ? `${bookmakerBase} - ${vinculoAbreviado}`
-      : bookmakerBase;
-    if (aposta.instance_identifier && !vinculoAbreviado) {
-      bookmakerDisplay += ` (${aposta.instance_identifier})`;
-    } else if (identifierDiffersFromParceiro) {
-      bookmakerDisplay += ` (${aposta.instance_identifier})`;
-    }
+    // Use centralized formatter - bookmaker_nome may already be pre-formatted
+    const bookmakerDisplay = aposta.parceiro_nome 
+      ? formatBookmakerProjectName(
+          aposta.bookmaker_nome?.split(" - ")[0] || aposta.bookmaker_nome || "Casa",
+          aposta.parceiro_nome,
+          aposta.instance_identifier,
+        )
+      : aposta.bookmaker_nome || "Casa";
     
     // Para operações com múltiplas pernas (3+), usa layout vertical
     const hasMultipleLegs = hasPernas && (aposta.pernas?.length || 0) >= 3;
@@ -655,7 +644,7 @@ export function ApostaCard({
                       </div>
                     )}
                     <span className="truncate flex-1 uppercase text-muted-foreground">
-                      {aposta.bookmaker_nome}{aposta.parceiro_nome ? ` - ${getFirstLastName(aposta.parceiro_nome)}` : ''}
+                      {formatBookmakerProjectName(aposta.bookmaker_nome || "Casa", aposta.parceiro_nome, aposta.instance_identifier)}
                     </span>
                     <span className="font-medium shrink-0 text-foreground">@{(aposta.primary_odd ?? aposta.odd ?? 0).toFixed(2)}</span>
                     <span className="shrink-0 text-muted-foreground">{formatByMoeda(aposta.stake, aposta.moeda || 'BRL')}</span>
@@ -671,7 +660,7 @@ export function ApostaCard({
                         </div>
                       )}
                       <span className="truncate flex-1 uppercase text-muted-foreground">
-                        {entry.bookmaker_nome}{entry.parceiro_nome ? ` - ${getFirstLastName(entry.parceiro_nome)}` : ''}
+                        {formatBookmakerProjectName(entry.bookmaker_nome, entry.parceiro_nome)}
                       </span>
                       <span className="font-medium shrink-0 text-foreground">@{entry.odd.toFixed(2)}</span>
                       <span className="shrink-0 text-muted-foreground">{formatByMoeda(entry.stake, entry.moeda || aposta.moeda || 'BRL')}</span>
@@ -717,27 +706,14 @@ export function ApostaCard({
     );
   }
 
-  // Variant: card (padrão) - Padronizado para seguir mesmo layout do "list"
-  // Extrair nome base da casa (antes do " - ") para exibição limpa
-  const bookmakerBaseCard = aposta.bookmaker_nome?.split(" - ")[0] || aposta.bookmaker_nome;
-  // Extrair vínculo (parceiro) - pode vir do parceiro_nome ou da parte após " - " no bookmaker_nome
-  const vinculoFullCard = aposta.parceiro_nome || aposta.bookmaker_nome?.split(" - ")[1]?.trim();
-  // Abreviar para primeiro e último nome
-  const vinculoAbreviadoCard = vinculoFullCard ? getFirstLastName(vinculoFullCard) : null;
-  
-  // Formato padronizado: "CASA - PARCEIRO ABREVIADO (IDENTIFICADOR)"
-  // Evitar duplicação quando instance_identifier é igual ao primeiro nome do parceiro
-  const identifierDiffersFromParceiroCard = aposta.instance_identifier && 
-    vinculoAbreviadoCard && 
-    aposta.instance_identifier.toUpperCase() !== vinculoAbreviadoCard.split(" ")[0]?.toUpperCase();
-  let bookmakerDisplayCard = vinculoAbreviadoCard 
-    ? `${bookmakerBaseCard} - ${vinculoAbreviadoCard}`
-    : bookmakerBaseCard;
-  if (aposta.instance_identifier && !vinculoAbreviadoCard) {
-    bookmakerDisplayCard += ` (${aposta.instance_identifier})`;
-  } else if (identifierDiffersFromParceiroCard) {
-    bookmakerDisplayCard += ` (${aposta.instance_identifier})`;
-  }
+  // Variant: card (padrão)
+  const bookmakerDisplayCard = aposta.parceiro_nome 
+    ? formatBookmakerProjectName(
+        aposta.bookmaker_nome?.split(" - ")[0] || aposta.bookmaker_nome || "Casa",
+        aposta.parceiro_nome,
+        aposta.instance_identifier,
+      )
+    : aposta.bookmaker_nome || "Casa";
 
   return (
     <Card 
@@ -943,7 +919,7 @@ export function ApostaCard({
                 <div className="flex items-center gap-2 text-xs py-0.5 px-1 rounded">
                   <BookmakerLogo logoUrl={aposta.logo_url} size="h-6 w-6" iconSize="h-3 w-3" />
                   <span className="truncate flex-1 uppercase text-muted-foreground">
-                    {aposta.bookmaker_nome}{aposta.parceiro_nome ? ` - ${getFirstLastName(aposta.parceiro_nome)}` : ''}
+                    {formatBookmakerProjectName(aposta.bookmaker_nome || "Casa", aposta.parceiro_nome, aposta.instance_identifier)}
                   </span>
                   <span className="font-medium shrink-0 text-foreground">@{(aposta.primary_odd ?? aposta.odd ?? 0).toFixed(2)}</span>
                   <span className="shrink-0 text-muted-foreground">{formatByMoeda(aposta.stake, aposta.moeda || 'BRL')}</span>
@@ -953,7 +929,7 @@ export function ApostaCard({
                   <div key={idx} className="flex items-center gap-2 text-xs py-0.5 px-1 rounded">
                     <BookmakerLogo logoUrl={entry.logo_url} size="h-6 w-6" iconSize="h-3 w-3" />
                     <span className="truncate flex-1 uppercase text-muted-foreground">
-                      {entry.bookmaker_nome}{entry.parceiro_nome ? ` - ${getFirstLastName(entry.parceiro_nome)}` : ''}
+                      {formatBookmakerProjectName(entry.bookmaker_nome, entry.parceiro_nome)}
                     </span>
                     <span className="font-medium shrink-0 text-foreground">@{entry.odd.toFixed(2)}</span>
                     <span className="shrink-0 text-muted-foreground">{formatByMoeda(entry.stake, entry.moeda || aposta.moeda || 'BRL')}</span>
