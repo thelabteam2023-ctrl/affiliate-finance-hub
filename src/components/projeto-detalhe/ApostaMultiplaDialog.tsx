@@ -1067,13 +1067,11 @@ export function ApostaMultiplaDialog({
         // Detectar mudanças financeiras
         const resultadoAnterior = aposta.resultado;
         const resultadoMudou = resultadoAnterior !== resultadoFinal;
-        const persistedStakeSplit = deriveStakeSplit({
+        const persistedStakeSplit = derivePersistedStakeSplit({
           stake: aposta.stake,
           stake_total: aposta.stake_total,
           stake_real: aposta.stake_real,
           stake_freebet: aposta.stake_freebet,
-          usar_freebet: aposta.usar_freebet,
-          fonte_saldo: aposta.fonte_saldo,
         });
         const stakeMudou = stakeSplit.stakeTotal !== persistedStakeSplit.stakeTotal || stakeSplit.stakeReal !== persistedStakeSplit.stakeReal || stakeSplit.stakeFreebet !== persistedStakeSplit.stakeFreebet;
         const oddMudou = oddFinal !== aposta.odd_final;
