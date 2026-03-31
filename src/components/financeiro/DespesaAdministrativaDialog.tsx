@@ -634,8 +634,8 @@ export function DespesaAdministrativaDialog({
                   setFormData({ 
                     ...formData, 
                     grupo: value,
-                    // Limpar subcategoria se mudar de grupo
-                    subcategoria_rh: value === "RECURSOS_HUMANOS" ? formData.subcategoria_rh : null
+                    subcategoria_rh: value === "RECURSOS_HUMANOS" ? formData.subcategoria_rh : null,
+                    operador_id: value === "RECURSOS_HUMANOS" ? formData.operador_id : null,
                   });
                 }}
               >
