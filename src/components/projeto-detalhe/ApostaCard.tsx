@@ -8,6 +8,7 @@ import { DateAnomalyBadge } from "@/components/ui/date-anomaly-alert";
 import { detectDateAnomaly } from "@/lib/dateAnomalyDetection";
 import { ApostaPernasResumo, ApostaPernasInline, getModeloOperacao, Perna } from "./ApostaPernasResumo";
 import { cn, getFirstLastName } from "@/lib/utils";
+import { formatBookmakerProjectName } from "@/lib/bookmaker-display";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { parseLocalDateTime } from "@/utils/dateUtils";
