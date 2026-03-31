@@ -21,6 +21,49 @@ export interface StakeSplitResult {
   usesFreebet: boolean;
 }
 
+const buildStakeSplitResult = (
+  stakeRealValue: number,
+  stakeFreebetValue: number,
+  stakeTotalValue: number
+): StakeSplitResult => {
+  const stakeReal = roundMoney(Math.max(0, stakeRealValue));
+  const stakeFreebet = roundMoney(Math.max(0, stakeFreebetValue));
+  const stakeTotal = roundMoney(Math.max(stakeTotalValue, stakeReal + stakeFreebet));
+
+  return {
+    stakeReal,
+    stakeFreebet,
+    stakeTotal,
+    usesFreebet: stakeFreebet > 0,
+  };
+};
+
+/**
+ * Hidrata o split APENAS a partir dos campos persistidos da aposta.
+ * Não usa `usar_freebet`/`fonte_saldo` como inferência para evitar falso positivo em edição.
+ */
+export const derivePersistedStakeSplit = (source: StakeSplitSource): StakeSplitResult => {
+  const totalFromDb = toFiniteNumber(source.stake_total) ?? toFiniteNumber(source.stake) ?? 0;
+  const explicitReal = toFiniteNumber(source.stake_real);
+  const explicitFreebet = toFiniteNumber(source.stake_freebet);
+
+  if (explicitReal !== null && explicitFreebet !== null) {
+    return buildStakeSplitResult(explicitReal, explicitFreebet, Math.max(totalFromDb, explicitReal + explicitFreebet));
+  }
+
+  if (explicitReal !== null) {
+    const inferredFreebet = Math.max(totalFromDb - explicitReal, 0);
+    return buildStakeSplitResult(explicitReal, inferredFreebet, Math.max(totalFromDb, explicitReal + inferredFreebet));
+  }
+
+  if (explicitFreebet !== null) {
+    const inferredReal = Math.max(totalFromDb - explicitFreebet, 0);
+    return buildStakeSplitResult(inferredReal, explicitFreebet, Math.max(totalFromDb, inferredReal + explicitFreebet));
+  }
+
+  return buildStakeSplitResult(totalFromDb, 0, totalFromDb);
+};
+
 export const deriveStakeSplit = (source: StakeSplitSource): StakeSplitResult => {
   const totalFromDb = toFiniteNumber(source.stake_total) ?? toFiniteNumber(source.stake);
   const explicitReal = toFiniteNumber(source.stake_real);
@@ -37,10 +80,5 @@ export const deriveStakeSplit = (source: StakeSplitSource): StakeSplitResult => 
   const stakeFreebet = Math.max(0, explicitFreebet ?? (usesFreebetFlag ? canonicalTotal - stakeReal : 0));
   const stakeTotal = Math.max(canonicalTotal, stakeReal + stakeFreebet);
 
-  return {
-    stakeReal: roundMoney(stakeReal),
-    stakeFreebet: roundMoney(stakeFreebet),
-    stakeTotal: roundMoney(stakeTotal),
-    usesFreebet: roundMoney(stakeFreebet) > 0,
-  };
+  return buildStakeSplitResult(stakeReal, stakeFreebet, stakeTotal);
 };
