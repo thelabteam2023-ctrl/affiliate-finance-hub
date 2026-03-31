@@ -932,7 +932,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           const persistedStakeFreebet = Number(aposta.stake_freebet ?? stakeSplit.stakeFreebet ?? 0);
           setStake(persistedStakeReal > 0 ? persistedStakeReal.toString() : "0");
           setValorFreebetUsar(persistedStakeFreebet);
-          setUsarFreebetBookmaker(persistedStakeFreebet > 0 || aposta.usar_freebet === true);
+          setUsarFreebetBookmaker(persistedStakeFreebet > 0);
         } else {
           setStake(aposta.stake?.toString() || "");
           setValorFreebetUsar(0);
