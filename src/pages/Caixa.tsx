@@ -872,6 +872,14 @@ export default function Caixa() {
         }
       }
       
+      // 3. Fallback: buscar por valor+data (registros legados sem categoria na descrição)
+      if (grupoKey === "OUTROS" && transacao.valor && transacao.data_transacao) {
+        const compositeKey = `${transacao.valor}_${transacao.data_transacao}`;
+        if (despesasAdminGrupoMap[compositeKey]) {
+          grupoKey = despesasAdminGrupoMap[compositeKey].grupo;
+        }
+      }
+      
       
       const grupoInfo = getGrupoInfo(grupoKey);
       return { 
