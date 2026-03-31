@@ -919,7 +919,7 @@ export function ApostaCard({
                 <div className="flex items-center gap-2 text-xs py-0.5 px-1 rounded">
                   <BookmakerLogo logoUrl={aposta.logo_url} size="h-6 w-6" iconSize="h-3 w-3" />
                   <span className="truncate flex-1 uppercase text-muted-foreground">
-                    {aposta.bookmaker_nome}{aposta.parceiro_nome ? ` - ${getFirstLastName(aposta.parceiro_nome)}` : ''}
+                    {formatBookmakerProjectName(aposta.bookmaker_nome || "Casa", aposta.parceiro_nome, aposta.instance_identifier)}
                   </span>
                   <span className="font-medium shrink-0 text-foreground">@{(aposta.primary_odd ?? aposta.odd ?? 0).toFixed(2)}</span>
                   <span className="shrink-0 text-muted-foreground">{formatByMoeda(aposta.stake, aposta.moeda || 'BRL')}</span>
