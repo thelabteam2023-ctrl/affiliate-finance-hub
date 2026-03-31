@@ -78,7 +78,7 @@ import { Plus, Trash2 as Trash2Entry, Layers } from "lucide-react";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { FonteEntradaSelector } from "@/components/apostas/FonteEntradaSelector";
 import { useWorkspaceBetSources } from "@/hooks/useWorkspaceBetSources";
-import { deriveStakeSplit } from "@/lib/freebetStake";
+import { deriveStakeSplit, derivePersistedStakeSplit } from "@/lib/freebetStake";
 
 // Multi-entry para aposta simples (mesma seleção, múltiplas bookmakers)
 interface AdditionalEntry {
@@ -789,13 +789,11 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
       (aposta?.status === 'LIQUIDADA' && (resultadoAnterior === 'RED' || resultadoAnterior === 'MEIO_RED'));
     
     const stakeAnterior = aposta && mesmaBookmaker && deveAdicionarStake
-      ? deriveStakeSplit({
+      ? derivePersistedStakeSplit({
           stake: aposta.stake,
           stake_total: aposta.stake_total,
           stake_real: aposta.stake_real,
           stake_freebet: aposta.stake_freebet,
-          usar_freebet: aposta.usar_freebet,
-          fonte_saldo: aposta.fonte_saldo,
         }).stakeReal
       : 0;
     
@@ -921,20 +919,18 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         // Usar evento direto (campo já unificado no banco)
         setEvento(aposta.evento || "");
         setOdd(aposta.odd?.toString() || "");
-        const stakeSplit = deriveStakeSplit({
+        const stakeSplit = derivePersistedStakeSplit({
           stake: aposta.stake,
           stake_total: aposta.stake_total,
           stake_real: aposta.stake_real,
           stake_freebet: aposta.stake_freebet,
-          usar_freebet: aposta.usar_freebet,
-          fonte_saldo: aposta.fonte_saldo,
         });
         if (aposta.modo_entrada !== "EXCHANGE") {
           const persistedStakeReal = Number(aposta.stake_real ?? stakeSplit.stakeReal ?? 0);
           const persistedStakeFreebet = Number(aposta.stake_freebet ?? stakeSplit.stakeFreebet ?? 0);
           setStake(persistedStakeReal > 0 ? persistedStakeReal.toString() : "0");
           setValorFreebetUsar(persistedStakeFreebet);
-          setUsarFreebetBookmaker(persistedStakeFreebet > 0 || aposta.usar_freebet === true);
+          setUsarFreebetBookmaker(persistedStakeFreebet > 0);
         } else {
           setStake(aposta.stake?.toString() || "");
           setValorFreebetUsar(0);
@@ -1054,26 +1050,22 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
               // Atualizar primary com dados da perna (podem diferir do agregado)
               setBookmakerId(primaryPerna.bookmaker_id);
               setOdd(primaryPerna.odd.toString());
-              const primaryStakeSplit = deriveStakeSplit({
+              const primaryStakeSplit = derivePersistedStakeSplit({
                 stake: primaryPerna.stake,
                 stake_total: primaryPerna.stake,
                 stake_real: primaryPerna.stake_real,
                 stake_freebet: primaryPerna.stake_freebet,
-                usar_freebet: (primaryPerna.stake_freebet || 0) > 0,
-                fonte_saldo: aposta.fonte_saldo ?? primaryPerna.fonte_saldo,
               });
               setStake(primaryStakeSplit.stakeReal > 0 ? primaryStakeSplit.stakeReal.toString() : '0');
               setUsarFreebetBookmaker(primaryStakeSplit.usesFreebet);
               setValorFreebetUsar(primaryStakeSplit.stakeFreebet);
               
               const extras = pernas.slice(1).map(p => {
-                const split = deriveStakeSplit({
+                const split = derivePersistedStakeSplit({
                   stake: p.stake,
                   stake_total: p.stake,
                   stake_real: p.stake_real,
                   stake_freebet: p.stake_freebet,
-                  usar_freebet: p.fonte_saldo === 'FREEBET' || p.gerou_freebet === true,
-                  fonte_saldo: p.fonte_saldo,
                 });
                 return {
                   id: p.id,
@@ -1094,9 +1086,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         setGerouFreebet(aposta.gerou_freebet || false);
         setValorFreebetGerada(aposta.valor_freebet_gerada?.toString() || "");
         
-        // Se a aposta usou freebet (bookmaker simples), restaurar flag sem sobrescrever split já hidratado
+        // Se a aposta usou freebet (bookmaker simples), restaurar flag APENAS com base no stake_freebet persistido
         if (aposta.tipo_freebet && aposta.tipo_freebet !== "normal" && aposta.modo_entrada === "PADRAO") {
-          setUsarFreebetBookmaker((prev) => prev || Number(aposta.stake_freebet ?? stakeSplit.stakeFreebet ?? 0) > 0);
+          setUsarFreebetBookmaker((prev) => prev || Number(aposta.stake_freebet ?? 0) > 0);
         }
         
         // Restaurar campos de registro (estrategia, forma_registro, contexto_operacional, fonte_saldo)
@@ -1688,13 +1680,11 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         // Para edição: stake anterior é "livre" apenas se a bookmaker não mudou
         const mesmaBookmaker = aposta?.bookmaker_id === bookmakerId;
         const splitApostaAtual = aposta
-          ? deriveStakeSplit({
+          ? derivePersistedStakeSplit({
               stake: aposta.stake,
               stake_total: aposta.stake_total,
               stake_real: aposta.stake_real,
               stake_freebet: aposta.stake_freebet,
-              usar_freebet: aposta.usar_freebet,
-              fonte_saldo: aposta.fonte_saldo,
             })
           : null;
         const stakeRealAnterior = aposta && mesmaBookmaker ? splitApostaAtual?.stakeReal ?? 0 : 0;

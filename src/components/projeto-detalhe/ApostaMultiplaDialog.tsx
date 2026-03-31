@@ -72,7 +72,7 @@ import { GerouFreebetInput } from "./GerouFreebetInput";
 import { FreebetToggle } from "@/components/apostas/waterfall";
 import { FonteEntradaSelector } from "@/components/apostas/FonteEntradaSelector";
 import { useWorkspaceBetSources } from "@/hooks/useWorkspaceBetSources";
-import { deriveStakeSplit } from "@/lib/freebetStake";
+import { deriveStakeSplit, derivePersistedStakeSplit } from "@/lib/freebetStake";
 
 interface Selecao {
   descricao: string;
@@ -381,13 +381,11 @@ export function ApostaMultiplaDialog({
       
       setBookmakerId(aposta.bookmaker_id);
       setBoostPercent((aposta as any).boost_percentual?.toString() || "");
-      const persistedStakeSplit = deriveStakeSplit({
+      const persistedStakeSplit = derivePersistedStakeSplit({
         stake: aposta.stake,
         stake_total: aposta.stake_total,
         stake_real: aposta.stake_real,
         stake_freebet: aposta.stake_freebet,
-        usar_freebet: aposta.usar_freebet,
-        fonte_saldo: aposta.fonte_saldo,
       });
 
       setStake((persistedStakeSplit.stakeTotal || aposta.stake || 0).toString());
@@ -430,9 +428,7 @@ export function ApostaMultiplaDialog({
       });
 
       // Freebet
-      setUsarFreebet(
-        persistedStakeSplit.usesFreebet || !!(aposta.tipo_freebet && aposta.tipo_freebet !== "normal")
-      );
+      setUsarFreebet(persistedStakeSplit.usesFreebet);
       setValorFreebetUsar(persistedStakeSplit.stakeFreebet);
       setGerouFreebet(aposta.gerou_freebet || false);
       setValorFreebetGerada(aposta.valor_freebet_gerada?.toString() || "");
@@ -954,13 +950,11 @@ export function ApostaMultiplaDialog({
     const selectedBookmaker = bookmakers.find((b) => b.id === bookmakerId);
     const sameBookmakerOnEdit = !!aposta && aposta.bookmaker_id === bookmakerId;
     const previousStakeSplit = sameBookmakerOnEdit
-      ? deriveStakeSplit({
+      ? derivePersistedStakeSplit({
           stake: aposta?.stake,
           stake_total: aposta?.stake_total,
           stake_real: aposta?.stake_real,
           stake_freebet: aposta?.stake_freebet,
-          usar_freebet: aposta?.usar_freebet,
-          fonte_saldo: aposta?.fonte_saldo,
         })
       : null;
 
@@ -1073,13 +1067,11 @@ export function ApostaMultiplaDialog({
         // Detectar mudanças financeiras
         const resultadoAnterior = aposta.resultado;
         const resultadoMudou = resultadoAnterior !== resultadoFinal;
-        const persistedStakeSplit = deriveStakeSplit({
+        const persistedStakeSplit = derivePersistedStakeSplit({
           stake: aposta.stake,
           stake_total: aposta.stake_total,
           stake_real: aposta.stake_real,
           stake_freebet: aposta.stake_freebet,
-          usar_freebet: aposta.usar_freebet,
-          fonte_saldo: aposta.fonte_saldo,
         });
         const stakeMudou = stakeSplit.stakeTotal !== persistedStakeSplit.stakeTotal || stakeSplit.stakeReal !== persistedStakeSplit.stakeReal || stakeSplit.stakeFreebet !== persistedStakeSplit.stakeFreebet;
         const oddMudou = oddFinal !== aposta.odd_final;
