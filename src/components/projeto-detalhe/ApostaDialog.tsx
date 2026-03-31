@@ -1682,13 +1682,11 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         // Para edição: stake anterior é "livre" apenas se a bookmaker não mudou
         const mesmaBookmaker = aposta?.bookmaker_id === bookmakerId;
         const splitApostaAtual = aposta
-          ? deriveStakeSplit({
+          ? derivePersistedStakeSplit({
               stake: aposta.stake,
               stake_total: aposta.stake_total,
               stake_real: aposta.stake_real,
               stake_freebet: aposta.stake_freebet,
-              usar_freebet: aposta.usar_freebet,
-              fonte_saldo: aposta.fonte_saldo,
             })
           : null;
         const stakeRealAnterior = aposta && mesmaBookmaker ? splitApostaAtual?.stakeReal ?? 0 : 0;
