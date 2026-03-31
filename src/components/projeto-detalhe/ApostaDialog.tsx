@@ -789,13 +789,11 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
       (aposta?.status === 'LIQUIDADA' && (resultadoAnterior === 'RED' || resultadoAnterior === 'MEIO_RED'));
     
     const stakeAnterior = aposta && mesmaBookmaker && deveAdicionarStake
-      ? deriveStakeSplit({
+      ? derivePersistedStakeSplit({
           stake: aposta.stake,
           stake_total: aposta.stake_total,
           stake_real: aposta.stake_real,
           stake_freebet: aposta.stake_freebet,
-          usar_freebet: aposta.usar_freebet,
-          fonte_saldo: aposta.fonte_saldo,
         }).stakeReal
       : 0;
     

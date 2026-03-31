@@ -950,13 +950,11 @@ export function ApostaMultiplaDialog({
     const selectedBookmaker = bookmakers.find((b) => b.id === bookmakerId);
     const sameBookmakerOnEdit = !!aposta && aposta.bookmaker_id === bookmakerId;
     const previousStakeSplit = sameBookmakerOnEdit
-      ? deriveStakeSplit({
+      ? derivePersistedStakeSplit({
           stake: aposta?.stake,
           stake_total: aposta?.stake_total,
           stake_real: aposta?.stake_real,
           stake_freebet: aposta?.stake_freebet,
-          usar_freebet: aposta?.usar_freebet,
-          fonte_saldo: aposta?.fonte_saldo,
         })
       : null;
 
