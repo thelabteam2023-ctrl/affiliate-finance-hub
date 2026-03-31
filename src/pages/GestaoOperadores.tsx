@@ -310,85 +310,93 @@ export default function GestaoOperadores() {
             </Card>
           ) : viewMode === "cards" ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {filteredOperadores.map((operador) => (
-                <Card 
-                  key={operador.workspace_member_id} 
-                  className="cursor-pointer hover:border-primary/50 transition-colors"
-                  onClick={() => handleOpenDialog(operador, "view")}
-                >
-                  <CardHeader className="pb-2">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+              {filteredOperadores.map((operador) => {
+                const totalPago = operador.total_pago || 0;
+                return (
+                  <Card 
+                    key={operador.workspace_member_id} 
+                    className="overflow-hidden border-border/50 bg-gradient-to-br from-card to-card/80 hover:border-primary/30 hover:shadow-lg transition-all duration-200 cursor-pointer group"
+                    onClick={() => handleOpenDialog(operador, "view")}
+                  >
+                    {/* Header */}
+                    <div className="flex items-center justify-between px-5 pt-4 pb-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
                           <User className="h-5 w-5 text-primary" />
                         </div>
-                        <div>
-                          <CardTitle className="text-base">{operador.nome || "Sem nome"}</CardTitle>
-                          <p className="text-sm text-muted-foreground">{operador.email}</p>
+                        <div className="min-w-0">
+                          <h4 className="font-semibold text-sm leading-tight truncate">{operador.nome || "Sem nome"}</h4>
+                          <p className="text-xs text-muted-foreground truncate mt-0.5">{operador.email}</p>
                         </div>
                       </div>
-                      <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
+                      <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-[10px] shrink-0">
                         ATIVO
                       </Badge>
                     </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Briefcase className="h-4 w-4" />
-                        <span>{getContratoLabel(operador.tipo_contrato)}</span>
-                      </div>
-                      {operador.data_admissao && (
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Calendar className="h-4 w-4" />
-                          <span>
-                            Desde {format(new Date(operador.data_admissao), "dd/MM/yyyy", { locale: ptBR })}
-                          </span>
+
+                    {/* Metrics Grid - 2x2 */}
+                    <div className="grid grid-cols-2 gap-2 px-5 pb-3">
+                      <div className="rounded-lg bg-muted/40 border border-border/30 p-3 flex items-center justify-between">
+                        <div>
+                          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Contrato</p>
+                          <p className="text-sm font-semibold mt-0.5">{getContratoLabel(operador.tipo_contrato)}</p>
                         </div>
-                      )}
-                      <div className="flex items-center gap-2 text-sm">
-                        <DollarSign className="h-4 w-4 text-emerald-500" />
-                        <span className="text-emerald-500">
-                          {formatCurrency(operador.total_pago || 0)} pagos
-                        </span>
+                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                          <Briefcase className="h-4 w-4 text-primary" />
+                        </div>
                       </div>
-                      {(operador.projetos_ativos || 0) > 0 && (
-                        <Badge variant="outline" className="mt-2">
-                          {operador.projetos_ativos} projeto(s) ativo(s)
-                        </Badge>
-                      )}
+
+                      <div className="rounded-lg bg-muted/40 border border-border/30 p-3 flex items-center justify-between">
+                        <div>
+                          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Projetos</p>
+                          <p className="text-sm font-semibold mt-0.5">{operador.projetos_ativos || 0} ativo{(operador.projetos_ativos || 0) !== 1 ? 's' : ''}</p>
+                        </div>
+                        <div className="h-8 w-8 rounded-full bg-blue-500/10 flex items-center justify-center">
+                          <LayoutGrid className="h-4 w-4 text-blue-500" />
+                        </div>
+                      </div>
+
+                      <div className="rounded-lg bg-muted/40 border border-border/30 p-3 flex items-center justify-between col-span-2">
+                        <div>
+                          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Total Pago</p>
+                          <p className={`text-lg font-bold font-mono mt-0.5 ${totalPago > 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-muted-foreground'}`}>
+                            {formatCurrency(totalPago)}
+                          </p>
+                        </div>
+                        <div className={`h-8 w-8 rounded-full flex items-center justify-center ${totalPago > 0 ? 'bg-emerald-500/10' : 'bg-muted/60'}`}>
+                          <DollarSign className={`h-4 w-4 ${totalPago > 0 ? 'text-emerald-500' : 'text-muted-foreground'}`} />
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex gap-2 mt-4 pt-4 border-t">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="flex-1"
+
+                    {/* Actions */}
+                    <div className="flex border-t border-border/30">
+                      <button 
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleOpenDialog(operador, "view");
                         }}
                       >
-                        <Eye className="h-4 w-4 mr-1" />
+                        <Eye className="h-3.5 w-3.5" />
                         Ver
-                      </Button>
+                      </button>
                       {canEdit('operadores', 'operadores.edit') && (
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="flex-1"
+                        <button 
+                          className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors border-l border-border/30"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleOpenDialog(operador, "edit");
                           }}
                         >
-                          <Edit className="h-4 w-4 mr-1" />
+                          <Edit className="h-3.5 w-3.5" />
                           Editar
-                        </Button>
+                        </button>
                       )}
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
+                  </Card>
+                );
+              })}
             </div>
           ) : (
             <Card>
