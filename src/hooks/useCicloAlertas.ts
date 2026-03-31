@@ -48,10 +48,11 @@ export function useCicloAlertas() {
             id, projeto_id, numero_ciclo, tipo_gatilho,
             data_inicio, data_fim_prevista, meta_volume,
             valor_acumulado, metrica_acumuladora,
-            projeto:projetos(nome, metrica_lucro_ciclo)
+            projeto:projetos!inner(nome, metrica_lucro_ciclo, status)
           `)
           .eq("status", "EM_ANDAMENTO")
-          .eq("workspace_id", workspaceId) as any,
+          .eq("workspace_id", workspaceId)
+          .neq("projeto.status", "ARQUIVADO") as any,
         supabase
           .from("ciclo_alert_dismissals")
           .select("ciclo_id"),
