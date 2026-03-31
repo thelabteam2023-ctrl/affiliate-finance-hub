@@ -381,13 +381,11 @@ export function ApostaMultiplaDialog({
       
       setBookmakerId(aposta.bookmaker_id);
       setBoostPercent((aposta as any).boost_percentual?.toString() || "");
-      const persistedStakeSplit = deriveStakeSplit({
+      const persistedStakeSplit = derivePersistedStakeSplit({
         stake: aposta.stake,
         stake_total: aposta.stake_total,
         stake_real: aposta.stake_real,
         stake_freebet: aposta.stake_freebet,
-        usar_freebet: aposta.usar_freebet,
-        fonte_saldo: aposta.fonte_saldo,
       });
 
       setStake((persistedStakeSplit.stakeTotal || aposta.stake || 0).toString());
