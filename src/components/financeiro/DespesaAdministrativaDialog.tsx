@@ -98,23 +98,31 @@ export function DespesaAdministrativaDialog({
     cotacao: null,
   });
 
-  // Fetch operadores when dialog opens and group is RH
+  // Fetch operadores filtered by current workspace
   useEffect(() => {
-    if (open) {
+    if (open && workspaceId) {
       const fetchOperadores = async () => {
         const { data, error } = await supabase
           .from("v_operadores_workspace")
           .select("operador_id, nome")
+          .eq("workspace_id", workspaceId)
           .eq("is_active", true)
           .not("operador_id", "is", null)
           .order("nome");
         if (!error && data) {
-          setOperadores(data.filter(op => op.operador_id) as OperadorOption[]);
+          // Deduplicate by operador_id
+          const seen = new Set<string>();
+          const unique = data.filter(op => {
+            if (!op.operador_id || seen.has(op.operador_id)) return false;
+            seen.add(op.operador_id);
+            return true;
+          });
+          setOperadores(unique as OperadorOption[]);
         }
       };
       fetchOperadores();
     }
-  }, [open]);
+  }, [open, workspaceId]);
 
   useEffect(() => {
     if (despesa) {
