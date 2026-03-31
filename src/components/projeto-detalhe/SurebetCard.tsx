@@ -249,8 +249,7 @@ function PernaItem({
   const displayOdd = perna.odd_media || perna.odd;
   const displayStake = perna.stake_total || perna.stake;
   
-  const { formatBookmakerDisplay } = await import("@/lib/bookmaker-display");
-  // Note: using dynamic import won't work in render. Let's use the local one instead.
+  // formatBookmakerDisplay imported from @/lib/bookmaker-display
   
   // Enriquecer nome do bookmaker: usar mapa canônico se disponível, senão usar o que está salvo
   const enrichedBookmakerNome = (perna.bookmaker_id && bookmakerNomeMap?.has(perna.bookmaker_id))
