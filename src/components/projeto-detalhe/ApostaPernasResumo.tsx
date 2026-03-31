@@ -64,17 +64,7 @@ function getBookmakerNome(perna: Perna): string {
   return perna.bookmaker_nome || perna.bookmaker || "Casa desconhecida";
 }
 
-// Formata nome do bookmaker com vínculo abreviado
-function formatBookmakerDisplay(nomeCompleto: string): string {
-  const separatorIdx = nomeCompleto.indexOf(" - ");
-  if (separatorIdx > 0) {
-    const casa = nomeCompleto.substring(0, separatorIdx).trim();
-    const vinculoRaw = nomeCompleto.substring(separatorIdx + 3).trim();
-    const vinculoAbreviado = getFirstLastName(vinculoRaw);
-    return `${casa} - ${vinculoAbreviado}`;
-  }
-  return nomeCompleto;
-}
+// formatBookmakerDisplay imported from @/lib/bookmaker-display
 
 // Retorna classe de cor baseado no resultado
 function getResultadoColor(resultado: string | null | undefined): string {
