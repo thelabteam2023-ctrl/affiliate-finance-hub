@@ -82,6 +82,7 @@ interface Transacao {
   ajuste_motivo: string | null;
   data_confirmacao: string | null;
   created_at: string;
+  auditoria_metadata: any;
 }
 
 interface SaldoFiat {
