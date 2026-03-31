@@ -283,11 +283,18 @@ export default function Caixa() {
       // Fetch despesas administrativas grupo para lookup no histórico
       const { data: despAdminData } = await supabase
         .from("despesas_administrativas")
-        .select("id, grupo, descricao, categoria");
-      const despAdminMap: { [descricao: string]: { grupo: string; categoria: string } } = {};
+        .select("id, grupo, descricao, categoria, valor, data_despesa");
+      const despAdminMap: { [key: string]: { grupo: string; categoria: string } } = {};
       despAdminData?.forEach(d => {
+        const grupo = d.grupo || "OUTROS";
+        const categoria = d.categoria || "";
+        // Key by description
         if (d.descricao) {
-          despAdminMap[d.descricao.trim().toLowerCase()] = { grupo: d.grupo || "OUTROS", categoria: d.categoria || "" };
+          despAdminMap[d.descricao.trim().toLowerCase()] = { grupo, categoria };
+        }
+        // Key by valor+data composite for legacy records without category in description
+        if (d.valor && d.data_despesa) {
+          despAdminMap[`${d.valor}_${d.data_despesa}`] = { grupo, categoria };
         }
       });
       setDespesasAdminGrupoMap(despAdminMap);
