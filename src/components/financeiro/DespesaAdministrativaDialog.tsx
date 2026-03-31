@@ -30,6 +30,19 @@ import { GRUPOS_DESPESA_LIST, getGrupoInfo, SUBCATEGORIAS_RH_LIST, getSubcategor
 interface OperadorOption {
   operador_id: string;
   nome: string;
+  email: string | null;
+  tipo_contrato: string | null;
+}
+
+function toTitleCase(str: string): string {
+  return str
+    .toLowerCase()
+    .split(" ")
+    .map((word) => {
+      if (["de", "da", "do", "dos", "das", "e"].includes(word)) return word;
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(" ");
 }
 
 interface DespesaAdministrativa {
@@ -104,7 +117,7 @@ export function DespesaAdministrativaDialog({
       const fetchOperadores = async () => {
         const { data, error } = await supabase
           .from("v_operadores_workspace")
-          .select("operador_id, nome")
+          .select("operador_id, nome, email, tipo_contrato")
           .eq("workspace_id", workspaceId)
           .eq("is_active", true)
           .not("operador_id", "is", null)
@@ -738,17 +751,34 @@ export function DespesaAdministrativaDialog({
                       <SelectValue placeholder="Selecione o operador" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">Nenhum operador selecionado</SelectItem>
+                      <SelectItem value="none">
+                        <span className="text-muted-foreground">Nenhum operador selecionado</span>
+                      </SelectItem>
                       {operadores.map((op) => (
                         <SelectItem key={op.operador_id} value={op.operador_id}>
-                          {op.nome}
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{toTitleCase(op.nome)}</span>
+                            {op.tipo_contrato && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                                {op.tipo_contrato}
+                              </span>
+                            )}
+                          </div>
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  <p className="text-xs text-muted-foreground">
-                    Vincule o pagamento a um operador cadastrado para rastreabilidade
-                  </p>
+                  {formData.operador_id && (() => {
+                    const sel = operadores.find(o => o.operador_id === formData.operador_id);
+                    return sel?.email ? (
+                      <p className="text-xs text-muted-foreground">{sel.email}</p>
+                    ) : null;
+                  })()}
+                  {!formData.operador_id && (
+                    <p className="text-xs text-muted-foreground">
+                      Vincule o pagamento a um operador cadastrado
+                    </p>
+                  )}
                 </div>
               </div>
             )}
