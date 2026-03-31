@@ -1061,9 +1061,6 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                                 <div className="flex items-center gap-1.5">
                                   <p className="text-xs font-medium truncate">
                                     {bm.bookmaker_nome}
-                                    {bm.instance_identifier && (
-                                      <span className="text-primary/80 ml-1 font-normal">({bm.instance_identifier})</span>
-                                    )}
                                   </p>
                                   {bm.has_credentials && (
                                     <Popover
