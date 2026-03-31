@@ -1052,13 +1052,11 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
               // Atualizar primary com dados da perna (podem diferir do agregado)
               setBookmakerId(primaryPerna.bookmaker_id);
               setOdd(primaryPerna.odd.toString());
-              const primaryStakeSplit = deriveStakeSplit({
+              const primaryStakeSplit = derivePersistedStakeSplit({
                 stake: primaryPerna.stake,
                 stake_total: primaryPerna.stake,
                 stake_real: primaryPerna.stake_real,
                 stake_freebet: primaryPerna.stake_freebet,
-                usar_freebet: (primaryPerna.stake_freebet || 0) > 0,
-                fonte_saldo: aposta.fonte_saldo ?? primaryPerna.fonte_saldo,
               });
               setStake(primaryStakeSplit.stakeReal > 0 ? primaryStakeSplit.stakeReal.toString() : '0');
               setUsarFreebetBookmaker(primaryStakeSplit.usesFreebet);
