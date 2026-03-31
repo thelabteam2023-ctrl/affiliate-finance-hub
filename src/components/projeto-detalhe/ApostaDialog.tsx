@@ -1063,13 +1063,11 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
               setValorFreebetUsar(primaryStakeSplit.stakeFreebet);
               
               const extras = pernas.slice(1).map(p => {
-                const split = deriveStakeSplit({
+                const split = derivePersistedStakeSplit({
                   stake: p.stake,
                   stake_total: p.stake,
                   stake_real: p.stake_real,
                   stake_freebet: p.stake_freebet,
-                  usar_freebet: p.fonte_saldo === 'FREEBET' || p.gerou_freebet === true,
-                  fonte_saldo: p.fonte_saldo,
                 });
                 return {
                   id: p.id,
