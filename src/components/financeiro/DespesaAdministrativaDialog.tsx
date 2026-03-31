@@ -117,7 +117,7 @@ export function DespesaAdministrativaDialog({
       const fetchOperadores = async () => {
         const { data, error } = await supabase
           .from("v_operadores_workspace")
-          .select("operador_id, nome")
+          .select("operador_id, nome, email, tipo_contrato")
           .eq("workspace_id", workspaceId)
           .eq("is_active", true)
           .not("operador_id", "is", null)
