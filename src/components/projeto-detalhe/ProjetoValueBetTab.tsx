@@ -65,6 +65,7 @@ import { UnifiedStatisticsCard } from "./UnifiedStatisticsCard";
 import { ChartEmptyState } from "@/components/ui/chart-empty-state";
 
 import { cn, getFirstLastName } from "@/lib/utils";
+import { buildBookmakerNomeMap } from "@/lib/bookmaker-display";
 import { useOpenOperationsCount } from "@/hooks/useOpenOperationsCount";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { useCotacoes } from "@/hooks/useCotacoes";

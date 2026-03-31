@@ -57,6 +57,7 @@ import { SurebetStatisticsCard } from "./SurebetStatisticsCard";
 
 import { parsePernaFromJson, PernaArbitragem } from "@/types/apostasUnificada";
 import { cn, getFirstLastName } from "@/lib/utils";
+import { buildBookmakerNomeMap } from "@/lib/bookmaker-display";
 import { useOpenOperationsCount } from "@/hooks/useOpenOperationsCount";
 import { APOSTA_ESTRATEGIA } from "@/lib/apostaConstants";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";

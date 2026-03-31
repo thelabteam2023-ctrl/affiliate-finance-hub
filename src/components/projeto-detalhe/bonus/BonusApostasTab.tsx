@@ -46,6 +46,7 @@ import { ResultadoPill } from "@/components/projeto-detalhe/ResultadoPill";
 import { ApostaCard, type ApostaCardData } from "@/components/projeto-detalhe/ApostaCard";
 import { useProjectBonuses, FinalizeReason } from "@/hooks/useProjectBonuses";
 import { cn, getFirstLastName } from "@/lib/utils";
+import { buildBookmakerNomeMap } from "@/lib/bookmaker-display";
 import { 
   OperationsSubTabHeader,
   type HistorySubTab,
