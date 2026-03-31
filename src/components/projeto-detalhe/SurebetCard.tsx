@@ -248,17 +248,8 @@ function PernaItem({
   const displayOdd = perna.odd_media || perna.odd;
   const displayStake = perna.stake_total || perna.stake;
   
-  // Formatar nome da casa com vínculo abreviado
-  const formatBookmakerDisplay = (nomeCompleto: string) => {
-    const separatorIdx = nomeCompleto.indexOf(" - ");
-    if (separatorIdx > 0) {
-      const casa = nomeCompleto.substring(0, separatorIdx).trim();
-      const vinculoRaw = nomeCompleto.substring(separatorIdx + 3).trim();
-      const vinculoAbreviado = getFirstLastName(vinculoRaw);
-      return `${casa} - ${vinculoAbreviado}`;
-    }
-    return nomeCompleto;
-  };
+  const { formatBookmakerDisplay } = await import("@/lib/bookmaker-display");
+  // Note: using dynamic import won't work in render. Let's use the local one instead.
   
   // Enriquecer nome do bookmaker: usar mapa canônico se disponível, senão usar o que está salvo
   const enrichedBookmakerNome = (perna.bookmaker_id && bookmakerNomeMap?.has(perna.bookmaker_id))
