@@ -533,9 +533,10 @@ export function DespesaAdministrativaDialog({
               origem_conta_bancaria_id: origemData.origemContaBancariaId || null,
               origem_wallet_id: origemData.origemWalletId || null,
               data_transacao: formData.data_despesa,
-              descricao: `Despesa administrativa - ${categoriaLabel}${formData.descricao ? `: ${formData.descricao}` : ''}`,
+              descricao: `Despesa administrativa - ${categoriaLabel}${operadorSelecionado ? ` [${operadorSelecionado.nome}]` : ''}${formData.descricao ? `: ${formData.descricao}` : ''}`,
               status: "CONFIRMADO",
-              auditoria_metadata: { grupo: formData.grupo, categoria: categoriaLabel },
+              auditoria_metadata: { grupo: formData.grupo, categoria: categoriaLabel, operador_id: formData.operador_id, operador_nome: operadorSelecionado?.nome },
+              operador_id: formData.operador_id || null,
             });
           
           if (ledgerError) throw ledgerError;
