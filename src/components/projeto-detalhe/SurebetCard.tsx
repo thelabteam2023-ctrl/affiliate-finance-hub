@@ -5,6 +5,7 @@ import { format as formatDate } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ArrowLeftRight, Zap, CheckCircle2, Clock, Coins, ChevronDown, ChevronUp, Layers, Building2, TrendingUp, Target } from "lucide-react";
 import { cn, getFirstLastName } from "@/lib/utils";
+import { formatBookmakerDisplay } from "@/lib/bookmaker-display";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
