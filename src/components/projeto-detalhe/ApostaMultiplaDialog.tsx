@@ -428,9 +428,7 @@ export function ApostaMultiplaDialog({
       });
 
       // Freebet
-      setUsarFreebet(
-        persistedStakeSplit.usesFreebet || !!(aposta.tipo_freebet && aposta.tipo_freebet !== "normal")
-      );
+      setUsarFreebet(persistedStakeSplit.usesFreebet);
       setValorFreebetUsar(persistedStakeSplit.stakeFreebet);
       setGerouFreebet(aposta.gerou_freebet || false);
       setValorFreebetGerada(aposta.valor_freebet_gerada?.toString() || "");
