@@ -840,80 +840,118 @@ export function OperadorDashboard() {
           </h3>
           <ScrollArea className="h-[450px]">
             <div className="space-y-4 pr-4">
-              {operadoresFiltrados.map((op) => (
-                <Card key={op.operador_id} className="overflow-hidden">
-                  <CardHeader className="pb-2">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <CardTitle className="text-base">{op.nome}</CardTitle>
-                        <p className="text-sm text-muted-foreground">
-                          {op.projetos.map(p => p.projeto_nome).join(", ") || "Sem projetos"}
-                        </p>
+              {operadoresFiltrados.map((op) => {
+                const lucroDisplay = getFinancialDisplay(op.lucro_total_gerado);
+                const isExpanded = expandedCards.has(op.operador_id);
+
+                return (
+                  <Card 
+                    key={op.operador_id} 
+                    className="overflow-hidden border-border/50 bg-gradient-to-br from-card to-card/80 hover:border-primary/30 transition-all duration-200 hover:shadow-md"
+                  >
+                    {/* Header */}
+                    <div className="flex items-center justify-between px-5 pt-4 pb-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                          <Users className="h-5 w-5 text-primary" />
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="font-semibold text-sm leading-tight truncate">{op.nome}</h4>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {op.projetos_ativos} projeto{op.projetos_ativos !== 1 ? 's' : ''} · {op.total_apostas} apostas
+                          </p>
+                        </div>
                       </div>
-                      <div className="flex flex-col items-end gap-1">
+                      <div className="flex items-center gap-2 shrink-0">
                         {getStatusBadge(op)}
-                        <Badge variant="outline">
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0.5">
                           {op.projetos[0]?.modelo_pagamento 
                             ? MODELOS_PAGAMENTO_LABELS[op.projetos[0].modelo_pagamento] 
                             : "N/A"}
                         </Badge>
                       </div>
                     </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        {(() => {
-                          const display = getFinancialDisplay(op.lucro_total_gerado);
-                          return (
-                            <>
-                              <p className="text-xs text-muted-foreground">
-                                {display.label || 'Resultado'}
-                              </p>
-                              <p className={`text-lg font-bold ${display.colorClass}`}>
-                                {display.formattedValue}
-                              </p>
-                            </>
-                          );
-                        })()}
+
+                    {/* Metrics Grid - 2x2 */}
+                    <div className="grid grid-cols-2 gap-2 px-5 pb-3">
+                      {/* Lucro */}
+                      <div className="rounded-lg bg-muted/40 border border-border/30 p-3 flex items-center justify-between">
+                        <div>
+                          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
+                            {lucroDisplay.label || 'Resultado'}
+                          </p>
+                          <p className={`text-base font-bold font-mono mt-0.5 ${lucroDisplay.colorClass}`}>
+                            {lucroDisplay.formattedValue}
+                          </p>
+                        </div>
+                        <div className={`h-8 w-8 rounded-full flex items-center justify-center ${
+                          op.lucro_total_gerado >= 0 ? 'bg-emerald-500/10' : 'bg-red-500/10'
+                        }`}>
+                          {op.lucro_total_gerado >= 0 
+                            ? <TrendingUp className="h-4 w-4 text-emerald-500" />
+                            : <TrendingDown className="h-4 w-4 text-red-500" />
+                          }
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">ROI</p>
-                        <p className="text-lg font-bold">
-                          {formatPercent(op.roi)}
-                        </p>
+
+                      {/* ROI */}
+                      <div className="rounded-lg bg-muted/40 border border-border/30 p-3 flex items-center justify-between">
+                        <div>
+                          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">ROI</p>
+                          <p className={`text-base font-bold font-mono mt-0.5 ${
+                            op.roi >= 0 ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'
+                          }`}>
+                            {formatPercent(op.roi)}
+                          </p>
+                        </div>
+                        <div className={`h-8 w-8 rounded-full flex items-center justify-center ${
+                          op.roi >= 0 ? 'bg-emerald-500/10' : 'bg-red-500/10'
+                        }`}>
+                          <Percent className="h-4 w-4 text-muted-foreground" />
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Win Rate</p>
-                        <p className="text-lg font-bold">
-                          {formatPercent(op.winRate)}
-                        </p>
+
+                      {/* Win Rate */}
+                      <div className="rounded-lg bg-muted/40 border border-border/30 p-3 flex items-center justify-between">
+                        <div>
+                          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Win Rate</p>
+                          <p className="text-base font-bold font-mono mt-0.5">
+                            {formatPercent(op.winRate)}
+                          </p>
+                        </div>
+                        <div className="h-8 w-8 rounded-full bg-blue-500/10 flex items-center justify-center">
+                          <Target className="h-4 w-4 text-blue-500" />
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Pgto. Estimado</p>
-                        <p className="text-lg font-bold text-primary">
-                          {formatCurrency(op.pagamentoEstimado)}
-                        </p>
+
+                      {/* Total Pago */}
+                      <div className="rounded-lg bg-muted/40 border border-border/30 p-3 flex items-center justify-between">
+                        <div>
+                          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Total Pago</p>
+                          <p className="text-base font-bold font-mono mt-0.5 text-primary">
+                            {formatCurrency(op.total_pago)}
+                          </p>
+                        </div>
+                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                          <DollarSign className="h-4 w-4 text-primary" />
+                        </div>
                       </div>
                     </div>
 
                     {/* Progresso da Entrega */}
                     {op.entregaAtual && op.entregaAtual.meta_valor && (
-                      <div className="space-y-1.5 pt-2 border-t">
+                      <div className="mx-5 mb-3 p-3 rounded-lg bg-muted/30 border border-border/20 space-y-1.5">
                         <div className="flex justify-between text-xs">
-                          <span className="flex items-center gap-1">
+                          <span className="flex items-center gap-1 text-muted-foreground">
                             <Clock className="h-3 w-3" />
                             Entrega #{op.entregaAtual.numero_entrega}
                           </span>
-                          <span className={op.progressoEntrega >= 100 ? "text-emerald-500 font-medium" : ""}>
+                          <span className={op.progressoEntrega >= 100 ? "text-emerald-500 font-semibold" : "font-medium"}>
                             {formatPercent(op.progressoEntrega)}
                           </span>
                         </div>
-                        <Progress 
-                          value={op.progressoEntrega} 
-                          className="h-2"
-                        />
-                        <div className="flex justify-between text-xs text-muted-foreground">
+                        <Progress value={op.progressoEntrega} className="h-1.5" />
+                        <div className="flex justify-between text-[10px] text-muted-foreground">
                           <span>{formatCurrency(op.entregaAtual.resultado_nominal)}</span>
                           <span>Meta: {formatCurrency(op.entregaAtual.meta_valor)}</span>
                         </div>
@@ -921,50 +959,74 @@ export function OperadorDashboard() {
                     )}
 
                     {/* Expandable details */}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-full"
-                      onClick={() => toggleExpand(op.operador_id)}
-                    >
-                      {expandedCards.has(op.operador_id) ? (
-                        <>
-                          <ChevronUp className="h-4 w-4 mr-1" />
-                          Menos detalhes
-                        </>
-                      ) : (
-                        <>
-                          <ChevronDown className="h-4 w-4 mr-1" />
-                          Mais detalhes
-                        </>
-                      )}
-                    </Button>
+                    <div className="border-t border-border/30">
+                      <button
+                        className="w-full flex items-center justify-center gap-1.5 py-2 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
+                        onClick={() => toggleExpand(op.operador_id)}
+                      >
+                        {isExpanded ? (
+                          <>
+                            <ChevronUp className="h-3.5 w-3.5" />
+                            Menos detalhes
+                          </>
+                        ) : (
+                          <>
+                            <ChevronDown className="h-3.5 w-3.5" />
+                            Mais detalhes
+                          </>
+                        )}
+                      </button>
 
-                    {expandedCards.has(op.operador_id) && (
-                      <div className="pt-3 border-t space-y-2">
-                        <div className="grid grid-cols-2 gap-2 text-sm">
+                      {isExpanded && (
+                        <div className="px-5 pb-4 space-y-3">
+                          {/* Projetos vinculados */}
                           <div>
-                            <span className="text-muted-foreground">Total Apostas:</span>
-                            <span className="ml-2 font-medium">{op.total_apostas}</span>
+                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-2 flex items-center gap-1.5">
+                              <Zap className="h-3 w-3" />
+                              Projetos Vinculados
+                            </p>
+                            <div className="space-y-1.5">
+                              {op.projetos.map((proj) => {
+                                const projLucroDisplay = getFinancialDisplay(proj.lucro_projeto);
+                                const projRoi = proj.faturamento_projeto > 0 
+                                  ? (proj.lucro_projeto / proj.faturamento_projeto) * 100 
+                                  : 0;
+                                return (
+                                  <div key={proj.operador_projeto_id} className="flex items-center justify-between text-xs p-2 rounded-md bg-muted/20">
+                                    <span className="font-medium truncate">{proj.projeto_nome}</span>
+                                    <div className="flex items-center gap-3 shrink-0">
+                                      <span className="text-muted-foreground">{proj.total_apostas} apostas</span>
+                                      <span className={`font-mono font-semibold ${projLucroDisplay.colorClass}`}>
+                                        {projLucroDisplay.formattedValue}
+                                      </span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
                           </div>
-                          <div>
-                            <span className="text-muted-foreground">Volume:</span>
-                            <span className="ml-2 font-medium">{formatCurrency(op.volume_total)}</span>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">Média/Aposta:</span>
-                            <span className="ml-2 font-medium">{formatCurrency(op.mediaPorAposta)}</span>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">Total Pago:</span>
-                            <span className="ml-2 font-medium text-emerald-500">{formatCurrency(op.total_pago)}</span>
+
+                          {/* Extra metrics */}
+                          <div className="grid grid-cols-3 gap-3 pt-2 border-t border-border/20">
+                            <div className="text-center">
+                              <p className="text-[10px] text-muted-foreground">Volume</p>
+                              <p className="text-xs font-bold font-mono">{formatCurrency(op.volume_total)}</p>
+                            </div>
+                            <div className="text-center">
+                              <p className="text-[10px] text-muted-foreground">Média/Aposta</p>
+                              <p className="text-xs font-bold font-mono">{formatCurrency(op.mediaPorAposta)}</p>
+                            </div>
+                            <div className="text-center">
+                              <p className="text-[10px] text-muted-foreground">Pgto. Estimado</p>
+                              <p className="text-xs font-bold font-mono text-primary">{formatCurrency(op.pagamentoEstimado)}</p>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
+                      )}
+                    </div>
+                  </Card>
+                );
+              })}
               {operadoresFiltrados.length === 0 && (
                 <div className="text-center py-8 text-muted-foreground">
                   Nenhum operador encontrado com os filtros selecionados
