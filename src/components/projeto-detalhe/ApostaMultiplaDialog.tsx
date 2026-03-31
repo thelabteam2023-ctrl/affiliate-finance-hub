@@ -72,7 +72,7 @@ import { GerouFreebetInput } from "./GerouFreebetInput";
 import { FreebetToggle } from "@/components/apostas/waterfall";
 import { FonteEntradaSelector } from "@/components/apostas/FonteEntradaSelector";
 import { useWorkspaceBetSources } from "@/hooks/useWorkspaceBetSources";
-import { deriveStakeSplit } from "@/lib/freebetStake";
+import { deriveStakeSplit, derivePersistedStakeSplit } from "@/lib/freebetStake";
 
 interface Selecao {
   descricao: string;
