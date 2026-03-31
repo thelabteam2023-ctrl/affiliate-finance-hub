@@ -214,6 +214,9 @@ export function DespesaAdministrativaDialog({
 
       const grupoInfo = getGrupoInfo(formData.grupo || "OUTROS");
       const subcategoriaInfo = formData.subcategoria_rh ? getSubcategoriaRHInfo(formData.subcategoria_rh) : null;
+      const operadorSelecionado = formData.operador_id 
+        ? operadores.find(op => op.operador_id === formData.operador_id) 
+        : null;
       
       // Categoria personalizada para RH incluindo subcategoria
       const categoriaLabel = formData.grupo === "RECURSOS_HUMANOS" && subcategoriaInfo
@@ -221,9 +224,10 @@ export function DespesaAdministrativaDialog({
         : grupoInfo.label;
       
       const payload: any = {
-        categoria: categoriaLabel, // Categoria recebe o label do grupo para compatibilidade
+        categoria: categoriaLabel,
         grupo: formData.grupo,
         subcategoria_rh: formData.grupo === "RECURSOS_HUMANOS" ? formData.subcategoria_rh : null,
+        operador_id: formData.grupo === "RECURSOS_HUMANOS" ? (formData.operador_id || null) : null,
         descricao: formData.descricao || null,
         valor: formData.valor,
         data_despesa: formData.data_despesa,
