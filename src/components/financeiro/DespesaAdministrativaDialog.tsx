@@ -21,11 +21,16 @@ import { Switch } from "@/components/ui/switch";
 import { DatePicker } from "@/components/ui/date-picker";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, Users } from "lucide-react";
 import { OrigemPagamentoSelect, OrigemPagamentoData } from "@/components/programa-indicacao/OrigemPagamentoSelect";
 import { PagamentoOperadorDialog } from "@/components/operadores/PagamentoOperadorDialog";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { GRUPOS_DESPESA_LIST, getGrupoInfo, SUBCATEGORIAS_RH_LIST, getSubcategoriaRHInfo } from "@/lib/despesaGrupos";
+
+interface OperadorOption {
+  operador_id: string;
+  nome: string;
+}
 
 interface DespesaAdministrativa {
   id?: string;
