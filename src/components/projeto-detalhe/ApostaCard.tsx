@@ -409,26 +409,14 @@ export function ApostaCard({
   };
   
   if (variant === "list") {
-    // Extrair nome base da casa (antes do " - ") para exibição limpa
-    const bookmakerBase = aposta.bookmaker_nome?.split(" - ")[0] || aposta.bookmaker_nome;
-    // Extrair vínculo (parceiro) - pode vir do parceiro_nome ou da parte após " - " no bookmaker_nome
-    const vinculoFull = aposta.parceiro_nome || aposta.bookmaker_nome?.split(" - ")[1]?.trim();
-    // Abreviar para primeiro e último nome
-    const vinculoAbreviado = vinculoFull ? getFirstLastName(vinculoFull) : null;
-    
-    // Formato padronizado: "CASA - PARCEIRO ABREVIADO (IDENTIFICADOR)"
-    // Evitar duplicação quando instance_identifier é igual ao primeiro nome do parceiro
-    const identifierDiffersFromParceiro = aposta.instance_identifier && 
-      vinculoAbreviado && 
-      aposta.instance_identifier.toUpperCase() !== vinculoAbreviado.split(" ")[0]?.toUpperCase();
-    let bookmakerDisplay = vinculoAbreviado 
-      ? `${bookmakerBase} - ${vinculoAbreviado}`
-      : bookmakerBase;
-    if (aposta.instance_identifier && !vinculoAbreviado) {
-      bookmakerDisplay += ` (${aposta.instance_identifier})`;
-    } else if (identifierDiffersFromParceiro) {
-      bookmakerDisplay += ` (${aposta.instance_identifier})`;
-    }
+    // Use centralized formatter - bookmaker_nome may already be pre-formatted
+    const bookmakerDisplay = aposta.parceiro_nome 
+      ? formatBookmakerProjectName(
+          aposta.bookmaker_nome?.split(" - ")[0] || aposta.bookmaker_nome || "Casa",
+          aposta.parceiro_nome,
+          aposta.instance_identifier,
+        )
+      : aposta.bookmaker_nome || "Casa";
     
     // Para operações com múltiplas pernas (3+), usa layout vertical
     const hasMultipleLegs = hasPernas && (aposta.pernas?.length || 0) >= 3;
