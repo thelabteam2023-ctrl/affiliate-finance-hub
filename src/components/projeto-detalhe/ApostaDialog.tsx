@@ -1088,9 +1088,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         setGerouFreebet(aposta.gerou_freebet || false);
         setValorFreebetGerada(aposta.valor_freebet_gerada?.toString() || "");
         
-        // Se a aposta usou freebet (bookmaker simples), restaurar flag sem sobrescrever split já hidratado
+        // Se a aposta usou freebet (bookmaker simples), restaurar flag APENAS com base no stake_freebet persistido
         if (aposta.tipo_freebet && aposta.tipo_freebet !== "normal" && aposta.modo_entrada === "PADRAO") {
-          setUsarFreebetBookmaker((prev) => prev || Number(aposta.stake_freebet ?? stakeSplit.stakeFreebet ?? 0) > 0);
+          setUsarFreebetBookmaker((prev) => prev || Number(aposta.stake_freebet ?? 0) > 0);
         }
         
         // Restaurar campos de registro (estrategia, forma_registro, contexto_operacional, fonte_saldo)
