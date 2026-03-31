@@ -391,11 +391,6 @@ export const ParceiroBookmakersTab = memo(function ParceiroBookmakersTab({
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5">
                           <p className="text-xs font-medium truncate">{bm.nome}</p>
-                          {bm.instance_identifier && (
-                            <Badge variant="outline" className="text-[8px] px-1 py-0 h-3.5 border-primary/50 text-primary">
-                              {bm.instance_identifier}
-                            </Badge>
-                          )}
                           {hasCredentials(bm) && (
                             <Popover open={credentialsPopoverOpen === bm.id} onOpenChange={(open) => setCredentialsPopoverOpen(open ? bm.id : null)}>
                               <PopoverTrigger asChild><button type="button" className="h-6 w-6 p-0.5 shrink-0 rounded hover:bg-muted/50 transition-colors cursor-pointer flex items-center justify-center" onClick={(e) => { e.stopPropagation(); setCredentialsPopoverOpen(credentialsPopoverOpen === bm.id ? null : bm.id); }}><IdCard className="h-5 w-5 text-muted-foreground hover:text-foreground" /></button></PopoverTrigger>

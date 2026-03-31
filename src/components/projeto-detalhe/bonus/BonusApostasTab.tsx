@@ -46,6 +46,7 @@ import { ResultadoPill } from "@/components/projeto-detalhe/ResultadoPill";
 import { ApostaCard, type ApostaCardData } from "@/components/projeto-detalhe/ApostaCard";
 import { useProjectBonuses, FinalizeReason } from "@/hooks/useProjectBonuses";
 import { cn, getFirstLastName } from "@/lib/utils";
+import { buildBookmakerNomeMap } from "@/lib/bookmaker-display";
 import { 
   OperationsSubTabHeader,
   type HistorySubTab,
@@ -761,15 +762,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
   };
 
   // Mapa de bookmaker_id -> nome completo com parceiro para enriquecer nomes no SurebetCard
-  const bookmakerNomeMap = useMemo(() => {
-    const map = new Map<string, string>();
-    bookmakers.forEach(bk => {
-      const shortName = getFirstLastName(bk.parceiro?.nome || "");
-      const nomeCompleto = shortName ? `${bk.nome} - ${shortName}` : bk.nome;
-      map.set(bk.id, nomeCompleto);
-    });
-    return map;
-  }, [bookmakers]);
+  const bookmakerNomeMap = useMemo(() => buildBookmakerNomeMap(bookmakers), [bookmakers]);
 
 
   // Resolução rápida de apostas simples/múltiplas - USA RPC ATÔMICA + ROLLOVER (Motor Financeiro Unificado)

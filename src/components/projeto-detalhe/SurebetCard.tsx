@@ -5,6 +5,7 @@ import { format as formatDate } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ArrowLeftRight, Zap, CheckCircle2, Clock, Coins, ChevronDown, ChevronUp, Layers, Building2, TrendingUp, Target } from "lucide-react";
 import { cn, getFirstLastName } from "@/lib/utils";
+import { formatBookmakerDisplay } from "@/lib/bookmaker-display";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
@@ -248,17 +249,7 @@ function PernaItem({
   const displayOdd = perna.odd_media || perna.odd;
   const displayStake = perna.stake_total || perna.stake;
   
-  // Formatar nome da casa com vínculo abreviado
-  const formatBookmakerDisplay = (nomeCompleto: string) => {
-    const separatorIdx = nomeCompleto.indexOf(" - ");
-    if (separatorIdx > 0) {
-      const casa = nomeCompleto.substring(0, separatorIdx).trim();
-      const vinculoRaw = nomeCompleto.substring(separatorIdx + 3).trim();
-      const vinculoAbreviado = getFirstLastName(vinculoRaw);
-      return `${casa} - ${vinculoAbreviado}`;
-    }
-    return nomeCompleto;
-  };
+  // formatBookmakerDisplay imported from @/lib/bookmaker-display
   
   // Enriquecer nome do bookmaker: usar mapa canônico se disponível, senão usar o que está salvo
   const enrichedBookmakerNome = (perna.bookmaker_id && bookmakerNomeMap?.has(perna.bookmaker_id))
