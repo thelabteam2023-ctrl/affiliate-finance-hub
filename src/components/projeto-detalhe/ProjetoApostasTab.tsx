@@ -1710,8 +1710,11 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
 
               // Single-entry simples → ApostaCard normal
               const displayInfo = getApostaDisplayInfo(aposta);
-              const bookmakerBase = aposta.bookmaker?.nome?.split(" - ")[0] || aposta.bookmaker?.nome;
-              const parceiroNome = aposta.bookmaker?.parceiro?.nome;
+              const bookmakerNomeFormatted = formatBookmakerProjectName(
+                aposta.bookmaker?.nome || "—",
+                aposta.bookmaker?.parceiro?.nome,
+                (aposta.bookmaker as any)?.instance_identifier,
+              );
               const logoUrl = aposta.bookmaker?.bookmakers_catalogo?.logo_url;
               
               let estrategia: string = aposta.estrategia || "NORMAL";
