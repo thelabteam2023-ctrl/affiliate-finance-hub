@@ -98,6 +98,24 @@ export function DespesaAdministrativaDialog({
     cotacao: null,
   });
 
+  // Fetch operadores when dialog opens and group is RH
+  useEffect(() => {
+    if (open) {
+      const fetchOperadores = async () => {
+        const { data, error } = await supabase
+          .from("v_operadores_workspace")
+          .select("operador_id, nome")
+          .eq("is_active", true)
+          .not("operador_id", "is", null)
+          .order("nome");
+        if (!error && data) {
+          setOperadores(data.filter(op => op.operador_id) as OperadorOption[]);
+        }
+      };
+      fetchOperadores();
+    }
+  }, [open]);
+
   useEffect(() => {
     if (despesa) {
       setFormData({
@@ -105,8 +123,8 @@ export function DespesaAdministrativaDialog({
         data_despesa: despesa.data_despesa.split("T")[0],
         grupo: despesa.grupo || "OUTROS",
         subcategoria_rh: (despesa as any).subcategoria_rh || null,
+        operador_id: (despesa as any).operador_id || null,
       });
-      // Set origem data from existing despesa
       setOrigemData({
         origemTipo: (despesa.origem_tipo as "CAIXA_OPERACIONAL" | "PARCEIRO_CONTA" | "PARCEIRO_WALLET") || "CAIXA_OPERACIONAL",
         origemParceiroId: despesa.origem_parceiro_id || null,
@@ -123,6 +141,7 @@ export function DespesaAdministrativaDialog({
         categoria: "",
         grupo: "UTILIDADES_E_SERVICOS_BASICOS",
         subcategoria_rh: null,
+        operador_id: null,
         descricao: "",
         valor: 0,
         data_despesa: new Date().toISOString().split("T")[0],
