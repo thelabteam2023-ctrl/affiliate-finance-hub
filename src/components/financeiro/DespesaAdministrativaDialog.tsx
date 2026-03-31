@@ -492,8 +492,8 @@ export function DespesaAdministrativaDialog({
               workspace_id: workspaceId,
               tipo_transacao: "DESPESA_ADMINISTRATIVA",
               tipo_moeda: origemData.tipoMoeda,
-              moeda: isCrypto ? "USD" : origemData.moeda, // CRÍTICO: CRYPTO = USD, não BRL
-              valor: isCrypto ? formData.valor : formData.valor, // valor referência BRL para histórico
+              moeda: isCrypto ? "USD" : origemData.moeda,
+              valor: isCrypto ? formData.valor : formData.valor,
               coin: origemData.coin || null,
               qtd_coin: qtdCoin,
               valor_usd: valorUSD,
@@ -502,10 +502,10 @@ export function DespesaAdministrativaDialog({
               origem_parceiro_id: origemData.origemParceiroId || null,
               origem_conta_bancaria_id: origemData.origemContaBancariaId || null,
               origem_wallet_id: origemData.origemWalletId || null,
-              // destino_tipo: NULL - despesas administrativas são externas ao sistema
               data_transacao: formData.data_despesa,
               descricao: `Despesa administrativa - ${categoriaLabel}${formData.descricao ? `: ${formData.descricao}` : ''}`,
               status: "CONFIRMADO",
+              auditoria_metadata: { grupo: formData.grupo, categoria: categoriaLabel },
             });
           
           if (ledgerError) throw ledgerError;

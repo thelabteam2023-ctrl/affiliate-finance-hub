@@ -82,6 +82,7 @@ interface Transacao {
   ajuste_motivo: string | null;
   data_confirmacao: string | null;
   created_at: string;
+  auditoria_metadata: any;
 }
 
 interface SaldoFiat {
@@ -283,11 +284,18 @@ export default function Caixa() {
       // Fetch despesas administrativas grupo para lookup no histórico
       const { data: despAdminData } = await supabase
         .from("despesas_administrativas")
-        .select("id, grupo, descricao, categoria");
-      const despAdminMap: { [descricao: string]: { grupo: string; categoria: string } } = {};
+        .select("id, grupo, descricao, categoria, valor, data_despesa");
+      const despAdminMap: { [key: string]: { grupo: string; categoria: string } } = {};
       despAdminData?.forEach(d => {
+        const grupo = d.grupo || "OUTROS";
+        const categoria = d.categoria || "";
+        // Key by description
         if (d.descricao) {
-          despAdminMap[d.descricao.trim().toLowerCase()] = { grupo: d.grupo || "OUTROS", categoria: d.categoria || "" };
+          despAdminMap[d.descricao.trim().toLowerCase()] = { grupo, categoria };
+        }
+        // Key by valor+data composite for legacy records without category in description
+        if (d.valor && d.data_despesa) {
+          despAdminMap[`${d.valor}_${d.data_despesa}`] = { grupo, categoria };
         }
       });
       setDespesasAdminGrupoMap(despAdminMap);
@@ -854,14 +862,29 @@ export default function Caixa() {
       const categoriaRaw = catMatch?.[1]?.trim() || "";
       const detalhe = catMatch?.[2]?.trim() || "";
       
+      // 0. Prioridade máxima: auditoria_metadata.grupo (registros novos)
+      const meta = transacao.auditoria_metadata as any;
+      let grupoKey = meta?.grupo || "";
+      
       // 1. Tentar resolver grupo pela categoria extraída da descrição (ex: "Recursos Humanos")
-      let grupoKey = categoriaRaw ? getGrupoFromCategoria(categoriaRaw) : "OUTROS";
+      if (!grupoKey && categoriaRaw) {
+        grupoKey = getGrupoFromCategoria(categoriaRaw);
+      }
+      if (!grupoKey) grupoKey = "OUTROS";
       
       // 2. Fallback: buscar grupo pela descrição no mapa de despesas administrativas
       if (grupoKey === "OUTROS" && detalhe) {
         const lookupKey = detalhe.trim().toLowerCase();
         if (despesasAdminGrupoMap[lookupKey]) {
           grupoKey = despesasAdminGrupoMap[lookupKey].grupo;
+        }
+      }
+      
+      // 3. Fallback: buscar por valor+data (registros legados sem categoria na descrição)
+      if (grupoKey === "OUTROS" && transacao.valor && transacao.data_transacao) {
+        const compositeKey = `${transacao.valor}_${transacao.data_transacao}`;
+        if (despesasAdminGrupoMap[compositeKey]) {
+          grupoKey = despesasAdminGrupoMap[compositeKey].grupo;
         }
       }
       
