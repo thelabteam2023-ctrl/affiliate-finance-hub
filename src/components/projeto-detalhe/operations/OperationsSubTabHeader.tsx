@@ -10,44 +10,23 @@ import type { SortOrder } from "@/hooks/useTabFilters";
 export type HistorySubTab = "abertas" | "historico";
 
 export interface OperationsSubTabHeaderProps {
-  /** Sub-tab atual */
   subTab: HistorySubTab;
-  
-  /** Callback para mudar sub-tab */
   onSubTabChange: (tab: HistorySubTab) => void;
-  
-  /** Número de operações abertas (para badge) */
   openCount: number;
-  
-  /** Número total de operações abertas (sem filtros dimensionais) */
   totalOpenCount?: number;
-  
-  /** Número de operações no histórico (opcional, mostra badge se > 0) */
   historyCount?: number;
-  
-  /** Número total de operações no histórico (sem filtros dimensionais) */
   totalHistoryCount?: number;
-  
-  /** Modo de visualização cards/list (opcional) */
   viewMode?: "cards" | "list";
-  
-  /** Callback para mudar modo de visualização (opcional) */
   onViewModeChange?: (mode: "cards" | "list") => void;
-  
-  /** Mostrar toggle de visualização */
   showViewToggle?: boolean;
-  
-  /** Texto de busca por evento/jogo */
   searchQuery?: string;
-  
-  /** Callback para mudar texto de busca */
   onSearchChange?: (query: string) => void;
-  
-  /** Ações extras (ex: ExportMenu) - renderizadas à direita */
   extraActions?: ReactNode;
-  
-  /** Classe CSS adicional */
   className?: string;
+  /** Ordenação atual do histórico */
+  sortOrder?: SortOrder;
+  /** Callback para alternar ordenação */
+  onSortOrderToggle?: () => void;
 }
 
 /**
