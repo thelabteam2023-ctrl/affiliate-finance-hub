@@ -175,9 +175,10 @@ export function useTabFilters({
       period,
       bookmakerIds,
       parceiroIds,
+      sortOrder,
     };
     localStorage.setItem(storageKey, JSON.stringify(toSave));
-  }, [storageKey, persist, period, bookmakerIds, parceiroIds]);
+  }, [storageKey, persist, period, bookmakerIds, parceiroIds, sortOrder]);
 
   // Computar dateRange
   const dateRange = useMemo(
