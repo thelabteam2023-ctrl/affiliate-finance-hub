@@ -1656,7 +1656,8 @@ export function CaixaTransacaoDialog({
         exchange: w.exchange,
         endereco: w.endereco,
         parceiro_id: w.parceiro_id,
-        moeda: w.moeda
+        moeda: w.moeda,
+        network: (w as any).network ?? null,
       })));
       
       // Fetch caixa operacional partner ID
