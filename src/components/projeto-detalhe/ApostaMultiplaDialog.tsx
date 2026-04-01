@@ -1820,7 +1820,7 @@ export function ApostaMultiplaDialog({
                 />
                 {boostMultiplier > 1 && oddFinalSemBoost > 0 && (
                   <p className="text-[8px] text-muted-foreground">
-                    {oddFinalSemBoost.toFixed(3)} → +{boostPercent}%
+                    {parseFloat(oddFinalSemBoost.toFixed(5))} → +{boostPercent}%
                   </p>
                 )}
               </div>
