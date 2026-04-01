@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { isWalletCompatibleWithCoin } from "@/lib/cryptoNetworkCompat";
 import { getTodayCivilDate } from "@/utils/dateUtils";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
