@@ -22,7 +22,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Loader2, Save, Trash2, Camera, CheckCircle2, Gift, FileText } from "lucide-react";
+import { Loader2, Save, Trash2, Camera, CheckCircle2, Gift, FileText, CalendarIcon } from "lucide-react";
+import { format, parse } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useApostaRascunho, type RascunhoSelecaoData, type ApostaRascunho } from "@/hooks/useApostaRascunho";
 import {
   Tooltip,
@@ -1905,16 +1909,61 @@ export function ApostaMultiplaDialog({
               </p>
             </div>
 
-            {/* Data editável */}
+            {/* Data editável - Calendar padrão do sistema */}
             <div className="flex items-center justify-end gap-1.5">
               <Label className="text-[9px] text-muted-foreground shrink-0">Data:</Label>
-              <Input
-                type="datetime-local"
-                value={dataAposta}
-                onChange={(e) => setDataAposta(e.target.value)}
-                className="h-5 text-[9px] w-[155px] border-border/30 bg-transparent px-1"
-                required
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="h-6 text-[9px] w-[180px] justify-start border-border/30 bg-transparent px-2 font-normal"
+                  >
+                    <CalendarIcon className="mr-1 h-3 w-3 opacity-50" />
+                    {dataAposta 
+                      ? (() => {
+                          const [datePart, timePart] = dataAposta.split("T");
+                          if (!datePart) return "Selecione";
+                          const d = new Date(datePart + "T12:00:00");
+                          return `${format(d, "dd/MM/yyyy", { locale: ptBR })} ${timePart || "00:00"}`;
+                        })()
+                      : "Selecione a data"
+                    }
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end" sideOffset={4}>
+                  <Calendar
+                    mode="single"
+                    selected={dataAposta ? (() => {
+                      const [datePart] = dataAposta.split("T");
+                      return datePart ? new Date(datePart + "T12:00:00") : undefined;
+                    })() : undefined}
+                    onSelect={(date) => {
+                      if (date) {
+                        const timePart = dataAposta?.split("T")[1] || "00:00";
+                        const yyyy = date.getFullYear();
+                        const mm = String(date.getMonth() + 1).padStart(2, "0");
+                        const dd = String(date.getDate()).padStart(2, "0");
+                        setDataAposta(`${yyyy}-${mm}-${dd}T${timePart}`);
+                      }
+                    }}
+                    locale={ptBR}
+                    initialFocus
+                    className="pointer-events-auto"
+                  />
+                  <div className="border-t border-border p-2 flex items-center justify-center gap-1">
+                    <Label className="text-[10px] text-muted-foreground">Hora:</Label>
+                    <Input
+                      type="time"
+                      value={dataAposta?.split("T")[1] || "00:00"}
+                      onChange={(e) => {
+                        const datePart = dataAposta?.split("T")[0] || new Date().toISOString().slice(0, 10);
+                        setDataAposta(`${datePart}T${e.target.value}`);
+                      }}
+                      className="h-6 text-[10px] w-[80px] border-border/30 bg-background px-1"
+                    />
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
 
