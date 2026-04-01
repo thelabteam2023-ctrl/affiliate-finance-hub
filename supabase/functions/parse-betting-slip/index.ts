@@ -550,10 +550,10 @@ DICA: Em boletins de apostas, a ODD geralmente aparece em verde/destaque próxim
         parsedData.stake.value = normalizeNumericString(parsedData.stake?.value);
         parsedData.retornoPotencial.value = normalizeNumericString(parsedData.retornoPotencial?.value);
         
-        // Normalize each selection
+        // Normalize each selection - odds with 5 decimal precision
         for (const sel of parsedData.selecoes) {
           if (sel.odd) {
-            sel.odd.value = normalizeNumericString(sel.odd.value);
+            sel.odd.value = normalizeNumericString(sel.odd.value, 5);
           }
           // Uppercase event names
           if (sel.evento?.value) {
