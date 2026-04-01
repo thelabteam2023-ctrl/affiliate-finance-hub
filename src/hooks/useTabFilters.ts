@@ -308,6 +308,7 @@ export function useTabFilters({
     toggleParceiro,
     toggleEstrategia,
     toggleResultado,
+    toggleSortOrder,
     clearFilters,
     activeFiltersCount,
     
