@@ -1218,6 +1218,8 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
               showViewToggle={true}
               searchQuery={searchTerm}
               onSearchChange={setSearchTerm}
+              sortOrder={tabFilters.sortOrder}
+              onSortOrderToggle={tabFilters.toggleSortOrder}
               extraActions={
                 <ExportMenu
                   getData={() => apostasFiltradas.map(a => {
