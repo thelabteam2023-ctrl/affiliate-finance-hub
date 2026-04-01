@@ -660,10 +660,21 @@ DICA: Em boletins de apostas, a ODD geralmente aparece em verde/destaque próxim
         }
       }
 
-      // Normalize numeric fields
-      parsedData.odd.value = normalizeNumericString(parsedData.odd?.value);
+      // Normalize numeric fields - odds with 5 decimal precision
+      parsedData.odd.value = normalizeNumericString(parsedData.odd?.value, 5);
       parsedData.stake.value = normalizeNumericString(parsedData.stake?.value);
       parsedData.retorno.value = normalizeNumericString(parsedData.retorno?.value);
+
+      // REGRA CRÍTICA: Recalcular odd a partir de stake/retorno para máxima precisão
+      const { oddValue, wasRecalculated } = recalcularOddFromStakeRetorno(
+        parsedData.stake.value,
+        parsedData.retorno.value,
+        parsedData.odd.value
+      );
+      if (wasRecalculated) {
+        parsedData.odd.value = oddValue;
+        parsedData.odd.confidence = "high";
+      }
 
       // Normalize resultado to standard values
       if (parsedData.resultado?.value) {
