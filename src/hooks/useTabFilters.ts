@@ -292,6 +292,7 @@ export function useTabFilters({
     resultados,
     estrategias,
     dateRange,
+    sortOrder,
     
     // Setters
     setPeriod,
