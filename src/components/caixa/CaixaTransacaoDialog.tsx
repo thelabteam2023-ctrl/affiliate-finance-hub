@@ -1628,6 +1628,7 @@ export function CaixaTransacaoDialog({
           endereco, 
           parceiro_id, 
           moeda,
+          network,
           parceiros!inner(workspace_id)
         `)
         .eq("parceiros.workspace_id", workspaceId)
