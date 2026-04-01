@@ -342,12 +342,6 @@ export function HistoryDimensionalFilter({
 /**
  * Hook para usar o filtro dimensional com estado local
  */
-export function useHistoryDimensionalFilter() {
-  const [state, setState] = useState<HistoryDimensionalFilterState>({
-    bookmakerIds: [],
-    parceiroIds: [],
-    resultados: [],
-  });
+// Hook moved to src/hooks/useHistoryDimensionalFilter.ts for Fast Refresh compatibility
+export { useHistoryDimensionalFilter } from "@/hooks/useHistoryDimensionalFilter";
 
-  return { dimensionalFilter: state, setDimensionalFilter: setState };
-}
