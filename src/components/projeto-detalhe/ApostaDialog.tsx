@@ -3479,7 +3479,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                     <td className="px-1 py-3">
                       <Input
                         type="number"
-                        step="0.001"
+                        step="0.00001"
                         min="1.01"
                         value={odd}
                         onChange={(e) => setOdd(e.target.value)}
@@ -3712,7 +3712,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                         <td className="px-1 py-3">
                           <Input
                             type="number"
-                            step="0.001"
+                            step="0.00001"
                             min="1.01"
                             value={entry.odd}
                             onChange={(e) => setAdditionalEntries(prev => prev.map(en => en.id === entry.id ? { ...en, odd: e.target.value } : en))}

@@ -255,7 +255,7 @@ export function SurebetMobileCard({
             <label className="text-[10px] text-muted-foreground uppercase mb-1 block">Odd</label>
             <Input 
               type="number"
-              step="0.001"
+              step="0.00001"
               placeholder="0.00"
               value={entry.odd}
               onChange={(e) => onUpdateOdd(pernaIndex, "odd", e.target.value)}
@@ -390,7 +390,7 @@ export function SurebetMobileCard({
               <div className="grid grid-cols-2 gap-2">
                 <Input 
                   type="number"
-                  step="0.001"
+                  step="0.00001"
                   placeholder="Odd"
                   value={addEntry.odd}
                   onChange={(e) => onUpdateAdditionalEntry(pernaIndex, addIndex, 'odd', e.target.value)}
