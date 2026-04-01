@@ -162,8 +162,8 @@ export function calcularOddReal(
 export function formatOddDisplay(odd: number): string {
   if (odd === 0) return "";
   
-  // Se tem decimais significativas, mostrar até 4 casas
-  const formatted = odd.toFixed(4);
+  // Se tem decimais significativas, mostrar até 5 casas
+  const formatted = odd.toFixed(5);
   
   // Remover zeros à direita desnecessários
   return formatted.replace(/\.?0+$/, "") || formatted;

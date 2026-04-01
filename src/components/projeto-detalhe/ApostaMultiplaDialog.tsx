@@ -1856,7 +1856,7 @@ export function ApostaMultiplaDialog({
                    resultadoCalculado}
                 </Badge>
                 {(resultadoCalculado === "GREEN" || resultadoCalculado === "MEIO_GREEN") && oddFinalReal !== oddFinal && (
-                  <span className="text-[10px] text-muted-foreground">Odd ajust.: <span className="font-medium text-foreground">{oddFinalReal.toFixed(3)}</span></span>
+                  <span className="text-[10px] text-muted-foreground">Odd ajust.: <span className="font-medium text-foreground">{parseFloat(oddFinalReal.toFixed(5))}</span></span>
                 )}
               </div>
             )}

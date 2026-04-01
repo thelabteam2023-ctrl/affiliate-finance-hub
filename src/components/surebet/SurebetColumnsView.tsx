@@ -533,7 +533,7 @@ export function SurebetColumnsView({
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Odd ø</span>
                         <span className="text-sm font-bold tabular-nums text-foreground">
-                          {hasOddData ? oddMedia.toFixed(3) : "—"}
+                          {hasOddData ? parseFloat(oddMedia.toFixed(5)) : "—"}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">

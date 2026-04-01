@@ -146,7 +146,7 @@ export function SurebetColumnsLayout({
                   </span>
                   {leg.entries.length > 1 && weightedOdd > 0 && (
                     <span className="text-[10px] text-muted-foreground font-mono tabular-nums" title="Odd média ponderada">
-                      ø {weightedOdd.toFixed(3)}
+                      ø {parseFloat(weightedOdd.toFixed(5))}
                     </span>
                   )}
                 </div>

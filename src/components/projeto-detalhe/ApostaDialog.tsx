@@ -3865,7 +3865,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                       <div className="flex items-center gap-1.5">
                         <Layers className="h-3.5 w-3.5 text-muted-foreground" />
                         <span className="text-muted-foreground">Odd ø</span>
-                        <span className="font-bold tabular-nums">{weightedOdd.toFixed(3)}</span>
+                        <span className="font-bold tabular-nums">{parseFloat(weightedOdd.toFixed(5))}</span>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <span className="text-muted-foreground">Stake Total</span>
