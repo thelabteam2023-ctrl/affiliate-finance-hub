@@ -1220,7 +1220,7 @@ export function ProjetoValueBetTab({
         <CardHeader className="pb-3">
           {/* Sub-abas Abertas / Histórico - usando componente padronizado */}
           <div className="mb-3">
-            <OperationsSubTabHeader
+             <OperationsSubTabHeader
               subTab={apostasSubTab}
               onSubTabChange={setApostasSubTab}
               openCount={filteredAbertasCount}
@@ -1232,6 +1232,8 @@ export function ProjetoValueBetTab({
               showViewToggle={true}
               searchQuery={searchTerm}
               onSearchChange={setSearchTerm}
+              sortOrder={tabFilters.sortOrder}
+              onSortOrderToggle={tabFilters.toggleSortOrder}
               extraActions={
                 <ExportMenu
                   getData={() => apostasFiltradas.map(a => transformApostaToExport({
