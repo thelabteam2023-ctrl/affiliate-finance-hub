@@ -7,6 +7,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { extractLocalDateKey } from "@/utils/dateUtils";
+import { KPIStatCell } from "@/components/kpis/KPIStatCell";
+import { KPISectionHeader } from "@/components/kpis/KPISectionHeader";
 
 interface SurebetPerna {
   id?: string;
@@ -45,42 +47,6 @@ interface SurebetStatisticsCardProps {
   currencySymbol: string;
 }
 
-const StatCell = ({ 
-  label, 
-  value, 
-  valueClass = "",
-  tooltip,
-  tooltipContent
-}: { 
-  label: string; 
-  value: string | number; 
-  valueClass?: string;
-  tooltip?: string;
-  tooltipContent?: React.ReactNode;
-}) => {
-  const content = (
-    <div className="flex items-center justify-between bg-muted/40 rounded px-3 py-1.5">
-      <span className="text-muted-foreground text-xs">{label}</span>
-      <span className={`font-medium tabular-nums text-xs ${valueClass}`}>{value}</span>
-    </div>
-  );
-
-  if (tooltip || tooltipContent) {
-    return (
-      <Tooltip>
-        <TooltipTrigger asChild>{content}</TooltipTrigger>
-        <TooltipContent 
-          side="top" 
-          className="text-xs max-w-xs bg-popover/95 backdrop-blur-sm border-border/50 shadow-xl"
-        >
-          {tooltipContent || tooltip}
-        </TooltipContent>
-      </Tooltip>
-    );
-  }
-  return content;
-};
-
 interface RankingItem {
   label: string;
   value: string;
@@ -116,17 +82,6 @@ const RankingTooltip = ({
   </div>
 );
 
-const SectionHeader = ({ title }: { title: string }) => (
-  <div className="mt-4 first:mt-0 mb-1">
-    <div className="flex items-center gap-2">
-      <div className="w-0.5 h-4 bg-emerald-500 rounded-full" />
-      <span className="text-xs font-semibold text-foreground/90 uppercase tracking-wider">
-        {title}
-      </span>
-    </div>
-  </div>
-);
-
 export function SurebetStatisticsCard({ surebets, formatCurrency, currencySymbol }: SurebetStatisticsCardProps) {
 
   const stats = useMemo(() => {
@@ -138,8 +93,6 @@ export function SurebetStatisticsCard({ surebets, formatCurrency, currencySymbol
     );
 
     // === 1. MÉTRICAS DE ROI ===
-    // CORREÇÃO: Garantir que stake_total tenha fallback para 0 quando NULL
-    // O valor já vem transformado do ProjetoSurebetTab com fallback stake_total || stake
     const getStakeValue = (s: Surebet) => s.stake_total || 0;
     
     const lucroTotalResolvidas = resolvidas.reduce((acc, s) => acc + (s.lucro_real || 0), 0);
@@ -148,10 +101,10 @@ export function SurebetStatisticsCard({ surebets, formatCurrency, currencySymbol
       ? (lucroTotalResolvidas / stakeTotalResolvidas) * 100 
       : 0;
 
-    // ROI médio mensal - agrupar por mês
+    // ROI médio mensal
     const lucroMensal = new Map<string, { lucro: number; stake: number }>();
     resolvidas.forEach(s => {
-      const mes = s.data_operacao.slice(0, 7); // YYYY-MM
+      const mes = s.data_operacao.slice(0, 7);
       if (!lucroMensal.has(mes)) {
         lucroMensal.set(mes, { lucro: 0, stake: 0 });
       }
@@ -175,7 +128,6 @@ export function SurebetStatisticsCard({ surebets, formatCurrency, currencySymbol
     const stakeTotal = surebets.reduce((acc, s) => acc + getStakeValue(s), 0);
     const stakeMedia = totalOperacoes > 0 ? stakeTotal / totalOperacoes : 0;
 
-    // Stake total média diária - Usar extractLocalDateKey para garantir agrupamento correto
     const stakePorDia = new Map<string, number>();
     surebets.forEach(s => {
       const dia = extractLocalDateKey(s.data_operacao);
@@ -224,7 +176,6 @@ export function SurebetStatisticsCard({ surebets, formatCurrency, currencySymbol
       });
     });
 
-    // Casas mais usadas
     const casasOrdenadas = Array.from(casaStats.entries())
       .sort((a, b) => b[1].operacoes - a[1].operacoes);
     const top3Casas = casasOrdenadas.slice(0, 3).map(([casa, data]) => ({
@@ -234,33 +185,27 @@ export function SurebetStatisticsCard({ surebets, formatCurrency, currencySymbol
       roi: data.stake > 0 ? (data.lucro / data.stake) * 100 : 0,
     }));
 
-    // Casas ordenadas por lucro
     const casasOrdenadasPorLucro = Array.from(casaStats.entries())
       .sort((a, b) => b[1].lucro - a[1].lucro);
     
-    // Top 5 casas maior lucro
     const top5MaiorLucro = casasOrdenadasPorLucro.slice(0, 5).map(([casa, data]) => ({
       casa,
       lucro: data.lucro,
     }));
     
-    // Top 5 casas menor lucro
     const top5MenorLucro = casasOrdenadasPorLucro.slice(-5).reverse().map(([casa, data]) => ({
       casa,
       lucro: data.lucro,
     }));
 
-    // Casa com maior lucro
     const casaMaiorLucro = casasOrdenadasPorLucro.length > 0 
       ? { casa: casasOrdenadasPorLucro[0][0], lucro: casasOrdenadasPorLucro[0][1].lucro }
       : null;
     
-    // Casa com menor lucro
     const casaMenorLucro = casasOrdenadasPorLucro.length > 0 
       ? { casa: casasOrdenadasPorLucro[casasOrdenadasPorLucro.length - 1][0], lucro: casasOrdenadasPorLucro[casasOrdenadasPorLucro.length - 1][1].lucro }
       : null;
 
-    // Casa com maior ROI (mínimo 10 operações)
     const MIN_OPERACOES_ROI = 10;
     const casasComRoi = casasOrdenadas
       .filter(([_, data]) => data.stake > 0 && data.operacoes >= MIN_OPERACOES_ROI)
@@ -272,12 +217,9 @@ export function SurebetStatisticsCard({ surebets, formatCurrency, currencySymbol
       .sort((a, b) => b.roi - a.roi);
     
     const casaMaiorRoi = casasComRoi.length > 0 ? casasComRoi[0] : null;
-    
-    // Casa com menor ROI e top 3 menor ROI (mínimo 10 operações)
     const casaMenorRoi = casasComRoi.length > 0 ? casasComRoi[casasComRoi.length - 1] : null;
     const top3MenorRoi = casasComRoi.slice(-3).reverse();
 
-    // Casa com maior incidência de Void
     const casasComVoid = casasOrdenadas.filter(([_, data]) => data.voids > 0);
     const casaMaiorVoid = casasComVoid.length > 0 
       ? casasComVoid.reduce((a, b) => {
@@ -290,7 +232,6 @@ export function SurebetStatisticsCard({ surebets, formatCurrency, currencySymbol
       ? (casaMaiorVoid[1].voids / casaMaiorVoid[1].operacoes) * 100 
       : 0;
 
-    // Casa com maior slippage
     const casasComSlippage = casasOrdenadas.filter(([_, data]) => data.operacoesComRoi > 0);
     const casaMaiorSlippage = casasComSlippage.length > 0 
       ? casasComSlippage.reduce((a, b) => {
@@ -309,7 +250,6 @@ export function SurebetStatisticsCard({ surebets, formatCurrency, currencySymbol
       ? Math.min(...lucrosResolvidas, 0) 
       : 0;
 
-    // Maior prejuízo acumulado em um dia - Usar extractLocalDateKey para garantir agrupamento correto
     const lucroPorDia = new Map<string, number>();
     resolvidas.forEach(s => {
       const dia = extractLocalDateKey(s.data_operacao);
@@ -327,20 +267,17 @@ export function SurebetStatisticsCard({ surebets, formatCurrency, currencySymbol
 
     const casasDistintas = casaStats.size;
     
-    // Estatísticas por VÍNCULO (bookmaker_id) - não por nome de casa
-    // IMPORTANTE: 1 surebet = 1 operação por vínculo, independente do número de pernas
+    // Estatísticas por VÍNCULO
     const vinculoStats = new Map<string, {
       id: string;
       nome: string;
-      operacoes: number; // contagem de surebets em que o vínculo participou
+      operacoes: number;
       lucro: number;
       stake: number;
     }>();
 
     surebets.forEach(s => {
       const numPernas = s.pernas?.length || 1;
-      
-      // Identificar vínculos únicos que participaram desta surebet
       const vinculosNestaSurebet = new Set<string>();
       
       s.pernas?.forEach(perna => {
@@ -360,12 +297,9 @@ export function SurebetStatisticsCard({ surebets, formatCurrency, currencySymbol
         const entry = vinculoStats.get(bookmarkerId)!;
         entry.stake += perna.stake;
         entry.lucro += (s.lucro_real || 0) / numPernas;
-        
-        // Marcar que este vínculo participou desta surebet
         vinculosNestaSurebet.add(bookmarkerId);
       });
       
-      // Incrementar +1 operação para cada vínculo único que participou desta surebet
       vinculosNestaSurebet.forEach(bookmarkerId => {
         const entry = vinculoStats.get(bookmarkerId);
         if (entry) {
@@ -379,20 +313,17 @@ export function SurebetStatisticsCard({ surebets, formatCurrency, currencySymbol
       ? lucroTotalGeral / totalVinculosAtivos 
       : 0;
 
-    // Ordenar vínculos por lucro
     const vinculosOrdenados = Array.from(vinculoStats.values())
       .sort((a, b) => b.lucro - a.lucro);
     
     const vinculoMaiorLucro = vinculosOrdenados.length > 0 ? vinculosOrdenados[0] : null;
     const vinculoMenorLucro = vinculosOrdenados.length > 0 ? vinculosOrdenados[vinculosOrdenados.length - 1] : null;
     
-    // Média de surebets por vínculo
     const totalOperacoesVinculos = Array.from(vinculoStats.values()).reduce((acc, v) => acc + v.operacoes, 0);
     const mediaOperacoesPorVinculo = totalVinculosAtivos > 0 
       ? totalOperacoesVinculos / totalVinculosAtivos 
       : 0;
 
-    // Top 5 vínculos por lucro para tooltip
     const top5VinculosMaiorLucro = vinculosOrdenados.slice(0, 5);
     const top5VinculosMenorLucro = vinculosOrdenados.slice(-5).reverse();
 
@@ -403,7 +334,6 @@ export function SurebetStatisticsCard({ surebets, formatCurrency, currencySymbol
       ? (surebetsRoiMaior25 / surebetsComRoi.length) * 100 
       : 0;
 
-    // Média de odds envolvidas
     let totalOdds = 0;
     let countOdds = 0;
     surebets.forEach(s => {
@@ -417,16 +347,12 @@ export function SurebetStatisticsCard({ surebets, formatCurrency, currencySymbol
     const mediaOdds = countOdds > 0 ? totalOdds / countOdds : 0;
 
     return {
-      // ROI
       roiMedioPorOperacao,
       roiMedioMensal,
-      // Resultados
       eventosLucrativos,
       eventosDeficitarios,
-      // Capital
       stakeMedia,
       stakeTotalDiaria,
-      // Casas
       top3Casas,
       top5MaiorLucro,
       top5MenorLucro,
@@ -437,13 +363,10 @@ export function SurebetStatisticsCard({ surebets, formatCurrency, currencySymbol
       casaMenorRoi,
       casaMaiorVoid: casaMaiorVoid ? { casa: casaMaiorVoid[0], taxa: taxaVoidMaior } : null,
       casaMaiorSlippage: casaMaiorSlippage ? { casa: casaMaiorSlippage[0], slippage: slippageMaiorCasa } : null,
-      // Risco
       maiorPrejuizoUnitario,
       maiorPrejuizoDiario,
-      // Eficiência
       lucroPorMilAlocados,
       casasDistintas,
-      // Vínculos
       totalVinculosAtivos,
       lucroPorVinculoAtivo,
       vinculoMaiorLucro,
@@ -452,7 +375,6 @@ export function SurebetStatisticsCard({ surebets, formatCurrency, currencySymbol
       top5VinculosMaiorLucro,
       top5VinculosMenorLucro,
       lucroTotalGeral,
-      // Qualidade
       percentRoiMaior25,
       mediaOdds,
     };
@@ -476,55 +398,60 @@ export function SurebetStatisticsCard({ surebets, formatCurrency, currencySymbol
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-0 pb-3">
-        {/* Layout em 3 colunas principais */}
-        <div className="grid grid-cols-3 gap-4">
-          {/* COLUNA 1: ROI + Resultados + Capital */}
-          <div className="space-y-2">
-            <SectionHeader title="ROI" />
-            <StatCell 
+        {/* Mobile: seções empilhadas | Desktop: 3 colunas */}
+        <div className="space-y-4 md:space-y-0 md:grid md:grid-cols-3 md:gap-4">
+          
+          {/* SEÇÃO 1: ROI + Resultados + Capital */}
+          <div className="space-y-1.5 md:space-y-2">
+            <KPISectionHeader title="ROI" color="emerald" />
+            <KPIStatCell 
               label="ROI médio/operação" 
               value={formatPercent(stats.roiMedioPorOperacao)} 
               valueClass={stats.roiMedioPorOperacao >= 0 ? "text-emerald-400" : "text-red-400"}
               tooltip="Lucro total ÷ Stake total das operações resolvidas"
             />
-            <StatCell 
+            <KPIStatCell 
               label="ROI médio mensal" 
               value={formatPercent(stats.roiMedioMensal)} 
               valueClass={stats.roiMedioMensal >= 0 ? "text-emerald-400" : "text-red-400"}
               tooltip="Média dos ROIs mensais"
             />
 
-            <SectionHeader title="Resultados" />
-            <StatCell 
-              label="Eventos lucrativos" 
-              value={stats.eventosLucrativos} 
-              valueClass="text-emerald-400"
-              tooltip="Operações com lucro > 0"
-            />
-            <StatCell 
-              label="Eventos deficitários" 
-              value={stats.eventosDeficitarios} 
-              valueClass="text-red-400"
-              tooltip="Operações com lucro < 0"
-            />
+            <KPISectionHeader title="Resultados" color="emerald" />
+            <div className="grid grid-cols-2 gap-1.5">
+              <KPIStatCell 
+                label="Lucrativos" 
+                value={stats.eventosLucrativos} 
+                valueClass="text-emerald-400"
+                tooltip="Operações com lucro > 0"
+                size="sm"
+              />
+              <KPIStatCell 
+                label="Deficitários" 
+                value={stats.eventosDeficitarios} 
+                valueClass="text-red-400"
+                tooltip="Operações com lucro < 0"
+                size="sm"
+              />
+            </div>
 
-            <SectionHeader title="Capital" />
-            <StatCell 
+            <KPISectionHeader title="Capital" color="emerald" />
+            <KPIStatCell 
               label="Stake média/operação" 
               value={formatCurrency(stats.stakeMedia)}
               tooltip="Stake total ÷ Nº de operações"
             />
-            <StatCell 
+            <KPIStatCell 
               label="Stake média diária" 
               value={formatCurrency(stats.stakeTotalDiaria)}
               tooltip="Stake total ÷ Dias com operações"
             />
           </div>
 
-          {/* COLUNA 2: Casas */}
-          <div className="space-y-2">
-            <SectionHeader title="Casas" />
-            <StatCell 
+          {/* SEÇÃO 2: Casas */}
+          <div className="space-y-1.5 md:space-y-2">
+            <KPISectionHeader title="Casas" color="emerald" />
+            <KPIStatCell 
               label="Casa mais usada" 
               value={stats.top3Casas[0]?.casa || "-"}
               tooltipContent={stats.top3Casas.length > 0 ? (
@@ -537,93 +464,103 @@ export function SurebetStatisticsCard({ surebets, formatCurrency, currencySymbol
                 />
               ) : undefined}
             />
-            <StatCell 
+            <KPIStatCell 
               label="Casas utilizadas" 
               value={stats.casasDistintas}
               tooltip="Total de casas distintas"
             />
-            <StatCell 
-              label="Maior lucro (casa)" 
-              value={stats.casaMaiorLucro ? stats.casaMaiorLucro.casa : "-"}
-              valueClass="text-emerald-400"
-              tooltipContent={stats.top5MaiorLucro.length > 0 ? (
-                <RankingTooltip 
-                  title="Top 5 Maior Lucro"
-                  items={stats.top5MaiorLucro.map(c => ({
-                    label: c.casa,
-                    value: formatCurrency(c.lucro),
-                    valueClass: c.lucro >= 0 ? "text-emerald-400" : "text-red-400",
-                  }))}
-                />
-              ) : undefined}
-            />
-            <StatCell 
-              label="Maior ROI (casa)" 
-              value={stats.casaMaiorRoi ? stats.casaMaiorRoi.casa : "-"}
-              valueClass="text-emerald-400"
-              tooltip={stats.casaMaiorRoi ? `ROI: ${formatPercent(stats.casaMaiorRoi.roi)}` : undefined}
-            />
-            <StatCell 
-              label="Menor lucro (casa)" 
-              value={stats.casaMenorLucro ? stats.casaMenorLucro.casa : "-"}
-              valueClass="text-red-400"
-              tooltipContent={stats.top5MenorLucro.length > 0 ? (
-                <RankingTooltip 
-                  title="Top 5 Menor Lucro"
-                  items={stats.top5MenorLucro.map(c => ({
-                    label: c.casa,
-                    value: formatCurrency(c.lucro),
-                    valueClass: c.lucro >= 0 ? "text-emerald-400" : "text-red-400",
-                  }))}
-                />
-              ) : undefined}
-            />
-            <StatCell 
-              label="Menor ROI (casa)" 
-              value={stats.casaMenorRoi ? stats.casaMenorRoi.casa : "-"}
-              valueClass="text-red-400"
-              tooltipContent={stats.top3MenorRoi.length > 0 ? (
-                <RankingTooltip 
-                  title="Top 3 Menor ROI"
-                  items={stats.top3MenorRoi.map(c => ({
-                    label: c.casa,
-                    value: formatPercent(c.roi),
-                    valueClass: c.roi >= 0 ? "text-emerald-400" : "text-red-400",
-                  }))}
-                />
-              ) : undefined}
-            />
+            <div className="grid grid-cols-2 gap-1.5">
+              <KPIStatCell 
+                label="Maior lucro" 
+                value={stats.casaMaiorLucro ? stats.casaMaiorLucro.casa : "-"}
+                valueClass="text-emerald-400"
+                size="sm"
+                tooltipContent={stats.top5MaiorLucro.length > 0 ? (
+                  <RankingTooltip 
+                    title="Top 5 Maior Lucro"
+                    items={stats.top5MaiorLucro.map(c => ({
+                      label: c.casa,
+                      value: formatCurrency(c.lucro),
+                      valueClass: c.lucro >= 0 ? "text-emerald-400" : "text-red-400",
+                    }))}
+                  />
+                ) : undefined}
+              />
+              <KPIStatCell 
+                label="Maior ROI" 
+                value={stats.casaMaiorRoi ? stats.casaMaiorRoi.casa : "-"}
+                valueClass="text-emerald-400"
+                size="sm"
+                tooltip={stats.casaMaiorRoi ? `ROI: ${formatPercent(stats.casaMaiorRoi.roi)}` : undefined}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-1.5">
+              <KPIStatCell 
+                label="Menor lucro" 
+                value={stats.casaMenorLucro ? stats.casaMenorLucro.casa : "-"}
+                valueClass="text-red-400"
+                size="sm"
+                tooltipContent={stats.top5MenorLucro.length > 0 ? (
+                  <RankingTooltip 
+                    title="Top 5 Menor Lucro"
+                    items={stats.top5MenorLucro.map(c => ({
+                      label: c.casa,
+                      value: formatCurrency(c.lucro),
+                      valueClass: c.lucro >= 0 ? "text-emerald-400" : "text-red-400",
+                    }))}
+                  />
+                ) : undefined}
+              />
+              <KPIStatCell 
+                label="Menor ROI" 
+                value={stats.casaMenorRoi ? stats.casaMenorRoi.casa : "-"}
+                valueClass="text-red-400"
+                size="sm"
+                tooltipContent={stats.top3MenorRoi.length > 0 ? (
+                  <RankingTooltip 
+                    title="Top 3 Menor ROI"
+                    items={stats.top3MenorRoi.map(c => ({
+                      label: c.casa,
+                      value: formatPercent(c.roi),
+                      valueClass: c.roi >= 0 ? "text-emerald-400" : "text-red-400",
+                    }))}
+                  />
+                ) : undefined}
+              />
+            </div>
           </div>
 
-          {/* COLUNA 3: Risco + Eficiência + Qualidade */}
-          <div className="space-y-2">
-            <SectionHeader title="Risco" />
-            <StatCell 
-              label="Maior prejuízo unitário" 
-              value={formatCurrency(stats.maiorPrejuizoUnitario)} 
-              valueClass="text-red-400"
-              tooltip="Maior perda em uma única operação"
-            />
-            <StatCell 
-              label="Maior prejuízo diário" 
-              value={formatCurrency(stats.maiorPrejuizoDiario)} 
-              valueClass="text-red-400"
-              tooltip="Maior soma negativa em um único dia"
-            />
+          {/* SEÇÃO 3: Risco + Eficiência + Qualidade */}
+          <div className="space-y-1.5 md:space-y-2">
+            <KPISectionHeader title="Risco" color="red" />
+            <div className="grid grid-cols-2 gap-1.5 md:grid-cols-1">
+              <KPIStatCell 
+                label="Maior prejuízo unitário" 
+                value={formatCurrency(stats.maiorPrejuizoUnitario)} 
+                valueClass="text-red-400"
+                tooltip="Maior perda em uma única operação"
+              />
+              <KPIStatCell 
+                label="Maior prejuízo diário" 
+                value={formatCurrency(stats.maiorPrejuizoDiario)} 
+                valueClass="text-red-400"
+                tooltip="Maior soma negativa em um único dia"
+              />
+            </div>
 
-            <SectionHeader title="Eficiência" />
-            <StatCell 
+            <KPISectionHeader title="Eficiência" color="blue" />
+            <KPIStatCell 
               label={`Lucro por ${currencySymbol}1.000`}
               value={formatCurrency(stats.lucroPorMilAlocados)}
               valueClass={stats.lucroPorMilAlocados >= 0 ? "text-emerald-400" : "text-red-400"}
               tooltip={`(Lucro ÷ Stake) × 1.000`}
             />
-            <StatCell 
+            <KPIStatCell 
               label="Lucro por vínculo ativo" 
               value={formatCurrency(stats.lucroPorVinculoAtivo)}
               valueClass={stats.lucroPorVinculoAtivo >= 0 ? "text-emerald-400" : "text-red-400"}
               tooltipContent={(
-                <div className="space-y-2.5 py-1.5 min-w-[300px]">
+                <div className="space-y-2.5 py-1.5 min-w-[280px]">
                   <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground border-b border-border/30 pb-1.5">
                     Detalhes por Vínculo
                   </div>
@@ -654,7 +591,7 @@ export function SurebetStatisticsCard({ surebets, formatCurrency, currencySymbol
                     <div className="pt-2 border-t border-border/30">
                       <div className="flex justify-between items-center text-xs">
                         <span className="text-muted-foreground">Melhor vínculo:</span>
-                        <span className="font-semibold text-emerald-400 truncate max-w-[180px]" title={stats.vinculoMaiorLucro.nome}>
+                        <span className="font-semibold text-emerald-400 truncate max-w-[160px]" title={stats.vinculoMaiorLucro.nome}>
                           {stats.vinculoMaiorLucro.nome}
                         </span>
                       </div>
@@ -672,7 +609,7 @@ export function SurebetStatisticsCard({ surebets, formatCurrency, currencySymbol
                     <div className="pt-2 border-t border-border/30">
                       <div className="flex justify-between items-center text-xs">
                         <span className="text-muted-foreground">Pior vínculo:</span>
-                        <span className="font-semibold text-red-400 truncate max-w-[180px]" title={stats.vinculoMenorLucro.nome}>
+                        <span className="font-semibold text-red-400 truncate max-w-[160px]" title={stats.vinculoMenorLucro.nome}>
                           {stats.vinculoMenorLucro.nome}
                         </span>
                       </div>
@@ -692,18 +629,20 @@ export function SurebetStatisticsCard({ surebets, formatCurrency, currencySymbol
               )}
             />
 
-            <SectionHeader title="Qualidade" />
-            <StatCell 
-              label="Surebets ROI > 2,5%" 
-              value={`${stats.percentRoiMaior25.toFixed(1)}%`}
-              valueClass={stats.percentRoiMaior25 >= 50 ? "text-emerald-400" : ""}
-              tooltip="% de operações com ROI individual > 2,5%"
-            />
-            <StatCell 
-              label="Média de odds" 
-              value={stats.mediaOdds.toFixed(2)}
-              tooltip="Média de todas as odds das pernas"
-            />
+            <KPISectionHeader title="Qualidade" color="purple" />
+            <div className="grid grid-cols-2 gap-1.5 md:grid-cols-1">
+              <KPIStatCell 
+                label="ROI > 2,5%" 
+                value={`${stats.percentRoiMaior25.toFixed(1)}%`}
+                valueClass={stats.percentRoiMaior25 >= 50 ? "text-emerald-400" : ""}
+                tooltip="% de operações com ROI individual > 2,5%"
+              />
+              <KPIStatCell 
+                label="Média de odds" 
+                value={stats.mediaOdds.toFixed(2)}
+                tooltip="Média de todas as odds das pernas"
+              />
+            </div>
           </div>
         </div>
       </CardContent>
