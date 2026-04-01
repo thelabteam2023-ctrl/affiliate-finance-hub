@@ -106,8 +106,31 @@ export function OperationsSubTabHeader({
           </Button>
         </div>
 
-        {/* Right side: extra actions + view toggle */}
+        {/* Right side: sort toggle + extra actions + view toggle */}
         <div className="flex items-center gap-2">
+          {/* Sort order toggle - only shown on histórico tab */}
+          {subTab === "historico" && onSortOrderToggle && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 shrink-0"
+                  onClick={onSortOrderToggle}
+                >
+                  {sortOrder === "desc" ? (
+                    <ArrowDownWideNarrow className="h-4 w-4" />
+                  ) : (
+                    <ArrowUpNarrowWide className="h-4 w-4" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                {sortOrder === "desc" ? "Mais recente primeiro" : "Mais antigo primeiro"}
+              </TooltipContent>
+            </Tooltip>
+          )}
+
           {/* Extra actions slot (e.g., ExportMenu) */}
           {extraActions}
           
