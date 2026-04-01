@@ -153,7 +153,7 @@ export function useParceiroFinanceiroConsolidado(parceiroId: string | null) {
           .from("cash_ledger")
           .select("destino_bookmaker_id, valor, valor_destino, valor_usd, tipo_moeda, moeda, moeda_destino")
           .in("destino_bookmaker_id", bookmakerIds)
-          .eq("tipo_transacao", "DEPOSITO")
+          .in("tipo_transacao", ["DEPOSITO", "DEPOSITO_VIRTUAL"])
           .eq("status", "CONFIRMADO");
 
         depositos?.forEach((d) => {
@@ -181,7 +181,7 @@ export function useParceiroFinanceiroConsolidado(parceiroId: string | null) {
           .from("cash_ledger")
           .select("origem_bookmaker_id, valor, valor_origem, valor_usd, tipo_moeda, moeda, moeda_origem")
           .in("origem_bookmaker_id", bookmakerIds)
-          .eq("tipo_transacao", "SAQUE")
+          .in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])
           .eq("status", "CONFIRMADO");
 
         saques?.forEach((s) => {
