@@ -121,6 +121,7 @@ interface WalletCrypto {
   endereco: string;
   parceiro_id: string;
   moeda: string[] | null;
+  network: string | null;
 }
 
 interface Bookmaker {
