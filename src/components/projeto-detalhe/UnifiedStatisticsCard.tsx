@@ -915,32 +915,36 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
   const renderTipoBlock = (label: string, data: typeof stats.porTipo.simples) => (
     <div className="space-y-2">
       <h4 className="text-sm font-semibold text-foreground">{label}</h4>
-      <div className="grid grid-cols-3 gap-2">
-        <AnchorKPI 
-          label="Lucro / Prejuízo" 
-          value={formatCurrency(data.lucro)} 
-          valueClass={data.lucro >= 0 ? "text-emerald-400" : "text-red-400"} 
-        />
-        <AnchorKPI 
-          label="ROI" 
-          value={formatPercent(data.roi)} 
-          valueClass={data.roi >= 0 ? "text-emerald-400" : "text-red-400"}
-          tooltip="Lucro ÷ Volume liquidado"
-        />
-        <AnchorKPI 
-          label="Win Rate" 
-          value={formatPercent(data.winRate)}
-          tooltip="Apostas ganhas ÷ Apostas liquidadas"
-        />
+      <div className="space-y-2 md:space-y-0 md:grid md:grid-cols-3 md:gap-2">
+        <div className="md:col-span-1">
+          <KPIAnchorCard 
+            label="Lucro / Prejuízo" 
+            value={formatCurrency(data.lucro)} 
+            valueClass={data.lucro >= 0 ? "text-emerald-400" : "text-red-400"} 
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-2 md:contents">
+          <KPIAnchorCard 
+            label="ROI" 
+            value={formatPercent(data.roi)} 
+            valueClass={data.roi >= 0 ? "text-emerald-400" : "text-red-400"}
+            tooltip="Lucro ÷ Volume liquidado"
+          />
+          <KPIAnchorCard 
+            label="Win Rate" 
+            value={formatPercent(data.winRate)}
+            tooltip="Apostas ganhas ÷ Apostas liquidadas"
+          />
+        </div>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-        <StatCell label="Apostas" value={data.total} />
-        <StatCell label="Volume" value={formatCurrency(data.volume)} />
-        <StatCell label="Greens" value={data.ganhas} valueClass="text-emerald-500" />
-        <StatCell label="Reds" value={data.perdidas} valueClass="text-red-500" />
+        <KPIStatCell label="Apostas" value={data.total} size="sm" />
+        <KPIStatCell label="Volume" value={formatCurrency(data.volume)} size="sm" />
+        <KPIStatCell label="Greens" value={data.ganhas} valueClass="text-emerald-500" size="sm" />
+        <KPIStatCell label="Reds" value={data.perdidas} valueClass="text-red-500" size="sm" />
       </div>
       {data.pendentes > 0 && (
-        <StatCell label="Pendentes" value={data.pendentes} valueClass="text-blue-400" size="small" />
+        <KPIStatCell label="Pendentes" value={data.pendentes} valueClass="text-blue-400" size="sm" />
       )}
     </div>
   );
