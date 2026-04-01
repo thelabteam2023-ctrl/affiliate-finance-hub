@@ -301,6 +301,7 @@ export function useTabFilters({
     setParceiroIds,
     setEstrategias,
     setResultados,
+    setSortOrder,
     
     // Helpers
     toggleBookmaker,
