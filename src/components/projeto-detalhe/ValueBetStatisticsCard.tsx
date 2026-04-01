@@ -2,6 +2,8 @@ import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart3 } from "lucide-react";
 import { parseLocalDateTime } from "@/utils/dateUtils";
+import { KPIStatCell } from "@/components/kpis/KPIStatCell";
+import { KPISectionHeader } from "@/components/kpis/KPISectionHeader";
 
 interface Aposta {
   id: string;
@@ -17,7 +19,6 @@ interface Aposta {
 
 interface ValueBetStatisticsCardProps {
   apostas: Aposta[];
-  /** Função de formatação obrigatória - deve vir do useProjetoCurrency */
   formatCurrency: (value: number) => string;
 }
 
@@ -132,30 +133,48 @@ export function ValueBetStatisticsCard({ apostas, formatCurrency }: ValueBetStat
           Estatísticas
         </CardTitle>
       </CardHeader>
-      <CardContent className="pt-0 pb-3">
-        <div className="grid grid-cols-2 gap-2">
-          <StatCell label="Vencedoras" value={stats.vencedoras} valueClass="text-emerald-400" />
-          <StatCell label="Perdedoras" value={stats.perdedoras} valueClass="text-red-400" />
-          <StatCell label="Reembolsadas" value={stats.reembolsadas} />
-          <StatCell label="Em curso" value={stats.emCurso} valueClass="text-blue-400" />
-          <StatCell label="Valor Total Apostado" value={formatCurrency(stats.valorEmJogo)} />
-          <StatCell label="Valor em apostas em curso" value={formatCurrency(stats.valorEmCurso)} valueClass="text-blue-400" />
-          <StatCell label="Máx. vitórias" value={stats.maxVitorias} valueClass="text-emerald-400" />
-          <StatCell label="Máx. derrotas" value={stats.maxDerrotas} valueClass="text-red-400" />
-          <StatCell label="Valor médio" value={formatCurrency(stats.valorMedio)} />
-          <StatCell label="Valor máximo" value={formatCurrency(stats.valorMaximo)} />
-          <StatCell label="Cotação média" value={stats.cotacaoMedia.toFixed(2)} />
-          <StatCell 
-            label="Maior odd ganha" 
-            value={stats.maiorCotacaoGanha > 0 ? stats.maiorCotacaoGanha.toFixed(2) : "-"} 
-            valueClass="text-emerald-400" 
-          />
-          <StatCell 
-            label="Maior lucro" 
-            value={stats.maiorLucro > 0 ? `+${formatCurrency(stats.maiorLucro)}` : formatCurrency(stats.maiorLucro)} 
-            valueClass="text-emerald-400" 
-          />
-          <StatCell label="Maior perda" value={formatCurrency(stats.maiorPerda)} valueClass="text-red-400" />
+      <CardContent className="pt-0 pb-3 space-y-2 md:space-y-3">
+        {/* Resultados */}
+        <div>
+          <KPISectionHeader title="Resultados" color="purple" />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5 md:gap-2">
+            <KPIStatCell label="Vencedoras" value={stats.vencedoras} valueClass="text-emerald-400" />
+            <KPIStatCell label="Perdedoras" value={stats.perdedoras} valueClass="text-red-400" />
+            <KPIStatCell label="Reembolsadas" value={stats.reembolsadas} />
+            <KPIStatCell label="Em curso" value={stats.emCurso} valueClass="text-blue-400" />
+          </div>
+        </div>
+
+        {/* Financeiro */}
+        <div>
+          <KPISectionHeader title="Financeiro" color="emerald" />
+          <div className="grid grid-cols-2 gap-1.5 md:gap-2">
+            <KPIStatCell label="Valor Total Apostado" value={formatCurrency(stats.valorEmJogo)} />
+            <KPIStatCell label="Em curso" value={formatCurrency(stats.valorEmCurso)} valueClass="text-blue-400" />
+            <KPIStatCell label="Valor médio" value={formatCurrency(stats.valorMedio)} />
+            <KPIStatCell label="Valor máximo" value={formatCurrency(stats.valorMaximo)} />
+          </div>
+        </div>
+
+        {/* Sequências e Cotações */}
+        <div>
+          <KPISectionHeader title="Sequências e Cotações" color="amber" />
+          <div className="grid grid-cols-2 gap-1.5 md:gap-2">
+            <KPIStatCell label="Máx. vitórias" value={stats.maxVitorias} valueClass="text-emerald-400" />
+            <KPIStatCell label="Máx. derrotas" value={stats.maxDerrotas} valueClass="text-red-400" />
+            <KPIStatCell label="Cotação média" value={stats.cotacaoMedia.toFixed(2)} />
+            <KPIStatCell 
+              label="Maior odd ganha" 
+              value={stats.maiorCotacaoGanha > 0 ? stats.maiorCotacaoGanha.toFixed(2) : "-"} 
+              valueClass="text-emerald-400" 
+            />
+            <KPIStatCell 
+              label="Maior lucro" 
+              value={stats.maiorLucro > 0 ? `+${formatCurrency(stats.maiorLucro)}` : formatCurrency(stats.maiorLucro)} 
+              valueClass="text-emerald-400" 
+            />
+            <KPIStatCell label="Maior perda" value={formatCurrency(stats.maiorPerda)} valueClass="text-red-400" />
+          </div>
         </div>
       </CardContent>
     </Card>

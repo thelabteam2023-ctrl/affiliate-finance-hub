@@ -1024,7 +1024,7 @@ export function VisaoGeralCharts({
           )}
         </CardHeader>
         <CardContent className="pt-0">
-          <div className="h-[280px]">
+          <div className="h-[220px] md:h-[280px]">
             <EvolucaoLucroChart data={chartDisplayData} accentColor={accentColor} isSingleDayPeriod={isSingleDayPeriod} formatCurrency={formatCurrency} formatChartAxis={axisFormatter} />
           </div>
         </CardContent>
@@ -1034,7 +1034,7 @@ export function VisaoGeralCharts({
 
   // Ambos
   return (
-    <div className="grid gap-4 lg:grid-cols-3">
+    <div className="grid gap-4 grid-cols-1 lg:grid-cols-3">
       {/* Gráfico de Área — Evolução do Lucro (PROTAGONISTA - 2 colunas) */}
       <Card className="lg:col-span-2">
         <CardHeader className="pb-2">
@@ -1093,7 +1093,7 @@ export function VisaoGeralCharts({
           )}
         </CardHeader>
         <CardContent className="pt-0">
-          <div className="h-[280px]">
+          <div className="h-[220px] md:h-[280px]">
             <EvolucaoLucroChart data={chartDisplayData} accentColor={accentColor} isSingleDayPeriod={isSingleDayPeriod} formatCurrency={formatCurrency} formatChartAxis={axisFormatter} />
           </div>
         </CardContent>
