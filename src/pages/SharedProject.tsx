@@ -2,9 +2,9 @@ import { useParams } from "react-router-dom";
 import labbetLogo from "@/assets/labbet-logo-shared.png";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Lock, Clock, AlertTriangle, TrendingUp, TrendingDown, BarChart3, Target } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Loader2, Lock, Clock, AlertTriangle, TrendingUp, TrendingDown, BarChart3, Target, Flame, Percent } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { KPICardV2 } from "@/components/kpis/KPICardV2";
 import { SharedCalendar } from "@/components/shared/SharedCalendar";
 import { SharedDailyChart } from "@/components/shared/SharedDailyChart";
 import { useMemo } from "react";
@@ -123,29 +123,32 @@ export default function SharedProject() {
       {/* Content */}
       <main className="max-w-6xl mx-auto px-4 py-6 space-y-6">
         {/* KPI Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <KpiCard
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+          <KPICardV2
             title="Lucro Total"
             value={`${currencySymbol} ${resumo.lucro_total?.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`}
-            icon={resumo.lucro_total >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
+            icon={resumo.lucro_total >= 0 ? <TrendingUp className="h-5 w-5" /> : <TrendingDown className="h-5 w-5" />}
             variant={resumo.lucro_total >= 0 ? "positive" : "negative"}
+            highlight
           />
-          <KpiCard
+          <KPICardV2
             title="Apostas"
             value={resumo.total_apostas?.toLocaleString("pt-BR")}
             subtitle={`${resumo.apostas_pendentes} pendentes`}
-            icon={<BarChart3 className="h-4 w-4" />}
+            icon={<BarChart3 className="h-5 w-5" />}
           />
-          <KpiCard
+          <KPICardV2
             title="ROI"
             value={`${roi.toFixed(2)}%`}
-            icon={<Target className="h-4 w-4" />}
+            icon={<Percent className="h-5 w-5" />}
             variant={roi >= 0 ? "positive" : "negative"}
           />
-          <KpiCard
+          <KPICardV2
             title="Win Rate"
             value={`${winRate.toFixed(1)}%`}
             subtitle={`${resumo.greens}G / ${resumo.reds}R`}
+            icon={<Flame className="h-5 w-5" />}
+            variant={winRate >= 50 ? "positive" : winRate >= 40 ? "neutral" : "negative"}
           />
         </div>
 
@@ -161,46 +164,5 @@ export default function SharedProject() {
         Dados atualizados em tempo real
       </footer>
     </div>
-  );
-}
-
-function KpiCard({
-  title,
-  value,
-  subtitle,
-  icon,
-  variant,
-}: {
-  title: string;
-  value: string;
-  subtitle?: string;
-  icon?: React.ReactNode;
-  variant?: "positive" | "negative";
-}) {
-  return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-          {icon}
-          {title}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div
-          className={`text-lg font-bold ${
-            variant === "positive"
-              ? "text-green-500"
-              : variant === "negative"
-              ? "text-red-500"
-              : ""
-          }`}
-        >
-          {value}
-        </div>
-        {subtitle && (
-          <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>
-        )}
-      </CardContent>
-    </Card>
   );
 }
