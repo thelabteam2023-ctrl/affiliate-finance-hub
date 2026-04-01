@@ -524,7 +524,7 @@ export function AjusteManualDialog({
         status: "CONFIRMADO",
         transit_status: "CONFIRMED",
         data_transacao: getTodayCivilDate(),
-        impacta_caixa_operacional: tipoDestino === "CAIXA_OPERACIONAL",
+        impacta_caixa_operacional: true,
         // Campos obrigatórios de auditoria para ajustes
         ajuste_motivo: motivo.trim(),
         ajuste_direcao: direcaoFinal,
