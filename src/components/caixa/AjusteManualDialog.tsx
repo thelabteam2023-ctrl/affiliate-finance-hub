@@ -524,7 +524,7 @@ export function AjusteManualDialog({
         status: "CONFIRMADO",
         transit_status: "CONFIRMED",
         data_transacao: getTodayCivilDate(),
-        impacta_caixa_operacional: true,
+        impacta_caixa_operacional: false,
         // Campos obrigatórios de auditoria para ajustes
         ajuste_motivo: motivo.trim(),
         ajuste_direcao: direcaoFinal,
@@ -550,12 +550,10 @@ export function AjusteManualDialog({
         },
       };
 
-      // Definir origem/destino baseado na direção e tipo
-      // CRITICAL: Para CAIXA_OPERACIONAL, NÃO definir ambos origem_tipo e destino_tipo
-      // como CAIXA_OPERACIONAL, pois a view v_saldo_caixa_fiat usa CASE WHEN e
-      // sempre pegaria o primeiro match (destino_tipo), ignorando a direção.
+      // Definir origem/destino baseado na direção e escopo real da entidade.
+      // Ajustes em conta bancária / wallet / bookmaker não devem usar CAIXA_OPERACIONAL
+      // como proxy; o escopo é derivado pelos IDs vinculados.
       if (direcaoFinal === "ENTRADA") {
-        // Entrada: dinheiro ENTRA no caixa/entidade → destino_tipo = entidade
         switch (tipoDestino) {
           case "CAIXA_OPERACIONAL":
             transactionData.origem_tipo = "AJUSTE";
@@ -572,21 +570,18 @@ export function AjusteManualDialog({
             }
             break;
           case "BOOKMAKER":
-            transactionData.origem_tipo = "CAIXA_OPERACIONAL";
             transactionData.destino_tipo = "BOOKMAKER";
             transactionData.destino_bookmaker_id = bookmakerId;
             transactionData.valor_destino = valorNumerico;
             transactionData.moeda_destino = moeda;
             break;
           case "CONTA_BANCARIA":
-            transactionData.origem_tipo = "CAIXA_OPERACIONAL";
             transactionData.destino_tipo = "PARCEIRO_CONTA";
             transactionData.destino_conta_bancaria_id = contaId;
             transactionData.valor_destino = valorNumerico;
             transactionData.moeda_destino = moeda;
             break;
           case "WALLET":
-            transactionData.origem_tipo = "CAIXA_OPERACIONAL";
             transactionData.destino_tipo = "PARCEIRO_WALLET";
             transactionData.destino_wallet_id = walletId;
             transactionData.valor_destino = valorNumerico;
@@ -594,7 +589,6 @@ export function AjusteManualDialog({
             break;
         }
       } else {
-        // Saída: dinheiro SAI do caixa/entidade → origem_tipo = entidade
         switch (tipoDestino) {
           case "CAIXA_OPERACIONAL":
             transactionData.origem_tipo = "CAIXA_OPERACIONAL";
@@ -611,21 +605,18 @@ export function AjusteManualDialog({
             }
             break;
           case "BOOKMAKER":
-            transactionData.destino_tipo = "CAIXA_OPERACIONAL";
             transactionData.origem_tipo = "BOOKMAKER";
             transactionData.origem_bookmaker_id = bookmakerId;
             transactionData.valor_origem = valorNumerico;
             transactionData.moeda_origem = moeda;
             break;
           case "CONTA_BANCARIA":
-            transactionData.destino_tipo = "CAIXA_OPERACIONAL";
             transactionData.origem_tipo = "PARCEIRO_CONTA";
             transactionData.origem_conta_bancaria_id = contaId;
             transactionData.valor_origem = valorNumerico;
             transactionData.moeda_origem = moeda;
             break;
           case "WALLET":
-            transactionData.destino_tipo = "CAIXA_OPERACIONAL";
             transactionData.origem_tipo = "PARCEIRO_WALLET";
             transactionData.origem_wallet_id = walletId;
             transactionData.valor_origem = valorNumerico;
@@ -633,6 +624,10 @@ export function AjusteManualDialog({
             break;
         }
       }
+
+      transactionData.impacta_caixa_operacional =
+        transactionData.origem_tipo === "CAIXA_OPERACIONAL" ||
+        transactionData.destino_tipo === "CAIXA_OPERACIONAL";
 
       const { error } = await supabase.from("cash_ledger").insert([transactionData] as any);
       if (error) throw error;
