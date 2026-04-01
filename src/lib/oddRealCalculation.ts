@@ -95,8 +95,8 @@ export function calcularOddReal(
   if (ganho !== null && stake !== null && stake > 0) {
     const oddReal = ganho / stake;
     
-    // Limitar a 4 casas decimais
-    const oddRealFormatted = Math.round(oddReal * 10000) / 10000;
+    // Limitar a 5 casas decimais
+    const oddRealFormatted = Math.round(oddReal * 100000) / 100000;
     
     // Calcular diferença se temos odd exibida
     const diferenca = oddVisual !== null ? Math.abs(oddRealFormatted - oddVisual) : 0;
