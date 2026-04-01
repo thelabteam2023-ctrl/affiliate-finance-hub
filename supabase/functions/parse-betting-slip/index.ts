@@ -416,18 +416,16 @@ DICA: Em boletins de apostas, a ODD geralmente aparece em verde/destaque próxim
 
     console.log("AI Response:", content);
 
-    // Normalizar ODD/STAKE para um formato numérico consistente
-    // Handles both string and number inputs from AI response
-    const normalizeNumericString = (raw: string | number | null | undefined): string | null => {
+    // Normalizar valores numéricos - preserva precisão original
+    const normalizeNumericString = (raw: string | number | null | undefined, maxDecimals: number = 2): string | null => {
       if (raw === null || raw === undefined) return null;
       
-      // If it's already a number, just format it
       if (typeof raw === 'number') {
         if (!Number.isFinite(raw)) return null;
-        return raw.toFixed(2);
+        // Remove trailing zeros
+        return parseFloat(raw.toFixed(maxDecimals)).toString();
       }
       
-      // If it's not a string at this point, convert it
       const rawStr = String(raw);
       if (!rawStr) return null;
       
@@ -450,7 +448,31 @@ DICA: Em boletins de apostas, a ODD geralmente aparece em verde/destaque próxim
 
       const n = parseFloat(s);
       if (!Number.isFinite(n)) return null;
-      return n.toFixed(2);
+      return parseFloat(n.toFixed(maxDecimals)).toString();
+    };
+
+    /**
+     * REGRA CRÍTICA: Recalcular odd a partir de stake e retorno
+     * ODD_TOTAL = RETORNO / STAKE (até 5 casas decimais)
+     * A odd recalculada tem prioridade sobre a odd exibida no print
+     */
+    const recalcularOddFromStakeRetorno = (
+      stakeStr: string | null,
+      retornoStr: string | null,
+      oddOriginalStr: string | null
+    ): { oddValue: string | null; wasRecalculated: boolean } => {
+      const stakeNum = stakeStr ? parseFloat(stakeStr) : null;
+      const retornoNum = retornoStr ? parseFloat(retornoStr) : null;
+
+      if (stakeNum && retornoNum && stakeNum > 0 && retornoNum > 0) {
+        const oddCalculada = retornoNum / stakeNum;
+        if (oddCalculada >= 1 && oddCalculada <= 10000) {
+          const oddStr = parseFloat(oddCalculada.toFixed(5)).toString();
+          console.log(`[recalcularOdd] stake=${stakeNum}, retorno=${retornoNum}, odd_calculada=${oddStr}, odd_original=${oddOriginalStr}`);
+          return { oddValue: oddStr, wasRecalculated: true };
+        }
+      }
+      return { oddValue: oddOriginalStr, wasRecalculated: false };
     };
 
     // Normalize date to ensure current year if not specified
@@ -528,10 +550,10 @@ DICA: Em boletins de apostas, a ODD geralmente aparece em verde/destaque próxim
         parsedData.stake.value = normalizeNumericString(parsedData.stake?.value);
         parsedData.retornoPotencial.value = normalizeNumericString(parsedData.retornoPotencial?.value);
         
-        // Normalize each selection
+        // Normalize each selection - odds with 5 decimal precision
         for (const sel of parsedData.selecoes) {
           if (sel.odd) {
-            sel.odd.value = normalizeNumericString(sel.odd.value);
+            sel.odd.value = normalizeNumericString(sel.odd.value, 5);
           }
           // Uppercase event names
           if (sel.evento?.value) {
@@ -638,10 +660,21 @@ DICA: Em boletins de apostas, a ODD geralmente aparece em verde/destaque próxim
         }
       }
 
-      // Normalize numeric fields
-      parsedData.odd.value = normalizeNumericString(parsedData.odd?.value);
+      // Normalize numeric fields - odds with 5 decimal precision
+      parsedData.odd.value = normalizeNumericString(parsedData.odd?.value, 5);
       parsedData.stake.value = normalizeNumericString(parsedData.stake?.value);
       parsedData.retorno.value = normalizeNumericString(parsedData.retorno?.value);
+
+      // REGRA CRÍTICA: Recalcular odd a partir de stake/retorno para máxima precisão
+      const { oddValue, wasRecalculated } = recalcularOddFromStakeRetorno(
+        parsedData.stake.value,
+        parsedData.retorno.value,
+        parsedData.odd.value
+      );
+      if (wasRecalculated) {
+        parsedData.odd.value = oddValue;
+        parsedData.odd.confidence = "high";
+      }
 
       // Normalize resultado to standard values
       if (parsedData.resultado?.value) {
