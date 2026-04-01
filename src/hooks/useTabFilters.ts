@@ -146,6 +146,7 @@ export function useTabFilters({
   const [parceiroIds, setParceiroIdsState] = useState<string[]>([]);
   const [estrategias, setEstrategiasState] = useState<EstrategiaFilter[]>(["all"]);
   const [resultados, setResultadosState] = useState<ResultadoFilter[]>([]);
+  const [sortOrder, setSortOrderState] = useState<SortOrder>("desc");
 
   // Carregar estado salvo (apenas se persist=true)
   useEffect(() => {
