@@ -1093,7 +1093,7 @@ export function VisaoGeralCharts({
           )}
         </CardHeader>
         <CardContent className="pt-0">
-          <div className="h-[280px]">
+          <div className="h-[220px] md:h-[280px]">
             <EvolucaoLucroChart data={chartDisplayData} accentColor={accentColor} isSingleDayPeriod={isSingleDayPeriod} formatCurrency={formatCurrency} formatChartAxis={axisFormatter} />
           </div>
         </CardContent>
