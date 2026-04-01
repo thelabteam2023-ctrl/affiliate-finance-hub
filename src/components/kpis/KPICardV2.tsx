@@ -69,8 +69,8 @@ export function KPICardV2({
             className={cn(
               "font-bold tabular-nums leading-tight truncate",
               highlight
-                ? "text-2xl md:text-3xl"
-                : "text-xl md:text-2xl",
+                ? "text-lg md:text-2xl"
+                : "text-base md:text-xl",
               styles.value
             )}
           >
