@@ -265,6 +265,7 @@ export function useTabFilters({
     setParceiroIdsState([]);
     setEstrategiasState(["all"]);
     setResultadosState([]);
+    setSortOrderState("desc");
   }, [defaultPeriod]);
 
   // Contagem de filtros ativos
