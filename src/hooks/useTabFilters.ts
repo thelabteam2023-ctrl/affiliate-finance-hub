@@ -214,6 +214,14 @@ export function useTabFilters({
     setResultadosState(r);
   }, []);
 
+  const setSortOrder = useCallback((order: SortOrder) => {
+    setSortOrderState(order);
+  }, []);
+
+  const toggleSortOrder = useCallback(() => {
+    setSortOrderState(prev => prev === "desc" ? "asc" : "desc");
+  }, []);
+
   const toggleResultado = useCallback((resultado: ResultadoFilter) => {
     setResultadosState(prev => {
       if (prev.includes(resultado)) {
