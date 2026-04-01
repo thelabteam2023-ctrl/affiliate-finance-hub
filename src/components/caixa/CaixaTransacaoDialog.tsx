@@ -1184,7 +1184,7 @@ export function CaixaTransacaoDialog({
     
     // Verificar quantas wallets o parceiro tem para a moeda selecionada
     const walletsDoParceiro = walletsCrypto.filter(
-      (w) => w.parceiro_id === destinoParceiroId && w.moeda?.includes(coin)
+      (w) => w.parceiro_id === destinoParceiroId && isWalletCompatibleWithCoin(w, coin)
     );
     
     // Se houver exatamente uma wallet, auto-selecionar
@@ -1810,7 +1810,7 @@ export function CaixaTransacaoDialog({
 
   const getWalletsDisponiveisDestino = (parceiroId: string) => {
     return walletsCrypto.filter(
-      (w) => w.parceiro_id === parceiroId && w.moeda?.includes(coin) && w.id !== origemWalletId
+      (w) => w.parceiro_id === parceiroId && isWalletCompatibleWithCoin(w, coin) && w.id !== origemWalletId
     );
   };
 
@@ -1829,7 +1829,7 @@ export function CaixaTransacaoDialog({
         .filter((value, index, self) => self.indexOf(value) === index); // unique
     } else {
       return walletsCrypto
-        .filter((w) => w.moeda?.includes(coin) && w.id !== origemWalletId && !parceirosExcluidos.has(w.parceiro_id))
+        .filter((w) => isWalletCompatibleWithCoin(w, coin) && w.id !== origemWalletId && !parceirosExcluidos.has(w.parceiro_id))
         .map((w) => w.parceiro_id)
         .filter((value, index, self) => self.indexOf(value) === index); // unique
     }
@@ -2288,7 +2288,7 @@ export function CaixaTransacaoDialog({
           }
         }
         if (tipoMoeda === "CRYPTO" && (!caixaWalletId || caixaWalletId === "none")) {
-          const walletsEmpresa = walletsCrypto.filter(w => w.parceiro_id === caixaParceiroId && w.moeda?.includes(coin));
+          const walletsEmpresa = walletsCrypto.filter(w => w.parceiro_id === caixaParceiroId && isWalletCompatibleWithCoin(w, coin));
           if (walletsEmpresa.length > 0) {
             toast({
               title: "Erro",
@@ -3026,7 +3026,7 @@ export function CaixaTransacaoDialog({
     }
 
     if (tipoMoeda === "CRYPTO") {
-      const walletsCompativeis = walletsEmpresa.filter(w => w.moeda?.includes(coin));
+      const walletsCompativeis = walletsEmpresa.filter(w => isWalletCompatibleWithCoin(w, coin));
       if (walletsCompativeis.length === 0) return (
         <div className="text-[11px] text-destructive text-center mt-1">
           ⚠ Nenhuma wallet da empresa compatível com {coin}
@@ -3214,7 +3214,7 @@ export function CaixaTransacaoDialog({
           {origemParceiroId && tipoMoeda === "CRYPTO" && coin && (() => {
             // Verificar se o parceiro tem wallet que suporta a moeda
             const walletsDoParceiroComMoeda = walletsCrypto.filter(
-              (w) => w.parceiro_id === origemParceiroId && w.moeda?.includes(coin)
+              (w) => w.parceiro_id === origemParceiroId && isWalletCompatibleWithCoin(w, coin)
             );
             const temWalletComMoeda = walletsDoParceiroComMoeda.length > 0;
             
@@ -3471,7 +3471,7 @@ export function CaixaTransacaoDialog({
                     <SelectContent>
                       {walletsCrypto
                         .filter((w) => {
-                          if (w.parceiro_id !== origemParceiroId || !w.moeda?.includes(coin)) return false;
+                          if (w.parceiro_id !== origemParceiroId || !isWalletCompatibleWithCoin(w, coin)) return false;
                           const saldo = saldosParceirosWallets.find(
                             s => s.wallet_id === w.id && s.coin === coin
                           );
@@ -3502,7 +3502,7 @@ export function CaixaTransacaoDialog({
               )}
               {origemParceiroId && coin && (() => {
                 const walletsDoParceiroComMoeda = walletsCrypto.filter(
-                  (w) => w.parceiro_id === origemParceiroId && w.moeda?.includes(coin)
+                  (w) => w.parceiro_id === origemParceiroId && isWalletCompatibleWithCoin(w, coin)
                 );
                 const temWalletComMoeda = walletsDoParceiroComMoeda.length > 0;
                 const walletsComSaldo = walletsDoParceiroComMoeda.filter((w) => {
@@ -3678,7 +3678,7 @@ export function CaixaTransacaoDialog({
                   <SelectContent>
                     {walletsCrypto
                       .filter((w) => {
-                        if (w.parceiro_id !== origemParceiroId || !w.moeda?.includes(coin)) return false;
+                        if (w.parceiro_id !== origemParceiroId || !isWalletCompatibleWithCoin(w, coin)) return false;
                         // Filtrar apenas wallets com saldo DISPONÍVEL
                         const saldo = saldosParceirosWallets.find(
                           s => s.wallet_id === w.id && s.coin === coin
@@ -3711,7 +3711,7 @@ export function CaixaTransacaoDialog({
             {origemParceiroId && coin && (() => {
               // Verificar se o parceiro tem wallet que suporta a moeda
               const walletsDoParceiroComMoeda = walletsCrypto.filter(
-                (w) => w.parceiro_id === origemParceiroId && w.moeda?.includes(coin)
+                (w) => w.parceiro_id === origemParceiroId && isWalletCompatibleWithCoin(w, coin)
               );
               const temWalletComMoeda = walletsDoParceiroComMoeda.length > 0;
               
@@ -3876,7 +3876,7 @@ export function CaixaTransacaoDialog({
       // Parceiros que têm wallets que suportam a moeda selecionada
       const parceirosComWalletMoeda = [...new Set(
         walletsCrypto
-          .filter(w => w.moeda?.includes(coin))
+          .filter(w => isWalletCompatibleWithCoin(w, coin))
           .map(w => w.parceiro_id)
       )];
       
@@ -3920,7 +3920,7 @@ export function CaixaTransacaoDialog({
                 </SelectTrigger>
                 <SelectContent>
                   {walletsCrypto
-                    .filter((w) => w.parceiro_id === destinoParceiroId && w.moeda?.includes(coin))
+                    .filter((w) => w.parceiro_id === destinoParceiroId && isWalletCompatibleWithCoin(w, coin))
                     .map((wallet) => {
                       const walletName = wallet.exchange?.replace(/-/g, ' ').toUpperCase() || 'WALLET';
                       const shortenedAddress = wallet.endereco 
@@ -3936,7 +3936,7 @@ export function CaixaTransacaoDialog({
               </Select>
             </div>
           )}
-          {destinoParceiroId && walletsCrypto.filter((w) => w.parceiro_id === destinoParceiroId && w.moeda?.includes(coin)).length === 0 && (
+          {destinoParceiroId && walletsCrypto.filter((w) => w.parceiro_id === destinoParceiroId && isWalletCompatibleWithCoin(w, coin)).length === 0 && (
             <Alert variant="destructive" className="border-warning/50 bg-warning/10">
               <AlertTriangle className="h-4 w-4 text-warning" />
               <AlertDescription className="text-warning">
