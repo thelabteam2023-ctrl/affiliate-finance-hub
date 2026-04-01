@@ -1736,7 +1736,7 @@ export function ApostaMultiplaDialog({
                     />
                     <Input
                       type="number"
-                      step="0.01"
+                      step="0.00001"
                       placeholder="Odd"
                       value={selecao.odd}
                       onChange={(e) => handleSelecaoChange(index, "odd", e.target.value)}
