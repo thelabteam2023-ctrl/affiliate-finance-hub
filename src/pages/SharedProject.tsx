@@ -126,7 +126,7 @@ export default function SharedProject() {
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
           <KPICardV2
             title="Lucro Total"
-            value={`${currencySymbol} ${resumo.lucro_total?.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`}
+            value={`${currencySymbol} ${resumo.lucro_total?.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
             icon={resumo.lucro_total >= 0 ? <TrendingUp className="h-5 w-5" /> : <TrendingDown className="h-5 w-5" />}
             variant={resumo.lucro_total >= 0 ? "positive" : "negative"}
             
