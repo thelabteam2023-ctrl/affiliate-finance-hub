@@ -2,6 +2,8 @@ import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart3 } from "lucide-react";
 import { parseLocalDateTime } from "@/utils/dateUtils";
+import { KPIStatCell } from "@/components/kpis/KPIStatCell";
+import { KPISectionHeader } from "@/components/kpis/KPISectionHeader";
 
 interface Aposta {
   id: string;
@@ -17,7 +19,6 @@ interface Aposta {
 
 interface ValueBetStatisticsCardProps {
   apostas: Aposta[];
-  /** Função de formatação obrigatória - deve vir do useProjetoCurrency */
   formatCurrency: (value: number) => string;
 }
 
