@@ -41,6 +41,8 @@ export interface DateRangeResult {
   end: Date;
 }
 
+export type SortOrder = "desc" | "asc";
+
 export interface TabFiltersState {
   period: StandardPeriodFilter;
   customDateRange: DateRange | undefined;
@@ -49,6 +51,7 @@ export interface TabFiltersState {
   estrategias: EstrategiaFilter[];
   resultados: ResultadoFilter[];
   dateRange: DateRangeResult | null;
+  sortOrder: SortOrder;
 }
 
 export interface UseTabFiltersOptions {

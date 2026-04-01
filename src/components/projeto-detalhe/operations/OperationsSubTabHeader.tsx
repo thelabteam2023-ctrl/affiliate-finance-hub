@@ -2,8 +2,10 @@ import { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Clock, History, LayoutGrid, List, Search, X } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { ArrowDownUp, ArrowDownWideNarrow, ArrowUpNarrowWide, Clock, History, LayoutGrid, List, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { SortOrder } from "@/hooks/useTabFilters";
 
 export type HistorySubTab = "abertas" | "historico";
 
