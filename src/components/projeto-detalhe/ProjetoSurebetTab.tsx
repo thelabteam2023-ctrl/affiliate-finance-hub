@@ -1414,6 +1414,8 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
               showViewToggle={true}
               searchQuery={searchTerm}
               onSearchChange={setSearchTerm}
+              sortOrder={tabFilters.sortOrder}
+              onSortOrderToggle={tabFilters.toggleSortOrder}
               extraActions={
                 <ExportMenu
                   getData={() => surebetsListaAtual.map(s => 
