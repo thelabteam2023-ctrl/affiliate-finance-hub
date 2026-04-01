@@ -49,6 +49,8 @@ export function OperationsSubTabHeader({
   onSearchChange,
   extraActions,
   className,
+  sortOrder,
+  onSortOrderToggle,
 }: OperationsSubTabHeaderProps) {
   const isOpenFiltered = totalOpenCount !== undefined && totalOpenCount !== openCount;
   const isHistoryFiltered = totalHistoryCount !== undefined && totalHistoryCount !== historyCount;
