@@ -1814,7 +1814,7 @@ export function ApostaMultiplaDialog({
               <div className="space-y-0.5">
                 <Label className="text-[10px] text-muted-foreground">Odd Final{boostMultiplier > 1 ? ' 🚀' : ''}</Label>
                 <Input
-                  value={oddFinal > 0 ? oddFinal.toFixed(3) : "-"}
+                  value={oddFinal > 0 ? parseFloat(oddFinal.toFixed(5)) : "-"}
                   disabled
                   className={`bg-muted/50 h-7 text-xs ${boostMultiplier > 1 ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : ''}`}
                 />
