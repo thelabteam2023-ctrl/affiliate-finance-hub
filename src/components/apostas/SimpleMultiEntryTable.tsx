@@ -248,7 +248,7 @@ export function SimpleMultiEntryTable({
                 <td className="px-1 py-3">
                   <Input
                     type="number"
-                    step="0.001"
+                    step="0.00001"
                     min="1.01"
                     value={entry.odd}
                     onChange={(e) => updateEntry(entry.id, 'odd', e.target.value)}
