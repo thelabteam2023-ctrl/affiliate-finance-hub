@@ -1497,6 +1497,8 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
               showViewToggle={true}
               searchQuery={searchTerm}
               onSearchChange={setSearchTerm}
+              sortOrder={tabFilters.sortOrder}
+              onSortOrderToggle={tabFilters.toggleSortOrder}
               extraActions={
                 <ExportMenu
                   getData={() => apostasUnificadas.map(u => {
