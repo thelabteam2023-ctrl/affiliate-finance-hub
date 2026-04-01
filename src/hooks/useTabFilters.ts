@@ -159,6 +159,7 @@ export function useTabFilters({
         if (parsed.period) setPeriodState(parsed.period);
         if (parsed.bookmakerIds) setBookmakerIdsState(parsed.bookmakerIds);
         if (parsed.parceiroIds) setParceiroIdsState(parsed.parceiroIds);
+        if (parsed.sortOrder) setSortOrderState(parsed.sortOrder);
         // Não restaurar customDateRange e estrategias para evitar estados inválidos
       } catch (e) {
         console.error(`[useTabFilters] Erro ao restaurar filtros da aba ${tabId}:`, e);
