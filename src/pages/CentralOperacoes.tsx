@@ -608,7 +608,7 @@ export default function CentralOperacoes() {
 
     // 4.6. Casas Aguardando Decisão
     const casasAguardandoDecisao = casasDesvinculadas.filter(c => c.status === 'AGUARDANDO_DECISAO');
-    const casasAtivasDesvinculadas = casasDesvinculadas.filter(c => c.status === 'ATIVO');
+    const casasAtivasDesvinculadas = casasDesvinculadas.filter(c => c.status === 'ATIVO' || c.status?.toUpperCase() === 'LIMITADA');
 
     if (casasAguardandoDecisao.length > 0 && allowedDomains.includes('financial_event')) {
       cards.push({
