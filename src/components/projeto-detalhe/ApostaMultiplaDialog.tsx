@@ -22,7 +22,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Loader2, Save, Trash2, Camera, CheckCircle2, Gift, FileText } from "lucide-react";
+import { Loader2, Save, Trash2, Camera, CheckCircle2, Gift, FileText, CalendarIcon } from "lucide-react";
+import { format, parse } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useApostaRascunho, type RascunhoSelecaoData, type ApostaRascunho } from "@/hooks/useApostaRascunho";
 import {
   Tooltip,
