@@ -123,29 +123,32 @@ export default function SharedProject() {
       {/* Content */}
       <main className="max-w-6xl mx-auto px-4 py-6 space-y-6">
         {/* KPI Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <KpiCard
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+          <KPICardV2
             title="Lucro Total"
             value={`${currencySymbol} ${resumo.lucro_total?.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`}
-            icon={resumo.lucro_total >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
+            icon={resumo.lucro_total >= 0 ? <TrendingUp className="h-5 w-5" /> : <TrendingDown className="h-5 w-5" />}
             variant={resumo.lucro_total >= 0 ? "positive" : "negative"}
+            highlight
           />
-          <KpiCard
+          <KPICardV2
             title="Apostas"
             value={resumo.total_apostas?.toLocaleString("pt-BR")}
             subtitle={`${resumo.apostas_pendentes} pendentes`}
-            icon={<BarChart3 className="h-4 w-4" />}
+            icon={<BarChart3 className="h-5 w-5" />}
           />
-          <KpiCard
+          <KPICardV2
             title="ROI"
             value={`${roi.toFixed(2)}%`}
-            icon={<Target className="h-4 w-4" />}
+            icon={<Percent className="h-5 w-5" />}
             variant={roi >= 0 ? "positive" : "negative"}
           />
-          <KpiCard
+          <KPICardV2
             title="Win Rate"
             value={`${winRate.toFixed(1)}%`}
             subtitle={`${resumo.greens}G / ${resumo.reds}R`}
+            icon={<Flame className="h-5 w-5" />}
+            variant={winRate >= 50 ? "positive" : winRate >= 40 ? "neutral" : "negative"}
           />
         </div>
 
