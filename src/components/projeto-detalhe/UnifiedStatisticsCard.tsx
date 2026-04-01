@@ -1,7 +1,6 @@
 import { useMemo, useState, Fragment } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { 
   BarChart3, 
   TrendingUp, 
@@ -12,6 +11,9 @@ import { ModernBarChart } from "@/components/ui/modern-bar-chart";
 import { parseLocalDateTime, extractLocalDateKey } from "@/utils/dateUtils";
 import { ChartEmptyState } from "@/components/ui/chart-empty-state";
 import { getConsolidatedStake, getConsolidatedLucro } from "@/utils/consolidatedValues";
+import { KPIAnchorCard } from "@/components/kpis/KPIAnchorCard";
+import { KPIStatCell } from "@/components/kpis/KPIStatCell";
+import { KPISectionHeader } from "@/components/kpis/KPISectionHeader";
 
 interface Aposta {
   id: string;
@@ -25,7 +27,6 @@ interface Aposta {
   status: string;
   esporte?: string | null;
   fonte_entrada?: string | null;
-  // Campos de consolidação multi-moeda
   moeda_operacao?: string | null;
   stake_consolidado?: number | null;
   pl_consolidado?: number | null;
@@ -38,165 +39,11 @@ interface Aposta {
 interface UnifiedStatisticsCardProps {
   apostas: Aposta[];
   accentColor?: string;
-  /** Função de formatação de moeda (usa moeda do projeto quando fornecida) */
   formatCurrency?: (value: number) => string;
-  /** Símbolo da moeda do projeto (ex: "$", "R$") */
   currencySymbol?: string;
-  /** Função de conversão para moeda de consolidação do projeto */
   convertToConsolidation?: (valor: number, moedaOrigem: string) => number;
-  /** Moeda de consolidação do projeto (ex: "BRL", "USD") */
   moedaConsolidacao?: string;
 }
-
-// Componente de KPI âncora (destaque máximo)
-const AnchorKPI = ({ 
-  label, 
-  value, 
-  valueClass = "",
-  tooltip
-}: { 
-  label: string; 
-  value: string | number; 
-  valueClass?: string;
-  tooltip?: string;
-}) => {
-  const content = (
-    <div className="flex flex-col items-center justify-center bg-gradient-to-br from-muted/60 to-muted/30 rounded-xl px-4 py-4 border border-border/30 min-h-[90px]">
-      <span className={`font-bold tabular-nums text-2xl lg:text-3xl ${valueClass}`}>{value}</span>
-      <span className="text-muted-foreground text-xs mt-1.5 text-center">{label}</span>
-    </div>
-  );
-
-  if (tooltip) {
-    return (
-      <Tooltip>
-        <TooltipTrigger asChild>{content}</TooltipTrigger>
-        <TooltipContent side="top" className="text-xs max-w-xs">
-          {tooltip}
-        </TooltipContent>
-      </Tooltip>
-    );
-  }
-  return content;
-};
-
-// Componente de célula de estatística (peso médio)
-const StatCell = ({ 
-  label, 
-  value, 
-  valueClass = "",
-  tooltip,
-  size = "normal"
-}: { 
-  label: string; 
-  value: string | number; 
-  valueClass?: string;
-  tooltip?: string;
-  size?: "small" | "normal";
-}) => {
-  const content = (
-    <div className={`flex items-center justify-between bg-muted/40 rounded-lg ${size === "small" ? "px-2.5 py-1.5" : "px-3 py-2.5"}`}>
-      <span className={`text-muted-foreground ${size === "small" ? "text-[10px]" : "text-xs"}`}>{label}</span>
-      <span className={`font-semibold tabular-nums ${size === "small" ? "text-xs" : "text-sm"} ${valueClass}`}>{value}</span>
-    </div>
-  );
-
-  if (tooltip) {
-    return (
-      <Tooltip>
-        <TooltipTrigger asChild>{content}</TooltipTrigger>
-        <TooltipContent side="top" className="text-xs max-w-xs">
-          {tooltip}
-        </TooltipContent>
-      </Tooltip>
-    );
-  }
-  return content;
-};
-
-// Componente de célula de risco (com ícone de alerta)
-const RiskCell = ({ 
-  label, 
-  value, 
-  valueClass = "",
-  tooltip,
-  isNegative = false
-}: { 
-  label: string; 
-  value: string | number; 
-  valueClass?: string;
-  tooltip?: string;
-  isNegative?: boolean;
-}) => {
-  const content = (
-    <div className="flex items-center justify-between bg-muted/30 rounded-lg px-3 py-2.5 border border-border/20">
-      <span className="text-muted-foreground text-xs">{label}</span>
-      <span className={`font-semibold tabular-nums text-sm ${valueClass}`}>{value}</span>
-    </div>
-  );
-
-  if (tooltip) {
-    return (
-      <Tooltip>
-        <TooltipTrigger asChild>{content}</TooltipTrigger>
-        <TooltipContent side="top" className="text-xs max-w-xs">
-          {tooltip}
-        </TooltipContent>
-      </Tooltip>
-    );
-  }
-  return content;
-};
-
-// Cabeçalho de seção com diferentes pesos
-const SectionHeader = ({ 
-  title, 
-  icon: Icon,
-  priority = "normal",
-  color
-}: { 
-  title: string; 
-  icon?: React.ElementType;
-  priority?: "high" | "normal" | "low";
-  color?: "purple" | "blue" | "emerald";
-}) => {
-  // Se cor customizada foi passada, usa ela
-  const customBorderColor = color === "blue" 
-    ? "bg-blue-500" 
-    : color === "emerald" 
-      ? "bg-emerald-500" 
-      : null;
-  
-  const customIconColor = color === "blue" 
-    ? "text-blue-400" 
-    : color === "emerald" 
-      ? "text-emerald-400" 
-      : null;
-
-  const borderColor = customBorderColor ?? (priority === "high" 
-    ? "bg-amber-500" 
-    : priority === "low" 
-      ? "bg-muted-foreground/50" 
-      : "bg-purple-500");
-  
-  const iconColor = customIconColor ?? (priority === "high" 
-    ? "text-amber-500" 
-    : priority === "low" 
-      ? "text-muted-foreground" 
-      : "text-purple-400");
-
-  return (
-    <div className={`mb-2.5 ${priority === "high" ? "mt-6 pt-4 border-t border-border/50" : "mt-5 first:mt-0"}`}>
-      <div className="flex items-center gap-2">
-        <div className={`w-0.5 h-4 ${borderColor} rounded-full`} />
-        {Icon && <Icon className={`h-3.5 w-3.5 ${iconColor}`} />}
-        <span className="text-xs font-semibold text-foreground/90 uppercase tracking-wider">
-          {title}
-        </span>
-      </div>
-    </div>
-  );
-};
 
 // Formatador padrão (fallback se não for passado prop)
 const defaultFormatCurrency = (value: number) => {
@@ -557,50 +404,55 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
 
   // Aba Resumo (redesenhada com hierarquia visual)
   const renderResumo = () => (
-    <div className="space-y-1">
-      {/* 1️⃣ KPIs ÂNCORA - destaque máximo */}
-      <div className="grid grid-cols-3 gap-3">
-        <AnchorKPI 
-          label="Lucro / Prejuízo" 
-          value={formatCurrency(stats.lucroTotal)} 
-          valueClass={stats.lucroTotal >= 0 ? "text-emerald-400" : "text-red-400"} 
-        />
-        <AnchorKPI 
-          label="ROI" 
-          value={formatPercent(stats.roi)} 
-          valueClass={stats.roi >= 0 ? "text-emerald-400" : "text-red-400"}
-          tooltip="Lucro total ÷ Volume total apostado"
-        />
-        <AnchorKPI 
-          label="Taxa de Acerto" 
-          value={`${stats.taxaAcerto.toFixed(1)}%`} 
-          valueClass={stats.taxaAcerto >= 50 ? "text-emerald-400" : "text-amber-400"} 
-        />
-      </div>
-
-      {/* 2️⃣ RESULTADOS OPERACIONAIS - layout compacto, peso médio */}
-      <div>
-        <SectionHeader title="Resultados Operacionais" icon={BarChart3} />
-        <div className="grid grid-cols-4 gap-2">
-          <StatCell label="Vencedoras" value={stats.vencedoras} valueClass="text-emerald-400" />
-          <StatCell label="Perdedoras" value={stats.perdedoras} valueClass="text-red-400" />
-          <StatCell label="Reembolsadas" value={stats.reembolsadas} />
-          <StatCell label="Em curso" value={stats.emCurso} valueClass="text-blue-400" />
+    <div className="space-y-2 md:space-y-3">
+      {/* 1️⃣ KPIs ÂNCORA — mobile: lucro full-width, ROI+Taxa lado a lado */}
+      <div className="space-y-2 md:space-y-0 md:grid md:grid-cols-3 md:gap-3">
+        <div className="md:col-span-1">
+          <KPIAnchorCard 
+            label="Lucro / Prejuízo" 
+            value={formatCurrency(stats.lucroTotal)} 
+            valueClass={stats.lucroTotal >= 0 ? "text-emerald-400" : "text-red-400"}
+            size="lg"
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-2 md:contents">
+          <KPIAnchorCard 
+            label="ROI" 
+            value={formatPercent(stats.roi)} 
+            valueClass={stats.roi >= 0 ? "text-emerald-400" : "text-red-400"}
+            tooltip="Lucro total ÷ Volume total apostado"
+          />
+          <KPIAnchorCard 
+            label="Taxa de Acerto" 
+            value={`${stats.taxaAcerto.toFixed(1)}%`} 
+            valueClass={stats.taxaAcerto >= 50 ? "text-emerald-400" : "text-amber-400"} 
+          />
         </div>
       </div>
 
-      {/* 3️⃣ FINANCEIRO - peso médio-alto */}
+      {/* 2️⃣ RESULTADOS OPERACIONAIS */}
       <div>
-        <SectionHeader title="Financeiro" icon={TrendingUp} color="emerald" />
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
-          <StatCell label="Valor apostado" value={formatCurrency(stats.valorTotal)} />
-          <StatCell label="Em curso" value={formatCurrency(stats.valorEmCurso)} valueClass="text-blue-400" />
-          <StatCell 
+        <KPISectionHeader title="Resultados Operacionais" icon={BarChart3} color="purple" />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5 md:gap-2">
+          <KPIStatCell label="Vencedoras" value={stats.vencedoras} valueClass="text-emerald-400" />
+          <KPIStatCell label="Perdedoras" value={stats.perdedoras} valueClass="text-red-400" />
+          <KPIStatCell label="Reembolsadas" value={stats.reembolsadas} />
+          <KPIStatCell label="Em curso" value={stats.emCurso} valueClass="text-blue-400" />
+        </div>
+      </div>
+
+      {/* 3️⃣ FINANCEIRO */}
+      <div>
+        <KPISectionHeader title="Financeiro" icon={TrendingUp} color="emerald" />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5 md:gap-2">
+          <KPIStatCell label="Valor apostado" value={formatCurrency(stats.valorTotal)} />
+          <KPIStatCell label="Em curso" value={formatCurrency(stats.valorEmCurso)} valueClass="text-blue-400" />
+          <KPIStatCell 
             label="Stake média" 
             value={formatCurrency(stats.stakeMedia)}
             tooltip="Valor médio apostado"
           />
-          <StatCell 
+          <KPIStatCell 
             label="Stake máxima" 
             value={formatCurrency(stats.stakeMaxima)}
             tooltip="Maior valor apostado"
@@ -608,77 +460,69 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
         </div>
       </div>
 
-      {/* 4️⃣ ANÁLISE DE RISCO - pares verticais opostos */}
+      {/* 4️⃣ ANÁLISE DE RISCO */}
       <div>
-        <SectionHeader title="Análise de Risco" icon={AlertTriangle} priority="high" />
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {/* Par 1 — Unitário */}
+        <KPISectionHeader title="Análise de Risco" icon={AlertTriangle} color="amber" />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
           <div className="flex flex-col gap-1.5">
-            <RiskCell 
+            <KPIStatCell 
               label="Maior lucro unitário" 
               value={formatCurrency(stats.maiorLucro)} 
               valueClass="text-emerald-400"
               tooltip="Maior lucro em uma única aposta"
             />
-            <RiskCell 
+            <KPIStatCell 
               label="Maior prejuízo unitário" 
               value={formatCurrency(stats.maiorPerda)} 
               valueClass="text-red-400"
               tooltip="Maior perda em uma única aposta"
-              isNegative
             />
           </div>
-
-          {/* Par 2 — Diário */}
           <div className="flex flex-col gap-1.5">
-            <RiskCell 
+            <KPIStatCell 
               label="Maior lucro diário" 
               value={formatCurrency(stats.maiorLucroDiario)} 
               valueClass="text-emerald-400"
               tooltip="Maior soma positiva em um único dia"
             />
-            <RiskCell 
+            <KPIStatCell 
               label="Maior prejuízo diário" 
               value={formatCurrency(stats.maiorPrejuizoDiario)} 
               valueClass="text-red-400"
               tooltip="Maior soma negativa em um único dia"
-              isNegative
             />
           </div>
-
-          {/* Par 3 — Sequência */}
           <div className="flex flex-col gap-1.5">
-            <RiskCell 
+            <KPIStatCell 
               label="Máx. vitórias seguidas" 
               value={stats.maxVitorias} 
               valueClass="text-emerald-400" 
             />
-            <RiskCell 
+            <KPIStatCell 
               label="Máx. derrotas seguidas" 
               value={stats.maxDerrotas} 
               valueClass="text-red-400"
-              isNegative
             />
           </div>
         </div>
       </div>
 
-      {/* 5️⃣ EFICIÊNCIA E COTAÇÕES - bloco complementar, menor destaque */}
+      {/* 5️⃣ EFICIÊNCIA E COTAÇÕES */}
       <div>
-        <SectionHeader title="Eficiência e Cotações" icon={Zap} priority="low" />
-        <div className="grid grid-cols-3 gap-2">
-          <StatCell 
+        <KPISectionHeader title="Eficiência e Cotações" icon={Zap} color="blue" />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 md:gap-2">
+          <KPIStatCell 
             label={`Lucro por ${currencySymbol} 1.000`} 
             value={formatCurrency(stats.lucroPorMil)}
             valueClass={stats.lucroPorMil >= 0 ? "text-emerald-400" : "text-red-400"}
             tooltip={`Quanto você ganha para cada ${currencySymbol} 1.000 apostados`}
           />
-          <StatCell 
+          <KPIStatCell 
             label="Maior odd ganha" 
             value={stats.maiorCotacaoGanha > 0 ? stats.maiorCotacaoGanha.toFixed(2) : "-"}
             valueClass="text-emerald-400"
           />
-          <StatCell 
+          <KPIStatCell 
             label="Odd média" 
             value={stats.oddMedia > 0 ? stats.oddMedia.toFixed(2) : "-"}
           />
@@ -1071,32 +915,36 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
   const renderTipoBlock = (label: string, data: typeof stats.porTipo.simples) => (
     <div className="space-y-2">
       <h4 className="text-sm font-semibold text-foreground">{label}</h4>
-      <div className="grid grid-cols-3 gap-2">
-        <AnchorKPI 
-          label="Lucro / Prejuízo" 
-          value={formatCurrency(data.lucro)} 
-          valueClass={data.lucro >= 0 ? "text-emerald-400" : "text-red-400"} 
-        />
-        <AnchorKPI 
-          label="ROI" 
-          value={formatPercent(data.roi)} 
-          valueClass={data.roi >= 0 ? "text-emerald-400" : "text-red-400"}
-          tooltip="Lucro ÷ Volume liquidado"
-        />
-        <AnchorKPI 
-          label="Win Rate" 
-          value={formatPercent(data.winRate)}
-          tooltip="Apostas ganhas ÷ Apostas liquidadas"
-        />
+      <div className="space-y-2 md:space-y-0 md:grid md:grid-cols-3 md:gap-2">
+        <div className="md:col-span-1">
+          <KPIAnchorCard 
+            label="Lucro / Prejuízo" 
+            value={formatCurrency(data.lucro)} 
+            valueClass={data.lucro >= 0 ? "text-emerald-400" : "text-red-400"} 
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-2 md:contents">
+          <KPIAnchorCard 
+            label="ROI" 
+            value={formatPercent(data.roi)} 
+            valueClass={data.roi >= 0 ? "text-emerald-400" : "text-red-400"}
+            tooltip="Lucro ÷ Volume liquidado"
+          />
+          <KPIAnchorCard 
+            label="Win Rate" 
+            value={formatPercent(data.winRate)}
+            tooltip="Apostas ganhas ÷ Apostas liquidadas"
+          />
+        </div>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-        <StatCell label="Apostas" value={data.total} />
-        <StatCell label="Volume" value={formatCurrency(data.volume)} />
-        <StatCell label="Greens" value={data.ganhas} valueClass="text-emerald-500" />
-        <StatCell label="Reds" value={data.perdidas} valueClass="text-red-500" />
+        <KPIStatCell label="Apostas" value={data.total} size="sm" />
+        <KPIStatCell label="Volume" value={formatCurrency(data.volume)} size="sm" />
+        <KPIStatCell label="Greens" value={data.ganhas} valueClass="text-emerald-500" size="sm" />
+        <KPIStatCell label="Reds" value={data.perdidas} valueClass="text-red-500" size="sm" />
       </div>
       {data.pendentes > 0 && (
-        <StatCell label="Pendentes" value={data.pendentes} valueClass="text-blue-400" size="small" />
+        <KPIStatCell label="Pendentes" value={data.pendentes} valueClass="text-blue-400" size="sm" />
       )}
     </div>
   );
@@ -1119,7 +967,7 @@ export function UnifiedStatisticsCard({ apostas, accentColor = "hsl(270, 76%, 60
       </CardHeader>
       <CardContent className="pt-2 pb-4">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full grid grid-cols-6 h-9 mb-4 bg-transparent gap-1 p-0" accentColor="bg-purple-500">
+          <TabsList className="w-full grid grid-cols-3 md:grid-cols-6 h-auto md:h-9 mb-4 bg-transparent gap-1 p-0" accentColor="bg-purple-500">
             <TabsTrigger 
               value="resumo" 
               className="text-xs rounded-lg transition-all duration-200 bg-transparent data-[state=inactive]:text-muted-foreground data-[state=active]:text-foreground data-[state=active]:font-medium hover:text-foreground/80"
