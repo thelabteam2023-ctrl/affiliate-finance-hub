@@ -3479,7 +3479,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                     <td className="px-1 py-3">
                       <Input
                         type="number"
-                        step="0.001"
+                        step="0.00001"
                         min="1.01"
                         value={odd}
                         onChange={(e) => setOdd(e.target.value)}
@@ -3712,7 +3712,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                         <td className="px-1 py-3">
                           <Input
                             type="number"
-                            step="0.001"
+                            step="0.00001"
                             min="1.01"
                             value={entry.odd}
                             onChange={(e) => setAdditionalEntries(prev => prev.map(en => en.id === entry.id ? { ...en, odd: e.target.value } : en))}
@@ -3865,7 +3865,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
                       <div className="flex items-center gap-1.5">
                         <Layers className="h-3.5 w-3.5 text-muted-foreground" />
                         <span className="text-muted-foreground">Odd ø</span>
-                        <span className="font-bold tabular-nums">{weightedOdd.toFixed(3)}</span>
+                        <span className="font-bold tabular-nums">{parseFloat(weightedOdd.toFixed(5))}</span>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <span className="text-muted-foreground">Stake Total</span>

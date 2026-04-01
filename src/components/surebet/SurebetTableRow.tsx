@@ -263,7 +263,7 @@ export function SurebetTableRow({
         <td className="px-1" style={{ height: '78px' }}>
           <Input 
             type="number"
-            step="0.001"
+            step="0.00001"
             placeholder="0.00"
             value={entry.odd}
             onChange={(e) => onUpdateOdd(pernaIndex, "odd", e.target.value)}
@@ -477,7 +477,7 @@ export function SurebetTableRow({
             <td className="px-1" style={{ height: '52px' }}>
               <Input 
                 type="number"
-                step="0.001"
+                step="0.00001"
                 placeholder="0.00"
                 value={addEntry.odd}
                 onChange={(e) => onUpdateAdditionalEntry(pernaIndex, addIndex, 'odd', e.target.value)}

@@ -246,7 +246,7 @@ export function SurebetColumnsView({
                     <label className="text-[9px] text-muted-foreground uppercase tracking-wide mb-0.5 block">Odd</label>
                     <Input 
                       type="number"
-                      step="0.001"
+                      step="0.00001"
                       placeholder="0.00"
                       value={entry.odd}
                       onChange={(e) => onUpdateOdd(pernaIndex, "odd", e.target.value)}
@@ -390,7 +390,7 @@ export function SurebetColumnsView({
                           <label className="text-[9px] text-muted-foreground uppercase tracking-wide mb-0.5 block">Odd</label>
                           <Input 
                             type="number"
-                            step="0.001"
+                            step="0.00001"
                             placeholder="0.00"
                             value={addEntry.odd}
                             onChange={(e) => onUpdateAdditionalEntry(pernaIndex, addIndex, 'odd', e.target.value)}
@@ -533,7 +533,7 @@ export function SurebetColumnsView({
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Odd ø</span>
                         <span className="text-sm font-bold tabular-nums text-foreground">
-                          {hasOddData ? oddMedia.toFixed(3) : "—"}
+                          {hasOddData ? parseFloat(oddMedia.toFixed(5)) : "—"}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">

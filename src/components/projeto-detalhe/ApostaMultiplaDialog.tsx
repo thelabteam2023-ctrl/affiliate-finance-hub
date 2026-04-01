@@ -1814,13 +1814,13 @@ export function ApostaMultiplaDialog({
               <div className="space-y-0.5">
                 <Label className="text-[10px] text-muted-foreground">Odd Final{boostMultiplier > 1 ? ' 🚀' : ''}</Label>
                 <Input
-                  value={oddFinal > 0 ? oddFinal.toFixed(3) : "-"}
+                  value={oddFinal > 0 ? parseFloat(oddFinal.toFixed(5)) : "-"}
                   disabled
                   className={`bg-muted/50 h-7 text-xs ${boostMultiplier > 1 ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : ''}`}
                 />
                 {boostMultiplier > 1 && oddFinalSemBoost > 0 && (
                   <p className="text-[8px] text-muted-foreground">
-                    {oddFinalSemBoost.toFixed(3)} → +{boostPercent}%
+                    {parseFloat(oddFinalSemBoost.toFixed(5))} → +{boostPercent}%
                   </p>
                 )}
               </div>
@@ -1856,7 +1856,7 @@ export function ApostaMultiplaDialog({
                    resultadoCalculado}
                 </Badge>
                 {(resultadoCalculado === "GREEN" || resultadoCalculado === "MEIO_GREEN") && oddFinalReal !== oddFinal && (
-                  <span className="text-[10px] text-muted-foreground">Odd ajust.: <span className="font-medium text-foreground">{oddFinalReal.toFixed(3)}</span></span>
+                  <span className="text-[10px] text-muted-foreground">Odd ajust.: <span className="font-medium text-foreground">{parseFloat(oddFinalReal.toFixed(5))}</span></span>
                 )}
               </div>
             )}

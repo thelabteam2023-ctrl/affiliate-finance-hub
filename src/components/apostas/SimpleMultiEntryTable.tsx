@@ -248,7 +248,7 @@ export function SimpleMultiEntryTable({
                 <td className="px-1 py-3">
                   <Input
                     type="number"
-                    step="0.001"
+                    step="0.00001"
                     min="1.01"
                     value={entry.odd}
                     onChange={(e) => updateEntry(entry.id, 'odd', e.target.value)}
@@ -339,7 +339,7 @@ export function SimpleMultiEntryTable({
             <div className="flex items-center gap-1.5">
               <Layers className="h-3.5 w-3.5 text-muted-foreground" />
               <span className="text-muted-foreground">Odd ø</span>
-              <span className="font-bold tabular-nums">{oddMedia.toFixed(3)}</span>
+              <span className="font-bold tabular-nums">{parseFloat(oddMedia.toFixed(5))}</span>
             </div>
             <div className="flex items-center gap-1.5">
               <span className="text-muted-foreground">Stake Total</span>
