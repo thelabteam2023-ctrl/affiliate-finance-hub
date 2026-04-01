@@ -129,7 +129,7 @@ export default function SharedProject() {
             value={`${currencySymbol} ${resumo.lucro_total?.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`}
             icon={resumo.lucro_total >= 0 ? <TrendingUp className="h-5 w-5" /> : <TrendingDown className="h-5 w-5" />}
             variant={resumo.lucro_total >= 0 ? "positive" : "negative"}
-            highlight
+            
           />
           <KPICardV2
             title="Apostas"
