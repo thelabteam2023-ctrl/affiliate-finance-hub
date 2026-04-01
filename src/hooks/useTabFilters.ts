@@ -41,6 +41,8 @@ export interface DateRangeResult {
   end: Date;
 }
 
+export type SortOrder = "desc" | "asc";
+
 export interface TabFiltersState {
   period: StandardPeriodFilter;
   customDateRange: DateRange | undefined;
@@ -49,6 +51,7 @@ export interface TabFiltersState {
   estrategias: EstrategiaFilter[];
   resultados: ResultadoFilter[];
   dateRange: DateRangeResult | null;
+  sortOrder: SortOrder;
 }
 
 export interface UseTabFiltersOptions {
@@ -143,6 +146,7 @@ export function useTabFilters({
   const [parceiroIds, setParceiroIdsState] = useState<string[]>([]);
   const [estrategias, setEstrategiasState] = useState<EstrategiaFilter[]>(["all"]);
   const [resultados, setResultadosState] = useState<ResultadoFilter[]>([]);
+  const [sortOrder, setSortOrderState] = useState<SortOrder>("desc");
 
   // Carregar estado salvo (apenas se persist=true)
   useEffect(() => {
@@ -155,6 +159,7 @@ export function useTabFilters({
         if (parsed.period) setPeriodState(parsed.period);
         if (parsed.bookmakerIds) setBookmakerIdsState(parsed.bookmakerIds);
         if (parsed.parceiroIds) setParceiroIdsState(parsed.parceiroIds);
+        if (parsed.sortOrder) setSortOrderState(parsed.sortOrder);
         // Não restaurar customDateRange e estrategias para evitar estados inválidos
       } catch (e) {
         console.error(`[useTabFilters] Erro ao restaurar filtros da aba ${tabId}:`, e);
@@ -170,9 +175,10 @@ export function useTabFilters({
       period,
       bookmakerIds,
       parceiroIds,
+      sortOrder,
     };
     localStorage.setItem(storageKey, JSON.stringify(toSave));
-  }, [storageKey, persist, period, bookmakerIds, parceiroIds]);
+  }, [storageKey, persist, period, bookmakerIds, parceiroIds, sortOrder]);
 
   // Computar dateRange
   const dateRange = useMemo(
@@ -206,6 +212,14 @@ export function useTabFilters({
 
   const setResultados = useCallback((r: ResultadoFilter[]) => {
     setResultadosState(r);
+  }, []);
+
+  const setSortOrder = useCallback((order: SortOrder) => {
+    setSortOrderState(order);
+  }, []);
+
+  const toggleSortOrder = useCallback(() => {
+    setSortOrderState(prev => prev === "desc" ? "asc" : "desc");
   }, []);
 
   const toggleResultado = useCallback((resultado: ResultadoFilter) => {
@@ -251,6 +265,7 @@ export function useTabFilters({
     setParceiroIdsState([]);
     setEstrategiasState(["all"]);
     setResultadosState([]);
+    setSortOrderState("desc");
   }, [defaultPeriod]);
 
   // Contagem de filtros ativos
@@ -277,6 +292,7 @@ export function useTabFilters({
     resultados,
     estrategias,
     dateRange,
+    sortOrder,
     
     // Setters
     setPeriod,
@@ -285,12 +301,14 @@ export function useTabFilters({
     setParceiroIds,
     setEstrategias,
     setResultados,
+    setSortOrder,
     
     // Helpers
     toggleBookmaker,
     toggleParceiro,
     toggleEstrategia,
     toggleResultado,
+    toggleSortOrder,
     clearFilters,
     activeFiltersCount,
     

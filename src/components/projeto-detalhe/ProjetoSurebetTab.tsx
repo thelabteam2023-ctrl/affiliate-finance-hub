@@ -974,7 +974,15 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
       .sort((a, b) => new Date(a.data_operacao).getTime() - new Date(b.data_operacao).getTime()),
     [filteredSurebetsForOperacoes]
   );
-  const surebetsHistorico = useMemo(() => filteredSurebetsForOperacoes.filter(s => s.resultado && s.resultado !== "PENDENTE" && s.status !== "PENDENTE"), [filteredSurebetsForOperacoes]);
+  const surebetsHistorico = useMemo(() => {
+    const hist = filteredSurebetsForOperacoes.filter(s => s.resultado && s.resultado !== "PENDENTE" && s.status !== "PENDENTE");
+    const asc = tabFilters.sortOrder === "asc";
+    return hist.sort((a, b) => {
+      const ta = new Date(a.data_operacao || a.created_at).getTime();
+      const tb = new Date(b.data_operacao || b.created_at).getTime();
+      return asc ? ta - tb : tb - ta;
+    });
+  }, [filteredSurebetsForOperacoes, tabFilters.sortOrder]);
 
   // Contagens totais (sem filtros dimensionais) para indicar no badge
   const totalSurebetsAbertas = useMemo(() => surebets.filter(s => !s.resultado || s.resultado === "PENDENTE" || s.status === "PENDENTE").length, [surebets]);
@@ -1406,6 +1414,8 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
               showViewToggle={true}
               searchQuery={searchTerm}
               onSearchChange={setSearchTerm}
+              sortOrder={tabFilters.sortOrder}
+              onSortOrderToggle={tabFilters.toggleSortOrder}
               extraActions={
                 <ExportMenu
                   getData={() => surebetsListaAtual.map(s => 

@@ -1172,7 +1172,15 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
       .sort((a, b) => new Date(a.data_aposta).getTime() - new Date(b.data_aposta).getTime()),
     [apostasUnificadasBase]
   );
-  const apostasHistoricoList = useMemo(() => apostasUnificadasBase.filter(item => !isItemPendente(item)), [apostasUnificadasBase]);
+  const apostasHistoricoList = useMemo(() => {
+    const hist = apostasUnificadasBase.filter(item => !isItemPendente(item));
+    const asc = tabFilters.sortOrder === "asc";
+    return hist.sort((a, b) => {
+      const ta = new Date(a.data_aposta).getTime();
+      const tb = new Date(b.data_aposta).getTime();
+      return asc ? ta - tb : tb - ta;
+    });
+  }, [apostasUnificadasBase, tabFilters.sortOrder]);
 
   // Total counts without dimensional filters for badge comparison
   const totalAbertasRaw = useMemo(() => {
@@ -1489,6 +1497,8 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
               showViewToggle={true}
               searchQuery={searchTerm}
               onSearchChange={setSearchTerm}
+              sortOrder={tabFilters.sortOrder}
+              onSortOrderToggle={tabFilters.toggleSortOrder}
               extraActions={
                 <ExportMenu
                   getData={() => apostasUnificadas.map(u => {

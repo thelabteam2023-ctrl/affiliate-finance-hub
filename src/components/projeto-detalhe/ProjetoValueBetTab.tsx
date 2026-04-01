@@ -847,7 +847,15 @@ export function ProjetoValueBetTab({
       .sort((a, b) => new Date(a.data_aposta).getTime() - new Date(b.data_aposta).getTime()),
     [apostas]
   );
-  const apostasHistorico = useMemo(() => apostas.filter(a => a.resultado && a.resultado !== "PENDENTE"), [apostas]);
+  const apostasHistorico = useMemo(() => {
+    const hist = apostas.filter(a => a.resultado && a.resultado !== "PENDENTE");
+    const asc = tabFilters.sortOrder === "asc";
+    return hist.sort((a, b) => {
+      const ta = new Date(a.data_aposta).getTime();
+      const tb = new Date(b.data_aposta).getTime();
+      return asc ? ta - tb : tb - ta;
+    });
+  }, [apostas, tabFilters.sortOrder]);
 
   // Auto-switch to history tab when no open operations
   useEffect(() => {
@@ -1212,7 +1220,7 @@ export function ProjetoValueBetTab({
         <CardHeader className="pb-3">
           {/* Sub-abas Abertas / Histórico - usando componente padronizado */}
           <div className="mb-3">
-            <OperationsSubTabHeader
+             <OperationsSubTabHeader
               subTab={apostasSubTab}
               onSubTabChange={setApostasSubTab}
               openCount={filteredAbertasCount}
@@ -1224,6 +1232,8 @@ export function ProjetoValueBetTab({
               showViewToggle={true}
               searchQuery={searchTerm}
               onSearchChange={setSearchTerm}
+              sortOrder={tabFilters.sortOrder}
+              onSortOrderToggle={tabFilters.toggleSortOrder}
               extraActions={
                 <ExportMenu
                   getData={() => apostasFiltradas.map(a => transformApostaToExport({

@@ -2,50 +2,31 @@ import { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Clock, History, LayoutGrid, List, Search, X } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { ArrowDownUp, ArrowDownWideNarrow, ArrowUpNarrowWide, Clock, History, LayoutGrid, List, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { SortOrder } from "@/hooks/useTabFilters";
 
 export type HistorySubTab = "abertas" | "historico";
 
 export interface OperationsSubTabHeaderProps {
-  /** Sub-tab atual */
   subTab: HistorySubTab;
-  
-  /** Callback para mudar sub-tab */
   onSubTabChange: (tab: HistorySubTab) => void;
-  
-  /** Número de operações abertas (para badge) */
   openCount: number;
-  
-  /** Número total de operações abertas (sem filtros dimensionais) */
   totalOpenCount?: number;
-  
-  /** Número de operações no histórico (opcional, mostra badge se > 0) */
   historyCount?: number;
-  
-  /** Número total de operações no histórico (sem filtros dimensionais) */
   totalHistoryCount?: number;
-  
-  /** Modo de visualização cards/list (opcional) */
   viewMode?: "cards" | "list";
-  
-  /** Callback para mudar modo de visualização (opcional) */
   onViewModeChange?: (mode: "cards" | "list") => void;
-  
-  /** Mostrar toggle de visualização */
   showViewToggle?: boolean;
-  
-  /** Texto de busca por evento/jogo */
   searchQuery?: string;
-  
-  /** Callback para mudar texto de busca */
   onSearchChange?: (query: string) => void;
-  
-  /** Ações extras (ex: ExportMenu) - renderizadas à direita */
   extraActions?: ReactNode;
-  
-  /** Classe CSS adicional */
   className?: string;
+  /** Ordenação atual do histórico */
+  sortOrder?: SortOrder;
+  /** Callback para alternar ordenação */
+  onSortOrderToggle?: () => void;
 }
 
 /**
@@ -68,6 +49,8 @@ export function OperationsSubTabHeader({
   onSearchChange,
   extraActions,
   className,
+  sortOrder,
+  onSortOrderToggle,
 }: OperationsSubTabHeaderProps) {
   const isOpenFiltered = totalOpenCount !== undefined && totalOpenCount !== openCount;
   const isHistoryFiltered = totalHistoryCount !== undefined && totalHistoryCount !== historyCount;
@@ -123,8 +106,31 @@ export function OperationsSubTabHeader({
           </Button>
         </div>
 
-        {/* Right side: extra actions + view toggle */}
+        {/* Right side: sort toggle + extra actions + view toggle */}
         <div className="flex items-center gap-2">
+          {/* Sort order toggle - only shown on histórico tab */}
+          {subTab === "historico" && onSortOrderToggle && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 shrink-0"
+                  onClick={onSortOrderToggle}
+                >
+                  {sortOrder === "desc" ? (
+                    <ArrowDownWideNarrow className="h-4 w-4" />
+                  ) : (
+                    <ArrowUpNarrowWide className="h-4 w-4" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                {sortOrder === "desc" ? "Mais recente primeiro" : "Mais antigo primeiro"}
+              </TooltipContent>
+            </Tooltip>
+          )}
+
           {/* Extra actions slot (e.g., ExportMenu) */}
           {extraActions}
           
