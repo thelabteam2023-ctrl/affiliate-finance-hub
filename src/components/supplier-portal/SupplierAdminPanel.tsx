@@ -85,7 +85,7 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
 
       const [alocRes, tokenRes] = await Promise.all([
         supabase.from("supplier_alocacoes").select("supplier_workspace_id, valor, status, created_at").in("supplier_workspace_id", wsIds),
-        supabase.from("supplier_access_tokens").select("supplier_workspace_id, id, expires_at, revoked_at, use_count, last_used_at, label").in("supplier_workspace_id", wsIds),
+        supabase.from("supplier_access_tokens").select("supplier_workspace_id, id, expires_at, revoked_at, use_count, last_used_at, label, token_plain").in("supplier_workspace_id", wsIds),
       ]);
 
       return profiles.map((p: any) => ({
