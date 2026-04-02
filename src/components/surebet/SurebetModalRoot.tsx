@@ -161,6 +161,7 @@ export function SurebetModalRoot({
   const isEditing = !!surebet;
   const { workspaceId } = useWorkspace();
   const isMobile = useIsMobile();
+  const queryClient = useQueryClient();
   
   // Hook de rascunhos
   const { criarRascunho, atualizarRascunho, deletarRascunho } = useApostaRascunho(projetoId, workspaceId || '');
