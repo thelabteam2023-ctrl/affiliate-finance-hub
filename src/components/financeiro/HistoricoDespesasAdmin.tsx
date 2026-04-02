@@ -113,27 +113,29 @@ export function HistoricoDespesasAdmin({ formatCurrency }: HistoricoDespesasAdmi
       if (contasRes.data) setContasBancarias(contasRes.data);
       if (walletsRes.data) setWallets(walletsRes.data);
 
-      // Normalize despesas administrativas
-      const despesasNormalized: TransacaoHistorico[] = (despesasRes.data || []).map((d) => ({
-        id: d.id,
-        categoria: d.categoria,
-        grupo: d.grupo,
-        descricao: d.descricao,
-        valor: d.valor,
-        data_despesa: d.data_despesa,
-        status: d.status,
-        tipo_moeda: d.tipo_moeda,
-        coin: d.coin,
-        qtd_coin: d.qtd_coin,
-        cotacao: d.cotacao,
-        origem_tipo: d.origem_tipo,
-        origem_caixa_operacional: d.origem_caixa_operacional,
-        origem_parceiro_id: d.origem_parceiro_id,
-        origem_conta_bancaria_id: d.origem_conta_bancaria_id,
-        origem_wallet_id: d.origem_wallet_id,
-        destino_tipo: "EXTERNO",
-        destino_nome: null,
-      }));
+      // Normalize despesas administrativas (excluir as que têm operador_id + grupo RH, pois já vêm do PAGTO_OPERADOR)
+      const despesasNormalized: TransacaoHistorico[] = (despesasRes.data || [])
+        .filter((d) => !(d.operador_id && d.grupo === 'RECURSOS_HUMANOS'))
+        .map((d) => ({
+          id: d.id,
+          categoria: d.categoria,
+          grupo: d.grupo,
+          descricao: d.descricao,
+          valor: d.valor,
+          data_despesa: d.data_despesa,
+          status: d.status,
+          tipo_moeda: d.tipo_moeda,
+          coin: d.coin,
+          qtd_coin: d.qtd_coin,
+          cotacao: d.cotacao,
+          origem_tipo: d.origem_tipo,
+          origem_caixa_operacional: d.origem_caixa_operacional,
+          origem_parceiro_id: d.origem_parceiro_id,
+          origem_conta_bancaria_id: d.origem_conta_bancaria_id,
+          origem_wallet_id: d.origem_wallet_id,
+          destino_tipo: d.operador_id ? "OPERADOR" : "EXTERNO",
+          destino_nome: d.operador_id ? (operadoresMap[d.operador_id] || "Operador") : null,
+        }));
 
       // Normalize pagamentos de operador
       const pagamentosNormalized: TransacaoHistorico[] = (pagamentosOperadorRes.data || []).map((p) => ({
