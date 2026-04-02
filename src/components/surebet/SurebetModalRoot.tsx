@@ -1566,8 +1566,14 @@ export function SurebetModalRoot({
         }
       }
 
-      // Invalidar cache de saldos (agora os saldos já foram debitados pela RPC)
+      // Invalidar TODOS os caches (saldos + KPIs + calendário + dashboard)
       invalidateSaldos(projetoId);
+      invalidateCanonicalCaches(queryClient, projetoId);
+      
+      // Limpar refs de estado local — backend é a fonte da verdade
+      originalPernasSnapshot.current = [];
+      originalPernaIds.current = [];
+      originalStakesByBookmaker.current = new Map();
       
       onSuccess('save');
       if (!embedded) onOpenChange(false);
