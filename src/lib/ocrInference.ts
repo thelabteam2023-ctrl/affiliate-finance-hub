@@ -58,6 +58,34 @@ function inferSport(data: NormalizedBetData): void {
  * Rule 3: If choice is "X" → Line = Empate
  * Rule 4: Line always represents the choice within the market
  */
+function normalizeText(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isTeamMatch(selection: string, teamName: string): boolean {
+  const selNorm = normalizeText(selection);
+  const teamNorm = normalizeText(teamName);
+  if (!selNorm || selNorm.length < 3 || !teamNorm || teamNorm.length < 3) return false;
+
+  // Exact
+  if (selNorm === teamNorm) return true;
+  // Containment
+  if (selNorm.includes(teamNorm) || teamNorm.includes(selNorm)) return true;
+  // Word overlap >= 50%
+  const selWords = selNorm.split(/\s+/).filter(w => w.length > 2);
+  const teamWords = teamNorm.split(/\s+/).filter(w => w.length > 2);
+  if (selWords.length > 0 && teamWords.length > 0) {
+    const matches = selWords.filter(w => teamWords.some(tw => tw.includes(w) || w.includes(tw))).length;
+    if (matches / selWords.length >= 0.5) return true;
+  }
+  return false;
+}
+
 function inferMarketAndLine(data: NormalizedBetData): void {
   const selecao = data.selecao?.value?.trim() ?? "";
   const mercado = data.mercado?.value?.trim() ?? "";
@@ -69,15 +97,9 @@ function inferMarketAndLine(data: NormalizedBetData): void {
   const hasHandicapKeyword = /handicap|spread|hcap|hdp/i.test(mercado) || /handicap|spread|hcap|hdp/i.test(selecao);
   const hasTotalKeyword = /total|over|under|mais|menos|acima|abaixo|o\/u/i.test(mercado) || /total|over|under|mais|menos/i.test(selecao);
 
-  // Check if selection is one of the teams
-  const selecaoLower = selecao.toLowerCase();
+  // Check if selection matches a team (fuzzy)
   const isTeamSelection = teams && (
-    teams.mandante.toLowerCase() === selecaoLower ||
-    teams.visitante.toLowerCase() === selecaoLower ||
-    teams.mandante.toLowerCase().includes(selecaoLower) ||
-    teams.visitante.toLowerCase().includes(selecaoLower) ||
-    selecaoLower.includes(teams.mandante.toLowerCase()) ||
-    selecaoLower.includes(teams.visitante.toLowerCase())
+    isTeamMatch(selecao, teams.mandante) || isTeamMatch(selecao, teams.visitante)
   );
 
   // Rule 3: If choice is "X" or "Empate" → market = 1x2, line = Empate
@@ -91,11 +113,16 @@ function inferMarketAndLine(data: NormalizedBetData): void {
     return;
   }
 
-  // Rule 2: Team selection without handicap/total → 1x2
+  // Rule 2 (REFORÇADA): Team selection without handicap/total → Vencedor da Partida
+  // Agora também sobrescreve mercado "Outro" mesmo com confiança "medium"
   if (isTeamSelection && !hasHandicapKeyword && !hasTotalKeyword) {
-    if (!mercado || data.mercado?.confidence === "none" || data.mercado?.confidence === "low") {
-      data.mercado = { value: "1x2", confidence: "medium" };
-      console.log("[ocrInference] Inferred market: 1x2 (team selection, no handicap/total)");
+    const isOutro = !mercado || /^outro$/i.test(mercado);
+    const isLowConfidence = data.mercado?.confidence === "none" || data.mercado?.confidence === "low";
+    const isMediumOutro = data.mercado?.confidence === "medium" && isOutro;
+
+    if (isLowConfidence || isMediumOutro || !mercado) {
+      data.mercado = { value: "Vencedor da Partida", confidence: "high" };
+      console.log(`[ocrInference] Inferred market: Vencedor da Partida (selection "${selecao}" matches team in "${evento}")`);
     }
   }
 }
