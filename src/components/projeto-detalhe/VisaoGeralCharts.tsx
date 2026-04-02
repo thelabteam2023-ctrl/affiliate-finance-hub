@@ -538,6 +538,14 @@ export function VisaoGeralCharts({
 
   const calendarInitialMonth = periodStart ?? new Date();
 
+  // Detectar período multi-mês (ciclo) para que o calendário agregue totais do período inteiro
+  const calendarPeriodRange = useMemo(() => {
+    if (!periodStart || !periodEnd) return undefined;
+    // Se start e end estão no mesmo mês, não precisa de modo período
+    if (isSameMonth(periodStart, periodEnd)) return undefined;
+    return { start: periodStart, end: periodEnd };
+  }, [periodStart, periodEnd]);
+
   const periodTotal = useMemo(() => {
     // PRIORIDADE ABSOLUTA: Se temos o KPI canônico server-side, usar SEMPRE
     // Este valor já inclui todos os 11 módulos (apostas, FX, ajustes, bônus, etc.)
