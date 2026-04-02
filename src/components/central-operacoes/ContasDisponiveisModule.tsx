@@ -536,6 +536,34 @@ export function ContasDisponiveisModule() {
         </Badge>
       </div>
 
+      {/* Bulk Action Bar */}
+      {selectedIds.size > 0 && (
+        <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/10 border border-primary/20">
+          <Checkbox
+            checked={selectedIds.size === filtered.length}
+            onCheckedChange={toggleSelectAll}
+          />
+          <span className="text-sm font-medium">
+            {selectedIds.size} casa(s) selecionada(s)
+          </span>
+          <Button
+            size="sm"
+            onClick={() => { setBulkProjetoId(""); setBulkVincularOpen(true); }}
+            className="ml-auto gap-2"
+          >
+            <Link2 className="h-3.5 w-3.5" />
+            Vincular ao projeto
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setSelectedIds(new Set())}
+          >
+            Limpar seleção
+          </Button>
+        </div>
+      )}
+
       {/* Table */}
       <Card>
         <CardContent className="p-0">
@@ -543,6 +571,12 @@ export function ContasDisponiveisModule() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border">
+                  <th className="p-3 w-10">
+                    <Checkbox
+                      checked={filtered.length > 0 && selectedIds.size === filtered.length}
+                      onCheckedChange={toggleSelectAll}
+                    />
+                  </th>
                   <th className="text-left p-3 font-medium text-muted-foreground">Casa</th>
                   <th className="text-left p-3 font-medium text-muted-foreground">Parceiro</th>
                   <th className="text-left p-3 font-medium text-muted-foreground">Moeda</th>
