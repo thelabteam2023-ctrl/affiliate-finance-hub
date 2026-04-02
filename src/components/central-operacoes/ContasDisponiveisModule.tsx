@@ -64,6 +64,7 @@ import {
   ContextMenuSubContent,
 } from "@/components/ui/context-menu";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface ContaDisponivel {
   id: string;
@@ -97,7 +98,13 @@ export function ContasDisponiveisModule() {
   const [parceiroFilter, setParceiroFilter] = useState("todos");
   const [showHistory, setShowHistory] = useState<string | null>(null);
 
-  // Vincular dialog
+  // Seleção em massa
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkVincularOpen, setBulkVincularOpen] = useState(false);
+  const [bulkProjetoId, setBulkProjetoId] = useState("");
+  const [bulkLoading, setBulkLoading] = useState(false);
+
+  // Vincular dialog (individual)
   const [vincularDialogOpen, setVincularDialogOpen] = useState(false);
   const [selectedConta, setSelectedConta] = useState<ContaDisponivel | null>(null);
   const [selectedProjetoId, setSelectedProjetoId] = useState("");
@@ -344,9 +351,96 @@ export function ContasDisponiveisModule() {
     }
   };
 
+  // Selection helpers
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filtered.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filtered.map(c => c.id)));
+    }
+  };
+
+  const selectedContas = useMemo(
+    () => filtered.filter(c => selectedIds.has(c.id)),
+    [filtered, selectedIds]
+  );
+
+  // Bulk vincular handler
+  const handleBulkVincular = async () => {
+    if (!bulkProjetoId || selectedContas.length === 0) return;
+    setBulkLoading(true);
+    let successCount = 0;
+    try {
+      const { executeLink } = await import("@/lib/projetoTransitionService");
+
+      for (const conta of selectedContas) {
+        try {
+          const { error: updateError } = await supabase
+            .from("bookmakers")
+            .update({ projeto_id: bulkProjetoId })
+            .eq("id", conta.id);
+          if (updateError) throw updateError;
+
+          await supabase
+            .from("projeto_bookmaker_historico")
+            .insert({
+              projeto_id: bulkProjetoId,
+              bookmaker_id: conta.id,
+              bookmaker_nome: conta.nome,
+              parceiro_id: conta.parceiro_id,
+              parceiro_nome: conta.parceiro_nome,
+              user_id: user!.id,
+              workspace_id: workspaceId!,
+            });
+
+          await executeLink({
+            bookmakerId: conta.id,
+            projetoId: bulkProjetoId,
+            workspaceId: workspaceId!,
+            userId: user!.id,
+            saldoAtual: conta.saldo_atual,
+            moeda: conta.moeda,
+          });
+
+          await supabase
+            .from("cash_ledger")
+            .update({ projeto_id_snapshot: bulkProjetoId })
+            .or(`origem_bookmaker_id.eq.${conta.id},destino_bookmaker_id.eq.${conta.id}`)
+            .is("projeto_id_snapshot", null);
+
+          successCount++;
+        } catch (err) {
+          console.error(`[BulkVincular] Erro em ${conta.nome}:`, err);
+        }
+      }
+
+      if (successCount > 0) {
+        toast.success(`${successCount} casa(s) vinculada(s) ao projeto com sucesso!`);
+        queryClient.invalidateQueries({ queryKey: ["contas-disponiveis"] });
+        queryClient.invalidateQueries({ queryKey: ["projeto-vinculos"] });
+        queryClient.invalidateQueries({ queryKey: ["bookmaker-saldos"] });
+        refetch();
+      }
+      if (successCount < selectedContas.length) {
+        toast.error(`${selectedContas.length - successCount} casa(s) falharam ao vincular`);
+      }
+      setBulkVincularOpen(false);
+      setSelectedIds(new Set());
+      setBulkProjetoId("");
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
   const getSaldoEfetivo = (c: ContaDisponivel) => {
-    // saldo_atual é a fonte de verdade para TODAS as moedas
-    // Clamp: saldos nunca devem ser exibidos como negativos
     return Math.max(0, c.saldo_atual);
   };
 
@@ -442,6 +536,34 @@ export function ContasDisponiveisModule() {
         </Badge>
       </div>
 
+      {/* Bulk Action Bar */}
+      {selectedIds.size > 0 && (
+        <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/10 border border-primary/20">
+          <Checkbox
+            checked={selectedIds.size === filtered.length}
+            onCheckedChange={toggleSelectAll}
+          />
+          <span className="text-sm font-medium">
+            {selectedIds.size} casa(s) selecionada(s)
+          </span>
+          <Button
+            size="sm"
+            onClick={() => { setBulkProjetoId(""); setBulkVincularOpen(true); }}
+            className="ml-auto gap-2"
+          >
+            <Link2 className="h-3.5 w-3.5" />
+            Vincular ao projeto
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setSelectedIds(new Set())}
+          >
+            Limpar seleção
+          </Button>
+        </div>
+      )}
+
       {/* Table */}
       <Card>
         <CardContent className="p-0">
@@ -449,6 +571,12 @@ export function ContasDisponiveisModule() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border">
+                  <th className="p-3 w-10">
+                    <Checkbox
+                      checked={filtered.length > 0 && selectedIds.size === filtered.length}
+                      onCheckedChange={toggleSelectAll}
+                    />
+                  </th>
                   <th className="text-left p-3 font-medium text-muted-foreground">Casa</th>
                   <th className="text-left p-3 font-medium text-muted-foreground">Parceiro</th>
                   <th className="text-left p-3 font-medium text-muted-foreground">Moeda</th>
@@ -466,7 +594,13 @@ export function ContasDisponiveisModule() {
                   return (
                     <ContextMenu key={conta.id}>
                       <ContextMenuTrigger asChild>
-                        <tr className="border-b border-border/50 hover:bg-muted/30 transition-colors cursor-context-menu">
+                        <tr className={`border-b border-border/50 hover:bg-muted/30 transition-colors cursor-context-menu ${selectedIds.has(conta.id) ? 'bg-primary/5' : ''}`}>
+                          <td className="p-3 w-10" onClick={(e) => e.stopPropagation()}>
+                            <Checkbox
+                              checked={selectedIds.has(conta.id)}
+                              onCheckedChange={() => toggleSelect(conta.id)}
+                            />
+                          </td>
                           <td className="p-3">
                             <div className="flex items-center gap-2">
                               {conta.logo_url ? (
@@ -639,7 +773,7 @@ export function ContasDisponiveisModule() {
                 })}
                 {filtered.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="p-8 text-center text-muted-foreground">
+                    <td colSpan={9} className="p-8 text-center text-muted-foreground">
                       <Unlink className="h-8 w-8 mx-auto mb-2 opacity-30" />
                       <p>Nenhuma conta disponível encontrada</p>
                       <p className="text-xs mt-1">Ajuste os filtros ou todas as casas estão vinculadas a projetos</p>
@@ -690,6 +824,51 @@ export function ContasDisponiveisModule() {
               disabled={!selectedProjetoId || vincularLoading}
             >
               {vincularLoading ? "Vinculando..." : "Vincular"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: Vincular em Massa */}
+      <Dialog open={bulkVincularOpen} onOpenChange={setBulkVincularOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Vincular em Massa</DialogTitle>
+            <DialogDescription>
+              Vincular <strong>{selectedContas.length} casa(s)</strong> a um projeto ativo.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="p-3 rounded-lg bg-muted/50 space-y-1 max-h-[200px] overflow-y-auto">
+              {selectedContas.map(c => (
+                <div key={c.id} className="flex items-center justify-between text-sm">
+                  <span className="font-medium">{c.nome}</span>
+                  <span className="text-muted-foreground font-mono text-xs">
+                    {formatCurrency(getSaldoEfetivo(c), c.moeda)}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <Select value={bulkProjetoId} onValueChange={setBulkProjetoId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecionar projeto..." />
+              </SelectTrigger>
+              <SelectContent>
+                {(projetos || []).map((p) => (
+                  <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkVincularOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleBulkVincular}
+              disabled={!bulkProjetoId || bulkLoading}
+            >
+              {bulkLoading ? `Vinculando ${selectedContas.length}...` : `Vincular ${selectedContas.length} casas`}
             </Button>
           </DialogFooter>
         </DialogContent>
