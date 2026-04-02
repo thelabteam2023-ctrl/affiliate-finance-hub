@@ -14,7 +14,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { getOperationalDateRangeForQuery, getCivilDateRangeForQuery } from "@/utils/dateUtils";
-import { fetchProjetosLucroOperacionalKpi, derivarCotacoesFromConvertFn } from "@/services/fetchProjetosLucroOperacionalKpi";
+import { derivarCotacoesFromConvertFn } from "@/services/fetchProjetosLucroOperacionalKpi";
 import { parseISO } from "date-fns";
 
 /** Função de conversão de moeda (valor, moedaOrigem) => valorConvertido */
@@ -103,38 +103,34 @@ export async function calcularMetricasPeriodo({
   // DEVE usar getCivilDateRangeForQuery para não excluir registros pelo offset de 3h
   const { startUTC: cashLedgerStart, endUTC: cashLedgerEnd } = getCivilDateRangeForQuery(dataInicio, dataFim);
 
+  // Converter cotações para formato JSONB da RPC
+  const cotacoesJsonb: Record<string, number> = {};
+  for (const [moeda, rate] of Object.entries(cotacoes)) {
+    cotacoesJsonb[moeda] = Number(rate);
+  }
+
   // ═══════════════════════════════════════════════════════════════════
-  // BUSCAR TUDO EM PARALELO — delegando aos módulos canônicos
+  // BUSCAR TUDO EM PARALELO — FONTE ÚNICA: get_projeto_apostas_resumo
   // ═══════════════════════════════════════════════════════════════════
   const [
-    // 1. Lucro Operacional (DELEGADO ao KPI canônico com filtro de data)
-    lucroKpiResult,
-    // 2. Apostas resumo via RPC (elimina truncamento de 1000 linhas)
+    // 1. RPC ÚNICA: contagem + volume + lucro de TODOS os módulos (consolidado)
     apostasRpcResult,
-    // 3. Perdas (para detalhes na UI)
+    // 2. Perdas (para detalhes na UI)
     perdasResult,
-    // 4. Bookmakers (nomes para perdas)
+    // 3. Bookmakers (nomes para perdas)
     bookmakersResult,
-    // 5. Saques no período
+    // 4. Saques no período
     saquesResult,
-    // 6. Depósitos no período
+    // 5. Depósitos no período
     depositosResult,
   ] = await Promise.all([
-    // DELEGAÇÃO: Mesmo serviço usado pelo dashboard financeiro
-    fetchProjetosLucroOperacionalKpi({
-      projetoIds: [projetoId],
-      cotacaoUSD,
-      cotacoes,
-      moedaConsolidacao,
-      dataInicio,
-      dataFim,
-    }),
-
-    // RPC server-side: contagem + volume + resultados sem truncamento
+    // RPC server-side ÚNICA — passa cotação para consistência total
     supabase.rpc('get_projeto_apostas_resumo', {
       p_projeto_id: projetoId,
       p_data_inicio: dataInicio,
       p_data_fim: dataFim,
+      p_cotacao_usd: cotacaoUSD,
+      p_cotacoes: cotacoesJsonb,
     }),
 
     // Perdas (detalhes para UI)
@@ -187,21 +183,22 @@ export async function calcularMetricasPeriodo({
   // ═══════════════════════════════════════════════════════════════════
   const volume = Number(rpcData.total_stake || 0);
 
-
   // ═══════════════════════════════════════════════════════════════════
-  // LUCRO OPERACIONAL (DELEGADO ao KPI — já inclui TODOS os extras)
+  // LUCRO — FONTE ÚNICA: get_projeto_apostas_resumo (mesma cotação)
   // ═══════════════════════════════════════════════════════════════════
-  const lucroLiquido = lucroKpiResult[projetoId]?.consolidado || 0;
 
-  // Lucro bruto das apostas (via RPC — sem truncamento)
+  // Componentes individuais (todos já consolidados na moeda do projeto pela RPC)
   const lucroApostas = Number(rpcData.lucro_apostas || 0);
-
-  // Cashback e giros (via RPC — valores já consolidados, separados para exibição)
   const lucroCashback = Number(rpcData.lucro_cashback || 0);
   const lucroGiros = Number(rpcData.lucro_giros || 0);
+
   // FÓRMULA CANÔNICA: LUCRO_BRUTO = APOSTAS + CASHBACK + GIROS
   const lucroBruto = lucroApostas + lucroCashback + lucroGiros;
-  // Créditos extras = tudo que não é apostas/cashback/giros (ajustes, FX, bônus, conciliações)
+
+  // Lucro operacional total (inclui ajustes, FX, bônus, conciliações, perdas)
+  const lucroLiquido = Number(rpcData.lucro_total || 0);
+
+  // Créditos extras = diferença entre total e bruto (ajustes, FX, bônus, conciliações)
   const creditosExtras = lucroLiquido - lucroBruto;
 
   // ═══════════════════════════════════════════════════════════════════
