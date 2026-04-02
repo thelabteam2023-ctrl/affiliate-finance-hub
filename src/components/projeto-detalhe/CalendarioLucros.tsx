@@ -40,6 +40,8 @@ interface CalendarioLucrosProps {
   formatCurrency?: (value: number) => string;
   onMonthTotalChange?: (total: number) => void;
   initialMonth?: Date;
+  /** Quando fornecido, as estatísticas agregam TODO o período (ex: ciclo multi-mês) */
+  periodRange?: { start: Date; end: Date; label?: string };
 }
 
 const defaultFormatCurrencyFull = (value: number): string => {
