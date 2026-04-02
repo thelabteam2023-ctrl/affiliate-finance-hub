@@ -126,8 +126,11 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
     const now = new Date();
     return bonuses.filter(b => {
       if (b.status !== 'credited' || !b.expires_at) return false;
-      const expiresAt = parseISO(b.expires_at);
-      const daysUntilExpiry = differenceInDays(expiresAt, now);
+      const [y, m, d] = b.expires_at.slice(0, 10).split('-').map(Number);
+      const expiresAt = new Date(y, m - 1, d);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const daysUntilExpiry = differenceInDays(expiresAt, today);
       return daysUntilExpiry >= 0 && daysUntilExpiry <= days;
     });
   };

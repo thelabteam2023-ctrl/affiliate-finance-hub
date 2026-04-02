@@ -28,9 +28,14 @@ export function RolloverProgress({ bonus, onUpdateProgress, compact = false }: R
   const isComplete = percentage >= 100;
 
   // Check expiration
-  const expiresAt = bonus.expires_at ? new Date(bonus.expires_at) : null;
+  const expiresAt = bonus.expires_at ? (() => {
+    const [y, m, d] = bonus.expires_at.slice(0, 10).split('-').map(Number);
+    return new Date(y, m - 1, d);
+  })() : null;
   const isExpired = expiresAt ? isPast(expiresAt) : false;
-  const daysRemaining = expiresAt ? differenceInDays(expiresAt, new Date()) : null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const daysRemaining = expiresAt ? differenceInDays(expiresAt, today) : null;
   const isNearExpiry = daysRemaining !== null && daysRemaining <= 5 && daysRemaining > 0;
 
   // Don't show if no rollover target

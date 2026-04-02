@@ -41,12 +41,18 @@ export function AlertasTab({ bonuses, dateRange }: AnalyticsTabProps) {
     // 1. Bonuses expiring in 3 days or less
     bonuses.filter(b => {
       if (b.status !== 'credited' || !b.expires_at) return false;
-      const expiresAt = parseISO(b.expires_at);
-      const daysUntilExpiry = differenceInDays(expiresAt, now);
+      const [y, m, d] = b.expires_at.slice(0, 10).split('-').map(Number);
+      const expiresAt = new Date(y, m - 1, d);
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const daysUntilExpiry = differenceInDays(expiresAt, todayStart);
       return daysUntilExpiry >= 0 && daysUntilExpiry <= 3;
     }).forEach(b => {
-      const expiresAt = parseISO(b.expires_at!);
-      const daysLeft = differenceInDays(expiresAt, now);
+      const [y2, m2, d2] = b.expires_at!.slice(0, 10).split('-').map(Number);
+      const expiresAt2 = new Date(y2, m2 - 1, d2);
+      const todayStart2 = new Date();
+      todayStart2.setHours(0, 0, 0, 0);
+      const daysLeft = differenceInDays(expiresAt2, todayStart2);
       alertList.push({
         id: `expiring-${b.id}`,
         type: 'expiring_soon',
