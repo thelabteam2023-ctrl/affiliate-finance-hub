@@ -1474,6 +1474,7 @@ export type Database = {
           id: string
           instance_identifier: string | null
           investidor_id: string | null
+          is_broker_account: boolean
           link_origem: string | null
           login_password_encrypted: string
           login_username: string
@@ -1504,6 +1505,7 @@ export type Database = {
           id?: string
           instance_identifier?: string | null
           investidor_id?: string | null
+          is_broker_account?: boolean
           link_origem?: string | null
           login_password_encrypted: string
           login_username: string
@@ -1534,6 +1536,7 @@ export type Database = {
           id?: string
           instance_identifier?: string | null
           investidor_id?: string | null
+          is_broker_account?: boolean
           link_origem?: string | null
           login_password_encrypted?: string
           login_username?: string
