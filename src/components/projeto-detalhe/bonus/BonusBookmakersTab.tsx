@@ -651,7 +651,8 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
         let nearestExpiry: Date | null = null;
         activeBonuses.forEach(b => {
           if (b.expires_at) {
-            const expiryDate = parseISO(b.expires_at);
+            const [y, m, d] = b.expires_at.slice(0, 10).split('-').map(Number);
+            const expiryDate = new Date(y, m - 1, d);
             if (!nearestExpiry || expiryDate < nearestExpiry) {
               nearestExpiry = expiryDate;
             }
@@ -733,7 +734,9 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
 
   const getExpiryBadge = (expiryDate: Date | null) => {
     if (!expiryDate) return <span className="text-muted-foreground text-xs">—</span>;
-    const daysUntil = differenceInDays(expiryDate, new Date());
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const daysUntil = differenceInDays(expiryDate, today);
     
     if (daysUntil < 0) {
       return <Badge variant="destructive" className="text-xs">Expirado</Badge>;
