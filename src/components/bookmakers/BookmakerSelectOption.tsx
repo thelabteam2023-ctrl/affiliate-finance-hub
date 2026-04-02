@@ -232,8 +232,8 @@ export function BookmakerMetaRow({ bookmaker, className }: BookmakerMetaRowProps
   const { parceiro_nome, moeda, saldo_operavel, saldo_freebet = 0, saldo_disponivel } = bookmaker;
   const parceiroShort = parceiro_nome?.split(' ')[0] || '';
   const hasFreebet = saldo_freebet > 0;
-  // Se tem freebet, mostrar saldo_disponivel (real) separado
-  const saldoReal = hasFreebet && saldo_disponivel != null ? saldo_disponivel : saldo_operavel;
+  // Sempre mostrar saldo_disponivel (disponível real para apostar)
+  const saldoReal = saldo_disponivel != null ? saldo_disponivel : saldo_operavel;
   
   return (
     <div className={cn(
