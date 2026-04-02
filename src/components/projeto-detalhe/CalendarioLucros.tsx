@@ -454,7 +454,7 @@ export function CalendarioLucros({
         </div>
       </div>
     </div>
-    </div>
+  );
   );
 
   // ─── Navegação ───
