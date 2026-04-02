@@ -64,6 +64,7 @@ import {
   ContextMenuSubContent,
 } from "@/components/ui/context-menu";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface ContaDisponivel {
   id: string;
