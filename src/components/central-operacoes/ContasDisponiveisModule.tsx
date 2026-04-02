@@ -200,7 +200,7 @@ export function ContasDisponiveisModule() {
         .from("projetos")
         .select("id, nome")
         .eq("workspace_id", workspaceId!)
-        .eq("status", "EM_ANDAMENTO")
+        .in("status", ["PLANEJADO", "EM_ANDAMENTO"])
         .order("nome");
       if (error) throw error;
       return data || [];
