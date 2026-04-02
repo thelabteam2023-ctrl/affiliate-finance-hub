@@ -545,12 +545,19 @@ export function DespesaAdministrativaDialog({
           // FIAT: moeda = BRL, valor = valor em BRL
           const valorLedger = isCrypto ? valorUSD : formData.valor;
           
+          const isRH = formData.grupo === 'Recursos Humanos' && formData.operador_id;
+          const tipoTransacao = isRH ? "PAGTO_OPERADOR" : "DESPESA_ADMINISTRATIVA";
+          const destinoTipo = isRH ? "OPERADOR" : undefined;
+          const descricaoLedger = isRH 
+            ? `${operadorSelecionado?.nome || 'Operador'} - ${formData.descricao || 'COMISSAO'}`
+            : `Despesa administrativa - ${categoriaLabel}${operadorSelecionado ? ` [${operadorSelecionado.nome}]` : ''}${formData.descricao ? `: ${formData.descricao}` : ''}`;
+
           const { error: ledgerError } = await supabase
             .from("cash_ledger")
             .insert({
               user_id: user.id,
               workspace_id: workspaceId,
-              tipo_transacao: "DESPESA_ADMINISTRATIVA",
+              tipo_transacao: tipoTransacao,
               tipo_moeda: origemData.tipoMoeda,
               moeda: isCrypto ? "USD" : origemData.moeda,
               valor: isCrypto ? formData.valor : formData.valor,
@@ -562,8 +569,9 @@ export function DespesaAdministrativaDialog({
               origem_parceiro_id: origemData.origemParceiroId || null,
               origem_conta_bancaria_id: origemData.origemContaBancariaId || null,
               origem_wallet_id: origemData.origemWalletId || null,
+              destino_tipo: destinoTipo,
               data_transacao: formData.data_despesa,
-              descricao: `Despesa administrativa - ${categoriaLabel}${operadorSelecionado ? ` [${operadorSelecionado.nome}]` : ''}${formData.descricao ? `: ${formData.descricao}` : ''}`,
+              descricao: descricaoLedger,
               status: "CONFIRMADO",
               auditoria_metadata: { grupo: formData.grupo, categoria: categoriaLabel, operador_id: formData.operador_id, operador_nome: operadorSelecionado?.nome },
               operador_id: formData.operador_id || null,
