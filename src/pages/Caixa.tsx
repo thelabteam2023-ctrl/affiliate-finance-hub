@@ -815,22 +815,28 @@ export default function Caixa() {
       return { primary: "Parceiro" };
     }
     
-    if (transacao.destino_tipo === "INDICADOR") {
-      // Extrair nome do indicador da descrição
+    if (transacao.destino_tipo === "INDICADOR" || transacao.tipo_transacao === "COMISSAO_INDICADOR") {
+      const grupoRH = getGrupoInfo("Recursos Humanos");
       const match = transacao.descricao?.match(/indicação\s+(?:de\s+)?(.+)/i);
-      if (match) {
-        return { primary: match[1].trim() };
-      }
-      return { primary: transacao.descricao?.split(" - ")[0] || "Indicador" };
+      const primary = match ? match[1].trim() : (transacao.descricao?.split(" - ")[0] || "Indicador");
+      return { 
+        primary,
+        badgeLabel: grupoRH.label,
+        badgeColor: grupoRH.color,
+        BadgeIcon: grupoRH.icon,
+      };
     }
     
-    if (transacao.destino_tipo === "OPERADOR") {
-      // Usar operador_id diretamente para rastreabilidade
-      if (transacao.operador_id && operadoresMap[transacao.operador_id]) {
-        return { primary: operadoresMap[transacao.operador_id] };
-      }
-      // Fallback para descrição (registros antigos)
-      return { primary: transacao.descricao?.split(" - ")[0] || "Operador" };
+    if (transacao.destino_tipo === "OPERADOR" || transacao.tipo_transacao === "PAGTO_OPERADOR") {
+      const grupoRH = getGrupoInfo("Recursos Humanos");
+      const operadorNome = (transacao.operador_id && operadoresMap[transacao.operador_id]) 
+        || transacao.descricao?.split(" - ")[0] || "Operador";
+      return { 
+        primary: operadorNome,
+        badgeLabel: grupoRH.label,
+        badgeColor: grupoRH.color,
+        BadgeIcon: grupoRH.icon,
+      };
     }
     
     // Fallback: tentar extrair nome da descrição para transações com descrição formatada

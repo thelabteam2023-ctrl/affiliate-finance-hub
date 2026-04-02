@@ -138,7 +138,8 @@ export function HistoricoDespesasAdmin({ formatCurrency }: HistoricoDespesasAdmi
       // Normalize pagamentos de operador
       const pagamentosNormalized: TransacaoHistorico[] = (pagamentosOperadorRes.data || []).map((p) => ({
         id: p.id,
-        categoria: "OPERADORES",
+        categoria: "RECURSOS_HUMANOS",
+        grupo: "RECURSOS_HUMANOS",
         descricao: p.descricao,
         valor: p.valor,
         data_despesa: p.data_transacao,
