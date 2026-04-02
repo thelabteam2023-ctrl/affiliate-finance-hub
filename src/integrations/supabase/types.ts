@@ -3693,6 +3693,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           descricao: string | null
+          event_scope: Database["public"]["Enums"]["event_scope"]
           id: string
           idempotency_key: string | null
           metadata: Json | null
@@ -3711,6 +3712,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           descricao?: string | null
+          event_scope?: Database["public"]["Enums"]["event_scope"]
           id?: string
           idempotency_key?: string | null
           metadata?: Json | null
@@ -3729,6 +3731,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           descricao?: string | null
+          event_scope?: Database["public"]["Enums"]["event_scope"]
           id?: string
           idempotency_key?: string | null
           metadata?: Json | null
@@ -13934,6 +13937,18 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: number
       }
+      fn_audit_balance_anomalies: {
+        Args: { p_workspace_id: string }
+        Returns: {
+          anomalia_tipo: string
+          bookmaker_id: string
+          bookmaker_nome: string
+          detalhes: string
+          divergencia: number
+          saldo_calculado_ledger: number
+          saldo_materializado: number
+        }[]
+      }
       force_relogin_global: { Args: never; Returns: Json }
       force_relogin_user: { Args: { p_user_id: string }; Returns: Json }
       force_relogin_workspace: {
@@ -14761,6 +14776,7 @@ export type Database = {
         | "GLOBAL_RESTRICTED"
         | "WORKSPACE_PRIVATE"
       crypto_transit_status: "PENDING" | "CONFIRMED" | "FAILED" | "REVERSED"
+      event_scope: "REAL" | "VIRTUAL"
       indicador_status: "ATIVO" | "TOP_VIP" | "EM_OBSERVACAO" | "INATIVO"
       ocorrencia_evento_tipo:
         | "criacao"
@@ -14976,6 +14992,7 @@ export const Constants = {
         "WORKSPACE_PRIVATE",
       ],
       crypto_transit_status: ["PENDING", "CONFIRMED", "FAILED", "REVERSED"],
+      event_scope: ["REAL", "VIRTUAL"],
       indicador_status: ["ATIVO", "TOP_VIP", "EM_OBSERVACAO", "INATIVO"],
       ocorrencia_evento_tipo: [
         "criacao",
