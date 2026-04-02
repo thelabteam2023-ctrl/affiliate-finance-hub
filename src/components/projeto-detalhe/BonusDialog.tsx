@@ -23,6 +23,12 @@ import { BonusFormData, BonusStatus, ProjectBonus, TipoBonus } from "@/hooks/use
 import { getFirstLastName } from "@/lib/utils";
 import { useBookmakerBonusTemplates, BonusTemplate, calculateRolloverTarget } from "@/hooks/useBookmakerBonusTemplates";
 import { format, addDays } from "date-fns";
+
+/** Parse YYYY-MM-DD as local date (not UTC) to avoid timezone shift */
+const parseCivilDate = (dateStr: string): Date => {
+  const [y, m, d] = dateStr.slice(0, 10).split('-').map(Number);
+  return new Date(y, m - 1, d);
+};
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
