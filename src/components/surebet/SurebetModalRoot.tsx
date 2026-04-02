@@ -1755,6 +1755,7 @@ export function SurebetModalRoot({
       
       // Invalidar saldos
       invalidateSaldos(projetoId);
+      invalidateCanonicalCaches(queryClient, projetoId);
       
       toast.success(`Perna ${pernaIndex + 1} excluída`, {
         description: "O valor foi devolvido à casa de aposta.",
