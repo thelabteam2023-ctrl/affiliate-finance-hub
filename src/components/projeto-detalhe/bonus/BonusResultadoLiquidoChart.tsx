@@ -227,19 +227,8 @@ export function BonusResultadoLiquidoChart({
       juiceByDate[date] = (juiceByDate[date] || 0) + valor;
     });
 
-    // Combina todas as datas
+    // Combina todas as datas COM ATIVIDADE (Activity Mode — sem dias vazios)
     const allDates = new Set([...Object.keys(bonusByDate), ...Object.keys(juiceByDate)]);
-    
-    // CORREÇÃO: Preencher dias vazios no intervalo (calendário completo, como Visão Geral)
-    if (dateRange) {
-      let cursor = startOfDay(dateRange.start);
-      const endDay = startOfDay(dateRange.end);
-      while (cursor <= endDay) {
-        const dateKey = format(cursor, "yyyy-MM-dd");
-        allDates.add(dateKey);
-        cursor = addDays(cursor, 1);
-      }
-    }
     
     const sortedDates = Array.from(allDates).sort();
 
