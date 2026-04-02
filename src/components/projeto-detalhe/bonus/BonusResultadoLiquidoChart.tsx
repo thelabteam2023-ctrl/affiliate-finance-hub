@@ -363,6 +363,24 @@ export function BonusResultadoLiquidoChart({
     return new Date();
   }, [dateRange]);
 
+  // MOVIDO para nível do componente (evitar violação de hooks dentro de renderChart)
+  const useMonthlyTicks = !isSingleDayPeriod && chartData.length > 20;
+  const monthlyTickIndices = useMemo(() => {
+    if (!useMonthlyTicks) return null;
+    const indices = new Set<number>();
+    let lastMonth = '';
+    chartData.forEach((d, i) => {
+      if (d.dateKey) {
+        const month = d.dateKey.substring(0, 7);
+        if (month !== lastMonth) {
+          indices.add(i);
+          lastMonth = month;
+        }
+      }
+    });
+    return indices;
+  }, [chartData, useMonthlyTicks]);
+
   // Cores
   const colorPositivo = "hsl(var(--chart-2))";
   const colorNegativo = "hsl(var(--destructive))";
