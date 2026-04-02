@@ -13,6 +13,8 @@
  */
 
 import { useState, useEffect, useMemo, useRef, useCallback, KeyboardEvent } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { invalidateCanonicalCaches } from "@/lib/invalidateCanonicalCaches";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useBookmakerSaldosQuery, useInvalidateBookmakerSaldos } from "@/hooks/useBookmakerSaldosQuery";
@@ -159,6 +161,7 @@ export function SurebetModalRoot({
   const isEditing = !!surebet;
   const { workspaceId } = useWorkspace();
   const isMobile = useIsMobile();
+  const queryClient = useQueryClient();
   
   // Hook de rascunhos
   const { criarRascunho, atualizarRascunho, deletarRascunho } = useApostaRascunho(projetoId, workspaceId || '');
@@ -351,6 +354,15 @@ export function SurebetModalRoot({
   // ============================================
   // INICIALIZAÇÃO E RESET
   // ============================================
+
+  // Cleanup: resetar refs quando modal fecha para nunca reusar estado stale
+  useEffect(() => {
+    if (!open) {
+      originalPernasSnapshot.current = [];
+      originalPernaIds.current = [];
+      originalStakesByBookmaker.current = new Map();
+    }
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -1563,8 +1575,14 @@ export function SurebetModalRoot({
         }
       }
 
-      // Invalidar cache de saldos (agora os saldos já foram debitados pela RPC)
+      // Invalidar TODOS os caches (saldos + KPIs + calendário + dashboard)
       invalidateSaldos(projetoId);
+      invalidateCanonicalCaches(queryClient, projetoId);
+      
+      // Limpar refs de estado local — backend é a fonte da verdade
+      originalPernasSnapshot.current = [];
+      originalPernaIds.current = [];
+      originalStakesByBookmaker.current = new Map();
       
       onSuccess('save');
       if (!embedded) onOpenChange(false);
@@ -1654,6 +1672,7 @@ export function SurebetModalRoot({
       // CRÍTICO: Invalidar saldos imediatamente após exclusão
       // Garante que o "Saldo Operável" no formulário reflita o valor atualizado
       invalidateSaldos(projetoId);
+      invalidateCanonicalCaches(queryClient, projetoId);
       
       toast.success("Operação excluída!");
       onSuccess('delete');
@@ -1745,6 +1764,7 @@ export function SurebetModalRoot({
       
       // Invalidar saldos
       invalidateSaldos(projetoId);
+      invalidateCanonicalCaches(queryClient, projetoId);
       
       toast.success(`Perna ${pernaIndex + 1} excluída`, {
         description: "O valor foi devolvido à casa de aposta.",
