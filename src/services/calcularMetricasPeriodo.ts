@@ -196,11 +196,13 @@ export async function calcularMetricasPeriodo({
   // Lucro bruto das apostas (via RPC — sem truncamento)
   const lucroApostas = Number(rpcData.lucro_apostas || 0);
 
-  // Cashback e giros (para exibição informativa — já inclusos no KPI)
-  const lucroCashback = 0; // Incluído no lucroLiquido via KPI
-  const lucroGiros = 0;    // Incluído no lucroLiquido via KPI
-  const lucroBruto = lucroApostas; // Apenas apostas, extras já no KPI
-  const creditosExtras = lucroLiquido - lucroApostas; // Diferença = todos os extras
+  // Cashback e giros (via RPC — valores já consolidados, separados para exibição)
+  const lucroCashback = Number(rpcData.lucro_cashback || 0);
+  const lucroGiros = Number(rpcData.lucro_giros || 0);
+  // FÓRMULA CANÔNICA: LUCRO_BRUTO = APOSTAS + CASHBACK + GIROS
+  const lucroBruto = lucroApostas + lucroCashback + lucroGiros;
+  // Créditos extras = tudo que não é apostas/cashback/giros (ajustes, FX, bônus, conciliações)
+  const creditosExtras = lucroLiquido - lucroBruto;
 
   // ═══════════════════════════════════════════════════════════════════
   // PERDAS (detalhes para UI de ciclos)
