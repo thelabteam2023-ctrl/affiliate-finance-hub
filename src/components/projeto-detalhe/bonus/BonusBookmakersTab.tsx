@@ -651,7 +651,8 @@ export function BonusBookmakersTab({ projetoId }: BonusBookmakersTabProps) {
         let nearestExpiry: Date | null = null;
         activeBonuses.forEach(b => {
           if (b.expires_at) {
-            const expiryDate = parseISO(b.expires_at);
+            const [y, m, d] = b.expires_at.slice(0, 10).split('-').map(Number);
+            const expiryDate = new Date(y, m - 1, d);
             if (!nearestExpiry || expiryDate < nearestExpiry) {
               nearestExpiry = expiryDate;
             }
