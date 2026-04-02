@@ -8,16 +8,15 @@
  * - Formulário sempre usa dados fresh ao abrir
  */
 
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
+import type { OddEntry, OddFormEntry } from "@/hooks/useSurebetCalculator";
 
 // ============================================================
 // 1. TESTES DE TIPO: OddEntry e OddFormEntry possuem pernaId
 // ============================================================
 
 describe("OddEntry types carry pernaId", () => {
-  it("OddEntry should support pernaId field", async () => {
-    const { OddEntry } = await getTypes();
-    
+  it("OddEntry should support pernaId field", () => {
     const entry: OddEntry = {
       bookmaker_id: "bk-1",
       moeda: "BRL",
@@ -44,9 +43,7 @@ describe("OddEntry types carry pernaId", () => {
     expect(entry.additionalEntries![0].pernaId).toBe("uuid-perna-2");
   });
 
-  it("pernaId should be optional (undefined for new entries)", async () => {
-    const { OddEntry } = await getTypes();
-    
+  it("pernaId should be optional (undefined for new entries)", () => {
     const entry: OddEntry = {
       bookmaker_id: "bk-1",
       moeda: "BRL",
@@ -56,7 +53,6 @@ describe("OddEntry types carry pernaId", () => {
       selecaoLivre: "",
       isReference: true,
       isManuallyEdited: false,
-      // no pernaId — new entry
     };
     
     expect(entry.pernaId).toBeUndefined();
@@ -94,15 +90,15 @@ describe("FlatPerna carries pernaId through flattening", () => {
     const flat = flattenOdds(odds);
     
     expect(flat).toHaveLength(3);
-    expect(flat[0].pernaId).toBe("uuid-1"); // main
-    expect(flat[1].pernaId).toBe("uuid-3"); // additional
-    expect(flat[2].pernaId).toBe("uuid-2"); // second leg
+    expect(flat[0].pernaId).toBe("uuid-1");
+    expect(flat[1].pernaId).toBe("uuid-3");
+    expect(flat[2].pernaId).toBe("uuid-2");
   });
 
   it("new entries should have undefined pernaId", () => {
     const odds = createTestOdds([
       { pernaId: "uuid-1", bookmaker_id: "bk-1", odd: "2.0", stake: "100", selecao: "Casa" },
-      { bookmaker_id: "bk-2", odd: "3.0", stake: "80", selecao: "Fora" }, // NEW
+      { bookmaker_id: "bk-2", odd: "3.0", stake: "80", selecao: "Fora" },
     ]);
     
     const flat = flattenOdds(odds);
@@ -117,7 +113,7 @@ describe("FlatPerna carries pernaId through flattening", () => {
 // ============================================================
 
 describe("ID-based matching (never index)", () => {
-  it("should match existing pernas by ID, not position", () => {
+  it("should match existing pernas by ID even after reorder", () => {
     const originalSnapshot = [
       { id: "uuid-A", bookmaker_id: "bk-1", stake: 100, odd: 2.0, selecao: "Casa", selecao_livre: "", resultado: null, fonte_saldo: "REAL" },
       { id: "uuid-B", bookmaker_id: "bk-2", stake: 80, odd: 3.0, selecao: "Fora", selecao_livre: "", resultado: null, fonte_saldo: "REAL" },
@@ -125,11 +121,10 @@ describe("ID-based matching (never index)", () => {
     
     // User reorders: Fora comes first now
     const flatPernas = [
-      { pernaId: "uuid-B", bookmaker_id: "bk-2", odd: "3.0", stake: "80", selecao: "Fora" },
-      { pernaId: "uuid-A", bookmaker_id: "bk-1", odd: "2.0", stake: "100", selecao: "Casa" },
+      { pernaId: "uuid-B", bookmaker_id: "bk-2" },
+      { pernaId: "uuid-A", bookmaker_id: "bk-1" },
     ];
     
-    // ID-based: find by ID, not [i]
     for (const flat of flatPernas) {
       const match = originalSnapshot.find(op => op.id === flat.pernaId);
       expect(match).toBeDefined();
@@ -140,7 +135,7 @@ describe("ID-based matching (never index)", () => {
   it("should detect new pernas (no pernaId)", () => {
     const flatPernas = [
       { pernaId: "uuid-A", bookmaker_id: "bk-1" },
-      { pernaId: undefined, bookmaker_id: "bk-3" }, // NEW
+      { pernaId: undefined, bookmaker_id: "bk-3" },
     ];
     
     const newPernas = flatPernas.filter(f => !f.pernaId);
@@ -148,9 +143,9 @@ describe("ID-based matching (never index)", () => {
     expect(newPernas[0].bookmaker_id).toBe("bk-3");
   });
 
-  it("should detect deleted pernas (exist in snapshot but not in flat)", () => {
+  it("should detect deleted pernas (in snapshot but not in flat)", () => {
     const originalIds = ["uuid-A", "uuid-B", "uuid-C"];
-    const flatPernaIds = ["uuid-A", "uuid-C"]; // uuid-B removed
+    const flatPernaIds = ["uuid-A", "uuid-C"];
     
     const toDelete = originalIds.filter(id => !flatPernaIds.includes(id));
     expect(toDelete).toEqual(["uuid-B"]);
@@ -163,7 +158,7 @@ describe("ID-based matching (never index)", () => {
 
 describe("State cleanup on close", () => {
   it("should clear refs when modal closes", () => {
-    const snapshotRef = { current: [{ id: "uuid-1", bookmaker_id: "bk-1", stake: 100, odd: 2.0, selecao: "Casa", selecao_livre: "", resultado: null, fonte_saldo: "REAL" }] };
+    const snapshotRef = { current: [{ id: "uuid-1", bookmaker_id: "bk-1", stake: 100 }] };
     const idsRef = { current: ["uuid-1"] };
     const stakesRef = { current: new Map([["bk-1", { real: 100, freebet: 0 }]]) };
     
@@ -178,7 +173,6 @@ describe("State cleanup on close", () => {
   });
 
   it("should not reuse stale data after close+reopen", () => {
-    // Simulates: open edit → save → close → open same edit
     const snapshotRef = { current: [] as any[] };
     
     // Open: load from DB
@@ -189,7 +183,7 @@ describe("State cleanup on close", () => {
     snapshotRef.current = [];
     expect(snapshotRef.current).toHaveLength(0);
     
-    // Reopen: must fetch fresh (ref is empty, forcing new fetch)
+    // Reopen: ref is empty, must fetch
     expect(snapshotRef.current).toHaveLength(0);
   });
 });
@@ -220,15 +214,30 @@ describe("Atomic RPC payload construction", () => {
     expect(payload).toHaveLength(2);
   });
   
-  it("should correctly build payload for consecutive edits of same perna", () => {
-    // Edit 1: change stake
-    const edit1Payload = { id: "uuid-1", stake: 150, odd: 2.0 };
-    // Edit 2: change odd (same perna, same session)
-    const edit2Payload = { id: "uuid-1", stake: 150, odd: 2.5 };
+  it("consecutive edits of same perna use same UUID", () => {
+    const edit1 = { id: "uuid-1", stake: 150, odd: 2.0 };
+    const edit2 = { id: "uuid-1", stake: 150, odd: 2.5 };
     
-    // Both should reference same UUID
-    expect(edit1Payload.id).toBe(edit2Payload.id);
-    expect(edit1Payload.id).toBe("uuid-1");
+    expect(edit1.id).toBe(edit2.id);
+    expect(edit1.id).toBe("uuid-1");
+  });
+  
+  it("should correctly segregate existing vs new vs deleted", () => {
+    const originalIds = ["uuid-A", "uuid-B", "uuid-C"];
+    const editedPernas = [
+      { pernaId: "uuid-A", stake: 200 },  // edited
+      { pernaId: "uuid-C", stake: 100 },  // unchanged
+      { pernaId: undefined, stake: 50 },   // new
+    ];
+    
+    const inputIds = editedPernas.filter(p => p.pernaId).map(p => p.pernaId!);
+    const toDelete = originalIds.filter(id => !inputIds.includes(id));
+    const toInsert = editedPernas.filter(p => !p.pernaId);
+    const toUpdate = editedPernas.filter(p => p.pernaId);
+    
+    expect(toDelete).toEqual(["uuid-B"]);
+    expect(toInsert).toHaveLength(1);
+    expect(toUpdate).toHaveLength(2);
   });
 });
 
@@ -289,10 +298,4 @@ function flattenOdds(odds: ReturnType<typeof createTestOdds>): FlatPerna[] {
     }
   }
   return result;
-}
-
-async function getTypes() {
-  const mod = await import("@/hooks/useSurebetCalculator");
-  type OddEntry = typeof mod extends { OddEntry: infer T } ? T : any;
-  return { OddEntry: {} as OddEntry };
 }
