@@ -298,8 +298,8 @@ export function ContasDisponiveisModule() {
         console.error("[ContasDisponiveis] Erro ao criar histórico:", histError);
       }
 
-      // 3. DEPOSITO_VIRTUAL — baseline financeiro para o novo ciclo
-      // Sem isso, re-vinculações inflam o Fluxo Líquido do projeto
+      // 3. DEPOSITO_VIRTUAL + adoção de órfãs — gerenciado pelo trigger do DB
+      // O trigger fn_ensure_deposito_virtual_on_link cuida de tudo ao setar projeto_id
       const { executeLink } = await import("@/lib/projetoTransitionService");
       await executeLink({
         bookmakerId: selectedConta.id,
@@ -309,13 +309,6 @@ export function ContasDisponiveisModule() {
         saldoAtual: selectedConta.saldo_atual,
         moeda: selectedConta.moeda,
       });
-
-      // 4. Atribuir transações órfãs (sem projeto_id_snapshot) a este projeto
-      await supabase
-        .from("cash_ledger")
-        .update({ projeto_id_snapshot: selectedProjetoId })
-        .or(`origem_bookmaker_id.eq.${selectedConta.id},destino_bookmaker_id.eq.${selectedConta.id}`)
-        .is("projeto_id_snapshot", null);
 
       toast.success(`"${selectedConta.nome}" vinculada ao projeto com sucesso!`);
       setVincularDialogOpen(false);
