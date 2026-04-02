@@ -1238,6 +1238,8 @@ export function SurebetModalRoot({
       // bookmaker_id, odd, stake e moeda
       // ================================================================
       interface FlatPerna {
+        /** UUID da perna no banco. Undefined para pernas novas. */
+        pernaId?: string;
         bookmaker_id: string;
         odd: string;
         stake: string;
