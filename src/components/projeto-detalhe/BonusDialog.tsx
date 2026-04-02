@@ -797,7 +797,7 @@ export function BonusDialog({
                   onChange={(e) => {
                     setDeadlineDays(e.target.value);
                     if (e.target.value && creditedAt) {
-                      const baseDate = creditedAt ? new Date(creditedAt) : new Date();
+                      const baseDate = creditedAt ? parseCivilDate(creditedAt) : new Date();
                       const expiration = addDays(baseDate, Number(e.target.value));
                       setExpiresAt(format(expiration, "yyyy-MM-dd"));
                     }
