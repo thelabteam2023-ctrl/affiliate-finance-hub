@@ -267,7 +267,8 @@ export function resolveMarketForSport(
   pendingData: NormalizationPendingData,
   parsedSelecao: string | null | undefined,
   sport: string,
-  availableOptions: string[]
+  availableOptions: string[],
+  evento?: string
 ): string {
   if (!pendingData.mercadoIntencao && !pendingData.mercadoRaw) {
     return "";
@@ -275,7 +276,7 @@ export function resolveMarketForSport(
   
   const marketRaw = pendingData.mercadoRaw || pendingData.mercadoIntencao || "";
   const selectionValue = parsedSelecao || "";
-  const ocrResult = parseOcrMarket(marketRaw, selectionValue, sport);
+  const ocrResult = parseOcrMarket(marketRaw, selectionValue, sport, evento);
   
   const options = availableOptions.length > 0 
     ? availableOptions 
