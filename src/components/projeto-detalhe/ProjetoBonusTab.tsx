@@ -607,7 +607,7 @@ export function ProjetoBonusTab({ projetoId }: ProjetoBonusTabProps) {
                       <td className="p-4">
                         <span className="flex items-center gap-1 text-sm">
                           <Calendar className="h-3 w-3" />
-                          {format(new Date(bonus.credited_at || bonus.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                          {formatCivilDate(bonus.credited_at || bonus.created_at)}
                         </span>
                       </td>
                       <td className="p-4">
