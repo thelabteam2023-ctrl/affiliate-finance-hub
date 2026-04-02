@@ -50,12 +50,16 @@ export function BookmakerSelectOption({
     parceiro_nome, 
     moeda, 
     saldo_operavel, 
+    saldo_disponivel,
     saldo_freebet = 0, 
     saldo_bonus = 0, 
     logo_url, 
     bonus_rollover_started = false,
     instance_identifier,
   } = bookmaker;
+  
+  // Exibir saldo_disponivel (real disponível para apostar) em vez de saldo_operavel (que inclui saldo em aposta)
+  const saldoDisponivel = saldo_disponivel != null ? saldo_disponivel : saldo_operavel;
   
   const parceiroShortName = getFirstLastName(parceiro_nome || "");
   const hasBonus = saldo_bonus > 0;
@@ -106,7 +110,7 @@ export function BookmakerSelectOption({
         ) : saldo_freebet > 0 ? (
           <>
             <span className={cn("text-xs font-medium flex items-center gap-1", getCurrencyTextColor(moeda))}>
-              {formatCurrency(saldo_operavel - saldo_freebet, moeda)}
+              {formatCurrency(saldoDisponivel, moeda)}
               {hasBonus && <span className="text-purple-400" title="Bônus ativo">🎁</span>}
             </span>
             <span className="text-[9px] text-amber-400/80 flex items-center gap-0.5">
@@ -116,7 +120,7 @@ export function BookmakerSelectOption({
           </>
         ) : (
           <span className={cn("text-xs font-medium flex items-center gap-1", getCurrencyTextColor(moeda))}>
-            {formatCurrency(saldo_operavel, moeda)}
+            {formatCurrency(saldoDisponivel, moeda)}
             {hasBonus && <span className="text-purple-400" title="Bônus ativo">🎁</span>}
           </span>
         )}
@@ -228,8 +232,8 @@ export function BookmakerMetaRow({ bookmaker, className }: BookmakerMetaRowProps
   const { parceiro_nome, moeda, saldo_operavel, saldo_freebet = 0, saldo_disponivel } = bookmaker;
   const parceiroShort = parceiro_nome?.split(' ')[0] || '';
   const hasFreebet = saldo_freebet > 0;
-  // Se tem freebet, mostrar saldo_disponivel (real) separado
-  const saldoReal = hasFreebet && saldo_disponivel != null ? saldo_disponivel : saldo_operavel;
+  // Sempre mostrar saldo_disponivel (disponível real para apostar)
+  const saldoReal = saldo_disponivel != null ? saldo_disponivel : saldo_operavel;
   
   return (
     <div className={cn(
