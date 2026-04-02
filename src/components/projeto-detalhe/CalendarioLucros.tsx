@@ -18,7 +18,6 @@ import {
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { extractLocalDateKey } from "@/utils/dateUtils";
-import { parseLocalDateTime } from "@/utils/dateUtils";
 
 interface ApostaData {
   data_aposta: string;
@@ -237,8 +236,10 @@ export function CalendarioLucros({
     const diasOrdenados: { key: string; lucro: number }[] = [];
     
     apostas.forEach((aposta) => {
-      const dataAposta = parseLocalDateTime(aposta.data_aposta);
-      if (isSameMonth(dataAposta, currentMonth)) {
+      // Usar extractLocalDateKey para evitar bug de timezone onde
+      // datas como "2026-04-01" (UTC midnight) são parseadas como 31/03 em São Paulo
+      const dataKey = extractLocalDateKey(aposta.data_aposta);
+      if (dataKey.startsWith(mesAno)) {
         const isLiquidada = aposta.resultado 
           ? aposta.resultado !== "PENDENTE" 
           : aposta.lucro_prejuizo !== null && aposta.lucro_prejuizo !== undefined;
