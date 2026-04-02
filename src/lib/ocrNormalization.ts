@@ -85,7 +85,8 @@ export function normalizeDetectedSport(
 export function normalizeDetectedMarket(
   rawMarket: string | null | undefined,
   rawSelection: string | null | undefined,
-  sport: string
+  sport: string,
+  evento?: string
 ): {
   displayName: string;
   confidence: "exact" | "high" | "medium" | "low";
@@ -94,7 +95,7 @@ export function normalizeDetectedMarket(
   const marketText = rawMarket || "";
   const selectionText = rawSelection || "";
   
-  const ocrResult = parseOcrMarket(marketText, selectionText, sport);
+  const ocrResult = parseOcrMarket(marketText, selectionText, sport, evento);
   
   return {
     displayName: ocrResult.displayName,
