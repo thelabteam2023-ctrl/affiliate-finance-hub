@@ -1663,6 +1663,7 @@ export function SurebetModalRoot({
       // CRÍTICO: Invalidar saldos imediatamente após exclusão
       // Garante que o "Saldo Operável" no formulário reflita o valor atualizado
       invalidateSaldos(projetoId);
+      invalidateCanonicalCaches(queryClient, projetoId);
       
       toast.success("Operação excluída!");
       onSuccess('delete');
