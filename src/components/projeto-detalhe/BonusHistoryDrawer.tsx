@@ -44,8 +44,13 @@ import {
   Target,
 } from "lucide-react";
 import { format } from "date-fns";
-import { parseLocalDateTime } from "@/utils/dateUtils";
 import { ptBR } from "date-fns/locale";
+
+/** Parse a civil date string (YYYY-MM-DD or ISO) without UTC shift */
+const formatCivilDate = (dateStr: string): string => {
+  const [y, m, d] = dateStr.slice(0, 10).split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('pt-BR');
+};
 import { ProjectBonus, BonusStatus, FinalizeReason } from "@/hooks/useProjectBonuses";
 
 interface BonusHistoryDrawerProps {
