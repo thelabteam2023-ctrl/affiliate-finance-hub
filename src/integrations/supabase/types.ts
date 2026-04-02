@@ -3686,6 +3686,42 @@ export type Database = {
         }
         Relationships: []
       }
+      financial_debug_log: {
+        Row: {
+          bookmaker_id: string | null
+          event_type: string
+          id: number
+          new_project_id: string | null
+          old_project_id: string | null
+          op: string
+          payload: Json
+          resolved_project_id: string | null
+          ts: string
+        }
+        Insert: {
+          bookmaker_id?: string | null
+          event_type: string
+          id?: never
+          new_project_id?: string | null
+          old_project_id?: string | null
+          op: string
+          payload?: Json
+          resolved_project_id?: string | null
+          ts?: string
+        }
+        Update: {
+          bookmaker_id?: string | null
+          event_type?: string
+          id?: never
+          new_project_id?: string | null
+          old_project_id?: string | null
+          op?: string
+          payload?: Json
+          resolved_project_id?: string | null
+          ts?: string
+        }
+        Relationships: []
+      }
       financial_events: {
         Row: {
           aposta_id: string | null
