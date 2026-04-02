@@ -285,6 +285,9 @@ export function ProjetoDeleteDialog({
                     Todas as bookmakers serão <strong>desvinculadas</strong> e ficarão disponíveis para uso em outros projetos.
                     Os saldos serão mantidos.
                   </p>
+                  <p className="text-xs text-amber-400 font-medium mt-1">
+                    ⚠️ Para arquivar, desvincule todas as bookmakers primeiro.
+                  </p>
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">
