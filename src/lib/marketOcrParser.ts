@@ -316,10 +316,71 @@ function inferDomainFromSport(sport: string): MarketDomain {
  * @param rawSelection - Texto da seleção vindo do OCR (ex: "Mais 21.5")
  * @param sport - Esporte detectado
  */
+/**
+ * Normaliza texto para comparação fuzzy: lowercase, sem acentos, sem espaços extras
+ */
+function normalizeForComparison(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Extrai times do evento no formato "Team A vs Team B"
+ */
+function extractTeamsFromEvento(evento: string): { mandante: string; visitante: string } | null {
+  const match = evento.match(/^(.+?)\s*(?:x|vs\.?|\-|–|—)\s*(.+)$/i);
+  if (!match) return null;
+  return { mandante: match[1].trim(), visitante: match[2].trim() };
+}
+
+/**
+ * Verifica se a seleção corresponde a um dos times do evento (fuzzy)
+ */
+function isSelectionMatchingTeam(
+  selection: string,
+  evento: string
+): boolean {
+  const teams = extractTeamsFromEvento(evento);
+  if (!teams) return false;
+
+  const selNorm = normalizeForComparison(selection);
+  const mandNorm = normalizeForComparison(teams.mandante);
+  const visitNorm = normalizeForComparison(teams.visitante);
+
+  if (!selNorm || selNorm.length < 3) return false;
+
+  // Exact match
+  if (selNorm === mandNorm || selNorm === visitNorm) return true;
+
+  // Containment match (either direction)
+  if (selNorm.includes(mandNorm) || mandNorm.includes(selNorm)) return true;
+  if (selNorm.includes(visitNorm) || visitNorm.includes(selNorm)) return true;
+
+  // Word-based overlap: if >50% of words match
+  const selWords = selNorm.split(/\s+/).filter(w => w.length > 2);
+  const mandWords = mandNorm.split(/\s+/).filter(w => w.length > 2);
+  const visitWords = visitNorm.split(/\s+/).filter(w => w.length > 2);
+
+  const matchesMandante = selWords.filter(w => mandWords.some(mw => mw.includes(w) || w.includes(mw))).length;
+  const matchesVisitante = selWords.filter(w => visitWords.some(vw => vw.includes(w) || w.includes(vw))).length;
+
+  if (selWords.length > 0) {
+    if (matchesMandante / selWords.length >= 0.5) return true;
+    if (matchesVisitante / selWords.length >= 0.5) return true;
+  }
+
+  return false;
+}
+
 export function parseOcrMarket(
   rawMarket: string,
   rawSelection: string,
-  sport: string
+  sport: string,
+  evento?: string
 ): OcrMarketResult {
   const combinedText = `${rawMarket} ${rawSelection}`.toLowerCase();
   const marketTextLower = rawMarket.toLowerCase();
@@ -402,6 +463,16 @@ export function parseOcrMarket(
   else if (/1[ºo°]?\s*tempo|primeiro.*tempo|first.*half|\bht\b/i.test(combinedText)) {
     type = "FIRST_HALF";
     confidence = "high";
+  }
+  // ========================================================================
+  // PRIORIDADE 7 (NOVA): HEURÍSTICA DE VENCEDOR POR CORRESPONDÊNCIA DE TIME
+  // Se a seleção corresponde ao nome de um dos times do evento,
+  // e não há indicadores de handicap/total, classificar como MONEYLINE
+  // ========================================================================
+  else if (evento && rawSelection && isSelectionMatchingTeam(rawSelection, evento)) {
+    type = "MONEYLINE";
+    confidence = "high";
+    console.log(`[OCR Parser] Team-match heuristic: selection "${rawSelection}" matches team in "${evento}" → MONEYLINE`);
   }
   
   // 2. DETECTAR DOMÍNIO
@@ -492,7 +563,7 @@ export function parseOcrMarket(
   }
   
   // Log para debug
-  console.log(`[OCR Parser] Market: "${rawMarket}", Selection: "${rawSelection}", Sport: "${sport}"
+  console.log(`[OCR Parser] Market: "${rawMarket}", Selection: "${rawSelection}", Sport: "${sport}", Evento: "${evento || 'N/A'}"
     → Type: ${type}, Domain: ${domain || "N/A"}, Side: ${side || "N/A"}, Line: ${line ?? "N/A"}
     → Display: "${displayName}", Confidence: ${confidence}`);
   

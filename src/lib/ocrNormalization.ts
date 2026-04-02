@@ -85,7 +85,8 @@ export function normalizeDetectedSport(
 export function normalizeDetectedMarket(
   rawMarket: string | null | undefined,
   rawSelection: string | null | undefined,
-  sport: string
+  sport: string,
+  evento?: string
 ): {
   displayName: string;
   confidence: "exact" | "high" | "medium" | "low";
@@ -94,7 +95,7 @@ export function normalizeDetectedMarket(
   const marketText = rawMarket || "";
   const selectionText = rawSelection || "";
   
-  const ocrResult = parseOcrMarket(marketText, selectionText, sport);
+  const ocrResult = parseOcrMarket(marketText, selectionText, sport, evento);
   
   return {
     displayName: ocrResult.displayName,
@@ -205,7 +206,8 @@ export function normalizeOcrData(rawData: any): NormalizationResult {
     const sportDetected = data.esporte?.value || "Outro";
     const selectionRaw = data.selecao?.value || "";
     
-    const marketNorm = normalizeDetectedMarket(marketRaw, selectionRaw, sportDetected);
+    const eventoValue = data.evento?.value || "";
+    const marketNorm = normalizeDetectedMarket(marketRaw, selectionRaw, sportDetected, eventoValue);
     ocrResult = marketNorm.ocrResult;
     
     // Atualizar pendingData com categorização (para lógica interna)
@@ -265,7 +267,8 @@ export function resolveMarketForSport(
   pendingData: NormalizationPendingData,
   parsedSelecao: string | null | undefined,
   sport: string,
-  availableOptions: string[]
+  availableOptions: string[],
+  evento?: string
 ): string {
   if (!pendingData.mercadoIntencao && !pendingData.mercadoRaw) {
     return "";
@@ -273,7 +276,7 @@ export function resolveMarketForSport(
   
   const marketRaw = pendingData.mercadoRaw || pendingData.mercadoIntencao || "";
   const selectionValue = parsedSelecao || "";
-  const ocrResult = parseOcrMarket(marketRaw, selectionValue, sport);
+  const ocrResult = parseOcrMarket(marketRaw, selectionValue, sport, evento);
   
   const options = availableOptions.length > 0 
     ? availableOptions 
