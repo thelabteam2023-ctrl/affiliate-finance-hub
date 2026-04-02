@@ -1670,7 +1670,21 @@ export function SurebetModalRoot({
   const handleDeletePerna = useCallback(async (pernaIndex: number) => {
     if (!isEditing || !surebet) return;
     
-    const originalPerna = originalPernasSnapshot.current[pernaIndex];
+    // Buscar pernaId do OddEntry (ID-based, não index-based)
+    const oddEntry = odds[pernaIndex];
+    const pernaId = oddEntry?.pernaId;
+    
+    if (!pernaId) {
+      // Perna nova (ainda não persistida) — remover apenas da UI
+      setOdds(prev => prev.filter((_, i) => i !== pernaIndex));
+      setDirectedProfitLegs(prev => 
+        prev.filter(i => i !== pernaIndex).map(i => i > pernaIndex ? i - 1 : i)
+      );
+      toast.success("Sub-entrada removida");
+      return;
+    }
+    
+    const originalPerna = originalPernasSnapshot.current.find(op => op.id === pernaId);
     if (!originalPerna) {
       toast.error("Perna não encontrada no banco de dados");
       return;
@@ -1686,11 +1700,11 @@ export function SurebetModalRoot({
       setDeletingPerna(true);
       
       const { data: rpcResult, error: rpcError } = await supabase.rpc('deletar_perna_surebet_v1', {
-        p_perna_id: originalPerna.id,
+        p_perna_id: pernaId,
       });
       
       if (rpcError) {
-        console.error(`[SurebetModalRoot] Erro ao deletar perna ${originalPerna.id}:`, rpcError);
+        console.error(`[SurebetModalRoot] Erro ao deletar perna ${pernaId}:`, rpcError);
         throw new Error(rpcError.message);
       }
       
@@ -1699,7 +1713,7 @@ export function SurebetModalRoot({
         throw new Error(result.error || 'Falha ao excluir perna');
       }
       
-      console.log(`[SurebetModalRoot] ✅ Perna ${originalPerna.id} excluída via RPC:`, result);
+      console.log(`[SurebetModalRoot] ✅ Perna ${pernaId} excluída via RPC:`, result);
       
       // Remover da UI
       setOdds(prev => prev.filter((_, i) => i !== pernaIndex));
@@ -1707,9 +1721,9 @@ export function SurebetModalRoot({
         prev.filter(i => i !== pernaIndex).map(i => i > pernaIndex ? i - 1 : i)
       );
       
-      // Atualizar snapshots
-      originalPernasSnapshot.current = originalPernasSnapshot.current.filter((_, i) => i !== pernaIndex);
-      originalPernaIds.current = originalPernaIds.current.filter((_, i) => i !== pernaIndex);
+      // Atualizar snapshots (ID-based)
+      originalPernasSnapshot.current = originalPernasSnapshot.current.filter(p => p.id !== pernaId);
+      originalPernaIds.current = originalPernaIds.current.filter(id => id !== pernaId);
       
       // Recalcular crédito virtual (separado por tipo)
       const stakeMap = new Map<string, { real: number; freebet: number }>();
