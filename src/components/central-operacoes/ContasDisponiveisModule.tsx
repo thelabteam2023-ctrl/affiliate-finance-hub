@@ -773,7 +773,7 @@ export function ContasDisponiveisModule() {
                 })}
                 {filtered.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="p-8 text-center text-muted-foreground">
+                    <td colSpan={9} className="p-8 text-center text-muted-foreground">
                       <Unlink className="h-8 w-8 mx-auto mb-2 opacity-30" />
                       <p>Nenhuma conta disponível encontrada</p>
                       <p className="text-xs mt-1">Ajuste os filtros ou todas as casas estão vinculadas a projetos</p>
