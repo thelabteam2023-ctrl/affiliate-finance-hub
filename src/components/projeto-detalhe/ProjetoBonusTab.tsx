@@ -614,7 +614,7 @@ export function ProjetoBonusTab({ projetoId }: ProjetoBonusTabProps) {
                         {bonus.expires_at ? (
                           <span className="flex items-center gap-1 text-sm text-amber-400">
                             <Clock className="h-3 w-3" />
-                            {format(new Date(bonus.expires_at), "dd/MM/yyyy", { locale: ptBR })}
+                            {formatCivilDate(bonus.expires_at)}
                           </span>
                         ) : (
                           <span className="text-muted-foreground">-</span>
