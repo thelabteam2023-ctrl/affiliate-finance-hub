@@ -407,39 +407,53 @@ export function CalendarioLucros({
     </div>
   );
 
+  const statsLabel = isFullPeriodMode 
+    ? (periodRange?.label || "Período") 
+    : format(currentMonth, "MMMM", { locale: ptBR });
+
   const renderStats = () => (
-    <div className="mt-4 grid grid-cols-4 gap-2.5">
-      <div className="rounded-xl border border-border/40 bg-card-elevated px-3 py-2.5 text-center shadow-soft">
-        <div className={cn(
-          "text-base font-bold tabular-nums",
-          estatisticasMes.lucroTotal > 0 ? "text-success" : 
-          estatisticasMes.lucroTotal < 0 ? "text-destructive" : "text-muted-foreground"
-        )}>
-          {formatFullCurrency(estatisticasMes.lucroTotal)}
+    <div className="mt-4">
+      {isFullPeriodMode && (
+        <div className="mb-2 text-center">
+          <span className="text-[10px] font-medium text-primary/80 bg-primary/10 px-2 py-0.5 rounded-full">
+            Totais do {statsLabel}
+          </span>
         </div>
-        <div className="mt-0.5 text-[10px] text-muted-foreground/70">Lucro</div>
-      </div>
-      <div className="rounded-xl border border-border/40 bg-card-elevated px-3 py-2.5 text-center shadow-soft">
-        <div className="text-base font-bold tabular-nums text-foreground">
-          {estatisticasMes.totalApostas}
+      )}
+      <div className="grid grid-cols-4 gap-2.5">
+        <div className="rounded-xl border border-border/40 bg-card-elevated px-3 py-2.5 text-center shadow-soft">
+          <div className={cn(
+            "text-base font-bold tabular-nums",
+            estatisticasMes.lucroTotal > 0 ? "text-success" : 
+            estatisticasMes.lucroTotal < 0 ? "text-destructive" : "text-muted-foreground"
+          )}>
+            {formatFullCurrency(estatisticasMes.lucroTotal)}
+          </div>
+          <div className="mt-0.5 text-[10px] text-muted-foreground/70">Lucro</div>
         </div>
-        <div className="mt-0.5 text-[10px] text-muted-foreground/70">Operações</div>
-      </div>
-      <div className="rounded-xl border border-border/40 bg-card-elevated px-3 py-2.5 text-center shadow-soft">
-        <div className="flex items-center justify-center gap-1">
-          <span className="text-base font-bold tabular-nums text-success">{estatisticasMes.diasPositivos}</span>
-          <span className="text-muted-foreground/40">/</span>
-          <span className="text-base font-bold tabular-nums text-destructive">{estatisticasMes.diasNegativos}</span>
+        <div className="rounded-xl border border-border/40 bg-card-elevated px-3 py-2.5 text-center shadow-soft">
+          <div className="text-base font-bold tabular-nums text-foreground">
+            {estatisticasMes.totalApostas}
+          </div>
+          <div className="mt-0.5 text-[10px] text-muted-foreground/70">Operações</div>
         </div>
-        <div className="mt-0.5 text-[10px] text-muted-foreground/70">Green / Red</div>
-      </div>
-      <div className="rounded-xl border border-border/40 bg-card-elevated px-3 py-2.5 text-center shadow-soft">
-        <div className="flex items-center justify-center gap-1">
-          <Flame className="h-3.5 w-3.5 text-warning" />
-          <span className="text-base font-bold tabular-nums text-foreground">{estatisticasMes.melhorStreak}</span>
+        <div className="rounded-xl border border-border/40 bg-card-elevated px-3 py-2.5 text-center shadow-soft">
+          <div className="flex items-center justify-center gap-1">
+            <span className="text-base font-bold tabular-nums text-success">{estatisticasMes.diasPositivos}</span>
+            <span className="text-muted-foreground/40">/</span>
+            <span className="text-base font-bold tabular-nums text-destructive">{estatisticasMes.diasNegativos}</span>
+          </div>
+          <div className="mt-0.5 text-[10px] text-muted-foreground/70">Green / Red</div>
         </div>
-        <div className="mt-0.5 text-[10px] text-muted-foreground/70">Streak</div>
+        <div className="rounded-xl border border-border/40 bg-card-elevated px-3 py-2.5 text-center shadow-soft">
+          <div className="flex items-center justify-center gap-1">
+            <Flame className="h-3.5 w-3.5 text-warning" />
+            <span className="text-base font-bold tabular-nums text-foreground">{estatisticasMes.melhorStreak}</span>
+          </div>
+          <div className="mt-0.5 text-[10px] text-muted-foreground/70">Streak</div>
+        </div>
       </div>
+    </div>
     </div>
   );
 
