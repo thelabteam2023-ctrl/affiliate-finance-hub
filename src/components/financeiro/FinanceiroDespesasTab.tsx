@@ -39,7 +39,7 @@ interface Props {
   dataFim?: string | null;
 }
 
-export function FinanceiroDespesasTab({ despesasAdmin, totalDespesasAdmin, totalPagamentosOperadores, formatCurrency, onRefresh }: Props) {
+export function FinanceiroDespesasTab({ despesasAdmin, totalDespesasAdmin, totalPagamentosOperadores, formatCurrency, onRefresh, dataInicio, dataFim }: Props) {
   const { toast } = useToast();
   const [despesaAdminDialogOpen, setDespesaAdminDialogOpen] = useState(false);
   const [editingDespesa, setEditingDespesa] = useState<DespesaAdministrativa | null>(null);
