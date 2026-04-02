@@ -539,21 +539,14 @@ export function VisaoGeralCharts({
   const calendarInitialMonth = periodStart ?? new Date();
 
   const periodTotal = useMemo(() => {
-    if (lucroOperacionalKpi != null && periodStart && periodEnd) {
-      const sameMonthRange =
-        format(periodStart, "yyyy-MM") === format(periodEnd, "yyyy-MM") &&
-        periodStart.getTime() === startOfMonth(periodStart).getTime() &&
-        periodEnd.getTime() === startOfDay(endOfMonth(periodStart)).getTime();
-
-      if (!sameMonthRange) {
-        return lucroOperacionalKpi;
-      }
-    }
-
-    if (lucroOperacionalKpi != null && !periodStart && !periodEnd) {
+    // PRIORIDADE ABSOLUTA: Se temos o KPI canônico server-side, usar SEMPRE
+    // Este valor já inclui todos os 11 módulos (apostas, FX, ajustes, bônus, etc.)
+    // NÃO adicionar extrasLucro por cima — seria contagem dupla
+    if (lucroOperacionalKpi != null) {
       return lucroOperacionalKpi;
     }
 
+    // Fallback: cálculo manual (apenas quando KPI não está disponível)
     let total = 0;
 
     if (apostasCalendario && periodStart && periodEnd) {
@@ -571,19 +564,23 @@ export function VisaoGeralCharts({
       });
     }
 
-    extrasLucro.forEach((e) => {
-      const dateStr = e.data.includes('T') ? extractLocalDateKey(e.data) : e.data;
-      if (periodStart && periodEnd) {
-        const extraDate = new Date(dateStr + 'T12:00:00');
-        if (extraDate < startOfDay(periodStart) || extraDate > periodEnd) return;
-      }
-      let valorConsolidado = e.valor;
-      const moedaExtra = e.moeda || "BRL";
-      if (convertToConsolidation && moedaConsolidacao && moedaExtra !== moedaConsolidacao) {
-        valorConsolidado = convertToConsolidation(e.valor, moedaExtra);
-      }
-      total += valorConsolidado;
-    });
+    // Extras só no fallback manual (quando não temos RPC canônica)
+    // E apenas quando calendarData NÃO vem de RPC (que já inclui extras)
+    if (!apostasCalendario) {
+      extrasLucro.forEach((e) => {
+        const dateStr = e.data.includes('T') ? extractLocalDateKey(e.data) : e.data;
+        if (periodStart && periodEnd) {
+          const extraDate = new Date(dateStr + 'T12:00:00');
+          if (extraDate < startOfDay(periodStart) || extraDate > periodEnd) return;
+        }
+        let valorConsolidado = e.valor;
+        const moedaExtra = e.moeda || "BRL";
+        if (convertToConsolidation && moedaConsolidacao && moedaExtra !== moedaConsolidacao) {
+          valorConsolidado = convertToConsolidation(e.valor, moedaExtra);
+        }
+        total += valorConsolidado;
+      });
+    }
 
     return total;
   }, [apostas, apostasCalendario, extrasLucro, periodStart, periodEnd, lucroOperacionalKpi, convertToConsolidation, moedaConsolidacao]);
