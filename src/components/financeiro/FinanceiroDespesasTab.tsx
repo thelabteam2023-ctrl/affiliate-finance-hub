@@ -35,6 +35,8 @@ interface Props {
   totalPagamentosOperadores: number;
   formatCurrency: (value: number, currency?: string) => string;
   onRefresh: () => void;
+  dataInicio?: string | null;
+  dataFim?: string | null;
 }
 
 export function FinanceiroDespesasTab({ despesasAdmin, totalDespesasAdmin, totalPagamentosOperadores, formatCurrency, onRefresh }: Props) {
