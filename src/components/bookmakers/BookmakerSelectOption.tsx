@@ -106,7 +106,7 @@ export function BookmakerSelectOption({
         ) : saldo_freebet > 0 ? (
           <>
             <span className={cn("text-xs font-medium flex items-center gap-1", getCurrencyTextColor(moeda))}>
-              {formatCurrency(saldo_operavel - saldo_freebet, moeda)}
+              {formatCurrency(saldoDisponivel, moeda)}
               {hasBonus && <span className="text-purple-400" title="Bônus ativo">🎁</span>}
             </span>
             <span className="text-[9px] text-amber-400/80 flex items-center gap-0.5">
@@ -116,7 +116,7 @@ export function BookmakerSelectOption({
           </>
         ) : (
           <span className={cn("text-xs font-medium flex items-center gap-1", getCurrencyTextColor(moeda))}>
-            {formatCurrency(saldo_operavel, moeda)}
+            {formatCurrency(saldoDisponivel, moeda)}
             {hasBonus && <span className="text-purple-400" title="Bônus ativo">🎁</span>}
           </span>
         )}
