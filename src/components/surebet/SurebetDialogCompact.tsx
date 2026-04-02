@@ -154,6 +154,8 @@ export function SurebetDialogCompact({
         instance_identifier: bk.instance_identifier,
         moeda: bk.moeda as SupportedCurrency,
         saldo_operavel: bk.saldo_operavel,
+        saldo_disponivel: bk.saldo_disponivel,
+        saldo_freebet: bk.saldo_freebet,
       }));
   }, [bookmakerSaldos, isEditing]);
 
