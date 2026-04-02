@@ -23,6 +23,12 @@ import { BonusFormData, BonusStatus, ProjectBonus, TipoBonus } from "@/hooks/use
 import { getFirstLastName } from "@/lib/utils";
 import { useBookmakerBonusTemplates, BonusTemplate, calculateRolloverTarget } from "@/hooks/useBookmakerBonusTemplates";
 import { format, addDays } from "date-fns";
+
+/** Parse YYYY-MM-DD as local date (not UTC) to avoid timezone shift */
+const parseCivilDate = (dateStr: string): Date => {
+  const [y, m, d] = dateStr.slice(0, 10).split('-').map(Number);
+  return new Date(y, m - 1, d);
+};
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -273,7 +279,7 @@ export function BonusDialog({
     if (template.prazo) {
       setDeadlineDays(template.prazo);
       // Auto-set expiration date based on credit date (or today)
-      const baseDate = creditedAt ? new Date(creditedAt) : new Date();
+      const baseDate = creditedAt ? parseCivilDate(creditedAt) : new Date();
       const expiration = addDays(baseDate, Number(template.prazo));
       setExpiresAt(format(expiration, "yyyy-MM-dd"));
     }
@@ -344,8 +350,8 @@ export function BonusDialog({
       currency,
       status,
       tipo_bonus: tipoBonus,
-      credited_at: status === "credited" && creditedAt ? new Date(creditedAt).toISOString() : null,
-      expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
+      credited_at: status === "credited" && creditedAt ? parseCivilDate(creditedAt).toISOString() : null,
+      expires_at: expiresAt ? parseCivilDate(expiresAt).toISOString() : null,
       notes: null,
       source: filledFromTemplate ? "template" : "manual",
       template_snapshot: templateSnapshot,
@@ -797,7 +803,7 @@ export function BonusDialog({
                   onChange={(e) => {
                     setDeadlineDays(e.target.value);
                     if (e.target.value && creditedAt) {
-                      const baseDate = creditedAt ? new Date(creditedAt) : new Date();
+                      const baseDate = creditedAt ? parseCivilDate(creditedAt) : new Date();
                       const expiration = addDays(baseDate, Number(e.target.value));
                       setExpiresAt(format(expiration, "yyyy-MM-dd"));
                     }
@@ -820,7 +826,7 @@ export function BonusDialog({
                       setCreditedAt(val);
                       // Auto-recalculate expiration from new credit date + deadline
                       if (val && deadlineDays) {
-                        const baseDate = new Date(val);
+                        const baseDate = parseCivilDate(val);
                         const expiration = addDays(baseDate, Number(deadlineDays));
                         setExpiresAt(format(expiration, "yyyy-MM-dd"));
                       }
@@ -993,7 +999,7 @@ export function BonusDialog({
                   status: "pending",
                   tipo_bonus: tipoBonus,
                   credited_at: null,
-                  expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
+                  expires_at: expiresAt ? parseCivilDate(expiresAt).toISOString() : null,
                   notes: null,
                   source: filledFromTemplate ? "template" : "manual",
                   template_snapshot: templateSnapshot,

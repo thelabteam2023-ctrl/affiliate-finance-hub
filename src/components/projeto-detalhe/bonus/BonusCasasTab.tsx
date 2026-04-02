@@ -43,6 +43,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { differenceInDays, parseISO, format } from "date-fns";
+
+const parseCivilDate = (dateStr: string): Date => {
+  const [y, m, d] = dateStr.slice(0, 10).split('-').map(Number);
+  return new Date(y, m - 1, d);
+};
 import { ptBR } from "date-fns/locale";
 import {
   Tooltip,
@@ -176,7 +181,7 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
         let nearestExpiry: Date | null = null;
         activeBonuses.forEach(b => {
           if (b.expires_at) {
-            const expiryDate = parseISO(b.expires_at);
+            const expiryDate = parseCivilDate(b.expires_at);
             if (!nearestExpiry || expiryDate < nearestExpiry) {
               nearestExpiry = expiryDate;
             }
