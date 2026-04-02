@@ -225,7 +225,11 @@ export function CalendarioLucros({
     return max;
   }, [lucroPorDia, currentMonth]);
 
-  // Estatísticas do mês
+  // Determinar se estamos em modo período completo (ciclo multi-mês)
+  const isFullPeriodMode = !!periodRange;
+  const periodPrefix = isFullPeriodMode ? null : format(currentMonth, "yyyy-MM");
+
+  // Estatísticas — agrega mês atual OU período completo
   const estatisticasMes = useMemo(() => {
     let lucroTotal = 0;
     let totalApostas = 0;
@@ -235,14 +239,17 @@ export function CalendarioLucros({
     let streakAtual = 0;
     let melhorStreak = 0;
     
-    const mesAno = format(currentMonth, "yyyy-MM");
+    const matchesPeriod = (dataKey: string) => {
+      if (!isFullPeriodMode) return dataKey.startsWith(periodPrefix!);
+      // Em modo período completo, aceitar todas as datas que existam nos dados
+      return true;
+    };
+
     const diasOrdenados: { key: string; lucro: number }[] = [];
     
     apostas.forEach((aposta) => {
-      // Usar extractLocalDateKey para evitar bug de timezone onde
-      // datas como "2026-04-01" (UTC midnight) são parseadas como 31/03 em São Paulo
       const dataKey = extractLocalDateKey(aposta.data_aposta);
-      if (dataKey.startsWith(mesAno)) {
+      if (matchesPeriod(dataKey)) {
         const isLiquidada = aposta.resultado 
           ? aposta.resultado !== "PENDENTE" 
           : aposta.lucro_prejuizo !== null && aposta.lucro_prejuizo !== undefined;
@@ -254,14 +261,14 @@ export function CalendarioLucros({
     });
 
     extrasLucro.forEach((extra) => {
-      if (extra.data && extra.data.startsWith(mesAno)) {
+      if (extra.data && matchesPeriod(extra.data)) {
         lucroTotal += extra.valor;
       }
     });
 
     // Contar dias por tipo
     lucroPorDia.forEach((dados, key) => {
-      if (key.startsWith(mesAno) && dados.count > 0) {
+      if (matchesPeriod(key) && dados.count > 0) {
         diasOrdenados.push({ key, lucro: dados.lucro });
         if (dados.lucro > 0) diasPositivos++;
         else if (dados.lucro < 0) diasNegativos++;
@@ -281,7 +288,7 @@ export function CalendarioLucros({
     });
     
     return { lucroTotal, totalApostas, diasPositivos, diasNegativos, diasNeutros, melhorStreak };
-  }, [apostas, extrasLucro, currentMonth, lucroPorDia]);
+  }, [apostas, extrasLucro, currentMonth, lucroPorDia, isFullPeriodMode, periodPrefix]);
 
   useEffect(() => {
     onMonthTotalChange?.(estatisticasMes.lucroTotal);
