@@ -206,7 +206,8 @@ export function normalizeOcrData(rawData: any): NormalizationResult {
     const sportDetected = data.esporte?.value || "Outro";
     const selectionRaw = data.selecao?.value || "";
     
-    const marketNorm = normalizeDetectedMarket(marketRaw, selectionRaw, sportDetected);
+    const eventoValue = data.evento?.value || "";
+    const marketNorm = normalizeDetectedMarket(marketRaw, selectionRaw, sportDetected, eventoValue);
     ocrResult = marketNorm.ocrResult;
     
     // Atualizar pendingData com categorização (para lógica interna)
