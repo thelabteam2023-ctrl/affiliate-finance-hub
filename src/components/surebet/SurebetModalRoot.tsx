@@ -355,6 +355,15 @@ export function SurebetModalRoot({
   // INICIALIZAÇÃO E RESET
   // ============================================
 
+  // Cleanup: resetar refs quando modal fecha para nunca reusar estado stale
+  useEffect(() => {
+    if (!open) {
+      originalPernasSnapshot.current = [];
+      originalPernaIds.current = [];
+      originalStakesByBookmaker.current = new Map();
+    }
+  }, [open]);
+
   useEffect(() => {
     if (!open) return;
     
