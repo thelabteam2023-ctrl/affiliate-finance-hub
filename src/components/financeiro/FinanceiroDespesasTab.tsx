@@ -26,6 +26,7 @@ interface DespesaAdministrativa {
   data_despesa: string;
   recorrente: boolean;
   status: string;
+  _fromLedger?: boolean;
 }
 
 interface Props {
