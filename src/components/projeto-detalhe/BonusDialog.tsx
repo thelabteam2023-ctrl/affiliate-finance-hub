@@ -273,7 +273,7 @@ export function BonusDialog({
     if (template.prazo) {
       setDeadlineDays(template.prazo);
       // Auto-set expiration date based on credit date (or today)
-      const baseDate = creditedAt ? new Date(creditedAt) : new Date();
+      const baseDate = creditedAt ? parseCivilDate(creditedAt) : new Date();
       const expiration = addDays(baseDate, Number(template.prazo));
       setExpiresAt(format(expiration, "yyyy-MM-dd"));
     }
