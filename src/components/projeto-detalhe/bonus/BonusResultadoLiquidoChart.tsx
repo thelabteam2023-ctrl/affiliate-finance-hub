@@ -156,8 +156,9 @@ export function BonusResultadoLiquidoChart({
   const chartData = useMemo(() => {
     // Agrupa bônus creditados por data (usando timezone operacional)
     const bonusByDate: Record<string, number> = {};
+    // CRÍTICO: Excluir FREEBET — o lucro SNR já está no P&L da aposta (evita dupla contagem)
     filteredBonuses
-      .filter(b => (b.status === "credited" || b.status === "finalized") && b.credited_at)
+      .filter(b => (b.status === "credited" || b.status === "finalized") && b.credited_at && b.tipo_bonus !== "FREEBET")
       .forEach(b => {
         // CORREÇÃO: credited_at é data civil (meia-noite UTC), usar extractCivilDateKey
         const date = extractCivilDateKey(b.credited_at!);
@@ -226,19 +227,8 @@ export function BonusResultadoLiquidoChart({
       juiceByDate[date] = (juiceByDate[date] || 0) + valor;
     });
 
-    // Combina todas as datas
+    // Combina todas as datas COM ATIVIDADE (Activity Mode — sem dias vazios)
     const allDates = new Set([...Object.keys(bonusByDate), ...Object.keys(juiceByDate)]);
-    
-    // CORREÇÃO: Preencher dias vazios no intervalo (calendário completo, como Visão Geral)
-    if (dateRange) {
-      let cursor = startOfDay(dateRange.start);
-      const endDay = startOfDay(dateRange.end);
-      while (cursor <= endDay) {
-        const dateKey = format(cursor, "yyyy-MM-dd");
-        allDates.add(dateKey);
-        cursor = addDays(cursor, 1);
-      }
-    }
     
     const sortedDates = Array.from(allDates).sort();
 

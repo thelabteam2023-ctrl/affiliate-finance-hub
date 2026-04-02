@@ -361,7 +361,11 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
       return { totalBonusCreditado: 0, totalJuice: 0, totalPerdasCancelamento: 0, total: 0, performancePercent: 0, bonusPorMoeda: [] };
     }
     // Filtrar bônus por período (usar credited_at como data de competência)
-    let eligibleBonuses = bonuses.filter(b => b.status === "credited" || b.status === "finalized");
+    // CRÍTICO: Excluir FREEBET — o lucro SNR já está contabilizado no P&L da aposta (evita dupla contagem)
+    let eligibleBonuses = bonuses.filter(b => 
+      (b.status === "credited" || b.status === "finalized") && 
+      b.tipo_bonus !== "FREEBET"
+    );
     
     if (dateRange?.start || dateRange?.end) {
       eligibleBonuses = eligibleBonuses.filter(b => {
