@@ -60,7 +60,7 @@ async function fetchFinancialMetricsRaw(projetoId: string, dateRange?: { from: s
   const investorBookmakerIds = (bookmakers || []).filter(b => !!b.investidor_id).map(b => b.id);
 
   const depositoQ = applyDateFilter(
-    supabase.from("cash_ledger").select("valor, moeda, destino_bookmaker_id")
+    supabase.from("cash_ledger").select("valor, moeda, destino_bookmaker_id, tipo_transacao")
       .in("tipo_transacao", ["DEPOSITO", "DEPOSITO_VIRTUAL"])
       .eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId),
     dateRange
