@@ -47,6 +47,8 @@ export interface OddEntry {
   gerouFreebet?: boolean;
   valorFreebetGerada?: string;
   fonteSaldo?: 'REAL' | 'FREEBET';
+  /** UUID da perna no banco (apostas_pernas.id). Undefined para pernas novas. */
+  pernaId?: string;
   additionalEntries?: OddFormEntry[];
 }
 
@@ -57,6 +59,8 @@ export interface OddFormEntry {
   stake: string;
   selecaoLivre: string;
   fonteSaldo?: 'REAL' | 'FREEBET';
+  /** UUID da perna no banco (apostas_pernas.id). Undefined para pernas novas. */
+  pernaId?: string;
 }
 
 interface BookmakerInfo {
