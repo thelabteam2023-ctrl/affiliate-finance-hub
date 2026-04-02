@@ -815,13 +815,16 @@ export default function Caixa() {
       return { primary: "Parceiro" };
     }
     
-    if (transacao.destino_tipo === "INDICADOR") {
-      // Extrair nome do indicador da descrição
+    if (transacao.destino_tipo === "INDICADOR" || transacao.tipo_transacao === "COMISSAO_INDICADOR") {
+      const grupoRH = getGrupoInfo("Recursos Humanos");
       const match = transacao.descricao?.match(/indicação\s+(?:de\s+)?(.+)/i);
-      if (match) {
-        return { primary: match[1].trim() };
-      }
-      return { primary: transacao.descricao?.split(" - ")[0] || "Indicador" };
+      const primary = match ? match[1].trim() : (transacao.descricao?.split(" - ")[0] || "Indicador");
+      return { 
+        primary,
+        badgeLabel: grupoRH.label,
+        badgeColor: grupoRH.color,
+        BadgeIcon: grupoRH.icon,
+      };
     }
     
     if (transacao.destino_tipo === "OPERADOR" || transacao.tipo_transacao === "PAGTO_OPERADOR") {
