@@ -60,6 +60,11 @@ import {
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+
+const formatCivilDate = (dateStr: string): string => {
+  const [y, m, d] = dateStr.slice(0, 10).split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('pt-BR');
+};
 import { useProjectBonuses, ProjectBonus, BonusStatus, BonusFormData } from "@/hooks/useProjectBonuses";
 import { BonusDialog } from "./BonusDialog";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, DateRange as FilterDateRange } from "./StandardTimeFilter";
@@ -607,14 +612,14 @@ export function ProjetoBonusTab({ projetoId }: ProjetoBonusTabProps) {
                       <td className="p-4">
                         <span className="flex items-center gap-1 text-sm">
                           <Calendar className="h-3 w-3" />
-                          {format(new Date(bonus.credited_at || bonus.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                          {formatCivilDate(bonus.credited_at || bonus.created_at)}
                         </span>
                       </td>
                       <td className="p-4">
                         {bonus.expires_at ? (
                           <span className="flex items-center gap-1 text-sm text-amber-400">
                             <Clock className="h-3 w-3" />
-                            {format(new Date(bonus.expires_at), "dd/MM/yyyy", { locale: ptBR })}
+                            {formatCivilDate(bonus.expires_at)}
                           </span>
                         ) : (
                           <span className="text-muted-foreground">-</span>

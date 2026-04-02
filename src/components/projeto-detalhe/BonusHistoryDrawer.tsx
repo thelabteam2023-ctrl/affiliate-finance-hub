@@ -44,8 +44,13 @@ import {
   Target,
 } from "lucide-react";
 import { format } from "date-fns";
-import { parseLocalDateTime } from "@/utils/dateUtils";
 import { ptBR } from "date-fns/locale";
+
+/** Parse a civil date string (YYYY-MM-DD or ISO) without UTC shift */
+const formatCivilDate = (dateStr: string): string => {
+  const [y, m, d] = dateStr.slice(0, 10).split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('pt-BR');
+};
 import { ProjectBonus, BonusStatus, FinalizeReason } from "@/hooks/useProjectBonuses";
 
 interface BonusHistoryDrawerProps {
@@ -269,12 +274,12 @@ export function BonusHistoryDrawer({
                             <div className="flex items-center gap-3 text-xs text-muted-foreground">
                               <span className="flex items-center gap-1">
                                 <Calendar className="h-3 w-3" />
-                                {format(parseLocalDateTime(bonus.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                                {formatCivilDate(bonus.credited_at || bonus.created_at)}
                               </span>
                               {bonus.expires_at && (
                                 <span className="flex items-center gap-1 text-amber-400">
                                   <Clock className="h-3 w-3" />
-                                  Expira: {format(parseLocalDateTime(bonus.expires_at), "dd/MM/yyyy", { locale: ptBR })}
+                                  Expira: {formatCivilDate(bonus.expires_at!)}
                                 </span>
                               )}
                             </div>
@@ -392,7 +397,7 @@ export function BonusHistoryDrawer({
                             <div className="flex items-center gap-3 text-xs text-muted-foreground">
                               <span className="flex items-center gap-1">
                                 <Calendar className="h-3 w-3" />
-                                {format(parseLocalDateTime(bonus.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                                {formatCivilDate(bonus.credited_at || bonus.created_at)}
                               </span>
                               {bonus.status === "finalized" && bonus.finalize_reason && (
                                 <span className="text-blue-400">
