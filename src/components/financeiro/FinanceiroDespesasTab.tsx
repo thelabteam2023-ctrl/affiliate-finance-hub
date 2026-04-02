@@ -164,19 +164,13 @@ export function FinanceiroDespesasTab({ despesasAdmin, totalDespesasAdmin, total
               );
             })}
             {despesasAdmin.length > 0 && (
-              <div className="pt-3 border-t flex items-center justify-between font-semibold">
-                <span>Subtotal Infraestrutura</span>
-                <span className="text-orange-500">{formatCurrency(totalDespesasAdmin)}</span>
-              </div>
+              <>
+                <div className="pt-3 border-t flex items-center justify-between font-bold text-lg">
+                  <span>Total Geral</span>
+                  <span className="text-orange-500">{formatCurrency(despesasAdmin.reduce((acc, d) => acc + d.valor, 0))}</span>
+                </div>
+              </>
             )}
-            <div className="pt-3 border-t flex items-center justify-between font-semibold">
-              <span>Operadores</span>
-              <span className="text-blue-500">{formatCurrency(totalPagamentosOperadores)}</span>
-            </div>
-            <div className="pt-3 border-t flex items-center justify-between font-bold text-lg">
-              <span>Total Geral</span>
-              <span className="text-orange-500">{formatCurrency(totalDespesasAdmin + totalPagamentosOperadores)}</span>
-            </div>
           </div>
         </CardContent>
       </Card>
