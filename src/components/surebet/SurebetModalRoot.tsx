@@ -1257,6 +1257,7 @@ export function SurebetModalRoot({
         const entry = pernasPreenchidas[legIdx];
         // Entrada principal
         allPernasFlat.push({
+          pernaId: entry.pernaId, // UUID do banco (undefined se nova)
           bookmaker_id: entry.bookmaker_id,
           odd: entry.odd,
           stake: entry.stake,
@@ -1272,6 +1273,7 @@ export function SurebetModalRoot({
           for (const sub of entry.additionalEntries) {
             if (sub.bookmaker_id && parseFloat(sub.odd) > 1 && parseFloat(sub.stake) > 0) {
               allPernasFlat.push({
+                pernaId: sub.pernaId, // UUID do banco (undefined se nova)
                 bookmaker_id: sub.bookmaker_id,
                 odd: sub.odd,
                 stake: sub.stake,
