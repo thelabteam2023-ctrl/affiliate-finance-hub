@@ -1,20 +1,26 @@
 # Memory: finance/virtual-transactions-transition-standard
-Updated: 2026-03-06
+Updated: 2026-04-02
 
 ## Transações Virtuais (SAQUE_VIRTUAL / DEPOSITO_VIRTUAL)
 
 O sistema utiliza os tipos 'SAQUE_VIRTUAL' e 'DEPOSITO_VIRTUAL' no ledger contábil para gerir a entrada e saída de capital durante o vínculo ou desvínculo de instâncias de bookmaker em projetos.
 
+### Regra Fundamental (v2 — 2026-04-02)
+
+**SAQUE_VIRTUAL e DEPOSITO_VIRTUAL NÃO geram financial_events e NÃO afetam saldo_atual.**
+
+São entradas puramente contábeis para rastrear P&L de projeto. O dinheiro continua fisicamente na bookmaker — o saldo real não muda quando se (des)vincula de projeto.
+
 ### Regras
 
 1. **Cálculo Efetivo**: `SAQUE_VIRTUAL = saldo_atual - saques_pendentes + depositos_pendentes`
 2. **Idempotência**: Proteção contra duplicidade (ignora transações virtuais idênticas em janelas de 10 segundos)
-3. **Sem Supressão**: DEPOSITO_VIRTUAL é SEMPRE criado quando saldo > 0, mesmo em re-vinculação ao mesmo projeto. Supressão foi REMOVIDA por causar desbalanceamento no ledger.
-4. **Validação de Retorno**: Ambas as funções agora verificam o retorno de `registrarSaqueVirtualViaLedger` e `registrarDepositoVirtualViaLedger`. Se o insert falhar, a operação é ABORTADA.
-5. **Ordem Atômica**: Em `executeUnlink`, o SAQUE_VIRTUAL é criado ANTES de desvincular a bookmaker. Se o ledger falhar, a desvinculação NÃO ocorre.
+3. **Sem Supressão**: DEPOSITO_VIRTUAL é SEMPRE criado quando saldo > 0, mesmo em re-vinculação ao mesmo projeto.
+4. **Sem Impacto no Saldo**: O trigger `fn_cash_ledger_generate_financial_events` marca transações virtuais como processadas sem gerar eventos. Isso garante que o saldo da bookmaker permanece inalterado após desvinculação.
+5. **Ordem Atômica**: Em `executeUnlink`, o SAQUE_VIRTUAL é criado ANTES de desvincular a bookmaker.
 
-### Gaps Corrigidos (2026-03-06)
+### Bug Corrigido (2026-04-02)
 
-- **Retorno não verificado**: `executeUnlink` e `executeLink` não verificavam o retorno das funções de ledger. Agora lançam exceção se o insert falhar.
-- **Ordem invertida**: `executeUnlink` desvinculava ANTES de criar o SAQUE_VIRTUAL. Se o insert falhasse, a bookmaker ficava desvinculada sem registro contábil → lucro fantasma. Agora a ordem é: ledger → unlink.
-- **Supressão em re-vínculo**: Removida. Causava SAQUE_VIRTUAL sem DEPOSITO_VIRTUAL correspondente, inflando lucro.
+- **Causa raiz**: O trigger tratava SAQUE_VIRTUAL/DEPOSITO_VIRTUAL igual a SAQUE/DEPOSITO reais, gerando financial_events que debitavam/creditavam saldo_atual
+- **Efeito**: Após desvinculação, saldo ia para 0. A view `v_bookmakers_desvinculados` filtrava por saldo > 0.01, tornando a casa invisível
+- **Correção**: (1) Trigger agora ignora transações virtuais; (2) 58 eventos indevidos revertidos via REVERSAL
