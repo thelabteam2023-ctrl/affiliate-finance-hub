@@ -307,8 +307,9 @@ export function ProjetoDeleteDialog({
           <Button
             variant="secondary"
             onClick={handleArchive}
-            disabled={loading || checkingBookmakers}
+            disabled={loading || checkingBookmakers || bookmakers.length > 0}
             className="gap-2"
+            title={bookmakers.length > 0 ? "Desvincule todas as bookmakers antes de arquivar" : undefined}
           >
             {loading && action === "archive" ? (
               <Loader2 className="h-4 w-4 animate-spin" />
