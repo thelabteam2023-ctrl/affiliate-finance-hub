@@ -375,7 +375,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
     const hasInvestorCapital = depositosInvestidor > 0 || saquesInvestidor > 0 || saldoCasasInvestidor > 0;
 
     return {
-      depositosTotal, depositosInvestidor, depositosInterno,
+      depositosTotal, depositosReais, depositosVirtuais, depositosInvestidor, depositosInterno,
       saquesRecebidos, saquesInvestidor, saquesInterno,
       saquesPendentes, saquesPendentesInvestidor, saquesPendentesInterno,
       saldoCasas, saldoCasasInvestidor, saldoCasasInterno,
