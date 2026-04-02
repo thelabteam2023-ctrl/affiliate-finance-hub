@@ -351,9 +351,96 @@ export function ContasDisponiveisModule() {
     }
   };
 
+  // Selection helpers
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filtered.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filtered.map(c => c.id)));
+    }
+  };
+
+  const selectedContas = useMemo(
+    () => filtered.filter(c => selectedIds.has(c.id)),
+    [filtered, selectedIds]
+  );
+
+  // Bulk vincular handler
+  const handleBulkVincular = async () => {
+    if (!bulkProjetoId || selectedContas.length === 0) return;
+    setBulkLoading(true);
+    let successCount = 0;
+    try {
+      const { executeLink } = await import("@/lib/projetoTransitionService");
+
+      for (const conta of selectedContas) {
+        try {
+          const { error: updateError } = await supabase
+            .from("bookmakers")
+            .update({ projeto_id: bulkProjetoId })
+            .eq("id", conta.id);
+          if (updateError) throw updateError;
+
+          await supabase
+            .from("projeto_bookmaker_historico")
+            .insert({
+              projeto_id: bulkProjetoId,
+              bookmaker_id: conta.id,
+              bookmaker_nome: conta.nome,
+              parceiro_id: conta.parceiro_id,
+              parceiro_nome: conta.parceiro_nome,
+              user_id: user!.id,
+              workspace_id: workspaceId!,
+            });
+
+          await executeLink({
+            bookmakerId: conta.id,
+            projetoId: bulkProjetoId,
+            workspaceId: workspaceId!,
+            userId: user!.id,
+            saldoAtual: conta.saldo_atual,
+            moeda: conta.moeda,
+          });
+
+          await supabase
+            .from("cash_ledger")
+            .update({ projeto_id_snapshot: bulkProjetoId })
+            .or(`origem_bookmaker_id.eq.${conta.id},destino_bookmaker_id.eq.${conta.id}`)
+            .is("projeto_id_snapshot", null);
+
+          successCount++;
+        } catch (err) {
+          console.error(`[BulkVincular] Erro em ${conta.nome}:`, err);
+        }
+      }
+
+      if (successCount > 0) {
+        toast.success(`${successCount} casa(s) vinculada(s) ao projeto com sucesso!`);
+        queryClient.invalidateQueries({ queryKey: ["contas-disponiveis"] });
+        queryClient.invalidateQueries({ queryKey: ["projeto-vinculos"] });
+        queryClient.invalidateQueries({ queryKey: ["bookmaker-saldos"] });
+        refetch();
+      }
+      if (successCount < selectedContas.length) {
+        toast.error(`${selectedContas.length - successCount} casa(s) falharam ao vincular`);
+      }
+      setBulkVincularOpen(false);
+      setSelectedIds(new Set());
+      setBulkProjetoId("");
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
   const getSaldoEfetivo = (c: ContaDisponivel) => {
-    // saldo_atual é a fonte de verdade para TODAS as moedas
-    // Clamp: saldos nunca devem ser exibidos como negativos
     return Math.max(0, c.saldo_atual);
   };
 
