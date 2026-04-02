@@ -176,7 +176,7 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
         let nearestExpiry: Date | null = null;
         activeBonuses.forEach(b => {
           if (b.expires_at) {
-            const expiryDate = parseISO(b.expires_at);
+            const expiryDate = parseCivilDate(b.expires_at);
             if (!nearestExpiry || expiryDate < nearestExpiry) {
               nearestExpiry = expiryDate;
             }
