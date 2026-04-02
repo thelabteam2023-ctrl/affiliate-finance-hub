@@ -430,10 +430,28 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
       {/* ─── Seção 1: Fluxo de Caixa ─── */}
       <div className="space-y-1 pb-3">
         <SectionHeader icon={ArrowRightLeft} label="Fluxo de Caixa" />
+        {metrics.depositosReais > 0 && (
+          <MetricRow 
+            label="Depósitos Reais" 
+            value={formatCurrency(metrics.depositosReais)}
+            indent
+            tooltip="Dinheiro efetivamente transferido para as casas neste projeto"
+          />
+        )}
+        {metrics.depositosVirtuais > 0 && (
+          <MetricRow 
+            label="Capital Inicial (vinculação)" 
+            value={formatCurrency(metrics.depositosVirtuais)}
+            indent
+            colorClass="text-muted-foreground"
+            tooltip="Saldo já existente nas casas no momento da vinculação ao projeto. Não representa dinheiro novo — é a baseline contábil."
+          />
+        )}
         <MetricRow 
-          label="Depósitos Confirmados" 
+          label="Total Depósitos" 
           value={formatCurrency(metrics.depositosTotal)}
-          tooltip={metrics.hasInvestorCapital ? `Interno: ${formatCurrency(metrics.depositosInterno)} · Investidor: ${formatCurrency(metrics.depositosInvestidor)}` : undefined}
+          bold
+          tooltip={metrics.hasInvestorCapital ? `Interno: ${formatCurrency(metrics.depositosInterno)} · Investidor: ${formatCurrency(metrics.depositosInvestidor)}` : "Soma de depósitos reais + capital inicial das casas vinculadas"}
         />
         {hasExtras && (
           <ExtrasCollapsible metrics={metrics} formatCurrency={formatCurrency} />
