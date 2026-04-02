@@ -154,9 +154,14 @@ export function useCentralAlertsCount() {
           canSeePartnerData
             ? supabase.from("indicacoes").select("parceiro_id, indicador_id")
             : Promise.resolve({ data: [], error: null }),
-          // Casas desvinculadas - financial_event
+          // Casas desvinculadas COM SALDO REAL - financial_event
+          // Nota: v_bookmakers_desvinculados inclui casas sem saldo que tiveram atividade recente,
+          // o que infla o badge. Para o count, contamos apenas casas com saldo significativo.
           canSeeFinancialData
-            ? supabase.from("v_bookmakers_desvinculados").select("id", { count: "exact", head: true })
+            ? supabase
+                .from("v_bookmakers_desvinculados")
+                .select("id", { count: "exact", head: true })
+                .gt("saldo_total", 0.01)
             : Promise.resolve({ count: 0, error: null }),
           // Propostas de pagamento pendentes - project_event
           canSeeProjectData
