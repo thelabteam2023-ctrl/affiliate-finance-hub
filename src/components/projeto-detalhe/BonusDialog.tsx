@@ -820,7 +820,7 @@ export function BonusDialog({
                       setCreditedAt(val);
                       // Auto-recalculate expiration from new credit date + deadline
                       if (val && deadlineDays) {
-                        const baseDate = new Date(val);
+                        const baseDate = parseCivilDate(val);
                         const expiration = addDays(baseDate, Number(deadlineDays));
                         setExpiresAt(format(expiration, "yyyy-MM-dd"));
                       }
