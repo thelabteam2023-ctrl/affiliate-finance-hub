@@ -281,12 +281,16 @@ export function ProjetoCiclosTab({ projetoId, formatCurrency: formatCurrencyProp
         }
       });
 
+      const lucroRealValue = metricaLucroCiclo === "realizado" 
+        ? metricas.lucroRealizado 
+        : metricas.lucroLiquido;
+
       metricsMap[ciclo.id] = {
         qtdApostas: metricas.qtdApostas,
         volume: metricas.volume,
         ticketMedio: metricas.ticketMedio,
         lucroBruto: metricas.lucroBruto,
-        lucroReal: 0, // Resolvido no render via getLucroReal()
+        lucroReal: lucroRealValue,
         lucroOperacional: metricas.lucroLiquido,
         lucroRealizado: metricas.lucroRealizado,
         roi: metricas.roi,
