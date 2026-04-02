@@ -156,8 +156,9 @@ export function BonusResultadoLiquidoChart({
   const chartData = useMemo(() => {
     // Agrupa bônus creditados por data (usando timezone operacional)
     const bonusByDate: Record<string, number> = {};
+    // CRÍTICO: Excluir FREEBET — o lucro SNR já está no P&L da aposta (evita dupla contagem)
     filteredBonuses
-      .filter(b => (b.status === "credited" || b.status === "finalized") && b.credited_at)
+      .filter(b => (b.status === "credited" || b.status === "finalized") && b.credited_at && b.tipo_bonus !== "FREEBET")
       .forEach(b => {
         // CORREÇÃO: credited_at é data civil (meia-noite UTC), usar extractCivilDateKey
         const date = extractCivilDateKey(b.credited_at!);
