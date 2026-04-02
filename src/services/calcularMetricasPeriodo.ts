@@ -106,7 +106,7 @@ export async function calcularMetricasPeriodo({
   // Converter cotações para formato JSONB da RPC
   const cotacoesJsonb: Record<string, number> = {};
   for (const [moeda, rate] of Object.entries(cotacoes)) {
-    cotacoesJsonb[moeda] = rate;
+    cotacoesJsonb[moeda] = Number(rate);
   }
 
   // ═══════════════════════════════════════════════════════════════════
