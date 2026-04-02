@@ -177,22 +177,19 @@ export function ProjetoDeleteDialog({
 
   const handleArchive = async () => {
     if (!projeto) return;
+
+    // REGRA: Não pode arquivar com bookmakers vinculadas
+    if (bookmakers.length > 0) {
+      toast.error(
+        `Não é possível arquivar: ${bookmakers.length} bookmaker(s) ainda vinculada(s). Desvincule todas antes de arquivar.`
+      );
+      return;
+    }
     
     setLoading(true);
     setAction("archive");
 
     try {
-      // 1. Desvincular bookmakers
-      if (bookmakers.length > 0) {
-        const success = await handleDesvincularBookmakers();
-        if (!success) {
-          setLoading(false);
-          setAction(null);
-          return;
-        }
-      }
-
-      // 2. Arquivar o projeto (mudar status)
       const { error } = await supabase
         .from("projetos")
         .update({ 
@@ -204,9 +201,6 @@ export function ProjetoDeleteDialog({
       if (error) throw error;
 
       toast.success(`Projeto "${projeto.nome}" arquivado com sucesso`);
-      if (bookmakers.length > 0) {
-        toast.info(`${bookmakers.length} bookmaker(s) desvinculada(s) e disponível(eis) para outros projetos`);
-      }
       
       onSuccess();
       onOpenChange(false);
@@ -291,6 +285,9 @@ export function ProjetoDeleteDialog({
                     Todas as bookmakers serão <strong>desvinculadas</strong> e ficarão disponíveis para uso em outros projetos.
                     Os saldos serão mantidos.
                   </p>
+                  <p className="text-xs text-amber-400 font-medium mt-1">
+                    ⚠️ Para arquivar, desvincule todas as bookmakers primeiro.
+                  </p>
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">
@@ -313,8 +310,9 @@ export function ProjetoDeleteDialog({
           <Button
             variant="secondary"
             onClick={handleArchive}
-            disabled={loading || checkingBookmakers}
+            disabled={loading || checkingBookmakers || bookmakers.length > 0}
             className="gap-2"
+            title={bookmakers.length > 0 ? "Desvincule todas as bookmakers antes de arquivar" : undefined}
           >
             {loading && action === "archive" ? (
               <Loader2 className="h-4 w-4 animate-spin" />

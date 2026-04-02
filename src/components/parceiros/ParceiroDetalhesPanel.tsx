@@ -117,7 +117,7 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
         .from("projetos")
         .select("id, nome")
         .eq("workspace_id", workspaceId)
-        .eq("status", "EM_ANDAMENTO")
+        .in("status", ["PLANEJADO", "EM_ANDAMENTO"])
         .order("nome");
       return data || [];
     },
