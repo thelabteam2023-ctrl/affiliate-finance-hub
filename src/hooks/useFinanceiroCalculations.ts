@@ -379,18 +379,23 @@ export function useFinanceiroCalculations({
     historicoMensal,
     totalParceirosAtivos,
     despesasAdmin: [
-      ...finData.despesasAdmin,
-      ...(finData.pagamentosOperador || []).map((p: any) => ({
-        id: `pagto-op-${p.id}`,
-        categoria: 'RECURSOS_HUMANOS',
-        grupo: 'RECURSOS_HUMANOS',
-        descricao: p.descricao,
-        valor: p.valor,
-        data_despesa: p.data_transacao,
-        recorrente: false,
-        status: p.status || 'CONFIRMADO',
-        _fromLedger: true,
-      })),
+      ...filtered.filteredDespesasAdmin,
+      ...filterByPeriod(
+        (finData.pagamentosOperador || []).map((p: any) => ({
+          id: `pagto-op-${p.id}`,
+          categoria: 'RECURSOS_HUMANOS',
+          grupo: 'RECURSOS_HUMANOS',
+          descricao: p.descricao,
+          valor: p.valor,
+          data_despesa: p.data_transacao || p.data_pagamento,
+          recorrente: false,
+          status: p.status || 'CONFIRMADO',
+          _fromLedger: true,
+        })),
+        'data_despesa'
+      ),
     ],
+    dataInicio,
+    dataFim,
   };
 }

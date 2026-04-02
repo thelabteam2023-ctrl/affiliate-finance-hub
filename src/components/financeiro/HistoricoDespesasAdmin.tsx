@@ -55,9 +55,11 @@ interface Operador {
 
 interface HistoricoDespesasAdminProps {
   formatCurrency: (value: number, currency?: string) => string;
+  dataInicio?: string | null;
+  dataFim?: string | null;
 }
 
-export function HistoricoDespesasAdmin({ formatCurrency }: HistoricoDespesasAdminProps) {
+export function HistoricoDespesasAdmin({ formatCurrency, dataInicio, dataFim }: HistoricoDespesasAdminProps) {
   const [transacoes, setTransacoes] = useState<TransacaoHistorico[]>([]);
   const [parceiros, setParceiros] = useState<Record<string, string>>({});
   const [operadores, setOperadores] = useState<Record<string, string>>({});
@@ -67,25 +69,31 @@ export function HistoricoDespesasAdmin({ formatCurrency }: HistoricoDespesasAdmi
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [dataInicio, dataFim]);
 
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [despesasRes, pagamentosOperadorRes, parceirosRes, operadoresRes, contasRes, walletsRes] = await Promise.all([
-        supabase
+      let despesasQuery = supabase
           .from("despesas_administrativas")
           .select("*")
           .eq("status", "CONFIRMADO")
-          .order("data_despesa", { ascending: false })
-          .limit(50),
-        supabase
+          .order("data_despesa", { ascending: false });
+      if (dataInicio) despesasQuery = despesasQuery.gte("data_despesa", dataInicio);
+      if (dataFim) despesasQuery = despesasQuery.lte("data_despesa", dataFim);
+
+      let pagamentosQuery = supabase
           .from("cash_ledger")
           .select("*")
           .eq("tipo_transacao", "PAGTO_OPERADOR")
           .eq("status", "CONFIRMADO")
-          .order("data_transacao", { ascending: false })
-          .limit(50),
+          .order("data_transacao", { ascending: false });
+      if (dataInicio) pagamentosQuery = pagamentosQuery.gte("data_transacao", dataInicio);
+      if (dataFim) pagamentosQuery = pagamentosQuery.lte("data_transacao", dataFim);
+
+      const [despesasRes, pagamentosOperadorRes, parceirosRes, operadoresRes, contasRes, walletsRes] = await Promise.all([
+        despesasQuery.limit(100),
+        pagamentosQuery.limit(100),
         supabase.from("parceiros").select("id, nome"),
         supabase.from("operadores").select("id, nome"),
         supabase.from("contas_bancarias").select("id, banco, titular, parceiro_id"),

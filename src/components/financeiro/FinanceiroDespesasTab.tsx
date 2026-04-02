@@ -35,9 +35,11 @@ interface Props {
   totalPagamentosOperadores: number;
   formatCurrency: (value: number, currency?: string) => string;
   onRefresh: () => void;
+  dataInicio?: string | null;
+  dataFim?: string | null;
 }
 
-export function FinanceiroDespesasTab({ despesasAdmin, totalDespesasAdmin, totalPagamentosOperadores, formatCurrency, onRefresh }: Props) {
+export function FinanceiroDespesasTab({ despesasAdmin, totalDespesasAdmin, totalPagamentosOperadores, formatCurrency, onRefresh, dataInicio, dataFim }: Props) {
   const { toast } = useToast();
   const [despesaAdminDialogOpen, setDespesaAdminDialogOpen] = useState(false);
   const [editingDespesa, setEditingDespesa] = useState<DespesaAdministrativa | null>(null);
@@ -175,7 +177,7 @@ export function FinanceiroDespesasTab({ despesasAdmin, totalDespesasAdmin, total
         </CardContent>
       </Card>
 
-      <HistoricoDespesasAdmin formatCurrency={formatCurrency} />
+      <HistoricoDespesasAdmin formatCurrency={formatCurrency} dataInicio={dataInicio} dataFim={dataFim} />
 
       <DespesaAdministrativaDialog
         open={despesaAdminDialogOpen}
