@@ -18,7 +18,6 @@ import {
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { extractLocalDateKey } from "@/utils/dateUtils";
-import { parseLocalDateTime } from "@/utils/dateUtils";
 
 interface ApostaData {
   data_aposta: string;
