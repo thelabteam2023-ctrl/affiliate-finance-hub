@@ -301,8 +301,9 @@ export function BonusResultadoLiquidoChart({
       ? bonuses.filter(b => b.bookmaker_id === selectedBookmaker)
       : bonuses;
 
+    // CRÍTICO: Excluir FREEBET do calendário (consistência com KPIs)
     filteredForCalendar
-      .filter(b => (b.status === "credited" || b.status === "finalized") && b.credited_at)
+      .filter(b => (b.status === "credited" || b.status === "finalized") && b.credited_at && b.tipo_bonus !== "FREEBET")
       .forEach(b => {
         const date = extractCivilDateKey(b.credited_at!);
         const rawAmount = b.bonus_amount || 0;
