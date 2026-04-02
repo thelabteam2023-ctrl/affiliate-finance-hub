@@ -256,6 +256,8 @@ export default function Financeiro() {
             totalPagamentosOperadores={calc.costs.totalPagamentosOperadores}
             formatCurrency={calc.formatCurrency}
             onRefresh={() => refetchFinanceiro()}
+            dataInicio={calc.dataInicio}
+            dataFim={calc.dataFim}
           />
         </TabsContent>
 
