@@ -594,7 +594,13 @@ export function ContasDisponiveisModule() {
                   return (
                     <ContextMenu key={conta.id}>
                       <ContextMenuTrigger asChild>
-                        <tr className="border-b border-border/50 hover:bg-muted/30 transition-colors cursor-context-menu">
+                        <tr className={`border-b border-border/50 hover:bg-muted/30 transition-colors cursor-context-menu ${selectedIds.has(conta.id) ? 'bg-primary/5' : ''}`}>
+                          <td className="p-3 w-10" onClick={(e) => e.stopPropagation()}>
+                            <Checkbox
+                              checked={selectedIds.has(conta.id)}
+                              onCheckedChange={() => toggleSelect(conta.id)}
+                            />
+                          </td>
                           <td className="p-3">
                             <div className="flex items-center gap-2">
                               {conta.logo_url ? (
