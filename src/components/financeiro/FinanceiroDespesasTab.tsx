@@ -177,7 +177,7 @@ export function FinanceiroDespesasTab({ despesasAdmin, totalDespesasAdmin, total
         </CardContent>
       </Card>
 
-      <HistoricoDespesasAdmin formatCurrency={formatCurrency} />
+      <HistoricoDespesasAdmin formatCurrency={formatCurrency} dataInicio={dataInicio} dataFim={dataFim} />
 
       <DespesaAdministrativaDialog
         open={despesaAdminDialogOpen}
