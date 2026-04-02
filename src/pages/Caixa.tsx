@@ -824,13 +824,16 @@ export default function Caixa() {
       return { primary: transacao.descricao?.split(" - ")[0] || "Indicador" };
     }
     
-    if (transacao.destino_tipo === "OPERADOR") {
-      // Usar operador_id diretamente para rastreabilidade
-      if (transacao.operador_id && operadoresMap[transacao.operador_id]) {
-        return { primary: operadoresMap[transacao.operador_id] };
-      }
-      // Fallback para descrição (registros antigos)
-      return { primary: transacao.descricao?.split(" - ")[0] || "Operador" };
+    if (transacao.destino_tipo === "OPERADOR" || transacao.tipo_transacao === "PAGTO_OPERADOR") {
+      const grupoRH = getGrupoInfo("Recursos Humanos");
+      const operadorNome = (transacao.operador_id && operadoresMap[transacao.operador_id]) 
+        || transacao.descricao?.split(" - ")[0] || "Operador";
+      return { 
+        primary: operadorNome,
+        badgeLabel: grupoRH.label,
+        badgeColor: grupoRH.color,
+        BadgeIcon: grupoRH.icon,
+      };
     }
     
     // Fallback: tentar extrair nome da descrição para transações com descrição formatada
