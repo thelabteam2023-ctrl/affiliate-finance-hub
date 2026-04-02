@@ -999,7 +999,7 @@ export function BonusDialog({
                   status: "pending",
                   tipo_bonus: tipoBonus,
                   credited_at: null,
-                  expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
+                  expires_at: expiresAt ? parseCivilDate(expiresAt).toISOString() : null,
                   notes: null,
                   source: filledFromTemplate ? "template" : "manual",
                   template_snapshot: templateSnapshot,
