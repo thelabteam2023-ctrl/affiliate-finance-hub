@@ -1005,6 +1005,7 @@ export function VisaoGeralCharts({
                       compact
                       formatCurrency={formatCurrency}
                       initialMonth={calendarInitialMonth}
+                      periodRange={calendarPeriodRange}
                     />
                   </PopoverContent>
                 </Popover>
