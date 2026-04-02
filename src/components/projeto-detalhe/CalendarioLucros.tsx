@@ -162,6 +162,7 @@ export function CalendarioLucros({
   formatCurrency: formatCurrencyProp,
   onMonthTotalChange,
   initialMonth,
+  periodRange,
 }: CalendarioLucrosProps) {
   const [currentMonth, setCurrentMonth] = useState(initialMonth ?? new Date());
 
