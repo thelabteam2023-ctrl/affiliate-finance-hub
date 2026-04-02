@@ -50,12 +50,16 @@ export function BookmakerSelectOption({
     parceiro_nome, 
     moeda, 
     saldo_operavel, 
+    saldo_disponivel,
     saldo_freebet = 0, 
     saldo_bonus = 0, 
     logo_url, 
     bonus_rollover_started = false,
     instance_identifier,
   } = bookmaker;
+  
+  // Exibir saldo_disponivel (real disponível para apostar) em vez de saldo_operavel (que inclui saldo em aposta)
+  const saldoDisponivel = saldo_disponivel != null ? saldo_disponivel : saldo_operavel;
   
   const parceiroShortName = getFirstLastName(parceiro_nome || "");
   const hasBonus = saldo_bonus > 0;
