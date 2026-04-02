@@ -274,7 +274,7 @@ export function BonusHistoryDrawer({
                               {bonus.expires_at && (
                                 <span className="flex items-center gap-1 text-amber-400">
                                   <Clock className="h-3 w-3" />
-                                  Expira: {format(parseLocalDateTime(bonus.expires_at), "dd/MM/yyyy", { locale: ptBR })}
+                                  Expira: {formatCivilDate(bonus.expires_at!)}
                                 </span>
                               )}
                             </div>
