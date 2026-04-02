@@ -40,6 +40,8 @@ interface CalendarioLucrosProps {
   formatCurrency?: (value: number) => string;
   onMonthTotalChange?: (total: number) => void;
   initialMonth?: Date;
+  /** Quando fornecido, as estatísticas agregam TODO o período (ex: ciclo multi-mês) */
+  periodRange?: { start: Date; end: Date; label?: string };
 }
 
 const defaultFormatCurrencyFull = (value: number): string => {
@@ -160,6 +162,7 @@ export function CalendarioLucros({
   formatCurrency: formatCurrencyProp,
   onMonthTotalChange,
   initialMonth,
+  periodRange,
 }: CalendarioLucrosProps) {
   const [currentMonth, setCurrentMonth] = useState(initialMonth ?? new Date());
 
@@ -222,7 +225,11 @@ export function CalendarioLucros({
     return max;
   }, [lucroPorDia, currentMonth]);
 
-  // Estatísticas do mês
+  // Determinar se estamos em modo período completo (ciclo multi-mês)
+  const isFullPeriodMode = !!periodRange;
+  const periodPrefix = isFullPeriodMode ? null : format(currentMonth, "yyyy-MM");
+
+  // Estatísticas — agrega mês atual OU período completo
   const estatisticasMes = useMemo(() => {
     let lucroTotal = 0;
     let totalApostas = 0;
@@ -232,14 +239,17 @@ export function CalendarioLucros({
     let streakAtual = 0;
     let melhorStreak = 0;
     
-    const mesAno = format(currentMonth, "yyyy-MM");
+    const matchesPeriod = (dataKey: string) => {
+      if (!isFullPeriodMode) return dataKey.startsWith(periodPrefix!);
+      // Em modo período completo, aceitar todas as datas que existam nos dados
+      return true;
+    };
+
     const diasOrdenados: { key: string; lucro: number }[] = [];
     
     apostas.forEach((aposta) => {
-      // Usar extractLocalDateKey para evitar bug de timezone onde
-      // datas como "2026-04-01" (UTC midnight) são parseadas como 31/03 em São Paulo
       const dataKey = extractLocalDateKey(aposta.data_aposta);
-      if (dataKey.startsWith(mesAno)) {
+      if (matchesPeriod(dataKey)) {
         const isLiquidada = aposta.resultado 
           ? aposta.resultado !== "PENDENTE" 
           : aposta.lucro_prejuizo !== null && aposta.lucro_prejuizo !== undefined;
@@ -251,14 +261,14 @@ export function CalendarioLucros({
     });
 
     extrasLucro.forEach((extra) => {
-      if (extra.data && extra.data.startsWith(mesAno)) {
+      if (extra.data && matchesPeriod(extra.data)) {
         lucroTotal += extra.valor;
       }
     });
 
     // Contar dias por tipo
     lucroPorDia.forEach((dados, key) => {
-      if (key.startsWith(mesAno) && dados.count > 0) {
+      if (matchesPeriod(key) && dados.count > 0) {
         diasOrdenados.push({ key, lucro: dados.lucro });
         if (dados.lucro > 0) diasPositivos++;
         else if (dados.lucro < 0) diasNegativos++;
@@ -278,7 +288,7 @@ export function CalendarioLucros({
     });
     
     return { lucroTotal, totalApostas, diasPositivos, diasNegativos, diasNeutros, melhorStreak };
-  }, [apostas, extrasLucro, currentMonth, lucroPorDia]);
+  }, [apostas, extrasLucro, currentMonth, lucroPorDia, isFullPeriodMode, periodPrefix]);
 
   useEffect(() => {
     onMonthTotalChange?.(estatisticasMes.lucroTotal);
@@ -397,38 +407,51 @@ export function CalendarioLucros({
     </div>
   );
 
+  const statsLabel = isFullPeriodMode 
+    ? (periodRange?.label || "Período") 
+    : format(currentMonth, "MMMM", { locale: ptBR });
+
   const renderStats = () => (
-    <div className="mt-4 grid grid-cols-4 gap-2.5">
-      <div className="rounded-xl border border-border/40 bg-card-elevated px-3 py-2.5 text-center shadow-soft">
-        <div className={cn(
-          "text-base font-bold tabular-nums",
-          estatisticasMes.lucroTotal > 0 ? "text-success" : 
-          estatisticasMes.lucroTotal < 0 ? "text-destructive" : "text-muted-foreground"
-        )}>
-          {formatFullCurrency(estatisticasMes.lucroTotal)}
+    <div className="mt-4">
+      {isFullPeriodMode && (
+        <div className="mb-2 text-center">
+          <span className="text-[10px] font-medium text-primary/80 bg-primary/10 px-2 py-0.5 rounded-full">
+            Totais do {statsLabel}
+          </span>
         </div>
-        <div className="mt-0.5 text-[10px] text-muted-foreground/70">Lucro</div>
-      </div>
-      <div className="rounded-xl border border-border/40 bg-card-elevated px-3 py-2.5 text-center shadow-soft">
-        <div className="text-base font-bold tabular-nums text-foreground">
-          {estatisticasMes.totalApostas}
+      )}
+      <div className="grid grid-cols-4 gap-2.5">
+        <div className="rounded-xl border border-border/40 bg-card-elevated px-3 py-2.5 text-center shadow-soft">
+          <div className={cn(
+            "text-base font-bold tabular-nums",
+            estatisticasMes.lucroTotal > 0 ? "text-success" : 
+            estatisticasMes.lucroTotal < 0 ? "text-destructive" : "text-muted-foreground"
+          )}>
+            {formatFullCurrency(estatisticasMes.lucroTotal)}
+          </div>
+          <div className="mt-0.5 text-[10px] text-muted-foreground/70">Lucro</div>
         </div>
-        <div className="mt-0.5 text-[10px] text-muted-foreground/70">Operações</div>
-      </div>
-      <div className="rounded-xl border border-border/40 bg-card-elevated px-3 py-2.5 text-center shadow-soft">
-        <div className="flex items-center justify-center gap-1">
-          <span className="text-base font-bold tabular-nums text-success">{estatisticasMes.diasPositivos}</span>
-          <span className="text-muted-foreground/40">/</span>
-          <span className="text-base font-bold tabular-nums text-destructive">{estatisticasMes.diasNegativos}</span>
+        <div className="rounded-xl border border-border/40 bg-card-elevated px-3 py-2.5 text-center shadow-soft">
+          <div className="text-base font-bold tabular-nums text-foreground">
+            {estatisticasMes.totalApostas}
+          </div>
+          <div className="mt-0.5 text-[10px] text-muted-foreground/70">Operações</div>
         </div>
-        <div className="mt-0.5 text-[10px] text-muted-foreground/70">Green / Red</div>
-      </div>
-      <div className="rounded-xl border border-border/40 bg-card-elevated px-3 py-2.5 text-center shadow-soft">
-        <div className="flex items-center justify-center gap-1">
-          <Flame className="h-3.5 w-3.5 text-warning" />
-          <span className="text-base font-bold tabular-nums text-foreground">{estatisticasMes.melhorStreak}</span>
+        <div className="rounded-xl border border-border/40 bg-card-elevated px-3 py-2.5 text-center shadow-soft">
+          <div className="flex items-center justify-center gap-1">
+            <span className="text-base font-bold tabular-nums text-success">{estatisticasMes.diasPositivos}</span>
+            <span className="text-muted-foreground/40">/</span>
+            <span className="text-base font-bold tabular-nums text-destructive">{estatisticasMes.diasNegativos}</span>
+          </div>
+          <div className="mt-0.5 text-[10px] text-muted-foreground/70">Green / Red</div>
         </div>
-        <div className="mt-0.5 text-[10px] text-muted-foreground/70">Streak</div>
+        <div className="rounded-xl border border-border/40 bg-card-elevated px-3 py-2.5 text-center shadow-soft">
+          <div className="flex items-center justify-center gap-1">
+            <Flame className="h-3.5 w-3.5 text-warning" />
+            <span className="text-base font-bold tabular-nums text-foreground">{estatisticasMes.melhorStreak}</span>
+          </div>
+          <div className="mt-0.5 text-[10px] text-muted-foreground/70">Streak</div>
+        </div>
       </div>
     </div>
   );
