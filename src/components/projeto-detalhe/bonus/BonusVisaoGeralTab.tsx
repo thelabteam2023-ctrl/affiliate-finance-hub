@@ -857,12 +857,16 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
                 <div className="space-y-1">
                   {expiring7Days
                     .sort((a, b) => {
-                      const dA = a.expires_at ? differenceInDays(parseISO(a.expires_at), new Date()) : 999;
-                      const dB = b.expires_at ? differenceInDays(parseISO(b.expires_at), new Date()) : 999;
+                      const parseCivil = (s: string) => { const [y,m,d] = s.slice(0,10).split('-').map(Number); return new Date(y,m-1,d); };
+                      const t = new Date(); t.setHours(0,0,0,0);
+                      const dA = a.expires_at ? differenceInDays(parseCivil(a.expires_at), t) : 999;
+                      const dB = b.expires_at ? differenceInDays(parseCivil(b.expires_at), t) : 999;
                       return dA - dB;
                     })
                     .map(bonus => {
-                      const daysLeft = bonus.expires_at ? differenceInDays(parseISO(bonus.expires_at), new Date()) : 0;
+                      const parseCivil = (s: string) => { const [y,m,d] = s.slice(0,10).split('-').map(Number); return new Date(y,m-1,d); };
+                      const t = new Date(); t.setHours(0,0,0,0);
+                      const daysLeft = bonus.expires_at ? differenceInDays(parseCivil(bonus.expires_at), t) : 0;
                       // Show only first and last name
                       const shortName = bonus.parceiro_nome ? (() => {
                         const parts = bonus.parceiro_nome.trim().split(/\s+/);
