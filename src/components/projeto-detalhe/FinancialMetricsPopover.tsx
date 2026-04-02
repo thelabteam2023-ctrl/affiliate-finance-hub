@@ -60,7 +60,7 @@ async function fetchFinancialMetricsRaw(projetoId: string, dateRange?: { from: s
   const investorBookmakerIds = (bookmakers || []).filter(b => !!b.investidor_id).map(b => b.id);
 
   const depositoQ = applyDateFilter(
-    supabase.from("cash_ledger").select("valor, moeda, destino_bookmaker_id")
+    supabase.from("cash_ledger").select("valor, moeda, destino_bookmaker_id, tipo_transacao")
       .in("tipo_transacao", ["DEPOSITO", "DEPOSITO_VIRTUAL"])
       .eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId),
     dateRange
@@ -130,7 +130,7 @@ async function fetchFinancialMetricsRaw(projetoId: string, dateRange?: { from: s
   return {
     bookmakerSaldos,
     investorBookmakerIds,
-    depositos: (depositos.data || []) as (LedgerEntry & { destino_bookmaker_id?: string | null })[],
+    depositos: (depositos.data || []) as (LedgerEntry & { destino_bookmaker_id?: string | null; tipo_transacao?: string })[],
     saques: (saques.data || []) as (LedgerEntry & { origem_bookmaker_id?: string | null })[],
     saquesPendentes: (saquesPend.data || []) as (LedgerEntry & { origem_bookmaker_id?: string | null })[],
     reconciliation: {
@@ -289,6 +289,12 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
     const depositosTotal = rawMetrics.depositos.reduce(
       (acc, d) => acc + convertToConsolidationOficial(d.valor, d.moeda), 0
     );
+    const depositosReais = rawMetrics.depositos
+      .filter(d => d.tipo_transacao === 'DEPOSITO')
+      .reduce((acc, d) => acc + convertToConsolidationOficial(d.valor, d.moeda), 0);
+    const depositosVirtuais = rawMetrics.depositos
+      .filter(d => d.tipo_transacao === 'DEPOSITO_VIRTUAL')
+      .reduce((acc, d) => acc + convertToConsolidationOficial(d.valor, d.moeda), 0);
     const depositosInvestidor = rawMetrics.depositos
       .filter(d => d.destino_bookmaker_id && rawMetrics.investorBookmakerIds.includes(d.destino_bookmaker_id))
       .reduce((acc, d) => acc + convertToConsolidationOficial(d.valor, d.moeda), 0);
@@ -369,7 +375,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
     const hasInvestorCapital = depositosInvestidor > 0 || saquesInvestidor > 0 || saldoCasasInvestidor > 0;
 
     return {
-      depositosTotal, depositosInvestidor, depositosInterno,
+      depositosTotal, depositosReais, depositosVirtuais, depositosInvestidor, depositosInterno,
       saquesRecebidos, saquesInvestidor, saquesInterno,
       saquesPendentes, saquesPendentesInvestidor, saquesPendentesInterno,
       saldoCasas, saldoCasasInvestidor, saldoCasasInterno,
@@ -424,10 +430,28 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
       {/* ─── Seção 1: Fluxo de Caixa ─── */}
       <div className="space-y-1 pb-3">
         <SectionHeader icon={ArrowRightLeft} label="Fluxo de Caixa" />
+        {metrics.depositosReais > 0 && (
+          <MetricRow 
+            label="Depósitos Reais" 
+            value={formatCurrency(metrics.depositosReais)}
+            indent
+            tooltip="Dinheiro efetivamente transferido para as casas neste projeto"
+          />
+        )}
+        {metrics.depositosVirtuais > 0 && (
+          <MetricRow 
+            label="Capital Inicial (vinculação)" 
+            value={formatCurrency(metrics.depositosVirtuais)}
+            indent
+            colorClass="text-muted-foreground"
+            tooltip="Saldo já existente nas casas no momento da vinculação ao projeto. Não representa dinheiro novo — é a baseline contábil."
+          />
+        )}
         <MetricRow 
-          label="Depósitos Confirmados" 
+          label="Total Depósitos" 
           value={formatCurrency(metrics.depositosTotal)}
-          tooltip={metrics.hasInvestorCapital ? `Interno: ${formatCurrency(metrics.depositosInterno)} · Investidor: ${formatCurrency(metrics.depositosInvestidor)}` : undefined}
+          bold
+          tooltip={metrics.hasInvestorCapital ? `Interno: ${formatCurrency(metrics.depositosInterno)} · Investidor: ${formatCurrency(metrics.depositosInvestidor)}` : "Soma de depósitos reais + capital inicial das casas vinculadas"}
         />
         {hasExtras && (
           <ExtrasCollapsible metrics={metrics} formatCurrency={formatCurrency} />
