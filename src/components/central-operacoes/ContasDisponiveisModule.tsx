@@ -98,7 +98,13 @@ export function ContasDisponiveisModule() {
   const [parceiroFilter, setParceiroFilter] = useState("todos");
   const [showHistory, setShowHistory] = useState<string | null>(null);
 
-  // Vincular dialog
+  // Seleção em massa
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkVincularOpen, setBulkVincularOpen] = useState(false);
+  const [bulkProjetoId, setBulkProjetoId] = useState("");
+  const [bulkLoading, setBulkLoading] = useState(false);
+
+  // Vincular dialog (individual)
   const [vincularDialogOpen, setVincularDialogOpen] = useState(false);
   const [selectedConta, setSelectedConta] = useState<ContaDisponivel | null>(null);
   const [selectedProjetoId, setSelectedProjetoId] = useState("");
