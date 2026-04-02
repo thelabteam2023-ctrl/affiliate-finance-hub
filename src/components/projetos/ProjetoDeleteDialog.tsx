@@ -177,22 +177,19 @@ export function ProjetoDeleteDialog({
 
   const handleArchive = async () => {
     if (!projeto) return;
+
+    // REGRA: Não pode arquivar com bookmakers vinculadas
+    if (bookmakers.length > 0) {
+      toast.error(
+        `Não é possível arquivar: ${bookmakers.length} bookmaker(s) ainda vinculada(s). Desvincule todas antes de arquivar.`
+      );
+      return;
+    }
     
     setLoading(true);
     setAction("archive");
 
     try {
-      // 1. Desvincular bookmakers
-      if (bookmakers.length > 0) {
-        const success = await handleDesvincularBookmakers();
-        if (!success) {
-          setLoading(false);
-          setAction(null);
-          return;
-        }
-      }
-
-      // 2. Arquivar o projeto (mudar status)
       const { error } = await supabase
         .from("projetos")
         .update({ 
@@ -204,9 +201,6 @@ export function ProjetoDeleteDialog({
       if (error) throw error;
 
       toast.success(`Projeto "${projeto.nome}" arquivado com sucesso`);
-      if (bookmakers.length > 0) {
-        toast.info(`${bookmakers.length} bookmaker(s) desvinculada(s) e disponível(eis) para outros projetos`);
-      }
       
       onSuccess();
       onOpenChange(false);
