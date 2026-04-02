@@ -55,9 +55,11 @@ interface Operador {
 
 interface HistoricoDespesasAdminProps {
   formatCurrency: (value: number, currency?: string) => string;
+  dataInicio?: string | null;
+  dataFim?: string | null;
 }
 
-export function HistoricoDespesasAdmin({ formatCurrency }: HistoricoDespesasAdminProps) {
+export function HistoricoDespesasAdmin({ formatCurrency, dataInicio, dataFim }: HistoricoDespesasAdminProps) {
   const [transacoes, setTransacoes] = useState<TransacaoHistorico[]>([]);
   const [parceiros, setParceiros] = useState<Record<string, string>>({});
   const [operadores, setOperadores] = useState<Record<string, string>>({});
@@ -67,7 +69,7 @@ export function HistoricoDespesasAdmin({ formatCurrency }: HistoricoDespesasAdmi
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [dataInicio, dataFim]);
 
   const fetchData = async () => {
     try {
