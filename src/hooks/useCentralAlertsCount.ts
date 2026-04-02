@@ -318,21 +318,6 @@ export function useCentralAlertsCount() {
           totalCount += conciliacaoPendenteResult.data.length;
         }
 
-        console.log('[CentralAlertsCount] Breakdown:', {
-          totalCount,
-          painelOp: alertasResult.count || 0,
-          entregas: entregasResult.data?.length || 0,
-          saques: saquesPendentesResult.count || 0,
-          alertasLucro: alertasLucroResult.count || 0,
-          pagOp: pagamentosOperadorResult.data?.length || 0,
-          participacoes: participacoesResult.count || 0,
-          parcerias: parceriasResult.data?.length || 0,
-          casasDesv: casasDesvinculadasResult.count || 0,
-          propostas: propostasPagamentoResult.count || 0,
-          conciliacao: conciliacaoPendenteResult.data?.length || 0,
-          parceirosTotal: todosParceirosResult.data?.length || 0,
-          todasParcerias: todasParceriasResult.data?.length || 0,
-        });
         setFinancialCount(totalCount);
       } catch (error) {
         console.error("Error fetching central alerts count:", error);
