@@ -258,7 +258,10 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
 
   const getExpiryBadge = (expiryDate: Date | null) => {
     if (!expiryDate) return null;
-    const daysUntil = differenceInDays(expiryDate, new Date());
+    // Compare against start of today to avoid partial-day miscounts
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const daysUntil = differenceInDays(expiryDate, today);
     
     if (daysUntil < 0) {
       return <Badge className="bg-red-500/20 text-red-400 border-red-500/30">Expirado</Badge>;
