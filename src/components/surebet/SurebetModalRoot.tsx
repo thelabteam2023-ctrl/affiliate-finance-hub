@@ -1215,6 +1215,8 @@ export function SurebetModalRoot({
    * - Para EDIÇÃO: mantém fluxo de update direto (sem impacto financeiro novo)
    */
   const handleSave = async () => {
+    // GUARD: Impede múltiplos saves simultâneos (double-click, Enter key, etc.)
+    if (saving) return;
     if (!estrategia) { toast.error("Selecione uma estratégia"); return; }
     if (!contexto) { toast.error("Selecione um contexto"); return; }
     if (!evento.trim()) { toast.error("Informe o evento"); return; }
