@@ -116,20 +116,24 @@ export function FinanceiroDespesasTab({ despesasAdmin, totalDespesasAdmin, total
                               <Badge variant={despesa.status === "CONFIRMADO" ? "default" : "secondary"} className="text-xs">{despesa.status}</Badge>
                             </td>
                             <td className="py-3 px-4 w-[80px]">
-                              <div className="flex items-center justify-center gap-2">
-                                <button onClick={() => { setEditingDespesa(despesa); setDespesaAdminDialogOpen(true); }} className="text-muted-foreground hover:text-foreground transition-colors" title="Editar">
-                                  <Edit className="h-4 w-4" />
-                                </button>
-                                <button onClick={async () => {
-                                  if (confirm("Tem certeza que deseja excluir esta despesa?")) {
-                                    const { error } = await supabase.from("despesas_administrativas").delete().eq("id", despesa.id);
-                                    if (error) { toast({ title: "Erro ao excluir", description: error.message, variant: "destructive" }); }
-                                    else { toast({ title: "Despesa excluída" }); onRefresh(); }
-                                  }
-                                }} className="text-muted-foreground hover:text-destructive transition-colors" title="Excluir">
-                                  <Trash2 className="h-4 w-4" />
-                                </button>
-                              </div>
+                              {despesa._fromLedger ? (
+                                <span className="text-xs text-muted-foreground">via operador</span>
+                              ) : (
+                                <div className="flex items-center justify-center gap-2">
+                                  <button onClick={() => { setEditingDespesa(despesa); setDespesaAdminDialogOpen(true); }} className="text-muted-foreground hover:text-foreground transition-colors" title="Editar">
+                                    <Edit className="h-4 w-4" />
+                                  </button>
+                                  <button onClick={async () => {
+                                    if (confirm("Tem certeza que deseja excluir esta despesa?")) {
+                                      const { error } = await supabase.from("despesas_administrativas").delete().eq("id", despesa.id);
+                                      if (error) { toast({ title: "Erro ao excluir", description: error.message, variant: "destructive" }); }
+                                      else { toast({ title: "Despesa excluída" }); onRefresh(); }
+                                    }
+                                  }} className="text-muted-foreground hover:text-destructive transition-colors" title="Excluir">
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              )}
                             </td>
                           </tr>
                         );
