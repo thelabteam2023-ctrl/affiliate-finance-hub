@@ -289,6 +289,12 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
     const depositosTotal = rawMetrics.depositos.reduce(
       (acc, d) => acc + convertToConsolidationOficial(d.valor, d.moeda), 0
     );
+    const depositosReais = rawMetrics.depositos
+      .filter(d => d.tipo_transacao === 'DEPOSITO')
+      .reduce((acc, d) => acc + convertToConsolidationOficial(d.valor, d.moeda), 0);
+    const depositosVirtuais = rawMetrics.depositos
+      .filter(d => d.tipo_transacao === 'DEPOSITO_VIRTUAL')
+      .reduce((acc, d) => acc + convertToConsolidationOficial(d.valor, d.moeda), 0);
     const depositosInvestidor = rawMetrics.depositos
       .filter(d => d.destino_bookmaker_id && rawMetrics.investorBookmakerIds.includes(d.destino_bookmaker_id))
       .reduce((acc, d) => acc + convertToConsolidationOficial(d.valor, d.moeda), 0);
