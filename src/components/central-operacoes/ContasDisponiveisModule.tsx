@@ -828,6 +828,51 @@ export function ContasDisponiveisModule() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Dialog: Vincular em Massa */}
+      <Dialog open={bulkVincularOpen} onOpenChange={setBulkVincularOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Vincular em Massa</DialogTitle>
+            <DialogDescription>
+              Vincular <strong>{selectedContas.length} casa(s)</strong> a um projeto ativo.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="p-3 rounded-lg bg-muted/50 space-y-1 max-h-[200px] overflow-y-auto">
+              {selectedContas.map(c => (
+                <div key={c.id} className="flex items-center justify-between text-sm">
+                  <span className="font-medium">{c.nome}</span>
+                  <span className="text-muted-foreground font-mono text-xs">
+                    {formatCurrency(getSaldoEfetivo(c), c.moeda)}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <Select value={bulkProjetoId} onValueChange={setBulkProjetoId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecionar projeto..." />
+              </SelectTrigger>
+              <SelectContent>
+                {(projetos || []).map((p) => (
+                  <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkVincularOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleBulkVincular}
+              disabled={!bulkProjetoId || bulkLoading}
+            >
+              {bulkLoading ? `Vinculando ${selectedContas.length}...` : `Vincular ${selectedContas.length} casas`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
