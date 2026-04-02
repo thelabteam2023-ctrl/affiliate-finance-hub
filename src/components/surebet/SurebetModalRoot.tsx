@@ -643,6 +643,7 @@ export function SurebetModalRoot({
           gerouFreebet: mainPerna.gerou_freebet || false,
           valorFreebetGerada: mainPerna.valor_freebet_gerada?.toString() || "",
           fonteSaldo: (mainPerna.fonte_saldo as 'REAL' | 'FREEBET') || 'REAL',
+          pernaId: mainPerna.id, // UUID da perna no banco
           additionalEntries: additionalPernas.map((sub: any) => ({
             bookmaker_id: sub.bookmaker_id || "",
             moeda: (sub.moeda || "BRL") as SupportedCurrency,
@@ -650,6 +651,7 @@ export function SurebetModalRoot({
             stake: sub.stake?.toString() || "",
             selecaoLivre: sub.selecao_livre || "",
             fonteSaldo: (sub.fonte_saldo as 'REAL' | 'FREEBET') || 'REAL',
+            pernaId: sub.id, // UUID da sub-entrada no banco
           })),
         };
       });
