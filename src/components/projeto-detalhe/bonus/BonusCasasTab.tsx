@@ -43,6 +43,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { differenceInDays, parseISO, format } from "date-fns";
+
+const parseCivilDate = (dateStr: string): Date => {
+  const [y, m, d] = dateStr.slice(0, 10).split('-').map(Number);
+  return new Date(y, m - 1, d);
+};
 import { ptBR } from "date-fns/locale";
 import {
   Tooltip,
