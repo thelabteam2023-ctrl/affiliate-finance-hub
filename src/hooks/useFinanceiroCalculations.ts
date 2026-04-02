@@ -378,6 +378,19 @@ export function useFinanceiroCalculations({
     diasMedioAquisicao,
     historicoMensal,
     totalParceirosAtivos,
-    despesasAdmin: finData.despesasAdmin,
+    despesasAdmin: [
+      ...finData.despesasAdmin,
+      ...(finData.pagamentosOperador || []).map((p: any) => ({
+        id: `pagto-op-${p.id}`,
+        categoria: 'RECURSOS_HUMANOS',
+        grupo: 'RECURSOS_HUMANOS',
+        descricao: p.descricao,
+        valor: p.valor,
+        data_despesa: p.data_transacao,
+        recorrente: false,
+        status: p.status || 'CONFIRMADO',
+        _fromLedger: true,
+      })),
+    ],
   };
 }
