@@ -394,6 +394,7 @@ export function ContasDisponiveisModule() {
               workspace_id: workspaceId!,
             });
 
+          // DEPOSITO_VIRTUAL + adoção de órfãs — gerenciado pelo trigger do DB
           await executeLink({
             bookmakerId: conta.id,
             projetoId: bulkProjetoId,
@@ -402,12 +403,6 @@ export function ContasDisponiveisModule() {
             saldoAtual: conta.saldo_atual,
             moeda: conta.moeda,
           });
-
-          await supabase
-            .from("cash_ledger")
-            .update({ projeto_id_snapshot: bulkProjetoId })
-            .or(`origem_bookmaker_id.eq.${conta.id},destino_bookmaker_id.eq.${conta.id}`)
-            .is("projeto_id_snapshot", null);
 
           successCount++;
         } catch (err) {
