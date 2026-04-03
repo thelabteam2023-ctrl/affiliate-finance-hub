@@ -452,6 +452,21 @@ export default function GestaoProjetos() {
     return map;
   }, [sectionFilteredProjetos]);
 
+  // Contagem por status (para badges nos chips)
+  const statusCountMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    const baseFiltered = projetos.filter((proj) => {
+      const matchesSearch = proj.nome.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSection = isBrokerSection ? proj.is_broker === true : proj.is_broker !== true;
+      return matchesSearch && matchesSection;
+    });
+    baseFiltered.forEach((proj) => {
+      map[proj.status] = (map[proj.status] || 0) + 1;
+    });
+    map["all"] = baseFiltered.length;
+    return map;
+  }, [projetos, searchTerm, isBrokerSection]);
+
   const filteredProjetos = sectionFilteredProjetos.filter((proj) => {
     const matchesTipo = tipoFilter === "all" || (proj as any).tipo_projeto === tipoFilter;
     return matchesTipo;
