@@ -93,7 +93,7 @@ export function ParceiroListaSidebar({
   };
 
   return (
-    <div className="h-full max-h-full flex flex-col border-r border-border overflow-hidden">
+    <div className="h-full max-h-full flex flex-col md:border-r border-border overflow-hidden">
       {/* Header: altura fixa, nunca comprime */}
       <div className="shrink-0 p-3 border-b border-border space-y-2">
         <div className="flex items-center gap-2">
