@@ -127,8 +127,8 @@ export function ParceiroListaSidebar({
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
+            <SelectItem value="ativo">Em andamento</SelectItem>
             <SelectItem value="todos">Todos os status</SelectItem>
-            <SelectItem value="ativo">Ativos</SelectItem>
             <SelectItem value="inativo">Inativos</SelectItem>
           </SelectContent>
         </Select>
