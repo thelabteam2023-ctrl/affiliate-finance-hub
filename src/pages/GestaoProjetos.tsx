@@ -31,8 +31,15 @@ import {
   Eye,
   Star,
   Kanban,
-  Briefcase
+  Briefcase,
+  MoreHorizontal,
+  Check
 } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useProjectFavorites } from "@/hooks/useProjectFavorites";
 import { VisualizarOperadoresDialog } from "@/components/projetos/VisualizarOperadoresDialog";
