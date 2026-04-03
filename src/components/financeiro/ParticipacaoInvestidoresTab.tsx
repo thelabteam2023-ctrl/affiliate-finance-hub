@@ -207,10 +207,14 @@ export function ParticipacaoInvestidoresTab({ formatCurrency, onRefresh, investi
   );
   const pagas = participacoesFiltradas.filter(p => p.status === "PAGO");
   const reconhecidas = participacoesFiltradas.filter(p => p.status === "RECONHECIDO");
+  const historico = [...pagas, ...reconhecidas].sort((a, b) => 
+    new Date(b.data_apuracao).getTime() - new Date(a.data_apuracao).getTime()
+  );
 
   const totalAguardando = aguardando.reduce((acc, p) => acc + p.valor_participacao, 0);
   const totalPendente = pendentes.reduce((acc, p) => acc + p.valor_participacao, 0);
   const totalPago = pagas.reduce((acc, p) => acc + p.valor_participacao, 0);
+  const totalReconhecido = reconhecidas.reduce((acc, p) => acc + p.valor_participacao, 0);
 
   const getBaseCalculoLabel = (_base: string) => {
     return "Lucro Líquido";
