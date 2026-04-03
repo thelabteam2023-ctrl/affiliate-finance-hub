@@ -26,6 +26,8 @@ interface FinanceiroCalcParams {
   lucroOperacionalApostas: number;
   getCryptoUSDValue: (coin: string, saldoCoin: number, saldoUsdFallback: number) => number;
   convertFromBRL: (valor: number, currency: string) => number;
+  /** Função de conversão unificada (mesma do Caixa Operacional) */
+  convertUnified?: (valor: number, moedaOrigem: string, moedaDestino: string) => number;
 }
 
 export function useFinanceiroCalculations({
