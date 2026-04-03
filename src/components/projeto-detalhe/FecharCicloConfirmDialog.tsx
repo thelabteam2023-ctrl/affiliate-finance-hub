@@ -4,29 +4,24 @@ import { useWorkspace } from "@/hooks/useWorkspace";
 import {
   AlertDialog,
   AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { 
-  AlertTriangle, 
-  Lock, 
-  CheckCircle2, 
-  XCircle, 
-  Clock, 
+import {
+  AlertTriangle,
+  Lock,
+  CheckCircle2,
+  XCircle,
+  Clock,
   Target,
   TrendingUp,
   BarChart3,
-  Shield
+  Hash,
+  Activity,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -75,8 +70,15 @@ const CONFIRMATION_TEXT = "FECHAR CICLO";
 const TIPO_GATILHO_LABELS: Record<string, string> = {
   TEMPO: "Por Tempo",
   META: "Por Meta",
-  VOLUME: "Por Meta", // legado
-  HIBRIDO: "Meta + Prazo", // legado
+  VOLUME: "Por Meta",
+  HIBRIDO: "Meta + Prazo",
+};
+
+const TIPO_GATILHO_ICONS: Record<string, typeof Clock> = {
+  TEMPO: Clock,
+  META: Target,
+  VOLUME: Target,
+  HIBRIDO: Activity,
 };
 
 export function FecharCicloConfirmDialog({
@@ -121,7 +123,7 @@ export function FecharCicloConfirmDialog({
     } catch (error: any) {
       console.error("Erro ao verificar requisitos:", error);
       setRequirements({
-        canClose: true, // Fallback - permitir, backend valida novamente
+        canClose: true,
         apostasAbertas: 0,
         perdasPendentes: 0,
       });
@@ -138,17 +140,15 @@ export function FecharCicloConfirmDialog({
 
     setLoading(true);
     try {
-      // Pass pre-calculated metrics from calcularMetricasPeriodo (single source of truth)
-      // These already include proper multi-currency conversion
       const frontendMetrics = metrics ? {
         qtd_apostas: metrics.qtdApostas,
         volume: metrics.volume,
-        lucro_apostas: metrics.lucroBruto, // lucroBruto = apostas + cashback + giros (já consolidado)
+        lucro_apostas: metrics.lucroBruto,
         lucro_bruto: metrics.lucroBruto,
-        lucro_liquido: metrics.lucroOperacional ?? metrics.lucroReal, // Lucro operacional completo
+        lucro_liquido: metrics.lucroOperacional ?? metrics.lucroReal,
         perdas_confirmadas: metrics.perdas?.totalConfirmadas || 0,
-        cashback: 0, // Já incluído no lucroBruto pelo serviço canônico
-        giros_gratis: 0, // Já incluído no lucroBruto pelo serviço canônico
+        cashback: 0,
+        giros_gratis: 0,
       } : null;
 
       const { data, error } = await supabase
@@ -210,181 +210,185 @@ export function FecharCicloConfirmDialog({
     return format(new Date(dateStr + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR });
   };
 
+  const lucroLiquido = metrics?.lucroOperacional ?? metrics?.lucroReal ?? 0;
+  const lucroPositivo = lucroLiquido >= 0;
+  const GatilhoIcon = TIPO_GATILHO_ICONS[ciclo.tipo_gatilho] || Clock;
+
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-        <AlertDialogHeader>
-          <AlertDialogTitle className="flex items-center gap-2 text-destructive">
-            <Lock className="h-5 w-5" />
-            Confirmar Fechamento de Ciclo
-          </AlertDialogTitle>
-          <AlertDialogDescription className="text-left">
-            Esta é uma ação crítica e irreversível. Revise os dados abaixo antes de continuar.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-
-        <div className="space-y-4 py-4">
-          {/* Informações do Ciclo */}
-          <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Projeto</span>
-              <span className="font-medium">{projetoNome}</span>
+      <AlertDialogContent className="max-w-md sm:max-w-lg p-0 gap-0 overflow-hidden max-h-[95vh] flex flex-col">
+        {/* ── HEADER ── */}
+        <div className="px-5 pt-5 pb-4 border-b border-border/50">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="h-8 w-8 rounded-lg bg-destructive/10 flex items-center justify-center">
+              <Lock className="h-4 w-4 text-destructive" />
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Ciclo</span>
-              <Badge variant="outline">Ciclo {ciclo.numero_ciclo}</Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Tipo</span>
-              <Badge variant="secondary" className="gap-1">
-                {ciclo.tipo_gatilho === "TEMPO" && <Clock className="h-3 w-3" />}
-                {ciclo.tipo_gatilho === "VOLUME" && <Target className="h-3 w-3" />}
-                {TIPO_GATILHO_LABELS[ciclo.tipo_gatilho] || ciclo.tipo_gatilho}
-              </Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Período</span>
-              <span className="text-sm">
-                {formatDate(ciclo.data_inicio)} - {formatDate(ciclo.data_fim_prevista)}
-              </span>
-            </div>
+            <h2 className="text-base font-semibold text-foreground">Fechamento de Ciclo</h2>
           </div>
 
-          {/* Métricas do Ciclo */}
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+            <span className="font-medium text-foreground">{projetoNome}</span>
+            <span className="text-muted-foreground/50">•</span>
+            <span>Ciclo {ciclo.numero_ciclo}</span>
+            <span className="text-muted-foreground/50">•</span>
+            <span className="inline-flex items-center gap-1">
+              <GatilhoIcon className="h-3 w-3" />
+              {TIPO_GATILHO_LABELS[ciclo.tipo_gatilho] || ciclo.tipo_gatilho}
+            </span>
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">
+            {formatDate(ciclo.data_inicio)} — {formatDate(ciclo.data_fim_prevista)}
+          </p>
+        </div>
+
+        {/* ── SCROLLABLE BODY ── */}
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+
+          {/* ── MÉTRICAS ── */}
           {metrics && (
-            <div className="rounded-lg border p-4 space-y-3">
-              <div className="flex items-center gap-2 text-sm font-medium mb-2">
-                <BarChart3 className="h-4 w-4 text-primary" />
-                Métricas do Período
-              </div>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Total Apostas</span>
-                  <span className="font-medium">{metrics.qtdApostas}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Volume</span>
-                  <span className="font-medium">{formatCurrency(metrics.volume)}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Lucro Bruto</span>
-                  <span className={`font-medium ${metrics.lucroBruto >= 0 ? "text-emerald-500" : "text-red-500"}`}>
-                    {formatCurrency(metrics.lucroBruto)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Lucro Líquido</span>
-                  <span className={`font-medium ${metrics.lucroReal >= 0 ? "text-emerald-500" : "text-red-500"}`}>
-                    {formatCurrency(metrics.lucroReal)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">ROI</span>
-                  <span className={`font-medium ${metrics.roi >= 0 ? "text-emerald-500" : "text-red-500"}`}>
-                    {metrics.roi.toFixed(2)}%
-                  </span>
-                </div>
-                {metrics.perdas.totalConfirmadas > 0 && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Perdas</span>
-                    <span className="font-medium text-red-500">
-                      {formatCurrency(metrics.perdas.totalConfirmadas)}
-                    </span>
-                  </div>
+            <div className="space-y-3">
+              {/* KPI Principal - Lucro Líquido */}
+              <div className={`rounded-xl p-4 text-center ${
+                lucroPositivo 
+                  ? "bg-emerald-500/10 border border-emerald-500/20" 
+                  : "bg-red-500/10 border border-red-500/20"
+              }`}>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">
+                  Lucro Líquido
+                </p>
+                <p className={`text-2xl sm:text-3xl font-bold tracking-tight ${
+                  lucroPositivo ? "text-emerald-400" : "text-red-400"
+                }`}>
+                  {formatCurrency(lucroLiquido)}
+                </p>
+                {metrics.roi !== 0 && (
+                  <p className={`text-xs mt-1 ${lucroPositivo ? "text-emerald-400/70" : "text-red-400/70"}`}>
+                    ROI {metrics.roi.toFixed(2)}%
+                  </p>
                 )}
               </div>
+
+              {/* KPIs Secundários */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                <KPICell
+                  icon={<TrendingUp className="h-3.5 w-3.5" />}
+                  label="Lucro Bruto"
+                  value={formatCurrency(metrics.lucroBruto)}
+                  color={metrics.lucroBruto >= 0 ? "emerald" : "red"}
+                />
+                <KPICell
+                  icon={<BarChart3 className="h-3.5 w-3.5" />}
+                  label="Volume"
+                  value={formatCurrency(metrics.volume)}
+                  color="neutral"
+                />
+                <KPICell
+                  icon={<Hash className="h-3.5 w-3.5" />}
+                  label="Apostas"
+                  value={String(metrics.qtdApostas)}
+                  color="neutral"
+                  className="col-span-2 sm:col-span-1"
+                />
+              </div>
+
+              {metrics.perdas.totalConfirmadas > 0 && (
+                <div className="flex items-center justify-between rounded-lg bg-red-500/5 border border-red-500/10 px-3 py-2 text-sm">
+                  <span className="text-muted-foreground">Perdas Confirmadas</span>
+                  <span className="font-medium text-red-400">
+                    {formatCurrency(metrics.perdas.totalConfirmadas)}
+                  </span>
+                </div>
+              )}
             </div>
           )}
 
-          {/* Checklist de Requisitos */}
-          <div className="rounded-lg border p-4 space-y-2">
-            <div className="flex items-center gap-2 text-sm font-medium mb-2">
-              <Shield className="h-4 w-4 text-primary" />
-              Verificação de Pendências
-            </div>
-
+          {/* ── VERIFICAÇÃO DE PENDÊNCIAS ── */}
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              Verificação
+            </p>
             {checkingRequirements ? (
-              <div className="text-sm text-muted-foreground">Verificando...</div>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                <div className="h-4 w-4 rounded-full border-2 border-muted-foreground/30 border-t-primary animate-spin" />
+                Verificando pendências...
+              </div>
             ) : requirements ? (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm">
-                  {requirements.apostasAbertas === 0 ? (
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                  ) : (
-                    <XCircle className="h-4 w-4 text-red-500" />
-                  )}
-                  <span>
-                    {requirements.apostasAbertas === 0 
-                      ? "Nenhuma aposta em aberto" 
-                      : `${requirements.apostasAbertas} aposta(s) pendente(s)`}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  {requirements.perdasPendentes === 0 ? (
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                  ) : (
-                    <XCircle className="h-4 w-4 text-red-500" />
-                  )}
-                  <span>
-                    {requirements.perdasPendentes === 0 
-                      ? "Nenhuma perda pendente" 
-                      : `${requirements.perdasPendentes} perda(s) pendente(s)`}
-                  </span>
-                </div>
+              <div className="space-y-1.5">
+                <ChecklistItem
+                  ok={requirements.apostasAbertas === 0}
+                  okText="Nenhuma aposta em aberto"
+                  failText={`${requirements.apostasAbertas} aposta(s) pendente(s)`}
+                />
+                <ChecklistItem
+                  ok={requirements.perdasPendentes === 0}
+                  okText="Nenhuma perda pendente"
+                  failText={`${requirements.perdasPendentes} perda(s) pendente(s)`}
+                />
+
+                {!requirements.canClose && (
+                  <div className="mt-2 rounded-lg bg-destructive/10 border border-destructive/20 px-3 py-2 text-sm text-destructive flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 shrink-0" />
+                    Resolva as pendências antes de fechar o ciclo.
+                  </div>
+                )}
               </div>
             ) : null}
-
-            {requirements && !requirements.canClose && (
-              <Alert variant="destructive" className="mt-3">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>
-                  Resolva as pendências acima antes de fechar o ciclo.
-                </AlertDescription>
-              </Alert>
-            )}
           </div>
 
-          <Separator />
+          {/* ── ALERTA IRREVERSÍVEL ── */}
+          <div className="rounded-lg bg-amber-500/8 border border-amber-500/25 px-4 py-3">
+            <div className="flex items-start gap-2.5">
+              <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
+              <div className="text-sm">
+                <p className="font-semibold text-amber-400">Esta ação é irreversível.</p>
+                <p className="text-muted-foreground text-xs mt-0.5">
+                  Após o fechamento, o ciclo não poderá ser editado ou reaberto.
+                </p>
+              </div>
+            </div>
+          </div>
 
-          {/* Aviso de Irreversibilidade */}
-          <Alert className="border-amber-500/50 bg-amber-500/10">
-            <AlertTriangle className="h-4 w-4 text-amber-500" />
-            <AlertDescription className="text-amber-200">
-              <strong>⚠️ Esta ação é irreversível.</strong>
-              <br />
-              Após o fechamento, o ciclo não poderá ser editado ou reaberto.
-            </AlertDescription>
-          </Alert>
-
-          {/* Campo de Confirmação por Digitação */}
+          {/* ── CONFIRMAÇÃO POR TEXTO ── */}
           <div className="space-y-2">
-            <Label htmlFor="confirmation">
-              Para confirmar, digite <strong className="text-destructive">{CONFIRMATION_TEXT}</strong>
+            <Label htmlFor="confirmation" className="text-sm">
+              Digite <span className="font-mono font-bold text-destructive">{CONFIRMATION_TEXT}</span> para liberar
             </Label>
             <Input
               id="confirmation"
               value={confirmationInput}
               onChange={(e) => setConfirmationInput(e.target.value.toUpperCase())}
               placeholder={CONFIRMATION_TEXT}
-              className="font-mono text-center uppercase"
+              className="font-mono text-center uppercase tracking-widest h-10"
               disabled={!requirements?.canClose}
+              autoComplete="off"
             />
-            {confirmationInput && !isConfirmationValid && (
+            {confirmationInput.length > 0 && !isConfirmationValid && (
               <p className="text-xs text-destructive">Texto não confere</p>
+            )}
+            {isConfirmationValid && (
+              <p className="text-xs text-emerald-500 flex items-center gap-1">
+                <CheckCircle2 className="h-3 w-3" /> Confirmação válida
+              </p>
             )}
           </div>
         </div>
 
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={loading}>Cancelar</AlertDialogCancel>
+        {/* ── FOOTER (sticky) ── */}
+        <AlertDialogFooter className="border-t border-border/50 px-5 py-4 bg-background sticky bottom-0 flex-row gap-2 sm:gap-2">
+          <AlertDialogCancel disabled={loading} className="flex-1 sm:flex-none">
+            Cancelar
+          </AlertDialogCancel>
           <Button
             variant="destructive"
             onClick={handleConfirm}
             disabled={!canProceed || loading}
-            className="gap-2"
+            className="gap-2 flex-1 sm:flex-none"
           >
             {loading ? (
-              "Fechando..."
+              <>
+                <div className="h-4 w-4 rounded-full border-2 border-destructive-foreground/30 border-t-destructive-foreground animate-spin" />
+                Fechando...
+              </>
             ) : (
               <>
                 <Lock className="h-4 w-4" />
@@ -395,5 +399,60 @@ export function FecharCicloConfirmDialog({
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+  );
+}
+
+/* ── Sub-components ── */
+
+function KPICell({
+  icon,
+  label,
+  value,
+  color,
+  className = "",
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  color: "emerald" | "red" | "neutral";
+  className?: string;
+}) {
+  const colorClasses = {
+    emerald: "text-emerald-400",
+    red: "text-red-400",
+    neutral: "text-foreground",
+  };
+
+  return (
+    <div className={`rounded-lg border border-border/50 bg-muted/20 px-3 py-2.5 ${className}`}>
+      <div className="flex items-center gap-1.5 mb-1">
+        <span className="text-muted-foreground">{icon}</span>
+        <span className="text-[11px] text-muted-foreground uppercase tracking-wide">{label}</span>
+      </div>
+      <p className={`text-sm font-semibold ${colorClasses[color]}`}>{value}</p>
+    </div>
+  );
+}
+
+function ChecklistItem({
+  ok,
+  okText,
+  failText,
+}: {
+  ok: boolean;
+  okText: string;
+  failText: string;
+}) {
+  return (
+    <div className="flex items-center gap-2 text-sm py-1">
+      {ok ? (
+        <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+      ) : (
+        <XCircle className="h-4 w-4 text-red-500 shrink-0" />
+      )}
+      <span className={ok ? "text-muted-foreground" : "text-red-400"}>
+        {ok ? okText : failText}
+      </span>
+    </div>
   );
 }
