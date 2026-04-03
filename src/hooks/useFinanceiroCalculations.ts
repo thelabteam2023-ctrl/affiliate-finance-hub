@@ -22,6 +22,7 @@ interface FinanceiroCalcParams {
   dataInicio: string | null;
   dataFim: string | null;
   cotacaoUSD: number;
+  cotacoesMap?: Record<string, number>;
   lucroOperacionalApostas: number;
   getCryptoUSDValue: (coin: string, saldoCoin: number, saldoUsdFallback: number) => number;
   convertFromBRL: (valor: number, currency: string) => number;

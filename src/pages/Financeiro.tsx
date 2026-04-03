@@ -111,6 +111,7 @@ export default function Financeiro() {
     dataInicio: dataInicio || null,
     dataFim: dataFim || null,
     cotacaoUSD,
+    cotacoesMap,
     lucroOperacionalApostas,
     getCryptoUSDValue,
     convertFromBRL,
