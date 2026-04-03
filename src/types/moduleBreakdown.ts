@@ -100,6 +100,9 @@ export interface ProjetoKpiBreakdowns {
     lucroTotal: number;
     currency: string;
   };
+
+  /** Estatísticas temporais de volume */
+  volumeTemporal: VolumeTemporalStats;
 }
 
 /**
