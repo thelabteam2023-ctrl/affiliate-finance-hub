@@ -99,18 +99,23 @@ export function useFinanceiroCalculations({
     return { filteredDespesas, filteredCustos, filteredLedger, filteredDespesasAdmin, filteredPagamentosOp };
   }, [despesas, custos, cashLedger, despesasAdmin, pagamentosOperador, filterByPeriod]);
 
-  // Helper: converter qualquer moeda para BRL usando cotacoesMap
+  // Helper: converter qualquer moeda para BRL
+  // Prioriza convertUnified (mesma função do Caixa Operacional) para garantir paridade
   const convertToBRL = useCallback((valor: number, moeda: string): number => {
     if (!moeda || moeda === 'BRL') return valor;
+    // Se temos a função unificada do Caixa, usar ela (fonte única de verdade)
+    if (convertUnified) {
+      return convertUnified(valor, moeda, 'BRL');
+    }
+    // Fallback: conversão via cotacoesMap
     if (moeda === 'USD' || moeda === 'USDT' || moeda === 'USDC') return valor * cotacaoUSD;
-    // Usar cotação real do mapa (EUR, GBP, MYR, MXN, ARS, COP)
     const cotacao = cotacoesMap[moeda.toUpperCase()];
     if (cotacao && cotacao > 0.001) return valor * cotacao;
-    // Fallback: usar cotacaoUSD como proxy (melhor que hardcoded)
     return valor * cotacaoUSD;
-  }, [cotacaoUSD, cotacoesMap]);
+  }, [cotacaoUSD, cotacoesMap, convertUnified]);
 
-  // Saldos base
+  // Saldos base — ALINHADO com Caixa Operacional (PosicaoCapital)
+  // Usa Math.max(0, ...) para ignorar saldos negativos (mesma regra do Caixa)
   const saldos = useMemo(() => {
     // Caixa Operacional: consolidar TODAS as moedas FIAT
     let capitalOperacional = 0;
@@ -123,23 +128,25 @@ export function useFinanceiroCalculations({
     capitalOperacional += totalCryptoUSD * cotacaoUSD;
     
     // Bookmakers: consolidar TODAS as moedas via cotação real
-    const saldoBookmakersBRL = bookmakersSaldos.filter(b => !b.moeda || b.moeda === "BRL").reduce((acc, b) => acc + (b.saldo_atual || 0), 0);
-    const saldoBookmakersUSD = bookmakersSaldos.filter(b => b.moeda === "USD" || b.moeda === "USDT").reduce((acc, b) => acc + (b.saldo_atual || 0), 0);
-    const saldoBookmakersEUR = bookmakersSaldos.filter(b => b.moeda === "EUR").reduce((acc, b) => acc + (b.saldo_atual || 0), 0);
-    // Consolidar usando cotações reais (não hardcoded)
+    // ALINHAMENTO: Usar Math.max(0) igual ao Caixa Operacional
+    const saldoBookmakersBRL = bookmakersSaldos.filter(b => !b.moeda || b.moeda === "BRL").reduce((acc, b) => acc + Math.max(0, b.saldo_atual || 0), 0);
+    const saldoBookmakersUSD = bookmakersSaldos.filter(b => b.moeda === "USD" || b.moeda === "USDT").reduce((acc, b) => acc + Math.max(0, b.saldo_atual || 0), 0);
+    const saldoBookmakersEUR = bookmakersSaldos.filter(b => b.moeda === "EUR").reduce((acc, b) => acc + Math.max(0, b.saldo_atual || 0), 0);
     let saldoBookmakers = 0;
     bookmakersSaldos.forEach(b => {
-      saldoBookmakers += convertToBRL(b.saldo_atual || 0, b.moeda || 'BRL');
+      saldoBookmakers += convertToBRL(Math.max(0, b.saldo_atual || 0), b.moeda || 'BRL');
     });
     const hasBookmakersUSD = saldoBookmakersUSD > 0 || saldoBookmakersEUR > 0;
     
     // Contas Parceiros: consolidar por moeda com conversão real
+    // ALINHAMENTO: Usar Math.max(0) igual ao Caixa Operacional
     let totalContasParceiros = 0;
     contasParceiros.forEach((c: any) => {
-      totalContasParceiros += convertToBRL(c.saldo || 0, c.moeda || 'BRL');
+      totalContasParceiros += convertToBRL(Math.max(0, c.saldo || 0), c.moeda || 'BRL');
     });
 
-    const totalWalletsParceiros = walletsParceiros.reduce((acc: number, w: any) => acc + ((w.saldo_usd || 0) * cotacaoUSD), 0);
+    // Wallets Parceiros: Math.max(0) para paridade com Caixa
+    const totalWalletsParceiros = walletsParceiros.reduce((acc: number, w: any) => acc + (Math.max(0, w.saldo_usd || 0) * cotacaoUSD), 0);
     
     return { saldoBRL, saldoUSD, totalCryptoUSD, capitalOperacional, saldoBookmakersBRL, saldoBookmakersUSD, saldoBookmakersEUR, saldoBookmakers, hasBookmakersUSD, totalContasParceiros, totalWalletsParceiros };
   }, [caixaFiat, caixaCrypto, bookmakersSaldos, contasParceiros, walletsParceiros, cotacaoUSD, getCryptoUSDValue, convertToBRL]);
