@@ -92,6 +92,7 @@ interface Transacao {
   valor_usd: number | null;
   origem_tipo: string | null;
   destino_tipo: string | null;
+  descricao?: string | null;
 }
 
 interface FluxoFinanceiroOperacionalProps {
@@ -234,18 +235,57 @@ export function FluxoFinanceiroOperacional({
   };
 
   // Filtrar transações pelo período selecionado
+  // TAMBÉM exclui pares de estorno (transações de reversão + suas originais)
+  // para evitar distorção nos gráficos de fluxo de caixa
   const transacoesFiltradas = useMemo(() => {
-    if (!dataInicio && !dataFim) return transacoes;
+    let result = transacoes;
     
-    return transacoes.filter((t) => {
-      const dataTransacao = parseLocalDate(t.data_transacao);
-      if (dataInicio && dataFim) {
-        return isWithinInterval(dataTransacao, { start: dataInicio, end: dataFim });
+    // Filtro de período
+    if (dataInicio || dataFim) {
+      result = result.filter((t) => {
+        const dataTransacao = parseLocalDate(t.data_transacao);
+        if (dataInicio && dataFim) {
+          return isWithinInterval(dataTransacao, { start: dataInicio, end: dataFim });
+        }
+        if (dataInicio) return dataTransacao >= dataInicio;
+        if (dataFim) return dataTransacao <= dataFim;
+        return true;
+      });
+    }
+    
+    // Detectar e excluir pares de estorno para não distorcer gráficos
+    // 1. Encontrar IDs de transações referenciadas por estornos (padrão "Ref: <uuid_prefix>")
+    const estornoIds = new Set<string>();
+    const referencedPrefixes = new Set<string>();
+    
+    result.forEach((t) => {
+      const desc = t.descricao || '';
+      if (desc.toUpperCase().startsWith('ESTORNO:') || desc.toUpperCase().startsWith('ESTORNO ')) {
+        estornoIds.add(t.id);
+        // Extrair referência do ID original (padrão "Ref: 52853e41")
+        const refMatch = desc.match(/Ref:\s*([a-f0-9-]+)/i);
+        if (refMatch) {
+          referencedPrefixes.add(refMatch[1]);
+        }
       }
-      if (dataInicio) return dataTransacao >= dataInicio;
-      if (dataFim) return dataTransacao <= dataFim;
-      return true;
     });
+    
+    // 2. Se há estornos, filtrar tanto o estorno quanto a transação original
+    if (estornoIds.size > 0) {
+      result = result.filter((t) => {
+        // Excluir a própria transação de estorno
+        if (estornoIds.has(t.id)) return false;
+        // Excluir a transação original referenciada
+        if (referencedPrefixes.size > 0) {
+          for (const prefix of referencedPrefixes) {
+            if (t.id.startsWith(prefix)) return false;
+          }
+        }
+        return true;
+      });
+    }
+    
+    return result;
   }, [transacoes, dataInicio, dataFim]);
 
   // 1. Fluxo de Capital Externo (Investidores)
