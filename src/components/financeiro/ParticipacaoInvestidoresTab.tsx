@@ -383,7 +383,6 @@ export function ParticipacaoInvestidoresTab({ formatCurrency, onRefresh, investi
                 getTipoBadge={getTipoBadge}
                 accentColor="emerald"
                 showDate="pagamento"
-                statusOverride={p.status === "RECONHECIDO" ? "Reconhecido" : undefined}
               />
             ))}
           </div>
