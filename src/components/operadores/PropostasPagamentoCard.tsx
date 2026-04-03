@@ -446,6 +446,34 @@ export function PropostasPagamentoCard() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Dialog de Já Pago */}
+      <AlertDialog open={jaPagoDialogOpen} onOpenChange={setJaPagoDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Pagamento Realizado</AlertDialogTitle>
+            <AlertDialogDescription>
+              Você confirma que o pagamento de{" "}
+              <strong>
+                {formatCurrency(selectedProposta?.valor_ajustado ?? selectedProposta?.valor_calculado ?? 0)}
+              </strong>{" "}
+              para <strong>{selectedProposta?.operador_nome}</strong> já foi realizado?
+              <br /><br />
+              O registro será criado diretamente como <strong>PAGO</strong>.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleJaPago}
+              disabled={processing}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {processing ? "Processando..." : "Confirmar Já Pago"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
