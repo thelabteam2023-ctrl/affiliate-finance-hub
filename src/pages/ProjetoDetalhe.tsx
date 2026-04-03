@@ -137,6 +137,7 @@ export default function ProjetoDetalhe() {
   const [loading, setLoading] = useState(true);
   const [entregaAtiva, setEntregaAtiva] = useState<{ data_inicio: string | null; data_fim_prevista: string | null } | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [archiving, setArchiving] = useState(false);
   
   // Project favorites
   const { isFavorite, toggleFavorite } = useProjectFavorites();
