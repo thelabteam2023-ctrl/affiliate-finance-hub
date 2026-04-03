@@ -6,6 +6,7 @@ import { useFinanceiroData } from "@/hooks/useFinanceiroData";
 import { useFinanceiroCalculations } from "@/hooks/useFinanceiroCalculations";
 import { useToast } from "@/hooks/use-toast";
 import { useCotacoes } from "@/hooks/useCotacoes";
+import { useMultiCurrencyConversion } from "@/hooks/useMultiCurrencyConversion";
 import { useCurrencySnapshot } from "@/hooks/useCurrencySnapshot";
 import { useWorkspaceLucroOperacional } from "@/hooks/useWorkspaceLucroOperacional";
 import { useCapitalMedioPeriodo } from "@/hooks/useCapitalMedioPeriodo";
@@ -66,6 +67,8 @@ export default function Financeiro() {
   }, [cotacaoEUR, cotacaoGBP, cotacaoMYR, cotacaoMXN, cotacaoARS, cotacaoCOP]);
   
   const { convertFromBRL } = useCurrencySnapshot({ cryptoSymbols });
+  // Conversão unificada: mesma função usada pelo Caixa Operacional (PosicaoCapital)
+  const { convert: convertUnified } = useMultiCurrencyConversion(cryptoSymbols);
 
   // Filtro de período
   const [periodoPreset, setPeriodoPreset] = useState<DashboardPeriodFilter>("mes");
@@ -115,6 +118,7 @@ export default function Financeiro() {
     lucroOperacionalApostas,
     getCryptoUSDValue,
     convertFromBRL,
+    convertUnified,
   });
 
   const openKpiHelp = (type: KpiType) => { setKpiType(type); setKpiDialogOpen(true); };
