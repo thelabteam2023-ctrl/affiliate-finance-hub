@@ -456,69 +456,152 @@ export default function GestaoParceiros() {
       <div className="h-full flex flex-col bg-background">
 
         {/* PageBody: flex-1 ocupa espaço restante, min-h-0 permite shrink */}
-        <div className="flex-1 min-h-0 px-4 pt-2 pb-4">
+        <div className="flex-1 min-h-0 px-2 md:px-4 pt-2 pb-4">
           <Card className="h-full border-border bg-gradient-surface overflow-hidden">
-            {/* Layout Grid: duas colunas com altura 100% */}
-            <div className="h-full grid grid-cols-[340px_1fr] lg:grid-cols-[360px_1fr]">
-              
-              {/* Sidebar: altura 100%, scroll próprio interno */}
-              <ParceiroListaSidebar
-                parceiros={parceirosParaSidebar}
-                selectedId={selectedParceiroDetalhes}
-                onSelect={handleSelectParceiroDetalhes}
-                showSensitiveData={showSensitiveData}
-                onAddParceiro={() => setDialogOpen(true)}
-                onEditParceiro={(id) => {
-                  const parceiro = parceiros.find(p => p.id === id);
-                  if (parceiro) {
-                    setEditingParceiro(parceiro);
-                    setViewMode(false);
-                    setDialogOpen(true);
-                  }
-                }}
-                onDeposito={(id) => {
-                  handleSelectParceiroDetalhes(id);
-                  setTransacaoBookmaker(null);
-                  setTransacaoTipo("DEPOSITO");
-                  setTransacaoEntryPoint("affiliate_deposit");
-                  setTransacaoDialogOpen(true);
-                }}
-                onSaque={(id) => {
-                  handleSelectParceiroDetalhes(id);
-                  setTransacaoBookmaker(null);
-                  setTransacaoTipo("SAQUE");
-                  setTransacaoEntryPoint("affiliate_deposit");
-                  setTransacaoDialogOpen(true);
-                }}
-                onTransferencia={(id) => {
-                  handleSelectParceiroDetalhes(id);
-                  setTransacaoBookmaker(null);
-                  setTransacaoTipo("TRANSFERENCIA");
-                  setTransacaoEntryPoint("affiliate_deposit");
-                  setTransacaoDialogOpen(true);
-                }}
-              />
+            
+            {/* ===== MOBILE: Master-Detail Flow ===== */}
+            {isMobile ? (
+              <div className="h-full flex flex-col">
+                {/* Mobile: Detail view (when partner selected) */}
+                {selectedParceiroDetalhes ? (
+                  <>
+                    {/* Back button header */}
+                    <div className="shrink-0 flex items-center gap-2 px-3 py-2.5 border-b border-border bg-muted/30">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={handleBackToList}
+                        className="h-8 px-2 gap-1.5 text-muted-foreground hover:text-foreground"
+                      >
+                        <ArrowLeft className="h-4 w-4" />
+                        <span className="text-sm">Parceiros</span>
+                      </Button>
+                    </div>
+                    {/* Detail panel fills remaining space */}
+                    <div className="flex-1 min-h-0">
+                      <ParceiroDetalhesPanel 
+                        parceiroId={selectedParceiroDetalhes} 
+                        showSensitiveData={showSensitiveData}
+                        onToggleSensitiveData={handleToggleSensitiveData}
+                        onCreateVinculo={handleCreateVinculo}
+                        onEditVinculo={handleEditVinculo}
+                        onNewTransacao={handleNewTransacao}
+                        parceiroStatus={currentParceiroStatus}
+                        hasParceria={currentHasParceria}
+                        diasRestantes={currentDiasRestantes}
+                        onViewParceiro={handleViewParceiro}
+                        onEditParceiro={handleEditParceiro}
+                        onDeleteParceiro={handleDeleteParceiroClick}
+                        parceiroCache={parceiroCache}
+                        bookmakerRefreshKey={bookmakerRefreshKey}
+                        saldoBanco={selectedParceiroDetalhes ? (saldosData.get(selectedParceiroDetalhes)?.saldo_fiat ?? 0) : 0}
+                        saldoCrypto={selectedParceiroDetalhes ? (saldosData.get(selectedParceiroDetalhes)?.saldo_crypto_usd ?? 0) : 0}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  /* Mobile: List view (no partner selected) */
+                  <ParceiroListaSidebar
+                    parceiros={parceirosParaSidebar}
+                    selectedId={selectedParceiroDetalhes}
+                    onSelect={handleSelectParceiroDetalhes}
+                    showSensitiveData={showSensitiveData}
+                    onAddParceiro={() => setDialogOpen(true)}
+                    onEditParceiro={(id) => {
+                      const parceiro = parceiros.find(p => p.id === id);
+                      if (parceiro) {
+                        setEditingParceiro(parceiro);
+                        setViewMode(false);
+                        setDialogOpen(true);
+                      }
+                    }}
+                    onDeposito={(id) => {
+                      handleSelectParceiroDetalhes(id);
+                      setTransacaoBookmaker(null);
+                      setTransacaoTipo("DEPOSITO");
+                      setTransacaoEntryPoint("affiliate_deposit");
+                      setTransacaoDialogOpen(true);
+                    }}
+                    onSaque={(id) => {
+                      handleSelectParceiroDetalhes(id);
+                      setTransacaoBookmaker(null);
+                      setTransacaoTipo("SAQUE");
+                      setTransacaoEntryPoint("affiliate_deposit");
+                      setTransacaoDialogOpen(true);
+                    }}
+                    onTransferencia={(id) => {
+                      handleSelectParceiroDetalhes(id);
+                      setTransacaoBookmaker(null);
+                      setTransacaoTipo("TRANSFERENCIA");
+                      setTransacaoEntryPoint("affiliate_deposit");
+                      setTransacaoDialogOpen(true);
+                    }}
+                  />
+                )}
+              </div>
+            ) : (
+              /* ===== DESKTOP: Two-column layout ===== */
+              <div className="h-full grid grid-cols-[340px_1fr] lg:grid-cols-[360px_1fr]">
+                
+                {/* Sidebar: altura 100%, scroll próprio interno */}
+                <ParceiroListaSidebar
+                  parceiros={parceirosParaSidebar}
+                  selectedId={selectedParceiroDetalhes}
+                  onSelect={handleSelectParceiroDetalhes}
+                  showSensitiveData={showSensitiveData}
+                  onAddParceiro={() => setDialogOpen(true)}
+                  onEditParceiro={(id) => {
+                    const parceiro = parceiros.find(p => p.id === id);
+                    if (parceiro) {
+                      setEditingParceiro(parceiro);
+                      setViewMode(false);
+                      setDialogOpen(true);
+                    }
+                  }}
+                  onDeposito={(id) => {
+                    handleSelectParceiroDetalhes(id);
+                    setTransacaoBookmaker(null);
+                    setTransacaoTipo("DEPOSITO");
+                    setTransacaoEntryPoint("affiliate_deposit");
+                    setTransacaoDialogOpen(true);
+                  }}
+                  onSaque={(id) => {
+                    handleSelectParceiroDetalhes(id);
+                    setTransacaoBookmaker(null);
+                    setTransacaoTipo("SAQUE");
+                    setTransacaoEntryPoint("affiliate_deposit");
+                    setTransacaoDialogOpen(true);
+                  }}
+                  onTransferencia={(id) => {
+                    handleSelectParceiroDetalhes(id);
+                    setTransacaoBookmaker(null);
+                    setTransacaoTipo("TRANSFERENCIA");
+                    setTransacaoEntryPoint("affiliate_deposit");
+                    setTransacaoDialogOpen(true);
+                  }}
+                />
 
-              {/* MainPanel: altura 100%, gerencia internamente */}
-              <ParceiroDetalhesPanel 
-                parceiroId={selectedParceiroDetalhes} 
-                showSensitiveData={showSensitiveData}
-                onToggleSensitiveData={handleToggleSensitiveData}
-                onCreateVinculo={handleCreateVinculo}
-                onEditVinculo={handleEditVinculo}
-                onNewTransacao={handleNewTransacao}
-                parceiroStatus={currentParceiroStatus}
-                hasParceria={currentHasParceria}
-                diasRestantes={currentDiasRestantes}
-                onViewParceiro={handleViewParceiro}
-                onEditParceiro={handleEditParceiro}
-                onDeleteParceiro={handleDeleteParceiroClick}
-                parceiroCache={parceiroCache}
-                bookmakerRefreshKey={bookmakerRefreshKey}
-                saldoBanco={selectedParceiroDetalhes ? (saldosData.get(selectedParceiroDetalhes)?.saldo_fiat ?? 0) : 0}
-                saldoCrypto={selectedParceiroDetalhes ? (saldosData.get(selectedParceiroDetalhes)?.saldo_crypto_usd ?? 0) : 0}
-              />
-            </div>
+                {/* MainPanel: altura 100%, gerencia internamente */}
+                <ParceiroDetalhesPanel 
+                  parceiroId={selectedParceiroDetalhes} 
+                  showSensitiveData={showSensitiveData}
+                  onToggleSensitiveData={handleToggleSensitiveData}
+                  onCreateVinculo={handleCreateVinculo}
+                  onEditVinculo={handleEditVinculo}
+                  onNewTransacao={handleNewTransacao}
+                  parceiroStatus={currentParceiroStatus}
+                  hasParceria={currentHasParceria}
+                  diasRestantes={currentDiasRestantes}
+                  onViewParceiro={handleViewParceiro}
+                  onEditParceiro={handleEditParceiro}
+                  onDeleteParceiro={handleDeleteParceiroClick}
+                  parceiroCache={parceiroCache}
+                  bookmakerRefreshKey={bookmakerRefreshKey}
+                  saldoBanco={selectedParceiroDetalhes ? (saldosData.get(selectedParceiroDetalhes)?.saldo_fiat ?? 0) : 0}
+                  saldoCrypto={selectedParceiroDetalhes ? (saldosData.get(selectedParceiroDetalhes)?.saldo_crypto_usd ?? 0) : 0}
+                />
+              </div>
+            )}
           </Card>
         </div>
 
