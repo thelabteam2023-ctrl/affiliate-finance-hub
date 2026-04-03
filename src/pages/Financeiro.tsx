@@ -6,6 +6,7 @@ import { useFinanceiroData } from "@/hooks/useFinanceiroData";
 import { useFinanceiroCalculations } from "@/hooks/useFinanceiroCalculations";
 import { useToast } from "@/hooks/use-toast";
 import { useCotacoes } from "@/hooks/useCotacoes";
+import { useMultiCurrencyConversion } from "@/hooks/useMultiCurrencyConversion";
 import { useCurrencySnapshot } from "@/hooks/useCurrencySnapshot";
 import { useWorkspaceLucroOperacional } from "@/hooks/useWorkspaceLucroOperacional";
 import { useCapitalMedioPeriodo } from "@/hooks/useCapitalMedioPeriodo";
