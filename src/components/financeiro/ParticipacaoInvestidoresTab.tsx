@@ -289,8 +289,8 @@ export function ParticipacaoInvestidoresTab({ formatCurrency, onRefresh, investi
         <KPICard
           icon={<CheckCircle2 className="h-4 w-4" />}
           label="Pago"
-          value={formatCurrency(totalPago)}
-          count={pagas.length}
+          value={formatCurrency(totalPago + totalReconhecido)}
+          count={historico.length}
           color="emerald"
         />
         <KPICard
