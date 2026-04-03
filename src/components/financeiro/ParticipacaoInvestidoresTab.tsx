@@ -212,8 +212,8 @@ export function ParticipacaoInvestidoresTab({ formatCurrency, onRefresh, investi
   const totalPendente = pendentes.reduce((acc, p) => acc + p.valor_participacao, 0);
   const totalPago = pagas.reduce((acc, p) => acc + p.valor_participacao, 0);
 
-  const getBaseCalculoLabel = (base: string) => {
-    return base === "LUCRO_BRUTO" ? "Lucro Bruto" : "Lucro Líquido";
+  const getBaseCalculoLabel = (_base: string) => {
+    return "Lucro Líquido";
   };
 
   if (loading) {
