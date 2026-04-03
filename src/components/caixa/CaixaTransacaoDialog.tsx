@@ -2296,6 +2296,14 @@ export function CaixaTransacaoDialog({
               variant: "destructive",
             });
             return;
+          } else {
+            // 🔒 BLOQUEIO CRÍTICO: Nenhuma wallet compatível existe
+            toast({
+              title: "Erro",
+              description: `Nenhuma wallet compatível com ${coin} encontrada. Cadastre uma wallet na rede correta antes de prosseguir.`,
+              variant: "destructive",
+            });
+            return;
           }
         }
       }
