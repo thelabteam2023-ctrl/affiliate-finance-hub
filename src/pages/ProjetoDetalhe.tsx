@@ -503,6 +503,30 @@ export default function ProjetoDetalhe() {
                 <Edit className="mr-1 h-3 w-3" />
                 Editar
               </Button>
+              {projeto.status !== "ARQUIVADO" && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground">
+                      <MoreVertical className="h-3.5 w-3.5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={handleArchiveProject}
+                      disabled={archiving}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Archive className="h-4 w-4 mr-2" />
+                      {archiving ? "Arquivando..." : "Arquivar Projeto"}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+              {projeto.status === "ARQUIVADO" && (
+                <Badge variant="outline" className="text-xs bg-purple-500/10 text-purple-400 border-purple-500/30">
+                  Arquivado
+                </Badge>
+              )}
             </>
           )}
         </div>
