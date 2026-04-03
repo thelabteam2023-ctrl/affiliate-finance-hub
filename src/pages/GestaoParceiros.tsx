@@ -1,12 +1,14 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useTabWorkspace } from "@/hooks/useTabWorkspace";
 import { useNavigate } from "react-router-dom";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useCotacoes } from "@/hooks/useCotacoes";
 import { useTopBar } from "@/contexts/TopBarContext";
-import { Users } from "lucide-react";
+import { Users, ArrowLeft } from "lucide-react";
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import {
   AlertDialog,
@@ -38,6 +40,7 @@ const SUPPORTED_FIAT: string[] = FIAT_CURRENCIES.map(c => c.value);
 type SaldosPorMoeda = Record<string, number>;
 
 export default function GestaoParceiros() {
+  const isMobile = useIsMobile();
   // ==================== REACT QUERY: Cache + Deduplicação ====================
   const { parceiros, roiData, saldosData: saldosDataBase, saldosCryptoRaw, parceriasData, loading, refetch: refetchParceiros } = useParceirosData();
   
@@ -84,9 +87,14 @@ export default function GestaoParceiros() {
   const handleSelectParceiroDetalhes = useCallback((id: string) => {
     setSelectedParceiroDetalhes(id);
     parceiroCache.selectParceiro(id);
-    // Persistir no localStorage para manter contexto entre sessões
     localStorage.setItem('last_selected_partner_id', id);
   }, [parceiroCache.selectParceiro]);
+
+  // Mobile: voltar para lista
+  const handleBackToList = useCallback(() => {
+    setSelectedParceiroDetalhes(null);
+    localStorage.removeItem('last_selected_partner_id');
+  }, []);
 
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -366,7 +374,7 @@ export default function GestaoParceiros() {
     return parceriasData.get(selectedParceiroDetalhes || '')?.dias_restantes ?? null;
   }, [parceriasData, selectedParceiroDetalhes]);
 
-  // Persistência: Restaura último parceiro selecionado ou fallback para primeiro
+  // Persistência: Restaura último parceiro selecionado ou fallback para primeiro (desktop only)
   useEffect(() => {
     if (parceiros.length === 0) return;
     
@@ -374,20 +382,21 @@ export default function GestaoParceiros() {
     if (selectedParceiroDetalhes) {
       const parceiroExiste = parceiros.some(p => p.id === selectedParceiroDetalhes);
       if (parceiroExiste) {
-        // Parceiro existe, apenas garantir que o cache está sincronizado
         parceiroCache.selectParceiro(selectedParceiroDetalhes);
         return;
       }
-      // Parceiro não existe mais, limpar localStorage
       localStorage.removeItem('last_selected_partner_id');
     }
     
-    // Fallback: seleciona o primeiro da lista
+    // Mobile: não auto-selecionar, mostra lista primeiro
+    if (isMobile) return;
+    
+    // Desktop fallback: seleciona o primeiro da lista
     const firstParceiroId = parceiros[0].id;
     setSelectedParceiroDetalhes(firstParceiroId);
     parceiroCache.selectParceiro(firstParceiroId);
     localStorage.setItem('last_selected_partner_id', firstParceiroId);
-  }, [parceiros, selectedParceiroDetalhes, parceiroCache.selectParceiro]);
+  }, [parceiros, selectedParceiroDetalhes, parceiroCache.selectParceiro, isMobile]);
 
   // Prepare data for sidebar with multi-currency support
   const parceirosParaSidebar = useMemo(() => {
@@ -449,69 +458,152 @@ export default function GestaoParceiros() {
       <div className="h-full flex flex-col bg-background">
 
         {/* PageBody: flex-1 ocupa espaço restante, min-h-0 permite shrink */}
-        <div className="flex-1 min-h-0 px-4 pt-2 pb-4">
+        <div className="flex-1 min-h-0 px-2 md:px-4 pt-2 pb-4">
           <Card className="h-full border-border bg-gradient-surface overflow-hidden">
-            {/* Layout Grid: duas colunas com altura 100% */}
-            <div className="h-full grid grid-cols-[340px_1fr] lg:grid-cols-[360px_1fr]">
-              
-              {/* Sidebar: altura 100%, scroll próprio interno */}
-              <ParceiroListaSidebar
-                parceiros={parceirosParaSidebar}
-                selectedId={selectedParceiroDetalhes}
-                onSelect={handleSelectParceiroDetalhes}
-                showSensitiveData={showSensitiveData}
-                onAddParceiro={() => setDialogOpen(true)}
-                onEditParceiro={(id) => {
-                  const parceiro = parceiros.find(p => p.id === id);
-                  if (parceiro) {
-                    setEditingParceiro(parceiro);
-                    setViewMode(false);
-                    setDialogOpen(true);
-                  }
-                }}
-                onDeposito={(id) => {
-                  handleSelectParceiroDetalhes(id);
-                  setTransacaoBookmaker(null);
-                  setTransacaoTipo("DEPOSITO");
-                  setTransacaoEntryPoint("affiliate_deposit");
-                  setTransacaoDialogOpen(true);
-                }}
-                onSaque={(id) => {
-                  handleSelectParceiroDetalhes(id);
-                  setTransacaoBookmaker(null);
-                  setTransacaoTipo("SAQUE");
-                  setTransacaoEntryPoint("affiliate_deposit");
-                  setTransacaoDialogOpen(true);
-                }}
-                onTransferencia={(id) => {
-                  handleSelectParceiroDetalhes(id);
-                  setTransacaoBookmaker(null);
-                  setTransacaoTipo("TRANSFERENCIA");
-                  setTransacaoEntryPoint("affiliate_deposit");
-                  setTransacaoDialogOpen(true);
-                }}
-              />
+            
+            {/* ===== MOBILE: Master-Detail Flow ===== */}
+            {isMobile ? (
+              <div className="h-full flex flex-col">
+                {/* Mobile: Detail view (when partner selected) */}
+                {selectedParceiroDetalhes ? (
+                  <>
+                    {/* Back button header */}
+                    <div className="shrink-0 flex items-center gap-2 px-3 py-2.5 border-b border-border bg-muted/30">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={handleBackToList}
+                        className="h-8 px-2 gap-1.5 text-muted-foreground hover:text-foreground"
+                      >
+                        <ArrowLeft className="h-4 w-4" />
+                        <span className="text-sm">Parceiros</span>
+                      </Button>
+                    </div>
+                    {/* Detail panel fills remaining space */}
+                    <div className="flex-1 min-h-0">
+                      <ParceiroDetalhesPanel 
+                        parceiroId={selectedParceiroDetalhes} 
+                        showSensitiveData={showSensitiveData}
+                        onToggleSensitiveData={handleToggleSensitiveData}
+                        onCreateVinculo={handleCreateVinculo}
+                        onEditVinculo={handleEditVinculo}
+                        onNewTransacao={handleNewTransacao}
+                        parceiroStatus={currentParceiroStatus}
+                        hasParceria={currentHasParceria}
+                        diasRestantes={currentDiasRestantes}
+                        onViewParceiro={handleViewParceiro}
+                        onEditParceiro={handleEditParceiro}
+                        onDeleteParceiro={handleDeleteParceiroClick}
+                        parceiroCache={parceiroCache}
+                        bookmakerRefreshKey={bookmakerRefreshKey}
+                        saldoBanco={selectedParceiroDetalhes ? (saldosData.get(selectedParceiroDetalhes)?.saldo_fiat ?? 0) : 0}
+                        saldoCrypto={selectedParceiroDetalhes ? (saldosData.get(selectedParceiroDetalhes)?.saldo_crypto_usd ?? 0) : 0}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  /* Mobile: List view (no partner selected) */
+                  <ParceiroListaSidebar
+                    parceiros={parceirosParaSidebar}
+                    selectedId={selectedParceiroDetalhes}
+                    onSelect={handleSelectParceiroDetalhes}
+                    showSensitiveData={showSensitiveData}
+                    onAddParceiro={() => setDialogOpen(true)}
+                    onEditParceiro={(id) => {
+                      const parceiro = parceiros.find(p => p.id === id);
+                      if (parceiro) {
+                        setEditingParceiro(parceiro);
+                        setViewMode(false);
+                        setDialogOpen(true);
+                      }
+                    }}
+                    onDeposito={(id) => {
+                      handleSelectParceiroDetalhes(id);
+                      setTransacaoBookmaker(null);
+                      setTransacaoTipo("DEPOSITO");
+                      setTransacaoEntryPoint("affiliate_deposit");
+                      setTransacaoDialogOpen(true);
+                    }}
+                    onSaque={(id) => {
+                      handleSelectParceiroDetalhes(id);
+                      setTransacaoBookmaker(null);
+                      setTransacaoTipo("SAQUE");
+                      setTransacaoEntryPoint("affiliate_deposit");
+                      setTransacaoDialogOpen(true);
+                    }}
+                    onTransferencia={(id) => {
+                      handleSelectParceiroDetalhes(id);
+                      setTransacaoBookmaker(null);
+                      setTransacaoTipo("TRANSFERENCIA");
+                      setTransacaoEntryPoint("affiliate_deposit");
+                      setTransacaoDialogOpen(true);
+                    }}
+                  />
+                )}
+              </div>
+            ) : (
+              /* ===== DESKTOP: Two-column layout ===== */
+              <div className="h-full grid grid-cols-[340px_1fr] lg:grid-cols-[360px_1fr]">
+                
+                {/* Sidebar: altura 100%, scroll próprio interno */}
+                <ParceiroListaSidebar
+                  parceiros={parceirosParaSidebar}
+                  selectedId={selectedParceiroDetalhes}
+                  onSelect={handleSelectParceiroDetalhes}
+                  showSensitiveData={showSensitiveData}
+                  onAddParceiro={() => setDialogOpen(true)}
+                  onEditParceiro={(id) => {
+                    const parceiro = parceiros.find(p => p.id === id);
+                    if (parceiro) {
+                      setEditingParceiro(parceiro);
+                      setViewMode(false);
+                      setDialogOpen(true);
+                    }
+                  }}
+                  onDeposito={(id) => {
+                    handleSelectParceiroDetalhes(id);
+                    setTransacaoBookmaker(null);
+                    setTransacaoTipo("DEPOSITO");
+                    setTransacaoEntryPoint("affiliate_deposit");
+                    setTransacaoDialogOpen(true);
+                  }}
+                  onSaque={(id) => {
+                    handleSelectParceiroDetalhes(id);
+                    setTransacaoBookmaker(null);
+                    setTransacaoTipo("SAQUE");
+                    setTransacaoEntryPoint("affiliate_deposit");
+                    setTransacaoDialogOpen(true);
+                  }}
+                  onTransferencia={(id) => {
+                    handleSelectParceiroDetalhes(id);
+                    setTransacaoBookmaker(null);
+                    setTransacaoTipo("TRANSFERENCIA");
+                    setTransacaoEntryPoint("affiliate_deposit");
+                    setTransacaoDialogOpen(true);
+                  }}
+                />
 
-              {/* MainPanel: altura 100%, gerencia internamente */}
-              <ParceiroDetalhesPanel 
-                parceiroId={selectedParceiroDetalhes} 
-                showSensitiveData={showSensitiveData}
-                onToggleSensitiveData={handleToggleSensitiveData}
-                onCreateVinculo={handleCreateVinculo}
-                onEditVinculo={handleEditVinculo}
-                onNewTransacao={handleNewTransacao}
-                parceiroStatus={currentParceiroStatus}
-                hasParceria={currentHasParceria}
-                diasRestantes={currentDiasRestantes}
-                onViewParceiro={handleViewParceiro}
-                onEditParceiro={handleEditParceiro}
-                onDeleteParceiro={handleDeleteParceiroClick}
-                parceiroCache={parceiroCache}
-                bookmakerRefreshKey={bookmakerRefreshKey}
-                saldoBanco={selectedParceiroDetalhes ? (saldosData.get(selectedParceiroDetalhes)?.saldo_fiat ?? 0) : 0}
-                saldoCrypto={selectedParceiroDetalhes ? (saldosData.get(selectedParceiroDetalhes)?.saldo_crypto_usd ?? 0) : 0}
-              />
-            </div>
+                {/* MainPanel: altura 100%, gerencia internamente */}
+                <ParceiroDetalhesPanel 
+                  parceiroId={selectedParceiroDetalhes} 
+                  showSensitiveData={showSensitiveData}
+                  onToggleSensitiveData={handleToggleSensitiveData}
+                  onCreateVinculo={handleCreateVinculo}
+                  onEditVinculo={handleEditVinculo}
+                  onNewTransacao={handleNewTransacao}
+                  parceiroStatus={currentParceiroStatus}
+                  hasParceria={currentHasParceria}
+                  diasRestantes={currentDiasRestantes}
+                  onViewParceiro={handleViewParceiro}
+                  onEditParceiro={handleEditParceiro}
+                  onDeleteParceiro={handleDeleteParceiroClick}
+                  parceiroCache={parceiroCache}
+                  bookmakerRefreshKey={bookmakerRefreshKey}
+                  saldoBanco={selectedParceiroDetalhes ? (saldosData.get(selectedParceiroDetalhes)?.saldo_fiat ?? 0) : 0}
+                  saldoCrypto={selectedParceiroDetalhes ? (saldosData.get(selectedParceiroDetalhes)?.saldo_crypto_usd ?? 0) : 0}
+                />
+              </div>
+            )}
           </Card>
         </div>
 
