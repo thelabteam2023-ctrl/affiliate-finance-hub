@@ -180,8 +180,7 @@ export default function Financeiro() {
             </TabsTrigger>
             <TabsTrigger value="participacoes" className="flex items-center gap-1.5 md:gap-2 min-w-0 px-2.5 md:px-4 text-xs md:text-sm">
               <Users className="h-4 w-4 shrink-0" />
-              <span className="hidden sm:inline">Participações</span>
-              <span className="sm:hidden">Partic.</span>
+              Participações
             </TabsTrigger>
             <TabsTrigger value="historico" className="flex items-center gap-1.5 md:gap-2 min-w-0 px-2.5 md:px-4 text-xs md:text-sm">
               <History className="h-4 w-4 shrink-0" />
