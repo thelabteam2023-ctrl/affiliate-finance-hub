@@ -150,7 +150,7 @@ export default function Financeiro() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="container mx-auto px-3 py-4 md:px-6 md:py-6 space-y-4 md:space-y-6">
       <MultiCurrencyWarningBanner
         hasUSD={calc.saldos.hasBookmakersUSD || calc.saldos.saldoUSD > 0}
         hasCrypto={calc.saldos.totalCryptoUSD > 0}
@@ -164,17 +164,36 @@ export default function Financeiro() {
         onCustomRangeChange={setCustomRange}
       />
 
-      <Tabs value={activeFinanceiroTab} onValueChange={setActiveFinanceiroTab} className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="overview" className="flex items-center gap-2"><BarChart3 className="h-4 w-4" />Visão Financeira</TabsTrigger>
-          <TabsTrigger value="despesas" className="flex items-center gap-2"><Building2 className="h-4 w-4" />Despesas Administrativas</TabsTrigger>
-          <TabsTrigger value="participacoes" className="flex items-center gap-2"><Users className="h-4 w-4" />Participações</TabsTrigger>
-          <TabsTrigger value="historico" className="flex items-center gap-2"><History className="h-4 w-4" />Histórico Mensal</TabsTrigger>
-        </TabsList>
+      <Tabs value={activeFinanceiroTab} onValueChange={setActiveFinanceiroTab} className="space-y-4 md:space-y-6">
+        {/* Sticky tab bar - mobile optimized */}
+        <div className="sticky top-0 z-30 -mx-3 px-3 md:-mx-6 md:px-6 py-2 bg-background/95 backdrop-blur-sm border-b border-border/50">
+          <TabsList className="w-full overflow-x-auto scrollbar-none flex gap-0 md:gap-8 border-b-0">
+            <TabsTrigger value="overview" className="flex items-center gap-1.5 md:gap-2 min-w-0 px-2.5 md:px-4 text-xs md:text-sm">
+              <BarChart3 className="h-4 w-4 shrink-0" />
+              <span className="hidden sm:inline">Visão Financeira</span>
+              <span className="sm:hidden">Visão</span>
+            </TabsTrigger>
+            <TabsTrigger value="despesas" className="flex items-center gap-1.5 md:gap-2 min-w-0 px-2.5 md:px-4 text-xs md:text-sm">
+              <Building2 className="h-4 w-4 shrink-0" />
+              <span className="hidden sm:inline">Despesas Administrativas</span>
+              <span className="sm:hidden">Despesas</span>
+            </TabsTrigger>
+            <TabsTrigger value="participacoes" className="flex items-center gap-1.5 md:gap-2 min-w-0 px-2.5 md:px-4 text-xs md:text-sm">
+              <Users className="h-4 w-4 shrink-0" />
+              <span className="hidden sm:inline">Participações</span>
+              <span className="sm:hidden">Partic.</span>
+            </TabsTrigger>
+            <TabsTrigger value="historico" className="flex items-center gap-1.5 md:gap-2 min-w-0 px-2.5 md:px-4 text-xs md:text-sm">
+              <History className="h-4 w-4 shrink-0" />
+              <span className="hidden sm:inline">Histórico Mensal</span>
+              <span className="sm:hidden">Histórico</span>
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
-        <TabsContent value="overview" className="space-y-6">
+        <TabsContent value="overview" className="space-y-4 md:space-y-6">
           {/* LINHA 1: Visão Patrimonial */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
             <MapaPatrimonioCard
               caixaOperacional={calc.saldos.capitalOperacional}
               saldoBookmakers={calc.saldos.saldoBookmakers}
@@ -203,7 +222,7 @@ export default function Financeiro() {
           </div>
 
           {/* LINHA 2: Métricas Operacionais */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
             <EquilibrioOperacionalCard
               lucroOperacional={lucroOperacionalApostas}
               custoSustentacao={calc.costs.custoSustentacao}
@@ -235,7 +254,7 @@ export default function Financeiro() {
           </div>
 
           {/* LINHA 3: Custos e Rentabilidade */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
             <CustoSustentacaoCard
               custosOperacionais={calc.costs.totalCustosOperacionais}
               despesasAdministrativas={calc.costs.totalDespesasAdmin}
@@ -266,10 +285,10 @@ export default function Financeiro() {
           />
         </TabsContent>
 
-        <TabsContent value="participacoes" className="space-y-6">
+        <TabsContent value="participacoes" className="space-y-4 md:space-y-6">
           <div>
-            <h2 className="text-lg font-semibold">Participações de Investidores</h2>
-            <p className="text-sm text-muted-foreground">Gerencie distribuição de lucros para investidores vinculados a projetos</p>
+            <h2 className="text-base md:text-lg font-semibold">Participações de Investidores</h2>
+            <p className="text-xs md:text-sm text-muted-foreground">Gerencie distribuição de lucros para investidores vinculados a projetos</p>
           </div>
           <ParticipacaoInvestidoresTab
             formatCurrency={calc.formatCurrency}
