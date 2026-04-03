@@ -533,7 +533,7 @@ export default function ProjetoDetalhe() {
       </div>
     );
     return () => setTopBarContent(null);
-  }, [projeto, diasCiclo, id, isFavorite, canEdit, editDialogOpen]);
+  }, [projeto, diasCiclo, id, isFavorite, canEdit, editDialogOpen, archiving]);
 
   // As abas usam seus próprios filtros internos
   
