@@ -316,7 +316,7 @@ export function CicloDialog({
                 ciclo_id: novoCiclo.id,
                 investidor_id: projeto.investidor_id,
                 percentual_aplicado: projeto.percentual_investidor,
-                base_calculo: projeto.base_calculo_investidor || "LUCRO_BRUTO",
+                base_calculo: projeto.base_calculo_investidor || "LUCRO_LIQUIDO",
                 lucro_base: 0,
                 valor_participacao: 0,
                 status: "AGUARDANDO_CICLO",
