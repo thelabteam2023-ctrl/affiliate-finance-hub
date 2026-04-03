@@ -86,9 +86,14 @@ export default function GestaoParceiros() {
   const handleSelectParceiroDetalhes = useCallback((id: string) => {
     setSelectedParceiroDetalhes(id);
     parceiroCache.selectParceiro(id);
-    // Persistir no localStorage para manter contexto entre sessões
     localStorage.setItem('last_selected_partner_id', id);
   }, [parceiroCache.selectParceiro]);
+
+  // Mobile: voltar para lista
+  const handleBackToList = useCallback(() => {
+    setSelectedParceiroDetalhes(null);
+    localStorage.removeItem('last_selected_partner_id');
+  }, []);
 
   const navigate = useNavigate();
   const { toast } = useToast();
