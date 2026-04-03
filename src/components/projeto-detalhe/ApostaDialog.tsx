@@ -1975,7 +1975,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         apostaData = {
           ...commonData,
           bookmaker_id: bookmakerId,
-          odd: Math.round(effectiveOdd * 1000) / 1000, // 3 casas decimais
+          odd: Math.round(effectiveOdd * 100000) / 100000, // 5 casas decimais (padrão de precisão)
           stake: effectiveStake,
           modo_entrada: "PADRAO",
           valor_retorno: valorRetornoCalculado,
