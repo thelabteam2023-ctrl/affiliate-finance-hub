@@ -237,13 +237,20 @@ export function ParticipacaoInvestidoresTab({ formatCurrency, onRefresh, investi
               else setFiltroInvestidor(value);
             }}
           >
-            <SelectTrigger className="w-[200px] h-8 text-sm">
+            <SelectTrigger className="w-[280px] h-9 text-sm">
               <SelectValue placeholder="Filtrar investidor" />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todos">Todos os investidores</SelectItem>
+            <SelectContent className="min-w-[280px] max-h-[320px]">
+              <SelectItem value="todos" className="py-2.5">
+                <div className="flex items-center gap-2">
+                  <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="font-medium">Todos os investidores</span>
+                </div>
+              </SelectItem>
               {investidores.map((inv) => (
-                <SelectItem key={inv.id} value={inv.id}>{inv.nome}</SelectItem>
+                <SelectItem key={inv.id} value={inv.id} className="py-2.5">
+                  <span className="font-medium">{inv.nome}</span>
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
