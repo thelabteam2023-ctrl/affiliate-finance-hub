@@ -42,7 +42,8 @@ import {
   Zap,
   Puzzle,
   Plus,
-  
+  Archive,
+  MoreVertical,
 } from "lucide-react";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { useCotacoes } from "@/hooks/useCotacoes";
