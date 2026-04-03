@@ -196,7 +196,7 @@ export function PropostasPagamentoCard() {
           projeto_id: selectedProposta.projeto_id,
           valor: valorFinal,
           tipo_pagamento: "COMISSAO",
-          status: "PAGO",
+          status: "CONFIRMADO",
           data_pagamento: getTodayCivilDate(),
           descricao: `Pagamento do Ciclo ${selectedProposta.ciclo_numero || "N/A"} - ${selectedProposta.modelo_pagamento} (já realizado)`,
         })
