@@ -584,6 +584,9 @@ function deriveBreakdowns(
   const volumeLiquidadoTotal = apostasData.volumeLiquidado ?? volumeTotal;
   const roiTotal = volumeLiquidadoTotal > 0 ? (lucroTotal / volumeLiquidadoTotal) * 100 : null;
 
+  // === VOLUME TEMPORAL STATS ===
+  const volumeTemporalStats = deriveVolumeTemporalStats(rawData.apostas, volumeBreakdown.total);
+
   return {
     apostas: apostasBreakdown,
     volume: volumeBreakdown,
@@ -594,6 +597,7 @@ function deriveBreakdowns(
       lucroTotal,
       currency: moedaConsolidacao,
     },
+    volumeTemporal: volumeTemporalStats,
   };
 }
 
