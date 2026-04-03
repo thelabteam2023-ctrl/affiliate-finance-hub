@@ -399,6 +399,44 @@ export default function ProjetoDetalhe() {
     }
   }, [id]);
 
+  const handleArchiveProject = async () => {
+    if (!projeto || !id) return;
+    
+    // Check for active bookmaker links
+    const { count } = await supabase
+      .from("bookmakers")
+      .select("id", { count: "exact", head: true })
+      .eq("projeto_id", id)
+      .in("status", ["ATIVO", "AGUARDANDO_SAQUE"]);
+    
+    if (count && count > 0) {
+      toast.error(`Não é possível arquivar: ${count} bookmaker(s) ainda vinculado(s) ao projeto.`);
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Tem certeza que deseja arquivar o projeto "${projeto.nome}"?\n\nO projeto será removido do fluxo operacional e suas participações pendentes serão ignoradas. Esta ação pode ser revertida.`
+    );
+    if (!confirmed) return;
+
+    setArchiving(true);
+    try {
+      const { error } = await supabase
+        .from("projetos")
+        .update({ status: "ARQUIVADO" })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast.success("Projeto arquivado com sucesso!");
+      navigate("/projetos");
+    } catch (error: any) {
+      toast.error("Erro ao arquivar: " + error.message);
+    } finally {
+      setArchiving(false);
+    }
+  };
+
   // Inject project header into TopBar
   const diasCiclo = entregaAtiva?.data_fim_prevista ? differenceInDays(new Date(entregaAtiva.data_fim_prevista), new Date()) : null;
   useEffect(() => {
