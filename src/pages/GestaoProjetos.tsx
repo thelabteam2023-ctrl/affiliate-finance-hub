@@ -31,8 +31,15 @@ import {
   Eye,
   Star,
   Kanban,
-  Briefcase
+  Briefcase,
+  MoreHorizontal,
+  Check
 } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useProjectFavorites } from "@/hooks/useProjectFavorites";
 import { VisualizarOperadoresDialog } from "@/components/projetos/VisualizarOperadoresDialog";
@@ -445,6 +452,21 @@ export default function GestaoProjetos() {
     return map;
   }, [sectionFilteredProjetos]);
 
+  // Contagem por status (para badges nos chips)
+  const statusCountMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    const baseFiltered = projetos.filter((proj) => {
+      const matchesSearch = proj.nome.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSection = isBrokerSection ? proj.is_broker === true : proj.is_broker !== true;
+      return matchesSearch && matchesSection;
+    });
+    baseFiltered.forEach((proj) => {
+      map[proj.status] = (map[proj.status] || 0) + 1;
+    });
+    map["all"] = baseFiltered.length;
+    return map;
+  }, [projetos, searchTerm, isBrokerSection]);
+
   const filteredProjetos = sectionFilteredProjetos.filter((proj) => {
     const matchesTipo = tipoFilter === "all" || (proj as any).tipo_projeto === tipoFilter;
     return matchesTipo;
@@ -629,34 +651,90 @@ export default function GestaoProjetos() {
             </div>
           </div>
 
-          {/* Linha 2: Status chips */}
-          <div className="flex flex-wrap gap-1.5 mt-3">
+          {/* Linha 2: Status filter — estilo Gestão de Parceiros */}
+          <div className="flex items-center gap-2 mt-3">
+            {/* Chips principais: Em Andamento + Todos */}
             {[
-              { value: "EM_ANDAMENTO", label: "Em Andamento", dotColor: "bg-emerald-500" },
-              { value: "PLANEJADO", label: "Planejado", dotColor: "bg-blue-500" },
-              { value: "PAUSADO", label: "Pausado", dotColor: "bg-yellow-500" },
-              { value: "FINALIZADO", label: "Finalizado", dotColor: "bg-gray-400" },
-              { value: "ARQUIVADO", label: "Arquivado", dotColor: "bg-purple-500" },
-              { value: "all", label: "Todos", dotColor: "bg-muted-foreground" },
+              { value: "EM_ANDAMENTO", label: "Em andamento" },
+              { value: "all", label: "Todos os status" },
             ].map((chip) => {
               const isActive = statusFilter === chip.value;
+              const count = statusCountMap[chip.value] || 0;
               return (
                 <button
                   key={chip.value}
                   onClick={() => setStatusFilter(chip.value)}
                   className={cn(
-                    "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-150",
-                    "min-h-[36px] md:min-h-[32px] active:scale-95",
+                    "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border transition-all duration-150",
+                    "min-h-[36px] md:min-h-[32px] active:scale-[0.97] whitespace-nowrap",
                     isActive
-                      ? "bg-primary/15 border-primary/40 text-primary shadow-sm"
-                      : "bg-muted/30 border-border text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                      ? "bg-primary/10 border-primary/30 text-primary"
+                      : "bg-muted/40 border-border text-muted-foreground hover:bg-muted/70 hover:text-foreground"
                   )}
                 >
-                  <span className={cn("h-2 w-2 rounded-full flex-shrink-0", chip.dotColor)} />
                   {chip.label}
+                  {count > 0 && (
+                    <span className={cn(
+                      "ml-0.5 text-[10px] font-semibold tabular-nums",
+                      isActive ? "text-primary/70" : "text-muted-foreground/60"
+                    )}>
+                      ({count})
+                    </span>
+                  )}
                 </button>
               );
             })}
+
+            {/* Overflow: outros status */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  className={cn(
+                    "inline-flex items-center justify-center px-2.5 py-1.5 rounded-md text-xs font-medium border transition-all duration-150",
+                    "min-h-[36px] md:min-h-[32px] active:scale-[0.97]",
+                    ["PLANEJADO", "PAUSADO", "FINALIZADO", "ARQUIVADO"].includes(statusFilter)
+                      ? "bg-primary/10 border-primary/30 text-primary"
+                      : "bg-muted/40 border-border text-muted-foreground hover:bg-muted/70 hover:text-foreground"
+                  )}
+                >
+                  {["PLANEJADO", "PAUSADO", "FINALIZADO", "ARQUIVADO"].includes(statusFilter)
+                    ? getStatusLabel(statusFilter)
+                    : <MoreHorizontal className="h-4 w-4" />
+                  }
+                </button>
+              </PopoverTrigger>
+              <PopoverContent align="start" className="w-48 p-1">
+                {[
+                  { value: "PLANEJADO", label: "Planejado", dotColor: "bg-blue-500" },
+                  { value: "PAUSADO", label: "Pausado", dotColor: "bg-yellow-500" },
+                  { value: "FINALIZADO", label: "Finalizado", dotColor: "bg-gray-400" },
+                  { value: "ARQUIVADO", label: "Arquivado", dotColor: "bg-purple-500" },
+                ].map((item) => {
+                  const isActive = statusFilter === item.value;
+                  const count = statusCountMap[item.value] || 0;
+                  return (
+                    <button
+                      key={item.value}
+                      onClick={() => setStatusFilter(item.value)}
+                      className={cn(
+                        "w-full flex items-center gap-2 px-3 py-2.5 rounded-md text-sm transition-colors",
+                        "min-h-[44px]",
+                        isActive
+                          ? "bg-primary/10 text-primary font-medium"
+                          : "text-foreground hover:bg-muted/60"
+                      )}
+                    >
+                      <span className={cn("h-2 w-2 rounded-full flex-shrink-0", item.dotColor)} />
+                      <span className="flex-1 text-left">{item.label}</span>
+                      {count > 0 && (
+                        <span className="text-xs text-muted-foreground tabular-nums">({count})</span>
+                      )}
+                      {isActive && <Check className="h-3.5 w-3.5 text-primary flex-shrink-0" />}
+                    </button>
+                  );
+                })}
+              </PopoverContent>
+            </Popover>
           </div>
         </CardContent>
       </Card>
