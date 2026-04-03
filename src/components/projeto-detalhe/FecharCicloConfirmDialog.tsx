@@ -52,6 +52,8 @@ interface CicloMetrics {
   ticketMedio: number;
   lucroBruto: number;
   lucroReal: number;
+  lucroOperacional?: number;
+  lucroRealizado?: number;
   roi: number;
   perdas: {
     totalConfirmadas: number;
@@ -136,16 +138,17 @@ export function FecharCicloConfirmDialog({
 
     setLoading(true);
     try {
-      // Pass pre-calculated metrics (with proper currency conversion) to the RPC
+      // Pass pre-calculated metrics from calcularMetricasPeriodo (single source of truth)
+      // These already include proper multi-currency conversion
       const frontendMetrics = metrics ? {
         qtd_apostas: metrics.qtdApostas,
         volume: metrics.volume,
-        lucro_apostas: metrics.lucroBruto - (metrics.perdas?.totalConfirmadas || 0), // approximation
+        lucro_apostas: metrics.lucroBruto, // lucroBruto = apostas + cashback + giros (já consolidado)
         lucro_bruto: metrics.lucroBruto,
-        lucro_liquido: metrics.lucroReal,
+        lucro_liquido: metrics.lucroOperacional ?? metrics.lucroReal, // Lucro operacional completo
         perdas_confirmadas: metrics.perdas?.totalConfirmadas || 0,
-        cashback: 0, // already included in lucroBruto
-        giros_gratis: 0, // already included in lucroBruto
+        cashback: 0, // Já incluído no lucroBruto pelo serviço canônico
+        giros_gratis: 0, // Já incluído no lucroBruto pelo serviço canônico
       } : null;
 
       const { data, error } = await supabase
