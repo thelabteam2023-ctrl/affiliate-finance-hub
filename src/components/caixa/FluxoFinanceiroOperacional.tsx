@@ -92,6 +92,7 @@ interface Transacao {
   valor_usd: number | null;
   origem_tipo: string | null;
   destino_tipo: string | null;
+  descricao?: string | null;
 }
 
 interface FluxoFinanceiroOperacionalProps {
