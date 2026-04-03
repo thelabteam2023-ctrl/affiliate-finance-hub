@@ -374,7 +374,7 @@ export default function GestaoParceiros() {
     return parceriasData.get(selectedParceiroDetalhes || '')?.dias_restantes ?? null;
   }, [parceriasData, selectedParceiroDetalhes]);
 
-  // Persistência: Restaura último parceiro selecionado ou fallback para primeiro
+  // Persistência: Restaura último parceiro selecionado ou fallback para primeiro (desktop only)
   useEffect(() => {
     if (parceiros.length === 0) return;
     
@@ -382,20 +382,21 @@ export default function GestaoParceiros() {
     if (selectedParceiroDetalhes) {
       const parceiroExiste = parceiros.some(p => p.id === selectedParceiroDetalhes);
       if (parceiroExiste) {
-        // Parceiro existe, apenas garantir que o cache está sincronizado
         parceiroCache.selectParceiro(selectedParceiroDetalhes);
         return;
       }
-      // Parceiro não existe mais, limpar localStorage
       localStorage.removeItem('last_selected_partner_id');
     }
     
-    // Fallback: seleciona o primeiro da lista
+    // Mobile: não auto-selecionar, mostra lista primeiro
+    if (isMobile) return;
+    
+    // Desktop fallback: seleciona o primeiro da lista
     const firstParceiroId = parceiros[0].id;
     setSelectedParceiroDetalhes(firstParceiroId);
     parceiroCache.selectParceiro(firstParceiroId);
     localStorage.setItem('last_selected_partner_id', firstParceiroId);
-  }, [parceiros, selectedParceiroDetalhes, parceiroCache.selectParceiro]);
+  }, [parceiros, selectedParceiroDetalhes, parceiroCache.selectParceiro, isMobile]);
 
   // Prepare data for sidebar with multi-currency support
   const parceirosParaSidebar = useMemo(() => {
