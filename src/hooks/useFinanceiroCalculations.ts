@@ -33,6 +33,7 @@ export function useFinanceiroCalculations({
   dataInicio,
   dataFim,
   cotacaoUSD,
+  cotacoesMap = {},
   lucroOperacionalApostas,
   getCryptoUSDValue,
   convertFromBRL,
