@@ -13671,6 +13671,15 @@ export type Database = {
         | {
             Args: {
               _ciclo_id: string
+              _force_close?: boolean
+              _observacoes?: string
+              _workspace_id: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              _ciclo_id: string
               _frontend_metrics?: Json
               _workspace_id: string
             }
