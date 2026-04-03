@@ -267,6 +267,15 @@ input[type="number"] {
   .status-bg-purple { background-color: hsl(var(--status-purple) / 0.15); border-color: hsl(var(--status-purple) / 0.3); }
   .status-bg-gray { background-color: hsl(var(--status-gray) / 0.15); border-color: hsl(var(--status-gray) / 0.3); }
   .status-bg-slate { background-color: hsl(var(--status-slate) / 0.15); border-color: hsl(var(--status-slate) / 0.3); }
+
+  /* ═══ SCROLLBAR UTILITIES ═══ */
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 @keyframes glow {

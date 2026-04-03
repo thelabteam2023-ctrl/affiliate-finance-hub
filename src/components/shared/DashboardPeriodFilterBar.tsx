@@ -111,18 +111,18 @@ export function DashboardPeriodFilterBar({
   return (
     <div 
       className={cn(
-        "inline-flex items-center gap-2",
+        "flex flex-wrap items-center gap-2",
         className
       )}
     >
       {/* Botões de filtros rápidos */}
-      <div className="inline-flex items-center rounded-lg border border-border/50 bg-muted/30 p-0.5">
+      <div className="inline-flex items-center rounded-lg border border-border/50 bg-muted/30 p-0.5 overflow-x-auto scrollbar-none">
         {visibleOptions.map((option) => (
           <button
             key={option.value}
             onClick={() => onChange(option.value)}
             className={cn(
-              "font-medium rounded-md transition-all",
+              "font-medium rounded-md transition-all whitespace-nowrap min-h-[36px] md:min-h-0 active:scale-95",
               size === "sm" ? "px-2.5 py-1 text-xs" : "px-3 py-1.5 text-xs",
               value === option.value
                 ? "bg-primary text-primary-foreground shadow-sm"
