@@ -39,6 +39,7 @@ export function useFinanceiroCalculations({
   lucroOperacionalApostas,
   getCryptoUSDValue,
   convertFromBRL,
+  convertUnified,
 }: FinanceiroCalcParams) {
   const {
     caixaFiat,
