@@ -67,6 +67,8 @@ export default function Financeiro() {
   }, [cotacaoEUR, cotacaoGBP, cotacaoMYR, cotacaoMXN, cotacaoARS, cotacaoCOP]);
   
   const { convertFromBRL } = useCurrencySnapshot({ cryptoSymbols });
+  // Conversão unificada: mesma função usada pelo Caixa Operacional (PosicaoCapital)
+  const { convert: convertUnified } = useMultiCurrencyConversion(cryptoSymbols);
 
   // Filtro de período
   const [periodoPreset, setPeriodoPreset] = useState<DashboardPeriodFilter>("mes");
