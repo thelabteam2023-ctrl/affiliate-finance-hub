@@ -544,6 +544,17 @@ function ParticipacaoRow({
             <span>Ciclo #{p.projeto_ciclos?.numero_ciclo || "—"}</span>
             <span className="text-muted-foreground/40">•</span>
             <span>{dateStr}</span>
+            {showDate === "pagamento" && statusLabel && (
+              <>
+                <span className="text-muted-foreground/40">•</span>
+                <Badge variant="outline" className={`text-[10px] h-4 px-1.5 ${
+                  p.status === "PAGO" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30" : 
+                  "bg-blue-500/10 text-blue-400 border-blue-500/30"
+                }`}>
+                  {statusLabel}
+                </Badge>
+              </>
+            )}
           </div>
         </div>
       </div>
