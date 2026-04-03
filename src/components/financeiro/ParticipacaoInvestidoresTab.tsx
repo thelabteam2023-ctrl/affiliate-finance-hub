@@ -364,17 +364,17 @@ export function ParticipacaoInvestidoresTab({ formatCurrency, onRefresh, investi
       {/* ── Histórico ── */}
       <CollapsibleSection
         title="Histórico de Pagamentos"
-        count={pagas.length}
+        count={historico.length}
         icon={<CheckCircle2 className="h-4 w-4 text-emerald-400" />}
         expanded={expandedSections.pagas}
         onToggle={() => toggleSection("pagas")}
         accentColor="emerald"
       >
-        {pagas.length === 0 ? (
+        {historico.length === 0 ? (
           <EmptyState text="Nenhum pagamento realizado" />
         ) : (
           <div className="space-y-2">
-            {pagas.map((p) => (
+            {historico.map((p) => (
               <ParticipacaoRow
                 key={p.id}
                 p={p}
@@ -383,6 +383,7 @@ export function ParticipacaoInvestidoresTab({ formatCurrency, onRefresh, investi
                 getTipoBadge={getTipoBadge}
                 accentColor="emerald"
                 showDate="pagamento"
+                statusOverride={p.status === "RECONHECIDO" ? "Reconhecido" : undefined}
               />
             ))}
           </div>
