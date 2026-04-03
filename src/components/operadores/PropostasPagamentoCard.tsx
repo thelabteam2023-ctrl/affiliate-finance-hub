@@ -168,6 +168,67 @@ export function PropostasPagamentoCard() {
     }
   };
 
+  const handleJaPago = async () => {
+    if (!selectedProposta) return;
+    
+    setProcessing(true);
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session) {
+        toast.error("Usuário não autenticado");
+        return;
+      }
+
+      if (!workspaceId) {
+        toast.error("Workspace não disponível nesta aba");
+        return;
+      }
+
+      const valorFinal = selectedProposta.valor_ajustado ?? selectedProposta.valor_calculado;
+      
+      // 1. Criar registro em pagamentos_operador já como PAGO
+      const { data: pagamento, error: pagamentoError } = await supabase
+        .from("pagamentos_operador")
+        .insert({
+          user_id: session.session.user.id,
+          workspace_id: workspaceId,
+          operador_id: selectedProposta.operador_id,
+          projeto_id: selectedProposta.projeto_id,
+          valor: valorFinal,
+          tipo_pagamento: "COMISSAO",
+          status: "PAGO",
+          data_pagamento: getTodayCivilDate(),
+          descricao: `Pagamento do Ciclo ${selectedProposta.ciclo_numero || "N/A"} - ${selectedProposta.modelo_pagamento} (já realizado)`,
+        })
+        .select()
+        .single();
+
+      if (pagamentoError) throw pagamentoError;
+
+      // 2. Atualizar proposta como aprovada + paga
+      const { error: propostaError } = await supabase
+        .from("pagamentos_propostos")
+        .update({
+          status: "APROVADO",
+          data_aprovacao: new Date().toISOString(),
+          aprovado_por: session.session.user.email,
+          pagamento_id: pagamento.id,
+        })
+        .eq("id", selectedProposta.id);
+
+      if (propostaError) throw propostaError;
+
+      toast.success("Proposta marcada como já paga!");
+      setJaPagoDialogOpen(false);
+      setSelectedProposta(null);
+      fetchPropostas();
+    } catch (error: any) {
+      toast.error("Erro ao registrar: " + error.message);
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   const handleRejeitar = async () => {
     if (!selectedProposta) return;
     
