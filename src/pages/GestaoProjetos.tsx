@@ -568,10 +568,11 @@ export default function GestaoProjetos() {
         </Tabs>
       </div>
 
-      {/* Filtros - Card com contenção */}
+      {/* Filtros */}
       <Card className="flex-shrink-0 overflow-hidden">
-        <CardContent className="p-4 md:pt-6 md:p-6">
-          <div className="flex flex-col gap-3 md:flex-row md:gap-4">
+        <CardContent className="p-3 md:p-5">
+          {/* Linha 1: Busca + Tipo + View mode */}
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4">
             <div className="relative flex-1 min-w-0">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -582,7 +583,7 @@ export default function GestaoProjetos() {
               />
             </div>
             
-            <div className="flex gap-2 flex-shrink-0 flex-wrap">
+            <div className="flex gap-2 flex-shrink-0 items-center">
               <Select value={tipoFilter} onValueChange={setTipoFilter}>
                 <SelectTrigger className="w-full sm:w-[140px] md:w-[160px]">
                   <SelectValue placeholder="Tipo" />
@@ -597,19 +598,6 @@ export default function GestaoProjetos() {
                       </div>
                     </SelectItem>
                   ))}
-                </SelectContent>
-              </Select>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-full sm:w-[140px] md:w-[160px]">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos Status</SelectItem>
-                  <SelectItem value="PLANEJADO">Planejado</SelectItem>
-                  <SelectItem value="EM_ANDAMENTO">Em Andamento</SelectItem>
-                  <SelectItem value="PAUSADO">Pausado</SelectItem>
-                  <SelectItem value="FINALIZADO">Finalizado</SelectItem>
-                  <SelectItem value="ARQUIVADO">Arquivado</SelectItem>
                 </SelectContent>
               </Select>
               <div className="flex gap-1 flex-shrink-0">
@@ -639,6 +627,36 @@ export default function GestaoProjetos() {
                 </Tooltip>
               </div>
             </div>
+          </div>
+
+          {/* Linha 2: Status chips */}
+          <div className="flex flex-wrap gap-1.5 mt-3">
+            {[
+              { value: "EM_ANDAMENTO", label: "Em Andamento", dotColor: "bg-emerald-500" },
+              { value: "PLANEJADO", label: "Planejado", dotColor: "bg-blue-500" },
+              { value: "PAUSADO", label: "Pausado", dotColor: "bg-yellow-500" },
+              { value: "FINALIZADO", label: "Finalizado", dotColor: "bg-gray-400" },
+              { value: "ARQUIVADO", label: "Arquivado", dotColor: "bg-purple-500" },
+              { value: "all", label: "Todos", dotColor: "bg-muted-foreground" },
+            ].map((chip) => {
+              const isActive = statusFilter === chip.value;
+              return (
+                <button
+                  key={chip.value}
+                  onClick={() => setStatusFilter(chip.value)}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-150",
+                    "min-h-[36px] md:min-h-[32px] active:scale-95",
+                    isActive
+                      ? "bg-primary/15 border-primary/40 text-primary shadow-sm"
+                      : "bg-muted/30 border-border text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                  )}
+                >
+                  <span className={cn("h-2 w-2 rounded-full flex-shrink-0", chip.dotColor)} />
+                  {chip.label}
+                </button>
+              );
+            })}
           </div>
         </CardContent>
       </Card>
