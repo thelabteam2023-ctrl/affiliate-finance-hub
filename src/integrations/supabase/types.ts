@@ -13666,10 +13666,16 @@ export type Database = {
         Args: { p_hours_threshold?: number }
         Returns: number
       }
-      close_project_cycle: {
-        Args: { _ciclo_id: string; _workspace_id: string }
-        Returns: Json
-      }
+      close_project_cycle:
+        | { Args: { _ciclo_id: string; _workspace_id: string }; Returns: Json }
+        | {
+            Args: {
+              _ciclo_id: string
+              _frontend_metrics?: Json
+              _workspace_id: string
+            }
+            Returns: Json
+          }
       column_exists: {
         Args: { _column_name: string; _table_name: string }
         Returns: boolean

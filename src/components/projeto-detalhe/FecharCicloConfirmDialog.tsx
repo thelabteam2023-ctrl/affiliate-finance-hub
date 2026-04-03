@@ -136,10 +136,23 @@ export function FecharCicloConfirmDialog({
 
     setLoading(true);
     try {
+      // Pass pre-calculated metrics (with proper currency conversion) to the RPC
+      const frontendMetrics = metrics ? {
+        qtd_apostas: metrics.qtdApostas,
+        volume: metrics.volume,
+        lucro_apostas: metrics.lucroBruto - (metrics.perdas?.totalConfirmadas || 0), // approximation
+        lucro_bruto: metrics.lucroBruto,
+        lucro_liquido: metrics.lucroReal,
+        perdas_confirmadas: metrics.perdas?.totalConfirmadas || 0,
+        cashback: 0, // already included in lucroBruto
+        giros_gratis: 0, // already included in lucroBruto
+      } : null;
+
       const { data, error } = await supabase
         .rpc("close_project_cycle", {
           _ciclo_id: ciclo.id,
           _workspace_id: workspaceId,
+          _frontend_metrics: frontendMetrics,
         });
 
       if (error) throw error;
