@@ -82,14 +82,19 @@ export function ParticipacaoInvestidoresTab({ formatCurrency, onRefresh, investi
         .from("participacao_ciclos")
         .select(`
           *,
-          projetos(nome),
+          projetos(nome, status),
           investidores(nome),
           projeto_ciclos(numero_ciclo, status)
         `)
         .order("data_apuracao", { ascending: false });
 
       if (error) throw error;
-      setParticipacoes(data || []);
+      // Filtrar participações de projetos arquivados/finalizados
+      const filtered = (data || []).filter((p: any) => {
+        const projetoStatus = p.projetos?.status;
+        return projetoStatus !== "ARQUIVADO" && projetoStatus !== "FINALIZADO";
+      });
+      setParticipacoes(filtered);
     } catch (error: any) {
       toast({
         title: "Erro ao carregar participações",
