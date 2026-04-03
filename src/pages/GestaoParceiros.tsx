@@ -39,6 +39,7 @@ const SUPPORTED_FIAT: string[] = FIAT_CURRENCIES.map(c => c.value);
 type SaldosPorMoeda = Record<string, number>;
 
 export default function GestaoParceiros() {
+  const isMobile = useIsMobile();
   // ==================== REACT QUERY: Cache + Deduplicação ====================
   const { parceiros, roiData, saldosData: saldosDataBase, saldosCryptoRaw, parceriasData, loading, refetch: refetchParceiros } = useParceirosData();
   
