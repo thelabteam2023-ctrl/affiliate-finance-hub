@@ -478,6 +478,77 @@ function calcularLucroCanonicoFromRpc(
 }
 
 // =====================================================
+// VOLUME TEMPORAL STATS
+// =====================================================
+
+function deriveVolumeTemporalStats(
+  apostas: RawAposta[],
+  volumeTotal: number
+): VolumeTemporalStats {
+  if (apostas.length === 0) {
+    return {
+      primeiraAposta: null,
+      ultimaAposta: null,
+      diasAtivos: 0,
+      diasComOperacao: 0,
+      volumeMedioDiario: 0,
+      mediaApostasPorDia: 0,
+      densidadeOperacional: 0,
+      volumeProjetado: null,
+    };
+  }
+
+  // Extrair datas únicas de apostas (usar data civil, sem timezone)
+  const datasSet = new Set<string>();
+  let minDate: string | null = null;
+  let maxDate: string | null = null;
+
+  for (const a of apostas) {
+    const dateKey = a.data_aposta?.slice(0, 10); // YYYY-MM-DD
+    if (!dateKey) continue;
+    datasSet.add(dateKey);
+    if (!minDate || dateKey < minDate) minDate = dateKey;
+    if (!maxDate || dateKey > maxDate) maxDate = dateKey;
+  }
+
+  if (!minDate || !maxDate) {
+    return {
+      primeiraAposta: null,
+      ultimaAposta: null,
+      diasAtivos: 0,
+      diasComOperacao: 0,
+      volumeMedioDiario: 0,
+      mediaApostasPorDia: 0,
+      densidadeOperacional: 0,
+      volumeProjetado: null,
+    };
+  }
+
+  const diasComOperacao = datasSet.size;
+  
+  // diasAtivos = (última - primeira) + 1
+  const start = new Date(minDate + 'T00:00:00');
+  const end = new Date(maxDate + 'T00:00:00');
+  const diffMs = end.getTime() - start.getTime();
+  const diasAtivos = Math.max(1, Math.round(diffMs / (24 * 60 * 60 * 1000)) + 1);
+
+  const volumeMedioDiario = diasAtivos > 0 ? volumeTotal / diasAtivos : 0;
+  const mediaApostasPorDia = diasAtivos > 0 ? apostas.length / diasAtivos : 0;
+  const densidadeOperacional = diasAtivos > 0 ? diasComOperacao / diasAtivos : 0;
+
+  return {
+    primeiraAposta: minDate,
+    ultimaAposta: maxDate,
+    diasAtivos,
+    diasComOperacao,
+    volumeMedioDiario,
+    mediaApostasPorDia,
+    densidadeOperacional,
+    volumeProjetado: null, // Calculated at UI level with period context
+  };
+}
+
+// =====================================================
 // DERIVAÇÃO COMPLETA DOS BREAKDOWNS
 // =====================================================
 
