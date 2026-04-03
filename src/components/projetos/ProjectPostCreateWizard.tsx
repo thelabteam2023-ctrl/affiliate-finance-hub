@@ -648,7 +648,7 @@ export function ProjectPostCreateWizard({
                 ciclo_id: novoCiclo.id,
                 investidor_id: pi.investidor_id,
                 percentual_aplicado: pi.percentual_participacao,
-                base_calculo: pi.base_calculo || "LUCRO_BRUTO",
+                base_calculo: pi.base_calculo || "LUCRO_LIQUIDO",
                 lucro_base: 0,
                 valor_participacao: 0,
                 status,
