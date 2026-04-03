@@ -118,6 +118,7 @@ export default function Financeiro() {
     lucroOperacionalApostas,
     getCryptoUSDValue,
     convertFromBRL,
+    convertUnified,
   });
 
   const openKpiHelp = (type: KpiType) => { setKpiType(type); setKpiDialogOpen(true); };
