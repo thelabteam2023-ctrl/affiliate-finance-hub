@@ -13,6 +13,7 @@ import {
   ProjetoKpiBreakdowns, 
   KpiBreakdown, 
   CurrencyBreakdownItem,
+  VolumeTemporalStats,
   createModuleContribution, 
   createKpiBreakdown 
 } from '@/types/moduleBreakdown';
