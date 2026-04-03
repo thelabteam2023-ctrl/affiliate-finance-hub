@@ -527,6 +527,8 @@ function ParticipacaoRow({
     ? format(parseLocalDate(p.data_pagamento), "dd/MM/yyyy", { locale: ptBR })
     : format(parseLocalDate(p.data_apuracao), "dd/MM/yyyy", { locale: ptBR });
 
+  const statusLabel = p.status === "RECONHECIDO" ? "Reconhecido" : p.status === "PAGO" ? "Pago" : null;
+
   return (
     <div className="flex items-center justify-between gap-3 rounded-lg border border-border/40 bg-muted/10 px-3 py-2.5 hover:bg-muted/20 transition-colors">
       {/* Left: Info */}
