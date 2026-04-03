@@ -118,6 +118,26 @@ export default function TransacaoDialog({ open, onClose, bookmaker, defaultTipo 
       return;
     }
 
+    // 🔒 VALIDAÇÃO CRÍTICA: Bloquear transações crypto sem wallet compatível
+    if (tipo === "deposito" || tipo === "retirada") {
+      if (origemData.tipoMoeda === "CRYPTO" || origemData.origemTipo === "PARCEIRO_WALLET") {
+        if (!origemData.origemWalletId) {
+          toast.error("Nenhuma wallet compatível encontrada. Cadastre uma wallet na rede correta antes de prosseguir.");
+          return;
+        }
+      }
+      if (origemData.tipoMoeda === "FIAT" && origemData.origemTipo === "CAIXA_OPERACIONAL") {
+        if (!origemData.origemContaBancariaId) {
+          toast.error("Nenhuma conta bancária encontrada para esta moeda. Cadastre uma conta antes de prosseguir.");
+          return;
+        }
+      }
+      if (origemData.origemTipo === "PARCEIRO_CONTA" && !origemData.origemContaBancariaId) {
+        toast.error("Selecione uma conta bancária antes de prosseguir.");
+        return;
+      }
+    }
+
     // Validar valor creditado quando há conversão (para depósito)
     if (tipo === "deposito" && precisaConversao && valorCreditadoNum <= 0) {
       toast.error(`Informe o valor creditado em ${moedaDestino}`);
