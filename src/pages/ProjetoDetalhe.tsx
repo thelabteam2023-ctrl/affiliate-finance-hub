@@ -42,7 +42,8 @@ import {
   Zap,
   Puzzle,
   Plus,
-  
+  Archive,
+  MoreVertical,
 } from "lucide-react";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { useCotacoes } from "@/hooks/useCotacoes";
@@ -136,6 +137,7 @@ export default function ProjetoDetalhe() {
   const [loading, setLoading] = useState(true);
   const [entregaAtiva, setEntregaAtiva] = useState<{ data_inicio: string | null; data_fim_prevista: string | null } | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [archiving, setArchiving] = useState(false);
   
   // Project favorites
   const { isFavorite, toggleFavorite } = useProjectFavorites();
@@ -397,6 +399,44 @@ export default function ProjetoDetalhe() {
     }
   }, [id]);
 
+  const handleArchiveProject = async () => {
+    if (!projeto || !id) return;
+    
+    // Check for active bookmaker links
+    const { count } = await supabase
+      .from("bookmakers")
+      .select("id", { count: "exact", head: true })
+      .eq("projeto_id", id)
+      .in("status", ["ATIVO", "AGUARDANDO_SAQUE"]);
+    
+    if (count && count > 0) {
+      toast.error(`Não é possível arquivar: ${count} bookmaker(s) ainda vinculado(s) ao projeto.`);
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Tem certeza que deseja arquivar o projeto "${projeto.nome}"?\n\nO projeto será removido do fluxo operacional e suas participações pendentes serão ignoradas. Esta ação pode ser revertida.`
+    );
+    if (!confirmed) return;
+
+    setArchiving(true);
+    try {
+      const { error } = await supabase
+        .from("projetos")
+        .update({ status: "ARQUIVADO" })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast.success("Projeto arquivado com sucesso!");
+      navigate("/projetos");
+    } catch (error: any) {
+      toast.error("Erro ao arquivar: " + error.message);
+    } finally {
+      setArchiving(false);
+    }
+  };
+
   // Inject project header into TopBar
   const diasCiclo = entregaAtiva?.data_fim_prevista ? differenceInDays(new Date(entregaAtiva.data_fim_prevista), new Date()) : null;
   useEffect(() => {
@@ -463,13 +503,37 @@ export default function ProjetoDetalhe() {
                 <Edit className="mr-1 h-3 w-3" />
                 Editar
               </Button>
+              {projeto.status !== "ARQUIVADO" && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground">
+                      <MoreVertical className="h-3.5 w-3.5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={handleArchiveProject}
+                      disabled={archiving}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Archive className="h-4 w-4 mr-2" />
+                      {archiving ? "Arquivando..." : "Arquivar Projeto"}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+              {projeto.status === "ARQUIVADO" && (
+                <Badge variant="outline" className="text-xs bg-purple-500/10 text-purple-400 border-purple-500/30">
+                  Arquivado
+                </Badge>
+              )}
             </>
           )}
         </div>
       </div>
     );
     return () => setTopBarContent(null);
-  }, [projeto, diasCiclo, id, isFavorite, canEdit, editDialogOpen]);
+  }, [projeto, diasCiclo, id, isFavorite, canEdit, editDialogOpen, archiving]);
 
   // As abas usam seus próprios filtros internos
   
