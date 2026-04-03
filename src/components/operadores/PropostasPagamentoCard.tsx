@@ -55,6 +55,7 @@ export function PropostasPagamentoCard() {
   const [loading, setLoading] = useState(true);
   const [aprovarDialogOpen, setAprovarDialogOpen] = useState(false);
   const [rejeitarDialogOpen, setRejeitarDialogOpen] = useState(false);
+  const [jaPagoDialogOpen, setJaPagoDialogOpen] = useState(false);
   const [selectedProposta, setSelectedProposta] = useState<PropostaPagamento | null>(null);
   const [motivoRejeicao, setMotivoRejeicao] = useState("");
   const [processing, setProcessing] = useState(false);
@@ -162,6 +163,67 @@ export function PropostasPagamentoCard() {
       fetchPropostas();
     } catch (error: any) {
       toast.error("Erro ao aprovar: " + error.message);
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleJaPago = async () => {
+    if (!selectedProposta) return;
+    
+    setProcessing(true);
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session) {
+        toast.error("Usuário não autenticado");
+        return;
+      }
+
+      if (!workspaceId) {
+        toast.error("Workspace não disponível nesta aba");
+        return;
+      }
+
+      const valorFinal = selectedProposta.valor_ajustado ?? selectedProposta.valor_calculado;
+      
+      // 1. Criar registro em pagamentos_operador já como PAGO
+      const { data: pagamento, error: pagamentoError } = await supabase
+        .from("pagamentos_operador")
+        .insert({
+          user_id: session.session.user.id,
+          workspace_id: workspaceId,
+          operador_id: selectedProposta.operador_id,
+          projeto_id: selectedProposta.projeto_id,
+          valor: valorFinal,
+          tipo_pagamento: "COMISSAO",
+          status: "PAGO",
+          data_pagamento: getTodayCivilDate(),
+          descricao: `Pagamento do Ciclo ${selectedProposta.ciclo_numero || "N/A"} - ${selectedProposta.modelo_pagamento} (já realizado)`,
+        })
+        .select()
+        .single();
+
+      if (pagamentoError) throw pagamentoError;
+
+      // 2. Atualizar proposta como aprovada + paga
+      const { error: propostaError } = await supabase
+        .from("pagamentos_propostos")
+        .update({
+          status: "APROVADO",
+          data_aprovacao: new Date().toISOString(),
+          aprovado_por: session.session.user.email,
+          pagamento_id: pagamento.id,
+        })
+        .eq("id", selectedProposta.id);
+
+      if (propostaError) throw propostaError;
+
+      toast.success("Proposta marcada como já paga!");
+      setJaPagoDialogOpen(false);
+      setSelectedProposta(null);
+      fetchPropostas();
+    } catch (error: any) {
+      toast.error("Erro ao registrar: " + error.message);
     } finally {
       setProcessing(false);
     }
@@ -299,6 +361,17 @@ export function PropostasPagamentoCard() {
                   </Button>
                   <Button
                     size="sm"
+                    variant="outline"
+                    className="h-6 text-xs px-2 border-blue-500/40 text-blue-400 hover:bg-blue-500/10"
+                    onClick={() => {
+                      setSelectedProposta(proposta);
+                      setJaPagoDialogOpen(true);
+                    }}
+                  >
+                    Já Pago
+                  </Button>
+                  <Button
+                    size="sm"
                     className="bg-emerald-600 hover:bg-emerald-700 h-6 text-xs px-2"
                     onClick={() => {
                       setSelectedProposta(proposta);
@@ -369,6 +442,34 @@ export function PropostasPagamentoCard() {
               className="bg-red-600 hover:bg-red-700"
             >
               {processing ? "Processando..." : "Confirmar Rejeição"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Dialog de Já Pago */}
+      <AlertDialog open={jaPagoDialogOpen} onOpenChange={setJaPagoDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Pagamento Realizado</AlertDialogTitle>
+            <AlertDialogDescription>
+              Você confirma que o pagamento de{" "}
+              <strong>
+                {formatCurrency(selectedProposta?.valor_ajustado ?? selectedProposta?.valor_calculado ?? 0)}
+              </strong>{" "}
+              para <strong>{selectedProposta?.operador_nome}</strong> já foi realizado?
+              <br /><br />
+              O registro será criado diretamente como <strong>PAGO</strong>.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleJaPago}
+              disabled={processing}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {processing ? "Processando..." : "Confirmar Já Pago"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
