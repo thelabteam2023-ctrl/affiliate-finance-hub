@@ -55,6 +55,7 @@ export function PropostasPagamentoCard() {
   const [loading, setLoading] = useState(true);
   const [aprovarDialogOpen, setAprovarDialogOpen] = useState(false);
   const [rejeitarDialogOpen, setRejeitarDialogOpen] = useState(false);
+  const [jaPagoDialogOpen, setJaPagoDialogOpen] = useState(false);
   const [selectedProposta, setSelectedProposta] = useState<PropostaPagamento | null>(null);
   const [motivoRejeicao, setMotivoRejeicao] = useState("");
   const [processing, setProcessing] = useState(false);
