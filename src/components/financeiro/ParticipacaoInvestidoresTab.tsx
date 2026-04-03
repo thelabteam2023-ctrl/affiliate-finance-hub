@@ -544,25 +544,25 @@ function ParticipacaoRow({
 
       {/* Center: Breakdown */}
       <div className="hidden md:flex items-center gap-4 text-xs text-muted-foreground shrink-0">
-        <div className="text-right">
+        <div className="text-right min-w-[110px]">
           <p className="text-[10px] uppercase tracking-wide text-muted-foreground/70">
             {getBaseCalculoLabel(p.base_calculo)}
           </p>
-          <p className="text-sm">{formatCurrency(p.lucro_base)}</p>
+          <p className="text-sm tabular-nums">{formatCurrency(p.lucro_base)}</p>
         </div>
-        <div className="text-center">
+        <div className="text-center min-w-[48px]">
           <p className="text-[10px] uppercase tracking-wide text-muted-foreground/70">%</p>
-          <Badge variant="secondary" className="text-xs">{p.percentual_aplicado}%</Badge>
+          <Badge variant="secondary" className="text-xs tabular-nums">{p.percentual_aplicado}%</Badge>
         </div>
       </div>
 
       {/* Right: Value + Action */}
       <div className="flex items-center gap-2 shrink-0">
-        <div className="text-right">
-          <p className={`text-sm font-bold ${valueColor}`}>
+        <div className="text-right min-w-[120px]">
+          <p className={`text-sm font-bold tabular-nums ${valueColor}`}>
             {formatCurrency(p.valor_participacao)}
           </p>
-          <p className="text-[10px] text-muted-foreground md:hidden">
+          <p className="text-[10px] text-muted-foreground tabular-nums md:hidden">
             {p.percentual_aplicado}% de {formatCurrency(p.lucro_base)}
           </p>
         </div>
