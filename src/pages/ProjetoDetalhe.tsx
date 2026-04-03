@@ -44,6 +44,9 @@ import {
   Plus,
   Archive,
   MoreVertical,
+  Activity,
+  CalendarDays,
+  BarChart3,
 } from "lucide-react";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { useCotacoes } from "@/hooks/useCotacoes";
@@ -747,14 +750,82 @@ export default function ProjetoDetalhe() {
 
             <div className="h-8 w-px bg-border/50 hidden sm:block flex-shrink-0" />
 
-            {/* Volume */}
-            {/* Volume — usar .total já consolidado pelo useKpiBreakdowns (getConsolidatedStake) */}
-            <div className="flex flex-col min-w-[80px]">
-              <span className="text-xs text-muted-foreground leading-tight">Volume</span>
-              <span className="text-base md:text-lg font-bold leading-tight truncate">
-                {formatCurrency(kpiBreakdowns?.volume?.total || 0)}
-              </span>
-            </div>
+            {/* Volume — com tooltip temporal */}
+            <TooltipProvider>
+              <Tooltip delayDuration={200}>
+                <TooltipTrigger asChild>
+                  <div className="flex flex-col min-w-[80px] cursor-help">
+                    <span className="text-xs text-muted-foreground leading-tight">Volume</span>
+                    <span className="text-base md:text-lg font-bold leading-tight truncate">
+                      {formatCurrency(kpiBreakdowns?.volume?.total || 0)}
+                    </span>
+                    {kpiBreakdowns?.volumeTemporal && kpiBreakdowns.volumeTemporal.diasAtivos > 0 && (
+                      <span className="text-[10px] text-muted-foreground leading-tight">
+                        ~{formatCurrency(kpiBreakdowns.volumeTemporal.volumeMedioDiario)}/dia
+                      </span>
+                    )}
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-[300px] p-3" sideOffset={8}>
+                  {kpiBreakdowns?.volumeTemporal && kpiBreakdowns.volumeTemporal.diasAtivos > 0 ? (
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold border-b border-border pb-1.5">Performance Temporal</p>
+                      <div className="space-y-1.5 text-xs">
+                        <div className="flex justify-between gap-4">
+                          <span className="text-muted-foreground flex items-center gap-1">
+                            <BarChart3 className="h-3 w-3" />Vol. Médio/Dia
+                          </span>
+                          <span className="font-bold tabular-nums">
+                            {formatCurrency(kpiBreakdowns.volumeTemporal.volumeMedioDiario)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <span className="text-muted-foreground flex items-center gap-1">
+                            <CalendarDays className="h-3 w-3" />Dias Ativos
+                          </span>
+                          <span className="font-medium tabular-nums">{kpiBreakdowns.volumeTemporal.diasAtivos}</span>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <span className="text-muted-foreground flex items-center gap-1">
+                            <Activity className="h-3 w-3" />Dias c/ Operação
+                          </span>
+                          <span className="font-medium tabular-nums">{kpiBreakdowns.volumeTemporal.diasComOperacao}</span>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <span className="text-muted-foreground">Densidade</span>
+                          <span className={cn(
+                            "font-medium tabular-nums",
+                            kpiBreakdowns.volumeTemporal.densidadeOperacional < 0.5 ? "text-yellow-500" : "text-emerald-500"
+                          )}>
+                            {(kpiBreakdowns.volumeTemporal.densidadeOperacional * 100).toFixed(1)}%
+                          </span>
+                        </div>
+                        <div className="flex justify-between gap-4">
+                          <span className="text-muted-foreground">Apostas/Dia</span>
+                          <span className="font-medium tabular-nums">
+                            {kpiBreakdowns.volumeTemporal.mediaApostasPorDia.toFixed(1)}
+                          </span>
+                        </div>
+                      </div>
+                      {kpiBreakdowns.volumeTemporal.densidadeOperacional < 0.5 && (
+                        <div className="border-t border-border pt-1.5 mt-1">
+                          <p className="text-[10px] text-yellow-500 leading-snug">
+                            ⚠ Baixa densidade operacional — menos da metade dos dias teve operação.
+                          </p>
+                        </div>
+                      )}
+                      <div className="border-t border-border pt-1.5">
+                        <p className="text-[9px] text-muted-foreground/60 leading-snug">
+                          Período: {kpiBreakdowns.volumeTemporal.primeiraAposta} → {kpiBreakdowns.volumeTemporal.ultimaAposta}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">Sem apostas no período</p>
+                  )}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
 
             <div className="h-8 w-px bg-border/50 hidden sm:block flex-shrink-0" />
 

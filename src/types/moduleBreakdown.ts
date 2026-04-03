@@ -59,6 +59,28 @@ export interface KpiBreakdown {
 }
 
 /**
+ * Estatísticas temporais de volume (normalização por tempo operacional)
+ */
+export interface VolumeTemporalStats {
+  /** Data da primeira aposta no período */
+  primeiraAposta: string | null;
+  /** Data da última aposta no período */
+  ultimaAposta: string | null;
+  /** Dias ativos = (última - primeira) + 1 */
+  diasAtivos: number;
+  /** Dias com pelo menos 1 aposta */
+  diasComOperacao: number;
+  /** Volume médio diário = volume / diasAtivos */
+  volumeMedioDiario: number;
+  /** Média de apostas por dia = totalApostas / diasAtivos */
+  mediaApostasPorDia: number;
+  /** Densidade operacional = diasComOperacao / diasAtivos (0-1) */
+  densidadeOperacional: number;
+  /** Volume projetado (run rate) = volumeMedio * diasTotaisPeriodo */
+  volumeProjetado: number | null;
+}
+
+/**
  * Interface para breakdowns de todos os KPIs
  */
 export interface ProjetoKpiBreakdowns {
@@ -78,6 +100,9 @@ export interface ProjetoKpiBreakdowns {
     lucroTotal: number;
     currency: string;
   };
+
+  /** Estatísticas temporais de volume */
+  volumeTemporal: VolumeTemporalStats;
 }
 
 /**
