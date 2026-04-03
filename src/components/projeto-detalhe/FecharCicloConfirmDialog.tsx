@@ -52,6 +52,8 @@ interface CicloMetrics {
   ticketMedio: number;
   lucroBruto: number;
   lucroReal: number;
+  lucroOperacional?: number;
+  lucroRealizado?: number;
   roi: number;
   perdas: {
     totalConfirmadas: number;
