@@ -207,10 +207,14 @@ export function ParticipacaoInvestidoresTab({ formatCurrency, onRefresh, investi
   );
   const pagas = participacoesFiltradas.filter(p => p.status === "PAGO");
   const reconhecidas = participacoesFiltradas.filter(p => p.status === "RECONHECIDO");
+  const historico = [...pagas, ...reconhecidas].sort((a, b) => 
+    new Date(b.data_apuracao).getTime() - new Date(a.data_apuracao).getTime()
+  );
 
   const totalAguardando = aguardando.reduce((acc, p) => acc + p.valor_participacao, 0);
   const totalPendente = pendentes.reduce((acc, p) => acc + p.valor_participacao, 0);
   const totalPago = pagas.reduce((acc, p) => acc + p.valor_participacao, 0);
+  const totalReconhecido = reconhecidas.reduce((acc, p) => acc + p.valor_participacao, 0);
 
   const getBaseCalculoLabel = (_base: string) => {
     return "Lucro Líquido";
@@ -285,8 +289,8 @@ export function ParticipacaoInvestidoresTab({ formatCurrency, onRefresh, investi
         <KPICard
           icon={<CheckCircle2 className="h-4 w-4" />}
           label="Pago"
-          value={formatCurrency(totalPago)}
-          count={pagas.length}
+          value={formatCurrency(totalPago + totalReconhecido)}
+          count={historico.length}
           color="emerald"
         />
         <KPICard
@@ -360,17 +364,17 @@ export function ParticipacaoInvestidoresTab({ formatCurrency, onRefresh, investi
       {/* ── Histórico ── */}
       <CollapsibleSection
         title="Histórico de Pagamentos"
-        count={pagas.length}
+        count={historico.length}
         icon={<CheckCircle2 className="h-4 w-4 text-emerald-400" />}
         expanded={expandedSections.pagas}
         onToggle={() => toggleSection("pagas")}
         accentColor="emerald"
       >
-        {pagas.length === 0 ? (
+        {historico.length === 0 ? (
           <EmptyState text="Nenhum pagamento realizado" />
         ) : (
           <div className="space-y-2">
-            {pagas.map((p) => (
+            {historico.map((p) => (
               <ParticipacaoRow
                 key={p.id}
                 p={p}
@@ -523,6 +527,8 @@ function ParticipacaoRow({
     ? format(parseLocalDate(p.data_pagamento), "dd/MM/yyyy", { locale: ptBR })
     : format(parseLocalDate(p.data_apuracao), "dd/MM/yyyy", { locale: ptBR });
 
+  const statusLabel = p.status === "RECONHECIDO" ? "Reconhecido" : p.status === "PAGO" ? "Pago" : null;
+
   return (
     <div className="flex items-center justify-between gap-3 rounded-lg border border-border/40 bg-muted/10 px-3 py-2.5 hover:bg-muted/20 transition-colors">
       {/* Left: Info */}
@@ -538,6 +544,17 @@ function ParticipacaoRow({
             <span>Ciclo #{p.projeto_ciclos?.numero_ciclo || "—"}</span>
             <span className="text-muted-foreground/40">•</span>
             <span>{dateStr}</span>
+            {showDate === "pagamento" && statusLabel && (
+              <>
+                <span className="text-muted-foreground/40">•</span>
+                <Badge variant="outline" className={`text-[10px] h-4 px-1.5 ${
+                  p.status === "PAGO" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30" : 
+                  "bg-blue-500/10 text-blue-400 border-blue-500/30"
+                }`}>
+                  {statusLabel}
+                </Badge>
+              </>
+            )}
           </div>
         </div>
       </div>
