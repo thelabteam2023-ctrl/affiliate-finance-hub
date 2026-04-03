@@ -361,6 +361,17 @@ export function PropostasPagamentoCard() {
                   </Button>
                   <Button
                     size="sm"
+                    variant="outline"
+                    className="h-6 text-xs px-2 border-blue-500/40 text-blue-400 hover:bg-blue-500/10"
+                    onClick={() => {
+                      setSelectedProposta(proposta);
+                      setJaPagoDialogOpen(true);
+                    }}
+                  >
+                    Já Pago
+                  </Button>
+                  <Button
+                    size="sm"
                     className="bg-emerald-600 hover:bg-emerald-700 h-6 text-xs px-2"
                     onClick={() => {
                       setSelectedProposta(proposta);
