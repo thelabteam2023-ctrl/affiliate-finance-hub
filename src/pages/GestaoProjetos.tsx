@@ -435,7 +435,7 @@ export default function GestaoProjetos() {
   // Projetos filtrados por seção (antes do filtro de tipo, para calcular badges)
   const sectionFilteredProjetos = projetos.filter((proj) => {
     const matchesSearch = proj.nome.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" || proj.status === statusFilter;
+    const matchesStatus = statusFilter.length === 0 || statusFilter.includes(proj.status);
     const matchesSection = isBrokerSection 
       ? proj.is_broker === true
       : proj.is_broker !== true;
