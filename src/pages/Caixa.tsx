@@ -1074,7 +1074,7 @@ export default function Caixa() {
                   Saldo em Bancos
                 </div>
                 <p className="text-xl font-bold text-foreground tabular-nums">
-                  {formatCurrency(saldosContasParceiros.reduce((s, c) => s + c.saldo, 0))}
+                  {formatCurrency(saldosContasParceiros.reduce((s, c) => s + c.saldo, 0), "BRL")}
                 </p>
                 <p className="text-[10px] text-muted-foreground mt-0.5">
                   Toque para ver detalhes →
