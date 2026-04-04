@@ -64,6 +64,8 @@ export function SupplierTransacaoDialog({
 
   const isDeposito = tipo === "DEPOSITO";
   const isTransferenciaBanco = tipo === "TRANSFERENCIA_BANCO";
+  const isRecolhimentoBanco = tipo === "RECOLHIMENTO_BANCO";
+  const isBankOperation = isTransferenciaBanco || isRecolhimentoBanco;
 
   // Fetch all workspace banks - action via query param
   const { data: bancos, refetch: refetchBancos } = useQuery({
