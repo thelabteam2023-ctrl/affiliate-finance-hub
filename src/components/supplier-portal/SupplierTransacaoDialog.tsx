@@ -575,15 +575,19 @@ export function SupplierTransacaoDialog({
             </Button>
           )}
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          {step === 2 && isTransferenciaBanco && (
+          {step === 2 && isBankOperation && (
             <Button
               onClick={() => transferMutation.mutate()}
-              disabled={transferMutation.isPending || !valor || !bancoId || parseFloat(valor) > saldoDisponivel}
+              disabled={
+                transferMutation.isPending || !valor || !bancoId ||
+                (isTransferenciaBanco && parseFloat(valor) > saldoDisponivel) ||
+                (isRecolhimentoBanco && selectedBanco && parseFloat(valor) > selectedBanco.saldo)
+              }
             >
-              {transferMutation.isPending ? "Processando..." : "Enviar ao Banco"}
+              {transferMutation.isPending ? "Processando..." : isRecolhimentoBanco ? "Recolher do Banco" : "Enviar ao Banco"}
             </Button>
           )}
-          {step === 2 && !isTransferenciaBanco && (
+          {step === 2 && !isBankOperation && (
             <Button
               onClick={() => mutation.mutate()}
               disabled={
