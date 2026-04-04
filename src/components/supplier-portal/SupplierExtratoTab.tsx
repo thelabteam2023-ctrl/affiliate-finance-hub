@@ -36,7 +36,7 @@ const TIPO_ICONS: Record<string, typeof ArrowUpRight> = {
   PAGAMENTO_TITULAR: ArrowDownRight,
 };
 
-const EDITABLE_TYPES = ["DEPOSITO", "SAQUE", "TRANSFERENCIA_BANCO"];
+const EDITABLE_TYPES = ["DEPOSITO", "SAQUE", "TRANSFERENCIA_BANCO", "RECOLHIMENTO_BANCO"];
 
 function formatCurrency(val: number) {
   return new Intl.NumberFormat("pt-BR", {
