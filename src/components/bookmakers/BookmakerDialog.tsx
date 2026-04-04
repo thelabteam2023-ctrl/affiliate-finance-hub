@@ -698,11 +698,11 @@ export default function BookmakerDialog({
               {hasFinancialOperations ? (
                 <p className="text-xs text-destructive mt-1 flex items-center gap-1">
                   <AlertTriangle className="h-3 w-3" />
-                  A moeda não pode ser alterada pois existem operações financeiras associadas.
+                  A moeda não pode ser alterada — existem transações confirmadas associadas.
                 </p>
               ) : (
                 <p className="text-xs text-muted-foreground mt-1">
-                  Moeda em que a casa opera (saldo e transações)
+                  Moeda em que a casa opera. Bloqueada após a primeira transação confirmada.
                 </p>
               )}
             </div>
