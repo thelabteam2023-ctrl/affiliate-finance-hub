@@ -67,6 +67,103 @@ interface ParceiroDetalhesPanelProps {
 
 const clampSaldoVisual = (value: number | null | undefined) => Math.max(0, Number(value ?? 0));
 
+// Mobile card component for bookmaker performance
+interface MobileBookmakerCardProps {
+  bm: any;
+  showSensitiveData: boolean;
+  parceiroStatus?: string;
+  formatMoneyValue: (value: number, currency: string) => string;
+  clampSaldoVisual: (value: number | null | undefined) => number;
+  usageCategory?: string;
+  usageTooltip: string;
+  onHistorico: () => void;
+  onDeposito: () => void;
+  onSaque: () => void;
+}
+
+function MobileBookmakerCard({ bm, showSensitiveData, parceiroStatus, formatMoneyValue, clampSaldoVisual, onDeposito, onSaque }: MobileBookmakerCardProps) {
+  const [expanded, setExpanded] = useState(false);
+  const moeda = bm.moeda || "BRL";
+  const resultado = bm.lucro_prejuizo ?? 0;
+
+  return (
+    <div 
+      className="border border-border rounded-lg overflow-hidden bg-card transition-shadow hover:shadow-sm"
+      onClick={() => setExpanded(!expanded)}
+    >
+      {/* Main card content */}
+      <div className="p-3 flex items-center gap-3">
+        {bm.logo_url ? (
+          <img src={bm.logo_url} alt={bm.bookmaker_nome} className="h-9 w-9 rounded object-contain shrink-0" />
+        ) : (
+          <div className="h-9 w-9 rounded bg-muted flex items-center justify-center shrink-0">
+            <Building2 className="h-4 w-4 text-muted-foreground" />
+          </div>
+        )}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5">
+            <p className="text-sm font-medium truncate">{bm.bookmaker_nome}</p>
+            <Badge variant="outline" className={cn("text-[9px] px-1 py-0 h-4 shrink-0", bm.status === "ativo" ? "border-success/50 text-success" : bm.status === "limitada" ? "border-warning/50 text-warning" : "border-destructive/50 text-destructive")}>
+              {bm.status === "ativo" ? "Ativa" : bm.status === "limitada" ? "Limitada" : "Encerrada"}
+            </Badge>
+            <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 shrink-0 border-muted-foreground/30 text-muted-foreground">
+              {moeda}
+            </Badge>
+          </div>
+          {/* Resultado destaque */}
+          <div className="flex items-center justify-between mt-1">
+            <span className="text-[10px] text-muted-foreground">Resultado</span>
+            <span className={cn("text-sm font-bold font-mono", resultado >= 0 ? "text-success" : "text-destructive")}>
+              {showSensitiveData ? formatMoneyValue(resultado, moeda) : "••••"}
+            </span>
+          </div>
+        </div>
+        <ChevronDown className={cn("h-4 w-4 text-muted-foreground shrink-0 transition-transform", expanded && "rotate-180")} />
+      </div>
+
+      {/* Expanded details */}
+      {expanded && (
+        <div className="px-3 pb-3 pt-0 border-t border-border/50 space-y-2 animate-in slide-in-from-top-1 duration-200">
+          {/* Key metrics grid */}
+          <div className="grid grid-cols-3 gap-2 pt-2">
+            <div className="text-center">
+              <p className="text-[10px] text-muted-foreground">Saldo</p>
+              <p className="text-xs font-semibold font-mono">
+                {showSensitiveData ? formatMoneyValue(clampSaldoVisual(bm.saldo_atual), moeda) : "••••"}
+              </p>
+            </div>
+            <div className="text-center">
+              <p className="text-[10px] text-muted-foreground">Depositado</p>
+              <p className="text-xs font-medium font-mono text-destructive/80">
+                {showSensitiveData ? formatMoneyValue(bm.total_depositado ?? 0, moeda) : "••••"}
+              </p>
+            </div>
+            <div className="text-center">
+              <p className="text-[10px] text-muted-foreground">Sacado</p>
+              <p className="text-xs font-medium font-mono text-success/80">
+                {showSensitiveData ? formatMoneyValue(bm.total_sacado ?? 0, moeda) : "••••"}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center justify-between text-xs pt-1">
+            <span className="text-muted-foreground">Apostas</span>
+            <span className="font-medium">{(bm.qtd_apostas ?? 0).toLocaleString("pt-BR")}</span>
+          </div>
+          {/* Quick actions */}
+          <div className="flex gap-2 pt-1">
+            <Button variant="outline" size="sm" className="flex-1 h-8 text-xs gap-1" onClick={(e) => { e.stopPropagation(); onDeposito(); }}>
+              <Plus className="h-3 w-3 text-success" /> Depósito
+            </Button>
+            <Button variant="outline" size="sm" className="flex-1 h-8 text-xs gap-1" onClick={(e) => { e.stopPropagation(); onSaque(); }}>
+              <Minus className="h-3 w-3 text-destructive" /> Saque
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Memoizado para evitar re-renders desnecessários quando o parent re-renderiza
 // (ex: abertura/fechamento de modais)
 export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({ 
