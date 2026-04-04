@@ -109,9 +109,9 @@ export default function SurebetWindowPage() {
         }
         
         if (isDuplicating) {
-          // Strip identity/result for duplication
+          // Strip identity/result for duplication — preservar data_aposta original
           setSurebet({
-            data_operacao: new Date().toISOString().split('T')[0],
+            data_operacao: data.data_aposta, // Clone fiel da data original
             evento: data.evento || "",
             esporte: data.esporte || "Futebol",
             modelo: data.modelo || "1-2",

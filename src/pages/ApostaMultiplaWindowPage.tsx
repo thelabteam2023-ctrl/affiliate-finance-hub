@@ -77,11 +77,11 @@ export default function ApostaMultiplaWindowPage() {
         if (fetchError) throw fetchError;
         
         if (isDuplicating && data) {
-          // Strip identity/result fields for duplication
+          // Strip identity/result fields for duplication — preservar data_aposta original
           const { id: _id, created_at, updated_at, status, resultado, lucro_prejuizo, lucro_prejuizo_brl_referencia, pl_consolidado, retorno_consolidado, roi_real, valor_retorno, ...rest } = data;
           setAposta({
             ...rest,
-            data_aposta: new Date().toISOString().split('T')[0],
+            // Preservar data_aposta original (clone fiel)
             status: 'PENDENTE',
             resultado: null,
             lucro_prejuizo: null,
