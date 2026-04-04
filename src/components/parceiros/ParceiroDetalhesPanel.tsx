@@ -85,6 +85,7 @@ function MobileBookmakerCard({ bm, showSensitiveData, parceiroStatus, formatMone
   const [expanded, setExpanded] = useState(false);
   const moeda = bm.moeda || "BRL";
   const resultado = bm.lucro_prejuizo ?? 0;
+  const saldoAtual = clampSaldoVisual(bm.saldo_atual);
 
   return (
     <div 
@@ -110,11 +111,11 @@ function MobileBookmakerCard({ bm, showSensitiveData, parceiroStatus, formatMone
               {moeda}
             </Badge>
           </div>
-          {/* Resultado destaque */}
+          {/* Saldo atual destaque */}
           <div className="flex items-center justify-between mt-1">
-            <span className="text-[10px] text-muted-foreground">Resultado</span>
-            <span className={cn("text-sm font-bold font-mono", resultado >= 0 ? "text-success" : "text-destructive")}>
-              {showSensitiveData ? formatMoneyValue(resultado, moeda) : "••••"}
+            <span className="text-[10px] text-muted-foreground">Saldo Atual</span>
+            <span className="text-sm font-bold font-mono text-foreground">
+              {showSensitiveData ? formatMoneyValue(saldoAtual, moeda) : "••••"}
             </span>
           </div>
         </div>
@@ -127,9 +128,9 @@ function MobileBookmakerCard({ bm, showSensitiveData, parceiroStatus, formatMone
           {/* Key metrics grid */}
           <div className="grid grid-cols-3 gap-2 pt-2">
             <div className="text-center">
-              <p className="text-[10px] text-muted-foreground">Saldo</p>
-              <p className="text-xs font-semibold font-mono">
-                {showSensitiveData ? formatMoneyValue(clampSaldoVisual(bm.saldo_atual), moeda) : "••••"}
+              <p className="text-[10px] text-muted-foreground">Resultado</p>
+              <p className={cn("text-xs font-semibold font-mono", resultado >= 0 ? "text-success" : "text-destructive")}>
+                {showSensitiveData ? formatMoneyValue(resultado, moeda) : "••••"}
               </p>
             </div>
             <div className="text-center">
