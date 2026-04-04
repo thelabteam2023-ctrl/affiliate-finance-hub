@@ -34,6 +34,7 @@ import { AjusteManualDialog } from "@/components/caixa/AjusteManualDialog";
 import { ReconciliacaoDialog } from "@/components/caixa/ReconciliacaoDialog";
 import { SaldosFiatCard } from "@/components/caixa/SaldosFiatCard";
 import { ExposicaoCryptoCard } from "@/components/caixa/ExposicaoCryptoCard";
+import { SaldoBancosParceiroModal } from "@/components/caixa/SaldoBancosParceiroModal";
 // TransacoesEmTransito removido - lógica unificada na Conciliação
 import { subDays, startOfDay, endOfDay, format } from "date-fns";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
