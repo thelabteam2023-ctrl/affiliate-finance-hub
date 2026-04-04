@@ -763,7 +763,15 @@ export default function BookmakerDialog({
             <Button type="button" variant="outline" onClick={onClose} className="flex-1" disabled={loading}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={loading || isLoadingDetails || !parceiroId || !bookmakerId || !selectedLink} className="flex-1">
+            <Button 
+              type="submit" 
+              disabled={loading || isLoadingDetails || !parceiroId || !bookmakerId || !selectedLink || (!bookmaker && !moedaConfirmada)} 
+              className="flex-1"
+            >
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {bookmaker ? "Atualizar" : "Criar"} Vínculo
+            </Button>
+          </div>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {bookmaker ? "Atualizar" : "Criar"} Vínculo
             </Button>
