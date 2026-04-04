@@ -127,25 +127,40 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
   };
 
   // Capture initial state when dialog opens with parceiro data loaded
+  // Use parceiro object directly instead of relying on state timing
   useEffect(() => {
     if (open && parceiro) {
-      const captureInitialState = () => {
-        setInitialState({
-          nome,
-          cpf,
-          email,
-          telefone,
-          dataNascimento,
-          endereco,
-          cidade,
-          cep,
-          status,
-          observacoes,
-          bankAccounts: JSON.stringify(bankAccounts),
-          cryptoWallets: JSON.stringify(cryptoWallets)
-        });
-      };
-      setTimeout(captureInitialState, 100);
+      const mappedBankAccounts = (parceiro.contas_bancarias || []).map((acc: any) => {
+        let parsedPixKeys: Array<{ tipo: string; chave: string }> = [];
+        if (acc.pix_keys && Array.isArray(acc.pix_keys)) {
+          parsedPixKeys = acc.pix_keys.map((pk: any) => ({
+            tipo: pk.tipo || "",
+            chave: pk.chave || ""
+          }));
+        }
+        if (parsedPixKeys.length === 0) parsedPixKeys = [{ tipo: "", chave: "" }];
+        return { ...acc, moeda: acc.moeda || "BRL", pix_keys: parsedPixKeys };
+      });
+
+      const mappedWallets = (parceiro.wallets_crypto || []).map((w: any) => ({
+        ...w,
+        moeda: Array.isArray(w.moeda) ? w.moeda : w.moeda ? [w.moeda] : [],
+      }));
+
+      setInitialState({
+        nome: parceiro.nome || "",
+        cpf: formatCPF(parceiro.cpf || ""),
+        email: parceiro.email || "",
+        telefone: parceiro.telefone || "",
+        dataNascimento: parceiro.data_nascimento || "",
+        endereco: parceiro.endereco || "",
+        cidade: parceiro.cidade || "",
+        cep: formatCEP(parceiro.cep || ""),
+        status: parceiro.status || "ativo",
+        observacoes: parceiro.observacoes || "",
+        bankAccounts: JSON.stringify(mappedBankAccounts),
+        cryptoWallets: JSON.stringify(mappedWallets),
+      });
     }
   }, [open, parceiro]);
 
