@@ -83,6 +83,9 @@ interface Transacao {
   data_confirmacao: string | null;
   created_at: string;
   auditoria_metadata: any;
+  // Swap fields
+  moeda_origem: string | null;
+  moeda_destino: string | null;
 }
 
 interface SaldoFiat {
