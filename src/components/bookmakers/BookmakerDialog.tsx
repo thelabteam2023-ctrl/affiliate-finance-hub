@@ -20,7 +20,8 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, AlertTriangle, User } from "lucide-react";
+import { Loader2, AlertTriangle, User, ShieldAlert } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import BookmakerSelect from "./BookmakerSelect";
 import ParceiroSelect from "@/components/parceiros/ParceiroSelect";
@@ -85,6 +86,7 @@ export default function BookmakerDialog({
   const [showObservacoesDialog, setShowObservacoesDialog] = useState(false);
   const [hasFinancialOperations, setHasFinancialOperations] = useState(false);
   const [checkingOperations, setCheckingOperations] = useState(false);
+  const [moedaConfirmada, setMoedaConfirmada] = useState(false);
   const { toast } = useToast();
   const { workspaceId } = useWorkspace();
 
@@ -246,6 +248,7 @@ export default function BookmakerDialog({
         setIsInitialized(false);
         setHasFinancialOperations(false);
         setCheckingOperations(false);
+        setMoedaConfirmada(false);
       }, 100);
       return () => clearTimeout(timeout);
     }
@@ -615,6 +618,72 @@ export default function BookmakerDialog({
             </div>
           )}
 
+          {/* ═══════════ MOEDA OPERACIONAL — Campo crítico, posição estratégica ═══════════ */}
+          {!isLoadingDetails && selectedBookmaker && (
+            <div className={`p-4 rounded-lg border-2 transition-colors ${
+              hasFinancialOperations 
+                ? 'border-muted bg-muted/20' 
+                : 'border-amber-500/50 bg-amber-500/5'
+            }`}>
+              <Label htmlFor="moedaOperacional" className="flex items-center gap-2 text-base font-semibold mb-1">
+                <ShieldAlert className={`h-4 w-4 ${hasFinancialOperations ? 'text-muted-foreground' : 'text-amber-500'}`} />
+                Moeda Operacional
+                {checkingOperations && (
+                  <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                )}
+                {hasFinancialOperations && !checkingOperations && (
+                  <Badge variant="secondary" className="text-[10px] py-0 px-1.5">
+                    🔒 Bloqueada
+                  </Badge>
+                )}
+              </Label>
+              {!hasFinancialOperations && (
+                <p className="text-xs text-amber-600 dark:text-amber-400 mb-3">
+                  ⚠️ Campo crítico — impacta todas as operações financeiras desta conta. Não poderá ser alterado após a primeira transação confirmada.
+                </p>
+              )}
+              <Select 
+                value={moedaOperacional} 
+                onValueChange={(val) => {
+                  setMoedaOperacional(val as FiatCurrency);
+                  setMoedaConfirmada(false);
+                }}
+                disabled={loading || hasFinancialOperations}
+              >
+                <SelectTrigger className={`text-base ${hasFinancialOperations ? "bg-muted/50 cursor-not-allowed" : ""}`}>
+                  <SelectValue placeholder="Selecione a moeda" />
+                </SelectTrigger>
+                <SelectContent>
+                  {FIAT_CURRENCIES.map((currency) => (
+                    <SelectItem key={currency.value} value={currency.value}>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono">{currency.symbol}</span>
+                        <span>{currency.value} - {currency.label}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {hasFinancialOperations ? (
+                <p className="text-xs text-destructive mt-2 flex items-center gap-1">
+                  <AlertTriangle className="h-3 w-3" />
+                  A moeda não pode ser alterada — existem transações confirmadas associadas.
+                </p>
+              ) : !bookmaker ? (
+                <div className="flex items-center gap-2 mt-3">
+                  <Checkbox
+                    id="moedaConfirmacao"
+                    checked={moedaConfirmada}
+                    onCheckedChange={(checked) => setMoedaConfirmada(checked === true)}
+                  />
+                  <label htmlFor="moedaConfirmacao" className="text-xs cursor-pointer select-none">
+                    Confirmo que a moeda <strong className="font-mono">{moedaOperacional}</strong> está correta para esta conta
+                  </label>
+                </div>
+              ) : null}
+            </div>
+          )}
+
           {/* MULTI-CONTA: Aparece automaticamente quando o parceiro já tem outra conta na mesma casa */}
           {showInstanceField && (
             <div>
@@ -665,49 +734,6 @@ export default function BookmakerDialog({
             </div>
 
             <div>
-              <Label htmlFor="moedaOperacional" className="flex items-center gap-2">
-                Moeda Operacional
-                {checkingOperations && (
-                  <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
-                )}
-                {hasFinancialOperations && !checkingOperations && (
-                  <Badge variant="secondary" className="text-[10px] py-0 px-1.5">
-                    Bloqueada
-                  </Badge>
-                )}
-              </Label>
-              <Select 
-                value={moedaOperacional} 
-                onValueChange={(val) => setMoedaOperacional(val as FiatCurrency)} 
-                disabled={loading || hasFinancialOperations}
-              >
-                <SelectTrigger className={hasFinancialOperations ? "bg-muted/50 cursor-not-allowed" : ""}>
-                  <SelectValue placeholder="Selecione a moeda" />
-                </SelectTrigger>
-                <SelectContent>
-                  {FIAT_CURRENCIES.map((currency) => (
-                    <SelectItem key={currency.value} value={currency.value}>
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono">{currency.symbol}</span>
-                        <span>{currency.value} - {currency.label}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {hasFinancialOperations ? (
-                <p className="text-xs text-destructive mt-1 flex items-center gap-1">
-                  <AlertTriangle className="h-3 w-3" />
-                  A moeda não pode ser alterada — existem transações confirmadas associadas.
-                </p>
-              ) : (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Moeda em que a casa opera. Bloqueada após a primeira transação confirmada.
-                </p>
-              )}
-            </div>
-
-            <div>
               <Label htmlFor="status">Status</Label>
               <Select value={status} onValueChange={setStatus} disabled={loading}>
                 <SelectTrigger>
@@ -737,7 +763,11 @@ export default function BookmakerDialog({
             <Button type="button" variant="outline" onClick={onClose} className="flex-1" disabled={loading}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={loading || isLoadingDetails || !parceiroId || !bookmakerId || !selectedLink} className="flex-1">
+            <Button 
+              type="submit" 
+              disabled={loading || isLoadingDetails || !parceiroId || !bookmakerId || !selectedLink || (!bookmaker && !moedaConfirmada)} 
+              className="flex-1"
+            >
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {bookmaker ? "Atualizar" : "Criar"} Vínculo
             </Button>
