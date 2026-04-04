@@ -39,7 +39,7 @@ function formatCurrency(val: number, moeda = "BRL") {
 export function SupplierDashboard({ session }: Props) {
   const [activeTab, setActiveTab] = useState("visao-geral");
   const [transacaoOpen, setTransacaoOpen] = useState(false);
-  const [transacaoTipo, setTransacaoTipo] = useState<"DEPOSITO" | "SAQUE" | "TRANSFERENCIA_BANCO">("DEPOSITO");
+  const [transacaoTipo, setTransacaoTipo] = useState<"DEPOSITO" | "SAQUE" | "TRANSFERENCIA_BANCO" | "RECOLHIMENTO_BANCO">("DEPOSITO");
   const [bancosModalOpen, setBancosModalOpen] = useState(false);
   const [prefillTitularId, setPrefillTitularId] = useState<string | undefined>();
   const [prefillContaId, setPrefillContaId] = useState<string | undefined>();
@@ -164,6 +164,7 @@ export function SupplierDashboard({ session }: Props) {
     // Saldo central = only entries without bookmaker_account_id (central-level movements)
     // ALOCACAO CREDIT → +central (money enters workspace)
     // TRANSFERENCIA_BANCO DEBIT → -central (money sent to bank)
+    // RECOLHIMENTO_BANCO CREDIT → +central (money returned from bank)
     // DEVOLUCAO DEBIT → -central (money returned to admin)
     // PAGAMENTO_TITULAR DEBIT (fonte=CENTRAL) → -central
     // PAGAMENTO_TITULAR DEBIT (fonte=BANCO) → NOT central (debits bank directly)
@@ -285,14 +286,18 @@ export function SupplierDashboard({ session }: Props) {
             </CardContent>
           </Card>
 
-          <Card className="cursor-pointer hover:border-primary/30 transition-colors" onClick={() => setBancosModalOpen(true)}>
+          <Card className="cursor-pointer hover:border-primary/30 transition-colors" onClick={() => { if (saldoBancos > 0) { setTransacaoTipo("RECOLHIMENTO_BANCO"); setTransacaoOpen(true); } else { setBancosModalOpen(true); } }}>
             <CardContent className="pt-3 sm:pt-4 pb-2 sm:pb-3 px-3 sm:px-4">
               <div className="flex items-center gap-1.5 text-muted-foreground text-[10px] sm:text-xs mb-0.5 sm:mb-1">
                 <Wallet className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                 Em Bancos
               </div>
               <p className="text-base sm:text-xl font-bold text-foreground tabular-nums">{formatCurrency(saldoBancos)}</p>
-              <p className="text-[10px] text-primary mt-0.5">Toque para ver detalhes →</p>
+              {saldoBancos > 0 ? (
+                <p className="text-[10px] text-primary mt-0.5">Toque para recolher →</p>
+              ) : (
+                <p className="text-[10px] text-primary mt-0.5">Toque para ver detalhes →</p>
+              )}
             </CardContent>
           </Card>
         </div>

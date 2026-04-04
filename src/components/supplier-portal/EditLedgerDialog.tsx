@@ -29,6 +29,7 @@ const TIPO_LABELS: Record<string, string> = {
   DEPOSITO: "Depósito",
   SAQUE: "Saque",
   TRANSFERENCIA_BANCO: "Transferência ao Banco",
+  RECOLHIMENTO_BANCO: "Recolhimento do Banco",
   ALOCACAO: "Alocação",
   DEVOLUCAO: "Devolução",
   PAGAMENTO_TITULAR: "Pagamento ao Titular",
@@ -79,6 +80,15 @@ export function EditLedgerDialog({ open, onOpenChange, entry, onSuccess }: Props
       };
     }
 
+    if (tipo === "RECOLHIMENTO_BANCO") {
+      return {
+        line1: `${bancoNome}: ${delta > 0 ? "+" : "-"}${formatCurrency(Math.abs(delta))}`,
+        line2: `Saldo Disponível: ${delta > 0 ? "-" : "+"}${formatCurrency(Math.abs(delta))}`,
+        icon1: delta > 0 ? "📈" : "📉",
+        icon2: delta > 0 ? "📉" : "📈",
+      };
+    }
+
     return {
       line1: `Valor: ${formatCurrency(valorAtual)} → ${formatCurrency(numNovoValor)}`,
       line2: `Delta: ${delta > 0 ? "+" : ""}${formatCurrency(delta)}`,
@@ -124,7 +134,7 @@ export function EditLedgerDialog({ open, onOpenChange, entry, onSuccess }: Props
   if (!entry) return null;
 
   const tipoLabel = TIPO_LABELS[entry.tipo] || entry.tipo;
-  const isEditable = ["DEPOSITO", "SAQUE", "TRANSFERENCIA_BANCO"].includes(entry.tipo);
+  const isEditable = ["DEPOSITO", "SAQUE", "TRANSFERENCIA_BANCO", "RECOLHIMENTO_BANCO"].includes(entry.tipo);
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>

@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  tipo: "DEPOSITO" | "SAQUE" | "TRANSFERENCIA_BANCO";
+  tipo: "DEPOSITO" | "SAQUE" | "TRANSFERENCIA_BANCO" | "RECOLHIMENTO_BANCO";
   supplierWorkspaceId: string;
   accounts: any[];
   saldoDisponivel: number;
@@ -64,6 +64,8 @@ export function SupplierTransacaoDialog({
 
   const isDeposito = tipo === "DEPOSITO";
   const isTransferenciaBanco = tipo === "TRANSFERENCIA_BANCO";
+  const isRecolhimentoBanco = tipo === "RECOLHIMENTO_BANCO";
+  const isBankOperation = isTransferenciaBanco || isRecolhimentoBanco;
 
   // Fetch all workspace banks - action via query param
   const { data: bancos, refetch: refetchBancos } = useQuery({
@@ -135,34 +137,44 @@ export function SupplierTransacaoDialog({
 
   const handleSelectBanco = (id: string) => {
     setBancoId(id);
-    if (isTransferenciaBanco) {
-      // For bank transfer, step 2 only needs amount
+    if (isBankOperation) {
       setStep(2);
     } else {
       setStep(2);
     }
   };
 
-  // ── TRANSFER TO BANK mutation ──
+  // ── TRANSFER TO/FROM BANK mutation ──
   const transferMutation = useMutation({
     mutationFn: async () => {
       const numValor = parseFloat(valor);
       if (!numValor || numValor <= 0) throw new Error("Valor inválido");
       if (!bancoId) throw new Error("Selecione um banco");
-      if (numValor > saldoDisponivel) {
+
+      if (isTransferenciaBanco && numValor > saldoDisponivel) {
         throw new Error(`Saldo disponível insuficiente: ${formatCurrency(saldoDisponivel)}`);
       }
+      if (isRecolhimentoBanco && selectedBanco && numValor > selectedBanco.saldo) {
+        throw new Error(`Saldo insuficiente no banco "${selectedBanco.banco_nome}": ${formatCurrency(selectedBanco.saldo)}`);
+      }
 
-      // 1. Register in supplier_ledger as DEBIT (money leaving available balance)
+      const ledgerTipo = isRecolhimentoBanco ? "RECOLHIMENTO_BANCO" : "TRANSFERENCIA_BANCO";
+      const ledgerDirecao = isRecolhimentoBanco ? "CREDIT" : "DEBIT";
+      const bancoOperacao = isRecolhimentoBanco ? "DEBIT" : "CREDIT";
+      const descPadrao = isRecolhimentoBanco
+        ? `Recolhimento do banco: ${selectedBanco?.banco_nome || "banco"}`
+        : `Envio para banco: ${selectedBanco?.banco_nome || "banco"}`;
+
+      // 1. Register in supplier_ledger
       const { data, error } = await supabase.rpc("supplier_ledger_insert", {
         p_supplier_workspace_id: supplierWorkspaceId,
         p_bookmaker_account_id: null,
-        p_tipo: "TRANSFERENCIA_BANCO",
-        p_direcao: "DEBIT",
+        p_tipo: ledgerTipo,
+        p_direcao: ledgerDirecao,
         p_valor: numValor,
-        p_descricao: descricao || `Envio para banco: ${selectedBanco?.banco_nome || "banco"}`,
+        p_descricao: descricao || descPadrao,
         p_created_by: "SUPPLIER",
-        p_idempotency_key: `TRANSF_BANCO_${bancoId}_${Date.now()}`,
+        p_idempotency_key: `${ledgerTipo}_${bancoId}_${Date.now()}`,
         p_metadata: { banco_id: bancoId, banco_nome: selectedBanco?.banco_nome, titular_id: titularId },
       });
 
@@ -170,25 +182,25 @@ export function SupplierTransacaoDialog({
       const result = data as any;
       if (!result?.success) throw new Error(result?.error || "Erro ao processar");
 
-      // 2. Credit bank balance
+      // 2. Update bank balance
       const { data: bancoResult } = await supabase.functions.invoke("supplier-auth", {
         body: { action: "update-banco-saldo",
           token,
           banco_id: bancoId,
           valor: numValor,
-          operacao: "CREDIT",
+          operacao: bancoOperacao,
         },
       });
 
       if (bancoResult?.error) {
         console.error("Erro ao atualizar saldo do banco:", bancoResult.error);
-        toast.warning("Transferência registrada, mas houve erro ao atualizar saldo do banco");
+        toast.warning("Operação registrada, mas houve erro ao atualizar saldo do banco");
       }
 
       return result;
     },
     onSuccess: () => {
-      toast.success("Valor enviado ao banco com sucesso");
+      toast.success(isRecolhimentoBanco ? "Valor recolhido do banco com sucesso" : "Valor enviado ao banco com sucesso");
       onOpenChange(false);
       onSuccess();
     },
@@ -260,13 +272,15 @@ export function SupplierTransacaoDialog({
     onError: (e: any) => toast.error(e.message),
   });
 
-  const dialogTitle = isTransferenciaBanco
-    ? "Enviar ao Banco"
-    : isDeposito
-      ? "Depositar em Conta"
-      : "Sacar de Conta";
+  const dialogTitle = isRecolhimentoBanco
+    ? "Recolher do Banco"
+    : isTransferenciaBanco
+      ? "Enviar ao Banco"
+      : isDeposito
+        ? "Depositar em Conta"
+        : "Sacar de Conta";
 
-  const dialogIcon = isTransferenciaBanco
+  const dialogIcon = isBankOperation
     ? <ArrowRightLeft className="h-5 w-5 text-primary" />
     : isDeposito
       ? <Landmark className="h-5 w-5 text-primary" />
@@ -311,9 +325,11 @@ export function SupplierTransacaoDialog({
             {titularId && (
               <div className="space-y-2">
                 <Label className="text-muted-foreground text-xs">
-                  {isTransferenciaBanco
-                    ? "Selecione o banco para receber o valor:"
-                    : `Selecione o banco para ${isDeposito ? "debitar" : "creditar"}:`}
+                  {isRecolhimentoBanco
+                    ? "Selecione o banco para debitar:"
+                    : isTransferenciaBanco
+                      ? "Selecione o banco para receber o valor:"
+                      : `Selecione o banco para ${isDeposito ? "debitar" : "creditar"}:`}
                 </Label>
                 {titularBancos.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-4">
@@ -358,8 +374,8 @@ export function SupplierTransacaoDialog({
           </div>
         )}
 
-        {/* ── STEP 2 for TRANSFERENCIA_BANCO: Amount only ── */}
-        {step === 2 && isTransferenciaBanco && selectedBanco && (
+        {/* ── STEP 2 for BANK OPERATIONS: Amount only ── */}
+        {step === 2 && isBankOperation && selectedBanco && (
           <div className="space-y-4">
             {/* Selected bank summary */}
             <div className="flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
@@ -382,19 +398,31 @@ export function SupplierTransacaoDialog({
                 type="number"
                 step="0.01"
                 min="0.01"
-                max={saldoDisponivel}
+                max={isRecolhimentoBanco ? selectedBanco.saldo : saldoDisponivel}
                 value={valor}
                 onChange={e => setValor(e.target.value)}
                 placeholder="0,00"
               />
-              {parseFloat(valor) > saldoDisponivel ? (
-                <p className="text-[11px] text-destructive mt-1 font-medium">
-                  ⚠️ Valor excede o saldo disponível: {formatCurrency(saldoDisponivel)}
-                </p>
+              {isRecolhimentoBanco ? (
+                parseFloat(valor) > selectedBanco.saldo ? (
+                  <p className="text-[11px] text-destructive mt-1 font-medium">
+                    ⚠️ Valor excede o saldo do banco: {formatCurrency(selectedBanco.saldo)}
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Saldo no banco: {formatCurrency(selectedBanco.saldo)}
+                  </p>
+                )
               ) : (
-                <p className="text-[11px] text-muted-foreground mt-1">
-                  Saldo disponível: {formatCurrency(saldoDisponivel)}
-                </p>
+                parseFloat(valor) > saldoDisponivel ? (
+                  <p className="text-[11px] text-destructive mt-1 font-medium">
+                    ⚠️ Valor excede o saldo disponível: {formatCurrency(saldoDisponivel)}
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Saldo disponível: {formatCurrency(saldoDisponivel)}
+                  </p>
+                )
               )}
             </div>
 
@@ -413,15 +441,24 @@ export function SupplierTransacaoDialog({
             {valor && (
               <div className="bg-muted/50 rounded-lg p-3 text-xs text-muted-foreground space-y-1">
                 <p className="font-medium text-foreground text-sm">Resumo da operação:</p>
-                <p>📉 <span className="font-medium">Saldo Disponível</span> será debitado em {formatCurrency(parseFloat(valor) || 0)}</p>
-                <p>📈 <span className="font-medium">{selectedBanco.banco_nome}</span> ({selectedBanco.titular_nome}) será creditado</p>
+                {isRecolhimentoBanco ? (
+                  <>
+                    <p>📉 <span className="font-medium">{selectedBanco.banco_nome}</span> ({selectedBanco.titular_nome}) será debitado em {formatCurrency(parseFloat(valor) || 0)}</p>
+                    <p>📈 <span className="font-medium">Saldo Disponível</span> será creditado</p>
+                  </>
+                ) : (
+                  <>
+                    <p>📉 <span className="font-medium">Saldo Disponível</span> será debitado em {formatCurrency(parseFloat(valor) || 0)}</p>
+                    <p>📈 <span className="font-medium">{selectedBanco.banco_nome}</span> ({selectedBanco.titular_nome}) será creditado</p>
+                  </>
+                )}
               </div>
             )}
           </div>
         )}
 
         {/* ── STEP 2 for DEPOSITO/SAQUE: Account, Amount, Description ── */}
-        {step === 2 && !isTransferenciaBanco && selectedBanco && (
+        {step === 2 && !isBankOperation && selectedBanco && (
           <div className="space-y-4">
             {/* Selected bank summary */}
             <div className="flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
@@ -492,7 +529,7 @@ export function SupplierTransacaoDialog({
                   ⚠️ Valor excede o saldo do banco {selectedBanco.banco_nome} ({formatCurrency(selectedBanco.saldo)})
                 </p>
               )}
-              {!isDeposito && !isTransferenciaBanco && contaId && parseFloat(valor) > Number(accounts.find(a => a.id === contaId)?.saldo_atual || 0) && (
+              {!isDeposito && !isBankOperation && contaId && parseFloat(valor) > Number(accounts.find(a => a.id === contaId)?.saldo_atual || 0) && (
                 <p className="text-xs text-destructive mt-1">
                   ⚠️ Valor excede o saldo da conta ({formatCurrency(Number(accounts.find(a => a.id === contaId)?.saldo_atual || 0))})
                 </p>
@@ -538,15 +575,19 @@ export function SupplierTransacaoDialog({
             </Button>
           )}
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          {step === 2 && isTransferenciaBanco && (
+          {step === 2 && isBankOperation && (
             <Button
               onClick={() => transferMutation.mutate()}
-              disabled={transferMutation.isPending || !valor || !bancoId || parseFloat(valor) > saldoDisponivel}
+              disabled={
+                transferMutation.isPending || !valor || !bancoId ||
+                (isTransferenciaBanco && parseFloat(valor) > saldoDisponivel) ||
+                (isRecolhimentoBanco && selectedBanco && parseFloat(valor) > selectedBanco.saldo)
+              }
             >
-              {transferMutation.isPending ? "Processando..." : "Enviar ao Banco"}
+              {transferMutation.isPending ? "Processando..." : isRecolhimentoBanco ? "Recolher do Banco" : "Enviar ao Banco"}
             </Button>
           )}
-          {step === 2 && !isTransferenciaBanco && (
+          {step === 2 && !isBankOperation && (
             <Button
               onClick={() => mutation.mutate()}
               disabled={

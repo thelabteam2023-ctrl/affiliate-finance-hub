@@ -17,6 +17,7 @@ const TIPO_LABELS: Record<string, string> = {
   DEPOSITO: "Depósito",
   SAQUE: "Saque",
   TRANSFERENCIA_BANCO: "Envio ao Banco",
+  RECOLHIMENTO_BANCO: "Recolhimento do Banco",
   TRANSFERENCIA: "Transferência",
   DEVOLUCAO: "Devolução",
   AJUSTE: "Ajuste",
@@ -28,13 +29,14 @@ const TIPO_ICONS: Record<string, typeof ArrowUpRight> = {
   DEPOSITO: ArrowUpRight,
   SAQUE: ArrowDownRight,
   TRANSFERENCIA_BANCO: ArrowLeftRight,
+  RECOLHIMENTO_BANCO: ArrowLeftRight,
   TRANSFERENCIA: ArrowLeftRight,
   DEVOLUCAO: ArrowDownRight,
   AJUSTE: RefreshCw,
   PAGAMENTO_TITULAR: ArrowDownRight,
 };
 
-const EDITABLE_TYPES = ["DEPOSITO", "SAQUE", "TRANSFERENCIA_BANCO"];
+const EDITABLE_TYPES = ["DEPOSITO", "SAQUE", "TRANSFERENCIA_BANCO", "RECOLHIMENTO_BANCO"];
 
 function formatCurrency(val: number) {
   return new Intl.NumberFormat("pt-BR", {
@@ -119,6 +121,8 @@ export function SupplierExtratoTab({ supplierWorkspaceId }: Props) {
             subtitleParts.push(`${casaNome} → ${bancoNome}`);
           } else if (entry.tipo === "TRANSFERENCIA_BANCO" && bancoNome) {
             subtitleParts.push(`Saldo Disponível → ${bancoNome}`);
+          } else if (entry.tipo === "RECOLHIMENTO_BANCO" && bancoNome) {
+            subtitleParts.push(`${bancoNome} → Saldo Disponível`);
           } else if (entry.tipo === "PAGAMENTO_TITULAR") {
             const pgBanco = (entry.metadata as any)?.banco_nome;
             const pgTitular = (entry.metadata as any)?.titular_nome;
