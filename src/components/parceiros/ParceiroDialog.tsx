@@ -1524,7 +1524,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                 bankAccounts.map((account, index) => (
                 <Card key={index}>
                   <CardContent className="pt-4">
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {!viewMode && (
                         <div className="col-span-2 flex justify-end">
                           <Button
