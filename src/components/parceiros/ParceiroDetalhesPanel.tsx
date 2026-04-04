@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, memo, useEffect, useRef } from "react";
+import { useState, useCallback, useMemo, memo, useEffect, useRef, Fragment } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ParceiroFinanceiroConsolidado, saldosToEntries } from "@/hooks/useParceiroFinanceiroConsolidado";
 import { Badge } from "@/components/ui/badge";
@@ -67,7 +67,117 @@ interface ParceiroDetalhesPanelProps {
 
 const clampSaldoVisual = (value: number | null | undefined) => Math.max(0, Number(value ?? 0));
 
-// Mobile card component for bookmaker performance
+// Mobile Progressive KPIs component
+interface MobileProgressiveKpisProps {
+  kpisFiltrados: any;
+  showSensitiveData: boolean;
+  hasLucroFiltrado: boolean;
+  hasPrejuizoFiltrado: boolean;
+  dataSource: import("@/contexts/ExchangeRatesContext").DataSource;
+  isUsingFallback: boolean;
+  ratesMap: Record<string, number>;
+}
+
+function MobileProgressiveKpis({ kpisFiltrados, showSensitiveData, hasLucroFiltrado, hasPrejuizoFiltrado, dataSource, isUsingFallback, ratesMap }: MobileProgressiveKpisProps) {
+  const [expanded, setExpanded] = useState(() => {
+    try { return localStorage.getItem("parceiro-kpis-expanded") === "true"; } catch { return false; }
+  });
+
+  const toggleExpanded = () => {
+    const next = !expanded;
+    setExpanded(next);
+    try { localStorage.setItem("parceiro-kpis-expanded", String(next)); } catch {}
+  };
+
+  return (
+    <div className="lg:hidden space-y-2">
+      {/* Primary KPIs: always visible */}
+      <div className="grid gap-2 grid-cols-1 sm:grid-cols-3">
+        <ParceiroKpiCard
+          icon={<ArrowDownToLine className="h-4 w-4 text-destructive" />}
+          label="Depositado"
+          entries={kpisFiltrados.depositado}
+          consolidadoBRL={kpisFiltrados.depositadoBRL}
+          showBreakdown={kpisFiltrados.isConsolidado}
+          masked={!showSensitiveData}
+          dataSource={dataSource}
+          isUsingFallback={isUsingFallback}
+          rates={ratesMap}
+        />
+        <ParceiroKpiCard
+          icon={<ArrowUpFromLine className="h-4 w-4 text-success" />}
+          label="Sacado"
+          entries={kpisFiltrados.sacado}
+          consolidadoBRL={kpisFiltrados.sacadoBRL}
+          showBreakdown={kpisFiltrados.isConsolidado}
+          masked={!showSensitiveData}
+          dataSource={dataSource}
+          isUsingFallback={isUsingFallback}
+          rates={ratesMap}
+        />
+        <ParceiroKpiCard
+          icon={<Wallet className="h-4 w-4 text-primary" />}
+          label="💰 Saldo Atual"
+          entries={kpisFiltrados.saldo}
+          consolidadoBRL={kpisFiltrados.saldoBRL}
+          showBreakdown={kpisFiltrados.isConsolidado}
+          masked={!showSensitiveData}
+          cardClassName="bg-primary/10 border-primary/30 ring-1 ring-primary/20"
+          labelClassName="text-primary/80 font-medium"
+          dataSource={dataSource}
+          isUsingFallback={isUsingFallback}
+          rates={ratesMap}
+        />
+      </div>
+
+      {/* Expandable secondary KPIs */}
+      {expanded && (
+        <div className="grid gap-2 grid-cols-2 animate-in slide-in-from-top-2 duration-200">
+          <ParceiroKpiCard
+            icon={
+              showSensitiveData ? (
+                hasLucroFiltrado && !hasPrejuizoFiltrado ? (
+                  <TrendingUp className="h-4 w-4 text-success" />
+                ) : (
+                  <TrendingDown className="h-4 w-4 text-destructive" />
+                )
+              ) : (
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              )
+            }
+            label="Resultado Financeiro"
+            entries={kpisFiltrados.resultado}
+            consolidadoBRL={kpisFiltrados.resultadoBRL}
+            showBreakdown={kpisFiltrados.isConsolidado}
+            masked={!showSensitiveData}
+            variant="auto"
+            dataSource={dataSource}
+            isUsingFallback={isUsingFallback}
+            rates={ratesMap}
+          />
+          <div className="flex items-start gap-2 p-2.5 rounded-lg bg-muted/30 border border-border">
+            <Target className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Apostas</p>
+              <p className="text-sm font-semibold">{kpisFiltrados.apostas.toLocaleString("pt-BR")}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toggle button */}
+      <button
+        onClick={toggleExpanded}
+        className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors active:scale-[0.98]"
+      >
+        <ChevronDown className={cn("h-3.5 w-3.5 transition-transform duration-200", expanded && "rotate-180")} />
+        {expanded ? "Ocultar métricas" : "+ Ver mais métricas"}
+      </button>
+    </div>
+  );
+}
+
+
 interface MobileBookmakerCardProps {
   bm: any;
   showSensitiveData: boolean;
@@ -876,9 +986,9 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
 
               {/* Conteúdo fixo: KPIs e Info */}
               <div className="shrink-0 space-y-3">
-                {/* KPIs principais - 5 colunas: Depositado → Sacado → SALDO → Resultado → Apostas */}
-                <div className="grid gap-2 grid-cols-2 lg:grid-cols-5">
-                  {/* Depositado */}
+                {/* KPIs - Desktop: 5 cols | Mobile: 3 primary + expandable */}
+                {/* Desktop layout */}
+                <div className="hidden lg:grid gap-2 grid-cols-5">
                   <ParceiroKpiCard
                     icon={<ArrowDownToLine className="h-4 w-4 text-destructive" />}
                     label="Depositado"
@@ -890,8 +1000,6 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                     isUsingFallback={isUsingFallback}
                     rates={ratesMap}
                   />
-
-                  {/* Sacado */}
                   <ParceiroKpiCard
                     icon={<ArrowUpFromLine className="h-4 w-4 text-success" />}
                     label="Sacado"
@@ -903,8 +1011,6 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                     isUsingFallback={isUsingFallback}
                     rates={ratesMap}
                   />
-
-                  {/* SALDO ATUAL - Destaque principal */}
                   <ParceiroKpiCard
                     icon={<Wallet className="h-4 w-4 text-primary" />}
                     label="💰 Saldo Atual"
@@ -918,8 +1024,6 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                     isUsingFallback={isUsingFallback}
                     rates={ratesMap}
                   />
-
-                  {/* Resultado */}
                   <ParceiroKpiCard
                     icon={
                       showSensitiveData ? (
@@ -942,8 +1046,6 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                     isUsingFallback={isUsingFallback}
                     rates={ratesMap}
                   />
-
-                  {/* Apostas */}
                   <div className="flex items-start gap-2 p-2.5 rounded-lg bg-muted/30 border border-border">
                     <Target className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                     <div className="min-w-0 flex-1">
@@ -952,6 +1054,17 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                     </div>
                   </div>
                 </div>
+
+                {/* Mobile layout: Progressive KPIs */}
+                <MobileProgressiveKpis
+                  kpisFiltrados={kpisFiltrados}
+                  showSensitiveData={showSensitiveData}
+                  hasLucroFiltrado={hasLucroFiltrado}
+                  hasPrejuizoFiltrado={hasPrejuizoFiltrado}
+                  dataSource={dataSource}
+                  isUsingFallback={isUsingFallback}
+                  ratesMap={ratesMap}
+                />
 
                 {/* Info secundária: apenas casas ativas/limitadas */}
                 <div className="flex flex-wrap gap-3 text-xs">
@@ -1010,109 +1123,155 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
               {/* Card Desempenho por Casa - ocupa espaço restante com scroll interno */}
               <div className="flex-1 min-h-0 mt-3 border border-border rounded-lg flex flex-col">
                   {/* Header do card com filtro de moeda e busca */}
-                  <div className="px-3 py-2 bg-muted/30 border-b border-border flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                    <h3 className="text-xs font-medium flex items-center gap-1.5 shrink-0">
-                      <Building2 className="h-3.5 w-3.5 text-primary" />
-                      Desempenho por Casa ({bookmakersFiltradosMoeda.length}{filtroMoeda !== "todas" ? `/${data.bookmakers.length}` : ""})
-                    </h3>
-                    <div className="flex items-center gap-2 overflow-x-auto scrollbar-none">
-                      <div className="relative shrink-0">
-                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground pointer-events-none" />
+                  <div className="px-3 py-2 bg-muted/30 border-b border-border flex flex-col gap-2">
+                    {/* Row 1: Title + Desktop search */}
+                    <div className="flex items-center justify-between gap-2">
+                      <h3 className="text-xs font-medium flex items-center gap-1.5 shrink-0">
+                        <Building2 className="h-3.5 w-3.5 text-primary" />
+                        Desempenho por Casa ({bookmakersFiltradosMoeda.length}{filtroMoeda !== "todas" ? `/${data.bookmakers.length}` : ""})
+                      </h3>
+                      {/* Desktop: search inline */}
+                      <div className="hidden md:flex items-center gap-2">
+                        <div className="relative shrink-0">
+                          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground pointer-events-none" />
+                          <input
+                            type="text"
+                            value={buscaCasa}
+                            onChange={(e) => setBuscaCasa(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === "Escape") setBuscaCasa(""); }}
+                            placeholder="Buscar casa…"
+                            className="h-6 w-[130px] rounded border border-border/50 bg-background/50 pl-6 pr-2 text-[10px] placeholder:text-muted-foreground/60 focus:outline-none focus:border-border transition-colors"
+                          />
+                        </div>
+                        <div className="flex items-center gap-1 rounded-md border border-border/50 bg-background/50 p-0.5 shrink-0">
+                          <button
+                            onClick={() => setFiltroMoeda("todas")}
+                            className={cn(
+                              "h-5 px-2 rounded text-[10px] font-medium tracking-wide transition-colors uppercase",
+                              filtroMoeda === "todas" && filtroRegulamentacao === "todas"
+                                ? "bg-primary text-primary-foreground"
+                                : filtroMoeda === "todas"
+                                  ? "bg-muted text-foreground"
+                                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                            )}
+                          >
+                            Todas
+                          </button>
+                          {moedasDisponiveis.slice(0, 4).map(moeda => (
+                            <button
+                              key={moeda}
+                              onClick={() => setFiltroMoeda(filtroMoeda === moeda ? "todas" : moeda)}
+                              className={cn(
+                                "h-5 px-2 rounded text-[10px] font-medium tracking-wide transition-colors",
+                                filtroMoeda === moeda
+                                  ? "bg-primary text-primary-foreground"
+                                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                              )}
+                            >
+                              {moeda}
+                            </button>
+                          ))}
+                          {moedasDisponiveis.length > 4 && (
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <button
+                                  className={cn(
+                                    "h-5 px-2 rounded text-[10px] font-medium tracking-wide transition-colors",
+                                    moedasDisponiveis.slice(4).includes(filtroMoeda)
+                                      ? "bg-primary text-primary-foreground"
+                                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                                  )}
+                                >
+                                  +{moedasDisponiveis.length - 4}
+                                </button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-1.5 flex flex-col gap-0.5" align="end">
+                                {moedasDisponiveis.slice(4).map(moeda => (
+                                  <button
+                                    key={moeda}
+                                    onClick={() => setFiltroMoeda(filtroMoeda === moeda ? "todas" : moeda)}
+                                    className={cn(
+                                      "h-6 px-3 rounded text-[11px] font-medium tracking-wide transition-colors text-left",
+                                      filtroMoeda === moeda
+                                        ? "bg-primary text-primary-foreground"
+                                        : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                                    )}
+                                  >
+                                    {moeda}
+                                  </button>
+                                ))}
+                              </PopoverContent>
+                            </Popover>
+                          )}
+                          <div className="w-px h-3.5 bg-border/60 mx-0.5" />
+                          <button
+                            onClick={() => setFiltroRegulamentacao(filtroRegulamentacao === "REGULAMENTADA" ? "todas" : "REGULAMENTADA")}
+                            className={cn(
+                              "h-5 px-2 rounded text-[10px] font-medium tracking-wide transition-colors uppercase",
+                              filtroRegulamentacao === "REGULAMENTADA"
+                                ? "bg-success/80 text-success-foreground"
+                                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                            )}
+                          >
+                            Regulamentada
+                          </button>
+                          <button
+                            onClick={() => setFiltroRegulamentacao(filtroRegulamentacao === "NAO_REGULAMENTADA" ? "todas" : "NAO_REGULAMENTADA")}
+                            className={cn(
+                              "h-5 px-2 rounded text-[10px] font-medium tracking-wide transition-colors uppercase",
+                              filtroRegulamentacao === "NAO_REGULAMENTADA"
+                                ? "bg-warning/80 text-warning-foreground"
+                                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                            )}
+                          >
+                            Não Regulamentada
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Mobile: Full-width search */}
+                    <div className="md:hidden">
+                      <div className="relative w-full">
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
                         <input
                           type="text"
                           value={buscaCasa}
                           onChange={(e) => setBuscaCasa(e.target.value)}
                           onKeyDown={(e) => { if (e.key === "Escape") setBuscaCasa(""); }}
-                          placeholder="Buscar casa…"
-                          className="h-6 w-[130px] rounded border border-border/50 bg-background/50 pl-6 pr-2 text-[10px] placeholder:text-muted-foreground/60 focus:outline-none focus:border-border transition-colors"
+                          placeholder="Buscar casa..."
+                          className="h-8 w-full rounded-md border border-border/50 bg-background/50 pl-8 pr-3 text-xs placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-ring transition-colors"
                         />
                       </div>
-                      <div className="flex items-center gap-1 rounded-md border border-border/50 bg-background/50 p-0.5 shrink-0">
-                        <button
-                          onClick={() => setFiltroMoeda("todas")}
-                          className={cn(
-                            "h-5 px-2 rounded text-[10px] font-medium tracking-wide transition-colors uppercase",
-                            filtroMoeda === "todas" && filtroRegulamentacao === "todas"
-                              ? "bg-primary text-primary-foreground"
-                              : filtroMoeda === "todas"
-                                ? "bg-muted text-foreground"
-                                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                          )}
-                        >
-                          Todas
-                        </button>
-                        {moedasDisponiveis.slice(0, 4).map(moeda => (
-                          <button
-                            key={moeda}
-                            onClick={() => setFiltroMoeda(filtroMoeda === moeda ? "todas" : moeda)}
-                            className={cn(
-                              "h-5 px-2 rounded text-[10px] font-medium tracking-wide transition-colors",
-                              filtroMoeda === moeda
-                                ? "bg-primary text-primary-foreground"
-                                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                            )}
-                          >
-                            {moeda}
-                          </button>
-                        ))}
-                        {moedasDisponiveis.length > 4 && (
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <button
-                                className={cn(
-                                  "h-5 px-2 rounded text-[10px] font-medium tracking-wide transition-colors",
-                                  moedasDisponiveis.slice(4).includes(filtroMoeda)
-                                    ? "bg-primary text-primary-foreground"
-                                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                                )}
-                              >
-                                +{moedasDisponiveis.length - 4}
-                              </button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-1.5 flex flex-col gap-0.5" align="end">
-                              {moedasDisponiveis.slice(4).map(moeda => (
-                                <button
-                                  key={moeda}
-                                  onClick={() => setFiltroMoeda(filtroMoeda === moeda ? "todas" : moeda)}
-                                  className={cn(
-                                    "h-6 px-3 rounded text-[11px] font-medium tracking-wide transition-colors text-left",
-                                    filtroMoeda === moeda
-                                      ? "bg-primary text-primary-foreground"
-                                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                                  )}
-                                >
-                                  {moeda}
-                                </button>
-                              ))}
-                            </PopoverContent>
-                          </Popover>
+                    </div>
+
+                    {/* Mobile: Horizontal scrollable currency chips */}
+                    <div className="md:hidden flex items-center gap-1.5 overflow-x-auto scrollbar-none -mx-1 px-1 pb-0.5">
+                      <button
+                        onClick={() => setFiltroMoeda("todas")}
+                        className={cn(
+                          "shrink-0 h-7 px-3 rounded-full text-[11px] font-medium tracking-wide transition-all active:scale-95",
+                          filtroMoeda === "todas"
+                            ? "bg-primary text-primary-foreground shadow-sm"
+                            : "bg-muted/50 text-muted-foreground hover:bg-muted"
                         )}
-                        {/* Separator - hidden on mobile */}
-                        <div className="w-px h-3.5 bg-border/60 mx-0.5 hidden md:block" />
-                        {/* Regulation filter pills - hidden on mobile */}
+                      >
+                        Todas
+                      </button>
+                      {moedasDisponiveis.map(moeda => (
                         <button
-                          onClick={() => setFiltroRegulamentacao(filtroRegulamentacao === "REGULAMENTADA" ? "todas" : "REGULAMENTADA")}
+                          key={moeda}
+                          onClick={() => setFiltroMoeda(filtroMoeda === moeda ? "todas" : moeda)}
                           className={cn(
-                            "h-5 px-2 rounded text-[10px] font-medium tracking-wide transition-colors uppercase hidden md:inline-flex",
-                            filtroRegulamentacao === "REGULAMENTADA"
-                              ? "bg-success/80 text-success-foreground"
-                              : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                            "shrink-0 h-7 px-3 rounded-full text-[11px] font-medium tracking-wide transition-all active:scale-95",
+                            filtroMoeda === moeda
+                              ? "bg-primary text-primary-foreground shadow-sm"
+                              : "bg-muted/50 text-muted-foreground hover:bg-muted"
                           )}
                         >
-                          Regulamentada
+                          {moeda}
                         </button>
-                        <button
-                          onClick={() => setFiltroRegulamentacao(filtroRegulamentacao === "NAO_REGULAMENTADA" ? "todas" : "NAO_REGULAMENTADA")}
-                          className={cn(
-                            "h-5 px-2 rounded text-[10px] font-medium tracking-wide transition-colors uppercase hidden md:inline-flex",
-                            filtroRegulamentacao === "NAO_REGULAMENTADA"
-                              ? "bg-warning/80 text-warning-foreground"
-                              : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                          )}
-                        >
-                          Não Regulamentada
-                        </button>
-                      </div>
+                      ))}
                     </div>
                   </div>
 
