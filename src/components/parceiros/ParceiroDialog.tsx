@@ -1198,7 +1198,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
             </TabsList>
 
             <TabsContent value="dados" className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="col-span-2">
                   <Label htmlFor="nome">Nome Completo *</Label>
                   <div className="flex gap-2">
