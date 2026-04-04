@@ -109,6 +109,18 @@ export function useInvalidateCaixaData() {
           }),
           queryClient.invalidateQueries({
             queryKey: ["parceiro-consolidado"],
+          }),
+          // Central de Operações — saques/confirmações alteram estado das casas
+          queryClient.invalidateQueries({
+            queryKey: ["central-operacoes-data"],
+          }),
+          // Contas disponíveis (saque pode liberar casa)
+          queryClient.invalidateQueries({
+            queryKey: ["contas-disponiveis-count"],
+          }),
+          // Saldo operável (afetado por saques)
+          queryClient.invalidateQueries({
+            queryKey: ["saldo-operavel-rpc"],
           })
         );
       }
