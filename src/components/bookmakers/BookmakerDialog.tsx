@@ -88,7 +88,11 @@ export default function BookmakerDialog({
   const { toast } = useToast();
   const { workspaceId } = useWorkspace();
 
-  // Verificar se existem operações financeiras associadas ao vínculo
+  // Status considerados válidos/consolidados para bloqueio de moeda
+  const VALID_STATUSES_CASH = ["CONFIRMADO", "PROCESSADO", "CONSOLIDADO"];
+  const VALID_STATUSES_APOSTAS = ["confirmada", "ganha", "perdida", "cashout", "meio_ganha", "meio_perdida"];
+
+  // Verificar se existem operações financeiras VÁLIDAS associadas ao vínculo
   const checkFinancialOperations = async (bookmakerId: string) => {
     if (!bookmakerId) {
       setHasFinancialOperations(false);
@@ -97,44 +101,48 @@ export default function BookmakerDialog({
 
     setCheckingOperations(true);
     try {
-      // Verificar cash_ledger (transações)
+      // Verificar cash_ledger — apenas transações confirmadas/consolidadas
       const { count: cashCount } = await supabase
         .from("cash_ledger")
         .select("id", { count: "exact", head: true })
-        .or(`origem_bookmaker_id.eq.${bookmakerId},destino_bookmaker_id.eq.${bookmakerId}`);
+        .or(`origem_bookmaker_id.eq.${bookmakerId},destino_bookmaker_id.eq.${bookmakerId}`)
+        .in("status", VALID_STATUSES_CASH);
 
       if (cashCount && cashCount > 0) {
         setHasFinancialOperations(true);
         return;
       }
 
-      // Verificar apostas_unificada
+      // Verificar apostas_unificada — apenas apostas com resultado definido
       const { count: apostasCount } = await supabase
         .from("apostas_unificada")
         .select("id", { count: "exact", head: true })
-        .eq("bookmaker_id", bookmakerId);
+        .eq("bookmaker_id", bookmakerId)
+        .in("status", VALID_STATUSES_APOSTAS);
 
       if (apostasCount && apostasCount > 0) {
         setHasFinancialOperations(true);
         return;
       }
 
-      // Verificar apostas_pernas (apostas múltiplas)
+      // Verificar apostas_pernas — apenas com resultado definido
       const { count: pernasCount } = await supabase
         .from("apostas_pernas")
         .select("id", { count: "exact", head: true })
-        .eq("bookmaker_id", bookmakerId);
+        .eq("bookmaker_id", bookmakerId)
+        .not("resultado", "is", null);
 
       if (pernasCount && pernasCount > 0) {
         setHasFinancialOperations(true);
         return;
       }
 
-      // Verificar bônus
+      // Verificar bônus ativos (não cancelados)
       const { count: bonusCount } = await supabase
         .from("project_bookmaker_link_bonuses")
         .select("id", { count: "exact", head: true })
-        .eq("bookmaker_id", bookmakerId);
+        .eq("bookmaker_id", bookmakerId)
+        .neq("status", "cancelado");
 
       if (bonusCount && bonusCount > 0) {
         setHasFinancialOperations(true);
@@ -690,11 +698,11 @@ export default function BookmakerDialog({
               {hasFinancialOperations ? (
                 <p className="text-xs text-destructive mt-1 flex items-center gap-1">
                   <AlertTriangle className="h-3 w-3" />
-                  A moeda não pode ser alterada pois existem operações financeiras associadas.
+                  A moeda não pode ser alterada — existem transações confirmadas associadas.
                 </p>
               ) : (
                 <p className="text-xs text-muted-foreground mt-1">
-                  Moeda em que a casa opera (saldo e transações)
+                  Moeda em que a casa opera. Bloqueada após a primeira transação confirmada.
                 </p>
               )}
             </div>
