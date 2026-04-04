@@ -443,6 +443,10 @@ export default function Caixa() {
       console.log("[Caixa] Data changed event received - refetching data");
       fetchData();
       refetchPending();
+      // Invalidar Central de Operações para refletir mudanças de saque/saldo
+      queryClient.invalidateQueries({ queryKey: ["central-operacoes-data"] });
+      queryClient.invalidateQueries({ queryKey: ["contas-disponiveis-count"] });
+      queryClient.invalidateQueries({ queryKey: ["saldo-operavel-rpc"] });
     };
 
     window.addEventListener(CAIXA_DATA_CHANGED_EVENT, handleCaixaDataChanged);
