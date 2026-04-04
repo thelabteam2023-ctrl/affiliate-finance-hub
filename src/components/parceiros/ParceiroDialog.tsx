@@ -1618,7 +1618,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                           disabled={viewMode}
                         />
                       </div>
-                      <div className="col-span-2">
+                      <div className="md:col-span-2">
                         <PixKeyInput
                           keys={account.pix_keys}
                           onChange={(keys) => updateBankAccount(index, "pix_keys", keys)}
