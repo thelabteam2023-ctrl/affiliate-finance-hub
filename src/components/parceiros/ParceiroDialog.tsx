@@ -1173,7 +1173,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto md:max-h-[90vh] max-md:fixed max-md:inset-0 max-md:max-w-none max-md:w-full max-md:h-full max-md:max-h-full max-md:rounded-none max-md:translate-x-0 max-md:translate-y-0 max-md:left-0 max-md:top-0">
         <DialogHeader>
           <DialogTitle>
             {viewMode ? "Visualizar Parceiro" : parceiro ? "Editar Parceiro" : "Novo Parceiro"}

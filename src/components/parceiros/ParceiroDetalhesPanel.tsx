@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { TrendingUp, TrendingDown, ArrowDownToLine, ArrowUpFromLine, Target, Building2, User, Wallet, AlertCircle, Eye, EyeOff, History, BarChart3, IdCard, Edit, Trash2, Copy, Check, Calendar, RefreshCw, CircleDashed, CircleCheck, Lock, Search, Pencil, Plus, Minus, FolderKanban, Loader2, AlertTriangle, DollarSign, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { TrendingUp, TrendingDown, ArrowDownToLine, ArrowUpFromLine, Target, Building2, User, Wallet, AlertCircle, Eye, EyeOff, History, BarChart3, IdCard, Edit, Trash2, Copy, Check, Calendar, RefreshCw, CircleDashed, CircleCheck, Lock, Search, Pencil, Plus, Minus, FolderKanban, Loader2, AlertTriangle, DollarSign, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown } from "lucide-react";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -67,6 +67,103 @@ interface ParceiroDetalhesPanelProps {
 
 const clampSaldoVisual = (value: number | null | undefined) => Math.max(0, Number(value ?? 0));
 
+// Mobile card component for bookmaker performance
+interface MobileBookmakerCardProps {
+  bm: any;
+  showSensitiveData: boolean;
+  parceiroStatus?: string;
+  formatMoneyValue: (value: number, currency: string) => string;
+  clampSaldoVisual: (value: number | null | undefined) => number;
+  usageCategory?: string;
+  usageTooltip: string;
+  onHistorico: () => void;
+  onDeposito: () => void;
+  onSaque: () => void;
+}
+
+function MobileBookmakerCard({ bm, showSensitiveData, parceiroStatus, formatMoneyValue, clampSaldoVisual, onDeposito, onSaque }: MobileBookmakerCardProps) {
+  const [expanded, setExpanded] = useState(false);
+  const moeda = bm.moeda || "BRL";
+  const resultado = bm.lucro_prejuizo ?? 0;
+
+  return (
+    <div 
+      className="border border-border rounded-lg overflow-hidden bg-card transition-shadow hover:shadow-sm"
+      onClick={() => setExpanded(!expanded)}
+    >
+      {/* Main card content */}
+      <div className="p-3 flex items-center gap-3">
+        {bm.logo_url ? (
+          <img src={bm.logo_url} alt={bm.bookmaker_nome} className="h-9 w-9 rounded object-contain shrink-0" />
+        ) : (
+          <div className="h-9 w-9 rounded bg-muted flex items-center justify-center shrink-0">
+            <Building2 className="h-4 w-4 text-muted-foreground" />
+          </div>
+        )}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5">
+            <p className="text-sm font-medium truncate">{bm.bookmaker_nome}</p>
+            <Badge variant="outline" className={cn("text-[9px] px-1 py-0 h-4 shrink-0", bm.status === "ativo" ? "border-success/50 text-success" : bm.status === "limitada" ? "border-warning/50 text-warning" : "border-destructive/50 text-destructive")}>
+              {bm.status === "ativo" ? "Ativa" : bm.status === "limitada" ? "Limitada" : "Encerrada"}
+            </Badge>
+            <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 shrink-0 border-muted-foreground/30 text-muted-foreground">
+              {moeda}
+            </Badge>
+          </div>
+          {/* Resultado destaque */}
+          <div className="flex items-center justify-between mt-1">
+            <span className="text-[10px] text-muted-foreground">Resultado</span>
+            <span className={cn("text-sm font-bold font-mono", resultado >= 0 ? "text-success" : "text-destructive")}>
+              {showSensitiveData ? formatMoneyValue(resultado, moeda) : "••••"}
+            </span>
+          </div>
+        </div>
+        <ChevronDown className={cn("h-4 w-4 text-muted-foreground shrink-0 transition-transform", expanded && "rotate-180")} />
+      </div>
+
+      {/* Expanded details */}
+      {expanded && (
+        <div className="px-3 pb-3 pt-0 border-t border-border/50 space-y-2 animate-in slide-in-from-top-1 duration-200">
+          {/* Key metrics grid */}
+          <div className="grid grid-cols-3 gap-2 pt-2">
+            <div className="text-center">
+              <p className="text-[10px] text-muted-foreground">Saldo</p>
+              <p className="text-xs font-semibold font-mono">
+                {showSensitiveData ? formatMoneyValue(clampSaldoVisual(bm.saldo_atual), moeda) : "••••"}
+              </p>
+            </div>
+            <div className="text-center">
+              <p className="text-[10px] text-muted-foreground">Depositado</p>
+              <p className="text-xs font-medium font-mono text-destructive/80">
+                {showSensitiveData ? formatMoneyValue(bm.total_depositado ?? 0, moeda) : "••••"}
+              </p>
+            </div>
+            <div className="text-center">
+              <p className="text-[10px] text-muted-foreground">Sacado</p>
+              <p className="text-xs font-medium font-mono text-success/80">
+                {showSensitiveData ? formatMoneyValue(bm.total_sacado ?? 0, moeda) : "••••"}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center justify-between text-xs pt-1">
+            <span className="text-muted-foreground">Apostas</span>
+            <span className="font-medium">{(bm.qtd_apostas ?? 0).toLocaleString("pt-BR")}</span>
+          </div>
+          {/* Quick actions */}
+          <div className="flex gap-2 pt-1">
+            <Button variant="outline" size="sm" className="flex-1 h-8 text-xs gap-1" onClick={(e) => { e.stopPropagation(); onDeposito(); }}>
+              <Plus className="h-3 w-3 text-success" /> Depósito
+            </Button>
+            <Button variant="outline" size="sm" className="flex-1 h-8 text-xs gap-1" onClick={(e) => { e.stopPropagation(); onSaque(); }}>
+              <Minus className="h-3 w-3 text-destructive" /> Saque
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Memoizado para evitar re-renders desnecessários quando o parent re-renderiza
 // (ex: abertura/fechamento de modais)
 export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({ 
@@ -101,6 +198,7 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
   const [filtroStatus, setFiltroStatus] = useState<string | null>(null);
   const [filtroRegulamentacao, setFiltroRegulamentacao] = useState<string>("todas");
   const [perdaDialog, setPerdaDialog] = useState<{ open: boolean; bookmakerId: string; bookmakerNome: string; moeda: string; saldoAtual: number } | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sortColumn, setSortColumn] = useState<"dep" | "saq" | "saldo" | "resultado" | "apostas" | null>(null);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const { canEdit, canDelete } = useActionAccess();
@@ -524,117 +622,164 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
     );
   }
 
+
+
   return (
     <>
     <TooltipProvider>
       {/* MainPanel: flex-col, altura 100%, sem scroll próprio */}
       <div className="h-full flex flex-col">
         
-        {/* PartnerHeader: fixo, não cresce */}
-        <div className="shrink-0 flex items-center gap-3 p-4 pb-2 border-b border-border">
-          <div 
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 cursor-pointer hover:bg-primary/20 transition-colors"
-            onClick={onViewParceiro}
-          >
-            <User className="h-5 w-5 text-primary" />
-          </div>
-          <div 
-            className="flex-1 min-w-0 cursor-pointer group"
-            onClick={onViewParceiro}
-          >
-            <div className="flex items-center gap-2">
-              <h2 className="text-lg font-semibold truncate group-hover:text-primary transition-colors">{data.parceiro_nome}</h2>
-              <Badge
-                variant="outline"
-                className={cn(
-                  "text-[10px] px-1.5 py-0 h-5 shrink-0",
-                  parceiroStatus === "ativo"
-                    ? "border-success/50 text-success"
-                    : "border-muted-foreground/50 text-muted-foreground"
-                )}
-              >
-                {parceiroStatus === "ativo" ? "Ativo" : "Inativo"}
-              </Badge>
+        {/* PartnerHeader: mobile-optimized */}
+        <div className="shrink-0 p-4 pb-2 border-b border-border">
+          {/* Linha 1: Nome + Status */}
+          <div className="flex items-center gap-2 mb-1">
+            <div 
+              className="flex h-9 w-9 md:h-10 md:w-10 items-center justify-center rounded-full bg-primary/10 cursor-pointer hover:bg-primary/20 transition-colors shrink-0"
+              onClick={onViewParceiro}
+            >
+              <User className="h-4 w-4 md:h-5 md:w-5 text-primary" />
             </div>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span>{data.bookmakers.length} casa{data.bookmakers.length !== 1 ? "s" : ""} vinculada{data.bookmakers.length !== 1 ? "s" : ""}</span>
-              {hasParceria && diasRestantes !== null && diasRestantes !== undefined && (
-                <>
-                  <span>•</span>
-                  <span className={cn(
-                    "flex items-center gap-1 font-medium",
-                    diasRestantes >= 31 ? "text-emerald-500" :
-                    diasRestantes >= 16 ? "text-lime-500" :
-                    diasRestantes >= 8 ? "text-yellow-500" :
-                    "text-red-500"
-                  )}>
-                    <Calendar className="h-3 w-3" />
-                    {diasRestantes} dias restantes
-                  </span>
-                </>
+            <div className="flex-1 min-w-0 cursor-pointer group" onClick={onViewParceiro}>
+              <h2 className="text-base md:text-lg font-semibold truncate group-hover:text-primary transition-colors">{data.parceiro_nome}</h2>
+            </div>
+            <Badge
+              variant="outline"
+              className={cn(
+                "text-[10px] px-1.5 py-0 h-5 shrink-0",
+                parceiroStatus === "ativo"
+                  ? "border-success/50 text-success"
+                  : "border-muted-foreground/50 text-muted-foreground"
               )}
-              {(saldoBanco !== 0 || saldoCrypto !== 0) && (
-                <>
-                  <span>•</span>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <button 
-                        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer rounded px-1.5 py-0.5 hover:bg-muted/50"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <DollarSign className="h-3 w-3" />
-                        <span>Ver saldos</span>
-                      </button>
-                    </PopoverTrigger>
-                    <PopoverContent side="bottom" align="start" className="w-64 p-3">
-                      <div className="space-y-3">
-                        <p className="text-xs font-semibold text-foreground">Saldos do Parceiro</p>
-                        
-                        {saldoBanco !== 0 && (
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-muted-foreground flex items-center gap-1.5">
-                              <Building2 className="h-3.5 w-3.5" />
-                              Contas Bancárias
-                            </span>
-                            <span className={cn("text-sm font-medium font-mono", saldoBanco < 0 && "text-destructive")}>
-                              R$ {saldoBanco.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                            </span>
-                          </div>
-                        )}
-                        
-                        {saldoCrypto !== 0 && (
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-muted-foreground flex items-center gap-1.5">
-                              <Wallet className="h-3.5 w-3.5" />
-                              Wallets Crypto
-                            </span>
-                            <span className={cn("text-sm font-medium font-mono", saldoCrypto < 0 && "text-destructive")}>
-                              $ {saldoCrypto.toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                            </span>
-                          </div>
-                        )}
+            >
+              {parceiroStatus === "ativo" ? "Ativo" : "Inativo"}
+            </Badge>
+            {/* Mobile: overflow menu for actions */}
+            <Popover open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="icon" className="shrink-0 h-8 w-8 md:hidden">
+                  <CircleDashed className="h-4 w-4" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-44 p-1.5 md:hidden">
+                <div className="flex flex-col gap-0.5">
+                  <button
+                    onClick={() => { parceiroCache.refreshCurrent(); toast({ title: "Atualizando dados..." }); setMobileMenuOpen(false); }}
+                    className="flex items-center gap-2 px-3 py-2 rounded-md text-sm hover:bg-muted transition-colors w-full text-left"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    Atualizar
+                  </button>
+                  {onToggleSensitiveData && (
+                    <button
+                      onClick={() => { onToggleSensitiveData(); setMobileMenuOpen(false); }}
+                      className="flex items-center gap-2 px-3 py-2 rounded-md text-sm hover:bg-muted transition-colors w-full text-left"
+                    >
+                      {showSensitiveData ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {showSensitiveData ? "Ocultar valores" : "Mostrar valores"}
+                    </button>
+                  )}
+                  {onEditParceiro && canEdit('parceiros', 'parceiros.edit') && (
+                    <button
+                      onClick={() => { onEditParceiro(); setMobileMenuOpen(false); }}
+                      className="flex items-center gap-2 px-3 py-2 rounded-md text-sm hover:bg-muted transition-colors w-full text-left"
+                    >
+                      <Edit className="h-4 w-4" />
+                      Editar
+                    </button>
+                  )}
+                  {onDeleteParceiro && canDelete('parceiros', 'parceiros.delete') && (
+                    <button
+                      onClick={() => { onDeleteParceiro(); setMobileMenuOpen(false); }}
+                      className="flex items-center gap-2 px-3 py-2 rounded-md text-sm hover:bg-muted transition-colors w-full text-left text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Excluir
+                    </button>
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
 
-                        {saldoBanco !== 0 && saldoCrypto !== 0 && (
-                          <div className="border-t pt-2 space-y-1.5">
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs font-medium text-muted-foreground">Patrimônio externo</span>
-                              <span className="text-sm font-bold text-primary font-mono">
-                                R$ {(saldoBanco + convertToBRL(saldoCrypto, "USD")).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                              </span>
-                            </div>
-                            <p className="text-[10px] text-muted-foreground">
-                              Cotação USD: R$ {rates.USDBRL.toFixed(4)}
-                            </p>
+          {/* Linha 2: Métricas resumidas */}
+          <div className="flex items-center gap-2 text-xs text-muted-foreground ml-11 md:ml-12 flex-wrap">
+            <span>{data.bookmakers.length} casa{data.bookmakers.length !== 1 ? "s" : ""}</span>
+            {hasParceria && diasRestantes !== null && diasRestantes !== undefined && (
+              <>
+                <span>•</span>
+                <span className={cn(
+                  "flex items-center gap-1 font-medium",
+                  diasRestantes >= 31 ? "text-emerald-500" :
+                  diasRestantes >= 16 ? "text-lime-500" :
+                  diasRestantes >= 8 ? "text-yellow-500" :
+                  "text-red-500"
+                )}>
+                  <Calendar className="h-3 w-3" />
+                  {diasRestantes} dias
+                </span>
+              </>
+            )}
+            {(saldoBanco !== 0 || saldoCrypto !== 0) && (
+              <>
+                <span>•</span>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button 
+                      className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer rounded px-1.5 py-0.5 hover:bg-muted/50"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <DollarSign className="h-3 w-3" />
+                      <span>Saldos</span>
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent side="bottom" align="start" className="w-64 p-3">
+                    <div className="space-y-3">
+                      <p className="text-xs font-semibold text-foreground">Saldos do Parceiro</p>
+                      {saldoBanco !== 0 && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground flex items-center gap-1.5">
+                            <Building2 className="h-3.5 w-3.5" />
+                            Contas Bancárias
+                          </span>
+                          <span className={cn("text-sm font-medium font-mono", saldoBanco < 0 && "text-destructive")}>
+                            R$ {saldoBanco.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                      )}
+                      {saldoCrypto !== 0 && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground flex items-center gap-1.5">
+                            <Wallet className="h-3.5 w-3.5" />
+                            Wallets Crypto
+                          </span>
+                          <span className={cn("text-sm font-medium font-mono", saldoCrypto < 0 && "text-destructive")}>
+                            $ {saldoCrypto.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                      )}
+                      {saldoBanco !== 0 && saldoCrypto !== 0 && (
+                        <div className="border-t pt-2 space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-medium text-muted-foreground">Patrimônio externo</span>
+                            <span className="text-sm font-bold text-primary font-mono">
+                              R$ {(saldoBanco + convertToBRL(saldoCrypto, "USD")).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                            </span>
                           </div>
-                        )}
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                </>
-              )}
-            </div>
+                          <p className="text-[10px] text-muted-foreground">
+                            Cotação USD: R$ {rates.USDBRL.toFixed(4)}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </>
+            )}
           </div>
-          <div className="flex items-center gap-1.5">
+
+          {/* Desktop: action buttons row (hidden on mobile) */}
+          <div className="hidden md:flex items-center gap-1.5 mt-2 ml-12">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -650,59 +795,36 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                   <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>
-                <p>Atualizar dados</p>
-              </TooltipContent>
+              <TooltipContent><p>Atualizar dados</p></TooltipContent>
             </Tooltip>
             {onEditParceiro && canEdit('parceiros', 'parceiros.edit') && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={onEditParceiro}
-                    className="shrink-0 h-8 w-8"
-                  >
+                  <Button variant="outline" size="icon" onClick={onEditParceiro} className="shrink-0 h-8 w-8">
                     <Edit className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>
-                  <p>Editar parceiro</p>
-                </TooltipContent>
+                <TooltipContent><p>Editar parceiro</p></TooltipContent>
               </Tooltip>
             )}
             {onDeleteParceiro && canDelete('parceiros', 'parceiros.delete') && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={onDeleteParceiro}
-                    className="shrink-0 h-8 w-8 text-destructive hover:text-destructive"
-                  >
+                  <Button variant="outline" size="icon" onClick={onDeleteParceiro} className="shrink-0 h-8 w-8 text-destructive hover:text-destructive">
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>
-                  <p>Excluir parceiro</p>
-                </TooltipContent>
+                <TooltipContent><p>Excluir parceiro</p></TooltipContent>
               </Tooltip>
             )}
             {onToggleSensitiveData && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={onToggleSensitiveData}
-                    className="shrink-0 h-8 w-8"
-                  >
+                  <Button variant="outline" size="icon" onClick={onToggleSensitiveData} className="shrink-0 h-8 w-8">
                     {showSensitiveData ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>
-                  <p>{showSensitiveData ? "Ocultar dados sensíveis" : "Mostrar dados sensíveis"}</p>
-                </TooltipContent>
+                <TooltipContent><p>{showSensitiveData ? "Ocultar dados sensíveis" : "Mostrar dados sensíveis"}</p></TooltipContent>
               </Tooltip>
             )}
           </div>
@@ -887,13 +1009,13 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
               {/* Card Desempenho por Casa - ocupa espaço restante com scroll interno */}
               <div className="flex-1 min-h-0 mt-3 border border-border rounded-lg flex flex-col">
                   {/* Header do card com filtro de moeda e busca */}
-                  <div className="px-3 py-2 bg-muted/30 border-b border-border flex items-center justify-between gap-2">
+                  <div className="px-3 py-2 bg-muted/30 border-b border-border flex flex-col md:flex-row md:items-center md:justify-between gap-2">
                     <h3 className="text-xs font-medium flex items-center gap-1.5 shrink-0">
                       <Building2 className="h-3.5 w-3.5 text-primary" />
                       Desempenho por Casa ({bookmakersFiltradosMoeda.length}{filtroMoeda !== "todas" ? `/${data.bookmakers.length}` : ""})
                     </h3>
-                    <div className="flex items-center gap-2">
-                      <div className="relative">
+                    <div className="flex items-center gap-2 overflow-x-auto scrollbar-none">
+                      <div className="relative shrink-0">
                         <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground pointer-events-none" />
                         <input
                           type="text"
@@ -904,8 +1026,7 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                           className="h-6 w-[130px] rounded border border-border/50 bg-background/50 pl-6 pr-2 text-[10px] placeholder:text-muted-foreground/60 focus:outline-none focus:border-border transition-colors"
                         />
                       </div>
-                      <div className="flex items-center gap-1 rounded-md border border-border/50 bg-background/50 p-0.5">
-                        {/* Moeda filter pills - max 4 visible + overflow */}
+                      <div className="flex items-center gap-1 rounded-md border border-border/50 bg-background/50 p-0.5 shrink-0">
                         <button
                           onClick={() => setFiltroMoeda("todas")}
                           className={cn(
@@ -965,13 +1086,13 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                             </PopoverContent>
                           </Popover>
                         )}
-                        {/* Separator */}
-                        <div className="w-px h-3.5 bg-border/60 mx-0.5" />
-                        {/* Regulation filter pills */}
+                        {/* Separator - hidden on mobile */}
+                        <div className="w-px h-3.5 bg-border/60 mx-0.5 hidden md:block" />
+                        {/* Regulation filter pills - hidden on mobile */}
                         <button
                           onClick={() => setFiltroRegulamentacao(filtroRegulamentacao === "REGULAMENTADA" ? "todas" : "REGULAMENTADA")}
                           className={cn(
-                            "h-5 px-2 rounded text-[10px] font-medium tracking-wide transition-colors uppercase",
+                            "h-5 px-2 rounded text-[10px] font-medium tracking-wide transition-colors uppercase hidden md:inline-flex",
                             filtroRegulamentacao === "REGULAMENTADA"
                               ? "bg-success/80 text-success-foreground"
                               : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
@@ -982,7 +1103,7 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                         <button
                           onClick={() => setFiltroRegulamentacao(filtroRegulamentacao === "NAO_REGULAMENTADA" ? "todas" : "NAO_REGULAMENTADA")}
                           className={cn(
-                            "h-5 px-2 rounded text-[10px] font-medium tracking-wide transition-colors uppercase",
+                            "h-5 px-2 rounded text-[10px] font-medium tracking-wide transition-colors uppercase hidden md:inline-flex",
                             filtroRegulamentacao === "NAO_REGULAMENTADA"
                               ? "bg-warning/80 text-warning-foreground"
                               : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
@@ -1009,443 +1130,217 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                           Mostrando {bookmakersFiltrados.length} de {bookmakersFiltradosMoeda.length} casas
                         </div>
                       )}
-                      {/* Header da tabela - sortable columns */}
-                      <div className="grid grid-cols-8 gap-2 px-3 py-1.5 text-[10px] font-medium text-muted-foreground uppercase tracking-wide bg-muted/30 border-b border-border">
-                        <div className="col-span-2">Casa</div>
-                        <div className="text-center"></div>
-                        {([
-                          { key: "dep", label: "Dep." },
-                          { key: "saq", label: "Saq." },
-                          { key: "saldo", label: "Saldo" },
-                          { key: "resultado", label: "Result. Fin." },
-                          { key: "apostas", label: "Apost." },
-                        ] as const).map(col => (
-                          <button
-                            key={col.key}
-                            onClick={() => handleSort(col.key)}
-                            className="text-right flex items-center justify-end gap-0.5 hover:text-foreground transition-colors cursor-pointer"
-                          >
-                            <span>{col.label}</span>
-                            {sortColumn === col.key ? (
-                              sortDirection === "desc" 
-                                ? <ArrowDown className="h-2.5 w-2.5 text-primary" /> 
-                                : <ArrowUp className="h-2.5 w-2.5 text-primary" />
-                            ) : (
-                              <ArrowUpDown className="h-2.5 w-2.5 opacity-30" />
-                            )}
-                          </button>
-                        ))}
-                      </div>
 
-                      {/* Lista de bookmakers - único elemento rolável */}
-                      <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-border">
-                        {bookmakersSorted.map((bm) => (
-                          <ContextMenu key={bm.bookmaker_id}>
-                            <ContextMenuTrigger asChild>
-                              <div
-                                className="grid grid-cols-8 gap-2 px-3 py-2 hover:bg-muted/20 transition-colors items-center cursor-context-menu"
-                              >
-                            <div className="col-span-2 flex items-center gap-2 min-w-0">
-                              {bm.logo_url ? (
-                                <img
-                                  src={bm.logo_url}
-                                  alt={bm.bookmaker_nome}
-                                  className="h-10 w-10 rounded object-contain p-0.5 shrink-0"
-                                />
+                      {/* DESKTOP: Table view */}
+                      <div className="hidden md:flex md:flex-col md:flex-1 md:min-h-0">
+                        {/* Header da tabela - sortable columns */}
+                        <div className="grid grid-cols-8 gap-2 px-3 py-1.5 text-[10px] font-medium text-muted-foreground uppercase tracking-wide bg-muted/30 border-b border-border">
+                          <div className="col-span-2">Casa</div>
+                          <div className="text-center"></div>
+                          {([
+                            { key: "dep", label: "Dep." },
+                            { key: "saq", label: "Saq." },
+                            { key: "saldo", label: "Saldo" },
+                            { key: "resultado", label: "Result. Fin." },
+                            { key: "apostas", label: "Apost." },
+                          ] as const).map(col => (
+                            <button
+                              key={col.key}
+                              onClick={() => handleSort(col.key)}
+                              className="text-right flex items-center justify-end gap-0.5 hover:text-foreground transition-colors cursor-pointer"
+                            >
+                              <span>{col.label}</span>
+                              {sortColumn === col.key ? (
+                                sortDirection === "desc" 
+                                  ? <ArrowDown className="h-2.5 w-2.5 text-primary" /> 
+                                  : <ArrowUp className="h-2.5 w-2.5 text-primary" />
                               ) : (
-                                <div className="h-10 w-10 rounded bg-muted flex items-center justify-center shrink-0">
-                                  <Building2 className="h-5 w-5 text-muted-foreground" />
-                                </div>
+                                <ArrowUpDown className="h-2.5 w-2.5 opacity-30" />
                               )}
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-1.5">
-                                  <p className="text-xs font-medium truncate">
-                                    {bm.bookmaker_nome}
-                                  </p>
-                                  {bm.has_credentials && (
-                                    <Popover
-                                      open={credentialsPopoverOpen === bm.bookmaker_id}
-                                      onOpenChange={(open) =>
-                                        setCredentialsPopoverOpen(open ? bm.bookmaker_id : null)
-                                      }
-                                    >
-                                      <PopoverTrigger asChild>
-                                        <button
-                                          type="button"
-                                          className="h-5 w-5 p-0.5 shrink-0 rounded hover:bg-muted/50 transition-colors cursor-pointer flex items-center justify-center"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setCredentialsPopoverOpen(
-                                              credentialsPopoverOpen === bm.bookmaker_id
-                                                ? null
-                                                : bm.bookmaker_id
-                                            );
-                                          }}
-                                        >
-                                          <IdCard className="h-4 w-4 text-muted-foreground hover:text-foreground" />
-                                        </button>
-                                      </PopoverTrigger>
-                                      <PopoverContent className="w-52 p-2" align="start">
-                                        <div className="space-y-2">
-                                          <div>
-                                            <label className="text-[10px] text-muted-foreground">Usuário</label>
-                                            <div className="flex items-center gap-1 mt-0.5">
-                                              <code className="flex-1 text-xs bg-muted px-1.5 py-0.5 rounded truncate">
-                                                {showSensitiveData ? bm.login_username : "••••••"}
-                                              </code>
-                                              <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() =>
-                                                  bm.login_username &&
-                                                  copyToClipboard(bm.login_username, "Usuário")
-                                                }
-                                                className="h-6 w-6 p-0 shrink-0"
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* Lista de bookmakers - desktop table */}
+                        <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-border">
+                          {bookmakersSorted.map((bm) => (
+                            <ContextMenu key={bm.bookmaker_id}>
+                              <ContextMenuTrigger asChild>
+                                <div className="grid grid-cols-8 gap-2 px-3 py-2 hover:bg-muted/20 transition-colors items-center cursor-context-menu">
+                                  <div className="col-span-2 flex items-center gap-2 min-w-0">
+                                    {bm.logo_url ? (
+                                      <img src={bm.logo_url} alt={bm.bookmaker_nome} className="h-10 w-10 rounded object-contain p-0.5 shrink-0" />
+                                    ) : (
+                                      <div className="h-10 w-10 rounded bg-muted flex items-center justify-center shrink-0">
+                                        <Building2 className="h-5 w-5 text-muted-foreground" />
+                                      </div>
+                                    )}
+                                    <div className="min-w-0">
+                                      <div className="flex items-center gap-1.5">
+                                        <p className="text-xs font-medium truncate">{bm.bookmaker_nome}</p>
+                                        {bm.has_credentials && (
+                                          <Popover
+                                            open={credentialsPopoverOpen === bm.bookmaker_id}
+                                            onOpenChange={(open) => setCredentialsPopoverOpen(open ? bm.bookmaker_id : null)}
+                                          >
+                                            <PopoverTrigger asChild>
+                                              <button
+                                                type="button"
+                                                className="h-5 w-5 p-0.5 shrink-0 rounded hover:bg-muted/50 transition-colors cursor-pointer flex items-center justify-center"
+                                                onClick={(e) => { e.stopPropagation(); setCredentialsPopoverOpen(credentialsPopoverOpen === bm.bookmaker_id ? null : bm.bookmaker_id); }}
                                               >
-                                                {copiedField === "Usuário" ? (
-                                                  <Check className="h-3 w-3 text-success" />
-                                                ) : (
-                                                  <Copy className="h-3 w-3" />
-                                                )}
-                                              </Button>
-                                            </div>
-                                          </div>
-                                          <div>
-                                            <label className="text-[10px] text-muted-foreground">Senha</label>
-                                            <LazyPasswordField
-                                              cacheKey={`parceiro-detalhes:${bm.bookmaker_id}`}
-                                              encrypted={bm.login_password_encrypted}
-                                              parentMasked={!showSensitiveData}
-                                              requestDecrypt={requestDecrypt}
-                                              isDecrypted={isDecrypted}
-                                              getCached={getCached}
-                                            />
-                                          </div>
-                                        </div>
-                                      </PopoverContent>
-                                    </Popover>
-                                  )}
-                                </div>
-                                <div className="flex items-center gap-1 flex-wrap">
-                                  {/* Badge de status REAL da conta */}
-                                  <Badge
-                                    variant="outline"
-                                    className={cn(
-                                      "text-[9px] px-1 py-0 h-4",
-                                      bm.status === "ativo"
-                                        ? "border-success/50 text-success"
-                                        : bm.status === "limitada"
-                                          ? "border-warning/50 text-warning"
-                                          : bm.status === "encerrada"
-                                            ? "border-destructive/50 text-destructive"
-                                            : "border-muted-foreground/50 text-muted-foreground"
-                                    )}
-                                  >
-                                    {bm.status === "ativo" 
-                                      ? "Ativa" 
-                                      : bm.status === "limitada"
-                                        ? "Limitada"
-                                        : bm.status === "encerrada"
-                                          ? "Encerrada"
-                                          : bm.status}
-                                  </Badge>
-                                  {/* Badge de bloqueio quando parceiro está inativo */}
-                                  {parceiroStatus === "inativo" && (
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Badge
-                                          variant="outline"
-                                          className="text-[9px] px-1 py-0 h-4 border-destructive/50 text-destructive"
-                                        >
-                                          <Lock className="h-2.5 w-2.5 mr-0.5" />
-                                          Bloq.
+                                                <IdCard className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                                              </button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-52 p-2" align="start">
+                                              <div className="space-y-2">
+                                                <div>
+                                                  <label className="text-[10px] text-muted-foreground">Usuário</label>
+                                                  <div className="flex items-center gap-1 mt-0.5">
+                                                    <code className="flex-1 text-xs bg-muted px-1.5 py-0.5 rounded truncate">{showSensitiveData ? bm.login_username : "••••••"}</code>
+                                                    <Button variant="ghost" size="sm" onClick={() => bm.login_username && copyToClipboard(bm.login_username, "Usuário")} className="h-6 w-6 p-0 shrink-0">
+                                                      {copiedField === "Usuário" ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
+                                                    </Button>
+                                                  </div>
+                                                </div>
+                                                <div>
+                                                  <label className="text-[10px] text-muted-foreground">Senha</label>
+                                                  <LazyPasswordField cacheKey={`parceiro-detalhes:${bm.bookmaker_id}`} encrypted={bm.login_password_encrypted} parentMasked={!showSensitiveData} requestDecrypt={requestDecrypt} isDecrypted={isDecrypted} getCached={getCached} />
+                                                </div>
+                                              </div>
+                                            </PopoverContent>
+                                          </Popover>
+                                        )}
+                                      </div>
+                                      <div className="flex items-center gap-1 flex-wrap">
+                                        <Badge variant="outline" className={cn("text-[9px] px-1 py-0 h-4", bm.status === "ativo" ? "border-success/50 text-success" : bm.status === "limitada" ? "border-warning/50 text-warning" : bm.status === "encerrada" ? "border-destructive/50 text-destructive" : "border-muted-foreground/50 text-muted-foreground")}>
+                                          {bm.status === "ativo" ? "Ativa" : bm.status === "limitada" ? "Limitada" : bm.status === "encerrada" ? "Encerrada" : bm.status}
                                         </Badge>
-                                      </TooltipTrigger>
-                                      <TooltipContent side="top" className="max-w-[200px]">
-                                        <p className="text-xs">Parceiro inativo. Operações financeiras bloqueadas.</p>
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  )}
-                                  <Badge
-                                    variant="outline"
-                                    className={cn(
-                                      "text-[9px] px-1 py-0 h-4",
-                                      bm.moeda === "USD" || bm.moeda === "USDT"
-                                        ? "border-cyan-500/50 text-cyan-400"
-                                        : bm.moeda === "EUR"
-                                          ? "border-yellow-500/50 text-yellow-400"
-                                          : bm.moeda === "GBP"
-                                            ? "border-purple-500/50 text-purple-400"
-                                            : "border-emerald-500/50 text-emerald-400"
-                                    )}
-                                  >
-                                    {bm.moeda || "BRL"}
-                                  </Badge>
-                                </div>
-                              </div>
-                            </div>
-                            {/* Botão Histórico de Projetos - com cor semântica */}
-                            <div className="flex justify-center">
-                              {(() => {
-                                const usage = usageMap[bm.bookmaker_id];
-                                const config = usage ? getUsageCategoryConfig(usage.category) : null;
-                                const IconComponent = usage?.category === "ATIVA" 
-                                  ? CircleCheck 
-                                  : usage?.category === "JA_USADA" 
-                                    ? History 
-                                    : CircleDashed;
-                                const iconColorClass = config?.iconColor || "text-muted-foreground";
-                                
-                                return (
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-7 w-7 p-0"
-                                        onClick={() => setHistoricoDialog({
-                                          open: true,
-                                          bookmakerId: bm.bookmaker_id,
-                                          bookmakerNome: bm.bookmaker_nome,
-                                          logoUrl: bm.logo_url,
-                                          status: bm.status,
-                                        })}
-                                      >
-                                        <IconComponent className={cn("h-4 w-4", iconColorClass, "hover:opacity-80")} />
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p className="text-xs">
-                                        {usage?.category === "ATIVA" && usage.projetoAtivoNome 
-                                          ? `Projeto: ${usage.projetoAtivoNome}`
-                                          : config?.tooltip || "Ver histórico"
-                                        }
-                                      </p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                );
-                              })()}
-                            </div>
-                            {/* Depósito - sempre na moeda nativa da casa */}
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div className="text-right">
-                                  <MoneyDisplay
-                                    value={bm.total_depositado}
-                                    currency={bm.moeda || "BRL"}
-                                    size="sm"
-                                    masked={!showSensitiveData}
-                                  />
-                                </div>
-                              </TooltipTrigger>
-                              {showSensitiveData && bm.total_depositado > 0 && (
-                                <TooltipContent side="top" className="text-xs">
-                                  <p className="font-medium">Total depositado</p>
-                                  <p>{formatMoneyValue(bm.total_depositado, bm.moeda || "BRL")}</p>
-                                </TooltipContent>
-                              )}
-                            </Tooltip>
-                            {/* Saque - sempre na moeda nativa da casa */}
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div className="text-right">
-                                  <MoneyDisplay
-                                    value={bm.total_sacado}
-                                    currency={bm.moeda || "BRL"}
-                                    size="sm"
-                                    masked={!showSensitiveData}
-                                  />
-                                </div>
-                              </TooltipTrigger>
-                              {showSensitiveData && bm.total_sacado > 0 && (
-                                <TooltipContent side="top" className="text-xs">
-                                  <p className="font-medium">Total sacado</p>
-                                  <p>{formatMoneyValue(bm.total_sacado, bm.moeda || "BRL")}</p>
-                                </TooltipContent>
-                              )}
-                            </Tooltip>
-                            {/* Saldo Atual - moeda nativa (clamp visual para não negativo) */}
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div className="text-right">
-                                  <MoneyDisplay
-                                    value={clampSaldoVisual(bm.saldo_atual)}
-                                    currency={bm.moeda || "BRL"}
-                                    size="sm"
-                                    masked={!showSensitiveData}
-                                  />
-                                </div>
-                              </TooltipTrigger>
-                              {showSensitiveData && (
-                                <TooltipContent side="top" className="text-xs space-y-1">
-                                  <p className="font-medium">Saldo atual na casa</p>
-                                  <p>{formatMoneyValue(clampSaldoVisual(bm.saldo_atual), bm.moeda || "BRL")}</p>
-                                  {clampSaldoVisual(bm.saldo_atual) === 0 && (
-                                    <p className="text-muted-foreground italic">Sem saldo remanescente</p>
-                                  )}
-                                </TooltipContent>
-                              )}
-                            </Tooltip>
-                            {/* Resultado Financeiro Real - Saq + Saldo - Dep */}
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div className="text-right">
-                                  <MoneyDisplay
-                                    value={bm.lucro_prejuizo}
-                                    currency={bm.moeda || "BRL"}
-                                    size="sm"
-                                    variant="auto"
-                                    masked={!showSensitiveData}
-                                  />
-                                </div>
-                              </TooltipTrigger>
-                              {showSensitiveData && (
-                                <TooltipContent side="top" className="text-xs">
-                                  <p className="font-semibold mb-1.5">Resultado Financeiro Real</p>
-                                  <div className="space-y-1 min-w-[200px]">
-                                    <div className="flex justify-between gap-4">
-                                      <span className="text-muted-foreground">Saques</span>
-                                      <span className="text-success">
-                                        {formatMoneyValue(bm.total_sacado, bm.moeda || "BRL")}
-                                      </span>
-                                    </div>
-                                    <div className="flex justify-between gap-4">
-                                      <span className="text-muted-foreground">+ Saldo Atual</span>
-                                      <span>
-                                        {formatMoneyValue(clampSaldoVisual(bm.saldo_atual), bm.moeda || "BRL")}
-                                      </span>
-                                    </div>
-                                    <div className="flex justify-between gap-4">
-                                      <span className="text-muted-foreground">− Depósitos</span>
-                                      <span className="text-destructive">
-                                        {formatMoneyValue(bm.total_depositado, bm.moeda || "BRL")}
-                                      </span>
-                                    </div>
-                                    <div className="border-t border-border pt-1 flex justify-between gap-4 font-medium">
-                                      <span>= Resultado</span>
-                                      <span className={bm.lucro_prejuizo >= 0 ? "text-success" : "text-destructive"}>
-                                        {formatMoneyValue(bm.lucro_prejuizo, bm.moeda || "BRL")}
-                                      </span>
+                                        {parceiroStatus === "inativo" && (
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 border-destructive/50 text-destructive">
+                                                <Lock className="h-2.5 w-2.5 mr-0.5" />Bloq.
+                                              </Badge>
+                                            </TooltipTrigger>
+                                            <TooltipContent side="top" className="max-w-[200px]"><p className="text-xs">Parceiro inativo. Operações financeiras bloqueadas.</p></TooltipContent>
+                                          </Tooltip>
+                                        )}
+                                        <Badge variant="outline" className={cn("text-[9px] px-1 py-0 h-4", bm.moeda === "USD" || bm.moeda === "USDT" ? "border-cyan-500/50 text-cyan-400" : bm.moeda === "EUR" ? "border-yellow-500/50 text-yellow-400" : bm.moeda === "GBP" ? "border-purple-500/50 text-purple-400" : "border-emerald-500/50 text-emerald-400")}>
+                                          {bm.moeda || "BRL"}
+                                        </Badge>
+                                      </div>
                                     </div>
                                   </div>
-                                  {/* Performance Operacional como métrica secundária */}
-                                  {bm.resultado_operacional !== 0 && (
-                                    <div className="mt-2 pt-1.5 border-t border-border/50 space-y-0.5 text-muted-foreground">
-                                      <p className="text-[10px] font-medium">Performance Operacional</p>
-                                      {bm.resultado_apostas !== 0 && (
-                                        <p className="text-[10px]">Apostas: {formatMoneyValue(bm.resultado_apostas, bm.moeda || "BRL")}</p>
-                                      )}
-                                      {bm.resultado_giros !== 0 && (
-                                        <p className="text-[10px]">Giros: {formatMoneyValue(bm.resultado_giros, bm.moeda || "BRL")}</p>
-                                      )}
-                                      {bm.resultado_cashback !== 0 && (
-                                        <p className="text-[10px]">Cashback: {formatMoneyValue(bm.resultado_cashback, bm.moeda || "BRL")}</p>
-                                      )}
-                                      {bm.resultado_bonus !== 0 && (
-                                        <p className="text-[10px]">Bônus: {formatMoneyValue(bm.resultado_bonus, bm.moeda || "BRL")}</p>
-                                      )}
-                                      <p className="text-[10px] font-medium">
-                                        Total Op: <span className={bm.resultado_operacional >= 0 ? "text-success" : "text-destructive"}>
-                                          {formatMoneyValue(bm.resultado_operacional, bm.moeda || "BRL")}
-                                        </span>
-                                      </p>
-                                    </div>
-                                  )}
-                                </TooltipContent>
-                              )}
-                            </Tooltip>
-                            <div className="text-right text-sm font-medium text-muted-foreground">
-                              {bm.qtd_apostas.toLocaleString("pt-BR")}
-                            </div>
-                              </div>
-                            </ContextMenuTrigger>
-                            <ContextMenuContent>
-                              <ContextMenuSub>
-                                <ContextMenuSubTrigger className="gap-2">
-                                  <DollarSign className="h-4 w-4" />
-                                  Financeiro
-                                </ContextMenuSubTrigger>
-                                <ContextMenuSubContent className="min-w-[180px]">
-                                  <ContextMenuItem
-                                    onClick={() => onNewTransacao?.(bm.bookmaker_id, bm.bookmaker_nome, bm.moeda || "BRL", bm.saldo_atual ?? 0, 0, "deposito")}
-                                    className="gap-2"
-                                  >
-                                    <Plus className="h-4 w-4 text-success" />
-                                    Depósito
-                                  </ContextMenuItem>
-                                  <ContextMenuItem
-                                    onClick={() => onNewTransacao?.(bm.bookmaker_id, bm.bookmaker_nome, bm.moeda || "BRL", bm.saldo_atual ?? 0, 0, "retirada")}
-                                    className="gap-2"
-                                  >
-                                    <Minus className="h-4 w-4 text-destructive" />
-                                    Saque
-                                  </ContextMenuItem>
-                                  <ContextMenuSeparator />
-                                  <ContextMenuItem
-                                    onClick={() => setPerdaDialog({ open: true, bookmakerId: bm.bookmaker_id, bookmakerNome: bm.bookmaker_nome, moeda: bm.moeda || "BRL", saldoAtual: bm.saldo_atual ?? 0 })}
-                                    className="gap-2 text-destructive focus:text-destructive"
-                                  >
-                                    <AlertTriangle className="h-4 w-4" />
-                                    Registrar perda
-                                  </ContextMenuItem>
-                                </ContextMenuSubContent>
-                              </ContextMenuSub>
-                              <ContextMenuSeparator />
-                              {(() => {
-                                const usage = usageMap[bm.bookmaker_id];
-                                const isLinked = usage?.isActiveInProject || (bm.projetos && bm.projetos.length > 0);
-                                const projetoNome = usage?.projetoAtivoNome || projetos?.find(p => bm.projetos?.includes(p.id))?.nome || "atual";
-                                
-                                if (isLinked) {
+                                  {/* Botão Histórico de Projetos */}
+                                  <div className="flex justify-center">
+                                    {(() => {
+                                      const usage = usageMap[bm.bookmaker_id];
+                                      const config = usage ? getUsageCategoryConfig(usage.category) : null;
+                                      const IconComponent = usage?.category === "ATIVA" ? CircleCheck : usage?.category === "JA_USADA" ? History : CircleDashed;
+                                      const iconColorClass = config?.iconColor || "text-muted-foreground";
+                                      return (
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setHistoricoDialog({ open: true, bookmakerId: bm.bookmaker_id, bookmakerNome: bm.bookmaker_nome, logoUrl: bm.logo_url, status: bm.status })}>
+                                              <IconComponent className={cn("h-4 w-4", iconColorClass, "hover:opacity-80")} />
+                                            </Button>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <p className="text-xs">{usage?.category === "ATIVA" && usage.projetoAtivoNome ? `Projeto: ${usage.projetoAtivoNome}` : config?.tooltip || "Ver histórico"}</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      );
+                                    })()}
+                                  </div>
+                                  <Tooltip><TooltipTrigger asChild><div className="text-right"><MoneyDisplay value={bm.total_depositado} currency={bm.moeda || "BRL"} size="sm" masked={!showSensitiveData} /></div></TooltipTrigger>{showSensitiveData && bm.total_depositado > 0 && <TooltipContent side="top" className="text-xs"><p className="font-medium">Total depositado</p><p>{formatMoneyValue(bm.total_depositado, bm.moeda || "BRL")}</p></TooltipContent>}</Tooltip>
+                                  <Tooltip><TooltipTrigger asChild><div className="text-right"><MoneyDisplay value={bm.total_sacado} currency={bm.moeda || "BRL"} size="sm" masked={!showSensitiveData} /></div></TooltipTrigger>{showSensitiveData && bm.total_sacado > 0 && <TooltipContent side="top" className="text-xs"><p className="font-medium">Total sacado</p><p>{formatMoneyValue(bm.total_sacado, bm.moeda || "BRL")}</p></TooltipContent>}</Tooltip>
+                                  <Tooltip><TooltipTrigger asChild><div className="text-right"><MoneyDisplay value={clampSaldoVisual(bm.saldo_atual)} currency={bm.moeda || "BRL"} size="sm" masked={!showSensitiveData} /></div></TooltipTrigger>{showSensitiveData && <TooltipContent side="top" className="text-xs space-y-1"><p className="font-medium">Saldo atual na casa</p><p>{formatMoneyValue(clampSaldoVisual(bm.saldo_atual), bm.moeda || "BRL")}</p></TooltipContent>}</Tooltip>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <div className="text-right"><MoneyDisplay value={bm.lucro_prejuizo} currency={bm.moeda || "BRL"} size="sm" variant="auto" masked={!showSensitiveData} /></div>
+                                    </TooltipTrigger>
+                                    {showSensitiveData && (
+                                      <TooltipContent side="top" className="text-xs">
+                                        <p className="font-semibold mb-1.5">Resultado Financeiro Real</p>
+                                        <div className="space-y-1 min-w-[200px]">
+                                          <div className="flex justify-between gap-4"><span className="text-muted-foreground">Saques</span><span className="text-success">{formatMoneyValue(bm.total_sacado, bm.moeda || "BRL")}</span></div>
+                                          <div className="flex justify-between gap-4"><span className="text-muted-foreground">+ Saldo Atual</span><span>{formatMoneyValue(clampSaldoVisual(bm.saldo_atual), bm.moeda || "BRL")}</span></div>
+                                          <div className="flex justify-between gap-4"><span className="text-muted-foreground">− Depósitos</span><span className="text-destructive">{formatMoneyValue(bm.total_depositado, bm.moeda || "BRL")}</span></div>
+                                          <div className="border-t border-border pt-1 flex justify-between gap-4 font-medium"><span>= Resultado</span><span className={bm.lucro_prejuizo >= 0 ? "text-success" : "text-destructive"}>{formatMoneyValue(bm.lucro_prejuizo, bm.moeda || "BRL")}</span></div>
+                                        </div>
+                                        {bm.resultado_operacional !== 0 && (
+                                          <div className="mt-2 pt-1.5 border-t border-border/50 space-y-0.5 text-muted-foreground">
+                                            <p className="text-[10px] font-medium">Performance Operacional</p>
+                                            {bm.resultado_apostas !== 0 && <p className="text-[10px]">Apostas: {formatMoneyValue(bm.resultado_apostas, bm.moeda || "BRL")}</p>}
+                                            {bm.resultado_giros !== 0 && <p className="text-[10px]">Giros: {formatMoneyValue(bm.resultado_giros, bm.moeda || "BRL")}</p>}
+                                            {bm.resultado_cashback !== 0 && <p className="text-[10px]">Cashback: {formatMoneyValue(bm.resultado_cashback, bm.moeda || "BRL")}</p>}
+                                            {bm.resultado_bonus !== 0 && <p className="text-[10px]">Bônus: {formatMoneyValue(bm.resultado_bonus, bm.moeda || "BRL")}</p>}
+                                            <p className="text-[10px] font-medium">Total Op: <span className={bm.resultado_operacional >= 0 ? "text-success" : "text-destructive"}>{formatMoneyValue(bm.resultado_operacional, bm.moeda || "BRL")}</span></p>
+                                          </div>
+                                        )}
+                                      </TooltipContent>
+                                    )}
+                                  </Tooltip>
+                                  <div className="text-right text-sm font-medium text-muted-foreground">{bm.qtd_apostas.toLocaleString("pt-BR")}</div>
+                                </div>
+                              </ContextMenuTrigger>
+                              <ContextMenuContent>
+                                <ContextMenuSub>
+                                  <ContextMenuSubTrigger className="gap-2"><DollarSign className="h-4 w-4" />Financeiro</ContextMenuSubTrigger>
+                                  <ContextMenuSubContent className="min-w-[180px]">
+                                    <ContextMenuItem onClick={() => onNewTransacao?.(bm.bookmaker_id, bm.bookmaker_nome, bm.moeda || "BRL", bm.saldo_atual ?? 0, 0, "deposito")} className="gap-2"><Plus className="h-4 w-4 text-success" />Depósito</ContextMenuItem>
+                                    <ContextMenuItem onClick={() => onNewTransacao?.(bm.bookmaker_id, bm.bookmaker_nome, bm.moeda || "BRL", bm.saldo_atual ?? 0, 0, "retirada")} className="gap-2"><Minus className="h-4 w-4 text-destructive" />Saque</ContextMenuItem>
+                                    <ContextMenuSeparator />
+                                    <ContextMenuItem onClick={() => setPerdaDialog({ open: true, bookmakerId: bm.bookmaker_id, bookmakerNome: bm.bookmaker_nome, moeda: bm.moeda || "BRL", saldoAtual: bm.saldo_atual ?? 0 })} className="gap-2 text-destructive focus:text-destructive"><AlertTriangle className="h-4 w-4" />Registrar perda</ContextMenuItem>
+                                  </ContextMenuSubContent>
+                                </ContextMenuSub>
+                                <ContextMenuSeparator />
+                                {(() => {
+                                  const usage = usageMap[bm.bookmaker_id];
+                                  const isLinked = usage?.isActiveInProject || (bm.projetos && bm.projetos.length > 0);
+                                  const projetoNome = usage?.projetoAtivoNome || projetos?.find(p => bm.projetos?.includes(p.id))?.nome || "atual";
+                                  if (isLinked) {
+                                    return (<ContextMenuItem onClick={() => handleDesvincularProjeto(bm.bookmaker_id, projetoNome)} className="gap-2 text-destructive focus:text-destructive"><FolderKanban className="h-4 w-4" />Desvincular do projeto {projetoNome}</ContextMenuItem>);
+                                  }
                                   return (
-                                    <ContextMenuItem
-                                      onClick={() => handleDesvincularProjeto(bm.bookmaker_id, projetoNome)}
-                                      className="gap-2 text-destructive focus:text-destructive"
-                                    >
-                                      <FolderKanban className="h-4 w-4" />
-                                      Desvincular do projeto {projetoNome}
-                                    </ContextMenuItem>
+                                    <ContextMenuSub>
+                                      <ContextMenuSubTrigger className="gap-2"><FolderKanban className="h-4 w-4" />Vincular a projeto</ContextMenuSubTrigger>
+                                      <ContextMenuSubContent className="min-w-[180px]">
+                                        {projetos && projetos.length > 0 ? projetos.map((proj) => (<ContextMenuItem key={proj.id} onClick={() => handleVincularProjeto(bm.bookmaker_id, proj.id, proj.nome)} className="gap-2"><FolderKanban className="h-3.5 w-3.5 text-muted-foreground" />{proj.nome}</ContextMenuItem>)) : (<ContextMenuItem disabled className="text-muted-foreground text-xs">Nenhum projeto disponível</ContextMenuItem>)}
+                                      </ContextMenuSubContent>
+                                    </ContextMenuSub>
                                   );
-                                }
-                                
-                                return (
-                                  <ContextMenuSub>
-                                    <ContextMenuSubTrigger className="gap-2">
-                                      <FolderKanban className="h-4 w-4" />
-                                      Vincular a projeto
-                                    </ContextMenuSubTrigger>
-                                    <ContextMenuSubContent className="min-w-[180px]">
-                                      {projetos && projetos.length > 0 ? (
-                                        projetos.map((proj) => (
-                                          <ContextMenuItem
-                                            key={proj.id}
-                                            onClick={() => handleVincularProjeto(bm.bookmaker_id, proj.id, proj.nome)}
-                                            className="gap-2"
-                                          >
-                                            <FolderKanban className="h-3.5 w-3.5 text-muted-foreground" />
-                                            {proj.nome}
-                                          </ContextMenuItem>
-                                        ))
-                                      ) : (
-                                        <ContextMenuItem disabled className="text-muted-foreground text-xs">
-                                          Nenhum projeto disponível
-                                        </ContextMenuItem>
-                                      )}
-                                    </ContextMenuSubContent>
-                                  </ContextMenuSub>
-                                );
-                              })()}
-                              <ContextMenuSeparator />
-                              <ContextMenuItem
-                                onClick={() => onEditVinculo?.(bm.bookmaker_id)}
-                                className="gap-2"
-                              >
-                                <Pencil className="h-4 w-4" />
-                                Editar vínculo
-                              </ContextMenuItem>
-                            </ContextMenuContent>
-                          </ContextMenu>
-                        ))}
+                                })()}
+                                <ContextMenuSeparator />
+                                <ContextMenuItem onClick={() => onEditVinculo?.(bm.bookmaker_id)} className="gap-2"><Pencil className="h-4 w-4" />Editar vínculo</ContextMenuItem>
+                              </ContextMenuContent>
+                            </ContextMenu>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* MOBILE: Card view */}
+                      <div className="md:hidden flex-1 min-h-0 overflow-y-auto p-2 space-y-2">
+                        {bookmakersSorted.map((bm) => {
+                          const usage = usageMap[bm.bookmaker_id];
+                          const config = usage ? getUsageCategoryConfig(usage.category) : null;
+                          return (
+                            <MobileBookmakerCard
+                              key={bm.bookmaker_id}
+                              bm={bm}
+                              showSensitiveData={showSensitiveData}
+                              parceiroStatus={parceiroStatus}
+                              formatMoneyValue={formatMoneyValue}
+                              clampSaldoVisual={clampSaldoVisual}
+                              usageCategory={usage?.category}
+                              usageTooltip={usage?.category === "ATIVA" && usage.projetoAtivoNome ? `Projeto: ${usage.projetoAtivoNome}` : config?.tooltip || "Ver histórico"}
+                              onHistorico={() => setHistoricoDialog({ open: true, bookmakerId: bm.bookmaker_id, bookmakerNome: bm.bookmaker_nome, logoUrl: bm.logo_url, status: bm.status })}
+                              onDeposito={() => onNewTransacao?.(bm.bookmaker_id, bm.bookmaker_nome, bm.moeda || "BRL", bm.saldo_atual ?? 0, 0, "deposito")}
+                              onSaque={() => onNewTransacao?.(bm.bookmaker_id, bm.bookmaker_nome, bm.moeda || "BRL", bm.saldo_atual ?? 0, 0, "retirada")}
+                            />
+                          );
+                        })}
                       </div>
                     </>
                   )}
