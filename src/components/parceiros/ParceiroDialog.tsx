@@ -1757,7 +1757,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                           <p className="text-xs text-red-500 mt-1 text-center">{enderecoErrors[index]}</p>
                         )}
                       </div>
-                      <div className="col-span-2">
+                      <div className="md:col-span-2">
                         <Label className="text-center block">
                           Observações
                           <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
