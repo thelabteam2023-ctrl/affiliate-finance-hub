@@ -1456,7 +1456,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="col-span-2">
+                <div className="md:col-span-2">
                   <Label htmlFor="observacoes">
                     Observações
                     <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
