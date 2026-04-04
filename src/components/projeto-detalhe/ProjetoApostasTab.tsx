@@ -1467,6 +1467,9 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
 
   return (
     <div className="space-y-4">
+      {/* Saldo Atual - compacto, reutilizado da Visão Geral */}
+      <SaldoOperavelCard projetoId={projetoId} variant="compact" />
+
       {/* Filtro de período + Actions na mesma linha */}
       <div className="flex items-center gap-3">
         <div className="flex-1">
