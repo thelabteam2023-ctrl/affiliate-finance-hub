@@ -1,44 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-workspace-id, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+import { withMiddleware, corsHeaders, type AuthResult } from "../_shared/middleware.ts";
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
-
-  // --- AUTH CHECK ---
-  const authHeader = req.headers.get("Authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
-    console.warn("AUTH_DENIED", { reason: "missing_header", fn: "parse-ev-print" });
-    return new Response(
-      JSON.stringify({ error: "Unauthorized" }),
-      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  }
-
-  const supabaseAuth = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_ANON_KEY")!,
-    { global: { headers: { Authorization: authHeader } } }
-  );
-
-  const token = authHeader.replace("Bearer ", "");
-  const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(token);
-  if (claimsError || !claimsData?.claims) {
-    console.warn("AUTH_DENIED", { reason: "invalid_token", fn: "parse-ev-print" });
-    return new Response(
-      JSON.stringify({ error: "Unauthorized" }),
-      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  }
-  // --- END AUTH CHECK ---
-
-  try {
+  return withMiddleware(req, 'parse-ev-print', async (auth, req) => {
     const { imageBase64 } = await req.json();
 
     if (!imageBase64 || !imageBase64.startsWith("data:image/")) {
@@ -226,12 +190,5 @@ REGRAS:
       JSON.stringify({ success: true, data: result }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-
-  } catch (error) {
-    console.error("[parse-ev-print] Error:", error);
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Erro interno" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  }
+  }, { rateLimit: { maxRequests: 15, windowMs: 60_000 } });
 });
