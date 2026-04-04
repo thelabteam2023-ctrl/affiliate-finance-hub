@@ -374,8 +374,8 @@ export function SupplierTransacaoDialog({
           </div>
         )}
 
-        {/* ── STEP 2 for TRANSFERENCIA_BANCO: Amount only ── */}
-        {step === 2 && isTransferenciaBanco && selectedBanco && (
+        {/* ── STEP 2 for BANK OPERATIONS: Amount only ── */}
+        {step === 2 && isBankOperation && selectedBanco && (
           <div className="space-y-4">
             {/* Selected bank summary */}
             <div className="flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
@@ -398,19 +398,31 @@ export function SupplierTransacaoDialog({
                 type="number"
                 step="0.01"
                 min="0.01"
-                max={saldoDisponivel}
+                max={isRecolhimentoBanco ? selectedBanco.saldo : saldoDisponivel}
                 value={valor}
                 onChange={e => setValor(e.target.value)}
                 placeholder="0,00"
               />
-              {parseFloat(valor) > saldoDisponivel ? (
-                <p className="text-[11px] text-destructive mt-1 font-medium">
-                  ⚠️ Valor excede o saldo disponível: {formatCurrency(saldoDisponivel)}
-                </p>
+              {isRecolhimentoBanco ? (
+                parseFloat(valor) > selectedBanco.saldo ? (
+                  <p className="text-[11px] text-destructive mt-1 font-medium">
+                    ⚠️ Valor excede o saldo do banco: {formatCurrency(selectedBanco.saldo)}
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Saldo no banco: {formatCurrency(selectedBanco.saldo)}
+                  </p>
+                )
               ) : (
-                <p className="text-[11px] text-muted-foreground mt-1">
-                  Saldo disponível: {formatCurrency(saldoDisponivel)}
-                </p>
+                parseFloat(valor) > saldoDisponivel ? (
+                  <p className="text-[11px] text-destructive mt-1 font-medium">
+                    ⚠️ Valor excede o saldo disponível: {formatCurrency(saldoDisponivel)}
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Saldo disponível: {formatCurrency(saldoDisponivel)}
+                  </p>
+                )
               )}
             </div>
 
@@ -429,8 +441,17 @@ export function SupplierTransacaoDialog({
             {valor && (
               <div className="bg-muted/50 rounded-lg p-3 text-xs text-muted-foreground space-y-1">
                 <p className="font-medium text-foreground text-sm">Resumo da operação:</p>
-                <p>📉 <span className="font-medium">Saldo Disponível</span> será debitado em {formatCurrency(parseFloat(valor) || 0)}</p>
-                <p>📈 <span className="font-medium">{selectedBanco.banco_nome}</span> ({selectedBanco.titular_nome}) será creditado</p>
+                {isRecolhimentoBanco ? (
+                  <>
+                    <p>📉 <span className="font-medium">{selectedBanco.banco_nome}</span> ({selectedBanco.titular_nome}) será debitado em {formatCurrency(parseFloat(valor) || 0)}</p>
+                    <p>📈 <span className="font-medium">Saldo Disponível</span> será creditado</p>
+                  </>
+                ) : (
+                  <>
+                    <p>📉 <span className="font-medium">Saldo Disponível</span> será debitado em {formatCurrency(parseFloat(valor) || 0)}</p>
+                    <p>📈 <span className="font-medium">{selectedBanco.banco_nome}</span> ({selectedBanco.titular_nome}) será creditado</p>
+                  </>
+                )}
               </div>
             )}
           </div>
