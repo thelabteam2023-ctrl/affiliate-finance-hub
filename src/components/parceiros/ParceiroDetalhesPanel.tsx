@@ -73,7 +73,7 @@ interface MobileProgressiveKpisProps {
   showSensitiveData: boolean;
   hasLucroFiltrado: boolean;
   hasPrejuizoFiltrado: boolean;
-  dataSource: string;
+  dataSource: import("@/contexts/ExchangeRatesContext").DataSource;
   isUsingFallback: boolean;
   ratesMap: Record<string, number>;
 }
