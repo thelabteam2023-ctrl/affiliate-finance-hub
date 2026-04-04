@@ -876,9 +876,9 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
 
               {/* Conteúdo fixo: KPIs e Info */}
               <div className="shrink-0 space-y-3">
-                {/* KPIs principais - 5 colunas: Depositado → Sacado → SALDO → Resultado → Apostas */}
-                <div className="grid gap-2 grid-cols-2 lg:grid-cols-5">
-                  {/* Depositado */}
+                {/* KPIs - Desktop: 5 cols | Mobile: 3 primary + expandable */}
+                {/* Desktop layout */}
+                <div className="hidden lg:grid gap-2 grid-cols-5">
                   <ParceiroKpiCard
                     icon={<ArrowDownToLine className="h-4 w-4 text-destructive" />}
                     label="Depositado"
@@ -890,8 +890,6 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                     isUsingFallback={isUsingFallback}
                     rates={ratesMap}
                   />
-
-                  {/* Sacado */}
                   <ParceiroKpiCard
                     icon={<ArrowUpFromLine className="h-4 w-4 text-success" />}
                     label="Sacado"
@@ -903,8 +901,6 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                     isUsingFallback={isUsingFallback}
                     rates={ratesMap}
                   />
-
-                  {/* SALDO ATUAL - Destaque principal */}
                   <ParceiroKpiCard
                     icon={<Wallet className="h-4 w-4 text-primary" />}
                     label="💰 Saldo Atual"
@@ -918,8 +914,6 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                     isUsingFallback={isUsingFallback}
                     rates={ratesMap}
                   />
-
-                  {/* Resultado */}
                   <ParceiroKpiCard
                     icon={
                       showSensitiveData ? (
@@ -942,8 +936,6 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                     isUsingFallback={isUsingFallback}
                     rates={ratesMap}
                   />
-
-                  {/* Apostas */}
                   <div className="flex items-start gap-2 p-2.5 rounded-lg bg-muted/30 border border-border">
                     <Target className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                     <div className="min-w-0 flex-1">
@@ -952,6 +944,17 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                     </div>
                   </div>
                 </div>
+
+                {/* Mobile layout: Progressive KPIs */}
+                <MobileProgressiveKpis
+                  kpisFiltrados={kpisFiltrados}
+                  showSensitiveData={showSensitiveData}
+                  hasLucroFiltrado={hasLucroFiltrado}
+                  hasPrejuizoFiltrado={hasPrejuizoFiltrado}
+                  dataSource={dataSource}
+                  isUsingFallback={isUsingFallback}
+                  ratesMap={ratesMap}
+                />
 
                 {/* Info secundária: apenas casas ativas/limitadas */}
                 <div className="flex flex-wrap gap-3 text-xs">
