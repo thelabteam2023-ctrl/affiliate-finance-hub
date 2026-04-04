@@ -772,10 +772,9 @@ export default function BookmakerDialog({
               {bookmaker ? "Atualizar" : "Criar"} Vínculo
             </Button>
           </div>
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {bookmaker ? "Atualizar" : "Criar"} Vínculo
-            </Button>
-          </div>
+          </form>
+          </>
+        )}
           </form>
           </>
         )}
