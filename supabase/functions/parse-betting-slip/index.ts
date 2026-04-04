@@ -724,4 +724,5 @@ DICA: Em boletins de apostas, a ODD geralmente aparece em verde/destaque próxim
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
+  }, { rateLimit: { maxRequests: 15, windowMs: 60_000 } });
 });
