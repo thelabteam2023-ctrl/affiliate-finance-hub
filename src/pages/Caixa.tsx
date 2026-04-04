@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -103,6 +104,7 @@ export default function Caixa() {
   const { toast } = useToast();
   const location = useLocation();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { setContent: setTopBarContent } = useTopBar();
   const [searchParams] = useSearchParams();
   const locationState = location.state as LocationState | null;
@@ -443,6 +445,10 @@ export default function Caixa() {
       console.log("[Caixa] Data changed event received - refetching data");
       fetchData();
       refetchPending();
+      // Invalidar Central de Operações para refletir mudanças de saque/saldo
+      queryClient.invalidateQueries({ queryKey: ["central-operacoes-data"] });
+      queryClient.invalidateQueries({ queryKey: ["contas-disponiveis-count"] });
+      queryClient.invalidateQueries({ queryKey: ["saldo-operavel-rpc"] });
     };
 
     window.addEventListener(CAIXA_DATA_CHANGED_EVENT, handleCaixaDataChanged);
