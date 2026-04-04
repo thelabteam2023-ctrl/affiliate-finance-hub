@@ -621,8 +621,9 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
     );
   }
 
-  // Mobile action menu state
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Mobile action menu state
 
   return (
     <>
