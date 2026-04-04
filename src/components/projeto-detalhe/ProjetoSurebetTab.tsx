@@ -1398,10 +1398,6 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
   // Render Operações
   const renderOperacoes = () => (
     <div className="space-y-4">
-      {/* Saldo Operável — contexto operacional */}
-      <div className="flex justify-end">
-        <SaldoOperavelCard projetoId={projetoId} variant="compact" />
-      </div>
       <Card>
         <CardHeader className="pb-3">
           {/* Sub-abas Abertas / Histórico - usando componente padronizado */}
