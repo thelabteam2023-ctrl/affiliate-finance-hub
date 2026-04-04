@@ -134,7 +134,7 @@ export function EditLedgerDialog({ open, onOpenChange, entry, onSuccess }: Props
   if (!entry) return null;
 
   const tipoLabel = TIPO_LABELS[entry.tipo] || entry.tipo;
-  const isEditable = ["DEPOSITO", "SAQUE", "TRANSFERENCIA_BANCO"].includes(entry.tipo);
+  const isEditable = ["DEPOSITO", "SAQUE", "TRANSFERENCIA_BANCO", "RECOLHIMENTO_BANCO"].includes(entry.tipo);
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
