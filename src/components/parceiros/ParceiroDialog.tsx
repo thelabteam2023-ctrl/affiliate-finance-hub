@@ -1444,7 +1444,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                     )}
                   </div>
                 </div>
-                <div className="col-span-2 mt-8">
+                <div className="md:col-span-2 mt-8">
                   <Label htmlFor="status" className="text-center block mb-2">Status</Label>
                   <Select value={status} onValueChange={setStatus} disabled={loading || viewMode}>
                     <SelectTrigger className="w-full">
