@@ -144,26 +144,37 @@ export function SupplierTransacaoDialog({
     }
   };
 
-  // ── TRANSFER TO BANK mutation ──
+  // ── TRANSFER TO/FROM BANK mutation ──
   const transferMutation = useMutation({
     mutationFn: async () => {
       const numValor = parseFloat(valor);
       if (!numValor || numValor <= 0) throw new Error("Valor inválido");
       if (!bancoId) throw new Error("Selecione um banco");
-      if (numValor > saldoDisponivel) {
+
+      if (isTransferenciaBanco && numValor > saldoDisponivel) {
         throw new Error(`Saldo disponível insuficiente: ${formatCurrency(saldoDisponivel)}`);
       }
+      if (isRecolhimentoBanco && selectedBanco && numValor > selectedBanco.saldo) {
+        throw new Error(`Saldo insuficiente no banco "${selectedBanco.banco_nome}": ${formatCurrency(selectedBanco.saldo)}`);
+      }
 
-      // 1. Register in supplier_ledger as DEBIT (money leaving available balance)
+      const ledgerTipo = isRecolhimentoBanco ? "RECOLHIMENTO_BANCO" : "TRANSFERENCIA_BANCO";
+      const ledgerDirecao = isRecolhimentoBanco ? "CREDIT" : "DEBIT";
+      const bancoOperacao = isRecolhimentoBanco ? "DEBIT" : "CREDIT";
+      const descPadrao = isRecolhimentoBanco
+        ? `Recolhimento do banco: ${selectedBanco?.banco_nome || "banco"}`
+        : `Envio para banco: ${selectedBanco?.banco_nome || "banco"}`;
+
+      // 1. Register in supplier_ledger
       const { data, error } = await supabase.rpc("supplier_ledger_insert", {
         p_supplier_workspace_id: supplierWorkspaceId,
         p_bookmaker_account_id: null,
-        p_tipo: "TRANSFERENCIA_BANCO",
-        p_direcao: "DEBIT",
+        p_tipo: ledgerTipo,
+        p_direcao: ledgerDirecao,
         p_valor: numValor,
-        p_descricao: descricao || `Envio para banco: ${selectedBanco?.banco_nome || "banco"}`,
+        p_descricao: descricao || descPadrao,
         p_created_by: "SUPPLIER",
-        p_idempotency_key: `TRANSF_BANCO_${bancoId}_${Date.now()}`,
+        p_idempotency_key: `${ledgerTipo}_${bancoId}_${Date.now()}`,
         p_metadata: { banco_id: bancoId, banco_nome: selectedBanco?.banco_nome, titular_id: titularId },
       });
 
@@ -171,25 +182,25 @@ export function SupplierTransacaoDialog({
       const result = data as any;
       if (!result?.success) throw new Error(result?.error || "Erro ao processar");
 
-      // 2. Credit bank balance
+      // 2. Update bank balance
       const { data: bancoResult } = await supabase.functions.invoke("supplier-auth", {
         body: { action: "update-banco-saldo",
           token,
           banco_id: bancoId,
           valor: numValor,
-          operacao: "CREDIT",
+          operacao: bancoOperacao,
         },
       });
 
       if (bancoResult?.error) {
         console.error("Erro ao atualizar saldo do banco:", bancoResult.error);
-        toast.warning("Transferência registrada, mas houve erro ao atualizar saldo do banco");
+        toast.warning("Operação registrada, mas houve erro ao atualizar saldo do banco");
       }
 
       return result;
     },
     onSuccess: () => {
-      toast.success("Valor enviado ao banco com sucesso");
+      toast.success(isRecolhimentoBanco ? "Valor recolhido do banco com sucesso" : "Valor enviado ao banco com sucesso");
       onOpenChange(false);
       onSuccess();
     },
