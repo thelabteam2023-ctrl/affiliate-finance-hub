@@ -524,117 +524,165 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
     );
   }
 
+  // Mobile action menu state
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   return (
     <>
     <TooltipProvider>
       {/* MainPanel: flex-col, altura 100%, sem scroll próprio */}
       <div className="h-full flex flex-col">
         
-        {/* PartnerHeader: fixo, não cresce */}
-        <div className="shrink-0 flex items-center gap-3 p-4 pb-2 border-b border-border">
-          <div 
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 cursor-pointer hover:bg-primary/20 transition-colors"
-            onClick={onViewParceiro}
-          >
-            <User className="h-5 w-5 text-primary" />
-          </div>
-          <div 
-            className="flex-1 min-w-0 cursor-pointer group"
-            onClick={onViewParceiro}
-          >
-            <div className="flex items-center gap-2">
-              <h2 className="text-lg font-semibold truncate group-hover:text-primary transition-colors">{data.parceiro_nome}</h2>
-              <Badge
-                variant="outline"
-                className={cn(
-                  "text-[10px] px-1.5 py-0 h-5 shrink-0",
-                  parceiroStatus === "ativo"
-                    ? "border-success/50 text-success"
-                    : "border-muted-foreground/50 text-muted-foreground"
-                )}
-              >
-                {parceiroStatus === "ativo" ? "Ativo" : "Inativo"}
-              </Badge>
+        {/* PartnerHeader: mobile-optimized */}
+        <div className="shrink-0 p-4 pb-2 border-b border-border">
+          {/* Linha 1: Nome + Status */}
+          <div className="flex items-center gap-2 mb-1">
+            <div 
+              className="flex h-9 w-9 md:h-10 md:w-10 items-center justify-center rounded-full bg-primary/10 cursor-pointer hover:bg-primary/20 transition-colors shrink-0"
+              onClick={onViewParceiro}
+            >
+              <User className="h-4 w-4 md:h-5 md:w-5 text-primary" />
             </div>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span>{data.bookmakers.length} casa{data.bookmakers.length !== 1 ? "s" : ""} vinculada{data.bookmakers.length !== 1 ? "s" : ""}</span>
-              {hasParceria && diasRestantes !== null && diasRestantes !== undefined && (
-                <>
-                  <span>•</span>
-                  <span className={cn(
-                    "flex items-center gap-1 font-medium",
-                    diasRestantes >= 31 ? "text-emerald-500" :
-                    diasRestantes >= 16 ? "text-lime-500" :
-                    diasRestantes >= 8 ? "text-yellow-500" :
-                    "text-red-500"
-                  )}>
-                    <Calendar className="h-3 w-3" />
-                    {diasRestantes} dias restantes
-                  </span>
-                </>
+            <div className="flex-1 min-w-0 cursor-pointer group" onClick={onViewParceiro}>
+              <h2 className="text-base md:text-lg font-semibold truncate group-hover:text-primary transition-colors">{data.parceiro_nome}</h2>
+            </div>
+            <Badge
+              variant="outline"
+              className={cn(
+                "text-[10px] px-1.5 py-0 h-5 shrink-0",
+                parceiroStatus === "ativo"
+                  ? "border-success/50 text-success"
+                  : "border-muted-foreground/50 text-muted-foreground"
               )}
-              {(saldoBanco !== 0 || saldoCrypto !== 0) && (
-                <>
-                  <span>•</span>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <button 
-                        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer rounded px-1.5 py-0.5 hover:bg-muted/50"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <DollarSign className="h-3 w-3" />
-                        <span>Ver saldos</span>
-                      </button>
-                    </PopoverTrigger>
-                    <PopoverContent side="bottom" align="start" className="w-64 p-3">
-                      <div className="space-y-3">
-                        <p className="text-xs font-semibold text-foreground">Saldos do Parceiro</p>
-                        
-                        {saldoBanco !== 0 && (
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-muted-foreground flex items-center gap-1.5">
-                              <Building2 className="h-3.5 w-3.5" />
-                              Contas Bancárias
-                            </span>
-                            <span className={cn("text-sm font-medium font-mono", saldoBanco < 0 && "text-destructive")}>
-                              R$ {saldoBanco.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                            </span>
-                          </div>
-                        )}
-                        
-                        {saldoCrypto !== 0 && (
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-muted-foreground flex items-center gap-1.5">
-                              <Wallet className="h-3.5 w-3.5" />
-                              Wallets Crypto
-                            </span>
-                            <span className={cn("text-sm font-medium font-mono", saldoCrypto < 0 && "text-destructive")}>
-                              $ {saldoCrypto.toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                            </span>
-                          </div>
-                        )}
+            >
+              {parceiroStatus === "ativo" ? "Ativo" : "Inativo"}
+            </Badge>
+            {/* Mobile: overflow menu for actions */}
+            <Popover open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="icon" className="shrink-0 h-8 w-8 md:hidden">
+                  <CircleDashed className="h-4 w-4" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-44 p-1.5 md:hidden">
+                <div className="flex flex-col gap-0.5">
+                  <button
+                    onClick={() => { parceiroCache.refreshCurrent(); toast({ title: "Atualizando dados..." }); setMobileMenuOpen(false); }}
+                    className="flex items-center gap-2 px-3 py-2 rounded-md text-sm hover:bg-muted transition-colors w-full text-left"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    Atualizar
+                  </button>
+                  {onToggleSensitiveData && (
+                    <button
+                      onClick={() => { onToggleSensitiveData(); setMobileMenuOpen(false); }}
+                      className="flex items-center gap-2 px-3 py-2 rounded-md text-sm hover:bg-muted transition-colors w-full text-left"
+                    >
+                      {showSensitiveData ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {showSensitiveData ? "Ocultar valores" : "Mostrar valores"}
+                    </button>
+                  )}
+                  {onEditParceiro && canEdit('parceiros', 'parceiros.edit') && (
+                    <button
+                      onClick={() => { onEditParceiro(); setMobileMenuOpen(false); }}
+                      className="flex items-center gap-2 px-3 py-2 rounded-md text-sm hover:bg-muted transition-colors w-full text-left"
+                    >
+                      <Edit className="h-4 w-4" />
+                      Editar
+                    </button>
+                  )}
+                  {onDeleteParceiro && canDelete('parceiros', 'parceiros.delete') && (
+                    <button
+                      onClick={() => { onDeleteParceiro(); setMobileMenuOpen(false); }}
+                      className="flex items-center gap-2 px-3 py-2 rounded-md text-sm hover:bg-muted transition-colors w-full text-left text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Excluir
+                    </button>
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
 
-                        {saldoBanco !== 0 && saldoCrypto !== 0 && (
-                          <div className="border-t pt-2 space-y-1.5">
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs font-medium text-muted-foreground">Patrimônio externo</span>
-                              <span className="text-sm font-bold text-primary font-mono">
-                                R$ {(saldoBanco + convertToBRL(saldoCrypto, "USD")).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                              </span>
-                            </div>
-                            <p className="text-[10px] text-muted-foreground">
-                              Cotação USD: R$ {rates.USDBRL.toFixed(4)}
-                            </p>
+          {/* Linha 2: Métricas resumidas */}
+          <div className="flex items-center gap-2 text-xs text-muted-foreground ml-11 md:ml-12 flex-wrap">
+            <span>{data.bookmakers.length} casa{data.bookmakers.length !== 1 ? "s" : ""}</span>
+            {hasParceria && diasRestantes !== null && diasRestantes !== undefined && (
+              <>
+                <span>•</span>
+                <span className={cn(
+                  "flex items-center gap-1 font-medium",
+                  diasRestantes >= 31 ? "text-emerald-500" :
+                  diasRestantes >= 16 ? "text-lime-500" :
+                  diasRestantes >= 8 ? "text-yellow-500" :
+                  "text-red-500"
+                )}>
+                  <Calendar className="h-3 w-3" />
+                  {diasRestantes} dias
+                </span>
+              </>
+            )}
+            {(saldoBanco !== 0 || saldoCrypto !== 0) && (
+              <>
+                <span>•</span>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button 
+                      className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer rounded px-1.5 py-0.5 hover:bg-muted/50"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <DollarSign className="h-3 w-3" />
+                      <span>Saldos</span>
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent side="bottom" align="start" className="w-64 p-3">
+                    <div className="space-y-3">
+                      <p className="text-xs font-semibold text-foreground">Saldos do Parceiro</p>
+                      {saldoBanco !== 0 && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground flex items-center gap-1.5">
+                            <Building2 className="h-3.5 w-3.5" />
+                            Contas Bancárias
+                          </span>
+                          <span className={cn("text-sm font-medium font-mono", saldoBanco < 0 && "text-destructive")}>
+                            R$ {saldoBanco.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                      )}
+                      {saldoCrypto !== 0 && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground flex items-center gap-1.5">
+                            <Wallet className="h-3.5 w-3.5" />
+                            Wallets Crypto
+                          </span>
+                          <span className={cn("text-sm font-medium font-mono", saldoCrypto < 0 && "text-destructive")}>
+                            $ {saldoCrypto.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                      )}
+                      {saldoBanco !== 0 && saldoCrypto !== 0 && (
+                        <div className="border-t pt-2 space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-medium text-muted-foreground">Patrimônio externo</span>
+                            <span className="text-sm font-bold text-primary font-mono">
+                              R$ {(saldoBanco + convertToBRL(saldoCrypto, "USD")).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                            </span>
                           </div>
-                        )}
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                </>
-              )}
-            </div>
+                          <p className="text-[10px] text-muted-foreground">
+                            Cotação USD: R$ {rates.USDBRL.toFixed(4)}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </>
+            )}
           </div>
-          <div className="flex items-center gap-1.5">
+
+          {/* Desktop: action buttons row (hidden on mobile) */}
+          <div className="hidden md:flex items-center gap-1.5 mt-2 ml-12">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -650,59 +698,36 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                   <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>
-                <p>Atualizar dados</p>
-              </TooltipContent>
+              <TooltipContent><p>Atualizar dados</p></TooltipContent>
             </Tooltip>
             {onEditParceiro && canEdit('parceiros', 'parceiros.edit') && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={onEditParceiro}
-                    className="shrink-0 h-8 w-8"
-                  >
+                  <Button variant="outline" size="icon" onClick={onEditParceiro} className="shrink-0 h-8 w-8">
                     <Edit className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>
-                  <p>Editar parceiro</p>
-                </TooltipContent>
+                <TooltipContent><p>Editar parceiro</p></TooltipContent>
               </Tooltip>
             )}
             {onDeleteParceiro && canDelete('parceiros', 'parceiros.delete') && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={onDeleteParceiro}
-                    className="shrink-0 h-8 w-8 text-destructive hover:text-destructive"
-                  >
+                  <Button variant="outline" size="icon" onClick={onDeleteParceiro} className="shrink-0 h-8 w-8 text-destructive hover:text-destructive">
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>
-                  <p>Excluir parceiro</p>
-                </TooltipContent>
+                <TooltipContent><p>Excluir parceiro</p></TooltipContent>
               </Tooltip>
             )}
             {onToggleSensitiveData && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={onToggleSensitiveData}
-                    className="shrink-0 h-8 w-8"
-                  >
+                  <Button variant="outline" size="icon" onClick={onToggleSensitiveData} className="shrink-0 h-8 w-8">
                     {showSensitiveData ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>
-                  <p>{showSensitiveData ? "Ocultar dados sensíveis" : "Mostrar dados sensíveis"}</p>
-                </TooltipContent>
+                <TooltipContent><p>{showSensitiveData ? "Ocultar dados sensíveis" : "Mostrar dados sensíveis"}</p></TooltipContent>
               </Tooltip>
             )}
           </div>
