@@ -39,7 +39,7 @@ function formatCurrency(val: number, moeda = "BRL") {
 export function SupplierDashboard({ session }: Props) {
   const [activeTab, setActiveTab] = useState("visao-geral");
   const [transacaoOpen, setTransacaoOpen] = useState(false);
-  const [transacaoTipo, setTransacaoTipo] = useState<"DEPOSITO" | "SAQUE" | "TRANSFERENCIA_BANCO">("DEPOSITO");
+  const [transacaoTipo, setTransacaoTipo] = useState<"DEPOSITO" | "SAQUE" | "TRANSFERENCIA_BANCO" | "RECOLHIMENTO_BANCO">("DEPOSITO");
   const [bancosModalOpen, setBancosModalOpen] = useState(false);
   const [prefillTitularId, setPrefillTitularId] = useState<string | undefined>();
   const [prefillContaId, setPrefillContaId] = useState<string | undefined>();
