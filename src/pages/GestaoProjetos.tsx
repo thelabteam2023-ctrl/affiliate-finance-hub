@@ -116,7 +116,7 @@ export default function GestaoProjetos() {
   const [projetos, setProjetos] = useState<Projeto[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("EM_ANDAMENTO");
+  const [statusFilter, setStatusFilter] = useState<string[]>(["EM_ANDAMENTO"]);
   const [tipoFilter, setTipoFilter] = useState<string>("all");
   
   // Recuperar preferência de visualização do localStorage
@@ -435,7 +435,7 @@ export default function GestaoProjetos() {
   // Projetos filtrados por seção (antes do filtro de tipo, para calcular badges)
   const sectionFilteredProjetos = projetos.filter((proj) => {
     const matchesSearch = proj.nome.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" || proj.status === statusFilter;
+    const matchesStatus = statusFilter.length === 0 || statusFilter.includes(proj.status);
     const matchesSection = isBrokerSection 
       ? proj.is_broker === true
       : proj.is_broker !== true;
@@ -651,71 +651,88 @@ export default function GestaoProjetos() {
             </div>
           </div>
 
-          {/* Linha 2: Status filter — estilo Gestão de Parceiros */}
+          {/* Linha 2: Status filter — chip único + menu overflow multi-select */}
           <div className="flex items-center gap-2 mt-3">
-            {/* Chips principais: Em Andamento + Todos */}
-            {[
-              { value: "EM_ANDAMENTO", label: "Em andamento" },
-              { value: "all", label: "Todos os status" },
-            ].map((chip) => {
-              const isActive = statusFilter === chip.value;
-              const count = statusCountMap[chip.value] || 0;
-              return (
+            {/* Chip principal: Em andamento (default) */}
+            <Tooltip>
+              <TooltipTrigger asChild>
                 <button
-                  key={chip.value}
-                  onClick={() => setStatusFilter(chip.value)}
+                  onClick={() => setStatusFilter(["EM_ANDAMENTO"])}
                   className={cn(
                     "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border transition-all duration-150",
                     "min-h-[36px] md:min-h-[32px] active:scale-[0.97] whitespace-nowrap",
-                    isActive
+                    statusFilter.length === 1 && statusFilter[0] === "EM_ANDAMENTO"
                       ? "bg-primary/10 border-primary/30 text-primary"
                       : "bg-muted/40 border-border text-muted-foreground hover:bg-muted/70 hover:text-foreground"
                   )}
                 >
-                  {chip.label}
-                  {count > 0 && (
+                  Em andamento
+                  {(statusCountMap["EM_ANDAMENTO"] || 0) > 0 && (
                     <span className={cn(
                       "ml-0.5 text-[10px] font-semibold tabular-nums",
-                      isActive ? "text-primary/70" : "text-muted-foreground/60"
+                      statusFilter.length === 1 && statusFilter[0] === "EM_ANDAMENTO" ? "text-primary/70" : "text-muted-foreground/60"
                     )}>
-                      ({count})
+                      ({statusCountMap["EM_ANDAMENTO"] || 0})
                     </span>
                   )}
                 </button>
-              );
-            })}
+              </TooltipTrigger>
+              <TooltipContent>Mostrar apenas projetos em andamento</TooltipContent>
+            </Tooltip>
 
-            {/* Overflow: outros status */}
+            {/* Overflow: multi-select de outros status */}
             <Popover>
               <PopoverTrigger asChild>
-                <button
-                  className={cn(
-                    "inline-flex items-center justify-center px-2.5 py-1.5 rounded-md text-xs font-medium border transition-all duration-150",
-                    "min-h-[36px] md:min-h-[32px] active:scale-[0.97]",
-                    ["PLANEJADO", "PAUSADO", "FINALIZADO", "ARQUIVADO"].includes(statusFilter)
-                      ? "bg-primary/10 border-primary/30 text-primary"
-                      : "bg-muted/40 border-border text-muted-foreground hover:bg-muted/70 hover:text-foreground"
-                  )}
-                >
-                  {["PLANEJADO", "PAUSADO", "FINALIZADO", "ARQUIVADO"].includes(statusFilter)
-                    ? getStatusLabel(statusFilter)
-                    : <MoreHorizontal className="h-4 w-4" />
-                  }
-                </button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      className={cn(
+                        "inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-all duration-150",
+                        "min-h-[36px] md:min-h-[32px] active:scale-[0.97] whitespace-nowrap",
+                        statusFilter.some(s => ["PLANEJADO", "PAUSADO", "FINALIZADO", "ARQUIVADO"].includes(s))
+                          ? "bg-primary/10 border-primary/30 text-primary"
+                          : "bg-muted/40 border-border text-muted-foreground hover:bg-muted/70 hover:text-foreground"
+                      )}
+                    >
+                      {(() => {
+                        const secondaryActive = statusFilter.filter(s => ["PLANEJADO", "PAUSADO", "FINALIZADO", "ARQUIVADO"].includes(s));
+                        if (secondaryActive.length === 1) {
+                          return getStatusLabel(secondaryActive[0]);
+                        }
+                        if (secondaryActive.length > 1) {
+                          return `Filtros ativos (${secondaryActive.length})`;
+                        }
+                        return <MoreHorizontal className="h-4 w-4" />;
+                      })()}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>Filtrar por outros status</TooltipContent>
+                </Tooltip>
               </PopoverTrigger>
-              <PopoverContent align="start" className="w-48 p-1">
+              <PopoverContent align="start" className="w-52 p-1">
                 {[
                   { value: "PLANEJADO", label: "Planejado", dotColor: "bg-blue-500" },
                   { value: "PAUSADO", label: "Pausado", dotColor: "bg-yellow-500" },
                   { value: "FINALIZADO", label: "Finalizado", dotColor: "bg-gray-400" },
                   { value: "ARQUIVADO", label: "Arquivado", dotColor: "bg-purple-500" },
                 ].map((item) => {
-                  const isActive = statusFilter === item.value;
+                  const isActive = statusFilter.includes(item.value);
                   const count = statusCountMap[item.value] || 0;
                   return (
                     <button
                       key={item.value}
-                      onClick={() => setStatusFilter(item.value)}
+                      onClick={() => {
+                        setStatusFilter(prev => {
+                          const withoutDefault = prev.filter(s => s !== "EM_ANDAMENTO" || prev.length > 1);
+                          if (isActive) {
+                            const newFilter = prev.filter(s => s !== item.value);
+                            return newFilter.length === 0 ? ["EM_ANDAMENTO"] : newFilter;
+                          }
+                          // Remove EM_ANDAMENTO when selecting secondary filters
+                          const base = prev.filter(s => s !== "EM_ANDAMENTO");
+                          return [...base, item.value];
+                        });
+                      }}
                       className={cn(
                         "w-full flex items-center gap-2 px-3 py-2.5 rounded-md text-sm transition-colors",
                         "min-h-[44px]",
@@ -797,7 +814,7 @@ export default function GestaoProjetos() {
                 <FolderKanban className="mx-auto h-12 w-12 text-muted-foreground/50" />
                 <h3 className="mt-4 text-lg font-semibold">Nenhum projeto encontrado</h3>
                 <p className="text-muted-foreground">
-                  {searchTerm || statusFilter !== "all"
+                  {searchTerm || statusFilter.length !== 1 || statusFilter[0] !== "EM_ANDAMENTO"
                     ? "Tente ajustar os filtros"
                     : "Comece criando seu primeiro projeto"}
                 </p>
