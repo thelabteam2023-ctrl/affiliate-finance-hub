@@ -325,9 +325,11 @@ export function SupplierTransacaoDialog({
             {titularId && (
               <div className="space-y-2">
                 <Label className="text-muted-foreground text-xs">
-                  {isTransferenciaBanco
-                    ? "Selecione o banco para receber o valor:"
-                    : `Selecione o banco para ${isDeposito ? "debitar" : "creditar"}:`}
+                  {isRecolhimentoBanco
+                    ? "Selecione o banco para debitar:"
+                    : isTransferenciaBanco
+                      ? "Selecione o banco para receber o valor:"
+                      : `Selecione o banco para ${isDeposito ? "debitar" : "creditar"}:`}
                 </Label>
                 {titularBancos.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-4">
