@@ -90,89 +90,92 @@ function MobileProgressiveKpis({ kpisFiltrados, showSensitiveData, hasLucroFiltr
   };
 
   return (
-    <div className="lg:hidden space-y-2">
-      {/* Primary KPIs: always visible */}
-      <div className="grid gap-2 grid-cols-1 sm:grid-cols-3">
-        <ParceiroKpiCard
-          icon={<ArrowDownToLine className="h-4 w-4 text-destructive" />}
-          label="Depositado"
-          entries={kpisFiltrados.depositado}
-          consolidadoBRL={kpisFiltrados.depositadoBRL}
-          showBreakdown={kpisFiltrados.isConsolidado}
-          masked={!showSensitiveData}
-          dataSource={dataSource}
-          isUsingFallback={isUsingFallback}
-          rates={ratesMap}
-        />
-        <ParceiroKpiCard
-          icon={<ArrowUpFromLine className="h-4 w-4 text-success" />}
-          label="Sacado"
-          entries={kpisFiltrados.sacado}
-          consolidadoBRL={kpisFiltrados.sacadoBRL}
-          showBreakdown={kpisFiltrados.isConsolidado}
-          masked={!showSensitiveData}
-          dataSource={dataSource}
-          isUsingFallback={isUsingFallback}
-          rates={ratesMap}
-        />
+    <div className="lg:hidden space-y-1.5">
+      {/* Row 1: Saldo Atual + Resultado Financeiro */}
+      <div className="grid gap-1.5 grid-cols-2">
         <ParceiroKpiCard
           icon={<Wallet className="h-4 w-4 text-primary" />}
-          label="💰 Saldo Atual"
+          label="Saldo Atual"
           entries={kpisFiltrados.saldo}
           consolidadoBRL={kpisFiltrados.saldoBRL}
           showBreakdown={kpisFiltrados.isConsolidado}
           masked={!showSensitiveData}
-          cardClassName="bg-primary/10 border-primary/30 ring-1 ring-primary/20"
-          labelClassName="text-primary/80 font-medium"
+          cardClassName="border-primary/30"
+          dataSource={dataSource}
+          isUsingFallback={isUsingFallback}
+          rates={ratesMap}
+        />
+        <ParceiroKpiCard
+          icon={
+            showSensitiveData ? (
+              hasLucroFiltrado && !hasPrejuizoFiltrado ? (
+                <TrendingUp className="h-4 w-4 text-success" />
+              ) : (
+                <TrendingDown className="h-4 w-4 text-destructive" />
+              )
+            ) : (
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            )
+          }
+          label="Resultado"
+          entries={kpisFiltrados.resultado}
+          consolidadoBRL={kpisFiltrados.resultadoBRL}
+          showBreakdown={kpisFiltrados.isConsolidado}
+          masked={!showSensitiveData}
+          variant="auto"
+          cardClassName="bg-primary/5 border-primary/20 ring-1 ring-primary/10"
+          labelClassName="font-medium"
           dataSource={dataSource}
           isUsingFallback={isUsingFallback}
           rates={ratesMap}
         />
       </div>
 
-      {/* Expandable secondary KPIs */}
+      {/* Row 2: Apostas + Expand toggle */}
+      <div className="grid gap-1.5 grid-cols-2">
+        <div className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-muted/30 border border-border">
+          <Target className="h-4 w-4 text-muted-foreground shrink-0" />
+          <div className="min-w-0">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Apostas</p>
+            <p className="text-sm font-semibold">{kpisFiltrados.apostas.toLocaleString("pt-BR")}</p>
+          </div>
+        </div>
+        <button
+          onClick={toggleExpanded}
+          className="flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-border text-xs text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors active:scale-[0.98]"
+        >
+          <ChevronDown className={cn("h-3.5 w-3.5 transition-transform duration-200", expanded && "rotate-180")} />
+          {expanded ? "Ocultar" : "+ Ver mais"}
+        </button>
+      </div>
+
+      {/* Expandable: Depositado + Sacado */}
       {expanded && (
-        <div className="grid gap-2 grid-cols-2 animate-in slide-in-from-top-2 duration-200">
+        <div className="grid gap-1.5 grid-cols-2 animate-in slide-in-from-top-2 duration-200">
           <ParceiroKpiCard
-            icon={
-              showSensitiveData ? (
-                hasLucroFiltrado && !hasPrejuizoFiltrado ? (
-                  <TrendingUp className="h-4 w-4 text-success" />
-                ) : (
-                  <TrendingDown className="h-4 w-4 text-destructive" />
-                )
-              ) : (
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              )
-            }
-            label="Resultado Financeiro"
-            entries={kpisFiltrados.resultado}
-            consolidadoBRL={kpisFiltrados.resultadoBRL}
+            icon={<ArrowDownToLine className="h-4 w-4 text-destructive" />}
+            label="Depositado"
+            entries={kpisFiltrados.depositado}
+            consolidadoBRL={kpisFiltrados.depositadoBRL}
             showBreakdown={kpisFiltrados.isConsolidado}
             masked={!showSensitiveData}
-            variant="auto"
             dataSource={dataSource}
             isUsingFallback={isUsingFallback}
             rates={ratesMap}
           />
-          <div className="flex items-start gap-2 p-2.5 rounded-lg bg-muted/30 border border-border">
-            <Target className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-            <div className="min-w-0 flex-1">
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Apostas</p>
-              <p className="text-sm font-semibold">{kpisFiltrados.apostas.toLocaleString("pt-BR")}</p>
-            </div>
-          </div>
+          <ParceiroKpiCard
+            icon={<ArrowUpFromLine className="h-4 w-4 text-success" />}
+            label="Sacado"
+            entries={kpisFiltrados.sacado}
+            consolidadoBRL={kpisFiltrados.sacadoBRL}
+            showBreakdown={kpisFiltrados.isConsolidado}
+            masked={!showSensitiveData}
+            dataSource={dataSource}
+            isUsingFallback={isUsingFallback}
+            rates={ratesMap}
+          />
         </div>
       )}
-
-      {/* Toggle button */}
-      <button
-        onClick={toggleExpanded}
-        className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors active:scale-[0.98]"
-      >
-        <ChevronDown className={cn("h-3.5 w-3.5 transition-transform duration-200", expanded && "rotate-180")} />
-        {expanded ? "Ocultar métricas" : "+ Ver mais métricas"}
-      </button>
     </div>
   );
 }
