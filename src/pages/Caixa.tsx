@@ -104,6 +104,7 @@ export default function Caixa() {
   const { toast } = useToast();
   const location = useLocation();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { setContent: setTopBarContent } = useTopBar();
   const [searchParams] = useSearchParams();
   const locationState = location.state as LocationState | null;
