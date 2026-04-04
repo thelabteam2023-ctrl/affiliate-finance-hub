@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { calcularImpactoResultado } from "@/lib/bookmakerBalanceHelper";
 import { reliquidarAposta, deletarAposta, liquidarPernaSurebet } from "@/services/aposta/ApostaService";
 import { useInvalidateBookmakerSaldos } from "@/hooks/useBookmakerSaldosQuery";
+import { SaldoOperavelCard } from "./SaldoOperavelCard";
 import { getConsolidatedStake, getConsolidatedLucro } from "@/utils/consolidatedValues";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { useCrossWindowSync } from "@/hooks/useCrossWindowSync";
@@ -1466,6 +1467,9 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
 
   return (
     <div className="space-y-4">
+      {/* Saldo Atual - compacto, reutilizado da Visão Geral */}
+      <SaldoOperavelCard projetoId={projetoId} variant="compact" />
+
       {/* Filtro de período + Actions na mesma linha */}
       <div className="flex items-center gap-3">
         <div className="flex-1">
