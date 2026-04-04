@@ -622,9 +622,7 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
     );
   }
 
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Mobile action menu state
 
   return (
     <>
