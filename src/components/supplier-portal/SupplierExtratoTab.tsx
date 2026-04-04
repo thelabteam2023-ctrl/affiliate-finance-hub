@@ -29,6 +29,7 @@ const TIPO_ICONS: Record<string, typeof ArrowUpRight> = {
   DEPOSITO: ArrowUpRight,
   SAQUE: ArrowDownRight,
   TRANSFERENCIA_BANCO: ArrowLeftRight,
+  RECOLHIMENTO_BANCO: ArrowLeftRight,
   TRANSFERENCIA: ArrowLeftRight,
   DEVOLUCAO: ArrowDownRight,
   AJUSTE: RefreshCw,
