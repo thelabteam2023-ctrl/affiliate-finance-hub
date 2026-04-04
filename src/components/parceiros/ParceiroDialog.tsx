@@ -1173,8 +1173,8 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto md:max-h-[90vh] max-md:fixed max-md:inset-0 max-md:max-w-none max-md:w-full max-md:h-full max-md:max-h-full max-md:rounded-none max-md:translate-x-0 max-md:translate-y-0 max-md:left-0 max-md:top-0">
-        <DialogHeader>
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto md:max-h-[90vh] max-md:fixed max-md:inset-0 max-md:max-w-none max-md:w-full max-md:h-full max-md:max-h-full max-md:rounded-none max-md:translate-x-0 max-md:translate-y-0 max-md:left-0 max-md:top-0 max-md:pb-24">
+        <DialogHeader className="max-md:sticky max-md:top-0 max-md:z-10 max-md:bg-background max-md:pb-3 max-md:border-b max-md:border-border/50">
           <DialogTitle>
             {viewMode ? "Visualizar Parceiro" : parceiro ? "Editar Parceiro" : "Novo Parceiro"}
           </DialogTitle>
@@ -1182,24 +1182,24 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
 
         <form onSubmit={handleSubmit} autoComplete="off" data-form-type="other" noValidate>
           <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "dados" | "bancos" | "crypto")} className="w-full">
-            <TabsList className="w-full">
-              <TabsTrigger value="dados">
+            <TabsList className="w-full max-md:overflow-x-auto max-md:scrollbar-none max-md:justify-start max-md:gap-1">
+              <TabsTrigger value="dados" className="max-md:min-w-fit max-md:px-3 max-md:text-xs">
                 <User className="w-4 h-4" />
                 Dados Pessoais
               </TabsTrigger>
-              <TabsTrigger value="bancos" disabled={!parceiroId && !parceiro}>
+              <TabsTrigger value="bancos" disabled={!parceiroId && !parceiro} className="max-md:min-w-fit max-md:px-3 max-md:text-xs">
                 <Landmark className="w-4 h-4" />
-                Contas Bancárias
+                Bancário
               </TabsTrigger>
-              <TabsTrigger value="crypto" disabled={!parceiroId && !parceiro}>
+              <TabsTrigger value="crypto" disabled={!parceiroId && !parceiro} className="max-md:min-w-fit max-md:px-3 max-md:text-xs">
                 <Wallet className="w-4 h-4" />
-                Wallets Crypto
+                Crypto
               </TabsTrigger>
             </TabsList>
 
             <TabsContent value="dados" className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="md:col-span-2">
                   <Label htmlFor="nome">Nome Completo *</Label>
                   <div className="flex gap-2">
                     <Input
@@ -1444,7 +1444,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                     )}
                   </div>
                 </div>
-                <div className="col-span-2 mt-8">
+                <div className="md:col-span-2 mt-8">
                   <Label htmlFor="status" className="text-center block mb-2">Status</Label>
                   <Select value={status} onValueChange={setStatus} disabled={loading || viewMode}>
                     <SelectTrigger className="w-full">
@@ -1456,7 +1456,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="col-span-2">
+                <div className="md:col-span-2">
                   <Label htmlFor="observacoes">
                     Observações
                     <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
@@ -1472,12 +1472,12 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
               </div>
 
               {!viewMode && !parceiro && !parceiroId && (
-                <div className="flex gap-3 mt-6">
+                <div className="flex gap-3 mt-6 max-md:fixed max-md:bottom-0 max-md:left-0 max-md:right-0 max-md:p-4 max-md:bg-background max-md:border-t max-md:border-border/50 max-md:z-10">
                   <Button
                     type="button"
                     onClick={savePersonalData}
                     disabled={loading || !nome || !cpf}
-                    className="w-full"
+                    className="w-full max-md:h-12"
                   >
                     {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Salvar e Continuar
@@ -1524,9 +1524,9 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                 bankAccounts.map((account, index) => (
                 <Card key={index}>
                   <CardContent className="pt-4">
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {!viewMode && (
-                        <div className="col-span-2 flex justify-end">
+                         <div className="md:col-span-2 flex justify-end">
                           <Button
                             type="button"
                             variant="ghost"
@@ -1618,7 +1618,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                           disabled={viewMode}
                         />
                       </div>
-                      <div className="col-span-2">
+                      <div className="md:col-span-2">
                         <PixKeyInput
                           keys={account.pix_keys}
                           onChange={(keys) => updateBankAccount(index, "pix_keys", keys)}
@@ -1626,7 +1626,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                           disabled={viewMode}
                         />
                       </div>
-                      <div className="col-span-2">
+                      <div className="md:col-span-2">
                         <Label>
                           Observações
                           <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
@@ -1699,9 +1699,9 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                 cryptoWallets.map((wallet, index) => (
                 <Card key={index}>
                   <CardContent className="pt-4">
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {!viewMode && (
-                        <div className="col-span-2 flex justify-end">
+                        <div className="md:col-span-2 flex justify-end">
                           <Button
                             type="button"
                             variant="ghost"
@@ -1712,14 +1712,14 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                           </Button>
                         </div>
                       )}
-                      <div className="col-span-2">
+                      <div className="md:col-span-2">
                         <MoedaMultiSelect
                           moedas={wallet.moeda}
                           onChange={(moedas) => updateCryptoWallet(index, "moeda", moedas)}
                           disabled={viewMode}
                         />
                       </div>
-                      <div className="col-span-2">
+                      <div className="md:col-span-2">
                         <Label className="text-center block">
                           Exchange/Wallet
                           <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
@@ -1730,7 +1730,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                           disabled={viewMode}
                         />
                       </div>
-                      <div className="col-span-2">
+                      <div className="md:col-span-2">
                         <Label className="text-center block">Network *</Label>
                         <RedeSelect
                           value={wallet.rede_id}
@@ -1738,7 +1738,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                           disabled={viewMode}
                         />
                       </div>
-                      <div className="col-span-2">
+                      <div className="md:col-span-2">
                         <Label className="text-center block">Endereço *</Label>
                         <Input
                           value={wallet.endereco}
@@ -1757,7 +1757,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                           <p className="text-xs text-red-500 mt-1 text-center">{enderecoErrors[index]}</p>
                         )}
                       </div>
-                      <div className="col-span-2">
+                      <div className="md:col-span-2">
                         <Label className="text-center block">
                           Observações
                           <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
@@ -1778,12 +1778,12 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
             </TabsContent>
           </Tabs>
 
-          <div className="flex gap-3 mt-6">
-            <Button type="button" variant="outline" onClick={() => onClose()} className="flex-1">
+          <div className="flex gap-3 mt-6 max-md:fixed max-md:bottom-0 max-md:left-0 max-md:right-0 max-md:p-4 max-md:bg-background max-md:border-t max-md:border-border/50 max-md:z-10">
+            <Button type="button" variant="outline" onClick={() => onClose()} className="flex-1 max-md:h-12">
               {viewMode ? "Fechar" : "Cancelar"}
             </Button>
             {!viewMode && (parceiro || parceiroId) && (
-              <Button type="submit" disabled={loading || (!hasChanges && bankAccounts.length === 0 && cryptoWallets.length === 0)} className="flex-1">
+              <Button type="submit" disabled={loading || (!hasChanges && bankAccounts.length === 0 && cryptoWallets.length === 0)} className="flex-1 max-md:h-12">
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Salvar Alterações
               </Button>
