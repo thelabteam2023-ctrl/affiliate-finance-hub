@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  tipo: "DEPOSITO" | "SAQUE" | "TRANSFERENCIA_BANCO";
+  tipo: "DEPOSITO" | "SAQUE" | "TRANSFERENCIA_BANCO" | "RECOLHIMENTO_BANCO";
   supplierWorkspaceId: string;
   accounts: any[];
   saldoDisponivel: number;
