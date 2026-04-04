@@ -80,6 +80,15 @@ export function EditLedgerDialog({ open, onOpenChange, entry, onSuccess }: Props
       };
     }
 
+    if (tipo === "RECOLHIMENTO_BANCO") {
+      return {
+        line1: `${bancoNome}: ${delta > 0 ? "+" : "-"}${formatCurrency(Math.abs(delta))}`,
+        line2: `Saldo Disponível: ${delta > 0 ? "-" : "+"}${formatCurrency(Math.abs(delta))}`,
+        icon1: delta > 0 ? "📈" : "📉",
+        icon2: delta > 0 ? "📉" : "📈",
+      };
+    }
+
     return {
       line1: `Valor: ${formatCurrency(valorAtual)} → ${formatCurrency(numNovoValor)}`,
       line2: `Delta: ${delta > 0 ? "+" : ""}${formatCurrency(delta)}`,
