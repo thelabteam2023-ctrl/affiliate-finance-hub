@@ -1202,8 +1202,6 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
 
   const renderApostas = () => (
     <div className="space-y-4">
-      {/* Saldo Atual — contexto operacional */}
-      <SaldoOperavelCard projetoId={projetoId} variant="compact" />
       <Card>
         <CardHeader className="pb-3">
           {/* Sub-abas Abertas / Histórico - usando componente padronizado */}

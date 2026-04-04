@@ -1215,8 +1215,6 @@ export function ProjetoValueBetTab({
   // Render Apostas
   const renderApostas = () => (
     <div className="space-y-4">
-      {/* Saldo Atual — contexto operacional */}
-      <SaldoOperavelCard projetoId={projetoId} variant="compact" />
       {/* Card de Histórico com Filtros Internos */}
       <Card>
         <CardHeader className="pb-3">
