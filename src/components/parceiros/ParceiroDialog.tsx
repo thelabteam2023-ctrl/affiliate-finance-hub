@@ -1173,8 +1173,8 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto md:max-h-[90vh] max-md:fixed max-md:inset-0 max-md:max-w-none max-md:w-full max-md:h-full max-md:max-h-full max-md:rounded-none max-md:translate-x-0 max-md:translate-y-0 max-md:left-0 max-md:top-0">
-        <DialogHeader>
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto md:max-h-[90vh] max-md:fixed max-md:inset-0 max-md:max-w-none max-md:w-full max-md:h-full max-md:max-h-full max-md:rounded-none max-md:translate-x-0 max-md:translate-y-0 max-md:left-0 max-md:top-0 max-md:pb-24">
+        <DialogHeader className="max-md:sticky max-md:top-0 max-md:z-10 max-md:bg-background max-md:pb-3 max-md:border-b max-md:border-border/50">
           <DialogTitle>
             {viewMode ? "Visualizar Parceiro" : parceiro ? "Editar Parceiro" : "Novo Parceiro"}
           </DialogTitle>
@@ -1182,18 +1182,18 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
 
         <form onSubmit={handleSubmit} autoComplete="off" data-form-type="other" noValidate>
           <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "dados" | "bancos" | "crypto")} className="w-full">
-            <TabsList className="w-full">
-              <TabsTrigger value="dados">
+            <TabsList className="w-full max-md:overflow-x-auto max-md:scrollbar-none max-md:justify-start max-md:gap-1">
+              <TabsTrigger value="dados" className="max-md:min-w-fit max-md:px-3 max-md:text-xs">
                 <User className="w-4 h-4" />
                 Dados Pessoais
               </TabsTrigger>
-              <TabsTrigger value="bancos" disabled={!parceiroId && !parceiro}>
+              <TabsTrigger value="bancos" disabled={!parceiroId && !parceiro} className="max-md:min-w-fit max-md:px-3 max-md:text-xs">
                 <Landmark className="w-4 h-4" />
-                Contas Bancárias
+                Bancário
               </TabsTrigger>
-              <TabsTrigger value="crypto" disabled={!parceiroId && !parceiro}>
+              <TabsTrigger value="crypto" disabled={!parceiroId && !parceiro} className="max-md:min-w-fit max-md:px-3 max-md:text-xs">
                 <Wallet className="w-4 h-4" />
-                Wallets Crypto
+                Crypto
               </TabsTrigger>
             </TabsList>
 
