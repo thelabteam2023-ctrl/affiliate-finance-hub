@@ -529,7 +529,7 @@ export function SupplierTransacaoDialog({
                   ⚠️ Valor excede o saldo do banco {selectedBanco.banco_nome} ({formatCurrency(selectedBanco.saldo)})
                 </p>
               )}
-              {!isDeposito && !isTransferenciaBanco && contaId && parseFloat(valor) > Number(accounts.find(a => a.id === contaId)?.saldo_atual || 0) && (
+              {!isDeposito && !isBankOperation && contaId && parseFloat(valor) > Number(accounts.find(a => a.id === contaId)?.saldo_atual || 0) && (
                 <p className="text-xs text-destructive mt-1">
                   ⚠️ Valor excede o saldo da conta ({formatCurrency(Number(accounts.find(a => a.id === contaId)?.saldo_atual || 0))})
                 </p>
