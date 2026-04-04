@@ -167,6 +167,16 @@ export const CalculadoraEVContent: React.FC = () => {
 
       const payload = JSON.stringify({ imageBase64: processedBase64 });
 
+      // Get session token for authenticated request
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData?.session?.access_token;
+
+      if (!accessToken) {
+        toast.error('Sessão expirada', { description: 'Faça login novamente para usar o OCR.' });
+        return;
+      }
+
       let response: Response;
       try {
         response = await fetch(endpoint, {
@@ -174,7 +184,7 @@ export const CalculadoraEVContent: React.FC = () => {
           headers: {
             'Content-Type': 'application/json',
             'apikey': supabaseKey,
-            'Authorization': `Bearer ${supabaseKey}`,
+            'Authorization': `Bearer ${accessToken}`,
           },
           body: payload,
         });
