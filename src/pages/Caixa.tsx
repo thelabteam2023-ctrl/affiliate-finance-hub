@@ -1046,7 +1046,7 @@ export default function Caixa() {
       <div className="flex-1 min-h-0 overflow-y-auto">
         <div className="px-6 pb-6 space-y-6">
           {/* KPI Cards */}
-          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 max-w-[960px]">
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 max-w-[1200px]">
             {/* Saldos FIAT - Interactive Card */}
             <SaldosFiatCard
               caixaParceiroId={caixaParceiroId}
@@ -1062,6 +1062,25 @@ export default function Caixa() {
               formatCurrency={formatCurrency}
               onDataChanged={fetchData}
             />
+
+            {/* Saldo em Bancos dos Parceiros - KPI Card */}
+            <Card
+              className="cursor-pointer hover:border-primary/30 transition-colors"
+              onClick={() => setSaldoBancosModalOpen(true)}
+            >
+              <CardContent className="pt-4 pb-3 px-4">
+                <div className="flex items-center gap-1.5 text-muted-foreground text-xs mb-1">
+                  <Building2 className="h-3.5 w-3.5" />
+                  Saldo em Bancos
+                </div>
+                <p className="text-xl font-bold text-foreground tabular-nums">
+                  {formatCurrency(saldosContasParceiros.reduce((s, c) => s + c.saldo, 0))}
+                </p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">
+                  Toque para ver detalhes →
+                </p>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Posição de Capital */}
