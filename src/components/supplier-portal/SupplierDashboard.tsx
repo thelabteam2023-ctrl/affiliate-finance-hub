@@ -285,14 +285,18 @@ export function SupplierDashboard({ session }: Props) {
             </CardContent>
           </Card>
 
-          <Card className="cursor-pointer hover:border-primary/30 transition-colors" onClick={() => setBancosModalOpen(true)}>
+          <Card className="cursor-pointer hover:border-primary/30 transition-colors" onClick={() => { if (saldoBancos > 0) { setTransacaoTipo("RECOLHIMENTO_BANCO"); setTransacaoOpen(true); } else { setBancosModalOpen(true); } }}>
             <CardContent className="pt-3 sm:pt-4 pb-2 sm:pb-3 px-3 sm:px-4">
               <div className="flex items-center gap-1.5 text-muted-foreground text-[10px] sm:text-xs mb-0.5 sm:mb-1">
                 <Wallet className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                 Em Bancos
               </div>
               <p className="text-base sm:text-xl font-bold text-foreground tabular-nums">{formatCurrency(saldoBancos)}</p>
-              <p className="text-[10px] text-primary mt-0.5">Toque para ver detalhes →</p>
+              {saldoBancos > 0 ? (
+                <p className="text-[10px] text-primary mt-0.5">Toque para recolher →</p>
+              ) : (
+                <p className="text-[10px] text-primary mt-0.5">Toque para ver detalhes →</p>
+              )}
             </CardContent>
           </Card>
         </div>
