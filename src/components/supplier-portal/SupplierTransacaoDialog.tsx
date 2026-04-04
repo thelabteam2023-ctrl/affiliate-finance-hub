@@ -458,7 +458,7 @@ export function SupplierTransacaoDialog({
         )}
 
         {/* ── STEP 2 for DEPOSITO/SAQUE: Account, Amount, Description ── */}
-        {step === 2 && !isTransferenciaBanco && selectedBanco && (
+        {step === 2 && !isBankOperation && selectedBanco && (
           <div className="space-y-4">
             {/* Selected bank summary */}
             <div className="flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
