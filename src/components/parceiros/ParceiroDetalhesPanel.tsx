@@ -238,30 +238,32 @@ function MobileBookmakerCard({ bm, showSensitiveData, parceiroStatus, formatMone
       {/* Expanded details */}
       {expanded && (
         <div className="px-3 pb-3 pt-0 border-t border-border/50 space-y-2 animate-in slide-in-from-top-1 duration-200">
-          {/* Key metrics grid */}
-          <div className="grid grid-cols-3 gap-2 pt-2">
-            <div className="text-center">
-              <p className="text-[10px] text-muted-foreground">Resultado</p>
-              <p className={cn("text-xs font-semibold font-mono", resultado >= 0 ? "text-success" : "text-destructive")}>
+          {/* Key metrics grid — 2x2 vertical pattern */}
+          <div className="grid grid-cols-2 gap-2 pt-2">
+            <div className="px-2.5 py-2 rounded-lg bg-muted/30 border border-border">
+              <p className="text-[11px] text-muted-foreground leading-none mb-1">Resultado</p>
+              <p className={cn("text-[15px] font-semibold font-mono tabular-nums leading-tight", resultado >= 0 ? "text-success" : "text-destructive")}>
                 {showSensitiveData ? formatMoneyValue(resultado, moeda) : "••••"}
               </p>
             </div>
-            <div className="text-center">
-              <p className="text-[10px] text-muted-foreground">Depositado</p>
-              <p className="text-xs font-medium font-mono text-destructive/80">
+            <div className="px-2.5 py-2 rounded-lg bg-muted/30 border border-border">
+              <p className="text-[11px] text-muted-foreground leading-none mb-1">Depositado</p>
+              <p className="text-[15px] font-semibold font-mono tabular-nums leading-tight text-destructive/80">
                 {showSensitiveData ? formatMoneyValue(bm.total_depositado ?? 0, moeda) : "••••"}
               </p>
             </div>
-            <div className="text-center">
-              <p className="text-[10px] text-muted-foreground">Sacado</p>
-              <p className="text-xs font-medium font-mono text-success/80">
+            <div className="px-2.5 py-2 rounded-lg bg-muted/30 border border-border">
+              <p className="text-[11px] text-muted-foreground leading-none mb-1">Sacado</p>
+              <p className="text-[15px] font-semibold font-mono tabular-nums leading-tight text-success/80">
                 {showSensitiveData ? formatMoneyValue(bm.total_sacado ?? 0, moeda) : "••••"}
               </p>
             </div>
-          </div>
-          <div className="flex items-center justify-between text-xs pt-1">
-            <span className="text-muted-foreground">Apostas</span>
-            <span className="font-medium">{(bm.qtd_apostas ?? 0).toLocaleString("pt-BR")}</span>
+            <div className="px-2.5 py-2 rounded-lg bg-muted/30 border border-border">
+              <p className="text-[11px] text-muted-foreground leading-none mb-1">Apostas</p>
+              <p className="text-[15px] font-semibold tabular-nums leading-tight text-foreground">
+                {(bm.qtd_apostas ?? 0).toLocaleString("pt-BR")}
+              </p>
+            </div>
           </div>
           {/* Quick actions */}
           <div className="flex gap-2 pt-1">
