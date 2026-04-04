@@ -164,6 +164,7 @@ export function SupplierDashboard({ session }: Props) {
     // Saldo central = only entries without bookmaker_account_id (central-level movements)
     // ALOCACAO CREDIT → +central (money enters workspace)
     // TRANSFERENCIA_BANCO DEBIT → -central (money sent to bank)
+    // RECOLHIMENTO_BANCO CREDIT → +central (money returned from bank)
     // DEVOLUCAO DEBIT → -central (money returned to admin)
     // PAGAMENTO_TITULAR DEBIT (fonte=CENTRAL) → -central
     // PAGAMENTO_TITULAR DEBIT (fonte=BANCO) → NOT central (debits bank directly)
