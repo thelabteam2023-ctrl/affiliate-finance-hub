@@ -137,8 +137,7 @@ export function SupplierTransacaoDialog({
 
   const handleSelectBanco = (id: string) => {
     setBancoId(id);
-    if (isTransferenciaBanco) {
-      // For bank transfer, step 2 only needs amount
+    if (isBankOperation) {
       setStep(2);
     } else {
       setStep(2);
