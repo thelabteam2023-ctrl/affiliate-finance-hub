@@ -272,13 +272,15 @@ export function SupplierTransacaoDialog({
     onError: (e: any) => toast.error(e.message),
   });
 
-  const dialogTitle = isTransferenciaBanco
-    ? "Enviar ao Banco"
-    : isDeposito
-      ? "Depositar em Conta"
-      : "Sacar de Conta";
+  const dialogTitle = isRecolhimentoBanco
+    ? "Recolher do Banco"
+    : isTransferenciaBanco
+      ? "Enviar ao Banco"
+      : isDeposito
+        ? "Depositar em Conta"
+        : "Sacar de Conta";
 
-  const dialogIcon = isTransferenciaBanco
+  const dialogIcon = isBankOperation
     ? <ArrowRightLeft className="h-5 w-5 text-primary" />
     : isDeposito
       ? <Landmark className="h-5 w-5 text-primary" />
