@@ -198,6 +198,7 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
   const [filtroStatus, setFiltroStatus] = useState<string | null>(null);
   const [filtroRegulamentacao, setFiltroRegulamentacao] = useState<string>("todas");
   const [perdaDialog, setPerdaDialog] = useState<{ open: boolean; bookmakerId: string; bookmakerNome: string; moeda: string; saldoAtual: number } | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sortColumn, setSortColumn] = useState<"dep" | "saq" | "saldo" | "resultado" | "apostas" | null>(null);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const { canEdit, canDelete } = useActionAccess();
