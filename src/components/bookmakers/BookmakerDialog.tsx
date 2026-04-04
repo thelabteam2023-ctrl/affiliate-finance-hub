@@ -775,9 +775,6 @@ export default function BookmakerDialog({
           </form>
           </>
         )}
-          </form>
-          </>
-        )}
       </DialogContent>
 
       {/* Dialog de Observações */}
