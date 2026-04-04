@@ -106,12 +106,12 @@ export async function authenticate(
   fn: string,
   options?: { allowCron?: boolean },
 ): Promise<AuthResult | Response> {
-  // 1. Check CRON_SECRET (if allowed)
+  // 1. Check CRON_SECRET header (preferred for cron jobs)
   if (options?.allowCron) {
     const cronSecret = req.headers.get('x-cron-secret');
     const expectedSecret = Deno.env.get('CRON_SECRET');
     if (cronSecret && expectedSecret && cronSecret === expectedSecret) {
-      securityLog('AUTH_SUCCESS', { type: 'cron', fn });
+      securityLog('AUTH_SUCCESS', { type: 'cron', fn, method: 'cron_secret' });
       return { type: 'cron' };
     }
   }
@@ -120,6 +120,17 @@ export async function authenticate(
   const authHeader = req.headers.get('Authorization');
   if (!authHeader?.startsWith('Bearer ')) {
     return unauthorizedResponse('missing_header', fn);
+  }
+
+  // 2b. For cron-enabled functions, accept anon/service-role keys from pg_cron
+  if (options?.allowCron) {
+    const token = authHeader.replace('Bearer ', '');
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    if ((anonKey && token === anonKey) || (serviceKey && token === serviceKey)) {
+      securityLog('AUTH_SUCCESS', { type: 'cron', fn, method: 'system_key' });
+      return { type: 'cron' };
+    }
   }
 
   const supabaseAuth = createClient(
