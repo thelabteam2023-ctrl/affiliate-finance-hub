@@ -12,7 +12,7 @@ import { CASH_REAL_TYPES } from "@/lib/cashOperationalTypes";
 import { getGrupoFromCategoria, getGrupoInfo } from "@/lib/despesaGrupos";
 import { Button } from "@/components/ui/button";
 import { useTopBar } from "@/contexts/TopBarContext";
-import { Plus, TrendingUp, TrendingDown, Wallet, AlertCircle, ArrowRight, Calendar, Filter, Info, Wrench, MoreHorizontal, HelpCircle } from "lucide-react";
+import { Plus, TrendingUp, TrendingDown, Wallet, AlertCircle, ArrowRight, Calendar, Filter, Info, Wrench, MoreHorizontal, HelpCircle, Building2 } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import {
   DropdownMenu,
@@ -34,6 +34,7 @@ import { AjusteManualDialog } from "@/components/caixa/AjusteManualDialog";
 import { ReconciliacaoDialog } from "@/components/caixa/ReconciliacaoDialog";
 import { SaldosFiatCard } from "@/components/caixa/SaldosFiatCard";
 import { ExposicaoCryptoCard } from "@/components/caixa/ExposicaoCryptoCard";
+import { SaldoBancosParceiroModal } from "@/components/caixa/SaldoBancosParceiroModal";
 // TransacoesEmTransito removido - lógica unificada na Conciliação
 import { subDays, startOfDay, endOfDay, format } from "date-fns";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -135,6 +136,7 @@ export default function Caixa() {
   const [ajusteDialogOpen, setAjusteDialogOpen] = useState(false);
   const [reconciliacaoDialogOpen, setReconciliacaoDialogOpen] = useState(false);
   const [caixaParceiroId, setCaixaParceiroId] = useState<string | null>(null);
+  const [saldoBancosModalOpen, setSaldoBancosModalOpen] = useState(false);
 
   // Estado para pré-preenchimento do dialog de transação (vindo de navegação)
   const [dialogDefaultData, setDialogDefaultData] = useState<{
@@ -1044,7 +1046,7 @@ export default function Caixa() {
       <div className="flex-1 min-h-0 overflow-y-auto">
         <div className="px-6 pb-6 space-y-6">
           {/* KPI Cards */}
-          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 max-w-[960px]">
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 max-w-[1200px]">
             {/* Saldos FIAT - Interactive Card */}
             <SaldosFiatCard
               caixaParceiroId={caixaParceiroId}
@@ -1060,6 +1062,25 @@ export default function Caixa() {
               formatCurrency={formatCurrency}
               onDataChanged={fetchData}
             />
+
+            {/* Saldo em Bancos dos Parceiros - KPI Card */}
+            <Card
+              className="cursor-pointer hover:border-primary/30 transition-colors"
+              onClick={() => setSaldoBancosModalOpen(true)}
+            >
+              <CardContent className="pt-4 pb-3 px-4">
+                <div className="flex items-center gap-1.5 text-muted-foreground text-xs mb-1">
+                  <Building2 className="h-3.5 w-3.5" />
+                  Saldo em Bancos
+                </div>
+                <p className="text-xl font-bold text-foreground tabular-nums">
+                  {formatCurrency(saldosContasParceiros.reduce((s, c) => s + c.saldo, 0), "BRL")}
+                </p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">
+                  Toque para ver detalhes →
+                </p>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Posição de Capital */}
@@ -1210,6 +1231,13 @@ export default function Caixa() {
           await new Promise(resolve => setTimeout(resolve, 600));
           await fetchData();
         }}
+      />
+
+      {/* Modal Saldo em Bancos dos Parceiros */}
+      <SaldoBancosParceiroModal
+        open={saldoBancosModalOpen}
+        onOpenChange={setSaldoBancosModalOpen}
+        caixaParceiroId={caixaParceiroId}
       />
     </div>
   );
