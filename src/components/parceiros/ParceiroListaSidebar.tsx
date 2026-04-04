@@ -114,7 +114,7 @@ export function ParceiroListaSidebar({
                 className="h-9 w-9 shrink-0"
                 onClick={() => setSortOrder(prev => prev === "desc" ? "asc" : "desc")}
               >
-                <Clock className="h-4 w-4" />
+                {sortOrder === "desc" ? <ArrowDown className="h-4 w-4" /> : <ArrowUp className="h-4 w-4" />}
               </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom">
