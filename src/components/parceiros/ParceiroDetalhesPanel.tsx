@@ -128,9 +128,9 @@ function MobileBookmakerCard({ bm, showSensitiveData, parceiroStatus, formatMone
           {/* Key metrics grid */}
           <div className="grid grid-cols-3 gap-2 pt-2">
             <div className="text-center">
-              <p className="text-[10px] text-muted-foreground">Saldo</p>
-              <p className="text-xs font-semibold font-mono">
-                {showSensitiveData ? formatMoneyValue(clampSaldoVisual(bm.saldo_atual), moeda) : "••••"}
+              <p className="text-[10px] text-muted-foreground">Resultado</p>
+              <p className={cn("text-xs font-semibold font-mono", resultado >= 0 ? "text-success" : "text-destructive")}>
+                {showSensitiveData ? formatMoneyValue(resultado, moeda) : "••••"}
               </p>
             </div>
             <div className="text-center">
