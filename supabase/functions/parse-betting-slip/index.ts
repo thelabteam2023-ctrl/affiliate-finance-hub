@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -28,13 +29,9 @@ interface ParsedSelecao {
   evento: ParsedField;
   selecao: ParsedField;
   odd: ParsedField;
-}
-
-interface ParsedMultiplaBetSlip {
-  tipo: ParsedField; // "dupla" or "tripla"
-  stake: ParsedField;
-  retornoPotencial: ParsedField;
-  selecoes: ParsedSelecao[];
+  esporte: ParsedField;
+  mercado: ParsedField;
+  resultado: ParsedField;
 }
 
 const SPORTS_LIST = [
@@ -78,20 +75,23 @@ FORMATO DE RESPOSTA (JSON estrito):
 {
   "tipo": { "value": "dupla" ou "tripla", "confidence": "high|medium|low|none" },
   "stake": { "value": "VALOR NUMÉRICO APOSTADO ou null", "confidence": "high|medium|low|none" },
-  "retornoPotencial": { "value": "VALOR DO RETORNO POTENCIAL ou null", "confidence": "high|medium|low|none" },
+  "retornoPotencial": { "value": "RETORNO POTENCIAL ou null", "confidence": "high|medium|low|none" },
   "selecoes": [
     {
-      "evento": { "value": "EVENTO (ex: Time A x Time B)", "confidence": "high|medium|low|none" },
-      "selecao": { "value": "O QUE FOI APOSTADO (ex: Time A vence, Over 2.5)", "confidence": "high|medium|low|none" },
-      "odd": { "value": "ODD INDIVIDUAL DESTA SELEÇÃO", "confidence": "high|medium|low|none" }
+      "evento": { "value": "Time A vs Time B", "confidence": "high|medium|low|none" },
+      "selecao": { "value": "SELEÇÃO APOSTADA", "confidence": "high|medium|low|none" },
+      "odd": { "value": "VALOR NUMÉRICO DA ODD", "confidence": "high|medium|low|none" },
+      "esporte": { "value": "ESPORTE", "confidence": "high|medium|low|none" },
+      "mercado": { "value": "TIPO DE MERCADO", "confidence": "high|medium|low|none" },
+      "resultado": { "value": "GREEN|RED|VOID|null", "confidence": "high|medium|low|none" }
     }
   ]
 }
 
-Nível de confiança:
-- "high": texto claramente visível e inequívoco
-- "medium": texto visível mas pode ter interpretação ambígua
-- "low": texto parcialmente visível ou muito incerto
+IMPORTANTE:
+- Extraia EXATAMENTE 2 ou 3 seleções
+- O STAKE é TOTAL do bilhete, não por seleção
+- Se não conseguir identificar, use "none" como confiança
 - "none": não foi possível detectar
 
 DICA: Em bilhetes múltiplos, as seleções geralmente aparecem empilhadas verticalmente, cada uma com seu evento, seleção e odd.
@@ -106,6 +106,33 @@ serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+
+  // --- AUTH CHECK ---
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    console.warn("AUTH_DENIED", { reason: "missing_header", fn: "parse-betting-slip" });
+    return new Response(
+      JSON.stringify({ error: "Unauthorized" }),
+      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  const supabaseAuth = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_ANON_KEY")!,
+    { global: { headers: { Authorization: authHeader } } }
+  );
+
+  const token = authHeader.replace("Bearer ", "");
+  const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(token);
+  if (claimsError || !claimsData?.claims) {
+    console.warn("AUTH_DENIED", { reason: "invalid_token", fn: "parse-betting-slip" });
+    return new Response(
+      JSON.stringify({ error: "Unauthorized" }),
+      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+  // --- END AUTH CHECK ---
 
   try {
     const requestBody = await req.json();
