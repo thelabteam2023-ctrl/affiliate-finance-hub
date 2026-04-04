@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { SaldoOperavelCard } from "../SaldoOperavelCard";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -1239,6 +1240,8 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
 
   return (
     <div className="space-y-4">
+      {/* Saldo Atual — contexto operacional */}
+      <SaldoOperavelCard projetoId={projetoId} variant="compact" />
       <Card>
         <CardHeader className="pb-3">
           {/* Sub-abas Abertas / Histórico - usando componente padronizado */}
