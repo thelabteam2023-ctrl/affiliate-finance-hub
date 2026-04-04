@@ -248,6 +248,7 @@ export default function BookmakerDialog({
         setIsInitialized(false);
         setHasFinancialOperations(false);
         setCheckingOperations(false);
+        setMoedaConfirmada(false);
       }, 100);
       return () => clearTimeout(timeout);
     }
