@@ -121,6 +121,8 @@ export function SupplierExtratoTab({ supplierWorkspaceId }: Props) {
             subtitleParts.push(`${casaNome} → ${bancoNome}`);
           } else if (entry.tipo === "TRANSFERENCIA_BANCO" && bancoNome) {
             subtitleParts.push(`Saldo Disponível → ${bancoNome}`);
+          } else if (entry.tipo === "RECOLHIMENTO_BANCO" && bancoNome) {
+            subtitleParts.push(`${bancoNome} → Saldo Disponível`);
           } else if (entry.tipo === "PAGAMENTO_TITULAR") {
             const pgBanco = (entry.metadata as any)?.banco_nome;
             const pgTitular = (entry.metadata as any)?.titular_nome;
