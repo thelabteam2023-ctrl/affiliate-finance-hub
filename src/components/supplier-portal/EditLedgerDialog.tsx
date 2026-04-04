@@ -29,6 +29,7 @@ const TIPO_LABELS: Record<string, string> = {
   DEPOSITO: "Depósito",
   SAQUE: "Saque",
   TRANSFERENCIA_BANCO: "Transferência ao Banco",
+  RECOLHIMENTO_BANCO: "Recolhimento do Banco",
   ALOCACAO: "Alocação",
   DEVOLUCAO: "Devolução",
   PAGAMENTO_TITULAR: "Pagamento ao Titular",
