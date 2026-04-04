@@ -814,7 +814,7 @@ export default function GestaoProjetos() {
                 <FolderKanban className="mx-auto h-12 w-12 text-muted-foreground/50" />
                 <h3 className="mt-4 text-lg font-semibold">Nenhum projeto encontrado</h3>
                 <p className="text-muted-foreground">
-                  {searchTerm || statusFilter !== "all"
+                  {searchTerm || statusFilter.length !== 1 || statusFilter[0] !== "EM_ANDAMENTO"
                     ? "Tente ajustar os filtros"
                     : "Comece criando seu primeiro projeto"}
                 </p>
