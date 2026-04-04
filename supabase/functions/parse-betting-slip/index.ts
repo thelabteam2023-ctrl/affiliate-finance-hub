@@ -1,10 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-workspace-id",
-};
+import { withMiddleware, corsHeaders, type AuthResult } from "../_shared/middleware.ts";
 
 interface ParsedField {
   value: string | null;
@@ -103,36 +99,7 @@ const getCurrentYear = (): number => {
 };
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
-
-  // --- AUTH CHECK ---
-  const authHeader = req.headers.get("Authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
-    console.warn("AUTH_DENIED", { reason: "missing_header", fn: "parse-betting-slip" });
-    return new Response(
-      JSON.stringify({ error: "Unauthorized" }),
-      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  }
-
-  const supabaseAuth = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_ANON_KEY")!,
-    { global: { headers: { Authorization: authHeader } } }
-  );
-
-  const token = authHeader.replace("Bearer ", "");
-  const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(token);
-  if (claimsError || !claimsData?.claims) {
-    console.warn("AUTH_DENIED", { reason: "invalid_token", fn: "parse-betting-slip" });
-    return new Response(
-      JSON.stringify({ error: "Unauthorized" }),
-      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  }
-  // --- END AUTH CHECK ---
+  return withMiddleware(req, 'parse-betting-slip', async (auth, req) => {
 
   try {
     const requestBody = await req.json();
@@ -757,4 +724,5 @@ DICA: Em boletins de apostas, a ODD geralmente aparece em verde/destaque próxim
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
+  }, { rateLimit: { maxRequests: 15, windowMs: 60_000 } });
 });
