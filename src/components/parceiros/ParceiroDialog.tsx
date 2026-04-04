@@ -1712,7 +1712,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                           </Button>
                         </div>
                       )}
-                      <div className="col-span-2">
+                      <div className="md:col-span-2">
                         <MoedaMultiSelect
                           moedas={wallet.moeda}
                           onChange={(moedas) => updateCryptoWallet(index, "moeda", moedas)}
