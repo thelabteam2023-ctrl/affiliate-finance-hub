@@ -1202,10 +1202,6 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
 
   const renderApostas = () => (
     <div className="space-y-4">
-      {/* Saldo Operável — contexto operacional */}
-      <div className="flex justify-end">
-        <SaldoOperavelCard projetoId={projetoId} variant="compact" />
-      </div>
       <Card>
         <CardHeader className="pb-3">
           {/* Sub-abas Abertas / Histórico - usando componente padronizado */}
@@ -1520,7 +1516,10 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
         {activeNavTab !== "visao-geral" && (
           <div className="flex items-center gap-3 mb-4">
             <div className="flex-1">{periodFilterComponent}</div>
-            {actionsSlot && <div className="shrink-0">{actionsSlot}</div>}
+            <div className="shrink-0 flex items-center gap-2">
+              <SaldoOperavelCard projetoId={projetoId} variant="compact" />
+              {actionsSlot}
+            </div>
           </div>
         )}
         {activeNavTab === "apostas" && renderApostas()}
