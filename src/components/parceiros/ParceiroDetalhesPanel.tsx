@@ -111,11 +111,11 @@ function MobileBookmakerCard({ bm, showSensitiveData, parceiroStatus, formatMone
               {moeda}
             </Badge>
           </div>
-          {/* Resultado destaque */}
+          {/* Saldo atual destaque */}
           <div className="flex items-center justify-between mt-1">
-            <span className="text-[10px] text-muted-foreground">Resultado</span>
-            <span className={cn("text-sm font-bold font-mono", resultado >= 0 ? "text-success" : "text-destructive")}>
-              {showSensitiveData ? formatMoneyValue(resultado, moeda) : "••••"}
+            <span className="text-[10px] text-muted-foreground">Saldo Atual</span>
+            <span className="text-sm font-bold font-mono text-foreground">
+              {showSensitiveData ? formatMoneyValue(saldoAtual, moeda) : "••••"}
             </span>
           </div>
         </div>
