@@ -246,6 +246,7 @@ export function SwapCryptoDialog({ open, onClose, onSuccess, caixaParceiroId }: 
       }
 
       // SWAP_OUT: Débito da moeda origem
+      // REGRA: valor USD = preço da moeda ENVIADA × quantidade enviada
       const swapOutData: any = {
         user_id: userData.user.id,
         workspace_id: workspaceId,
@@ -266,6 +267,7 @@ export function SwapCryptoDialog({ open, onClose, onSuccess, caixaParceiroId }: 
         impacta_caixa_operacional: true,
         descricao: `Swap ${coinOrigem} → ${coinDestino}`,
         origem_wallet_id: walletOrigemId,
+        origem_tipo: "PARCEIRO_WALLET",
         origem_parceiro_id: caixaParceiroId,
         moeda_origem: coinOrigem,
         valor_origem: qtdEnviadaNum,
@@ -283,17 +285,20 @@ export function SwapCryptoDialog({ open, onClose, onSuccess, caixaParceiroId }: 
       if (outError) throw outError;
 
       // SWAP_IN: Crédito da moeda destino (na wallet de destino)
+      // REGRA CRÍTICA: valor USD deve ser IGUAL ao SWAP_OUT (swap é zero-sum para capital)
+      // O campo qtd_coin registra a quantidade real de coins recebida,
+      // mas o valor econômico (USD) não muda — é a mesma quantia convertida.
       const swapInData: any = {
         user_id: userData.user.id,
         workspace_id: workspaceId,
         tipo_transacao: "SWAP_IN",
         tipo_moeda: "CRYPTO",
         moeda: "USD",
-        valor: usdRecebido,
+        valor: usdEnviado, // IGUAL ao SWAP_OUT — swap não cria nem destrói valor
         coin: coinDestino,
         qtd_coin: qtdRecebidaNum,
-        valor_usd: usdRecebido,
-        valor_usd_referencia: usdRecebido,
+        valor_usd: usdEnviado, // IGUAL ao SWAP_OUT
+        valor_usd_referencia: usdEnviado, // IGUAL ao SWAP_OUT
         cotacao: precoDestino,
         cotacao_destino_usd: precoDestino,
         cotacao_snapshot_at: now,
@@ -303,6 +308,7 @@ export function SwapCryptoDialog({ open, onClose, onSuccess, caixaParceiroId }: 
         impacta_caixa_operacional: true,
         descricao: `Swap ${coinOrigem} → ${coinDestino}`,
         destino_wallet_id: finalDestinoWalletId,
+        destino_tipo: "PARCEIRO_WALLET",
         destino_parceiro_id: caixaParceiroId,
         referencia_transacao_id: outResult.id,
         moeda_origem: coinOrigem,

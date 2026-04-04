@@ -671,6 +671,23 @@ export default function Caixa() {
   };
 
   const getOrigemInfo = (transacao: Transacao): { primary: string; secondary?: string } => {
+    // SWAP: Mostrar wallet de origem com nome do parceiro
+    if (transacao.tipo_transacao === "SWAP_OUT" && transacao.origem_wallet_id) {
+      const wallet = walletsDetalhes.find(w => w.id === transacao.origem_wallet_id);
+      if (wallet) {
+        const parceiroNome = wallet.parceiro_id ? parceiros[wallet.parceiro_id] : undefined;
+        return {
+          primary: `Wallet ${parceiroNome || wallet.exchange || 'Crypto'}`,
+          secondary: `${transacao.coin || transacao.moeda_origem || ''}`
+        };
+      }
+      return { primary: "Wallet Crypto" };
+    }
+    if (transacao.tipo_transacao === "SWAP_IN") {
+      // SWAP_IN: origem é conceitual (a moeda que foi trocada)
+      return { primary: `Swap Interno`, secondary: `${transacao.moeda_origem || ''} → ${transacao.coin || transacao.moeda_destino || ''}` };
+    }
+
     // Para APORTE_FINANCEIRO, verificamos o fluxo pela direção
     if (transacao.tipo_transacao === "APORTE_FINANCEIRO") {
       // Se destino é CAIXA_OPERACIONAL, é um aporte (Investidor → Caixa)
