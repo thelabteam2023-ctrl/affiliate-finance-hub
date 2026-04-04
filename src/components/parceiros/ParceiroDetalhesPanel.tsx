@@ -85,6 +85,7 @@ function MobileBookmakerCard({ bm, showSensitiveData, parceiroStatus, formatMone
   const [expanded, setExpanded] = useState(false);
   const moeda = bm.moeda || "BRL";
   const resultado = bm.lucro_prejuizo ?? 0;
+  const saldoAtual = clampSaldoVisual(bm.saldo_atual);
 
   return (
     <div 
