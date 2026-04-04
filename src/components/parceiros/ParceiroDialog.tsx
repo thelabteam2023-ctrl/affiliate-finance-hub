@@ -1472,12 +1472,12 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
               </div>
 
               {!viewMode && !parceiro && !parceiroId && (
-                <div className="flex gap-3 mt-6">
+                <div className="flex gap-3 mt-6 max-md:fixed max-md:bottom-0 max-md:left-0 max-md:right-0 max-md:p-4 max-md:bg-background max-md:border-t max-md:border-border/50 max-md:z-10">
                   <Button
                     type="button"
                     onClick={savePersonalData}
                     disabled={loading || !nome || !cpf}
-                    className="w-full"
+                    className="w-full max-md:h-12"
                   >
                     {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Salvar e Continuar
