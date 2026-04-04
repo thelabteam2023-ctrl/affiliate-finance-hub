@@ -1232,6 +1232,13 @@ export default function Caixa() {
           await fetchData();
         }}
       />
+
+      {/* Modal Saldo em Bancos dos Parceiros */}
+      <SaldoBancosParceiroModal
+        open={saldoBancosModalOpen}
+        onOpenChange={setSaldoBancosModalOpen}
+        caixaParceiroId={caixaParceiroId}
+      />
     </div>
   );
 }
