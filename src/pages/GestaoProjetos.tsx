@@ -116,7 +116,7 @@ export default function GestaoProjetos() {
   const [projetos, setProjetos] = useState<Projeto[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("EM_ANDAMENTO");
+  const [statusFilter, setStatusFilter] = useState<string[]>(["EM_ANDAMENTO"]);
   const [tipoFilter, setTipoFilter] = useState<string>("all");
   
   // Recuperar preferência de visualização do localStorage
