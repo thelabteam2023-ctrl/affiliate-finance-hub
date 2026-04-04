@@ -683,31 +683,27 @@ export default function GestaoProjetos() {
             {/* Overflow: multi-select de outros status */}
             <Popover>
               <PopoverTrigger asChild>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      className={cn(
-                        "inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-all duration-150",
-                        "min-h-[36px] md:min-h-[32px] active:scale-[0.97] whitespace-nowrap",
-                        statusFilter.some(s => ["PLANEJADO", "PAUSADO", "FINALIZADO", "ARQUIVADO"].includes(s))
-                          ? "bg-primary/10 border-primary/30 text-primary"
-                          : "bg-muted/40 border-border text-muted-foreground hover:bg-muted/70 hover:text-foreground"
-                      )}
-                    >
-                      {(() => {
-                        const secondaryActive = statusFilter.filter(s => ["PLANEJADO", "PAUSADO", "FINALIZADO", "ARQUIVADO"].includes(s));
-                        if (secondaryActive.length === 1) {
-                          return getStatusLabel(secondaryActive[0]);
-                        }
-                        if (secondaryActive.length > 1) {
-                          return `Filtros ativos (${secondaryActive.length})`;
-                        }
-                        return <MoreHorizontal className="h-4 w-4" />;
-                      })()}
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>Filtrar por outros status</TooltipContent>
-                </Tooltip>
+                <button
+                  className={cn(
+                    "inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium border transition-all duration-150",
+                    "min-h-[36px] md:min-h-[32px] active:scale-[0.97] whitespace-nowrap",
+                    statusFilter.some(s => ["PLANEJADO", "PAUSADO", "FINALIZADO", "ARQUIVADO"].includes(s))
+                      ? "bg-primary/10 border-primary/30 text-primary"
+                      : "bg-muted/40 border-border text-muted-foreground hover:bg-muted/70 hover:text-foreground"
+                  )}
+                  title="Filtrar por outros status"
+                >
+                  {(() => {
+                    const secondaryActive = statusFilter.filter(s => ["PLANEJADO", "PAUSADO", "FINALIZADO", "ARQUIVADO"].includes(s));
+                    if (secondaryActive.length === 1) {
+                      return getStatusLabel(secondaryActive[0]);
+                    }
+                    if (secondaryActive.length > 1) {
+                      return `Filtros ativos (${secondaryActive.length})`;
+                    }
+                    return <MoreHorizontal className="h-4 w-4" />;
+                  })()}
+                </button>
               </PopoverTrigger>
               <PopoverContent align="start" className="w-52 p-1">
                 {[
