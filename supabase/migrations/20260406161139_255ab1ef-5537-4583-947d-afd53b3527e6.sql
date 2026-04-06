@@ -1,0 +1,1 @@
+ALTER TYPE solicitacao_tipo ADD VALUE IF NOT EXISTS 'verificacao_sms_email';

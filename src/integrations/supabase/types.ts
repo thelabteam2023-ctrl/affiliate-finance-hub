@@ -14906,6 +14906,7 @@ export type Database = {
         | "verificacao_celular"
         | "verificacao_facial"
         | "contato_parceria"
+        | "verificacao_sms_email"
       subscription_status:
         | "active"
         | "trialing"
@@ -15132,6 +15133,7 @@ export const Constants = {
         "verificacao_celular",
         "verificacao_facial",
         "contato_parceria",
+        "verificacao_sms_email",
       ],
       subscription_status: [
         "active",
