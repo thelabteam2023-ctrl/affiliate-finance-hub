@@ -49,6 +49,7 @@ import { cn } from '@/lib/utils';
 const schema = z.object({
   descricao: z.string().min(10, 'Descreva a solicitação com pelo menos 10 caracteres'),
   tipo: z.enum(['abertura_conta', 'verificacao_kyc', 'deposito', 'saque', 'verificacao_sms_email', 'contato_parceria', 'outros'] as const),
+  prioridade: z.enum(['baixa', 'media', 'alta'] as const),
   destinatario_nome: z.string().optional(),
   executor_ids: z.array(z.string()).min(1, 'Selecione ao menos um responsável'),
   bookmaker_ids: z.array(z.string()).optional(),
