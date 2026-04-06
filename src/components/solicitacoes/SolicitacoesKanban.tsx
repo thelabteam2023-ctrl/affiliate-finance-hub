@@ -27,6 +27,8 @@ import {
   resolverPrioridade,
   calcularSlaRestante,
   formatarSla,
+  calcularExpiracao,
+  formatarExpiracao,
 } from '@/types/solicitacoes';
 import type { Solicitacao, SolicitacaoStatus, SolicitacaoTipo, SolicitacaoPrioridade } from '@/types/solicitacoes';
 import {
@@ -39,6 +41,7 @@ import {
   Flag,
   AlertTriangle,
   Trash2,
+  Timer,
 } from 'lucide-react';
 import {
   AlertDialog,
