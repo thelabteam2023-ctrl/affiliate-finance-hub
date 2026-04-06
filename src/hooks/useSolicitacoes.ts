@@ -153,7 +153,14 @@ export function useAtualizarStatusSolicitacao() {
       recusa_motivo?: string;
     }) => {
       const updates: Record<string, unknown> = { status };
-      if (status === 'concluida') updates.concluida_at = new Date().toISOString();
+      if (status === 'concluida') {
+        updates.concluida_at = new Date().toISOString();
+        updates.archived_at = null;
+      } else {
+        // Reversão: limpa campos de conclusão e arquivamento
+        updates.concluida_at = null;
+        updates.archived_at = null;
+      }
       if (status === 'recusada') {
         updates.recusada_at = new Date().toISOString();
         if (recusa_motivo) updates.recusa_motivo = recusa_motivo;

@@ -38,6 +38,7 @@ export interface Solicitacao {
   lote_id?: string | null;
   contexto_metadata?: Record<string, unknown> | null;
   recusa_motivo?: string | null;
+  archived_at?: string | null;
   created_at: string;
   updated_at: string;
   concluida_at?: string | null;
