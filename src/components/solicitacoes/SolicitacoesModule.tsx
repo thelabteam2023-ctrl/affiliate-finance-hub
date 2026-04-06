@@ -75,43 +75,6 @@ export function SolicitacoesModule() {
             </p>
           )}
         </div>
-        <div className="flex items-center gap-2">
-          {isMobile ? (
-            <>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => setLoteOpen(true)}
-              >
-                <ClipboardPaste className="h-4 w-4" />
-              </Button>
-              <Button
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => setNovaOpen(true)}
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-2"
-                onClick={() => setLoteOpen(true)}
-              >
-                <ClipboardPaste className="h-4 w-4" />
-                Em Lote
-              </Button>
-              <Button onClick={() => setNovaOpen(true)} size="sm" className="gap-2">
-                <Plus className="h-4 w-4" />
-                Nova Solicitação
-              </Button>
-            </>
-          )}
-        </div>
       </div>
 
       {/* KPIs */}
