@@ -296,80 +296,157 @@ export function SupplierTransacaoDialog({
           </DialogTitle>
         </DialogHeader>
 
-        {/* ── STEP 1: Select Titular → Bank Card ── */}
+        {/* ── STEP 1: Select Bank Account ── */}
         {step === 1 && (
-          <div className="space-y-4">
-            {/* Titular selector */}
-            <div>
-              <Label>Titular *</Label>
-              <Select value={titularId} onValueChange={setTitularId} disabled={!!prefillTitularId}>
-                <SelectTrigger className={prefillTitularId ? "opacity-80" : ""}>
-                  <SelectValue placeholder="Selecione o titular" />
-                </SelectTrigger>
-                <SelectContent>
-                  {titulares.map(t => (
-                    <SelectItem key={t.id} value={t.id}>
-                      <div className="flex items-center gap-2">
-                        <span>{t.nome}</span>
-                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                          {t.bankCount} banco{t.bankCount !== 1 ? "s" : ""}
-                        </Badge>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Bank cards */}
-            {titularId && (
-              <div className="space-y-2">
+          <div className="space-y-3">
+            {/* For RECOLHIMENTO_BANCO: show all banks grouped by titular directly */}
+            {isRecolhimentoBanco ? (
+              <>
                 <Label className="text-muted-foreground text-xs">
-                  {isRecolhimentoBanco
-                    ? "Selecione o banco para debitar:"
-                    : isTransferenciaBanco
-                      ? "Selecione o banco para receber o valor:"
-                      : `Selecione o banco para ${isDeposito ? "debitar" : "creditar"}:`}
+                  Selecione a conta bancária para debitar:
                 </Label>
-                {titularBancos.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-4">
-                    Nenhum banco cadastrado para este titular.
-                  </p>
-                ) : (
-                  <div className="grid gap-2">
-                    {titularBancos.map(b => (
-                      <button
-                        key={b.id}
-                        type="button"
-                        onClick={() => handleSelectBanco(b.id)}
-                        className={cn(
-                          "w-full flex items-center gap-3 rounded-lg border p-3 text-left transition-all hover:border-primary/50 hover:bg-accent/30 cursor-pointer",
-                          bancoId === b.id && "border-primary bg-primary/5 ring-1 ring-primary/30"
-                        )}
-                      >
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                          <Wallet className="h-5 w-5 text-primary" />
+                <div className="max-h-[380px] overflow-y-auto space-y-3 pr-1">
+                  {titulares.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-6">
+                      Nenhum banco cadastrado.
+                    </p>
+                  ) : (
+                    titulares.map(t => {
+                      const tBancos = (bancos || []).filter(b => b.titular_id === t.id).sort((a, b) => b.saldo - a.saldo);
+                      if (tBancos.length === 0) return null;
+                      return (
+                        <div key={t.id} className="space-y-1.5">
+                          <div className="flex items-center justify-between px-1">
+                            <div className="flex items-center gap-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                              <Building2 className="h-3 w-3" />
+                              {t.nome}
+                            </div>
+                            <span className="text-[10px] font-semibold text-muted-foreground tabular-nums">
+                              {formatCurrency(t.totalSaldo)}
+                            </span>
+                          </div>
+                          <div className="grid gap-1.5">
+                            {tBancos.map(b => {
+                              const disabled = b.saldo <= 0;
+                              return (
+                                <button
+                                  key={b.id}
+                                  type="button"
+                                  disabled={disabled}
+                                  onClick={() => {
+                                    setTitularId(b.titular_id);
+                                    handleSelectBanco(b.id);
+                                  }}
+                                  className={cn(
+                                    "w-full flex items-center gap-3 rounded-lg border p-3 text-left transition-all cursor-pointer",
+                                    disabled
+                                      ? "opacity-40 cursor-not-allowed border-border/30"
+                                      : "hover:border-primary/50 hover:bg-accent/30",
+                                    bancoId === b.id && "border-primary bg-primary/5 ring-1 ring-primary/30"
+                                  )}
+                                >
+                                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                                    <Wallet className="h-4 w-4 text-primary" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="font-medium text-sm text-foreground truncate">{b.banco_nome}</p>
+                                    {b.pix_key && (
+                                      <p className="text-[10px] text-muted-foreground truncate">PIX: {b.pix_key}</p>
+                                    )}
+                                  </div>
+                                  <div className="text-right shrink-0">
+                                    <p className={cn(
+                                      "font-semibold text-sm tabular-nums",
+                                      b.saldo > 0 ? "text-primary" : "text-muted-foreground"
+                                    )}>
+                                      {formatCurrency(b.saldo)}
+                                    </p>
+                                    {disabled && (
+                                      <p className="text-[9px] text-destructive">sem saldo</p>
+                                    )}
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm text-foreground truncate">{b.banco_nome}</p>
-                          {b.pix_key && (
-                            <p className="text-[11px] text-muted-foreground truncate">PIX: {b.pix_key}</p>
-                          )}
-                        </div>
-                        <div className="text-right shrink-0">
-                          <p className={cn(
-                            "font-semibold text-sm",
-                            b.saldo > 0 ? "text-primary" : "text-muted-foreground"
-                          )}>
-                            {formatCurrency(b.saldo)}
-                          </p>
-                          <p className="text-[10px] text-muted-foreground">saldo</p>
-                        </div>
-                      </button>
-                    ))}
+                      );
+                    })
+                  )}
+                </div>
+              </>
+            ) : (
+              /* Original flow for DEPOSITO/SAQUE/TRANSFERENCIA_BANCO: titular dropdown → bank cards */
+              <>
+                <div>
+                  <Label>Titular *</Label>
+                  <Select value={titularId} onValueChange={setTitularId} disabled={!!prefillTitularId}>
+                    <SelectTrigger className={prefillTitularId ? "opacity-80" : ""}>
+                      <SelectValue placeholder="Selecione o titular" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {titulares.map(t => (
+                        <SelectItem key={t.id} value={t.id}>
+                          <div className="flex items-center gap-2">
+                            <span>{t.nome}</span>
+                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                              {t.bankCount} banco{t.bankCount !== 1 ? "s" : ""}
+                            </Badge>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {titularId && (
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground text-xs">
+                      {isTransferenciaBanco
+                        ? "Selecione o banco para receber o valor:"
+                        : `Selecione o banco para ${isDeposito ? "debitar" : "creditar"}:`}
+                    </Label>
+                    {titularBancos.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-4">
+                        Nenhum banco cadastrado para este titular.
+                      </p>
+                    ) : (
+                      <div className="grid gap-2">
+                        {titularBancos.map(b => (
+                          <button
+                            key={b.id}
+                            type="button"
+                            onClick={() => handleSelectBanco(b.id)}
+                            className={cn(
+                              "w-full flex items-center gap-3 rounded-lg border p-3 text-left transition-all hover:border-primary/50 hover:bg-accent/30 cursor-pointer",
+                              bancoId === b.id && "border-primary bg-primary/5 ring-1 ring-primary/30"
+                            )}
+                          >
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                              <Wallet className="h-5 w-5 text-primary" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm text-foreground truncate">{b.banco_nome}</p>
+                              {b.pix_key && (
+                                <p className="text-[11px] text-muted-foreground truncate">PIX: {b.pix_key}</p>
+                              )}
+                            </div>
+                            <div className="text-right shrink-0">
+                              <p className={cn(
+                                "font-semibold text-sm",
+                                b.saldo > 0 ? "text-primary" : "text-muted-foreground"
+                              )}>
+                                {formatCurrency(b.saldo)}
+                              </p>
+                              <p className="text-[10px] text-muted-foreground">saldo</p>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
-              </div>
+              </>
             )}
           </div>
         )}
