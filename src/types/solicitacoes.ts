@@ -149,6 +149,32 @@ export function formatarSla(restanteMs: number): string {
   return restanteMs < 0 ? `Vencido ${label}` : label;
 }
 
+/** Calcula o tempo de retenção (em ms) baseado na velocidade de resolução */
+export function calcularRetencaoMs(createdAt: string, concluidaAt: string): number {
+  const resolutionMs = new Date(concluidaAt).getTime() - new Date(createdAt).getTime();
+  const TEN_MIN = 10 * 60 * 1000;
+  const ONE_HOUR = 60 * 60 * 1000;
+  if (resolutionMs <= TEN_MIN) return 6 * ONE_HOUR;
+  if (resolutionMs <= ONE_HOUR) return 12 * ONE_HOUR;
+  return 24 * ONE_HOUR;
+}
+
+/** Calcula ms restantes até arquivamento. Negativo = deve ser arquivado. */
+export function calcularExpiracao(createdAt: string, concluidaAt: string): number {
+  const retencao = calcularRetencaoMs(createdAt, concluidaAt);
+  const deadline = new Date(concluidaAt).getTime() + retencao;
+  return deadline - Date.now();
+}
+
+/** Formata expiração como "Expira em Xh Ym" */
+export function formatarExpiracao(restanteMs: number): string {
+  if (restanteMs <= 0) return 'Expirando...';
+  const hours = Math.floor(restanteMs / (60 * 60 * 1000));
+  const minutes = Math.floor((restanteMs % (60 * 60 * 1000)) / (60 * 1000));
+  if (hours > 0) return `Expira em ${hours}h ${minutes}m`;
+  return `Expira em ${minutes}m`;
+}
+
 // ---- Status ----
 
 export const SOLICITACAO_PRIORIDADE_COLORS: Record<SolicitacaoPrioridade, string> = {
