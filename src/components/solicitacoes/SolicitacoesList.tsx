@@ -275,6 +275,7 @@ function SolicitacaoRow({
                 <PriorityFlag prioridade={prio} solicitacaoId={solicitacao.id} />
                 <StatusBadge status={solicitacao.status} />
                 <SlaBadge createdAt={solicitacao.created_at} prioridade={prio} status={solicitacao.status} />
+                <ExpirationBadge createdAt={solicitacao.created_at} concluidaAt={solicitacao.concluida_at} status={solicitacao.status} />
               </div>
 
               {/* Casas — 2 visíveis + tooltip com restantes */}
