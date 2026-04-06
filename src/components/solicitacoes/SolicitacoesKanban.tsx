@@ -160,6 +160,14 @@ function KanbanCard({
             </div>
           )}
 
+          {/* Destinatário */}
+          {solicitacao.destinatario_nome && (
+            <div className="flex items-center gap-1 text-xs">
+              <span className="text-muted-foreground">→</span>
+              <span className="font-medium text-foreground">{solicitacao.destinatario_nome}</span>
+            </div>
+          )}
+
           {/* Valor */}
           {valor != null && valor > 0 && (
             <div className="flex items-center gap-1 text-xs text-primary font-medium">

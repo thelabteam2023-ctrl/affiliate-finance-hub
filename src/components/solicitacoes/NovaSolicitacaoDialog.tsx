@@ -53,6 +53,7 @@ import { cn } from '@/lib/utils';
 const schema = z.object({
   descricao: z.string().min(10, 'Descreva a solicitação com pelo menos 10 caracteres'),
   tipo: z.enum(['abertura_conta', 'verificacao_kyc', 'transferencia', 'deposito', 'saque', 'verificacao_conta', 'verificacao_celular', 'verificacao_facial', 'contato_parceria', 'outros'] as const),
+  destinatario_nome: z.string().optional(),
   prazo: z.string().optional(),
   executor_ids: z.array(z.string()).min(1, 'Selecione ao menos um responsável'),
   bookmaker_ids: z.array(z.string()).optional(),
@@ -423,6 +424,7 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
     defaultValues: {
       descricao: '',
       tipo: contextoInicial?.tipo || 'outros',
+      destinatario_nome: '',
       prazo: undefined,
       executor_ids: [],
       bookmaker_ids: [],
@@ -443,13 +445,12 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
   const transferenciaValor = form.watch('transferencia_valor');
   const transferenciaMoeda = form.watch('transferencia_moeda');
 
-  // Estado dos parceiros para select (carregados do DB)
+  // Estado dos parceiros para select (carregados do DB) — usado para destinatário e transferência
   const [parceiros, setParceiros] = useState<{ id: string; nome: string }[]>([]);
   useEffect(() => {
-    if (tipoSelecionado !== 'transferencia') return;
     supabase.from('parceiros').select('id, nome').eq('status', 'ativo').order('nome')
       .then(({ data }) => setParceiros(data ?? []));
-  }, [tipoSelecionado]);
+  }, []);
 
   // Inicializar subtipo padrão ao entrar em transferência
   useEffect(() => {
@@ -589,6 +590,7 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
       tipo: data.tipo,
       prazo: data.prazo,
       executor_id: data.executor_ids[0],
+      destinatario_nome: data.destinatario_nome?.trim() || undefined,
       bookmaker_ids: data.tipo === 'abertura_conta' ? (data.bookmaker_ids ?? []) : [],
       bookmaker_id: data.tipo === 'verificacao_kyc'
         ? (data.kyc_bookmaker_id || contextoInicial?.bookmaker_id)
@@ -644,6 +646,56 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
               />
 
             </div>
+
+            {/* Destinatário */}
+            <FormField
+              control={form.control}
+              name="destinatario_nome"
+              render={({ field }) => {
+                const [destSearch, setDestSearch] = useState('');
+                const filteredParceiros = parceiros.filter(p =>
+                  getFirstLastName(p.nome).toLowerCase().includes(destSearch.toLowerCase())
+                );
+                const showSuggestions = destSearch.length > 0 && filteredParceiros.length > 0 && field.value !== destSearch;
+                return (
+                  <FormItem>
+                    <FormLabel className="block text-center">Destinatário</FormLabel>
+                    <div className="relative">
+                      <FormControl>
+                        <Input
+                          placeholder="Para quem é a solicitação? Ex: Lolisa, Mariana..."
+                          className="h-9"
+                          value={field.value ?? ''}
+                          onChange={(e) => {
+                            field.onChange(e.target.value);
+                            setDestSearch(e.target.value);
+                          }}
+                          autoComplete="off"
+                        />
+                      </FormControl>
+                      {showSuggestions && (
+                        <div className="absolute z-50 top-full left-0 right-0 mt-1 rounded-md border border-border bg-popover shadow-lg max-h-40 overflow-y-auto">
+                          {filteredParceiros.slice(0, 8).map(p => (
+                            <button
+                              key={p.id}
+                              type="button"
+                              className="w-full text-left px-3 py-2 text-sm hover:bg-accent transition-colors"
+                              onClick={() => {
+                                field.onChange(getFirstLastName(p.nome));
+                                setDestSearch('');
+                              }}
+                            >
+                              {getFirstLastName(p.nome)}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                );
+              }}
+            />
 
             {/* Bookmakers + Responsáveis na mesma linha quando tipo = abertura_conta */}
             {tipoSelecionado === 'abertura_conta' ? (

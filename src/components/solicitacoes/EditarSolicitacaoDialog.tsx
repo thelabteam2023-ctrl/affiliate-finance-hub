@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -46,6 +47,7 @@ import { cn } from '@/lib/utils';
 const schema = z.object({
   descricao: z.string().min(1, 'Descrição é obrigatória'),
   tipo: z.enum(['abertura_conta', 'verificacao_kyc', 'transferencia', 'deposito', 'saque', 'verificacao_conta', 'verificacao_celular', 'verificacao_facial', 'contato_parceria', 'outros'] as const),
+  destinatario_nome: z.string().optional(),
   prazo: z.string().optional(),
   executor_ids: z.array(z.string()).min(1, 'Selecione ao menos um responsável'),
   bookmaker_ids: z.array(z.string()).optional(),
@@ -381,6 +383,7 @@ export function EditarSolicitacaoDialog({ solicitacao, open, onOpenChange }: Pro
     defaultValues: {
       descricao: solicitacao.descricao ?? '',
       tipo: solicitacao.tipo,
+      destinatario_nome: solicitacao.destinatario_nome ?? '',
       prazo: prazo ?? undefined,
       executor_ids: originalExecutorIds,
       bookmaker_ids: originalBookmakerIds,
@@ -393,6 +396,7 @@ export function EditarSolicitacaoDialog({ solicitacao, open, onOpenChange }: Pro
       form.reset({
         descricao: solicitacao.descricao ?? '',
         tipo: solicitacao.tipo,
+        destinatario_nome: solicitacao.destinatario_nome ?? '',
         prazo: prazo ?? undefined,
         executor_ids: originalExecutorIds,
         bookmaker_ids: originalBookmakerIds,
@@ -439,6 +443,7 @@ export function EditarSolicitacaoDialog({ solicitacao, open, onOpenChange }: Pro
       executor_id: data.executor_ids[0],
       executor_ids: data.executor_ids,
       executor_nomes: executorNomes,
+      destinatario_nome: data.destinatario_nome?.trim() || null,
       bookmaker_ids: data.tipo === 'abertura_conta' ? (data.bookmaker_ids ?? []) : [],
       bookmaker_nomes: selectedBms.map((b) => b.nome).join(', '),
       bookmaker_ids_originais: originalBookmakerIds,
@@ -488,6 +493,26 @@ export function EditarSolicitacaoDialog({ solicitacao, open, onOpenChange }: Pro
                 )}
               />
             </div>
+
+            {/* Destinatário */}
+            <FormField
+              control={form.control}
+              name="destinatario_nome"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Destinatário</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Para quem é a solicitação? Ex: Lolisa, Mariana..."
+                      className="h-9"
+                      value={field.value ?? ''}
+                      onChange={field.onChange}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             {/* Bookmakers — apenas quando tipo = abertura_conta */}
             {tipoSelecionado === 'abertura_conta' && (

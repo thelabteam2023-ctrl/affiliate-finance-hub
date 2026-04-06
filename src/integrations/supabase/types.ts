@@ -8605,6 +8605,7 @@ export type Database = {
           created_at: string
           descricao: string
           descricao_editada_at: string | null
+          destinatario_nome: string | null
           executor_id: string
           id: string
           lote_id: string | null
@@ -8631,6 +8632,7 @@ export type Database = {
           created_at?: string
           descricao: string
           descricao_editada_at?: string | null
+          destinatario_nome?: string | null
           executor_id: string
           id?: string
           lote_id?: string | null
@@ -8657,6 +8659,7 @@ export type Database = {
           created_at?: string
           descricao?: string
           descricao_editada_at?: string | null
+          destinatario_nome?: string | null
           executor_id?: string
           id?: string
           lote_id?: string | null

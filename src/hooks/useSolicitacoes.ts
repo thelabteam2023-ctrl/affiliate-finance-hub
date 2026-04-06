@@ -92,6 +92,7 @@ export function useCriarSolicitacao() {
       bookmaker_ids?: string[];
       projeto_id?: string;
       parceiro_id?: string;
+      destinatario_nome?: string;
       contexto_metadata?: Record<string, unknown>;
     }) => {
       if (!user || !workspaceId) throw new Error('Não autenticado');
@@ -109,6 +110,7 @@ export function useCriarSolicitacao() {
           bookmaker_ids: payload.bookmaker_ids?.length ? payload.bookmaker_ids : null,
           projeto_id: payload.projeto_id ?? null,
           parceiro_id: payload.parceiro_id ?? null,
+          destinatario_nome: payload.destinatario_nome ?? null,
           contexto_metadata: payload.contexto_metadata ?? null,
           status: 'pendente',
         })
@@ -198,6 +200,7 @@ export function useEditarSolicitacao() {
       bookmaker_ids,
       bookmaker_nomes,
       bookmaker_ids_originais,
+      destinatario_nome,
       contexto_metadata,
     }: {
       id: string;
@@ -210,6 +213,7 @@ export function useEditarSolicitacao() {
       bookmaker_ids?: string[];
       bookmaker_nomes?: string;
       bookmaker_ids_originais?: string[];
+      destinatario_nome?: string | null;
       contexto_metadata?: Record<string, unknown> | null;
     }) => {
       // Calcula as casas novas (adicionadas nesta edição)
@@ -241,6 +245,7 @@ export function useEditarSolicitacao() {
           tipo,
           prazo: prazo ?? null,
           executor_id,
+          destinatario_nome: destinatario_nome ?? null,
           contexto_metadata: meta,
           descricao_editada_at: new Date().toISOString(),
         })

@@ -36,6 +36,7 @@ export interface Solicitacao {
   bookmaker_id?: string | null;
   projeto_id?: string | null;
   parceiro_id?: string | null;
+  destinatario_nome?: string | null;
   valor?: number | null;
   lote_id?: string | null;
   contexto_metadata?: Record<string, unknown> | null;
