@@ -1,4 +1,4 @@
-import { Bell, Users, Users2, Landmark, Wallet, Building2, TrendingUp, UserPlus, PieChart, Briefcase, FolderKanban, FlaskConical, Settings, LogOut, Star, Shield, Calculator, StickyNote, ShieldCheck, ChevronUp, ChevronDown, Sun, Moon, Target, Layers, ArrowLeftRight, Zap, Truck } from "lucide-react";
+import { Bell, Users, Users2, Landmark, Wallet, Building2, TrendingUp, UserPlus, PieChart, Briefcase, FolderKanban, FlaskConical, Settings, LogOut, Star, Shield, Calculator, StickyNote, ShieldCheck, ChevronUp, ChevronDown, Sun, Moon, Target, Layers, ArrowLeftRight, Zap, Truck, ClipboardList } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -71,7 +71,7 @@ interface ProjectInfo {
 // Icon mapping for favorites
 const iconMap: Record<string, any> = {
   Bell, Users, Users2, Landmark, Wallet, Building2, TrendingUp, 
-  UserPlus, PieChart, Briefcase, FolderKanban, FlaskConical, Settings, Star, Shield, Calculator, StickyNote, Truck
+  UserPlus, PieChart, Briefcase, FolderKanban, FlaskConical, Settings, Star, Shield, Calculator, StickyNote, Truck, ClipboardList
 };
 
 // Menu structure organized by functional domain
