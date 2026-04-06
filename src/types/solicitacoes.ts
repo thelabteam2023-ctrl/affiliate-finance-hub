@@ -11,7 +11,7 @@ export type SolicitacaoTipo =
   | 'contato_parceria'
   | 'outros';
 
-export type SolicitacaoPrioridade = 'baixa' | 'media' | 'alta' | 'urgente';
+export type SolicitacaoPrioridade = 'baixa' | 'media' | 'alta';
 
 export type SolicitacaoStatus =
   | 'pendente'
@@ -71,11 +71,89 @@ export const SOLICITACAO_TIPO_FALLBACK: Record<string, SolicitacaoTipo> = {
   verificacao_facial: 'verificacao_kyc',
 };
 
+// ---- Prioridade (3 níveis com SLA) ----
+
 export const SOLICITACAO_PRIORIDADE_LABELS: Record<SolicitacaoPrioridade, string> = {
   baixa: 'Baixa',
   media: 'Média',
   alta: 'Alta',
-  urgente: 'Urgente',
+};
+
+export const SOLICITACAO_PRIORIDADE_CONFIG: Record<SolicitacaoPrioridade, {
+  label: string;
+  icon: string;
+  slaHours: number;
+  slaLabel: string;
+  borderColor: string;
+  bgColor: string;
+  textColor: string;
+  dotColor: string;
+}> = {
+  baixa: {
+    label: 'Baixa',
+    icon: '🟢',
+    slaHours: 24,
+    slaLabel: '24h',
+    borderColor: 'border-l-emerald-500',
+    bgColor: 'bg-emerald-500/10',
+    textColor: 'text-emerald-400',
+    dotColor: 'bg-emerald-500',
+  },
+  media: {
+    label: 'Média',
+    icon: '🟡',
+    slaHours: 12,
+    slaLabel: '12h',
+    borderColor: 'border-l-yellow-500',
+    bgColor: 'bg-yellow-500/10',
+    textColor: 'text-yellow-400',
+    dotColor: 'bg-yellow-500',
+  },
+  alta: {
+    label: 'Alta',
+    icon: '🔴',
+    slaHours: 6,
+    slaLabel: '6h',
+    borderColor: 'border-l-red-500',
+    bgColor: 'bg-red-500/10',
+    textColor: 'text-red-400',
+    dotColor: 'bg-red-500',
+  },
+};
+
+// Fallback de prioridade: urgente → alta
+export const PRIORIDADE_FALLBACK: Record<string, SolicitacaoPrioridade> = {
+  urgente: 'alta',
+};
+
+export function resolverPrioridade(p: string): SolicitacaoPrioridade {
+  if (p in SOLICITACAO_PRIORIDADE_CONFIG) return p as SolicitacaoPrioridade;
+  if (p in PRIORIDADE_FALLBACK) return PRIORIDADE_FALLBACK[p];
+  return 'baixa';
+}
+
+/** Calcula o SLA restante em ms. Negativo = vencido. */
+export function calcularSlaRestante(createdAt: string, prioridade: SolicitacaoPrioridade): number {
+  const config = SOLICITACAO_PRIORIDADE_CONFIG[prioridade];
+  const deadline = new Date(createdAt).getTime() + config.slaHours * 60 * 60 * 1000;
+  return deadline - Date.now();
+}
+
+/** Formata SLA restante como "Xh Ym" ou "Vencido Xh" */
+export function formatarSla(restanteMs: number): string {
+  const abs = Math.abs(restanteMs);
+  const hours = Math.floor(abs / (60 * 60 * 1000));
+  const minutes = Math.floor((abs % (60 * 60 * 1000)) / (60 * 1000));
+  const label = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+  return restanteMs < 0 ? `Vencido ${label}` : label;
+}
+
+// ---- Status ----
+
+export const SOLICITACAO_PRIORIDADE_COLORS: Record<SolicitacaoPrioridade, string> = {
+  baixa: 'text-emerald-400 border-emerald-400/50',
+  media: 'text-yellow-400 border-yellow-400/50',
+  alta: 'text-red-400 border-red-400/50',
 };
 
 export const SOLICITACAO_STATUS_LABELS: Record<SolicitacaoStatus, string> = {
@@ -83,13 +161,6 @@ export const SOLICITACAO_STATUS_LABELS: Record<SolicitacaoStatus, string> = {
   em_execucao: 'Em Execução',
   concluida: 'Concluída',
   recusada: 'Recusada',
-};
-
-export const SOLICITACAO_PRIORIDADE_COLORS: Record<SolicitacaoPrioridade, string> = {
-  baixa: 'text-muted-foreground border-muted-foreground/50',
-  media: 'text-blue-400 border-blue-400/50',
-  alta: 'text-orange-400 border-orange-400/50',
-  urgente: 'text-red-400 border-red-400/50',
 };
 
 export const SOLICITACAO_STATUS_COLORS: Record<SolicitacaoStatus, string> = {
