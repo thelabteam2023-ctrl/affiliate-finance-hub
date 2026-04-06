@@ -53,7 +53,7 @@ import { cn } from '@/lib/utils';
 const schema = z.object({
   descricao: z.string().min(10, 'Descreva a solicitação com pelo menos 10 caracteres'),
   tipo: z.enum(['abertura_conta', 'verificacao_kyc', 'transferencia', 'deposito', 'saque', 'verificacao_conta', 'verificacao_celular', 'verificacao_facial', 'contato_parceria', 'outros'] as const),
-  prazo: z.string().min(1, 'Selecione o prazo limite'),
+  prazo: z.string().optional(),
   executor_ids: z.array(z.string()).min(1, 'Selecione ao menos um responsável'),
   bookmaker_ids: z.array(z.string()).optional(),
   kyc_bookmaker_id: z.string().optional(),
@@ -614,8 +614,8 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" style={{ fontFamily: "'Syne', sans-serif" }}>
-            {/* Tipo + Prazo — grid alinhado */}
-            <div className="grid grid-cols-2 gap-4 items-start">
+            {/* Tipo */}
+            <div className="grid grid-cols-1 gap-4 items-start">
               <FormField
                 control={form.control}
                 name="tipo"
@@ -643,25 +643,6 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="prazo"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="block text-center">Prazo Limite *</FormLabel>
-                    <FormControl>
-                      <DateTimePicker
-                        value={field.value}
-                        onChange={field.onChange}
-                        placeholder="Selecionar data e hora"
-                        fromYear={new Date().getFullYear()}
-                        toYear={new Date().getFullYear() + 3}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </div>
 
             {/* Bookmakers + Responsáveis na mesma linha quando tipo = abertura_conta */}
