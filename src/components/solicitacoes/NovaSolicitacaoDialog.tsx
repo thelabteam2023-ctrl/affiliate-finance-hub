@@ -1,8 +1,8 @@
-import { useForm, Controller } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { getFirstLastName } from '@/lib/utils';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -24,7 +24,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import * as SelectPrimitive from '@radix-ui/react-select';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -35,7 +34,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { DateTimePicker } from '@/components/ui/date-time-picker';
 import { useCriarSolicitacao } from '@/hooks/useSolicitacoes';
 import { useWorkspaceMembers } from '@/hooks/useWorkspaceMembers';
 import { useWorkspaceBookmakers } from '@/hooks/useWorkspaceBookmakers';
@@ -43,10 +41,8 @@ import { SOLICITACAO_TIPO_LABELS } from '@/types/solicitacoes';
 import type { SolicitacaoTipo } from '@/types/solicitacoes';
 import { KycBookmakerSelect } from './KycBookmakerSelect';
 import type { OperationalBookmakerOption } from '@/hooks/useOperationalBookmakers';
-import { useParceiroContas } from '@/hooks/useParceiroContas';
-import type { ContaOuWallet } from '@/hooks/useParceiroContas';
 import { supabase } from '@/integrations/supabase/client';
-import { ClipboardList, Loader2, Search, X, MoveRight, Landmark, Wallet } from 'lucide-react';
+import { ClipboardList, Loader2, Search, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // ---- Schema do formulário ----
@@ -396,89 +392,20 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
       descricao: '',
       tipo: contextoInicial?.tipo || 'outros',
       destinatario_nome: '',
-      prazo: undefined,
       executor_ids: [],
       bookmaker_ids: [],
       kyc_bookmaker_id: '',
     },
   });
 
-  const MOEDAS_TRANSFERENCIA = ['BRL', 'USD', 'EUR', 'USDT', 'BTC', 'ETH', 'PIX', 'Outro'];
-
   const tipoSelecionado = form.watch('tipo');
-  const subtipoTransferencia = form.watch('subtipo_transferencia') ?? 'necessidade';
 
-  // Watch campos de transferência
-  const origemParceiroId = form.watch('origem_parceiro_id');
-  const origemContaId = form.watch('origem_conta_id');
-  const destinoParceiroId = form.watch('destino_parceiro_id');
-  const destinoContaId = form.watch('destino_conta_id');
-  const transferenciaValor = form.watch('transferencia_valor');
-  const transferenciaMoeda = form.watch('transferencia_moeda');
-
-  // Estado dos parceiros para select (carregados do DB) — usado para destinatário e transferência
+  // Estado dos parceiros para select (carregados do DB) — usado para destinatário
   const [parceiros, setParceiros] = useState<{ id: string; nome: string }[]>([]);
   useEffect(() => {
     supabase.from('parceiros').select('id, nome').eq('status', 'ativo').order('nome')
       .then(({ data }) => setParceiros(data ?? []));
   }, []);
-
-  // Inicializar subtipo padrão ao entrar em transferência
-  useEffect(() => {
-    if (tipoSelecionado === 'transferencia' && !form.getValues('subtipo_transferencia')) {
-      form.setValue('subtipo_transferencia', 'necessidade');
-    }
-  }, [tipoSelecionado]);
-
-  // Em 'transferencia', origem também é necessária
-  const needsOrigem = subtipoTransferencia === 'transferencia';
-  // Destino sempre necessário
-  const needsDestino = true;
-
-  // Contas/wallets por parceiro
-  const { data: origemContas = [], isLoading: origemContasLoading } = useParceiroContas(
-    tipoSelecionado === 'transferencia' && needsOrigem ? (origemParceiroId ?? null) : null
-  );
-  const { data: destinoContas = [], isLoading: destinoContasLoading } = useParceiroContas(
-    tipoSelecionado === 'transferencia' ? (destinoParceiroId ?? null) : null
-  );
-
-  // Moeda derivada sempre da conta de destino; lista vazia até conta ser selecionada
-  const moedaOptions = useMemo(() => {
-    const conta = destinoContas.find(c => c.id === destinoContaId);
-    if (!conta) return [];  // nenhuma opção até selecionar a conta
-    if (conta.tipo === 'banco') return [(conta as import('@/hooks/useParceiroContas').ContaBancaria).moeda];
-    if (conta.tipo === 'wallet') return (conta as import('@/hooks/useParceiroContas').WalletCrypto).moedas;
-    return MOEDAS_TRANSFERENCIA;
-  }, [destinoContaId, destinoContas]);
-
-  // Auto-seleciona moeda quando há só uma opção
-  useEffect(() => {
-    if (moedaOptions.length === 1) {
-      form.setValue('transferencia_moeda', moedaOptions[0]);
-    } else if (moedaOptions.length > 1 && transferenciaMoeda && !moedaOptions.includes(transferenciaMoeda)) {
-      form.setValue('transferencia_moeda', '');
-    }
-  }, [moedaOptions]);
-
-  // Labels para o preview
-  const origemParceiroNome = parceiros.find(p => p.id === origemParceiroId)?.nome ?? '';
-  const destinoParceiroNome = parceiros.find(p => p.id === destinoParceiroId)?.nome ?? '';
-  const origemContaLabel = origemContas.find(c => c.id === origemContaId)?.label ?? '';
-  const destinoContaLabel = destinoContas.find(c => c.id === destinoContaId)?.label ?? '';
-
-  const transferenciaResumo = useMemo(() => {
-    if (tipoSelecionado !== 'transferencia') return null;
-    if (!transferenciaValor || !transferenciaMoeda) return null;
-    const valor = `${transferenciaValor} ${transferenciaMoeda}`;
-    if (subtipoTransferencia === 'necessidade') {
-      if (!destinoContaLabel || !destinoParceiroNome) return null;
-      return `Necessidade de ${valor} na conta ${destinoContaLabel} (${getFirstLastName(destinoParceiroNome)})`;
-    }
-    // transferencia
-    if (!origemContaLabel || !origemParceiroNome || !destinoContaLabel || !destinoParceiroNome) return null;
-    return `Transferir ${valor} de ${origemContaLabel} (${getFirstLastName(origemParceiroNome)}) para ${destinoContaLabel} (${getFirstLastName(destinoParceiroNome)})`;
-  }, [tipoSelecionado, subtipoTransferencia, transferenciaValor, transferenciaMoeda, origemContaLabel, origemParceiroNome, destinoContaLabel, destinoParceiroNome]);
 
   const bookmakerItems = useMemo(
     () =>
@@ -519,31 +446,6 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
       metadata['kyc_projeto_nome'] = kycBookmakerData.projeto_nome ?? null;
     }
 
-    // Transferência: armazena blocos de origem/destino com dados reais
-    if (data.tipo === 'transferencia') {
-      const sub = data.subtipo_transferencia ?? 'necessidade';
-      const origemContaDados = origemContas.find(c => c.id === data.origem_conta_id);
-      const destinoContaDados = destinoContas.find(c => c.id === data.destino_conta_id);
-      const origemParcNome = parceiros.find(p => p.id === data.origem_parceiro_id)?.nome ?? '';
-      const destinoParcNome = parceiros.find(p => p.id === data.destino_parceiro_id)?.nome ?? '';
-      const valor = `${data.transferencia_valor} ${data.transferencia_moeda}`;
-      let resumo = '';
-      if (sub === 'necessidade') {
-        resumo = `Necessidade de ${valor} na conta ${destinoContaDados?.label ?? ''} (${getFirstLastName(destinoParcNome)})`;
-      } else {
-        resumo = `Transferir ${valor} de ${origemContaDados?.label ?? ''} (${getFirstLastName(origemParcNome)}) para ${destinoContaDados?.label ?? ''} (${getFirstLastName(destinoParcNome)})`;
-      }
-      metadata['transferencia'] = {
-        subtipo: sub,
-        origem: sub === 'transferencia' ? { parceiro_id: data.origem_parceiro_id, parceiro_nome: origemParcNome, conta_id: data.origem_conta_id, conta_label: origemContaDados?.label ?? '', tipo: origemContaDados?.tipo ?? '' } : null,
-        destino: { parceiro_id: data.destino_parceiro_id, parceiro_nome: destinoParcNome, conta_id: data.destino_conta_id, conta_label: destinoContaDados?.label ?? '', tipo: destinoContaDados?.tipo ?? '' },
-        valor: data.transferencia_valor,
-        moeda: data.transferencia_moeda,
-        resumo,
-      };
-    }
-
-
     // Armazena múltiplos executores no metadata
     const executorNomes = data.executor_ids.map(
       (id) => members.find((m) => m.user_id === id)?.full_name || id,
@@ -559,7 +461,6 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
       titulo: tituloGerado,
       descricao: data.descricao,
       tipo: data.tipo,
-      prazo: data.prazo,
       executor_id: data.executor_ids[0],
       destinatario_nome: data.destinatario_nome?.trim() || undefined,
       bookmaker_ids: data.tipo === 'abertura_conta' ? (data.bookmaker_ids ?? []) : [],
@@ -615,7 +516,6 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
                   </FormItem>
                 )}
               />
-
             </div>
 
             {/* Destinatário */}
@@ -741,287 +641,6 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
                   )}
                 />
               </div>
-            ) : tipoSelecionado === 'transferencia' ? (
-              <>
-                {/* ── Seletor de modo ── */}
-                <div className="flex items-center justify-center gap-1 p-1 rounded-lg bg-muted/40 border border-border/40">
-                  {([
-                    { key: 'necessidade',   icon: '📋', label: 'Necessidade' },
-                    { key: 'transferencia', icon: '🔄', label: 'Transferência' },
-                  ] as const).map(({ key, icon, label }) => (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => {
-                        form.setValue('subtipo_transferencia', key);
-                        form.setValue('origem_parceiro_id', '');
-                        form.setValue('origem_conta_id', '');
-                        form.setValue('destino_parceiro_id', '');
-                        form.setValue('destino_conta_id', '');
-                        form.setValue('transferencia_moeda', '');
-                      }}
-                      className={cn(
-                        'flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all',
-                        subtipoTransferencia === key
-                          ? 'bg-primary text-primary-foreground shadow-sm'
-                          : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
-                      )}
-                    >
-                      <span>{icon}</span>
-                      {label}
-                    </button>
-                  ))}
-                </div>
-
-                {/* ── Blocos de conta ── */}
-                <div className="space-y-3">
-                  <div className={cn(
-                    'grid gap-3 items-start',
-                    subtipoTransferencia === 'transferencia'
-                      ? 'grid-cols-[1fr_auto_1fr]'
-                      : 'grid-cols-1'
-                  )}>
-                    {/* Bloco Origem (só em transferência) */}
-                    {needsOrigem && (
-                      <div className="rounded-lg border border-border/60 bg-muted/20 p-3 space-y-2">
-                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide text-center">
-                          Origem
-                        </p>
-                        <FormField
-                          control={form.control}
-                          name="origem_parceiro_id"
-                          render={({ field }) => {
-                            const [searchOrigem, setSearchOrigem] = useState('');
-                            const filteredOrigem = parceiros.filter(p =>
-                              getFirstLastName(p.nome).toLowerCase().includes(searchOrigem.toLowerCase())
-                            );
-                            return (
-                              <FormItem>
-                                <FormLabel className="text-xs">Parceiro *</FormLabel>
-                                <Select
-                                  onValueChange={(v) => { field.onChange(v); form.setValue('origem_conta_id', ''); form.setValue('transferencia_moeda', ''); }}
-                                  value={field.value ?? ''}
-                                >
-                                  <FormControl>
-                                    <SelectTrigger className="h-8 text-sm">
-                                      <SelectValue placeholder="Selecionar parceiro...">
-                                        {field.value ? getFirstLastName(parceiros.find(p => p.id === field.value)?.nome ?? '') : null}
-                                      </SelectValue>
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent className="z-[9999]">
-                                    <div className="px-2 pt-2 pb-1 border-b border-border sticky top-0 bg-popover z-10">
-                                      <div className="relative">
-                                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-                                        <input type="text" value={searchOrigem} onChange={e => setSearchOrigem(e.target.value)} placeholder="Buscar parceiro..."
-                                          className="w-full h-7 pl-7 pr-2 text-xs rounded-md border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                                          onKeyDown={e => e.stopPropagation()} />
-                                      </div>
-                                    </div>
-                                    <div className="max-h-48 overflow-y-auto">
-                                      {filteredOrigem.length === 0
-                                        ? <p className="px-3 py-2 text-xs text-muted-foreground">Nenhum parceiro encontrado</p>
-                                        : filteredOrigem.map(p => <SelectItem key={p.id} value={p.id}>{getFirstLastName(p.nome)}</SelectItem>)
-                                      }
-                                    </div>
-                                  </SelectContent>
-                                </Select>
-                                <FormMessage className="text-[10px]" />
-                              </FormItem>
-                            );
-                          }}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="origem_conta_id"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-xs">Conta / Wallet *</FormLabel>
-                              <Select onValueChange={(v) => { field.onChange(v); }} value={field.value ?? ''} disabled={!origemParceiroId}>
-                                <FormControl>
-                                  <SelectTrigger className="h-8 text-sm">
-                                    {origemContasLoading ? <span className="text-muted-foreground text-xs">Carregando...</span>
-                                      : <SelectValue placeholder={origemParceiroId ? 'Selecionar conta...' : 'Selecione o parceiro'} />}
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent className="z-[9999]">
-                                  {origemContas.length === 0 && <p className="px-3 py-2 text-xs text-muted-foreground">Nenhuma conta cadastrada</p>}
-                                  {origemContas.filter(c => c.tipo === 'banco').length > 0 && (<>
-                                    <div className="px-2 py-1 flex items-center gap-1.5 text-[10px] text-muted-foreground uppercase tracking-wide font-semibold"><Landmark className="h-3 w-3" /> Contas Bancárias</div>
-                                    {origemContas.filter(c => c.tipo === 'banco').map(c => <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>)}
-                                  </>)}
-                                  {origemContas.filter(c => c.tipo === 'wallet').length > 0 && (<>
-                                    <div className="px-2 py-1 flex items-center gap-1.5 text-[10px] text-muted-foreground uppercase tracking-wide font-semibold mt-1"><Wallet className="h-3 w-3" /> Wallets Crypto</div>
-                                    {origemContas.filter(c => c.tipo === 'wallet').map(c => <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>)}
-                                  </>)}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage className="text-[10px]" />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                    )}
-
-                    {/* Seta central (só em transferência) */}
-                    {subtipoTransferencia === 'transferencia' && (
-                      <div className="flex items-center justify-center pt-10">
-                        <MoveRight className="h-6 w-6 text-primary" />
-                      </div>
-                    )}
-
-                    {/* Bloco Destino (sempre visível) */}
-                    <div className="rounded-lg border border-border/60 bg-muted/20 p-3 space-y-2">
-                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide text-center">
-                        {subtipoTransferencia === 'necessidade' ? '📋 Conta de Destino' : 'Destino'}
-                      </p>
-                      <div className="grid grid-cols-2 gap-3">
-                      <FormField
-                        control={form.control}
-                        name="destino_parceiro_id"
-                        render={({ field }) => {
-                          const [searchDestino, setSearchDestino] = useState('');
-                          const filteredDestino = parceiros.filter(p =>
-                            getFirstLastName(p.nome).toLowerCase().includes(searchDestino.toLowerCase())
-                          );
-                          return (
-                            <FormItem>
-                              <FormLabel className="text-xs">Parceiro *</FormLabel>
-                              <Select
-                                onValueChange={(v) => { field.onChange(v); form.setValue('destino_conta_id', ''); form.setValue('transferencia_moeda', ''); }}
-                                value={field.value ?? ''}
-                              >
-                                <FormControl>
-                                  <SelectTrigger className="h-8 text-sm">
-                                    <SelectValue placeholder="Selecionar parceiro...">
-                                      {field.value ? getFirstLastName(parceiros.find(p => p.id === field.value)?.nome ?? '') : null}
-                                    </SelectValue>
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent className="z-[9999]">
-                                  <div className="px-2 pt-2 pb-1 border-b border-border sticky top-0 bg-popover z-10">
-                                    <div className="relative">
-                                      <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-                                      <input type="text" value={searchDestino} onChange={e => setSearchDestino(e.target.value)} placeholder="Buscar parceiro..."
-                                        className="w-full h-7 pl-7 pr-2 text-xs rounded-md border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                                        onKeyDown={e => e.stopPropagation()} />
-                                    </div>
-                                  </div>
-                                  <div className="max-h-48 overflow-y-auto">
-                                    {filteredDestino.length === 0
-                                      ? <p className="px-3 py-2 text-xs text-muted-foreground">Nenhum parceiro encontrado</p>
-                                      : filteredDestino.map(p => <SelectItem key={p.id} value={p.id}>{getFirstLastName(p.nome)}</SelectItem>)
-                                    }
-                                  </div>
-                                </SelectContent>
-                              </Select>
-                              <FormMessage className="text-[10px]" />
-                            </FormItem>
-                          );
-                        }}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="destino_conta_id"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-xs">Conta / Wallet *</FormLabel>
-                            <Select onValueChange={(v) => { field.onChange(v); form.setValue('transferencia_moeda', ''); }} value={field.value ?? ''} disabled={!destinoParceiroId}>
-                              <FormControl>
-                                <SelectTrigger className="h-8 text-sm">
-                                  {destinoContasLoading ? <span className="text-muted-foreground text-xs">Carregando...</span>
-                                    : <SelectValue placeholder={destinoParceiroId ? 'Selecionar conta...' : 'Selecione o parceiro'} />}
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent className="z-[9999]">
-                                {destinoContas.length === 0 && <p className="px-3 py-2 text-xs text-muted-foreground">Nenhuma conta cadastrada</p>}
-                                {destinoContas.filter(c => c.tipo === 'banco').length > 0 && (<>
-                                  <div className="px-2 py-1 flex items-center gap-1.5 text-[10px] text-muted-foreground uppercase tracking-wide font-semibold"><Landmark className="h-3 w-3" /> Contas Bancárias</div>
-                                  {destinoContas.filter(c => c.tipo === 'banco').map(c => <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>)}
-                                </>)}
-                                {destinoContas.filter(c => c.tipo === 'wallet').length > 0 && (<>
-                                  <div className="px-2 py-1 flex items-center gap-1.5 text-[10px] text-muted-foreground uppercase tracking-wide font-semibold mt-1"><Wallet className="h-3 w-3" /> Wallets Crypto</div>
-                                  {destinoContas.filter(c => c.tipo === 'wallet').map(c => <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>)}
-                                </>)}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage className="text-[10px]" />
-                          </FormItem>
-                        )}
-                      />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Valor + Moeda */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <FormField
-                      control={form.control}
-                      name="transferencia_valor"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs">Valor *</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Ex: 1000" type="text" inputMode="decimal" className="h-8 text-sm" {...field} />
-                          </FormControl>
-                          <FormMessage className="text-[10px]" />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="transferencia_moeda"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs">
-                            Moeda *
-                            {moedaOptions.length === 1 && (
-                              <span className="ml-1 text-[10px] text-primary font-normal">(automático)</span>
-                            )}
-                          </FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value ?? ''} disabled={!destinoContaId || moedaOptions.length === 1}>
-                            <FormControl>
-                              <SelectTrigger className="h-8 text-sm">
-                                <SelectValue placeholder={destinoContaId ? 'Selecionar...' : 'Selecione a conta primeiro'} />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent className="z-[9999]">
-                              {moedaOptions.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage className="text-[10px]" />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  {/* Preview automático */}
-                  {transferenciaResumo && (
-                    <div className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-2.5 flex items-center gap-2">
-                      <MoveRight className="h-4 w-4 text-primary shrink-0" />
-                      <p className="text-sm text-foreground font-medium">{transferenciaResumo}</p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Responsáveis para transferência */}
-                <FormField
-                  control={form.control}
-                  name="executor_ids"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="block text-center">Responsáveis pela Execução *</FormLabel>
-                      <MemberMultiSelect
-                        items={memberItems}
-                        value={field.value}
-                        onChange={field.onChange}
-                        loading={membersLoading}
-                      />
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </>
             ) : (
               <>
                 {/* Responsáveis — multi-select (outros tipos) */}
