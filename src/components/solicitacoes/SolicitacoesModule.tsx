@@ -145,13 +145,13 @@ export function SolicitacoesModule() {
         </Card>
       </div>
 
-      {/* Filters bar */}
-      <div className={isMobile ? 'space-y-2' : 'flex items-center justify-between gap-3 flex-wrap'}>
-        {/* Type filter chips */}
-        <div className="flex items-center gap-1.5 flex-wrap">
+      {/* Filters bar - single row */}
+      <div className="flex items-center justify-between gap-2">
+        {/* Left: type filter chips (scrollable on mobile) */}
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink min-w-0">
           <Badge
             variant={tipoFilter === null ? 'default' : 'outline'}
-            className="cursor-pointer text-xs"
+            className="cursor-pointer text-xs whitespace-nowrap shrink-0"
             onClick={() => setTipoFilter(null)}
           >
             Todos ({activeSolicitacoes.length})
@@ -160,7 +160,7 @@ export function SolicitacoesModule() {
             <Badge
               key={tipo}
               variant={tipoFilter === tipo ? 'default' : 'outline'}
-              className="cursor-pointer text-xs"
+              className="cursor-pointer text-xs whitespace-nowrap shrink-0"
               onClick={() =>
                 setTipoFilter(tipoFilter === tipo ? null : (tipo as SolicitacaoTipo))
               }
@@ -170,14 +170,14 @@ export function SolicitacoesModule() {
           ))}
         </div>
 
-        {/* View toggle + responsável filter */}
-        <div className="flex items-center gap-2">
+        {/* Right: responsável + view toggle */}
+        <div className="flex items-center gap-2 shrink-0">
           <Select
             value={responsavelFilter ?? 'todos'}
             onValueChange={(v) => setResponsavelFilter(v === 'todos' ? null : v)}
           >
-            <SelectTrigger className="h-8 w-[140px] text-xs">
-              <Users className="h-3.5 w-3.5 mr-1" />
+            <SelectTrigger className={isMobile ? 'h-8 w-[100px] text-xs' : 'h-8 w-[140px] text-xs'}>
+              <Users className="h-3.5 w-3.5 mr-1 shrink-0" />
               <SelectValue placeholder="Responsável" />
             </SelectTrigger>
             <SelectContent>
