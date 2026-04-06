@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -10,7 +10,6 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -23,61 +22,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { useWorkspaceMembers } from '@/hooks/useWorkspaceMembers';
 import { SOLICITACAO_TIPO_LABELS } from '@/types/solicitacoes';
 import type { SolicitacaoTipo, SolicitacaoPrioridade } from '@/types/solicitacoes';
-import { Loader2, Trash2, AlertCircle, ClipboardPaste, Pencil } from 'lucide-react';
+import { Loader2, Trash2, AlertCircle, ClipboardPaste, User, Gamepad2 } from 'lucide-react';
 import { cn, getFirstLastName } from '@/lib/utils';
 import { toast } from 'sonner';
-
-interface ParsedItem {
-  id: string;
-  tipo: SolicitacaoTipo;
-  descricao: string;
-  titular?: string;
-  bookmaker?: string;
-  valor?: number;
-  incompleto: boolean;
-  selecionado: boolean;
-}
-
-// Simple parser for free-text batch input
-function parseLines(text: string): ParsedItem[] {
-  const lines = text
-    .split('\n')
-    .map((l) => l.trim())
-    .filter(Boolean);
-
-  return lines.map((line, i) => {
-    const lower = line.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    let tipo: SolicitacaoTipo = 'outros';
-    let valor: number | undefined;
-
-    // Detect type from keywords
-    if (/^dep\b|deposito|depósito/i.test(lower)) tipo = 'deposito';
-    else if (/^saque\b|saq\b/i.test(lower)) tipo = 'saque';
-    else if (/sms|email|celular|telefone/i.test(lower)) tipo = 'verificacao_sms_email';
-    else if (/kyc|verificac|facial|documento|cpf/i.test(lower)) tipo = 'verificacao_kyc';
-    else if (/abertura|criar conta|nova conta/i.test(lower)) tipo = 'abertura_conta';
-    else if (/contato|parceria|parceiro/i.test(lower)) tipo = 'contato_parceria';
-
-    // Extract numeric value
-    const valorMatch = line.match(/(\d[\d.,]*)/);
-    if (valorMatch) {
-      const parsed = parseFloat(valorMatch[1].replace(/\./g, '').replace(',', '.'));
-      if (!isNaN(parsed) && parsed > 0) valor = parsed;
-    }
-
-    // The rest is the description
-    const incompleto = tipo === 'outros' && !valor;
-
-    return {
-      id: `${Date.now()}-${i}`,
-      tipo,
-      descricao: line,
-      valor,
-      incompleto,
-      selecionado: true,
-    };
-  });
-}
+import { parseBatchText, type ParsedItem } from '@/lib/solicitacoes-parser';
 
 interface Props {
   open: boolean;
@@ -96,7 +44,7 @@ export function SolicitacaoLoteDialog({ open, onOpenChange }: Props) {
   const { data: members = [] } = useWorkspaceMembers();
 
   const handleParse = () => {
-    const parsed = parseLines(rawText);
+    const parsed = parseBatchText(rawText);
     if (parsed.length === 0) {
       toast.error('Nenhuma linha válida encontrada');
       return;
@@ -148,10 +96,12 @@ export function SolicitacaoLoteDialog({ open, onOpenChange }: Props) {
           descricao: item.descricao,
           tipo: item.tipo,
           executor_id: executorId,
+          destinatario_nome: item.titular || null,
           contexto_metadata: {
             lote_id: loteId,
             executor_ids: [executorId],
             executor_nomes: executor?.full_name ? [executor.full_name] : [],
+            ...(item.bookmaker ? { bookmaker: item.bookmaker } : {}),
             ...(item.valor != null ? { valor: item.valor } : {}),
           },
         });
@@ -191,12 +141,12 @@ export function SolicitacaoLoteDialog({ open, onOpenChange }: Props) {
         {step === 'input' ? (
           <div className="space-y-4 flex-1">
             <p className="text-sm text-muted-foreground">
-              Cole múltiplas solicitações, uma por linha. O sistema identificará automaticamente o tipo, valor e contexto.
+              Cole múltiplas solicitações (texto livre). O sistema interpreta automaticamente tipo, plataforma, destinatário e valor — inclusive agrupando por contexto.
             </p>
             <Textarea
               value={rawText}
               onChange={(e) => setRawText(e.target.value)}
-              placeholder={`Exemplos:\nDep Betano Mariana 900\nSaque 900 bolsa Luiz\nFacial Betano Glayza\nSMS 365 Lolisa`}
+              placeholder={`Exemplos:\n\nFacial\nBetano Glayza\nSuperbet Glayza\n\nDep Betano Mariana 900\nSaque 900 bolsa Luiz\nSMS 365 Lolisa`}
               className="min-h-[200px] font-mono text-sm"
             />
             <DialogFooter>
@@ -234,10 +184,9 @@ export function SolicitacaoLoteDialog({ open, onOpenChange }: Props) {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="baixa">Baixa</SelectItem>
-                    <SelectItem value="media">Média</SelectItem>
-                    <SelectItem value="alta">Alta</SelectItem>
-                    <SelectItem value="urgente">Urgente</SelectItem>
+                    <SelectItem value="baixa">🟢 Baixa</SelectItem>
+                    <SelectItem value="media">🟡 Média</SelectItem>
+                    <SelectItem value="alta">🔴 Alta</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -280,6 +229,18 @@ export function SolicitacaoLoteDialog({ open, onOpenChange }: Props) {
                           )}
                         </SelectContent>
                       </Select>
+                      {item.bookmaker && (
+                        <Badge variant="secondary" className="text-[9px] gap-0.5 px-1.5">
+                          <Gamepad2 className="h-2.5 w-2.5" />
+                          {item.bookmaker}
+                        </Badge>
+                      )}
+                      {item.titular && (
+                        <Badge variant="outline" className="text-[9px] gap-0.5 px-1.5 text-blue-400 border-blue-400/50">
+                          <User className="h-2.5 w-2.5" />
+                          {item.titular}
+                        </Badge>
+                      )}
                       {item.incompleto && (
                         <Badge variant="outline" className="text-[9px] text-orange-400 border-orange-400/50 gap-0.5">
                           <AlertCircle className="h-2.5 w-2.5" />
@@ -287,7 +248,7 @@ export function SolicitacaoLoteDialog({ open, onOpenChange }: Props) {
                         </Badge>
                       )}
                     </div>
-                    <p className="text-xs text-foreground">{item.descricao}</p>
+                    <p className="text-xs text-muted-foreground">{item.descricao}</p>
                     {item.valor != null && (
                       <span className="text-[10px] text-primary font-medium">
                         R$ {item.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
