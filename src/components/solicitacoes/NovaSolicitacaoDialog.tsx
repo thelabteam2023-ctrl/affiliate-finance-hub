@@ -590,6 +590,7 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
       tipo: data.tipo,
       prazo: data.prazo,
       executor_id: data.executor_ids[0],
+      destinatario_nome: data.destinatario_nome?.trim() || undefined,
       bookmaker_ids: data.tipo === 'abertura_conta' ? (data.bookmaker_ids ?? []) : [],
       bookmaker_id: data.tipo === 'verificacao_kyc'
         ? (data.kyc_bookmaker_id || contextoInicial?.bookmaker_id)
