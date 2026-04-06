@@ -35,8 +35,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { DateTimePicker } from '@/components/ui/date-time-picker';
 import { useEditarSolicitacao } from '@/hooks/useSolicitacoes';
+// unused import removed
 import { useWorkspaceMembers } from '@/hooks/useWorkspaceMembers';
 import { useWorkspaceBookmakers } from '@/hooks/useWorkspaceBookmakers';
 import { SOLICITACAO_TIPO_LABELS } from '@/types/solicitacoes';
