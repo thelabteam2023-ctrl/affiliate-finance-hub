@@ -133,15 +133,14 @@ export function SolicitacoesModule() {
           ))}
         </div>
 
-        {/* Right: responsável + view toggle */}
-        <div className="flex items-center gap-2 shrink-0">
+        {/* Right: select + actions + view toggle */}
+        <div className="flex items-center gap-1.5 shrink-0">
           <Select
             value={responsavelFilter ?? 'todos'}
             onValueChange={(v) => setResponsavelFilter(v === 'todos' ? null : v)}
           >
-            <SelectTrigger className={isMobile ? 'h-8 w-[100px] text-xs' : 'h-8 w-[140px] text-xs'}>
-              <Users className="h-3.5 w-3.5 mr-1 shrink-0" />
-              <SelectValue placeholder="Responsável" />
+            <SelectTrigger className="h-8 w-auto min-w-[90px] text-xs gap-1 px-2.5" icon={<Users className="h-3.5 w-3.5" />}>
+              <SelectValue placeholder="Resp." />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="todos">Todos</SelectItem>
@@ -152,6 +151,42 @@ export function SolicitacoesModule() {
               ))}
             </SelectContent>
           </Select>
+
+          {isMobile ? (
+            <>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setLoteOpen(true)}
+              >
+                <ClipboardPaste className="h-3.5 w-3.5" />
+              </Button>
+              <Button
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setNovaOpen(true)}
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1.5 text-xs"
+                onClick={() => setLoteOpen(true)}
+              >
+                <ClipboardPaste className="h-3.5 w-3.5" />
+                Em Lote
+              </Button>
+              <Button onClick={() => setNovaOpen(true)} size="sm" className="h-8 gap-1.5 text-xs">
+                <Plus className="h-3.5 w-3.5" />
+                Nova Solicitação
+              </Button>
+            </>
+          )}
 
           {!isMobile && (
             <div className="flex items-center border border-border rounded-md">
