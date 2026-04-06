@@ -5,12 +5,9 @@
 export type SolicitacaoTipo =
   | 'abertura_conta'
   | 'verificacao_kyc'
-  | 'transferencia'
   | 'deposito'
   | 'saque'
-  | 'verificacao_conta'
-  | 'verificacao_celular'
-  | 'verificacao_facial'
+  | 'verificacao_sms_email'
   | 'contato_parceria'
   | 'outros';
 
@@ -59,14 +56,19 @@ export interface Solicitacao {
 export const SOLICITACAO_TIPO_LABELS: Record<SolicitacaoTipo, string> = {
   abertura_conta: 'Abertura de Bookmaker',
   verificacao_kyc: 'Verificação KYC',
-  transferencia: 'Transferência / Movimentação',
   deposito: 'Depósito',
-  saque: 'Saque',
-  verificacao_conta: 'Verificação de Conta',
-  verificacao_celular: 'Verificação de Celular',
-  verificacao_facial: 'Verificação Facial',
+  saque: 'Saques',
+  verificacao_sms_email: 'Verificação SMS/Email',
   contato_parceria: 'Contato para Parceria',
   outros: 'Outros',
+};
+
+// Fallback map: tipos antigos → novos (para registros históricos)
+export const SOLICITACAO_TIPO_FALLBACK: Record<string, SolicitacaoTipo> = {
+  transferencia: 'outros',
+  verificacao_conta: 'verificacao_kyc',
+  verificacao_celular: 'verificacao_sms_email',
+  verificacao_facial: 'verificacao_kyc',
 };
 
 export const SOLICITACAO_PRIORIDADE_LABELS: Record<SolicitacaoPrioridade, string> = {
@@ -110,3 +112,10 @@ export const KANBAN_COLUMNS: { status: SolicitacaoStatus; label: string; color: 
   { status: 'em_execucao', label: 'Em Andamento', color: 'text-blue-400', icon: '🔵' },
   { status: 'concluida', label: 'Concluído', color: 'text-emerald-400', icon: '🟢' },
 ];
+
+/** Resolve um tipo (potencialmente legado) para o tipo atual */
+export function resolverTipoSolicitacao(tipo: string): SolicitacaoTipo {
+  if (tipo in SOLICITACAO_TIPO_LABELS) return tipo as SolicitacaoTipo;
+  if (tipo in SOLICITACAO_TIPO_FALLBACK) return SOLICITACAO_TIPO_FALLBACK[tipo];
+  return 'outros';
+}
