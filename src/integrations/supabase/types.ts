@@ -8607,6 +8607,7 @@ export type Database = {
           descricao_editada_at: string | null
           executor_id: string
           id: string
+          lote_id: string | null
           observadores: string[] | null
           parceiro_id: string | null
           prazo: string | null
@@ -8619,6 +8620,7 @@ export type Database = {
           tipo: Database["public"]["Enums"]["solicitacao_tipo"]
           titulo: string
           updated_at: string
+          valor: number | null
           workspace_id: string
         }
         Insert: {
@@ -8631,6 +8633,7 @@ export type Database = {
           descricao_editada_at?: string | null
           executor_id: string
           id?: string
+          lote_id?: string | null
           observadores?: string[] | null
           parceiro_id?: string | null
           prazo?: string | null
@@ -8643,6 +8646,7 @@ export type Database = {
           tipo?: Database["public"]["Enums"]["solicitacao_tipo"]
           titulo: string
           updated_at?: string
+          valor?: number | null
           workspace_id: string
         }
         Update: {
@@ -8655,6 +8659,7 @@ export type Database = {
           descricao_editada_at?: string | null
           executor_id?: string
           id?: string
+          lote_id?: string | null
           observadores?: string[] | null
           parceiro_id?: string | null
           prazo?: string | null
@@ -8667,6 +8672,7 @@ export type Database = {
           tipo?: Database["public"]["Enums"]["solicitacao_tipo"]
           titulo?: string
           updated_at?: string
+          valor?: number | null
           workspace_id?: string
         }
         Relationships: [
