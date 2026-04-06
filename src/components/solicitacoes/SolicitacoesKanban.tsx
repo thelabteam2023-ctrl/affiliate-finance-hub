@@ -16,7 +16,7 @@ import {
   DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn, getFirstLastName } from '@/lib/utils';
-import { useSolicitacoes, useAtualizarStatusSolicitacao, useAtualizarPrioridadeSolicitacao } from '@/hooks/useSolicitacoes';
+import { useSolicitacoes, useAtualizarStatusSolicitacao, useAtualizarPrioridadeSolicitacao, useExcluirSolicitacao } from '@/hooks/useSolicitacoes';
 import { useAuth } from '@/hooks/useAuth';
 import { useIsMobile } from '@/hooks/use-mobile';
 import {
@@ -38,7 +38,18 @@ import {
   ArrowRight,
   Flag,
   AlertTriangle,
+  Trash2,
 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { EditarSolicitacaoDialog } from './EditarSolicitacaoDialog';
 
 interface Props {
