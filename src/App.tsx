@@ -55,6 +55,7 @@ const ApostaMultiplaWindowPage = lazy(() => import("./pages/ApostaMultiplaWindow
 const SharedProject = lazy(() => import("./pages/SharedProject"));
 const SupplierPortal = lazy(() => import("./pages/SupplierPortal"));
 const FornecedoresPortal = lazy(() => import("./pages/FornecedoresPortal"));
+const Solicitacoes = lazy(() => import("./pages/Solicitacoes"));
 
 // ─── QueryClient com defaults globais de performance ───
 const queryClient = new QueryClient({
@@ -164,6 +165,15 @@ const App = () => (
               <ProtectedRoute>
                 <AuthenticatedLayout>
                   <CentralOperacoes />
+                </AuthenticatedLayout>
+              </ProtectedRoute>
+            } />
+            
+            {/* Solicitações - Página independente */}
+            <Route path="/solicitacoes" element={
+              <ProtectedRoute>
+                <AuthenticatedLayout>
+                  <Suspense fallback={<PageLoader />}><Solicitacoes /></Suspense>
                 </AuthenticatedLayout>
               </ProtectedRoute>
             } />
