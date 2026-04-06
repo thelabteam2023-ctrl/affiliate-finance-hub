@@ -66,7 +66,7 @@ function KanbanCard({
     return solicitacao.executor?.full_name ? [getFirstLastName(solicitacao.executor.full_name)] : ['—'];
   })();
 
-  const valor = (solicitacao as Record<string, unknown>).valor as number | null;
+  const valor = solicitacao.valor;
 
   return (
     <>
