@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -492,6 +493,26 @@ export function EditarSolicitacaoDialog({ solicitacao, open, onOpenChange }: Pro
                 )}
               />
             </div>
+
+            {/* Destinatário */}
+            <FormField
+              control={form.control}
+              name="destinatario_nome"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Destinatário</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Para quem é a solicitação? Ex: Lolisa, Mariana..."
+                      className="h-9"
+                      value={field.value ?? ''}
+                      onChange={field.onChange}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             {/* Bookmakers — apenas quando tipo = abertura_conta */}
             {tipoSelecionado === 'abertura_conta' && (
