@@ -14900,6 +14900,12 @@ export type Database = {
         | "verificacao_kyc"
         | "transferencia"
         | "outros"
+        | "deposito"
+        | "saque"
+        | "verificacao_conta"
+        | "verificacao_celular"
+        | "verificacao_facial"
+        | "contato_parceria"
       subscription_status:
         | "active"
         | "trialing"
@@ -15120,6 +15126,12 @@ export const Constants = {
         "verificacao_kyc",
         "transferencia",
         "outros",
+        "deposito",
+        "saque",
+        "verificacao_conta",
+        "verificacao_celular",
+        "verificacao_facial",
+        "contato_parceria",
       ],
       subscription_status: [
         "active",
