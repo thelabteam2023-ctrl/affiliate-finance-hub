@@ -1,4 +1,4 @@
-import { isPast, differenceInSeconds, formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow } from 'date-fns';
 import { getFirstLastName } from '@/lib/utils';
 import { ptBR } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
@@ -56,70 +56,6 @@ import { useEffect, useState } from 'react';
 import { EditarSolicitacaoDialog } from './EditarSolicitacaoDialog';
 
 
-// ---- Helpers ----
-function formatCountdown(secondsLeft: number): string {
-  if (secondsLeft <= 0) return 'Vencido';
-  const d = Math.floor(secondsLeft / 86400);
-  const h = Math.floor((secondsLeft % 86400) / 3600);
-  if (d > 0) return `${d}d ${h}h`;
-  if (h > 0) return `${h}h`;
-  return '< 1h';
-}
-
-// ---- Prazo badge ----
-function PrazoBadge({ prazo }: { prazo: string }) {
-  const date = new Date(prazo);
-  const vencido = isPast(date);
-
-  const [secondsLeft, setSecondsLeft] = useState<number>(
-    () => differenceInSeconds(date, new Date()),
-  );
-
-  useEffect(() => {
-    if (vencido) return;
-    const tick = () => setSecondsLeft(differenceInSeconds(date, new Date()));
-    tick();
-    const id = setInterval(tick, 60000);
-    return () => clearInterval(id);
-  }, [prazo]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const isUrgent = !vencido && secondsLeft < 86400;
-  const countdown = vencido ? 'Vencido' : formatCountdown(secondsLeft);
-
-  const dataFormatada = date.toLocaleString('pt-BR', {
-    day: '2-digit', month: '2-digit', year: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-  });
-
-  const tooltipText = vencido
-    ? `Prazo vencido em ${dataFormatada}`
-    : isUrgent
-    ? `Atenção! Resta ${countdown} para finalizar esta demanda. Prazo: ${dataFormatada}`
-    : `Resta ${countdown} para finalizar esta demanda. Prazo: ${dataFormatada}`;
-
-  return (
-    <TooltipProvider delayDuration={200}>
-      <Tooltip>
-        <TooltipTrigger
-          className={cn(
-            'inline-flex items-center gap-1 rounded-md border px-2.5 py-0.5 text-xs font-mono font-semibold transition-colors cursor-default',
-            vencido
-              ? 'text-destructive border-destructive/50'
-              : isUrgent
-              ? 'text-orange-400 border-orange-400/50'
-              : 'text-emerald-400 border-emerald-400/50',
-          )}
-        >
-          <Timer className="h-3 w-3" />
-          {countdown}
-        </TooltipTrigger>
-        <TooltipContent side="bottom" className="max-w-[240px] text-center text-xs">
-          {tooltipText}
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  );
-}
 
 
 function StatusBadge({ status }: { status: SolicitacaoStatus }) {
@@ -245,7 +181,7 @@ function SolicitacaoRow({
                 <Badge variant="secondary" className="text-xs font-medium">
                   {SOLICITACAO_TIPO_LABELS[solicitacao.tipo]}
                 </Badge>
-                {prazo && <PrazoBadge prazo={prazo} />}
+                
                 <StatusBadge status={solicitacao.status} />
               </div>
 
@@ -475,14 +411,9 @@ export function SolicitacoesList({ filtros, emptyMessage }: Props) {
   const { isOwnerOrAdmin } = useRole();
   const { data: solicitacoes = [], isLoading } = useSolicitacoes(filtros);
 
-  // Ordenar por prazo crescente (mais urgente primeiro)
+  // Ordenar por data de criação (mais recente primeiro)
   const ordenadas = [...solicitacoes].sort((a, b) => {
-    const prazoA = (a as unknown as { prazo?: string | null }).prazo;
-    const prazoB = (b as unknown as { prazo?: string | null }).prazo;
-    if (!prazoA && !prazoB) return 0;
-    if (!prazoA) return 1;
-    if (!prazoB) return -1;
-    return new Date(prazoA).getTime() - new Date(prazoB).getTime();
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
   });
 
   if (isLoading) {

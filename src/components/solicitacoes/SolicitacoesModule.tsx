@@ -90,7 +90,7 @@ export function SolicitacoesModule() {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-3 gap-3">
         <Card className="border-border/50">
           <CardContent className="p-4 flex items-center gap-3">
             <Clock className="h-8 w-8 text-yellow-400 flex-shrink-0" />
@@ -106,15 +106,6 @@ export function SolicitacoesModule() {
             <div>
               <p className="text-2xl font-bold">{kpis?.em_execucao ?? 0}</p>
               <p className="text-xs text-muted-foreground">Em Execução</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-border/50">
-          <CardContent className="p-4 flex items-center gap-3">
-            <Zap className="h-8 w-8 text-red-400 flex-shrink-0" />
-            <div>
-              <p className="text-2xl font-bold">{kpis?.urgentes ?? 0}</p>
-              <p className="text-xs text-muted-foreground">Prazo Vencido</p>
             </div>
           </CardContent>
         </Card>
