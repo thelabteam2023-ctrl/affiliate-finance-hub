@@ -459,8 +459,8 @@ export function EditarSolicitacaoDialog({ solicitacao, open, onOpenChange }: Pro
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            {/* Tipo + Prazo — alinhados */}
-            <div className="grid grid-cols-2 gap-4 items-start">
+            {/* Tipo */}
+            <div className="grid grid-cols-1 gap-4 items-start">
               <FormField
                 control={form.control}
                 name="tipo"
@@ -483,26 +483,6 @@ export function EditarSolicitacaoDialog({ solicitacao, open, onOpenChange }: Pro
                         )}
                       </SelectContent>
                     </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="prazo"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Prazo Limite</FormLabel>
-                    <FormControl>
-                      <DateTimePicker
-                        value={field.value}
-                        onChange={field.onChange}
-                        placeholder="Selecionar data e hora"
-                        fromYear={new Date().getFullYear()}
-                        toYear={new Date().getFullYear() + 3}
-                      />
-                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
