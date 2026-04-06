@@ -408,7 +408,7 @@ function SolicitacaoRow({
                       ))}
                     </>
                   )}
-                  {isAdmin && (
+                  {(isAdmin || isRequerente) && solicitacao.status === 'pendente' && (
                     <>
                       {(isRequerente || (podeAtualizar && proximosStatus.length > 0)) && <DropdownMenuSeparator />}
                       <DropdownMenuItem
@@ -439,9 +439,9 @@ function SolicitacaoRow({
       <AlertDialog open={confirmExcluir} onOpenChange={setConfirmExcluir}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir solicitação?</AlertDialogTitle>
+            <AlertDialogTitle>Excluir solicitação</AlertDialogTitle>
             <AlertDialogDescription>
-              A solicitação <strong>"{SOLICITACAO_TIPO_LABELS[solicitacao.tipo]}"</strong> será excluída permanentemente.
+              Essa ação não pode ser desfeita. Deseja continuar?
               Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
