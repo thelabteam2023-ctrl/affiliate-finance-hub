@@ -182,8 +182,9 @@ function SolicitacaoRow({
   const podeAtualizar = isExecutor || isRequerente;
   const temAcoes = (podeAtualizar && proximosStatus.length > 0) || isRequerente || isAdmin;
 
-  const prazo = (solicitacao as unknown as { prazo?: string | null }).prazo;
   const foiEditada = !!(solicitacao as unknown as { descricao_editada_at?: string | null }).descricao_editada_at;
+  const prio = resolverPrioridade(solicitacao.prioridade);
+  const prioConfig = SOLICITACAO_PRIORIDADE_CONFIG[prio];
 
   const meta = solicitacao.contexto_metadata as Record<string, unknown> | null;
 
