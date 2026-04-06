@@ -9,11 +9,13 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn, getFirstLastName } from '@/lib/utils';
 import { useSolicitacoes, useAtualizarStatusSolicitacao } from '@/hooks/useSolicitacoes';
 import { useAuth } from '@/hooks/useAuth';
+import { useIsMobile } from '@/hooks/use-mobile';
 import {
   SOLICITACAO_TIPO_LABELS,
   SOLICITACAO_PRIORIDADE_LABELS,
@@ -28,6 +30,7 @@ import {
   Clock,
   DollarSign,
   GripVertical,
+  ArrowRight,
 } from 'lucide-react';
 import { EditarSolicitacaoDialog } from './EditarSolicitacaoDialog';
 
@@ -40,12 +43,15 @@ interface Props {
 function KanbanCard({
   solicitacao,
   onDragStart,
+  isMobile,
 }: {
   solicitacao: Solicitacao;
   onDragStart: (e: React.DragEvent, id: string) => void;
+  isMobile: boolean;
 }) {
   const [editOpen, setEditOpen] = useState(false);
   const { user } = useAuth();
+  const { mutate: atualizarStatus } = useAtualizarStatusSolicitacao();
 
   const meta = solicitacao.contexto_metadata as Record<string, unknown> | null;
   const bookmakerNomes: string[] = (() => {
@@ -68,12 +74,24 @@ function KanbanCard({
 
   const valor = solicitacao.valor;
 
+  // Next possible statuses for mobile move action
+  const statusFlow: Record<SolicitacaoStatus, SolicitacaoStatus[]> = {
+    pendente: ['em_execucao', 'concluida', 'recusada'],
+    em_execucao: ['concluida', 'recusada'],
+    concluida: [],
+    recusada: [],
+  };
+  const nextStatuses = statusFlow[solicitacao.status];
+
   return (
     <>
       <Card
-        draggable
-        onDragStart={(e) => onDragStart(e, solicitacao.id)}
-        className="p-3 cursor-grab active:cursor-grabbing border-border/50 hover:border-border transition-all hover:shadow-md group"
+        draggable={!isMobile}
+        onDragStart={!isMobile ? (e) => onDragStart(e, solicitacao.id) : undefined}
+        className={cn(
+          'p-3 border-border/50 hover:border-border transition-all hover:shadow-md group',
+          !isMobile && 'cursor-grab active:cursor-grabbing',
+        )}
       >
         <div className="space-y-2">
           {/* Header: tipo + prioridade */}
@@ -90,10 +108,12 @@ function KanbanCard({
               </Badge>
             </div>
             <div className="flex items-center gap-0.5 shrink-0">
-              <GripVertical className="h-3.5 w-3.5 text-muted-foreground/40 opacity-0 group-hover:opacity-100 transition-opacity" />
+              {!isMobile && (
+                <GripVertical className="h-3.5 w-3.5 text-muted-foreground/40 opacity-0 group-hover:opacity-100 transition-opacity" />
+              )}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-6 w-6">
+                  <Button variant="ghost" size="icon" className="h-7 w-7 min-w-[28px]">
                     <MoreHorizontal className="h-3.5 w-3.5" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -101,6 +121,21 @@ function KanbanCard({
                   <DropdownMenuItem onClick={() => setEditOpen(true)}>
                     Editar
                   </DropdownMenuItem>
+                  {isMobile && nextStatuses.length > 0 && (
+                    <>
+                      <DropdownMenuSeparator />
+                      {nextStatuses.map((s) => (
+                        <DropdownMenuItem
+                          key={s}
+                          onClick={() => atualizarStatus({ id: solicitacao.id, status: s })}
+                          className={s === 'recusada' ? 'text-destructive focus:text-destructive' : ''}
+                        >
+                          <ArrowRight className="h-3.5 w-3.5 mr-2" />
+                          {SOLICITACAO_STATUS_LABELS[s]}
+                        </DropdownMenuItem>
+                      ))}
+                    </>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -178,6 +213,7 @@ function KanbanColumn({
   dragOverStatus,
   onDragOver,
   onDragLeave,
+  isMobile,
 }: {
   status: SolicitacaoStatus;
   label: string;
@@ -189,8 +225,25 @@ function KanbanColumn({
   dragOverStatus: SolicitacaoStatus | null;
   onDragOver: (e: React.DragEvent, status: SolicitacaoStatus) => void;
   onDragLeave: () => void;
+  isMobile: boolean;
 }) {
   const isDragOver = dragOverStatus === status;
+
+  if (isMobile) {
+    return (
+      <div className="space-y-2">
+        {items.length === 0 ? (
+          <div className="text-center py-8 text-xs text-muted-foreground/60">
+            Nenhuma solicitação
+          </div>
+        ) : (
+          items.map((s) => (
+            <KanbanCard key={s.id} solicitacao={s} onDragStart={onDragStart} isMobile={isMobile} />
+          ))
+        )}
+      </div>
+    );
+  }
 
   return (
     <div
@@ -222,7 +275,7 @@ function KanbanColumn({
             </div>
           ) : (
             items.map((s) => (
-              <KanbanCard key={s.id} solicitacao={s} onDragStart={onDragStart} />
+              <KanbanCard key={s.id} solicitacao={s} onDragStart={onDragStart} isMobile={isMobile} />
             ))
           )}
         </div>
@@ -237,6 +290,8 @@ export function SolicitacoesKanban({ tipoFilter, responsavelFilter }: Props) {
   const { mutate: atualizarStatus } = useAtualizarStatusSolicitacao();
   const [dragOverStatus, setDragOverStatus] = useState<SolicitacaoStatus | null>(null);
   const dragIdRef = useRef<string | null>(null);
+  const isMobile = useIsMobile();
+  const [mobileTab, setMobileTab] = useState<SolicitacaoStatus>('pendente');
 
   // Filter
   let filtered = solicitacoes;
@@ -292,6 +347,53 @@ export function SolicitacoesKanban({ tipoFilter, responsavelFilter }: Props) {
     [solicitacoes, atualizarStatus],
   );
 
+  // Mobile: tab-based single column
+  if (isMobile) {
+    const mobileCols = KANBAN_COLUMNS.filter((c) => c.status !== 'recusada');
+
+    return (
+      <div className="space-y-3">
+        {/* Tabs */}
+        <div className="flex items-center border-b border-border overflow-x-auto no-scrollbar">
+          {mobileCols.map((col) => (
+            <button
+              key={col.status}
+              onClick={() => setMobileTab(col.status)}
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap active:scale-95',
+                mobileTab === col.status
+                  ? 'border-primary text-foreground'
+                  : 'border-transparent text-muted-foreground',
+              )}
+            >
+              <span>{col.icon}</span>
+              <span>{col.label}</span>
+              <Badge variant="secondary" className="text-[10px] h-4 min-w-4 px-1 justify-center ml-0.5">
+                {grouped[col.status].length}
+              </Badge>
+            </button>
+          ))}
+        </div>
+
+        {/* Active column content */}
+        <KanbanColumn
+          status={mobileTab}
+          label=""
+          color=""
+          icon=""
+          items={grouped[mobileTab]}
+          onDragStart={handleDragStart}
+          onDrop={handleDrop}
+          dragOverStatus={dragOverStatus}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          isMobile
+        />
+      </div>
+    );
+  }
+
+  // Desktop: full kanban
   return (
     <div className="flex gap-3 overflow-x-auto pb-2">
       {KANBAN_COLUMNS.map((col) => (
@@ -307,6 +409,7 @@ export function SolicitacoesKanban({ tipoFilter, responsavelFilter }: Props) {
           dragOverStatus={dragOverStatus}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
+          isMobile={false}
         />
       ))}
     </div>
