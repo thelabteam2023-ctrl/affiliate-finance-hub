@@ -97,36 +97,43 @@ export function useCriarSolicitacao() {
     }) => {
       if (!user || !workspaceId) throw new Error('Não autenticado');
 
+      const insertPayload = {
+        workspace_id: workspaceId,
+        requerente_id: user.id,
+        titulo: payload.titulo,
+        descricao: payload.descricao,
+        tipo: payload.tipo,
+        prazo: payload.prazo ?? null,
+        executor_id: payload.executor_id,
+        bookmaker_id: payload.bookmaker_id ?? null,
+        bookmaker_ids: payload.bookmaker_ids?.length ? payload.bookmaker_ids : null,
+        projeto_id: payload.projeto_id ?? null,
+        parceiro_id: payload.parceiro_id ?? null,
+        destinatario_nome: payload.destinatario_nome ?? null,
+        contexto_metadata: payload.contexto_metadata ?? null,
+        status: 'pendente',
+      };
+      console.log('[useCriarSolicitacao] payload:', JSON.stringify(insertPayload, null, 2));
+
       const { data, error } = await solicitacoesTable()
-        .insert({
-          workspace_id: workspaceId,
-          requerente_id: user.id,
-          titulo: payload.titulo,
-          descricao: payload.descricao,
-          tipo: payload.tipo,
-          prazo: payload.prazo ?? null,
-          executor_id: payload.executor_id,
-          bookmaker_id: payload.bookmaker_id ?? null,
-          bookmaker_ids: payload.bookmaker_ids?.length ? payload.bookmaker_ids : null,
-          projeto_id: payload.projeto_id ?? null,
-          parceiro_id: payload.parceiro_id ?? null,
-          destinatario_nome: payload.destinatario_nome ?? null,
-          contexto_metadata: payload.contexto_metadata ?? null,
-          status: 'pendente',
-        })
+        .insert(insertPayload)
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('[useCriarSolicitacao] DB error:', error);
+        throw error;
+      }
       return data as Solicitacao;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
       toast.success('Solicitação criada com sucesso!');
     },
-    onError: (err) => {
-      console.error(err);
-      toast.error('Erro ao criar solicitação');
+    onError: (err: any) => {
+      console.error('[useCriarSolicitacao] ERRO:', err);
+      const msg = err?.message || err?.details || 'Erro desconhecido';
+      toast.error(`Erro ao criar solicitação: ${msg}`);
     },
   });
 }
