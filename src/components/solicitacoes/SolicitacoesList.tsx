@@ -1,4 +1,4 @@
-import { isPast, differenceInSeconds, formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow } from 'date-fns';
 import { getFirstLastName } from '@/lib/utils';
 import { ptBR } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
