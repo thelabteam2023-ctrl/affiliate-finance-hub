@@ -22,7 +22,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
-import { useSolicitacoes, useAtualizarStatusSolicitacao, useExcluirSolicitacao } from '@/hooks/useSolicitacoes';
+import { useSolicitacoes, useAtualizarStatusSolicitacao, useExcluirSolicitacao, useAtualizarPrioridadeSolicitacao } from '@/hooks/useSolicitacoes';
 import { useAuth } from '@/hooks/useAuth';
 import { useRole } from '@/hooks/useRole';
 import {
@@ -30,8 +30,12 @@ import {
   SOLICITACAO_STATUS_LABELS,
   SOLICITACAO_STATUS_COLORS,
   SOLICITACAO_STATUS_FLOW,
+  SOLICITACAO_PRIORIDADE_CONFIG,
+  resolverPrioridade,
+  calcularSlaRestante,
+  formatarSla,
 } from '@/types/solicitacoes';
-import type { Solicitacao, SolicitacaoStatus } from '@/types/solicitacoes';
+import type { Solicitacao, SolicitacaoStatus, SolicitacaoPrioridade } from '@/types/solicitacoes';
 import {
   ClipboardList,
   MoreHorizontal,
@@ -41,10 +45,10 @@ import {
   XCircle,
   Clock,
   User,
-  Timer,
   Trash2,
   FileText,
   Pencil,
+  AlertTriangle,
 } from 'lucide-react';
 import {
   Tooltip,
@@ -52,9 +56,71 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { EditarSolicitacaoDialog } from './EditarSolicitacaoDialog';
 
+// ---- Inline Priority Flag ----
+function PriorityFlag({ prioridade, solicitacaoId }: { prioridade: SolicitacaoPrioridade; solicitacaoId: string }) {
+  const { mutate: atualizarPrioridade } = useAtualizarPrioridadeSolicitacao();
+  const config = SOLICITACAO_PRIORIDADE_CONFIG[prioridade];
+  const priorities: SolicitacaoPrioridade[] = ['baixa', 'media', 'alta'];
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          className={cn(
+            'inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-medium transition-colors cursor-pointer hover:opacity-80',
+            config.bgColor,
+            config.textColor,
+            'border-current/30',
+          )}
+          title={`Prioridade: ${config.label} (SLA ${config.slaLabel})`}
+        >
+          <span>{config.icon}</span>
+          <span>{config.label}</span>
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="min-w-[140px]">
+        {priorities.map((p) => {
+          const c = SOLICITACAO_PRIORIDADE_CONFIG[p];
+          return (
+            <DropdownMenuItem
+              key={p}
+              onClick={() => atualizarPrioridade({ id: solicitacaoId, prioridade: p })}
+              className={cn(p === prioridade && 'font-semibold')}
+            >
+              <span className="mr-2">{c.icon}</span>
+              {c.label}
+              <span className="ml-auto text-[10px] text-muted-foreground">SLA {c.slaLabel}</span>
+            </DropdownMenuItem>
+          );
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+// ---- SLA Badge ----
+function SlaBadge({ createdAt, prioridade, status }: { createdAt: string; prioridade: SolicitacaoPrioridade; status: SolicitacaoStatus }) {
+  if (status === 'concluida' || status === 'recusada') return null;
+  const restante = calcularSlaRestante(createdAt, prioridade);
+  const vencido = restante < 0;
+
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-0.5 text-[10px] font-medium',
+        vencido ? 'text-red-400 animate-pulse' : 'text-muted-foreground',
+      )}
+      title={vencido ? 'SLA vencido' : `SLA restante: ${formatarSla(restante)}`}
+    >
+      {vencido && <AlertTriangle className="h-3 w-3" />}
+      <Clock className="h-3 w-3" />
+      {formatarSla(restante)}
+    </span>
+  );
+}
 
 
 
