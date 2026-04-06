@@ -1,0 +1,1 @@
+ALTER TABLE public.solicitacoes ADD COLUMN IF NOT EXISTS destinatario_nome TEXT NULL;
