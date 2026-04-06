@@ -169,6 +169,15 @@ const App = () => (
               </ProtectedRoute>
             } />
             
+            {/* Solicitações - Página independente */}
+            <Route path="/solicitacoes" element={
+              <ProtectedRoute>
+                <AuthenticatedLayout>
+                  <Suspense fallback={<PageLoader />}><Solicitacoes /></Suspense>
+                </AuthenticatedLayout>
+              </ProtectedRoute>
+            } />
+            
             {/* Anotações - Pessoal, qualquer usuário autenticado */}
             <Route path="/anotacoes" element={
               <ProtectedRoute>
