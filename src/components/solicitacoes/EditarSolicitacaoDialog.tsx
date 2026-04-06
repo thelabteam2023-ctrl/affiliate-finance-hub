@@ -35,8 +35,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { DateTimePicker } from '@/components/ui/date-time-picker';
 import { useEditarSolicitacao } from '@/hooks/useSolicitacoes';
+// unused import removed
 import { useWorkspaceMembers } from '@/hooks/useWorkspaceMembers';
 import { useWorkspaceBookmakers } from '@/hooks/useWorkspaceBookmakers';
 import { SOLICITACAO_TIPO_LABELS } from '@/types/solicitacoes';
@@ -46,9 +46,8 @@ import { cn } from '@/lib/utils';
 
 const schema = z.object({
   descricao: z.string().min(1, 'Descrição é obrigatória'),
-  tipo: z.enum(['abertura_conta', 'verificacao_kyc', 'transferencia', 'deposito', 'saque', 'verificacao_conta', 'verificacao_celular', 'verificacao_facial', 'contato_parceria', 'outros'] as const),
+  tipo: z.enum(['abertura_conta', 'verificacao_kyc', 'deposito', 'saque', 'verificacao_sms_email', 'contato_parceria', 'outros'] as const),
   destinatario_nome: z.string().optional(),
-  prazo: z.string().optional(),
   executor_ids: z.array(z.string()).min(1, 'Selecione ao menos um responsável'),
   bookmaker_ids: z.array(z.string()).optional(),
 });
@@ -376,15 +375,12 @@ export function EditarSolicitacaoDialog({ solicitacao, open, onOpenChange }: Pro
     return solicitacao.executor_id ? [solicitacao.executor_id] : [];
   }, [solicitacao]);
 
-  const prazo = (solicitacao as unknown as { prazo?: string | null }).prazo;
-
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
       descricao: solicitacao.descricao ?? '',
       tipo: solicitacao.tipo,
       destinatario_nome: solicitacao.destinatario_nome ?? '',
-      prazo: prazo ?? undefined,
       executor_ids: originalExecutorIds,
       bookmaker_ids: originalBookmakerIds,
     },
@@ -397,7 +393,6 @@ export function EditarSolicitacaoDialog({ solicitacao, open, onOpenChange }: Pro
         descricao: solicitacao.descricao ?? '',
         tipo: solicitacao.tipo,
         destinatario_nome: solicitacao.destinatario_nome ?? '',
-        prazo: prazo ?? undefined,
         executor_ids: originalExecutorIds,
         bookmaker_ids: originalBookmakerIds,
       });
@@ -439,7 +434,7 @@ export function EditarSolicitacaoDialog({ solicitacao, open, onOpenChange }: Pro
       id: solicitacao.id,
       descricao: data.descricao,
       tipo: data.tipo,
-      prazo: data.prazo ?? null,
+      prazo: null,
       executor_id: data.executor_ids[0],
       executor_ids: data.executor_ids,
       executor_nomes: executorNomes,

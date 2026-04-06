@@ -58,18 +58,16 @@ export function useSolicitacoesKpis() {
     enabled: !!user && !!workspaceId,
     queryFn: async () => {
       const { data, error } = await solicitacoesTable()
-        .select('status, prazo')
+        .select('status')
         .eq('workspace_id', workspaceId!)
         .in('status', ['pendente', 'em_execucao']);
 
       if (error) throw error;
-      const rows = (data ?? []) as { status: string; prazo?: string | null }[];
-      const now = new Date();
+      const rows = (data ?? []) as { status: string }[];
 
       return {
         pendentes: rows.filter((r) => r.status === 'pendente').length,
         em_execucao: rows.filter((r) => r.status === 'em_execucao').length,
-        urgentes: rows.filter((r) => r.prazo && new Date(r.prazo) < now).length,
         total_abertas: rows.length,
       };
     },
@@ -86,7 +84,6 @@ export function useCriarSolicitacao() {
       titulo: string;
       descricao: string;
       tipo: string;
-      prazo?: string;
       executor_id: string;
       bookmaker_id?: string;
       bookmaker_ids?: string[];
@@ -103,7 +100,6 @@ export function useCriarSolicitacao() {
         titulo: payload.titulo,
         descricao: payload.descricao,
         tipo: payload.tipo,
-        prazo: payload.prazo ?? null,
         executor_id: payload.executor_id,
         bookmaker_id: payload.bookmaker_id ?? null,
         bookmaker_ids: payload.bookmaker_ids?.length ? payload.bookmaker_ids : null,

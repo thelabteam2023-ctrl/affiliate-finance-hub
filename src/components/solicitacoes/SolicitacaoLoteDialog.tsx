@@ -53,12 +53,10 @@ function parseLines(text: string): ParsedItem[] {
     // Detect type from keywords
     if (/^dep\b|deposito|depósito/i.test(lower)) tipo = 'deposito';
     else if (/^saque\b|saq\b/i.test(lower)) tipo = 'saque';
-    else if (/facial/i.test(lower)) tipo = 'verificacao_facial';
-    else if (/sms|celular|telefone/i.test(lower)) tipo = 'verificacao_celular';
-    else if (/kyc|verificac/i.test(lower)) tipo = 'verificacao_kyc';
+    else if (/sms|email|celular|telefone/i.test(lower)) tipo = 'verificacao_sms_email';
+    else if (/kyc|verificac|facial|documento|cpf/i.test(lower)) tipo = 'verificacao_kyc';
     else if (/abertura|criar conta|nova conta/i.test(lower)) tipo = 'abertura_conta';
     else if (/contato|parceria|parceiro/i.test(lower)) tipo = 'contato_parceria';
-    else if (/transfer/i.test(lower)) tipo = 'transferencia';
 
     // Extract numeric value
     const valorMatch = line.match(/(\d[\d.,]*)/);
