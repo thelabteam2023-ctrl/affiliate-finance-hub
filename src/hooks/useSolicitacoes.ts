@@ -84,6 +84,7 @@ export function useCriarSolicitacao() {
       titulo: string;
       descricao: string;
       tipo: string;
+      prioridade?: string;
       executor_id: string;
       bookmaker_id?: string;
       bookmaker_ids?: string[];
@@ -100,6 +101,7 @@ export function useCriarSolicitacao() {
         titulo: payload.titulo,
         descricao: payload.descricao,
         tipo: payload.tipo,
+        prioridade: payload.prioridade ?? 'baixa',
         executor_id: payload.executor_id,
         bookmaker_id: payload.bookmaker_id ?? null,
         bookmaker_ids: payload.bookmaker_ids?.length ? payload.bookmaker_ids : null,
