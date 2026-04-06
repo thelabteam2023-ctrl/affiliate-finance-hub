@@ -34,6 +34,8 @@ import {
   resolverPrioridade,
   calcularSlaRestante,
   formatarSla,
+  calcularExpiracao,
+  formatarExpiracao,
 } from '@/types/solicitacoes';
 import type { Solicitacao, SolicitacaoStatus, SolicitacaoPrioridade } from '@/types/solicitacoes';
 import {
@@ -49,6 +51,7 @@ import {
   FileText,
   Pencil,
   AlertTriangle,
+  Timer,
 } from 'lucide-react';
 import {
   Tooltip,
@@ -122,6 +125,27 @@ function SlaBadge({ createdAt, prioridade, status }: { createdAt: string; priori
   );
 }
 
+// ---- Expiration Badge ----
+function ExpirationBadge({ createdAt, concluidaAt, status }: { createdAt: string; concluidaAt?: string | null; status: SolicitacaoStatus }) {
+  if (status !== 'concluida' || !concluidaAt) return null;
+  const restante = calcularExpiracao(createdAt, concluidaAt);
+  const label = formatarExpiracao(restante);
+  const urgente = restante < 60 * 60 * 1000;
+  const medio = restante < 3 * 60 * 60 * 1000;
+
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1 text-[10px] font-medium',
+        urgente ? 'text-red-400' : medio ? 'text-yellow-400' : 'text-emerald-400',
+      )}
+      title={label}
+    >
+      <Timer className="h-3 w-3" />
+      {label}
+    </span>
+  );
+}
 
 
 function StatusBadge({ status }: { status: SolicitacaoStatus }) {
@@ -251,6 +275,7 @@ function SolicitacaoRow({
                 <PriorityFlag prioridade={prio} solicitacaoId={solicitacao.id} />
                 <StatusBadge status={solicitacao.status} />
                 <SlaBadge createdAt={solicitacao.created_at} prioridade={prio} status={solicitacao.status} />
+                <ExpirationBadge createdAt={solicitacao.created_at} concluidaAt={solicitacao.concluida_at} status={solicitacao.status} />
               </div>
 
               {/* Casas — 2 visíveis + tooltip com restantes */}

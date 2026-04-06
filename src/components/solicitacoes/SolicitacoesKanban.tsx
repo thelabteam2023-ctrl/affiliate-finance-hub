@@ -27,6 +27,8 @@ import {
   resolverPrioridade,
   calcularSlaRestante,
   formatarSla,
+  calcularExpiracao,
+  formatarExpiracao,
 } from '@/types/solicitacoes';
 import type { Solicitacao, SolicitacaoStatus, SolicitacaoTipo, SolicitacaoPrioridade } from '@/types/solicitacoes';
 import {
@@ -39,6 +41,7 @@ import {
   Flag,
   AlertTriangle,
   Trash2,
+  Timer,
 } from 'lucide-react';
 import {
   AlertDialog,
@@ -128,7 +131,29 @@ function SlaBadge({ createdAt, prioridade, status }: { createdAt: string; priori
   );
 }
 
-// ---- Kanban Card ----
+// ---- Expiration Badge (for completed items) ----
+function ExpirationBadge({ createdAt, concluidaAt, status }: { createdAt: string; concluidaAt?: string | null; status: SolicitacaoStatus }) {
+  if (status !== 'concluida' || !concluidaAt) return null;
+  const restante = calcularExpiracao(createdAt, concluidaAt);
+  const label = formatarExpiracao(restante);
+  const urgente = restante < 60 * 60 * 1000; // <1h
+  const medio = restante < 3 * 60 * 60 * 1000; // <3h
+
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-0.5 text-[9px] font-medium',
+        urgente ? 'text-red-400' : medio ? 'text-yellow-400' : 'text-emerald-400',
+      )}
+      title={label}
+    >
+      <Timer className="h-2.5 w-2.5" />
+      {label}
+    </span>
+  );
+}
+
+
 function KanbanCard({
   solicitacao,
   onDragStart,
@@ -197,6 +222,7 @@ function KanbanCard({
               </Badge>
               <PriorityFlag prioridade={prio} solicitacaoId={solicitacao.id} compact />
               <SlaBadge createdAt={solicitacao.created_at} prioridade={prio} status={solicitacao.status} />
+              <ExpirationBadge createdAt={solicitacao.created_at} concluidaAt={solicitacao.concluida_at} status={solicitacao.status} />
             </div>
             <div className="flex items-center gap-0.5 shrink-0">
               {!isMobile && (

@@ -8598,6 +8598,7 @@ export type Database = {
       }
       solicitacoes: {
         Row: {
+          archived_at: string | null
           bookmaker_id: string | null
           bookmaker_ids: string[] | null
           concluida_at: string | null
@@ -8627,6 +8628,7 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
+          archived_at?: string | null
           bookmaker_id?: string | null
           bookmaker_ids?: string[] | null
           concluida_at?: string | null
@@ -8656,6 +8658,7 @@ export type Database = {
           workspace_id: string
         }
         Update: {
+          archived_at?: string | null
           bookmaker_id?: string | null
           bookmaker_ids?: string[] | null
           concluida_at?: string | null
