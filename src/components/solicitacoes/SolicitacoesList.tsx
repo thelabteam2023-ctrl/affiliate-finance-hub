@@ -232,7 +232,7 @@ function SolicitacaoRow({
 
   return (
     <>
-      <Card className="border-border/50 hover:border-border transition-colors">
+      <Card className={cn('border-border/50 hover:border-border transition-colors border-l-[3px]', prioConfig.borderColor)}>
         <CardContent className="p-3">
           <div className="flex items-stretch gap-0">
             {/* Bloco esquerdo: número + conteúdo */}
@@ -248,8 +248,9 @@ function SolicitacaoRow({
                 <Badge variant="secondary" className="text-xs font-medium">
                   {SOLICITACAO_TIPO_LABELS[solicitacao.tipo]}
                 </Badge>
-                
+                <PriorityFlag prioridade={prio} solicitacaoId={solicitacao.id} />
                 <StatusBadge status={solicitacao.status} />
+                <SlaBadge createdAt={solicitacao.created_at} prioridade={prio} status={solicitacao.status} />
               </div>
 
               {/* Casas — 2 visíveis + tooltip com restantes */}
