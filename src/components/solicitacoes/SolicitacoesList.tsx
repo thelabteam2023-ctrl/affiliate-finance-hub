@@ -125,6 +125,27 @@ function SlaBadge({ createdAt, prioridade, status }: { createdAt: string; priori
   );
 }
 
+// ---- Expiration Badge ----
+function ExpirationBadge({ createdAt, concluidaAt, status }: { createdAt: string; concluidaAt?: string | null; status: SolicitacaoStatus }) {
+  if (status !== 'concluida' || !concluidaAt) return null;
+  const restante = calcularExpiracao(createdAt, concluidaAt);
+  const label = formatarExpiracao(restante);
+  const urgente = restante < 60 * 60 * 1000;
+  const medio = restante < 3 * 60 * 60 * 1000;
+
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1 text-[10px] font-medium',
+        urgente ? 'text-red-400' : medio ? 'text-yellow-400' : 'text-emerald-400',
+      )}
+      title={label}
+    >
+      <Timer className="h-3 w-3" />
+      {label}
+    </span>
+  );
+}
 
 
 function StatusBadge({ status }: { status: SolicitacaoStatus }) {
