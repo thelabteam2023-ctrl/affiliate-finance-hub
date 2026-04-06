@@ -549,7 +549,13 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
 
           const result = limitCheck as unknown as { allowed: boolean; current: number; limit: number; plan: string };
           if (!result.allowed) {
-            setPlanLimitError(`Limite atingido: ${result.current}/${result.limit} parceiros ativos no plano ${result.plan.toUpperCase()}. Faça upgrade para adicionar mais.`);
+            const msg = `Limite atingido: ${result.current}/${result.limit} parceiros ativos no plano ${result.plan.toUpperCase()}. Faça upgrade para adicionar mais.`;
+            setPlanLimitError(msg);
+            toast({
+              title: "Limite de parceiros atingido",
+              description: msg,
+              variant: "destructive",
+            });
             setLoading(false);
             return;
           }
@@ -1470,6 +1476,12 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                       <SelectItem value="inativo">Inativo</SelectItem>
                     </SelectContent>
                   </Select>
+                  {planLimitError && (
+                    <Alert variant="destructive" className="mt-2">
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription>{planLimitError}</AlertDescription>
+                    </Alert>
+                  )}
                 </div>
                 <div className="md:col-span-2">
                   <Label htmlFor="observacoes">
