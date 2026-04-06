@@ -81,6 +81,7 @@ const menuGroups: MenuGroup[] = [
     label: "VISÃO GERAL",
     items: [
       { title: "Central", url: "/", icon: Bell, iconName: "Bell", moduleKey: "central" },
+      { title: "Solicitações", url: "/solicitacoes", icon: ClipboardList, iconName: "ClipboardList", moduleKey: "central" },
     ],
   },
   {
