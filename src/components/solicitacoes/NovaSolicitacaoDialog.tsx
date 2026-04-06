@@ -445,13 +445,12 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
   const transferenciaValor = form.watch('transferencia_valor');
   const transferenciaMoeda = form.watch('transferencia_moeda');
 
-  // Estado dos parceiros para select (carregados do DB)
+  // Estado dos parceiros para select (carregados do DB) — usado para destinatário e transferência
   const [parceiros, setParceiros] = useState<{ id: string; nome: string }[]>([]);
   useEffect(() => {
-    if (tipoSelecionado !== 'transferencia') return;
     supabase.from('parceiros').select('id, nome').eq('status', 'ativo').order('nome')
       .then(({ data }) => setParceiros(data ?? []));
-  }, [tipoSelecionado]);
+  }, []);
 
   // Inicializar subtipo padrão ao entrar em transferência
   useEffect(() => {
