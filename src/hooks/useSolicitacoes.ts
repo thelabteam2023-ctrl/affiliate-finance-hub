@@ -285,3 +285,22 @@ export function useExcluirSolicitacao() {
     onError: () => toast.error('Erro ao excluir solicitação'),
   });
 }
+
+// ---- Atualizar prioridade (inline) ----
+export function useAtualizarPrioridadeSolicitacao() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, prioridade }: { id: string; prioridade: string }) => {
+      const { error } = await solicitacoesTable()
+        .update({ prioridade })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
+    },
+    onError: () => toast.error('Erro ao atualizar prioridade'),
+  });
+}
+}
