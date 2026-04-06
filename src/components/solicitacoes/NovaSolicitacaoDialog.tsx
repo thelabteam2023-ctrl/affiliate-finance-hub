@@ -49,6 +49,7 @@ import { cn } from '@/lib/utils';
 const schema = z.object({
   descricao: z.string().min(10, 'Descreva a solicitação com pelo menos 10 caracteres'),
   tipo: z.enum(['abertura_conta', 'verificacao_kyc', 'deposito', 'saque', 'verificacao_sms_email', 'contato_parceria', 'outros'] as const),
+  prioridade: z.enum(['baixa', 'media', 'alta'] as const),
   destinatario_nome: z.string().optional(),
   executor_ids: z.array(z.string()).min(1, 'Selecione ao menos um responsável'),
   bookmaker_ids: z.array(z.string()).optional(),
@@ -391,6 +392,7 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
     defaultValues: {
       descricao: '',
       tipo: contextoInicial?.tipo || 'outros',
+      prioridade: 'baixa' as const,
       destinatario_nome: '',
       executor_ids: [],
       bookmaker_ids: [],
@@ -461,6 +463,7 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
       titulo: tituloGerado,
       descricao: data.descricao,
       tipo: data.tipo,
+      prioridade: data.prioridade,
       executor_id: data.executor_ids[0],
       destinatario_nome: data.destinatario_nome?.trim() || undefined,
       bookmaker_ids: data.tipo === 'abertura_conta' ? (data.bookmaker_ids ?? []) : [],
@@ -488,8 +491,8 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" style={{ fontFamily: "'Syne', sans-serif" }}>
-            {/* Tipo */}
-            <div className="grid grid-cols-1 gap-4 items-start">
+            {/* Tipo + Prioridade */}
+            <div className="grid grid-cols-2 gap-4 items-start">
               <FormField
                 control={form.control}
                 name="tipo"
@@ -512,6 +515,38 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
                         )}
                       </SelectContent>
                     </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="prioridade"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="block text-center">Prioridade *</FormLabel>
+                    <div className="flex gap-1">
+                      {(['baixa', 'media', 'alta'] as const).map((p) => {
+                        const c = SOLICITACAO_PRIORIDADE_CONFIG[p];
+                        const selected = field.value === p;
+                        return (
+                          <button
+                            key={p}
+                            type="button"
+                            onClick={() => field.onChange(p)}
+                            className={cn(
+                              'flex-1 flex items-center justify-center gap-1 px-2 py-2 rounded-md border text-xs font-medium transition-all',
+                              selected
+                                ? `${c.bgColor} ${c.textColor} border-current shadow-sm`
+                                : 'bg-transparent text-muted-foreground border-border hover:bg-muted/40',
+                            )}
+                          >
+                            <span>{c.icon}</span>
+                            <span>{c.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}

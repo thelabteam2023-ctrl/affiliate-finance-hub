@@ -1,0 +1,1 @@
+UPDATE public.solicitacoes SET prioridade = 'alta' WHERE prioridade = 'urgente';

@@ -11,19 +11,24 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn, getFirstLastName } from '@/lib/utils';
-import { useSolicitacoes, useAtualizarStatusSolicitacao } from '@/hooks/useSolicitacoes';
+import { useSolicitacoes, useAtualizarStatusSolicitacao, useAtualizarPrioridadeSolicitacao } from '@/hooks/useSolicitacoes';
 import { useAuth } from '@/hooks/useAuth';
 import { useIsMobile } from '@/hooks/use-mobile';
 import {
   SOLICITACAO_TIPO_LABELS,
-  SOLICITACAO_PRIORIDADE_LABELS,
-  SOLICITACAO_PRIORIDADE_COLORS,
   SOLICITACAO_STATUS_LABELS,
+  SOLICITACAO_PRIORIDADE_CONFIG,
   KANBAN_COLUMNS,
+  resolverPrioridade,
+  calcularSlaRestante,
+  formatarSla,
 } from '@/types/solicitacoes';
-import type { Solicitacao, SolicitacaoStatus, SolicitacaoTipo } from '@/types/solicitacoes';
+import type { Solicitacao, SolicitacaoStatus, SolicitacaoTipo, SolicitacaoPrioridade } from '@/types/solicitacoes';
 import {
   MoreHorizontal,
   User,
@@ -31,12 +36,85 @@ import {
   DollarSign,
   GripVertical,
   ArrowRight,
+  Flag,
+  AlertTriangle,
 } from 'lucide-react';
 import { EditarSolicitacaoDialog } from './EditarSolicitacaoDialog';
 
 interface Props {
   tipoFilter?: SolicitacaoTipo | null;
   responsavelFilter?: string | null;
+}
+
+// ---- Inline Priority Picker ----
+function PriorityFlag({
+  prioridade,
+  solicitacaoId,
+  compact,
+}: {
+  prioridade: SolicitacaoPrioridade;
+  solicitacaoId: string;
+  compact?: boolean;
+}) {
+  const { mutate: atualizarPrioridade } = useAtualizarPrioridadeSolicitacao();
+  const config = SOLICITACAO_PRIORIDADE_CONFIG[prioridade];
+  const priorities: SolicitacaoPrioridade[] = ['baixa', 'media', 'alta'];
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          className={cn(
+            'inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-medium transition-colors cursor-pointer hover:opacity-80',
+            config.bgColor,
+            config.textColor,
+            `border-current/30`,
+          )}
+          title={`Prioridade: ${config.label} (SLA ${config.slaLabel})`}
+        >
+          <span>{config.icon}</span>
+          {!compact && <span>{config.label}</span>}
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="min-w-[140px]">
+        {priorities.map((p) => {
+          const c = SOLICITACAO_PRIORIDADE_CONFIG[p];
+          return (
+            <DropdownMenuItem
+              key={p}
+              onClick={() => atualizarPrioridade({ id: solicitacaoId, prioridade: p })}
+              className={cn(p === prioridade && 'font-semibold')}
+            >
+              <span className="mr-2">{c.icon}</span>
+              {c.label}
+              <span className="ml-auto text-[10px] text-muted-foreground">SLA {c.slaLabel}</span>
+            </DropdownMenuItem>
+          );
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+// ---- SLA Badge ----
+function SlaBadge({ createdAt, prioridade, status }: { createdAt: string; prioridade: SolicitacaoPrioridade; status: SolicitacaoStatus }) {
+  if (status === 'concluida' || status === 'recusada') return null;
+  const restante = calcularSlaRestante(createdAt, prioridade);
+  const vencido = restante < 0;
+
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-0.5 text-[9px] font-medium',
+        vencido ? 'text-red-400 animate-pulse' : 'text-muted-foreground',
+      )}
+      title={vencido ? 'SLA vencido' : `SLA restante: ${formatarSla(restante)}`}
+    >
+      {vencido && <AlertTriangle className="h-2.5 w-2.5" />}
+      <Clock className="h-2.5 w-2.5" />
+      {formatarSla(restante)}
+    </span>
+  );
 }
 
 // ---- Kanban Card ----
@@ -52,6 +130,9 @@ function KanbanCard({
   const [editOpen, setEditOpen] = useState(false);
   const { user } = useAuth();
   const { mutate: atualizarStatus } = useAtualizarStatusSolicitacao();
+
+  const prio = resolverPrioridade(solicitacao.prioridade);
+  const prioConfig = SOLICITACAO_PRIORIDADE_CONFIG[prio];
 
   const meta = solicitacao.contexto_metadata as Record<string, unknown> | null;
   const bookmakerNomes: string[] = (() => {
@@ -89,23 +170,20 @@ function KanbanCard({
         draggable={!isMobile}
         onDragStart={!isMobile ? (e) => onDragStart(e, solicitacao.id) : undefined}
         className={cn(
-          'p-3 border-border/50 hover:border-border transition-all hover:shadow-md group',
+          'p-3 border-border/50 hover:border-border transition-all hover:shadow-md group border-l-[3px]',
+          prioConfig.borderColor,
           !isMobile && 'cursor-grab active:cursor-grabbing',
         )}
       >
         <div className="space-y-2">
-          {/* Header: tipo + prioridade */}
+          {/* Header: tipo + prioridade flag + SLA */}
           <div className="flex items-center justify-between gap-1">
             <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
               <Badge variant="secondary" className="text-[10px] font-medium shrink-0">
                 {SOLICITACAO_TIPO_LABELS[solicitacao.tipo]}
               </Badge>
-              <Badge
-                variant="outline"
-                className={cn('text-[10px]', SOLICITACAO_PRIORIDADE_COLORS[solicitacao.prioridade])}
-              >
-                {SOLICITACAO_PRIORIDADE_LABELS[solicitacao.prioridade]}
-              </Badge>
+              <PriorityFlag prioridade={prio} solicitacaoId={solicitacao.id} compact />
+              <SlaBadge createdAt={solicitacao.created_at} prioridade={prio} status={solicitacao.status} />
             </div>
             <div className="flex items-center gap-0.5 shrink-0">
               {!isMobile && (
