@@ -222,6 +222,7 @@ function KanbanCard({
               </Badge>
               <PriorityFlag prioridade={prio} solicitacaoId={solicitacao.id} compact />
               <SlaBadge createdAt={solicitacao.created_at} prioridade={prio} status={solicitacao.status} />
+              <ExpirationBadge createdAt={solicitacao.created_at} concluidaAt={solicitacao.concluida_at} status={solicitacao.status} />
             </div>
             <div className="flex items-center gap-0.5 shrink-0">
               {!isMobile && (
