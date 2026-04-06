@@ -269,7 +269,10 @@ export function AppSidebar() {
     if (!canSeeItem(item)) return null;
     // Badge de alertas só aparece na Central (URL "/"), não em outros itens com moduleKey "central"
     const isCentralPage = item.url === "/";
-    const showBadge = isCentralPage && alertsCount > 0;
+    const isSolicitacoesPage = item.url === "/solicitacoes";
+    const solicitacoesPendentes = kpisSolicitacoes?.pendentes ?? 0;
+    const showBadge = (isCentralPage && alertsCount > 0) || (isSolicitacoesPage && solicitacoesPendentes > 0);
+    const badgeCount = isSolicitacoesPage ? solicitacoesPendentes : alertsCount;
     const isToolLink = item.url.startsWith('#');
 
     // Para links de ferramentas (que abrem popups), usamos button ao invés de NavLink
