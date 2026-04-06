@@ -303,4 +303,3 @@ export function useAtualizarPrioridadeSolicitacao() {
     onError: () => toast.error('Erro ao atualizar prioridade'),
   });
 }
-}
