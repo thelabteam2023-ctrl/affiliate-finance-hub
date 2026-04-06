@@ -32,6 +32,7 @@ export function useSolicitacoes(filtros?: {
           parceiro:parceiros(id, nome)
         `)
         .eq('workspace_id', workspaceId!)
+        .is('deleted_at', null)
         .order('created_at', { ascending: false });
 
       if (filtros?.status?.length) query = query.in('status', filtros.status);
@@ -60,6 +61,7 @@ export function useSolicitacoesKpis() {
       const { data, error } = await solicitacoesTable()
         .select('status')
         .eq('workspace_id', workspaceId!)
+        .is('deleted_at', null)
         .in('status', ['pendente', 'em_execucao']);
 
       if (error) throw error;
@@ -265,24 +267,43 @@ export function useEditarSolicitacao() {
   });
 }
 
-// ---- Excluir (apenas admin/owner) ----
+// ---- Soft Delete (apenas pendentes) ----
 export function useExcluirSolicitacao() {
   const queryClient = useQueryClient();
-  const { workspaceId } = useAuth();
+  const { user, workspaceId } = useAuth();
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await solicitacoesTable()
-        .delete()
+      if (!user || !workspaceId) throw new Error('Não autenticado');
+
+      // Verify status is pendente before soft-deleting
+      const { data: row, error: fetchErr } = await solicitacoesTable()
+        .select('status')
         .eq('id', id)
-        .eq('workspace_id', workspaceId!);
+        .eq('workspace_id', workspaceId)
+        .single();
+      if (fetchErr) throw fetchErr;
+      if (row?.status !== 'pendente') {
+        throw new Error('Solicitações já processadas não podem ser excluídas');
+      }
+
+      const { error } = await solicitacoesTable()
+        .update({
+          deleted_at: new Date().toISOString(),
+          deleted_by: user.id,
+        })
+        .eq('id', id)
+        .eq('workspace_id', workspaceId);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
       toast.success('Solicitação excluída');
     },
-    onError: () => toast.error('Erro ao excluir solicitação'),
+    onError: (err: any) => {
+      const msg = err?.message || 'Erro ao excluir solicitação';
+      toast.error(msg);
+    },
   });
 }
 

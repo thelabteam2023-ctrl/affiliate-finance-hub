@@ -16,7 +16,7 @@ import {
   DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn, getFirstLastName } from '@/lib/utils';
-import { useSolicitacoes, useAtualizarStatusSolicitacao, useAtualizarPrioridadeSolicitacao } from '@/hooks/useSolicitacoes';
+import { useSolicitacoes, useAtualizarStatusSolicitacao, useAtualizarPrioridadeSolicitacao, useExcluirSolicitacao } from '@/hooks/useSolicitacoes';
 import { useAuth } from '@/hooks/useAuth';
 import { useIsMobile } from '@/hooks/use-mobile';
 import {
@@ -38,7 +38,18 @@ import {
   ArrowRight,
   Flag,
   AlertTriangle,
+  Trash2,
 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { EditarSolicitacaoDialog } from './EditarSolicitacaoDialog';
 
 interface Props {
@@ -128,8 +139,10 @@ function KanbanCard({
   isMobile: boolean;
 }) {
   const [editOpen, setEditOpen] = useState(false);
+  const [confirmExcluir, setConfirmExcluir] = useState(false);
   const { user } = useAuth();
   const { mutate: atualizarStatus } = useAtualizarStatusSolicitacao();
+  const { mutate: excluir, isPending: excluindo } = useExcluirSolicitacao();
 
   const prio = resolverPrioridade(solicitacao.prioridade);
   const prioConfig = SOLICITACAO_PRIORIDADE_CONFIG[prio];
@@ -214,6 +227,18 @@ function KanbanCard({
                       ))}
                     </>
                   )}
+                  {solicitacao.status === 'pendente' && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => setConfirmExcluir(true)}
+                        className="text-destructive focus:text-destructive"
+                      >
+                        <Trash2 className="h-3.5 w-3.5 mr-2" />
+                        Excluir
+                      </DropdownMenuItem>
+                    </>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -283,6 +308,28 @@ function KanbanCard({
         open={editOpen}
         onOpenChange={setEditOpen}
       />
+
+      <AlertDialog open={confirmExcluir} onOpenChange={setConfirmExcluir}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir solicitação</AlertDialogTitle>
+            <AlertDialogDescription>
+              Essa ação não pode ser desfeita. Deseja continuar?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => excluir(solicitacao.id)}
+              disabled={excluindo}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Confirmar exclusão
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
