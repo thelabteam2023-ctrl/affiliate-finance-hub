@@ -109,7 +109,7 @@ export default function CentralOperacoes() {
   const { role, isOperator } = useRole();
   const { user, workspaceId } = useAuth();
   const { data: kpisOcorrencias } = useOcorrenciasKpis();
-  const { data: kpisSolicitacoes } = useSolicitacoesKpis();
+  
 
   // ==================== REACT QUERY: Cache + Deduplicação ====================
   const { data: centralData, loading, refreshing, refetch: refetchCentral, allowedDomains } = useCentralOperacoesData();
@@ -214,11 +214,10 @@ export default function CentralOperacoes() {
   const [selectedCasaConciliacao, setSelectedCasaConciliacao] = useState<typeof casasPendentesConciliacao[0] | null>(null);
   const [selectedProjetoVincular, setSelectedProjetoVincular] = useState("");
   const [vincularConciliacaoLoading, setVincularConciliacaoLoading] = useState(false);
-  const [mainTab, setMainTabState] = useState<'financeiro' | 'contas' | 'ocorrencias' | 'solicitacoes' | 'alertas'>(() => {
+  const [mainTab, setMainTabState] = useState<'financeiro' | 'contas' | 'ocorrencias' | 'alertas'>(() => {
     const saved = localStorage.getItem('central-operacoes-main-tab');
-    // Operadores não têm acesso à Central de Operações completa
     if (role === 'operator') return 'financeiro';
-    if (saved === 'financeiro' || saved === 'contas' || saved === 'ocorrencias' || saved === 'solicitacoes' || saved === 'alertas') return saved;
+    if (saved === 'financeiro' || saved === 'contas' || saved === 'ocorrencias' || saved === 'alertas') return saved;
     return 'financeiro';
   });
   const setMainTab = (tab: typeof mainTab) => {
@@ -1178,10 +1177,7 @@ export default function CentralOperacoes() {
             Ocorrências
             {(kpisOcorrencias?.abertas_total ?? 0) > 0 && <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold leading-none">{kpisOcorrencias!.abertas_total}</span>}
           </TabsTrigger>
-          <TabsTrigger value="solicitacoes" className="relative">
-            Solicitações
-            {(kpisSolicitacoes?.total_abertas ?? 0) > 0 && <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-yellow-500 text-white text-[10px] font-bold leading-none">{kpisSolicitacoes!.total_abertas}</span>}
-          </TabsTrigger>
+          <TabsTrigger value="alertas" disabled className="opacity-50">Alertas<span className="ml-1.5 text-[10px] text-muted-foreground">(em breve)</span></TabsTrigger>
           <TabsTrigger value="alertas" disabled className="opacity-50">Alertas<span className="ml-1.5 text-[10px] text-muted-foreground">(em breve)</span></TabsTrigger>
         </TabsList>
 
@@ -1242,7 +1238,7 @@ export default function CentralOperacoes() {
         </TabsContent>
 
         <TabsContent value="ocorrencias" className="mt-4"><OcorrenciasModule /></TabsContent>
-        <TabsContent value="solicitacoes" className="mt-4"><SolicitacoesModule /></TabsContent>
+        <TabsContent value="alertas" className="mt-4">
         <TabsContent value="alertas" className="mt-4">
           <div className="flex flex-col items-center justify-center py-24 text-center"><p className="text-muted-foreground">Em breve: Alertas automáticos do sistema.</p></div>
         </TabsContent>
