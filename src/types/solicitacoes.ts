@@ -6,6 +6,12 @@ export type SolicitacaoTipo =
   | 'abertura_conta'
   | 'verificacao_kyc'
   | 'transferencia'
+  | 'deposito'
+  | 'saque'
+  | 'verificacao_conta'
+  | 'verificacao_celular'
+  | 'verificacao_facial'
+  | 'contato_parceria'
   | 'outros';
 
 export type SolicitacaoPrioridade = 'baixa' | 'media' | 'alta' | 'urgente';
@@ -30,6 +36,8 @@ export interface Solicitacao {
   bookmaker_id?: string | null;
   projeto_id?: string | null;
   parceiro_id?: string | null;
+  valor?: number | null;
+  lote_id?: string | null;
   contexto_metadata?: Record<string, unknown> | null;
   recusa_motivo?: string | null;
   created_at: string;
@@ -51,6 +59,12 @@ export const SOLICITACAO_TIPO_LABELS: Record<SolicitacaoTipo, string> = {
   abertura_conta: 'Abertura de Bookmaker',
   verificacao_kyc: 'Verificação KYC',
   transferencia: 'Transferência / Movimentação',
+  deposito: 'Depósito',
+  saque: 'Saque',
+  verificacao_conta: 'Verificação de Conta',
+  verificacao_celular: 'Verificação de Celular',
+  verificacao_facial: 'Verificação Facial',
+  contato_parceria: 'Contato para Parceria',
   outros: 'Outros',
 };
 
@@ -88,3 +102,10 @@ export const SOLICITACAO_STATUS_FLOW: Record<SolicitacaoStatus, SolicitacaoStatu
   concluida: [],
   recusada: [],
 };
+
+// Kanban columns config
+export const KANBAN_COLUMNS: { status: SolicitacaoStatus; label: string; color: string; icon: string }[] = [
+  { status: 'pendente', label: 'Pendente', color: 'text-yellow-400', icon: '🟡' },
+  { status: 'em_execucao', label: 'Em Andamento', color: 'text-blue-400', icon: '🔵' },
+  { status: 'concluida', label: 'Concluído', color: 'text-emerald-400', icon: '🟢' },
+];
