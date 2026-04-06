@@ -124,9 +124,10 @@ export function useCriarSolicitacao() {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
       toast.success('Solicitação criada com sucesso!');
     },
-    onError: (err) => {
-      console.error(err);
-      toast.error('Erro ao criar solicitação');
+    onError: (err: any) => {
+      console.error('[useCriarSolicitacao] ERRO:', err);
+      const msg = err?.message || err?.details || 'Erro desconhecido';
+      toast.error(`Erro ao criar solicitação: ${msg}`);
     },
   });
 }
