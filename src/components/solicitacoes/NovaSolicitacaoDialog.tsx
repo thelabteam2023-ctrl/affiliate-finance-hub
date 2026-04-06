@@ -424,6 +424,7 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
     defaultValues: {
       descricao: '',
       tipo: contextoInicial?.tipo || 'outros',
+      destinatario_nome: '',
       prazo: undefined,
       executor_ids: [],
       bookmaker_ids: [],
