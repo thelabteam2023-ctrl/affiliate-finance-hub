@@ -21,7 +21,6 @@ import { useTopBar } from "@/contexts/TopBarContext";
 import { useQuery } from "@tanstack/react-query";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { OcorrenciasModule } from "@/components/ocorrencias/OcorrenciasModule";
-import { OcorrenciasModule } from "@/components/ocorrencias/OcorrenciasModule";
 import { useOcorrenciasKpis } from "@/hooks/useOcorrencias";
 import { formatCurrency as formatCurrencyUtil } from "@/utils/formatCurrency";
 import { supabase } from "@/integrations/supabase/client";
