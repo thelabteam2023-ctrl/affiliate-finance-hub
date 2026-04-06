@@ -37,7 +37,7 @@ import {
 import { useCriarSolicitacao } from '@/hooks/useSolicitacoes';
 import { useWorkspaceMembers } from '@/hooks/useWorkspaceMembers';
 import { useWorkspaceBookmakers } from '@/hooks/useWorkspaceBookmakers';
-import { SOLICITACAO_TIPO_LABELS } from '@/types/solicitacoes';
+import { SOLICITACAO_TIPO_LABELS, SOLICITACAO_PRIORIDADE_CONFIG } from '@/types/solicitacoes';
 import type { SolicitacaoTipo } from '@/types/solicitacoes';
 import { KycBookmakerSelect } from './KycBookmakerSelect';
 import type { OperationalBookmakerOption } from '@/hooks/useOperationalBookmakers';
