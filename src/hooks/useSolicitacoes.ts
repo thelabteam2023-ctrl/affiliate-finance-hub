@@ -200,6 +200,7 @@ export function useEditarSolicitacao() {
       bookmaker_ids,
       bookmaker_nomes,
       bookmaker_ids_originais,
+      destinatario_nome,
       contexto_metadata,
     }: {
       id: string;
@@ -212,6 +213,7 @@ export function useEditarSolicitacao() {
       bookmaker_ids?: string[];
       bookmaker_nomes?: string;
       bookmaker_ids_originais?: string[];
+      destinatario_nome?: string | null;
       contexto_metadata?: Record<string, unknown> | null;
     }) => {
       // Calcula as casas novas (adicionadas nesta edição)
@@ -243,6 +245,7 @@ export function useEditarSolicitacao() {
           tipo,
           prazo: prazo ?? null,
           executor_id,
+          destinatario_nome: destinatario_nome ?? null,
           contexto_metadata: meta,
           descricao_editada_at: new Date().toISOString(),
         })
