@@ -8603,6 +8603,8 @@ export type Database = {
           concluida_at: string | null
           contexto_metadata: Json | null
           created_at: string
+          deleted_at: string | null
+          deleted_by: string | null
           descricao: string
           descricao_editada_at: string | null
           destinatario_nome: string | null
@@ -8630,6 +8632,8 @@ export type Database = {
           concluida_at?: string | null
           contexto_metadata?: Json | null
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           descricao: string
           descricao_editada_at?: string | null
           destinatario_nome?: string | null
@@ -8657,6 +8661,8 @@ export type Database = {
           concluida_at?: string | null
           contexto_metadata?: Json | null
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           descricao?: string
           descricao_editada_at?: string | null
           destinatario_nome?: string | null
