@@ -330,7 +330,7 @@ export function AppSidebar() {
                       variant="destructive" 
                       className="absolute -top-1 -right-1 h-4 min-w-4 px-1 text-[10px] font-bold flex items-center justify-center"
                     >
-                      {alertsCount > 99 ? "99+" : alertsCount}
+                      {badgeCount > 99 ? "99+" : badgeCount}
                     </Badge>
                   )}
                 </NavLink>
@@ -338,7 +338,7 @@ export function AppSidebar() {
             </TooltipTrigger>
             <TooltipContent side="right" className="font-medium">
               {item.title}
-              {showBadge && ` (${alertsCount})`}
+              {showBadge && ` (${badgeCount})`}
             </TooltipContent>
           </Tooltip>
         ) : (
@@ -356,7 +356,7 @@ export function AppSidebar() {
                   variant="destructive" 
                   className="h-5 min-w-5 px-1.5 text-[10px] font-bold"
                 >
-                  {alertsCount > 99 ? "99+" : alertsCount}
+                  {badgeCount > 99 ? "99+" : badgeCount}
                 </Badge>
               )}
             </NavLink>
