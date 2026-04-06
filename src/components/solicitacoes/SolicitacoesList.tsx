@@ -56,8 +56,6 @@ import { useEffect, useState } from 'react';
 import { EditarSolicitacaoDialog } from './EditarSolicitacaoDialog';
 
 
-  );
-}
 
 
 function StatusBadge({ status }: { status: SolicitacaoStatus }) {
