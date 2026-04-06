@@ -9,6 +9,7 @@ import { SolicitacaoLoteDialog } from './SolicitacaoLoteDialog';
 import { useSolicitacoesKpis, useSolicitacoes } from '@/hooks/useSolicitacoes';
 import { useAuth } from '@/hooks/useAuth';
 import { useWorkspaceMembers } from '@/hooks/useWorkspaceMembers';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { SOLICITACAO_TIPO_LABELS } from '@/types/solicitacoes';
 import type { SolicitacaoTipo } from '@/types/solicitacoes';
 import { getFirstLastName } from '@/lib/utils';
@@ -18,7 +19,6 @@ import {
   Clock,
   PlayCircle,
   CheckCircle2,
-  Zap,
   ClipboardPaste,
   Kanban,
   List,
@@ -45,6 +45,7 @@ export function SolicitacoesModule() {
   const { user } = useAuth();
   const { data: kpis } = useSolicitacoesKpis();
   const { data: members = [] } = useWorkspaceMembers();
+  const isMobile = useIsMobile();
 
   // Active solicitações for tipo breakdown
   const { data: activeSolicitacoes = [] } = useSolicitacoes({
@@ -68,60 +69,84 @@ export function SolicitacoesModule() {
             <ClipboardList className="h-5 w-5 text-blue-400" />
             Solicitações
           </h2>
-          <p className="text-sm text-muted-foreground">
-            Delegue e acompanhe tarefas operacionais
-          </p>
+          {!isMobile && (
+            <p className="text-sm text-muted-foreground">
+              Delegue e acompanhe tarefas operacionais
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2"
-            onClick={() => setLoteOpen(true)}
-          >
-            <ClipboardPaste className="h-4 w-4" />
-            Em Lote
-          </Button>
-          <Button onClick={() => setNovaOpen(true)} size="sm" className="gap-2">
-            <Plus className="h-4 w-4" />
-            Nova Solicitação
-          </Button>
+          {isMobile ? (
+            <>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setLoteOpen(true)}
+              >
+                <ClipboardPaste className="h-4 w-4" />
+              </Button>
+              <Button
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setNovaOpen(true)}
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={() => setLoteOpen(true)}
+              >
+                <ClipboardPaste className="h-4 w-4" />
+                Em Lote
+              </Button>
+              <Button onClick={() => setNovaOpen(true)} size="sm" className="gap-2">
+                <Plus className="h-4 w-4" />
+                Nova Solicitação
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-3 gap-3">
-        <Card className="border-border/50">
-          <CardContent className="p-4 flex items-center gap-3">
-            <Clock className="h-8 w-8 text-yellow-400 flex-shrink-0" />
+      <div className={isMobile ? 'flex gap-2 overflow-x-auto no-scrollbar pb-1' : 'grid grid-cols-3 gap-3'}>
+        <Card className={isMobile ? 'border-border/50 min-w-[130px] shrink-0' : 'border-border/50'}>
+          <CardContent className="p-3 flex items-center gap-2">
+            <Clock className={isMobile ? 'h-6 w-6 text-yellow-400 shrink-0' : 'h-8 w-8 text-yellow-400 shrink-0'} />
             <div>
-              <p className="text-2xl font-bold">{kpis?.pendentes ?? 0}</p>
-              <p className="text-xs text-muted-foreground">Pendentes</p>
+              <p className="text-xl font-bold">{kpis?.pendentes ?? 0}</p>
+              <p className="text-[10px] text-muted-foreground">Pendentes</p>
             </div>
           </CardContent>
         </Card>
-        <Card className="border-border/50">
-          <CardContent className="p-4 flex items-center gap-3">
-            <PlayCircle className="h-8 w-8 text-blue-400 flex-shrink-0" />
+        <Card className={isMobile ? 'border-border/50 min-w-[130px] shrink-0' : 'border-border/50'}>
+          <CardContent className="p-3 flex items-center gap-2">
+            <PlayCircle className={isMobile ? 'h-6 w-6 text-blue-400 shrink-0' : 'h-8 w-8 text-blue-400 shrink-0'} />
             <div>
-              <p className="text-2xl font-bold">{kpis?.em_execucao ?? 0}</p>
-              <p className="text-xs text-muted-foreground">Em Execução</p>
+              <p className="text-xl font-bold">{kpis?.em_execucao ?? 0}</p>
+              <p className="text-[10px] text-muted-foreground">Em Execução</p>
             </div>
           </CardContent>
         </Card>
-        <Card className="border-border/50">
-          <CardContent className="p-4 flex items-center gap-3">
-            <CheckCircle2 className="h-8 w-8 text-emerald-400 flex-shrink-0" />
+        <Card className={isMobile ? 'border-border/50 min-w-[130px] shrink-0' : 'border-border/50'}>
+          <CardContent className="p-3 flex items-center gap-2">
+            <CheckCircle2 className={isMobile ? 'h-6 w-6 text-emerald-400 shrink-0' : 'h-8 w-8 text-emerald-400 shrink-0'} />
             <div>
-              <p className="text-2xl font-bold">{kpis?.total_abertas ?? 0}</p>
-              <p className="text-xs text-muted-foreground">Total Abertas</p>
+              <p className="text-xl font-bold">{kpis?.total_abertas ?? 0}</p>
+              <p className="text-[10px] text-muted-foreground">Total Abertas</p>
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Filters bar */}
-      <div className="flex items-center justify-between gap-3 flex-wrap">
+      <div className={isMobile ? 'space-y-2' : 'flex items-center justify-between gap-3 flex-wrap'}>
         {/* Type filter chips */}
         <div className="flex items-center gap-1.5 flex-wrap">
           <Badge
@@ -151,8 +176,8 @@ export function SolicitacoesModule() {
             value={responsavelFilter ?? 'todos'}
             onValueChange={(v) => setResponsavelFilter(v === 'todos' ? null : v)}
           >
-            <SelectTrigger className="h-8 w-[160px] text-xs">
-              <Users className="h-3.5 w-3.5 mr-1.5" />
+            <SelectTrigger className="h-8 w-[140px] text-xs">
+              <Users className="h-3.5 w-3.5 mr-1" />
               <SelectValue placeholder="Responsável" />
             </SelectTrigger>
             <SelectContent>
@@ -165,33 +190,35 @@ export function SolicitacoesModule() {
             </SelectContent>
           </Select>
 
-          <div className="flex items-center border border-border rounded-md">
-            <button
-              onClick={() => setViewMode('kanban')}
-              className={`p-1.5 rounded-l-md transition-colors ${
-                viewMode === 'kanban'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <Kanban className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => setViewMode('lista')}
-              className={`p-1.5 rounded-r-md transition-colors ${
-                viewMode === 'lista'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <List className="h-4 w-4" />
-            </button>
-          </div>
+          {!isMobile && (
+            <div className="flex items-center border border-border rounded-md">
+              <button
+                onClick={() => setViewMode('kanban')}
+                className={`p-1.5 rounded-l-md transition-colors ${
+                  viewMode === 'kanban'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <Kanban className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setViewMode('lista')}
+                className={`p-1.5 rounded-r-md transition-colors ${
+                  viewMode === 'lista'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <List className="h-4 w-4" />
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Content */}
-      {viewMode === 'kanban' ? (
+      {/* Content - mobile always kanban, desktop switchable */}
+      {isMobile || viewMode === 'kanban' ? (
         <SolicitacoesKanban
           tipoFilter={tipoFilter}
           responsavelFilter={responsavelFilter}

@@ -1,4 +1,5 @@
 import { Bell, Users, Users2, Landmark, Wallet, Building2, TrendingUp, UserPlus, PieChart, Briefcase, FolderKanban, FlaskConical, Settings, LogOut, Star, Shield, Calculator, StickyNote, ShieldCheck, ChevronUp, ChevronDown, Sun, Moon, Target, Layers, ArrowLeftRight, Zap, Truck, ClipboardList } from "lucide-react";
+import { useSolicitacoesKpis } from "@/hooks/useSolicitacoes";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -146,6 +147,7 @@ export function AppSidebar() {
   const { workspace, workspaceId } = useWorkspace();
   const { canAccess } = useModuleAccess();
   const { count: alertsCount } = useCentralAlertsCount();
+  const { data: kpisSolicitacoes } = useSolicitacoesKpis();
   const { 
     workspaces: userWorkspaces, 
     pendingInvites, 
@@ -269,7 +271,10 @@ export function AppSidebar() {
     if (!canSeeItem(item)) return null;
     // Badge de alertas só aparece na Central (URL "/"), não em outros itens com moduleKey "central"
     const isCentralPage = item.url === "/";
-    const showBadge = isCentralPage && alertsCount > 0;
+    const isSolicitacoesPage = item.url === "/solicitacoes";
+    const solicitacoesPendentes = kpisSolicitacoes?.pendentes ?? 0;
+    const showBadge = (isCentralPage && alertsCount > 0) || (isSolicitacoesPage && solicitacoesPendentes > 0);
+    const badgeCount = isSolicitacoesPage ? solicitacoesPendentes : alertsCount;
     const isToolLink = item.url.startsWith('#');
 
     // Para links de ferramentas (que abrem popups), usamos button ao invés de NavLink
@@ -325,7 +330,7 @@ export function AppSidebar() {
                       variant="destructive" 
                       className="absolute -top-1 -right-1 h-4 min-w-4 px-1 text-[10px] font-bold flex items-center justify-center"
                     >
-                      {alertsCount > 99 ? "99+" : alertsCount}
+                      {badgeCount > 99 ? "99+" : badgeCount}
                     </Badge>
                   )}
                 </NavLink>
@@ -333,7 +338,7 @@ export function AppSidebar() {
             </TooltipTrigger>
             <TooltipContent side="right" className="font-medium">
               {item.title}
-              {showBadge && ` (${alertsCount})`}
+              {showBadge && ` (${badgeCount})`}
             </TooltipContent>
           </Tooltip>
         ) : (
@@ -351,7 +356,7 @@ export function AppSidebar() {
                   variant="destructive" 
                   className="h-5 min-w-5 px-1.5 text-[10px] font-bold"
                 >
-                  {alertsCount > 99 ? "99+" : alertsCount}
+                  {badgeCount > 99 ? "99+" : badgeCount}
                 </Badge>
               )}
             </NavLink>
