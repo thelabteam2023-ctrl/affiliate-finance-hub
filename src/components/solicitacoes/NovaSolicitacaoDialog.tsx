@@ -52,40 +52,11 @@ import { cn } from '@/lib/utils';
 // ---- Schema do formulário ----
 const schema = z.object({
   descricao: z.string().min(10, 'Descreva a solicitação com pelo menos 10 caracteres'),
-  tipo: z.enum(['abertura_conta', 'verificacao_kyc', 'transferencia', 'deposito', 'saque', 'verificacao_conta', 'verificacao_celular', 'verificacao_facial', 'contato_parceria', 'outros'] as const),
+  tipo: z.enum(['abertura_conta', 'verificacao_kyc', 'deposito', 'saque', 'verificacao_sms_email', 'contato_parceria', 'outros'] as const),
   destinatario_nome: z.string().optional(),
-  prazo: z.string().optional(),
   executor_ids: z.array(z.string()).min(1, 'Selecione ao menos um responsável'),
   bookmaker_ids: z.array(z.string()).optional(),
   kyc_bookmaker_id: z.string().optional(),
-  // Transferência — dois modos: 'necessidade' (só destino) | 'transferencia' (origem+destino)
-  subtipo_transferencia: z.enum(['necessidade', 'transferencia'] as const).optional(),
-  origem_parceiro_id: z.string().optional(),
-  origem_conta_id: z.string().optional(),
-  destino_parceiro_id: z.string().optional(),
-  destino_conta_id: z.string().optional(),
-  transferencia_valor: z.string().optional(),
-  transferencia_moeda: z.string().optional(),
-}).superRefine((data, ctx) => {
-  if (data.tipo === 'transferencia') {
-    const subtipo = data.subtipo_transferencia ?? 'necessidade';
-
-    // Destino sempre obrigatório
-    if (!data.destino_parceiro_id) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Selecione o parceiro', path: ['destino_parceiro_id'] });
-    if (!data.destino_conta_id) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Selecione a conta/wallet', path: ['destino_conta_id'] });
-
-    // Origem só obrigatória em transferência
-    if (subtipo === 'transferencia') {
-      if (!data.origem_parceiro_id) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Selecione o parceiro de origem', path: ['origem_parceiro_id'] });
-      if (!data.origem_conta_id) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Selecione a conta/wallet', path: ['origem_conta_id'] });
-      if (data.origem_conta_id && data.destino_conta_id && data.origem_conta_id === data.destino_conta_id) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Origem e destino não podem ser iguais', path: ['destino_conta_id'] });
-      }
-    }
-
-    if (!data.transferencia_valor?.trim()) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Informe o valor', path: ['transferencia_valor'] });
-    if (!data.transferencia_moeda?.trim()) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Selecione a moeda', path: ['transferencia_moeda'] });
-  }
 });
 
 type FormData = z.infer<typeof schema>;

@@ -46,9 +46,8 @@ import { cn } from '@/lib/utils';
 
 const schema = z.object({
   descricao: z.string().min(1, 'Descrição é obrigatória'),
-  tipo: z.enum(['abertura_conta', 'verificacao_kyc', 'transferencia', 'deposito', 'saque', 'verificacao_conta', 'verificacao_celular', 'verificacao_facial', 'contato_parceria', 'outros'] as const),
+  tipo: z.enum(['abertura_conta', 'verificacao_kyc', 'deposito', 'saque', 'verificacao_sms_email', 'contato_parceria', 'outros'] as const),
   destinatario_nome: z.string().optional(),
-  prazo: z.string().optional(),
   executor_ids: z.array(z.string()).min(1, 'Selecione ao menos um responsável'),
   bookmaker_ids: z.array(z.string()).optional(),
 });
