@@ -463,6 +463,7 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
       titulo: tituloGerado,
       descricao: data.descricao,
       tipo: data.tipo,
+      prioridade: data.prioridade,
       executor_id: data.executor_ids[0],
       destinatario_nome: data.destinatario_nome?.trim() || undefined,
       bookmaker_ids: data.tipo === 'abertura_conta' ? (data.bookmaker_ids ?? []) : [],
