@@ -92,6 +92,7 @@ export function useCriarSolicitacao() {
       bookmaker_ids?: string[];
       projeto_id?: string;
       parceiro_id?: string;
+      destinatario_nome?: string;
       contexto_metadata?: Record<string, unknown>;
     }) => {
       if (!user || !workspaceId) throw new Error('Não autenticado');
@@ -109,6 +110,7 @@ export function useCriarSolicitacao() {
           bookmaker_ids: payload.bookmaker_ids?.length ? payload.bookmaker_ids : null,
           projeto_id: payload.projeto_id ?? null,
           parceiro_id: payload.parceiro_id ?? null,
+          destinatario_nome: payload.destinatario_nome ?? null,
           contexto_metadata: payload.contexto_metadata ?? null,
           status: 'pendente',
         })
