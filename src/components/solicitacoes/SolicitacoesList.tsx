@@ -34,6 +34,8 @@ import {
   resolverPrioridade,
   calcularSlaRestante,
   formatarSla,
+  calcularExpiracao,
+  formatarExpiracao,
 } from '@/types/solicitacoes';
 import type { Solicitacao, SolicitacaoStatus, SolicitacaoPrioridade } from '@/types/solicitacoes';
 import {
