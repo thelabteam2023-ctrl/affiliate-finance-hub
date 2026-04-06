@@ -33,6 +33,7 @@ export function useSolicitacoes(filtros?: {
         `)
         .eq('workspace_id', workspaceId!)
         .is('deleted_at', null)
+        .is('archived_at', null)
         .order('created_at', { ascending: false });
 
       if (filtros?.status?.length) query = query.in('status', filtros.status);
