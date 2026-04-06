@@ -139,8 +139,10 @@ function KanbanCard({
   isMobile: boolean;
 }) {
   const [editOpen, setEditOpen] = useState(false);
+  const [confirmExcluir, setConfirmExcluir] = useState(false);
   const { user } = useAuth();
   const { mutate: atualizarStatus } = useAtualizarStatusSolicitacao();
+  const { mutate: excluir, isPending: excluindo } = useExcluirSolicitacao();
 
   const prio = resolverPrioridade(solicitacao.prioridade);
   const prioConfig = SOLICITACAO_PRIORIDADE_CONFIG[prio];
