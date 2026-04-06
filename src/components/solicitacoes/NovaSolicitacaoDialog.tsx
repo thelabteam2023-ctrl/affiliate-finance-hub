@@ -491,8 +491,8 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" style={{ fontFamily: "'Syne', sans-serif" }}>
-            {/* Tipo */}
-            <div className="grid grid-cols-1 gap-4 items-start">
+            {/* Tipo + Prioridade */}
+            <div className="grid grid-cols-2 gap-4 items-start">
               <FormField
                 control={form.control}
                 name="tipo"
@@ -515,6 +515,38 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
                         )}
                       </SelectContent>
                     </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="prioridade"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="block text-center">Prioridade *</FormLabel>
+                    <div className="flex gap-1">
+                      {(['baixa', 'media', 'alta'] as const).map((p) => {
+                        const c = SOLICITACAO_PRIORIDADE_CONFIG[p];
+                        const selected = field.value === p;
+                        return (
+                          <button
+                            key={p}
+                            type="button"
+                            onClick={() => field.onChange(p)}
+                            className={cn(
+                              'flex-1 flex items-center justify-center gap-1 px-2 py-2 rounded-md border text-xs font-medium transition-all',
+                              selected
+                                ? `${c.bgColor} ${c.textColor} border-current shadow-sm`
+                                : 'bg-transparent text-muted-foreground border-border hover:bg-muted/40',
+                            )}
+                          >
+                            <span>{c.icon}</span>
+                            <span>{c.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}
