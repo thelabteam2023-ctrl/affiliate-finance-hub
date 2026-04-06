@@ -647,6 +647,56 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
 
             </div>
 
+            {/* Destinatário */}
+            <FormField
+              control={form.control}
+              name="destinatario_nome"
+              render={({ field }) => {
+                const [destSearch, setDestSearch] = useState('');
+                const filteredParceiros = parceiros.filter(p =>
+                  getFirstLastName(p.nome).toLowerCase().includes(destSearch.toLowerCase())
+                );
+                const showSuggestions = destSearch.length > 0 && filteredParceiros.length > 0 && field.value !== destSearch;
+                return (
+                  <FormItem>
+                    <FormLabel className="block text-center">Destinatário</FormLabel>
+                    <div className="relative">
+                      <FormControl>
+                        <Input
+                          placeholder="Para quem é a solicitação? Ex: Lolisa, Mariana..."
+                          className="h-9"
+                          value={field.value ?? ''}
+                          onChange={(e) => {
+                            field.onChange(e.target.value);
+                            setDestSearch(e.target.value);
+                          }}
+                          autoComplete="off"
+                        />
+                      </FormControl>
+                      {showSuggestions && (
+                        <div className="absolute z-50 top-full left-0 right-0 mt-1 rounded-md border border-border bg-popover shadow-lg max-h-40 overflow-y-auto">
+                          {filteredParceiros.slice(0, 8).map(p => (
+                            <button
+                              key={p.id}
+                              type="button"
+                              className="w-full text-left px-3 py-2 text-sm hover:bg-accent transition-colors"
+                              onClick={() => {
+                                field.onChange(getFirstLastName(p.nome));
+                                setDestSearch('');
+                              }}
+                            >
+                              {getFirstLastName(p.nome)}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                );
+              }}
+            />
+
             {/* Bookmakers + Responsáveis na mesma linha quando tipo = abertura_conta */}
             {tipoSelecionado === 'abertura_conta' ? (
               <div className="grid grid-cols-2 gap-4">
