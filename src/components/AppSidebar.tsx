@@ -1,4 +1,5 @@
 import { Bell, Users, Users2, Landmark, Wallet, Building2, TrendingUp, UserPlus, PieChart, Briefcase, FolderKanban, FlaskConical, Settings, LogOut, Star, Shield, Calculator, StickyNote, ShieldCheck, ChevronUp, ChevronDown, Sun, Moon, Target, Layers, ArrowLeftRight, Zap, Truck, ClipboardList } from "lucide-react";
+import { useSolicitacoesKpis } from "@/hooks/useSolicitacoes";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -146,6 +147,7 @@ export function AppSidebar() {
   const { workspace, workspaceId } = useWorkspace();
   const { canAccess } = useModuleAccess();
   const { count: alertsCount } = useCentralAlertsCount();
+  const { data: kpisSolicitacoes } = useSolicitacoesKpis();
   const { 
     workspaces: userWorkspaces, 
     pendingInvites, 
