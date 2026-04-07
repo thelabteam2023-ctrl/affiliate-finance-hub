@@ -293,6 +293,7 @@ export function useInactivityTimeout(): UseInactivityTimeoutReturn {
     
     setLastActivity(initialActivity);
     isExpiredRef.current = false;
+    toastFiredRef.current = false;
     warningShownRef.current = false;
     
     // Adicionar listeners para eventos de atividade
