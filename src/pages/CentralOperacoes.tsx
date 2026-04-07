@@ -27,6 +27,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { getFirstLastName } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { OperationCard } from "@/components/central-operacoes/OperationCard";
+import { OperationItem } from "@/components/central-operacoes/OperationItem";
+import { CentralKPISummary } from "@/components/central-operacoes/CentralKPISummary";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
@@ -399,28 +402,12 @@ export default function CentralOperacoes() {
       cards.push({
         id: "alertas-criticos", priority: PRIORITY.CRITICAL, domain: 'admin_event',
         component: (
-          <Card key="alertas-criticos" className="border-red-500/40 bg-red-500/5">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm">
-                <AlertTriangle className="h-4 w-4 text-red-400" />
-                Alertas Críticos
-                <Badge className="ml-auto bg-red-500/20 text-red-400">{alertasCriticos.length}</Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="space-y-2">
-                {alertasCriticos.slice(0, 5).map((alerta) => (
-                  <div key={alerta.entidade_id} className="flex items-center justify-between p-2 rounded-lg border border-red-500/30 bg-red-500/10">
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <AlertTriangle className="h-3.5 w-3.5 text-red-400 shrink-0" />
-                      <span className="text-xs font-medium truncate">{alerta.titulo}</span>
-                    </div>
-                    <Button size="sm" variant="destructive" className="h-6 text-xs px-2 shrink-0">Resolver</Button>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          <OperationCard key="alertas-criticos" title="Alertas Críticos" icon={<AlertTriangle className="h-4 w-4" />} color="red" count={alertasCriticos.length}>
+            {alertasCriticos.slice(0, 5).map((alerta) => (
+              <OperationItem key={alerta.entidade_id} icon={<AlertTriangle className="h-3.5 w-3.5" />} color="red" label={alerta.titulo}
+                actions={<Button size="sm" variant="destructive" className="h-6 text-xs px-2 shrink-0">Resolver</Button>} />
+            ))}
+          </OperationCard>
         ),
       });
     }
@@ -435,38 +422,24 @@ export default function CentralOperacoes() {
       cards.push({
         id: "casas-pendentes-conciliacao", priority: PRIORITY.CRITICAL, domain: 'financial_event',
         component: (
-          <Card key="casas-pendentes-conciliacao" className="border-amber-500/50 bg-amber-500/5">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm">
-                <ShieldAlert className="h-4 w-4 text-amber-500" />Conciliação Pendente
-                <CardInfoTooltip title="Conciliação Obrigatória" description="Casas com transações pendentes não podem ser utilizadas para apostas ou bônus até que a conciliação seja realizada." flow="Transações pendentes (depósitos, saques em processamento) devem ser conciliadas para liberar a casa para operação." />
-                <Badge className="ml-auto bg-amber-500/20 text-amber-600 animate-pulse">{casasPendentesConciliacao.length}</Badge>
-              </CardTitle>
-              <CardDescription className="text-xs text-muted-foreground">Casas bloqueadas até conciliar transações</CardDescription>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="max-h-[240px] overflow-y-auto space-y-2 pr-1">
-                {casasPendentesConciliacao.map((casa) => (
-                  <div key={casa.bookmaker_id} className="flex items-center justify-between p-2 rounded-lg border border-amber-500/30 bg-amber-500/10">
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <ShieldAlert className="h-3.5 w-3.5 text-amber-500 shrink-0 animate-pulse" />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs font-medium truncate">{casa.bookmaker_nome}{casa.parceiro_nome && <span className="text-muted-foreground font-normal"> de {getFirstLastName(casa.parceiro_nome)}</span>}</p>
-                        <p className="text-[10px] text-muted-foreground truncate">
-                          {casa.projeto_nome ? <span className="text-primary/80">{casa.projeto_nome}</span> : <button type="button" onClick={(e) => { e.stopPropagation(); setSelectedCasaConciliacao(casa); setSelectedProjetoVincular(""); setVincularConciliacaoOpen(true); }} className="text-amber-600 italic hover:text-amber-400 hover:underline cursor-pointer transition-colors inline-flex items-center gap-0.5"><FolderKanban className="h-2.5 w-2.5" />Nenhum projeto vinculado</button>}
-                          <span className="mx-1">•</span>{casa.qtd_transacoes_pendentes} {casa.qtd_transacoes_pendentes === 1 ? "transação" : "transações"}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-xs font-bold text-amber-500">{formatCurrency(casa.valor_total_pendente, casa.moeda)}</span>
-                      <Button size="sm" variant="outline" onClick={() => navigate(`/caixa?tab=conciliacao&bookmaker=${casa.bookmaker_id}`)} className="border-amber-500/50 text-amber-600 hover:bg-amber-500/10 h-6 text-xs px-2">Conciliar</Button>
-                    </div>
+          <OperationCard key="casas-pendentes-conciliacao" title="Conciliação Pendente" icon={<ShieldAlert className="h-4 w-4" />} color="amber" count={casasPendentesConciliacao.length}
+            description="Casas bloqueadas até conciliar transações"
+            tooltip={{ title: "Conciliação Obrigatória", description: "Casas com transações pendentes não podem ser utilizadas para apostas ou bônus até que a conciliação seja realizada.", flow: "Transações pendentes (depósitos, saques em processamento) devem ser conciliadas para liberar a casa para operação." }}>
+            {casasPendentesConciliacao.map((casa) => (
+              <OperationItem key={casa.bookmaker_id} icon={<ShieldAlert className="h-3.5 w-3.5" />} color="amber" pulse
+                label={`${casa.bookmaker_nome}${casa.parceiro_nome ? ` · ${getFirstLastName(casa.parceiro_nome)}` : ''}`}
+                sublabel={`${casa.projeto_nome || 'Sem projeto'} • ${casa.qtd_transacoes_pendentes} transaç${casa.qtd_transacoes_pendentes === 1 ? 'ão' : 'ões'}`}
+                value={formatCurrency(casa.valor_total_pendente, casa.moeda)}
+                actions={
+                  <div className="flex items-center gap-1">
+                    {!casa.projeto_nome && (
+                      <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); setSelectedCasaConciliacao(casa); setSelectedProjetoVincular(""); setVincularConciliacaoOpen(true); }} className="h-6 text-xs px-1.5"><FolderKanban className="h-3 w-3" /></Button>
+                    )}
+                    <Button size="sm" variant="outline" onClick={() => navigate(`/caixa?tab=conciliacao&bookmaker=${casa.bookmaker_id}`)} className="border-amber-500/50 text-amber-600 hover:bg-amber-500/10 h-6 text-xs px-2">Conciliar</Button>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                } />
+            ))}
+          </OperationCard>
         ),
       });
     }
@@ -476,40 +449,28 @@ export default function CentralOperacoes() {
       cards.push({
         id: "saques-aguardando", priority: PRIORITY.HIGH, domain: 'financial_event',
         component: (
-          <Card key="saques-aguardando" className="border-yellow-500/30">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm">
-                <Clock className="h-4 w-4 text-yellow-400" />Saques Aguardando Confirmação
-                <CardInfoTooltip title="Saques Aguardando Confirmação" description="Saques que foram iniciados e precisam de confirmação de recebimento." flow="Quando um saque é registrado no Caixa, ele fica pendente até que a tesouraria confirme o recebimento." />
-                <Badge className="ml-auto bg-yellow-500/20 text-yellow-400">{saquesPendentes.length}</Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <SaquesSmartFilter saques={saquesPendentes}>
-                {(filtered) => (
-                  <div className="max-h-[300px] overflow-y-auto space-y-2 pr-1">
-                    {filtered.length === 0 ? (
-                      <p className="text-xs text-muted-foreground text-center py-4">Nenhum saque encontrado com os filtros aplicados.</p>
-                    ) : filtered.map((saque) => {
-                      const destinoNome = saque.destino_wallet_id ? (saque.wallet_exchange || saque.wallet_nome || "Wallet") : (saque.banco_nome || "Conta Bancária");
-                      const parceiroShort = saque.parceiro_nome ? getFirstLastName(saque.parceiro_nome) : "";
-                      return (
-                        <div key={saque.id} className="flex items-center gap-2 p-2 rounded-lg border border-yellow-500/30 bg-yellow-500/5">
-                          {saque.destino_wallet_id ? <Wallet className="h-4 w-4 text-yellow-400 shrink-0" /> : <Building2 className="h-4 w-4 text-yellow-400 shrink-0" />}
-                          <div className="min-w-0 flex-1">
-                            <p className="text-xs font-medium truncate">{destinoNome}{parceiroShort ? ` · ${parceiroShort}` : ""}</p>
-                            <p className="text-[10px] text-muted-foreground truncate">{saque.bookmaker_nome}{saque.coin ? ` · ${saque.coin}` : ""}{saque.projeto_nome ? ` · ${saque.projeto_nome}` : ""}</p>
-                          </div>
-                          <span className="text-xs font-bold text-yellow-400 shrink-0">{formatCurrency(saque.valor_origem || saque.valor, saque.moeda_origem || saque.moeda)}</span>
-                          <Button size="sm" onClick={() => handleConfirmarSaque(saque)} className="bg-yellow-600 hover:bg-yellow-700 h-6 text-xs px-2 shrink-0">Confirmar</Button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </SaquesSmartFilter>
-            </CardContent>
-          </Card>
+          <OperationCard key="saques-aguardando" title="Saques Aguardando Confirmação" icon={<Clock className="h-4 w-4" />} color="yellow" count={saquesPendentes.length}
+            tooltip={{ title: "Saques Aguardando Confirmação", description: "Saques que foram iniciados e precisam de confirmação de recebimento.", flow: "Quando um saque é registrado no Caixa, ele fica pendente até que a tesouraria confirme o recebimento." }}>
+            <SaquesSmartFilter saques={saquesPendentes}>
+              {(filtered) => (
+                <>
+                  {filtered.length === 0 ? (
+                    <p className="text-xs text-muted-foreground text-center py-4">Nenhum saque encontrado com os filtros aplicados.</p>
+                  ) : filtered.map((saque) => {
+                    const destinoNome = saque.destino_wallet_id ? (saque.wallet_exchange || saque.wallet_nome || "Wallet") : (saque.banco_nome || "Conta Bancária");
+                    const parceiroShort = saque.parceiro_nome ? getFirstLastName(saque.parceiro_nome) : "";
+                    return (
+                      <OperationItem key={saque.id} icon={saque.destino_wallet_id ? <Wallet className="h-3.5 w-3.5" /> : <Building2 className="h-3.5 w-3.5" />} color="yellow"
+                        label={`${destinoNome}${parceiroShort ? ` · ${parceiroShort}` : ""}`}
+                        sublabel={`${saque.bookmaker_nome}${saque.coin ? ` · ${saque.coin}` : ""}${saque.projeto_nome ? ` · ${saque.projeto_nome}` : ""}`}
+                        value={formatCurrency(saque.valor_origem || saque.valor, saque.moeda_origem || saque.moeda)}
+                        actions={<Button size="sm" onClick={() => handleConfirmarSaque(saque)} className="bg-yellow-600 hover:bg-yellow-700 h-6 text-xs px-2 shrink-0">Confirmar</Button>} />
+                    );
+                  })}
+                </>
+              )}
+            </SaquesSmartFilter>
+          </OperationCard>
         ),
       });
     }
@@ -519,40 +480,26 @@ export default function CentralOperacoes() {
       cards.push({
         id: "saques-processamento", priority: PRIORITY.HIGH, domain: 'financial_event',
         component: (
-          <Card key="saques-processamento" className="border-emerald-500/30">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm">
-                <DollarSign className="h-4 w-4 text-emerald-400" />Saques Pendentes de Processamento
-                <CardInfoTooltip title="Saques Pendentes de Processamento" description="Bookmakers marcados para saque que aguardam processamento." flow="Casa chega aqui quando desvinculada como 'limitada' (saque automático) ou quando gestor escolhe 'Marcar para Saque'." />
-                <Badge className="ml-auto bg-emerald-500/20 text-emerald-400">{alertasSaques.length}</Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="max-h-[240px] overflow-y-auto space-y-2 pr-1">
-                {alertasSaques.map((alerta) => (
-                  <div key={alerta.entidade_id} className="flex items-center justify-between p-2 rounded-lg border border-emerald-500/20 bg-emerald-500/5">
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <Building2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
-                      <div className="min-w-0">
-                        <p className="text-xs font-medium truncate">{alerta.titulo}</p>
-                        {alerta.parceiro_nome && <p className="text-[10px] text-muted-foreground truncate">{getFirstLastName(alerta.parceiro_nome)}</p>}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      {alerta.valor && <span className="text-xs font-bold text-emerald-400">{formatCurrency(alerta.valor, alerta.moeda)}</span>}
-                      <Button size="sm" onClick={() => mutations.handleSaqueAction(alerta)} className="h-6 text-xs px-2">Processar</Button>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild><Button variant="ghost" size="sm" className="h-6 w-6 p-0"><MoreVertical className="h-3.5 w-3.5" /></Button></DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => mutations.handleCancelarLiberacao(alerta)} className="text-xs gap-2"><Undo2 className="h-3.5 w-3.5" />Cancelar Liberação</DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
+          <OperationCard key="saques-processamento" title="Saques Pendentes de Processamento" icon={<DollarSign className="h-4 w-4" />} color="emerald" count={alertasSaques.length}
+            tooltip={{ title: "Saques Pendentes de Processamento", description: "Bookmakers marcados para saque que aguardam processamento.", flow: "Casa chega aqui quando desvinculada como 'limitada' (saque automático) ou quando gestor escolhe 'Marcar para Saque'." }}>
+            {alertasSaques.map((alerta) => (
+              <OperationItem key={alerta.entidade_id} icon={<Building2 className="h-3.5 w-3.5" />} color="emerald"
+                label={alerta.titulo}
+                sublabel={alerta.parceiro_nome ? getFirstLastName(alerta.parceiro_nome) : undefined}
+                value={alerta.valor ? formatCurrency(alerta.valor, alerta.moeda) : undefined}
+                actions={
+                  <div className="flex items-center gap-1">
+                    <Button size="sm" onClick={() => mutations.handleSaqueAction(alerta)} className="h-6 text-xs px-2">Processar</Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild><Button variant="ghost" size="sm" className="h-6 w-6 p-0"><MoreVertical className="h-3.5 w-3.5" /></Button></DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => mutations.handleCancelarLiberacao(alerta)} className="text-xs gap-2"><Undo2 className="h-3.5 w-3.5" />Cancelar Liberação</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                } />
+            ))}
+          </OperationCard>
         ),
       });
     }
@@ -562,43 +509,31 @@ export default function CentralOperacoes() {
       cards.push({
         id: "casas-limitadas", priority: PRIORITY.HIGH, domain: 'financial_event',
         component: (
-          <Card key="casas-limitadas" className="border-orange-500/30 bg-orange-500/5">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm">
-                <ShieldAlert className="h-4 w-4 text-orange-400" />Casas Limitadas
-                <CardInfoTooltip title="Casas Limitadas" description="Bookmakers marcadas como limitadas e ainda vinculadas a projetos." flow="Quando uma bookmaker é marcada como 'Limitada', ela aparece aqui para processamento de saque." />
-                <Badge className="ml-auto bg-orange-500/20 text-orange-400">{alertasLimitadas.length}</Badge>
-              </CardTitle>
-              <CardDescription className="text-xs text-muted-foreground">Casas devolvidas/limitadas com saldo pendente</CardDescription>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <CasasLimitadasSmartFilter casas={alertasLimitadas}>
-                {(filtered) => (
-                  <div className="max-h-[300px] overflow-y-auto space-y-2 pr-1">
-                    {filtered.map((alerta) => (
-                      <div key={alerta.entidade_id} className="flex items-center justify-between p-2 rounded-lg border border-orange-500/30 bg-orange-500/10">
-                        <div className="flex items-center gap-2 min-w-0 flex-1">
-                          <Building2 className="h-3.5 w-3.5 text-orange-400 shrink-0" />
-                          <div className="min-w-0">
-                            <p className="text-xs font-medium truncate">{alerta.titulo}</p>
-                            <p className="text-[10px] text-muted-foreground truncate">{alerta.parceiro_nome && `${getFirstLastName(alerta.parceiro_nome)} • `}Sacar ou realocar saldo</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          {alerta.valor && <span className="text-xs font-bold text-orange-400">{formatCurrency(alerta.valor, alerta.moeda)}</span>}
+          <OperationCard key="casas-limitadas" title="Casas Limitadas" icon={<ShieldAlert className="h-4 w-4" />} color="orange" count={alertasLimitadas.length}
+            description="Casas devolvidas/limitadas com saldo pendente"
+            tooltip={{ title: "Casas Limitadas", description: "Bookmakers marcadas como limitadas e ainda vinculadas a projetos.", flow: "Quando uma bookmaker é marcada como 'Limitada', ela aparece aqui para processamento de saque." }}>
+            <CasasLimitadasSmartFilter casas={alertasLimitadas}>
+              {(filtered) => (
+                <>
+                  {filtered.map((alerta) => (
+                    <OperationItem key={alerta.entidade_id} icon={<Building2 className="h-3.5 w-3.5" />} color="orange"
+                      label={alerta.titulo}
+                      sublabel={`${alerta.parceiro_nome ? `${getFirstLastName(alerta.parceiro_nome)} • ` : ''}Sacar ou realocar saldo`}
+                      value={alerta.valor ? formatCurrency(alerta.valor, alerta.moeda) : undefined}
+                      actions={
+                        <div className="flex items-center gap-1">
                           <TooltipProvider><Tooltip delayDuration={200}><TooltipTrigger asChild>
                             <Button size="sm" variant="outline" onClick={() => setPerdaLimitadaDialog({ open: true, bookmakerId: alerta.entidade_id, bookmakerNome: alerta.titulo, moeda: alerta.moeda || "BRL", saldoAtual: alerta.valor || 0 })} className="border-destructive/50 text-destructive hover:bg-destructive/10 h-6 text-xs px-2 gap-1"><Ghost className="h-3 w-3" />Fantasma</Button>
                           </TooltipTrigger><TooltipContent side="top" className="max-w-xs p-3 space-y-1"><p className="font-medium text-sm">Saldo Fantasma</p><p className="text-xs text-muted-foreground">Registra como perda operacional o saldo residual que não pode ser sacado.</p></TooltipContent></Tooltip></TooltipProvider>
                           <Button size="sm" onClick={() => mutations.handleSaqueAction(alerta)} className="bg-orange-600 hover:bg-orange-700 h-6 text-xs px-2">Sacar</Button>
                         </div>
-                      </div>
-                    ))}
-                    {filtered.length === 0 && <p className="text-center text-[10px] text-muted-foreground py-4">Nenhuma casa encontrada com os filtros aplicados.</p>}
-                  </div>
-                )}
-              </CasasLimitadasSmartFilter>
-            </CardContent>
-          </Card>
+                      } />
+                  ))}
+                  {filtered.length === 0 && <p className="text-center text-[10px] text-muted-foreground py-4">Nenhuma casa encontrada com os filtros aplicados.</p>}
+                </>
+              )}
+            </CasasLimitadasSmartFilter>
+          </OperationCard>
         ),
       });
     }
@@ -611,38 +546,22 @@ export default function CentralOperacoes() {
       cards.push({
         id: "casas-aguardando-decisao", priority: PRIORITY.HIGH, domain: 'financial_event',
         component: (
-          <Card key="casas-aguardando-decisao" className="border-purple-500/30 bg-purple-500/5">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm">
-                <Unlink className="h-4 w-4 text-purple-400" />Casas Aguardando Decisão
-                <CardInfoTooltip title="Casas Aguardando Decisão" description="Bookmakers ativas desvinculadas de projetos com saldo positivo." flow="Quando um operador desvincula uma casa ATIVA com saldo, ela aguarda decisão do responsável financeiro." />
-                <Badge className="ml-auto bg-purple-500/20 text-purple-400">{casasAguardandoDecisao.length}</Badge>
-              </CardTitle>
-              <CardDescription className="text-xs text-muted-foreground">Definir destino: disponibilizar ou sacar</CardDescription>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="max-h-[240px] overflow-y-auto space-y-2 pr-1">
-                {casasAguardandoDecisao.map((casa) => (
-                  <div key={casa.id} className="flex items-center justify-between p-2 rounded-lg border border-purple-500/30 bg-purple-500/10">
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <Unlink className="h-3.5 w-3.5 text-purple-400 shrink-0" />
-                      <div className="min-w-0">
-                        <p className="text-xs font-medium truncate">{casa.nome}</p>
-                        <p className="text-[10px] text-muted-foreground truncate">{casa.parceiro_nome ? getFirstLastName(casa.parceiro_nome) : "Sem parceiro"}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-xs font-bold text-purple-400">{formatCurrency(casa.saldo_efetivo, casa.moeda)}</span>
-                      <div className="flex gap-1">
-                        <Button size="sm" variant="outline" onClick={() => mutations.handleDisponibilizarCasa(casa)} className="border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 h-6 text-xs px-2">Disponibilizar</Button>
-                        <Button size="sm" onClick={() => mutations.handleMarcarParaSaque(casa)} className="bg-purple-600 hover:bg-purple-700 h-6 text-xs px-2">Marcar Saque</Button>
-                      </div>
-                    </div>
+          <OperationCard key="casas-aguardando-decisao" title="Casas Aguardando Decisão" icon={<Unlink className="h-4 w-4" />} color="purple" count={casasAguardandoDecisao.length}
+            description="Definir destino: disponibilizar ou sacar"
+            tooltip={{ title: "Casas Aguardando Decisão", description: "Bookmakers ativas desvinculadas de projetos com saldo positivo.", flow: "Quando um operador desvincula uma casa ATIVA com saldo, ela aguarda decisão do responsável financeiro." }}>
+            {casasAguardandoDecisao.map((casa) => (
+              <OperationItem key={casa.id} icon={<Unlink className="h-3.5 w-3.5" />} color="purple"
+                label={casa.nome}
+                sublabel={casa.parceiro_nome ? getFirstLastName(casa.parceiro_nome) : "Sem parceiro"}
+                value={formatCurrency(casa.saldo_efetivo, casa.moeda)}
+                actions={
+                  <div className="flex gap-1">
+                    <Button size="sm" variant="outline" onClick={() => mutations.handleDisponibilizarCasa(casa)} className="border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 h-6 text-xs px-2">Disponibilizar</Button>
+                    <Button size="sm" onClick={() => mutations.handleMarcarParaSaque(casa)} className="bg-purple-600 hover:bg-purple-700 h-6 text-xs px-2">Marcar Saque</Button>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                } />
+            ))}
+          </OperationCard>
         ),
       });
     }
@@ -652,38 +571,22 @@ export default function CentralOperacoes() {
       cards.push({
         id: "casas-desvinculadas", priority: PRIORITY.MEDIUM, domain: 'financial_event',
         component: (
-          <Card key="casas-desvinculadas" className="border-slate-500/30 bg-slate-500/5">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm">
-                <Unlink className="h-4 w-4 text-slate-400" />Casas Desvinculadas
-                <CardInfoTooltip title="Casas Desvinculadas (Legado)" description="Bookmakers desvinculadas antes da nova regra de decisão." flow="Casas desvinculadas antes do novo fluxo aparecem aqui para compatibilidade." />
-                <Badge className="ml-auto bg-slate-500/20 text-slate-400">{casasAtivasDesvinculadas.length}</Badge>
-              </CardTitle>
-              <CardDescription className="text-xs text-muted-foreground">Casas sem projeto com saldo pendente</CardDescription>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="max-h-[240px] overflow-y-auto space-y-2 pr-1">
-                {casasAtivasDesvinculadas.map((casa) => (
-                  <div key={casa.id} className="flex items-center justify-between p-2 rounded-lg border border-slate-500/30 bg-slate-500/10">
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <Unlink className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                      <div className="min-w-0">
-                        <p className="text-xs font-medium truncate">{casa.nome}</p>
-                        <p className="text-[10px] text-muted-foreground truncate">{casa.parceiro_nome ? getFirstLastName(casa.parceiro_nome) : "Sem parceiro"}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-xs font-bold text-slate-400">{formatCurrency(casa.saldo_efetivo, casa.moeda)}</span>
-                      <div className="flex gap-1">
-                        <Button size="sm" onClick={() => mutations.handleSolicitarSaqueCasaDesvinculada(casa)} className="bg-slate-600 hover:bg-slate-700 h-6 text-xs px-2">Sacar</Button>
-                        <Button size="sm" variant="outline" onClick={() => mutations.handleAcknowledgeCasaDesvinculada(casa)} className="border-slate-500/30 text-slate-400 hover:bg-slate-500/10 h-6 text-xs px-2">Ciente</Button>
-                      </div>
-                    </div>
+          <OperationCard key="casas-desvinculadas" title="Casas Desvinculadas" icon={<Unlink className="h-4 w-4" />} color="slate" count={casasAtivasDesvinculadas.length}
+            description="Casas sem projeto com saldo pendente"
+            tooltip={{ title: "Casas Desvinculadas (Legado)", description: "Bookmakers desvinculadas antes da nova regra de decisão.", flow: "Casas desvinculadas antes do novo fluxo aparecem aqui para compatibilidade." }}>
+            {casasAtivasDesvinculadas.map((casa) => (
+              <OperationItem key={casa.id} icon={<Unlink className="h-3.5 w-3.5" />} color="slate"
+                label={casa.nome}
+                sublabel={casa.parceiro_nome ? getFirstLastName(casa.parceiro_nome) : "Sem parceiro"}
+                value={formatCurrency(casa.saldo_efetivo, casa.moeda)}
+                actions={
+                  <div className="flex gap-1">
+                    <Button size="sm" onClick={() => mutations.handleSolicitarSaqueCasaDesvinculada(casa)} className="bg-slate-600 hover:bg-slate-700 h-6 text-xs px-2">Sacar</Button>
+                    <Button size="sm" variant="outline" onClick={() => mutations.handleAcknowledgeCasaDesvinculada(casa)} className="border-slate-500/30 text-slate-400 hover:bg-slate-500/10 h-6 text-xs px-2">Ciente</Button>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                } />
+            ))}
+          </OperationCard>
         ),
       });
     }
@@ -693,35 +596,23 @@ export default function CentralOperacoes() {
       cards.push({
         id: "participacoes-investidores", priority: PRIORITY.HIGH, domain: 'financial_event',
         component: (
-          <Card key="participacoes-investidores" className="border-indigo-500/30">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm">
-                <Banknote className="h-4 w-4 text-indigo-400" />Participações de Investidores
-                <CardInfoTooltip title="Participações de Investidores" description="Pagamentos de participação nos lucros devidos aos investidores." flow="Quando um ciclo é fechado com lucro, a participação de cada investidor é calculada." />
-                <Badge className="ml-auto bg-indigo-500/20 text-indigo-400">{participacoesPendentes.length}</Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <ParticipacoesSmartFilter participacoes={participacoesPendentes}>
-                {(filtered) => (
-                  <div className="max-h-[300px] overflow-y-auto space-y-2 pr-1">
-                    {filtered.map((part) => (
-                      <div key={part.id} className="flex items-center justify-between p-2 rounded-lg border border-indigo-500/20 bg-indigo-500/5 cursor-pointer" onClick={() => { setSelectedParticipacao(part); setPagamentoParticipacaoOpen(true); }}>
-                        <div className="flex items-center gap-2 min-w-0 flex-1">
-                          <User className="h-3.5 w-3.5 text-indigo-400 shrink-0" />
-                          <div className="min-w-0"><p className="text-xs font-medium truncate">{part.investidor_nome}</p><p className="text-[10px] text-muted-foreground truncate">{part.projeto_nome} • Ciclo {part.ciclo_numero}</p></div>
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <span className="text-xs font-bold text-indigo-400">{formatCurrency(part.valor_participacao)}</span>
-                          <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700 h-6 text-xs px-2" onClick={(e) => { e.stopPropagation(); setSelectedParticipacao(part); setPagamentoParticipacaoOpen(true); }}>Pagar</Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </ParticipacoesSmartFilter>
-            </CardContent>
-          </Card>
+          <OperationCard key="participacoes-investidores" title="Participações de Investidores" icon={<Banknote className="h-4 w-4" />} color="indigo" count={participacoesPendentes.length}
+            tooltip={{ title: "Participações de Investidores", description: "Pagamentos de participação nos lucros devidos aos investidores.", flow: "Quando um ciclo é fechado com lucro, a participação de cada investidor é calculada." }}>
+            <ParticipacoesSmartFilter participacoes={participacoesPendentes}>
+              {(filtered) => (
+                <>
+                  {filtered.map((part) => (
+                    <OperationItem key={part.id} icon={<User className="h-3.5 w-3.5" />} color="indigo"
+                      label={part.investidor_nome}
+                      sublabel={`${part.projeto_nome} • Ciclo ${part.ciclo_numero}`}
+                      value={formatCurrency(part.valor_participacao)}
+                      onClick={() => { setSelectedParticipacao(part); setPagamentoParticipacaoOpen(true); }}
+                      actions={<Button size="sm" className="bg-indigo-600 hover:bg-indigo-700 h-6 text-xs px-2" onClick={(e) => { e.stopPropagation(); setSelectedParticipacao(part); setPagamentoParticipacaoOpen(true); }}>Pagar</Button>} />
+                  ))}
+                </>
+              )}
+            </ParticipacoesSmartFilter>
+          </OperationCard>
         ),
       });
     }
@@ -731,31 +622,17 @@ export default function CentralOperacoes() {
       cards.push({
         id: "pagamentos-operador", priority: PRIORITY.HIGH, domain: 'project_event',
         component: (
-          <Card key="pagamentos-operador" className="border-orange-500/30">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm">
-                <Users className="h-4 w-4 text-orange-400" />Pagamentos de Operador
-                <CardInfoTooltip title="Pagamentos de Operador" description="Pagamentos pendentes aos operadores de projetos." flow="Quando um operador atinge meta ou tem pagamento agendado, o valor é gerado e aguarda processamento." />
-                <Badge className="ml-auto bg-orange-500/20 text-orange-400">{pagamentosOperadorPendentes.length}</Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="max-h-[240px] overflow-y-auto space-y-2 pr-1">
-                {pagamentosOperadorPendentes.map((pag) => (
-                  <div key={pag.id} className="flex items-center justify-between p-2 rounded-lg border border-orange-500/20 bg-orange-500/5 cursor-pointer" onClick={() => { setSelectedPagamentoOperador(pag); setPagamentoOperadorOpen(true); }}>
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <DollarSign className="h-3.5 w-3.5 text-orange-400 shrink-0" />
-                      <div className="min-w-0"><p className="text-xs font-medium truncate">{pag.operador_nome}</p><p className="text-[10px] text-muted-foreground truncate">{pag.tipo_pagamento}{pag.projeto_nome ? ` • ${pag.projeto_nome}` : ""}</p></div>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-xs font-bold text-orange-400">{formatCurrency(pag.valor)}</span>
-                      <Button size="sm" className="bg-orange-600 hover:bg-orange-700 h-6 text-xs px-2" onClick={(e) => { e.stopPropagation(); setSelectedPagamentoOperador(pag); setPagamentoOperadorOpen(true); }}>Pagar</Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          <OperationCard key="pagamentos-operador" title="Pagamentos de Operador" icon={<Users className="h-4 w-4" />} color="orange" count={pagamentosOperadorPendentes.length}
+            tooltip={{ title: "Pagamentos de Operador", description: "Pagamentos pendentes aos operadores de projetos.", flow: "Quando um operador atinge meta ou tem pagamento agendado, o valor é gerado e aguarda processamento." }}>
+            {pagamentosOperadorPendentes.map((pag) => (
+              <OperationItem key={pag.id} icon={<DollarSign className="h-3.5 w-3.5" />} color="orange"
+                label={pag.operador_nome}
+                sublabel={`${pag.tipo_pagamento}${pag.projeto_nome ? ` • ${pag.projeto_nome}` : ""}`}
+                value={formatCurrency(pag.valor)}
+                onClick={() => { setSelectedPagamentoOperador(pag); setPagamentoOperadorOpen(true); }}
+                actions={<Button size="sm" className="bg-orange-600 hover:bg-orange-700 h-6 text-xs px-2" onClick={(e) => { e.stopPropagation(); setSelectedPagamentoOperador(pag); setPagamentoOperadorOpen(true); }}>Pagar</Button>} />
+            ))}
+          </OperationCard>
         ),
       });
     }
@@ -766,77 +643,48 @@ export default function CentralOperacoes() {
       cards.push({
         id: "ciclos-apuracao", priority: PRIORITY.MEDIUM, domain: 'project_event',
         component: (
-          <Card key="ciclos-apuracao" className="border-violet-500/30">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm">
-                <Target className="h-4 w-4 text-violet-400" />Ciclos de Apuração
-                <CardInfoTooltip title="Ciclos de Apuração" description="Ciclos próximos do fechamento ou que já atingiram a meta." flow="Ciclos são criados automaticamente e fecham por tempo, volume ou ambos." />
-                {alertasCiclosFiltrados.length > 0 && (
-                  <Badge className="ml-auto bg-violet-500/20 text-violet-400">{alertasCiclosFiltrados.length}</Badge>
-                )}
-              </CardTitle>
-              {ciclosDismissedCount > 0 && (
-                <button
-                  onClick={() => setShowDismissedCiclos(!showDismissedCiclos)}
-                  className="text-[10px] text-muted-foreground hover:text-foreground transition-colors text-left"
-                >
-                  {showDismissedCiclos ? "Ocultar dispensados" : `${ciclosDismissedCount} oculto${ciclosDismissedCount > 1 ? "s" : ""} — mostrar`}
-                </button>
-              )}
-            </CardHeader>
-            <CardContent className="pt-0">
-              {alertasCiclosFiltrados.length === 0 && !showDismissedCiclos ? (
-                <p className="text-xs text-muted-foreground text-center py-4">Todos os ciclos foram ocultos.</p>
-              ) : (
-                <div className="max-h-[240px] overflow-y-auto space-y-2 pr-1">
-                  {alertasCiclosFiltrados.map((ciclo) => {
-                    const isDismissed = ciclo.dismissed;
-                    const getUrgencyColor = () => {
-                      if (isDismissed) return "border-muted/40 bg-muted/10 opacity-60";
-                      switch (ciclo.urgencia) { case "CRITICA": return "border-red-500/40 bg-red-500/10"; case "ALTA": return "border-orange-500/40 bg-orange-500/10"; default: return "border-violet-500/30 bg-violet-500/10"; }
-                    };
-                    return (
-                      <div key={ciclo.id} className={`p-2 rounded-lg border ${getUrgencyColor()} group`}>
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 min-w-0 flex-1 cursor-pointer" onClick={() => navigate(`/projeto/${ciclo.projeto_id}`)}>
-                            <FolderKanban className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                            <span className="text-xs font-medium truncate">{ciclo.projeto_nome}</span>
-                            <Badge variant="outline" className="text-[10px] shrink-0">Ciclo {ciclo.numero_ciclo}</Badge>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            {ciclo.tipo_gatilho === "TEMPO" && <Clock className="h-3 w-3 text-muted-foreground" />}
-                            {ciclo.tipo_gatilho === "VOLUME" && <Target className="h-3 w-3 text-muted-foreground" />}
-                            {ciclo.tipo_gatilho === "HIBRIDO" && <Zap className="h-3 w-3 text-muted-foreground" />}
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    isDismissed ? undismissCiclo(ciclo.id) : dismissCiclo(ciclo.id);
-                                  }}
-                                >
-                                  {isDismissed ? <Undo2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent side="left">
-                                {isDismissed ? "Tornar visível novamente" : "Ocultar este ciclo"}
-                              </TooltipContent>
-                            </Tooltip>
-                          </div>
-                        </div>
-                        {(ciclo.tipo_gatilho === "VOLUME" || ciclo.tipo_gatilho === "HIBRIDO") && ciclo.meta_volume && (
-                          <div className="mt-2"><Progress value={Math.min(100, ciclo.progresso_volume)} className="h-1" /><p className="text-[10px] text-muted-foreground mt-1">{ciclo.progresso_volume.toFixed(0)}% concluído</p></div>
-                        )}
+          <OperationCard key="ciclos-apuracao" title="Ciclos de Apuração" icon={<Target className="h-4 w-4" />} color="violet" count={alertasCiclosFiltrados.length}
+            tooltip={{ title: "Ciclos de Apuração", description: "Ciclos próximos do fechamento ou que já atingiram a meta.", flow: "Ciclos são criados automaticamente e fecham por tempo, volume ou ambos." }}
+            headerActions={ciclosDismissedCount > 0 ? (
+              <button onClick={() => setShowDismissedCiclos(!showDismissedCiclos)} className="text-[10px] text-muted-foreground hover:text-foreground transition-colors">
+                {showDismissedCiclos ? "Ocultar" : `${ciclosDismissedCount} oculto${ciclosDismissedCount > 1 ? "s" : ""}`}
+              </button>
+            ) : undefined}>
+            {alertasCiclosFiltrados.length === 0 && !showDismissedCiclos ? (
+              <p className="text-xs text-muted-foreground text-center py-4">Todos os ciclos foram ocultos.</p>
+            ) : (
+              alertasCiclosFiltrados.map((ciclo) => {
+                const isDismissed = ciclo.dismissed;
+                return (
+                  <div key={ciclo.id} className={`p-2 rounded-xl border group transition-all duration-150 ${isDismissed ? "border-muted/40 bg-muted/10 opacity-60" : ciclo.urgencia === "CRITICA" ? "border-red-500/30 bg-red-500/[0.06]" : ciclo.urgencia === "ALTA" ? "border-orange-500/30 bg-orange-500/[0.06]" : "border-violet-500/20 bg-violet-500/[0.06]"}`}>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0 flex-1 cursor-pointer" onClick={() => navigate(`/projeto/${ciclo.projeto_id}`)}>
+                        <FolderKanban className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                        <span className="text-xs font-medium truncate">{ciclo.projeto_nome}</span>
+                        <Badge variant="outline" className="text-[10px] shrink-0">Ciclo {ciclo.numero_ciclo}</Badge>
                       </div>
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                      <div className="flex items-center gap-1">
+                        {ciclo.tipo_gatilho === "TEMPO" && <Clock className="h-3 w-3 text-muted-foreground" />}
+                        {ciclo.tipo_gatilho === "VOLUME" && <Target className="h-3 w-3 text-muted-foreground" />}
+                        {ciclo.tipo_gatilho === "HIBRIDO" && <Zap className="h-3 w-3 text-muted-foreground" />}
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button size="sm" variant="ghost" className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => { e.stopPropagation(); isDismissed ? undismissCiclo(ciclo.id) : dismissCiclo(ciclo.id); }}>
+                              {isDismissed ? <Undo2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="left">{isDismissed ? "Tornar visível novamente" : "Ocultar este ciclo"}</TooltipContent>
+                        </Tooltip>
+                      </div>
+                    </div>
+                    {(ciclo.tipo_gatilho === "VOLUME" || ciclo.tipo_gatilho === "HIBRIDO") && ciclo.meta_volume && (
+                      <div className="mt-2"><Progress value={Math.min(100, ciclo.progresso_volume)} className="h-1" /><p className="text-[10px] text-muted-foreground mt-1">{ciclo.progresso_volume.toFixed(0)}% concluído</p></div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </OperationCard>
         ),
       });
     }
@@ -846,31 +694,18 @@ export default function CentralOperacoes() {
       cards.push({
         id: "alertas-lucro", priority: PRIORITY.MEDIUM, domain: 'partner_event',
         component: (
-          <Card key="alertas-lucro" className="border-emerald-500/30">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm">
-                <TrendingUp className="h-4 w-4 text-emerald-400" />Marcos de Lucro Atingidos
-                <CardInfoTooltip title="Marcos de Lucro" description="Parceiros que atingiram marcos importantes de lucro acumulado." flow="Quando o lucro total de um parceiro cruza um marco configurado, um alerta é gerado." />
-                <Badge className="ml-auto bg-emerald-500/20 text-emerald-400">{alertasLucro.length}</Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="max-h-[240px] overflow-y-auto space-y-2 pr-1">
-                {alertasLucro.map((alerta) => (
-                  <div key={alerta.id} className="flex items-center justify-between p-2 rounded-lg border border-emerald-500/20 bg-emerald-500/5">
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <TrendingUp className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
-                      <div className="min-w-0"><p className="text-xs font-medium truncate">{alerta.parceiro_nome}</p><p className="text-[10px] text-muted-foreground">Lucro: {formatCurrency(alerta.lucro_atual)}</p></div>
-                    </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <span className="text-xs font-bold text-emerald-400">R$ {alerta.marco_valor.toLocaleString("pt-BR")}</span>
-                      <Button size="sm" variant="outline" onClick={async () => { try { await supabase.from("parceiro_lucro_alertas").update({ notificado: true }).eq("id", alerta.id); setAlertasLucro(prev => prev.filter(a => a.id !== alerta.id)); toast.success("Marco verificado"); } catch { toast.error("Erro ao confirmar"); } }} className="h-6 text-[10px] px-2 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"><CheckCircle2 className="h-3 w-3 mr-1" />OK</Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          <OperationCard key="alertas-lucro" title="Marcos de Lucro Atingidos" icon={<TrendingUp className="h-4 w-4" />} color="emerald" count={alertasLucro.length}
+            tooltip={{ title: "Marcos de Lucro", description: "Parceiros que atingiram marcos importantes de lucro acumulado.", flow: "Quando o lucro total de um parceiro cruza um marco configurado, um alerta é gerado." }}>
+            {alertasLucro.map((alerta) => (
+              <OperationItem key={alerta.id} icon={<TrendingUp className="h-3.5 w-3.5" />} color="emerald"
+                label={alerta.parceiro_nome}
+                sublabel={`Lucro: ${formatCurrency(alerta.lucro_atual)}`}
+                value={`R$ ${alerta.marco_valor.toLocaleString("pt-BR")}`}
+                actions={
+                  <Button size="sm" variant="outline" onClick={async () => { try { await supabase.from("parceiro_lucro_alertas").update({ notificado: true }).eq("id", alerta.id); setAlertasLucro(prev => prev.filter(a => a.id !== alerta.id)); toast.success("Marco verificado"); } catch { toast.error("Erro ao confirmar"); } }} className="h-6 text-[10px] px-2 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"><CheckCircle2 className="h-3 w-3 mr-1" />OK</Button>
+                } />
+            ))}
+          </OperationCard>
         ),
       });
     }
@@ -880,31 +715,16 @@ export default function CentralOperacoes() {
       cards.push({
         id: "entregas-pendentes", priority: PRIORITY.MEDIUM, domain: 'project_event',
         component: (
-          <Card key="entregas-pendentes" className="border-purple-500/30">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm">
-                <Package className="h-4 w-4 text-purple-400" />Entregas Pendentes
-                <CardInfoTooltip title="Entregas Pendentes" description="Entregas prontas para conciliação e pagamento." flow="Quando uma entrega atinge a meta, ela fica disponível para conciliação." />
-                <Badge className="ml-auto bg-purple-500/20 text-purple-400">{entregasPendentes.length}</Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="max-h-[240px] overflow-y-auto space-y-2 pr-1">
-                {entregasPendentes.map((entrega) => (
-                  <div key={entrega.id} className={`flex items-center justify-between p-2 rounded-lg border ${entrega.nivel_urgencia === "CRITICA" ? "border-red-500/30 bg-red-500/5" : "border-purple-500/20 bg-purple-500/5"}`}>
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <Target className={`h-3.5 w-3.5 shrink-0 ${entrega.nivel_urgencia === "CRITICA" ? "text-red-400" : "text-purple-400"}`} />
-                      <div className="min-w-0"><p className="text-xs font-medium truncate">{entrega.operador_nome}</p><p className="text-[10px] text-muted-foreground truncate">{entrega.projeto_nome} • Entrega #{entrega.numero_entrega}</p></div>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-xs font-bold text-purple-400">{formatCurrency(entrega.resultado_nominal)}</span>
-                      <Button size="sm" onClick={() => handleConciliarEntrega(entrega)} className="bg-purple-600 hover:bg-purple-700 h-6 text-xs px-2">Conciliar</Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          <OperationCard key="entregas-pendentes" title="Entregas Pendentes" icon={<Package className="h-4 w-4" />} color="purple" count={entregasPendentes.length}
+            tooltip={{ title: "Entregas Pendentes", description: "Entregas prontas para conciliação e pagamento.", flow: "Quando uma entrega atinge a meta, ela fica disponível para conciliação." }}>
+            {entregasPendentes.map((entrega) => (
+              <OperationItem key={entrega.id} icon={<Target className="h-3.5 w-3.5" />} color={entrega.nivel_urgencia === "CRITICA" ? "red" : "purple"}
+                label={entrega.operador_nome}
+                sublabel={`${entrega.projeto_nome} • Entrega #${entrega.numero_entrega}`}
+                value={formatCurrency(entrega.resultado_nominal)}
+                actions={<Button size="sm" onClick={() => handleConciliarEntrega(entrega)} className="bg-purple-600 hover:bg-purple-700 h-6 text-xs px-2">Conciliar</Button>} />
+            ))}
+          </OperationCard>
         ),
       });
     }
@@ -914,26 +734,15 @@ export default function CentralOperacoes() {
       cards.push({
         id: "parceiros-sem-parceria", priority: PRIORITY.LOW, domain: 'partner_event',
         component: (
-          <Card key="parceiros-sem-parceria" className="border-amber-500/30">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm">
-                <UserPlus className="h-4 w-4 text-amber-400" />Parceiros sem Origem
-                <CardInfoTooltip title="Parceiros sem Origem" description="Parceiros ativos sem indicador, fornecedor ou outra origem registrada." flow="Parceiros cadastrados sem origem aparecem aqui para definição." />
-                <Badge className="ml-auto bg-amber-500/20 text-amber-400">{parceirosSemParceria.length}</Badge>
-              </CardTitle>
-              <p className="text-xs text-muted-foreground">Parceiros sem indicação, fornecedor ou origem registrada</p>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="max-h-[240px] overflow-y-auto space-y-2 pr-1">
-                {parceirosSemParceria.map((parceiro) => (
-                  <div key={parceiro.id} className="flex items-center justify-between p-2 rounded-lg border status-bg-orange">
-                    <div className="flex items-center gap-2 min-w-0 flex-1"><User className="h-3.5 w-3.5 status-orange shrink-0" /><span className="text-xs font-medium truncate">{getFirstLastName(parceiro.nome)}</span></div>
-                    <Button size="sm" variant="outline" onClick={() => navigate("/programa-indicacao", { state: { tab: "parcerias", parceiroId: parceiro.id } })} className="h-6 text-xs px-2 status-orange status-bg-orange hover:opacity-80">Definir Origem</Button>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          <OperationCard key="parceiros-sem-parceria" title="Parceiros sem Origem" icon={<UserPlus className="h-4 w-4" />} color="amber" count={parceirosSemParceria.length}
+            description="Parceiros sem indicação, fornecedor ou origem registrada"
+            tooltip={{ title: "Parceiros sem Origem", description: "Parceiros ativos sem indicador, fornecedor ou outra origem registrada.", flow: "Parceiros cadastrados sem origem aparecem aqui para definição." }}>
+            {parceirosSemParceria.map((parceiro) => (
+              <OperationItem key={parceiro.id} icon={<User className="h-3.5 w-3.5" />} color="amber"
+                label={getFirstLastName(parceiro.nome)}
+                actions={<Button size="sm" variant="outline" onClick={() => navigate("/programa-indicacao", { state: { tab: "parcerias", parceiroId: parceiro.id } })} className="h-6 text-xs px-2">Definir Origem</Button>} />
+            ))}
+          </OperationCard>
         ),
       });
     }
@@ -943,43 +752,34 @@ export default function CentralOperacoes() {
       cards.push({
         id: "pagamentos-parceiros", priority: PRIORITY.LOW, domain: 'partner_event',
         component: (
-          <Card key="pagamentos-parceiros" className="border-cyan-500/30">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm">
-                <DollarSign className="h-4 w-4 text-cyan-400" />Pagamentos a Parceiros
-                <CardInfoTooltip title="Pagamentos a Parceiros" description="Valores devidos aos parceiros conforme acordado na parceria." flow="Quando uma parceria possui valor acordado para o parceiro, ele aparece aqui." />
-                <Badge className="ml-auto bg-cyan-500/20 text-cyan-400">{pagamentosParceiros.length}</Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="max-h-[240px] overflow-y-auto space-y-2 pr-1">
-                {pagamentosParceiros.map((pag) => (
-                  <div key={pag.parceriaId} className="flex items-center justify-between p-2 rounded-lg border border-cyan-500/20 bg-cyan-500/5">
-                    <div className="flex items-center gap-2 min-w-0 flex-1"><User className="h-3.5 w-3.5 text-cyan-400 shrink-0" /><span className="text-xs font-medium truncate">{getFirstLastName(pag.parceiroNome)}</span></div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <span className="text-xs font-bold text-cyan-400">{formatCurrency(pag.valorParceiro)}</span>
-                      <Button size="sm" variant="ghost" onClick={() => { setSelectedPagamentoParceiro(pag); setPagamentoParceiroDialogOpen(true); }} className="h-6 text-xs px-2">Pagar</Button>
-                      <Button size="sm" variant="ghost" className="h-6 text-xs px-2 text-muted-foreground hover:text-destructive" onClick={async () => {
-                        setDispensaParceriaId(pag.parceriaId);
-                        setDispensaParceiroNome(pag.parceiroNome);
-                        setDispensaMotivo('');
-                        setDispensaEstornar(false);
-                        const { data: parData } = await supabase.from("parcerias").select("comissao_paga, valor_comissao_indicador, indicacao_id").eq("id", pag.parceriaId).single();
-                        const jaPaga = parData?.comissao_paga === true && (parData?.valor_comissao_indicador || 0) > 0;
-                        setDispensaComissaoJaPaga(jaPaga);
-                        setDispensaValorComissao(parData?.valor_comissao_indicador || 0);
-                        if (jaPaga && parData?.indicacao_id) {
-                          const { data: ind } = await supabase.from("v_indicacoes_workspace").select("indicador_id").eq("id", parData.indicacao_id).maybeSingle();
-                          if (ind?.indicador_id) { const { data: indRef } = await supabase.from("indicadores_referral").select("nome").eq("id", ind.indicador_id).maybeSingle(); setDispensaIndicadorNome(indRef?.nome || "Indicador"); } else { setDispensaIndicadorNome("Indicador"); }
-                        } else { setDispensaIndicadorNome(""); }
-                        setDispensaOpen(true);
-                      }}><XCircle className="h-3 w-3 mr-1" />Dispensar</Button>
-                    </div>
+          <OperationCard key="pagamentos-parceiros" title="Pagamentos a Parceiros" icon={<DollarSign className="h-4 w-4" />} color="cyan" count={pagamentosParceiros.length}
+            tooltip={{ title: "Pagamentos a Parceiros", description: "Valores devidos aos parceiros conforme acordado na parceria.", flow: "Quando uma parceria possui valor acordado para o parceiro, ele aparece aqui." }}>
+            {pagamentosParceiros.map((pag) => (
+              <OperationItem key={pag.parceriaId} icon={<User className="h-3.5 w-3.5" />} color="cyan"
+                label={getFirstLastName(pag.parceiroNome)}
+                value={formatCurrency(pag.valorParceiro)}
+                actions={
+                  <div className="flex items-center gap-1">
+                    <Button size="sm" variant="ghost" onClick={() => { setSelectedPagamentoParceiro(pag); setPagamentoParceiroDialogOpen(true); }} className="h-6 text-xs px-2">Pagar</Button>
+                    <Button size="sm" variant="ghost" className="h-6 text-xs px-2 text-muted-foreground hover:text-destructive" onClick={async () => {
+                      setDispensaParceriaId(pag.parceriaId);
+                      setDispensaParceiroNome(pag.parceiroNome);
+                      setDispensaMotivo('');
+                      setDispensaEstornar(false);
+                      const { data: parData } = await supabase.from("parcerias").select("comissao_paga, valor_comissao_indicador, indicacao_id").eq("id", pag.parceriaId).single();
+                      const jaPaga = parData?.comissao_paga === true && (parData?.valor_comissao_indicador || 0) > 0;
+                      setDispensaComissaoJaPaga(jaPaga);
+                      setDispensaValorComissao(parData?.valor_comissao_indicador || 0);
+                      if (jaPaga && parData?.indicacao_id) {
+                        const { data: ind } = await supabase.from("v_indicacoes_workspace").select("indicador_id").eq("id", parData.indicacao_id).maybeSingle();
+                        if (ind?.indicador_id) { const { data: indRef } = await supabase.from("indicadores_referral").select("nome").eq("id", ind.indicador_id).maybeSingle(); setDispensaIndicadorNome(indRef?.nome || "Indicador"); } else { setDispensaIndicadorNome("Indicador"); }
+                      } else { setDispensaIndicadorNome(""); }
+                      setDispensaOpen(true);
+                    }}><XCircle className="h-3 w-3 mr-1" />Dispensar</Button>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                } />
+            ))}
+          </OperationCard>
         ),
       });
     }
@@ -989,31 +789,16 @@ export default function CentralOperacoes() {
       cards.push({
         id: "pagamentos-fornecedores", priority: PRIORITY.MEDIUM, domain: 'partner_event',
         component: (
-          <Card key="pagamentos-fornecedores" className="border-orange-500/30">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm">
-                <Truck className="h-4 w-4 text-orange-400" />Pagamentos a Fornecedores
-                <CardInfoTooltip title="Pagamentos a Fornecedores" description="Valores devidos aos fornecedores conforme acordado na parceria." flow="Quando uma parceria é vinculada a um fornecedor com valor contratado, ele aparece aqui." />
-                <Badge className="ml-auto bg-orange-500/20 text-orange-400">{pagamentosFornecedores.length}</Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="max-h-[240px] overflow-y-auto space-y-2 pr-1">
-                {pagamentosFornecedores.map((pag) => (
-                  <div key={pag.parceriaId} className="flex items-center justify-between p-2 rounded-lg border border-orange-500/20 bg-orange-500/5">
-                    <div className="flex flex-col gap-0.5 min-w-0 flex-1">
-                      <div className="flex items-center gap-2"><Truck className="h-3.5 w-3.5 text-orange-400 shrink-0" /><span className="text-xs font-medium truncate">{pag.fornecedorNome}</span></div>
-                      <span className="text-[10px] text-muted-foreground ml-5">Parceiro: {getFirstLastName(pag.parceiroNome)}{pag.valorPago > 0 && ` · Pago: ${formatCurrency(pag.valorPago)} de ${formatCurrency(pag.valorFornecedor)}`}</span>
-                    </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <span className="text-xs font-bold text-orange-400">{formatCurrency(pag.valorRestante)}</span>
-                      <Button size="sm" variant="ghost" onClick={() => { setSelectedPagamentoFornecedor(pag); setPagamentoFornecedorOpen(true); }} className="h-6 text-xs px-2">Pagar</Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          <OperationCard key="pagamentos-fornecedores" title="Pagamentos a Fornecedores" icon={<Truck className="h-4 w-4" />} color="orange" count={pagamentosFornecedores.length}
+            tooltip={{ title: "Pagamentos a Fornecedores", description: "Valores devidos aos fornecedores conforme acordado na parceria.", flow: "Quando uma parceria é vinculada a um fornecedor com valor contratado, ele aparece aqui." }}>
+            {pagamentosFornecedores.map((pag) => (
+              <OperationItem key={pag.parceriaId} icon={<Truck className="h-3.5 w-3.5" />} color="orange"
+                label={pag.fornecedorNome}
+                sublabel={`Parceiro: ${getFirstLastName(pag.parceiroNome)}${pag.valorPago > 0 ? ` · Pago: ${formatCurrency(pag.valorPago)} de ${formatCurrency(pag.valorFornecedor)}` : ''}`}
+                value={formatCurrency(pag.valorRestante)}
+                actions={<Button size="sm" variant="ghost" onClick={() => { setSelectedPagamentoFornecedor(pag); setPagamentoFornecedorOpen(true); }} className="h-6 text-xs px-2">Pagar</Button>} />
+            ))}
+          </OperationCard>
         ),
       });
     }
@@ -1023,28 +808,16 @@ export default function CentralOperacoes() {
       cards.push({
         id: "bonus-pendentes", priority: PRIORITY.LOW, domain: 'partner_event',
         component: (
-          <Card key="bonus-pendentes" className="border-pink-500/30">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm">
-                <Gift className="h-4 w-4 text-pink-400" />Bônus de Indicadores
-                <CardInfoTooltip title="Bônus de Indicadores" description="Bônus devidos a indicadores que atingiram metas." flow="Quando um indicador atinge a meta de parceiros indicados, um bônus é gerado." />
-                <Badge className="ml-auto bg-pink-500/20 text-pink-400">{bonusPendentes.reduce((acc, b) => acc + b.ciclosPendentes, 0)}</Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="max-h-[240px] overflow-y-auto space-y-2 pr-1">
-                {bonusPendentes.map((bonus) => (
-                  <div key={bonus.indicadorId} className="flex items-center justify-between p-2 rounded-lg border border-pink-500/20 bg-pink-500/5">
-                    <div className="flex items-center gap-2 min-w-0 flex-1"><Gift className="h-3.5 w-3.5 text-pink-400 shrink-0" /><div className="min-w-0"><p className="text-xs font-medium truncate">{bonus.indicadorNome}</p><p className="text-[10px] text-muted-foreground">{bonus.ciclosPendentes} ciclo(s) pendente(s)</p></div></div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-xs font-bold text-pink-400">{formatCurrency(bonus.totalBonusPendente)}</span>
-                      <Button size="sm" variant="ghost" onClick={() => navigate("/programa-indicacao", { state: { tab: "financeiro" } })} className="h-6 text-xs px-2">Pagar</Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          <OperationCard key="bonus-pendentes" title="Bônus de Indicadores" icon={<Gift className="h-4 w-4" />} color="pink" count={bonusPendentes.reduce((acc, b) => acc + b.ciclosPendentes, 0)}
+            tooltip={{ title: "Bônus de Indicadores", description: "Bônus devidos a indicadores que atingiram metas.", flow: "Quando um indicador atinge a meta de parceiros indicados, um bônus é gerado." }}>
+            {bonusPendentes.map((bonus) => (
+              <OperationItem key={bonus.indicadorId} icon={<Gift className="h-3.5 w-3.5" />} color="pink"
+                label={bonus.indicadorNome}
+                sublabel={`${bonus.ciclosPendentes} ciclo(s) pendente(s)`}
+                value={formatCurrency(bonus.totalBonusPendente)}
+                actions={<Button size="sm" variant="ghost" onClick={() => navigate("/programa-indicacao", { state: { tab: "financeiro" } })} className="h-6 text-xs px-2">Pagar</Button>} />
+            ))}
+          </OperationCard>
         ),
       });
     }
@@ -1054,28 +827,16 @@ export default function CentralOperacoes() {
       cards.push({
         id: "comissoes-pendentes", priority: PRIORITY.LOW, domain: 'partner_event',
         component: (
-          <Card key="comissoes-pendentes" className="border-teal-500/30">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm">
-                <Banknote className="h-4 w-4 text-teal-400" />Comissões Pendentes
-                <CardInfoTooltip title="Comissões Pendentes" description="Comissões devidas a indicadores por parceiros que eles indicaram." flow="Quando uma parceria indicada gera receita, uma comissão é calculada para o indicador." />
-                <Badge className="ml-auto bg-teal-500/20 text-teal-400">{comissoesPendentes.length}</Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="max-h-[240px] overflow-y-auto space-y-2 pr-1">
-                {comissoesPendentes.map((comissao) => (
-                  <div key={comissao.parceriaId} className="flex items-center justify-between p-2 rounded-lg border border-teal-500/20 bg-teal-500/5">
-                    <div className="flex items-center gap-2 min-w-0 flex-1"><Banknote className="h-3.5 w-3.5 text-teal-400 shrink-0" /><div className="min-w-0"><p className="text-xs font-medium truncate">{comissao.indicadorNome}</p><p className="text-[10px] text-muted-foreground truncate">→ {getFirstLastName(comissao.parceiroNome)}</p></div></div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-xs font-bold text-teal-400">{formatCurrency(comissao.valorComissao)}</span>
-                      <Button size="sm" variant="ghost" onClick={() => navigate("/programa-indicacao", { state: { tab: "financeiro" } })} className="h-6 text-xs px-2">Pagar</Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          <OperationCard key="comissoes-pendentes" title="Comissões Pendentes" icon={<Banknote className="h-4 w-4" />} color="teal" count={comissoesPendentes.length}
+            tooltip={{ title: "Comissões Pendentes", description: "Comissões devidas a indicadores por parceiros que eles indicaram.", flow: "Quando uma parceria indicada gera receita, uma comissão é calculada para o indicador." }}>
+            {comissoesPendentes.map((comissao) => (
+              <OperationItem key={comissao.parceriaId} icon={<Banknote className="h-3.5 w-3.5" />} color="teal"
+                label={comissao.indicadorNome}
+                sublabel={`→ ${getFirstLastName(comissao.parceiroNome)}`}
+                value={formatCurrency(comissao.valorComissao)}
+                actions={<Button size="sm" variant="ghost" onClick={() => navigate("/programa-indicacao", { state: { tab: "financeiro" } })} className="h-6 text-xs px-2">Pagar</Button>} />
+            ))}
+          </OperationCard>
         ),
       });
     }
@@ -1085,32 +846,23 @@ export default function CentralOperacoes() {
       cards.push({
         id: "parcerias-encerrando", priority: PRIORITY.LOW, domain: 'partner_event',
         component: (
-          <Card key="parcerias-encerrando" className="border-red-500/30">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm">
-                <Calendar className="h-4 w-4 text-red-400" />Parcerias Encerrando
-                <CardInfoTooltip title="Parcerias Encerrando" description="Parcerias com data de fim próxima que precisam de ação." flow="Parcerias com encerramento nos próximos dias aparecem aqui." />
-                <Badge className="ml-auto bg-red-500/20 text-red-400">{parceriasEncerramento.length}</Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="max-h-[240px] overflow-y-auto space-y-2 pr-1">
-                {parceriasEncerramento.map((parc) => {
-                  const isRed = parc.diasRestantes <= 5;
-                  return (
-                    <div key={parc.id} className={`flex items-center justify-between p-2 rounded-lg border ${isRed ? "border-red-500/30 bg-red-500/5" : "border-yellow-500/30 bg-yellow-500/5"}`}>
-                      <div className="flex items-center gap-2 min-w-0 flex-1"><Calendar className={`h-3.5 w-3.5 shrink-0 ${isRed ? "text-red-400" : "text-yellow-400"}`} /><span className="text-xs font-medium truncate">{getFirstLastName(parc.parceiroNome)}</span></div>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <Badge className={`text-[10px] h-5 ${isRed ? "bg-red-500/20 text-red-400" : "bg-yellow-500/20 text-yellow-400"}`}>{parc.diasRestantes <= 0 ? `${Math.abs(parc.diasRestantes)}d atrás` : `${parc.diasRestantes}d`}</Badge>
-                        <Button size="sm" variant="outline" onClick={() => handleRenovarClick(parc)} className="h-6 text-xs px-2">Renovar</Button>
-                        <Button size="sm" variant="destructive" onClick={() => { setParceriaToEncerrar(parc); setEncerrarDialogOpen(true); }} className="h-6 text-xs px-2">Encerrar</Button>
-                      </div>
+          <OperationCard key="parcerias-encerrando" title="Parcerias Encerrando" icon={<Calendar className="h-4 w-4" />} color="red" count={parceriasEncerramento.length}
+            tooltip={{ title: "Parcerias Encerrando", description: "Parcerias com data de fim próxima que precisam de ação.", flow: "Parcerias com encerramento nos próximos dias aparecem aqui." }}>
+            {parceriasEncerramento.map((parc) => {
+              const isRed = parc.diasRestantes <= 5;
+              return (
+                <OperationItem key={parc.id} icon={<Calendar className="h-3.5 w-3.5" />} color={isRed ? "red" : "yellow"}
+                  label={getFirstLastName(parc.parceiroNome)}
+                  actions={
+                    <div className="flex items-center gap-1.5">
+                      <Badge className={`text-[10px] h-5 ${isRed ? "bg-red-500/20 text-red-400" : "bg-yellow-500/20 text-yellow-400"}`}>{parc.diasRestantes <= 0 ? `${Math.abs(parc.diasRestantes)}d atrás` : `${parc.diasRestantes}d`}</Badge>
+                      <Button size="sm" variant="outline" onClick={() => handleRenovarClick(parc)} className="h-6 text-xs px-2">Renovar</Button>
+                      <Button size="sm" variant="destructive" onClick={() => { setParceriaToEncerrar(parc); setEncerrarDialogOpen(true); }} className="h-6 text-xs px-2">Encerrar</Button>
                     </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
+                  } />
+              );
+            })}
+          </OperationCard>
         ),
       });
     }
@@ -1141,21 +893,22 @@ export default function CentralOperacoes() {
 
   if (loading) {
     return (
-      <div className="p-6 space-y-6">
+      <div className="p-4 md:p-6 space-y-4 md:space-y-6">
         <Skeleton className="h-10 w-64" />
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">{[1, 2, 3, 4, 5, 6].map((i) => <Skeleton key={i} className="h-48" />)}</div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">{[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-16 rounded-xl" />)}</div>
+        <div className="grid gap-3 md:gap-4 md:grid-cols-2 lg:grid-cols-3">{[1, 2, 3, 4, 5, 6].map((i) => <Skeleton key={i} className="h-48 rounded-2xl" />)}</div>
       </div>
     );
   }
 
   return (
-    <div className="p-6 space-y-4">
+    <div className="p-4 md:p-6 space-y-3 md:space-y-4">
       {/* Actions bar */}
       <div className="flex items-center justify-end">
         {(mainTab === 'financeiro' || mainTab === 'contas') && (
-          <Button variant="outline" onClick={() => { fetchData(true); refetchCiclos(); }} disabled={refreshing}>
-            {refreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-            <span className="ml-2">Atualizar</span>
+          <Button variant="outline" size="sm" onClick={() => { fetchData(true); refetchCiclos(); }} disabled={refreshing} className="h-8">
+            {refreshing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+            <span className="ml-1.5 hidden sm:inline">Atualizar</span>
           </Button>
         )}
       </div>
@@ -1164,46 +917,51 @@ export default function CentralOperacoes() {
         <OperatorSaquesReadOnly />
       ) : (
       <Tabs value={mainTab} onValueChange={(v) => setMainTab(v as typeof mainTab)}>
-        <TabsList>
-          <TabsTrigger value="financeiro" className="relative">
+        <TabsList className="w-full md:w-auto overflow-x-auto scrollbar-none">
+          <TabsTrigger value="financeiro" className="relative text-xs md:text-sm">
             Financeiro
             {alertCards.length > 0 && <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-orange-500 text-white text-[10px] font-bold leading-none">{alertCards.length}</span>}
           </TabsTrigger>
-          <TabsTrigger value="contas" className="relative">
+          <TabsTrigger value="contas" className="relative text-xs md:text-sm">
             Bookmakers
             {(contasDisponiveisCount ?? 0) > 0 && <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-amber-500 text-white text-[10px] font-bold leading-none animate-pulse">!</span>}
           </TabsTrigger>
-          <TabsTrigger value="ocorrencias" className="relative">
+          <TabsTrigger value="ocorrencias" className="relative text-xs md:text-sm">
             Ocorrências
             {(kpisOcorrencias?.abertas_total ?? 0) > 0 && <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold leading-none">{kpisOcorrencias!.abertas_total}</span>}
           </TabsTrigger>
-          <TabsTrigger value="alertas" disabled className="opacity-50">Alertas<span className="ml-1.5 text-[10px] text-muted-foreground">(em breve)</span></TabsTrigger>
-          <TabsTrigger value="alertas" disabled className="opacity-50">Alertas<span className="ml-1.5 text-[10px] text-muted-foreground">(em breve)</span></TabsTrigger>
+          <TabsTrigger value="alertas" disabled className="opacity-50 text-xs md:text-sm">Alertas<span className="ml-1 text-[10px] text-muted-foreground hidden sm:inline">(em breve)</span></TabsTrigger>
         </TabsList>
 
-        <TabsContent value="financeiro" className="mt-4 space-y-4">
+        <TabsContent value="financeiro" className="mt-3 md:mt-4 space-y-3 md:space-y-4">
+          {/* KPI Summary */}
+          <CentralKPISummary
+            criticalCount={alertasCriticos.length + casasPendentesConciliacao.length}
+            saquesCount={saquesPendentes.length + alertasSaques.length}
+            pendentesCount={pagamentosOperadorPendentes.length + participacoesPendentes.length + entregasPendentes.length}
+            limitadasCount={alertasLimitadas.length}
+          />
+
           {!hasAnyAlerts && (
-            <Card className="border-emerald-500/30 bg-emerald-500/5">
-              <CardContent className="pt-6">
-                <div className="text-center py-16">
-                  <div className="mx-auto h-16 w-16 rounded-full bg-emerald-500/10 flex items-center justify-center mb-4"><CheckCircle2 className="h-8 w-8 text-emerald-400" /></div>
-                  <h3 className="text-xl font-semibold text-emerald-400">Nenhuma pendência</h3>
-                  <p className="text-muted-foreground mt-2">Todas as operações estão em dia! 🎉</p>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/[0.03] backdrop-blur-sm">
+              <div className="text-center py-12 md:py-16">
+                <div className="mx-auto h-14 w-14 md:h-16 md:w-16 rounded-full bg-emerald-500/10 flex items-center justify-center mb-4"><CheckCircle2 className="h-7 w-7 md:h-8 md:w-8 text-emerald-400" /></div>
+                <h3 className="text-lg md:text-xl font-semibold text-emerald-400">Nenhuma pendência</h3>
+                <p className="text-muted-foreground mt-2 text-sm">Todas as operações estão em dia! 🎉</p>
+              </div>
+            </div>
           )}
           {hasAnyAlerts && (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">{alertCards.map((card) => card.component)}</div>
+            <div className="grid gap-3 md:gap-4 md:grid-cols-2 lg:grid-cols-3">{alertCards.map((card) => card.component)}</div>
           )}
         </TabsContent>
 
-        <TabsContent value="contas" className="mt-4">
+        <TabsContent value="contas" className="mt-3 md:mt-4">
           <Tabs defaultValue="contas-saldo" className="w-full">
-            <TabsList className="mb-4">
-              <TabsTrigger value="contas-saldo">Bookmakers Disponíveis</TabsTrigger>
-              <TabsTrigger value="bookmakers-livres">Bookmakers Livres</TabsTrigger>
-              <TabsTrigger value="nao-criadas">Não Criadas</TabsTrigger>
+            <TabsList className="mb-3 md:mb-4 w-full md:w-auto overflow-x-auto scrollbar-none">
+              <TabsTrigger value="contas-saldo" className="text-xs md:text-sm">Disponíveis</TabsTrigger>
+              <TabsTrigger value="bookmakers-livres" className="text-xs md:text-sm">Livres</TabsTrigger>
+              <TabsTrigger value="nao-criadas" className="text-xs md:text-sm">Não Criadas</TabsTrigger>
             </TabsList>
             <TabsContent value="contas-saldo"><ContasDisponiveisModule /></TabsContent>
             <TabsContent value="bookmakers-livres">
