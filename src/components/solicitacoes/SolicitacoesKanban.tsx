@@ -173,6 +173,8 @@ function KanbanCard({
   const prioConfig = SOLICITACAO_PRIORIDADE_CONFIG[prio];
 
   const meta = solicitacao.contexto_metadata as Record<string, unknown> | null;
+
+  // Extract bookmaker names from metadata
   const bookmakerNomes: string[] = (() => {
     if (!meta) return [];
     const nomes = meta['bookmaker_nomes'];
@@ -182,6 +184,14 @@ function KanbanCard({
     return [];
   })();
 
+  // Extract bookmaker logos from metadata
+  const bookmakerLogos = (meta?.['bookmaker_logos'] as Record<string, string> | undefined) ?? {};
+
+  // KYC-specific data
+  const kycBookmakerNome = meta?.['kyc_bookmaker_nome'] as string | undefined;
+  const kycParceiroNome = meta?.['kyc_parceiro_nome'] as string | undefined;
+
+  // Executor names
   const executorNomes: string[] = (() => {
     if (meta) {
       const nomes = meta['executor_nomes'];
@@ -202,6 +212,10 @@ function KanbanCard({
   };
   const nextStatuses = statusFlow[solicitacao.status];
 
+  // Determine if there's any bookmaker info to show
+  const hasBookmakers = bookmakerNomes.length > 0;
+  const hasKycInfo = !!kycBookmakerNome;
+
   return (
     <>
       <Card
@@ -214,7 +228,7 @@ function KanbanCard({
         )}
       >
         <div className="space-y-2">
-          {/* Header: tipo + prioridade flag + SLA */}
+          {/* Header: tipo + prioridade flag + SLA + menu */}
           <div className="flex items-center justify-between gap-1">
             <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
               <Badge variant="secondary" className="text-[10px] font-medium shrink-0">
@@ -270,28 +284,57 @@ function KanbanCard({
             </div>
           </div>
 
-          {/* Bookmakers */}
-          {bookmakerNomes.length > 0 && (
+          {/* Bookmakers (multi) */}
+          {hasBookmakers && (
             <div className="flex flex-wrap gap-1">
-              {bookmakerNomes.slice(0, 3).map((nome) => (
+              {bookmakerNomes.slice(0, 4).map((nome) => (
                 <span
                   key={nome}
-                  className="text-[10px] font-semibold px-1.5 py-0.5 rounded border border-emerald-500/30 text-emerald-400 bg-emerald-500/10"
+                  className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded border border-emerald-500/30 text-emerald-400 bg-emerald-500/10"
                 >
+                  {bookmakerLogos[nome] && (
+                    <img
+                      src={bookmakerLogos[nome]}
+                      alt={nome}
+                      className="h-3 w-3 rounded object-contain"
+                      onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                    />
+                  )}
                   {nome}
                 </span>
               ))}
-              {bookmakerNomes.length > 3 && (
+              {bookmakerNomes.length > 4 && (
                 <span className="text-[10px] px-1.5 py-0.5 rounded border border-muted-foreground/30 text-muted-foreground">
-                  +{bookmakerNomes.length - 3}
+                  +{bookmakerNomes.length - 4}
                 </span>
               )}
+            </div>
+          )}
+
+          {/* KYC bookmaker + parceiro */}
+          {hasKycInfo && (
+            <div className="flex items-center gap-1.5 text-xs">
+              <span className="font-semibold text-emerald-400">{kycBookmakerNome}</span>
+              {kycParceiroNome && (
+                <>
+                  <span className="text-muted-foreground">—</span>
+                  <span className="text-foreground">{kycParceiroNome}</span>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Joined bookmaker (legacy / single bookmaker_id) */}
+          {!hasBookmakers && !hasKycInfo && solicitacao.bookmaker && (
+            <div className="flex items-center gap-1.5 text-xs">
+              <span className="font-semibold text-emerald-400">{solicitacao.bookmaker.nome}</span>
             </div>
           )}
 
           {/* Destinatário */}
           {solicitacao.destinatario_nome && (
             <div className="flex items-center gap-1 text-xs">
+              <User className="h-3 w-3 text-blue-400 shrink-0" />
               <span className="text-muted-foreground">→</span>
               <span className="font-medium text-foreground">{solicitacao.destinatario_nome}</span>
             </div>
