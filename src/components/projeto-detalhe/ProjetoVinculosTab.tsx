@@ -105,6 +105,7 @@ import { SaldoOperavelDisplay } from "@/components/ui/saldo-operavel-display";
 import { usePasswordDecryption } from "@/hooks/usePasswordDecryption";
 import { LazyPasswordField } from "@/components/parceiros/LazyPasswordField";
 import { BrokerReceberContasDialog } from "@/components/broker/BrokerReceberContasDialog";
+import { FilterDropdown } from "@/components/ui/filter-dropdown";
 
 type VinculoSortMode = "alpha" | "newest" | "oldest" | "apostas_desc" | "apostas_asc" | "saldo_desc" | "saldo_asc" | "em_aposta_desc" | "em_aposta_asc" | "disponivel_desc" | "disponivel_asc";
 
@@ -615,134 +616,20 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
         </Toggle>
         
         {/* Filtro por Casas */}
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" size="sm" className="gap-2">
-              <Building2 className="h-4 w-4" />
-              Casas
-              {selectedCasas.length > 0 && (
-                <Badge variant="secondary" className="ml-1 h-5 px-1.5">
-                  {selectedCasas.length}
-                </Badge>
-              )}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-56 p-2" align="start">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between px-2 pb-2 border-b">
-                <span className="text-sm font-medium">Filtrar Casas</span>
-                {selectedCasas.length > 0 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 text-xs"
-                    onClick={() => setSelectedCasas([])}
-                  >
-                    Limpar
-                  </Button>
-                )}
-              </div>
-              <div className="px-1">
-                <Input
-                  placeholder="Buscar casa..."
-                  value={casasSearchTerm}
-                  onChange={(e) => setCasasSearchTerm(e.target.value)}
-                  className="h-8 text-sm"
-                />
-              </div>
-              <ScrollArea className="h-48">
-                <div className="space-y-1">
-                  {uniqueCasas
-                    .filter(casa => casa.toLowerCase().includes(casasSearchTerm.toLowerCase()))
-                    .map((casa) => (
-                    <div
-                      key={casa}
-                      className="flex items-center justify-center gap-2 px-2 py-1.5 hover:bg-accent rounded cursor-pointer"
-                      onClick={() => {
-                        setSelectedCasas(prev =>
-                          prev.includes(casa)
-                            ? prev.filter(c => c !== casa)
-                            : [...prev, casa]
-                        );
-                      }}
-                    >
-                      <Checkbox
-                        checked={selectedCasas.includes(casa)}
-                        className="pointer-events-none"
-                      />
-                      <span className="text-sm truncate flex-1 text-center">{casa}</span>
-                    </div>
-                  ))}
-                  {uniqueCasas.filter(casa => casa.toLowerCase().includes(casasSearchTerm.toLowerCase())).length === 0 && (
-                    <p className="text-xs text-muted-foreground text-center py-4">
-                      Nenhuma casa encontrada
-                    </p>
-                  )}
-                </div>
-              </ScrollArea>
-            </div>
-          </PopoverContent>
-        </Popover>
+        <FilterDropdown
+          type="casas"
+          items={casasFilterItems}
+          selectedValues={selectedCasas}
+          onSelectionChange={setSelectedCasas}
+        />
 
         {/* Filtro por Parceiros */}
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" size="sm" className="gap-2">
-              <User className="h-4 w-4" />
-              Parceiros
-              {selectedParceiros.length > 0 && (
-                <Badge variant="secondary" className="ml-1 h-5 px-1.5">
-                  {selectedParceiros.length}
-                </Badge>
-              )}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-56 p-2" align="start">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between px-2 pb-2 border-b">
-                <span className="text-sm font-medium">Filtrar Parceiros</span>
-                {selectedParceiros.length > 0 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 text-xs"
-                    onClick={() => setSelectedParceiros([])}
-                  >
-                    Limpar
-                  </Button>
-                )}
-              </div>
-              <ScrollArea className="h-48">
-                <div className="space-y-1">
-                  {uniqueParceiros.map((parceiro) => (
-                    <div
-                      key={parceiro}
-                      className="flex items-center justify-center gap-2 px-2 py-1.5 hover:bg-accent rounded cursor-pointer"
-                      onClick={() => {
-                        setSelectedParceiros(prev =>
-                          prev.includes(parceiro)
-                            ? prev.filter(p => p !== parceiro)
-                            : [...prev, parceiro]
-                        );
-                      }}
-                    >
-                      <Checkbox
-                        checked={selectedParceiros.includes(parceiro)}
-                        className="pointer-events-none"
-                      />
-                      <span className="text-sm truncate flex-1 text-center">{parceiro}</span>
-                    </div>
-                  ))}
-                  {uniqueParceiros.length === 0 && (
-                    <p className="text-xs text-muted-foreground text-center py-4">
-                      Nenhum parceiro vinculado
-                    </p>
-                  )}
-                </div>
-              </ScrollArea>
-            </div>
-          </PopoverContent>
-        </Popover>
+        <FilterDropdown
+          type="parceiros"
+          items={parceirosFilterItems}
+          selectedValues={selectedParceiros}
+          onSelectionChange={setSelectedParceiros}
+        />
 
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
