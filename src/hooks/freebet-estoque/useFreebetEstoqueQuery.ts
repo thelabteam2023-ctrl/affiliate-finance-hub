@@ -130,6 +130,7 @@ async function fetchEstoqueData(
       parceiro_nome: bk.parceiros?.nome || null,
       logo_url: bk.bookmakers_catalogo?.logo_url || null,
       saldo_freebet: bk.saldo_freebet || 0,
+      saldo_nominal: 0,
       moeda: bk.moeda || "BRL",
       freebets_count: 0,
       freebets_pendentes: 0,
