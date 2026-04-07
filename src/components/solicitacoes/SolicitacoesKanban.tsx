@@ -174,7 +174,7 @@ function KanbanCard({
 
   const meta = solicitacao.contexto_metadata as Record<string, unknown> | null;
 
-  // Extract bookmaker names from metadata
+  // Extract bookmaker names from metadata (unified format for all sources)
   const bookmakerNomes: string[] = (() => {
     if (!meta) return [];
     const nomes = meta['bookmaker_nomes'];
@@ -186,10 +186,6 @@ function KanbanCard({
 
   // Extract bookmaker logos from metadata
   const bookmakerLogos = (meta?.['bookmaker_logos'] as Record<string, string> | undefined) ?? {};
-
-  // KYC-specific data
-  const kycBookmakerNome = meta?.['kyc_bookmaker_nome'] as string | undefined;
-  const kycParceiroNome = meta?.['kyc_parceiro_nome'] as string | undefined;
 
   // Executor names
   const executorNomes: string[] = (() => {
@@ -212,9 +208,10 @@ function KanbanCard({
   };
   const nextStatuses = statusFlow[solicitacao.status];
 
-  // Determine if there's any bookmaker info to show
+  // Determine if there's any bookmaker info to show (unified: metadata OR joined relation)
   const hasBookmakers = bookmakerNomes.length > 0;
-  const hasKycInfo = !!kycBookmakerNome;
+  // Fallback: legacy single bookmaker from DB join (no metadata)
+  const legacyBookmaker = !hasBookmakers && solicitacao.bookmaker ? solicitacao.bookmaker : null;
 
   return (
     <>
@@ -284,7 +281,7 @@ function KanbanCard({
             </div>
           </div>
 
-          {/* Bookmakers (multi) */}
+          {/* Bookmakers (unified rendering for all sources) */}
           {hasBookmakers && (
             <div className="flex flex-wrap gap-1">
               {bookmakerNomes.slice(0, 4).map((nome) => (
@@ -311,23 +308,12 @@ function KanbanCard({
             </div>
           )}
 
-          {/* KYC bookmaker + parceiro */}
-          {hasKycInfo && (
-            <div className="flex items-center gap-1.5 text-xs">
-              <span className="font-semibold text-emerald-400">{kycBookmakerNome}</span>
-              {kycParceiroNome && (
-                <>
-                  <span className="text-muted-foreground">—</span>
-                  <span className="text-foreground">{kycParceiroNome}</span>
-                </>
-              )}
-            </div>
-          )}
-
-          {/* Joined bookmaker (legacy / single bookmaker_id) */}
-          {!hasBookmakers && !hasKycInfo && solicitacao.bookmaker && (
-            <div className="flex items-center gap-1.5 text-xs">
-              <span className="font-semibold text-emerald-400">{solicitacao.bookmaker.nome}</span>
+          {/* Legacy fallback: single bookmaker from DB join (old records without metadata) */}
+          {legacyBookmaker && (
+            <div className="flex items-center gap-1.5">
+              <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded border border-emerald-500/30 text-emerald-400 bg-emerald-500/10">
+                {legacyBookmaker.nome}
+              </span>
             </div>
           )}
 
