@@ -893,21 +893,22 @@ export default function CentralOperacoes() {
 
   if (loading) {
     return (
-      <div className="p-6 space-y-6">
+      <div className="p-4 md:p-6 space-y-4 md:space-y-6">
         <Skeleton className="h-10 w-64" />
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">{[1, 2, 3, 4, 5, 6].map((i) => <Skeleton key={i} className="h-48" />)}</div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">{[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-16 rounded-xl" />)}</div>
+        <div className="grid gap-3 md:gap-4 md:grid-cols-2 lg:grid-cols-3">{[1, 2, 3, 4, 5, 6].map((i) => <Skeleton key={i} className="h-48 rounded-2xl" />)}</div>
       </div>
     );
   }
 
   return (
-    <div className="p-6 space-y-4">
+    <div className="p-4 md:p-6 space-y-3 md:space-y-4">
       {/* Actions bar */}
       <div className="flex items-center justify-end">
         {(mainTab === 'financeiro' || mainTab === 'contas') && (
-          <Button variant="outline" onClick={() => { fetchData(true); refetchCiclos(); }} disabled={refreshing}>
-            {refreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-            <span className="ml-2">Atualizar</span>
+          <Button variant="outline" size="sm" onClick={() => { fetchData(true); refetchCiclos(); }} disabled={refreshing} className="h-8">
+            {refreshing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+            <span className="ml-1.5 hidden sm:inline">Atualizar</span>
           </Button>
         )}
       </div>
@@ -916,37 +917,42 @@ export default function CentralOperacoes() {
         <OperatorSaquesReadOnly />
       ) : (
       <Tabs value={mainTab} onValueChange={(v) => setMainTab(v as typeof mainTab)}>
-        <TabsList>
-          <TabsTrigger value="financeiro" className="relative">
+        <TabsList className="w-full md:w-auto overflow-x-auto scrollbar-none">
+          <TabsTrigger value="financeiro" className="relative text-xs md:text-sm">
             Financeiro
             {alertCards.length > 0 && <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-orange-500 text-white text-[10px] font-bold leading-none">{alertCards.length}</span>}
           </TabsTrigger>
-          <TabsTrigger value="contas" className="relative">
+          <TabsTrigger value="contas" className="relative text-xs md:text-sm">
             Bookmakers
             {(contasDisponiveisCount ?? 0) > 0 && <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-amber-500 text-white text-[10px] font-bold leading-none animate-pulse">!</span>}
           </TabsTrigger>
-          <TabsTrigger value="ocorrencias" className="relative">
+          <TabsTrigger value="ocorrencias" className="relative text-xs md:text-sm">
             Ocorrências
             {(kpisOcorrencias?.abertas_total ?? 0) > 0 && <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold leading-none">{kpisOcorrencias!.abertas_total}</span>}
           </TabsTrigger>
-          <TabsTrigger value="alertas" disabled className="opacity-50">Alertas<span className="ml-1.5 text-[10px] text-muted-foreground">(em breve)</span></TabsTrigger>
-          <TabsTrigger value="alertas" disabled className="opacity-50">Alertas<span className="ml-1.5 text-[10px] text-muted-foreground">(em breve)</span></TabsTrigger>
+          <TabsTrigger value="alertas" disabled className="opacity-50 text-xs md:text-sm">Alertas<span className="ml-1 text-[10px] text-muted-foreground hidden sm:inline">(em breve)</span></TabsTrigger>
         </TabsList>
 
-        <TabsContent value="financeiro" className="mt-4 space-y-4">
+        <TabsContent value="financeiro" className="mt-3 md:mt-4 space-y-3 md:space-y-4">
+          {/* KPI Summary */}
+          <CentralKPISummary
+            criticalCount={alertasCriticos.length + casasPendentesConciliacao.length}
+            saquesCount={saquesPendentes.length + alertasSaques.length}
+            pendentesCount={pagamentosOperadorPendentes.length + participacoesPendentes.length + entregasPendentes.length}
+            limitadasCount={alertasLimitadas.length}
+          />
+
           {!hasAnyAlerts && (
-            <Card className="border-emerald-500/30 bg-emerald-500/5">
-              <CardContent className="pt-6">
-                <div className="text-center py-16">
-                  <div className="mx-auto h-16 w-16 rounded-full bg-emerald-500/10 flex items-center justify-center mb-4"><CheckCircle2 className="h-8 w-8 text-emerald-400" /></div>
-                  <h3 className="text-xl font-semibold text-emerald-400">Nenhuma pendência</h3>
-                  <p className="text-muted-foreground mt-2">Todas as operações estão em dia! 🎉</p>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/[0.03] backdrop-blur-sm">
+              <div className="text-center py-12 md:py-16">
+                <div className="mx-auto h-14 w-14 md:h-16 md:w-16 rounded-full bg-emerald-500/10 flex items-center justify-center mb-4"><CheckCircle2 className="h-7 w-7 md:h-8 md:w-8 text-emerald-400" /></div>
+                <h3 className="text-lg md:text-xl font-semibold text-emerald-400">Nenhuma pendência</h3>
+                <p className="text-muted-foreground mt-2 text-sm">Todas as operações estão em dia! 🎉</p>
+              </div>
+            </div>
           )}
           {hasAnyAlerts && (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">{alertCards.map((card) => card.component)}</div>
+            <div className="grid gap-3 md:gap-4 md:grid-cols-2 lg:grid-cols-3">{alertCards.map((card) => card.component)}</div>
           )}
         </TabsContent>
 
