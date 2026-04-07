@@ -185,7 +185,6 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
   const [vinculoParaConciliar, setVinculoParaConciliar] = useState<Vinculo | null>(null);
   const [bulkUnlinkOpen, setBulkUnlinkOpen] = useState(false);
   const [selectedCasas, setSelectedCasas] = useState<string[]>([]);
-  const [casasSearchTerm, setCasasSearchTerm] = useState("");
   const [selectedParceiros, setSelectedParceiros] = useState<string[]>([]);
   const [ajusteSaldoDialogOpen, setAjusteSaldoDialogOpen] = useState(false);
   const [vinculoParaAjuste, setVinculoParaAjuste] = useState<Vinculo | null>(null);
