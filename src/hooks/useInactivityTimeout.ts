@@ -320,17 +320,8 @@ export function useInactivityTimeout(): UseInactivityTimeoutReturn {
           break;
           
         case 'SESSION_EXPIRED':
-          // Outra aba expirou a sessão, expirar aqui também
-          if (!isExpiredRef.current) {
-            isExpiredRef.current = true;
-            toast({
-              title: "Sessão Expirada",
-              description: "Sua sessão expirou por inatividade. Faça login novamente.",
-              variant: "destructive",
-              duration: 5000,
-            });
-            signOut().then(() => navigate('/auth'));
-          }
+          // Outra aba expirou a sessão, expirar aqui também (idempotente)
+          handleSessionExpired('broadcast-remoto');
           break;
       }
     };
