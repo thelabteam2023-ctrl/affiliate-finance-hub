@@ -3020,19 +3020,21 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         throw new Error(result.error);
       }
 
-      // Buscar freebet disponível para marcar como usada
+      // HARDENING: Buscar freebet disponível via view derivada do ledger
       const { data: freebetsDisponiveis } = await supabase
-        .from("freebets_recebidas")
-        .select("id, valor")
+        .from("v_freebets_disponibilidade" as any)
+        .select("id, valor, valor_restante, utilizada_derivada")
         .eq("bookmaker_id", bookmakerIdFreebet)
-        .eq("utilizada", false)
+        .eq("utilizada_derivada", false)
         .eq("projeto_id", projetoId)
+        .eq("status", "LIBERADA")
         .order("valor", { ascending: false });
 
       if (freebetsDisponiveis && freebetsDisponiveis.length > 0) {
-        const freebetParaUsar = freebetsDisponiveis.find(fb => fb.valor >= valor) 
+        const freebetParaUsar = (freebetsDisponiveis as any[]).find((fb: any) => fb.valor >= valor) 
           || freebetsDisponiveis[0];
         
+        // Ainda marca na tabela para manter vínculo aposta_id (lido pela view)
         await supabase
           .from("freebets_recebidas")
           .update({
@@ -3040,7 +3042,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
             data_utilizacao: new Date().toISOString(),
             aposta_id: apostaId
           })
-          .eq("id", freebetParaUsar.id);
+          .eq("id", (freebetParaUsar as any).id);
       }
     } catch (error) {
       console.error("Erro ao debitar freebet usada:", error);

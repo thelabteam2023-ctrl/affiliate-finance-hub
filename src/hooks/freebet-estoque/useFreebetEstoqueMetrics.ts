@@ -27,7 +27,11 @@ export function useFreebetEstoqueMetrics(
 
     const totalUtilizado = freebetsLiberadas
       .filter(fb => fb.utilizada && fb.aposta_id)
-      .reduce((acc, fb) => acc + converterParaConsolidacao(fb.valor, fb.moeda), 0);
+      .reduce((acc, fb) => {
+        // HARDENING: usar valor_restante derivado do ledger para cálculo preciso
+        const valorConsumido = fb.valor - (fb.valor_restante ?? 0);
+        return acc + converterParaConsolidacao(Math.max(valorConsumido, 0), fb.moeda);
+      }, 0);
 
     const proximasExpirar = freebets.filter(fb =>
       fb.diasParaExpirar !== null && fb.diasParaExpirar <= 7 && fb.diasParaExpirar > 0 && !fb.utilizada

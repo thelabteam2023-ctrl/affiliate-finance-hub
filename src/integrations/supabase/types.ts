@@ -11939,6 +11939,164 @@ export type Database = {
           },
         ]
       }
+      v_freebets_disponibilidade: {
+        Row: {
+          aposta_id: string | null
+          aposta_multipla_id: string | null
+          bookmaker_id: string | null
+          data_recebida: string | null
+          data_utilizacao: string | null
+          data_validade: string | null
+          id: string | null
+          moeda_operacao: string | null
+          motivo: string | null
+          origem: string | null
+          projeto_id: string | null
+          qualificadora_id: string | null
+          status: string | null
+          tem_rollover: boolean | null
+          user_id: string | null
+          utilizada_derivada: boolean | null
+          valor: number | null
+          valor_restante: number | null
+          workspace_id: string | null
+        }
+        Insert: {
+          aposta_id?: string | null
+          aposta_multipla_id?: string | null
+          bookmaker_id?: string | null
+          data_recebida?: string | null
+          data_utilizacao?: string | null
+          data_validade?: string | null
+          id?: string | null
+          moeda_operacao?: string | null
+          motivo?: string | null
+          origem?: string | null
+          projeto_id?: string | null
+          qualificadora_id?: string | null
+          status?: string | null
+          tem_rollover?: boolean | null
+          user_id?: string | null
+          utilizada_derivada?: never
+          valor?: number | null
+          valor_restante?: never
+          workspace_id?: string | null
+        }
+        Update: {
+          aposta_id?: string | null
+          aposta_multipla_id?: string | null
+          bookmaker_id?: string | null
+          data_recebida?: string | null
+          data_utilizacao?: string | null
+          data_validade?: string | null
+          id?: string | null
+          moeda_operacao?: string | null
+          motivo?: string | null
+          origem?: string | null
+          projeto_id?: string | null
+          qualificadora_id?: string | null
+          status?: string | null
+          tem_rollover?: boolean | null
+          user_id?: string | null
+          utilizada_derivada?: never
+          valor?: number | null
+          valor_restante?: never
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "freebets_recebidas_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "bookmakers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "freebets_recebidas_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_disponibilidade"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "freebets_recebidas_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_resultado_financeiro"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "freebets_recebidas_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_resultado_operacional"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "freebets_recebidas_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_saldo_audit"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "freebets_recebidas_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_saldo_operavel"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "freebets_recebidas_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmaker_status_operacional"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "freebets_recebidas_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_aguardando_saque"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "freebets_recebidas_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_bookmakers_desvinculados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "freebets_recebidas_bookmaker_id_fkey"
+            columns: ["bookmaker_id"]
+            isOneToOne: false
+            referencedRelation: "v_financial_audit"
+            referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "freebets_recebidas_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "freebets_recebidas_qualificadora_id_fkey"
+            columns: ["qualificadora_id"]
+            isOneToOne: false
+            referencedRelation: "apostas_unificada"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "freebets_recebidas_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       v_indicacoes_workspace: {
         Row: {
           created_at: string | null

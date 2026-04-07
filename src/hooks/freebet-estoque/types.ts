@@ -17,6 +17,8 @@ export interface FreebetRecebidaCompleta {
   qualificadora_id: string | null;
   diasParaExpirar: number | null;
   tem_rollover: boolean;
+  /** Valor restante derivado do ledger (valor - consumos ativos) */
+  valor_restante?: number;
 }
 
 export interface BookmakerEstoque {

@@ -13,17 +13,13 @@ async function fetchEstoqueData(
   dataInicio?: Date,
   dataFim?: Date
 ): Promise<EstoqueData> {
-  // 1. Fetch freebets_recebidas
+  // 1. Fetch freebets via derived view (ledger-based state)
   let query = supabase
-    .from("freebets_recebidas")
+    .from("v_freebets_disponibilidade" as any)
     .select(`
       id, bookmaker_id, valor, moeda_operacao, motivo, data_recebida, data_validade,
-      utilizada, data_utilizacao, aposta_id, status, origem, qualificadora_id, tem_rollover,
-      bookmakers!freebets_recebidas_bookmaker_id_fkey (
-        nome, moeda, parceiro_id,
-        parceiros!bookmakers_parceiro_id_fkey (nome),
-        bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url)
-      )
+      utilizada_derivada, data_utilizacao, aposta_id, status, origem, qualificadora_id, tem_rollover,
+      valor_restante
     `)
     .eq("projeto_id", projetoId)
     .order("data_recebida", { ascending: false });
@@ -34,6 +30,42 @@ async function fetchEstoqueData(
   const { data: freebetsData, error: freebetsError } = await query;
   if (freebetsError) throw freebetsError;
 
+  // 2. Get bookmaker details for display
+  const bookmakerIds = [...new Set((freebetsData || []).map((fb: any) => fb.bookmaker_id))];
+  const bookmakerDetailsMap = new Map<string, any>();
+  
+  if (bookmakerIds.length > 0) {
+    const { data: bkDetails } = await supabase
+      .from("bookmakers")
+      .select(`
+        id, nome, moeda, saldo_freebet, parceiro_id,
+        parceiros!bookmakers_parceiro_id_fkey (nome),
+        bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url)
+      `)
+      .in("id", bookmakerIds);
+    
+    (bkDetails || []).forEach((bk: any) => {
+      bookmakerDetailsMap.set(bk.id, bk);
+    });
+  }
+
+  // Also fetch bookmakers with positive saldo_freebet that might not have freebets_recebidas records
+  const { data: extraBookmakers } = await supabase
+    .from("bookmakers")
+    .select(`
+      id, nome, moeda, saldo_freebet, parceiro_id,
+      parceiros!bookmakers_parceiro_id_fkey (nome),
+      bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url)
+    `)
+    .eq("projeto_id", projetoId)
+    .gt("saldo_freebet", 0);
+
+  (extraBookmakers || []).forEach((bk: any) => {
+    if (!bookmakerDetailsMap.has(bk.id)) {
+      bookmakerDetailsMap.set(bk.id, bk);
+    }
+  });
+
   const hoje = new Date();
   const formatted: FreebetRecebidaCompleta[] = (freebetsData || []).map((fb: any) => {
     let diasParaExpirar: number | null = null;
@@ -41,18 +73,20 @@ async function fetchEstoqueData(
       const validade = new Date(fb.data_validade);
       diasParaExpirar = Math.ceil((validade.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
     }
+    const bk = bookmakerDetailsMap.get(fb.bookmaker_id);
     return {
       id: fb.id,
       bookmaker_id: fb.bookmaker_id,
-      bookmaker_nome: fb.bookmakers?.nome || "Desconhecida",
-      parceiro_nome: fb.bookmakers?.parceiros?.nome || null,
-      logo_url: fb.bookmakers?.bookmakers_catalogo?.logo_url || null,
+      bookmaker_nome: bk?.nome || "Desconhecida",
+      parceiro_nome: bk?.parceiros?.nome || null,
+      logo_url: bk?.bookmakers_catalogo?.logo_url || null,
       valor: fb.valor,
-      moeda: fb.moeda_operacao || fb.bookmakers?.moeda || "BRL",
+      moeda: fb.moeda_operacao || bk?.moeda || "BRL",
       motivo: fb.motivo,
       data_recebida: fb.data_recebida,
       data_validade: fb.data_validade,
-      utilizada: fb.utilizada || false,
+      // HARDENING: usar estado derivado do ledger, não flag manual
+      utilizada: fb.utilizada_derivada || false,
       data_utilizacao: fb.data_utilizacao,
       aposta_id: fb.aposta_id,
       status: fb.status || "LIBERADA",
@@ -60,10 +94,11 @@ async function fetchEstoqueData(
       qualificadora_id: fb.qualificadora_id,
       diasParaExpirar,
       tem_rollover: fb.tem_rollover || false,
+      valor_restante: fb.valor_restante ?? fb.valor,
     };
   });
 
-  // 2. Fetch freebets from bonus module (project_bookmaker_link_bonuses)
+  // 3. Fetch bonus-module freebets
   const { data: bonusFreebets } = await supabase
     .from("project_bookmaker_link_bonuses")
     .select(`
@@ -103,28 +138,10 @@ async function fetchEstoqueData(
 
   const allFreebets = [...formatted, ...bonusFormatted];
 
-  // 3. Fetch bookmakers with freebet balance OR that have freebets_recebidas records
-  // This ensures bookmakers aren't hidden due to saldo_freebet desync
-  const bookmakerIdsFromFreebets = [...new Set(allFreebets.map(fb => fb.bookmaker_id))];
-  
-  const { data: bookmakers, error: bookmakersError } = await supabase
-    .from("bookmakers")
-    .select(`
-      id, nome, moeda, saldo_freebet,
-      parceiros!bookmakers_parceiro_id_fkey (nome),
-      bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url)
-    `)
-    .eq("projeto_id", projetoId)
-    .or(
-      `saldo_freebet.gt.0${bookmakerIdsFromFreebets.length > 0 ? `,id.in.(${bookmakerIdsFromFreebets.join(",")})` : ""}`
-    );
-
-  if (bookmakersError) throw bookmakersError;
-
   // 4. Build bookmaker estoque map
   const bookmakerEstoqueMap = new Map<string, BookmakerEstoque>();
-  (bookmakers || []).forEach((bk: any) => {
-    bookmakerEstoqueMap.set(bk.id, {
+  bookmakerDetailsMap.forEach((bk: any, id: string) => {
+    bookmakerEstoqueMap.set(id, {
       id: bk.id,
       nome: bk.nome,
       parceiro_nome: bk.parceiros?.nome || null,
@@ -143,7 +160,6 @@ async function fetchEstoqueData(
   allFreebets.forEach(fb => {
     let bk = bookmakerEstoqueMap.get(fb.bookmaker_id);
     if (!bk) {
-      // Bookmaker not in map yet (edge case) - add from freebet data
       bk = {
         id: fb.bookmaker_id,
         nome: fb.bookmaker_nome,
@@ -164,7 +180,8 @@ async function fetchEstoqueData(
       bk.freebets_pendentes++;
     } else if (fb.status === "LIBERADA" && !fb.utilizada) {
       bk.freebets_liberadas++;
-      bk.saldo_nominal += fb.valor;
+      // HARDENING: usar valor_restante derivado do ledger quando disponível
+      bk.saldo_nominal += (fb as any).valor_restante ?? fb.valor;
       if (fb.data_validade) {
         if (!bk.proxima_expiracao || new Date(fb.data_validade) < new Date(bk.proxima_expiracao)) {
           bk.proxima_expiracao = fb.data_validade;
@@ -189,6 +206,6 @@ export function useFreebetEstoqueQuery({ projetoId, dataInicio, dataFim }: UseFr
     queryKey: FREEBET_ESTOQUE_KEYS.withDates(projetoId, dataInicio, dataFim),
     queryFn: () => fetchEstoqueData(projetoId, dataInicio, dataFim),
     enabled: !!projetoId,
-    staleTime: 30_000, // 30s - dados de estoque não mudam a cada segundo
+    staleTime: 30_000,
   });
 }
