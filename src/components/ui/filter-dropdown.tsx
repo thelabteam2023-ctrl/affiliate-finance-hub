@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 import {
   Popover,
   PopoverContent,
@@ -76,12 +76,6 @@ export function FilterDropdown({
     onSelectionChange([]);
   };
 
-  const getInitials = (name: string) => {
-    const parts = name.trim().split(/\s+/);
-    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-    return name.slice(0, 2).toUpperCase();
-  };
-
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -102,7 +96,7 @@ export function FilterDropdown({
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[300px] min-w-[280px] max-w-[360px] p-0" align="start" sideOffset={8}>
+      <PopoverContent className="w-[360px] min-w-[280px] max-w-[calc(100vw-2rem)] p-0" align="start" sideOffset={8}>
         {/* Header */}
         <div className="flex items-center justify-between px-3 py-2.5 border-b border-border">
           <span className="text-sm font-semibold text-foreground">
@@ -135,7 +129,7 @@ export function FilterDropdown({
         </div>
 
         {/* List */}
-        <ScrollArea className="h-auto max-h-[300px]">
+        <div className="max-h-[300px] overflow-y-auto overscroll-contain">
           <div className="p-1.5 pb-2">
             {filtered.length === 0 ? (
               <p className="text-xs text-muted-foreground text-center py-6">
@@ -151,7 +145,7 @@ export function FilterDropdown({
                       type="button"
                       onClick={() => toggle(item.value)}
                       className={cn(
-                        "flex items-center gap-2.5 w-full px-2.5 py-2 rounded-lg text-left transition-all duration-150",
+                        "flex items-start gap-2.5 w-full px-2.5 py-2 rounded-lg text-left transition-all duration-150",
                         isSelected
                           ? "bg-primary/10 ring-1 ring-primary/20"
                           : "hover:bg-accent/60"
@@ -160,7 +154,7 @@ export function FilterDropdown({
                       {/* Checkbox indicator */}
                       <div
                         className={cn(
-                          "flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors",
+                          "mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors",
                           isSelected
                             ? "bg-primary border-primary text-primary-foreground"
                             : "border-muted-foreground/40"
@@ -169,25 +163,21 @@ export function FilterDropdown({
                         {isSelected && <Check className="h-3 w-3" />}
                       </div>
 
-                      {/* Avatar / Logo */}
-                      {type === "casas" ? (
+                      {/* Logo */}
+                      {type === "casas" && (
                         <BookmakerLogo
                           logoUrl={item.logoUrl}
                           alt={item.label}
                           size="h-7 w-7"
                           iconSize="h-3.5 w-3.5"
                         />
-                      ) : (
-                        <div className="h-7 w-7 rounded-full bg-muted/50 flex items-center justify-center shrink-0 text-[10px] font-semibold text-muted-foreground">
-                          {getInitials(item.label)}
-                        </div>
                       )}
 
                       {/* Text */}
-                      <div className="flex flex-col min-w-0 flex-1 overflow-hidden">
+                      <div className="flex min-w-0 flex-1 flex-col">
                         <span
                           className={cn(
-                            "text-sm truncate block",
+                            "text-sm leading-snug break-words text-left",
                             isSelected ? "font-semibold text-foreground" : "font-medium text-foreground/90"
                           )}
                           title={item.label}
@@ -195,7 +185,10 @@ export function FilterDropdown({
                           {item.label}
                         </span>
                         {item.subtitle && (
-                          <span className="text-[11px] text-muted-foreground truncate block" title={item.subtitle}>
+                          <span
+                            className="text-[11px] leading-snug text-muted-foreground break-words text-left"
+                            title={item.subtitle}
+                          >
                             {item.subtitle}
                           </span>
                         )}
@@ -206,7 +199,7 @@ export function FilterDropdown({
               </div>
             )}
           </div>
-        </ScrollArea>
+        </div>
 
         {/* Footer with count */}
         {items.length > 0 && (
