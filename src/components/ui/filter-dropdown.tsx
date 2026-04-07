@@ -129,7 +129,7 @@ export function FilterDropdown({
         </div>
 
         {/* List */}
-        <div className="max-h-[300px] overflow-y-auto overscroll-contain">
+        <div className="max-h-[300px] overflow-y-auto overscroll-contain pr-1 [scrollbar-width:thin] [scrollbar-color:hsl(var(--border))_transparent] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border/70">
           <div className="p-1.5 pb-2">
             {filtered.length === 0 ? (
               <p className="text-xs text-muted-foreground text-center py-6">
