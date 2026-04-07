@@ -30,15 +30,15 @@ async function fetchEstoqueData(
   const { data: freebetsData, error: freebetsError } = await query;
   if (freebetsError) throw freebetsError;
 
-  // We need bookmaker details separately since view doesn't join
+  // 2. Get bookmaker details for display
   const bookmakerIds = [...new Set((freebetsData || []).map((fb: any) => fb.bookmaker_id))];
-  let bookmakerDetailsMap = new Map<string, any>();
+  const bookmakerDetailsMap = new Map<string, any>();
   
   if (bookmakerIds.length > 0) {
     const { data: bkDetails } = await supabase
       .from("bookmakers")
       .select(`
-        id, nome, moeda, parceiro_id,
+        id, nome, moeda, saldo_freebet, parceiro_id,
         parceiros!bookmakers_parceiro_id_fkey (nome),
         bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url)
       `)
@@ -48,6 +48,23 @@ async function fetchEstoqueData(
       bookmakerDetailsMap.set(bk.id, bk);
     });
   }
+
+  // Also fetch bookmakers with positive saldo_freebet that might not have freebets_recebidas records
+  const { data: extraBookmakers } = await supabase
+    .from("bookmakers")
+    .select(`
+      id, nome, moeda, saldo_freebet, parceiro_id,
+      parceiros!bookmakers_parceiro_id_fkey (nome),
+      bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url)
+    `)
+    .eq("projeto_id", projetoId)
+    .gt("saldo_freebet", 0);
+
+  (extraBookmakers || []).forEach((bk: any) => {
+    if (!bookmakerDetailsMap.has(bk.id)) {
+      bookmakerDetailsMap.set(bk.id, bk);
+    }
+  });
 
   const hoje = new Date();
   const formatted: FreebetRecebidaCompleta[] = (freebetsData || []).map((fb: any) => {
@@ -77,16 +94,72 @@ async function fetchEstoqueData(
       qualificadora_id: fb.qualificadora_id,
       diasParaExpirar,
       tem_rollover: fb.tem_rollover || false,
-      // NEW: valor_restante derivado do ledger
       valor_restante: fb.valor_restante ?? fb.valor,
     };
+  });
+
+  // 3. Fetch bonus-module freebets
+  const { data: bonusFreebets } = await supabase
+    .from("project_bookmaker_link_bonuses")
+    .select(`
+      id, bookmaker_id, bonus_amount, status, created_at,
+      bookmakers!project_bookmaker_link_bonuses_bookmaker_id_fkey (
+        nome, moeda, parceiro_id,
+        parceiros!bookmakers_parceiro_id_fkey (nome),
+        bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url)
+      )
+    `)
+    .eq("project_id", projetoId)
+    .eq("tipo_bonus", "FREEBET");
+
+  const existingIds = new Set(formatted.map(f => f.id));
+  const bonusFormatted: FreebetRecebidaCompleta[] = (bonusFreebets || [])
+    .filter((bf: any) => !existingIds.has(bf.id))
+    .map((bf: any) => ({
+      id: bf.id,
+      bookmaker_id: bf.bookmaker_id,
+      bookmaker_nome: bf.bookmakers?.nome || "Desconhecida",
+      parceiro_nome: bf.bookmakers?.parceiros?.nome || null,
+      logo_url: bf.bookmakers?.bookmakers_catalogo?.logo_url || null,
+      valor: bf.bonus_amount || 0,
+      moeda: bf.bookmakers?.moeda || "BRL",
+      motivo: "Bônus Freebet",
+      data_recebida: bf.created_at,
+      data_validade: null,
+      utilizada: false,
+      data_utilizacao: null,
+      aposta_id: null,
+      status: bf.status === "credited" ? "LIBERADA" as const : "PENDENTE" as const,
+      origem: "PROMOCAO" as const,
+      qualificadora_id: null,
+      diasParaExpirar: null,
+      tem_rollover: false,
+    }));
+
+  const allFreebets = [...formatted, ...bonusFormatted];
+
+  // 4. Build bookmaker estoque map
+  const bookmakerEstoqueMap = new Map<string, BookmakerEstoque>();
+  bookmakerDetailsMap.forEach((bk: any, id: string) => {
+    bookmakerEstoqueMap.set(id, {
+      id: bk.id,
+      nome: bk.nome,
+      parceiro_nome: bk.parceiros?.nome || null,
+      logo_url: bk.bookmakers_catalogo?.logo_url || null,
+      saldo_freebet: bk.saldo_freebet || 0,
+      saldo_nominal: 0,
+      moeda: bk.moeda || "BRL",
+      freebets_count: 0,
+      freebets_pendentes: 0,
+      freebets_liberadas: 0,
+      proxima_expiracao: null,
+    });
   });
 
   // 5. Aggregate freebet counts per bookmaker
   allFreebets.forEach(fb => {
     let bk = bookmakerEstoqueMap.get(fb.bookmaker_id);
     if (!bk) {
-      // Bookmaker not in map yet (edge case) - add from freebet data
       bk = {
         id: fb.bookmaker_id,
         nome: fb.bookmaker_nome,
@@ -107,7 +180,8 @@ async function fetchEstoqueData(
       bk.freebets_pendentes++;
     } else if (fb.status === "LIBERADA" && !fb.utilizada) {
       bk.freebets_liberadas++;
-      bk.saldo_nominal += fb.valor;
+      // HARDENING: usar valor_restante derivado do ledger quando disponível
+      bk.saldo_nominal += (fb as any).valor_restante ?? fb.valor;
       if (fb.data_validade) {
         if (!bk.proxima_expiracao || new Date(fb.data_validade) < new Date(bk.proxima_expiracao)) {
           bk.proxima_expiracao = fb.data_validade;
@@ -132,6 +206,6 @@ export function useFreebetEstoqueQuery({ projetoId, dataInicio, dataFim }: UseFr
     queryKey: FREEBET_ESTOQUE_KEYS.withDates(projetoId, dataInicio, dataFim),
     queryFn: () => fetchEstoqueData(projetoId, dataInicio, dataFim),
     enabled: !!projetoId,
-    staleTime: 30_000, // 30s - dados de estoque não mudam a cada segundo
+    staleTime: 30_000,
   });
 }
