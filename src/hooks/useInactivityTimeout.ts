@@ -48,6 +48,7 @@ export function useInactivityTimeout(): UseInactivityTimeoutReturn {
   const lastBackendUpdateRef = useRef<number>(0);
   const warningShownRef = useRef<boolean>(false);
   const isExpiredRef = useRef<boolean>(false);
+  const toastFiredRef = useRef<boolean>(false); // Deduplicação de toast
   const broadcastChannelRef = useRef<BroadcastChannel | null>(null);
   const lastActivityRef = useRef<Date | null>(null);
   const userIdRef = useRef<string | undefined>(undefined);
@@ -177,6 +178,29 @@ export function useInactivityTimeout(): UseInactivityTimeoutReturn {
     }
   }, []);
 
+  // Função centralizada para mostrar toast + logout (idempotente)
+  const handleSessionExpired = useCallback(async (source: string) => {
+    // DEDUPLICAÇÃO: só dispara toast UMA vez
+    if (toastFiredRef.current) {
+      console.log(`[Inactivity] Toast já disparado, ignorando fonte: ${source}`);
+      return;
+    }
+    toastFiredRef.current = true;
+    isExpiredRef.current = true;
+    
+    console.log(`[Inactivity] Sessão expirada (fonte: ${source})`);
+    
+    toast({
+      title: "Sessão Expirada",
+      description: "Sua sessão expirou por inatividade. Faça login novamente.",
+      variant: "destructive",
+      duration: 5000,
+    });
+    
+    await signOut();
+    navigate('/auth');
+  }, [signOut, navigate, toast]);
+
   // Função para expirar sessão
   const expireSession = useCallback(async () => {
     const userId = userIdRef.current;
@@ -186,29 +210,19 @@ export function useInactivityTimeout(): UseInactivityTimeoutReturn {
     const backendConfirmedExpired = await checkBackendExpiration();
     
     if (!backendConfirmedExpired) {
-      // Backend não confirmou expiração, pode ter havido atividade em outra aba
       console.log('[Inactivity] Backend não confirmou expiração, verificando...');
       return;
     }
     
+    // Marcar como expirado ANTES de broadcast para evitar race condition
     isExpiredRef.current = true;
-    console.log('[Inactivity] Sessão expirada por inatividade (confirmado pelo backend)');
     
     // Broadcast expiração para outras abas
     broadcastExpiration();
     
-    // Mostrar mensagem antes do logout
-    toast({
-      title: "Sessão Expirada",
-      description: "Sua sessão expirou por inatividade. Faça login novamente.",
-      variant: "destructive",
-      duration: 5000,
-    });
-    
-    // Fazer logout e redirecionar
-    await signOut();
-    navigate('/auth');
-  }, [signOut, navigate, toast, checkBackendExpiration, broadcastExpiration]);
+    // Mostrar mensagem e fazer logout (idempotente)
+    await handleSessionExpired('timer-local');
+  }, [checkBackendExpiration, broadcastExpiration, handleSessionExpired]);
 
   // Verificar inatividade periodicamente
   useEffect(() => {
@@ -279,6 +293,7 @@ export function useInactivityTimeout(): UseInactivityTimeoutReturn {
     
     setLastActivity(initialActivity);
     isExpiredRef.current = false;
+    toastFiredRef.current = false;
     warningShownRef.current = false;
     
     // Adicionar listeners para eventos de atividade
@@ -306,17 +321,8 @@ export function useInactivityTimeout(): UseInactivityTimeoutReturn {
           break;
           
         case 'SESSION_EXPIRED':
-          // Outra aba expirou a sessão, expirar aqui também
-          if (!isExpiredRef.current) {
-            isExpiredRef.current = true;
-            toast({
-              title: "Sessão Expirada",
-              description: "Sua sessão expirou por inatividade. Faça login novamente.",
-              variant: "destructive",
-              duration: 5000,
-            });
-            signOut().then(() => navigate('/auth'));
-          }
+          // Outra aba expirou a sessão, expirar aqui também (idempotente)
+          handleSessionExpired('broadcast-remoto');
           break;
       }
     };
@@ -326,17 +332,8 @@ export function useInactivityTimeout(): UseInactivityTimeoutReturn {
       if (event.key !== STORAGE_KEY) return;
       
       if (event.newValue === null) {
-        // Sessão foi expirada em outra aba
-        if (!isExpiredRef.current) {
-          isExpiredRef.current = true;
-          toast({
-            title: "Sessão Expirada",
-            description: "Sua sessão expirou por inatividade. Faça login novamente.",
-            variant: "destructive",
-            duration: 5000,
-          });
-          signOut().then(() => navigate('/auth'));
-        }
+        // Sessão foi expirada em outra aba (idempotente)
+        handleSessionExpired('storage-remoto');
       } else {
         try {
           const data = JSON.parse(event.newValue);
@@ -391,7 +388,7 @@ export function useInactivityTimeout(): UseInactivityTimeoutReturn {
       window.removeEventListener('storage', handleStorageChange);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [user?.id, registerActivity, signOut, navigate, toast]);
+  }, [user?.id, registerActivity, handleSessionExpired]);
 
   return {
     lastActivity,
