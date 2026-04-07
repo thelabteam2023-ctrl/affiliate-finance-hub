@@ -429,19 +429,29 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
     [members],
   );
 
+  // Whether the current type uses KYC-specific bookmaker select
+  const isKycType = tipoSelecionado === 'verificacao_kyc';
+
   const onSubmit = async (data: FormData) => {
     const metadata: Record<string, unknown> = {
       ...(contextoInicial?.contexto_metadata ?? {}),
     };
 
-    if (data.tipo === 'abertura_conta' && data.bookmaker_ids?.length) {
+    // Store bookmaker info in metadata for ALL types that have bookmakers selected
+    if (data.bookmaker_ids?.length) {
       const selectedBms = workspaceBookmakers.filter((b) => data.bookmaker_ids!.includes(b.id));
       metadata['bookmaker_ids'] = data.bookmaker_ids;
       metadata['bookmaker_nomes'] = selectedBms.map((b) => b.nome).join(', ');
+      // Store logo URLs for card display
+      const logoMap: Record<string, string> = {};
+      selectedBms.forEach((b) => {
+        if (b.logo_url) logoMap[b.nome] = b.logo_url;
+      });
+      if (Object.keys(logoMap).length > 0) metadata['bookmaker_logos'] = logoMap;
     }
 
     // KYC: armazena detalhes da conta selecionada no metadata
-    if (data.tipo === 'verificacao_kyc' && data.kyc_bookmaker_id && kycBookmakerData) {
+    if (isKycType && data.kyc_bookmaker_id && kycBookmakerData) {
       metadata['kyc_bookmaker_id'] = data.kyc_bookmaker_id;
       metadata['kyc_bookmaker_nome'] = kycBookmakerData.nome;
       metadata['kyc_parceiro_nome'] = kycBookmakerData.parceiro_nome ?? null;
@@ -466,8 +476,8 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
       prioridade: data.prioridade,
       executor_id: data.executor_ids[0],
       destinatario_nome: data.destinatario_nome?.trim() || undefined,
-      bookmaker_ids: data.tipo === 'abertura_conta' ? (data.bookmaker_ids ?? []) : [],
-      bookmaker_id: data.tipo === 'verificacao_kyc'
+      bookmaker_ids: data.bookmaker_ids?.length ? data.bookmaker_ids : [],
+      bookmaker_id: isKycType
         ? (data.kyc_bookmaker_id || contextoInicial?.bookmaker_id)
         : contextoInicial?.bookmaker_id,
       projeto_id: kycBookmakerData?.projeto_id ?? contextoInicial?.projeto_id,
@@ -603,15 +613,39 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
               }}
             />
 
-            {/* Bookmakers + Responsáveis na mesma linha quando tipo = abertura_conta */}
-            {tipoSelecionado === 'abertura_conta' ? (
-              <div className="grid grid-cols-2 gap-4">
+            {/* KYC-specific: conta select */}
+            {isKycType && (
+              <FormField
+                control={form.control}
+                name="kyc_bookmaker_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="block text-center">Conta exigindo KYC *</FormLabel>
+                    <KycBookmakerSelect
+                      value={field.value ?? ''}
+                      onValueChange={(id, data) => {
+                        field.onChange(id);
+                        setKycBookmakerData(data);
+                      }}
+                      error={!!form.formState.errors.kyc_bookmaker_id}
+                    />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {/* Bookmakers (available for ALL types except KYC which has its own) + Responsáveis */}
+            <div className="grid grid-cols-2 gap-4">
+              {!isKycType && (
                 <FormField
                   control={form.control}
                   name="bookmaker_ids"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="block text-center">Bookmakers *</FormLabel>
+                      <FormLabel className="block text-center">
+                        Bookmakers {tipoSelecionado === 'abertura_conta' ? '*' : '(opcional)'}
+                      </FormLabel>
                       <BookmakerMultiSelect
                         items={bookmakerItems}
                         value={field.value ?? []}
@@ -622,81 +656,24 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="executor_ids"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="block text-center">Responsáveis pela Execução *</FormLabel>
-                      <MemberMultiSelect
-                        items={memberItems}
-                        value={field.value}
-                        onChange={field.onChange}
-                        loading={membersLoading}
-                      />
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            ) : tipoSelecionado === 'verificacao_kyc' ? (
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="kyc_bookmaker_id"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="block text-center">Conta exigindo KYC *</FormLabel>
-                      <KycBookmakerSelect
-                        value={field.value ?? ''}
-                        onValueChange={(id, data) => {
-                          field.onChange(id);
-                          setKycBookmakerData(data);
-                        }}
-                        error={!!form.formState.errors.kyc_bookmaker_id}
-                      />
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="executor_ids"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="block text-center">Responsáveis pela Execução *</FormLabel>
-                      <MemberMultiSelect
-                        items={memberItems}
-                        value={field.value}
-                        onChange={field.onChange}
-                        loading={membersLoading}
-                      />
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            ) : (
-              <>
-                {/* Responsáveis — multi-select (outros tipos) */}
-                <FormField
-                  control={form.control}
-                  name="executor_ids"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="block text-center">Responsáveis pela Execução *</FormLabel>
-                      <MemberMultiSelect
-                        items={memberItems}
-                        value={field.value}
-                        onChange={field.onChange}
-                        loading={membersLoading}
-                      />
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </>
-            )}
+              )}
+              <FormField
+                control={form.control}
+                name="executor_ids"
+                render={({ field }) => (
+                  <FormItem className={isKycType ? 'col-span-2' : ''}>
+                    <FormLabel className="block text-center">Responsáveis pela Execução *</FormLabel>
+                    <MemberMultiSelect
+                      items={memberItems}
+                      value={field.value}
+                      onChange={field.onChange}
+                      loading={membersLoading}
+                    />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             {/* Descrição */}
             <FormField
