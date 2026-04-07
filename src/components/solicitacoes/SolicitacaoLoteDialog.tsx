@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -17,12 +17,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { useCriarSolicitacao } from '@/hooks/useSolicitacoes';
 import { useAuth } from '@/hooks/useAuth';
 import { useWorkspaceMembers } from '@/hooks/useWorkspaceMembers';
+import { useWorkspaceBookmakers } from '@/hooks/useWorkspaceBookmakers';
 import { SOLICITACAO_TIPO_LABELS } from '@/types/solicitacoes';
 import type { SolicitacaoTipo, SolicitacaoPrioridade } from '@/types/solicitacoes';
-import { Loader2, Trash2, AlertCircle, ClipboardPaste, User, Gamepad2 } from 'lucide-react';
+import { Loader2, Trash2, AlertCircle, ClipboardPaste, User, Building2, Search, Check, X } from 'lucide-react';
 import { cn, getFirstLastName } from '@/lib/utils';
 import { toast } from 'sonner';
 import { parseBatchText, type ParsedItem } from '@/lib/solicitacoes-parser';
@@ -32,16 +38,141 @@ interface Props {
   onOpenChange: (open: boolean) => void;
 }
 
+/** Extended parsed item with resolved bookmaker ID */
+interface BatchItem extends ParsedItem {
+  bookmaker_id?: string;
+  bookmaker_nome?: string;
+  bookmaker_logo_url?: string;
+}
+
+/** Inline bookmaker selector for each batch item */
+function ItemBookmakerSelect({
+  value,
+  onSelect,
+  bookmakers,
+}: {
+  value?: string;
+  onSelect: (id: string | undefined, nome: string | undefined, logo: string | undefined) => void;
+  bookmakers: { id: string; nome: string; logo_url: string | null }[];
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return bookmakers;
+    const term = search.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    return bookmakers.filter((b) =>
+      b.nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(term),
+    );
+  }, [bookmakers, search]);
+
+  const selected = bookmakers.find((b) => b.id === value);
+
+  return (
+    <Popover open={open} onOpenChange={(v) => { setOpen(v); if (!v) setSearch(''); }}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className={cn(
+            'inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border transition-colors cursor-pointer hover:opacity-80 max-w-[160px]',
+            selected
+              ? 'border-emerald-500/40 text-emerald-400 bg-emerald-500/10 font-semibold'
+              : 'border-dashed border-muted-foreground/40 text-muted-foreground hover:border-primary/50',
+          )}
+        >
+          {selected?.logo_url && (
+            <img src={selected.logo_url} alt="" className="h-3 w-3 rounded object-contain" />
+          )}
+          {!selected && <Building2 className="h-2.5 w-2.5" />}
+          <span className="truncate">{selected?.nome ?? 'Casa'}</span>
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-64 p-0 z-[10000]" align="start" sideOffset={4}>
+        <div className="p-1.5 border-b border-border">
+          <div className="relative">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground pointer-events-none" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar casa..."
+              autoFocus
+              className="w-full h-7 pl-6 pr-2 text-xs rounded border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+            />
+          </div>
+        </div>
+        <div className="max-h-48 overflow-y-auto p-1">
+          {/* Option to clear */}
+          {value && (
+            <button
+              type="button"
+              onClick={() => { onSelect(undefined, undefined, undefined); setOpen(false); }}
+              className="w-full flex items-center gap-2 px-2 py-1.5 text-xs rounded hover:bg-accent text-muted-foreground"
+            >
+              <X className="h-3 w-3" />
+              Remover casa
+            </button>
+          )}
+          {filtered.length === 0 ? (
+            <p className="p-3 text-center text-xs text-muted-foreground">Nenhuma casa encontrada</p>
+          ) : (
+            filtered.map((bk) => (
+              <button
+                key={bk.id}
+                type="button"
+                onClick={() => {
+                  onSelect(bk.id, bk.nome, bk.logo_url ?? undefined);
+                  setOpen(false);
+                }}
+                className={cn(
+                  'w-full flex items-center gap-2 px-2 py-1.5 text-xs rounded hover:bg-accent',
+                  bk.id === value && 'bg-accent font-medium',
+                )}
+              >
+                {bk.id === value ? (
+                  <Check className="h-3 w-3 text-emerald-500 flex-shrink-0" />
+                ) : (
+                  <span className="w-3" />
+                )}
+                {bk.logo_url ? (
+                  <img src={bk.logo_url} alt="" className="h-4 w-4 rounded object-contain flex-shrink-0" />
+                ) : (
+                  <Building2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                )}
+                <span className="truncate uppercase font-medium tracking-wide">{bk.nome}</span>
+              </button>
+            ))
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export function SolicitacaoLoteDialog({ open, onOpenChange }: Props) {
   const [step, setStep] = useState<'input' | 'review'>('input');
   const [rawText, setRawText] = useState('');
-  const [items, setItems] = useState<ParsedItem[]>([]);
+  const [items, setItems] = useState<BatchItem[]>([]);
   const [prioridade, setPrioridade] = useState<SolicitacaoPrioridade>('media');
   const [executorId, setExecutorId] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const { mutateAsync: criar } = useCriarSolicitacao();
   const { user } = useAuth();
   const { data: members = [] } = useWorkspaceMembers();
+  const { data: workspaceBookmakers = [], isLoading: bookmakersLoading } = useWorkspaceBookmakers();
+
+  /** Try to auto-match a parsed bookmaker name to a workspace bookmaker */
+  const autoMatchBookmaker = (parsedName?: string) => {
+    if (!parsedName) return { id: undefined, nome: undefined, logo: undefined };
+    const normalized = parsedName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const match = workspaceBookmakers.find((bk) => {
+      const bkNorm = bk.nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      return bkNorm === normalized || bkNorm.includes(normalized) || normalized.includes(bkNorm);
+    });
+    return match
+      ? { id: match.id, nome: match.nome, logo: match.logo_url ?? undefined }
+      : { id: undefined, nome: parsedName, logo: undefined };
+  };
 
   const handleParse = () => {
     const parsed = parseBatchText(rawText);
@@ -49,7 +180,17 @@ export function SolicitacaoLoteDialog({ open, onOpenChange }: Props) {
       toast.error('Nenhuma linha válida encontrada');
       return;
     }
-    setItems(parsed);
+    // Enrich parsed items with auto-matched bookmaker IDs
+    const enriched: BatchItem[] = parsed.map((item) => {
+      const match = autoMatchBookmaker(item.bookmaker);
+      return {
+        ...item,
+        bookmaker_id: match.id,
+        bookmaker_nome: match.nome ?? item.bookmaker,
+        bookmaker_logo_url: match.logo,
+      };
+    });
+    setItems(enriched);
     setStep('review');
   };
 
@@ -65,7 +206,7 @@ export function SolicitacaoLoteDialog({ open, onOpenChange }: Props) {
     setItems((prev) => prev.filter((item) => item.id !== id));
   };
 
-  const updateItem = (id: string, updates: Partial<ParsedItem>) => {
+  const updateItem = (id: string, updates: Partial<BatchItem>) => {
     setItems((prev) =>
       prev.map((item) => (item.id === id ? { ...item, ...updates } : item)),
     );
@@ -89,21 +230,37 @@ export function SolicitacaoLoteDialog({ open, onOpenChange }: Props) {
 
     for (const item of selected) {
       try {
-        const titulo = `${SOLICITACAO_TIPO_LABELS[item.tipo]}${item.bookmaker ? ` - ${item.bookmaker}` : ''}${item.titular ? ` - ${item.titular}` : ''}${item.valor ? ` - R$ ${item.valor.toLocaleString('pt-BR')}` : ''}`;
+        const titulo = `${SOLICITACAO_TIPO_LABELS[item.tipo]}${item.bookmaker_nome ? ` - ${item.bookmaker_nome}` : ''}${item.titular ? ` - ${item.titular}` : ''}${item.valor ? ` - R$ ${item.valor.toLocaleString('pt-BR')}` : ''}`;
+
+        // Build metadata with bookmaker info for Kanban card display
+        const metadata: Record<string, unknown> = {
+          lote_id: loteId,
+          executor_ids: [executorId],
+          executor_nomes: executor?.full_name ? [executor.full_name] : [],
+        };
+
+        // Bookmaker data for card display
+        if (item.bookmaker_nome) {
+          metadata['bookmaker_nomes'] = item.bookmaker_nome;
+          if (item.bookmaker_id) {
+            metadata['bookmaker_ids'] = [item.bookmaker_id];
+          }
+          if (item.bookmaker_logo_url) {
+            metadata['bookmaker_logos'] = { [item.bookmaker_nome]: item.bookmaker_logo_url };
+          }
+        }
+
+        if (item.valor != null) metadata['valor'] = item.valor;
 
         await criar({
           titulo,
           descricao: item.descricao,
           tipo: item.tipo,
+          prioridade,
           executor_id: executorId,
-          destinatario_nome: item.titular || null,
-          contexto_metadata: {
-            lote_id: loteId,
-            executor_ids: [executorId],
-            executor_nomes: executor?.full_name ? [executor.full_name] : [],
-            ...(item.bookmaker ? { bookmaker: item.bookmaker } : {}),
-            ...(item.valor != null ? { valor: item.valor } : {}),
-          },
+          destinatario_nome: item.titular || undefined,
+          bookmaker_id: item.bookmaker_id || undefined,
+          contexto_metadata: metadata,
         });
         successCount++;
       } catch {
@@ -128,6 +285,9 @@ export function SolicitacaoLoteDialog({ open, onOpenChange }: Props) {
     onOpenChange(v);
   };
 
+  // Count unmatched bookmakers for feedback
+  const unmatchedCount = items.filter((i) => i.selecionado && i.bookmaker_nome && !i.bookmaker_id).length;
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
@@ -146,7 +306,7 @@ export function SolicitacaoLoteDialog({ open, onOpenChange }: Props) {
             <Textarea
               value={rawText}
               onChange={(e) => setRawText(e.target.value)}
-              placeholder={`Exemplos:\n\nFacial\nBetano Glayza\nSuperbet Glayza\n\nDep Betano Mariana 900\nSaque 900 bolsa Luiz\nSMS 365 Lolisa`}
+              placeholder={`Exemplos:\n\nFacial\nBetano Glayza\nSuperbet Glayza\n\nDepósito:\nSportingbet Mariana 900\nBetano Juliana 500\n\nSaque 900 bolsa Luiz`}
               className="min-h-[200px] font-mono text-sm"
             />
             <DialogFooter>
@@ -192,6 +352,16 @@ export function SolicitacaoLoteDialog({ open, onOpenChange }: Props) {
               </div>
             </div>
 
+            {/* Feedback: unmatched bookmakers */}
+            {unmatchedCount > 0 && (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-orange-500/10 border border-orange-500/30 text-xs text-orange-400">
+                <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                <span>
+                  {unmatchedCount} item{unmatchedCount > 1 ? 'ns' : ''} com casa não reconhecida — clique na badge para selecionar manualmente.
+                </span>
+              </div>
+            )}
+
             {/* Items list */}
             <div className="flex-1 overflow-y-auto space-y-2 pr-1">
               {items.map((item) => (
@@ -203,6 +373,7 @@ export function SolicitacaoLoteDialog({ open, onOpenChange }: Props) {
                       ? 'border-border bg-card'
                       : 'border-border/30 bg-muted/20 opacity-50',
                     item.incompleto && item.selecionado && 'border-orange-500/40',
+                    item.selecionado && item.bookmaker_nome && !item.bookmaker_id && 'border-orange-500/30',
                   )}
                 >
                   <Checkbox
@@ -212,6 +383,7 @@ export function SolicitacaoLoteDialog({ open, onOpenChange }: Props) {
                   />
                   <div className="flex-1 min-w-0 space-y-1.5">
                     <div className="flex items-center gap-1.5 flex-wrap">
+                      {/* Tipo selector */}
                       <Select
                         value={item.tipo}
                         onValueChange={(v) => updateItem(item.id, { tipo: v as SolicitacaoTipo, incompleto: false })}
@@ -229,18 +401,41 @@ export function SolicitacaoLoteDialog({ open, onOpenChange }: Props) {
                           )}
                         </SelectContent>
                       </Select>
-                      {item.bookmaker && (
-                        <Badge variant="secondary" className="text-[9px] gap-0.5 px-1.5">
-                          <Gamepad2 className="h-2.5 w-2.5" />
-                          {item.bookmaker}
+
+                      {/* Bookmaker selector (always editable) */}
+                      <ItemBookmakerSelect
+                        value={item.bookmaker_id}
+                        onSelect={(id, nome, logo) =>
+                          updateItem(item.id, {
+                            bookmaker_id: id,
+                            bookmaker_nome: nome,
+                            bookmaker_logo_url: logo,
+                            bookmaker: nome,
+                          })
+                        }
+                        bookmakers={workspaceBookmakers.map((bk) => ({
+                          id: bk.id,
+                          nome: bk.nome,
+                          logo_url: bk.logo_url,
+                        }))}
+                      />
+
+                      {/* Unmatched indicator */}
+                      {item.bookmaker_nome && !item.bookmaker_id && (
+                        <Badge variant="outline" className="text-[9px] text-orange-400 border-orange-400/50 gap-0.5">
+                          <AlertCircle className="h-2.5 w-2.5" />
+                          "{item.bookmaker_nome}" não reconhecida
                         </Badge>
                       )}
+
+                      {/* Destinatário */}
                       {item.titular && (
                         <Badge variant="outline" className="text-[9px] gap-0.5 px-1.5 text-blue-400 border-blue-400/50">
                           <User className="h-2.5 w-2.5" />
                           {item.titular}
                         </Badge>
                       )}
+
                       {item.incompleto && (
                         <Badge variant="outline" className="text-[9px] text-orange-400 border-orange-400/50 gap-0.5">
                           <AlertCircle className="h-2.5 w-2.5" />
