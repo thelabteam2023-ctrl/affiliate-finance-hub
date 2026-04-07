@@ -956,12 +956,12 @@ export default function CentralOperacoes() {
           )}
         </TabsContent>
 
-        <TabsContent value="contas" className="mt-4">
+        <TabsContent value="contas" className="mt-3 md:mt-4">
           <Tabs defaultValue="contas-saldo" className="w-full">
-            <TabsList className="mb-4">
-              <TabsTrigger value="contas-saldo">Bookmakers Disponíveis</TabsTrigger>
-              <TabsTrigger value="bookmakers-livres">Bookmakers Livres</TabsTrigger>
-              <TabsTrigger value="nao-criadas">Não Criadas</TabsTrigger>
+            <TabsList className="mb-3 md:mb-4 w-full md:w-auto overflow-x-auto scrollbar-none">
+              <TabsTrigger value="contas-saldo" className="text-xs md:text-sm">Disponíveis</TabsTrigger>
+              <TabsTrigger value="bookmakers-livres" className="text-xs md:text-sm">Livres</TabsTrigger>
+              <TabsTrigger value="nao-criadas" className="text-xs md:text-sm">Não Criadas</TabsTrigger>
             </TabsList>
             <TabsContent value="contas-saldo"><ContasDisponiveisModule /></TabsContent>
             <TabsContent value="bookmakers-livres">
