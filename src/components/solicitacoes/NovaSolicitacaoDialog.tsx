@@ -481,9 +481,9 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
       executor_id: data.executor_ids[0],
       destinatario_nome: data.destinatario_nome?.trim() || undefined,
       bookmaker_ids: data.bookmaker_ids?.length ? data.bookmaker_ids : [],
-      bookmaker_id: isKycType
-        ? (data.kyc_bookmaker_id || contextoInicial?.bookmaker_id)
-        : contextoInicial?.bookmaker_id,
+      // NOTE: bookmaker_id references bookmakers (instance) table, NOT bookmakers_catalogo.
+      // Catalog IDs from KYC select or workspace bookmakers are stored in contexto_metadata only.
+      bookmaker_id: undefined,
       projeto_id: contextoInicial?.projeto_id,
       parceiro_id: contextoInicial?.parceiro_id,
       contexto_metadata: metadata,
