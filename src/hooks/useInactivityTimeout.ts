@@ -178,6 +178,29 @@ export function useInactivityTimeout(): UseInactivityTimeoutReturn {
     }
   }, []);
 
+  // Função centralizada para mostrar toast + logout (idempotente)
+  const handleSessionExpired = useCallback(async (source: string) => {
+    // DEDUPLICAÇÃO: só dispara toast UMA vez
+    if (toastFiredRef.current) {
+      console.log(`[Inactivity] Toast já disparado, ignorando fonte: ${source}`);
+      return;
+    }
+    toastFiredRef.current = true;
+    isExpiredRef.current = true;
+    
+    console.log(`[Inactivity] Sessão expirada (fonte: ${source})`);
+    
+    toast({
+      title: "Sessão Expirada",
+      description: "Sua sessão expirou por inatividade. Faça login novamente.",
+      variant: "destructive",
+      duration: 5000,
+    });
+    
+    await signOut();
+    navigate('/auth');
+  }, [signOut, navigate, toast]);
+
   // Função para expirar sessão
   const expireSession = useCallback(async () => {
     const userId = userIdRef.current;
@@ -187,29 +210,19 @@ export function useInactivityTimeout(): UseInactivityTimeoutReturn {
     const backendConfirmedExpired = await checkBackendExpiration();
     
     if (!backendConfirmedExpired) {
-      // Backend não confirmou expiração, pode ter havido atividade em outra aba
       console.log('[Inactivity] Backend não confirmou expiração, verificando...');
       return;
     }
     
+    // Marcar como expirado ANTES de broadcast para evitar race condition
     isExpiredRef.current = true;
-    console.log('[Inactivity] Sessão expirada por inatividade (confirmado pelo backend)');
     
     // Broadcast expiração para outras abas
     broadcastExpiration();
     
-    // Mostrar mensagem antes do logout
-    toast({
-      title: "Sessão Expirada",
-      description: "Sua sessão expirou por inatividade. Faça login novamente.",
-      variant: "destructive",
-      duration: 5000,
-    });
-    
-    // Fazer logout e redirecionar
-    await signOut();
-    navigate('/auth');
-  }, [signOut, navigate, toast, checkBackendExpiration, broadcastExpiration]);
+    // Mostrar mensagem e fazer logout (idempotente)
+    await handleSessionExpired('timer-local');
+  }, [checkBackendExpiration, broadcastExpiration, handleSessionExpired]);
 
   // Verificar inatividade periodicamente
   useEffect(() => {
