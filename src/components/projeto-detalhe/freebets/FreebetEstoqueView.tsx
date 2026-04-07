@@ -314,10 +314,10 @@ export function FreebetEstoqueView({ projetoId, formatCurrency, dateRange, onAdd
                   </div>
 
                   <div className="grid grid-cols-4 gap-6 text-center">
-                    <div>
+                     <div>
                       <p className="text-xs text-muted-foreground">Saldo</p>
                       <p className="font-semibold text-amber-400">
-                        {formatNativeCurrency(bk.saldo_freebet, bk.moeda)}
+                        {formatNativeCurrency(bk.saldo_nominal, bk.moeda)}
                       </p>
                     </div>
                     <div>
@@ -368,9 +368,9 @@ export function FreebetEstoqueView({ projetoId, formatCurrency, dateRange, onAdd
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-center">
+                     <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-center">
                       <p className="text-2xl font-bold text-amber-400">
-                        {formatNativeCurrency(bk.saldo_freebet, bk.moeda)}
+                        {formatNativeCurrency(bk.saldo_nominal, bk.moeda)}
                       </p>
                       <p className="text-xs text-muted-foreground">Saldo Disponível</p>
                     </div>
