@@ -102,7 +102,7 @@ export function FilterDropdown({
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-72 p-0" align="start" sideOffset={8}>
+      <PopoverContent className="w-[300px] min-w-[280px] max-w-[360px] p-0" align="start" sideOffset={8}>
         {/* Header */}
         <div className="flex items-center justify-between px-3 py-2.5 border-b border-border">
           <span className="text-sm font-semibold text-foreground">
@@ -135,8 +135,8 @@ export function FilterDropdown({
         </div>
 
         {/* List */}
-        <ScrollArea className="max-h-64">
-          <div className="p-1.5">
+        <ScrollArea className="h-auto max-h-[300px]">
+          <div className="p-1.5 pb-2">
             {filtered.length === 0 ? (
               <p className="text-xs text-muted-foreground text-center py-6">
                 {type === "casas" ? "Nenhuma casa encontrada" : "Nenhum parceiro encontrado"}
@@ -184,17 +184,18 @@ export function FilterDropdown({
                       )}
 
                       {/* Text */}
-                      <div className="flex flex-col min-w-0 flex-1">
+                      <div className="flex flex-col min-w-0 flex-1 overflow-hidden">
                         <span
                           className={cn(
-                            "text-sm truncate",
+                            "text-sm truncate block",
                             isSelected ? "font-semibold text-foreground" : "font-medium text-foreground/90"
                           )}
+                          title={item.label}
                         >
                           {item.label}
                         </span>
                         {item.subtitle && (
-                          <span className="text-[11px] text-muted-foreground truncate">
+                          <span className="text-[11px] text-muted-foreground truncate block" title={item.subtitle}>
                             {item.subtitle}
                           </span>
                         )}
