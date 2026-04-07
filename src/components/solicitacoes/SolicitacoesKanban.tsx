@@ -281,7 +281,7 @@ function KanbanCard({
             </div>
           </div>
 
-          {/* Bookmakers (multi) */}
+          {/* Bookmakers (unified rendering for all sources) */}
           {hasBookmakers && (
             <div className="flex flex-wrap gap-1">
               {bookmakerNomes.slice(0, 4).map((nome) => (
@@ -308,23 +308,12 @@ function KanbanCard({
             </div>
           )}
 
-          {/* KYC bookmaker + parceiro */}
-          {hasKycInfo && (
-            <div className="flex items-center gap-1.5 text-xs">
-              <span className="font-semibold text-emerald-400">{kycBookmakerNome}</span>
-              {kycParceiroNome && (
-                <>
-                  <span className="text-muted-foreground">—</span>
-                  <span className="text-foreground">{kycParceiroNome}</span>
-                </>
-              )}
-            </div>
-          )}
-
-          {/* Joined bookmaker (legacy / single bookmaker_id) */}
-          {!hasBookmakers && !hasKycInfo && solicitacao.bookmaker && (
-            <div className="flex items-center gap-1.5 text-xs">
-              <span className="font-semibold text-emerald-400">{solicitacao.bookmaker.nome}</span>
+          {/* Legacy fallback: single bookmaker from DB join (old records without metadata) */}
+          {legacyBookmaker && (
+            <div className="flex items-center gap-1.5">
+              <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded border border-emerald-500/30 text-emerald-400 bg-emerald-500/10">
+                {legacyBookmaker.nome}
+              </span>
             </div>
           )}
 
