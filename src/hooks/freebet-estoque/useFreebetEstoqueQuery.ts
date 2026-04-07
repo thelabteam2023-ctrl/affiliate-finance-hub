@@ -130,6 +130,7 @@ async function fetchEstoqueData(
       parceiro_nome: bk.parceiros?.nome || null,
       logo_url: bk.bookmakers_catalogo?.logo_url || null,
       saldo_freebet: bk.saldo_freebet || 0,
+      saldo_nominal: 0,
       moeda: bk.moeda || "BRL",
       freebets_count: 0,
       freebets_pendentes: 0,
@@ -149,6 +150,7 @@ async function fetchEstoqueData(
         parceiro_nome: fb.parceiro_nome,
         logo_url: fb.logo_url,
         saldo_freebet: 0,
+        saldo_nominal: 0,
         moeda: fb.moeda,
         freebets_count: 0,
         freebets_pendentes: 0,
@@ -162,6 +164,7 @@ async function fetchEstoqueData(
       bk.freebets_pendentes++;
     } else if (fb.status === "LIBERADA" && !fb.utilizada) {
       bk.freebets_liberadas++;
+      bk.saldo_nominal += fb.valor;
       if (fb.data_validade) {
         if (!bk.proxima_expiracao || new Date(fb.data_validade) < new Date(bk.proxima_expiracao)) {
           bk.proxima_expiracao = fb.data_validade;
@@ -172,7 +175,7 @@ async function fetchEstoqueData(
 
   // 6. Filter: only show bookmakers that have active freebets or positive balance
   const activeEstoque = Array.from(bookmakerEstoqueMap.values()).filter(
-    bk => bk.freebets_liberadas > 0 || bk.freebets_pendentes > 0 || bk.saldo_freebet > 0
+    bk => bk.freebets_liberadas > 0 || bk.freebets_pendentes > 0 || bk.saldo_nominal > 0
   );
 
   return {

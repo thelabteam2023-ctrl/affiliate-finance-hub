@@ -25,6 +25,8 @@ export interface BookmakerEstoque {
   parceiro_nome: string | null;
   logo_url: string | null;
   saldo_freebet: number;
+  /** Soma das freebets recebidas não utilizadas (fonte: freebets_recebidas) */
+  saldo_nominal: number;
   moeda: string;
   freebets_count: number;
   freebets_pendentes: number;

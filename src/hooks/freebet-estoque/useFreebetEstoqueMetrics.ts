@@ -14,8 +14,8 @@ export function useFreebetEstoqueMetrics(
     const recebidoPorMoedaMap = new Map<string, number>();
 
     const saldoDisponivel = bookmakersEstoque.reduce((acc, bk) => {
-      saldoPorMoedaMap.set(bk.moeda, (saldoPorMoedaMap.get(bk.moeda) || 0) + bk.saldo_freebet);
-      return acc + converterParaConsolidacao(bk.saldo_freebet, bk.moeda);
+      saldoPorMoedaMap.set(bk.moeda, (saldoPorMoedaMap.get(bk.moeda) || 0) + bk.saldo_nominal);
+      return acc + converterParaConsolidacao(bk.saldo_nominal, bk.moeda);
     }, 0);
 
     const freebetsLiberadas = freebets.filter(fb => fb.status === "LIBERADA");
