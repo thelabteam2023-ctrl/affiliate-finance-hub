@@ -478,8 +478,8 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
       bookmaker_id: isKycType
         ? (data.kyc_bookmaker_id || contextoInicial?.bookmaker_id)
         : contextoInicial?.bookmaker_id,
-      projeto_id: kycBookmakerData?.projeto_id ?? contextoInicial?.projeto_id,
-      parceiro_id: kycBookmakerData?.parceiro_id ?? contextoInicial?.parceiro_id,
+      projeto_id: contextoInicial?.projeto_id,
+      parceiro_id: contextoInicial?.parceiro_id,
       contexto_metadata: metadata,
     });
     onOpenChange(false);
