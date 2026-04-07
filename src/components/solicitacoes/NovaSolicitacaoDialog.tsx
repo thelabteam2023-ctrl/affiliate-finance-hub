@@ -450,10 +450,16 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
       if (Object.keys(logoMap).length > 0) metadata['bookmaker_logos'] = logoMap;
     }
 
-    // KYC: armazena detalhes da conta selecionada no metadata
+    // KYC: armazena detalhes da conta selecionada no metadata (unified format)
     if (isKycType && data.kyc_bookmaker_id && kycBookmakerData) {
       metadata['kyc_bookmaker_id'] = data.kyc_bookmaker_id;
       metadata['kyc_bookmaker_nome'] = kycBookmakerData.nome;
+      // Also store in unified bookmaker format for consistent card rendering
+      metadata['bookmaker_nomes'] = kycBookmakerData.nome;
+      metadata['bookmaker_ids'] = [data.kyc_bookmaker_id];
+      if (kycBookmakerData.logo_url) {
+        metadata['bookmaker_logos'] = { [kycBookmakerData.nome]: kycBookmakerData.logo_url };
+      }
     }
 
     // Armazena múltiplos executores no metadata
