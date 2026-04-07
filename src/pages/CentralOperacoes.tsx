@@ -895,8 +895,7 @@ export default function CentralOperacoes() {
     return (
       <div className="p-4 md:p-6 space-y-4 md:space-y-6">
         <Skeleton className="h-10 w-64" />
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">{[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-16 rounded-xl" />)}</div>
-        <div className="grid gap-3 md:gap-4 md:grid-cols-2 lg:grid-cols-3">{[1, 2, 3, 4, 5, 6].map((i) => <Skeleton key={i} className="h-48 rounded-2xl" />)}</div>
+        <div className="grid gap-3 md:gap-4 md:grid-cols-2">{[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-48 rounded-2xl" />)}</div>
       </div>
     );
   }
@@ -934,14 +933,6 @@ export default function CentralOperacoes() {
         </TabsList>
 
         <TabsContent value="financeiro" className="mt-3 md:mt-4 space-y-3 md:space-y-4">
-          {/* KPI Summary */}
-          <CentralKPISummary
-            criticalCount={alertasCriticos.length + casasPendentesConciliacao.length}
-            saquesCount={saquesPendentes.length + alertasSaques.length}
-            pendentesCount={pagamentosOperadorPendentes.length + participacoesPendentes.length + entregasPendentes.length}
-            limitadasCount={alertasLimitadas.length}
-          />
-
           {!hasAnyAlerts && (
             <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/[0.03] backdrop-blur-sm">
               <div className="text-center py-12 md:py-16">
@@ -952,7 +943,7 @@ export default function CentralOperacoes() {
             </div>
           )}
           {hasAnyAlerts && (
-            <div className="grid gap-3 md:gap-4 md:grid-cols-2 lg:grid-cols-3">{alertCards.map((card) => card.component)}</div>
+            <div className="grid gap-3 md:gap-4 md:grid-cols-2">{alertCards.map((card) => card.component)}</div>
           )}
         </TabsContent>
 

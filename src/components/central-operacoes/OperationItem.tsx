@@ -1,7 +1,10 @@
 /**
  * OperationItem — Item de lista dentro de OperationCard
  * 
- * Padrão consistente: ícone + info + valor + ações
+ * Layout: estrutura multi-linha para máxima legibilidade
+ * Linha 1: Nome + Valor (destaque forte)
+ * Linha 2: Sublabel (metadados)
+ * Linha 3: Ações
  */
 
 import { ReactNode } from "react";
@@ -58,7 +61,7 @@ export function OperationItem({
   return (
     <div
       className={cn(
-        "flex items-center gap-2 p-2 md:p-2.5 rounded-xl border transition-all duration-150",
+        "flex flex-col gap-1.5 p-3 rounded-xl border transition-all duration-150",
         "hover:translate-y-[-1px] hover:shadow-sm",
         c.border, c.bg,
         pulse && "animate-pulse",
@@ -67,16 +70,23 @@ export function OperationItem({
       )}
       onClick={onClick}
     >
-      <span className={cn("shrink-0", c.valueColor)}>{icon}</span>
-      <div className="min-w-0 flex-1">
-        <p className="text-xs font-medium truncate">{label}</p>
-        {sublabel && <p className="text-[10px] text-muted-foreground truncate">{sublabel}</p>}
+      {/* Row 1: Icon + Name + Value */}
+      <div className="flex items-start gap-2">
+        <span className={cn("shrink-0 mt-0.5", c.valueColor)}>{icon}</span>
+        <p className="text-sm font-medium flex-1 break-words leading-snug">{label}</p>
+        {value && (
+          <span className={cn("text-sm font-bold shrink-0 tabular-nums whitespace-nowrap", c.valueColor)}>{value}</span>
+        )}
       </div>
-      {value && (
-        <span className={cn("text-xs font-bold shrink-0 tabular-nums", c.valueColor)}>{value}</span>
+
+      {/* Row 2: Sublabel */}
+      {sublabel && (
+        <p className="text-[11px] text-muted-foreground pl-5 break-words leading-snug">{sublabel}</p>
       )}
+
+      {/* Row 3: Actions */}
       {actions && (
-        <div className="flex items-center gap-1 shrink-0">{actions}</div>
+        <div className="flex items-center gap-1.5 pl-5 pt-0.5">{actions}</div>
       )}
     </div>
   );
