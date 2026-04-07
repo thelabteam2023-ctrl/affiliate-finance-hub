@@ -385,7 +385,7 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
   const { mutateAsync: criar, isPending } = useCriarSolicitacao();
   const { data: members = [], isLoading: membersLoading } = useWorkspaceMembers();
   const { data: workspaceBookmakers = [], isLoading: bookmakersLoading } = useWorkspaceBookmakers();
-  const [kycBookmakerData, setKycBookmakerData] = useState<OperationalBookmakerOption | null>(null);
+  const [kycBookmakerData, setKycBookmakerData] = useState<WorkspaceBookmakerOption | null>(null);
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
