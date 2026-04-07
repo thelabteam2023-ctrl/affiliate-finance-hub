@@ -454,13 +454,29 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
   const vinculosAtivos = vinculos.filter((v) => v.bookmaker_status.toUpperCase() === "ATIVO").length;
   const vinculosLimitados = vinculos.filter((v) => v.bookmaker_status.toUpperCase() === "LIMITADA").length;
 
-  // Listas únicas para filtros
-  const uniqueCasas = useMemo(() => {
-    return [...new Set(vinculos.map(v => v.nome))].sort();
+  // Listas únicas para filtros (como FilterDropdownItem)
+  const casasFilterItems = useMemo(() => {
+    const seen = new Map<string, { logoUrl?: string | null }>();
+    vinculos.forEach(v => {
+      if (!seen.has(v.nome)) {
+        seen.set(v.nome, { logoUrl: v.logo_url });
+      }
+    });
+    return Array.from(seen.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([nome, meta]) => ({
+        value: nome,
+        label: nome,
+        logoUrl: meta.logoUrl,
+      }));
   }, [vinculos]);
   
-  const uniqueParceiros = useMemo(() => {
-    return [...new Set(vinculos.map(v => v.parceiro_nome).filter(Boolean) as string[])].sort();
+  const parceirosFilterItems = useMemo(() => {
+    const names = [...new Set(vinculos.map(v => v.parceiro_nome).filter(Boolean) as string[])].sort();
+    return names.map(nome => ({
+      value: nome,
+      label: nome,
+    }));
   }, [vinculos]);
 
   if (loading) {
