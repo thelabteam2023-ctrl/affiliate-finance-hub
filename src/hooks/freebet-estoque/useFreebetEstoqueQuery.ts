@@ -150,6 +150,7 @@ async function fetchEstoqueData(
         parceiro_nome: fb.parceiro_nome,
         logo_url: fb.logo_url,
         saldo_freebet: 0,
+        saldo_nominal: 0,
         moeda: fb.moeda,
         freebets_count: 0,
         freebets_pendentes: 0,
@@ -163,6 +164,7 @@ async function fetchEstoqueData(
       bk.freebets_pendentes++;
     } else if (fb.status === "LIBERADA" && !fb.utilizada) {
       bk.freebets_liberadas++;
+      bk.saldo_nominal += fb.valor;
       if (fb.data_validade) {
         if (!bk.proxima_expiracao || new Date(fb.data_validade) < new Date(bk.proxima_expiracao)) {
           bk.proxima_expiracao = fb.data_validade;
