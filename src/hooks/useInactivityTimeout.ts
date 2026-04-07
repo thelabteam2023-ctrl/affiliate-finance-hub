@@ -331,17 +331,8 @@ export function useInactivityTimeout(): UseInactivityTimeoutReturn {
       if (event.key !== STORAGE_KEY) return;
       
       if (event.newValue === null) {
-        // Sessão foi expirada em outra aba
-        if (!isExpiredRef.current) {
-          isExpiredRef.current = true;
-          toast({
-            title: "Sessão Expirada",
-            description: "Sua sessão expirou por inatividade. Faça login novamente.",
-            variant: "destructive",
-            duration: 5000,
-          });
-          signOut().then(() => navigate('/auth'));
-        }
+        // Sessão foi expirada em outra aba (idempotente)
+        handleSessionExpired('storage-remoto');
       } else {
         try {
           const data = JSON.parse(event.newValue);
