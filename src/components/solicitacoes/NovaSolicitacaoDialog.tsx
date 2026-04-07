@@ -40,7 +40,7 @@ import { useWorkspaceBookmakers } from '@/hooks/useWorkspaceBookmakers';
 import { SOLICITACAO_TIPO_LABELS, SOLICITACAO_PRIORIDADE_CONFIG } from '@/types/solicitacoes';
 import type { SolicitacaoTipo } from '@/types/solicitacoes';
 import { KycBookmakerSelect } from './KycBookmakerSelect';
-import type { OperationalBookmakerOption } from '@/hooks/useOperationalBookmakers';
+import type { WorkspaceBookmakerOption } from '@/hooks/useWorkspaceBookmakers';
 import { supabase } from '@/integrations/supabase/client';
 import { ClipboardList, Loader2, Search, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
