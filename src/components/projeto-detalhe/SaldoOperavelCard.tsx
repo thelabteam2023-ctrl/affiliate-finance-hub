@@ -348,15 +348,12 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
                 <div className="flex items-center gap-1 min-w-0 flex-1">
                   <span className="text-xs font-medium text-foreground truncate">
                     {casa.nome}
-                    {casa.instanceIdentifier && (
-                      <span className="text-primary/80 ml-1 font-normal">({casa.instanceIdentifier})</span>
+                    {(casa.instanceIdentifier || casa.parceiroPrimeiroNome) && (
+                      <span className="text-primary/80 ml-1 font-normal">
+                        ({casa.instanceIdentifier || casa.parceiroPrimeiroNome})
+                      </span>
                     )}
                   </span>
-                  {casa.parceiroPrimeiroNome && (
-                    <span className="text-[10px] text-primary/80 truncate flex-shrink-0">
-                      {casa.parceiroPrimeiroNome}
-                    </span>
-                  )}
                   {casa.aguardandoSaque && (
                     <TooltipProvider delayDuration={0}>
                       <Tooltip>
