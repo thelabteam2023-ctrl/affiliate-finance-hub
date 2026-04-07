@@ -29,7 +29,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { OperationCard } from "@/components/central-operacoes/OperationCard";
 import { OperationItem } from "@/components/central-operacoes/OperationItem";
-import { CentralKPISummary } from "@/components/central-operacoes/CentralKPISummary";
+
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
