@@ -102,7 +102,7 @@ export function FilterDropdown({
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-72 p-0" align="start" sideOffset={8}>
+      <PopoverContent className="w-[300px] min-w-[280px] max-w-[360px] p-0" align="start" sideOffset={8}>
         {/* Header */}
         <div className="flex items-center justify-between px-3 py-2.5 border-b border-border">
           <span className="text-sm font-semibold text-foreground">
