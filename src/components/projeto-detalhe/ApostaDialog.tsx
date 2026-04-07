@@ -3003,17 +3003,21 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
   // 2. deletar_aposta_v4 encontre o evento via aposta_id (para reverter)
   const debitarFreebetUsada = async (bookmakerIdFreebet: string, valor: number, apostaId?: string) => {
     try {
-      if (apostaId) {
-        // Debitar saldo_freebet via ledger com chave determinística vinculada à aposta
-        const result = await consumirFreebetViaLedger(bookmakerIdFreebet, valor, {
-          apostaId,
-          descricao: `Freebet consumida em aposta #${apostaId.slice(0, 8)}`,
-        });
+      // PROTEÇÃO CRÍTICA: Nunca consumir freebet sem aposta vinculada
+      if (!apostaId) {
+        console.error("[debitarFreebetUsada] Tentativa de consumir freebet sem apostaId - BLOQUEADO");
+        return;
+      }
 
-        if (!result.success) {
-          console.error("Erro ao consumir freebet via ledger:", result.error);
-          throw new Error(result.error);
-        }
+      // Debitar saldo_freebet via ledger com chave determinística vinculada à aposta
+      const result = await consumirFreebetViaLedger(bookmakerIdFreebet, valor, {
+        apostaId,
+        descricao: `Freebet consumida em aposta #${apostaId.slice(0, 8)}`,
+      });
+
+      if (!result.success) {
+        console.error("Erro ao consumir freebet via ledger:", result.error);
+        throw new Error(result.error);
       }
 
       // Buscar freebet disponível para marcar como usada
@@ -3034,7 +3038,7 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           .update({
             utilizada: true,
             data_utilizacao: new Date().toISOString(),
-            aposta_id: apostaId || null
+            aposta_id: apostaId
           })
           .eq("id", freebetParaUsar.id);
       }

@@ -76,6 +76,12 @@ export async function consumirFreebetViaLedger(
       return { success: false, error: 'Valor deve ser positivo' };
     }
 
+    // PROTEÇÃO CRÍTICA: Nunca criar FREEBET_STAKE sem aposta vinculada
+    if (!options?.apostaId) {
+      console.error('[FreebetLedger] Tentativa de consumir freebet sem apostaId - BLOQUEADO');
+      return { success: false, error: 'FREEBET_STAKE requer aposta_id válido' };
+    }
+
     // CRÍTICO: Se apostaId fornecido, usar chave 'stake_{apostaId}' para que:
     // - liquidar_aposta_v4 detecte o evento existente (sem auto-heal duplicado)
     // - deletar_aposta_v4 encontre o evento via aposta_id (para reverter)
