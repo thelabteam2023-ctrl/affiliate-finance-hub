@@ -290,7 +290,9 @@ export function SolicitacaoLoteDialog({ open, onOpenChange }: Props) {
           prioridade,
           executor_id: executorId,
           destinatario_nome: item.titular || undefined,
-          bookmaker_id: item.bookmaker_id || undefined,
+          // NOTE: bookmaker_id references bookmakers (instance) table, NOT bookmakers_catalogo.
+          // Catalog IDs from the parser are stored in contexto_metadata only.
+          bookmaker_id: undefined,
           contexto_metadata: metadata,
         });
         successCount++;
