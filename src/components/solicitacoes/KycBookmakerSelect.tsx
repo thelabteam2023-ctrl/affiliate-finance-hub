@@ -1,6 +1,5 @@
 import { useState, useMemo } from 'react';
 import { Building2, Search, X, Check, ChevronDown } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import {
   Popover,
   PopoverContent,
@@ -9,8 +8,6 @@ import {
 import { cn } from '@/lib/utils';
 import { useWorkspaceBookmakers } from '@/hooks/useWorkspaceBookmakers';
 import type { WorkspaceBookmakerOption } from '@/hooks/useWorkspaceBookmakers';
-
-type RegFilter = 'todas' | 'REGULAMENTADA' | 'NAO_REGULAMENTADA';
 
 interface KycBookmakerSelectProps {
   value: string;
@@ -29,26 +26,14 @@ export function KycBookmakerSelect({
 
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
-  const [regFilter, setRegFilter] = useState<RegFilter>('todas');
 
   const filtered = useMemo(() => {
-    let list = allBookmakers;
-
-    if (regFilter === 'REGULAMENTADA') {
-      list = list.filter((i) => i.status === 'REGULAMENTADA');
-    } else if (regFilter === 'NAO_REGULAMENTADA') {
-      list = list.filter((i) => i.status === 'NAO_REGULAMENTADA');
-    }
-
-    if (search.trim()) {
-      const term = search.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-      list = list.filter((b) =>
-        b.nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(term),
-      );
-    }
-
-    return list;
-  }, [allBookmakers, regFilter, search]);
+    if (!search.trim()) return allBookmakers;
+    const term = search.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    return allBookmakers.filter((b) =>
+      b.nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(term),
+    );
+  }, [allBookmakers, search]);
 
   const selected = useMemo(
     () => allBookmakers.find((b) => b.id === value) ?? null,
@@ -60,138 +45,119 @@ export function KycBookmakerSelect({
     setOpen(false);
   };
 
-  const regOptions: { value: RegFilter; label: string }[] = [
-    { value: 'todas', label: 'Todas' },
-    { value: 'REGULAMENTADA', label: 'Regulamentadas' },
-    { value: 'NAO_REGULAMENTADA', label: 'Não Regulamentadas' },
-  ];
+  const handleClear = () => {
+    onValueChange('', null);
+    setOpen(false);
+  };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={(v) => { setOpen(v); if (!v) setSearch(''); }}>
       <PopoverTrigger asChild>
-        <Button
+        <button
           type="button"
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
           disabled={disabled || isLoading}
           className={cn(
-            'w-full h-12 justify-between text-left',
-            error && 'border-destructive',
+            'w-full h-10 px-3 flex items-center gap-2 text-left rounded-md border transition-colors cursor-pointer',
+            'bg-background hover:bg-accent/50',
+            error ? 'border-destructive' : 'border-border',
             !selected && 'text-muted-foreground',
+            (disabled || isLoading) && 'opacity-50 cursor-not-allowed',
           )}
         >
           {selected ? (
-            <div className="flex items-center gap-3 flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-1 min-w-0">
               {selected.logo_url ? (
                 <img
                   src={selected.logo_url}
                   alt=""
-                  className="h-6 w-6 rounded object-contain flex-shrink-0"
+                  className="h-4 w-4 rounded object-contain flex-shrink-0"
                   onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
                 />
               ) : (
-                <Building2 className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                <Building2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
               )}
-              <span className="uppercase text-sm font-bold truncate tracking-wide">
+              <span className="uppercase text-xs font-medium tracking-wide truncate">
                 {selected.nome}
               </span>
             </div>
           ) : (
-            <span className="text-sm">
-              {isLoading ? 'Carregando...' : 'Selecionar bookmaker...'}
+            <span className="text-xs flex-1">
+              {isLoading ? 'Carregando...' : 'Selecionar casa...'}
             </span>
           )}
-          <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0 ml-1" />
-        </Button>
+          <ChevronDown className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+        </button>
       </PopoverTrigger>
 
       <PopoverContent
-        className="w-[--radix-popover-trigger-width] min-w-[320px] p-0 z-[9999]"
+        className="w-[--radix-popover-trigger-width] min-w-[260px] p-0 z-[9999]"
         align="start"
         sideOffset={4}
       >
-        <div className="p-2 space-y-2 border-b border-border">
+        {/* Search header */}
+        <div className="p-1.5 border-b border-border">
           <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground pointer-events-none" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar bookmaker..."
-              className="w-full h-8 pl-8 pr-3 text-xs rounded-md border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+              placeholder="Buscar casa..."
+              autoFocus
+              className="w-full h-7 pl-6 pr-2 text-xs rounded border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
             />
           </div>
-          <div className="flex gap-1">
-            {regOptions.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => setRegFilter(opt.value)}
-                className={cn(
-                  'flex-1 text-xs px-2 py-1 rounded-md border transition-colors',
-                  regFilter === opt.value
-                    ? 'bg-primary text-primary-foreground border-primary font-medium'
-                    : 'bg-transparent text-muted-foreground border-border hover:bg-accent',
-                )}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
         </div>
 
-        <div className="max-h-[300px] overflow-y-auto" onWheel={(e) => e.stopPropagation()}>
+        {/* List */}
+        <div className="max-h-48 overflow-y-auto p-1">
+          {/* Clear option */}
+          {value && (
+            <button
+              type="button"
+              onClick={handleClear}
+              className="w-full flex items-center gap-2 px-2 py-1.5 text-xs rounded hover:bg-accent text-muted-foreground"
+            >
+              <X className="h-3 w-3" />
+              Remover casa
+            </button>
+          )}
+
           {filtered.length === 0 ? (
-            <p className="p-4 text-center text-sm text-muted-foreground">
-              {isLoading ? 'Carregando...' : 'Nenhuma bookmaker encontrada'}
+            <p className="p-3 text-center text-xs text-muted-foreground">
+              {isLoading ? 'Carregando...' : 'Nenhuma casa encontrada'}
             </p>
           ) : (
-            filtered.map((item) => {
-              const isSelected = item.id === value;
-              return (
-                <div
-                  key={item.id}
-                  onClick={() => handleSelect(item)}
-                  className={cn(
-                    'flex items-center gap-3 px-3 py-2.5 cursor-pointer border-l-2 transition-colors',
-                    isSelected
-                      ? 'border-l-emerald-500 bg-emerald-500/10'
-                      : 'border-l-transparent hover:bg-accent/50',
-                  )}
-                >
-                  <Check
-                    className={cn(
-                      'h-4 w-4 flex-shrink-0 text-emerald-500',
-                      isSelected ? 'opacity-100' : 'opacity-0',
-                    )}
+            filtered.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => handleSelect(item)}
+                className={cn(
+                  'w-full flex items-center gap-2 px-2 py-1.5 text-xs rounded hover:bg-accent',
+                  item.id === value && 'bg-accent font-medium',
+                )}
+              >
+                {item.id === value ? (
+                  <Check className="h-3 w-3 text-emerald-500 flex-shrink-0" />
+                ) : (
+                  <span className="w-3" />
+                )}
+                {item.logo_url ? (
+                  <img
+                    src={item.logo_url}
+                    alt=""
+                    className="h-4 w-4 rounded object-contain flex-shrink-0"
+                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
                   />
-                  {item.logo_url ? (
-                    <img
-                      src={item.logo_url}
-                      alt=""
-                      className="h-6 w-6 rounded object-contain flex-shrink-0"
-                      onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-                    />
-                  ) : (
-                    <Building2 className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                  )}
-                  <span className="uppercase text-sm font-bold tracking-wide truncate flex-1">
-                    {item.nome}
-                  </span>
-                </div>
-              );
-            })
+                ) : (
+                  <Building2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                )}
+                <span className="truncate uppercase font-medium tracking-wide">{item.nome}</span>
+              </button>
+            ))
           )}
         </div>
-
-        {filtered.length > 0 && (
-          <div className="border-t border-border px-3 py-1.5">
-            <p className="text-[10px] text-muted-foreground">
-              {filtered.length} bookmaker{filtered.length !== 1 ? 's' : ''} encontrada{filtered.length !== 1 ? 's' : ''}
-            </p>
-          </div>
-        )}
       </PopoverContent>
     </Popover>
   );
