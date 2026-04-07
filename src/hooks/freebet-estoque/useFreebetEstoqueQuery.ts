@@ -175,7 +175,7 @@ async function fetchEstoqueData(
 
   // 6. Filter: only show bookmakers that have active freebets or positive balance
   const activeEstoque = Array.from(bookmakerEstoqueMap.values()).filter(
-    bk => bk.freebets_liberadas > 0 || bk.freebets_pendentes > 0 || bk.saldo_freebet > 0
+    bk => bk.freebets_liberadas > 0 || bk.freebets_pendentes > 0 || bk.saldo_nominal > 0
   );
 
   return {
