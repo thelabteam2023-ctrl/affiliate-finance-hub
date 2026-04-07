@@ -453,7 +453,14 @@ export function FreebetEstoqueView({ projetoId, formatCurrency, dateRange, onAdd
                           ) : (
                             <Gift className="h-5 w-5 text-amber-400" />
                           )}
-                          <span className="truncate max-w-[120px]">{fb.bookmaker_nome}</span>
+                          <div className="flex flex-col min-w-0">
+                            <span className="truncate max-w-[140px] font-medium">{fb.bookmaker_nome}</span>
+                            {fb.parceiro_nome && (
+                              <span className="text-[11px] text-muted-foreground truncate max-w-[140px]">
+                                {fb.parceiro_nome}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </td>
                       <td className="p-3 text-right font-medium text-amber-400">
