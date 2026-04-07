@@ -103,7 +103,10 @@ async function fetchEstoqueData(
 
   const allFreebets = [...formatted, ...bonusFormatted];
 
-  // 3. Fetch bookmakers with freebet balance
+  // 3. Fetch bookmakers with freebet balance OR that have freebets_recebidas records
+  // This ensures bookmakers aren't hidden due to saldo_freebet desync
+  const bookmakerIdsFromFreebets = [...new Set(allFreebets.map(fb => fb.bookmaker_id))];
+  
   const { data: bookmakers, error: bookmakersError } = await supabase
     .from("bookmakers")
     .select(`
@@ -112,7 +115,9 @@ async function fetchEstoqueData(
       bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url)
     `)
     .eq("projeto_id", projetoId)
-    .gt("saldo_freebet", 0);
+    .or(
+      `saldo_freebet.gt.0${bookmakerIdsFromFreebets.length > 0 ? `,id.in.(${bookmakerIdsFromFreebets.join(",")})` : ""}`
+    );
 
   if (bookmakersError) throw bookmakersError;
 
@@ -135,25 +140,44 @@ async function fetchEstoqueData(
 
   // 5. Aggregate freebet counts per bookmaker
   allFreebets.forEach(fb => {
-    const bk = bookmakerEstoqueMap.get(fb.bookmaker_id);
-    if (bk) {
-      bk.freebets_count++;
-      if (fb.status === "PENDENTE") {
-        bk.freebets_pendentes++;
-      } else if (fb.status === "LIBERADA" && !fb.utilizada) {
-        bk.freebets_liberadas++;
-        if (fb.data_validade) {
-          if (!bk.proxima_expiracao || new Date(fb.data_validade) < new Date(bk.proxima_expiracao)) {
-            bk.proxima_expiracao = fb.data_validade;
-          }
+    let bk = bookmakerEstoqueMap.get(fb.bookmaker_id);
+    if (!bk) {
+      // Bookmaker not in map yet (edge case) - add from freebet data
+      bk = {
+        id: fb.bookmaker_id,
+        nome: fb.bookmaker_nome,
+        parceiro_nome: fb.parceiro_nome,
+        logo_url: fb.logo_url,
+        saldo_freebet: 0,
+        moeda: fb.moeda,
+        freebets_count: 0,
+        freebets_pendentes: 0,
+        freebets_liberadas: 0,
+        proxima_expiracao: null,
+      };
+      bookmakerEstoqueMap.set(fb.bookmaker_id, bk);
+    }
+    bk.freebets_count++;
+    if (fb.status === "PENDENTE") {
+      bk.freebets_pendentes++;
+    } else if (fb.status === "LIBERADA" && !fb.utilizada) {
+      bk.freebets_liberadas++;
+      if (fb.data_validade) {
+        if (!bk.proxima_expiracao || new Date(fb.data_validade) < new Date(bk.proxima_expiracao)) {
+          bk.proxima_expiracao = fb.data_validade;
         }
       }
     }
   });
 
+  // 6. Filter: only show bookmakers that have active freebets or positive balance
+  const activeEstoque = Array.from(bookmakerEstoqueMap.values()).filter(
+    bk => bk.freebets_liberadas > 0 || bk.freebets_pendentes > 0 || bk.saldo_freebet > 0
+  );
+
   return {
     freebets: allFreebets,
-    bookmakersEstoque: Array.from(bookmakerEstoqueMap.values()),
+    bookmakersEstoque: activeEstoque,
   };
 }
 
