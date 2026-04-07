@@ -113,7 +113,7 @@ export function OperationCard({
       {/* Content */}
       {isExpanded && (
         <div className="px-3 md:px-4 pb-3 md:pb-4">
-          <div className="max-h-[300px] overflow-y-auto space-y-1.5 pr-0.5 scrollbar-thin">
+          <div className="max-h-[400px] overflow-y-auto space-y-2 pr-0.5 scrollbar-thin">
             {children}
           </div>
         </div>
