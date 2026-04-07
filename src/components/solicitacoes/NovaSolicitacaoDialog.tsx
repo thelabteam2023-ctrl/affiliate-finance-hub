@@ -40,7 +40,7 @@ import { useWorkspaceBookmakers } from '@/hooks/useWorkspaceBookmakers';
 import { SOLICITACAO_TIPO_LABELS, SOLICITACAO_PRIORIDADE_CONFIG } from '@/types/solicitacoes';
 import type { SolicitacaoTipo } from '@/types/solicitacoes';
 import { KycBookmakerSelect } from './KycBookmakerSelect';
-import type { OperationalBookmakerOption } from '@/hooks/useOperationalBookmakers';
+import type { WorkspaceBookmakerOption } from '@/hooks/useWorkspaceBookmakers';
 import { supabase } from '@/integrations/supabase/client';
 import { ClipboardList, Loader2, Search, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -385,7 +385,7 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
   const { mutateAsync: criar, isPending } = useCriarSolicitacao();
   const { data: members = [], isLoading: membersLoading } = useWorkspaceMembers();
   const { data: workspaceBookmakers = [], isLoading: bookmakersLoading } = useWorkspaceBookmakers();
-  const [kycBookmakerData, setKycBookmakerData] = useState<OperationalBookmakerOption | null>(null);
+  const [kycBookmakerData, setKycBookmakerData] = useState<WorkspaceBookmakerOption | null>(null);
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -454,8 +454,6 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
     if (isKycType && data.kyc_bookmaker_id && kycBookmakerData) {
       metadata['kyc_bookmaker_id'] = data.kyc_bookmaker_id;
       metadata['kyc_bookmaker_nome'] = kycBookmakerData.nome;
-      metadata['kyc_parceiro_nome'] = kycBookmakerData.parceiro_nome ?? null;
-      metadata['kyc_projeto_nome'] = kycBookmakerData.projeto_nome ?? null;
     }
 
     // Armazena múltiplos executores no metadata
@@ -480,8 +478,8 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
       bookmaker_id: isKycType
         ? (data.kyc_bookmaker_id || contextoInicial?.bookmaker_id)
         : contextoInicial?.bookmaker_id,
-      projeto_id: kycBookmakerData?.projeto_id ?? contextoInicial?.projeto_id,
-      parceiro_id: kycBookmakerData?.parceiro_id ?? contextoInicial?.parceiro_id,
+      projeto_id: contextoInicial?.projeto_id,
+      parceiro_id: contextoInicial?.parceiro_id,
       contexto_metadata: metadata,
     });
     onOpenChange(false);
