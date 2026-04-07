@@ -174,7 +174,7 @@ function KanbanCard({
 
   const meta = solicitacao.contexto_metadata as Record<string, unknown> | null;
 
-  // Extract bookmaker names from metadata
+  // Extract bookmaker names from metadata (unified format for all sources)
   const bookmakerNomes: string[] = (() => {
     if (!meta) return [];
     const nomes = meta['bookmaker_nomes'];
@@ -186,10 +186,6 @@ function KanbanCard({
 
   // Extract bookmaker logos from metadata
   const bookmakerLogos = (meta?.['bookmaker_logos'] as Record<string, string> | undefined) ?? {};
-
-  // KYC-specific data
-  const kycBookmakerNome = meta?.['kyc_bookmaker_nome'] as string | undefined;
-  const kycParceiroNome = meta?.['kyc_parceiro_nome'] as string | undefined;
 
   // Executor names
   const executorNomes: string[] = (() => {
@@ -212,9 +208,10 @@ function KanbanCard({
   };
   const nextStatuses = statusFlow[solicitacao.status];
 
-  // Determine if there's any bookmaker info to show
+  // Determine if there's any bookmaker info to show (unified: metadata OR joined relation)
   const hasBookmakers = bookmakerNomes.length > 0;
-  const hasKycInfo = !!kycBookmakerNome;
+  // Fallback: legacy single bookmaker from DB join (no metadata)
+  const legacyBookmaker = !hasBookmakers && solicitacao.bookmaker ? solicitacao.bookmaker : null;
 
   return (
     <>
