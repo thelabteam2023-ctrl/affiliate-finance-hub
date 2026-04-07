@@ -388,7 +388,7 @@ export function useInactivityTimeout(): UseInactivityTimeoutReturn {
       window.removeEventListener('storage', handleStorageChange);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [user?.id, registerActivity, signOut, navigate, toast]);
+  }, [user?.id, registerActivity, handleSessionExpired]);
 
   return {
     lastActivity,
