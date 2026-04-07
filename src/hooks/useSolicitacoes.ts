@@ -166,11 +166,18 @@ export function useAtualizarStatusSolicitacao() {
         if (recusa_motivo) updates.recusa_motivo = recusa_motivo;
       }
 
-      const { error } = await solicitacoesTable()
+      console.log('[useAtualizarStatus] updating:', { id, updates });
+      const { data, error } = await solicitacoesTable()
         .update(updates)
-        .eq('id', id);
+        .eq('id', id)
+        .select('id, status')
+        .maybeSingle();
 
       if (error) throw error;
+      if (!data) {
+        throw new Error('Sem permissão para atualizar esta solicitação ou registro não encontrado.');
+      }
+      console.log('[useAtualizarStatus] success:', data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
