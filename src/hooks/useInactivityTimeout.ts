@@ -48,6 +48,7 @@ export function useInactivityTimeout(): UseInactivityTimeoutReturn {
   const lastBackendUpdateRef = useRef<number>(0);
   const warningShownRef = useRef<boolean>(false);
   const isExpiredRef = useRef<boolean>(false);
+  const toastFiredRef = useRef<boolean>(false); // Deduplicação de toast
   const broadcastChannelRef = useRef<BroadcastChannel | null>(null);
   const lastActivityRef = useRef<Date | null>(null);
   const userIdRef = useRef<string | undefined>(undefined);
