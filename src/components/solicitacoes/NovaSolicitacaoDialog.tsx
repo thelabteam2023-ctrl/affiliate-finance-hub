@@ -454,8 +454,6 @@ export function NovaSolicitacaoDialog({ open, onOpenChange, contextoInicial }: P
     if (isKycType && data.kyc_bookmaker_id && kycBookmakerData) {
       metadata['kyc_bookmaker_id'] = data.kyc_bookmaker_id;
       metadata['kyc_bookmaker_nome'] = kycBookmakerData.nome;
-      metadata['kyc_parceiro_nome'] = kycBookmakerData.parceiro_nome ?? null;
-      metadata['kyc_projeto_nome'] = kycBookmakerData.projeto_nome ?? null;
     }
 
     // Armazena múltiplos executores no metadata
