@@ -161,14 +161,45 @@ export function SolicitacaoLoteDialog({ open, onOpenChange }: Props) {
   const { data: members = [] } = useWorkspaceMembers();
   const { data: workspaceBookmakers = [], isLoading: bookmakersLoading } = useWorkspaceBookmakers();
 
-  /** Try to auto-match a parsed bookmaker name to a workspace bookmaker */
+  /** Try to auto-match a parsed bookmaker name to a workspace bookmaker (fuzzy) */
   const autoMatchBookmaker = (parsedName?: string) => {
     if (!parsedName) return { id: undefined, nome: undefined, logo: undefined };
-    const normalized = parsedName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    const match = workspaceBookmakers.find((bk) => {
-      const bkNorm = bk.nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-      return bkNorm === normalized || bkNorm.includes(normalized) || normalized.includes(bkNorm);
+    const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const target = norm(parsedName);
+
+    // 1) Exact / substring match
+    let match = workspaceBookmakers.find((bk) => {
+      const bkNorm = norm(bk.nome);
+      return bkNorm === target || bkNorm.includes(target) || target.includes(bkNorm);
     });
+
+    // 2) Fuzzy match with Levenshtein similarity
+    if (!match) {
+      let bestScore = 0;
+      for (const bk of workspaceBookmakers) {
+        const bkNorm = norm(bk.nome);
+        const maxLen = Math.max(target.length, bkNorm.length);
+        if (maxLen === 0) continue;
+        // Simple Levenshtein
+        const m = target.length, n = bkNorm.length;
+        const dp: number[][] = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+        for (let i = 0; i <= m; i++) dp[i][0] = i;
+        for (let j = 0; j <= n; j++) dp[0][j] = j;
+        for (let i = 1; i <= m; i++) {
+          for (let j = 1; j <= n; j++) {
+            dp[i][j] = target[i - 1] === bkNorm[j - 1]
+              ? dp[i - 1][j - 1]
+              : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+          }
+        }
+        const score = 1 - dp[m][n] / maxLen;
+        if (score > 0.75 && score > bestScore) {
+          bestScore = score;
+          match = bk;
+        }
+      }
+    }
+
     return match
       ? { id: match.id, nome: match.nome, logo: match.logo_url ?? undefined }
       : { id: undefined, nome: parsedName, logo: undefined };
