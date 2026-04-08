@@ -446,6 +446,10 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
   const isSimples = surebet.estrategia === "SIMPLES" || surebet.estrategia === "NORMAL";
   const isLiquidada = surebet.status === "LIQUIDADA";
   
+  // Detectar se alguma perna usa freebet (badge no nível do card)
+  const hasAnyFreebetPerna = surebet.pernas?.some(p => 
+    p.fonte_saldo === 'FREEBET' || p.entries?.some(e => e.fonte_saldo === 'FREEBET')
+  ) ?? false;
   // Detectar moeda predominante das pernas (se todas iguais, usar essa; senão, usar formatValue do projeto)
   const moedaPernas = (() => {
     if (!surebet.pernas || surebet.pernas.length === 0) return null;
