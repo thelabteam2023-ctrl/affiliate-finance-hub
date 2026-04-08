@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge, SelectionBadge } from "@/components/ui/badge";
 import { format as formatDate } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ArrowLeftRight, Zap, CheckCircle2, Clock, Coins, ChevronDown, ChevronUp, Layers, Building2, TrendingUp, Target } from "lucide-react";
+import { ArrowLeftRight, Zap, CheckCircle2, Clock, Coins, ChevronDown, ChevronUp, Layers, Building2, TrendingUp, Target, Gift } from "lucide-react";
 import { cn, getFirstLastName } from "@/lib/utils";
 import { formatBookmakerDisplay } from "@/lib/bookmaker-display";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -446,6 +446,10 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
   const isSimples = surebet.estrategia === "SIMPLES" || surebet.estrategia === "NORMAL";
   const isLiquidada = surebet.status === "LIQUIDADA";
   
+  // Detectar se alguma perna usa freebet (badge no nível do card)
+  const hasAnyFreebetPerna = surebet.pernas?.some(p => 
+    p.fonte_saldo === 'FREEBET' || p.entries?.some(e => e.fonte_saldo === 'FREEBET')
+  ) ?? false;
   // Detectar moeda predominante das pernas (se todas iguais, usar essa; senão, usar formatValue do projeto)
   const moedaPernas = (() => {
     if (!surebet.pernas || surebet.pernas.length === 0) return null;
@@ -646,6 +650,12 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
             {surebet.modelo}
           </Badge>
           <ResultadoBadge resultado={isLiquidada ? surebet.resultado : null} />
+          {hasAnyFreebetPerna && (
+            <Badge variant="outline" className="text-[10px] sm:text-xs px-1.5 py-0 border-amber-500/40 text-amber-400 bg-amber-500/10 font-bold flex items-center gap-0.5">
+              <Gift className="h-3 w-3" />
+              FB
+            </Badge>
+          )}
           
           <div className="ml-auto flex-shrink-0">
             {(onEdit || onDelete || onDuplicate || onQuickResolve) && (
