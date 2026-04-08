@@ -1102,9 +1102,11 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
             }
           } else {
             // INSERT new account
-            const { error: insertError } = await supabase
+            const { data: insertedData, error: insertError } = await supabase
               .from("contas_bancarias")
-              .insert([accountData]);
+              .insert([accountData])
+              .select('id')
+              .single();
             
             if (insertError) {
               console.error("Error inserting bank account:", insertError);
