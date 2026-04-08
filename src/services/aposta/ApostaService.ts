@@ -146,8 +146,9 @@ export async function criarAposta(
     forma_registro: input.forma_registro,
     estrategia: input.estrategia,
     contexto_operacional: input.contexto_operacional || 'NORMAL',
+    // DEPRECAÇÃO: usar_freebet agora é DERIVADO de stakeSplit, não input direto
     fonte_saldo: input.fonte_saldo || inferFonteSaldo(input.contexto_operacional, input.estrategia, input.usar_freebet),
-    usar_freebet: input.usar_freebet || (stakeSplit?.usesFreebet ?? false),
+    usar_freebet: (stakeSplit?.usesFreebet ?? false) || (input.stake_freebet != null && input.stake_freebet > 0),
     data_aposta: input.data_aposta,
     evento: input.evento,
     esporte: input.esporte,
