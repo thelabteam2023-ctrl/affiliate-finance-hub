@@ -62,6 +62,7 @@ export function useWaterfallDebito(): WaterfallDebitoHook {
     async (
       bookmakerId: string,
       stake: number,
+      /** @deprecated Mantido para compatibilidade com RPC. Verdade: fonte_saldo */
       usarFreebet: boolean
     ): Promise<WaterfallResult | null> => {
       try {
@@ -105,6 +106,7 @@ export function useWaterfallDebito(): WaterfallDebitoHook {
     async (
       bookmakerId: string,
       stake: number,
+      /** @deprecated Mantido para compatibilidade com RPC. Verdade: fonte_saldo */
       usarFreebet: boolean,
       workspaceId: string,
       userId: string,
