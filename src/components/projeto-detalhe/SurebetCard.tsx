@@ -295,9 +295,9 @@ function PernaItem({
               </Tooltip>
             </TooltipProvider>
             {isFreebet && (
-              <Badge variant="outline" className="text-[9px] px-1 py-0 shrink-0 border-amber-500/40 text-amber-400 bg-amber-500/10 font-bold">
-                FB
-              </Badge>
+              <span className="shrink-0 text-amber-400" title="Freebet">
+                <Gift className="h-3.5 w-3.5" />
+              </span>
             )}
           </div>
           
@@ -415,9 +415,9 @@ function PernaItem({
                   )}
                 </span>
                 {entry.fonte_saldo === 'FREEBET' && (
-                  <Badge variant="outline" className="text-[9px] px-1 py-0 shrink-0 border-amber-500/40 text-amber-400 bg-amber-500/10 font-bold">
-                    FB
-                  </Badge>
+                  <span className="shrink-0 text-amber-400" title="Freebet">
+                    <Gift className="h-3.5 w-3.5" />
+                  </span>
                 )}
                 {entry.selecao_livre && (
                   <span className="text-primary/70 text-[9px] shrink-0">({entry.selecao_livre})</span>
@@ -653,10 +653,9 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
           </Badge>
           <ResultadoBadge resultado={isLiquidada ? surebet.resultado : null} />
           {hasAnyFreebetPerna && (
-            <Badge variant="outline" className="text-[10px] sm:text-xs px-1.5 py-0 border-amber-500/40 text-amber-400 bg-amber-500/10 font-bold flex items-center gap-0.5">
-              <Gift className="h-3 w-3" />
-              FB
-            </Badge>
+            <span className="shrink-0 text-amber-400" title="Freebet">
+              <Gift className="h-3.5 w-3.5" />
+            </span>
           )}
           
           <div className="ml-auto flex-shrink-0">
