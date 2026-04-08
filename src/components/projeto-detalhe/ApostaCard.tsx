@@ -363,6 +363,9 @@ export function ApostaCard({
   const moeda = aposta.moeda || "BRL";
   const displayCurrency = isMultiCurrency ? (moedaConsolidacao || "BRL") : moeda;
   const isForeignCurrency = moeda !== "BRL";
+  
+  // Detectar freebet: ÚNICA fonte de verdade = fonte_saldo
+  const isFreebet = aposta.fonte_saldo === 'FREEBET';
   const boostPct = aposta.boost_percentual;
   
   // Calcular odd das seleções (produto das odds individuais)
