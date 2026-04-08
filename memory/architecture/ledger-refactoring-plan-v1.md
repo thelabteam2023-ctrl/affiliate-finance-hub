@@ -162,10 +162,10 @@ Eliminados:
 - `apostas_unificada.usar_freebet` → já existe `fonte_saldo` na perna
 
 ### 3.2 RPCs Duplicadas (Candidatas a Remoção)
-- `criar_aposta_atomica` (sem versão) × 2 → manter apenas `_v3`
-- `criar_aposta_atomica_v2` → deprecated
-- `reliquidar_aposta_v5` → manter apenas `_v6`
-- `atualizar_aposta_liquidada_atomica` / `_v2` → substituído por `editar_aposta_liquidada_v4`
+- ~~`criar_aposta_atomica_v2` → deprecated~~ ✅ REMOVIDA
+- ~~`reliquidar_aposta_v5` → manter apenas `_v6`~~ ✅ REMOVIDA
+- ~~`atualizar_aposta_liquidada_atomica` / `_v2`~~ ✅ REMOVIDAS
+- `criar_aposta_atomica` (sem versão) × 2 → ATIVA (usada por useSafeApostaSave para multi-perna)
 
 ### 3.3 Vocabulário de Eventos
 - `FREEBET_STAKE` → normalizar para `STAKE` com `tipo_uso='FREEBET'` (ou vice-versa)
@@ -180,8 +180,9 @@ Eliminados:
 | 1 | View `v_freebets_disponibilidade` incluir `STAKE+FREEBET` | ✅ Aplicada |
 | 2 | RPC `liquidar_perna_surebet_v1` priorizar `fonte_saldo` da perna | ✅ Aplicada |
 | 3 | Reconciliação de freebets duplicadas (Mariana) | ✅ Aplicada |
-| 4 | Normalizar os 10 eventos `FREEBET_STAKE` → `STAKE` | 🟡 Pendente |
-| 5 | Remover uso de `utilizada` flag em código TS | 🟡 Pendente |
+| 4 | Normalizar os 10 eventos `FREEBET_STAKE` → `STAKE` | ✅ Aplicada |
+| 5 | Remover 4 RPCs deprecated | ✅ Aplicada |
+| 6 | `utilizada` flag → já derivada via `utilizada_derivada` no hook | ✅ Verificado (inerte) |
 
 ---
 
