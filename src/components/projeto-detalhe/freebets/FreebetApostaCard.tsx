@@ -67,8 +67,8 @@ function getContextoBadge(aposta: ApostaOperacionalFreebet) {
     return null;
   }
   
-  // Se usa freebet (contexto operacional FREEBET ou tipo_freebet definido)
-  if (aposta.contexto_operacional === "FREEBET" || aposta.tipo_freebet) {
+  // Se usa freebet (fonte_saldo é a verdade — fallback para legado)
+  if (aposta.fonte_saldo === 'FREEBET' || aposta.contexto_operacional === "FREEBET" || aposta.tipo_freebet) {
     return (
       <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-[10px] px-1.5 py-0">
         <Gift className="h-2.5 w-2.5 mr-0.5" />

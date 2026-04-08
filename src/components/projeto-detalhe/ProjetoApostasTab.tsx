@@ -1749,10 +1749,11 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                  estrategia: aposta.estrategia,
                   bookmaker_nome: bookmakerNomeFormatted,
                  logo_url: logoUrl,
-                 moeda: aposta.moeda_operacao || "BRL",
-                 pl_consolidado: aposta.pl_consolidado ?? undefined,
-                 stake_consolidado: aposta.stake_consolidado ?? undefined,
-               };
+                  moeda: aposta.moeda_operacao || "BRL",
+                  fonte_saldo: aposta.fonte_saldo || null,
+                  pl_consolidado: aposta.pl_consolidado ?? undefined,
+                  stake_consolidado: aposta.stake_consolidado ?? undefined,
+                };
               
               return (
                 <ApostaCard
