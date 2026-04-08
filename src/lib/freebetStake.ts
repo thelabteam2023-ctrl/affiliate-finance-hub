@@ -10,6 +10,7 @@ export interface StakeSplitSource {
   stake_total?: number | null;
   stake_real?: number | null;
   stake_freebet?: number | null;
+  /** @deprecated Use stake_freebet > 0 || fonte_saldo === 'FREEBET' instead */
   usar_freebet?: boolean | null;
   fonte_saldo?: string | null;
 }
@@ -40,7 +41,7 @@ const buildStakeSplitResult = (
 
 /**
  * Hidrata o split APENAS a partir dos campos persistidos da aposta.
- * Não usa `usar_freebet`/`fonte_saldo` como inferência para evitar falso positivo em edição.
+ * Usa stake_freebet e fonte_saldo como verdade — usar_freebet é ignorado.
  */
 export const derivePersistedStakeSplit = (source: StakeSplitSource): StakeSplitResult => {
   const totalFromDb = toFiniteNumber(source.stake_total) ?? toFiniteNumber(source.stake) ?? 0;
@@ -68,8 +69,9 @@ export const deriveStakeSplit = (source: StakeSplitSource): StakeSplitResult => 
   const totalFromDb = toFiniteNumber(source.stake_total) ?? toFiniteNumber(source.stake);
   const explicitReal = toFiniteNumber(source.stake_real);
   const explicitFreebet = toFiniteNumber(source.stake_freebet);
+  // DEPRECAÇÃO: usar_freebet removido da decisão — verdade é stake_freebet + fonte_saldo
   const usesFreebetFlag =
-    (explicitFreebet ?? 0) > 0 || source.fonte_saldo === "FREEBET" || source.usar_freebet === true;
+    (explicitFreebet ?? 0) > 0 || source.fonte_saldo === "FREEBET";
 
   const fallbackTotal = (explicitReal ?? 0) + (explicitFreebet ?? 0);
   const canonicalTotal = Math.max(0, totalFromDb ?? fallbackTotal);
