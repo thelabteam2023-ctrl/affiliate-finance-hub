@@ -415,6 +415,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
                 valor_freebet_gerada: p.valor_freebet_gerada,
                 stake_brl_referencia: p.stake_brl_referencia,
                 lucro_prejuizo_brl_referencia: p.lucro_prejuizo_brl_referencia,
+                fonte_saldo: p.fonte_saldo || null,
               }));
             } else if (pernas.length > 1) {
               // SIMPLES multi-entry: store as sub_entries
