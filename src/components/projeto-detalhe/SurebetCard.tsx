@@ -280,29 +280,31 @@ function PernaItem({
             <SurebetBookmakerLogo nome={perna.bookmaker_nome} getLogoUrl={getLogoUrl} />
           </div>
           
-          {/* Nome da casa + vínculo abreviado - com tooltip */}
-          <TooltipProvider delayDuration={300}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="text-sm text-muted-foreground truncate flex-1 uppercase min-w-0 cursor-default">
-                  {bookmakerDisplay}
-                </span>
-              </TooltipTrigger>
-              <TooltipContent side="top" className="max-w-[300px]">
-                <p className="uppercase">{enrichedBookmakerNome}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          
-          {/* Odd e Stake à direita - larguras fixas para alinhamento */}
-          <div className="flex items-center gap-2 shrink-0">
-            <span className="text-sm sm:text-base font-medium whitespace-nowrap w-[60px] text-right tabular-nums">@{perna.odd.toFixed(2)}</span>
-            <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap w-[90px] text-right tabular-nums">{formatPernaValue(perna.stake, perna.moeda)}</span>
+          {/* Nome da casa + vínculo abreviado + FB badge - com tooltip */}
+          <div className="flex items-center gap-1.5 flex-1 min-w-0 overflow-hidden">
+            <TooltipProvider delayDuration={300}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="text-sm text-muted-foreground truncate uppercase min-w-0 cursor-default">
+                    {bookmakerDisplay}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-[300px]">
+                  <p className="uppercase">{enrichedBookmakerNome}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             {isFreebet && (
               <Badge variant="outline" className="text-[9px] px-1 py-0 shrink-0 border-amber-500/40 text-amber-400 bg-amber-500/10 font-bold">
                 FB
               </Badge>
             )}
+          </div>
+          
+          {/* Odd e Stake à direita - larguras fixas para alinhamento */}
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-sm sm:text-base font-medium whitespace-nowrap w-[60px] text-right tabular-nums">@{perna.odd.toFixed(2)}</span>
+            <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap w-[90px] text-right tabular-nums">{formatPernaValue(perna.stake, perna.moeda)}</span>
           </div>
           
           {/* Result pill per perna */}
@@ -403,7 +405,7 @@ function PernaItem({
                 <SurebetBookmakerLogo nome={entry.bookmaker_nome} getLogoUrl={getLogoUrl} />
               </div>
               
-              {/* Nome + linha opcional - com vínculo abreviado */}
+              {/* Nome + FB badge + linha opcional - com vínculo abreviado */}
               <div className="flex items-center gap-1.5 flex-1 min-w-0 text-muted-foreground">
                 <span className="truncate uppercase">
                   {formatBookmakerDisplay(
@@ -412,20 +414,20 @@ function PernaItem({
                       : entry.bookmaker_nome
                   )}
                 </span>
-                {entry.selecao_livre && (
-                  <span className="text-primary/70 text-[9px] shrink-0">({entry.selecao_livre})</span>
-                )}
-              </div>
-              
-              {/* Odd + Stake + FB badge */}
-              <div className="flex items-center gap-2 shrink-0">
-                <span className="font-medium text-foreground">@{entry.odd.toFixed(2)}</span>
-                <span className="text-muted-foreground">{formatPernaValue(entry.stake, entry.moeda)}</span>
                 {entry.fonte_saldo === 'FREEBET' && (
                   <Badge variant="outline" className="text-[9px] px-1 py-0 shrink-0 border-amber-500/40 text-amber-400 bg-amber-500/10 font-bold">
                     FB
                   </Badge>
                 )}
+                {entry.selecao_livre && (
+                  <span className="text-primary/70 text-[9px] shrink-0">({entry.selecao_livre})</span>
+                )}
+              </div>
+              
+              {/* Odd + Stake */}
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="font-medium text-foreground">@{entry.odd.toFixed(2)}</span>
+                <span className="text-muted-foreground">{formatPernaValue(entry.stake, entry.moeda)}</span>
               </div>
             </div>
           ))}
