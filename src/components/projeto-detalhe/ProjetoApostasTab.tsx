@@ -115,6 +115,7 @@ interface Aposta {
   is_bonus_bet?: boolean;
   surebet_id?: string | null;
   contexto_operacional?: string | null;
+  fonte_saldo?: string | null;
   forma_registro?: string | null;
   pernas?: unknown | null;
   // Campos de consolidação multi-moeda
