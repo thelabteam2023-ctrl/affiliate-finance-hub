@@ -14784,14 +14784,6 @@ export type Database = {
         Args: { p_workspace_id: string }
         Returns: Json
       }
-      reliquidar_aposta_v5: {
-        Args: {
-          p_aposta_id: string
-          p_lucro_prejuizo?: number
-          p_novo_resultado: string
-        }
-        Returns: Json
-      }
       reliquidar_aposta_v6: {
         Args: {
           p_aposta_id: string
