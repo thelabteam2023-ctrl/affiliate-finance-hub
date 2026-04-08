@@ -14,8 +14,8 @@
  * - NENHUM trigger atualiza saldo - tudo via RPC
  * 
  * TIPOS DE EVENTO:
- * - STAKE: Débito de stake ao criar aposta (NORMAL)
- * - FREEBET_STAKE: Débito de stake usando freebet
+ * - STAKE: Débito de stake ao criar aposta (NORMAL ou FREEBET via tipo_uso)
+ * - (FREEBET_STAKE foi unificado em STAKE com tipo_uso='FREEBET')
  * - PAYOUT: Retorno de aposta ganha (stake + lucro)
  * - FREEBET_PAYOUT: Lucro de freebet (sem retorno de stake)
  * - VOID_REFUND: Devolução de stake em VOID
