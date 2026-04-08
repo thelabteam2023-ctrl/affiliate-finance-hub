@@ -14935,6 +14935,10 @@ export type Database = {
         Args: { check_user_id: string }
         Returns: boolean
       }
+      user_is_owner_or_admin_in_workspace: {
+        Args: { check_user_id: string; check_workspace_id: string }
+        Returns: boolean
+      }
       validate_and_reserve_stakes:
         | {
             Args: { p_bookmaker_stakes: Json; p_projeto_id: string }
