@@ -765,6 +765,12 @@ export function ApostaCard({
               {getModeloOperacao(aposta.pernas as Perna[])}
             </Badge>
           )}
+          {isFreebet && (
+            <Badge variant="outline" className="text-[10px] sm:text-xs px-1.5 py-0 border-amber-500/40 text-amber-400 bg-amber-500/10 font-bold flex items-center gap-0.5">
+              <Gift className="h-3 w-3" />
+              FB
+            </Badge>
+          )}
           <ResultadoBadge resultado={aposta.resultado} apostaId={aposta.id} onQuickResolve={isSimples ? onQuickResolve : undefined} />
           
           <div className="ml-auto">
