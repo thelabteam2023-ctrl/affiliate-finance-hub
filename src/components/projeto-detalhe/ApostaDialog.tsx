@@ -87,6 +87,7 @@ interface AdditionalEntry {
   odd: string;
   stake: string;
   selecao_livre: string;
+  /** @deprecated Derivado de valor_freebet > 0. Mantido para compatibilidade com RPCs. */
   usar_freebet: boolean;
   /** Valor de freebet a usar (parcial ou total). Stake real = stake - valor_freebet */
   valor_freebet: string;
@@ -1860,8 +1861,9 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         forma_registro: registroValues.forma_registro,
         // contexto_operacional: respeitar valor selecionado no formulário (NORMAL, BONUS, FREEBET)
         contexto_operacional: registroValues.contexto_operacional || 'NORMAL',
-        // VERDADE FINANCEIRA: usar_freebet toggle determina fonte de saldo
+        // VERDADE FINANCEIRA: fonte_saldo é a fonte de verdade
         fonte_saldo: usarFreebetBookmaker ? 'FREEBET' : 'REAL',
+        // @deprecated: usar_freebet derivado de fonte_saldo, mantido para compat RPC
         usar_freebet: usarFreebetBookmaker,
         fonte_entrada: registroValues.estrategia === 'VALUEBET' ? (fonteEntrada || 'Manual') : null,
         // CRÍTICO: Moeda da operação = moeda nativa da bookmaker

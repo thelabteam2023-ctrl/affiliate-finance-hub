@@ -52,15 +52,16 @@ export interface RegistroApostaValues {
   contexto_operacional?: ContextoOperacional | null;
   
   /**
-   * VERDADE FINANCEIRA: fonte de saldo determinada por usar_freebet.
+   * VERDADE FINANCEIRA: fonte de saldo.
    * - REAL = saldo normal (inclui bônus)
    * - FREEBET = saldo freebet
    */
   fonte_saldo?: FonteSaldo | null;
   
   /**
-   * Toggle explícito: se true, debita de saldo_freebet.
-   * Este é o campo que controla a decisão financeira.
+   * @deprecated Derivado automaticamente de fonte_saldo === 'FREEBET'.
+   * Mantido temporariamente para compatibilidade com RPCs.
+   * NÃO usar como fonte de verdade — usar fonte_saldo e stake_freebet.
    */
   usar_freebet?: boolean;
 }
@@ -412,7 +413,7 @@ export function validateRegistroAposta(values: RegistroApostaValues): {
  * 
  * NOVA ARQUITETURA:
  * - contexto_operacional é DEPRECATED e sempre 'NORMAL' internamente
- * - usar_freebet é a verdade financeira (toggle explícito na UI)
+ * - fonte_saldo é a verdade financeira (usar_freebet é deprecated/derivado)
  * - estrategia é classificação analítica para KPIs
  */
 export function getSuggestionsForTab(activeTab: string): Partial<RegistroApostaValues> {
