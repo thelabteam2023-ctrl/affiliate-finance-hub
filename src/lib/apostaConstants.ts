@@ -73,7 +73,7 @@ export type FormaRegistro = typeof FORMA_REGISTRO[keyof typeof FORMA_REGISTRO];
  * REGRAS:
  * - Fonte de saldo determina qual wallet é debitada/creditada
  * - É a VERDADE FINANCEIRA
- * - Determinado por usar_freebet toggle (binário)
+ * - Determinado por fonte_saldo da perna + stake_freebet (usar_freebet deprecated)
  * 
  * NOVA ARQUITETURA:
  * - REAL = saldo_real + saldo_bonus (bônus é dinheiro normal)

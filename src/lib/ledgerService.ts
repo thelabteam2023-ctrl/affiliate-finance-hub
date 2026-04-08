@@ -14,7 +14,7 @@
  * REGRA DE OURO:
  * - Bônus é dinheiro NORMAL com tag de origem no ledger
  * - Apenas Freebet tem pool separado
- * - usar_freebet toggle é a verdade financeira
+ * - fonte_saldo da perna + stake_freebet > 0 é a verdade financeira (usar_freebet deprecated)
  * 
  * FLUXO:
  * 1. Frontend chama insertLedgerEntry()
