@@ -621,7 +621,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         // UPDATE or INSERT accounts
         for (let i = 0; i < bankAccounts.length; i++) {
           const account = bankAccounts[i];
-          if (account.banco_id && account.pix_keys.some(k => k.chave)) {
+          if (account.banco_id) {
             // Format PIX keys for JSONB storage - clean CPF/CNPJ formatting
             const cleanedPixKeys = account.pix_keys
               .filter(k => k.chave && k.tipo)
@@ -1065,7 +1065,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       
       // UPDATE or INSERT accounts
       for (const account of bankAccounts) {
-        if (account.banco_id && account.pix_keys.some(k => k.chave)) {
+        if (account.banco_id) {
           // Format PIX keys for JSONB storage - clean CPF/CNPJ formatting
           const cleanedPixKeys = account.pix_keys
             .filter(k => k.chave && k.tipo)
