@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Building2, User, Landmark, Loader2 } from "lucide-react";
+import { Building2, User, Landmark, Loader2, ArrowDownAZ, ArrowDown01 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatMoneyValue } from "@/components/ui/money-display";
+import { Button } from "@/components/ui/button";
 
 interface ContaDetalhe {
   parceiro_id: string;
@@ -24,10 +25,13 @@ interface Props {
   caixaParceiroId: string | null;
 }
 
+type SortMode = "valor" | "alfabetica";
+
 export function SaldoBancosParceiroModal({ open, onOpenChange, caixaParceiroId }: Props) {
   const [loading, setLoading] = useState(false);
   const [parceiros, setParceiros] = useState<ParceiroAgrupado[]>([]);
   const [total, setTotal] = useState(0);
+  const [sortMode, setSortMode] = useState<SortMode>("valor");
 
   useEffect(() => {
     if (!open) return;
@@ -47,7 +51,6 @@ export function SaldoBancosParceiroModal({ open, onOpenChange, caixaParceiroId }
         const { data } = await query;
         const rows = (data || []) as ContaDetalhe[];
 
-        // Group by parceiro
         const grouped: Record<string, ParceiroAgrupado> = {};
         let sum = 0;
 
@@ -64,8 +67,7 @@ export function SaldoBancosParceiroModal({ open, onOpenChange, caixaParceiroId }
           grouped[key].contas.push({ banco: r.banco || "Conta", saldo, moeda: r.moeda || "BRL" });
         });
 
-        const sorted = Object.values(grouped).sort((a, b) => b.total - a.total);
-        setParceiros(sorted);
+        setParceiros(Object.values(grouped));
         setTotal(sum);
       } catch (err) {
         console.error("Erro ao buscar saldos bancários:", err);
@@ -77,6 +79,13 @@ export function SaldoBancosParceiroModal({ open, onOpenChange, caixaParceiroId }
     fetchData();
   }, [open, caixaParceiroId]);
 
+  const sortedParceiros = [...parceiros].sort((a, b) => {
+    if (sortMode === "alfabetica") {
+      return a.nome.localeCompare(b.nome, "pt-BR");
+    }
+    return b.total - a.total;
+  });
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
@@ -85,25 +94,49 @@ export function SaldoBancosParceiroModal({ open, onOpenChange, caixaParceiroId }
             <Landmark className="h-5 w-5 text-primary" />
             Saldo em Bancos dos Parceiros
           </DialogTitle>
-          <p className="text-sm text-muted-foreground">
-            Total consolidado:{" "}
-            <span className="font-semibold text-foreground">
-              {formatMoneyValue(total, "BRL")}
-            </span>
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              Total consolidado:{" "}
+              <span className="font-semibold text-foreground">
+                {formatMoneyValue(total, "BRL")}
+              </span>
+            </p>
+            <div className="flex items-center gap-1">
+              <Button
+                variant={sortMode === "valor" ? "secondary" : "ghost"}
+                size="sm"
+                className="h-7 px-2 text-xs gap-1"
+                onClick={() => setSortMode("valor")}
+                title="Ordenar por valor"
+              >
+                <ArrowDown01 className="h-3.5 w-3.5" />
+                Valor
+              </Button>
+              <Button
+                variant={sortMode === "alfabetica" ? "secondary" : "ghost"}
+                size="sm"
+                className="h-7 px-2 text-xs gap-1"
+                onClick={() => setSortMode("alfabetica")}
+                title="Ordenar por nome"
+              >
+                <ArrowDownAZ className="h-3.5 w-3.5" />
+                A-Z
+              </Button>
+            </div>
+          </div>
         </DialogHeader>
 
         {loading ? (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           </div>
-        ) : parceiros.length === 0 ? (
+        ) : sortedParceiros.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-8">
             Nenhuma conta bancária com saldo encontrada
           </p>
         ) : (
           <div className="space-y-4 mt-2">
-            {parceiros.map((parceiro) => (
+            {sortedParceiros.map((parceiro) => (
               <div key={parceiro.nome} className="space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5 text-sm font-medium text-foreground">
