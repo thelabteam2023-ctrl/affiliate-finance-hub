@@ -83,6 +83,8 @@ export interface ApostaCardData {
   moeda?: string; // Moeda da operação (moeda principal)
   logo_url?: string | null;
   sub_entries?: SubEntry[];
+  /** Fonte de saldo: REAL ou FREEBET */
+  fonte_saldo?: string | null;
   // Multi-currency consolidation
   /** Lucro consolidado na moeda do projeto */
   pl_consolidado?: number | null;
@@ -361,6 +363,9 @@ export function ApostaCard({
   const moeda = aposta.moeda || "BRL";
   const displayCurrency = isMultiCurrency ? (moedaConsolidacao || "BRL") : moeda;
   const isForeignCurrency = moeda !== "BRL";
+  
+  // Detectar freebet: ÚNICA fonte de verdade = fonte_saldo
+  const isFreebet = aposta.fonte_saldo === 'FREEBET';
   const boostPct = aposta.boost_percentual;
   
   // Calcular odd das seleções (produto das odds individuais)
@@ -465,6 +470,12 @@ export function ApostaCard({
               {hasPernas && !aposta.modelo && (
                 <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-600/30 dark:border-amber-500/30 text-amber-700 dark:text-amber-400 bg-amber-500/15 dark:bg-amber-500/20">
                   {getModeloOperacao(aposta.pernas as Perna[])}
+                </Badge>
+              )}
+              {isFreebet && (
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-500/40 text-amber-400 bg-amber-500/10 font-bold flex items-center gap-0.5">
+                  <Gift className="h-2.5 w-2.5" />
+                  FB
                 </Badge>
               )}
               <ResultadoBadge resultado={aposta.resultado} apostaId={aposta.id} onQuickResolve={isSimples ? onQuickResolve : undefined} />
@@ -752,6 +763,12 @@ export function ApostaCard({
           {hasPernas && !aposta.modelo && (
             <Badge variant="outline" className="text-[10px] sm:text-xs px-1.5 py-0 border-amber-500/30 text-amber-400 bg-amber-500/20">
               {getModeloOperacao(aposta.pernas as Perna[])}
+            </Badge>
+          )}
+          {isFreebet && (
+            <Badge variant="outline" className="text-[10px] sm:text-xs px-1.5 py-0 border-amber-500/40 text-amber-400 bg-amber-500/10 font-bold flex items-center gap-0.5">
+              <Gift className="h-3 w-3" />
+              FB
             </Badge>
           )}
           <ResultadoBadge resultado={aposta.resultado} apostaId={aposta.id} onQuickResolve={isSimples ? onQuickResolve : undefined} />

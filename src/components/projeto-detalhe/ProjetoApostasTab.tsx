@@ -115,6 +115,7 @@ interface Aposta {
   is_bonus_bet?: boolean;
   surebet_id?: string | null;
   contexto_operacional?: string | null;
+  fonte_saldo?: string | null;
   forma_registro?: string | null;
   pernas?: unknown | null;
   // Campos de consolidação multi-moeda
@@ -1749,10 +1750,11 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                  estrategia: aposta.estrategia,
                   bookmaker_nome: bookmakerNomeFormatted,
                  logo_url: logoUrl,
-                 moeda: aposta.moeda_operacao || "BRL",
-                 pl_consolidado: aposta.pl_consolidado ?? undefined,
-                 stake_consolidado: aposta.stake_consolidado ?? undefined,
-               };
+                  moeda: aposta.moeda_operacao || "BRL",
+                  fonte_saldo: aposta.fonte_saldo || null,
+                  pl_consolidado: aposta.pl_consolidado ?? undefined,
+                  stake_consolidado: aposta.stake_consolidado ?? undefined,
+                };
               
               return (
                 <ApostaCard
@@ -1807,9 +1809,10 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                bookmaker_nome: bookmakerBaseMultipla,
                parceiro_nome: parceiroNomeMultipla,
                instance_identifier: (multipla.bookmaker as any)?.instance_identifier,
-               logo_url: logoUrlMultipla,
-               moeda: multipla.moeda_operacao || "BRL",
-             };
+                logo_url: logoUrlMultipla,
+                moeda: multipla.moeda_operacao || "BRL",
+                fonte_saldo: (multipla as any).fonte_saldo || null,
+              };
             
             return (
               <ApostaCard

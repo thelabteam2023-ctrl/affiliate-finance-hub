@@ -49,6 +49,7 @@ export interface ApostaOperacionalFreebet {
   estrategia: string | null;
   lado_aposta: string | null;
   contexto_operacional: string | null;
+  fonte_saldo?: string | null;
   // Campos para ResultadoPill/edição (cobertura/lay)
   lay_exchange: string | null;
   lay_odd: number | null;

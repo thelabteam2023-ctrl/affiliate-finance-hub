@@ -299,7 +299,7 @@ function PernaItem({
             <span className="text-sm sm:text-base font-medium whitespace-nowrap w-[60px] text-right tabular-nums">@{perna.odd.toFixed(2)}</span>
             <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap w-[90px] text-right tabular-nums">{formatPernaValue(perna.stake, perna.moeda)}</span>
             {isFreebet && (
-              <Badge variant="outline" className="text-[9px] px-1 py-0 shrink-0 border-green-500/40 text-green-400 bg-green-500/10 font-bold">
+              <Badge variant="outline" className="text-[9px] px-1 py-0 shrink-0 border-amber-500/40 text-amber-400 bg-amber-500/10 font-bold">
                 FB
               </Badge>
             )}
@@ -422,7 +422,7 @@ function PernaItem({
                 <span className="font-medium text-foreground">@{entry.odd.toFixed(2)}</span>
                 <span className="text-muted-foreground">{formatPernaValue(entry.stake, entry.moeda)}</span>
                 {entry.fonte_saldo === 'FREEBET' && (
-                  <Badge variant="outline" className="text-[9px] px-1 py-0 shrink-0 border-green-500/40 text-green-400 bg-green-500/10 font-bold">
+                  <Badge variant="outline" className="text-[9px] px-1 py-0 shrink-0 border-amber-500/40 text-amber-400 bg-amber-500/10 font-bold">
                     FB
                   </Badge>
                 )}
