@@ -1173,6 +1173,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
              parceiro_nome: parceiroNome,
              logo_url: logoUrl,
              moeda: aposta.moeda_operacao || "BRL",
+             fonte_saldo: (aposta as any).fonte_saldo || null,
            };
            
            return (
@@ -1217,6 +1218,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
            parceiro_nome: parceiroNomeMultipla,
            logo_url: logoUrlMultipla,
            moeda: multipla.moeda_operacao || "BRL",
+           fonte_saldo: (multipla as any).fonte_saldo || null,
          };
          
          return (
