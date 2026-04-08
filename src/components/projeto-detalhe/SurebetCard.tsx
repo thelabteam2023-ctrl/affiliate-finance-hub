@@ -650,6 +650,12 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
             {surebet.modelo}
           </Badge>
           <ResultadoBadge resultado={isLiquidada ? surebet.resultado : null} />
+          {hasAnyFreebetPerna && (
+            <Badge variant="outline" className="text-[10px] sm:text-xs px-1.5 py-0 border-amber-500/40 text-amber-400 bg-amber-500/10 font-bold flex items-center gap-0.5">
+              <Gift className="h-3 w-3" />
+              FB
+            </Badge>
+          )}
           
           <div className="ml-auto flex-shrink-0">
             {(onEdit || onDelete || onDuplicate || onQuickResolve) && (
