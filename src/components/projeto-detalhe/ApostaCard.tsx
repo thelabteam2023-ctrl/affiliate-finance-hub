@@ -83,6 +83,8 @@ export interface ApostaCardData {
   moeda?: string; // Moeda da operação (moeda principal)
   logo_url?: string | null;
   sub_entries?: SubEntry[];
+  /** Fonte de saldo: REAL ou FREEBET */
+  fonte_saldo?: string | null;
   // Multi-currency consolidation
   /** Lucro consolidado na moeda do projeto */
   pl_consolidado?: number | null;
