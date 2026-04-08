@@ -76,10 +76,10 @@ export async function consumirFreebetViaLedger(
       return { success: false, error: 'Valor deve ser positivo' };
     }
 
-    // PROTEÇÃO CRÍTICA: Nunca criar FREEBET_STAKE sem aposta vinculada
+    // PROTEÇÃO CRÍTICA: Nunca criar STAKE/FREEBET sem aposta vinculada
     if (!options?.apostaId) {
       console.error('[FreebetLedger] Tentativa de consumir freebet sem apostaId - BLOQUEADO');
-      return { success: false, error: 'FREEBET_STAKE requer aposta_id válido' };
+      return { success: false, error: 'STAKE/FREEBET requer aposta_id válido' };
     }
 
     // CRÍTICO: Se apostaId fornecido, usar chave 'stake_{apostaId}' para que:
@@ -92,7 +92,7 @@ export async function consumirFreebetViaLedger(
     const result = await processFinancialEvent({
       bookmakerId,
       apostaId: options?.apostaId,
-      tipoEvento: 'FREEBET_STAKE',
+      tipoEvento: 'STAKE',
       tipoUso: 'FREEBET',
       origem: 'FREEBET',
       valor: -valor, // Negativo = débito
