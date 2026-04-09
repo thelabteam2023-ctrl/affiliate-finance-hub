@@ -1,3 +1,5 @@
+export type FreebetStatus = "PENDENTE" | "LIBERADA" | "NAO_LIBERADA" | "CANCELADA";
+
 export interface FreebetRecebidaCompleta {
   id: string;
   bookmaker_id: string;
@@ -12,7 +14,7 @@ export interface FreebetRecebidaCompleta {
   utilizada: boolean;
   data_utilizacao: string | null;
   aposta_id: string | null;
-  status: "PENDENTE" | "LIBERADA" | "NAO_LIBERADA";
+  status: FreebetStatus;
   origem: "MANUAL" | "QUALIFICADORA" | "PROMOCAO";
   qualificadora_id: string | null;
   diasParaExpirar: number | null;
