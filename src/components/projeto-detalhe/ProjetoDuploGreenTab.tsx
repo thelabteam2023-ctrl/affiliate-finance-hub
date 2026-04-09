@@ -3,6 +3,7 @@ import { calcSurebetWindowHeight } from "@/lib/windowHelper";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAllPaginated } from "@/lib/fetchAllPaginated";
+import { fetchChunkedIn } from "@/lib/fetchChunkedIn";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { KpiSummaryBar } from "@/components/ui/kpi-summary-bar";
 import { LucroCurrencyTooltip } from "@/components/ui/lucro-currency-tooltip";
@@ -373,10 +374,6 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
       // Enriquecer com pernas de apostas_pernas (para ARBITRAGEM e sub_entries de SIMPLES)
       const apostaIds = mapped.map((a: any) => a.id);
       if (apostaIds.length > 0) {
-        const { data: pernasData } = await supabase
-          .from("apostas_pernas")
-          .select(`
-            id, aposta_id, bookmaker_id, odd, stake, moeda, selecao, selecao_livre, ordem,
         const pernasData = await fetchChunkedIn(
           (idsChunk) =>
             supabase
@@ -385,7 +382,6 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
                 id, aposta_id, bookmaker_id, odd, stake, stake_real, stake_freebet, moeda, selecao, selecao_livre, ordem,
                 resultado, lucro_prejuizo, gerou_freebet, valor_freebet_gerada,
                 stake_brl_referencia, lucro_prejuizo_brl_referencia, fonte_saldo,
-                stake_brl_referencia, lucro_prejuizo_brl_referencia,
                 bookmaker:bookmakers (
                   nome, parceiro_id,
                   parceiro:parceiros (nome),
