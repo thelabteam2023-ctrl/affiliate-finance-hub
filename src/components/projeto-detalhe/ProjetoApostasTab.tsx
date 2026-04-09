@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAllPaginated } from "@/lib/fetchAllPaginated";
+import { fetchChunkedIn } from "@/lib/fetchChunkedIn";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { calcularImpactoResultado } from "@/lib/bookmakerBalanceHelper";
 import { reliquidarAposta, deletarAposta, liquidarPernaSurebet } from "@/services/aposta/ApostaService";

@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAllPaginated } from "@/lib/fetchAllPaginated";
+import { fetchChunkedIn } from "@/lib/fetchChunkedIn";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { KpiSummaryBar } from "@/components/ui/kpi-summary-bar";
 import { LucroCurrencyTooltip } from "@/components/ui/lucro-currency-tooltip";
@@ -398,8 +399,6 @@ export function ProjetoValueBetTab({
       // Enriquecer com sub_entries de apostas_pernas
       const apostaIds = mappedApostas.map(a => a.id);
       if (apostaIds.length > 0) {
-        const { data: pernasData } = await supabase
-          .from("apostas_pernas")
         const pernasData = await fetchChunkedIn(
           (idsChunk) =>
             supabase
