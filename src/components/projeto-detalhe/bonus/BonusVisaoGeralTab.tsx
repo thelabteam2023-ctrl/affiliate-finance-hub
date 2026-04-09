@@ -169,10 +169,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
         ),
       ]);
       
-      if (resBonusId.error) throw resBonusId.error;
-      if (resEstrategia.error) throw resEstrategia.error;
-
-      const allBets = [...(resBonusId.data || []), ...(resEstrategia.data || [])];
+      const allBets = [...dataBonusId, ...dataEstrategia];
       const uniqueBets = Array.from(new Map(allBets.map(b => [b.id, b])).values());
       
       // Buscar pernas para apostas multicurrency (conversão direta sem pivot BRL)
