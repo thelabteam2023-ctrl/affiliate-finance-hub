@@ -67,11 +67,8 @@ export function BonusSummaryCards({ projetoId, compact = false }: BonusSummaryCa
         ),
       ]);
       
-      if (resBonusId.error) throw resBonusId.error;
-      if (resEstrategia.error) throw resEstrategia.error;
-
       // Combinar removendo duplicados por id
-      const allBets = [...(resBonusId.data || []), ...(resEstrategia.data || [])];
+      const allBets = [...dataBonusId, ...dataEstrategia];
       const uniqueBets = Array.from(new Map(allBets.map(b => [b.id, b])).values());
       
       // Buscar pernas para apostas multicurrency (para conversão direta sem pivot BRL)
