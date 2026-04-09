@@ -431,18 +431,18 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
   const fetchSurebetsInternal = async (projId: string, bonusIds: string[]) => {
     try {
       // Buscar operações multi-leg (ARBITRAGEM ou SUREBET) com estratégia BONUS ou contexto BONUS
-      const { data: surebetsData, error } = await supabase
-        .from("apostas_unificada")
-        .select("*")
-        .eq("projeto_id", projId)
-        .or(`forma_registro.eq.ARBITRAGEM,forma_registro.eq.SUREBET`)
-        .or(`estrategia.eq.EXTRACAO_BONUS,contexto_operacional.eq.BONUS`)
-        .order("data_aposta", { ascending: false });
-
-      if (error) throw error;
+      const surebetsData = await fetchAllPaginated(() =>
+        supabase
+          .from("apostas_unificada")
+          .select("*")
+          .eq("projeto_id", projId)
+          .or(`forma_registro.eq.ARBITRAGEM,forma_registro.eq.SUREBET`)
+          .or(`estrategia.eq.EXTRACAO_BONUS,contexto_operacional.eq.BONUS`)
+          .order("data_aposta", { ascending: false })
+      );
       
       // Buscar pernas da tabela normalizada para operações multi-leg
-      const surebetIds = (surebetsData || []).map((s: any) => s.id);
+      const surebetIds = surebetsData.map((s: any) => s.id);
       let pernasMap: Record<string, any[]> = {};
       
       if (surebetIds.length > 0) {
