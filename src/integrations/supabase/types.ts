@@ -11961,48 +11961,6 @@ export type Database = {
           valor_restante: number | null
           workspace_id: string | null
         }
-        Insert: {
-          aposta_id?: string | null
-          aposta_multipla_id?: string | null
-          bookmaker_id?: string | null
-          data_recebida?: string | null
-          data_utilizacao?: string | null
-          data_validade?: string | null
-          id?: string | null
-          moeda_operacao?: string | null
-          motivo?: string | null
-          origem?: string | null
-          projeto_id?: string | null
-          qualificadora_id?: string | null
-          status?: string | null
-          tem_rollover?: boolean | null
-          user_id?: string | null
-          utilizada_derivada?: never
-          valor?: number | null
-          valor_restante?: never
-          workspace_id?: string | null
-        }
-        Update: {
-          aposta_id?: string | null
-          aposta_multipla_id?: string | null
-          bookmaker_id?: string | null
-          data_recebida?: string | null
-          data_utilizacao?: string | null
-          data_validade?: string | null
-          id?: string | null
-          moeda_operacao?: string | null
-          motivo?: string | null
-          origem?: string | null
-          projeto_id?: string | null
-          qualificadora_id?: string | null
-          status?: string | null
-          tem_rollover?: boolean | null
-          user_id?: string | null
-          utilizada_derivada?: never
-          valor?: number | null
-          valor_restante?: never
-          workspace_id?: string | null
-        }
         Relationships: [
           {
             foreignKeyName: "freebets_recebidas_bookmaker_id_fkey"
