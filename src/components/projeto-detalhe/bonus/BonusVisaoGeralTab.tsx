@@ -5,6 +5,7 @@ import { KpiSummaryBar } from "@/components/ui/kpi-summary-bar";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAllPaginated } from "@/lib/fetchAllPaginated";
+import { fetchChunkedIn } from "@/lib/fetchChunkedIn";
 import { useProjectBonuses, ProjectBonus, bonusQueryKeys } from "@/hooks/useProjectBonuses";
 import { useBonusContamination } from "@/hooks/useBonusContamination";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
@@ -177,10 +178,13 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
       let pernasMap: Record<string, Array<{ moeda: string; lucro_prejuizo: number | null; resultado: string | null }>> = {};
       
       if (multicurrencyIds.length > 0) {
-        const { data: pernas } = await supabase
-          .from("apostas_pernas")
-          .select("aposta_id, moeda, lucro_prejuizo, resultado")
-          .in("aposta_id", multicurrencyIds);
+        const pernas = await fetchChunkedIn(
+          (idsChunk) => supabase
+            .from("apostas_pernas")
+            .select("aposta_id, moeda, lucro_prejuizo, resultado")
+            .in("aposta_id", idsChunk),
+          multicurrencyIds
+        );
         
         if (pernas) {
           for (const p of pernas) {
