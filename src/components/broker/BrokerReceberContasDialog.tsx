@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Trash2, Loader2, Search, ArrowLeft } from "lucide-react";
+import { encryptPassword } from "@/utils/cryptoPassword";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { BookmakerLogo } from "@/components/ui/bookmaker-logo";
@@ -160,7 +161,9 @@ export function BrokerReceberContasDialog({ open, onClose, onSuccess, projetoId 
 
       for (const conta of contas) {
         const saldoInicial = parseFloat(conta.saldo_inicial) || 0;
-        const passwordToStore = conta.login_password || "***";
+        const passwordToStore = conta.login_password
+          ? await encryptPassword(conta.login_password)
+          : await encryptPassword("***");
 
         // CRITICAL: Insert WITHOUT projeto_id first, then UPDATE to set it.
         // This avoids the double-balance bug where:
