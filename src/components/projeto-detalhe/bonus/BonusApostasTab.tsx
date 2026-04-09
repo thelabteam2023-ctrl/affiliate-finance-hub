@@ -446,24 +446,27 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
       let pernasMap: Record<string, any[]> = {};
       
       if (surebetIds.length > 0) {
-        const { data: pernasData } = await supabase
-          .from("apostas_pernas")
-          .select(`
-            id,
-            aposta_id,
-            bookmaker_id,
-            selecao,
-            selecao_livre,
-            odd,
-            stake,
-            resultado,
-            lucro_prejuizo,
-            moeda,
-            fonte_saldo,
-            bookmakers (nome, moeda, parceiro:parceiros(nome))
-          `)
-          .in("aposta_id", surebetIds)
-          .order("ordem", { ascending: true });
+        const pernasData = await fetchChunkedIn(
+          (idsChunk) => supabase
+            .from("apostas_pernas")
+            .select(`
+              id,
+              aposta_id,
+              bookmaker_id,
+              selecao,
+              selecao_livre,
+              odd,
+              stake,
+              resultado,
+              lucro_prejuizo,
+              moeda,
+              fonte_saldo,
+              bookmakers (nome, moeda, parceiro:parceiros(nome))
+            `)
+            .in("aposta_id", idsChunk)
+            .order("ordem", { ascending: true }),
+          surebetIds
+        );
         
         (pernasData || []).forEach((p: any) => {
           if (!pernasMap[p.aposta_id]) {
