@@ -67,7 +67,10 @@ async function fetchEstoqueData(
   });
 
   const hoje = new Date();
-  const formatted: FreebetRecebidaCompleta[] = (freebetsData || []).map((fb: any) => {
+  const formatted: FreebetRecebidaCompleta[] = (freebetsData || [])
+    // Excluir canceladas da listagem ativa (soft-delete)
+    .filter((fb: any) => fb.status !== "CANCELADA")
+    .map((fb: any) => {
     let diasParaExpirar: number | null = null;
     if (fb.data_validade) {
       const validade = new Date(fb.data_validade);

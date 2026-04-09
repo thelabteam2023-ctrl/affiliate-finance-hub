@@ -529,9 +529,9 @@ export function FreebetEstoqueView({ projetoId, formatCurrency, dateRange, onAdd
       <AlertDialog open={!!freebetToDelete} onOpenChange={(open) => !open && setFreebetToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir Freebet</AlertDialogTitle>
+            <AlertDialogTitle>Cancelar Freebet</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir esta freebet de{" "}
+              Tem certeza que deseja cancelar esta freebet de{" "}
               <span className="font-medium text-foreground">
                 {formatCurrency(freebetToDelete?.valor || 0)}
               </span>{" "}
@@ -539,17 +539,22 @@ export function FreebetEstoqueView({ projetoId, formatCurrency, dateRange, onAdd
               <span className="font-medium text-foreground">
                 {freebetToDelete?.bookmaker_nome}
               </span>
-              ? Esta ação não pode ser desfeita.
+              ? O saldo será estornado e o registro preservado para auditoria.
+              {freebetToDelete?.utilizada && (
+                <span className="block mt-2 text-destructive font-medium">
+                  ⚠️ Esta freebet já foi utilizada e não pode ser cancelada.
+                </span>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteFreebet}
-              disabled={isDeleting}
+              disabled={isDeleting || freebetToDelete?.utilizada}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {isDeleting ? "Excluindo..." : "Excluir"}
+              {isDeleting ? "Cancelando..." : "Cancelar Freebet"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
