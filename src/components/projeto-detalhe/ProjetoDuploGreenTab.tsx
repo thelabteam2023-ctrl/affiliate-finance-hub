@@ -377,17 +377,25 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
           .from("apostas_pernas")
           .select(`
             id, aposta_id, bookmaker_id, odd, stake, moeda, selecao, selecao_livre, ordem,
-            resultado, lucro_prejuizo, gerou_freebet, valor_freebet_gerada,
-            stake_brl_referencia, lucro_prejuizo_brl_referencia, fonte_saldo,
-            stake_brl_referencia, lucro_prejuizo_brl_referencia,
-            bookmaker:bookmakers (
-              nome, parceiro_id,
-              parceiro:parceiros (nome),
-              bookmakers_catalogo (logo_url)
-            )
-          `)
-          .in("aposta_id", apostaIds)
-          .order("ordem", { ascending: true });
+        const pernasData = await fetchChunkedIn(
+          (idsChunk) =>
+            supabase
+              .from("apostas_pernas")
+              .select(`
+                id, aposta_id, bookmaker_id, odd, stake, stake_real, stake_freebet, moeda, selecao, selecao_livre, ordem,
+                resultado, lucro_prejuizo, gerou_freebet, valor_freebet_gerada,
+                stake_brl_referencia, lucro_prejuizo_brl_referencia, fonte_saldo,
+                stake_brl_referencia, lucro_prejuizo_brl_referencia,
+                bookmaker:bookmakers (
+                  nome, parceiro_id,
+                  parceiro:parceiros (nome),
+                  bookmakers_catalogo (logo_url)
+                )
+              `)
+              .in("aposta_id", idsChunk)
+              .order("ordem", { ascending: true }),
+          apostaIds
+        );
 
         if (pernasData) {
           const pernasMap = new Map<string, any[]>();
