@@ -468,7 +468,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
           surebetIds
         );
         
-        (pernasData || []).forEach((p: any) => {
+        pernasData.forEach((p: any) => {
           if (!pernasMap[p.aposta_id]) {
             pernasMap[p.aposta_id] = [];
           }
@@ -492,7 +492,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
         });
       }
       
-      const surebetsComPernas = (surebetsData || []).map((surebet: any) => {
+      const surebetsComPernas = surebetsData.map((surebet: any) => {
         // Usar pernas da tabela normalizada (com fallback para JSONB legado)
         const pernas = pernasMap[surebet.id] || (Array.isArray(surebet.pernas) ? surebet.pernas : []);
         return {
