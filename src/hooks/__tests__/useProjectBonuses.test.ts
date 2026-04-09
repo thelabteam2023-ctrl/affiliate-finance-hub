@@ -370,6 +370,7 @@ describe("Sistema de Bônus — Testes Exaustivos", () => {
     it("1.8 saldo_atual = bonus_amount quando credited, 0 quando pending", async () => {
       const chain = createChain({ data: { id: "test-saldo" }, error: null });
       (supabase.from as any).mockReturnValue(chain);
+      (registrarBonusCreditadoViaLedger as any).mockResolvedValue({ success: true });
 
       await simulateCreateBonus({
         projectId,
