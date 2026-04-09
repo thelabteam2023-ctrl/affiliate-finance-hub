@@ -304,50 +304,46 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
   const { data: surebets = [], isLoading: loading, refetch: refetchSurebets } = useQuery({
     queryKey: surebetsQueryKey,
     queryFn: async (): Promise<Surebet[]> => {
-      let query = supabase
-        .from("apostas_unificada")
-        .select(`
+      const selectFields = `
           id, workspace_id, created_at, data_aposta, evento, esporte, modelo, mercado, stake, stake_total, stake_bonus,
           spread_calculado, roi_esperado, lucro_esperado, lucro_prejuizo, roi_real,
           status, resultado, observacoes, forma_registro, estrategia, contexto_operacional,
           odd, selecao, bookmaker_id, bonus_id,
           moeda_operacao, stake_consolidado, pl_consolidado, valor_brl_referencia, lucro_prejuizo_brl_referencia,
           bookmaker:bookmakers(nome, parceiro:parceiros(nome))
-        `)
-        .eq("projeto_id", projetoId)
-        .eq("estrategia", "SUREBET")
-        .is("cancelled_at", null)
-        .order("data_aposta", { ascending: false })
-        .limit(10000);
-      
+        `;
+
+      let dateFilters: { startUTC?: string; endUTC?: string } = {};
       if (dateRange) {
-        const { startUTC, endUTC } = getOperationalDateRangeForQuery(dateRange.start, dateRange.end);
-        query = query.gte("data_aposta", startUTC);
-        query = query.lte("data_aposta", endUTC);
+        dateFilters = getOperationalDateRangeForQuery(dateRange.start, dateRange.end);
       }
 
-      const { data: arbitragensData, error } = await query;
-      if (error) throw error;
+      const arbitragensData = await fetchAllPaginated(() => {
+        let q = supabase
+          .from("apostas_unificada")
+          .select(selectFields)
+          .eq("projeto_id", projetoId)
+          .eq("estrategia", "SUREBET")
+          .is("cancelled_at", null)
+          .order("data_aposta", { ascending: false });
+        if (dateFilters.startUTC) q = q.gte("data_aposta", dateFilters.startUTC);
+        if (dateFilters.endUTC) q = q.lte("data_aposta", dateFilters.endUTC);
+        return q;
+      });
 
       // Query separada para PENDENTES sem filtro de data (garantir que abertas sempre apareçam)
       let allData = arbitragensData || [];
       if (dateRange) {
-        const { data: pendentesData } = await supabase
-          .from("apostas_unificada")
-          .select(`
-            id, workspace_id, created_at, data_aposta, evento, esporte, modelo, mercado, stake, stake_total, stake_bonus,
-            spread_calculado, roi_esperado, lucro_esperado, lucro_prejuizo, roi_real,
-            status, resultado, observacoes, forma_registro, estrategia, contexto_operacional,
-            odd, selecao, bookmaker_id, bonus_id,
-            moeda_operacao, stake_consolidado, pl_consolidado, valor_brl_referencia, lucro_prejuizo_brl_referencia,
-            bookmaker:bookmakers(nome, parceiro:parceiros(nome))
-          `)
-          .eq("projeto_id", projetoId)
-          .eq("estrategia", "SUREBET")
-          .eq("status", "PENDENTE")
-          .is("cancelled_at", null)
-          .order("data_aposta", { ascending: false })
-          .limit(10000);
+        const pendentesData = await fetchAllPaginated(() =>
+          supabase
+            .from("apostas_unificada")
+            .select(selectFields)
+            .eq("projeto_id", projetoId)
+            .eq("estrategia", "SUREBET")
+            .eq("status", "PENDENTE")
+            .is("cancelled_at", null)
+            .order("data_aposta", { ascending: false })
+        );
 
         if (pendentesData && pendentesData.length > 0) {
           const existingIds = new Set(allData.map((a: any) => a.id));
