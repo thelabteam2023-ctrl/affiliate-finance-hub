@@ -2,31 +2,23 @@
  * UTILITÁRIO DE FETCH PAGINADO
  * 
  * Resolve o problema de truncamento do Supabase (default 1000 linhas).
- * Busca TODOS os registros em batches usando .range(), garantindo integridade
- * e consistência entre todas as abas do sistema.
- * 
- * USO:
- * ```ts
- * const data = await fetchAllPaginated(
- *   supabase.from("apostas_unificada").select("*").eq("projeto_id", id)
- * );
- * ```
+ * Busca TODOS os registros em batches usando .range(), garantindo integridade.
  */
-
-import type { PostgrestFilterBuilder } from "@supabase/postgrest-js";
 
 const BATCH_SIZE = 1000;
 
 /**
  * Busca TODOS os registros de uma query Supabase paginando automaticamente.
- * Substitui .limit(N) para garantir que nenhum dado seja truncado.
  * 
- * @param queryBuilder - Query Supabase SEM .limit() e SEM .range()
+ * IMPORTANTE: Como Supabase query builders são imutáveis após .range(),
+ * esta função recebe uma factory que cria a query base (sem .range/.limit).
+ * 
+ * @param queryFactory - Função que retorna a query Supabase (sem .limit/.range)
  * @param batchSize - Tamanho de cada batch (default: 1000)
  * @returns Array com TODOS os registros
  */
 export async function fetchAllPaginated<T = any>(
-  queryBuilder: PostgrestFilterBuilder<any, any, any>,
+  queryFactory: () => any,
   batchSize: number = BATCH_SIZE
 ): Promise<T[]> {
   const allResults: T[] = [];
@@ -34,7 +26,7 @@ export async function fetchAllPaginated<T = any>(
   let hasMore = true;
 
   while (hasMore) {
-    const { data, error } = await queryBuilder
+    const { data, error } = await queryFactory()
       .range(offset, offset + batchSize - 1);
 
     if (error) {
@@ -54,16 +46,4 @@ export async function fetchAllPaginated<T = any>(
   }
 
   return allResults;
-}
-
-/**
- * Versão que retorna count junto com os dados.
- * Útil para validação de integridade.
- */
-export async function fetchAllWithCount<T = any>(
-  queryBuilder: PostgrestFilterBuilder<any, any, any>,
-  batchSize: number = BATCH_SIZE
-): Promise<{ data: T[]; count: number }> {
-  const data = await fetchAllPaginated<T>(queryBuilder, batchSize);
-  return { data, count: data.length };
 }
