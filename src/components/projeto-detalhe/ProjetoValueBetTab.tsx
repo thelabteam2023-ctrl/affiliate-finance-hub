@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllPaginated } from "@/lib/fetchAllPaginated";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { KpiSummaryBar } from "@/components/ui/kpi-summary-bar";
 import { LucroCurrencyTooltip } from "@/components/ui/lucro-currency-tooltip";
