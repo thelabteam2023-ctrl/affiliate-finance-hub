@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllPaginated } from "@/lib/fetchAllPaginated";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { calcularImpactoResultado } from "@/lib/bookmakerBalanceHelper";
 import { reliquidarAposta, deletarAposta, liquidarPernaSurebet } from "@/services/aposta/ApostaService";
@@ -418,9 +419,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
       // Usa tabela unificada para apostas simples
       // NOTA: Apostas com estrategia=SUREBET e forma_registro=SIMPLES são pernas individuais
       // de operações de surebet e DEVEM aparecer aqui para visualização completa
-      let query = supabase
-        .from("apostas_unificada")
-        .select(`
+      const selectFields = `
           id, created_at, data_aposta, esporte, evento, mercado, selecao, odd, stake, stake_real, stake_freebet, stake_total, estrategia,
           status, resultado, valor_retorno, lucro_prejuizo, observacoes, bookmaker_id,
           modo_entrada, lay_exchange, lay_odd, lay_stake, lay_liability, lay_comissao,
@@ -428,45 +427,39 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
           tipo_freebet, is_bonus_bet, contexto_operacional, forma_registro, pernas,
           moeda_operacao, stake_consolidado, pl_consolidado, valor_brl_referencia, lucro_prejuizo_brl_referencia,
           usar_freebet, fonte_saldo
-        `)
-        .eq("projeto_id", projetoId)
-        .eq("forma_registro", "SIMPLES")
-        // Todas as apostas SIMPLES aparecem aqui, incluindo SUREBET
-        // A separação visual é feita via badges, não via filtro excludente
-        .is("cancelled_at", null)
-        .order("data_aposta", { ascending: false })
-        .limit(10000);
-      
+        `;
+
+      let dateFilters: { startUTC?: string; endUTC?: string } = {};
       if (dateRange) {
-        // CRÍTICO: Usar getOperationalDateRangeForQuery para garantir timezone operacional (São Paulo)
-        const { startUTC, endUTC } = getOperationalDateRangeForQuery(dateRange.start, dateRange.end);
-        query = query.gte("data_aposta", startUTC);
-        query = query.lte("data_aposta", endUTC);
+        dateFilters = getOperationalDateRangeForQuery(dateRange.start, dateRange.end);
       }
 
-      const { data, error } = await query;
-      if (error) throw error;
+      const data = await fetchAllPaginated(() => {
+        let q = supabase
+          .from("apostas_unificada")
+          .select(selectFields)
+          .eq("projeto_id", projetoId)
+          .eq("forma_registro", "SIMPLES")
+          .is("cancelled_at", null)
+          .order("data_aposta", { ascending: false });
+        if (dateFilters.startUTC) q = q.gte("data_aposta", dateFilters.startUTC);
+        if (dateFilters.endUTC) q = q.lte("data_aposta", dateFilters.endUTC);
+        return q;
+      });
 
       // Query separada para PENDENTES sem filtro de data (garantir que abertas sempre apareçam)
       let allData = data || [];
       if (dateRange) {
-        const { data: pendentesData } = await supabase
-          .from("apostas_unificada")
-          .select(`
-            id, created_at, data_aposta, esporte, evento, mercado, selecao, odd, stake, stake_real, stake_freebet, stake_total, estrategia,
-            status, resultado, valor_retorno, lucro_prejuizo, observacoes, bookmaker_id,
-            modo_entrada, lay_exchange, lay_odd, lay_stake, lay_liability, lay_comissao,
-            back_comissao, back_em_exchange, gerou_freebet, valor_freebet_gerada,
-            tipo_freebet, is_bonus_bet, contexto_operacional, forma_registro, pernas,
-            moeda_operacao, stake_consolidado, pl_consolidado, valor_brl_referencia, lucro_prejuizo_brl_referencia,
-            usar_freebet, fonte_saldo
-          `)
-          .eq("projeto_id", projetoId)
-          .eq("forma_registro", "SIMPLES")
-          .eq("status", "PENDENTE")
-          .is("cancelled_at", null)
-          .order("data_aposta", { ascending: false })
-          .limit(10000);
+        const pendentesData = await fetchAllPaginated(() =>
+          supabase
+            .from("apostas_unificada")
+            .select(selectFields)
+            .eq("projeto_id", projetoId)
+            .eq("forma_registro", "SIMPLES")
+            .eq("status", "PENDENTE")
+            .is("cancelled_at", null)
+            .order("data_aposta", { ascending: false })
+        );
 
         if (pendentesData && pendentesData.length > 0) {
           const existingIds = new Set(allData.map((a: any) => a.id));
@@ -565,48 +558,45 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
   const fetchApostasMultiplas = async () => {
     try {
       // Usa tabela unificada para apostas múltiplas
-      let query = supabase
-        .from("apostas_unificada")
-        .select(`
+      const selectFieldsMultipla = `
           id, created_at, data_aposta, evento, esporte, stake, odd_final, lucro_prejuizo, valor_retorno,
           status, resultado, observacoes, bookmaker_id, estrategia,
           tipo_freebet, gerou_freebet, valor_freebet_gerada, is_bonus_bet,
           contexto_operacional, forma_registro, selecoes, tipo_multipla, retorno_potencial,
           moeda_operacao, stake_consolidado, pl_consolidado, valor_brl_referencia, lucro_prejuizo_brl_referencia
-        `)
-        .eq("projeto_id", projetoId)
-        .eq("forma_registro", "MULTIPLA")
-        .is("cancelled_at", null)
-        .order("data_aposta", { ascending: false })
-        .limit(10000);
-      
+        `;
+
+      let dateFiltersMultipla: { startUTC?: string; endUTC?: string } = {};
       if (dateRange) {
-        const { startUTC, endUTC } = getOperationalDateRangeForQuery(dateRange.start, dateRange.end);
-        query = query.gte("data_aposta", startUTC);
-        query = query.lte("data_aposta", endUTC);
+        dateFiltersMultipla = getOperationalDateRangeForQuery(dateRange.start, dateRange.end);
       }
 
-      const { data, error } = await query;
-      if (error) throw error;
-
-      // Query separada para PENDENTES sem filtro de data (garantir que abertas sempre apareçam)
-      let allData = data || [];
-      if (dateRange) {
-        const { data: pendentesData } = await supabase
+      const dataMultipla = await fetchAllPaginated(() => {
+        let q = supabase
           .from("apostas_unificada")
-          .select(`
-            id, created_at, data_aposta, evento, esporte, stake, odd_final, lucro_prejuizo, valor_retorno,
-            status, resultado, observacoes, bookmaker_id, estrategia,
-            tipo_freebet, gerou_freebet, valor_freebet_gerada, is_bonus_bet,
-            contexto_operacional, forma_registro, selecoes, tipo_multipla, retorno_potencial,
-            moeda_operacao, stake_consolidado, pl_consolidado, valor_brl_referencia, lucro_prejuizo_brl_referencia
-          `)
+          .select(selectFieldsMultipla)
           .eq("projeto_id", projetoId)
           .eq("forma_registro", "MULTIPLA")
-          .eq("status", "PENDENTE")
           .is("cancelled_at", null)
-          .order("data_aposta", { ascending: false })
-          .limit(10000);
+          .order("data_aposta", { ascending: false });
+        if (dateFiltersMultipla.startUTC) q = q.gte("data_aposta", dateFiltersMultipla.startUTC);
+        if (dateFiltersMultipla.endUTC) q = q.lte("data_aposta", dateFiltersMultipla.endUTC);
+        return q;
+      });
+
+      // Query separada para PENDENTES sem filtro de data
+      let allData = dataMultipla || [];
+      if (dateRange) {
+        const pendentesData = await fetchAllPaginated(() =>
+          supabase
+            .from("apostas_unificada")
+            .select(selectFieldsMultipla)
+            .eq("projeto_id", projetoId)
+            .eq("forma_registro", "MULTIPLA")
+            .eq("status", "PENDENTE")
+            .is("cancelled_at", null)
+            .order("data_aposta", { ascending: false })
+        );
 
         if (pendentesData && pendentesData.length > 0) {
           const existingIds = new Set(allData.map((a: any) => a.id));
@@ -647,9 +637,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
   const fetchSurebets = async () => {
     try {
       // Usa tabela unificada para surebets/arbitragem
-      let query = supabase
-        .from("apostas_unificada")
-        .select(`
+      const selectFieldsSurebet = `
           id, evento, esporte, modelo, stake_total, spread_calculado,
           roi_esperado, roi_real, lucro_esperado, lucro_prejuizo,
           status, resultado, data_aposta, observacoes, created_at, pernas, estrategia,
@@ -659,44 +647,39 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
           apostas_pernas (
             id, selecao, selecao_livre, odd, stake, resultado, lucro_prejuizo, bookmaker_id, moeda, ordem
           )
-        `)
-        .eq("projeto_id", projetoId)
-        .eq("forma_registro", "ARBITRAGEM")
-        .is("cancelled_at", null)
-        .order("data_aposta", { ascending: false })
-        .limit(10000);
-      
+        `;
+
+      let dateFiltersSurebet: { startUTC?: string; endUTC?: string } = {};
       if (dateRange) {
-        const { startUTC, endUTC } = getOperationalDateRangeForQuery(dateRange.start, dateRange.end);
-        query = query.gte("data_aposta", startUTC);
-        query = query.lte("data_aposta", endUTC);
+        dateFiltersSurebet = getOperationalDateRangeForQuery(dateRange.start, dateRange.end);
       }
 
-      const { data, error } = await query;
-      if (error) throw error;
-
-      // Query separada para PENDENTES sem filtro de data (garantir que abertas sempre apareçam)
-      let allSurebetData = (data || []) as any[];
-      if (dateRange) {
-        const { data: pendentesData } = await supabase
+      const dataSurebet = await fetchAllPaginated(() => {
+        let q = supabase
           .from("apostas_unificada")
-          .select(`
-            id, evento, esporte, modelo, stake_total, spread_calculado,
-            roi_esperado, roi_real, lucro_esperado, lucro_prejuizo,
-            status, resultado, data_aposta, observacoes, created_at, pernas, estrategia,
-            contexto_operacional,
-            workspace_id, moeda_operacao, stake_consolidado, pl_consolidado,
-            valor_brl_referencia, lucro_prejuizo_brl_referencia,
-            apostas_pernas (
-              id, selecao, selecao_livre, odd, stake, resultado, lucro_prejuizo, bookmaker_id, moeda, ordem
-            )
-          `)
+          .select(selectFieldsSurebet)
           .eq("projeto_id", projetoId)
           .eq("forma_registro", "ARBITRAGEM")
-          .eq("status", "PENDENTE")
           .is("cancelled_at", null)
-          .order("data_aposta", { ascending: false })
-          .limit(10000);
+          .order("data_aposta", { ascending: false });
+        if (dateFiltersSurebet.startUTC) q = q.gte("data_aposta", dateFiltersSurebet.startUTC);
+        if (dateFiltersSurebet.endUTC) q = q.lte("data_aposta", dateFiltersSurebet.endUTC);
+        return q;
+      });
+
+      // Query separada para PENDENTES sem filtro de data
+      let allSurebetData = dataSurebet as any[];
+      if (dateRange) {
+        const pendentesData = await fetchAllPaginated(() =>
+          supabase
+            .from("apostas_unificada")
+            .select(selectFieldsSurebet)
+            .eq("projeto_id", projetoId)
+            .eq("forma_registro", "ARBITRAGEM")
+            .eq("status", "PENDENTE")
+            .is("cancelled_at", null)
+            .order("data_aposta", { ascending: false })
+        );
 
         if (pendentesData && pendentesData.length > 0) {
           const existingIds = new Set(allSurebetData.map((a: any) => a.id));

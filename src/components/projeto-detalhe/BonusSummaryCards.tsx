@@ -10,6 +10,7 @@ import { Tooltip as TooltipUI, TooltipContent, TooltipProvider, TooltipTrigger }
 import { useQuery } from "@tanstack/react-query";
 import { PERIOD_STALE_TIME, PERIOD_GC_TIME } from "@/lib/query-cache-config";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllPaginated } from "@/lib/fetchAllPaginated";
 import { subDays } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CurrencyBreakdownTooltip } from "@/components/ui/currency-breakdown-tooltip";
@@ -43,33 +44,31 @@ export function BonusSummaryCards({ projetoId, compact = false }: BonusSummaryCa
       const startDate = subDays(new Date(), 365).toISOString();
       const startDateStr = startDate.split('T')[0];
       
-      // Query 1: apostas vinculadas via bonus_id
-      const queryBonusId = supabase
-        .from("apostas_unificada")
-        .select("id, pl_consolidado, consolidation_currency, lucro_prejuizo, moeda_operacao, is_multicurrency")
-        .eq("projeto_id", projetoId)
-        .eq("status", "LIQUIDADA")
-        .gte("data_aposta", startDateStr)
-        .not("bonus_id", "is", null)
-        .limit(10000);
+      const selectFieldsB = "id, pl_consolidado, consolidation_currency, lucro_prejuizo, moeda_operacao, is_multicurrency";
 
-      // Query 2: apostas com estratégia EXTRACAO_BONUS (mesmo sem bonus_id)
-      const queryEstrategia = supabase
-        .from("apostas_unificada")
-        .select("id, pl_consolidado, consolidation_currency, lucro_prejuizo, moeda_operacao, is_multicurrency")
-        .eq("projeto_id", projetoId)
-        .eq("status", "LIQUIDADA")
-        .gte("data_aposta", startDateStr)
-        .eq("estrategia", "EXTRACAO_BONUS")
-        .limit(10000);
-
-      const [resBonusId, resEstrategia] = await Promise.all([queryBonusId, queryEstrategia]);
+      const [dataBonusId, dataEstrategia] = await Promise.all([
+        fetchAllPaginated(() =>
+          supabase
+            .from("apostas_unificada")
+            .select(selectFieldsB)
+            .eq("projeto_id", projetoId)
+            .eq("status", "LIQUIDADA")
+            .gte("data_aposta", startDateStr)
+            .not("bonus_id", "is", null)
+        ),
+        fetchAllPaginated(() =>
+          supabase
+            .from("apostas_unificada")
+            .select(selectFieldsB)
+            .eq("projeto_id", projetoId)
+            .eq("status", "LIQUIDADA")
+            .gte("data_aposta", startDateStr)
+            .eq("estrategia", "EXTRACAO_BONUS")
+        ),
+      ]);
       
-      if (resBonusId.error) throw resBonusId.error;
-      if (resEstrategia.error) throw resEstrategia.error;
-
       // Combinar removendo duplicados por id
-      const allBets = [...(resBonusId.data || []), ...(resEstrategia.data || [])];
+      const allBets = [...dataBonusId, ...dataEstrategia];
       const uniqueBets = Array.from(new Map(allBets.map(b => [b.id, b])).values());
       
       // Buscar pernas para apostas multicurrency (para conversão direta sem pivot BRL)

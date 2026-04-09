@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllPaginated } from "@/lib/fetchAllPaginated";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCrossWindowSync } from "@/hooks/useCrossWindowSync";
@@ -79,32 +80,35 @@ async function fetchApostasFiltradas(
   projetoId: string, 
   dateRange: { start: Date; end: Date } | null
 ): Promise<ApostaUnificada[]> {
-  let query = supabase
-    .from("apostas_unificada")
-    .select(`id, data_aposta, lucro_prejuizo, pl_consolidado, consolidation_currency, resultado, stake, stake_total, stake_consolidado, esporte, bookmaker_id, forma_registro, estrategia, bonus_id, moeda_operacao, valor_brl_referencia, lucro_prejuizo_brl_referencia`)
-    .eq("projeto_id", projetoId)
-    .eq("status", "LIQUIDADA")
-    .is("cancelled_at", null)
-    .order("data_aposta", { ascending: true })
-    .limit(10000);
-
+  let dateFilters: { startUTC?: string; endUTC?: string } = {};
   if (dateRange) {
-    const { startUTC, endUTC } = getOperationalDateRangeForQuery(dateRange.start, dateRange.end);
-    query = query.gte("data_aposta", startUTC).lte("data_aposta", endUTC);
+    dateFilters = getOperationalDateRangeForQuery(dateRange.start, dateRange.end);
   }
 
-  const { data, error } = await query;
-  if (error) throw error;
+  const data = await fetchAllPaginated(() => {
+    let q = supabase
+      .from("apostas_unificada")
+      .select(`id, data_aposta, lucro_prejuizo, pl_consolidado, consolidation_currency, resultado, stake, stake_total, stake_consolidado, esporte, bookmaker_id, forma_registro, estrategia, bonus_id, moeda_operacao, valor_brl_referencia, lucro_prejuizo_brl_referencia`)
+      .eq("projeto_id", projetoId)
+      .eq("status", "LIQUIDADA")
+      .is("cancelled_at", null)
+      .order("data_aposta", { ascending: true });
+    if (dateFilters.startUTC) q = q.gte("data_aposta", dateFilters.startUTC);
+    if (dateFilters.endUTC) q = q.lte("data_aposta", dateFilters.endUTC);
+    return q;
+  });
 
   // Fetch pernas for all bets (including SIMPLES with multi-entry)
   const apostaIds = (data || []).map(a => a.id);
   let pernasMap: Record<string, any[]> = {};
   if (apostaIds.length > 0) {
-    const { data: pernasData } = await supabase
-      .from("apostas_pernas")
-      .select(`aposta_id, bookmaker_id, selecao, odd, stake, moeda, resultado, lucro_prejuizo, gerou_freebet, valor_freebet_gerada, bookmakers (nome, instance_identifier, parceiro_id, parceiros (nome), bookmakers_catalogo (logo_url))`)
-      .in("aposta_id", apostaIds)
-      .order("ordem", { ascending: true });
+    const pernasData = await fetchAllPaginated(() =>
+      supabase
+        .from("apostas_pernas")
+        .select(`aposta_id, bookmaker_id, selecao, odd, stake, moeda, resultado, lucro_prejuizo, gerou_freebet, valor_freebet_gerada, bookmakers (nome, instance_identifier, parceiro_id, parceiros (nome), bookmakers_catalogo (logo_url))`)
+        .in("aposta_id", apostaIds)
+        .order("ordem", { ascending: true })
+    );
     
     (pernasData || []).forEach((p: any) => {
       if (!pernasMap[p.aposta_id]) pernasMap[p.aposta_id] = [];
