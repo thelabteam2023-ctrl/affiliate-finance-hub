@@ -394,9 +394,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
 
   const fetchApostasMultiplasInternal = async (projId: string, bonusIds: string[]) => {
     try {
-      let query = supabase
-        .from("apostas_unificada")
-        .select(`
+      const selectFields = `
           *,
           bookmaker:bookmakers (
             nome,
@@ -406,19 +404,20 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
             parceiro:parceiros (nome),
             bookmakers_catalogo (logo_url)
           )
-        `)
-        .eq("projeto_id", projId)
-        .eq("forma_registro", "MULTIPLA");
-      
-      if (bonusIds.length > 0) {
-        query = query.or(`bookmaker_id.in.(${bonusIds.join(',')}),contexto_operacional.eq.BONUS,estrategia.eq.EXTRACAO_BONUS`);
-      } else {
-        query = query.or(`contexto_operacional.eq.BONUS,estrategia.eq.EXTRACAO_BONUS`);
-      }
-      
-      const { data, error } = await query.order("data_aposta", { ascending: false });
+        `;
+      const orFilter = bonusIds.length > 0
+        ? `bookmaker_id.in.(${bonusIds.join(',')}),contexto_operacional.eq.BONUS,estrategia.eq.EXTRACAO_BONUS`
+        : `contexto_operacional.eq.BONUS,estrategia.eq.EXTRACAO_BONUS`;
 
-      if (error) throw error;
+      const data = await fetchAllPaginated(() =>
+        supabase
+          .from("apostas_unificada")
+          .select(selectFields)
+          .eq("projeto_id", projId)
+          .eq("forma_registro", "MULTIPLA")
+          .or(orFilter)
+          .order("data_aposta", { ascending: false })
+      );
       
       setApostasMultiplas((data || []).map((am: any) => ({
         ...am,
