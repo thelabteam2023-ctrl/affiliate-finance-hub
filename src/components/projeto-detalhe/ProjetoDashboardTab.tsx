@@ -102,11 +102,13 @@ async function fetchApostasFiltradas(
   const apostaIds = (data || []).map(a => a.id);
   let pernasMap: Record<string, any[]> = {};
   if (apostaIds.length > 0) {
-    const { data: pernasData } = await supabase
-      .from("apostas_pernas")
-      .select(`aposta_id, bookmaker_id, selecao, odd, stake, moeda, resultado, lucro_prejuizo, gerou_freebet, valor_freebet_gerada, bookmakers (nome, instance_identifier, parceiro_id, parceiros (nome), bookmakers_catalogo (logo_url))`)
-      .in("aposta_id", apostaIds)
-      .order("ordem", { ascending: true });
+    const pernasData = await fetchAllPaginated(() =>
+      supabase
+        .from("apostas_pernas")
+        .select(`aposta_id, bookmaker_id, selecao, odd, stake, moeda, resultado, lucro_prejuizo, gerou_freebet, valor_freebet_gerada, bookmakers (nome, instance_identifier, parceiro_id, parceiros (nome), bookmakers_catalogo (logo_url))`)
+        .in("aposta_id", apostaIds)
+        .order("ordem", { ascending: true })
+    );
     
     (pernasData || []).forEach((p: any) => {
       if (!pernasMap[p.aposta_id]) pernasMap[p.aposta_id] = [];
