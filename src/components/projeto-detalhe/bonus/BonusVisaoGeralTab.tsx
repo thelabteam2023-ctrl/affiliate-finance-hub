@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { KpiSummaryBar } from "@/components/ui/kpi-summary-bar";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllPaginated } from "@/lib/fetchAllPaginated";
 import { useProjectBonuses, ProjectBonus, bonusQueryKeys } from "@/hooks/useProjectBonuses";
 import { useBonusContamination } from "@/hooks/useBonusContamination";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
@@ -145,25 +146,28 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
     queryFn: async () => {
       const startDate = subDays(new Date(), 365).toISOString();
       
-      let queryBonusId = supabase
-        .from("apostas_unificada")
-        .select("id, data_aposta, lucro_prejuizo, pl_consolidado, consolidation_currency, moeda_operacao, bookmaker_id, bonus_id, stake_bonus, estrategia, is_multicurrency")
-        .eq("projeto_id", projetoId)
-        .eq("status", "LIQUIDADA")
-        .gte("data_aposta", startDate.split('T')[0])
-        .not("bonus_id", "is", null)
-        .limit(10000);
+      const selectFieldsBonus = "id, data_aposta, lucro_prejuizo, pl_consolidado, consolidation_currency, moeda_operacao, bookmaker_id, bonus_id, stake_bonus, estrategia, is_multicurrency";
 
-      let queryEstrategia = supabase
-        .from("apostas_unificada")
-        .select("id, data_aposta, lucro_prejuizo, pl_consolidado, consolidation_currency, moeda_operacao, bookmaker_id, bonus_id, stake_bonus, estrategia, is_multicurrency")
-        .eq("projeto_id", projetoId)
-        .eq("status", "LIQUIDADA")
-        .gte("data_aposta", startDate.split('T')[0])
-        .eq("estrategia", "EXTRACAO_BONUS")
-        .limit(10000);
-
-      const [resBonusId, resEstrategia] = await Promise.all([queryBonusId, queryEstrategia]);
+      const [dataBonusId, dataEstrategia] = await Promise.all([
+        fetchAllPaginated(() =>
+          supabase
+            .from("apostas_unificada")
+            .select(selectFieldsBonus)
+            .eq("projeto_id", projetoId)
+            .eq("status", "LIQUIDADA")
+            .gte("data_aposta", startDate.split('T')[0])
+            .not("bonus_id", "is", null)
+        ),
+        fetchAllPaginated(() =>
+          supabase
+            .from("apostas_unificada")
+            .select(selectFieldsBonus)
+            .eq("projeto_id", projetoId)
+            .eq("status", "LIQUIDADA")
+            .gte("data_aposta", startDate.split('T')[0])
+            .eq("estrategia", "EXTRACAO_BONUS")
+        ),
+      ]);
       
       if (resBonusId.error) throw resBonusId.error;
       if (resEstrategia.error) throw resEstrategia.error;
