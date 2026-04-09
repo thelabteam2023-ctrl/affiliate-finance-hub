@@ -7,6 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllPaginated } from "@/lib/fetchAllPaginated";
 import { useProjectBonuses, ProjectBonus, FinalizeReason } from "@/hooks/useProjectBonuses";
 import { useQuery } from "@tanstack/react-query";
 import { PERIOD_STALE_TIME, PERIOD_GC_TIME } from "@/lib/query-cache-config";
@@ -107,13 +108,13 @@ export function BonusCasasTab({ projetoId }: BonusCasasTabProps) {
     queryKey: ["bonus-casas-apostas-stats", projetoId],
     queryFn: async () => {
       // Busca todas as apostas do projeto agrupadas por bookmaker
-      const { data, error } = await supabase
-        .from("apostas_unificada")
-        .select("bookmaker_id, stake, lucro_prejuizo, status")
-        .eq("projeto_id", projetoId)
-        .neq("status", "CANCELADA");
-
-      if (error) throw error;
+      const data = await fetchAllPaginated(() =>
+        supabase
+          .from("apostas_unificada")
+          .select("bookmaker_id, stake, lucro_prejuizo, status")
+          .eq("projeto_id", projetoId)
+          .neq("status", "CANCELADA")
+      );
 
       // Agrupa por bookmaker_id
       const stats: Record<string, { total_apostas: number; volume_apostado: number; lucro_prejuizo: number }> = {};

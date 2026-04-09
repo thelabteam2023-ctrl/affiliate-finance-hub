@@ -2,6 +2,8 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { SaldoOperavelCard } from "../SaldoOperavelCard";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllPaginated } from "@/lib/fetchAllPaginated";
+import { fetchChunkedIn } from "@/lib/fetchChunkedIn";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -314,9 +316,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
 
   const fetchApostasInternal = async (projId: string, bonusIds: string[]) => {
     try {
-      let query = supabase
-        .from("apostas_unificada")
-        .select(`
+      const selectFields = `
           *,
           bookmaker:bookmakers (
             nome,
@@ -326,19 +326,23 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
             parceiro:parceiros (nome),
             bookmakers_catalogo (logo_url)
           )
-        `)
-        .eq("projeto_id", projId)
-        .eq("forma_registro", "SIMPLES");
+        `;
       
-      if (bonusIds.length > 0) {
-        query = query.or(`bookmaker_id.in.(${bonusIds.join(',')}),contexto_operacional.eq.BONUS,estrategia.eq.EXTRACAO_BONUS`);
-      } else {
-        query = query.or(`contexto_operacional.eq.BONUS,estrategia.eq.EXTRACAO_BONUS`);
-      }
-      
-      const { data, error } = await query.order("data_aposta", { ascending: false });
+      const orFilter = bonusIds.length > 0
+        ? `bookmaker_id.in.(${bonusIds.join(',')}),contexto_operacional.eq.BONUS,estrategia.eq.EXTRACAO_BONUS`
+        : `contexto_operacional.eq.BONUS,estrategia.eq.EXTRACAO_BONUS`;
 
-      if (error) throw error;
+      const data = await fetchAllPaginated(() =>
+        supabase
+          .from("apostas_unificada")
+          .select(selectFields)
+          .eq("projeto_id", projId)
+          .eq("forma_registro", "SIMPLES")
+          .or(orFilter)
+          .order("data_aposta", { ascending: false })
+      );
+
+      
       
       const mapped = (data || []).map((a: any) => ({
         ...a,
@@ -350,18 +354,21 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
       // Enriquecer apostas simples com sub_entries de apostas_pernas
       const apostaIds = mapped.map((a: any) => a.id);
       if (apostaIds.length > 0) {
-        const { data: pernasData } = await supabase
-          .from("apostas_pernas")
-          .select(`
-            aposta_id, bookmaker_id, odd, stake, moeda, selecao_livre, ordem, fonte_saldo,
-            bookmaker:bookmakers (
-              nome, parceiro_id,
-              parceiro:parceiros (nome),
-              bookmakers_catalogo (logo_url)
-            )
-          `)
-          .in("aposta_id", apostaIds)
-          .order("ordem", { ascending: true });
+        const pernasData = await fetchChunkedIn(
+          (idsChunk) => supabase
+            .from("apostas_pernas")
+            .select(`
+              aposta_id, bookmaker_id, odd, stake, moeda, selecao_livre, ordem, fonte_saldo,
+              bookmaker:bookmakers (
+                nome, parceiro_id,
+                parceiro:parceiros (nome),
+                bookmakers_catalogo (logo_url)
+              )
+            `)
+            .in("aposta_id", idsChunk)
+            .order("ordem", { ascending: true }),
+          apostaIds
+        );
 
         if (pernasData) {
           const pernasMap = new Map<string, any[]>();
@@ -387,9 +394,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
 
   const fetchApostasMultiplasInternal = async (projId: string, bonusIds: string[]) => {
     try {
-      let query = supabase
-        .from("apostas_unificada")
-        .select(`
+      const selectFields = `
           *,
           bookmaker:bookmakers (
             nome,
@@ -399,19 +404,20 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
             parceiro:parceiros (nome),
             bookmakers_catalogo (logo_url)
           )
-        `)
-        .eq("projeto_id", projId)
-        .eq("forma_registro", "MULTIPLA");
-      
-      if (bonusIds.length > 0) {
-        query = query.or(`bookmaker_id.in.(${bonusIds.join(',')}),contexto_operacional.eq.BONUS,estrategia.eq.EXTRACAO_BONUS`);
-      } else {
-        query = query.or(`contexto_operacional.eq.BONUS,estrategia.eq.EXTRACAO_BONUS`);
-      }
-      
-      const { data, error } = await query.order("data_aposta", { ascending: false });
+        `;
+      const orFilter = bonusIds.length > 0
+        ? `bookmaker_id.in.(${bonusIds.join(',')}),contexto_operacional.eq.BONUS,estrategia.eq.EXTRACAO_BONUS`
+        : `contexto_operacional.eq.BONUS,estrategia.eq.EXTRACAO_BONUS`;
 
-      if (error) throw error;
+      const data = await fetchAllPaginated(() =>
+        supabase
+          .from("apostas_unificada")
+          .select(selectFields)
+          .eq("projeto_id", projId)
+          .eq("forma_registro", "MULTIPLA")
+          .or(orFilter)
+          .order("data_aposta", { ascending: false })
+      );
       
       setApostasMultiplas((data || []).map((am: any) => ({
         ...am,
@@ -425,41 +431,44 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
   const fetchSurebetsInternal = async (projId: string, bonusIds: string[]) => {
     try {
       // Buscar operações multi-leg (ARBITRAGEM ou SUREBET) com estratégia BONUS ou contexto BONUS
-      const { data: surebetsData, error } = await supabase
-        .from("apostas_unificada")
-        .select("*")
-        .eq("projeto_id", projId)
-        .or(`forma_registro.eq.ARBITRAGEM,forma_registro.eq.SUREBET`)
-        .or(`estrategia.eq.EXTRACAO_BONUS,contexto_operacional.eq.BONUS`)
-        .order("data_aposta", { ascending: false });
-
-      if (error) throw error;
+      const surebetsData = await fetchAllPaginated(() =>
+        supabase
+          .from("apostas_unificada")
+          .select("*")
+          .eq("projeto_id", projId)
+          .or(`forma_registro.eq.ARBITRAGEM,forma_registro.eq.SUREBET`)
+          .or(`estrategia.eq.EXTRACAO_BONUS,contexto_operacional.eq.BONUS`)
+          .order("data_aposta", { ascending: false })
+      );
       
       // Buscar pernas da tabela normalizada para operações multi-leg
-      const surebetIds = (surebetsData || []).map((s: any) => s.id);
+      const surebetIds = surebetsData.map((s: any) => s.id);
       let pernasMap: Record<string, any[]> = {};
       
       if (surebetIds.length > 0) {
-        const { data: pernasData } = await supabase
-          .from("apostas_pernas")
-          .select(`
-            id,
-            aposta_id,
-            bookmaker_id,
-            selecao,
-            selecao_livre,
-            odd,
-            stake,
-            resultado,
-            lucro_prejuizo,
-            moeda,
-            fonte_saldo,
-            bookmakers (nome, moeda, parceiro:parceiros(nome))
-          `)
-          .in("aposta_id", surebetIds)
-          .order("ordem", { ascending: true });
+        const pernasData = await fetchChunkedIn(
+          (idsChunk) => supabase
+            .from("apostas_pernas")
+            .select(`
+              id,
+              aposta_id,
+              bookmaker_id,
+              selecao,
+              selecao_livre,
+              odd,
+              stake,
+              resultado,
+              lucro_prejuizo,
+              moeda,
+              fonte_saldo,
+              bookmakers (nome, moeda, parceiro:parceiros(nome))
+            `)
+            .in("aposta_id", idsChunk)
+            .order("ordem", { ascending: true }),
+          surebetIds
+        );
         
-        (pernasData || []).forEach((p: any) => {
+        pernasData.forEach((p: any) => {
           if (!pernasMap[p.aposta_id]) {
             pernasMap[p.aposta_id] = [];
           }
@@ -483,7 +492,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
         });
       }
       
-      const surebetsComPernas = (surebetsData || []).map((surebet: any) => {
+      const surebetsComPernas = surebetsData.map((surebet: any) => {
         // Usar pernas da tabela normalizada (com fallback para JSONB legado)
         const pernas = pernasMap[surebet.id] || (Array.isArray(surebet.pernas) ? surebet.pernas : []);
         return {
