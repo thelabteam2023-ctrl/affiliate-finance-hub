@@ -657,25 +657,25 @@ describe("Sistema de Bônus — Testes Exaustivos", () => {
   // ==========================================================================
   describe("5. FINALIZE — Finalização de Bônus", () => {
     it("5.1 Finalizar com rollover_completed — SEM impacto financeiro", () => {
-      const reason = "rollover_completed";
+      const reason: string = "rollover_completed";
       const hasFinancialImpact = reason === "cancelled_reversed";
       expect(hasFinancialImpact).toBe(false);
     });
 
     it("5.2 Finalizar com cycle_completed — SEM impacto financeiro", () => {
-      const reason = "cycle_completed";
+      const reason: string = "cycle_completed";
       const hasFinancialImpact = reason === "cancelled_reversed";
       expect(hasFinancialImpact).toBe(false);
     });
 
     it("5.3 Finalizar com expired — SEM impacto no saldo real", () => {
-      const reason = "expired";
+      const reason: string = "expired";
       const hasFinancialImpact = reason === "cancelled_reversed";
       expect(hasFinancialImpact).toBe(false);
     });
 
     it("5.4 Finalizar com cancelled_reversed — DEBITA valor perdido", () => {
-      const reason = "cancelled_reversed";
+      const reason: string = "cancelled_reversed";
       const hasFinancialImpact = reason === "cancelled_reversed";
       expect(hasFinancialImpact).toBe(true);
     });
@@ -734,8 +734,8 @@ describe("Sistema de Bônus — Testes Exaustivos", () => {
     });
 
     it("6.4 Mudar status pending → credited — credita valor total no ledger", () => {
-      const existingStatus = "pending";
-      const newStatus = "credited";
+      const existingStatus: string = "pending";
+      const newStatus: string = "credited";
       const statusChanged = newStatus !== existingStatus;
       const shouldCredit = statusChanged && newStatus === "credited";
 
