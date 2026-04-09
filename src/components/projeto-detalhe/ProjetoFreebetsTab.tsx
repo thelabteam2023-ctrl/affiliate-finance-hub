@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllPaginated } from "@/lib/fetchAllPaginated";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { KpiSummaryBar } from "@/components/ui/kpi-summary-bar";
 import { Badge } from "@/components/ui/badge";
@@ -240,21 +241,21 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
   const fetchApostasOperacionais = async () => {
     try {
       // Usa tabela unificada para apostas de freebet
-      const { data: apostasUnificadas, error: errorUnificadas } = await supabase
-        .from("apostas_unificada")
-        .select(`
-          id, created_at, evento, mercado, selecao, odd, stake, lucro_prejuizo, valor_retorno,
-          data_aposta, status, resultado, tipo_freebet, contexto_operacional,
-          gerou_freebet, valor_freebet_gerada, bookmaker_id, estrategia, modo_entrada,
-          esporte, forma_registro, lay_exchange, lay_odd, lay_stake, lay_liability,
-          lay_comissao, back_comissao, back_em_exchange, selecoes, tipo_multipla
-        `)
-        .eq("projeto_id", projetoId)
-        .or("contexto_operacional.eq.FREEBET,gerou_freebet.eq.true,tipo_freebet.not.is.null")
-        .is("cancelled_at", null)
-        .order("data_aposta", { ascending: false });
-
-      if (errorUnificadas) throw errorUnificadas;
+      const apostasUnificadas = await fetchAllPaginated(() =>
+        supabase
+          .from("apostas_unificada")
+          .select(`
+            id, created_at, evento, mercado, selecao, odd, stake, lucro_prejuizo, valor_retorno,
+            data_aposta, status, resultado, tipo_freebet, contexto_operacional,
+            gerou_freebet, valor_freebet_gerada, bookmaker_id, estrategia, modo_entrada,
+            esporte, forma_registro, lay_exchange, lay_odd, lay_stake, lay_liability,
+            lay_comissao, back_comissao, back_em_exchange, selecoes, tipo_multipla
+          `)
+          .eq("projeto_id", projetoId)
+          .or("contexto_operacional.eq.FREEBET,gerou_freebet.eq.true,tipo_freebet.not.is.null")
+          .is("cancelled_at", null)
+          .order("data_aposta", { ascending: false })
+      );
 
       // Buscar nomes dos bookmakers
       const bookmakerIds = [...new Set((apostasUnificadas || []).map((a: any) => a.bookmaker_id).filter(Boolean))];
