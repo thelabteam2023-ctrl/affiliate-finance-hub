@@ -379,52 +379,71 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
         deadline_days: data.deadline_days || null,
       };
 
-      const { error } = await supabase
+      // Step 1: Insert bonus record and capture the ID for potential rollback
+      const { data: insertedBonus, error } = await supabase
         .from("project_bookmaker_link_bonuses")
-        .insert(bonusData as any);
+        .insert(bonusData as any)
+        .select("id")
+        .single();
 
       if (error) throw error;
 
+      const insertedBonusId = insertedBonus?.id;
+
       // MODELO UNIFICADO: Se status = credited, creditar via ledger
+      // ROLLBACK COMPENSATÓRIO: Se o ledger falhar, deleta o registro órfão
       if (data.status === "credited") {
         const moeda = await getBookmakerMoeda(data.bookmaker_id);
         const creditedAt = data.credited_at || new Date().toISOString();
         
-        if (tipoBonus === 'FREEBET') {
-          // FREEBET: Creditar em saldo_freebet
-          const result = await creditarFreebetViaLedger(
-            data.bookmaker_id,
-            data.bonus_amount,
-            `Crédito de freebet (bônus): ${data.title || 'Sem título'}`,
-            {
-              userId: userData.user.id,
-              workspaceId,
+        try {
+          if (tipoBonus === 'FREEBET') {
+            // FREEBET: Creditar em saldo_freebet
+            const result = await creditarFreebetViaLedger(
+              data.bookmaker_id,
+              data.bonus_amount,
+              `Crédito de freebet (bônus): ${data.title || 'Sem título'}`,
+              {
+                userId: userData.user.id,
+                workspaceId,
+              }
+            );
+            if (!result.success) {
+              throw new Error(`Falha ao creditar freebet no saldo: ${result.error || 'erro desconhecido'}`);
             }
-          );
-          if (!result.success) {
-            console.error("[useProjectBonuses] Erro ao creditar freebet via ledger:", result.error);
-            throw new Error(`Falha ao creditar freebet no saldo: ${result.error || 'erro desconhecido'}`);
-          } else {
             console.log(`[useProjectBonuses] Freebet creditada via ledger: ${data.bonus_amount}`);
-          }
-        } else {
-          // BONUS TRADICIONAL: Creditar em saldo_atual
-          const result = await registrarBonusCreditadoViaLedger({
-            bookmakerId: data.bookmaker_id,
-            valor: data.bonus_amount,
-            moeda,
-            workspaceId,
-            userId: userData.user.id,
-            descricao: `Crédito de bônus: ${data.title || 'Sem título'}`,
-            dataCredito: creditedAt.split('T')[0],
-            projetoIdSnapshot: projectId,
-          });
-          if (!result.success) {
-            console.error("[useProjectBonuses] Erro ao creditar bônus via ledger:", result.error);
-            throw new Error(`Falha ao creditar bônus no saldo: ${result.error || 'erro desconhecido'}`);
           } else {
+            // BONUS TRADICIONAL: Creditar em saldo_atual
+            const result = await registrarBonusCreditadoViaLedger({
+              bookmakerId: data.bookmaker_id,
+              valor: data.bonus_amount,
+              moeda,
+              workspaceId,
+              userId: userData.user.id,
+              descricao: `Crédito de bônus: ${data.title || 'Sem título'}`,
+              dataCredito: creditedAt.split('T')[0],
+              projetoIdSnapshot: projectId,
+            });
+            if (!result.success) {
+              throw new Error(`Falha ao creditar bônus no saldo: ${result.error || 'erro desconhecido'}`);
+            }
             console.log(`[useProjectBonuses] Bônus creditado via ledger: ${data.bonus_amount}`);
           }
+        } catch (ledgerError) {
+          // ROLLBACK COMPENSATÓRIO: Deleta o registro de bônus órfão
+          console.error("[useProjectBonuses] Ledger falhou, executando rollback compensatório...", ledgerError);
+          if (insertedBonusId) {
+            const { error: deleteError } = await supabase
+              .from("project_bookmaker_link_bonuses")
+              .delete()
+              .eq("id", insertedBonusId);
+            if (deleteError) {
+              console.error("[useProjectBonuses] CRÍTICO: Falha no rollback compensatório!", deleteError);
+            } else {
+              console.log(`[useProjectBonuses] Rollback compensatório executado: bônus ${insertedBonusId} removido`);
+            }
+          }
+          throw ledgerError;
         }
       }
     },
