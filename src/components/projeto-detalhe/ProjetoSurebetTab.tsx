@@ -359,16 +359,18 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
       
       let pernasMap: Record<string, any[]> = {};
       if (apostaIdsMultiLeg.length > 0) {
-        const { data: pernasData } = await supabase
-          .from("apostas_pernas")
-          .select(`
-            id, aposta_id, bookmaker_id, moeda, selecao, selecao_livre, odd, stake,
-            resultado, lucro_prejuizo, gerou_freebet, valor_freebet_gerada,
-            stake_brl_referencia, lucro_prejuizo_brl_referencia, fonte_saldo,
-            bookmakers (nome, instance_identifier, parceiro:parceiros(nome))
-          `)
-          .in("aposta_id", apostaIdsMultiLeg)
-          .order("ordem", { ascending: true });
+        const pernasData = await fetchAllPaginated(() =>
+          supabase
+            .from("apostas_pernas")
+            .select(`
+              id, aposta_id, bookmaker_id, moeda, selecao, selecao_livre, odd, stake,
+              resultado, lucro_prejuizo, gerou_freebet, valor_freebet_gerada,
+              stake_brl_referencia, lucro_prejuizo_brl_referencia, fonte_saldo,
+              bookmakers (nome, instance_identifier, parceiro:parceiros(nome))
+            `)
+            .in("aposta_id", apostaIdsMultiLeg)
+            .order("ordem", { ascending: true })
+        );
         
         (pernasData || []).forEach((p: any) => {
           if (!pernasMap[p.aposta_id]) pernasMap[p.aposta_id] = [];
