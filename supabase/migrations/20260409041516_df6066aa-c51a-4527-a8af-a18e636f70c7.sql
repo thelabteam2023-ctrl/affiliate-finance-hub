@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS "anon_select_supplier_titulares" ON public.supplier_titulares;
