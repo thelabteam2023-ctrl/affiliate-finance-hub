@@ -161,7 +161,9 @@ export function BrokerReceberContasDialog({ open, onClose, onSuccess, projetoId 
 
       for (const conta of contas) {
         const saldoInicial = parseFloat(conta.saldo_inicial) || 0;
-        const passwordToStore = conta.login_password || "***";
+        const passwordToStore = conta.login_password
+          ? await encryptPassword(conta.login_password)
+          : await encryptPassword("***");
 
         // CRITICAL: Insert WITHOUT projeto_id first, then UPDATE to set it.
         // This avoids the double-balance bug where:
