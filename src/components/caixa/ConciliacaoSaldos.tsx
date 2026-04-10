@@ -293,9 +293,11 @@ export function ConciliacaoSaldos({
         .update({
           status: "CONFIRMADO",
           status_valor: hasDiferenca ? "AJUSTADO" : "CONFIRMADO",
-          valor_confirmado: valorReal, // Novo campo: valor REAL para fins operacionais
-          valor_destino: valorReal, // Atualizar valor_destino para trigger de saldo
-          valor: valorReal, // Atualizar valor canônico
+          valor_confirmado: valorReal, // Valor REAL para fins de auditoria
+          // NÃO atualizar 'valor' nem 'valor_destino' quando há diferença cambial,
+          // pois o GANHO/PERDA_CAMBIAL já será registrado separadamente.
+          // Atualizar apenas quando NÃO há diferença (confirmação simples).
+          ...(hasDiferenca ? {} : { valor: valorReal, valor_destino: valorReal }),
           // Se é transação crypto com origem wallet, confirma o trânsito
           transit_status: isCrypto && selectedTransaction.origem_wallet_id ? "CONFIRMED" : selectedTransaction.transit_status,
           cotacao_implicita: isCrypto && hasDiferenca && selectedTransaction.qtd_coin 
