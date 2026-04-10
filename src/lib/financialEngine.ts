@@ -103,6 +103,7 @@ export async function processFinancialEvent(
       p_reversed_event_id: input.reversedEventId || null,
       p_descricao: input.descricao || null,
       p_metadata: JSON.stringify(input.metadata || {}),
+      p_allow_negative: input.allowNegative || false,
     });
 
     if (error) {
