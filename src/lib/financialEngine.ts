@@ -444,6 +444,7 @@ export async function registrarAjusteManual(params: {
   moeda?: string;
   descricao?: string;
   motivo?: string;
+  allowNegative?: boolean;
 }): Promise<FinancialEventResult> {
   return processFinancialEvent({
     bookmakerId: params.bookmakerId,
@@ -455,6 +456,7 @@ export async function registrarAjusteManual(params: {
     descricao: params.descricao || params.motivo || 'Ajuste manual',
     idempotencyKey: `adj_${params.bookmakerId}_${Date.now()}`,
     metadata: { motivo: params.motivo },
+    allowNegative: params.allowNegative ?? true,
   });
 }
 
