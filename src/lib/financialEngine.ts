@@ -60,6 +60,8 @@ export interface FinancialEventInput {
   reversedEventId?: string;
   descricao?: string;
   metadata?: Record<string, unknown>;
+  /** Permite saldo negativo (apenas para ajustes admin/reconciliação) */
+  allowNegative?: boolean;
 }
 
 export interface FinancialEventResult {
