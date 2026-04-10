@@ -3727,6 +3727,7 @@ export type Database = {
       }
       financial_events: {
         Row: {
+          allow_negative: boolean
           aposta_id: string | null
           bookmaker_id: string
           created_at: string
@@ -3734,7 +3735,7 @@ export type Database = {
           descricao: string | null
           event_scope: Database["public"]["Enums"]["event_scope"]
           id: string
-          idempotency_key: string | null
+          idempotency_key: string
           metadata: Json | null
           moeda: string
           origem: string | null
@@ -3746,6 +3747,7 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
+          allow_negative?: boolean
           aposta_id?: string | null
           bookmaker_id: string
           created_at?: string
@@ -3753,7 +3755,7 @@ export type Database = {
           descricao?: string | null
           event_scope?: Database["public"]["Enums"]["event_scope"]
           id?: string
-          idempotency_key?: string | null
+          idempotency_key: string
           metadata?: Json | null
           moeda?: string
           origem?: string | null
@@ -3765,6 +3767,7 @@ export type Database = {
           workspace_id: string
         }
         Update: {
+          allow_negative?: boolean
           aposta_id?: string | null
           bookmaker_id?: string
           created_at?: string
@@ -3772,7 +3775,7 @@ export type Database = {
           descricao?: string | null
           event_scope?: Database["public"]["Enums"]["event_scope"]
           id?: string
-          idempotency_key?: string | null
+          idempotency_key?: string
           metadata?: Json | null
           moeda?: string
           origem?: string | null
@@ -14612,22 +14615,40 @@ export type Database = {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
       }
-      process_financial_event: {
-        Args: {
-          p_aposta_id?: string
-          p_bookmaker_id: string
-          p_descricao?: string
-          p_idempotency_key?: string
-          p_metadata?: Json
-          p_moeda?: string
-          p_origem?: string
-          p_reversed_event_id?: string
-          p_tipo_evento?: string
-          p_tipo_uso?: string
-          p_valor?: number
-        }
-        Returns: Json
-      }
+      process_financial_event:
+        | {
+            Args: {
+              p_aposta_id?: string
+              p_bookmaker_id: string
+              p_descricao?: string
+              p_idempotency_key?: string
+              p_metadata?: Json
+              p_moeda?: string
+              p_origem?: string
+              p_reversed_event_id?: string
+              p_tipo_evento?: string
+              p_tipo_uso?: string
+              p_valor?: number
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_allow_negative?: boolean
+              p_aposta_id?: string
+              p_bookmaker_id: string
+              p_descricao?: string
+              p_idempotency_key?: string
+              p_metadata?: Json
+              p_moeda?: string
+              p_origem?: string
+              p_reversed_event_id?: string
+              p_tipo_evento?: string
+              p_tipo_uso?: string
+              p_valor?: number
+            }
+            Returns: Json
+          }
       processar_bonus_aposta: {
         Args: {
           p_aposta_id: string

@@ -60,6 +60,8 @@ export interface FinancialEventInput {
   reversedEventId?: string;
   descricao?: string;
   metadata?: Record<string, unknown>;
+  /** Permite saldo negativo (apenas para ajustes admin/reconciliação) */
+  allowNegative?: boolean;
 }
 
 export interface FinancialEventResult {
@@ -101,6 +103,7 @@ export async function processFinancialEvent(
       p_reversed_event_id: input.reversedEventId || null,
       p_descricao: input.descricao || null,
       p_metadata: JSON.stringify(input.metadata || {}),
+      p_allow_negative: input.allowNegative || false,
     });
 
     if (error) {
@@ -441,6 +444,7 @@ export async function registrarAjusteManual(params: {
   moeda?: string;
   descricao?: string;
   motivo?: string;
+  allowNegative?: boolean;
 }): Promise<FinancialEventResult> {
   return processFinancialEvent({
     bookmakerId: params.bookmakerId,
@@ -452,6 +456,7 @@ export async function registrarAjusteManual(params: {
     descricao: params.descricao || params.motivo || 'Ajuste manual',
     idempotencyKey: `adj_${params.bookmakerId}_${Date.now()}`,
     metadata: { motivo: params.motivo },
+    allowNegative: params.allowNegative ?? true,
   });
 }
 
