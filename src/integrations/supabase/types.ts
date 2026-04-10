@@ -3727,6 +3727,7 @@ export type Database = {
       }
       financial_events: {
         Row: {
+          allow_negative: boolean
           aposta_id: string | null
           bookmaker_id: string
           created_at: string
@@ -3734,7 +3735,7 @@ export type Database = {
           descricao: string | null
           event_scope: Database["public"]["Enums"]["event_scope"]
           id: string
-          idempotency_key: string | null
+          idempotency_key: string
           metadata: Json | null
           moeda: string
           origem: string | null
@@ -3746,6 +3747,7 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
+          allow_negative?: boolean
           aposta_id?: string | null
           bookmaker_id: string
           created_at?: string
@@ -3753,7 +3755,7 @@ export type Database = {
           descricao?: string | null
           event_scope?: Database["public"]["Enums"]["event_scope"]
           id?: string
-          idempotency_key?: string | null
+          idempotency_key: string
           metadata?: Json | null
           moeda?: string
           origem?: string | null
@@ -3765,6 +3767,7 @@ export type Database = {
           workspace_id: string
         }
         Update: {
+          allow_negative?: boolean
           aposta_id?: string | null
           bookmaker_id?: string
           created_at?: string
@@ -3772,7 +3775,7 @@ export type Database = {
           descricao?: string | null
           event_scope?: Database["public"]["Enums"]["event_scope"]
           id?: string
-          idempotency_key?: string | null
+          idempotency_key?: string
           metadata?: Json | null
           moeda?: string
           origem?: string | null
