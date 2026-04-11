@@ -212,7 +212,7 @@ export function SaldoOperavelDisplay({
         {hasPendingWithdrawal && (
           <div className="flex justify-between text-orange-400">
             <span>Em saque:</span>
-            <span className="font-medium">-{formatCurrency(saldoSaquePendente, moeda)}</span>
+            <span className="font-medium">-{formatCurrency(saquePendenteEfetivo, moeda)}</span>
           </div>
         )}
         <div className="flex justify-between pt-1 border-t border-border">
@@ -274,7 +274,7 @@ export function SaldoOperavelDisplay({
         {/* Em Saque - Visível apenas se existir */}
         {hasPendingWithdrawal && (
           <PendingWithdrawalBadge
-            saldoSaquePendente={saldoSaquePendente}
+            saldoSaquePendente={saquePendenteEfetivo}
             saldoReal={saldoReal}
             formatCurrency={formatCurrency}
             moeda={moeda}
@@ -314,7 +314,7 @@ export function SaldoOperavelDisplay({
                   <span className="text-warning mr-2">-{formatCurrency(saldoEmAposta, moeda)} em jogo</span>
                 )}
                 {hasPendingWithdrawal && (
-                  <span className="text-orange-400 mr-2">-{formatCurrency(saldoSaquePendente, moeda)} em saque</span>
+                  <span className="text-orange-400 mr-2">-{formatCurrency(saquePendenteEfetivo, moeda)} em saque</span>
                 )}
                 <span className="text-accent-foreground">{formatCurrency(saldoDisponivel, moeda)} livre</span>
               </p>
@@ -377,14 +377,14 @@ export function SaldoOperavelDisplay({
                 <TooltipTrigger asChild>
                   <span className={cn(
                     "text-sm font-medium cursor-help",
-                    saldoSaquePendente >= saldoReal ? "text-destructive" : "text-orange-400"
+                    saquePendenteEfetivo >= saldoReal ? "text-destructive" : "text-orange-400"
                   )}>
-                    {formatCurrency(saldoSaquePendente, moeda)}
+                    {formatCurrency(saquePendenteEfetivo, moeda)}
                   </span>
                 </TooltipTrigger>
                 <TooltipContent side="top">
                   <p className="text-xs max-w-[200px]">
-                    {saldoSaquePendente >= saldoReal
+                    {saquePendenteEfetivo >= saldoReal
                       ? "Saldo totalmente comprometido em saque pendente"
                       : "Valor reservado para saque pendente, indisponível para apostas"}
                   </p>
@@ -406,7 +406,7 @@ export function SaldoOperavelDisplay({
       {/* Badge de alerta para saque total */}
       {hasPendingWithdrawal && (
         <PendingWithdrawalBadge
-          saldoSaquePendente={saldoSaquePendente}
+          saldoSaquePendente={saquePendenteEfetivo}
           saldoReal={saldoReal}
           formatCurrency={formatCurrency}
           moeda={moeda}
