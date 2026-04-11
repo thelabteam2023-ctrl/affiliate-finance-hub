@@ -133,7 +133,9 @@ export function useBookmakerSaldosQuery({
         saldo_disponivel: Number(row.saldo_disponivel) || 0,
         saldo_operavel: Number(row.saldo_operavel) || 0,
         bonus_rollover_started: Boolean(row.bonus_rollover_started),
-        has_pending_transactions: Boolean(row.has_pending_transactions)
+        has_pending_transactions: Boolean(row.has_pending_transactions),
+        has_pending_withdrawals: Boolean(row.has_pending_withdrawals),
+        saldo_saque_pendente: Number(row.saldo_saque_pendente) || 0
       }));
 
       // Filtrar por saldo operável > 0, exceto se for o bookmaker atual ou includeZeroBalance
