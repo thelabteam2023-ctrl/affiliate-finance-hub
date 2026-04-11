@@ -378,14 +378,15 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
     if (dateRange?.start || dateRange?.end) {
       eligibleBonuses = eligibleBonuses.filter(b => {
         if (!b.credited_at) return true; // Sem data, incluir por segurança
-        // Comparar apenas a parte da data (YYYY-MM-DD) para evitar problemas de fuso horário
-        const creditDateStr = b.credited_at.substring(0, 10);
+        // CORREÇÃO: Usar extractCivilDateKey para credited_at (data civil 03:00 UTC = meia-noite BRT)
+        // e format() local para dateRange (evita vazamento UTC→BRT na fronteira de mês)
+        const creditDateStr = extractCivilDateKey(b.credited_at);
         if (dateRange.start) {
-          const startStr = dateRange.start.toISOString().substring(0, 10);
+          const startStr = format(dateRange.start, 'yyyy-MM-dd');
           if (creditDateStr < startStr) return false;
         }
         if (dateRange.end) {
-          const endStr = dateRange.end.toISOString().substring(0, 10);
+          const endStr = format(dateRange.end, 'yyyy-MM-dd');
           if (creditDateStr > endStr) return false;
         }
         return true;
@@ -734,13 +735,13 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
             // Filtrar por período selecionado (dateRange / ciclo)
             if (dateRange?.start || dateRange?.end) {
               eligibleForAvg = eligibleForAvg.filter(b => {
-                const creditDateStr = b.credited_at!.substring(0, 10);
+                const creditDateStr = extractCivilDateKey(b.credited_at!);
                 if (dateRange.start) {
-                  const startStr = dateRange.start.toISOString().substring(0, 10);
+                  const startStr = format(dateRange.start, 'yyyy-MM-dd');
                   if (creditDateStr < startStr) return false;
                 }
                 if (dateRange.end) {
-                  const endStr = dateRange.end.toISOString().substring(0, 10);
+                  const endStr = format(dateRange.end, 'yyyy-MM-dd');
                   if (creditDateStr > endStr) return false;
                 }
                 return true;
