@@ -14182,6 +14182,7 @@ export type Database = {
         Returns: {
           bonus_rollover_started: boolean
           has_pending_transactions: boolean
+          has_pending_withdrawals: boolean
           id: string
           instance_identifier: string
           logo_url: string
@@ -14196,6 +14197,7 @@ export type Database = {
           saldo_freebet: number
           saldo_operavel: number
           saldo_real: number
+          saldo_saque_pendente: number
         }[]
       }
       get_bookmaker_saldos_financeiro: {
