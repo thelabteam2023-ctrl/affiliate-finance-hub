@@ -1,4 +1,4 @@
-import { Info, ArrowUp, ArrowDown } from "lucide-react";
+import { Info, ArrowUp, ArrowDown, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Tooltip,
@@ -56,6 +56,80 @@ function CompactCurrencyValue({
   );
 }
 
+/** Badge indicador de saque pendente */
+function PendingWithdrawalBadge({
+  saldoSaquePendente,
+  saldoReal,
+  formatCurrency,
+  moeda,
+  variant,
+}: {
+  saldoSaquePendente: number;
+  saldoReal: number;
+  formatCurrency: (v: number, m?: string) => string;
+  moeda?: string;
+  variant: "card" | "list" | "compact";
+}) {
+  if (saldoSaquePendente <= 0) return null;
+
+  const isTotalWithdrawal = saldoSaquePendente >= saldoReal;
+  const formattedValue = formatCurrency(saldoSaquePendente, moeda);
+
+  const tooltipText = isTotalWithdrawal
+    ? `Saldo totalmente comprometido em saque pendente (${formattedValue}). Aguardando confirmação.`
+    : `${formattedValue} reservado para saque pendente. Valor indisponível para novas operações.`;
+
+  if (variant === "list") {
+    return (
+      <div className="text-right w-[100px] flex-shrink-0">
+        <p className="text-xs text-muted-foreground flex items-center justify-end gap-1">
+          Em Saque
+        </p>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className={cn(
+                "font-medium tabular-nums text-xs flex items-center justify-end gap-1 cursor-help",
+                isTotalWithdrawal ? "text-destructive" : "text-orange-400"
+              )}>
+                <Clock className="h-3 w-3" />
+                <CompactCurrencyValue value={saldoSaquePendente} formatCurrency={formatCurrency} moeda={moeda} className="font-medium tabular-nums text-xs" />
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              <p className="text-xs max-w-[200px]">{tooltipText}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
+    );
+  }
+
+  // Card & compact variants
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className={cn(
+            "flex items-center gap-1.5 px-2 py-1 rounded-md text-xs cursor-help",
+            isTotalWithdrawal
+              ? "bg-destructive/10 border border-destructive/20 text-destructive"
+              : "bg-orange-500/10 border border-orange-500/20 text-orange-400"
+          )}>
+            <Clock className="h-3 w-3 flex-shrink-0" />
+            <span className="font-medium">
+              {isTotalWithdrawal ? "100% em saque" : `${formattedValue} em saque`}
+            </span>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent side="top">
+          <p className="text-xs max-w-[220px]">{tooltipText}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
 interface SaldoOperavelDisplayProps {
   /** Saldo Operável = Fiat + Bônus + Freebet */
   saldoOperavel: number;
@@ -67,6 +141,8 @@ interface SaldoOperavelDisplayProps {
   saldoReal: number;
   saldoFreebet: number;
   saldoBonus: number;
+  /** Valor em saque pendente (reservado) */
+  saldoSaquePendente?: number;
   /** Função de formatação */
   formatCurrency: (value: number, moeda?: string) => string;
   /** Moeda da conta */
@@ -87,17 +163,6 @@ interface SaldoOperavelDisplayProps {
 
 /**
  * Componente unificado para exibição de saldos de conta
- * 
- * PRINCÍPIO DE VERDADE ÚNICA:
- * - Saldo Operável: Tudo que pode virar dinheiro apostável (Fiat + Bônus + Freebet)
- * - Em Aposta: Parte alocada em apostas pendentes
- * - Disponível para Aposta: O que ainda pode ser usado agora
- * 
- * FÓRMULAS OBRIGATÓRIAS:
- * - Saldo Operável = Fiat + Bônus + Freebet
- * - Disponível = Saldo Operável - Em Aposta
- * 
- * Bônus/Freebet/Fiat aparecem APENAS no tooltip de composição
  */
 export function SaldoOperavelDisplay({
   saldoOperavel,
@@ -106,6 +171,7 @@ export function SaldoOperavelDisplay({
   saldoReal,
   saldoFreebet,
   saldoBonus,
+  saldoSaquePendente = 0,
   formatCurrency,
   moeda = "BRL",
   variant = "card",
@@ -118,6 +184,7 @@ export function SaldoOperavelDisplay({
   sortDisponivel,
 }: SaldoOperavelDisplayProps) {
   const hasComposition = saldoFreebet > 0 || saldoBonus > 0;
+  const hasPendingWithdrawal = saldoSaquePendente > 0;
 
   // Componente de tooltip com composição
   const CompositionTooltip = () => (
@@ -138,6 +205,12 @@ export function SaldoOperavelDisplay({
           <div className="flex justify-between">
             <span className="text-muted-foreground">Bônus:</span>
             <span className="font-medium text-primary">{formatCurrency(saldoBonus, moeda)}</span>
+          </div>
+        )}
+        {hasPendingWithdrawal && (
+          <div className="flex justify-between text-orange-400">
+            <span>Em saque:</span>
+            <span className="font-medium">-{formatCurrency(saldoSaquePendente, moeda)}</span>
           </div>
         )}
         <div className="flex justify-between pt-1 border-t border-border">
@@ -196,6 +269,17 @@ export function SaldoOperavelDisplay({
           <CompactCurrencyValue value={saldoEmAposta} formatCurrency={formatCurrency} moeda={moeda} className="font-medium text-warning tabular-nums text-xs" />
         </div>
 
+        {/* Em Saque - Visível apenas se existir */}
+        {hasPendingWithdrawal && (
+          <PendingWithdrawalBadge
+            saldoSaquePendente={saldoSaquePendente}
+            saldoReal={saldoReal}
+            formatCurrency={formatCurrency}
+            moeda={moeda}
+            variant="list"
+          />
+        )}
+
         {/* Disponível - Destaque secundário */}
         <div className="text-right w-[100px] flex-shrink-0">
           <p 
@@ -227,6 +311,9 @@ export function SaldoOperavelDisplay({
                 {saldoEmAposta > 0 && (
                   <span className="text-warning mr-2">-{formatCurrency(saldoEmAposta, moeda)} em jogo</span>
                 )}
+                {hasPendingWithdrawal && (
+                  <span className="text-orange-400 mr-2">-{formatCurrency(saldoSaquePendente, moeda)} em saque</span>
+                )}
                 <span className="text-accent-foreground">{formatCurrency(saldoDisponivel, moeda)} livre</span>
               </p>
             </div>
@@ -247,7 +334,7 @@ export function SaldoOperavelDisplay({
         <div className="flex items-center justify-between">
           <span className="text-xs font-medium text-primary flex items-center gap-1">
             Saldo Operável
-            {hasComposition && (
+            {(hasComposition || hasPendingWithdrawal) && (
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -266,9 +353,9 @@ export function SaldoOperavelDisplay({
         </div>
       </div>
 
-      {/* Em Aposta + Disponível */}
-      <div className="grid grid-cols-2 gap-2">
-        {/* Em Aposta - Informativo */}
+      {/* Em Aposta + Em Saque + Disponível */}
+      <div className={cn("grid gap-2", hasPendingWithdrawal ? "grid-cols-3" : "grid-cols-2")}>
+        {/* Em Aposta */}
         <div className="flex flex-col">
           <span className="text-[10px] text-muted-foreground">Em Aposta</span>
           <span className="text-sm font-medium text-warning">
@@ -276,7 +363,36 @@ export function SaldoOperavelDisplay({
           </span>
         </div>
 
-        {/* Disponível - Destaque secundário */}
+        {/* Em Saque - Visível apenas se existir */}
+        {hasPendingWithdrawal && (
+          <div className="flex flex-col text-center">
+            <span className="text-[10px] text-muted-foreground flex items-center gap-0.5 justify-center">
+              <Clock className="h-2.5 w-2.5" />
+              Em Saque
+            </span>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className={cn(
+                    "text-sm font-medium cursor-help",
+                    saldoSaquePendente >= saldoReal ? "text-destructive" : "text-orange-400"
+                  )}>
+                    {formatCurrency(saldoSaquePendente, moeda)}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p className="text-xs max-w-[200px]">
+                    {saldoSaquePendente >= saldoReal
+                      ? "Saldo totalmente comprometido em saque pendente"
+                      : "Valor reservado para saque pendente, indisponível para apostas"}
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        )}
+
+        {/* Disponível */}
         <div className="flex flex-col text-right">
           <span className="text-[10px] text-muted-foreground">Disponível</span>
           <span className="text-sm font-semibold text-accent-foreground">
@@ -284,6 +400,17 @@ export function SaldoOperavelDisplay({
           </span>
         </div>
       </div>
+
+      {/* Badge de alerta para saque total */}
+      {hasPendingWithdrawal && (
+        <PendingWithdrawalBadge
+          saldoSaquePendente={saldoSaquePendente}
+          saldoReal={saldoReal}
+          formatCurrency={formatCurrency}
+          moeda={moeda}
+          variant="card"
+        />
+      )}
     </div>
   );
 }

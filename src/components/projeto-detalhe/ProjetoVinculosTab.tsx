@@ -848,6 +848,7 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
                       saldoReal={vinculo.saldo_real}
                       saldoFreebet={vinculo.saldo_freebet}
                       saldoBonus={vinculo.saldo_bonus}
+                      saldoSaquePendente={vinculo.saldo_saque_pendente}
                       formatCurrency={(val, moeda) => formatCurrency(val, moeda || vinculo.moeda)}
                       moeda={vinculo.moeda}
                       variant="card"
@@ -1097,6 +1098,7 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
                     saldoReal={vinculo.saldo_real}
                     saldoFreebet={vinculo.saldo_freebet}
                     saldoBonus={vinculo.saldo_bonus}
+                    saldoSaquePendente={vinculo.saldo_saque_pendente}
                     formatCurrency={(val, moeda) => formatCurrency(val, moeda || vinculo.moeda)}
                     moeda={vinculo.moeda}
                     variant="list"
