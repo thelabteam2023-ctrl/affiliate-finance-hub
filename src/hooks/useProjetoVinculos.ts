@@ -36,6 +36,8 @@ export interface Vinculo {
   logo_url?: string | null;
   totalApostas: number;
   has_pending_transactions: boolean;
+  has_pending_withdrawals: boolean;
+  saldo_saque_pendente: number;
   created_at: string | null;
 }
 
@@ -252,6 +254,8 @@ export function useProjetoVinculos(projetoId: string | undefined) {
           logo_url: s.logo_url || null,
           totalApostas: apostasCount[s.id] || 0,
           has_pending_transactions: Boolean(s.has_pending_transactions),
+          has_pending_withdrawals: Boolean(s.has_pending_withdrawals),
+          saldo_saque_pendente: Number(s.saldo_saque_pendente) || 0,
           created_at: creds.created_at,
           investidor_id: creds.investidor_id,
           investidor_nome: creds.investidor_nome,
