@@ -184,7 +184,9 @@ export function SaldoOperavelDisplay({
   sortDisponivel,
 }: SaldoOperavelDisplayProps) {
   const hasComposition = saldoFreebet > 0 || saldoBonus > 0;
-  const hasPendingWithdrawal = saldoSaquePendente > 0;
+  // Limitar exibição do saque pendente ao saldo real (não mostrar mais do que existe na conta)
+  const saquePendenteEfetivo = Math.min(saldoSaquePendente, saldoReal);
+  const hasPendingWithdrawal = saquePendenteEfetivo > 0;
 
   // Componente de tooltip com composição
   const CompositionTooltip = () => (
