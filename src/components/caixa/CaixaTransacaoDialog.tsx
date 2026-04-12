@@ -2571,7 +2571,13 @@ export function CaixaTransacaoDialog({
         
         // SAQUE CRYPTO: calcular estimativa de coins baseado no valor da casa
         if (tipoTransacao === "SAQUE" && origemBookmakerId) {
-          // Valor está na moeda da casa, calcular estimativa de coins
+          // =========================================================================
+          // SAQUE CRYPTO: CORREÇÃO ESTRUTURAL
+          // O campo `valor` DEVE ser o valor na MOEDA DA CASA (débito real).
+          // O campo `valor_destino` armazena a estimativa convertida em crypto.
+          // Isso garante que o trigger de financial_events debite o valor correto
+          // do saldo_atual da bookmaker, sem inflação por conversão cambial.
+          // =========================================================================
           const bm = bookmakers.find(b => b.id === origemBookmakerId);
           const moedaCasaSaque = bm?.moeda || "USD";
           let valorEmUSD = valorOrigem;
@@ -2592,9 +2598,16 @@ export function CaixaTransacaoDialog({
           transactionData.cotacao = cotacaoCoin;
           transactionData.cotacao_implicita = cotacaoCoin;
           
-          // Registrar moeda de origem (moeda da casa)
+          // CORREÇÃO RAIZ: valor e moeda CANÔNICOS = moeda da CASA (débito real)
+          // Antes: valor ficava como valorDestinoCalculado (inflado por conversão USD→BRL)
+          transactionData.moeda = moedaCasaSaque;
+          transactionData.valor = valorOrigem;
+          
+          // Registrar camadas origem/destino para auditoria
           transactionData.moeda_origem = moedaCasaSaque;
           transactionData.valor_origem = valorOrigem;
+          transactionData.moeda_destino = coin;
+          transactionData.valor_destino = qtdEstimada;
         } else {
           // Outros fluxos CRYPTO (DEPOSITO, TRANSFERENCIA)
           transactionData.qtd_coin = parseFloat(qtdCoin);
