@@ -608,10 +608,16 @@ export const CalculadoraExtracaoContent: React.FC = () => {
 
             {/* Metrics */}
             <div>
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Custo Real da Estratégia</p>
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Resultado da Operação</p>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                <StatCard icon={Percent} label="Custo de Extração" value={`${results.custoExtracaoPercent}%`} subtitle={`R$ ${fmt(results.custoExtracao)} — taxa para converter`} accent="red" />
-                <StatCard icon={DollarSign} label="Valor Líquido Estimado" value={`R$ ${fmt(results.valorLiquidoEstimado)}`} subtitle="valor extraído − custo" accent="green" />
+                <StatCard
+                  icon={Percent}
+                  label="Resultado da Extração"
+                  value={results.resultadoOperacao > 0 ? `+${results.resultadoOperacaoPercent}%` : results.resultadoOperacao === 0 ? '0%' : `${results.custoExtracaoPercent}%`}
+                  subtitle={results.resultadoOperacao > 0 ? `+R$ ${fmt(results.resultadoOperacao)} — edge positivo` : results.resultadoOperacao === 0 ? 'operação neutra' : `R$ ${fmt(results.custoExtracao)} — taxa para converter`}
+                  accent={results.resultadoOperacao >= 0 ? 'green' : 'red'}
+                />
+                <StatCard icon={DollarSign} label="Valor Líquido Estimado" value={`R$ ${fmt(results.valorLiquidoEstimado)}`} subtitle={results.resultadoOperacao >= 0 ? 'valor extraído + lucro' : 'valor extraído − custo'} accent="green" />
                 <StatCard icon={Shield} label="Capital Esperado" value={`R$ ${fmt(results.capitalEsperado)}`} subtitle="uso médio ponderado" />
               </div>
             </div>
