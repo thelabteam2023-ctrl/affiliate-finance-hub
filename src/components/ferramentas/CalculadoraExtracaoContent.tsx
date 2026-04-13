@@ -319,7 +319,9 @@ export const CalculadoraExtracaoContent: React.FC = () => {
 
   const handleSaveForComparison = () => {
     if (!results) return;
-    const label = `${numEvents} ev. • ${results.oddTotal}x • ${results.custoExtracaoPercent}%`;
+    const pct = results.resultadoOperacao >= 0 ? `+${results.resultadoOperacaoPercent}` : `${results.custoExtracaoPercent}`;
+    const label = `${numEvents} ev. • ${results.oddTotal}x • ${pct}%`;
+    setSavedStrategies(prev => [...prev.slice(-3), { label, results }]);
     setSavedStrategies(prev => [...prev.slice(-3), { label, results }]);
   };
 
@@ -881,8 +883,12 @@ export const CalculadoraExtracaoContent: React.FC = () => {
                         {savedStrategies.map((s, i) => (
                           <tr key={i} className="border-b border-border/50">
                             <td className="py-2 px-2 font-medium">{s.label}</td>
-                            <td className="py-2 px-2 text-right font-mono">{s.results.custoExtracaoPercent}%</td>
-                            <td className="py-2 px-2 text-right font-mono">R$ {fmt(s.results.custoExtracao)}</td>
+                            <td className={`py-2 px-2 text-right font-mono ${s.results.resultadoOperacao >= 0 ? 'text-emerald-400' : ''}`}>
+                              {s.results.resultadoOperacao >= 0 ? `+${s.results.resultadoOperacaoPercent}%` : `${s.results.custoExtracaoPercent}%`}
+                            </td>
+                            <td className={`py-2 px-2 text-right font-mono ${s.results.resultadoOperacao >= 0 ? 'text-emerald-400' : ''}`}>
+                              {s.results.resultadoOperacao >= 0 ? `+R$ ${fmt(s.results.resultadoOperacao)}` : `R$ ${fmt(s.results.custoExtracao)}`}
+                            </td>
                             <td className="py-2 px-2 text-right font-mono">R$ {fmt(s.results.capitalMaximoNecessario)}</td>
                             <td className="py-2 px-2 text-right font-mono">R$ {fmt(s.results.exposicaoMaxima)}</td>
                             <td className="py-2 px-2 text-center"><ClassificationBadge classification={s.results.classification} /></td>
