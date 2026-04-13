@@ -510,7 +510,7 @@ export const CalculadoraExtracaoContent: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Distribuição de custos por cenário */}
+                {/* Distribuição de resultados por cenário */}
                 {(() => {
                   const scenarioRows = probabilities.map((p) => {
                     const isSuccess = p.type === 'success';
@@ -520,32 +520,45 @@ export const CalculadoraExtracaoContent: React.FC = () => {
                     } else if (!isSuccess) {
                       netResult = results.netCashFailure;
                     }
-                    const lossValue = targetVal - netResult;
-                    const lossPercent = targetVal > 0 ? (lossValue / targetVal) * 100 : 0;
-                    const retentionPercent = 100 - lossPercent;
-                    return { ...p, isSuccess, lossValue, lossPercent, retentionPercent };
+                    // Positive delta = profit over target, negative = cost
+                    const delta = netResult - targetVal;
+                    const deltaPercent = targetVal > 0 ? (delta / targetVal) * 100 : 0;
+                    return { ...p, isSuccess, netResult, delta, deltaPercent };
                   });
 
-                  const evLoss = scenarioRows.reduce((sum, s) => sum + s.probability * s.lossValue, 0);
-                  const evLossPercent = targetVal > 0 ? (evLoss / targetVal) * 100 : 0;
+                  const evDelta = scenarioRows.reduce((sum, s) => sum + s.probability * s.delta, 0);
+                  const evDeltaPercent = targetVal > 0 ? (evDelta / targetVal) * 100 : 0;
 
-                  const getLossColor = (pct: number) => {
-                    if (pct <= 5) return 'text-emerald-400';
-                    if (pct <= 15) return 'text-yellow-400';
+                  const getResultColor = (delta: number) => {
+                    if (delta > 0) return 'text-emerald-400';
+                    if (delta === 0) return 'text-foreground';
+                    if (Math.abs(delta) / targetVal <= 0.05) return 'text-emerald-400';
+                    if (Math.abs(delta) / targetVal <= 0.15) return 'text-yellow-400';
                     return 'text-red-400';
+                  };
+
+                  const formatDelta = (v: number) => {
+                    if (v > 0) return `+R$ ${fmt(v)}`;
+                    if (v < 0) return `-R$ ${fmt(Math.abs(v))}`;
+                    return `R$ 0,00`;
+                  };
+
+                  const formatDeltaPct = (v: number) => {
+                    if (v > 0) return `+${v.toFixed(1)}%`;
+                    return `${v.toFixed(1)}%`;
                   };
 
                   return (
                     <div className="space-y-2">
-                      <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Custo por cenário</p>
+                      <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Resultado por cenário</p>
                       <div className="overflow-x-auto">
                         <table className="w-full text-xs">
                           <thead>
                             <tr className="border-b border-border text-muted-foreground">
                               <th className="text-left py-1.5 px-2 font-medium">Cenário</th>
                               <th className="text-right py-1.5 px-2 font-medium">Prob.</th>
-                              <th className="text-right py-1.5 px-2 font-medium">Perda (R$)</th>
-                              <th className="text-right py-1.5 px-2 font-medium">Perda (%)</th>
+                              <th className="text-right py-1.5 px-2 font-medium">Resultado (R$)</th>
+                              <th className="text-right py-1.5 px-2 font-medium">Resultado (%)</th>
                               <th className="text-right py-1.5 px-2 font-medium">Retenção</th>
                             </tr>
                           </thead>
@@ -557,14 +570,14 @@ export const CalculadoraExtracaoContent: React.FC = () => {
                                   {s.label}
                                 </td>
                                 <td className="py-1.5 px-2 text-right text-muted-foreground">{(s.probability * 100).toFixed(1)}%</td>
-                                <td className={`py-1.5 px-2 text-right font-mono font-semibold ${getLossColor(s.lossPercent)}`}>
-                                  R$ {fmt(Math.abs(s.lossValue))}
+                                <td className={`py-1.5 px-2 text-right font-mono font-semibold ${getResultColor(s.delta)}`}>
+                                  {formatDelta(s.delta)}
                                 </td>
-                                <td className={`py-1.5 px-2 text-right font-mono font-semibold ${getLossColor(s.lossPercent)}`}>
-                                  {s.lossPercent.toFixed(1)}%
+                                <td className={`py-1.5 px-2 text-right font-mono font-semibold ${getResultColor(s.delta)}`}>
+                                  {formatDeltaPct(s.deltaPercent)}
                                 </td>
                                 <td className="py-1.5 px-2 text-right text-muted-foreground">
-                                  {s.retentionPercent.toFixed(1)}%
+                                  {(100 + s.deltaPercent).toFixed(1)}%
                                 </td>
                               </tr>
                             ))}
@@ -572,16 +585,16 @@ export const CalculadoraExtracaoContent: React.FC = () => {
                           <tfoot>
                             <tr className="border-t border-primary/30 bg-primary/5">
                               <td className="py-2 px-2 font-semibold text-primary" colSpan={2}>
-                                📊 Custo Médio Esperado (EV)
+                                📊 {evDelta >= 0 ? 'Resultado Médio Esperado (EV)' : 'Custo Médio Esperado (EV)'}
                               </td>
-                              <td className="py-2 px-2 text-right font-mono font-bold text-primary">
-                                R$ {fmt(Math.abs(evLoss))}
+                              <td className={`py-2 px-2 text-right font-mono font-bold ${evDelta >= 0 ? 'text-emerald-400' : 'text-primary'}`}>
+                                {formatDelta(evDelta)}
                               </td>
-                              <td className="py-2 px-2 text-right font-mono font-bold text-primary">
-                                {evLossPercent.toFixed(1)}%
+                              <td className={`py-2 px-2 text-right font-mono font-bold ${evDelta >= 0 ? 'text-emerald-400' : 'text-primary'}`}>
+                                {formatDeltaPct(evDeltaPercent)}
                               </td>
                               <td className="py-2 px-2 text-right text-muted-foreground font-medium">
-                                {(100 - evLossPercent).toFixed(1)}%
+                                {(100 + evDeltaPercent).toFixed(1)}%
                               </td>
                             </tr>
                           </tfoot>
