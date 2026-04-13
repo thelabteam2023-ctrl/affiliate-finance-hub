@@ -49,6 +49,7 @@ const ComunidadeChatPopout = lazy(() => import("./pages/ComunidadeChatPopout"));
 const SystemAdmin = lazy(() => import("./pages/SystemAdmin"));
 const ProtecaoProgressiva = lazy(() => import("./pages/ProtecaoProgressiva"));
 const CalculadoraEV = lazy(() => import("./pages/CalculadoraEV"));
+const CalculadoraExtracao = lazy(() => import("./pages/CalculadoraExtracao"));
 const SurebetWindowPage = lazy(() => import("./pages/SurebetWindowPage"));
 const ApostaWindowPage = lazy(() => import("./pages/ApostaWindowPage"));
 const ApostaMultiplaWindowPage = lazy(() => import("./pages/ApostaMultiplaWindowPage"));
@@ -361,6 +362,15 @@ const App = () => (
               <ProtectedRoute>
                 <Suspense fallback={<PageLoader />}>
                   <CalculadoraEV />
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            
+            {/* Calculadora de Extração - standalone */}
+            <Route path="/ferramentas/calculadora-extracao" element={
+              <ProtectedRoute>
+                <Suspense fallback={<PageLoader />}>
+                  <CalculadoraExtracao />
                 </Suspense>
               </ProtectedRoute>
             } />

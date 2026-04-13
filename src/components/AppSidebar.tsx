@@ -108,6 +108,7 @@ const menuGroups: MenuGroup[] = [
     items: [
       { title: "Prot. Progressiva", url: "#calculadora-lay", icon: Calculator, iconName: "Calculator", moduleKey: "ferramentas" },
       { title: "Calculadora EV", url: "#calculadora-ev", icon: Calculator, iconName: "Calculator", moduleKey: "ferramentas" },
+      { title: "Calc. Extração", url: "#calculadora-extracao", icon: Calculator, iconName: "Calculator", moduleKey: "ferramentas" },
     ],
   },
   {
@@ -234,12 +235,13 @@ export function AppSidebar() {
     const toolMap: Record<string, { url: string; name: string }> = {
       '#calculadora-lay': { url: '/ferramentas/protecao-progressiva', name: 'calculadora-protecao' },
       '#calculadora-ev': { url: '/ferramentas/calculadora-ev', name: 'calculadora-ev' },
+      '#calculadora-extracao': { url: '/ferramentas/calculadora-extracao', name: 'calculadora-extracao' },
     };
     const tool = toolMap[item.url];
     if (tool) {
       e.preventDefault();
-      const width = item.url === '#calculadora-ev' ? 420 : 900;
-      const height = item.url === '#calculadora-ev' ? 580 : 750;
+      const width = item.url === '#calculadora-ev' ? 420 : item.url === '#calculadora-extracao' ? 1000 : 900;
+      const height = item.url === '#calculadora-ev' ? 580 : item.url === '#calculadora-extracao' ? 800 : 750;
       const left = Math.max(0, (window.screen.width - width) / 2);
       const top = Math.max(0, (window.screen.height - height) / 2);
       window.open(
