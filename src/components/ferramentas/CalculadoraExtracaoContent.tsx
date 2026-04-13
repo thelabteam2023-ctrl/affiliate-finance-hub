@@ -98,17 +98,28 @@ function StrategyExplainer({ results, monteCarlo, targetExtraction }: {
   const lines: string[] = [];
 
   lines.push(`📋 Você quer converter R$ ${fmt(targetExtraction)} de bônus/freebet em dinheiro real.`);
-  lines.push(`💡 Extrair bônus sempre tem um custo — o objetivo é minimizá-lo.`);
+  if (results.resultadoOperacao >= 0) {
+    lines.push(`💡 Esta operação tem edge positivo — você lucra na conversão!`);
+  } else {
+    lines.push(`💡 Extrair bônus sempre tem um custo — o objetivo é minimizá-lo.`);
+  }
   lines.push(`🎯 Estratégia com ${n} eventos: odds ${odds} (total: ${results.oddTotal}).`);
-  lines.push(`💸 Custo estimado: R$ ${fmt(results.custoExtracao)} (${results.custoExtracaoPercent}%). Você paga R$ ${fmt(results.custoExtracao)} para extrair R$ ${fmt(targetExtraction)}, recebendo ~R$ ${fmt(results.valorLiquidoEstimado)} líquido.`);
+  if (results.resultadoOperacao > 0) {
+    lines.push(`💰 Lucro estimado: R$ ${fmt(results.resultadoOperacao)} (+${results.resultadoOperacaoPercent}%). Você extrai R$ ${fmt(targetExtraction)} e ainda ganha R$ ${fmt(results.resultadoOperacao)}, recebendo ~R$ ${fmt(results.valorLiquidoEstimado)} líquido.`);
+  } else if (results.resultadoOperacao === 0) {
+    lines.push(`⚖️ Operação neutra: sem custo e sem lucro. Você extrai exatamente R$ ${fmt(targetExtraction)}.`);
+  } else {
+    lines.push(`💸 Custo estimado: R$ ${fmt(results.custoExtracao)} (${results.custoExtracaoPercent}%). Você paga R$ ${fmt(results.custoExtracao)} para extrair R$ ${fmt(targetExtraction)}, recebendo ~R$ ${fmt(results.valorLiquidoEstimado)} líquido.`);
+  }
   lines.push(`⚠️ Exposição máxima de caixa: R$ ${fmt(results.exposicaoMaxima)} — movimentação temporária, não perda real.`);
   lines.push(`🏦 Capital necessário: até R$ ${fmt(results.capitalMaximoNecessario)}.`);
 
   if (monteCarlo) {
-    lines.push(`📊 Na simulação de ${monteCarlo.iterations.toLocaleString()} cenários, o resultado mais comum foi um custo de R$ ${fmt(Math.abs(monteCarlo.medianResult))}.`);
+    lines.push(`📊 Na simulação de ${monteCarlo.iterations.toLocaleString()} cenários, o resultado mais comum foi R$ ${fmt(monteCarlo.medianResult)}.`);
   }
 
-  if (results.custoExtracaoPercent < 10) lines.push(`✅ Estratégia barata: custo baixo, vale a pena executar.`);
+  if (results.resultadoOperacao > 0) lines.push(`🎯 Operação com edge positivo — aproveite!`);
+  else if (results.custoExtracaoPercent < 10) lines.push(`✅ Estratégia barata: custo baixo, vale a pena executar.`);
   else if (results.custoExtracaoPercent <= 20) lines.push(`👍 Custo aceitável para a maioria dos bônus.`);
   else if (results.custoExtracaoPercent <= 30) lines.push(`⚡ Custo moderado. Tente odds com spread menor.`);
   else lines.push(`🚫 Estratégia cara. Revise as odds — spreads menores ajudam.`);
