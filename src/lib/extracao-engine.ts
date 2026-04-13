@@ -158,12 +158,16 @@ export function calculateDeterministicHedge(config: ExtractionConfig): StrategyR
   else if (custoExtracaoPercent <= 30) classification = 'medium';
   else classification = 'poor';
 
+  // For display: failure shows same cost as last event (all lays executed in both)
+  const netCashFailureDisplay = netCashAtEvent[events.length - 1];
+
   return {
     events: hedgeEvents,
     oddTotal: Math.round(oddTotal * 100) / 100,
     backStake,
     potentialReturn: Math.round(potentialReturn * 100) / 100,
-    netCashFailure: Math.round(netCashAllWin * 100) / 100,
+    netCashFailure: Math.round(netCashFailureDisplay * 100) / 100,
+    netCashFailureReal: Math.round(netCashAllWin * 100) / 100,
     custoExtracao,
     custoExtracaoPercent,
     exposicaoMaxima,
