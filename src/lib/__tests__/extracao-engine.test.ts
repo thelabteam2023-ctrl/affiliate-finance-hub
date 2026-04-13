@@ -71,4 +71,37 @@ describe('calculateDeterministicHedge', () => {
     const result = calculateDeterministicHedge(config);
     expect(result.custoExtracao).toBeGreaterThan(0);
   });
+
+  it('should have identical cost for last event and failure (all lays executed)', () => {
+    const config: ExtractionConfig = {
+      targetExtraction: 100,
+      bankrollAvailable: 1000,
+      exchangeCommission: 0.028,
+      events: [
+        { backOdd: 2.0, layOdd: 2.2 },
+        { backOdd: 2.0, layOdd: 2.2 },
+      ],
+    };
+
+    const result = calculateDeterministicHedge(config);
+    const lastEvent = result.events[result.events.length - 1];
+    expect(lastEvent.resultIfBackLoses).toBe(result.netCashFailure);
+  });
+
+  it('should have identical cost for last event and failure with 3 events', () => {
+    const config: ExtractionConfig = {
+      targetExtraction: 100,
+      bankrollAvailable: 1000,
+      exchangeCommission: 0.05,
+      events: [
+        { backOdd: 1.8, layOdd: 2.0 },
+        { backOdd: 2.0, layOdd: 2.2 },
+        { backOdd: 1.5, layOdd: 1.6 },
+      ],
+    };
+
+    const result = calculateDeterministicHedge(config);
+    const lastEvent = result.events[result.events.length - 1];
+    expect(lastEvent.resultIfBackLoses).toBe(result.netCashFailure);
+  });
 });
