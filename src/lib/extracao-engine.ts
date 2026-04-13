@@ -39,8 +39,10 @@ export interface StrategyResults {
   potentialReturn: number;
   netCashFailure: number;           // resultado líquido exibido na falha (= último evento, todos lays executados)
   netCashFailureReal: number;       // resultado real de caixa se todos ganham (para EV interno)
-  custoExtracao: number;          // custo esperado (R$)
-  custoExtracaoPercent: number;   // custo / valor extraído (%)
+  resultadoOperacao: number;       // resultado esperado: >0 = lucro, <0 = custo
+  resultadoOperacaoPercent: number; // resultado / valor extraído (%)
+  custoExtracao: number;          // legacy: max(0, -resultado) para backward compat
+  custoExtracaoPercent: number;   // legacy: custo / valor extraído (%)
   exposicaoMaxima: number;        // maior movimentação negativa
   exposicaoMaximaPercent: number;
   capitalMaximoNecessario: number;
@@ -138,8 +140,14 @@ export function calculateDeterministicHedge(config: ExtractionConfig): StrategyR
     capitalEsperadoPonderado += probChegar * liabilities[i];
   }
 
-  // Cost = how much less than targetExtraction we expect to get
-  const custoExtracao = Math.round(Math.max(0, targetExtraction - valorEsperado) * 100) / 100;
+  // Result = how much more/less than targetExtraction we expect
+  // Positive = profit (edge), Negative = cost, Zero = neutral
+  const resultadoRaw = valorEsperado - targetExtraction;
+  const resultadoOperacao = Math.round(resultadoRaw * 100) / 100;
+  const resultadoOperacaoPercent = resultadoOperacao === 0 ? 0 : Math.round((resultadoOperacao / targetExtraction) * 10000) / 100;
+
+  // Legacy aliases (positive = cost, for backward compat)
+  const custoExtracao = Math.round(Math.max(0, -resultadoOperacao) * 100) / 100;
   const custoExtracaoPercent = custoExtracao === 0 ? 0 : Math.round((custoExtracao / targetExtraction) * 10000) / 100;
 
   const maxLiability = Math.max(...liabilities);
@@ -149,11 +157,12 @@ export function calculateDeterministicHedge(config: ExtractionConfig): StrategyR
   const exposicaoMaximaPercent = Math.round((exposicaoMaxima / targetExtraction) * 10000) / 100;
 
   const capitalEsperado = Math.round(capitalEsperadoPonderado * 100) / 100;
-  const valorLiquidoEstimado = Math.round((targetExtraction - custoExtracao) * 100) / 100;
+  const valorLiquidoEstimado = Math.round((targetExtraction + resultadoOperacao) * 100) / 100;
 
-  // Classificação por custo
+  // Classification supports profit scenarios
   let classification: StrategyResults['classification'];
-  if (custoExtracaoPercent < 10) classification = 'excellent';
+  if (resultadoOperacao >= 0) classification = 'excellent';
+  else if (custoExtracaoPercent < 10) classification = 'excellent';
   else if (custoExtracaoPercent <= 20) classification = 'good';
   else if (custoExtracaoPercent <= 30) classification = 'medium';
   else classification = 'poor';
@@ -168,6 +177,8 @@ export function calculateDeterministicHedge(config: ExtractionConfig): StrategyR
     potentialReturn: Math.round(potentialReturn * 100) / 100,
     netCashFailure: Math.round(netCashFailureDisplay * 100) / 100,
     netCashFailureReal: Math.round(netCashAllWin * 100) / 100,
+    resultadoOperacao,
+    resultadoOperacaoPercent,
     custoExtracao,
     custoExtracaoPercent,
     exposicaoMaxima,

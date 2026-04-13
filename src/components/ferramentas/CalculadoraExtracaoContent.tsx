@@ -32,9 +32,12 @@ const fmt = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2,
 
 // ─── Classification Badge ───
 
-function ClassificationBadge({ classification }: { classification: StrategyResults['classification'] }) {
+function ClassificationBadge({ classification, resultadoPercent }: { classification: StrategyResults['classification']; resultadoPercent?: number }) {
+  const isProfit = resultadoPercent !== undefined && resultadoPercent > 0;
   const map = {
-    excellent: { label: '🟢 Excelente (<10%)', className: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' },
+    excellent: isProfit
+      ? { label: `🟢 Lucrativa (+${resultadoPercent}%)`, className: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' }
+      : { label: '🟢 Excelente (<10%)', className: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' },
     good: { label: '🔵 Boa (10–20%)', className: 'bg-blue-500/15 text-blue-400 border-blue-500/30' },
     medium: { label: '🟡 Média (20–30%)', className: 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30' },
     poor: { label: '🔴 Cara (>30%)', className: 'bg-red-500/15 text-red-400 border-red-500/30' },
@@ -51,12 +54,13 @@ function ClassificationBadge({ classification }: { classification: StrategyResul
 
 function ClassificationExplainer({ results }: { results: StrategyResults }) {
   const [open, setOpen] = useState(false);
-  const custo = results.custoExtracaoPercent;
+  const res = results.resultadoOperacaoPercent;
+  const isProfit = results.resultadoOperacao > 0;
   const rules = [
-    { tier: '🟢 Excelente', rule: 'Custo de extração < 10%', met: custo < 10 },
-    { tier: '🔵 Boa', rule: 'Custo entre 10% e 20%', met: custo >= 10 && custo <= 20 },
-    { tier: '🟡 Média', rule: 'Custo entre 20% e 30%', met: custo > 20 && custo <= 30 },
-    { tier: '🔴 Cara', rule: 'Custo > 30%', met: custo > 30 },
+    { tier: '🟢 Excelente', rule: isProfit ? 'Operação lucrativa (edge positivo)' : 'Custo de extração < 10%', met: results.classification === 'excellent' },
+    { tier: '🔵 Boa', rule: 'Custo entre 10% e 20%', met: results.classification === 'good' },
+    { tier: '🟡 Média', rule: 'Custo entre 20% e 30%', met: results.classification === 'medium' },
+    { tier: '🔴 Cara', rule: 'Custo > 30%', met: results.classification === 'poor' },
   ];
   return (
     <div className="mt-2">
@@ -65,7 +69,7 @@ function ClassificationExplainer({ results }: { results: StrategyResults }) {
       </button>
       {open && (
         <div className="mt-2 p-3 rounded-lg bg-muted/50 border border-border space-y-2 text-xs">
-          <p className="font-medium text-foreground">Baseado no <span className="text-primary">Custo de Extração</span>:</p>
+          <p className="font-medium text-foreground">Baseado no <span className="text-primary">Resultado da Operação</span>:</p>
           {rules.map((r, i) => (
             <div key={i} className="flex items-start gap-2">
               <span className={r.met ? 'text-primary' : 'text-muted-foreground'}>{r.met ? '→' : '•'}</span>
@@ -73,7 +77,7 @@ function ClassificationExplainer({ results }: { results: StrategyResults }) {
             </div>
           ))}
           <div className="pt-2 border-t border-border text-muted-foreground">
-            Seu custo: <span className="font-mono text-foreground">{custo}%</span> (R$ {fmt(results.custoExtracao)})
+            Resultado: <span className="font-mono text-foreground">{res > 0 ? '+' : ''}{res}%</span> (R$ {res >= 0 ? '+' : ''}{fmt(results.resultadoOperacao)})
           </div>
         </div>
       )}
@@ -94,17 +98,28 @@ function StrategyExplainer({ results, monteCarlo, targetExtraction }: {
   const lines: string[] = [];
 
   lines.push(`📋 Você quer converter R$ ${fmt(targetExtraction)} de bônus/freebet em dinheiro real.`);
-  lines.push(`💡 Extrair bônus sempre tem um custo — o objetivo é minimizá-lo.`);
+  if (results.resultadoOperacao >= 0) {
+    lines.push(`💡 Esta operação tem edge positivo — você lucra na conversão!`);
+  } else {
+    lines.push(`💡 Extrair bônus sempre tem um custo — o objetivo é minimizá-lo.`);
+  }
   lines.push(`🎯 Estratégia com ${n} eventos: odds ${odds} (total: ${results.oddTotal}).`);
-  lines.push(`💸 Custo estimado: R$ ${fmt(results.custoExtracao)} (${results.custoExtracaoPercent}%). Você paga R$ ${fmt(results.custoExtracao)} para extrair R$ ${fmt(targetExtraction)}, recebendo ~R$ ${fmt(results.valorLiquidoEstimado)} líquido.`);
+  if (results.resultadoOperacao > 0) {
+    lines.push(`💰 Lucro estimado: R$ ${fmt(results.resultadoOperacao)} (+${results.resultadoOperacaoPercent}%). Você extrai R$ ${fmt(targetExtraction)} e ainda ganha R$ ${fmt(results.resultadoOperacao)}, recebendo ~R$ ${fmt(results.valorLiquidoEstimado)} líquido.`);
+  } else if (results.resultadoOperacao === 0) {
+    lines.push(`⚖️ Operação neutra: sem custo e sem lucro. Você extrai exatamente R$ ${fmt(targetExtraction)}.`);
+  } else {
+    lines.push(`💸 Custo estimado: R$ ${fmt(results.custoExtracao)} (${results.custoExtracaoPercent}%). Você paga R$ ${fmt(results.custoExtracao)} para extrair R$ ${fmt(targetExtraction)}, recebendo ~R$ ${fmt(results.valorLiquidoEstimado)} líquido.`);
+  }
   lines.push(`⚠️ Exposição máxima de caixa: R$ ${fmt(results.exposicaoMaxima)} — movimentação temporária, não perda real.`);
   lines.push(`🏦 Capital necessário: até R$ ${fmt(results.capitalMaximoNecessario)}.`);
 
   if (monteCarlo) {
-    lines.push(`📊 Na simulação de ${monteCarlo.iterations.toLocaleString()} cenários, o resultado mais comum foi um custo de R$ ${fmt(Math.abs(monteCarlo.medianResult))}.`);
+    lines.push(`📊 Na simulação de ${monteCarlo.iterations.toLocaleString()} cenários, o resultado mais comum foi R$ ${fmt(monteCarlo.medianResult)}.`);
   }
 
-  if (results.custoExtracaoPercent < 10) lines.push(`✅ Estratégia barata: custo baixo, vale a pena executar.`);
+  if (results.resultadoOperacao > 0) lines.push(`🎯 Operação com edge positivo — aproveite!`);
+  else if (results.custoExtracaoPercent < 10) lines.push(`✅ Estratégia barata: custo baixo, vale a pena executar.`);
   else if (results.custoExtracaoPercent <= 20) lines.push(`👍 Custo aceitável para a maioria dos bônus.`);
   else if (results.custoExtracaoPercent <= 30) lines.push(`⚡ Custo moderado. Tente odds com spread menor.`);
   else lines.push(`🚫 Estratégia cara. Revise as odds — spreads menores ajudam.`);
@@ -304,7 +319,9 @@ export const CalculadoraExtracaoContent: React.FC = () => {
 
   const handleSaveForComparison = () => {
     if (!results) return;
-    const label = `${numEvents} ev. • ${results.oddTotal}x • ${results.custoExtracaoPercent}%`;
+    const pct = results.resultadoOperacao >= 0 ? `+${results.resultadoOperacaoPercent}` : `${results.custoExtracaoPercent}`;
+    const label = `${numEvents} ev. • ${results.oddTotal}x • ${pct}%`;
+    setSavedStrategies(prev => [...prev.slice(-3), { label, results }]);
     setSavedStrategies(prev => [...prev.slice(-3), { label, results }]);
   };
 
@@ -425,7 +442,7 @@ export const CalculadoraExtracaoContent: React.FC = () => {
                     Resultado da Estratégia
                   </CardTitle>
                   <div className="flex items-center gap-2">
-                    <ClassificationBadge classification={results.classification} />
+                    <ClassificationBadge classification={results.classification} resultadoPercent={results.resultadoOperacaoPercent} />
                     <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={handleSaveForComparison}>
                       <Copy className="h-3 w-3" /> Salvar p/ comparar
                     </Button>
@@ -463,9 +480,25 @@ export const CalculadoraExtracaoContent: React.FC = () => {
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Resumo Executivo</p>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="text-center p-3 rounded-lg bg-card border border-border">
-                    <p className="text-[10px] text-muted-foreground mb-1">Você paga</p>
-                    <p className="text-2xl font-bold text-primary">R$ {fmt(results.custoExtracao)}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{results.custoExtracaoPercent}% do valor</p>
+                    {results.resultadoOperacao > 0 ? (
+                      <>
+                        <p className="text-[10px] text-muted-foreground mb-1">Você ganha</p>
+                        <p className="text-2xl font-bold text-emerald-400">+R$ {fmt(results.resultadoOperacao)}</p>
+                        <p className="text-xs text-emerald-400/80 mt-1">+{results.resultadoOperacaoPercent}% de edge</p>
+                      </>
+                    ) : results.resultadoOperacao === 0 ? (
+                      <>
+                        <p className="text-[10px] text-muted-foreground mb-1">Resultado</p>
+                        <p className="text-2xl font-bold text-foreground">Neutro</p>
+                        <p className="text-xs text-muted-foreground mt-1">sem custo</p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-[10px] text-muted-foreground mb-1">Você paga</p>
+                        <p className="text-2xl font-bold text-primary">R$ {fmt(results.custoExtracao)}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{results.custoExtracaoPercent}% do valor</p>
+                      </>
+                    )}
                   </div>
                   <div className="text-center p-3 rounded-lg bg-card border border-border">
                     <p className="text-[10px] text-muted-foreground mb-1">Para extrair</p>
@@ -479,7 +512,7 @@ export const CalculadoraExtracaoContent: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Distribuição de custos por cenário */}
+                {/* Distribuição de resultados por cenário */}
                 {(() => {
                   const scenarioRows = probabilities.map((p) => {
                     const isSuccess = p.type === 'success';
@@ -489,32 +522,45 @@ export const CalculadoraExtracaoContent: React.FC = () => {
                     } else if (!isSuccess) {
                       netResult = results.netCashFailure;
                     }
-                    const lossValue = targetVal - netResult;
-                    const lossPercent = targetVal > 0 ? (lossValue / targetVal) * 100 : 0;
-                    const retentionPercent = 100 - lossPercent;
-                    return { ...p, isSuccess, lossValue, lossPercent, retentionPercent };
+                    // Positive delta = profit over target, negative = cost
+                    const delta = netResult - targetVal;
+                    const deltaPercent = targetVal > 0 ? (delta / targetVal) * 100 : 0;
+                    return { ...p, isSuccess, netResult, delta, deltaPercent };
                   });
 
-                  const evLoss = scenarioRows.reduce((sum, s) => sum + s.probability * s.lossValue, 0);
-                  const evLossPercent = targetVal > 0 ? (evLoss / targetVal) * 100 : 0;
+                  const evDelta = scenarioRows.reduce((sum, s) => sum + s.probability * s.delta, 0);
+                  const evDeltaPercent = targetVal > 0 ? (evDelta / targetVal) * 100 : 0;
 
-                  const getLossColor = (pct: number) => {
-                    if (pct <= 5) return 'text-emerald-400';
-                    if (pct <= 15) return 'text-yellow-400';
+                  const getResultColor = (delta: number) => {
+                    if (delta > 0) return 'text-emerald-400';
+                    if (delta === 0) return 'text-foreground';
+                    if (Math.abs(delta) / targetVal <= 0.05) return 'text-emerald-400';
+                    if (Math.abs(delta) / targetVal <= 0.15) return 'text-yellow-400';
                     return 'text-red-400';
+                  };
+
+                  const formatDelta = (v: number) => {
+                    if (v > 0) return `+R$ ${fmt(v)}`;
+                    if (v < 0) return `-R$ ${fmt(Math.abs(v))}`;
+                    return `R$ 0,00`;
+                  };
+
+                  const formatDeltaPct = (v: number) => {
+                    if (v > 0) return `+${v.toFixed(1)}%`;
+                    return `${v.toFixed(1)}%`;
                   };
 
                   return (
                     <div className="space-y-2">
-                      <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Custo por cenário</p>
+                      <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Resultado por cenário</p>
                       <div className="overflow-x-auto">
                         <table className="w-full text-xs">
                           <thead>
                             <tr className="border-b border-border text-muted-foreground">
                               <th className="text-left py-1.5 px-2 font-medium">Cenário</th>
                               <th className="text-right py-1.5 px-2 font-medium">Prob.</th>
-                              <th className="text-right py-1.5 px-2 font-medium">Perda (R$)</th>
-                              <th className="text-right py-1.5 px-2 font-medium">Perda (%)</th>
+                              <th className="text-right py-1.5 px-2 font-medium">Resultado (R$)</th>
+                              <th className="text-right py-1.5 px-2 font-medium">Resultado (%)</th>
                               <th className="text-right py-1.5 px-2 font-medium">Retenção</th>
                             </tr>
                           </thead>
@@ -526,14 +572,14 @@ export const CalculadoraExtracaoContent: React.FC = () => {
                                   {s.label}
                                 </td>
                                 <td className="py-1.5 px-2 text-right text-muted-foreground">{(s.probability * 100).toFixed(1)}%</td>
-                                <td className={`py-1.5 px-2 text-right font-mono font-semibold ${getLossColor(s.lossPercent)}`}>
-                                  R$ {fmt(Math.abs(s.lossValue))}
+                                <td className={`py-1.5 px-2 text-right font-mono font-semibold ${getResultColor(s.delta)}`}>
+                                  {formatDelta(s.delta)}
                                 </td>
-                                <td className={`py-1.5 px-2 text-right font-mono font-semibold ${getLossColor(s.lossPercent)}`}>
-                                  {s.lossPercent.toFixed(1)}%
+                                <td className={`py-1.5 px-2 text-right font-mono font-semibold ${getResultColor(s.delta)}`}>
+                                  {formatDeltaPct(s.deltaPercent)}
                                 </td>
                                 <td className="py-1.5 px-2 text-right text-muted-foreground">
-                                  {s.retentionPercent.toFixed(1)}%
+                                  {(100 + s.deltaPercent).toFixed(1)}%
                                 </td>
                               </tr>
                             ))}
@@ -541,16 +587,16 @@ export const CalculadoraExtracaoContent: React.FC = () => {
                           <tfoot>
                             <tr className="border-t border-primary/30 bg-primary/5">
                               <td className="py-2 px-2 font-semibold text-primary" colSpan={2}>
-                                📊 Custo Médio Esperado (EV)
+                                📊 {evDelta >= 0 ? 'Resultado Médio Esperado (EV)' : 'Custo Médio Esperado (EV)'}
                               </td>
-                              <td className="py-2 px-2 text-right font-mono font-bold text-primary">
-                                R$ {fmt(Math.abs(evLoss))}
+                              <td className={`py-2 px-2 text-right font-mono font-bold ${evDelta >= 0 ? 'text-emerald-400' : 'text-primary'}`}>
+                                {formatDelta(evDelta)}
                               </td>
-                              <td className="py-2 px-2 text-right font-mono font-bold text-primary">
-                                {evLossPercent.toFixed(1)}%
+                              <td className={`py-2 px-2 text-right font-mono font-bold ${evDelta >= 0 ? 'text-emerald-400' : 'text-primary'}`}>
+                                {formatDeltaPct(evDeltaPercent)}
                               </td>
                               <td className="py-2 px-2 text-right text-muted-foreground font-medium">
-                                {(100 - evLossPercent).toFixed(1)}%
+                                {(100 + evDeltaPercent).toFixed(1)}%
                               </td>
                             </tr>
                           </tfoot>
@@ -564,10 +610,16 @@ export const CalculadoraExtracaoContent: React.FC = () => {
 
             {/* Metrics */}
             <div>
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Custo Real da Estratégia</p>
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Resultado da Operação</p>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                <StatCard icon={Percent} label="Custo de Extração" value={`${results.custoExtracaoPercent}%`} subtitle={`R$ ${fmt(results.custoExtracao)} — taxa para converter`} accent="red" />
-                <StatCard icon={DollarSign} label="Valor Líquido Estimado" value={`R$ ${fmt(results.valorLiquidoEstimado)}`} subtitle="valor extraído − custo" accent="green" />
+                <StatCard
+                  icon={Percent}
+                  label="Resultado da Extração"
+                  value={results.resultadoOperacao > 0 ? `+${results.resultadoOperacaoPercent}%` : results.resultadoOperacao === 0 ? '0%' : `${results.custoExtracaoPercent}%`}
+                  subtitle={results.resultadoOperacao > 0 ? `+R$ ${fmt(results.resultadoOperacao)} — edge positivo` : results.resultadoOperacao === 0 ? 'operação neutra' : `R$ ${fmt(results.custoExtracao)} — taxa para converter`}
+                  accent={results.resultadoOperacao >= 0 ? 'green' : 'red'}
+                />
+                <StatCard icon={DollarSign} label="Valor Líquido Estimado" value={`R$ ${fmt(results.valorLiquidoEstimado)}`} subtitle={results.resultadoOperacao >= 0 ? 'valor extraído + lucro' : 'valor extraído − custo'} accent="green" />
                 <StatCard icon={Shield} label="Capital Esperado" value={`R$ ${fmt(results.capitalEsperado)}`} subtitle="uso médio ponderado" />
               </div>
             </div>
@@ -831,8 +883,12 @@ export const CalculadoraExtracaoContent: React.FC = () => {
                         {savedStrategies.map((s, i) => (
                           <tr key={i} className="border-b border-border/50">
                             <td className="py-2 px-2 font-medium">{s.label}</td>
-                            <td className="py-2 px-2 text-right font-mono">{s.results.custoExtracaoPercent}%</td>
-                            <td className="py-2 px-2 text-right font-mono">R$ {fmt(s.results.custoExtracao)}</td>
+                            <td className={`py-2 px-2 text-right font-mono ${s.results.resultadoOperacao >= 0 ? 'text-emerald-400' : ''}`}>
+                              {s.results.resultadoOperacao >= 0 ? `+${s.results.resultadoOperacaoPercent}%` : `${s.results.custoExtracaoPercent}%`}
+                            </td>
+                            <td className={`py-2 px-2 text-right font-mono ${s.results.resultadoOperacao >= 0 ? 'text-emerald-400' : ''}`}>
+                              {s.results.resultadoOperacao >= 0 ? `+R$ ${fmt(s.results.resultadoOperacao)}` : `R$ ${fmt(s.results.custoExtracao)}`}
+                            </td>
                             <td className="py-2 px-2 text-right font-mono">R$ {fmt(s.results.capitalMaximoNecessario)}</td>
                             <td className="py-2 px-2 text-right font-mono">R$ {fmt(s.results.exposicaoMaxima)}</td>
                             <td className="py-2 px-2 text-center"><ClassificationBadge classification={s.results.classification} /></td>
