@@ -231,6 +231,7 @@ export const CalculadoraExtracaoContent: React.FC = () => {
   const [monteCarlo, setMonteCarlo] = useState<MonteCarloResult | null>(null);
   const [showMonteCarlo, setShowMonteCarlo] = useState(false);
   const [calculated, setCalculated] = useState(false);
+  const [calcKey, setCalcKey] = useState(0);
 
   const handleCalculate = () => {
     const config: ExtractionConfig = {
