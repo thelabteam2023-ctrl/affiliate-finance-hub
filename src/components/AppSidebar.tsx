@@ -240,8 +240,8 @@ export function AppSidebar() {
     const tool = toolMap[item.url];
     if (tool) {
       e.preventDefault();
-      const width = item.url === '#calculadora-ev' ? 420 : 900;
-      const height = item.url === '#calculadora-ev' ? 580 : 750;
+      const width = item.url === '#calculadora-ev' ? 420 : item.url === '#calculadora-extracao' ? 1000 : 900;
+      const height = item.url === '#calculadora-ev' ? 580 : item.url === '#calculadora-extracao' ? 800 : 750;
       const left = Math.max(0, (window.screen.width - width) / 2);
       const top = Math.max(0, (window.screen.height - height) / 2);
       window.open(
