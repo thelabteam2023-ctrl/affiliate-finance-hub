@@ -213,12 +213,24 @@ export function calculateProbabilities(events: EventInput[]): { probabilities: P
 
 export function runMonteCarloSimulation(
   config: ExtractionConfig,
-  hedgeEvents: HedgeEvent[],
+  _hedgeEvents: HedgeEvent[],
   iterations = 10000,
 ): MonteCarloResult {
   const { events, targetExtraction, exchangeCommission } = config;
   const backStake = targetExtraction;
+  const commissionFactor = exchangeCommission > 0 ? (1 - exchangeCommission) : 1;
   const potentialReturn = backStake * events.reduce((a, e) => a * e.backOdd, 1);
+
+  // Precompute full precision lay data
+  const layStakes: number[] = [];
+  const liabilities: number[] = [];
+  for (let i = 0; i < events.length; i++) {
+    let oddAcum = 1;
+    for (let j = 0; j <= i; j++) oddAcum *= events[j].backOdd;
+    const ls = (backStake * oddAcum) / events[i].layOdd;
+    layStakes.push(ls);
+    liabilities.push(ls * (events[i].layOdd - 1));
+  }
 
   const results: number[] = [];
   const layUsage: number[] = new Array(events.length).fill(0);
@@ -231,17 +243,17 @@ export function runMonteCarloSimulation(
       layUsage[i]++;
       const probWin = 1 / events[i].backOdd;
       if (Math.random() > probWin) {
-        // Back perde
-        result = i === 0 ? -backStake : -hedgeEvents[i - 1].liability;
+        // Back loses at event i → freebet model
+        const paidLiabilities = liabilities.slice(0, i).reduce((s, l) => s + l, 0);
+        result = layStakes[i] * commissionFactor - paidLiabilities;
         allWon = false;
         break;
       }
     }
 
     if (allWon) {
-      const retorno = potentialReturn - backStake;
-      const lastLiability = hedgeEvents[hedgeEvents.length - 1].liability;
-      result = (retorno - lastLiability) * (1 - exchangeCommission);
+      // All events won → freebet pays, all lays lost
+      result = potentialReturn - liabilities.reduce((s, l) => s + l, 0);
     }
 
     results.push(Math.round(result * 100) / 100);
