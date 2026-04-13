@@ -231,6 +231,7 @@ export const CalculadoraExtracaoContent: React.FC = () => {
   const [monteCarlo, setMonteCarlo] = useState<MonteCarloResult | null>(null);
   const [showMonteCarlo, setShowMonteCarlo] = useState(false);
   const [calculated, setCalculated] = useState(false);
+  const [calcKey, setCalcKey] = useState(0);
 
   const handleCalculate = () => {
     const config: ExtractionConfig = {
@@ -250,7 +251,9 @@ export const CalculadoraExtracaoContent: React.FC = () => {
     setAlternatives(alts);
     setProbabilities(calculateProbabilities(best.strategy));
     setMonteCarlo(runMonteCarloSimulation(best.strategy, config));
+    setShowMonteCarlo(false);
     setCalculated(true);
+    setCalcKey(k => k + 1);
   };
 
   const fmt = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -385,7 +388,7 @@ export const CalculadoraExtracaoContent: React.FC = () => {
 
         {/* ─── RESULTS ─── */}
         {calculated && results && (
-          <>
+          <React.Fragment key={calcKey}>
             {/* Strategy Explainer */}
             <StrategyExplainer results={results} monteCarlo={monteCarlo} targetExtraction={targetVal} />
 
@@ -654,7 +657,7 @@ export const CalculadoraExtracaoContent: React.FC = () => {
                 </CardContent>
               </Card>
             )}
-          </>
+          </React.Fragment>
         )}
       </div>
     </ScrollArea>
