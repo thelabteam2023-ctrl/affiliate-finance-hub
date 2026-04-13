@@ -7,8 +7,8 @@ import { Slider } from '@/components/ui/slider';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CardInfoTooltip } from '@/components/ui/card-info-tooltip';
 import {
-  Zap, TrendingUp, TrendingDown, DollarSign, BarChart3, Target,
-  Shield, ChevronDown, ChevronUp, Lightbulb, HelpCircle, Info
+  Zap, TrendingDown, DollarSign, BarChart3, Target,
+  Shield, ChevronDown, ChevronUp, Lightbulb, HelpCircle, Info, Percent
 } from 'lucide-react';
 import {
   type ExtractionConfig,
@@ -28,11 +28,12 @@ function InputTooltip({ title, description, flow }: { title: string; description
 
 // ─── Classification Badge ───
 
-function ClassificationBadge({ classification }: { classification: 'excellent' | 'medium' | 'poor' }) {
+function ClassificationBadge({ classification }: { classification: 'excellent' | 'good' | 'medium' | 'poor' }) {
   const map = {
-    excellent: { label: '🟢 Excelente', className: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' },
-    medium: { label: '🟡 Média', className: 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30' },
-    poor: { label: '🔴 Ruim', className: 'bg-red-500/15 text-red-400 border-red-500/30' },
+    excellent: { label: '🟢 Excelente (<10%)', className: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' },
+    good: { label: '🔵 Boa (10–20%)', className: 'bg-blue-500/15 text-blue-400 border-blue-500/30' },
+    medium: { label: '🟡 Média (20–30%)', className: 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30' },
+    poor: { label: '🔴 Cara (>30%)', className: 'bg-red-500/15 text-red-400 border-red-500/30' },
   };
   const { label, className } = map[classification];
   return (
@@ -46,10 +47,12 @@ function ClassificationBadge({ classification }: { classification: 'excellent' |
 
 function ClassificationExplainer({ results }: { results: StrategyResults }) {
   const [open, setOpen] = useState(false);
+  const custo = results.custoExtracaoPercent;
   const rules = [
-    { label: 'Taxa de conversão ≥ 70% e perda máxima ≤ 15%', met: results.taxaConversao >= 70 && results.perdaMaximaPercent <= 15, tier: '🟢 Excelente' },
-    { label: 'Taxa de conversão ≥ 50% e perda máxima ≤ 25%', met: results.taxaConversao >= 50 && results.perdaMaximaPercent <= 25, tier: '🟡 Média' },
-    { label: 'Não atende critérios acima', met: results.taxaConversao < 50 || results.perdaMaximaPercent > 25, tier: '🔴 Ruim' },
+    { tier: '🟢 Excelente', rule: 'Custo de extração < 10%', met: custo < 10 },
+    { tier: '🔵 Boa', rule: 'Custo de extração entre 10% e 20%', met: custo >= 10 && custo <= 20 },
+    { tier: '🟡 Média', rule: 'Custo de extração entre 20% e 30%', met: custo > 20 && custo <= 30 },
+    { tier: '🔴 Cara', rule: 'Custo de extração > 30%', met: custo > 30 },
   ];
   return (
     <div className="mt-2">
@@ -59,19 +62,15 @@ function ClassificationExplainer({ results }: { results: StrategyResults }) {
       </button>
       {open && (
         <div className="mt-2 p-3 rounded-lg bg-muted/50 border border-border space-y-2 text-xs">
-          <p className="font-medium text-foreground">Critérios de classificação:</p>
+          <p className="font-medium text-foreground">A classificação é baseada no <span className="text-primary">Custo de Extração</span> — quanto você paga para converter o bônus:</p>
           {rules.map((r, i) => (
             <div key={i} className="flex items-start gap-2">
-              <span className={r.met && r.tier.includes(results.classification === 'excellent' ? 'Excelente' : results.classification === 'medium' ? 'Média' : 'Ruim') ? 'text-primary' : 'text-muted-foreground'}>
-                {r.met && r.tier.includes(results.classification === 'excellent' ? 'Excelente' : results.classification === 'medium' ? 'Média' : 'Ruim') ? '→' : '•'}
-              </span>
-              <div>
-                <span className="font-medium">{r.tier}:</span> {r.label}
-              </div>
+              <span className={r.met ? 'text-primary' : 'text-muted-foreground'}>{r.met ? '→' : '•'}</span>
+              <div><span className="font-medium">{r.tier}:</span> {r.rule}</div>
             </div>
           ))}
           <div className="pt-2 border-t border-border text-muted-foreground">
-            <p>Seus valores: conversão = <span className="font-mono text-foreground">{results.taxaConversao}%</span>, perda máx = <span className="font-mono text-foreground">{results.perdaMaximaPercent}%</span></p>
+            <p>Seu custo: <span className="font-mono text-foreground">{results.custoExtracaoPercent}%</span> (R$ {results.custoExtracao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} de perda esperada para extrair R$ {results.strategy.backStake.toLocaleString('pt-BR', { minimumFractionDigits: 2 })})</p>
           </div>
         </div>
       )}
@@ -87,29 +86,34 @@ function StrategyExplainer({ results, monteCarlo, targetExtraction }: {
   targetExtraction: number;
 }) {
   const [open, setOpen] = useState(false);
+  const fmt = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   const explanation = (() => {
     const n = results.strategy.numEvents;
     const odds = results.strategy.backOdds.map(o => o.toFixed(2)).join(' × ');
     const lines: string[] = [];
+    const valorLiquido = targetExtraction - results.custoExtracao;
 
-    lines.push(`📋 Você quer converter R$ ${targetExtraction.toLocaleString('pt-BR')} em dinheiro real.`);
+    lines.push(`📋 Você quer converter R$ ${fmt(targetExtraction)} de bônus/freebet em dinheiro real.`);
+    lines.push(`💡 Extrair bônus sempre tem um custo — o objetivo é minimizá-lo.`);
     lines.push(`🎯 A estratégia usa uma múltipla de ${n} eventos com odds ${odds} (total: ${results.strategy.oddTotal}).`);
-    lines.push(`💰 Se tudo der certo, o lucro estimado é R$ ${results.lucroLiquidoEstimado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}, uma taxa de conversão de ${results.taxaConversao}%.`);
-    lines.push(`⚠️ No pior caso, a perda máxima é R$ ${results.perdaMaxima.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} (${results.perdaMaximaPercent}% do valor alvo).`);
-    lines.push(`🏦 Você precisará de até R$ ${results.capitalMaximoNecessario.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} de capital para executar todos os hedges.`);
+    lines.push(`💸 Custo estimado: R$ ${fmt(results.custoExtracao)} (${results.custoExtracaoPercent}% do valor). Você paga R$ ${fmt(results.custoExtracao)} para extrair R$ ${fmt(targetExtraction)}, recebendo ~R$ ${fmt(valorLiquido)} líquido.`);
+    lines.push(`⚠️ No pior cenário, a perda pode chegar a R$ ${fmt(results.perdaMaxima)} (${results.perdaMaximaPercent}% do valor alvo).`);
+    lines.push(`🏦 Capital necessário para executar: até R$ ${fmt(results.capitalMaximoNecessario)}.`);
 
     if (monteCarlo) {
-      const winRate = monteCarlo.profitDistribution.filter(b => !b.range.includes('-')).reduce((s, b) => s + b.percentage, 0);
-      lines.push(`📊 Na simulação de ${monteCarlo.iterations.toLocaleString()} cenários, o lucro mediano foi R$ ${monteCarlo.medianProfit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}.`);
+      const perdaMediana = Math.abs(monteCarlo.medianProfit);
+      lines.push(`📊 Na simulação de ${monteCarlo.iterations.toLocaleString()} cenários, a perda mediana foi R$ ${fmt(perdaMediana)}.`);
     }
 
-    if (results.classification === 'excellent') {
-      lines.push(`✅ Recomendação: Estratégia sólida com boa relação risco-retorno. Pode executar com confiança.`);
-    } else if (results.classification === 'medium') {
-      lines.push(`⚡ Recomendação: Estratégia aceitável. Considere ajustar spread ou retenção para melhorar.`);
+    if (results.custoExtracaoPercent < 10) {
+      lines.push(`✅ Estratégia barata: custo baixo, vale a pena executar.`);
+    } else if (results.custoExtracaoPercent <= 20) {
+      lines.push(`👍 Estratégia com custo aceitável. Boa relação para a maioria dos bônus.`);
+    } else if (results.custoExtracaoPercent <= 30) {
+      lines.push(`⚡ Estratégia com custo moderado. Considere ajustar spread ou retenção para reduzir.`);
     } else {
-      lines.push(`🚫 Recomendação: Estratégia com risco elevado. Revise os parâmetros antes de executar.`);
+      lines.push(`🚫 Estratégia cara. O custo de extração é alto. Revise os parâmetros — spreads menores ou odds diferentes podem ajudar.`);
     }
 
     return lines;
@@ -138,29 +142,28 @@ function StrategyExplainer({ results, monteCarlo, targetExtraction }: {
 // ─── Simulation Insights ───
 
 function SimulationInsights({ monteCarlo, targetExtraction }: { monteCarlo: MonteCarloResult; targetExtraction: number }) {
+  const fmt = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const insights: string[] = [];
+  const perdaMediana = Math.abs(monteCarlo.medianProfit);
+  const valorLiquido = targetExtraction - perdaMediana;
+
+  insights.push(`💰 Você paga ~R$ ${fmt(perdaMediana)} para extrair R$ ${fmt(targetExtraction)} → recebe ~R$ ${fmt(valorLiquido)} líquido.`);
+
   const lossRate = monteCarlo.profitDistribution
     .filter(b => b.range.includes('-'))
     .reduce((s, b) => s + b.percentage, 0);
-
-  if (monteCarlo.medianProfit > 0) {
-    insights.push(`📈 Na maioria dos cenários você termina no positivo (mediana: R$ ${monteCarlo.medianProfit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}).`);
-  } else {
-    insights.push(`📉 Na maioria dos cenários o resultado é negativo. Considere ajustar os parâmetros.`);
-  }
-
   if (lossRate > 0) {
-    insights.push(`⚠️ Em ~${lossRate.toFixed(0)}% dos cenários há perda.`);
+    insights.push(`📉 Em ${lossRate.toFixed(0)}% dos cenários há perda (esperado — o prejuízo faz parte da extração).`);
   }
 
-  const spread = monteCarlo.bestCase - monteCarlo.worstCase;
-  insights.push(`📏 A variação entre melhor e pior caso é R$ ${spread.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}.`);
+  const spread = Math.abs(monteCarlo.bestCase - monteCarlo.worstCase);
+  insights.push(`📏 Variação entre melhor e pior resultado: R$ ${fmt(spread)}.`);
 
   return (
     <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 space-y-1.5">
       <div className="flex items-center gap-1.5 text-xs font-medium text-primary">
         <Info className="h-3.5 w-3.5" />
-        Insights da Simulação
+        Resumo da Simulação
       </div>
       {insights.map((line, i) => (
         <p key={i} className="text-xs text-muted-foreground">{line}</p>
@@ -257,6 +260,15 @@ export const CalculadoraExtracaoContent: React.FC = () => {
     <ScrollArea className="h-full">
       <div className="p-4 space-y-4 max-w-5xl mx-auto">
 
+        {/* ─── HEADER CONTEXT ─── */}
+        <div className="p-3 rounded-lg bg-muted/50 border border-border">
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            <strong className="text-foreground">Como funciona:</strong> Converter bônus/freebet em dinheiro real sempre tem um custo (dejuice). 
+            Esta calculadora encontra a estratégia que <strong className="text-foreground">minimiza esse custo</strong> usando múltiplas + hedge sequencial na exchange.
+            O prejuízo é esperado e inevitável — o objetivo é torná-lo o menor possível.
+          </p>
+        </div>
+
         {/* ─── INPUTS ─── */}
         <Card>
           <CardHeader className="pb-3">
@@ -322,8 +334,8 @@ export const CalculadoraExtracaoContent: React.FC = () => {
                   <Label className="text-xs">Spread Médio (%)</Label>
                   <InputTooltip
                     title="Spread Médio (custo oculto)"
-                    description="A diferença percentual entre a odd back (casa) e a odd lay (exchange). É um custo oculto: quanto maior o spread, menor o lucro da extração."
-                    flow="Spread de 3% significa que se a odd back é 2.00, a lay será ~2.06. Spreads acima de 5% reduzem significativamente a conversão."
+                    description="A diferença percentual entre a odd back (casa) e a odd lay (exchange). É um custo oculto: quanto maior o spread, mais cara a extração."
+                    flow="Spread de 3% significa que se a odd back é 2.00, a lay será ~2.06. Spreads acima de 5% encarecem significativamente a conversão."
                   />
                 </div>
                 <Input type="number" step="0.1" value={avgSpread} onChange={e => setAvgSpread(e.target.value)} className="h-9 text-sm" />
@@ -334,7 +346,7 @@ export const CalculadoraExtracaoContent: React.FC = () => {
                   <InputTooltip
                     title="Comissão da Exchange"
                     description="A taxa que a exchange cobra sobre o lucro dos lays. Geralmente entre 2% e 5%."
-                    flow="Reduz diretamente o lucro de cada hedge executado."
+                    flow="Aumenta diretamente o custo de cada hedge executado."
                   />
                 </div>
                 <Input type="number" step="0.1" value={exchangeCommission} onChange={e => setExchangeCommission(e.target.value)} className="h-9 text-sm" />
@@ -349,7 +361,7 @@ export const CalculadoraExtracaoContent: React.FC = () => {
                   <InputTooltip
                     title="Retenção Alvo (perda máxima aceitável)"
                     description="Define qual porcentagem do valor você quer reter no mínimo. Retenção de 85% = perda máxima de 15% do valor. Quanto mais alta, mais conservadora a estratégia."
-                    flow="Retenção alta → estratégias com menos risco, mas possivelmente menor conversão."
+                    flow="Retenção alta → estratégias com menos risco, mas possivelmente custo maior."
                   />
                 </div>
                 <div className="text-right">
@@ -366,7 +378,7 @@ export const CalculadoraExtracaoContent: React.FC = () => {
 
             <Button onClick={handleCalculate} className="w-full">
               <Zap className="h-4 w-4 mr-2" />
-              Calcular Estratégia Ótima
+              Calcular Estratégia de Menor Custo
             </Button>
           </CardContent>
         </Card>
@@ -413,19 +425,25 @@ export const CalculadoraExtracaoContent: React.FC = () => {
               </CardContent>
             </Card>
 
-            {/* Financial Results — separated clearly */}
+            {/* Financial Results — cost-focused */}
             <div>
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Resumo Financeiro</p>
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Custo da Conversão</p>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <StatCard icon={DollarSign} label="Valor Alvo" value={`R$ ${fmt(targetVal)}`} subtitle="valor do bônus/freebet" />
-                <StatCard icon={TrendingUp} label="Lucro Líquido Estimado" value={`R$ ${fmt(results.lucroLiquidoEstimado)}`} subtitle={`Conversão: ${results.taxaConversao}%`} accent="green" />
+                <StatCard icon={DollarSign} label="Valor a Extrair" value={`R$ ${fmt(targetVal)}`} subtitle="valor do bônus/freebet" />
+                <StatCard
+                  icon={Percent}
+                  label="Custo de Extração"
+                  value={`${results.custoExtracaoPercent}%`}
+                  subtitle={`R$ ${fmt(results.custoExtracao)} de perda esperada`}
+                  accent="red"
+                />
                 <StatCard icon={TrendingDown} label="Perda Máxima" value={`R$ ${fmt(results.perdaMaxima)}`} subtitle={`${results.perdaMaximaPercent}% do valor alvo`} accent="red" />
                 <StatCard
                   icon={BarChart3}
-                  label="Cenário Mais Provável"
-                  value={monteCarlo ? `R$ ${fmt(monteCarlo.medianProfit)}` : '—'}
-                  subtitle="mediana da simulação"
-                  accent={monteCarlo && monteCarlo.medianProfit >= 0 ? 'green' : 'red'}
+                  label="Perda Mediana (provável)"
+                  value={monteCarlo ? `R$ ${fmt(Math.abs(monteCarlo.medianProfit))}` : '—'}
+                  subtitle="cenário mais comum na simulação"
+                  accent="red"
                 />
               </div>
             </div>
@@ -435,11 +453,11 @@ export const CalculadoraExtracaoContent: React.FC = () => {
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 <StatCard icon={Shield} label="Capital Máximo Necessário" value={`R$ ${fmt(results.capitalMaximoNecessario)}`} subtitle="pior cenário de hedge" />
                 <StatCard icon={Shield} label="Capital Esperado" value={`R$ ${fmt(results.capitalEsperado)}`} subtitle="média ponderada" />
-                <StatCard icon={BarChart3} label="Eficiência de Capital" value={`${results.eficienciaCapital}%`} subtitle="lucro / capital máximo" />
+                <StatCard icon={BarChart3} label="Valor Líquido Estimado" value={`R$ ${fmt(targetVal - results.custoExtracao)}`} subtitle="valor extraído − custo" accent="green" />
               </div>
             </div>
 
-            {/* Hedge Detail Table — enhanced */}
+            {/* Hedge Detail Table */}
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-base flex items-center gap-2">
@@ -555,24 +573,26 @@ export const CalculadoraExtracaoContent: React.FC = () => {
 
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     <div className="text-center p-2 rounded bg-muted">
-                      <p className="text-[10px] text-muted-foreground">Lucro Médio</p>
-                      <p className={`text-sm font-bold ${monteCarlo.avgProfit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                        R$ {fmt(monteCarlo.avgProfit)}
+                      <p className="text-[10px] text-muted-foreground">Perda Mediana</p>
+                      <p className="text-sm font-bold text-red-400">
+                        R$ {fmt(Math.abs(monteCarlo.medianProfit))}
                       </p>
+                      <p className="text-[9px] text-muted-foreground">principal indicador</p>
                     </div>
                     <div className="text-center p-2 rounded bg-muted">
-                      <p className="text-[10px] text-muted-foreground">Mediana</p>
-                      <p className={`text-sm font-bold ${monteCarlo.medianProfit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                        R$ {fmt(monteCarlo.medianProfit)}
+                      <p className="text-[10px] text-muted-foreground">Perda Média</p>
+                      <p className="text-sm font-bold text-red-400">
+                        R$ {fmt(Math.abs(monteCarlo.avgProfit))}
                       </p>
                     </div>
                     <div className="text-center p-2 rounded bg-muted">
                       <p className="text-[10px] text-muted-foreground">Pior Caso</p>
-                      <p className="text-sm font-bold text-red-400">R$ {fmt(monteCarlo.worstCase)}</p>
+                      <p className="text-sm font-bold text-red-400">R$ {fmt(Math.abs(monteCarlo.worstCase))}</p>
                     </div>
                     <div className="text-center p-2 rounded bg-muted">
                       <p className="text-[10px] text-muted-foreground">Melhor Caso</p>
-                      <p className="text-sm font-bold text-emerald-400">R$ {fmt(monteCarlo.bestCase)}</p>
+                      <p className="text-sm font-bold text-emerald-400">R$ {fmt(Math.abs(monteCarlo.bestCase))}</p>
+                      <p className="text-[9px] text-muted-foreground">{monteCarlo.bestCase >= 0 ? 'lucro' : 'perda'}</p>
                     </div>
                   </div>
 
@@ -625,9 +645,8 @@ export const CalculadoraExtracaoContent: React.FC = () => {
                           <span className="text-xs text-muted-foreground">[{alt.strategy.backOdds.map(o => o.toFixed(2)).join(', ')}]</span>
                         </div>
                         <div className="flex items-center gap-4 text-sm">
-                          <span className="text-emerald-400">+R$ {fmt(alt.lucroLiquidoEstimado)}</span>
-                          <span className="text-red-400">-R$ {fmt(alt.perdaMaxima)}</span>
-                          <span className="text-muted-foreground">{alt.taxaConversao}%</span>
+                          <span className="text-red-400">Custo: {alt.custoExtracaoPercent}%</span>
+                          <span className="text-muted-foreground">Perda máx: R$ {fmt(alt.perdaMaxima)}</span>
                         </div>
                       </div>
                     ))}
