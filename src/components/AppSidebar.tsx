@@ -108,6 +108,7 @@ const menuGroups: MenuGroup[] = [
     items: [
       { title: "Prot. Progressiva", url: "#calculadora-lay", icon: Calculator, iconName: "Calculator", moduleKey: "ferramentas" },
       { title: "Calculadora EV", url: "#calculadora-ev", icon: Calculator, iconName: "Calculator", moduleKey: "ferramentas" },
+      { title: "Calc. Extração", url: "#calculadora-extracao", icon: Calculator, iconName: "Calculator", moduleKey: "ferramentas" },
     ],
   },
   {
@@ -234,6 +235,7 @@ export function AppSidebar() {
     const toolMap: Record<string, { url: string; name: string }> = {
       '#calculadora-lay': { url: '/ferramentas/protecao-progressiva', name: 'calculadora-protecao' },
       '#calculadora-ev': { url: '/ferramentas/calculadora-ev', name: 'calculadora-ev' },
+      '#calculadora-extracao': { url: '/ferramentas/calculadora-extracao', name: 'calculadora-extracao' },
     };
     const tool = toolMap[item.url];
     if (tool) {
