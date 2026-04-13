@@ -263,7 +263,7 @@ const DEFAULT_EVENTS: Record<number, EventInput[]> = {
 
 export const CalculadoraExtracaoContent: React.FC = () => {
   const [targetExtraction, setTargetExtraction] = useState('1000');
-  const [bankroll, setBankroll] = useState('5000');
+  
   const [exchangeCommission, setExchangeCommission] = useState('2.8');
   const [numEvents, setNumEvents] = useState('2');
   const [eventInputs, setEventInputs] = useState<Record<string, EventInput[]>>({
@@ -301,7 +301,7 @@ export const CalculadoraExtracaoContent: React.FC = () => {
 
     const config: ExtractionConfig = {
       targetExtraction: isNaN(parseFloat(targetExtraction)) ? 1000 : parseFloat(targetExtraction),
-      bankrollAvailable: isNaN(parseFloat(bankroll)) ? 5000 : parseFloat(bankroll),
+      bankrollAvailable: 99999,
       exchangeCommission: (isNaN(parseFloat(exchangeCommission)) ? 2.8 : parseFloat(exchangeCommission)) / 100,
       events,
     };
