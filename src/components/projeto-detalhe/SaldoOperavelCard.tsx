@@ -386,6 +386,19 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
                   )}
                 </div>
 
+                {/* Row 3: Em Saque badge */}
+                {casa.aguardandoSaque && (
+                  <div className="mt-1.5">
+                    <Badge 
+                      variant="outline" 
+                      className="text-[9px] px-1.5 py-0.5 bg-orange-500/15 border-orange-500/30 text-orange-400 font-medium gap-0.5"
+                    >
+                      <Clock className="h-2.5 w-2.5" />
+                      Em Saque
+                    </Badge>
+                  </div>
+                )}
+
                 {/* Row 3: Rollover progress */}
                 {casa.hasRollover && (
                   <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/30">
