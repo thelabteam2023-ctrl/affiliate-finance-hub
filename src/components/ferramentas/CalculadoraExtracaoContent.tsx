@@ -388,7 +388,7 @@ export const CalculadoraExtracaoContent: React.FC = () => {
 
         {/* ─── RESULTS ─── */}
         {calculated && results && (
-          <>
+          <React.Fragment key={calcKey}>
             {/* Strategy Explainer */}
             <StrategyExplainer results={results} monteCarlo={monteCarlo} targetExtraction={targetVal} />
 
