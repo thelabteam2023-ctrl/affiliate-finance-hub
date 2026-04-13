@@ -440,7 +440,7 @@ export const CalculadoraExtracaoContent: React.FC = () => {
                     Resultado da Estratégia
                   </CardTitle>
                   <div className="flex items-center gap-2">
-                    <ClassificationBadge classification={results.classification} />
+                    <ClassificationBadge classification={results.classification} resultadoPercent={results.resultadoOperacaoPercent} />
                     <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={handleSaveForComparison}>
                       <Copy className="h-3 w-3" /> Salvar p/ comparar
                     </Button>
