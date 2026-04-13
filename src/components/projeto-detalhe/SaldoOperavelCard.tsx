@@ -369,7 +369,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
                   </div>
                 </div>
 
-                {/* Row 2: Titular + Currency + Saque badge */}
+                {/* Row 2: Titular + Em Jogo + Currency + Saque badge */}
                 <div className="flex items-center justify-between gap-1.5">
                   <div className="flex items-center gap-1.5 min-w-0">
                     {titular && (
@@ -380,6 +380,15 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
                     )}
                   </div>
                   <div className="flex items-center gap-1.5 flex-shrink-0">
+                    {casa.saldoEmApostaNativo > 0 && (
+                      <Badge 
+                        variant="outline" 
+                        className="text-[9px] px-1.5 py-0.5 bg-amber-500/10 border-amber-500/25 text-amber-400 font-medium gap-0.5 tabular-nums"
+                      >
+                        <Clock className="h-2.5 w-2.5" />
+                        {formatCurrencyUtil(casa.saldoEmApostaNativo, casa.moedaOriginal)} em jogo
+                      </Badge>
+                    )}
                     {casa.aguardandoSaque && (
                       <Badge 
                         variant="outline" 
