@@ -478,9 +478,25 @@ export const CalculadoraExtracaoContent: React.FC = () => {
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Resumo Executivo</p>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="text-center p-3 rounded-lg bg-card border border-border">
-                    <p className="text-[10px] text-muted-foreground mb-1">Você paga</p>
-                    <p className="text-2xl font-bold text-primary">R$ {fmt(results.custoExtracao)}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{results.custoExtracaoPercent}% do valor</p>
+                    {results.resultadoOperacao > 0 ? (
+                      <>
+                        <p className="text-[10px] text-muted-foreground mb-1">Você ganha</p>
+                        <p className="text-2xl font-bold text-emerald-400">+R$ {fmt(results.resultadoOperacao)}</p>
+                        <p className="text-xs text-emerald-400/80 mt-1">+{results.resultadoOperacaoPercent}% de edge</p>
+                      </>
+                    ) : results.resultadoOperacao === 0 ? (
+                      <>
+                        <p className="text-[10px] text-muted-foreground mb-1">Resultado</p>
+                        <p className="text-2xl font-bold text-foreground">Neutro</p>
+                        <p className="text-xs text-muted-foreground mt-1">sem custo</p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-[10px] text-muted-foreground mb-1">Você paga</p>
+                        <p className="text-2xl font-bold text-primary">R$ {fmt(results.custoExtracao)}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{results.custoExtracaoPercent}% do valor</p>
+                      </>
+                    )}
                   </div>
                   <div className="text-center p-3 rounded-lg bg-card border border-border">
                     <p className="text-[10px] text-muted-foreground mb-1">Para extrair</p>
