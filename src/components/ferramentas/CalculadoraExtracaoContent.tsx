@@ -240,10 +240,10 @@ function EventInputRow({ index, event, onChange }: {
 // ─── Main Component ───
 
 const DEFAULT_EVENTS: Record<number, EventInput[]> = {
-  2: [{ backOdd: 1.80, layOdd: 1.85 }, { backOdd: 1.90, layOdd: 1.96 }],
-  3: [{ backOdd: 1.50, layOdd: 1.54 }, { backOdd: 1.60, layOdd: 1.65 }, { backOdd: 1.70, layOdd: 1.75 }],
-  4: [{ backOdd: 1.40, layOdd: 1.44 }, { backOdd: 1.45, layOdd: 1.49 }, { backOdd: 1.50, layOdd: 1.54 }, { backOdd: 1.55, layOdd: 1.59 }],
-  5: [{ backOdd: 1.30, layOdd: 1.33 }, { backOdd: 1.35, layOdd: 1.38 }, { backOdd: 1.40, layOdd: 1.44 }, { backOdd: 1.45, layOdd: 1.49 }, { backOdd: 1.50, layOdd: 1.54 }],
+  2: [{ backOdd: 2.00, layOdd: 2.00 }, { backOdd: 2.00, layOdd: 2.00 }],
+  3: [{ backOdd: 2.00, layOdd: 2.00 }, { backOdd: 2.00, layOdd: 2.00 }, { backOdd: 2.00, layOdd: 2.00 }],
+  4: [{ backOdd: 2.00, layOdd: 2.00 }, { backOdd: 2.00, layOdd: 2.00 }, { backOdd: 2.00, layOdd: 2.00 }, { backOdd: 2.00, layOdd: 2.00 }],
+  5: [{ backOdd: 2.00, layOdd: 2.00 }, { backOdd: 2.00, layOdd: 2.00 }, { backOdd: 2.00, layOdd: 2.00 }, { backOdd: 2.00, layOdd: 2.00 }, { backOdd: 2.00, layOdd: 2.00 }],
 };
 
 export const CalculadoraExtracaoContent: React.FC = () => {
