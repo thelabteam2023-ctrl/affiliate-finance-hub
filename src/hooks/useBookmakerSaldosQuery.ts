@@ -7,7 +7,7 @@
  * - saldo_bonus = APENAS PARA DISPLAY (retornado pela RPC para breakdown, NÃO somado no operavel)
  * - saldo_em_aposta = SUM de stakes pendentes (SIMPLES/MULTIPLA: direto, ARBITRAGEM: pernas JSON)
  * - saldo_disponivel = saldo_real - saldo_em_aposta (capital livre)
- * - saldo_operavel = saldo_disponivel + saldo_freebet (bônus JÁ está em saldo_real)
+ * - saldo_operavel = saldo_disponivel + saldo_freebet (bônus NÃO é somado — já está em saldo_real via ledger)
  * 
  * REGRA FUNDAMENTAL:
  * - O bônus creditado já está incluído em saldo_real (via financial_events/trigger)
@@ -36,7 +36,7 @@ export interface BookmakerSaldo {
   saldo_em_aposta: number;
   // Saldos calculados (da RPC)
   saldo_disponivel: number;  // saldo_real - saldo_em_aposta
-  saldo_operavel: number;    // saldo_disponivel + saldo_freebet + saldo_bonus
+  saldo_operavel: number;    // saldo_disponivel + saldo_freebet (bônus NÃO somado — já em saldo_real)
   // Estado do rollover
   bonus_rollover_started: boolean; // true se rollover_progress > 0 em algum bônus creditado
   // Estado de conciliação (APENAS depósitos pendentes bloqueiam)
