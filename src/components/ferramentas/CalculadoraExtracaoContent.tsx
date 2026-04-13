@@ -260,6 +260,7 @@ export const CalculadoraExtracaoContent: React.FC = () => {
 
   const [results, setResults] = useState<StrategyResults | null>(null);
   const [probabilities, setProbabilities] = useState<ProbabilityEvent[]>([]);
+  const [successRate, setSuccessRate] = useState(0);
   const [monteCarlo, setMonteCarlo] = useState<MonteCarloResult | null>(null);
   const [showMonteCarlo, setShowMonteCarlo] = useState(false);
   const [calculated, setCalculated] = useState(false);
@@ -292,7 +293,9 @@ export const CalculadoraExtracaoContent: React.FC = () => {
 
     const res = calculateDeterministicHedge(config);
     setResults(res);
-    setProbabilities(calculateProbabilities(events));
+    const probResult = calculateProbabilities(events);
+    setProbabilities(probResult.probabilities);
+    setSuccessRate(probResult.successRate);
     setMonteCarlo(runMonteCarloSimulation(config, res.events));
     setShowMonteCarlo(false);
     setCalculated(true);
@@ -561,23 +564,47 @@ export const CalculadoraExtracaoContent: React.FC = () => {
               </CardContent>
             </Card>
 
-            {/* Probabilities */}
+            {/* Probabilidades Operacionais */}
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center gap-2"><BarChart3 className="h-4 w-4" /> Probabilidades</CardTitle>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <BarChart3 className="h-4 w-4" /> Probabilidades Operacionais
+                </CardTitle>
+                <p className="text-xs text-muted-foreground">
+                  Na extração, <span className="text-green-600 font-medium">finalizar = sucesso</span> (back perde, bônus convertido) e <span className="text-red-500 font-medium">todos ganharem = falha</span> (hedge máximo executado).
+                </p>
               </CardHeader>
-              <CardContent className="space-y-2">
-                {probabilities.map((p, i) => (
-                  <div key={i} className="space-y-1">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-muted-foreground">{p.label}</span>
-                      <span className="font-medium">{(p.probability * 100).toFixed(1)}%</span>
+              <CardContent className="space-y-3">
+                {/* Taxa de sucesso */}
+                <div className="flex items-center justify-between p-2 rounded-md bg-green-500/10 border border-green-500/20">
+                  <span className="text-sm font-medium text-green-700 dark:text-green-400">Taxa de Sucesso</span>
+                  <span className="text-sm font-bold text-green-700 dark:text-green-400">{(successRate * 100).toFixed(1)}%</span>
+                </div>
+
+                {probabilities.map((p, i) => {
+                  const isSuccess = p.type === 'success';
+                  const barColor = isSuccess ? 'bg-green-500' : 'bg-red-500';
+                  const textColor = isSuccess ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400';
+                  return (
+                    <div key={i} className="space-y-1">
+                      <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2">
+                          <span className={`inline-block w-2 h-2 rounded-full ${isSuccess ? 'bg-green-500' : 'bg-red-500'}`} />
+                          <span className={textColor}>{p.label}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground text-[10px]">
+                            {p.laysExecuted === 0 ? 'nenhum lay' : `${p.laysExecuted} lay${p.laysExecuted > 1 ? 's' : ''}`}
+                          </span>
+                          <span className={`font-medium ${textColor}`}>{(p.probability * 100).toFixed(1)}%</span>
+                        </div>
+                      </div>
+                      <div className="w-full h-2 rounded-full bg-muted overflow-hidden">
+                        <div className={`h-full rounded-full ${barColor} transition-all`} style={{ width: `${Math.min(p.probability * 100, 100)}%` }} />
+                      </div>
                     </div>
-                    <div className="w-full h-2 rounded-full bg-muted overflow-hidden">
-                      <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${Math.min(p.probability * 100, 100)}%` }} />
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </CardContent>
             </Card>
 
