@@ -263,7 +263,7 @@ const DEFAULT_EVENTS: Record<number, EventInput[]> = {
 
 export const CalculadoraExtracaoContent: React.FC = () => {
   const [targetExtraction, setTargetExtraction] = useState('1000');
-  const [bankroll, setBankroll] = useState('5000');
+  
   const [exchangeCommission, setExchangeCommission] = useState('2.8');
   const [numEvents, setNumEvents] = useState('2');
   const [eventInputs, setEventInputs] = useState<Record<string, EventInput[]>>({
@@ -301,7 +301,7 @@ export const CalculadoraExtracaoContent: React.FC = () => {
 
     const config: ExtractionConfig = {
       targetExtraction: isNaN(parseFloat(targetExtraction)) ? 1000 : parseFloat(targetExtraction),
-      bankrollAvailable: isNaN(parseFloat(bankroll)) ? 5000 : parseFloat(bankroll),
+      bankrollAvailable: 99999,
       exchangeCommission: (isNaN(parseFloat(exchangeCommission)) ? 2.8 : parseFloat(exchangeCommission)) / 100,
       events,
     };
@@ -349,20 +349,13 @@ export const CalculadoraExtracaoContent: React.FC = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Financial row */}
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <div className="flex items-center">
                   <Label className="text-xs">Valor a Extrair (R$)</Label>
                   <InputTooltip title="Valor a Extrair" description="O valor total do bônus ou freebet que você quer converter." />
                 </div>
                 <Input type="number" value={targetExtraction} onChange={e => setTargetExtraction(e.target.value)} className="h-9 text-sm" />
-              </div>
-              <div className="space-y-1.5">
-                <div className="flex items-center">
-                  <Label className="text-xs">Bankroll Disponível (R$)</Label>
-                  <InputTooltip title="Bankroll" description="Capital disponível para executar os hedges na exchange." />
-                </div>
-                <Input type="number" value={bankroll} onChange={e => setBankroll(e.target.value)} className="h-9 text-sm" />
               </div>
               <div className="space-y-1.5">
                 <div className="flex items-center">
@@ -478,28 +471,7 @@ export const CalculadoraExtracaoContent: React.FC = () => {
             <Card className="border-primary/40 bg-gradient-to-r from-primary/5 to-transparent">
               <CardContent className="pt-5 pb-4 space-y-4">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Resumo Executivo</p>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="text-center p-3 rounded-lg bg-card border border-border">
-                    {results.resultadoOperacao > 0 ? (
-                      <>
-                        <p className="text-[10px] text-muted-foreground mb-1">Você ganha</p>
-                        <p className="text-2xl font-bold text-emerald-400">+R$ {fmt(results.resultadoOperacao)}</p>
-                        <p className="text-xs text-emerald-400/80 mt-1">+{results.resultadoOperacaoPercent}% de edge</p>
-                      </>
-                    ) : results.resultadoOperacao === 0 ? (
-                      <>
-                        <p className="text-[10px] text-muted-foreground mb-1">Resultado</p>
-                        <p className="text-2xl font-bold text-foreground">Neutro</p>
-                        <p className="text-xs text-muted-foreground mt-1">sem custo</p>
-                      </>
-                    ) : (
-                      <>
-                        <p className="text-[10px] text-muted-foreground mb-1">Você paga</p>
-                        <p className="text-2xl font-bold text-primary">R$ {fmt(results.custoExtracao)}</p>
-                        <p className="text-xs text-muted-foreground mt-1">{results.custoExtracaoPercent}% do valor</p>
-                      </>
-                    )}
-                  </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="text-center p-3 rounded-lg bg-card border border-border">
                     <p className="text-[10px] text-muted-foreground mb-1">Para extrair</p>
                     <p className="text-2xl font-bold text-foreground">R$ {fmt(targetVal)}</p>
