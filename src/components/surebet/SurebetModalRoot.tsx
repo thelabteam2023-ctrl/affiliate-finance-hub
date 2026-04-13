@@ -1499,7 +1499,7 @@ export function SurebetModalRoot({
           p_workspace_id: workspaceId,
           p_user_id: user.id,
           p_projeto_id: projetoId,
-          p_evento: evento,
+          p_evento: evento || '',
           p_esporte: esporte,
           p_mercado: mercado || null,
           p_modelo: modelo,
