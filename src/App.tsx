@@ -366,6 +366,15 @@ const App = () => (
               </ProtectedRoute>
             } />
             
+            {/* Calculadora de Extração - standalone */}
+            <Route path="/ferramentas/calculadora-extracao" element={
+              <ProtectedRoute>
+                <Suspense fallback={<PageLoader />}>
+                  <CalculadoraExtracao />
+                </Suspense>
+              </ProtectedRoute>
+            } />
+            
             {/* Janela Surebet - standalone, para abrir em nova janela */}
             <Route path="/janela/surebet/novo" element={
               <ProtectedRoute>
