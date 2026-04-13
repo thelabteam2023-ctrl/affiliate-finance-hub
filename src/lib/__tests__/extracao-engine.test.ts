@@ -19,10 +19,11 @@ describe('calculateDeterministicHedge', () => {
     expect(result.custoExtracaoPercent).toBe(0);
     expect(result.classification).toBe('excellent');
 
-    // All scenarios should extract exactly targetExtraction (100)
     for (const event of result.events) {
       expect(event.resultIfBackLoses).toBe(100);
     }
+    // With no commission, failure display should also be 100
+    expect(result.netCashFailure).toBe(100);
   });
 
   it('should produce zero cost with 3 events, equal odds, no commission', () => {
@@ -84,12 +85,11 @@ describe('calculateDeterministicHedge', () => {
     };
 
     const result = calculateDeterministicHedge(config);
-    // Expected cost = commission rate * targetExtraction = 28
     expect(result.custoExtracao).toBe(28);
     expect(result.custoExtracaoPercent).toBe(2.8);
   });
 
-  it('last event and failure should differ when commission > 0 (lay win vs lay loss)', () => {
+  it('failure display should equal last event (all lays executed)', () => {
     const config: ExtractionConfig = {
       targetExtraction: 100,
       bankrollAvailable: 1000,
@@ -102,8 +102,26 @@ describe('calculateDeterministicHedge', () => {
 
     const result = calculateDeterministicHedge(config);
     const lastEvent = result.events[result.events.length - 1];
-    // Last event: lay wins (commission applied) → less than failure
-    // Failure: all lays lose (no commission) → freebet pays out
-    expect(lastEvent.resultIfBackLoses).not.toBe(result.netCashFailure);
+    // Display: failure = last event (both have all lays executed)
+    expect(result.netCashFailure).toBe(lastEvent.resultIfBackLoses);
+    // Real cash flow differs (no commission on losing lays)
+    expect(result.netCashFailureReal).not.toBe(result.netCashFailure);
+  });
+
+  it('failure display should equal last event with 3 events', () => {
+    const config: ExtractionConfig = {
+      targetExtraction: 100,
+      bankrollAvailable: 1000,
+      exchangeCommission: 0.05,
+      events: [
+        { backOdd: 1.8, layOdd: 2.0 },
+        { backOdd: 2.0, layOdd: 2.2 },
+        { backOdd: 1.5, layOdd: 1.6 },
+      ],
+    };
+
+    const result = calculateDeterministicHedge(config);
+    const lastEvent = result.events[result.events.length - 1];
+    expect(result.netCashFailure).toBe(lastEvent.resultIfBackLoses);
   });
 });
