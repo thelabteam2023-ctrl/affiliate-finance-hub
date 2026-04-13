@@ -87,29 +87,28 @@ export function calculateDeterministicHedge(config: ExtractionConfig): StrategyR
 
     const retornoAcumulado = backStake * oddAcumulada;
 
-    // Lay stake para hedgear o retorno acumulado
-    const layStake = Math.round((retornoAcumulado / layOdd) * 100) / 100;
-    const liability = Math.round(layStake * (layOdd - 1) * 100) / 100;
+    // Lay stake para hedgear o retorno acumulado — full precision
+    const layStake = retornoAcumulado / layOdd;
+    const liability = layStake * (layOdd - 1);
 
     // Resultado se back perde neste evento
     const resultIfBackLoses = i === 0
       ? -backStake
-      : Math.round(-hedgeEvents[i - 1].liability * 100) / 100;
+      : -hedgeEvents[i - 1].liability;
 
     // Resultado líquido se hedge é executado (back ganha, lay protege)
-    const resultIfHedged = Math.round(
-      (retornoAcumulado - layStake * layOdd) * (1 - exchangeCommission) * 100
-    ) / 100;
+    const commissionFactor = exchangeCommission > 0 ? (1 - exchangeCommission) : 1;
+    const resultIfHedged = (retornoAcumulado - layStake * layOdd) * commissionFactor;
 
     hedgeEvents.push({
       eventIndex: i,
       backOdd,
       layOdd,
-      layStake,
-      liability,
+      layStake: Math.round(layStake * 100) / 100,
+      liability: Math.round(liability * 100) / 100,
       isConditional: i > 0,
-      resultIfBackLoses,
-      resultIfHedged,
+      resultIfBackLoses: Math.round(resultIfBackLoses * 100) / 100,
+      resultIfHedged: Math.round(resultIfHedged * 100) / 100,
     });
   }
 
