@@ -112,34 +112,50 @@ export function calculateDeterministicHedge(config: ExtractionConfig): StrategyR
     });
   }
 
-  // ─ Métricas financeiras ─
-  const maxLiability = Math.max(...hedgeEvents.map(e => e.liability));
+  // ─ Métricas financeiras (full precision) ─
+
+  // Recalculate with full precision for EV (hedgeEvents have rounded values for display)
+  const fullPrecisionLiabilities: number[] = [];
+  for (let i = 0; i < events.length; i++) {
+    let oddAcum = 1;
+    for (let j = 0; j <= i; j++) oddAcum *= events[j].backOdd;
+    const retorno = backStake * oddAcum;
+    const ls = retorno / events[i].layOdd;
+    fullPrecisionLiabilities.push(ls * (events[i].layOdd - 1));
+  }
+
+  const maxLiability = Math.max(...fullPrecisionLiabilities);
   const capitalMaximoNecessario = Math.round((backStake + maxLiability) * 100) / 100;
 
   // Custo esperado (valor esperado ponderado por probabilidade)
   let valorEsperado = 0;
   let capitalEsperadoPonderado = 0;
+  const commissionFactor = exchangeCommission > 0 ? (1 - exchangeCommission) : 1;
 
-  for (let i = 0; i < hedgeEvents.length; i++) {
+  for (let i = 0; i < events.length; i++) {
     const probChegar = probabilityOfReaching(events, i);
     const probPerder = 1 - 1 / events[i].backOdd;
     const probParar = probChegar * probPerder;
 
-    if (i === hedgeEvents.length - 1) {
+    // Full precision resultIfBackLoses
+    const lossAtI = i === 0 ? -backStake : -fullPrecisionLiabilities[i - 1];
+
+    if (i === events.length - 1) {
       // Último evento
       const probGanha = probChegar * (1 / events[i].backOdd);
-      const retornoFinal = (potentialReturn - backStake) * (1 - exchangeCommission);
+      const retornoFinal = (potentialReturn - backStake) * commissionFactor;
       valorEsperado += probGanha * retornoFinal;
-      valorEsperado += probParar * hedgeEvents[i].resultIfBackLoses;
+      valorEsperado += probParar * lossAtI;
     } else {
-      valorEsperado += probParar * hedgeEvents[i].resultIfBackLoses;
+      valorEsperado += probParar * lossAtI;
     }
 
-    capitalEsperadoPonderado += probChegar * hedgeEvents[i].liability;
+    capitalEsperadoPonderado += probChegar * fullPrecisionLiabilities[i];
   }
 
+  // Round only at output
   const custoExtracao = Math.round(Math.abs(valorEsperado) * 100) / 100;
-  const custoExtracaoPercent = Math.round((custoExtracao / targetExtraction) * 10000) / 100;
+  const custoExtracaoPercent = custoExtracao === 0 ? 0 : Math.round((custoExtracao / targetExtraction) * 10000) / 100;
 
   const exposicaoMaxima = Math.abs(Math.min(
     ...hedgeEvents.map(e => e.resultIfBackLoses),
