@@ -1,31 +1,70 @@
 
 
-## Plano: Mover indicador de Lucro Patrimonial para dentro do KPI "Lucro" da aba Surebet
+## Plano: Calculadora de Extração (nova ferramenta)
 
-### O que muda
+### Resumo
 
-O indicador de **Prejuízo/Lucro patrimonial** (que hoje aparece como um botão separado na barra de KPIs com o ícone `$`) será removido de sua posição atual e integrado como um **popover** acessível a partir do KPI "Lucro" da aba Surebet.
+Criar uma nova ferramenta "Calculadora de Extração" que otimiza a conversão de bônus/freebet em dinheiro real via múltiplas (back) + hedge sequencial (lay em exchange). Ferramenta 100% client-side, sem mudanças no banco de dados.
 
-Na prática, ao clicar no valor de Lucro (ex: "R$ 79,01"), além do tooltip de breakdown por moeda que já existe, aparecerá o `FinancialMetricsPopover` com o detalhamento completo (fluxo de caixa, patrimônio, lucro realizado).
+### Arquivos a criar/modificar
 
-### Mudanças técnicas
+| Arquivo | Ação |
+|---------|------|
+| `src/lib/extracao-engine.ts` | Criar — motor de cálculo puro |
+| `src/components/ferramentas/CalculadoraExtracaoContent.tsx` | Criar — UI principal |
+| `src/pages/CalculadoraExtracao.tsx` | Criar — página standalone |
+| `src/App.tsx` | Modificar — adicionar rota `/ferramentas/calculadora-extracao` |
 
-1. **`ProjetoSurebetTab.tsx`** — No `leading` do `KpiSummaryBar`, remover o `<FinancialSummaryCompact>`. Manter apenas o `<SaldoOperavelCard>`.
+---
 
-2. **`ProjetoSurebetTab.tsx`** — No KPI "Lucro" (linhas ~1063-1078), trocar o `wrapper` de `LucroCurrencyTooltip` para um **Popover** que combine:
-   - O breakdown por moeda (conteúdo atual do `LucroCurrencyTooltip`)
-   - O `FinancialMetricsPopover` completo (conteúdo atual do botão `$`)
-   
-   O popover será ativado por clique no valor de Lucro, e mostrará as duas seções em sequência: primeiro o breakdown de moedas (se multi-moeda), depois o detalhamento financeiro do projeto.
+### 1. Motor de cálculo (`extracao-engine.ts`)
 
-3. **Escopo**: Apenas a aba Surebet será modificada neste momento. As demais abas (ValueBet, Duplo Green, Bônus) continuam com o layout atual até validação.
+Lógica pura sem React, exportando:
 
-### Resultado esperado
+- **`generateOptimalStrategy(config)`** — Itera combinações de 2 a N eventos com odds distribuídas no range, seleciona a melhor por: menor perda máxima, menor capital, maior conversão.
+- **`calculateHedgeSequence(strategy)`** — Calcula lay_stake, liability e lucro/perda para cada evento (lay 1 sempre, lay N só se N-1 ganhou).
+- **`runMonteCarloSimulation(strategy, 10000)`** — Distribuição de lucro, pior caso, frequência de cada lay.
+- **`classifyStrategy(results)`** — 🟢 Excelente / 🟡 Média / 🔴 Ruim.
 
-- O KPI "Lucro R$ 79,01" passa a ser clicável
-- Ao clicar, abre um popover com:
-  - Breakdown por moeda (se houver múltiplas moedas)
-  - Separador
-  - Detalhamento financeiro completo (Fluxo de Caixa, Patrimônio, Lucro Realizado)
-- O botão `$` com "Prejuízo R$ -1.274,47" desaparece da barra, liberando espaço
+**Fórmulas:**
+- `odd_total = Π(odds[i])`
+- `lay_stake_i = (acumulado_back × odd_acumulada_parcial) / lay_odd_i`
+- `liability_i = lay_stake_i × (lay_odd_i - 1)`
+- `lucro_exchange = lucro × (1 - comissão)`
+- Constraint: `perda_maxima ≤ target × (1 - retention)`
+
+---
+
+### 2. UI (`CalculadoraExtracaoContent.tsx`)
+
+**Painel de Inputs:**
+- Valor a Extrair (R$), Bankroll (R$)
+- Nº Eventos (min/max, 2-5)
+- Range de Odds (min/max), Spread médio (%)
+- Retenção alvo (slider 80%-95%)
+- Comissão Exchange (%)
+- Botão "Calcular"
+
+**Estratégia Recomendada:**
+- Card com nº eventos, odds sugeridas, odd total, badge 🟢/🟡/🔴
+
+**Resultados Financeiros** (grid de cards):
+- Valor extraído, Lucro líquido, Perda máxima (R$ e %), Taxa de conversão, Capital máximo, Capital esperado, Eficiência
+
+**Hedge Detalhado** (tabela):
+- Evento | Odd Back | Odd Lay | Lay Stake | Liability | Condicional?
+- Timeline visual sequencial
+
+**Probabilidades** (barras horizontais):
+- P(parar no evento 1), P(chegar ao evento 2), ..., P(usar lay N)
+
+**Simulação Monte Carlo** (seção expansível):
+- Histograma de lucro (barras CSS), pior caso, frequência de cada lay
+
+---
+
+### 3. Página e Rota
+
+- `CalculadoraExtracao.tsx` — wrapper com layout padrão
+- Rota em `App.tsx`: `/ferramentas/calculadora-extracao`
 
