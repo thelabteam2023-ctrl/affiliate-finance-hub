@@ -82,25 +82,8 @@ export function useSaldoOperavel(projetoId: string) {
     refetchOnWindowFocus: false,
   });
 
-  // Query para buscar casas com saques pendentes de confirmação
-  const { data: casasComSaquePendente } = useQuery({
-    queryKey: ["bookmaker-saque-pendente", projetoId, bookmakers.map(b => b.id).join(",")],
-    queryFn: async () => {
-      const ids = bookmakers.map(b => b.id);
-      if (!ids.length) return new Set<string>();
-      
-      const { data } = await supabase
-        .from("cash_ledger")
-        .select("origem_bookmaker_id")
-        .in("origem_bookmaker_id", ids)
-        .eq("tipo_transacao", "SAQUE")
-        .eq("transit_status", "PENDING");
-      
-      return new Set((data || []).map(r => r.origem_bookmaker_id).filter(Boolean));
-    },
-    enabled: bookmakers.length > 0,
-    staleTime: 5000,
-  });
+  // has_pending_withdrawals agora vem direto da RPC get_bookmaker_saldos (campo has_pending_withdrawals)
+  // Removida query redundante que filtrava por transit_status incorreto
 
   // Query separada para rollover por casa (individual)
   const { data: rolloverData } = useQuery({
