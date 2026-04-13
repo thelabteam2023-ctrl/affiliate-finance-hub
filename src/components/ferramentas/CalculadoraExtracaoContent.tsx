@@ -581,62 +581,80 @@ export const CalculadoraExtracaoContent: React.FC = () => {
                   <span className="text-sm font-bold text-green-700 dark:text-green-400">{(successRate * 100).toFixed(1)}%</span>
                 </div>
 
-                {probabilities.map((p, i) => {
-                  const isSuccess = p.type === 'success';
-                  const barColor = isSuccess ? 'bg-green-500' : 'bg-red-500';
-                  const textColor = isSuccess ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400';
-                  
-                  // Calculate loss/retention for this scenario
-                  let lossPercent: number | null = null;
-                  let lossValue: number | null = null;
-                  let retentionPercent: number | null = null;
-                  if (results && targetVal > 0) {
-                    if (isSuccess && results.events[p.eventIndex]) {
-                      const netResult = results.events[p.eventIndex].resultIfBackLoses;
-                      retentionPercent = (netResult / targetVal) * 100;
-                      lossPercent = 100 - retentionPercent;
-                      lossValue = targetVal * (lossPercent / 100);
-                    } else if (!isSuccess) {
-                      const totalLiabilities = results.events.reduce((sum, e) => sum + e.liability, 0);
-                      const netResult = results.potentialReturn - totalLiabilities;
-                      retentionPercent = (netResult / targetVal) * 100;
-                      lossPercent = 100 - retentionPercent;
-                      lossValue = targetVal * (lossPercent / 100);
+                {/* Tabela de cenários */}
+                {(() => {
+                  // Build scenario data with loss/retention
+                  const scenarios = probabilities.map((p) => {
+                    const isSuccess = p.type === 'success';
+                    let netResult = 0;
+                    if (results && targetVal > 0) {
+                      if (isSuccess && results.events[p.eventIndex]) {
+                        netResult = results.events[p.eventIndex].resultIfBackLoses;
+                      } else if (!isSuccess) {
+                        netResult = results.netCashFailure;
+                      }
                     }
-                  }
+                    const lossValue = targetVal - netResult;
+                    const lossPercent = targetVal > 0 ? (lossValue / targetVal) * 100 : 0;
+                    const retentionPercent = 100 - lossPercent;
+                    return { ...p, isSuccess, netResult, lossValue, lossPercent, retentionPercent };
+                  });
+
+                  // EV = sum(P_k * lossValue_k)
+                  const evLoss = scenarios.reduce((sum, s) => sum + s.probability * s.lossValue, 0);
+                  const evLossPercent = targetVal > 0 ? (evLoss / targetVal) * 100 : 0;
 
                   return (
-                    <div key={i} className="space-y-1.5">
-                      <div className="flex items-center justify-between text-xs">
-                        <div className="flex items-center gap-2">
-                          <span className={`inline-block w-2 h-2 rounded-full ${isSuccess ? 'bg-green-500' : 'bg-red-500'}`} />
-                          <span className={textColor}>{p.label}</span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <span className="text-muted-foreground text-[10px]">
-                            {`${p.laysExecuted} lay${p.laysExecuted > 1 ? 's' : ''}`}
-                          </span>
-                          <span className={`font-medium ${textColor}`}>{(p.probability * 100).toFixed(1)}%</span>
+                    <>
+                      {scenarios.map((s, i) => {
+                        const barColor = s.isSuccess ? 'bg-green-500' : 'bg-red-500';
+                        const textColor = s.isSuccess ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400';
+
+                        return (
+                          <div key={i} className="space-y-1.5">
+                            <div className="flex items-center justify-between text-xs">
+                              <div className="flex items-center gap-2">
+                                <span className={`inline-block w-2 h-2 rounded-full ${s.isSuccess ? 'bg-green-500' : 'bg-red-500'}`} />
+                                <span className={textColor}>{s.label}</span>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <span className="text-muted-foreground text-[10px]">
+                                  {`${s.laysExecuted} lay${s.laysExecuted > 1 ? 's' : ''}`}
+                                </span>
+                                <span className={`font-medium ${textColor}`}>{(s.probability * 100).toFixed(1)}%</span>
+                              </div>
+                            </div>
+                            <div className="ml-4 flex items-center gap-3 text-[11px]">
+                              <span className="text-red-500 dark:text-red-400 font-semibold">
+                                💸 Perda: {s.lossPercent.toFixed(1)}% (R$ {fmt(Math.abs(s.lossValue))})
+                              </span>
+                              <span className="text-muted-foreground">
+                                📈 Retenção: {s.retentionPercent.toFixed(1)}%
+                              </span>
+                            </div>
+                            <div className="w-full h-2 rounded-full bg-muted overflow-hidden">
+                              <div className={`h-full rounded-full ${barColor} transition-all`} style={{ width: `${Math.min(s.probability * 100, 100)}%` }} />
+                            </div>
+                          </div>
+                        );
+                      })}
+
+                      {/* Custo Esperado (EV ponderado) */}
+                      <div className="mt-4 p-3 rounded-md bg-primary/10 border border-primary/20">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-xs font-semibold text-primary">📊 Custo Médio Esperado (EV)</p>
+                            <p className="text-[10px] text-muted-foreground">Ponderado pela probabilidade de cada cenário</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-bold text-primary">R$ {fmt(Math.abs(evLoss))} ({evLossPercent.toFixed(1)}%)</p>
+                            <p className="text-[10px] text-muted-foreground">retenção esperada: {(100 - evLossPercent).toFixed(1)}%</p>
+                          </div>
                         </div>
                       </div>
-                      {lossPercent !== null && (
-                        <div className="ml-4 flex items-center gap-3 text-[11px]">
-                          <span className="text-red-500 dark:text-red-400 font-semibold">
-                            💸 Perda: {lossPercent.toFixed(1)}% (R$ {fmt(Math.abs(lossValue!))})
-                          </span>
-                          {retentionPercent !== null && isSuccess && (
-                            <span className="text-muted-foreground">
-                              📈 Retenção: {retentionPercent.toFixed(1)}%
-                            </span>
-                          )}
-                        </div>
-                      )}
-                      <div className="w-full h-2 rounded-full bg-muted overflow-hidden">
-                        <div className={`h-full rounded-full ${barColor} transition-all`} style={{ width: `${Math.min(p.probability * 100, 100)}%` }} />
-                      </div>
-                    </div>
+                    </>
                   );
-                })}
+                })()}
               </CardContent>
             </Card>
 
