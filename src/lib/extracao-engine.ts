@@ -1,25 +1,24 @@
 /**
- * Motor de cálculo da Calculadora de Extração
- * 
- * Otimiza conversão de bônus/freebet em dinheiro real via:
- * - Múltipla (back em casa) 
- * - Hedge sequencial condicional (lay em exchange)
- * 
- * 100% lógica pura, sem dependências React.
+ * Motor de cálculo da Calculadora de Extração — Modelo Determinístico
+ *
+ * Recebe odds reais (back + lay) por evento e calcula hedge sequencial
+ * condicional para conversão de bônus/freebet.
+ *
+ * 100 % lógica pura, sem dependências React.
  */
 
 // ─── Types ───
 
+export interface EventInput {
+  backOdd: number; // odd na casa de apostas
+  layOdd: number;  // odd na exchange
+}
+
 export interface ExtractionConfig {
-  targetExtraction: number;      // Valor a extrair (ex: 1000)
-  bankrollAvailable: number;     // Bankroll disponível
-  numEventsMin: number;          // Mín eventos (2-5)
-  numEventsMax: number;          // Máx eventos (2-5)
-  oddMin: number;                // Odd mínima (ex: 1.30)
-  oddMax: number;                // Odd máxima (ex: 5.50)
-  avgSpread: number;             // Spread médio back vs lay (ex: 0.03 = 3%)
-  targetRetention: number;       // Retenção alvo (0.80 a 0.95)
-  exchangeCommission: number;    // Comissão exchange (ex: 0.028 = 2.8%)
+  targetExtraction: number;       // valor do bônus/freebet a converter
+  bankrollAvailable: number;      // capital disponível para hedge
+  exchangeCommission: number;     // ex: 0.028 = 2.8 %
+  events: EventInput[];           // 2–5 eventos com odds reais
 }
 
 export interface HedgeEvent {
@@ -28,420 +27,246 @@ export interface HedgeEvent {
   layOdd: number;
   layStake: number;
   liability: number;
-  isConditional: boolean;        // true se depende do evento anterior ganhar
-  profitIfBackWins: number;      // lucro se back ganha até aqui
-  lossIfBackLoses: number;       // perda se back perde aqui
-}
-
-export interface Strategy {
-  numEvents: number;
-  backOdds: number[];
-  oddTotal: number;
-  backStake: number;             // stake na múltipla (= targetExtraction para freebet)
-  hedgeEvents: HedgeEvent[];
-  potentialReturn: number;       // retorno se múltipla ganha
+  isConditional: boolean;
+  resultIfBackLoses: number;  // fluxo de caixa se back perde aqui
+  resultIfHedged: number;     // fluxo de caixa se hedge executado
 }
 
 export interface StrategyResults {
-  strategy: Strategy;
-  custoExtracao: number;           // perda esperada em R$
-  custoExtracaoPercent: number;    // perda esperada / valor extraído (%)
-  perdaMaxima: number;
-  perdaMaximaPercent: number;
+  events: HedgeEvent[];
+  oddTotal: number;
+  backStake: number;
+  potentialReturn: number;
+  custoExtracao: number;          // custo esperado (R$)
+  custoExtracaoPercent: number;   // custo / valor extraído (%)
+  exposicaoMaxima: number;        // maior movimentação negativa
+  exposicaoMaximaPercent: number;
   capitalMaximoNecessario: number;
   capitalEsperado: number;
-  eficienciaCapital: number;       // (target - custo) / capital_maximo
+  valorLiquidoEstimado: number;
   classification: 'excellent' | 'good' | 'medium' | 'poor';
 }
 
 export interface ProbabilityEvent {
   eventIndex: number;
   label: string;
-  probability: number;           // 0 a 1
+  probability: number;
 }
 
 export interface MonteCarloResult {
   iterations: number;
-  avgProfit: number;
-  medianProfit: number;
+  avgResult: number;
+  medianResult: number;
   worstCase: number;
   bestCase: number;
-  profitDistribution: { range: string; count: number; percentage: number }[];
+  resultDistribution: { range: string; count: number; percentage: number }[];
   layUsageFrequency: { eventIndex: number; frequency: number }[];
 }
 
-// ─── Core Functions ───
+// ─── Core ───
 
 /**
- * Gera odds distribuídas equilibradamente dentro do range
+ * Calcula o hedge sequencial determinístico a partir de odds reais.
  */
-function generateBalancedOdds(numEvents: number, oddMin: number, oddMax: number, targetOddTotal: number): number[] {
-  // Queremos odds equilibradas cuja multiplicação ≈ targetOddTotal
-  // odd_individual ≈ targetOddTotal^(1/numEvents)
-  const baseOdd = Math.pow(targetOddTotal, 1 / numEvents);
-  
-  // Clamp ao range
-  const clampedOdd = Math.max(oddMin, Math.min(oddMax, baseOdd));
-  
-  // Distribuir com leve variação para parecer natural
-  const odds: number[] = [];
-  for (let i = 0; i < numEvents; i++) {
-    const variation = 1 + (i - (numEvents - 1) / 2) * 0.05;
-    let odd = clampedOdd * variation;
-    odd = Math.max(oddMin, Math.min(oddMax, odd));
-    odd = Math.round(odd * 100) / 100;
-    odds.push(odd);
-  }
-  
-  return odds;
-}
-
-/**
- * Calcula a sequência de hedge para uma estratégia
- */
-export function calculateHedgeSequence(
-  backOdds: number[],
-  backStake: number,
-  avgSpread: number,
-  exchangeCommission: number
-): HedgeEvent[] {
+export function calculateDeterministicHedge(config: ExtractionConfig): StrategyResults {
+  const { events, targetExtraction, exchangeCommission, bankrollAvailable } = config;
+  const backStake = targetExtraction;
   const hedgeEvents: HedgeEvent[] = [];
-  const numEvents = backOdds.length;
-  
-  for (let i = 0; i < numEvents; i++) {
-    const backOdd = backOdds[i];
-    const layOdd = backOdd * (1 + avgSpread); // lay = back + spread
-    const layOddRounded = Math.round(layOdd * 100) / 100;
-    
-    // Odd acumulada dos eventos até i (inclusive)
+
+  const oddTotal = events.reduce((acc, e) => acc * e.backOdd, 1);
+  const potentialReturn = backStake * oddTotal;
+
+  for (let i = 0; i < events.length; i++) {
+    const { backOdd, layOdd } = events[i];
+
+    // Odd acumulada até evento i (inclusive)
     let oddAcumulada = 1;
-    for (let j = 0; j <= i; j++) {
-      oddAcumulada *= backOdds[j];
-    }
-    
-    // Retorno potencial se múltipla ganha até evento i
-    const potentialReturn = backStake * oddAcumulada;
-    
-    // Lay stake para hedgear o valor acumulado
-    // lay_stake = potentialReturn / layOdd (simplificado)
-    const layStake = Math.round((potentialReturn / layOddRounded) * 100) / 100;
-    const liability = Math.round(layStake * (layOddRounded - 1) * 100) / 100;
-    
-    // Lucro se o back ganha e fazemos lay
-    const layProfit = layStake * (1 - exchangeCommission);
-    const profitIfBackWins = Math.round((potentialReturn - layStake * layOddRounded) * (1 - exchangeCommission) * 100) / 100;
-    
-    // Perda se back perde neste evento (perdemos apenas o que não foi hedgeado antes)
-    const lossIfBackLoses = i === 0 
-      ? -backStake  // se perde no primeiro, perdemos a stake da múltipla
-      : Math.round(-liability * 100) / 100; // se perde depois, perdemos a liability do lay anterior
-    
+    for (let j = 0; j <= i; j++) oddAcumulada *= events[j].backOdd;
+
+    const retornoAcumulado = backStake * oddAcumulada;
+
+    // Lay stake para hedgear o retorno acumulado
+    const layStake = Math.round((retornoAcumulado / layOdd) * 100) / 100;
+    const liability = Math.round(layStake * (layOdd - 1) * 100) / 100;
+
+    // Resultado se back perde neste evento
+    const resultIfBackLoses = i === 0
+      ? -backStake
+      : Math.round(-hedgeEvents[i - 1].liability * 100) / 100;
+
+    // Resultado líquido se hedge é executado (back ganha, lay protege)
+    const resultIfHedged = Math.round(
+      (retornoAcumulado - layStake * layOdd) * (1 - exchangeCommission) * 100
+    ) / 100;
+
     hedgeEvents.push({
       eventIndex: i,
       backOdd,
-      layOdd: layOddRounded,
+      layOdd,
       layStake,
       liability,
       isConditional: i > 0,
-      profitIfBackWins,
-      lossIfBackLoses,
+      resultIfBackLoses,
+      resultIfHedged,
     });
   }
-  
-  return hedgeEvents;
-}
 
-/**
- * Gera a estratégia ótima iterando combinações
- */
-export function generateOptimalStrategy(config: ExtractionConfig): Strategy[] {
-  const strategies: Strategy[] = [];
-  
-  for (let numEvents = config.numEventsMin; numEvents <= config.numEventsMax; numEvents++) {
-    // Testar diferentes odd totals no range viável
-    const oddTotalMin = Math.pow(config.oddMin, numEvents);
-    const oddTotalMax = Math.pow(config.oddMax, numEvents);
-    
-    // Range ideal: 3.0 a 8.0 para extração
-    const effectiveMin = Math.max(2.5, oddTotalMin);
-    const effectiveMax = Math.min(15, oddTotalMax);
-    
-    // Testar 5 pontos no range
-    const steps = 5;
-    for (let step = 0; step < steps; step++) {
-      const oddTotal = effectiveMin + (effectiveMax - effectiveMin) * (step / (steps - 1));
-      
-      const backOdds = generateBalancedOdds(numEvents, config.oddMin, config.oddMax, oddTotal);
-      const actualOddTotal = backOdds.reduce((acc, o) => acc * o, 1);
-      
-      const backStake = config.targetExtraction;
-      const potentialReturn = backStake * actualOddTotal;
-      
-      const hedgeEvents = calculateHedgeSequence(
-        backOdds,
-        backStake,
-        config.avgSpread,
-        config.exchangeCommission
-      );
-      
-      strategies.push({
-        numEvents,
-        backOdds,
-        oddTotal: Math.round(actualOddTotal * 100) / 100,
-        backStake,
-        hedgeEvents,
-        potentialReturn: Math.round(potentialReturn * 100) / 100,
-      });
-    }
-  }
-  
-  return strategies;
-}
-
-/**
- * Avalia uma estratégia e calcula resultados financeiros
- */
-export function evaluateStrategy(
-  strategy: Strategy,
-  config: ExtractionConfig
-): StrategyResults {
-  const { hedgeEvents } = strategy;
-  
-  // Capital máximo = maior liability simultânea + back stake
+  // ─ Métricas financeiras ─
   const maxLiability = Math.max(...hedgeEvents.map(e => e.liability));
-  const capitalMaximoNecessario = Math.round((strategy.backStake + maxLiability) * 100) / 100;
-  
-  // Lucro esperado ponderado por probabilidade
-  let lucroEsperado = 0;
+  const capitalMaximoNecessario = Math.round((backStake + maxLiability) * 100) / 100;
+
+  // Custo esperado (valor esperado ponderado por probabilidade)
+  let valorEsperado = 0;
   let capitalEsperadoPonderado = 0;
-  
+
   for (let i = 0; i < hedgeEvents.length; i++) {
-    const event = hedgeEvents[i];
-    const probChegar = getProbabilityOfReaching(strategy.backOdds, i);
-    const probPerder = 1 - (1 / event.backOdd);
+    const probChegar = probabilityOfReaching(events, i);
+    const probPerder = 1 - 1 / events[i].backOdd;
     const probParar = probChegar * probPerder;
-    
+
     if (i === hedgeEvents.length - 1) {
-      // Último evento: ou ganha tudo ou perde
-      const probGanha = probChegar * (1 / event.backOdd);
-      const retornoFinal = strategy.potentialReturn - strategy.backStake;
-      const lucroComHedge = event.profitIfBackWins;
-      
-      lucroEsperado += probGanha * retornoFinal * (1 - config.exchangeCommission);
-      lucroEsperado += probParar * event.lossIfBackLoses;
+      // Último evento
+      const probGanha = probChegar * (1 / events[i].backOdd);
+      const retornoFinal = (potentialReturn - backStake) * (1 - exchangeCommission);
+      valorEsperado += probGanha * retornoFinal;
+      valorEsperado += probParar * hedgeEvents[i].resultIfBackLoses;
     } else {
-      // Evento intermediário: hedge condicional
-      lucroEsperado += probParar * event.lossIfBackLoses;
+      valorEsperado += probParar * hedgeEvents[i].resultIfBackLoses;
     }
-    
-    capitalEsperadoPonderado += probChegar * event.liability;
+
+    capitalEsperadoPonderado += probChegar * hedgeEvents[i].liability;
   }
-  
-  // Perda máxima: pior cenário
-  const perdaMaxima = Math.abs(Math.min(...hedgeEvents.map(e => e.lossIfBackLoses), -strategy.backStake));
-  const perdaMaximaPercent = (perdaMaxima / config.targetExtraction) * 100;
-  
-  // Custo de extração = perda esperada (valor esperado negativo da operação)
-  // lucroEsperado é negativo na maioria dos cenários realistas
-  const custoExtracao = Math.round(Math.abs(lucroEsperado) * 100) / 100;
-  const custoExtracaoPercent = Math.round((custoExtracao / config.targetExtraction) * 10000) / 100;
-  
+
+  const custoExtracao = Math.round(Math.abs(valorEsperado) * 100) / 100;
+  const custoExtracaoPercent = Math.round((custoExtracao / targetExtraction) * 10000) / 100;
+
+  const exposicaoMaxima = Math.abs(Math.min(
+    ...hedgeEvents.map(e => e.resultIfBackLoses),
+    -backStake,
+  ));
+  const exposicaoMaximaPercent = Math.round((exposicaoMaxima / targetExtraction) * 10000) / 100;
+
   const capitalEsperado = Math.round(capitalEsperadoPonderado * 100) / 100;
-  const eficienciaCapital = capitalMaximoNecessario > 0 
-    ? Math.round(((config.targetExtraction - custoExtracao) / capitalMaximoNecessario) * 10000) / 100 
-    : 0;
-  
-  // Classificação baseada no custo de extração
-  let classification: 'excellent' | 'good' | 'medium' | 'poor';
-  if (custoExtracaoPercent < 10) {
-    classification = 'excellent';
-  } else if (custoExtracaoPercent <= 20) {
-    classification = 'good';
-  } else if (custoExtracaoPercent <= 30) {
-    classification = 'medium';
-  } else {
-    classification = 'poor';
-  }
-  
-  // Verificar se atende retenção
-  const retencaoReal = 1 - (perdaMaxima / config.targetExtraction);
-  if (retencaoReal < config.targetRetention) {
-    classification = 'poor';
-  }
-  
+  const valorLiquidoEstimado = Math.round((targetExtraction - custoExtracao) * 100) / 100;
+
+  // Classificação por custo
+  let classification: StrategyResults['classification'];
+  if (custoExtracaoPercent < 10) classification = 'excellent';
+  else if (custoExtracaoPercent <= 20) classification = 'good';
+  else if (custoExtracaoPercent <= 30) classification = 'medium';
+  else classification = 'poor';
+
   return {
-    strategy,
+    events: hedgeEvents,
+    oddTotal: Math.round(oddTotal * 100) / 100,
+    backStake,
+    potentialReturn: Math.round(potentialReturn * 100) / 100,
     custoExtracao,
     custoExtracaoPercent,
-    perdaMaxima: Math.round(perdaMaxima * 100) / 100,
-    perdaMaximaPercent: Math.round(perdaMaximaPercent * 100) / 100,
+    exposicaoMaxima: Math.round(exposicaoMaxima * 100) / 100,
+    exposicaoMaximaPercent,
     capitalMaximoNecessario,
     capitalEsperado,
-    eficienciaCapital,
+    valorLiquidoEstimado,
     classification,
   };
 }
 
-/**
- * Probabilidade de chegar ao evento i (todos anteriores ganharam)
- */
-function getProbabilityOfReaching(backOdds: number[], eventIndex: number): number {
-  let prob = 1;
-  for (let j = 0; j < eventIndex; j++) {
-    prob *= 1 / backOdds[j];
-  }
-  return prob;
+// ─── Probability helpers ───
+
+function probabilityOfReaching(events: EventInput[], idx: number): number {
+  let p = 1;
+  for (let j = 0; j < idx; j++) p *= 1 / events[j].backOdd;
+  return p;
 }
 
-/**
- * Calcula probabilidades de cada evento
- */
-export function calculateProbabilities(strategy: Strategy): ProbabilityEvent[] {
-  const events: ProbabilityEvent[] = [];
-  const { backOdds } = strategy;
-  
-  for (let i = 0; i < backOdds.length; i++) {
-    const probChegar = getProbabilityOfReaching(backOdds, i);
-    const probPerder = 1 - (1 / backOdds[i]);
-    
+export function calculateProbabilities(events: EventInput[]): ProbabilityEvent[] {
+  const result: ProbabilityEvent[] = [];
+
+  for (let i = 0; i < events.length; i++) {
+    const probChegar = probabilityOfReaching(events, i);
+    const probPerder = 1 - 1 / events[i].backOdd;
+
     if (i === 0) {
-      events.push({
-        eventIndex: i,
-        label: `Parar no evento ${i + 1} (back perde)`,
-        probability: probPerder,
-      });
+      result.push({ eventIndex: i, label: `Parar no evento 1 (back perde)`, probability: probPerder });
     } else {
-      events.push({
-        eventIndex: i,
-        label: `Usar lay ${i + 1} (chegar ao evento ${i + 1})`,
-        probability: probChegar,
-      });
+      result.push({ eventIndex: i, label: `Usar lay ${i + 1} (chegar ao evento ${i + 1})`, probability: probChegar });
     }
   }
-  
-  // Probabilidade de todos ganharem (múltipla completa)
-  const probTodosGanham = backOdds.reduce((acc, odd) => acc * (1 / odd), 1);
-  events.push({
-    eventIndex: backOdds.length,
-    label: 'Múltipla completa (todos ganham)',
-    probability: probTodosGanham,
-  });
-  
-  return events;
+
+  const probAll = events.reduce((acc, e) => acc * (1 / e.backOdd), 1);
+  result.push({ eventIndex: events.length, label: 'Múltipla completa (todos ganham)', probability: probAll });
+
+  return result;
 }
 
-/**
- * Simulação Monte Carlo
- */
+// ─── Monte Carlo ───
+
 export function runMonteCarloSimulation(
-  strategy: Strategy,
   config: ExtractionConfig,
-  iterations: number = 10000
+  hedgeEvents: HedgeEvent[],
+  iterations = 10000,
 ): MonteCarloResult {
-  const profits: number[] = [];
-  const layUsage: number[] = new Array(strategy.backOdds.length).fill(0);
-  
+  const { events, targetExtraction, exchangeCommission } = config;
+  const backStake = targetExtraction;
+  const potentialReturn = backStake * events.reduce((a, e) => a * e.backOdd, 1);
+
+  const results: number[] = [];
+  const layUsage: number[] = new Array(events.length).fill(0);
+
   for (let iter = 0; iter < iterations; iter++) {
-    let profit = 0;
+    let result = 0;
     let allWon = true;
-    
-    for (let i = 0; i < strategy.backOdds.length; i++) {
-      const probWin = 1 / strategy.backOdds[i];
-      const roll = Math.random();
-      
+
+    for (let i = 0; i < events.length; i++) {
       layUsage[i]++;
-      
-      if (roll > probWin) {
-        // Back perde neste evento
-        if (i === 0) {
-          profit = -strategy.backStake;
-        } else {
-          // Perdemos a liability do lay do evento anterior que foi ativado
-          profit = -strategy.hedgeEvents[i - 1].liability;
-        }
+      const probWin = 1 / events[i].backOdd;
+      if (Math.random() > probWin) {
+        // Back perde
+        result = i === 0 ? -backStake : -hedgeEvents[i - 1].liability;
         allWon = false;
         break;
       }
-      // Back ganhou, lay é ativado (hedge)
     }
-    
+
     if (allWon) {
-      // Múltipla completa ganhou
-      const retornoBruto = strategy.potentialReturn - strategy.backStake;
-      // Deduz comissão do último hedge
-      const lastHedge = strategy.hedgeEvents[strategy.backOdds.length - 1];
-      profit = retornoBruto - lastHedge.liability;
-      profit *= (1 - config.exchangeCommission);
+      const retorno = potentialReturn - backStake;
+      const lastLiability = hedgeEvents[hedgeEvents.length - 1].liability;
+      result = (retorno - lastLiability) * (1 - exchangeCommission);
     }
-    
-    profits.push(Math.round(profit * 100) / 100);
+
+    results.push(Math.round(result * 100) / 100);
   }
-  
-  // Estatísticas
-  profits.sort((a, b) => a - b);
-  const avg = profits.reduce((s, p) => s + p, 0) / iterations;
-  const median = profits[Math.floor(iterations / 2)];
-  
-  // Distribuição em buckets
-  const minProfit = profits[0];
-  const maxProfit = profits[profits.length - 1];
-  const bucketSize = Math.max(1, Math.ceil((maxProfit - minProfit) / 10));
-  const buckets: Map<string, number> = new Map();
-  
-  for (const p of profits) {
-    const bucketStart = Math.floor(p / bucketSize) * bucketSize;
-    const key = `${bucketStart} a ${bucketStart + bucketSize}`;
+
+  results.sort((a, b) => a - b);
+  const avg = results.reduce((s, r) => s + r, 0) / iterations;
+  const median = results[Math.floor(iterations / 2)];
+
+  // Distribution buckets
+  const min = results[0];
+  const max = results[results.length - 1];
+  const bucketSize = Math.max(1, Math.ceil((max - min) / 10));
+  const buckets = new Map<string, number>();
+  for (const r of results) {
+    const start = Math.floor(r / bucketSize) * bucketSize;
+    const key = `${start} a ${start + bucketSize}`;
     buckets.set(key, (buckets.get(key) || 0) + 1);
   }
-  
-  const profitDistribution = Array.from(buckets.entries()).map(([range, count]) => ({
-    range,
-    count,
-    percentage: Math.round((count / iterations) * 10000) / 100,
-  }));
-  
-  const layUsageFrequency = layUsage.map((count, i) => ({
-    eventIndex: i,
-    frequency: Math.round((count / iterations) * 10000) / 100,
-  }));
-  
+
   return {
     iterations,
-    avgProfit: Math.round(avg * 100) / 100,
-    medianProfit: median,
-    worstCase: profits[0],
-    bestCase: profits[profits.length - 1],
-    profitDistribution,
-    layUsageFrequency,
-  };
-}
-
-/**
- * Encontra a melhor estratégia dado o config
- */
-export function findBestStrategy(config: ExtractionConfig): {
-  best: StrategyResults;
-  alternatives: StrategyResults[];
-} {
-  const strategies = generateOptimalStrategy(config);
-  
-  const evaluated = strategies.map(s => evaluateStrategy(s, config));
-  
-  // Ordenar por: classificação, depois por menor custo de extração
-  const classOrder: Record<string, number> = { excellent: 0, good: 1, medium: 2, poor: 3 };
-  evaluated.sort((a, b) => {
-    const classDiff = classOrder[a.classification] - classOrder[b.classification];
-    if (classDiff !== 0) return classDiff;
-    return a.custoExtracaoPercent - b.custoExtracaoPercent;
-  });
-  
-  // Filtrar estratégias que cabem no bankroll
-  const viable = evaluated.filter(e => e.capitalMaximoNecessario <= config.bankrollAvailable);
-  
-  const pool = viable.length > 0 ? viable : evaluated;
-  
-  return {
-    best: pool[0],
-    alternatives: pool.slice(1, 4), // até 3 alternativas
+    avgResult: Math.round(avg * 100) / 100,
+    medianResult: median,
+    worstCase: results[0],
+    bestCase: results[results.length - 1],
+    resultDistribution: Array.from(buckets.entries()).map(([range, count]) => ({
+      range,
+      count,
+      percentage: Math.round((count / iterations) * 10000) / 100,
+    })),
+    layUsageFrequency: layUsage.map((count, i) => ({
+      eventIndex: i,
+      frequency: Math.round((count / iterations) * 10000) / 100,
+    })),
   };
 }

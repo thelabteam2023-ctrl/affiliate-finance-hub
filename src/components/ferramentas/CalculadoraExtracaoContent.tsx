@@ -3,32 +3,36 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Slider } from '@/components/ui/slider';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { CardInfoTooltip } from '@/components/ui/card-info-tooltip';
 import {
   Zap, TrendingDown, DollarSign, BarChart3, Target,
-  Shield, ChevronDown, ChevronUp, Lightbulb, HelpCircle, Info, Percent
+  Shield, ChevronDown, ChevronUp, Lightbulb, HelpCircle, Info, Percent, Plus, Copy,
 } from 'lucide-react';
 import {
   type ExtractionConfig,
+  type EventInput,
   type StrategyResults,
   type MonteCarloResult,
   type ProbabilityEvent,
-  findBestStrategy,
+  type HedgeEvent,
+  calculateDeterministicHedge,
   calculateProbabilities,
   runMonteCarloSimulation,
 } from '@/lib/extracao-engine';
 
-// ─── Tooltip helper ───
+// ─── Helpers ───
 
 function InputTooltip({ title, description, flow }: { title: string; description: string; flow?: string }) {
   return <CardInfoTooltip title={title} description={description} flow={flow} />;
 }
 
+const fmt = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
 // ─── Classification Badge ───
 
-function ClassificationBadge({ classification }: { classification: 'excellent' | 'good' | 'medium' | 'poor' }) {
+function ClassificationBadge({ classification }: { classification: StrategyResults['classification'] }) {
   const map = {
     excellent: { label: '🟢 Excelente (<10%)', className: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' },
     good: { label: '🔵 Boa (10–20%)', className: 'bg-blue-500/15 text-blue-400 border-blue-500/30' },
@@ -43,34 +47,33 @@ function ClassificationBadge({ classification }: { classification: 'excellent' |
   );
 }
 
-// ─── Classification explainer ───
+// ─── Classification Explainer ───
 
 function ClassificationExplainer({ results }: { results: StrategyResults }) {
   const [open, setOpen] = useState(false);
   const custo = results.custoExtracaoPercent;
   const rules = [
     { tier: '🟢 Excelente', rule: 'Custo de extração < 10%', met: custo < 10 },
-    { tier: '🔵 Boa', rule: 'Custo de extração entre 10% e 20%', met: custo >= 10 && custo <= 20 },
-    { tier: '🟡 Média', rule: 'Custo de extração entre 20% e 30%', met: custo > 20 && custo <= 30 },
-    { tier: '🔴 Cara', rule: 'Custo de extração > 30%', met: custo > 30 },
+    { tier: '🔵 Boa', rule: 'Custo entre 10% e 20%', met: custo >= 10 && custo <= 20 },
+    { tier: '🟡 Média', rule: 'Custo entre 20% e 30%', met: custo > 20 && custo <= 30 },
+    { tier: '🔴 Cara', rule: 'Custo > 30%', met: custo > 30 },
   ];
   return (
     <div className="mt-2">
       <button onClick={() => setOpen(!open)} className="text-xs text-primary hover:underline flex items-center gap-1">
-        <HelpCircle className="h-3 w-3" />
-        Por que essa classificação?
+        <HelpCircle className="h-3 w-3" /> Por que essa classificação?
       </button>
       {open && (
         <div className="mt-2 p-3 rounded-lg bg-muted/50 border border-border space-y-2 text-xs">
-          <p className="font-medium text-foreground">A classificação é baseada no <span className="text-primary">Custo de Extração</span> — quanto você paga para converter o bônus:</p>
+          <p className="font-medium text-foreground">Baseado no <span className="text-primary">Custo de Extração</span>:</p>
           {rules.map((r, i) => (
             <div key={i} className="flex items-start gap-2">
               <span className={r.met ? 'text-primary' : 'text-muted-foreground'}>{r.met ? '→' : '•'}</span>
-              <div><span className="font-medium">{r.tier}:</span> {r.rule}</div>
+              <span><span className="font-medium">{r.tier}:</span> {r.rule}</span>
             </div>
           ))}
           <div className="pt-2 border-t border-border text-muted-foreground">
-            <p>Seu custo: <span className="font-mono text-foreground">{results.custoExtracaoPercent}%</span> (R$ {results.custoExtracao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} de perda esperada para extrair R$ {results.strategy.backStake.toLocaleString('pt-BR', { minimumFractionDigits: 2 })})</p>
+            Seu custo: <span className="font-mono text-foreground">{custo}%</span> (R$ {fmt(results.custoExtracao)})
           </div>
         </div>
       )}
@@ -86,38 +89,25 @@ function StrategyExplainer({ results, monteCarlo, targetExtraction }: {
   targetExtraction: number;
 }) {
   const [open, setOpen] = useState(false);
-  const fmt = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const n = results.events.length;
+  const odds = results.events.map(e => e.backOdd.toFixed(2)).join(' × ');
+  const lines: string[] = [];
 
-  const explanation = (() => {
-    const n = results.strategy.numEvents;
-    const odds = results.strategy.backOdds.map(o => o.toFixed(2)).join(' × ');
-    const lines: string[] = [];
-    const valorLiquido = targetExtraction - results.custoExtracao;
+  lines.push(`📋 Você quer converter R$ ${fmt(targetExtraction)} de bônus/freebet em dinheiro real.`);
+  lines.push(`💡 Extrair bônus sempre tem um custo — o objetivo é minimizá-lo.`);
+  lines.push(`🎯 Estratégia com ${n} eventos: odds ${odds} (total: ${results.oddTotal}).`);
+  lines.push(`💸 Custo estimado: R$ ${fmt(results.custoExtracao)} (${results.custoExtracaoPercent}%). Você paga R$ ${fmt(results.custoExtracao)} para extrair R$ ${fmt(targetExtraction)}, recebendo ~R$ ${fmt(results.valorLiquidoEstimado)} líquido.`);
+  lines.push(`⚠️ Exposição máxima de caixa: R$ ${fmt(results.exposicaoMaxima)} — movimentação temporária, não perda real.`);
+  lines.push(`🏦 Capital necessário: até R$ ${fmt(results.capitalMaximoNecessario)}.`);
 
-    lines.push(`📋 Você quer converter R$ ${fmt(targetExtraction)} de bônus/freebet em dinheiro real.`);
-    lines.push(`💡 Extrair bônus sempre tem um custo — o objetivo é minimizá-lo.`);
-    lines.push(`🎯 A estratégia usa uma múltipla de ${n} eventos com odds ${odds} (total: ${results.strategy.oddTotal}).`);
-    lines.push(`💸 Custo estimado: R$ ${fmt(results.custoExtracao)} (${results.custoExtracaoPercent}% do valor). Você paga R$ ${fmt(results.custoExtracao)} para extrair R$ ${fmt(targetExtraction)}, recebendo ~R$ ${fmt(valorLiquido)} líquido.`);
-    lines.push(`⚠️ No pior cenário, a exposição de caixa pode chegar a R$ ${fmt(results.perdaMaxima)} — isso não é uma perda real, é o capital temporariamente comprometido.`);
-    lines.push(`🏦 Capital necessário para executar: até R$ ${fmt(results.capitalMaximoNecessario)}.`);
+  if (monteCarlo) {
+    lines.push(`📊 Na simulação de ${monteCarlo.iterations.toLocaleString()} cenários, o resultado mais comum foi um custo de R$ ${fmt(Math.abs(monteCarlo.medianResult))}.`);
+  }
 
-    if (monteCarlo) {
-      const resultadoMediano = Math.abs(monteCarlo.medianProfit);
-      lines.push(`📊 Na simulação de ${monteCarlo.iterations.toLocaleString()} cenários, o resultado mais comum foi um custo de R$ ${fmt(resultadoMediano)}.`);
-    }
-
-    if (results.custoExtracaoPercent < 10) {
-      lines.push(`✅ Estratégia barata: custo baixo, vale a pena executar.`);
-    } else if (results.custoExtracaoPercent <= 20) {
-      lines.push(`👍 Estratégia com custo aceitável. Boa relação para a maioria dos bônus.`);
-    } else if (results.custoExtracaoPercent <= 30) {
-      lines.push(`⚡ Estratégia com custo moderado. Considere ajustar spread ou retenção para reduzir.`);
-    } else {
-      lines.push(`🚫 Estratégia cara. O custo de extração é alto. Revise os parâmetros — spreads menores ou odds diferentes podem ajudar.`);
-    }
-
-    return lines;
-  })();
+  if (results.custoExtracaoPercent < 10) lines.push(`✅ Estratégia barata: custo baixo, vale a pena executar.`);
+  else if (results.custoExtracaoPercent <= 20) lines.push(`👍 Custo aceitável para a maioria dos bônus.`);
+  else if (results.custoExtracaoPercent <= 30) lines.push(`⚡ Custo moderado. Tente odds com spread menor.`);
+  else lines.push(`🚫 Estratégia cara. Revise as odds — spreads menores ajudam.`);
 
   return (
     <Card className="border-primary/20 bg-primary/5">
@@ -129,7 +119,7 @@ function StrategyExplainer({ results, monteCarlo, targetExtraction }: {
         </button>
         {open && (
           <div className="mt-3 space-y-2">
-            {explanation.map((line, i) => (
+            {lines.map((line, i) => (
               <p key={i} className="text-xs text-foreground leading-relaxed">{line}</p>
             ))}
           </div>
@@ -142,18 +132,17 @@ function StrategyExplainer({ results, monteCarlo, targetExtraction }: {
 // ─── Simulation Insights ───
 
 function SimulationInsights({ monteCarlo, targetExtraction }: { monteCarlo: MonteCarloResult; targetExtraction: number }) {
-  const fmt = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const insights: string[] = [];
-  const custoMediano = Math.abs(monteCarlo.medianProfit);
+  const custoMediano = Math.abs(monteCarlo.medianResult);
   const valorLiquido = targetExtraction - custoMediano;
+  const insights: string[] = [];
 
   insights.push(`💰 Você paga ~R$ ${fmt(custoMediano)} para extrair R$ ${fmt(targetExtraction)} → recebe ~R$ ${fmt(valorLiquido)} líquido.`);
 
-  const lossRate = monteCarlo.profitDistribution
+  const lossRate = monteCarlo.resultDistribution
     .filter(b => b.range.includes('-'))
     .reduce((s, b) => s + b.percentage, 0);
   if (lossRate > 0) {
-    insights.push(`📉 Em ${lossRate.toFixed(0)}% dos cenários há movimentação negativa de caixa (esperado — é o custo operacional da extração).`);
+    insights.push(`📉 Em ${lossRate.toFixed(0)}% dos cenários há movimentação negativa de caixa (esperado — custo operacional).`);
   }
 
   const spread = Math.abs(monteCarlo.bestCase - monteCarlo.worstCase);
@@ -162,8 +151,7 @@ function SimulationInsights({ monteCarlo, targetExtraction }: { monteCarlo: Mont
   return (
     <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 space-y-1.5">
       <div className="flex items-center gap-1.5 text-xs font-medium text-primary">
-        <Info className="h-3.5 w-3.5" />
-        Resumo da Simulação
+        <Info className="h-3.5 w-3.5" /> Resumo da Simulação
       </div>
       {insights.map((line, i) => (
         <p key={i} className="text-xs text-muted-foreground">{line}</p>
@@ -175,18 +163,10 @@ function SimulationInsights({ monteCarlo, targetExtraction }: { monteCarlo: Mont
 // ─── Stat Card ───
 
 function StatCard({ icon: Icon, label, value, subtitle, accent }: {
-  icon: React.ElementType;
-  label: string;
-  value: string;
-  subtitle?: string;
+  icon: React.ElementType; label: string; value: string; subtitle?: string;
   accent?: 'green' | 'red' | 'blue' | 'default';
 }) {
-  const accentMap = {
-    green: 'text-emerald-400',
-    red: 'text-red-400',
-    blue: 'text-blue-400',
-    default: 'text-foreground',
-  };
+  const accentMap = { green: 'text-emerald-400', red: 'text-red-400', blue: 'text-blue-400', default: 'text-foreground' };
   return (
     <div className="rounded-lg border border-border bg-card p-3 space-y-1">
       <div className="flex items-center gap-1.5 text-muted-foreground">
@@ -199,208 +179,254 @@ function StatCard({ icon: Icon, label, value, subtitle, accent }: {
   );
 }
 
-// ─── Hedge Objective Helper ───
+// ─── Hedge helpers ───
 
-function getHedgeObjective(eventIndex: number, numEvents: number): string {
-  if (eventIndex === 0) return 'Proteger a stake inicial caso o primeiro evento perca';
-  if (eventIndex === numEvents - 1) return 'Garantir lucro final se a múltipla completa';
-  return `Travar lucro parcial acumulado até o evento ${eventIndex + 1}`;
+function getHedgeObjective(i: number, total: number): string {
+  if (i === 0) return 'Proteger a stake inicial';
+  if (i === total - 1) return 'Garantir lucro final';
+  return `Travar lucro acumulado até evento ${i + 1}`;
 }
 
-function getHedgeImpact(eventIndex: number, liability: number): string {
-  if (eventIndex === 0) return `Sem hedge: perda total da stake`;
-  return `Sem hedge: exposição de R$ ${liability.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} não protegida`;
+function getHedgeImpact(i: number, liability: number): string {
+  if (i === 0) return 'Sem hedge: perda total da stake';
+  return `Sem hedge: exposição de R$ ${fmt(liability)} não protegida`;
+}
+
+// ─── Event Inputs Row ───
+
+function EventInputRow({ index, event, onChange }: {
+  index: number;
+  event: EventInput;
+  onChange: (updated: EventInput) => void;
+}) {
+  const spread = event.layOdd > 0 && event.backOdd > 0
+    ? (((event.layOdd - event.backOdd) / event.backOdd) * 100).toFixed(1)
+    : '—';
+
+  return (
+    <div className="grid grid-cols-[auto_1fr_1fr_auto] gap-3 items-end">
+      <div className="flex items-center justify-center w-8 h-9 rounded-md bg-primary/10 text-primary text-sm font-bold">
+        {index + 1}
+      </div>
+      <div className="space-y-1">
+        <Label className="text-[10px] text-muted-foreground">Odd Back (casa)</Label>
+        <Input
+          type="number"
+          step="0.01"
+          placeholder="ex: 1.80"
+          value={event.backOdd || ''}
+          onChange={e => onChange({ ...event, backOdd: parseFloat(e.target.value) || 0 })}
+          className="h-9 text-sm font-mono"
+        />
+      </div>
+      <div className="space-y-1">
+        <Label className="text-[10px] text-muted-foreground">Odd Lay (exchange)</Label>
+        <Input
+          type="number"
+          step="0.01"
+          placeholder="ex: 1.85"
+          value={event.layOdd || ''}
+          onChange={e => onChange({ ...event, layOdd: parseFloat(e.target.value) || 0 })}
+          className="h-9 text-sm font-mono"
+        />
+      </div>
+      <div className="flex items-center h-9 px-2 text-[10px] text-muted-foreground">
+        spread: {spread}%
+      </div>
+    </div>
+  );
 }
 
 // ─── Main Component ───
 
+const DEFAULT_EVENTS: Record<number, EventInput[]> = {
+  2: [{ backOdd: 1.80, layOdd: 1.85 }, { backOdd: 1.90, layOdd: 1.96 }],
+  3: [{ backOdd: 1.50, layOdd: 1.54 }, { backOdd: 1.60, layOdd: 1.65 }, { backOdd: 1.70, layOdd: 1.75 }],
+  4: [{ backOdd: 1.40, layOdd: 1.44 }, { backOdd: 1.45, layOdd: 1.49 }, { backOdd: 1.50, layOdd: 1.54 }, { backOdd: 1.55, layOdd: 1.59 }],
+  5: [{ backOdd: 1.30, layOdd: 1.33 }, { backOdd: 1.35, layOdd: 1.38 }, { backOdd: 1.40, layOdd: 1.44 }, { backOdd: 1.45, layOdd: 1.49 }, { backOdd: 1.50, layOdd: 1.54 }],
+};
+
 export const CalculadoraExtracaoContent: React.FC = () => {
   const [targetExtraction, setTargetExtraction] = useState('1000');
   const [bankroll, setBankroll] = useState('5000');
-  const [numEventsMin, setNumEventsMin] = useState(2);
-  const [numEventsMax, setNumEventsMax] = useState(4);
-  const [oddMin, setOddMin] = useState('1.40');
-  const [oddMax, setOddMax] = useState('3.50');
-  const [avgSpread, setAvgSpread] = useState('3');
-  const [targetRetention, setTargetRetention] = useState([85]);
   const [exchangeCommission, setExchangeCommission] = useState('2.8');
+  const [numEvents, setNumEvents] = useState('2');
+  const [eventInputs, setEventInputs] = useState<Record<string, EventInput[]>>({
+    '2': [...DEFAULT_EVENTS[2]],
+    '3': [...DEFAULT_EVENTS[3]],
+    '4': [...DEFAULT_EVENTS[4]],
+    '5': [...DEFAULT_EVENTS[5]],
+  });
 
   const [results, setResults] = useState<StrategyResults | null>(null);
-  const [alternatives, setAlternatives] = useState<StrategyResults[]>([]);
   const [probabilities, setProbabilities] = useState<ProbabilityEvent[]>([]);
   const [monteCarlo, setMonteCarlo] = useState<MonteCarloResult | null>(null);
   const [showMonteCarlo, setShowMonteCarlo] = useState(false);
   const [calculated, setCalculated] = useState(false);
   const [calcKey, setCalcKey] = useState(0);
 
+  // Comparison slots
+  const [savedStrategies, setSavedStrategies] = useState<{ label: string; results: StrategyResults }[]>([]);
+
+  const currentEvents = eventInputs[numEvents] || [];
+
+  const updateEvent = (idx: number, updated: EventInput) => {
+    setEventInputs(prev => {
+      const copy = { ...prev };
+      copy[numEvents] = [...copy[numEvents]];
+      copy[numEvents][idx] = updated;
+      return copy;
+    });
+  };
+
   const handleCalculate = () => {
+    const events = currentEvents.filter(e => e.backOdd > 0 && e.layOdd > 0);
+    if (events.length < 2) return;
+
     const config: ExtractionConfig = {
       targetExtraction: parseFloat(targetExtraction) || 1000,
       bankrollAvailable: parseFloat(bankroll) || 5000,
-      numEventsMin,
-      numEventsMax,
-      oddMin: parseFloat(oddMin) || 1.40,
-      oddMax: parseFloat(oddMax) || 3.50,
-      avgSpread: (parseFloat(avgSpread) || 3) / 100,
-      targetRetention: targetRetention[0] / 100,
       exchangeCommission: (parseFloat(exchangeCommission) || 2.8) / 100,
+      events,
     };
 
-    const { best, alternatives: alts } = findBestStrategy(config);
-    setResults(best);
-    setAlternatives(alts);
-    setProbabilities(calculateProbabilities(best.strategy));
-    setMonteCarlo(runMonteCarloSimulation(best.strategy, config));
+    const res = calculateDeterministicHedge(config);
+    setResults(res);
+    setProbabilities(calculateProbabilities(events));
+    setMonteCarlo(runMonteCarloSimulation(config, res.events));
     setShowMonteCarlo(false);
     setCalculated(true);
     setCalcKey(k => k + 1);
   };
 
-  const fmt = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const handleSaveForComparison = () => {
+    if (!results) return;
+    const label = `${numEvents} ev. • ${results.oddTotal}x • ${results.custoExtracaoPercent}%`;
+    setSavedStrategies(prev => [...prev.slice(-3), { label, results }]);
+  };
+
   const targetVal = parseFloat(targetExtraction) || 1000;
 
   return (
     <ScrollArea className="h-full">
       <div className="p-4 space-y-4 max-w-5xl mx-auto">
 
-        {/* ─── HEADER CONTEXT ─── */}
+        {/* Header */}
         <div className="p-3 rounded-lg bg-muted/50 border border-border">
           <p className="text-xs text-muted-foreground leading-relaxed">
-            <strong className="text-foreground">Como funciona:</strong> Converter bônus/freebet em dinheiro real sempre tem um custo (dejuice). 
-            Esta calculadora encontra a estratégia que <strong className="text-foreground">minimiza esse custo</strong> usando múltiplas + hedge sequencial na exchange.
-            O prejuízo é esperado e inevitável — o objetivo é torná-lo o menor possível.
+            <strong className="text-foreground">Como funciona:</strong> Insira as odds reais que você está vendo no mercado (back na casa + lay na exchange).
+            A calculadora simula o hedge sequencial e calcula o <strong className="text-foreground">custo real de conversão</strong> do seu bônus/freebet.
           </p>
         </div>
 
-        {/* ─── INPUTS ─── */}
+        {/* Inputs */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <Target className="h-4 w-4 text-primary" />
-              Parâmetros de Extração
+              Parâmetros
             </CardTitle>
-            <CardDescription className="text-xs">
-              Configure o valor alvo, bankroll e parâmetros de mercado
-            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Row 1: Financial */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {/* Financial row */}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               <div className="space-y-1.5">
                 <div className="flex items-center">
                   <Label className="text-xs">Valor a Extrair (R$)</Label>
-                  <InputTooltip
-                    title="Valor a Extrair"
-                    description="O valor total do bônus ou freebet que você quer converter em dinheiro real."
-                    flow="Este valor define a stake da múltipla. Quanto maior, mais capital você precisa."
-                  />
+                  <InputTooltip title="Valor a Extrair" description="O valor total do bônus ou freebet que você quer converter." />
                 </div>
                 <Input type="number" value={targetExtraction} onChange={e => setTargetExtraction(e.target.value)} className="h-9 text-sm" />
               </div>
               <div className="space-y-1.5">
                 <div className="flex items-center">
                   <Label className="text-xs">Bankroll Disponível (R$)</Label>
-                  <InputTooltip
-                    title="Bankroll Disponível"
-                    description="O capital total que você tem disponível para executar os hedges na exchange."
-                    flow="Estratégias que exigem mais capital que seu bankroll serão depriorizadas."
-                  />
+                  <InputTooltip title="Bankroll" description="Capital disponível para executar os hedges na exchange." />
                 </div>
                 <Input type="number" value={bankroll} onChange={e => setBankroll(e.target.value)} className="h-9 text-sm" />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">Odd Mínima</Label>
-                <Input type="number" step="0.01" value={oddMin} onChange={e => setOddMin(e.target.value)} className="h-9 text-sm" />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Odd Máxima</Label>
-                <Input type="number" step="0.01" value={oddMax} onChange={e => setOddMax(e.target.value)} className="h-9 text-sm" />
-              </div>
-            </div>
-
-            {/* Row 2: Strategy */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs">Eventos (mín)</Label>
-                <select value={numEventsMin} onChange={e => setNumEventsMin(Number(e.target.value))} className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm">
-                  {[2, 3, 4, 5].map(n => <option key={n} value={n}>{n}</option>)}
-                </select>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Eventos (máx)</Label>
-                <select value={numEventsMax} onChange={e => setNumEventsMax(Number(e.target.value))} className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm">
-                  {[2, 3, 4, 5].map(n => <option key={n} value={n}>{n}</option>)}
-                </select>
-              </div>
-              <div className="space-y-1.5">
-                <div className="flex items-center">
-                  <Label className="text-xs">Spread Médio (%)</Label>
-                  <InputTooltip
-                    title="Spread Médio (custo oculto)"
-                    description="A diferença percentual entre a odd back (casa) e a odd lay (exchange). É um custo oculto: quanto maior o spread, mais cara a extração."
-                    flow="Spread de 3% significa que se a odd back é 2.00, a lay será ~2.06. Spreads acima de 5% encarecem significativamente a conversão."
-                  />
-                </div>
-                <Input type="number" step="0.1" value={avgSpread} onChange={e => setAvgSpread(e.target.value)} className="h-9 text-sm" />
-              </div>
-              <div className="space-y-1.5">
                 <div className="flex items-center">
                   <Label className="text-xs">Comissão Exchange (%)</Label>
-                  <InputTooltip
-                    title="Comissão da Exchange"
-                    description="A taxa que a exchange cobra sobre o lucro dos lays. Geralmente entre 2% e 5%."
-                    flow="Aumenta diretamente o custo de cada hedge executado."
-                  />
+                  <InputTooltip title="Comissão" description="Taxa cobrada pela exchange sobre o lucro dos lays (2–5%)." />
                 </div>
                 <Input type="number" step="0.1" value={exchangeCommission} onChange={e => setExchangeCommission(e.target.value)} className="h-9 text-sm" />
               </div>
             </div>
 
-            {/* Retention Slider */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <Label className="text-xs">Retenção Alvo</Label>
-                  <InputTooltip
-                    title="Retenção Alvo (perda máxima aceitável)"
-                    description="Define qual porcentagem do valor você quer reter no mínimo. Retenção de 85% = perda máxima de 15% do valor. Quanto mais alta, mais conservadora a estratégia."
-                    flow="Retenção alta → estratégias com menos risco, mas possivelmente custo maior."
-                  />
-                </div>
-                <div className="text-right">
-                  <span className="text-sm font-bold text-primary">{targetRetention[0]}%</span>
-                  <span className="text-[10px] text-muted-foreground ml-1">(perda máx: {100 - targetRetention[0]}%)</span>
-                </div>
+            {/* Event tabs */}
+            <div>
+              <div className="flex items-center gap-1 mb-2">
+                <Label className="text-xs">Eventos da Múltipla</Label>
+                <InputTooltip
+                  title="Eventos da Múltipla"
+                  description="Insira as odds reais de cada evento. Cada aba representa um tipo de múltipla (dupla, tripla, etc.)."
+                  flow="Odds reais = cálculo preciso. Quanto menor o spread (diferença back vs lay), menor o custo."
+                />
               </div>
-              <Slider value={targetRetention} onValueChange={setTargetRetention} min={70} max={98} step={1} />
-              <div className="flex justify-between text-[10px] text-muted-foreground">
-                <span>70% (agressivo — até 30% perda)</span>
-                <span>98% (conservador — até 2% perda)</span>
-              </div>
+              <Tabs value={numEvents} onValueChange={setNumEvents}>
+                <TabsList className="mb-3">
+                  <TabsTrigger value="2">Dupla (2)</TabsTrigger>
+                  <TabsTrigger value="3">Tripla (3)</TabsTrigger>
+                  <TabsTrigger value="4">Quádrupla (4)</TabsTrigger>
+                  <TabsTrigger value="5">5 Eventos</TabsTrigger>
+                </TabsList>
+
+                {['2', '3', '4', '5'].map(n => (
+                  <TabsContent key={n} value={n} className="space-y-2">
+                    {(eventInputs[n] || []).map((ev, i) => (
+                      <EventInputRow
+                        key={i}
+                        index={i}
+                        event={ev}
+                        onChange={updated => {
+                          setEventInputs(prev => {
+                            const copy = { ...prev };
+                            copy[n] = [...copy[n]];
+                            copy[n][i] = updated;
+                            return copy;
+                          });
+                        }}
+                      />
+                    ))}
+                    {/* Odd total preview */}
+                    <div className="flex items-center justify-between pt-2 border-t border-border/50 text-xs text-muted-foreground">
+                      <span>Odd total da múltipla:</span>
+                      <span className="font-mono font-bold text-foreground">
+                        {(eventInputs[n] || []).reduce((acc, e) => acc * (e.backOdd || 1), 1).toFixed(2)}x
+                      </span>
+                    </div>
+                  </TabsContent>
+                ))}
+              </Tabs>
             </div>
 
             <Button onClick={handleCalculate} className="w-full">
               <Zap className="h-4 w-4 mr-2" />
-              Calcular Estratégia de Menor Custo
+              Calcular Custo de Conversão
             </Button>
           </CardContent>
         </Card>
 
-        {/* ─── RESULTS ─── */}
+        {/* Results */}
         {calculated && results && (
           <React.Fragment key={calcKey}>
-            {/* Strategy Explainer */}
+            {/* Strategy explainer */}
             <StrategyExplainer results={results} monteCarlo={monteCarlo} targetExtraction={targetVal} />
 
-            {/* Strategy Overview */}
+            {/* Strategy overview */}
             <Card className="border-primary/30">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-base flex items-center gap-2">
                     <Zap className="h-4 w-4 text-primary" />
-                    Estratégia Recomendada
+                    Resultado da Estratégia
                   </CardTitle>
-                  <ClassificationBadge classification={results.classification} />
+                  <div className="flex items-center gap-2">
+                    <ClassificationBadge classification={results.classification} />
+                    <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={handleSaveForComparison}>
+                      <Copy className="h-3 w-3" /> Salvar p/ comparar
+                    </Button>
+                  </div>
                 </div>
                 <ClassificationExplainer results={results} />
               </CardHeader>
@@ -408,18 +434,18 @@ export const CalculadoraExtracaoContent: React.FC = () => {
                 <div className="flex flex-wrap items-center gap-3">
                   <div className="text-center px-3 py-1.5 rounded-md bg-muted">
                     <p className="text-[10px] text-muted-foreground">Eventos</p>
-                    <p className="text-lg font-bold">{results.strategy.numEvents}</p>
+                    <p className="text-lg font-bold">{results.events.length}</p>
                   </div>
                   <div className="text-center px-3 py-1.5 rounded-md bg-muted">
                     <p className="text-[10px] text-muted-foreground">Odd Total</p>
-                    <p className="text-lg font-bold">{results.strategy.oddTotal}</p>
+                    <p className="text-lg font-bold">{results.oddTotal}</p>
                   </div>
                   <div className="flex-1 min-w-[200px]">
-                    <p className="text-[10px] text-muted-foreground mb-1">Odds Sugeridas</p>
+                    <p className="text-[10px] text-muted-foreground mb-1">Odds Back (reais)</p>
                     <div className="flex gap-1.5">
-                      {results.strategy.backOdds.map((odd, i) => (
+                      {results.events.map((ev, i) => (
                         <span key={i} className="px-2 py-0.5 rounded bg-primary/10 text-primary text-sm font-mono font-medium">
-                          {odd.toFixed(2)}
+                          {ev.backOdd.toFixed(2)}
                         </span>
                       ))}
                     </div>
@@ -428,7 +454,7 @@ export const CalculadoraExtracaoContent: React.FC = () => {
               </CardContent>
             </Card>
 
-            {/* ─── RESUMO EXECUTIVO ─── */}
+            {/* Resumo Executivo */}
             <Card className="border-primary/40 bg-gradient-to-r from-primary/5 to-transparent">
               <CardContent className="pt-5 pb-4">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">Resumo Executivo</p>
@@ -452,18 +478,12 @@ export const CalculadoraExtracaoContent: React.FC = () => {
               </CardContent>
             </Card>
 
-            {/* Financial Results — cost-focused */}
+            {/* Metrics */}
             <div>
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Custo Real da Estratégia</p>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                <StatCard
-                  icon={Percent}
-                  label="Custo de Extração"
-                  value={`${results.custoExtracaoPercent}%`}
-                  subtitle={`R$ ${fmt(results.custoExtracao)} — taxa para converter o bônus`}
-                  accent="red"
-                />
-                <StatCard icon={DollarSign} label="Valor Líquido Estimado" value={`R$ ${fmt(targetVal - results.custoExtracao)}`} subtitle="valor extraído − custo" accent="green" />
+                <StatCard icon={Percent} label="Custo de Extração" value={`${results.custoExtracaoPercent}%`} subtitle={`R$ ${fmt(results.custoExtracao)} — taxa para converter`} accent="red" />
+                <StatCard icon={DollarSign} label="Valor Líquido Estimado" value={`R$ ${fmt(results.valorLiquidoEstimado)}`} subtitle="valor extraído − custo" accent="green" />
                 <StatCard icon={Shield} label="Capital Esperado" value={`R$ ${fmt(results.capitalEsperado)}`} subtitle="uso médio ponderado" />
               </div>
             </div>
@@ -471,38 +491,22 @@ export const CalculadoraExtracaoContent: React.FC = () => {
             <div>
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1">
                 Exposição e Fluxo de Caixa
-                <CardInfoTooltip
-                  title="Exposição ≠ Perda"
-                  description="Estes valores representam movimentações temporárias de caixa, não perdas reais. O capital circula entre bookmaker e exchange durante a operação e retorna ao final."
-                />
+                <CardInfoTooltip title="Exposição ≠ Perda" description="Movimentações temporárias de caixa, não perdas reais. O capital retorna ao final da operação." />
               </p>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                <StatCard
-                  icon={TrendingDown}
-                  label="Exposição Máxima de Caixa"
-                  value={`R$ ${fmt(results.perdaMaxima)}`}
-                  subtitle="fluxo temporário, não perda real"
-                />
-                <StatCard
-                  icon={BarChart3}
-                  label="Resultado Mais Comum (Simulação)"
-                  value={monteCarlo ? `R$ ${fmt(Math.abs(monteCarlo.medianProfit))}` : '—'}
-                  subtitle="custo típico observado nos cenários"
-                />
+                <StatCard icon={TrendingDown} label="Exposição Máxima de Caixa" value={`R$ ${fmt(results.exposicaoMaxima)}`} subtitle="fluxo temporário, não perda real" />
+                <StatCard icon={BarChart3} label="Resultado Mais Comum (Simulação)" value={monteCarlo ? `R$ ${fmt(Math.abs(monteCarlo.medianResult))}` : '—'} subtitle="custo típico observado" />
                 <StatCard icon={Shield} label="Capital Máximo Necessário" value={`R$ ${fmt(results.capitalMaximoNecessario)}`} subtitle="pior cenário de hedge" />
               </div>
             </div>
 
-            {/* Hedge Detail Table */}
+            {/* Hedge Table */}
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-base flex items-center gap-2">
-                  <Shield className="h-4 w-4" />
-                  Hedge Detalhado (Sequencial Condicional)
+                  <Shield className="h-4 w-4" /> Hedge Detalhado (Sequencial Condicional)
                 </CardTitle>
-                <CardDescription className="text-xs">
-                  Cada lay só é executado se o evento anterior ganhar. O Lay 1 é sempre executado.
-                </CardDescription>
+                <CardDescription className="text-xs">Cada lay só é executado se o evento anterior ganhar. O Lay 1 é sempre executado.</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
@@ -520,7 +524,7 @@ export const CalculadoraExtracaoContent: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {results.strategy.hedgeEvents.map((event, i) => (
+                      {results.events.map((event, i) => (
                         <tr key={i} className="border-b border-border/50 hover:bg-muted/30">
                           <td className="py-2 px-2 font-medium">Evento {i + 1}</td>
                           <td className="py-2 px-2 text-right font-mono">{event.backOdd.toFixed(2)}</td>
@@ -528,40 +532,29 @@ export const CalculadoraExtracaoContent: React.FC = () => {
                           <td className="py-2 px-2 text-right font-mono">R$ {fmt(event.layStake)}</td>
                           <td className="py-2 px-2 text-right font-mono text-red-400">R$ {fmt(event.liability)}</td>
                           <td className="py-2 px-2 text-center">
-                            {event.isConditional ? (
-                              <span className="text-yellow-400 text-xs">Se ev. {i} ganhar</span>
-                            ) : (
-                              <span className="text-emerald-400 text-xs">Sempre</span>
-                            )}
+                            {event.isConditional
+                              ? <span className="text-yellow-400 text-xs">Se ev. {i} ganhar</span>
+                              : <span className="text-emerald-400 text-xs">Sempre</span>
+                            }
                           </td>
-                          <td className="py-2 px-2 text-xs text-muted-foreground max-w-[150px]">
-                            {getHedgeObjective(i, results.strategy.numEvents)}
-                          </td>
-                          <td className="py-2 px-2 text-xs text-red-400/80 max-w-[150px]">
-                            {getHedgeImpact(i, event.liability)}
-                          </td>
+                          <td className="py-2 px-2 text-xs text-muted-foreground max-w-[150px]">{getHedgeObjective(i, results.events.length)}</td>
+                          <td className="py-2 px-2 text-xs text-red-400/80 max-w-[150px]">{getHedgeImpact(i, event.liability)}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
 
-                {/* Visual Timeline */}
+                {/* Timeline */}
                 <div className="mt-4 flex items-center gap-1">
-                  {results.strategy.hedgeEvents.map((event, i) => (
+                  {results.events.map((event, i) => (
                     <React.Fragment key={i}>
-                      <div className={`flex-1 rounded-md p-2 text-center text-[10px] ${
-                        i === 0 ? 'bg-emerald-500/15 border border-emerald-500/30' : 'bg-yellow-500/10 border border-yellow-500/20'
-                      }`}>
+                      <div className={`flex-1 rounded-md p-2 text-center text-[10px] ${i === 0 ? 'bg-emerald-500/15 border border-emerald-500/30' : 'bg-yellow-500/10 border border-yellow-500/20'}`}>
                         <div className="font-medium">Lay {i + 1}</div>
                         <div className="text-muted-foreground">R$ {fmt(event.layStake)}</div>
-                        <div className="text-[8px] text-muted-foreground mt-0.5">
-                          {i === 0 ? 'sempre' : `se ev.${i} ✓`}
-                        </div>
+                        <div className="text-[8px] text-muted-foreground mt-0.5">{i === 0 ? 'sempre' : `se ev.${i} ✓`}</div>
                       </div>
-                      {i < results.strategy.hedgeEvents.length - 1 && (
-                        <div className="text-muted-foreground text-[10px]">→</div>
-                      )}
+                      {i < results.events.length - 1 && <div className="text-muted-foreground text-[10px]">→</div>}
                     </React.Fragment>
                   ))}
                 </div>
@@ -571,10 +564,7 @@ export const CalculadoraExtracaoContent: React.FC = () => {
             {/* Probabilities */}
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <BarChart3 className="h-4 w-4" />
-                  Probabilidades
-                </CardTitle>
+                <CardTitle className="text-base flex items-center gap-2"><BarChart3 className="h-4 w-4" /> Probabilidades</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
                 {probabilities.map((p, i) => (
@@ -591,35 +581,29 @@ export const CalculadoraExtracaoContent: React.FC = () => {
               </CardContent>
             </Card>
 
-            {/* Monte Carlo Simulation */}
+            {/* Monte Carlo */}
             <Card>
               <CardHeader className="pb-2">
                 <button onClick={() => setShowMonteCarlo(!showMonteCarlo)} className="flex items-center justify-between w-full">
                   <CardTitle className="text-base flex items-center gap-2">
-                    <BarChart3 className="h-4 w-4" />
-                    Simulação Monte Carlo ({monteCarlo?.iterations.toLocaleString()} cenários)
+                    <BarChart3 className="h-4 w-4" /> Simulação Monte Carlo ({monteCarlo?.iterations.toLocaleString()} cenários)
                   </CardTitle>
                   {showMonteCarlo ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                 </button>
               </CardHeader>
               {showMonteCarlo && monteCarlo && (
                 <CardContent className="space-y-4">
-                  {/* Insights */}
                   <SimulationInsights monteCarlo={monteCarlo} targetExtraction={targetVal} />
 
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     <div className="text-center p-2 rounded bg-muted">
                       <p className="text-[10px] text-muted-foreground">Resultado Mais Comum</p>
-                      <p className="text-sm font-bold text-primary">
-                        R$ {fmt(Math.abs(monteCarlo.medianProfit))}
-                      </p>
+                      <p className="text-sm font-bold text-primary">R$ {fmt(Math.abs(monteCarlo.medianResult))}</p>
                       <p className="text-[9px] text-muted-foreground">custo típico</p>
                     </div>
                     <div className="text-center p-2 rounded bg-muted/50">
                       <p className="text-[10px] text-muted-foreground">Custo Médio</p>
-                      <p className="text-sm font-medium text-muted-foreground">
-                        R$ {fmt(Math.abs(monteCarlo.avgProfit))}
-                      </p>
+                      <p className="text-sm font-medium text-muted-foreground">R$ {fmt(Math.abs(monteCarlo.avgResult))}</p>
                     </div>
                     <div className="text-center p-2 rounded bg-muted/50">
                       <p className="text-[10px] text-muted-foreground">Pior Cenário</p>
@@ -636,7 +620,7 @@ export const CalculadoraExtracaoContent: React.FC = () => {
                   <div>
                     <p className="text-xs text-muted-foreground mb-2">Distribuição de Resultados</p>
                     <div className="space-y-1">
-                      {monteCarlo.profitDistribution.map((bucket, i) => (
+                      {monteCarlo.resultDistribution.map((bucket, i) => (
                         <div key={i} className="flex items-center gap-2">
                           <span className="text-[10px] text-muted-foreground w-28 text-right shrink-0 font-mono">{bucket.range}</span>
                           <div className="flex-1 h-4 rounded bg-muted overflow-hidden">
@@ -666,27 +650,38 @@ export const CalculadoraExtracaoContent: React.FC = () => {
               )}
             </Card>
 
-            {/* Alternatives */}
-            {alternatives.length > 0 && (
+            {/* Comparison */}
+            {savedStrategies.length > 0 && (
               <Card>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm text-muted-foreground">Estratégias Alternativas</CardTitle>
+                  <CardTitle className="text-sm text-muted-foreground">Comparação de Estratégias</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-2">
-                    {alternatives.map((alt, i) => (
-                      <div key={i} className="flex items-center justify-between p-2 rounded-md bg-muted/50 border border-border/50">
-                        <div className="flex items-center gap-3">
-                          <ClassificationBadge classification={alt.classification} />
-                          <span className="text-sm">{alt.strategy.numEvents} eventos • Odd {alt.strategy.oddTotal}</span>
-                          <span className="text-xs text-muted-foreground">[{alt.strategy.backOdds.map(o => o.toFixed(2)).join(', ')}]</span>
-                        </div>
-                        <div className="flex items-center gap-4 text-sm">
-                          <span className="text-primary">Custo: {alt.custoExtracaoPercent}%</span>
-                          <span className="text-muted-foreground">Exposição: R$ {fmt(alt.perdaMaxima)}</span>
-                        </div>
-                      </div>
-                    ))}
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-b border-border text-muted-foreground">
+                          <th className="text-left py-2 px-2">Estratégia</th>
+                          <th className="text-right py-2 px-2">Custo (%)</th>
+                          <th className="text-right py-2 px-2">Custo (R$)</th>
+                          <th className="text-right py-2 px-2">Capital Máx</th>
+                          <th className="text-right py-2 px-2">Exposição</th>
+                          <th className="text-center py-2 px-2">Classe</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {savedStrategies.map((s, i) => (
+                          <tr key={i} className="border-b border-border/50">
+                            <td className="py-2 px-2 font-medium">{s.label}</td>
+                            <td className="py-2 px-2 text-right font-mono">{s.results.custoExtracaoPercent}%</td>
+                            <td className="py-2 px-2 text-right font-mono">R$ {fmt(s.results.custoExtracao)}</td>
+                            <td className="py-2 px-2 text-right font-mono">R$ {fmt(s.results.capitalMaximoNecessario)}</td>
+                            <td className="py-2 px-2 text-right font-mono">R$ {fmt(s.results.exposicaoMaxima)}</td>
+                            <td className="py-2 px-2 text-center"><ClassificationBadge classification={s.results.classification} /></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 </CardContent>
               </Card>
