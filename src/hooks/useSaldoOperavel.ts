@@ -38,6 +38,8 @@ interface BookmakerSaldoCompleto {
   saldo_disponivel: number;
   saldo_operavel: number;
   bonus_rollover_started: boolean;
+  has_pending_withdrawals: boolean;
+  saldo_saque_pendente: number;
 }
 
 interface RolloverPorCasa {
@@ -80,25 +82,8 @@ export function useSaldoOperavel(projetoId: string) {
     refetchOnWindowFocus: false,
   });
 
-  // Query para buscar casas com saques pendentes de confirmação
-  const { data: casasComSaquePendente } = useQuery({
-    queryKey: ["bookmaker-saque-pendente", projetoId, bookmakers.map(b => b.id).join(",")],
-    queryFn: async () => {
-      const ids = bookmakers.map(b => b.id);
-      if (!ids.length) return new Set<string>();
-      
-      const { data } = await supabase
-        .from("cash_ledger")
-        .select("origem_bookmaker_id")
-        .in("origem_bookmaker_id", ids)
-        .eq("tipo_transacao", "SAQUE")
-        .eq("transit_status", "PENDING");
-      
-      return new Set((data || []).map(r => r.origem_bookmaker_id).filter(Boolean));
-    },
-    enabled: bookmakers.length > 0,
-    staleTime: 5000,
-  });
+  // has_pending_withdrawals agora vem direto da RPC get_bookmaker_saldos (campo has_pending_withdrawals)
+  // Removida query redundante que filtrava por transit_status incorreto
 
   // Query separada para rollover por casa (individual)
   const { data: rolloverData } = useQuery({
@@ -234,13 +219,14 @@ export function useSaldoOperavel(projetoId: string) {
           rolloverProgress: rolloverInfo?.progress || 0,
           rolloverTarget: rolloverInfo?.target || 0,
           rolloverPercentual: rolloverInfo?.percentual || 0,
-          // Status de saque
-          aguardandoSaque: casasComSaquePendente?.has(bk.id) || false,
+          // Status de saque (usar campo da RPC que filtra por status PENDENTE corretamente)
+          aguardandoSaque: Boolean(bk.has_pending_withdrawals),
+          saldoSaquePendenteNativo: Number(bk.saldo_saque_pendente) || 0,
         };
       })
       .filter((casa) => casa.saldoOperavel > 0 || casa.saldoEmAposta > 0)
       .sort((a, b) => b.saldoOperavel - a.saldoOperavel);
-  }, [bookmakers, convertToConsolidationOficial, rolloverPorCasa, casasComSaquePendente]);
+  }, [bookmakers, convertToConsolidationOficial, rolloverPorCasa]);
 
   return {
     // Valor principal do KPI
