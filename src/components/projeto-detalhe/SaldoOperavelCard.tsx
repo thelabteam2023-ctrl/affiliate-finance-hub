@@ -263,68 +263,69 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
 
   // Casas breakdown content (inline, not a component)
   const casasBreakdownContent = (
-    <div className="space-y-3">
+    <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-center gap-2 pb-2 border-b border-border/50">
-        <Wallet className="h-4 w-4 text-primary" />
-        <h3 className="text-sm font-semibold text-foreground">Saldo Atual</h3>
-        <Badge 
-          variant="outline" 
-          className="text-[10px] px-2 py-0.5 bg-muted/50 border-muted-foreground/30 text-muted-foreground font-normal"
-        >
-          {moedaConsolidacao} • Moeda de Consolidação
-        </Badge>
-      </div>
-
-      {/* Composição do Saldo — estilo lista com separadores */}
-      <div className="space-y-2">
-        <p className="text-xs font-medium text-foreground">Composição do Saldo</p>
-        <div className="space-y-0 text-xs rounded-lg border border-border/50 overflow-hidden">
-          {/* Saldo Real */}
-          <div className="flex items-center justify-between px-3 py-2 bg-muted/20">
-            <span className="text-muted-foreground">Saldo Total</span>
-            <span className="font-semibold">{formatCurrency(Math.max(0, saldoReal))}</span>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className="h-8 w-8 rounded-lg bg-primary/15 flex items-center justify-center">
+            <Wallet className="h-4 w-4 text-primary" />
           </div>
-          {/* Freebet */}
-          {hasFreebet && (
-            <div className="flex items-center justify-between px-3 py-2 bg-muted/20 border-t border-border/30">
-              <span className="text-muted-foreground flex items-center gap-1">
-                <Gift className="h-3 w-3 text-warning" />
-                Freebet
-              </span>
-              <span className="font-semibold text-warning">{formatCurrency(saldoFreebet)}</span>
-            </div>
-          )}
-          {/* Apostas em Aberto — dedução */}
-          {saldoEmAposta > 0 && (
-            <div className="flex items-center justify-between px-3 py-2 bg-amber-500/10 border-t border-border/30">
-              <span className="text-muted-foreground flex items-center gap-1">
-                <Clock className="h-3 w-3 text-amber-500" />
-                Apostas em Aberto
-              </span>
-              <span className="font-semibold text-amber-500">{formatCurrency(saldoEmAposta)}</span>
-            </div>
-          )}
-          {/* Saldo Livre = saldo disponível líquido + freebet */}
-          <div className="flex items-center justify-between px-3 py-2.5 border-t border-border/50 bg-muted/30">
-            <span className="font-semibold text-foreground">Saldo Livre</span>
-            <span className="font-bold text-foreground">{formatCurrency(Math.max(0, saldoOperavel))}</span>
+          <div>
+            <h3 className="text-sm font-bold text-foreground tracking-tight">Patrimônio nas Casas</h3>
+            <p className="text-[10px] text-muted-foreground">Visão consolidada em {moedaConsolidacao}</p>
           </div>
         </div>
       </div>
 
-      {/* Saldo por Casa — GRID RESPONSIVO */}
-      <div className="space-y-2">
-        <p className="text-xs font-medium text-foreground">Saldo por Casa <span className="font-normal text-muted-foreground">— disponível para uso</span></p>
+      {/* Summary Cards */}
+      <div className="grid grid-cols-3 gap-2">
+        <div className="rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 p-3 text-center">
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1">Total</p>
+          <p className="text-base font-bold text-foreground tabular-nums">{formatCurrency(Math.max(0, saldoReal))}</p>
+        </div>
+        <div className="rounded-xl bg-gradient-to-br from-amber-500/10 to-amber-500/5 border border-amber-500/20 p-3 text-center">
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1">Em Jogo</p>
+          <p className="text-base font-bold text-amber-500 tabular-nums">{formatCurrency(saldoEmAposta)}</p>
+        </div>
+        <div className="rounded-xl bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border border-emerald-500/20 p-3 text-center">
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1">Disponível</p>
+          <p className="text-base font-bold text-emerald-500 tabular-nums">{formatCurrency(Math.max(0, saldoOperavel))}</p>
+        </div>
+      </div>
+
+      {/* Extra badges for freebet/bonus */}
+      {(hasFreebet || hasBonus) && (
+        <div className="flex items-center gap-2 flex-wrap">
+          {hasFreebet && (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-warning/10 border border-warning/20">
+              <Gift className="h-3 w-3 text-warning" />
+              <span className="text-[10px] font-medium text-warning">Freebet: {formatCurrency(saldoFreebet)}</span>
+            </div>
+          )}
+          {hasBonus && (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-500/10 border border-purple-500/20">
+              <Gift className="h-3 w-3 text-purple-400" />
+              <span className="text-[10px] font-medium text-purple-400">Bônus: {formatCurrency(saldoBonus)}</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Saldo por Casa */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-semibold text-foreground">Saldo por Casa</p>
+          <span className="text-[10px] text-muted-foreground">{casasComSaldo.length} casa{casasComSaldo.length !== 1 ? 's' : ''}</span>
+        </div>
         
         {casasComSaldo.length >= 8 && (
           <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
             <Input
-              placeholder="Buscar casa..."
+              placeholder="Buscar por casa ou titular..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="h-8 pl-8 text-xs bg-muted/30 border-border/50"
+              className="h-9 pl-9 text-xs bg-muted/20 border-border/40 rounded-lg"
               autoFocus
             />
           </div>
@@ -332,91 +333,107 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
 
         <div 
           className="grid gap-2"
-          style={{ gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))" }}
+          style={{ gridTemplateColumns: "repeat(auto-fit, minmax(270px, 1fr))" }}
         >
-          {filteredCasas.map((casa) => (
-            <div 
-              key={casa.id} 
-              className={cn(
-                "p-2 rounded-lg transition-colors",
-                casa.aguardandoSaque 
-                  ? "bg-orange-500/10 border border-orange-500/20 hover:bg-orange-500/15" 
-                  : "bg-muted/30 hover:bg-muted/50"
-              )}
-            >
-              <div className="flex items-center justify-between gap-1.5 min-w-0">
-                <div className="flex items-center gap-1 min-w-0 flex-1">
-                  <span className="text-xs font-medium text-foreground truncate">
-                    {casa.nome}
-                    {(casa.instanceIdentifier || casa.parceiroPrimeiroNome) && (
-                      <span className="text-primary/80 ml-1 font-normal">
-                        ({casa.instanceIdentifier || casa.parceiroPrimeiroNome})
+          {filteredCasas.map((casa) => {
+            const titular = casa.instanceIdentifier || casa.parceiroPrimeiroNome;
+            return (
+              <div 
+                key={casa.id} 
+                className={cn(
+                  "group rounded-xl border p-3 transition-all duration-200",
+                  casa.aguardandoSaque 
+                    ? "bg-orange-500/5 border-orange-500/25 hover:border-orange-500/40" 
+                    : "bg-muted/15 border-border/40 hover:border-primary/30 hover:bg-muted/30"
+                )}
+              >
+                {/* Row 1: Casa name + Balance */}
+                <div className="flex items-start justify-between gap-2 mb-1.5">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      {casa.logoUrl && (
+                        <img src={casa.logoUrl} alt="" className="h-4 w-4 rounded-sm object-contain flex-shrink-0" />
+                      )}
+                      <span className="text-xs font-bold text-foreground truncate uppercase tracking-wide">
+                        {casa.nome}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-baseline gap-1 flex-shrink-0">
+                    <SaldoCompostoSimples
+                      saldoReal={casa.saldoDisponivelNativo}
+                      saldoFreebet={casa.saldoFreebetNativo}
+                      formatCurrency={(val) => formatCurrencyUtil(val, casa.moedaOriginal)}
+                      className="text-sm text-primary font-bold whitespace-nowrap tabular-nums"
+                    />
+                  </div>
+                </div>
+
+                {/* Row 2: Titular + Currency + Saque badge */}
+                <div className="flex items-center justify-between gap-1.5">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    {titular && (
+                      <span className="text-[11px] text-muted-foreground truncate">
+                        <span className="text-muted-foreground/60">Titular:</span>{" "}
+                        <span className="text-foreground/70 font-medium">{titular}</span>
                       </span>
                     )}
-                  </span>
-                  {casa.aguardandoSaque && (
-                    <TooltipProvider delayDuration={0}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Badge 
-                            variant="outline" 
-                            className="text-[8px] px-1.5 py-0 bg-orange-500/15 border-orange-500/30 text-orange-400 font-medium leading-tight gap-0.5 flex-shrink-0"
-                          >
-                            <Clock className="h-2.5 w-2.5" />
-                            Saque
-                          </Badge>
-                        </TooltipTrigger>
-                        <TooltipContent className="z-[10000]">
-                          <p className="text-xs">Aguardando processamento de saque</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  )}
+                  </div>
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    {casa.aguardandoSaque && (
+                      <Badge 
+                        variant="outline" 
+                        className="text-[9px] px-1.5 py-0.5 bg-orange-500/15 border-orange-500/30 text-orange-400 font-medium gap-0.5"
+                      >
+                        <Clock className="h-2.5 w-2.5" />
+                        Em Saque
+                      </Badge>
+                    )}
+                    <Badge 
+                      variant="outline" 
+                      className="text-[9px] px-1.5 py-0.5 bg-muted/40 border-border/50 text-muted-foreground font-mono"
+                    >
+                      {casa.moedaOriginal}
+                    </Badge>
+                  </div>
                 </div>
-                <div className="flex items-center gap-1.5 flex-shrink-0">
-                  <Badge 
-                    variant="outline" 
-                    className="text-[8px] px-1 py-0 bg-muted/50 border-muted-foreground/30 text-muted-foreground font-normal leading-tight"
-                  >
-                    {casa.moedaOriginal}
-                  </Badge>
-                  <SaldoCompostoSimples
-                    saldoReal={casa.saldoDisponivelNativo}
-                    saldoFreebet={casa.saldoFreebetNativo}
-                    formatCurrency={(val) => formatCurrencyUtil(val, casa.moedaOriginal)}
-                    className="text-xs text-primary font-semibold whitespace-nowrap"
-                  />
-                </div>
+
+                {/* Row 3: Rollover progress */}
+                {casa.hasRollover && (
+                  <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/30">
+                    <Gift className="h-3 w-3 text-amber-500 flex-shrink-0" />
+                    <Progress 
+                      value={casa.rolloverPercentual} 
+                      className="h-1.5 flex-1"
+                    />
+                    <span className="text-[10px] font-medium text-amber-500 tabular-nums w-8 text-right">
+                      {casa.rolloverPercentual.toFixed(0)}%
+                    </span>
+                  </div>
+                )}
               </div>
-              
-              {casa.hasRollover && (
-                <div className="flex items-center gap-1.5 mt-1">
-                  <Gift className="h-3 w-3 text-amber-500 flex-shrink-0" />
-                  <Progress 
-                    value={casa.rolloverPercentual} 
-                    className="h-1 flex-1"
-                  />
-                  <span className="text-[9px] text-muted-foreground whitespace-nowrap w-7 text-right">
-                    {casa.rolloverPercentual.toFixed(0)}%
-                  </span>
-                </div>
-              )}
-            </div>
-          ))}
+            );
+          })}
 
           {filteredCasas.length === 0 && searchTerm && (
-            <p className="text-xs text-muted-foreground col-span-full text-center py-4">
+            <p className="text-xs text-muted-foreground col-span-full text-center py-6">
               Nenhuma casa encontrada para "{searchTerm}"
             </p>
           )}
         </div>
       </div>
       
-      <p className="text-xs text-muted-foreground pt-1.5 border-t border-border">
-        {casasComSaldo.length} casa{casasComSaldo.length !== 1 ? 's' : ''} com saldo
-        {casasComRollover > 0 && ` • ${casasComRollover} com rollover`}
-        {casasAguardandoSaque > 0 && ` • ${casasAguardandoSaque} em saque`}
-      </p>
+      {/* Footer */}
+      <div className="flex items-center justify-between pt-2 border-t border-border/30">
+        <p className="text-[10px] text-muted-foreground">
+          {casasComSaldo.length} com saldo
+          {casasComRollover > 0 && ` · ${casasComRollover} rollover`}
+          {casasAguardandoSaque > 0 && ` · ${casasAguardandoSaque} em saque`}
+        </p>
+        <Badge variant="outline" className="text-[9px] px-1.5 py-0.5 bg-muted/30 border-border/40 text-muted-foreground font-normal">
+          Consolidado em {moedaConsolidacao}
+        </Badge>
+      </div>
     </div>
   );
 
