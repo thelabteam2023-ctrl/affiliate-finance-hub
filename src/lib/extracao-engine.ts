@@ -51,6 +51,8 @@ export interface ProbabilityEvent {
   eventIndex: number;
   label: string;
   probability: number;
+  type: 'success' | 'failure';
+  laysExecuted: number;  // quantos lays são executados nesse cenário
 }
 
 export interface MonteCarloResult {
@@ -180,24 +182,33 @@ function probabilityOfReaching(events: EventInput[], idx: number): number {
   return p;
 }
 
-export function calculateProbabilities(events: EventInput[]): ProbabilityEvent[] {
+export function calculateProbabilities(events: EventInput[]): { probabilities: ProbabilityEvent[]; successRate: number } {
   const result: ProbabilityEvent[] = [];
 
   for (let i = 0; i < events.length; i++) {
     const probChegar = probabilityOfReaching(events, i);
     const probPerder = 1 - 1 / events[i].backOdd;
+    const prob = probChegar * probPerder;
 
-    if (i === 0) {
-      result.push({ eventIndex: i, label: `Parar no evento 1 (back perde)`, probability: probPerder });
-    } else {
-      result.push({ eventIndex: i, label: `Usar lay ${i + 1} (chegar ao evento ${i + 1})`, probability: probChegar });
-    }
+    result.push({
+      eventIndex: i,
+      label: `Finalizar no evento ${i + 1}`,
+      probability: prob,
+      type: 'success',
+      laysExecuted: i, // lays 0..i-1 foram executados antes deste evento
+    });
   }
 
   const probAll = events.reduce((acc, e) => acc * (1 / e.backOdd), 1);
-  result.push({ eventIndex: events.length, label: 'Múltipla completa (todos ganham)', probability: probAll });
+  result.push({
+    eventIndex: events.length,
+    label: 'Falha — todos eventos ganham',
+    probability: probAll,
+    type: 'failure',
+    laysExecuted: events.length,
+  });
 
-  return result;
+  return { probabilities: result, successRate: 1 - probAll };
 }
 
 // ─── Monte Carlo ───
