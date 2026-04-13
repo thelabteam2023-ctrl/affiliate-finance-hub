@@ -54,12 +54,13 @@ function ClassificationBadge({ classification, resultadoPercent }: { classificat
 
 function ClassificationExplainer({ results }: { results: StrategyResults }) {
   const [open, setOpen] = useState(false);
-  const custo = results.custoExtracaoPercent;
+  const res = results.resultadoOperacaoPercent;
+  const isProfit = results.resultadoOperacao > 0;
   const rules = [
-    { tier: '🟢 Excelente', rule: 'Custo de extração < 10%', met: custo < 10 },
-    { tier: '🔵 Boa', rule: 'Custo entre 10% e 20%', met: custo >= 10 && custo <= 20 },
-    { tier: '🟡 Média', rule: 'Custo entre 20% e 30%', met: custo > 20 && custo <= 30 },
-    { tier: '🔴 Cara', rule: 'Custo > 30%', met: custo > 30 },
+    { tier: '🟢 Excelente', rule: isProfit ? 'Operação lucrativa (edge positivo)' : 'Custo de extração < 10%', met: results.classification === 'excellent' },
+    { tier: '🔵 Boa', rule: 'Custo entre 10% e 20%', met: results.classification === 'good' },
+    { tier: '🟡 Média', rule: 'Custo entre 20% e 30%', met: results.classification === 'medium' },
+    { tier: '🔴 Cara', rule: 'Custo > 30%', met: results.classification === 'poor' },
   ];
   return (
     <div className="mt-2">
@@ -68,7 +69,7 @@ function ClassificationExplainer({ results }: { results: StrategyResults }) {
       </button>
       {open && (
         <div className="mt-2 p-3 rounded-lg bg-muted/50 border border-border space-y-2 text-xs">
-          <p className="font-medium text-foreground">Baseado no <span className="text-primary">Custo de Extração</span>:</p>
+          <p className="font-medium text-foreground">Baseado no <span className="text-primary">Resultado da Operação</span>:</p>
           {rules.map((r, i) => (
             <div key={i} className="flex items-start gap-2">
               <span className={r.met ? 'text-primary' : 'text-muted-foreground'}>{r.met ? '→' : '•'}</span>
@@ -76,7 +77,7 @@ function ClassificationExplainer({ results }: { results: StrategyResults }) {
             </div>
           ))}
           <div className="pt-2 border-t border-border text-muted-foreground">
-            Seu custo: <span className="font-mono text-foreground">{custo}%</span> (R$ {fmt(results.custoExtracao)})
+            Resultado: <span className="font-mono text-foreground">{res > 0 ? '+' : ''}{res}%</span> (R$ {res >= 0 ? '+' : ''}{fmt(results.resultadoOperacao)})
           </div>
         </div>
       )}
