@@ -177,6 +177,8 @@ export function calculateDeterministicHedge(config: ExtractionConfig): StrategyR
     potentialReturn: Math.round(potentialReturn * 100) / 100,
     netCashFailure: Math.round(netCashFailureDisplay * 100) / 100,
     netCashFailureReal: Math.round(netCashAllWin * 100) / 100,
+    resultadoOperacao,
+    resultadoOperacaoPercent,
     custoExtracao,
     custoExtracaoPercent,
     exposicaoMaxima,
