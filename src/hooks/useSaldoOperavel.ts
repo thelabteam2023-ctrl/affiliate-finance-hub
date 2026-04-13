@@ -234,8 +234,9 @@ export function useSaldoOperavel(projetoId: string) {
           rolloverProgress: rolloverInfo?.progress || 0,
           rolloverTarget: rolloverInfo?.target || 0,
           rolloverPercentual: rolloverInfo?.percentual || 0,
-          // Status de saque
-          aguardandoSaque: casasComSaquePendente?.has(bk.id) || false,
+          // Status de saque (usar campo da RPC que filtra por status PENDENTE corretamente)
+          aguardandoSaque: Boolean(bk.has_pending_withdrawals),
+          saldoSaquePendenteNativo: Number(bk.saldo_saque_pendente) || 0,
         };
       })
       .filter((casa) => casa.saldoOperavel > 0 || casa.saldoEmAposta > 0)
