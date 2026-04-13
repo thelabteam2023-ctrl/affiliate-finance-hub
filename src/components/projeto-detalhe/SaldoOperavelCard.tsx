@@ -361,7 +361,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
                   </div>
                   <div className="flex items-baseline gap-1.5 flex-shrink-0">
                     <SaldoCompostoSimples
-                      saldoReal={casa.saldoDisponivelNativo}
+                      saldoReal={casa.saldoRealNativo}
                       saldoFreebet={casa.saldoFreebetNativo}
                       formatCurrency={(val) => formatCurrencyUtil(val, casa.moedaOriginal)}
                       className="text-sm text-primary font-bold whitespace-nowrap tabular-nums"
