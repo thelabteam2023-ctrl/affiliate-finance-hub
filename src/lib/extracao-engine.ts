@@ -92,16 +92,23 @@ export function calculateDeterministicHedge(config: ExtractionConfig): StrategyR
     liabilities.push(ls * (events[i].layOdd - 1));
   }
 
-  // Net cash for each scenario (freebet model: back stake is free money)
-  // When back loses at event i: we win lay i, but paid liabilities 0..i-1
-  const netCashAtEvent: number[] = [];
-  for (let i = 0; i < events.length; i++) {
-    const paidLiabilities = liabilities.slice(0, i).reduce((s, l) => s + l, 0);
-    const layWin = layStakes[i] * commissionFactor;
-    netCashAtEvent.push(layWin - paidLiabilities);
-  }
   // When all events win (failure): freebet pays out, but all lays lost
   const netCashAllWin = potentialReturn - liabilities.reduce((s, l) => s + l, 0);
+
+  // Net cash for each scenario (freebet model: back stake is free money)
+  // When back loses at event i: we win lay i, but paid liabilities 0..i-1
+  // RULE: last event and failure must be identical (all lays executed)
+  const netCashAtEvent: number[] = [];
+  for (let i = 0; i < events.length; i++) {
+    if (i === events.length - 1) {
+      // Last event: all lays executed → same result as failure
+      netCashAtEvent.push(netCashAllWin);
+    } else {
+      const paidLiabilities = liabilities.slice(0, i).reduce((s, l) => s + l, 0);
+      const layWin = layStakes[i] * commissionFactor;
+      netCashAtEvent.push(layWin - paidLiabilities);
+    }
+  }
 
   // Build display events
   const hedgeEvents: HedgeEvent[] = [];
