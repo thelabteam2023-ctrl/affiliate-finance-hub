@@ -44,14 +44,14 @@ export interface Strategy {
 
 export interface StrategyResults {
   strategy: Strategy;
-  lucroLiquidoEstimado: number;
+  custoExtracao: number;           // perda esperada em R$
+  custoExtracaoPercent: number;    // perda esperada / valor extraído (%)
   perdaMaxima: number;
   perdaMaximaPercent: number;
-  taxaConversao: number;         // lucro / target (%)
   capitalMaximoNecessario: number;
   capitalEsperado: number;
-  eficienciaCapital: number;     // lucro / capital_maximo
-  classification: 'excellent' | 'medium' | 'poor';
+  eficienciaCapital: number;       // (target - custo) / capital_maximo
+  classification: 'excellent' | 'good' | 'medium' | 'poor';
 }
 
 export interface ProbabilityEvent {
@@ -241,20 +241,23 @@ export function evaluateStrategy(
   const perdaMaxima = Math.abs(Math.min(...hedgeEvents.map(e => e.lossIfBackLoses), -strategy.backStake));
   const perdaMaximaPercent = (perdaMaxima / config.targetExtraction) * 100;
   
-  // Lucro líquido estimado (valor esperado)
-  const lucroLiquidoEstimado = Math.round(lucroEsperado * 100) / 100;
-  const taxaConversao = (lucroLiquidoEstimado / config.targetExtraction) * 100;
+  // Custo de extração = perda esperada (valor esperado negativo da operação)
+  // lucroEsperado é negativo na maioria dos cenários realistas
+  const custoExtracao = Math.round(Math.abs(lucroEsperado) * 100) / 100;
+  const custoExtracaoPercent = Math.round((custoExtracao / config.targetExtraction) * 10000) / 100;
   
   const capitalEsperado = Math.round(capitalEsperadoPonderado * 100) / 100;
   const eficienciaCapital = capitalMaximoNecessario > 0 
-    ? Math.round((lucroLiquidoEstimado / capitalMaximoNecessario) * 10000) / 100 
+    ? Math.round(((config.targetExtraction - custoExtracao) / capitalMaximoNecessario) * 10000) / 100 
     : 0;
   
-  // Classificação
-  let classification: 'excellent' | 'medium' | 'poor';
-  if (taxaConversao >= 70 && perdaMaximaPercent <= 15) {
+  // Classificação baseada no custo de extração
+  let classification: 'excellent' | 'good' | 'medium' | 'poor';
+  if (custoExtracaoPercent < 10) {
     classification = 'excellent';
-  } else if (taxaConversao >= 50 && perdaMaximaPercent <= 25) {
+  } else if (custoExtracaoPercent <= 20) {
+    classification = 'good';
+  } else if (custoExtracaoPercent <= 30) {
     classification = 'medium';
   } else {
     classification = 'poor';
@@ -268,10 +271,10 @@ export function evaluateStrategy(
   
   return {
     strategy,
-    lucroLiquidoEstimado,
+    custoExtracao,
+    custoExtracaoPercent,
     perdaMaxima: Math.round(perdaMaxima * 100) / 100,
     perdaMaximaPercent: Math.round(perdaMaximaPercent * 100) / 100,
-    taxaConversao: Math.round(taxaConversao * 100) / 100,
     capitalMaximoNecessario,
     capitalEsperado,
     eficienciaCapital,
@@ -424,12 +427,12 @@ export function findBestStrategy(config: ExtractionConfig): {
   
   const evaluated = strategies.map(s => evaluateStrategy(s, config));
   
-  // Ordenar por: classificação (excellent > medium > poor), depois por taxa de conversão
-  const classOrder = { excellent: 0, medium: 1, poor: 2 };
+  // Ordenar por: classificação, depois por menor custo de extração
+  const classOrder: Record<string, number> = { excellent: 0, good: 1, medium: 2, poor: 3 };
   evaluated.sort((a, b) => {
     const classDiff = classOrder[a.classification] - classOrder[b.classification];
     if (classDiff !== 0) return classDiff;
-    return b.taxaConversao - a.taxaConversao;
+    return a.custoExtracaoPercent - b.custoExtracaoPercent;
   });
   
   // Filtrar estratégias que cabem no bankroll
