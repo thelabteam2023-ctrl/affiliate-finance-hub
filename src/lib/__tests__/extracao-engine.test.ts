@@ -72,7 +72,24 @@ describe('calculateDeterministicHedge', () => {
     expect(result.custoExtracao).toBeGreaterThan(0);
   });
 
-  it('should have identical cost for last event and failure (all lays executed)', () => {
+  it('cost with back=lay and 2.8% commission should equal commission rate', () => {
+    const config: ExtractionConfig = {
+      targetExtraction: 1000,
+      bankrollAvailable: 5000,
+      exchangeCommission: 0.028,
+      events: [
+        { backOdd: 2.0, layOdd: 2.0 },
+        { backOdd: 2.0, layOdd: 2.0 },
+      ],
+    };
+
+    const result = calculateDeterministicHedge(config);
+    // Expected cost = commission rate * targetExtraction = 28
+    expect(result.custoExtracao).toBe(28);
+    expect(result.custoExtracaoPercent).toBe(2.8);
+  });
+
+  it('last event and failure should differ when commission > 0 (lay win vs lay loss)', () => {
     const config: ExtractionConfig = {
       targetExtraction: 100,
       bankrollAvailable: 1000,
@@ -85,23 +102,8 @@ describe('calculateDeterministicHedge', () => {
 
     const result = calculateDeterministicHedge(config);
     const lastEvent = result.events[result.events.length - 1];
-    expect(lastEvent.resultIfBackLoses).toBe(result.netCashFailure);
-  });
-
-  it('should have identical cost for last event and failure with 3 events', () => {
-    const config: ExtractionConfig = {
-      targetExtraction: 100,
-      bankrollAvailable: 1000,
-      exchangeCommission: 0.05,
-      events: [
-        { backOdd: 1.8, layOdd: 2.0 },
-        { backOdd: 2.0, layOdd: 2.2 },
-        { backOdd: 1.5, layOdd: 1.6 },
-      ],
-    };
-
-    const result = calculateDeterministicHedge(config);
-    const lastEvent = result.events[result.events.length - 1];
-    expect(lastEvent.resultIfBackLoses).toBe(result.netCashFailure);
+    // Last event: lay wins (commission applied) → less than failure
+    // Failure: all lays lose (no commission) → freebet pays out
+    expect(lastEvent.resultIfBackLoses).not.toBe(result.netCashFailure);
   });
 });
