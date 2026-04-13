@@ -586,40 +586,51 @@ export const CalculadoraExtracaoContent: React.FC = () => {
                   const barColor = isSuccess ? 'bg-green-500' : 'bg-red-500';
                   const textColor = isSuccess ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400';
                   
-                  // Calculate juice % for this scenario
-                  let juiceValue: number | null = null;
-                  let juicePercent: number | null = null;
-                  if (results) {
+                  // Calculate loss/retention for this scenario
+                  let lossPercent: number | null = null;
+                  let lossValue: number | null = null;
+                  let retentionPercent: number | null = null;
+                  if (results && targetVal > 0) {
                     if (isSuccess && results.events[p.eventIndex]) {
-                      juiceValue = results.events[p.eventIndex].resultIfBackLoses;
-                      juicePercent = targetVal > 0 ? (juiceValue / targetVal) * 100 : 0;
+                      const netResult = results.events[p.eventIndex].resultIfBackLoses;
+                      retentionPercent = (netResult / targetVal) * 100;
+                      lossPercent = 100 - retentionPercent;
+                      lossValue = targetVal * (lossPercent / 100);
                     } else if (!isSuccess) {
-                      // Failure: all events win, net result is negative (cost of all liabilities)
                       const totalLiabilities = results.events.reduce((sum, e) => sum + e.liability, 0);
-                      juiceValue = -totalLiabilities;
-                      juicePercent = targetVal > 0 ? (juiceValue / targetVal) * 100 : 0;
+                      const netResult = results.potentialReturn - totalLiabilities;
+                      retentionPercent = (netResult / targetVal) * 100;
+                      lossPercent = 100 - retentionPercent;
+                      lossValue = targetVal * (lossPercent / 100);
                     }
                   }
 
                   return (
-                    <div key={i} className="space-y-1">
+                    <div key={i} className="space-y-1.5">
                       <div className="flex items-center justify-between text-xs">
                         <div className="flex items-center gap-2">
                           <span className={`inline-block w-2 h-2 rounded-full ${isSuccess ? 'bg-green-500' : 'bg-red-500'}`} />
                           <span className={textColor}>{p.label}</span>
                         </div>
                         <div className="flex items-center gap-3">
-                          {juicePercent !== null && (
-                            <span className={`font-semibold text-[11px] ${isSuccess ? 'text-green-600 dark:text-green-300' : 'text-red-500 dark:text-red-300'}`}>
-                              {isSuccess ? `${juicePercent.toFixed(1)}% juice` : `−R$ ${fmt(Math.abs(juiceValue!))}`}
-                            </span>
-                          )}
                           <span className="text-muted-foreground text-[10px]">
                             {`${p.laysExecuted} lay${p.laysExecuted > 1 ? 's' : ''}`}
                           </span>
                           <span className={`font-medium ${textColor}`}>{(p.probability * 100).toFixed(1)}%</span>
                         </div>
                       </div>
+                      {lossPercent !== null && (
+                        <div className="ml-4 flex items-center gap-3 text-[11px]">
+                          <span className="text-red-500 dark:text-red-400 font-semibold">
+                            💸 Perda: {lossPercent.toFixed(1)}% (R$ {fmt(Math.abs(lossValue!))})
+                          </span>
+                          {retentionPercent !== null && isSuccess && (
+                            <span className="text-muted-foreground">
+                              📈 Retenção: {retentionPercent.toFixed(1)}%
+                            </span>
+                          )}
+                        </div>
+                      )}
                       <div className="w-full h-2 rounded-full bg-muted overflow-hidden">
                         <div className={`h-full rounded-full ${barColor} transition-all`} style={{ width: `${Math.min(p.probability * 100, 100)}%` }} />
                       </div>
