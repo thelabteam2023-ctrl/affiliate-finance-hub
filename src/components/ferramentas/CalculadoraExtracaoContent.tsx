@@ -585,6 +585,22 @@ export const CalculadoraExtracaoContent: React.FC = () => {
                   const isSuccess = p.type === 'success';
                   const barColor = isSuccess ? 'bg-green-500' : 'bg-red-500';
                   const textColor = isSuccess ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400';
+                  
+                  // Calculate juice % for this scenario
+                  let juiceValue: number | null = null;
+                  let juicePercent: number | null = null;
+                  if (results) {
+                    if (isSuccess && results.events[p.eventIndex]) {
+                      juiceValue = results.events[p.eventIndex].resultIfBackLoses;
+                      juicePercent = targetVal > 0 ? (juiceValue / targetVal) * 100 : 0;
+                    } else if (!isSuccess) {
+                      // Failure: all events win, net result is negative (cost of all liabilities)
+                      const totalLiabilities = results.events.reduce((sum, e) => sum + e.liability, 0);
+                      juiceValue = -totalLiabilities;
+                      juicePercent = targetVal > 0 ? (juiceValue / targetVal) * 100 : 0;
+                    }
+                  }
+
                   return (
                     <div key={i} className="space-y-1">
                       <div className="flex items-center justify-between text-xs">
@@ -592,9 +608,14 @@ export const CalculadoraExtracaoContent: React.FC = () => {
                           <span className={`inline-block w-2 h-2 rounded-full ${isSuccess ? 'bg-green-500' : 'bg-red-500'}`} />
                           <span className={textColor}>{p.label}</span>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-3">
+                          {juicePercent !== null && (
+                            <span className={`font-semibold text-[11px] ${isSuccess ? 'text-green-600 dark:text-green-300' : 'text-red-500 dark:text-red-300'}`}>
+                              {isSuccess ? `${juicePercent.toFixed(1)}% juice` : `−R$ ${fmt(Math.abs(juiceValue!))}`}
+                            </span>
+                          )}
                           <span className="text-muted-foreground text-[10px]">
-                            {`${p.laysExecuted} lay${p.laysExecuted > 1 ? 's' : ''} executado${p.laysExecuted > 1 ? 's' : ''}`}
+                            {`${p.laysExecuted} lay${p.laysExecuted > 1 ? 's' : ''}`}
                           </span>
                           <span className={`font-medium ${textColor}`}>{(p.probability * 100).toFixed(1)}%</span>
                         </div>
