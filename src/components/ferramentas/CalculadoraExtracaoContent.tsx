@@ -657,7 +657,7 @@ export const CalculadoraExtracaoContent: React.FC = () => {
                 </CardContent>
               </Card>
             )}
-          </>
+          </React.Fragment>
         )}
       </div>
     </ScrollArea>
