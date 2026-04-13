@@ -195,7 +195,7 @@ export function calculateProbabilities(events: EventInput[]): { probabilities: P
       label: `Finalizar no evento ${i + 1}`,
       probability: prob,
       type: 'success',
-      laysExecuted: i, // lays 0..i-1 foram executados antes deste evento
+      laysExecuted: i + 1, // lay 1..i+1 executados (lay k antes do evento k)
     });
   }
 
