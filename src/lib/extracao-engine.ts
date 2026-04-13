@@ -37,7 +37,8 @@ export interface StrategyResults {
   oddTotal: number;
   backStake: number;
   potentialReturn: number;
-  netCashFailure: number;           // resultado líquido se todos ganham (falha)
+  netCashFailure: number;           // resultado líquido exibido na falha (= último evento, todos lays executados)
+  netCashFailureReal: number;       // resultado real de caixa se todos ganham (para EV interno)
   custoExtracao: number;          // custo esperado (R$)
   custoExtracaoPercent: number;   // custo / valor extraído (%)
   exposicaoMaxima: number;        // maior movimentação negativa
