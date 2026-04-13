@@ -19,9 +19,9 @@ describe('calculateDeterministicHedge', () => {
     expect(result.custoExtracaoPercent).toBe(0);
     expect(result.classification).toBe('excellent');
 
-    // All hedged results should be 0
+    // All scenarios should extract exactly targetExtraction (100)
     for (const event of result.events) {
-      expect(event.resultIfHedged).toBe(0);
+      expect(event.resultIfBackLoses).toBe(100);
     }
   });
 
