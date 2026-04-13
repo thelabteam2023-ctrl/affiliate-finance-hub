@@ -32,9 +32,12 @@ const fmt = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2,
 
 // ─── Classification Badge ───
 
-function ClassificationBadge({ classification }: { classification: StrategyResults['classification'] }) {
+function ClassificationBadge({ classification, resultadoPercent }: { classification: StrategyResults['classification']; resultadoPercent?: number }) {
+  const isProfit = resultadoPercent !== undefined && resultadoPercent > 0;
   const map = {
-    excellent: { label: '🟢 Excelente (<10%)', className: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' },
+    excellent: isProfit
+      ? { label: `🟢 Lucrativa (+${resultadoPercent}%)`, className: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' }
+      : { label: '🟢 Excelente (<10%)', className: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' },
     good: { label: '🔵 Boa (10–20%)', className: 'bg-blue-500/15 text-blue-400 border-blue-500/30' },
     medium: { label: '🟡 Média (20–30%)', className: 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30' },
     poor: { label: '🔴 Cara (>30%)', className: 'bg-red-500/15 text-red-400 border-red-500/30' },
