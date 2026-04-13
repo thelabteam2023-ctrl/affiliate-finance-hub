@@ -594,7 +594,7 @@ export const CalculadoraExtracaoContent: React.FC = () => {
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="text-muted-foreground text-[10px]">
-                            {p.laysExecuted === 0 ? 'nenhum lay' : `${p.laysExecuted} lay${p.laysExecuted > 1 ? 's' : ''}`}
+                            {`${p.laysExecuted} lay${p.laysExecuted > 1 ? 's' : ''} executado${p.laysExecuted > 1 ? 's' : ''}`}
                           </span>
                           <span className={`font-medium ${textColor}`}>{(p.probability * 100).toFixed(1)}%</span>
                         </div>
