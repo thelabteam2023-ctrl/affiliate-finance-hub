@@ -459,8 +459,8 @@ export const CalculadoraExtracaoContent: React.FC = () => {
 
             {/* Resumo Executivo */}
             <Card className="border-primary/40 bg-gradient-to-r from-primary/5 to-transparent">
-              <CardContent className="pt-5 pb-4">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">Resumo Executivo</p>
+              <CardContent className="pt-5 pb-4 space-y-4">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Resumo Executivo</p>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="text-center p-3 rounded-lg bg-card border border-border">
                     <p className="text-[10px] text-muted-foreground mb-1">Você paga</p>
@@ -478,6 +478,87 @@ export const CalculadoraExtracaoContent: React.FC = () => {
                     <p className="text-xs text-muted-foreground mt-1">exposição máxima temporária</p>
                   </div>
                 </div>
+
+                {/* Distribuição de custos por cenário */}
+                {(() => {
+                  const scenarioRows = probabilities.map((p) => {
+                    const isSuccess = p.type === 'success';
+                    let netResult = 0;
+                    if (isSuccess && results.events[p.eventIndex]) {
+                      netResult = results.events[p.eventIndex].resultIfBackLoses;
+                    } else if (!isSuccess) {
+                      netResult = results.netCashFailure;
+                    }
+                    const lossValue = targetVal - netResult;
+                    const lossPercent = targetVal > 0 ? (lossValue / targetVal) * 100 : 0;
+                    const retentionPercent = 100 - lossPercent;
+                    return { ...p, isSuccess, lossValue, lossPercent, retentionPercent };
+                  });
+
+                  const evLoss = scenarioRows.reduce((sum, s) => sum + s.probability * s.lossValue, 0);
+                  const evLossPercent = targetVal > 0 ? (evLoss / targetVal) * 100 : 0;
+
+                  const getLossColor = (pct: number) => {
+                    if (pct <= 5) return 'text-emerald-400';
+                    if (pct <= 15) return 'text-yellow-400';
+                    return 'text-red-400';
+                  };
+
+                  return (
+                    <div className="space-y-2">
+                      <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Custo por cenário</p>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-xs">
+                          <thead>
+                            <tr className="border-b border-border text-muted-foreground">
+                              <th className="text-left py-1.5 px-2 font-medium">Cenário</th>
+                              <th className="text-right py-1.5 px-2 font-medium">Prob.</th>
+                              <th className="text-right py-1.5 px-2 font-medium">Perda (R$)</th>
+                              <th className="text-right py-1.5 px-2 font-medium">Perda (%)</th>
+                              <th className="text-right py-1.5 px-2 font-medium">Retenção</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {scenarioRows.map((s, i) => (
+                              <tr key={i} className={`border-b border-border/30 ${s.isSuccess ? '' : 'bg-red-500/5'}`}>
+                                <td className="py-1.5 px-2 font-medium">
+                                  <span className={`inline-block w-1.5 h-1.5 rounded-full mr-1.5 ${s.isSuccess ? 'bg-emerald-500' : 'bg-red-500'}`} />
+                                  {s.label}
+                                </td>
+                                <td className="py-1.5 px-2 text-right text-muted-foreground">{(s.probability * 100).toFixed(1)}%</td>
+                                <td className={`py-1.5 px-2 text-right font-mono font-semibold ${getLossColor(s.lossPercent)}`}>
+                                  R$ {fmt(Math.abs(s.lossValue))}
+                                </td>
+                                <td className={`py-1.5 px-2 text-right font-mono font-semibold ${getLossColor(s.lossPercent)}`}>
+                                  {s.lossPercent.toFixed(1)}%
+                                </td>
+                                <td className="py-1.5 px-2 text-right text-muted-foreground">
+                                  {s.retentionPercent.toFixed(1)}%
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                          <tfoot>
+                            <tr className="border-t border-primary/30 bg-primary/5">
+                              <td className="py-2 px-2 font-semibold text-primary" colSpan={2}>
+                                📊 Custo Médio Esperado (EV)
+                              </td>
+                              <td className="py-2 px-2 text-right font-mono font-bold text-primary">
+                                R$ {fmt(Math.abs(evLoss))}
+                              </td>
+                              <td className="py-2 px-2 text-right font-mono font-bold text-primary">
+                                {evLossPercent.toFixed(1)}%
+                              </td>
+                              <td className="py-2 px-2 text-right text-muted-foreground font-medium">
+                                {(100 - evLossPercent).toFixed(1)}%
+                              </td>
+                            </tr>
+                          </tfoot>
+                        </table>
+                      </div>
+                    </div>
+                  );
+                })()}
               </CardContent>
             </Card>
 
