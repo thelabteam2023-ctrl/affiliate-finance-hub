@@ -285,9 +285,9 @@ export const CalculadoraExtracaoContent: React.FC = () => {
     if (events.length < 2) return;
 
     const config: ExtractionConfig = {
-      targetExtraction: parseFloat(targetExtraction) || 1000,
-      bankrollAvailable: parseFloat(bankroll) || 5000,
-      exchangeCommission: (parseFloat(exchangeCommission) || 2.8) / 100,
+      targetExtraction: isNaN(parseFloat(targetExtraction)) ? 1000 : parseFloat(targetExtraction),
+      bankrollAvailable: isNaN(parseFloat(bankroll)) ? 5000 : parseFloat(bankroll),
+      exchangeCommission: (isNaN(parseFloat(exchangeCommission)) ? 2.8 : parseFloat(exchangeCommission)) / 100,
       events,
     };
 
