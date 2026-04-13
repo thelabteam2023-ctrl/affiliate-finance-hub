@@ -251,7 +251,9 @@ export const CalculadoraExtracaoContent: React.FC = () => {
     setAlternatives(alts);
     setProbabilities(calculateProbabilities(best.strategy));
     setMonteCarlo(runMonteCarloSimulation(best.strategy, config));
+    setShowMonteCarlo(false);
     setCalculated(true);
+    setCalcKey(k => k + 1);
   };
 
   const fmt = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
