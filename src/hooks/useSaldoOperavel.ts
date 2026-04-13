@@ -38,6 +38,8 @@ interface BookmakerSaldoCompleto {
   saldo_disponivel: number;
   saldo_operavel: number;
   bonus_rollover_started: boolean;
+  has_pending_withdrawals: boolean;
+  saldo_saque_pendente: number;
 }
 
 interface RolloverPorCasa {
@@ -241,7 +243,7 @@ export function useSaldoOperavel(projetoId: string) {
       })
       .filter((casa) => casa.saldoOperavel > 0 || casa.saldoEmAposta > 0)
       .sort((a, b) => b.saldoOperavel - a.saldoOperavel);
-  }, [bookmakers, convertToConsolidationOficial, rolloverPorCasa, casasComSaquePendente]);
+  }, [bookmakers, convertToConsolidationOficial, rolloverPorCasa]);
 
   return {
     // Valor principal do KPI
