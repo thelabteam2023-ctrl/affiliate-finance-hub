@@ -347,8 +347,8 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
                     : "bg-muted/15 border-border/40 hover:border-primary/30 hover:bg-muted/30"
                 )}
               >
-                {/* Row 1: Casa name + Balance */}
-                <div className="flex items-start justify-between gap-2 mb-1.5">
+                {/* Row 1: Casa name + Balance + Currency */}
+                <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
                       {casa.logoUrl && (
@@ -357,54 +357,42 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
                       <span className="text-xs font-bold text-foreground truncate uppercase tracking-wide">
                         {casa.nome}
                       </span>
+                      {casa.aguardandoSaque && (
+                        <Badge 
+                          variant="outline" 
+                          className="text-[9px] px-1.5 py-0.5 bg-orange-500/15 border-orange-500/30 text-orange-400 font-medium gap-0.5"
+                        >
+                          <Clock className="h-2.5 w-2.5" />
+                          Em Saque
+                        </Badge>
+                      )}
                     </div>
                   </div>
-                  <div className="flex items-baseline gap-1 flex-shrink-0">
+                  <div className="flex items-baseline gap-1.5 flex-shrink-0">
                     <SaldoCompostoSimples
                       saldoReal={casa.saldoDisponivelNativo}
                       saldoFreebet={casa.saldoFreebetNativo}
                       formatCurrency={(val) => formatCurrencyUtil(val, casa.moedaOriginal)}
                       className="text-sm text-primary font-bold whitespace-nowrap tabular-nums"
                     />
+                    <span className="text-[9px] text-muted-foreground font-mono">{casa.moedaOriginal}</span>
                   </div>
                 </div>
 
-                {/* Row 2: Titular + Em Jogo + Currency + Saque badge */}
-                <div className="flex items-center justify-between gap-1.5">
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    {titular && (
-                      <span className="text-[11px] text-muted-foreground truncate">
-                        <span className="text-muted-foreground/60">Titular:</span>{" "}
-                        <span className="text-foreground/70 font-medium">{titular}</span>
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-1.5 flex-shrink-0">
-                    {casa.saldoEmApostaNativo > 0 && (
-                      <Badge 
-                        variant="outline" 
-                        className="text-[9px] px-1.5 py-0.5 bg-amber-500/10 border-amber-500/25 text-amber-400 font-medium gap-0.5 tabular-nums"
-                      >
-                        <Clock className="h-2.5 w-2.5" />
-                        {formatCurrencyUtil(casa.saldoEmApostaNativo, casa.moedaOriginal)} em jogo
-                      </Badge>
-                    )}
-                    {casa.aguardandoSaque && (
-                      <Badge 
-                        variant="outline" 
-                        className="text-[9px] px-1.5 py-0.5 bg-orange-500/15 border-orange-500/30 text-orange-400 font-medium gap-0.5"
-                      >
-                        <Clock className="h-2.5 w-2.5" />
-                        Em Saque
-                      </Badge>
-                    )}
-                    <Badge 
-                      variant="outline" 
-                      className="text-[9px] px-1.5 py-0.5 bg-muted/40 border-border/50 text-muted-foreground font-mono"
-                    >
-                      {casa.moedaOriginal}
-                    </Badge>
-                  </div>
+                {/* Row 2: Titular + Em Jogo */}
+                <div className="flex items-center justify-between gap-1.5 mt-1">
+                  {titular ? (
+                    <span className="text-[11px] text-muted-foreground truncate">
+                      <span className="text-muted-foreground/60">Titular:</span>{" "}
+                      <span className="text-foreground/70 font-medium">{titular}</span>
+                    </span>
+                  ) : <span />}
+                  {casa.saldoEmApostaNativo > 0 && (
+                    <span className="text-[10px] text-amber-400 tabular-nums flex items-center gap-1 flex-shrink-0">
+                      <Clock className="h-3 w-3" />
+                      {formatCurrencyUtil(casa.saldoEmApostaNativo, casa.moedaOriginal)} em jogo
+                    </span>
+                  )}
                 </div>
 
                 {/* Row 3: Rollover progress */}
