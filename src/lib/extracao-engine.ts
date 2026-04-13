@@ -71,81 +71,79 @@ export interface MonteCarloResult {
  * Calcula o hedge sequencial determinístico a partir de odds reais.
  */
 export function calculateDeterministicHedge(config: ExtractionConfig): StrategyResults {
-  const { events, targetExtraction, exchangeCommission, bankrollAvailable } = config;
-  const backStake = targetExtraction;
-  const hedgeEvents: HedgeEvent[] = [];
+  const { events, targetExtraction, exchangeCommission } = config;
+  const backStake = targetExtraction; // freebet value
+  const commissionFactor = exchangeCommission > 0 ? (1 - exchangeCommission) : 1;
 
   const oddTotal = events.reduce((acc, e) => acc * e.backOdd, 1);
   const potentialReturn = backStake * oddTotal;
 
-  for (let i = 0; i < events.length; i++) {
-    const { backOdd, layOdd } = events[i];
+  // Full precision lay calculations
+  const layStakes: number[] = [];
+  const liabilities: number[] = [];
 
-    // Odd acumulada até evento i (inclusive)
+  for (let i = 0; i < events.length; i++) {
     let oddAcumulada = 1;
     for (let j = 0; j <= i; j++) oddAcumulada *= events[j].backOdd;
-
     const retornoAcumulado = backStake * oddAcumulada;
+    const ls = retornoAcumulado / events[i].layOdd;
+    layStakes.push(ls);
+    liabilities.push(ls * (events[i].layOdd - 1));
+  }
 
-    // Lay stake para hedgear o retorno acumulado
-    const layStake = Math.round((retornoAcumulado / layOdd) * 100) / 100;
-    const liability = Math.round(layStake * (layOdd - 1) * 100) / 100;
+  // Net cash for each scenario (freebet model: back stake is free money)
+  // When back loses at event i: we win lay i, but paid liabilities 0..i-1
+  const netCashAtEvent: number[] = [];
+  for (let i = 0; i < events.length; i++) {
+    const paidLiabilities = liabilities.slice(0, i).reduce((s, l) => s + l, 0);
+    const layWin = layStakes[i] * commissionFactor;
+    netCashAtEvent.push(layWin - paidLiabilities);
+  }
+  // When all events win (failure): freebet pays out, but all lays lost
+  const netCashAllWin = potentialReturn - liabilities.reduce((s, l) => s + l, 0);
 
-    // Resultado se back perde neste evento
-    const resultIfBackLoses = i === 0
-      ? -backStake
-      : Math.round(-hedgeEvents[i - 1].liability * 100) / 100;
-
-    // Resultado líquido se hedge é executado (back ganha, lay protege)
-    const resultIfHedged = Math.round(
-      (retornoAcumulado - layStake * layOdd) * (1 - exchangeCommission) * 100
-    ) / 100;
-
+  // Build display events
+  const hedgeEvents: HedgeEvent[] = [];
+  for (let i = 0; i < events.length; i++) {
     hedgeEvents.push({
       eventIndex: i,
-      backOdd,
-      layOdd,
-      layStake,
-      liability,
+      backOdd: events[i].backOdd,
+      layOdd: events[i].layOdd,
+      layStake: Math.round(layStakes[i] * 100) / 100,
+      liability: Math.round(liabilities[i] * 100) / 100,
       isConditional: i > 0,
-      resultIfBackLoses,
-      resultIfHedged,
+      resultIfBackLoses: Math.round(netCashAtEvent[i] * 100) / 100,
+      resultIfHedged: Math.round(-liabilities[i] * 100) / 100,
     });
   }
 
-  // ─ Métricas financeiras ─
-  const maxLiability = Math.max(...hedgeEvents.map(e => e.liability));
-  const capitalMaximoNecessario = Math.round((backStake + maxLiability) * 100) / 100;
-
-  // Custo esperado (valor esperado ponderado por probabilidade)
+  // ─ Expected value (full precision) ─
   let valorEsperado = 0;
   let capitalEsperadoPonderado = 0;
 
-  for (let i = 0; i < hedgeEvents.length; i++) {
+  for (let i = 0; i < events.length; i++) {
     const probChegar = probabilityOfReaching(events, i);
     const probPerder = 1 - 1 / events[i].backOdd;
     const probParar = probChegar * probPerder;
 
-    if (i === hedgeEvents.length - 1) {
-      // Último evento
+    valorEsperado += probParar * netCashAtEvent[i];
+
+    if (i === events.length - 1) {
       const probGanha = probChegar * (1 / events[i].backOdd);
-      const retornoFinal = (potentialReturn - backStake) * (1 - exchangeCommission);
-      valorEsperado += probGanha * retornoFinal;
-      valorEsperado += probParar * hedgeEvents[i].resultIfBackLoses;
-    } else {
-      valorEsperado += probParar * hedgeEvents[i].resultIfBackLoses;
+      valorEsperado += probGanha * netCashAllWin;
     }
 
-    capitalEsperadoPonderado += probChegar * hedgeEvents[i].liability;
+    capitalEsperadoPonderado += probChegar * liabilities[i];
   }
 
-  const custoExtracao = Math.round(Math.abs(valorEsperado) * 100) / 100;
-  const custoExtracaoPercent = Math.round((custoExtracao / targetExtraction) * 10000) / 100;
+  // Cost = how much less than targetExtraction we expect to get
+  const custoExtracao = Math.round(Math.max(0, targetExtraction - valorEsperado) * 100) / 100;
+  const custoExtracaoPercent = custoExtracao === 0 ? 0 : Math.round((custoExtracao / targetExtraction) * 10000) / 100;
 
-  const exposicaoMaxima = Math.abs(Math.min(
-    ...hedgeEvents.map(e => e.resultIfBackLoses),
-    -backStake,
-  ));
+  const maxLiability = Math.max(...liabilities);
+  const capitalMaximoNecessario = Math.round(maxLiability * 100) / 100;
+
+  const exposicaoMaxima = Math.round(maxLiability * 100) / 100;
   const exposicaoMaximaPercent = Math.round((exposicaoMaxima / targetExtraction) * 10000) / 100;
 
   const capitalEsperado = Math.round(capitalEsperadoPonderado * 100) / 100;
@@ -165,7 +163,7 @@ export function calculateDeterministicHedge(config: ExtractionConfig): StrategyR
     potentialReturn: Math.round(potentialReturn * 100) / 100,
     custoExtracao,
     custoExtracaoPercent,
-    exposicaoMaxima: Math.round(exposicaoMaxima * 100) / 100,
+    exposicaoMaxima,
     exposicaoMaximaPercent,
     capitalMaximoNecessario,
     capitalEsperado,
@@ -215,12 +213,24 @@ export function calculateProbabilities(events: EventInput[]): { probabilities: P
 
 export function runMonteCarloSimulation(
   config: ExtractionConfig,
-  hedgeEvents: HedgeEvent[],
+  _hedgeEvents: HedgeEvent[],
   iterations = 10000,
 ): MonteCarloResult {
   const { events, targetExtraction, exchangeCommission } = config;
   const backStake = targetExtraction;
+  const commissionFactor = exchangeCommission > 0 ? (1 - exchangeCommission) : 1;
   const potentialReturn = backStake * events.reduce((a, e) => a * e.backOdd, 1);
+
+  // Precompute full precision lay data
+  const layStakes: number[] = [];
+  const liabilities: number[] = [];
+  for (let i = 0; i < events.length; i++) {
+    let oddAcum = 1;
+    for (let j = 0; j <= i; j++) oddAcum *= events[j].backOdd;
+    const ls = (backStake * oddAcum) / events[i].layOdd;
+    layStakes.push(ls);
+    liabilities.push(ls * (events[i].layOdd - 1));
+  }
 
   const results: number[] = [];
   const layUsage: number[] = new Array(events.length).fill(0);
@@ -233,17 +243,17 @@ export function runMonteCarloSimulation(
       layUsage[i]++;
       const probWin = 1 / events[i].backOdd;
       if (Math.random() > probWin) {
-        // Back perde
-        result = i === 0 ? -backStake : -hedgeEvents[i - 1].liability;
+        // Back loses at event i → freebet model
+        const paidLiabilities = liabilities.slice(0, i).reduce((s, l) => s + l, 0);
+        result = layStakes[i] * commissionFactor - paidLiabilities;
         allWon = false;
         break;
       }
     }
 
     if (allWon) {
-      const retorno = potentialReturn - backStake;
-      const lastLiability = hedgeEvents[hedgeEvents.length - 1].liability;
-      result = (retorno - lastLiability) * (1 - exchangeCommission);
+      // All events won → freebet pays, all lays lost
+      result = potentialReturn - liabilities.reduce((s, l) => s + l, 0);
     }
 
     results.push(Math.round(result * 100) / 100);
