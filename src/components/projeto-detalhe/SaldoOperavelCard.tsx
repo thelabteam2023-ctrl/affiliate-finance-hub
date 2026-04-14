@@ -281,7 +281,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
       <div className="grid grid-cols-3 gap-2">
         <div className="rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 p-3 text-center">
           <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1">Total</p>
-          <p className="text-base font-bold text-foreground tabular-nums">{formatCurrency(Math.max(0, saldoReal))}</p>
+          <p className="text-base font-bold text-foreground tabular-nums">{formatCurrency(Math.max(0, saldoOperavel))}</p>
         </div>
         <div className="rounded-xl bg-gradient-to-br from-amber-500/10 to-amber-500/5 border border-amber-500/20 p-3 text-center">
           <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1">Em Jogo</p>
@@ -289,7 +289,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
         </div>
         <div className="rounded-xl bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border border-emerald-500/20 p-3 text-center">
           <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1">Disponível</p>
-          <p className="text-base font-bold text-emerald-500 tabular-nums">{formatCurrency(Math.max(0, saldoOperavel))}</p>
+          <p className="text-base font-bold text-emerald-500 tabular-nums">{formatCurrency(Math.max(0, saldoOperavel - saldoEmAposta))}</p>
         </div>
       </div>
 
