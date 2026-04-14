@@ -148,22 +148,28 @@ async function fetchFinancialMetricsRaw(projetoId: string, dateRange?: { from: s
   };
 }
 
-function MetricRow({ label, value, colorClass = "text-foreground", bold = false, indent = false, tooltip }: {
+function MetricRow({ label, value, colorClass = "text-foreground", bold = false, indent = false, tooltip, onClick }: {
   label: string;
   value: string;
   colorClass?: string;
   bold?: boolean;
   indent?: boolean;
   tooltip?: string;
+  onClick?: () => void;
 }) {
+  const isClickable = !!onClick;
   const labelEl = (
-    <span className={`text-[11px] ${bold ? "font-medium text-foreground" : "text-muted-foreground"} ${tooltip ? "border-b border-dotted border-muted-foreground/40 cursor-help" : ""}`}>
+    <span className={`text-[11px] ${bold ? "font-medium text-foreground" : "text-muted-foreground"} ${tooltip ? "border-b border-dotted border-muted-foreground/40 cursor-help" : ""} ${isClickable ? "group-hover:text-primary transition-colors" : ""}`}>
       {label}
     </span>
   );
 
   return (
-    <div className={`flex items-center justify-between gap-4 ${indent ? "pl-3" : ""}`}>
+    <div
+      className={`flex items-center justify-between gap-4 ${indent ? "pl-3" : ""} ${isClickable ? "group cursor-pointer hover:bg-muted/40 -mx-1 px-1 rounded transition-colors" : ""}`}
+      onClick={onClick}
+      role={isClickable ? "button" : undefined}
+    >
       {tooltip ? (
         <Tooltip>
           <TooltipTrigger asChild>{labelEl}</TooltipTrigger>
@@ -172,7 +178,7 @@ function MetricRow({ label, value, colorClass = "text-foreground", bold = false,
           </TooltipContent>
         </Tooltip>
       ) : labelEl}
-      <span className={`text-[11px] font-mono tabular-nums ${bold ? "font-bold" : "font-semibold"} ${colorClass}`}>
+      <span className={`text-[11px] font-mono tabular-nums ${bold ? "font-bold" : "font-semibold"} ${colorClass} ${isClickable ? "group-hover:text-primary transition-colors" : ""}`}>
         {value}
       </span>
     </div>
