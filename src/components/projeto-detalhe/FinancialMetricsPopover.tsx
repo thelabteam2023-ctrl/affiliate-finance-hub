@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { differenceInDays, parseISO, format } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
+import { FinancialDrillDownModal } from "./FinancialDrillDownModal";
 import {
   DollarSign,
   ArrowDownCircle,
@@ -147,22 +148,28 @@ async function fetchFinancialMetricsRaw(projetoId: string, dateRange?: { from: s
   };
 }
 
-function MetricRow({ label, value, colorClass = "text-foreground", bold = false, indent = false, tooltip }: {
+function MetricRow({ label, value, colorClass = "text-foreground", bold = false, indent = false, tooltip, onClick }: {
   label: string;
   value: string;
   colorClass?: string;
   bold?: boolean;
   indent?: boolean;
   tooltip?: string;
+  onClick?: () => void;
 }) {
+  const isClickable = !!onClick;
   const labelEl = (
-    <span className={`text-[11px] ${bold ? "font-medium text-foreground" : "text-muted-foreground"} ${tooltip ? "border-b border-dotted border-muted-foreground/40 cursor-help" : ""}`}>
+    <span className={`text-[11px] ${bold ? "font-medium text-foreground" : "text-muted-foreground"} ${tooltip ? "border-b border-dotted border-muted-foreground/40 cursor-help" : ""} ${isClickable ? "group-hover:text-primary transition-colors" : ""}`}>
       {label}
     </span>
   );
 
   return (
-    <div className={`flex items-center justify-between gap-4 ${indent ? "pl-3" : ""}`}>
+    <div
+      className={`flex items-center justify-between gap-4 ${indent ? "pl-3" : ""} ${isClickable ? "group cursor-pointer hover:bg-muted/40 -mx-1 px-1 rounded transition-colors" : ""}`}
+      onClick={onClick}
+      role={isClickable ? "button" : undefined}
+    >
       {tooltip ? (
         <Tooltip>
           <TooltipTrigger asChild>{labelEl}</TooltipTrigger>
@@ -171,7 +178,7 @@ function MetricRow({ label, value, colorClass = "text-foreground", bold = false,
           </TooltipContent>
         </Tooltip>
       ) : labelEl}
-      <span className={`text-[11px] font-mono tabular-nums ${bold ? "font-bold" : "font-semibold"} ${colorClass}`}>
+      <span className={`text-[11px] font-mono tabular-nums ${bold ? "font-bold" : "font-semibold"} ${colorClass} ${isClickable ? "group-hover:text-primary transition-colors" : ""}`}>
         {value}
       </span>
     </div>
@@ -191,7 +198,7 @@ function SectionHeader({ icon: Icon, label, iconClass = "text-muted-foreground" 
   );
 }
 
-function ExtrasCollapsible({ metrics, formatCurrency }: { metrics: any; formatCurrency: (v: number) => string }) {
+function ExtrasCollapsible({ metrics, formatCurrency, onDrillDown }: { metrics: any; formatCurrency: (v: number) => string; onDrillDown?: (key: string, value: number) => void }) {
   const [open, setOpen] = useState(false);
   return (
     <div>
@@ -210,28 +217,28 @@ function ExtrasCollapsible({ metrics, formatCurrency }: { metrics: any; formatCu
       {open && (
         <div className="mt-1 space-y-0.5 pl-2 border-l-2 border-border/30 ml-1">
           {Math.abs(metrics.bonusGanhos) >= 0.01 && (
-            <MetricRow label="Bônus Ganhos" value={formatCurrency(metrics.bonusGanhos)} colorClass="text-emerald-500" indent tooltip="Valor total de bônus creditados nas casas de apostas. Representa o capital promocional recebido que contribui para o patrimônio do projeto." />
+            <MetricRow label="Bônus Ganhos" value={formatCurrency(metrics.bonusGanhos)} colorClass="text-emerald-500" indent tooltip="Valor total de bônus creditados nas casas de apostas. Representa o capital promocional recebido que contribui para o patrimônio do projeto." onClick={() => onDrillDown?.("bonusGanhos", metrics.bonusGanhos)} />
           )}
           {Math.abs(metrics.cashbackLiquido) >= 0.01 && (
-            <MetricRow label="Cashback Líquido" value={formatCurrency(metrics.cashbackLiquido)} colorClass="text-emerald-500" indent />
+            <MetricRow label="Cashback Líquido" value={formatCurrency(metrics.cashbackLiquido)} colorClass="text-emerald-500" indent onClick={() => onDrillDown?.("cashbackLiquido", metrics.cashbackLiquido)} />
           )}
           {Math.abs(metrics.girosGratis) >= 0.01 && (
-            <MetricRow label="Giros Grátis" value={formatCurrency(metrics.girosGratis)} colorClass="text-emerald-500" indent />
+            <MetricRow label="Giros Grátis" value={formatCurrency(metrics.girosGratis)} colorClass="text-emerald-500" indent onClick={() => onDrillDown?.("girosGratis", metrics.girosGratis)} />
           )}
           {Math.abs(metrics.ganhoConfirmacao) >= 0.01 && (
-            <MetricRow label="Ganho de Confirmação" value={formatCurrency(metrics.ganhoConfirmacao)} colorClass="text-emerald-500" indent />
+            <MetricRow label="Ganho de Confirmação" value={formatCurrency(metrics.ganhoConfirmacao)} colorClass="text-emerald-500" indent onClick={() => onDrillDown?.("ganhoConfirmacao", metrics.ganhoConfirmacao)} />
           )}
           {Math.abs(metrics.ajustes) >= 0.01 && (
-            <MetricRow label="Ajustes de Saldo" value={formatCurrency(metrics.ajustes)} colorClass={metrics.ajustes >= 0 ? "text-emerald-500" : "text-red-500"} indent tooltip="Correções feitas quando o saldo da casa diverge do esperado — por exemplo, variações de odds em décimos durante a operação que geram pequenas diferenças. O ajuste garante que o lucro real seja apurado corretamente." />
+            <MetricRow label="Ajustes de Saldo" value={formatCurrency(metrics.ajustes)} colorClass={metrics.ajustes >= 0 ? "text-emerald-500" : "text-red-500"} indent tooltip="Correções feitas quando o saldo da casa diverge do esperado — por exemplo, variações de odds em décimos durante a operação que geram pequenas diferenças. O ajuste garante que o lucro real seja apurado corretamente." onClick={() => onDrillDown?.("ajustes", metrics.ajustes)} />
           )}
           {(() => {
             const fxLiquido = metrics.ganhoFx - metrics.perdaFx;
             return Math.abs(fxLiquido) >= 0.01 ? (
-              <MetricRow label="Resultado Cambial" value={fxLiquido < 0 ? `−${formatCurrency(Math.abs(fxLiquido))}` : formatCurrency(fxLiquido)} colorClass={fxLiquido >= 0 ? "text-emerald-500" : "text-red-500"} indent tooltip="Diferença entre o valor solicitado no saque e o valor efetivamente recebido, causada por variação cambial entre a data do pedido e a data de confirmação. Ganhos e perdas são apurados automaticamente na conciliação." />
+              <MetricRow label="Resultado Cambial" value={fxLiquido < 0 ? `−${formatCurrency(Math.abs(fxLiquido))}` : formatCurrency(fxLiquido)} colorClass={fxLiquido >= 0 ? "text-emerald-500" : "text-red-500"} indent tooltip="Diferença entre o valor solicitado no saque e o valor efetivamente recebido, causada por variação cambial entre a data do pedido e a data de confirmação. Ganhos e perdas são apurados automaticamente na conciliação." onClick={() => onDrillDown?.("resultadoCambial", fxLiquido)} />
             ) : null;
           })()}
           {Math.abs(metrics.perdaOp) >= 0.01 && (
-            <MetricRow label="Perdas Operacionais" value={`−${formatCurrency(metrics.perdaOp)}`} colorClass="text-red-500" indent tooltip="Capital perdido por incidentes operacionais — como contas bloqueadas, saldos retidos ou fundos irrecuperáveis. Registrado via ocorrências ou ação rápida de perda." />
+            <MetricRow label="Perdas Operacionais" value={`−${formatCurrency(metrics.perdaOp)}`} colorClass="text-red-500" indent tooltip="Capital perdido por incidentes operacionais — como contas bloqueadas, saldos retidos ou fundos irrecuperáveis. Registrado via ocorrências ou ação rápida de perda." onClick={() => onDrillDown?.("perdaOp", metrics.perdaOp)} />
           )}
         </div>
       )}
@@ -265,6 +272,13 @@ function computeBreakEven(
 
 export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetricsPopoverProps) {
   const { formatCurrency, convertToConsolidationOficial, cotacaoOficialUSD } = useProjetoCurrency(projetoId);
+  const [drillDownKey, setDrillDownKey] = useState<string | null>(null);
+  const [drillDownValue, setDrillDownValue] = useState(0);
+
+  const openDrillDown = (key: string, value: number) => {
+    setDrillDownKey(key);
+    setDrillDownValue(value);
+  };
 
   const { data: rawMetrics, isLoading } = useQuery({
     queryKey: ["projeto-financial-metrics", projetoId, dateRange?.from, dateRange?.to],
@@ -436,6 +450,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
             value={formatCurrency(metrics.depositosReais)}
             indent
             tooltip="Dinheiro efetivamente transferido para as casas neste projeto"
+            onClick={() => openDrillDown("depositosReais", metrics.depositosReais)}
           />
         )}
         {metrics.depositosVirtuais > 0 && (
@@ -445,6 +460,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
             indent
             colorClass="text-muted-foreground"
             tooltip="Saldo já existente nas casas no momento da vinculação ao projeto. Não representa dinheiro novo — é a baseline contábil."
+            onClick={() => openDrillDown("depositosVirtuais", metrics.depositosVirtuais)}
           />
         )}
         <MetricRow 
@@ -452,14 +468,16 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
           value={formatCurrency(metrics.depositosTotal)}
           bold
           tooltip={metrics.hasInvestorCapital ? `Interno: ${formatCurrency(metrics.depositosInterno)} · Investidor: ${formatCurrency(metrics.depositosInvestidor)}` : "Soma de depósitos reais + capital inicial das casas vinculadas"}
+          onClick={() => openDrillDown("depositosTotal", metrics.depositosTotal)}
         />
         {hasExtras && (
-          <ExtrasCollapsible metrics={metrics} formatCurrency={formatCurrency} />
+          <ExtrasCollapsible metrics={metrics} formatCurrency={formatCurrency} onDrillDown={openDrillDown} />
         )}
         <MetricRow 
           label="Saques Recebidos" 
           value={formatCurrency(metrics.saquesRecebidos)}
           tooltip={metrics.hasInvestorCapital ? `Interno: ${formatCurrency(metrics.saquesInterno)} · Investidor: ${formatCurrency(metrics.saquesInvestidor)}` : undefined}
+          onClick={() => openDrillDown("saquesRecebidos", metrics.saquesRecebidos)}
         />
         {metrics.saquesPendentes > 0 && (
           <MetricRow 
@@ -467,6 +485,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
             value={formatCurrency(metrics.saquesPendentes)} 
             colorClass="text-amber-500"
             tooltip={metrics.hasInvestorCapital ? `Interno: ${formatCurrency(metrics.saquesPendentesInterno)} · Investidor: ${formatCurrency(metrics.saquesPendentesInvestidor)}` : undefined}
+            onClick={() => openDrillDown("saquesPendentes", metrics.saquesPendentes)}
           />
         )}
         <div className="border-t border-border/30 mt-1.5 pt-1.5">
@@ -576,6 +595,18 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
           </div>
         )}
       </div>
+
+      {/* Drill-Down Modal */}
+      {drillDownKey && (
+        <FinancialDrillDownModal
+          open={!!drillDownKey}
+          onOpenChange={(open) => { if (!open) setDrillDownKey(null); }}
+          indicatorKey={drillDownKey}
+          projetoId={projetoId}
+          dateRange={dateRange}
+          totalValue={drillDownValue}
+        />
+      )}
     </div>
   );
 }
