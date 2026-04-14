@@ -272,6 +272,13 @@ function computeBreakEven(
 
 export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetricsPopoverProps) {
   const { formatCurrency, convertToConsolidationOficial, cotacaoOficialUSD } = useProjetoCurrency(projetoId);
+  const [drillDownKey, setDrillDownKey] = useState<string | null>(null);
+  const [drillDownValue, setDrillDownValue] = useState(0);
+
+  const openDrillDown = (key: string, value: number) => {
+    setDrillDownKey(key);
+    setDrillDownValue(value);
+  };
 
   const { data: rawMetrics, isLoading } = useQuery({
     queryKey: ["projeto-financial-metrics", projetoId, dateRange?.from, dateRange?.to],
