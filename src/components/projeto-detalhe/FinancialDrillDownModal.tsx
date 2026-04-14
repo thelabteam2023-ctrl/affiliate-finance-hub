@@ -46,6 +46,8 @@ export interface IndicatorConfig {
   source?: "ledger" | "bonus";
   /** Direction filter for ajuste_saldo */
   ajusteDirecao?: string;
+  /** Special flag for ganhoConfirmacao: only saques with valor_confirmado != valor */
+  isConfirmationGain?: boolean;
 }
 
 export const INDICATOR_CONFIGS: Record<string, IndicatorConfig> = {
@@ -132,6 +134,8 @@ export const INDICATOR_CONFIGS: Record<string, IndicatorConfig> = {
     description: "Diferença positiva entre valor solicitado e valor confirmado em saques. Ganho apurado automaticamente na conciliação.",
     tipoTransacao: ["SAQUE", "SAQUE_VIRTUAL"],
     statusFilter: ["CONFIRMADO"],
+    /** Special: only saques where valor_confirmado differs from valor */
+    isConfirmationGain: true,
   },
 };
 
@@ -142,6 +146,7 @@ interface DrillDownTransaction {
   valor: number;
   valor_confirmado?: number | null;
   moeda: string;
+  tipo_moeda?: string | null;
   data_transacao: string;
   descricao?: string | null;
   origem_parceiro_id?: string | null;
@@ -181,7 +186,7 @@ async function fetchDrillDownLedger(
   let query = supabase
     .from("cash_ledger")
     .select(
-      "id, tipo_transacao, status, valor, valor_confirmado, moeda, data_transacao, descricao, ajuste_direcao, origem_bookmaker_id, destino_bookmaker_id, origem_parceiro_id, destino_parceiro_id"
+      "id, tipo_transacao, status, valor, valor_confirmado, moeda, tipo_moeda, data_transacao, descricao, ajuste_direcao, origem_bookmaker_id, destino_bookmaker_id, origem_parceiro_id, destino_parceiro_id"
     )
     .eq("projeto_id_snapshot", projetoId)
     .in("tipo_transacao", config.tipoTransacao)
@@ -221,6 +226,7 @@ async function fetchDrillDownLedger(
     valor: row.valor,
     valor_confirmado: row.valor_confirmado,
     moeda: row.moeda,
+    tipo_moeda: row.tipo_moeda,
     data_transacao: row.data_transacao,
     descricao: row.descricao,
     ajuste_direcao: row.ajuste_direcao,
@@ -368,6 +374,7 @@ export function FinancialDrillDownModal({
         status: b.status,
         valor: b.bonus_amount,
         valorEfetivo: b.bonus_amount,
+        valorConfirmado: null as number | null,
         moeda: b.currency,
         data: b.credited_at,
         origem: b.bookmaker_nome || "—",
@@ -375,10 +382,29 @@ export function FinancialDrillDownModal({
       }));
     }
 
-    return (ledgerData || []).map((t) => {
-      const valorEfetivo = (indicatorKey === "saquesRecebidos" || indicatorKey === "ganhoConfirmacao")
-        ? (t.valor_confirmado ?? t.valor)
-        : t.valor;
+    let rows = ledgerData || [];
+
+    // For ganhoConfirmacao: only include FIAT saques where valor_confirmado differs from valor
+    // Crypto saques store raw crypto amounts in valor_confirmado (not fiat equivalent)
+    if (config?.isConfirmationGain) {
+      rows = rows.filter(t => 
+        t.tipo_moeda !== 'CRYPTO' &&
+        t.valor_confirmado != null && 
+        Math.abs(t.valor_confirmado - t.valor) >= 0.01
+      );
+    }
+
+    return rows.map((t) => {
+      // For ganhoConfirmacao: show the DIFFERENCE, not the confirmed value
+      let valorEfetivo: number;
+      if (config?.isConfirmationGain) {
+        valorEfetivo = (t.valor_confirmado ?? t.valor) - t.valor;
+      } else if (indicatorKey === "saquesRecebidos") {
+        valorEfetivo = t.valor_confirmado ?? t.valor;
+      } else {
+        valorEfetivo = t.valor;
+      }
+      
       const origem = t.origem_bookmaker_nome || t.destino_bookmaker_nome || t.origem_parceiro_nome || t.destino_parceiro_nome || "—";
       return {
         id: t.id,
@@ -386,14 +412,15 @@ export function FinancialDrillDownModal({
         status: t.status,
         valor: t.valor,
         valorEfetivo,
+        valorConfirmado: t.valor_confirmado,
         moeda: t.moeda,
         data: t.data_transacao,
         origem,
         descricao: t.descricao,
-        ajuste_direcao: t.ajuste_direcao,
+        ajuste_direcao: (t as any).ajuste_direcao,
       };
     });
-  }, [ledgerData, bonusData, isBonus, indicatorKey]);
+  }, [ledgerData, bonusData, isBonus, indicatorKey, config]);
 
   // Apply filters, search, sorting
   const filteredRows = useMemo(() => {
@@ -429,23 +456,32 @@ export function FinancialDrillDownModal({
 
   // Aggregations
   const aggregations = useMemo(() => {
-    const porMoeda: Record<string, { total: number; creditado: number; pendente: number }> = {};
+    const porMoeda: Record<string, { total: number; creditado: number; pendente: number; ganho: number; perda: number }> = {};
+    const isGanhoConf = !!config?.isConfirmationGain;
 
     processedRows.forEach((r) => {
       const moeda = (r.moeda || "BRL").toUpperCase();
-      if (!porMoeda[moeda]) porMoeda[moeda] = { total: 0, creditado: 0, pendente: 0 };
-      const val = Math.abs(r.valorEfetivo);
-      porMoeda[moeda].total += val;
-      const statusUp = (r.status || "").toUpperCase();
-      if (statusUp === "CONFIRMADO" || r.status === "credited" || r.status === "finalized") {
-        porMoeda[moeda].creditado += val;
-      } else if (statusUp === "PENDENTE") {
-        porMoeda[moeda].pendente += val;
+      if (!porMoeda[moeda]) porMoeda[moeda] = { total: 0, creditado: 0, pendente: 0, ganho: 0, perda: 0 };
+      
+      if (isGanhoConf) {
+        // For ganhoConfirmacao: use signed value (difference), don't abs
+        porMoeda[moeda].total += r.valorEfetivo;
+        if (r.valorEfetivo > 0) porMoeda[moeda].ganho += r.valorEfetivo;
+        else porMoeda[moeda].perda += r.valorEfetivo;
+      } else {
+        const val = Math.abs(r.valorEfetivo);
+        porMoeda[moeda].total += val;
+        const statusUp = (r.status || "").toUpperCase();
+        if (statusUp === "CONFIRMADO" || r.status === "credited" || r.status === "finalized") {
+          porMoeda[moeda].creditado += val;
+        } else if (statusUp === "PENDENTE") {
+          porMoeda[moeda].pendente += val;
+        }
       }
     });
 
-    return { porMoeda, count: processedRows.length };
-  }, [processedRows]);
+    return { porMoeda, count: processedRows.length, isGanhoConf };
+  }, [processedRows, config]);
 
   // Available statuses for filter
   const availableStatuses = useMemo(() => {
@@ -498,11 +534,24 @@ export function FinancialDrillDownModal({
             {Object.entries(aggregations.porMoeda).map(([moeda, vals]) => (
               <div key={moeda} className="flex items-center gap-2 bg-muted/50 rounded-md px-2.5 py-1.5">
                 <span className="text-[10px] font-medium">Total: {formatCurrency(vals.total)}</span>
-                {vals.creditado > 0 && (
-                  <span className="text-[10px] text-emerald-500">Creditado: {formatCurrency(vals.creditado)}</span>
-                )}
-                {vals.pendente > 0 && (
-                  <span className="text-[10px] text-amber-500">Pendente: {formatCurrency(vals.pendente)}</span>
+                {aggregations.isGanhoConf ? (
+                  <>
+                    {vals.ganho > 0 && (
+                      <span className="text-[10px] text-emerald-500">Ganho: {formatCurrency(vals.ganho)}</span>
+                    )}
+                    {vals.perda < 0 && (
+                      <span className="text-[10px] text-red-500">Perda: {formatCurrency(vals.perda)}</span>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {vals.creditado > 0 && (
+                      <span className="text-[10px] text-emerald-500">Creditado: {formatCurrency(vals.creditado)}</span>
+                    )}
+                    {vals.pendente > 0 && (
+                      <span className="text-[10px] text-amber-500">Pendente: {formatCurrency(vals.pendente)}</span>
+                    )}
+                  </>
                 )}
               </div>
             ))}
@@ -589,11 +638,27 @@ export function FinancialDrillDownModal({
                     <TooltipContent side="top" className="text-xs max-w-xs">
                       <p>{row.origem}</p>
                       {row.descricao && <p className="text-muted-foreground mt-0.5">{row.descricao}</p>}
+                      {aggregations.isGanhoConf && row.valorConfirmado != null && (
+                        <div className="mt-1 space-y-0.5 text-muted-foreground">
+                          <p>Solicitado: {formatCurrency(row.valor)}</p>
+                          <p>Confirmado: {formatCurrency(row.valorConfirmado)}</p>
+                          <p className={row.valorEfetivo >= 0 ? "text-emerald-500" : "text-red-500"}>
+                            Diferença: {formatCurrency(row.valorEfetivo)}
+                          </p>
+                        </div>
+                      )}
                       <p className="text-muted-foreground/70 mt-1 font-mono text-[9px]">{row.id.slice(0, 8)}…</p>
                     </TooltipContent>
                   </Tooltip>
-                  <span className="font-mono tabular-nums text-right font-medium">
-                    {formatCurrency(Math.abs(row.valorEfetivo))}
+                  <span className={`font-mono tabular-nums text-right font-medium ${
+                    aggregations.isGanhoConf 
+                      ? (row.valorEfetivo >= 0 ? "text-emerald-500" : "text-red-500")
+                      : ""
+                  }`}>
+                    {aggregations.isGanhoConf 
+                      ? formatCurrency(row.valorEfetivo)
+                      : formatCurrency(Math.abs(row.valorEfetivo))
+                    }
                   </span>
                 </div>
               ))}
