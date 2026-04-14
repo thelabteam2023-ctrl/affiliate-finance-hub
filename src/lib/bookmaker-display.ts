@@ -75,3 +75,33 @@ export function buildBookmakerNomeMap(
   });
   return map;
 }
+
+/**
+ * Enriquece um bookmakerNomeMap existente com dados extraídos de pernas de apostas.
+ * Cobre bookmakers desvinculados do projeto que ainda aparecem em apostas históricas.
+ * Não sobrescreve entradas já existentes no mapa (projeto tem prioridade).
+ */
+export function enrichMapFromPernas(
+  map: Map<string, string>,
+  pernas: Array<{
+    bookmaker_id?: string | null;
+    bookmaker_nome?: string;
+    entries?: Array<{
+      bookmaker_id?: string;
+      bookmaker_nome?: string;
+    }>;
+  }>
+): void {
+  for (const perna of pernas) {
+    if (perna.bookmaker_id && !map.has(perna.bookmaker_id) && perna.bookmaker_nome) {
+      map.set(perna.bookmaker_id, perna.bookmaker_nome);
+    }
+    if (perna.entries) {
+      for (const entry of perna.entries) {
+        if (entry.bookmaker_id && !map.has(entry.bookmaker_id) && entry.bookmaker_nome) {
+          map.set(entry.bookmaker_id, entry.bookmaker_nome);
+        }
+      }
+    }
+  }
+}
