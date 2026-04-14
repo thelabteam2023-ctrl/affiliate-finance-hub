@@ -132,6 +132,8 @@ export const INDICATOR_CONFIGS: Record<string, IndicatorConfig> = {
     description: "Diferença positiva entre valor solicitado e valor confirmado em saques. Ganho apurado automaticamente na conciliação.",
     tipoTransacao: ["SAQUE", "SAQUE_VIRTUAL"],
     statusFilter: ["CONFIRMADO"],
+    /** Special: only saques where valor_confirmado differs from valor */
+    isConfirmationGain: true,
   },
 };
 
