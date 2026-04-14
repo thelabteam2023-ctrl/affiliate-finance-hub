@@ -450,6 +450,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
             value={formatCurrency(metrics.depositosReais)}
             indent
             tooltip="Dinheiro efetivamente transferido para as casas neste projeto"
+            onClick={() => openDrillDown("depositosReais", metrics.depositosReais)}
           />
         )}
         {metrics.depositosVirtuais > 0 && (
@@ -459,6 +460,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
             indent
             colorClass="text-muted-foreground"
             tooltip="Saldo já existente nas casas no momento da vinculação ao projeto. Não representa dinheiro novo — é a baseline contábil."
+            onClick={() => openDrillDown("depositosVirtuais", metrics.depositosVirtuais)}
           />
         )}
         <MetricRow 
@@ -466,14 +468,16 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
           value={formatCurrency(metrics.depositosTotal)}
           bold
           tooltip={metrics.hasInvestorCapital ? `Interno: ${formatCurrency(metrics.depositosInterno)} · Investidor: ${formatCurrency(metrics.depositosInvestidor)}` : "Soma de depósitos reais + capital inicial das casas vinculadas"}
+          onClick={() => openDrillDown("depositosTotal", metrics.depositosTotal)}
         />
         {hasExtras && (
-          <ExtrasCollapsible metrics={metrics} formatCurrency={formatCurrency} />
+          <ExtrasCollapsible metrics={metrics} formatCurrency={formatCurrency} onDrillDown={openDrillDown} />
         )}
         <MetricRow 
           label="Saques Recebidos" 
           value={formatCurrency(metrics.saquesRecebidos)}
           tooltip={metrics.hasInvestorCapital ? `Interno: ${formatCurrency(metrics.saquesInterno)} · Investidor: ${formatCurrency(metrics.saquesInvestidor)}` : undefined}
+          onClick={() => openDrillDown("saquesRecebidos", metrics.saquesRecebidos)}
         />
         {metrics.saquesPendentes > 0 && (
           <MetricRow 
@@ -481,6 +485,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
             value={formatCurrency(metrics.saquesPendentes)} 
             colorClass="text-amber-500"
             tooltip={metrics.hasInvestorCapital ? `Interno: ${formatCurrency(metrics.saquesPendentesInterno)} · Investidor: ${formatCurrency(metrics.saquesPendentesInvestidor)}` : undefined}
+            onClick={() => openDrillDown("saquesPendentes", metrics.saquesPendentes)}
           />
         )}
         <div className="border-t border-border/30 mt-1.5 pt-1.5">
