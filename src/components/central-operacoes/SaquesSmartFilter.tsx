@@ -21,6 +21,7 @@ export interface SaquePendenteItem {
   destino_conta_bancaria_id: string | null;
   destino_wallet_id: string | null;
   bookmaker_nome?: string;
+  bookmaker_logo_url?: string | null;
   parceiro_nome?: string;
   banco_nome?: string;
   wallet_nome?: string;
