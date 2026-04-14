@@ -372,6 +372,7 @@ export function FinancialDrillDownModal({
         status: b.status,
         valor: b.bonus_amount,
         valorEfetivo: b.bonus_amount,
+        valorConfirmado: null as number | null,
         moeda: b.currency,
         data: b.credited_at,
         origem: b.bookmaker_nome || "—",
@@ -379,10 +380,27 @@ export function FinancialDrillDownModal({
       }));
     }
 
-    return (ledgerData || []).map((t) => {
-      const valorEfetivo = (indicatorKey === "saquesRecebidos" || indicatorKey === "ganhoConfirmacao")
-        ? (t.valor_confirmado ?? t.valor)
-        : t.valor;
+    let rows = ledgerData || [];
+
+    // For ganhoConfirmacao: only include saques where valor_confirmado differs from valor
+    if (config?.isConfirmationGain) {
+      rows = rows.filter(t => 
+        t.valor_confirmado != null && 
+        Math.abs(t.valor_confirmado - t.valor) >= 0.01
+      );
+    }
+
+    return rows.map((t) => {
+      // For ganhoConfirmacao: show the DIFFERENCE, not the confirmed value
+      let valorEfetivo: number;
+      if (config?.isConfirmationGain) {
+        valorEfetivo = (t.valor_confirmado ?? t.valor) - t.valor;
+      } else if (indicatorKey === "saquesRecebidos") {
+        valorEfetivo = t.valor_confirmado ?? t.valor;
+      } else {
+        valorEfetivo = t.valor;
+      }
+      
       const origem = t.origem_bookmaker_nome || t.destino_bookmaker_nome || t.origem_parceiro_nome || t.destino_parceiro_nome || "—";
       return {
         id: t.id,
@@ -390,14 +408,15 @@ export function FinancialDrillDownModal({
         status: t.status,
         valor: t.valor,
         valorEfetivo,
+        valorConfirmado: t.valor_confirmado,
         moeda: t.moeda,
         data: t.data_transacao,
         origem,
         descricao: t.descricao,
-        ajuste_direcao: t.ajuste_direcao,
+        ajuste_direcao: (t as any).ajuste_direcao,
       };
     });
-  }, [ledgerData, bonusData, isBonus, indicatorKey]);
+  }, [ledgerData, bonusData, isBonus, indicatorKey, config]);
 
   // Apply filters, search, sorting
   const filteredRows = useMemo(() => {
