@@ -420,10 +420,7 @@ export default function CentralOperacoes() {
         id: "alertas-criticos", priority: PRIORITY.CRITICAL, domain: 'admin_event',
         component: (
           <OperationCard key="alertas-criticos" title="Alertas Críticos" icon={<AlertTriangle className="h-4 w-4" />} color="red" count={alertasCriticos.length}>
-            {alertasCriticos.slice(0, 5).map((alerta) => (
-              <OperationItem key={alerta.entidade_id} icon={<AlertTriangle className="h-3.5 w-3.5" />} color="red" label={alerta.titulo}
-                actions={<Button size="sm" variant="destructive" className="h-6 text-xs px-2 shrink-0">Resolver</Button>} />
-            ))}
+            <AlertasCriticosCardGrid alertas={alertasCriticos} />
           </OperationCard>
         ),
       });
