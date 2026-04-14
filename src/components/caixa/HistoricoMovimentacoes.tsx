@@ -393,7 +393,7 @@ export function HistoricoMovimentacoes({
                     </span>
                     <div className="flex items-center gap-3 text-[11px]">
                       <span className="text-emerald-400">
-                        Acreditado: {formatCurrencyDynamic(confirmado, moeda)}
+                        Creditado: {formatCurrencyDynamic(confirmado, moeda)}
                       </span>
                       {pendente > 0 && (
                         <span className="text-yellow-400">
