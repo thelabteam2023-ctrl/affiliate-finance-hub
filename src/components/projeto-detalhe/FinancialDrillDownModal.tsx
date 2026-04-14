@@ -452,23 +452,32 @@ export function FinancialDrillDownModal({
 
   // Aggregations
   const aggregations = useMemo(() => {
-    const porMoeda: Record<string, { total: number; creditado: number; pendente: number }> = {};
+    const porMoeda: Record<string, { total: number; creditado: number; pendente: number; ganho: number; perda: number }> = {};
+    const isGanhoConf = !!config?.isConfirmationGain;
 
     processedRows.forEach((r) => {
       const moeda = (r.moeda || "BRL").toUpperCase();
-      if (!porMoeda[moeda]) porMoeda[moeda] = { total: 0, creditado: 0, pendente: 0 };
-      const val = Math.abs(r.valorEfetivo);
-      porMoeda[moeda].total += val;
-      const statusUp = (r.status || "").toUpperCase();
-      if (statusUp === "CONFIRMADO" || r.status === "credited" || r.status === "finalized") {
-        porMoeda[moeda].creditado += val;
-      } else if (statusUp === "PENDENTE") {
-        porMoeda[moeda].pendente += val;
+      if (!porMoeda[moeda]) porMoeda[moeda] = { total: 0, creditado: 0, pendente: 0, ganho: 0, perda: 0 };
+      
+      if (isGanhoConf) {
+        // For ganhoConfirmacao: use signed value (difference), don't abs
+        porMoeda[moeda].total += r.valorEfetivo;
+        if (r.valorEfetivo > 0) porMoeda[moeda].ganho += r.valorEfetivo;
+        else porMoeda[moeda].perda += r.valorEfetivo;
+      } else {
+        const val = Math.abs(r.valorEfetivo);
+        porMoeda[moeda].total += val;
+        const statusUp = (r.status || "").toUpperCase();
+        if (statusUp === "CONFIRMADO" || r.status === "credited" || r.status === "finalized") {
+          porMoeda[moeda].creditado += val;
+        } else if (statusUp === "PENDENTE") {
+          porMoeda[moeda].pendente += val;
+        }
       }
     });
 
-    return { porMoeda, count: processedRows.length };
-  }, [processedRows]);
+    return { porMoeda, count: processedRows.length, isGanhoConf };
+  }, [processedRows, config]);
 
   // Available statuses for filter
   const availableStatuses = useMemo(() => {
