@@ -1,7 +1,8 @@
 import { useState, useMemo, useCallback } from "react";
-import { Search, X, ArrowUpDown } from "lucide-react";
+import { Search, X, ArrowUpDown, User } from "lucide-react";
 import { getFirstLastName } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -51,7 +52,6 @@ export function SaquesSmartFilter({ saques, children }: SaquesSmartFilterProps) 
   const [sortMode, setSortMode] = useState<SortMode>("oldest");
   const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([]);
 
-  // Extract unique values for filter chips
   const filterOptions = useMemo(() => {
     const projetos = new Map<string, string>();
     const parceiros = new Map<string, string>();
@@ -67,7 +67,6 @@ export function SaquesSmartFilter({ saques, children }: SaquesSmartFilterProps) 
     };
   }, [saques]);
 
-  // Count per parceiro for concentration indicator
   const parceiroConcentration = useMemo(() => {
     const map = new Map<string, number>();
     saques.forEach((s) => {
@@ -77,18 +76,16 @@ export function SaquesSmartFilter({ saques, children }: SaquesSmartFilterProps) 
     return map;
   }, [saques]);
 
-  const addFilter = useCallback((type: ActiveFilter["type"], value: string) => {
+  const toggleParceiroFilter = useCallback((parceiro: string) => {
     setActiveFilters((prev) => {
-      if (prev.some((f) => f.type === type && f.value === value)) return prev;
-      return [...prev, { type, value, label: value }];
+      const exists = prev.some((f) => f.type === "parceiro" && f.value === parceiro);
+      if (exists) {
+        return prev.filter((f) => !(f.type === "parceiro" && f.value === parceiro));
+      }
+      return [...prev, { type: "parceiro" as const, value: parceiro, label: parceiro }];
     });
   }, []);
 
-  const removeFilter = useCallback((type: string, value: string) => {
-    setActiveFilters((prev) => prev.filter((f) => !(f.type === type && f.value === value)));
-  }, []);
-
-  // Apply search + filters + sort
   const filtered = useMemo(() => {
     let result = [...saques];
 
@@ -124,7 +121,6 @@ export function SaquesSmartFilter({ saques, children }: SaquesSmartFilterProps) 
     return result;
   }, [saques, search, activeFilters, sortMode]);
 
-  // Totals grouped by currency (from filtered results)
   const totalsByMoeda = useMemo(() => {
     const map = new Map<string, number>();
     filtered.forEach((s) => {
@@ -137,22 +133,28 @@ export function SaquesSmartFilter({ saques, children }: SaquesSmartFilterProps) 
   }, [filtered]);
 
   const hasAnyFilter = search.trim() || activeFilters.length > 0;
+  const activeParceiroFilters = activeFilters.filter((f) => f.type === "parceiro").map((f) => f.value);
 
   const CURRENCY_SYMBOLS: Record<string, string> = {
     BRL: 'R$', USD: 'US$', EUR: '€', GBP: '£', MYR: 'RM', USDT: 'US$', USDC: 'US$',
   };
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       {/* Totals by currency */}
       {totalsByMoeda.length > 0 && (
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-[10px] text-muted-foreground font-medium">Total pendente:</span>
           {totalsByMoeda.map(({ moeda, total }) => (
-            <Badge key={moeda} variant="outline" className="text-[11px] font-semibold px-2 py-0.5 border-yellow-500/30 text-yellow-400">
-              {CURRENCY_SYMBOLS[moeda] || moeda} {total.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              <span className="ml-1 text-[9px] font-normal text-muted-foreground">{moeda}</span>
-            </Badge>
+            <div
+              key={moeda}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20"
+            >
+              <span className="text-[11px] font-bold text-amber-400 tabular-nums">
+                {CURRENCY_SYMBOLS[moeda] || moeda} {total.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+              <span className="text-[9px] font-medium text-muted-foreground">{moeda}</span>
+            </div>
           ))}
         </div>
       )}
@@ -166,7 +168,7 @@ export function SaquesSmartFilter({ saques, children }: SaquesSmartFilterProps) 
             placeholder="Buscar wallet, parceiro, casa..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full h-8 pl-8 pr-3 text-xs rounded-md border border-border bg-background/50 placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-colors"
+            className="w-full h-8 pl-8 pr-3 text-xs rounded-lg border border-border bg-muted/20 placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/40 focus:border-primary/40 transition-colors"
           />
           {search && (
             <button onClick={() => setSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
@@ -179,7 +181,7 @@ export function SaquesSmartFilter({ saques, children }: SaquesSmartFilterProps) 
             value={activeFilters.find((f) => f.type === "projeto")?.value || "all"}
             onValueChange={(v) => {
               setActiveFilters((prev) => prev.filter((f) => f.type !== "projeto"));
-              if (v !== "all") addFilter("projeto", v);
+              if (v !== "all") toggleParceiroFilter(v);
             }}
           >
             <SelectTrigger className="h-8 w-[160px] text-xs">
@@ -206,32 +208,33 @@ export function SaquesSmartFilter({ saques, children }: SaquesSmartFilterProps) 
         </Select>
       </div>
 
-      {/* Parceiro quick filter chips (compact, with concentration count) */}
+      {/* Parceiro filter chips — redesigned */}
       {filterOptions.parceiros.length > 1 && (
-        <div className="flex flex-wrap gap-1">
+        <div className="flex flex-wrap gap-1.5">
           {filterOptions.parceiros.map((p) => {
-            const isActive = activeFilters.some((f) => f.type === "parceiro" && f.value === p);
+            const isActive = activeParceiroFilters.includes(p);
             const count = parceiroConcentration.get(p) || 0;
-            const isHighConcentration = count >= 3;
             return (
               <button
                 key={`parc-${p}`}
-                onClick={() => isActive ? removeFilter("parceiro", p) : addFilter("parceiro", p)}
-                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium transition-colors border ${
+                onClick={() => toggleParceiroFilter(p)}
+                className={cn(
+                  "inline-flex items-center gap-1.5 pl-1.5 pr-2.5 py-1 rounded-lg text-[11px] font-medium transition-all duration-150",
                   isActive
-                    ? "bg-yellow-500/20 text-yellow-400 border-yellow-500/40"
-                    : isHighConcentration
-                      ? "bg-red-500/10 text-red-300 border-red-500/20 hover:bg-red-500/15"
-                      : "bg-muted/30 text-muted-foreground border-border hover:bg-muted/50"
-                }`}
-              >
-                {getFirstLastName(p)}
-                {count > 1 && (
-                  <span className={`text-[9px] font-bold ${isHighConcentration && !isActive ? "text-red-400" : ""}`}>
-                    {count}
-                  </span>
+                    ? "bg-primary/15 text-primary border border-primary/30 shadow-sm shadow-primary/10"
+                    : "bg-muted/20 text-muted-foreground border border-border/50 hover:bg-muted/40 hover:text-foreground hover:border-border"
                 )}
-                {isActive && <X className="h-2.5 w-2.5" />}
+              >
+                <div className={cn(
+                  "h-5 w-5 rounded-md flex items-center justify-center text-[9px] font-bold shrink-0",
+                  isActive
+                    ? "bg-primary/20 text-primary"
+                    : "bg-muted/40 text-muted-foreground"
+                )}>
+                  {count}
+                </div>
+                <span className="truncate max-w-[100px]">{getFirstLastName(p)}</span>
+                {isActive && <X className="h-3 w-3 ml-0.5 shrink-0" />}
               </button>
             );
           })}
@@ -245,7 +248,7 @@ export function SaquesSmartFilter({ saques, children }: SaquesSmartFilterProps) 
             {filtered.length} de {saques.length} saques
           </span>
           {activeFilters.length > 0 && (
-            <button onClick={() => setActiveFilters([])} className="text-[10px] text-muted-foreground hover:text-foreground underline">
+            <button onClick={() => setActiveFilters([])} className="text-[10px] text-primary hover:text-primary/80 font-medium">
               Limpar filtros
             </button>
           )}
