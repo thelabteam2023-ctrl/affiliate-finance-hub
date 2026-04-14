@@ -533,6 +533,7 @@ export function FinancialDrillDownModal({
             </div>
             {Object.entries(aggregations.porMoeda).map(([moeda, vals]) => (
               <div key={moeda} className="flex items-center gap-2 bg-muted/50 rounded-md px-2.5 py-1.5">
+                <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 font-semibold">{moeda}</Badge>
                 <span className="text-[10px] font-medium">Total: {formatCurrency(vals.total)}</span>
                 {aggregations.isGanhoConf ? (
                   <>
