@@ -198,7 +198,7 @@ function SectionHeader({ icon: Icon, label, iconClass = "text-muted-foreground" 
   );
 }
 
-function ExtrasCollapsible({ metrics, formatCurrency }: { metrics: any; formatCurrency: (v: number) => string }) {
+function ExtrasCollapsible({ metrics, formatCurrency, onDrillDown }: { metrics: any; formatCurrency: (v: number) => string; onDrillDown?: (key: string, value: number) => void }) {
   const [open, setOpen] = useState(false);
   return (
     <div>
@@ -217,28 +217,28 @@ function ExtrasCollapsible({ metrics, formatCurrency }: { metrics: any; formatCu
       {open && (
         <div className="mt-1 space-y-0.5 pl-2 border-l-2 border-border/30 ml-1">
           {Math.abs(metrics.bonusGanhos) >= 0.01 && (
-            <MetricRow label="Bônus Ganhos" value={formatCurrency(metrics.bonusGanhos)} colorClass="text-emerald-500" indent tooltip="Valor total de bônus creditados nas casas de apostas. Representa o capital promocional recebido que contribui para o patrimônio do projeto." />
+            <MetricRow label="Bônus Ganhos" value={formatCurrency(metrics.bonusGanhos)} colorClass="text-emerald-500" indent tooltip="Valor total de bônus creditados nas casas de apostas. Representa o capital promocional recebido que contribui para o patrimônio do projeto." onClick={() => onDrillDown?.("bonusGanhos", metrics.bonusGanhos)} />
           )}
           {Math.abs(metrics.cashbackLiquido) >= 0.01 && (
-            <MetricRow label="Cashback Líquido" value={formatCurrency(metrics.cashbackLiquido)} colorClass="text-emerald-500" indent />
+            <MetricRow label="Cashback Líquido" value={formatCurrency(metrics.cashbackLiquido)} colorClass="text-emerald-500" indent onClick={() => onDrillDown?.("cashbackLiquido", metrics.cashbackLiquido)} />
           )}
           {Math.abs(metrics.girosGratis) >= 0.01 && (
-            <MetricRow label="Giros Grátis" value={formatCurrency(metrics.girosGratis)} colorClass="text-emerald-500" indent />
+            <MetricRow label="Giros Grátis" value={formatCurrency(metrics.girosGratis)} colorClass="text-emerald-500" indent onClick={() => onDrillDown?.("girosGratis", metrics.girosGratis)} />
           )}
           {Math.abs(metrics.ganhoConfirmacao) >= 0.01 && (
-            <MetricRow label="Ganho de Confirmação" value={formatCurrency(metrics.ganhoConfirmacao)} colorClass="text-emerald-500" indent />
+            <MetricRow label="Ganho de Confirmação" value={formatCurrency(metrics.ganhoConfirmacao)} colorClass="text-emerald-500" indent onClick={() => onDrillDown?.("ganhoConfirmacao", metrics.ganhoConfirmacao)} />
           )}
           {Math.abs(metrics.ajustes) >= 0.01 && (
-            <MetricRow label="Ajustes de Saldo" value={formatCurrency(metrics.ajustes)} colorClass={metrics.ajustes >= 0 ? "text-emerald-500" : "text-red-500"} indent tooltip="Correções feitas quando o saldo da casa diverge do esperado — por exemplo, variações de odds em décimos durante a operação que geram pequenas diferenças. O ajuste garante que o lucro real seja apurado corretamente." />
+            <MetricRow label="Ajustes de Saldo" value={formatCurrency(metrics.ajustes)} colorClass={metrics.ajustes >= 0 ? "text-emerald-500" : "text-red-500"} indent tooltip="Correções feitas quando o saldo da casa diverge do esperado — por exemplo, variações de odds em décimos durante a operação que geram pequenas diferenças. O ajuste garante que o lucro real seja apurado corretamente." onClick={() => onDrillDown?.("ajustes", metrics.ajustes)} />
           )}
           {(() => {
             const fxLiquido = metrics.ganhoFx - metrics.perdaFx;
             return Math.abs(fxLiquido) >= 0.01 ? (
-              <MetricRow label="Resultado Cambial" value={fxLiquido < 0 ? `−${formatCurrency(Math.abs(fxLiquido))}` : formatCurrency(fxLiquido)} colorClass={fxLiquido >= 0 ? "text-emerald-500" : "text-red-500"} indent tooltip="Diferença entre o valor solicitado no saque e o valor efetivamente recebido, causada por variação cambial entre a data do pedido e a data de confirmação. Ganhos e perdas são apurados automaticamente na conciliação." />
+              <MetricRow label="Resultado Cambial" value={fxLiquido < 0 ? `−${formatCurrency(Math.abs(fxLiquido))}` : formatCurrency(fxLiquido)} colorClass={fxLiquido >= 0 ? "text-emerald-500" : "text-red-500"} indent tooltip="Diferença entre o valor solicitado no saque e o valor efetivamente recebido, causada por variação cambial entre a data do pedido e a data de confirmação. Ganhos e perdas são apurados automaticamente na conciliação." onClick={() => onDrillDown?.("resultadoCambial", fxLiquido)} />
             ) : null;
           })()}
           {Math.abs(metrics.perdaOp) >= 0.01 && (
-            <MetricRow label="Perdas Operacionais" value={`−${formatCurrency(metrics.perdaOp)}`} colorClass="text-red-500" indent tooltip="Capital perdido por incidentes operacionais — como contas bloqueadas, saldos retidos ou fundos irrecuperáveis. Registrado via ocorrências ou ação rápida de perda." />
+            <MetricRow label="Perdas Operacionais" value={`−${formatCurrency(metrics.perdaOp)}`} colorClass="text-red-500" indent tooltip="Capital perdido por incidentes operacionais — como contas bloqueadas, saldos retidos ou fundos irrecuperáveis. Registrado via ocorrências ou ação rápida de perda." onClick={() => onDrillDown?.("perdaOp", metrics.perdaOp)} />
           )}
         </div>
       )}
