@@ -248,28 +248,8 @@ async function fetchDrillDownBonus(
   const { data, error } = await query.order("credited_at", { ascending: false }).limit(5000);
   if (error) throw error;
 
-  // Fetch bookmaker names via link table
-  const linkIds = new Set<string>();
-  (data || []).forEach((r: any) => { if (r.project_bookmaker_link_id) linkIds.add(r.project_bookmaker_link_id); });
-  
-  let bmNameMap = new Map<string, string>();
-  if (linkIds.size > 0) {
-    const { data: links } = await supabase
-      .from("project_bookmaker_links")
-      .select("id, bookmaker_id")
-      .in("id", Array.from(linkIds));
-    const bmIds = new Set<string>();
-    (links || []).forEach((l: any) => { if (l.bookmaker_id) bmIds.add(l.bookmaker_id); });
-    if (bmIds.size > 0) {
-      const { data: bms } = await supabase.from("bookmakers").select("id, nome").in("id", Array.from(bmIds));
-      const bmIdToName = new Map((bms || []).map((b: any) => [b.id, b.nome]));
-      const linkToBm = new Map((links || []).map((l: any) => [l.id, l.bookmaker_id]));
-      linkIds.forEach(lid => {
-        const bmId = linkToBm.get(lid);
-        if (bmId) bmNameMap.set(lid, bmIdToName.get(bmId) || "");
-      });
-    }
-  }
+  // Skip bookmaker name resolution for bonus — just show bonus_type
+  const bmNameMap = new Map<string, string>();
 
   return (data || []).map((row: any) => ({
     id: row.id,
