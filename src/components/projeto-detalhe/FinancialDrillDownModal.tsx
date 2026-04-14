@@ -226,6 +226,7 @@ async function fetchDrillDownLedger(
     valor: row.valor,
     valor_confirmado: row.valor_confirmado,
     moeda: row.moeda,
+    tipo_moeda: row.tipo_moeda,
     data_transacao: row.data_transacao,
     descricao: row.descricao,
     ajuste_direcao: row.ajuste_direcao,
