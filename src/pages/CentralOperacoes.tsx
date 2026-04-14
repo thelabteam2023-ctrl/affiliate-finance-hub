@@ -50,6 +50,8 @@ import { CardInfoTooltip } from "@/components/ui/card-info-tooltip";
 import { SaquesSmartFilter } from "@/components/central-operacoes/SaquesSmartFilter";
 import { SaqueCardGrid } from "@/components/central-operacoes/SaqueCardGrid";
 import { CasasLimitadasSmartFilter } from "@/components/central-operacoes/CasasLimitadasSmartFilter";
+import { SaqueProcessamentoCardGrid } from "@/components/central-operacoes/SaqueProcessamentoCardGrid";
+import { ParceriaEncerramentoCardGrid } from "@/components/central-operacoes/ParceriaEncerramentoCardGrid";
 import { ParticipacoesSmartFilter } from "@/components/central-operacoes/ParticipacoesSmartFilter";
 import { PropostasPagamentoCard } from "@/components/operadores/PropostasPagamentoCard";
 import { ContasDisponiveisModule } from "@/components/central-operacoes/ContasDisponiveisModule";
