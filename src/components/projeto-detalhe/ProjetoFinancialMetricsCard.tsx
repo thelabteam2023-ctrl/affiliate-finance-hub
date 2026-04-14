@@ -68,7 +68,7 @@ async function fetchFinancialMetricsRaw(projetoId: string): Promise<FinancialMet
     supabase.from("cash_ledger").select("valor, moeda")
       .in("tipo_transacao", ["DEPOSITO", "DEPOSITO_VIRTUAL"])
       .eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId).limit(10000),
-    supabase.from("cash_ledger").select("valor, valor_confirmado, moeda")
+    supabase.from("cash_ledger").select("valor, valor_confirmado, moeda, tipo_moeda")
       .in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])
       .eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId).limit(10000),
     supabase.from("cash_ledger").select("valor, moeda")
@@ -104,7 +104,7 @@ async function fetchFinancialMetricsRaw(projetoId: string): Promise<FinancialMet
   return {
     bookmakerSaldos,
     depositos: (depositos.data || []) as LedgerEntry[],
-    saques: (saques.data || []) as LedgerEntry[],
+    saques: (saques.data || []) as (LedgerEntry & { tipo_moeda?: string | null })[],
     saquesPendentes: (saquesPend.data || []) as LedgerEntry[],
     reconciliation: {
       cashbackManual: (cashbackM.data || []) as { valor: number; moeda: string }[],
@@ -146,8 +146,10 @@ export function ProjetoFinancialMetricsCard({ projetoId }: ProjetoFinancialMetri
     );
 
     // Ganho de confirmação: diferença entre valor_confirmado e valor nos saques
+    // Exclude crypto: valor_confirmado stores raw crypto amount, not fiat equivalent
     const ganhoConfirmacao = rawMetrics.saques.reduce((acc, s) => {
-      if (s.valor_confirmado != null && s.valor_confirmado !== s.valor) {
+      if (s.tipo_moeda === 'CRYPTO') return acc;
+      if (s.valor_confirmado != null && Math.abs(s.valor_confirmado - s.valor) >= 0.01) {
         return acc + convertToConsolidationOficial(s.valor_confirmado - s.valor, s.moeda);
       }
       return acc;
