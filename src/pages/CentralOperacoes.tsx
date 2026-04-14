@@ -471,23 +471,11 @@ export default function CentralOperacoes() {
         component: (
           <OperationCard key="saques-processamento" title="Saques Pendentes de Processamento" icon={<DollarSign className="h-4 w-4" />} color="emerald" count={alertasSaques.length}
             tooltip={{ title: "Saques Pendentes de Processamento", description: "Bookmakers marcados para saque que aguardam processamento.", flow: "Casa chega aqui quando desvinculada como 'limitada' (saque automático) ou quando gestor escolhe 'Marcar para Saque'." }}>
-            {alertasSaques.map((alerta) => (
-              <OperationItem key={alerta.entidade_id} icon={<Building2 className="h-3.5 w-3.5" />} color="emerald"
-                label={alerta.titulo}
-                sublabel={alerta.parceiro_nome ? getFirstLastName(alerta.parceiro_nome) : undefined}
-                value={alerta.valor ? formatCurrency(alerta.valor, alerta.moeda) : undefined}
-                actions={
-                  <div className="flex items-center gap-1">
-                    <Button size="sm" onClick={() => mutations.handleSaqueAction(alerta)} className="h-6 text-xs px-2">Processar</Button>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild><Button variant="ghost" size="sm" className="h-6 w-6 p-0"><MoreVertical className="h-3.5 w-3.5" /></Button></DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => mutations.handleCancelarLiberacao(alerta)} className="text-xs gap-2"><Undo2 className="h-3.5 w-3.5" />Cancelar Liberação</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                } />
-            ))}
+            <SaqueProcessamentoCardGrid
+              alertas={alertasSaques}
+              onProcessar={(alerta) => mutations.handleSaqueAction(alerta)}
+              onCancelar={(alerta) => mutations.handleCancelarLiberacao(alerta)}
+            />
           </OperationCard>
         ),
       });
@@ -837,20 +825,11 @@ export default function CentralOperacoes() {
         component: (
           <OperationCard key="parcerias-encerrando" title="Parcerias Encerrando" icon={<Calendar className="h-4 w-4" />} color="red" count={parceriasEncerramento.length}
             tooltip={{ title: "Parcerias Encerrando", description: "Parcerias com data de fim próxima que precisam de ação.", flow: "Parcerias com encerramento nos próximos dias aparecem aqui." }}>
-            {parceriasEncerramento.map((parc) => {
-              const isRed = parc.diasRestantes <= 5;
-              return (
-                <OperationItem key={parc.id} icon={<Calendar className="h-3.5 w-3.5" />} color={isRed ? "red" : "yellow"}
-                  label={getFirstLastName(parc.parceiroNome)}
-                  actions={
-                    <div className="flex items-center gap-1.5">
-                      <Badge className={`text-[10px] h-5 ${isRed ? "bg-red-500/20 text-red-400" : "bg-yellow-500/20 text-yellow-400"}`}>{parc.diasRestantes <= 0 ? `${Math.abs(parc.diasRestantes)}d atrás` : `${parc.diasRestantes}d`}</Badge>
-                      <Button size="sm" variant="outline" onClick={() => handleRenovarClick(parc)} className="h-6 text-xs px-2">Renovar</Button>
-                      <Button size="sm" variant="destructive" onClick={() => { setParceriaToEncerrar(parc); setEncerrarDialogOpen(true); }} className="h-6 text-xs px-2">Encerrar</Button>
-                    </div>
-                  } />
-              );
-            })}
+            <ParceriaEncerramentoCardGrid
+              parcerias={parceriasEncerramento}
+              onRenovar={handleRenovarClick}
+              onEncerrar={(parc) => { setParceriaToEncerrar(parc); setEncerrarDialogOpen(true); }}
+            />
           </OperationCard>
         ),
       });
