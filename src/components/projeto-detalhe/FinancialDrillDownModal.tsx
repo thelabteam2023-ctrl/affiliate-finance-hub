@@ -530,11 +530,24 @@ export function FinancialDrillDownModal({
             {Object.entries(aggregations.porMoeda).map(([moeda, vals]) => (
               <div key={moeda} className="flex items-center gap-2 bg-muted/50 rounded-md px-2.5 py-1.5">
                 <span className="text-[10px] font-medium">Total: {formatCurrency(vals.total)}</span>
-                {vals.creditado > 0 && (
-                  <span className="text-[10px] text-emerald-500">Creditado: {formatCurrency(vals.creditado)}</span>
-                )}
-                {vals.pendente > 0 && (
-                  <span className="text-[10px] text-amber-500">Pendente: {formatCurrency(vals.pendente)}</span>
+                {aggregations.isGanhoConf ? (
+                  <>
+                    {vals.ganho > 0 && (
+                      <span className="text-[10px] text-emerald-500">Ganho: {formatCurrency(vals.ganho)}</span>
+                    )}
+                    {vals.perda < 0 && (
+                      <span className="text-[10px] text-red-500">Perda: {formatCurrency(vals.perda)}</span>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {vals.creditado > 0 && (
+                      <span className="text-[10px] text-emerald-500">Creditado: {formatCurrency(vals.creditado)}</span>
+                    )}
+                    {vals.pendente > 0 && (
+                      <span className="text-[10px] text-amber-500">Pendente: {formatCurrency(vals.pendente)}</span>
+                    )}
+                  </>
                 )}
               </div>
             ))}
