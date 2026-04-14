@@ -896,13 +896,11 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
   // Enriquecido com dados das pernas para cobrir bookmakers desvinculados
   const bookmakerNomeMap = useMemo(() => {
     const projectMap = buildBookmakerNomeMap(bookmakers);
-    if (surebets) {
-      for (const sb of surebets) {
-        enrichMapFromPernas(projectMap, sb.pernas || []);
-      }
+    for (const a of apostas) {
+      if ((a as any).pernas) enrichMapFromPernas(projectMap, (a as any).pernas);
     }
     return projectMap;
-  }, [bookmakers, surebets]);
+  }, [bookmakers, apostas]);
 
   // Mapa de logos combinando catálogo global + bookmakers do projeto
   const logoMap = useMemo(() => {
