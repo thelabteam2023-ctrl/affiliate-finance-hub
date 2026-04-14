@@ -43,6 +43,7 @@ export interface Alerta {
   projeto_id: string | null;
   projeto_nome: string | null;
   status_anterior: string | null;
+  bookmaker_logo_url: string | null;
 }
 
 export interface EntregaPendente {
