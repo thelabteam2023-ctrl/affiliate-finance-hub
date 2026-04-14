@@ -446,13 +446,24 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       return;
     }
     
-    // Validate mandatory fields only for new parceiros or when on personal data tab
+    // Validate mandatory fields
     const isNewParceiro = !parceiroId && !parceiro;
-    if (isNewParceiro || activeTab === "dados") {
+    if (isNewParceiro) {
+      // New parceiros require all fields
       if (!nome || !cpf || !dataNascimento || !email || !telefone) {
         toast({
           title: "Campos obrigatórios faltando",
           description: "Por favor, preencha: Nome, CPF, Data Nascimento, Email e Telefone.",
+          variant: "destructive",
+        });
+        return;
+      }
+    } else {
+      // Existing parceiros only require nome and cpf
+      if (!nome || !cpf) {
+        toast({
+          title: "Campos obrigatórios faltando",
+          description: "Por favor, preencha: Nome e CPF.",
           variant: "destructive",
         });
         return;
