@@ -1,7 +1,6 @@
 import { useState, useMemo, useCallback } from "react";
 import { Search, X, ArrowUpDown, User } from "lucide-react";
 import { getFirstLastName } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import {
   Select,
@@ -47,6 +46,10 @@ interface SaquesSmartFilterProps {
   children: (filtered: SaquePendenteItem[]) => React.ReactNode;
 }
 
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  BRL: "R$", USD: "US$", EUR: "€", GBP: "£", MYR: "RM", USDT: "US$", USDC: "US$",
+};
+
 export function SaquesSmartFilter({ saques, children }: SaquesSmartFilterProps) {
   const [search, setSearch] = useState("");
   const [sortMode, setSortMode] = useState<SortMode>("oldest");
@@ -55,12 +58,10 @@ export function SaquesSmartFilter({ saques, children }: SaquesSmartFilterProps) 
   const filterOptions = useMemo(() => {
     const projetos = new Map<string, string>();
     const parceiros = new Map<string, string>();
-
     saques.forEach((s) => {
       if (s.projeto_nome) projetos.set(s.projeto_nome, s.projeto_nome);
       if (s.parceiro_nome) parceiros.set(s.parceiro_nome, s.parceiro_nome);
     });
-
     return {
       projetos: Array.from(projetos.values()).sort(),
       parceiros: Array.from(parceiros.values()).sort(),
@@ -79,16 +80,13 @@ export function SaquesSmartFilter({ saques, children }: SaquesSmartFilterProps) 
   const toggleParceiroFilter = useCallback((parceiro: string) => {
     setActiveFilters((prev) => {
       const exists = prev.some((f) => f.type === "parceiro" && f.value === parceiro);
-      if (exists) {
-        return prev.filter((f) => !(f.type === "parceiro" && f.value === parceiro));
-      }
+      if (exists) return prev.filter((f) => !(f.type === "parceiro" && f.value === parceiro));
       return [...prev, { type: "parceiro" as const, value: parceiro, label: parceiro }];
     });
   }, []);
 
   const filtered = useMemo(() => {
     let result = [...saques];
-
     if (search.trim()) {
       const q = search.toLowerCase();
       result = result.filter((s) => {
@@ -97,17 +95,10 @@ export function SaquesSmartFilter({ saques, children }: SaquesSmartFilterProps) 
         return text.includes(q);
       });
     }
-
     const projetoFilters = activeFilters.filter((f) => f.type === "projeto").map((f) => f.value);
     const parceiroFilters = activeFilters.filter((f) => f.type === "parceiro").map((f) => f.value);
-
-    if (projetoFilters.length > 0) {
-      result = result.filter((s) => s.projeto_nome && projetoFilters.includes(s.projeto_nome));
-    }
-    if (parceiroFilters.length > 0) {
-      result = result.filter((s) => s.parceiro_nome && parceiroFilters.includes(s.parceiro_nome));
-    }
-
+    if (projetoFilters.length > 0) result = result.filter((s) => s.projeto_nome && projetoFilters.includes(s.projeto_nome));
+    if (parceiroFilters.length > 0) result = result.filter((s) => s.parceiro_nome && parceiroFilters.includes(s.parceiro_nome));
     result.sort((a, b) => {
       switch (sortMode) {
         case "oldest": return new Date(a.data_transacao).getTime() - new Date(b.data_transacao).getTime();
@@ -117,7 +108,6 @@ export function SaquesSmartFilter({ saques, children }: SaquesSmartFilterProps) 
         default: return 0;
       }
     });
-
     return result;
   }, [saques, search, activeFilters, sortMode]);
 
@@ -135,25 +125,24 @@ export function SaquesSmartFilter({ saques, children }: SaquesSmartFilterProps) 
   const hasAnyFilter = search.trim() || activeFilters.length > 0;
   const activeParceiroFilters = activeFilters.filter((f) => f.type === "parceiro").map((f) => f.value);
 
-  const CURRENCY_SYMBOLS: Record<string, string> = {
-    BRL: 'R$', USD: 'US$', EUR: '€', GBP: '£', MYR: 'RM', USDT: 'US$', USDC: 'US$',
-  };
-
   return (
     <div className="space-y-3">
-      {/* Totals by currency */}
+      {/* Totals by currency — modern pill style */}
       {totalsByMoeda.length > 0 && (
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[10px] text-muted-foreground font-medium">Total pendente:</span>
+          <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
+            Pendente:
+          </span>
           {totalsByMoeda.map(({ moeda, total }) => (
             <div
               key={moeda}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20"
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-muted/50 border border-border/60"
             >
-              <span className="text-[11px] font-bold text-amber-400 tabular-nums">
-                {CURRENCY_SYMBOLS[moeda] || moeda} {total.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              <span className="text-[11px] font-bold text-foreground tabular-nums">
+                {CURRENCY_SYMBOLS[moeda] || moeda}{" "}
+                {total.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
-              <span className="text-[9px] font-medium text-muted-foreground">{moeda}</span>
+              <span className="text-[9px] font-medium text-muted-foreground uppercase">{moeda}</span>
             </div>
           ))}
         </div>
@@ -181,7 +170,9 @@ export function SaquesSmartFilter({ saques, children }: SaquesSmartFilterProps) 
             value={activeFilters.find((f) => f.type === "projeto")?.value || "all"}
             onValueChange={(v) => {
               setActiveFilters((prev) => prev.filter((f) => f.type !== "projeto"));
-              if (v !== "all") toggleParceiroFilter(v);
+              if (v !== "all") {
+                setActiveFilters((prev) => [...prev, { type: "projeto", value: v, label: v }]);
+              }
             }}
           >
             <SelectTrigger className="h-8 w-[160px] text-xs">
@@ -208,7 +199,7 @@ export function SaquesSmartFilter({ saques, children }: SaquesSmartFilterProps) 
         </Select>
       </div>
 
-      {/* Parceiro filter chips — redesigned */}
+      {/* Parceiro filter chips — modern capsule style */}
       {filterOptions.parceiros.length > 1 && (
         <div className="flex flex-wrap gap-1.5">
           {filterOptions.parceiros.map((p) => {
@@ -219,22 +210,20 @@ export function SaquesSmartFilter({ saques, children }: SaquesSmartFilterProps) 
                 key={`parc-${p}`}
                 onClick={() => toggleParceiroFilter(p)}
                 className={cn(
-                  "inline-flex items-center gap-1.5 pl-1.5 pr-2.5 py-1 rounded-lg text-[11px] font-medium transition-all duration-150",
+                  "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium transition-all duration-150",
                   isActive
-                    ? "bg-primary/15 text-primary border border-primary/30 shadow-sm shadow-primary/10"
-                    : "bg-muted/20 text-muted-foreground border border-border/50 hover:bg-muted/40 hover:text-foreground hover:border-border"
+                    ? "bg-primary/15 text-primary border border-primary/30"
+                    : "bg-muted/30 text-muted-foreground border border-transparent hover:bg-muted/50 hover:text-foreground"
                 )}
               >
-                <div className={cn(
-                  "h-5 w-5 rounded-md flex items-center justify-center text-[9px] font-bold shrink-0",
-                  isActive
-                    ? "bg-primary/20 text-primary"
-                    : "bg-muted/40 text-muted-foreground"
+                <span className={cn(
+                  "tabular-nums text-[10px] font-bold",
+                  isActive ? "text-primary" : "text-muted-foreground/70"
                 )}>
                   {count}
-                </div>
+                </span>
                 <span className="truncate max-w-[100px]">{getFirstLastName(p)}</span>
-                {isActive && <X className="h-3 w-3 ml-0.5 shrink-0" />}
+                {isActive && <X className="h-2.5 w-2.5 ml-0.5 shrink-0" />}
               </button>
             );
           })}
