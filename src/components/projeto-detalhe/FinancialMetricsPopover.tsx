@@ -68,7 +68,7 @@ async function fetchFinancialMetricsRaw(projetoId: string, dateRange?: { from: s
   );
 
   const saqueQ = applyDateFilter(
-    supabase.from("cash_ledger").select("valor, valor_confirmado, moeda, origem_bookmaker_id")
+    supabase.from("cash_ledger").select("valor, valor_confirmado, moeda, origem_bookmaker_id, tipo_moeda")
       .in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])
       .eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId),
     dateRange
@@ -132,7 +132,7 @@ async function fetchFinancialMetricsRaw(projetoId: string, dateRange?: { from: s
     bookmakerSaldos,
     investorBookmakerIds,
     depositos: (depositos.data || []) as (LedgerEntry & { destino_bookmaker_id?: string | null; tipo_transacao?: string })[],
-    saques: (saques.data || []) as (LedgerEntry & { origem_bookmaker_id?: string | null })[],
+    saques: (saques.data || []) as (LedgerEntry & { origem_bookmaker_id?: string | null; tipo_moeda?: string | null })[],
     saquesPendentes: (saquesPend.data || []) as (LedgerEntry & { origem_bookmaker_id?: string | null })[],
     reconciliation: {
       cashbackManual: (cashbackM.data || []) as { valor: number; moeda: string }[],
