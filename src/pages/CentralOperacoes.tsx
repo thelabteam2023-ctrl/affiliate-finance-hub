@@ -454,21 +454,7 @@ export default function CentralOperacoes() {
             tooltip={{ title: "Saques Aguardando Confirmação", description: "Saques que foram iniciados e precisam de confirmação de recebimento.", flow: "Quando um saque é registrado no Caixa, ele fica pendente até que a tesouraria confirme o recebimento." }}>
             <SaquesSmartFilter saques={saquesPendentes}>
               {(filtered) => (
-                <>
-                  {filtered.length === 0 ? (
-                    <p className="text-xs text-muted-foreground text-center py-4">Nenhum saque encontrado com os filtros aplicados.</p>
-                  ) : filtered.map((saque) => {
-                    const destinoNome = saque.destino_wallet_id ? (saque.wallet_exchange || saque.wallet_nome || "Wallet") : (saque.banco_nome || "Conta Bancária");
-                    const parceiroShort = saque.parceiro_nome ? getFirstLastName(saque.parceiro_nome) : "";
-                    return (
-                      <OperationItem key={saque.id} icon={saque.destino_wallet_id ? <Wallet className="h-3.5 w-3.5" /> : <Building2 className="h-3.5 w-3.5" />} color="yellow"
-                        label={`${destinoNome}${parceiroShort ? ` · ${parceiroShort}` : ""}`}
-                        sublabel={`${saque.bookmaker_nome}${saque.coin ? ` · ${saque.coin}` : ""}${saque.projeto_nome ? ` · ${saque.projeto_nome}` : ""}`}
-                        value={formatCurrency(saque.valor_origem || saque.valor, saque.moeda_origem || saque.moeda)}
-                        actions={<Button size="sm" onClick={() => handleConfirmarSaque(saque)} className="bg-yellow-600 hover:bg-yellow-700 h-6 text-xs px-2 shrink-0">Confirmar</Button>} />
-                    );
-                  })}
-                </>
+                <SaqueCardGrid saques={filtered} onConfirmar={handleConfirmarSaque} />
               )}
             </SaquesSmartFilter>
           </OperationCard>
