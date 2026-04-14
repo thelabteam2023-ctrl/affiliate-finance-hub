@@ -272,6 +272,7 @@ function enrichSaques(rawSaques: any[]): SaquePendenteConfirmacao[] {
     return {
       ...s,
       bookmaker_nome: s.bookmaker_nome || "Bookmaker",
+      bookmaker_logo_url: s.bookmaker_logo_url || null,
       parceiro_nome: s.parceiro_nome || "",
       banco_nome: s.destino_conta_bancaria_id ? (s.banco_nome || "Conta Bancária") : undefined,
       wallet_nome: walletLabel,
