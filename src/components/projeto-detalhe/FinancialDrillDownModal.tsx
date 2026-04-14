@@ -634,11 +634,27 @@ export function FinancialDrillDownModal({
                     <TooltipContent side="top" className="text-xs max-w-xs">
                       <p>{row.origem}</p>
                       {row.descricao && <p className="text-muted-foreground mt-0.5">{row.descricao}</p>}
+                      {aggregations.isGanhoConf && row.valorConfirmado != null && (
+                        <div className="mt-1 space-y-0.5 text-muted-foreground">
+                          <p>Solicitado: {formatCurrency(row.valor)}</p>
+                          <p>Confirmado: {formatCurrency(row.valorConfirmado)}</p>
+                          <p className={row.valorEfetivo >= 0 ? "text-emerald-500" : "text-red-500"}>
+                            Diferença: {formatCurrency(row.valorEfetivo)}
+                          </p>
+                        </div>
+                      )}
                       <p className="text-muted-foreground/70 mt-1 font-mono text-[9px]">{row.id.slice(0, 8)}…</p>
                     </TooltipContent>
                   </Tooltip>
-                  <span className="font-mono tabular-nums text-right font-medium">
-                    {formatCurrency(Math.abs(row.valorEfetivo))}
+                  <span className={`font-mono tabular-nums text-right font-medium ${
+                    aggregations.isGanhoConf 
+                      ? (row.valorEfetivo >= 0 ? "text-emerald-500" : "text-red-500")
+                      : ""
+                  }`}>
+                    {aggregations.isGanhoConf 
+                      ? formatCurrency(row.valorEfetivo)
+                      : formatCurrency(Math.abs(row.valorEfetivo))
+                    }
                   </span>
                 </div>
               ))}
