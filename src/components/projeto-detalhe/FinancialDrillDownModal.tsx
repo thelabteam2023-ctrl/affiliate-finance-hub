@@ -146,6 +146,7 @@ interface DrillDownTransaction {
   valor: number;
   valor_confirmado?: number | null;
   moeda: string;
+  tipo_moeda?: string | null;
   data_transacao: string;
   descricao?: string | null;
   origem_parceiro_id?: string | null;
@@ -185,7 +186,7 @@ async function fetchDrillDownLedger(
   let query = supabase
     .from("cash_ledger")
     .select(
-      "id, tipo_transacao, status, valor, valor_confirmado, moeda, data_transacao, descricao, ajuste_direcao, origem_bookmaker_id, destino_bookmaker_id, origem_parceiro_id, destino_parceiro_id"
+      "id, tipo_transacao, status, valor, valor_confirmado, moeda, tipo_moeda, data_transacao, descricao, ajuste_direcao, origem_bookmaker_id, destino_bookmaker_id, origem_parceiro_id, destino_parceiro_id"
     )
     .eq("projeto_id_snapshot", projetoId)
     .in("tipo_transacao", config.tipoTransacao)
