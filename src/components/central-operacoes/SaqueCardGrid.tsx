@@ -1,6 +1,5 @@
 /**
  * SaqueCardGrid — Grid de cards para saques aguardando confirmação
- * Design inspirado no Patrimônio nas Casas (SaldoOperavelCard)
  */
 
 import { Button } from "@/components/ui/button";
@@ -62,8 +61,8 @@ export function SaqueCardGrid({ saques, onConfirmar }: SaqueCardGridProps) {
             key={saque.id}
             className={cn(
               "group rounded-xl border p-3 transition-all duration-200",
-              "bg-yellow-500/[0.04] border-yellow-500/20",
-              "hover:border-yellow-500/40 hover:bg-yellow-500/[0.08]"
+              "bg-card/80 border-border/50",
+              "hover:border-border hover:shadow-sm"
             )}
           >
             {/* Row 1: Logo + Casa name + Valor */}
@@ -80,7 +79,7 @@ export function SaqueCardGrid({ saques, onConfirmar }: SaqueCardGridProps) {
                 </span>
               </div>
               <div className="flex items-baseline gap-1 flex-shrink-0">
-                <span className="text-sm font-bold text-yellow-400 tabular-nums whitespace-nowrap">
+                <span className="text-sm font-bold text-foreground tabular-nums whitespace-nowrap">
                   {formatVal(valor, moeda)}
                 </span>
                 <span className="text-[9px] text-muted-foreground font-mono">{moeda}</span>
@@ -127,7 +126,7 @@ export function SaqueCardGrid({ saques, onConfirmar }: SaqueCardGridProps) {
               <Button
                 size="sm"
                 onClick={() => onConfirmar(saque)}
-                className="bg-yellow-600 hover:bg-yellow-700 h-6 text-[10px] px-2.5 shrink-0 font-semibold"
+                className="h-6 text-[10px] px-2.5 shrink-0 font-semibold"
               >
                 Confirmar
               </Button>
