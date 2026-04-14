@@ -333,7 +333,9 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
     const saquesPendentesInterno = saquesPendentes - saquesPendentesInvestidor;
 
     const ganhoConfirmacao = rawMetrics.saques.reduce((acc, s) => {
-      if (s.valor_confirmado != null && s.valor_confirmado !== s.valor) {
+      // Exclude crypto saques: valor_confirmado stores raw crypto amount, not fiat equivalent
+      if (s.tipo_moeda === 'CRYPTO') return acc;
+      if (s.valor_confirmado != null && Math.abs(s.valor_confirmado - s.valor) >= 0.01) {
         return acc + convertToConsolidationOficial(s.valor_confirmado - s.valor, s.moeda);
       }
       return acc;
