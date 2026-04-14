@@ -442,20 +442,11 @@ export default function CentralOperacoes() {
           <OperationCard key="casas-pendentes-conciliacao" title="Conciliação Pendente" icon={<ShieldAlert className="h-4 w-4" />} color="amber" count={casasPendentesConciliacao.length}
             description="Casas bloqueadas até conciliar transações"
             tooltip={{ title: "Conciliação Obrigatória", description: "Casas com transações pendentes não podem ser utilizadas para apostas ou bônus até que a conciliação seja realizada.", flow: "Transações pendentes (depósitos, saques em processamento) devem ser conciliadas para liberar a casa para operação." }}>
-            {casasPendentesConciliacao.map((casa) => (
-              <OperationItem key={casa.bookmaker_id} icon={<ShieldAlert className="h-3.5 w-3.5" />} color="amber" pulse
-                label={`${casa.bookmaker_nome}${casa.parceiro_nome ? ` · ${getFirstLastName(casa.parceiro_nome)}` : ''}`}
-                sublabel={`${casa.projeto_nome || 'Sem projeto'} • ${casa.qtd_transacoes_pendentes} transaç${casa.qtd_transacoes_pendentes === 1 ? 'ão' : 'ões'}`}
-                value={formatCurrency(casa.valor_total_pendente, casa.moeda)}
-                actions={
-                  <div className="flex items-center gap-1">
-                    {!casa.projeto_nome && (
-                      <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); setSelectedCasaConciliacao(casa); setSelectedProjetoVincular(""); setVincularConciliacaoOpen(true); }} className="h-6 text-xs px-1.5"><FolderKanban className="h-3 w-3" /></Button>
-                    )}
-                    <Button size="sm" variant="outline" onClick={() => navigate(`/caixa?tab=conciliacao&bookmaker=${casa.bookmaker_id}`)} className="border-amber-500/50 text-amber-600 hover:bg-amber-500/10 h-6 text-xs px-2">Conciliar</Button>
-                  </div>
-                } />
-            ))}
+            <ConciliacaoPendenteCardGrid
+              casas={casasPendentesConciliacao}
+              onConciliar={(casa) => navigate(`/caixa?tab=conciliacao&bookmaker=${casa.bookmaker_id}`)}
+              onVincular={(casa) => { setSelectedCasaConciliacao(casa); setSelectedProjetoVincular(""); setVincularConciliacaoOpen(true); }}
+            />
           </OperationCard>
         ),
       });
