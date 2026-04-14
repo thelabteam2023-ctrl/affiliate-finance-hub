@@ -56,7 +56,7 @@ import { TabFiltersBar } from "./TabFiltersBar";
 import { StandardTimeFilter } from "./StandardTimeFilter";
 import { useTabFilters } from "@/hooks/useTabFilters";
 import { cn, getFirstLastName } from "@/lib/utils";
-import { formatBookmakerProjectName, buildBookmakerNomeMap } from "@/lib/bookmaker-display";
+import { formatBookmakerProjectName, buildBookmakerNomeMap, enrichMapFromPernas } from "@/lib/bookmaker-display";
 import { parsePernaFromJson } from "@/types/apostasUnificada";
 import { OperationsSubTabHeader, type HistorySubTab, SuspiciousDateFilterButton, useSuspiciousDateFilter, isSuspiciousDate } from "./operations";
 import { parseLocalDateTime } from "@/utils/dateUtils";
@@ -1282,14 +1282,22 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
   }, [apostas, apostasMultiplas, surebets, bookmakersComBonusAtivo]);
 
   // Mapa de bookmaker_id -> nome completo com parceiro para enriquecer nomes no SurebetCard
+  // Enriquecido com dados das pernas para cobrir bookmakers desvinculados
   const bookmakerNomeMap = useMemo(() => {
-    return buildBookmakerNomeMap(bookmakers.map(bk => ({
+    const projectMap = buildBookmakerNomeMap(bookmakers.map(bk => ({
       id: bk.id,
       nome: bk.nome,
       parceiro_nome: bk.parceiro?.nome,
       instance_identifier: bk.instance_identifier,
     })));
-  }, [bookmakers]);
+    // Suplementar com pernas de surebets
+    if (surebets) {
+      for (const sb of surebets) {
+        enrichMapFromPernas(projectMap, sb.pernas || []);
+      }
+    }
+    return projectMap;
+  }, [bookmakers, surebets]);
 
   // formatCurrency definido no escopo do componente
 

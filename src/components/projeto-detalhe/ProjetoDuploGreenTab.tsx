@@ -68,7 +68,7 @@ import { VisaoGeralCharts } from "./VisaoGeralCharts";
 import { DuploGreenStatisticsCard } from "./DuploGreenStatisticsCard";
 
 import { cn, getFirstLastName } from "@/lib/utils";
-import { buildBookmakerNomeMap } from "@/lib/bookmaker-display";
+import { buildBookmakerNomeMap, enrichMapFromPernas } from "@/lib/bookmaker-display";
 import { useOpenOperationsCount } from "@/hooks/useOpenOperationsCount";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { useCotacoes } from "@/hooks/useCotacoes";
@@ -893,7 +893,14 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
   }, [apostasParaKpi]);
 
   // Mapa de bookmaker_id -> nome completo com parceiro para enriquecer dados no SurebetCard
-  const bookmakerNomeMap = useMemo(() => buildBookmakerNomeMap(bookmakers), [bookmakers]);
+  // Enriquecido com dados das pernas para cobrir bookmakers desvinculados
+  const bookmakerNomeMap = useMemo(() => {
+    const projectMap = buildBookmakerNomeMap(bookmakers);
+    for (const a of apostas) {
+      if ((a as any).pernas) enrichMapFromPernas(projectMap, (a as any).pernas);
+    }
+    return projectMap;
+  }, [bookmakers, apostas]);
 
   // Mapa de logos combinando catálogo global + bookmakers do projeto
   const logoMap = useMemo(() => {
