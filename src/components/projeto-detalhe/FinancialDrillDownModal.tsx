@@ -46,6 +46,8 @@ export interface IndicatorConfig {
   source?: "ledger" | "bonus";
   /** Direction filter for ajuste_saldo */
   ajusteDirecao?: string;
+  /** Special flag for ganhoConfirmacao: only saques with valor_confirmado != valor */
+  isConfirmationGain?: boolean;
 }
 
 export const INDICATOR_CONFIGS: Record<string, IndicatorConfig> = {
