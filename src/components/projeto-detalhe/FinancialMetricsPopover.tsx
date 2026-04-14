@@ -595,6 +595,18 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
           </div>
         )}
       </div>
+
+      {/* Drill-Down Modal */}
+      {drillDownKey && (
+        <FinancialDrillDownModal
+          open={!!drillDownKey}
+          onOpenChange={(open) => { if (!open) setDrillDownKey(null); }}
+          indicatorKey={drillDownKey}
+          projetoId={projetoId}
+          dateRange={dateRange}
+          totalValue={drillDownValue}
+        />
+      )}
     </div>
   );
 }
