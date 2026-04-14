@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { differenceInDays, parseISO, format } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
+import { FinancialDrillDownModal } from "./FinancialDrillDownModal";
 import {
   DollarSign,
   ArrowDownCircle,
