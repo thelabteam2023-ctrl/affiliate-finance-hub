@@ -50,7 +50,7 @@ interface DatedLedgerEntry {
 interface FinancialMetricsRaw {
   bookmakerSaldos: { saldo_atual: number; moeda: string }[];
   depositos: LedgerEntry[];
-  saques: LedgerEntry[];
+  saques: (LedgerEntry & { tipo_moeda?: string | null })[];
   saquesPendentes: LedgerEntry[];
   reconciliation: ReconciliationRaw;
   breakEvenTimeline: DatedLedgerEntry[];
