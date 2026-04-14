@@ -318,6 +318,30 @@ export function HistoricoMovimentacoes({
   // Period filter state
   const [periodFilter, setPeriodFilter] = useState<DashboardPeriodFilter>("tudo");
   
+  // Financial aggregation metrics
+  const metricas = useMemo(() => {
+    const porMoeda: Record<string, number> = {};
+    let count = 0;
+
+    transacoesComBusca.forEach((t: any) => {
+      const valor = getValorEfetivo(t);
+      const moeda = getMoedaEfetiva(t);
+      porMoeda[moeda] = (porMoeda[moeda] || 0) + Math.abs(valor);
+      count++;
+    });
+
+    const moedas = Object.entries(porMoeda)
+      .sort((a, b) => b[1] - a[1])
+      .map(([moeda, total]) => ({ moeda, total }));
+
+    const ticketMedio = moedas.map(m => ({
+      moeda: m.moeda,
+      valor: count > 0 ? m.total / count : 0,
+    }));
+
+    return { count, moedas, ticketMedio };
+  }, [transacoesComBusca]);
+  
   const handlePeriodChange = useCallback((filter: DashboardPeriodFilter) => {
     setPeriodFilter(filter);
     const range = getDashboardDateRange(filter);
@@ -337,8 +361,26 @@ export function HistoricoMovimentacoes({
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg">Histórico de Movimentações</CardTitle>
-          <div className="text-sm text-muted-foreground">
-            {transacoesComBusca.length} transações {termoBusca ? "encontradas" : "no período"}
+          <div className="text-right space-y-1">
+            <div className="text-sm text-muted-foreground">
+              {metricas.count} transações {termoBusca ? "encontradas" : "no período"}
+            </div>
+            {metricas.moedas.length > 0 && (
+              <div className="flex flex-col items-end gap-0.5">
+                {metricas.moedas.map(({ moeda, total }) => (
+                  <div key={moeda} className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-primary">
+                      {formatCurrencyDynamic(total, moeda)}
+                    </span>
+                    {metricas.count > 0 && (
+                      <span className="text-[10px] text-muted-foreground">
+                        ticket {formatCurrencyDynamic(total / metricas.count, moeda, { compact: true })}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
         <div className="space-y-4 mt-4">
