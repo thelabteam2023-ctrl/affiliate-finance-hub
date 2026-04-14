@@ -180,14 +180,9 @@ async function fetchDrillDownLedger(
 ) {
   let query = supabase
     .from("cash_ledger")
-    .select(`
-      id, tipo_transacao, status, valor, valor_confirmado, moeda, data_transacao, descricao,
-      ajuste_direcao,
-      origem_bookmaker:origem_bookmaker_id(nome),
-      destino_bookmaker:destino_bookmaker_id(nome),
-      origem_parceiro:origem_parceiro_id(nome),
-      destino_parceiro:destino_parceiro_id(nome)
-    `)
+    .select(
+      "id, tipo_transacao, status, valor, valor_confirmado, moeda, data_transacao, descricao, ajuste_direcao, origem_bookmaker_id, destino_bookmaker_id, origem_parceiro_id, destino_parceiro_id"
+    )
     .eq("projeto_id_snapshot", projetoId)
     .in("tipo_transacao", config.tipoTransacao)
     .order("data_transacao", { ascending: false });
@@ -200,6 +195,24 @@ async function fetchDrillDownLedger(
 
   const { data, error } = await query.limit(5000);
   if (error) throw error;
+
+  // Fetch bookmaker/parceiro names in batch
+  const bmIds = new Set<string>();
+  const parcIds = new Set<string>();
+  (data || []).forEach((r: any) => {
+    if (r.origem_bookmaker_id) bmIds.add(r.origem_bookmaker_id);
+    if (r.destino_bookmaker_id) bmIds.add(r.destino_bookmaker_id);
+    if (r.origem_parceiro_id) parcIds.add(r.origem_parceiro_id);
+    if (r.destino_parceiro_id) parcIds.add(r.destino_parceiro_id);
+  });
+
+  const [bmRes, parcRes] = await Promise.all([
+    bmIds.size > 0 ? supabase.from("bookmakers").select("id, nome").in("id", Array.from(bmIds)) : { data: [] },
+    parcIds.size > 0 ? supabase.from("parceiros").select("id, nome").in("id", Array.from(parcIds)) : { data: [] },
+  ]);
+
+  const bmMap = new Map((bmRes.data || []).map((b: any) => [b.id, b.nome]));
+  const parcMap = new Map((parcRes.data || []).map((p: any) => [p.id, p.nome]));
   
   return (data || []).map((row: any) => ({
     id: row.id,
@@ -211,10 +224,10 @@ async function fetchDrillDownLedger(
     data_transacao: row.data_transacao,
     descricao: row.descricao,
     ajuste_direcao: row.ajuste_direcao,
-    origem_bookmaker_nome: row.origem_bookmaker?.nome,
-    destino_bookmaker_nome: row.destino_bookmaker?.nome,
-    origem_parceiro_nome: row.origem_parceiro?.nome,
-    destino_parceiro_nome: row.destino_parceiro?.nome,
+    origem_bookmaker_nome: bmMap.get(row.origem_bookmaker_id),
+    destino_bookmaker_nome: bmMap.get(row.destino_bookmaker_id),
+    origem_parceiro_nome: parcMap.get(row.origem_parceiro_id),
+    destino_parceiro_nome: parcMap.get(row.destino_parceiro_id),
   })) as DrillDownTransaction[];
 }
 
