@@ -318,28 +318,47 @@ export function HistoricoMovimentacoes({
   // Period filter state
   const [periodFilter, setPeriodFilter] = useState<DashboardPeriodFilter>("tudo");
   
-  // Financial aggregation metrics
+  // Financial aggregation metrics with status breakdown
   const metricas = useMemo(() => {
-    const porMoeda: Record<string, number> = {};
+    const totalPorMoeda: Record<string, number> = {};
+    const confirmadoPorMoeda: Record<string, number> = {};
+    const pendentePorMoeda: Record<string, number> = {};
     let count = 0;
 
     transacoesComBusca.forEach((t: any) => {
-      const valor = getValorEfetivo(t);
+      const status = (t.status || "").toUpperCase();
+      // Exclude cancelled/rejected/reversed
+      if (status === "RECUSADO" || status === "CANCELADO" || status === "ESTORNADO") return;
+
+      const valor = Math.abs(getValorEfetivo(t));
       const moeda = getMoedaEfetiva(t);
-      porMoeda[moeda] = (porMoeda[moeda] || 0) + Math.abs(valor);
+      totalPorMoeda[moeda] = (totalPorMoeda[moeda] || 0) + valor;
       count++;
+
+      if (status === "CONFIRMADO") {
+        confirmadoPorMoeda[moeda] = (confirmadoPorMoeda[moeda] || 0) + valor;
+      } else {
+        // PENDENTE and any other non-final status
+        pendentePorMoeda[moeda] = (pendentePorMoeda[moeda] || 0) + valor;
+      }
     });
 
-    const moedas = Object.entries(porMoeda)
-      .sort((a, b) => b[1] - a[1])
-      .map(([moeda, total]) => ({ moeda, total }));
+    const allMoedas = [...new Set([
+      ...Object.keys(totalPorMoeda),
+      ...Object.keys(confirmadoPorMoeda),
+      ...Object.keys(pendentePorMoeda),
+    ])].sort((a, b) => (totalPorMoeda[b] || 0) - (totalPorMoeda[a] || 0));
 
-    const ticketMedio = moedas.map(m => ({
-      moeda: m.moeda,
-      valor: count > 0 ? m.total / count : 0,
+    const moedas = allMoedas.map(moeda => ({
+      moeda,
+      total: totalPorMoeda[moeda] || 0,
+      confirmado: confirmadoPorMoeda[moeda] || 0,
+      pendente: pendentePorMoeda[moeda] || 0,
     }));
 
-    return { count, moedas, ticketMedio };
+    const hasPendente = moedas.some(m => m.pendente > 0);
+
+    return { count, moedas, hasPendente };
   }, [transacoesComBusca]);
   
   const handlePeriodChange = useCallback((filter: DashboardPeriodFilter) => {
