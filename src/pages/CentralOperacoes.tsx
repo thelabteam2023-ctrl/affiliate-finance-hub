@@ -487,6 +487,7 @@ export default function CentralOperacoes() {
     }
 
     // 4.5. Casas Limitadas
+    // 4.5. Casas Limitadas
     if (alertasLimitadas.length > 0 && allowedDomains.includes('financial_event')) {
       cards.push({
         id: "casas-limitadas", priority: PRIORITY.HIGH, domain: 'financial_event',
@@ -496,23 +497,11 @@ export default function CentralOperacoes() {
             tooltip={{ title: "Casas Limitadas", description: "Bookmakers marcadas como limitadas e ainda vinculadas a projetos.", flow: "Quando uma bookmaker é marcada como 'Limitada', ela aparece aqui para processamento de saque." }}>
             <CasasLimitadasSmartFilter casas={alertasLimitadas}>
               {(filtered) => (
-                <>
-                  {filtered.map((alerta) => (
-                    <OperationItem key={alerta.entidade_id} icon={<Building2 className="h-3.5 w-3.5" />} color="orange"
-                      label={alerta.titulo}
-                      sublabel={`${alerta.parceiro_nome ? `${getFirstLastName(alerta.parceiro_nome)} • ` : ''}Sacar ou realocar saldo`}
-                      value={alerta.valor ? formatCurrency(alerta.valor, alerta.moeda) : undefined}
-                      actions={
-                        <div className="flex items-center gap-1">
-                          <TooltipProvider><Tooltip delayDuration={200}><TooltipTrigger asChild>
-                            <Button size="sm" variant="outline" onClick={() => setPerdaLimitadaDialog({ open: true, bookmakerId: alerta.entidade_id, bookmakerNome: alerta.titulo, moeda: alerta.moeda || "BRL", saldoAtual: alerta.valor || 0 })} className="border-destructive/50 text-destructive hover:bg-destructive/10 h-6 text-xs px-2 gap-1"><Ghost className="h-3 w-3" />Fantasma</Button>
-                          </TooltipTrigger><TooltipContent side="top" className="max-w-xs p-3 space-y-1"><p className="font-medium text-sm">Saldo Fantasma</p><p className="text-xs text-muted-foreground">Registra como perda operacional o saldo residual que não pode ser sacado.</p></TooltipContent></Tooltip></TooltipProvider>
-                          <Button size="sm" onClick={() => mutations.handleSaqueAction(alerta)} className="bg-orange-600 hover:bg-orange-700 h-6 text-xs px-2">Sacar</Button>
-                        </div>
-                      } />
-                  ))}
-                  {filtered.length === 0 && <p className="text-center text-[10px] text-muted-foreground py-4">Nenhuma casa encontrada com os filtros aplicados.</p>}
-                </>
+                <CasasLimitadasCardGrid
+                  alertas={filtered}
+                  onSacar={(alerta) => mutations.handleSaqueAction(alerta)}
+                  onFantasma={(alerta) => setPerdaLimitadaDialog({ open: true, bookmakerId: alerta.entidade_id, bookmakerNome: alerta.titulo, moeda: alerta.moeda || "BRL", saldoAtual: alerta.valor || 0 })}
+                />
               )}
             </CasasLimitadasSmartFilter>
           </OperationCard>
@@ -531,18 +520,12 @@ export default function CentralOperacoes() {
           <OperationCard key="casas-aguardando-decisao" title="Casas Aguardando Decisão" icon={<Unlink className="h-4 w-4" />} color="purple" count={casasAguardandoDecisao.length}
             description="Definir destino: disponibilizar ou sacar"
             tooltip={{ title: "Casas Aguardando Decisão", description: "Bookmakers ativas desvinculadas de projetos com saldo positivo.", flow: "Quando um operador desvincula uma casa ATIVA com saldo, ela aguarda decisão do responsável financeiro." }}>
-            {casasAguardandoDecisao.map((casa) => (
-              <OperationItem key={casa.id} icon={<Unlink className="h-3.5 w-3.5" />} color="purple"
-                label={casa.nome}
-                sublabel={casa.parceiro_nome ? getFirstLastName(casa.parceiro_nome) : "Sem parceiro"}
-                value={formatCurrency(casa.saldo_efetivo, casa.moeda)}
-                actions={
-                  <div className="flex gap-1">
-                    <Button size="sm" variant="outline" onClick={() => mutations.handleDisponibilizarCasa(casa)} className="border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 h-6 text-xs px-2">Disponibilizar</Button>
-                    <Button size="sm" onClick={() => mutations.handleMarcarParaSaque(casa)} className="bg-purple-600 hover:bg-purple-700 h-6 text-xs px-2">Marcar Saque</Button>
-                  </div>
-                } />
-            ))}
+            <CasasDecisaoCardGrid
+              casas={casasAguardandoDecisao}
+              variant="decisao"
+              onPrimary={(casa) => mutations.handleDisponibilizarCasa(casa)}
+              onSecondary={(casa) => mutations.handleMarcarParaSaque(casa)}
+            />
           </OperationCard>
         ),
       });
@@ -556,18 +539,12 @@ export default function CentralOperacoes() {
           <OperationCard key="casas-desvinculadas" title="Casas Desvinculadas" icon={<Unlink className="h-4 w-4" />} color="slate" count={casasAtivasDesvinculadas.length}
             description="Casas sem projeto com saldo pendente"
             tooltip={{ title: "Casas Desvinculadas (Legado)", description: "Bookmakers desvinculadas antes da nova regra de decisão.", flow: "Casas desvinculadas antes do novo fluxo aparecem aqui para compatibilidade." }}>
-            {casasAtivasDesvinculadas.map((casa) => (
-              <OperationItem key={casa.id} icon={<Unlink className="h-3.5 w-3.5" />} color="slate"
-                label={casa.nome}
-                sublabel={casa.parceiro_nome ? getFirstLastName(casa.parceiro_nome) : "Sem parceiro"}
-                value={formatCurrency(casa.saldo_efetivo, casa.moeda)}
-                actions={
-                  <div className="flex gap-1">
-                    <Button size="sm" onClick={() => mutations.handleSolicitarSaqueCasaDesvinculada(casa)} className="bg-slate-600 hover:bg-slate-700 h-6 text-xs px-2">Sacar</Button>
-                    <Button size="sm" variant="outline" onClick={() => mutations.handleAcknowledgeCasaDesvinculada(casa)} className="border-slate-500/30 text-slate-400 hover:bg-slate-500/10 h-6 text-xs px-2">Ciente</Button>
-                  </div>
-                } />
-            ))}
+            <CasasDecisaoCardGrid
+              casas={casasAtivasDesvinculadas}
+              variant="desvinculada"
+              onPrimary={(casa) => mutations.handleSolicitarSaqueCasaDesvinculada(casa)}
+              onSecondary={(casa) => mutations.handleAcknowledgeCasaDesvinculada(casa)}
+            />
           </OperationCard>
         ),
       });
@@ -582,16 +559,10 @@ export default function CentralOperacoes() {
             tooltip={{ title: "Participações de Investidores", description: "Pagamentos de participação nos lucros devidos aos investidores.", flow: "Quando um ciclo é fechado com lucro, a participação de cada investidor é calculada." }}>
             <ParticipacoesSmartFilter participacoes={participacoesPendentes}>
               {(filtered) => (
-                <>
-                  {filtered.map((part) => (
-                    <OperationItem key={part.id} icon={<User className="h-3.5 w-3.5" />} color="indigo"
-                      label={part.investidor_nome}
-                      sublabel={`${part.projeto_nome} • Ciclo ${part.ciclo_numero}`}
-                      value={formatCurrency(part.valor_participacao)}
-                      onClick={() => { setSelectedParticipacao(part); setPagamentoParticipacaoOpen(true); }}
-                      actions={<Button size="sm" className="bg-indigo-600 hover:bg-indigo-700 h-6 text-xs px-2" onClick={(e) => { e.stopPropagation(); setSelectedParticipacao(part); setPagamentoParticipacaoOpen(true); }}>Pagar</Button>} />
-                  ))}
-                </>
+                <ParticipacoesCardGrid
+                  participacoes={filtered}
+                  onPagar={(part) => { setSelectedParticipacao(part); setPagamentoParticipacaoOpen(true); }}
+                />
               )}
             </ParticipacoesSmartFilter>
           </OperationCard>
@@ -606,14 +577,10 @@ export default function CentralOperacoes() {
         component: (
           <OperationCard key="pagamentos-operador" title="Pagamentos de Operador" icon={<Users className="h-4 w-4" />} color="orange" count={pagamentosOperadorPendentes.length}
             tooltip={{ title: "Pagamentos de Operador", description: "Pagamentos pendentes aos operadores de projetos.", flow: "Quando um operador atinge meta ou tem pagamento agendado, o valor é gerado e aguarda processamento." }}>
-            {pagamentosOperadorPendentes.map((pag) => (
-              <OperationItem key={pag.id} icon={<DollarSign className="h-3.5 w-3.5" />} color="orange"
-                label={pag.operador_nome}
-                sublabel={`${pag.tipo_pagamento}${pag.projeto_nome ? ` • ${pag.projeto_nome}` : ""}`}
-                value={formatCurrency(pag.valor)}
-                onClick={() => { setSelectedPagamentoOperador(pag); setPagamentoOperadorOpen(true); }}
-                actions={<Button size="sm" className="bg-orange-600 hover:bg-orange-700 h-6 text-xs px-2" onClick={(e) => { e.stopPropagation(); setSelectedPagamentoOperador(pag); setPagamentoOperadorOpen(true); }}>Pagar</Button>} />
-            ))}
+            <PagamentosOperadorCardGrid
+              pagamentos={pagamentosOperadorPendentes}
+              onPagar={(pag) => { setSelectedPagamentoOperador(pag); setPagamentoOperadorOpen(true); }}
+            />
           </OperationCard>
         ),
       });
@@ -632,40 +599,12 @@ export default function CentralOperacoes() {
                 {showDismissedCiclos ? "Ocultar" : `${ciclosDismissedCount} oculto${ciclosDismissedCount > 1 ? "s" : ""}`}
               </button>
             ) : undefined}>
-            {alertasCiclosFiltrados.length === 0 && !showDismissedCiclos ? (
-              <p className="text-xs text-muted-foreground text-center py-4">Todos os ciclos foram ocultos.</p>
-            ) : (
-              alertasCiclosFiltrados.map((ciclo) => {
-                const isDismissed = ciclo.dismissed;
-                return (
-                  <div key={ciclo.id} className={`p-2 rounded-xl border group transition-all duration-150 ${isDismissed ? "border-muted/40 bg-muted/10 opacity-60" : ciclo.urgencia === "CRITICA" ? "border-red-500/30 bg-red-500/[0.06]" : ciclo.urgencia === "ALTA" ? "border-orange-500/30 bg-orange-500/[0.06]" : "border-violet-500/20 bg-violet-500/[0.06]"}`}>
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 min-w-0 flex-1 cursor-pointer" onClick={() => navigate(`/projeto/${ciclo.projeto_id}`)}>
-                        <FolderKanban className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                        <span className="text-xs font-medium truncate">{ciclo.projeto_nome}</span>
-                        <Badge variant="outline" className="text-[10px] shrink-0">Ciclo {ciclo.numero_ciclo}</Badge>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        {ciclo.tipo_gatilho === "TEMPO" && <Clock className="h-3 w-3 text-muted-foreground" />}
-                        {ciclo.tipo_gatilho === "VOLUME" && <Target className="h-3 w-3 text-muted-foreground" />}
-                        {ciclo.tipo_gatilho === "HIBRIDO" && <Zap className="h-3 w-3 text-muted-foreground" />}
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button size="sm" variant="ghost" className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => { e.stopPropagation(); isDismissed ? undismissCiclo(ciclo.id) : dismissCiclo(ciclo.id); }}>
-                              {isDismissed ? <Undo2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent side="left">{isDismissed ? "Tornar visível novamente" : "Ocultar este ciclo"}</TooltipContent>
-                        </Tooltip>
-                      </div>
-                    </div>
-                    {(ciclo.tipo_gatilho === "VOLUME" || ciclo.tipo_gatilho === "HIBRIDO") && ciclo.meta_volume && (
-                      <div className="mt-2"><Progress value={Math.min(100, ciclo.progresso_volume)} className="h-1" /><p className="text-[10px] text-muted-foreground mt-1">{ciclo.progresso_volume.toFixed(0)}% concluído</p></div>
-                    )}
-                  </div>
-                );
-              })
-            )}
+            <CiclosApuracaoCardGrid
+              ciclos={alertasCiclosFiltrados}
+              onNavigate={(projetoId) => navigate(`/projeto/${projetoId}`)}
+              onDismiss={dismissCiclo}
+              onUndismiss={undismissCiclo}
+            />
           </OperationCard>
         ),
       });
@@ -678,15 +617,10 @@ export default function CentralOperacoes() {
         component: (
           <OperationCard key="alertas-lucro" title="Marcos de Lucro Atingidos" icon={<TrendingUp className="h-4 w-4" />} color="emerald" count={alertasLucro.length}
             tooltip={{ title: "Marcos de Lucro", description: "Parceiros que atingiram marcos importantes de lucro acumulado.", flow: "Quando o lucro total de um parceiro cruza um marco configurado, um alerta é gerado." }}>
-            {alertasLucro.map((alerta) => (
-              <OperationItem key={alerta.id} icon={<TrendingUp className="h-3.5 w-3.5" />} color="emerald"
-                label={alerta.parceiro_nome}
-                sublabel={`Lucro: ${formatCurrency(alerta.lucro_atual)}`}
-                value={`R$ ${alerta.marco_valor.toLocaleString("pt-BR")}`}
-                actions={
-                  <Button size="sm" variant="outline" onClick={async () => { try { await supabase.from("parceiro_lucro_alertas").update({ notificado: true }).eq("id", alerta.id); setAlertasLucro(prev => prev.filter(a => a.id !== alerta.id)); toast.success("Marco verificado"); } catch { toast.error("Erro ao confirmar"); } }} className="h-6 text-[10px] px-2 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"><CheckCircle2 className="h-3 w-3 mr-1" />OK</Button>
-                } />
-            ))}
+            <AlertasLucroCardGrid
+              alertas={alertasLucro}
+              onConfirmar={async (alerta) => { try { await supabase.from("parceiro_lucro_alertas").update({ notificado: true }).eq("id", alerta.id); setAlertasLucro(prev => prev.filter(a => a.id !== alerta.id)); toast.success("Marco verificado"); } catch { toast.error("Erro ao confirmar"); } }}
+            />
           </OperationCard>
         ),
       });
@@ -699,13 +633,10 @@ export default function CentralOperacoes() {
         component: (
           <OperationCard key="entregas-pendentes" title="Entregas Pendentes" icon={<Package className="h-4 w-4" />} color="purple" count={entregasPendentes.length}
             tooltip={{ title: "Entregas Pendentes", description: "Entregas prontas para conciliação e pagamento.", flow: "Quando uma entrega atinge a meta, ela fica disponível para conciliação." }}>
-            {entregasPendentes.map((entrega) => (
-              <OperationItem key={entrega.id} icon={<Target className="h-3.5 w-3.5" />} color={entrega.nivel_urgencia === "CRITICA" ? "red" : "purple"}
-                label={entrega.operador_nome}
-                sublabel={`${entrega.projeto_nome} • Entrega #${entrega.numero_entrega}`}
-                value={formatCurrency(entrega.resultado_nominal)}
-                actions={<Button size="sm" onClick={() => handleConciliarEntrega(entrega)} className="bg-purple-600 hover:bg-purple-700 h-6 text-xs px-2">Conciliar</Button>} />
-            ))}
+            <EntregasPendentesCardGrid
+              entregas={entregasPendentes}
+              onConciliar={handleConciliarEntrega}
+            />
           </OperationCard>
         ),
       });
@@ -719,11 +650,10 @@ export default function CentralOperacoes() {
           <OperationCard key="parceiros-sem-parceria" title="Parceiros sem Origem" icon={<UserPlus className="h-4 w-4" />} color="amber" count={parceirosSemParceria.length}
             description="Parceiros sem indicação, fornecedor ou origem registrada"
             tooltip={{ title: "Parceiros sem Origem", description: "Parceiros ativos sem indicador, fornecedor ou outra origem registrada.", flow: "Parceiros cadastrados sem origem aparecem aqui para definição." }}>
-            {parceirosSemParceria.map((parceiro) => (
-              <OperationItem key={parceiro.id} icon={<User className="h-3.5 w-3.5" />} color="amber"
-                label={getFirstLastName(parceiro.nome)}
-                actions={<Button size="sm" variant="outline" onClick={() => navigate("/programa-indicacao", { state: { tab: "parcerias", parceiroId: parceiro.id } })} className="h-6 text-xs px-2">Definir Origem</Button>} />
-            ))}
+            <ParceirosSemParceriaCardGrid
+              parceiros={parceirosSemParceria}
+              onDefinirOrigem={(parceiro) => navigate("/programa-indicacao", { state: { tab: "parcerias", parceiroId: parceiro.id } })}
+            />
           </OperationCard>
         ),
       });
@@ -736,31 +666,25 @@ export default function CentralOperacoes() {
         component: (
           <OperationCard key="pagamentos-parceiros" title="Pagamentos a Parceiros" icon={<DollarSign className="h-4 w-4" />} color="cyan" count={pagamentosParceiros.length}
             tooltip={{ title: "Pagamentos a Parceiros", description: "Valores devidos aos parceiros conforme acordado na parceria.", flow: "Quando uma parceria possui valor acordado para o parceiro, ele aparece aqui." }}>
-            {pagamentosParceiros.map((pag) => (
-              <OperationItem key={pag.parceriaId} icon={<User className="h-3.5 w-3.5" />} color="cyan"
-                label={getFirstLastName(pag.parceiroNome)}
-                value={formatCurrency(pag.valorParceiro)}
-                actions={
-                  <div className="flex items-center gap-1">
-                    <Button size="sm" variant="ghost" onClick={() => { setSelectedPagamentoParceiro(pag); setPagamentoParceiroDialogOpen(true); }} className="h-6 text-xs px-2">Pagar</Button>
-                    <Button size="sm" variant="ghost" className="h-6 text-xs px-2 text-muted-foreground hover:text-destructive" onClick={async () => {
-                      setDispensaParceriaId(pag.parceriaId);
-                      setDispensaParceiroNome(pag.parceiroNome);
-                      setDispensaMotivo('');
-                      setDispensaEstornar(false);
-                      const { data: parData } = await supabase.from("parcerias").select("comissao_paga, valor_comissao_indicador, indicacao_id").eq("id", pag.parceriaId).single();
-                      const jaPaga = parData?.comissao_paga === true && (parData?.valor_comissao_indicador || 0) > 0;
-                      setDispensaComissaoJaPaga(jaPaga);
-                      setDispensaValorComissao(parData?.valor_comissao_indicador || 0);
-                      if (jaPaga && parData?.indicacao_id) {
-                        const { data: ind } = await supabase.from("v_indicacoes_workspace").select("indicador_id").eq("id", parData.indicacao_id).maybeSingle();
-                        if (ind?.indicador_id) { const { data: indRef } = await supabase.from("indicadores_referral").select("nome").eq("id", ind.indicador_id).maybeSingle(); setDispensaIndicadorNome(indRef?.nome || "Indicador"); } else { setDispensaIndicadorNome("Indicador"); }
-                      } else { setDispensaIndicadorNome(""); }
-                      setDispensaOpen(true);
-                    }}><XCircle className="h-3 w-3 mr-1" />Dispensar</Button>
-                  </div>
-                } />
-            ))}
+            <PagamentosParceirosCardGrid
+              pagamentos={pagamentosParceiros}
+              onPagar={(pag) => { setSelectedPagamentoParceiro(pag); setPagamentoParceiroDialogOpen(true); }}
+              onDispensar={async (pag) => {
+                setDispensaParceriaId(pag.parceriaId);
+                setDispensaParceiroNome(pag.parceiroNome);
+                setDispensaMotivo('');
+                setDispensaEstornar(false);
+                const { data: parData } = await supabase.from("parcerias").select("comissao_paga, valor_comissao_indicador, indicacao_id").eq("id", pag.parceriaId).single();
+                const jaPaga = parData?.comissao_paga === true && (parData?.valor_comissao_indicador || 0) > 0;
+                setDispensaComissaoJaPaga(jaPaga);
+                setDispensaValorComissao(parData?.valor_comissao_indicador || 0);
+                if (jaPaga && parData?.indicacao_id) {
+                  const { data: ind } = await supabase.from("v_indicacoes_workspace").select("indicador_id").eq("id", parData.indicacao_id).maybeSingle();
+                  if (ind?.indicador_id) { const { data: indRef } = await supabase.from("indicadores_referral").select("nome").eq("id", ind.indicador_id).maybeSingle(); setDispensaIndicadorNome(indRef?.nome || "Indicador"); } else { setDispensaIndicadorNome("Indicador"); }
+                } else { setDispensaIndicadorNome(""); }
+                setDispensaOpen(true);
+              }}
+            />
           </OperationCard>
         ),
       });
@@ -773,13 +697,10 @@ export default function CentralOperacoes() {
         component: (
           <OperationCard key="pagamentos-fornecedores" title="Pagamentos a Fornecedores" icon={<Truck className="h-4 w-4" />} color="orange" count={pagamentosFornecedores.length}
             tooltip={{ title: "Pagamentos a Fornecedores", description: "Valores devidos aos fornecedores conforme acordado na parceria.", flow: "Quando uma parceria é vinculada a um fornecedor com valor contratado, ele aparece aqui." }}>
-            {pagamentosFornecedores.map((pag) => (
-              <OperationItem key={pag.parceriaId} icon={<Truck className="h-3.5 w-3.5" />} color="orange"
-                label={pag.fornecedorNome}
-                sublabel={`Parceiro: ${getFirstLastName(pag.parceiroNome)}${pag.valorPago > 0 ? ` · Pago: ${formatCurrency(pag.valorPago)} de ${formatCurrency(pag.valorFornecedor)}` : ''}`}
-                value={formatCurrency(pag.valorRestante)}
-                actions={<Button size="sm" variant="ghost" onClick={() => { setSelectedPagamentoFornecedor(pag); setPagamentoFornecedorOpen(true); }} className="h-6 text-xs px-2">Pagar</Button>} />
-            ))}
+            <PagamentosFornecedoresCardGrid
+              pagamentos={pagamentosFornecedores}
+              onPagar={(pag) => { setSelectedPagamentoFornecedor(pag); setPagamentoFornecedorOpen(true); }}
+            />
           </OperationCard>
         ),
       });
@@ -792,13 +713,10 @@ export default function CentralOperacoes() {
         component: (
           <OperationCard key="bonus-pendentes" title="Bônus de Indicadores" icon={<Gift className="h-4 w-4" />} color="pink" count={bonusPendentes.reduce((acc, b) => acc + b.ciclosPendentes, 0)}
             tooltip={{ title: "Bônus de Indicadores", description: "Bônus devidos a indicadores que atingiram metas.", flow: "Quando um indicador atinge a meta de parceiros indicados, um bônus é gerado." }}>
-            {bonusPendentes.map((bonus) => (
-              <OperationItem key={bonus.indicadorId} icon={<Gift className="h-3.5 w-3.5" />} color="pink"
-                label={bonus.indicadorNome}
-                sublabel={`${bonus.ciclosPendentes} ciclo(s) pendente(s)`}
-                value={formatCurrency(bonus.totalBonusPendente)}
-                actions={<Button size="sm" variant="ghost" onClick={() => navigate("/programa-indicacao", { state: { tab: "financeiro" } })} className="h-6 text-xs px-2">Pagar</Button>} />
-            ))}
+            <BonusPendentesCardGrid
+              bonus={bonusPendentes}
+              onPagar={() => navigate("/programa-indicacao", { state: { tab: "financeiro" } })}
+            />
           </OperationCard>
         ),
       });
@@ -811,13 +729,10 @@ export default function CentralOperacoes() {
         component: (
           <OperationCard key="comissoes-pendentes" title="Comissões Pendentes" icon={<Banknote className="h-4 w-4" />} color="teal" count={comissoesPendentes.length}
             tooltip={{ title: "Comissões Pendentes", description: "Comissões devidas a indicadores por parceiros que eles indicaram.", flow: "Quando uma parceria indicada gera receita, uma comissão é calculada para o indicador." }}>
-            {comissoesPendentes.map((comissao) => (
-              <OperationItem key={comissao.parceriaId} icon={<Banknote className="h-3.5 w-3.5" />} color="teal"
-                label={comissao.indicadorNome}
-                sublabel={`→ ${getFirstLastName(comissao.parceiroNome)}`}
-                value={formatCurrency(comissao.valorComissao)}
-                actions={<Button size="sm" variant="ghost" onClick={() => navigate("/programa-indicacao", { state: { tab: "financeiro" } })} className="h-6 text-xs px-2">Pagar</Button>} />
-            ))}
+            <ComissoesPendentesCardGrid
+              comissoes={comissoesPendentes}
+              onPagar={() => navigate("/programa-indicacao", { state: { tab: "financeiro" } })}
+            />
           </OperationCard>
         ),
       });
