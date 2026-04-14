@@ -12769,6 +12769,7 @@ export type Database = {
       }
       v_painel_operacional: {
         Row: {
+          bookmaker_logo_url: string | null
           created_at: string | null
           data_limite: string | null
           descricao: string | null
