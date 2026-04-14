@@ -385,17 +385,22 @@ export function HistoricoMovimentacoes({
               {metricas.count} transações {termoBusca ? "encontradas" : "no período"}
             </div>
             {metricas.moedas.length > 0 && (
-              <div className="flex flex-col items-end gap-0.5">
-                {metricas.moedas.map(({ moeda, total }) => (
-                  <div key={moeda} className="flex items-center gap-2">
+              <div className="flex flex-col items-end gap-1">
+                {metricas.moedas.map(({ moeda, total, confirmado, pendente }) => (
+                  <div key={moeda} className="flex flex-col items-end">
                     <span className="text-sm font-semibold text-primary">
-                      {formatCurrencyDynamic(total, moeda)}
+                      Total: {formatCurrencyDynamic(total, moeda)}
                     </span>
-                    {metricas.count > 0 && (
-                      <span className="text-[10px] text-muted-foreground">
-                        ticket {formatCurrencyDynamic(total / metricas.count, moeda, { compact: true })}
+                    <div className="flex items-center gap-3 text-[11px]">
+                      <span className="text-emerald-400">
+                        Acreditado: {formatCurrencyDynamic(confirmado, moeda)}
                       </span>
-                    )}
+                      {pendente > 0 && (
+                        <span className="text-yellow-400">
+                          Pendente: {formatCurrencyDynamic(pendente, moeda)}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
