@@ -14276,9 +14276,9 @@ export type Database = {
       }
       get_central_operacoes_data: {
         Args: {
-          p_include_financial: boolean
-          p_include_partner: boolean
-          p_is_operator: boolean
+          p_include_financial?: boolean
+          p_include_partner?: boolean
+          p_is_operator?: boolean
           p_user_id: string
           p_workspace_id: string
         }
