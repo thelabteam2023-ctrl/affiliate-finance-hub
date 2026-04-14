@@ -1282,23 +1282,27 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
     };
   }, [apostas, apostasMultiplas, surebets, bookmakersComBonusAtivo]);
 
-  // Mapa de bookmaker_id -> nome completo com parceiro para enriquecer nomes no SurebetCard
-  // Enriquecido com dados das pernas para cobrir bookmakers desvinculados
-  const bookmakerNomeMap = useMemo(() => {
-    const projectMap = buildBookmakerNomeMap(bookmakers.map(bk => ({
+  // Mapa base do projeto (bookmakers vinculadas)
+  const projectNomeMap = useMemo(() => {
+    return buildBookmakerNomeMap(bookmakers.map(bk => ({
       id: bk.id,
       nome: bk.nome,
       parceiro_nome: bk.parceiro?.nome,
       instance_identifier: bk.instance_identifier,
     })));
-    // Suplementar com pernas de surebets
-    if (surebets) {
-      for (const sb of surebets) {
-        enrichMapFromPernas(projectMap, sb.pernas || []);
-      }
-    }
-    return projectMap;
-  }, [bookmakers, surebets]);
+  }, [bookmakers]);
+  const missingBookmakerIds = useMemo(
+    () => collectMissingBookmakerIds(projectNomeMap, [
+      ...(surebets || []),
+      ...(apostas || []).map(a => ({ bookmaker_id: (a as any).bookmaker_id, pernas: (a as any).pernas })),
+    ]),
+    [projectNomeMap, surebets, apostas]
+  );
+  const unlinkedNomeMap = useUnlinkedBookmakerNames(missingBookmakerIds);
+  const bookmakerNomeMap = useMemo(
+    () => mergeBookmakerNomeMaps(projectNomeMap, unlinkedNomeMap),
+    [projectNomeMap, unlinkedNomeMap]
+  );
 
   // formatCurrency definido no escopo do componente
 

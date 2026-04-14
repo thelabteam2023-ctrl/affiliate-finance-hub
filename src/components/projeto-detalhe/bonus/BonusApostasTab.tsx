@@ -772,17 +772,17 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
     return `${symbol} ${formatted}`;
   };
 
-  // Mapa de bookmaker_id -> nome completo com parceiro para enriquecer nomes no SurebetCard
-  // Enriquecido com dados das pernas para cobrir bookmakers desvinculados
-  const bookmakerNomeMap = useMemo(() => {
-    const projectMap = buildBookmakerNomeMap(bookmakers);
-    if (surebets) {
-      for (const sb of surebets) {
-        enrichMapFromPernas(projectMap, sb.pernas || []);
-      }
-    }
-    return projectMap;
-  }, [bookmakers, surebets]);
+  // Mapa base do projeto (bookmakers vinculadas)
+  const projectNomeMap = useMemo(() => buildBookmakerNomeMap(bookmakers), [bookmakers]);
+  const missingBookmakerIds = useMemo(
+    () => collectMissingBookmakerIds(projectNomeMap, surebets || []),
+    [projectNomeMap, surebets]
+  );
+  const unlinkedNomeMap = useUnlinkedBookmakerNames(missingBookmakerIds);
+  const bookmakerNomeMap = useMemo(
+    () => mergeBookmakerNomeMaps(projectNomeMap, unlinkedNomeMap),
+    [projectNomeMap, unlinkedNomeMap]
+  );
 
 
   // Resolução rápida de apostas simples/múltiplas - USA RPC ATÔMICA + ROLLOVER (Motor Financeiro Unificado)

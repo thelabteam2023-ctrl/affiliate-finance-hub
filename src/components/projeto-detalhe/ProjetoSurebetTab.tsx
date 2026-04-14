@@ -675,18 +675,23 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
   // ARQUITETURA: Filtros dimensionais (Casa/Parceiro) afetam APENAS a aba "Operações"
   // "Visão Geral" e "Por Casa" usam TODOS os dados (apenas filtro de data)
   
-  // Mapa de bookmaker_id -> nome completo com parceiro para enriquecer dados legados no SurebetCard
-  // INCLUI bookmakers desvinculados do projeto (extraídos das pernas) para não perder o nome do parceiro
-  const bookmakerNomeMap = useMemo(() => {
-    const projectMap = buildBookmakerNomeMap(bookmakers);
-    // Suplementar com dados das pernas (cobre bookmakers desvinculados do projeto)
-    if (surebets) {
-      for (const sb of surebets) {
-        enrichMapFromPernas(projectMap, sb.pernas || []);
-      }
-    }
-    return projectMap;
-  }, [bookmakers, surebets]);
+  // Mapa base do projeto (bookmakers vinculadas)
+  const projectNomeMap = useMemo(() => buildBookmakerNomeMap(bookmakers), [bookmakers]);
+
+  // Identificar bookmakers desvinculadas que aparecem nas pernas
+  const missingBookmakerIds = useMemo(
+    () => collectMissingBookmakerIds(projectNomeMap, surebets || []),
+    [projectNomeMap, surebets]
+  );
+
+  // Buscar nomes completos das bookmakers desvinculadas diretamente do banco
+  const unlinkedNomeMap = useUnlinkedBookmakerNames(missingBookmakerIds);
+
+  // Mapa final: projeto + desvinculadas
+  const bookmakerNomeMap = useMemo(
+    () => mergeBookmakerNomeMaps(projectNomeMap, unlinkedNomeMap),
+    [projectNomeMap, unlinkedNomeMap]
+  );
 
   // FILTRO PARA OPERAÇÕES: Aplica filtros dimensionais (Casa/Parceiro)
   // Este filtro afeta APENAS a sub-aba "Operações"
