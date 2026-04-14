@@ -56,7 +56,7 @@ import { TabFiltersBar } from "./TabFiltersBar";
 import { StandardTimeFilter } from "./StandardTimeFilter";
 import { useTabFilters } from "@/hooks/useTabFilters";
 import { cn, getFirstLastName } from "@/lib/utils";
-import { formatBookmakerProjectName, buildBookmakerNomeMap } from "@/lib/bookmaker-display";
+import { formatBookmakerProjectName, buildBookmakerNomeMap, enrichMapFromPernas } from "@/lib/bookmaker-display";
 import { parsePernaFromJson } from "@/types/apostasUnificada";
 import { OperationsSubTabHeader, type HistorySubTab, SuspiciousDateFilterButton, useSuspiciousDateFilter, isSuspiciousDate } from "./operations";
 import { parseLocalDateTime } from "@/utils/dateUtils";

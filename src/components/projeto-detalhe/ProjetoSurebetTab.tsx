@@ -59,7 +59,7 @@ import { SurebetStatisticsCard } from "./SurebetStatisticsCard";
 
 import { parsePernaFromJson, PernaArbitragem } from "@/types/apostasUnificada";
 import { cn, getFirstLastName } from "@/lib/utils";
-import { buildBookmakerNomeMap } from "@/lib/bookmaker-display";
+import { buildBookmakerNomeMap, enrichMapFromPernas } from "@/lib/bookmaker-display";
 import { useOpenOperationsCount } from "@/hooks/useOpenOperationsCount";
 import { APOSTA_ESTRATEGIA } from "@/lib/apostaConstants";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
@@ -681,19 +681,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
     // Suplementar com dados das pernas (cobre bookmakers desvinculados do projeto)
     if (surebets) {
       for (const sb of surebets) {
-        for (const perna of (sb.pernas || [])) {
-          if (perna.bookmaker_id && !projectMap.has(perna.bookmaker_id) && perna.bookmaker_nome) {
-            projectMap.set(perna.bookmaker_id, perna.bookmaker_nome);
-          }
-          // Também verificar sub-entries
-          if (perna.entries) {
-            for (const entry of perna.entries) {
-              if (entry.bookmaker_id && !projectMap.has(entry.bookmaker_id) && entry.bookmaker_nome) {
-                projectMap.set(entry.bookmaker_id, entry.bookmaker_nome);
-              }
-            }
-          }
-        }
+        enrichMapFromPernas(projectMap, sb.pernas || []);
       }
     }
     return projectMap;
