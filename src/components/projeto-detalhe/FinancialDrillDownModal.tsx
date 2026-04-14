@@ -384,9 +384,11 @@ export function FinancialDrillDownModal({
 
     let rows = ledgerData || [];
 
-    // For ganhoConfirmacao: only include saques where valor_confirmado differs from valor
+    // For ganhoConfirmacao: only include FIAT saques where valor_confirmado differs from valor
+    // Crypto saques store raw crypto amounts in valor_confirmado (not fiat equivalent)
     if (config?.isConfirmationGain) {
       rows = rows.filter(t => 
+        t.tipo_moeda !== 'CRYPTO' &&
         t.valor_confirmado != null && 
         Math.abs(t.valor_confirmado - t.valor) >= 0.01
       );
