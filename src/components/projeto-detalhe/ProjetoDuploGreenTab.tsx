@@ -68,7 +68,8 @@ import { VisaoGeralCharts } from "./VisaoGeralCharts";
 import { DuploGreenStatisticsCard } from "./DuploGreenStatisticsCard";
 
 import { cn, getFirstLastName } from "@/lib/utils";
-import { buildBookmakerNomeMap, enrichMapFromPernas } from "@/lib/bookmaker-display";
+import { buildBookmakerNomeMap, collectMissingBookmakerIds, mergeBookmakerNomeMaps } from "@/lib/bookmaker-display";
+import { useUnlinkedBookmakerNames } from "@/hooks/useUnlinkedBookmakerNames";
 import { useOpenOperationsCount } from "@/hooks/useOpenOperationsCount";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { useCotacoes } from "@/hooks/useCotacoes";
@@ -892,15 +893,17 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
       .slice(0, 8);
   }, [apostasParaKpi]);
 
-  // Mapa de bookmaker_id -> nome completo com parceiro para enriquecer dados no SurebetCard
-  // Enriquecido com dados das pernas para cobrir bookmakers desvinculados
-  const bookmakerNomeMap = useMemo(() => {
-    const projectMap = buildBookmakerNomeMap(bookmakers);
-    for (const a of apostas) {
-      if ((a as any).pernas) enrichMapFromPernas(projectMap, (a as any).pernas);
-    }
-    return projectMap;
-  }, [bookmakers, apostas]);
+  // Mapa base do projeto (bookmakers vinculadas)
+  const projectNomeMap = useMemo(() => buildBookmakerNomeMap(bookmakers), [bookmakers]);
+  const missingBookmakerIds = useMemo(
+    () => collectMissingBookmakerIds(projectNomeMap, apostas.map(a => ({ bookmaker_id: (a as any).bookmaker_id, pernas: (a as any).pernas }))),
+    [projectNomeMap, apostas]
+  );
+  const unlinkedNomeMap = useUnlinkedBookmakerNames(missingBookmakerIds);
+  const bookmakerNomeMap = useMemo(
+    () => mergeBookmakerNomeMaps(projectNomeMap, unlinkedNomeMap),
+    [projectNomeMap, unlinkedNomeMap]
+  );
 
   // Mapa de logos combinando catálogo global + bookmakers do projeto
   const logoMap = useMemo(() => {

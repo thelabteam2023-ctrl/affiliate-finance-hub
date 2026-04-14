@@ -67,7 +67,8 @@ import { UnifiedStatisticsCard } from "./UnifiedStatisticsCard";
 import { ChartEmptyState } from "@/components/ui/chart-empty-state";
 
 import { cn, getFirstLastName } from "@/lib/utils";
-import { buildBookmakerNomeMap, enrichMapFromPernas } from "@/lib/bookmaker-display";
+import { buildBookmakerNomeMap, collectMissingBookmakerIds, mergeBookmakerNomeMaps } from "@/lib/bookmaker-display";
+import { useUnlinkedBookmakerNames } from "@/hooks/useUnlinkedBookmakerNames";
 import { useOpenOperationsCount } from "@/hooks/useOpenOperationsCount";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { useCotacoes } from "@/hooks/useCotacoes";
@@ -635,15 +636,17 @@ export function ProjetoValueBetTab({
     }
   }, [apostas, handleSurebetPernaResolve]);
 
-  // Mapa de bookmaker_id -> nome completo com parceiro para SurebetCard
-  // Enriquecido com dados das pernas para cobrir bookmakers desvinculados
-  const bookmakerNomeMap = useMemo(() => {
-    const projectMap = buildBookmakerNomeMap(bookmakers);
-    for (const a of apostas) {
-      if ((a as any).pernas) enrichMapFromPernas(projectMap, (a as any).pernas);
-    }
-    return projectMap;
-  }, [bookmakers, apostas]);
+  // Mapa base do projeto (bookmakers vinculadas)
+  const projectNomeMap = useMemo(() => buildBookmakerNomeMap(bookmakers), [bookmakers]);
+  const missingBookmakerIds = useMemo(
+    () => collectMissingBookmakerIds(projectNomeMap, apostas.map(a => ({ bookmaker_id: (a as any).bookmaker_id, pernas: (a as any).pernas }))),
+    [projectNomeMap, apostas]
+  );
+  const unlinkedNomeMap = useUnlinkedBookmakerNames(missingBookmakerIds);
+  const bookmakerNomeMap = useMemo(
+    () => mergeBookmakerNomeMaps(projectNomeMap, unlinkedNomeMap),
+    [projectNomeMap, unlinkedNomeMap]
+  );
 
   // Filtrar pendentes fora do período para KPIs (pendentes são injetadas para visibilidade na lista, mas não devem inflar métricas)
   const apostasParaKpi = useMemo(() => 

@@ -77,31 +77,50 @@ export function buildBookmakerNomeMap(
 }
 
 /**
- * Enriquece um bookmakerNomeMap existente com dados extraídos de pernas de apostas.
- * Cobre bookmakers desvinculados do projeto que ainda aparecem em apostas históricas.
- * Não sobrescreve entradas já existentes no mapa (projeto tem prioridade).
+ * Extrai bookmaker_ids de pernas que NÃO estão no mapa do projeto.
+ * Usado para identificar bookmakers desvinculadas que precisam de query separada.
  */
-export function enrichMapFromPernas(
-  map: Map<string, string>,
-  pernas: Array<{
+export function collectMissingBookmakerIds(
+  projectMap: Map<string, string>,
+  operacoes: Array<{
     bookmaker_id?: string | null;
-    bookmaker_nome?: string;
-    entries?: Array<{
-      bookmaker_id?: string;
-      bookmaker_nome?: string;
+    pernas?: Array<{
+      bookmaker_id?: string | null;
+      entries?: Array<{ bookmaker_id?: string }>;
     }>;
   }>
-): void {
-  for (const perna of pernas) {
-    if (perna.bookmaker_id && !map.has(perna.bookmaker_id) && perna.bookmaker_nome) {
-      map.set(perna.bookmaker_id, perna.bookmaker_nome);
+): string[] {
+  const missing = new Set<string>();
+  for (const op of operacoes) {
+    if (op.bookmaker_id && !projectMap.has(op.bookmaker_id)) {
+      missing.add(op.bookmaker_id);
     }
-    if (perna.entries) {
-      for (const entry of perna.entries) {
-        if (entry.bookmaker_id && !map.has(entry.bookmaker_id) && entry.bookmaker_nome) {
-          map.set(entry.bookmaker_id, entry.bookmaker_nome);
+    for (const perna of (op.pernas || [])) {
+      if (perna.bookmaker_id && !projectMap.has(perna.bookmaker_id)) {
+        missing.add(perna.bookmaker_id);
+      }
+      for (const entry of (perna.entries || [])) {
+        if (entry.bookmaker_id && !projectMap.has(entry.bookmaker_id)) {
+          missing.add(entry.bookmaker_id);
         }
       }
     }
   }
+  return [...missing];
+}
+
+/**
+ * Mescla dois mapas de nomes. O primeiro tem prioridade.
+ */
+export function mergeBookmakerNomeMaps(
+  primary: Map<string, string>,
+  secondary: Map<string, string>
+): Map<string, string> {
+  const merged = new Map(primary);
+  for (const [id, nome] of secondary) {
+    if (!merged.has(id)) {
+      merged.set(id, nome);
+    }
+  }
+  return merged;
 }
