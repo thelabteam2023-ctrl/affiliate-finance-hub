@@ -7,19 +7,13 @@ import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
  * Hook para calcular o Saldo Operável do projeto.
  * 
  * CONTRATO CANÔNICO (fonte: get_bookmaker_saldos RPC):
- * saldo_operavel = saldo_real + saldo_freebet
+ * - saldo_operavel = saldo_disponivel + saldo_em_aposta + freebet + bonus (capital TOTAL na casa)
+ * - saldo_em_aposta = TODAS as apostas pendentes (independente de terem STAKE no ledger)
+ * - saldo_disponivel = saldo_atual - apostas pendentes NÃO debitadas (o que sobra para novas apostas)
  * 
- * Onde:
- * - saldo_real = bookmakers.saldo_atual (JÁ INCLUI deduções de stakes pendentes via financial_events trigger)
- * - saldo_freebet = bookmakers.saldo_freebet
- * - saldo_bonus = APENAS para DISPLAY (retornado pela RPC, mas NÃO somado no saldo_operavel)
+ * Exemplo: Saldo R$500, aposta R$200 → Operável=500, Em Aposta=200, Disponível=300
  * 
- * REGRA FUNDAMENTAL:
- * - O saldo_atual JÁ reflete stakes deduzidas via trigger de financial_events (evento STAKE)
- * - NÃO subtrair apostas pendentes novamente — isso causaria dupla subtração
- * - O bônus creditado já está incluído em saldo_real (via financial_events quando creditado)
- * - saldo_bonus é retornado apenas para informação/breakdown na UI
- * - Este é o ÚNICO local onde o Saldo Operável global do projeto deve ser calculado.
+ * Este é o ÚNICO local onde o Saldo Operável global do projeto deve ser calculado.
  */
 
 interface BookmakerSaldoCompleto {

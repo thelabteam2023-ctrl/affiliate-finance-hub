@@ -125,8 +125,8 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
     setSearchTerm("");
   }, []);
 
-  // Saldo Atual = patrimônio total nas casas (saldo_real + freebet), SEM descontar apostas em aberto
-  const saldoAtualTotal = saldoReal + saldoFreebet;
+  // Saldo Atual = patrimônio total nas casas (saldo operável já inclui real + em jogo + freebet + bonus)
+  const saldoAtualTotal = saldoOperavel;
 
   const conversaoVisual = useMemo(() => {
     if (moedaConsolidacao === "USD") {
