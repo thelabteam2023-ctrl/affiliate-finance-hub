@@ -237,12 +237,7 @@ async function fetchDrillDownBonus(
 ) {
   let query = supabase
     .from("project_bookmaker_link_bonuses")
-    .select(`
-      id, bonus_amount, currency, status, credited_at, bonus_type,
-      project_bookmaker_link:project_bookmaker_link_id(
-        bookmaker:bookmaker_id(nome)
-      )
-    `)
+    .select("id, bonus_amount, currency, status, credited_at, bonus_type, project_bookmaker_link_id")
     .eq("project_id", projetoId)
     .in("status", ["credited", "finalized"]);
 
@@ -253,6 +248,29 @@ async function fetchDrillDownBonus(
   const { data, error } = await query.order("credited_at", { ascending: false }).limit(5000);
   if (error) throw error;
 
+  // Fetch bookmaker names via link table
+  const linkIds = new Set<string>();
+  (data || []).forEach((r: any) => { if (r.project_bookmaker_link_id) linkIds.add(r.project_bookmaker_link_id); });
+  
+  let bmNameMap = new Map<string, string>();
+  if (linkIds.size > 0) {
+    const { data: links } = await supabase
+      .from("project_bookmaker_links")
+      .select("id, bookmaker_id")
+      .in("id", Array.from(linkIds));
+    const bmIds = new Set<string>();
+    (links || []).forEach((l: any) => { if (l.bookmaker_id) bmIds.add(l.bookmaker_id); });
+    if (bmIds.size > 0) {
+      const { data: bms } = await supabase.from("bookmakers").select("id, nome").in("id", Array.from(bmIds));
+      const bmIdToName = new Map((bms || []).map((b: any) => [b.id, b.nome]));
+      const linkToBm = new Map((links || []).map((l: any) => [l.id, l.bookmaker_id]));
+      linkIds.forEach(lid => {
+        const bmId = linkToBm.get(lid);
+        if (bmId) bmNameMap.set(lid, bmIdToName.get(bmId) || "");
+      });
+    }
+  }
+
   return (data || []).map((row: any) => ({
     id: row.id,
     bonus_amount: row.bonus_amount,
@@ -260,7 +278,7 @@ async function fetchDrillDownBonus(
     status: row.status,
     credited_at: row.credited_at,
     bonus_type: row.bonus_type || "bonus",
-    bookmaker_nome: row.project_bookmaker_link?.bookmaker?.nome,
+    bookmaker_nome: bmNameMap.get(row.project_bookmaker_link_id) || undefined,
   })) as BonusTransaction[];
 }
 
