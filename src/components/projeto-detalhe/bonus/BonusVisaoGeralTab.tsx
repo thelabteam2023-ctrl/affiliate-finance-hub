@@ -394,7 +394,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
     }
     
     const totalBonusCreditado = eligibleBonuses
-      .reduce((acc, b) => acc + convertToConsolidation(b.bonus_amount || 0, b.currency), 0);
+      .reduce((acc, b) => acc + convertToConsolidationTrabalho(b.bonus_amount || 0, b.currency), 0);
     
     // Breakdown de bônus por moeda original
     const bonusPorMoedaMap: Record<string, number> = {};
@@ -425,7 +425,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
           is_multicurrency: bet.is_multicurrency,
         },
         pernasMap[bet.id],
-        convertToConsolidation,
+        convertToConsolidationTrabalho,
         moedaConsolidacaoProjeto,
       );
     }, 0);
@@ -442,7 +442,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
     }
     
     const juiceAjustes = filteredAjustes.reduce((acc, a) => {
-      return acc + convertToConsolidation(a.valor, a.moeda);
+      return acc + convertToConsolidationTrabalho(a.valor, a.moeda);
     }, 0);
 
     const totalJuice = juiceBets + juiceAjustes;
@@ -458,7 +458,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
       });
     }
     const totalPerdasCancelamento = filteredPerdas.reduce((acc, p) => {
-      return acc + convertToConsolidation(p.valor, p.moeda);
+      return acc + convertToConsolidationTrabalho(p.valor, p.moeda);
     }, 0);
     
     const total = totalBonusCreditado + totalJuice + totalPerdasCancelamento;
@@ -468,7 +468,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
       : 0;
     
     return { totalBonusCreditado, totalJuice, totalPerdasCancelamento, total, performancePercent, bonusPorMoeda };
-  }, [bonuses, bonusBetsWithPernas, ajustesPostLimitacao, perdasCancelamento, convertToConsolidation, dateRange, cotacaoOficialUSD, moedaConsolidacao, currencyLoading]);
+  }, [bonuses, bonusBetsWithPernas, ajustesPostLimitacao, perdasCancelamento, convertToConsolidationTrabalho, dateRange, moedaConsolidacao, currencyLoading]);
 
   // NOTA: totalSaldoOperavel agora vem do hook useSaldoOperavel (já declarado no início)
 
