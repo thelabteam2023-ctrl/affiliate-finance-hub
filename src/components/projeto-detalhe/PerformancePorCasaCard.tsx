@@ -164,6 +164,7 @@ export function PerformancePorCasaCard({
           lucro: 0,
           greens: 0,
           reds: 0,
+          voids: 0,
           roi: 0,
         };
       }
@@ -183,6 +184,9 @@ export function PerformancePorCasaCard({
       if (aposta.resultado === "RED" || aposta.resultado === "MEIO_RED") {
         estrategiaMap[estrategiaNome].reds++;
       }
+      if (aposta.resultado === "VOID" || aposta.resultado === "REEMBOLSO") {
+        estrategiaMap[estrategiaNome].voids++;
+      }
     });
 
     // 2. Processar extras (cashback, giros grátis, freebets, bônus, promoções)
@@ -201,6 +205,7 @@ export function PerformancePorCasaCard({
           lucro: 0,
           greens: 0,
           reds: 0,
+          voids: 0,
           roi: 0,
           lucroBreakdown: {},
         };
@@ -254,6 +259,7 @@ export function PerformancePorCasaCard({
           lucro: 0,
           greens: 0,
           reds: 0,
+          voids: 0,
           roi: 0,
         };
       }
@@ -267,6 +273,9 @@ export function PerformancePorCasaCard({
       }
       if (resultado === "RED" || resultado === "MEIO_RED") {
         casaMap[key].reds++;
+      }
+      if (resultado === "VOID" || resultado === "REEMBOLSO") {
+        casaMap[key].voids++;
       }
     };
 
@@ -329,6 +338,7 @@ export function PerformancePorCasaCard({
           lucro: 0,
           greens: 0,
           reds: 0,
+          voids: 0,
           roi: 0,
         };
       }
@@ -342,6 +352,9 @@ export function PerformancePorCasaCard({
       }
       if (resultado === "RED" || resultado === "MEIO_RED") {
         contaMap[key].reds++;
+      }
+      if (resultado === "VOID" || resultado === "REEMBOLSO") {
+        contaMap[key].voids++;
       }
     };
 
@@ -502,7 +515,9 @@ export function PerformancePorCasaCard({
                     <div className="text-right">
                       <p className="text-sm font-mono">{item.totalOperacoes}</p>
                       <p className="text-xs text-muted-foreground">
-                        {(item.greens > 0 || item.reds > 0) ? `${item.greens}G / ${item.reds}R` : '–'}
+                        {(item.greens > 0 || item.reds > 0 || item.voids > 0) 
+                          ? `${item.greens}G / ${item.reds}R${item.voids > 0 ? ` / ${item.voids}V` : ''}` 
+                          : '–'}
                       </p>
                     </div>
                     <div className="text-right">
