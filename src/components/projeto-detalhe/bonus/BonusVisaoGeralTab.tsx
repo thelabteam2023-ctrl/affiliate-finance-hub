@@ -752,16 +752,15 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
               (acc, b) => acc + convertToConsolidation(b.bonus_amount || 0, b.currency), 0
             );
             
-            // Dias corridos: período selecionado (cap no dia atual) ou primeiro bônus até hoje
+            // Dias corridos: baseado no primeiro bônus do período (não no início do filtro)
+            // FIX: Usar a data do primeiro bônus como referência, não o início do filtro de período
             let calendarDays = 1;
-            if (dateRange?.start && dateRange?.end) {
-              const today = new Date();
-              const effectiveEnd = dateRange.end > today ? today : dateRange.end;
-              calendarDays = Math.max(1, differenceInDays(effectiveEnd, dateRange.start) + 1);
-            } else if (eligibleForAvg.length > 0) {
+            if (eligibleForAvg.length > 0) {
               const dates = eligibleForAvg.map(b => new Date(b.credited_at!));
               const earliest = new Date(Math.min(...dates.map(d => d.getTime())));
-              calendarDays = Math.max(1, differenceInDays(new Date(), earliest) + 1);
+              const today = new Date();
+              const effectiveEnd = dateRange?.end && dateRange.end < today ? dateRange.end : today;
+              calendarDays = Math.max(1, differenceInDays(effectiveEnd, earliest) + 1);
             }
             
             // Dias com depósito (distintos) - já filtrados pelo período
