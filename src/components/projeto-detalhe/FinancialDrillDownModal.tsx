@@ -244,7 +244,7 @@ async function fetchDrillDownBonus(
 ) {
   let query = supabase
     .from("project_bookmaker_link_bonuses")
-    .select("id, bonus_amount, currency, status, credited_at, bonus_type, project_bookmaker_link_id")
+    .select("id, bonus_amount, currency, status, credited_at, tipo_bonus, title, bookmaker_id")
     .eq("project_id", projetoId)
     .in("status", ["credited", "finalized"]);
 
@@ -255,8 +255,14 @@ async function fetchDrillDownBonus(
   const { data, error } = await query.order("credited_at", { ascending: false }).limit(5000);
   if (error) throw error;
 
-  // Skip bookmaker name resolution for bonus — just show bonus_type
+  // Resolve bookmaker names
+  const bmIds = new Set<string>();
+  (data || []).forEach((r: any) => { if (r.bookmaker_id) bmIds.add(r.bookmaker_id); });
   const bmNameMap = new Map<string, string>();
+  if (bmIds.size > 0) {
+    const { data: bms } = await supabase.from("bookmakers").select("id, nome").in("id", Array.from(bmIds));
+    (bms || []).forEach((b: any) => bmNameMap.set(b.id, b.nome));
+  }
 
   return (data || []).map((row: any) => ({
     id: row.id,
@@ -264,8 +270,8 @@ async function fetchDrillDownBonus(
     currency: row.currency || "BRL",
     status: row.status,
     credited_at: row.credited_at,
-    bonus_type: row.bonus_type || "bonus",
-    bookmaker_nome: bmNameMap.get(row.project_bookmaker_link_id) || undefined,
+    bonus_type: row.tipo_bonus || row.title || "bonus",
+    bookmaker_nome: bmNameMap.get(row.bookmaker_id) || undefined,
   })) as BonusTransaction[];
 }
 
