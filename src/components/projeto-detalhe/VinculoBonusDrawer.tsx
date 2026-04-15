@@ -113,6 +113,7 @@ export function VinculoBonusDrawer({
       });
       if (success) {
         setDialogOpen(false);
+        toast.success("Bônus registrado com sucesso");
       }
     }
     if (success && onBonusChange) {
