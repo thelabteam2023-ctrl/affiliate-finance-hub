@@ -1192,8 +1192,9 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
              parceiro_nome: parceiroNome,
              logo_url: logoUrl,
              moeda: aposta.moeda_operacao || "BRL",
-             fonte_saldo: (aposta as any).fonte_saldo || null,
-           };
+              fonte_saldo: (aposta as any).fonte_saldo || null,
+              stake_freebet: (aposta as any).stake_freebet ?? null,
+            };
            
            return (
              <ApostaCard

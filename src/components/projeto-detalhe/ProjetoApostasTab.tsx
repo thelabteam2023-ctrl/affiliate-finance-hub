@@ -1752,10 +1752,11 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                   bookmaker_nome: bookmakerNomeFormatted,
                  logo_url: logoUrl,
                   moeda: aposta.moeda_operacao || "BRL",
-                  fonte_saldo: aposta.fonte_saldo || null,
-                  pl_consolidado: aposta.pl_consolidado ?? undefined,
-                  stake_consolidado: aposta.stake_consolidado ?? undefined,
-                };
+                   fonte_saldo: aposta.fonte_saldo || null,
+                   stake_freebet: aposta.stake_freebet ?? null,
+                   pl_consolidado: aposta.pl_consolidado ?? undefined,
+                   stake_consolidado: aposta.stake_consolidado ?? undefined,
+                 };
               
               return (
                 <ApostaCard
@@ -1812,8 +1813,9 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                instance_identifier: (multipla.bookmaker as any)?.instance_identifier,
                 logo_url: logoUrlMultipla,
                 moeda: multipla.moeda_operacao || "BRL",
-                fonte_saldo: (multipla as any).fonte_saldo || null,
-              };
+                 fonte_saldo: (multipla as any).fonte_saldo || null,
+                 stake_freebet: (multipla as any).stake_freebet ?? null,
+               };
             
             return (
               <ApostaCard

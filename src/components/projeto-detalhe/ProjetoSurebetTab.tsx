@@ -1536,8 +1536,10 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
                   estrategia: "SUREBET",
                   bookmaker_nome: operacao.bookmaker_nome,
                   parceiro_nome: operacao.parceiro_nome,
-                  logo_url: getLogoUrl(bookmakerBase || ""),
-                  moeda: operacao.moeda_operacao || undefined,
+                   logo_url: getLogoUrl(bookmakerBase || ""),
+                   moeda: operacao.moeda_operacao || undefined,
+                   fonte_saldo: (operacao as any).fonte_saldo || null,
+                   stake_freebet: (operacao as any).stake_freebet ?? null,
                 };
                 
                 return (
