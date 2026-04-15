@@ -83,7 +83,19 @@ async function fetchFinancialMetricsRaw(projetoId: string, dateRange?: { from: s
     dateRange
   );
 
-  const [depositos, saques, saquesPend, cashbackM, cashbackE, giros, ajustes, perdasOp, perdasFx, ganhosFx] = await Promise.all([
+  // Query de apostas liquidadas por estratégia (para juice breakdown)
+  let apostasPorEstrategiaQ = supabase
+    .from("apostas_unificada")
+    .select("estrategia, lucro_prejuizo, pl_consolidado, moeda_operacao, consolidation_currency")
+    .eq("projeto_id", projetoId)
+    .eq("status", "LIQUIDADA");
+  if (dateRange) {
+    apostasPorEstrategiaQ = apostasPorEstrategiaQ
+      .gte("data_aposta", dateRange.from)
+      .lte("data_aposta", dateRange.to);
+  }
+
+  const [depositos, saques, saquesPend, cashbackM, cashbackE, giros, ajustes, perdasOp, perdasFx, ganhosFx, apostasPorEstrategia] = await Promise.all([
     depositoQ.limit(10000),
     saqueQ.limit(10000),
     saquePendQ.limit(10000),
@@ -101,6 +113,7 @@ async function fetchFinancialMetricsRaw(projetoId: string, dateRange?: { from: s
       .eq("tipo_transacao", "PERDA_CAMBIAL").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId), dateRange).limit(10000),
     applyDateFilter(supabase.from("cash_ledger").select("valor, moeda")
       .eq("tipo_transacao", "GANHO_CAMBIAL").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId), dateRange).limit(10000),
+    apostasPorEstrategiaQ.limit(10000),
   ]);
 
   // Include bookmaker IDs in timeline for internal-only break-even
@@ -146,6 +159,7 @@ async function fetchFinancialMetricsRaw(projetoId: string, dateRange?: { from: s
     },
     breakEvenTimeline: (timelineData || []) as { valor: number; valor_confirmado?: number | null; moeda: string; data_transacao: string; tipo_transacao: string; destino_bookmaker_id?: string | null; origem_bookmaker_id?: string | null }[],
     bonusGanhos: (bonusGanhosData || []) as { bonus_amount: number; currency: string }[],
+    apostasPorEstrategia: (apostasPorEstrategia.data || []) as { estrategia: string; lucro_prejuizo: number | null; pl_consolidado: number | null; moeda_operacao: string | null; consolidation_currency: string | null }[],
   };
 }
 
@@ -243,6 +257,55 @@ function ExtrasCollapsible({ metrics, formatCurrency, onDrillDown }: { metrics: 
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+const ESTRATEGIA_LABELS: Record<string, string> = {
+  SUREBET: "Surebet",
+  VALUEBET: "Value Bet",
+  DUPLO_GREEN: "Duplo Green",
+  SIMPLES: "Simples",
+  BONUS: "Bônus",
+  FREEBET: "Freebet (SNR)",
+  MULTIPLA: "Múltipla",
+  TRADING: "Trading",
+  OUTROS: "Outros",
+};
+
+function LucroOperacionalCollapsible({ metrics, formatCurrency }: { metrics: any; formatCurrency: (v: number) => string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div>
+      <SectionHeader icon={BarChart3} label="Lucro de Apostas (Juice)" iconClass="text-primary" />
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center justify-between gap-4 w-full group"
+      >
+        <span className="text-[11px] font-medium text-foreground flex items-center gap-1">
+          Resultado Puro
+          <ChevronDown className={`h-3 w-3 text-muted-foreground/60 transition-transform ${open ? "rotate-180" : ""}`} />
+        </span>
+        <span className={`text-[11px] font-mono tabular-nums font-bold ${metrics.lucroApostasPuro >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+          {metrics.lucroApostasPuro < 0 ? `−${formatCurrency(Math.abs(metrics.lucroApostasPuro))}` : formatCurrency(metrics.lucroApostasPuro)}
+        </span>
+      </button>
+      {open && metrics.estrategiaBreakdown.length > 0 && (
+        <div className="mt-1 space-y-0.5 pl-2 border-l-2 border-border/30 ml-1">
+          {metrics.estrategiaBreakdown.map(([key, val]: [string, number]) => (
+            <MetricRow
+              key={key}
+              label={ESTRATEGIA_LABELS[key] || key}
+              value={val < 0 ? `−${formatCurrency(Math.abs(val))}` : formatCurrency(val)}
+              colorClass={val >= 0 ? "text-emerald-500" : "text-red-500"}
+              indent
+            />
+          ))}
+        </div>
+      )}
+      <p className="text-[9px] text-muted-foreground/70 mt-0.5">
+        Lucro/prejuízo exclusivo de apostas liquidadas
+      </p>
     </div>
   );
 }
@@ -416,7 +479,19 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
       (acc, b) => acc + convertToConsolidationOficial(b.bonus_amount, b.currency || 'BRL'), 0
     );
 
-    // ─── Depósitos efetivos (reais + migração, excluindo baseline) ───
+    // ─── Lucro puro de apostas por estratégia (juice) ───
+    const estrategiaMap: Record<string, number> = {};
+    let lucroApostasPuro = 0;
+    for (const a of rawMetrics.apostasPorEstrategia) {
+      const lucro = a.pl_consolidado != null
+        ? a.pl_consolidado
+        : convertToConsolidationOficial(a.lucro_prejuizo ?? 0, a.moeda_operacao || 'BRL');
+      lucroApostasPuro += lucro;
+      const key = a.estrategia || 'OUTROS';
+      estrategiaMap[key] = (estrategiaMap[key] || 0) + lucro;
+    }
+    const estrategiaBreakdown = Object.entries(estrategiaMap)
+      .sort(([, a], [, b]) => Math.abs(b) - Math.abs(a));
     const depositosEfetivos = rawMetrics.depositos
       .filter(d => d.tipo_transacao === 'DEPOSITO' || (d.tipo_transacao === 'DEPOSITO_VIRTUAL' && (d as any).origem_tipo === 'MIGRACAO'))
       .reduce((acc, d) => acc + convertToConsolidationOficial(d.valor, d.moeda), 0);
@@ -462,6 +537,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
       fluxoInternoLiquido,
       cashbackLiquido, girosGratis, ajustes, ganhoConfirmacao, ganhoFx, perdaOp, perdaFx,
       bonusGanhos,
+      lucroApostasPuro, estrategiaBreakdown,
       patrimonio, lucroFinanceiro,
       // Break-even consolidado
       breakEvenDate: beConsolidado.breakEvenDate,
@@ -559,6 +635,13 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
           )}
         </div>
       </div>
+
+      {/* ─── Seção: Lucro Operacional (Juice) ─── */}
+      {Math.abs(metrics.lucroApostasPuro) >= 0.01 && (
+        <div className="border-t border-border/40 pt-3 pb-3 space-y-1">
+          <LucroOperacionalCollapsible metrics={metrics} formatCurrency={formatCurrency} />
+        </div>
+      )}
 
       {/* ─── Seção: Projeção de Lucro ─── */}
       <div className="border-t border-border/40 pt-3 pb-3 space-y-1">
