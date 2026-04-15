@@ -85,9 +85,10 @@ async function fetchFinancialMetricsRaw(projetoId: string, dateRange?: { from: s
   );
 
   // Query de apostas liquidadas por estratégia (para juice breakdown)
+  // CRÍTICO: incluir id e is_multicurrency para buscar pernas e usar getConsolidatedLucroDirect
   let apostasPorEstrategiaQ = supabase
     .from("apostas_unificada")
-    .select("estrategia, lucro_prejuizo, pl_consolidado, moeda_operacao, consolidation_currency")
+    .select("id, estrategia, lucro_prejuizo, pl_consolidado, moeda_operacao, consolidation_currency, is_multicurrency")
     .eq("projeto_id", projetoId)
     .eq("status", "LIQUIDADA");
   if (dateRange) {
