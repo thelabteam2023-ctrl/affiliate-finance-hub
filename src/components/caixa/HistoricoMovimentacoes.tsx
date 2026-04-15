@@ -385,7 +385,7 @@ export function HistoricoMovimentacoes({
               {metricas.count} transações {termoBusca ? "encontradas" : "no período"}
             </div>
             {/* Métricas agregadas só aparecem quando há filtros ativos (tipo, parceiro ou projeto) */}
-            {(filtroTipo.length > 0 || filtroParceiro || filtroProjeto) && metricas.moedas.length > 0 && (
+            {(filtroTipo.length > 0 || (filtroParceiro && filtroParceiro !== "TODOS") || (filtroProjeto && filtroProjeto !== "TODOS")) && metricas.moedas.length > 0 && (
               <div className="flex flex-col items-end gap-1">
                 {metricas.moedas.map(({ moeda, total, confirmado, pendente }) => (
                   <div key={moeda} className="flex flex-col items-end">
