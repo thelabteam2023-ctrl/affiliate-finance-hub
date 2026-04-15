@@ -343,7 +343,7 @@ export function FinancialDrillDownModal({
 }: FinancialDrillDownModalProps) {
   const config = INDICATOR_CONFIGS[indicatorKey];
   const isBonus = config?.source === "bonus";
-  const { formatCurrency, convertToConsolidationOficial } = useProjetoCurrency(projetoId);
+  const { formatCurrency, convertToConsolidationOficial, moedaConsolidacao } = useProjetoCurrency(projetoId);
 
   const [search, setSearch] = useState("");
   const [sortField, setSortField] = useState<SortField>("data");
