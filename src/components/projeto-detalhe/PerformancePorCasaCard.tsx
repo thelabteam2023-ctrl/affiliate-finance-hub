@@ -216,10 +216,8 @@ export function PerformancePorCasaCard({
       estrategiaMap[tipoNome].lucroBreakdown![moedaOriginal] = 
         (estrategiaMap[tipoNome].lucroBreakdown![moedaOriginal] || 0) + (extra.valor || 0);
       
-      // Extras sempre são "positivos" (greens) pois representam créditos
-      if (extra.valor > 0) {
-        estrategiaMap[tipoNome].greens++;
-      }
+      // Extras NÃO são apostas — não contam como greens/reds
+      // totalOperacoes conta as entradas, mas greens/reds ficam em 0
     });
 
     return Object.values(estrategiaMap)
@@ -503,7 +501,7 @@ export function PerformancePorCasaCard({
                     <div className="text-right">
                       <p className="text-sm font-mono">{item.totalOperacoes}</p>
                       <p className="text-xs text-muted-foreground">
-                        {item.greens}G / {item.reds}R
+                        {(item.greens > 0 || item.reds > 0) ? `${item.greens}G / ${item.reds}R` : '–'}
                       </p>
                     </div>
                     <div className="text-right">
