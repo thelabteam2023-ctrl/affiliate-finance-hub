@@ -61,15 +61,15 @@ export const INDICATOR_CONFIGS: Record<string, IndicatorConfig> = {
   },
   depositosVirtuais: {
     key: "depositosVirtuais",
-    label: "Saldo Herdado (vínculo)",
-    description: "Saldo que já existia nas casas quando foram vinculadas ao projeto. Representa a baseline contábil — não é dinheiro novo depositado.",
+    label: "Baseline de Vinculação",
+    description: "Saldo residual capturado ao vincular casas ao projeto. Inclui diferenças cambiais e ajustes de reconciliação anteriores ao vínculo. Não é dinheiro novo depositado — é a baseline contábil para cálculo de P&L.",
     tipoTransacao: ["DEPOSITO_VIRTUAL"],
     statusFilter: ["CONFIRMADO"],
   },
   depositosTotal: {
     key: "depositosTotal",
     label: "Total Depósitos",
-    description: "Soma de depósitos reais + saldo herdado das casas vinculadas (DEPÓSITO + DEPÓSITO_VIRTUAL confirmados).",
+    description: "Soma de depósitos reais + baseline de vinculação (capital já presente nas casas ao vincular ao projeto).",
     tipoTransacao: ["DEPOSITO", "DEPOSITO_VIRTUAL"],
     statusFilter: ["CONFIRMADO"],
   },
@@ -281,7 +281,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 const TIPO_LABELS: Record<string, string> = {
   DEPOSITO: "Depósito",
-  DEPOSITO_VIRTUAL: "Saldo Herdado",
+  DEPOSITO_VIRTUAL: "Baseline Vínculo",
   SAQUE: "Saque",
   SAQUE_VIRTUAL: "Saque Virtual",
   CASHBACK_MANUAL: "Cashback",
