@@ -247,10 +247,10 @@ export function ProjetoFinancialMetricsCard({ projetoId }: ProjetoFinancialMetri
 
     // Créditos Extras = receita operacional (bônus, cashback, giros, ajustes, FX)
     const extrasPositivos = metrics.cashbackLiquido + metrics.girosGratis + metrics.ajustes + metrics.ganhoConfirmacao + metrics.ganhoFx;
-    // Fluxo Líquido Ajustado = Saques - Depósitos REAIS (dinheiro que saiu do caixa)
-    const fluxoLiquidoAjustado = metrics.saquesRecebidos - metrics.depositosReais;
-    // Lucro Operacional Puro = Patrimônio - Depósitos REAIS
-    const lucroOperacionalPuro = (metrics.saldoCasas + metrics.saquesRecebidos) - metrics.depositosReais;
+    // Fluxo Líquido Ajustado = Saques - Depósitos (fórmula canônica de fluxo de caixa)
+    const fluxoLiquidoAjustado = metrics.saquesRecebidos - metrics.depositosTotal;
+    // Lucro Operacional Puro = Patrimônio - Depósitos
+    const lucroOperacionalPuro = (metrics.saldoCasas + metrics.saquesRecebidos) - metrics.depositosTotal;
 
     const breakEvenReached = metrics.fluxoCaixaLiquido >= 0;
 
@@ -382,8 +382,8 @@ export function ProjetoFinancialMetricsCard({ projetoId }: ProjetoFinancialMetri
                         <span className="font-mono">{formatCurrency(metrics.saquesRecebidos)}</span>
                       </div>
                       <div className="flex justify-between gap-6">
-                        <span className="text-muted-foreground">Depósitos Reais</span>
-                        <span className="font-mono">−{formatCurrency(metrics.depositosReais)}</span>
+                        <span className="text-muted-foreground">Depósitos</span>
+                        <span className="font-mono">−{formatCurrency(metrics.depositosTotal)}</span>
                       </div>
                       <div className="border-t border-border/40 pt-1.5 mt-1">
                         <div className="flex justify-between gap-6 font-medium">
