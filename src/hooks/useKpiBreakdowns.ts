@@ -582,7 +582,6 @@ function deriveBreakdowns(
   // === BREAKDOWN APOSTAS ===
   const apostasBreakdown = createKpiBreakdown([
     createModuleContribution('apostas', 'Apostas', apostasData.count, true, { icon: 'Target', color: 'default', details: apostasData.countDetails }),
-    createModuleContribution('giros_gratis', 'Giros Grátis', girosGratisData.count, girosGratisData.count > 0, { icon: 'Dices', color: 'default' }),
   ], moedaConsolidacao);
 
   // === BREAKDOWN VOLUME ===
