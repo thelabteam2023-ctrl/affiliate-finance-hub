@@ -313,6 +313,10 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
       .filter(d => d.destino_bookmaker_id && rawMetrics.investorBookmakerIds.includes(d.destino_bookmaker_id))
       .reduce((acc, d) => acc + convertToConsolidationOficial(d.valor, d.moeda), 0);
     const depositosInterno = depositosTotal - depositosInvestidor;
+    const depositosReaisInvestidor = rawMetrics.depositos
+      .filter(d => d.tipo_transacao === 'DEPOSITO' && d.destino_bookmaker_id && rawMetrics.investorBookmakerIds.includes(d.destino_bookmaker_id))
+      .reduce((acc, d) => acc + convertToConsolidationOficial(d.valor, d.moeda), 0);
+    const depositosReaisInterno = depositosReais - depositosReaisInvestidor;
 
     // ─── Saques confirmados: total + breakdown ───
     const saquesRecebidos = rawMetrics.saques.reduce(
@@ -370,7 +374,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
     const lucroFinanceiro = patrimonio - depositosReais;
 
     // ─── Fluxo INTERNO (sem investidor) ───
-    const fluxoInternoLiquido = saquesInterno - depositosInterno;
+    const fluxoInternoLiquido = saquesInterno - depositosReaisInterno;
 
     // ─── Break-even CONSOLIDADO ───
     const beConsolidado = computeBreakEven(
