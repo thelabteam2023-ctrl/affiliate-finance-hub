@@ -260,6 +260,31 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
 
       // Buscar nomes dos bookmakers
       const bookmakerIds = [...new Set((apostasUnificadas || []).map((a: any) => a.bookmaker_id).filter(Boolean))];
+      
+      // Para surebets (bookmaker_id null), buscar pernas para descobrir qual casa usou freebet
+      const surebetIds = (apostasUnificadas || [])
+        .filter((a: any) => !a.bookmaker_id && (a.stake_freebet > 0 || a.usar_freebet))
+        .map((a: any) => a.id);
+      
+      let pernasFreebetMap = new Map<string, string>(); // aposta_id -> bookmaker_id da perna freebet
+      if (surebetIds.length > 0) {
+        const { data: pernas } = await supabase
+          .from("apostas_pernas")
+          .select("aposta_id, bookmaker_id, fonte_saldo, stake_freebet")
+          .in("aposta_id", surebetIds)
+          .or("fonte_saldo.eq.FREEBET,stake_freebet.gt.0");
+        
+        (pernas || []).forEach((p: any) => {
+          if (!pernasFreebetMap.has(p.aposta_id)) {
+            pernasFreebetMap.set(p.aposta_id, p.bookmaker_id);
+            // Adicionar bookmaker_id à lista para buscar nomes
+            if (p.bookmaker_id && !bookmakerIds.includes(p.bookmaker_id)) {
+              bookmakerIds.push(p.bookmaker_id);
+            }
+          }
+        });
+      }
+
       let bookmakerMap = new Map<string, { nome: string; parceiro_nome: string | null; logo_url: string | null; instance_identifier: string | null }>();
       
       if (bookmakerIds.length > 0) {
@@ -284,7 +309,9 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
       }
 
       const todasApostas: ApostaOperacionalFreebet[] = (apostasUnificadas || []).map((ap: any) => {
-        const bkInfo = ap.bookmaker_id ? bookmakerMap.get(ap.bookmaker_id) : null;
+        // Para surebets sem bookmaker_id, usar a casa da perna que usou freebet
+        const effectiveBookmakerId = ap.bookmaker_id || pernasFreebetMap.get(ap.id) || null;
+        const bkInfo = effectiveBookmakerId ? bookmakerMap.get(effectiveBookmakerId) : null;
         const isMultipla = ap.forma_registro === 'MULTIPLA' || ap.tipo_multipla;
         const selecoes = Array.isArray(ap.selecoes) ? ap.selecoes : [];
         
@@ -306,7 +333,7 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
           status: ap.status,
           resultado: ap.resultado,
           tipo_freebet: ap.tipo_freebet,
-          bookmaker_id: ap.bookmaker_id,
+          bookmaker_id: effectiveBookmakerId,
           bookmaker_nome: bkInfo?.nome || "Desconhecida",
           logo_url: bkInfo?.logo_url || null,
           parceiro_nome: bkInfo?.parceiro_nome || null,
@@ -316,6 +343,7 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
           estrategia: ap.estrategia || null,
           lado_aposta: ap.modo_entrada || null,
           contexto_operacional: ap.contexto_operacional || null,
+          fonte_saldo: ap.fonte_saldo || null,
           lay_exchange: ap.lay_exchange || null,
           lay_odd: ap.lay_odd || null,
           lay_stake: ap.lay_stake || null,
@@ -325,6 +353,8 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
           back_em_exchange: ap.back_em_exchange || null,
           esporte: ap.esporte || null,
           forma_registro: ap.forma_registro || null,
+          stake_freebet: ap.stake_freebet || 0,
+          usar_freebet: ap.usar_freebet || false,
         };
       });
 
