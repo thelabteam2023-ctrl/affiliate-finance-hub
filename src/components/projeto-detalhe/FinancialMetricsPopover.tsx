@@ -488,6 +488,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
       fluxoInternoLiquido,
       cashbackLiquido, girosGratis, ajustes, ganhoConfirmacao, ganhoFx, perdaOp, perdaFx,
       bonusGanhos,
+      lucroApostasPuro, estrategiaBreakdown,
       patrimonio, lucroFinanceiro,
       // Break-even consolidado
       breakEvenDate: beConsolidado.breakEvenDate,
