@@ -14165,7 +14165,16 @@ export type Database = {
       }
       fn_recalc_pai_surebet: {
         Args: { p_surebet_id: string }
-        Returns: Record<string, unknown>
+        Returns: {
+          consolidation_currency: string
+          is_multicurrency: boolean
+          lucro_total: number
+          pl_consolidado: number
+          resultado_final: string
+          stake_consolidado: number
+          stake_total: number
+          todas_liquidadas: boolean
+        }[]
       }
       force_relogin_global: { Args: never; Returns: Json }
       force_relogin_user: { Args: { p_user_id: string }; Returns: Json }
