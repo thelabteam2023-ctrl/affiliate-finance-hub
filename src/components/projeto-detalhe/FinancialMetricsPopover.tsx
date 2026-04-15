@@ -3,6 +3,7 @@ import { differenceInDays, parseISO, format } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FinancialDrillDownModal } from "./FinancialDrillDownModal";
+import { LucroProjetadoModal } from "./LucroProjetadoModal";
 import {
   DollarSign,
   ArrowDownCircle,
@@ -324,6 +325,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
   const { formatCurrency, convertToConsolidationOficial, cotacaoOficialUSD } = useProjetoCurrency(projetoId);
   const [drillDownKey, setDrillDownKey] = useState<string | null>(null);
   const [drillDownValue, setDrillDownValue] = useState(0);
+  const [showLucroProjetado, setShowLucroProjetado] = useState(false);
 
   const openDrillDown = (key: string, value: number) => {
     setDrillDownKey(key);
@@ -588,7 +590,8 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
             value={formatCurrency(metrics.lucroFinanceiro)}
             colorClass={metrics.lucroFinanceiro >= 0 ? "text-emerald-500" : "text-red-500"}
             bold
-            tooltip="Se todo saldo fosse sacado hoje, esse seria o lucro real. Deve convergir com o Lucro Operacional (KPI)."
+            tooltip="Se todo saldo fosse sacado hoje, esse seria o lucro real. Clique para ver a reconciliação com o Lucro Operacional."
+            onClick={() => setShowLucroProjetado(true)}
           />
         </div>
       </div>
