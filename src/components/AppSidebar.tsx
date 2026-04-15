@@ -1,4 +1,4 @@
-import { Bell, Users, Users2, Landmark, Wallet, Building2, TrendingUp, UserPlus, PieChart, Briefcase, FolderKanban, FlaskConical, Settings, LogOut, Star, Shield, Calculator, StickyNote, ShieldCheck, ChevronUp, ChevronDown, Sun, Moon, Target, Layers, ArrowLeftRight, Zap, Truck, ClipboardList } from "lucide-react";
+import { Bell, Users, Users2, Landmark, Wallet, Building2, TrendingUp, UserPlus, PieChart, Briefcase, FolderKanban, Settings, LogOut, Star, Shield, Calculator, StickyNote, ShieldCheck, ChevronUp, ChevronDown, Sun, Moon, Target, Layers, ArrowLeftRight, Zap, Truck, ClipboardList } from "lucide-react";
 import { useSolicitacoesKpis } from "@/hooks/useSolicitacoes";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -72,7 +72,7 @@ interface ProjectInfo {
 // Icon mapping for favorites
 const iconMap: Record<string, any> = {
   Bell, Users, Users2, Landmark, Wallet, Building2, TrendingUp, 
-  UserPlus, PieChart, Briefcase, FolderKanban, FlaskConical, Settings, Star, Shield, Calculator, StickyNote, Truck, ClipboardList
+  UserPlus, PieChart, Briefcase, FolderKanban, Settings, Star, Shield, Calculator, StickyNote, Truck, ClipboardList
 };
 
 // Menu structure organized by functional domain
@@ -124,12 +124,6 @@ const menuGroups: MenuGroup[] = [
       { title: "Investidores", url: "/investidores", icon: TrendingUp, iconName: "TrendingUp", moduleKey: "investidores" },
       { title: "Operadores", url: "/operadores", icon: Briefcase, iconName: "Briefcase", moduleKey: "operadores" },
       
-    ],
-  },
-  {
-    label: "TESTES",
-    items: [
-      { title: "Testes", url: "/testes", icon: FlaskConical, iconName: "FlaskConical", moduleKey: "testes" },
     ],
   },
 ];

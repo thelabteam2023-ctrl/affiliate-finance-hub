@@ -40,7 +40,7 @@ const Caixa = lazy(() => import("./pages/Caixa"));
 const Financeiro = lazy(() => import("./pages/Financeiro"));
 const CentralOperacoes = lazy(() => import("./pages/CentralOperacoes"));
 const Anotacoes = lazy(() => import("./pages/Anotacoes"));
-const Testes = lazy(() => import("./pages/Testes"));
+
 const Workspace = lazy(() => import("./pages/Workspace"));
 const Comunidade = lazy(() => import("./pages/Comunidade"));
 const ComunidadeDetalhe = lazy(() => import("./pages/ComunidadeDetalhe"));
@@ -296,14 +296,6 @@ const App = () => (
               </ProtectedRoute>
             } />
             
-            {/* Testes - Requer role owner */}
-            <Route path="/testes" element={
-              <ProtectedRoute requiredRole={['owner']}>
-                <AuthenticatedLayout>
-                  <Testes />
-                </AuthenticatedLayout>
-              </ProtectedRoute>
-            } />
             
             {/* Admin do Sistema - Requer System Owner */}
             <Route path="/admin" element={

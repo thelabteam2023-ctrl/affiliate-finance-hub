@@ -53,9 +53,6 @@ const MODULE_ACCESS_MAP: Record<string, ModuleConfig> = {
   // ADMINISTRAÇÃO
   'workspace': { permission: null, roles: ['owner', 'admin'] },
   'admin': { permission: null, roles: [], requiresSystemOwner: true },
-  
-  // DESENVOLVIMENTO
-  'testes': { permission: null, roles: ['owner'] },
 };
 
 export interface ModuleAccessResult {
