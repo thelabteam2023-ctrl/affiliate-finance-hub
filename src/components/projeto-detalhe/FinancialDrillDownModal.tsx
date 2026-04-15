@@ -61,15 +61,15 @@ export const INDICATOR_CONFIGS: Record<string, IndicatorConfig> = {
   },
   depositosVirtuais: {
     key: "depositosVirtuais",
-    label: "Saldo Herdado (vínculo)",
-    description: "Saldo que já existia nas casas quando foram vinculadas ao projeto. Representa a baseline contábil — não é dinheiro novo depositado.",
+    label: "Baseline de Vinculação",
+    description: "Saldo residual capturado ao vincular casas ao projeto. Inclui diferenças cambiais e ajustes de reconciliação anteriores ao vínculo. Não é dinheiro novo depositado — é a baseline contábil para cálculo de P&L.",
     tipoTransacao: ["DEPOSITO_VIRTUAL"],
     statusFilter: ["CONFIRMADO"],
   },
   depositosTotal: {
     key: "depositosTotal",
     label: "Total Depósitos",
-    description: "Soma de depósitos reais + saldo herdado das casas vinculadas (DEPÓSITO + DEPÓSITO_VIRTUAL confirmados).",
+    description: "Soma de depósitos reais + baseline de vinculação (capital já presente nas casas ao vincular ao projeto).",
     tipoTransacao: ["DEPOSITO", "DEPOSITO_VIRTUAL"],
     statusFilter: ["CONFIRMADO"],
   },
@@ -281,7 +281,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 const TIPO_LABELS: Record<string, string> = {
   DEPOSITO: "Depósito",
-  DEPOSITO_VIRTUAL: "Saldo Herdado",
+  DEPOSITO_VIRTUAL: "Baseline Vínculo",
   SAQUE: "Saque",
   SAQUE_VIRTUAL: "Saque Virtual",
   CASHBACK_MANUAL: "Cashback",
@@ -640,9 +640,18 @@ export function FinancialDrillDownModal({
                       {format(parseISO(row.data), "HH:mm")}
                     </span>
                   </div>
-                  <span className="text-muted-foreground truncate" title={row.tipo}>
-                    {TIPO_LABELS[row.tipo] || row.tipo}
-                  </span>
+                  <div className="flex flex-col">
+                    <span className="text-muted-foreground truncate" title={row.tipo}>
+                      {TIPO_LABELS[row.tipo] || row.tipo}
+                    </span>
+                    {row.tipo === "DEPOSITO_VIRTUAL" && row.descricao && (
+                      <span className="text-[8px] text-muted-foreground/70 truncate" title={row.descricao}>
+                        {row.descricao.includes("cambial") || row.descricao.includes("adotado") 
+                          ? "Dif. cambial pré-vínculo" 
+                          : "Saldo pré-vínculo"}
+                      </span>
+                    )}
+                  </div>
                   <StatusBadge status={row.status} />
                   <Tooltip>
                     <TooltipTrigger asChild>
