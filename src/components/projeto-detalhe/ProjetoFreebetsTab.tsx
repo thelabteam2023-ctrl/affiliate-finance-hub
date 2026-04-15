@@ -249,10 +249,11 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
             data_aposta, status, resultado, tipo_freebet, contexto_operacional,
             gerou_freebet, valor_freebet_gerada, bookmaker_id, estrategia, modo_entrada,
             esporte, forma_registro, lay_exchange, lay_odd, lay_stake, lay_liability,
-            lay_comissao, back_comissao, back_em_exchange, selecoes, tipo_multipla
+            lay_comissao, back_comissao, back_em_exchange, selecoes, tipo_multipla,
+            stake_freebet, usar_freebet, fonte_saldo
           `)
           .eq("projeto_id", projetoId)
-          .or("contexto_operacional.eq.FREEBET,gerou_freebet.eq.true,tipo_freebet.not.is.null")
+          .or("contexto_operacional.eq.FREEBET,gerou_freebet.eq.true,tipo_freebet.not.is.null,stake_freebet.gt.0,usar_freebet.eq.true")
           .is("cancelled_at", null)
           .order("data_aposta", { ascending: false })
       );
