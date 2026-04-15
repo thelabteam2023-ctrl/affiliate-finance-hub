@@ -33,16 +33,17 @@ export interface ExchangeRates {
  * Estes valores são atualizados manualmente e podem estar desatualizados.
  * 
  * Última atualização: 2026-01-22
- * Fonte: FastForex API
+ * Fonte: Binance (primário) / PTAX (USD/EUR/GBP)
+ * Última atualização manual: 2026-04-15
  */
 export const FALLBACK_RATES: ExchangeRates = {
-  USDBRL: 5.32,
-  EURBRL: 6.21,
-  GBPBRL: 7.14,
+  USDBRL: 4.99,
+  EURBRL: 5.89,
+  GBPBRL: 6.77,
   MYRBRL: 1.32,
-  MXNBRL: 0.304,  // Atualizado de 0.26 para valor real
-  ARSBRL: 0.0037,
-  COPBRL: 0.00145,
+  MXNBRL: 0.289,
+  ARSBRL: 0.0034,
+  COPBRL: 0.00138,
 };
 
 /**
