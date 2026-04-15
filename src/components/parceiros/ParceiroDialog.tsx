@@ -804,6 +804,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
   };
 
   const addBankAccount = () => {
+    const newIndex = bankAccounts.length;
     setBankAccounts([
       ...bankAccounts,
       { 
@@ -817,10 +818,13 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         observacoes: ""
       },
     ]);
+    setExpandedBankIndex(newIndex);
   };
 
   const removeBankAccount = (index: number) => {
     setBankAccounts(bankAccounts.filter((_, i) => i !== index));
+    if (expandedBankIndex === index) setExpandedBankIndex(null);
+    else if (expandedBankIndex !== null && expandedBankIndex > index) setExpandedBankIndex(expandedBankIndex - 1);
   };
 
   const updateBankAccount = (index: number, field: string, value: any) => {
@@ -830,6 +834,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
   };
 
   const addCryptoWallet = () => {
+    const newIndex = cryptoWallets.length;
     setCryptoWallets([
       ...cryptoWallets,
       { 
@@ -840,10 +845,13 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         observacoes: ""
       },
     ]);
+    setExpandedWalletIndex(newIndex);
   };
 
   const removeCryptoWallet = (index: number) => {
     setCryptoWallets(cryptoWallets.filter((_, i) => i !== index));
+    if (expandedWalletIndex === index) setExpandedWalletIndex(null);
+    else if (expandedWalletIndex !== null && expandedWalletIndex > index) setExpandedWalletIndex(expandedWalletIndex - 1);
     
     // Clear errors for this wallet and reorganize remaining errors
     const newErrors: { [key: number]: string } = {};
