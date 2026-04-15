@@ -83,7 +83,19 @@ async function fetchFinancialMetricsRaw(projetoId: string, dateRange?: { from: s
     dateRange
   );
 
-  const [depositos, saques, saquesPend, cashbackM, cashbackE, giros, ajustes, perdasOp, perdasFx, ganhosFx] = await Promise.all([
+  // Query de apostas liquidadas por estratégia (para juice breakdown)
+  let apostasPorEstrategiaQ = supabase
+    .from("apostas_unificada")
+    .select("estrategia, lucro_prejuizo, pl_consolidado, moeda_operacao, consolidation_currency")
+    .eq("projeto_id", projetoId)
+    .eq("status", "LIQUIDADA");
+  if (dateRange) {
+    apostasPorEstrategiaQ = apostasPorEstrategiaQ
+      .gte("data_aposta", dateRange.from)
+      .lte("data_aposta", dateRange.to);
+  }
+
+  const [depositos, saques, saquesPend, cashbackM, cashbackE, giros, ajustes, perdasOp, perdasFx, ganhosFx, apostasPorEstrategia] = await Promise.all([
     depositoQ.limit(10000),
     saqueQ.limit(10000),
     saquePendQ.limit(10000),
@@ -101,6 +113,7 @@ async function fetchFinancialMetricsRaw(projetoId: string, dateRange?: { from: s
       .eq("tipo_transacao", "PERDA_CAMBIAL").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId), dateRange).limit(10000),
     applyDateFilter(supabase.from("cash_ledger").select("valor, moeda")
       .eq("tipo_transacao", "GANHO_CAMBIAL").eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId), dateRange).limit(10000),
+    apostasPorEstrategiaQ.limit(10000),
   ]);
 
   // Include bookmaker IDs in timeline for internal-only break-even
