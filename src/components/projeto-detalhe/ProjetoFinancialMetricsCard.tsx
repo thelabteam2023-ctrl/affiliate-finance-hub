@@ -103,7 +103,7 @@ async function fetchFinancialMetricsRaw(projetoId: string): Promise<FinancialMet
 
   return {
     bookmakerSaldos,
-    depositos: (depositos.data || []) as LedgerEntry[],
+    depositos: (depositos.data || []) as (LedgerEntry & { tipo_transacao: string })[],
     saques: (saques.data || []) as (LedgerEntry & { tipo_moeda?: string | null })[],
     saquesPendentes: (saquesPend.data || []) as LedgerEntry[],
     reconciliation: {
@@ -138,6 +138,9 @@ export function ProjetoFinancialMetricsCard({ projetoId }: ProjetoFinancialMetri
     const depositosTotal = rawMetrics.depositos.reduce(
       (acc, d) => acc + convertToConsolidationOficial(d.valor, d.moeda), 0
     );
+    const depositosReais = rawMetrics.depositos
+      .filter(d => d.tipo_transacao === 'DEPOSITO')
+      .reduce((acc, d) => acc + convertToConsolidationOficial(d.valor, d.moeda), 0);
     const saquesRecebidos = rawMetrics.saques.reduce(
       (acc, s) => acc + convertToConsolidationOficial(s.valor_confirmado ?? s.valor, s.moeda), 0
     );
@@ -205,7 +208,7 @@ export function ProjetoFinancialMetricsCard({ projetoId }: ProjetoFinancialMetri
       : null;
 
     return {
-      depositosTotal,
+      depositosTotal, depositosReais,
       saquesRecebidos,
       saquesPendentes,
       saldoCasas,
