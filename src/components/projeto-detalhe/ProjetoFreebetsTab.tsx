@@ -587,8 +587,9 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
       const existing = casasMap.get(ap.bookmaker_id);
       if (!existing) return;
       
-      // Conta qualquer aposta que usou freebet (tipo_freebet preenchido OU fonte_saldo = FREEBET)
-      const usouFreebet = !!ap.tipo_freebet || ap.fonte_saldo === "FREEBET";
+      // Conta qualquer aposta que usou freebet
+      const usouFreebet = !!ap.tipo_freebet || ap.fonte_saldo === "FREEBET" 
+        || (ap as any).stake_freebet > 0 || (ap as any).usar_freebet;
       if (!usouFreebet) return;
       
       existing.apostas_realizadas += 1;
