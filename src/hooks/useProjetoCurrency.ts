@@ -75,7 +75,7 @@ export function useProjetoCurrency(projetoId: string | undefined): ProjectCurren
       
       const { data, error } = await supabase
         .from("projetos")
-        .select("moeda_consolidacao, cotacao_trabalho, fonte_cotacao")
+        .select("moeda_consolidacao, cotacao_trabalho, fonte_cotacao, cotacao_trabalho_eur, cotacao_trabalho_gbp, cotacao_trabalho_myr, cotacao_trabalho_mxn, cotacao_trabalho_ars, cotacao_trabalho_cop")
         .eq("id", projetoId)
         .single();
 
