@@ -65,7 +65,7 @@ async function fetchFinancialMetricsRaw(projetoId: string): Promise<FinancialMet
   const bookmakerSaldos = (bookmakers || []).map(b => ({ saldo_atual: b.saldo_atual || 0, moeda: b.moeda || "BRL" }));
 
   const [depositos, saques, saquesPend, cashbackM, cashbackE, giros, ajustes, perdasOp, perdasFx, ganhosFx] = await Promise.all([
-    supabase.from("cash_ledger").select("valor, moeda, tipo_transacao")
+    supabase.from("cash_ledger").select("valor, moeda, tipo_transacao, origem_tipo")
       .in("tipo_transacao", ["DEPOSITO", "DEPOSITO_VIRTUAL"])
       .eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId).limit(10000),
     supabase.from("cash_ledger").select("valor, valor_confirmado, moeda, tipo_moeda")
@@ -173,8 +173,13 @@ export function ProjetoFinancialMetricsCard({ projetoId }: ProjetoFinancialMetri
     const perdaFx = sumConvert(r.perdaCambial);
     const ganhoFx = sumConvert(r.ganhoCambial);
 
-    const fluxoCaixaLiquido = saquesRecebidos - depositosTotal;
-    const lucroTotal = (saldoCasas + saquesRecebidos) - depositosTotal;
+    // Depósitos efetivos = reais + migração (exclui baseline que não saiu do caixa)
+    const depositosEfetivos = rawMetrics.depositos
+      .filter(d => d.tipo_transacao === 'DEPOSITO' || (d.tipo_transacao === 'DEPOSITO_VIRTUAL' && (d as any).origem_tipo === 'MIGRACAO'))
+      .reduce((acc, d) => acc + convertToConsolidationOficial(d.valor, d.moeda), 0);
+
+    const fluxoCaixaLiquido = saquesRecebidos - depositosEfetivos;
+    const lucroTotal = (saldoCasas + saquesRecebidos) - depositosEfetivos;
 
     // Extras = tudo que não é aposta mas impacta fluxo de caixa
     const totalExtras = cashbackLiquido + girosGratis + ajustes + ganhoConfirmacao + ganhoFx - perdaOp - perdaFx;

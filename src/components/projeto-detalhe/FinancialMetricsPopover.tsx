@@ -61,7 +61,7 @@ async function fetchFinancialMetricsRaw(projetoId: string, dateRange?: { from: s
   const investorBookmakerIds = (bookmakers || []).filter(b => !!b.investidor_id).map(b => b.id);
 
   const depositoQ = applyDateFilter(
-    supabase.from("cash_ledger").select("valor, moeda, destino_bookmaker_id, tipo_transacao")
+    supabase.from("cash_ledger").select("valor, moeda, destino_bookmaker_id, tipo_transacao, origem_tipo")
       .in("tipo_transacao", ["DEPOSITO", "DEPOSITO_VIRTUAL"])
       .eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId),
     dateRange
@@ -313,6 +313,11 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
       .filter(d => d.destino_bookmaker_id && rawMetrics.investorBookmakerIds.includes(d.destino_bookmaker_id))
       .reduce((acc, d) => acc + convertToConsolidationOficial(d.valor, d.moeda), 0);
     const depositosInterno = depositosTotal - depositosInvestidor;
+    // Efetivos internos (excluindo baselines) para fluxo interno
+    const depositosEfetivosInvestidor = rawMetrics.depositos
+      .filter(d => d.destino_bookmaker_id && rawMetrics.investorBookmakerIds.includes(d.destino_bookmaker_id))
+      .filter(d => d.tipo_transacao === 'DEPOSITO' || (d.tipo_transacao === 'DEPOSITO_VIRTUAL' && (d as any).origem_tipo === 'MIGRACAO'))
+      .reduce((acc, d) => acc + convertToConsolidationOficial(d.valor, d.moeda), 0);
 
     // ─── Saques confirmados: total + breakdown ───
     const saquesRecebidos = rawMetrics.saques.reduce(
@@ -359,16 +364,22 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
       (acc, b) => acc + convertToConsolidationOficial(b.bonus_amount, b.currency || 'BRL'), 0
     );
 
+    // ─── Depósitos efetivos (reais + migração, excluindo baseline) ───
+    const depositosEfetivos = rawMetrics.depositos
+      .filter(d => d.tipo_transacao === 'DEPOSITO' || (d.tipo_transacao === 'DEPOSITO_VIRTUAL' && (d as any).origem_tipo === 'MIGRACAO'))
+      .reduce((acc, d) => acc + convertToConsolidationOficial(d.valor, d.moeda), 0);
+
     // ─── Fluxo consolidado ───
-    const fluxoCaixaLiquido = saquesRecebidos - depositosTotal;
+    const fluxoCaixaLiquido = saquesRecebidos - depositosEfetivos;
     const extrasPositivos = cashbackLiquido + girosGratis + ajustes + ganhoConfirmacao + ganhoFx + bonusGanhos;
-    const capitalTotal = depositosTotal + extrasPositivos;
+    const capitalTotal = depositosEfetivos + extrasPositivos;
     const fluxoLiquidoAjustado = fluxoCaixaLiquido;
     const patrimonio = saldoCasas + saquesRecebidos + saquesPendentes;
-    const lucroFinanceiro = patrimonio - depositosTotal;
+    const lucroFinanceiro = patrimonio - depositosEfetivos;
 
     // ─── Fluxo INTERNO (sem investidor) ───
-    const fluxoInternoLiquido = saquesInterno - depositosInterno;
+    const depositosEfetivosInterno = depositosEfetivos - depositosEfetivosInvestidor;
+    const fluxoInternoLiquido = saquesInterno - depositosEfetivosInterno;
 
     // ─── Break-even CONSOLIDADO ───
     const beConsolidado = computeBreakEven(
