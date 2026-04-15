@@ -695,7 +695,7 @@ export default function BookmakerDialog({
               {/* ═══ SECTION: Configuração ═══ */}
               <FormSection icon={StickyNote} title="Configuração">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
+                  <div className="space-y-1.5 sm:col-span-2 sm:max-w-[240px] sm:mx-auto">
                     <Label className="text-xs">Status</Label>
                     <Select value={status} onValueChange={setStatus} disabled={loading}>
                       <SelectTrigger className="h-9 text-sm">
