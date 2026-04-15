@@ -698,7 +698,15 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
           saldoCasas={metrics.saldoCasas}
           saquesRecebidos={metrics.saquesRecebidos}
           saquesPendentes={metrics.saquesPendentes}
-          depositosTotal={metrics.depositosTotal}
+          depositosEfetivos={metrics.depositosTotal - metrics.depositosVirtuais}
+          depositosBaseline={metrics.depositosVirtuais}
+          ganhoConfirmacaoDeposito={metrics.ganhoConfirmacao}
+          bonusGanhosFinanceiro={metrics.bonusGanhos}
+          girosGratisFinanceiro={metrics.girosGratis}
+          cashbackFinanceiro={metrics.cashbackLiquido}
+          ajustesFinanceiro={metrics.ajustes}
+          perdaOpFinanceiro={metrics.perdaOp}
+          resultadoFxFinanceiro={metrics.ganhoFx - metrics.perdaFx}
         />
       )}
     </div>
