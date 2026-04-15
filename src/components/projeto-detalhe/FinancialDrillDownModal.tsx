@@ -32,6 +32,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { getCurrencySymbol } from "@/types/currency";
 
 /**
  * Indicator configuration: maps each financial metric to its ledger query
