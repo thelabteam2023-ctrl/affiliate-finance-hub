@@ -630,7 +630,7 @@ export function FinancialDrillDownModal({
               {filteredRows.map((row) => (
                 <div
                   key={row.id}
-                  className="grid grid-cols-[minmax(90px,1fr)_80px_80px_minmax(100px,1.5fr)_100px] gap-2 px-4 py-2 text-[11px] border-b border-border/10 hover:bg-muted/30 transition-colors items-center"
+                  className="grid grid-cols-[minmax(80px,1fr)_70px_70px_minmax(90px,1.5fr)_100px] sm:grid-cols-[minmax(90px,1fr)_80px_80px_minmax(100px,1.5fr)_100px] gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 text-[11px] border-b border-border/10 hover:bg-muted/30 transition-colors items-center"
                 >
                   <div className="flex flex-col">
                     <span className="font-medium">
