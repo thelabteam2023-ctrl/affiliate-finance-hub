@@ -159,6 +159,7 @@ async function fetchFinancialMetricsRaw(projetoId: string, dateRange?: { from: s
     },
     breakEvenTimeline: (timelineData || []) as { valor: number; valor_confirmado?: number | null; moeda: string; data_transacao: string; tipo_transacao: string; destino_bookmaker_id?: string | null; origem_bookmaker_id?: string | null }[],
     bonusGanhos: (bonusGanhosData || []) as { bonus_amount: number; currency: string }[],
+    apostasPorEstrategia: (apostasPorEstrategia.data || []) as { estrategia: string; lucro_prejuizo: number | null; pl_consolidado: number | null; moeda_operacao: string | null; consolidation_currency: string | null }[],
   };
 }
 
