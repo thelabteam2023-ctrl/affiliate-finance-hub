@@ -32,6 +32,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { getCurrencySymbol } from "@/types/currency";
 
 /**
  * Indicator configuration: maps each financial metric to its ledger query
@@ -60,15 +61,15 @@ export const INDICATOR_CONFIGS: Record<string, IndicatorConfig> = {
   },
   depositosVirtuais: {
     key: "depositosVirtuais",
-    label: "Capital Inicial (vinculação)",
-    description: "Saldo já existente nas casas no momento da vinculação ao projeto. Representa a baseline contábil — não é dinheiro novo.",
+    label: "Saldo Herdado (vínculo)",
+    description: "Saldo que já existia nas casas quando foram vinculadas ao projeto. Representa a baseline contábil — não é dinheiro novo depositado.",
     tipoTransacao: ["DEPOSITO_VIRTUAL"],
     statusFilter: ["CONFIRMADO"],
   },
   depositosTotal: {
     key: "depositosTotal",
     label: "Total Depósitos",
-    description: "Soma de depósitos reais + capital inicial das casas vinculadas (DEPÓSITO + DEPÓSITO_VIRTUAL confirmados).",
+    description: "Soma de depósitos reais + saldo herdado das casas vinculadas (DEPÓSITO + DEPÓSITO_VIRTUAL confirmados).",
     tipoTransacao: ["DEPOSITO", "DEPOSITO_VIRTUAL"],
     statusFilter: ["CONFIRMADO"],
   },
@@ -280,7 +281,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 const TIPO_LABELS: Record<string, string> = {
   DEPOSITO: "Depósito",
-  DEPOSITO_VIRTUAL: "Capital Inicial",
+  DEPOSITO_VIRTUAL: "Saldo Herdado",
   SAQUE: "Saque",
   SAQUE_VIRTUAL: "Saque Virtual",
   CASHBACK_MANUAL: "Cashback",
@@ -651,16 +652,23 @@ export function FinancialDrillDownModal({
                       <p className="text-muted-foreground/70 mt-1 font-mono text-[9px]">{row.id.slice(0, 8)}…</p>
                     </TooltipContent>
                   </Tooltip>
-                  <span className={`font-mono tabular-nums text-right font-medium ${
-                    aggregations.isGanhoConf 
-                      ? (row.valorEfetivo >= 0 ? "text-emerald-500" : "text-red-500")
-                      : ""
-                  }`}>
-                    {aggregations.isGanhoConf 
-                      ? formatCurrency(row.valorEfetivo)
-                      : formatCurrency(Math.abs(row.valorEfetivo))
-                    }
-                  </span>
+                  <div className="text-right">
+                    <span className={`font-mono tabular-nums font-medium ${
+                      aggregations.isGanhoConf 
+                        ? (row.valorEfetivo >= 0 ? "text-emerald-500" : "text-red-500")
+                        : ""
+                    }`}>
+                      {aggregations.isGanhoConf 
+                        ? formatCurrency(row.valorEfetivo)
+                        : formatCurrency(Math.abs(row.valorEfetivo))
+                      }
+                    </span>
+                    {row.moeda && row.moeda !== "BRL" && (
+                      <div className="text-[9px] text-muted-foreground mt-0.5">
+                        {getCurrencySymbol(row.moeda)} {Math.abs(row.valorEfetivo).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {row.moeda}
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
