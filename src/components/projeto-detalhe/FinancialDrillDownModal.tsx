@@ -640,9 +640,18 @@ export function FinancialDrillDownModal({
                       {format(parseISO(row.data), "HH:mm")}
                     </span>
                   </div>
-                  <span className="text-muted-foreground truncate" title={row.tipo}>
-                    {TIPO_LABELS[row.tipo] || row.tipo}
-                  </span>
+                  <div className="flex flex-col">
+                    <span className="text-muted-foreground truncate" title={row.tipo}>
+                      {TIPO_LABELS[row.tipo] || row.tipo}
+                    </span>
+                    {row.tipo === "DEPOSITO_VIRTUAL" && row.descricao && (
+                      <span className="text-[8px] text-muted-foreground/70 truncate" title={row.descricao}>
+                        {row.descricao.includes("cambial") || row.descricao.includes("adotado") 
+                          ? "Dif. cambial pré-vínculo" 
+                          : "Saldo pré-vínculo"}
+                      </span>
+                    )}
+                  </div>
                   <StatusBadge status={row.status} />
                   <Tooltip>
                     <TooltipTrigger asChild>
