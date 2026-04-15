@@ -24,7 +24,6 @@ import {
 } from "lucide-react";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { useKpiBreakdowns } from "@/hooks/useKpiBreakdowns";
-import { useProjetoDashboardData } from "@/hooks/useProjetoDashboardData";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const ICON_MAP: Record<string, React.ElementType> = {
