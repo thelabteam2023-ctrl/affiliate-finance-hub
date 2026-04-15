@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { getConsolidatedLucroDirect, PernaConsolidavel } from "@/utils/consolidatedValues";
 import { differenceInDays, parseISO, format } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -84,9 +85,10 @@ async function fetchFinancialMetricsRaw(projetoId: string, dateRange?: { from: s
   );
 
   // Query de apostas liquidadas por estratégia (para juice breakdown)
+  // CRÍTICO: incluir id e is_multicurrency para buscar pernas e usar getConsolidatedLucroDirect
   let apostasPorEstrategiaQ = supabase
     .from("apostas_unificada")
-    .select("estrategia, lucro_prejuizo, pl_consolidado, moeda_operacao, consolidation_currency")
+    .select("id, estrategia, lucro_prejuizo, pl_consolidado, moeda_operacao, consolidation_currency, is_multicurrency")
     .eq("projeto_id", projetoId)
     .eq("status", "LIQUIDADA");
   if (dateRange) {
@@ -142,6 +144,28 @@ async function fetchFinancialMetricsRaw(projetoId: string, dateRange?: { from: s
   
   const { data: bonusGanhosData } = await bonusQuery;
 
+  // Fetch pernas para apostas multicurrency (conversão direta, sem pivot BRL)
+  const apostasArr = (apostasPorEstrategia.data || []) as { id: string; estrategia: string; lucro_prejuizo: number | null; pl_consolidado: number | null; moeda_operacao: string | null; consolidation_currency: string | null; is_multicurrency: boolean | null }[];
+  const multicurrencyIds = apostasArr.filter(a => a.is_multicurrency).map(a => a.id);
+  
+  let pernasMap: Record<string, PernaConsolidavel[]> = {};
+  if (multicurrencyIds.length > 0) {
+    // Buscar em chunks de 100 para evitar URI too long
+    for (let i = 0; i < multicurrencyIds.length; i += 100) {
+      const chunk = multicurrencyIds.slice(i, i + 100);
+      const { data: pernas } = await supabase
+        .from("apostas_pernas")
+        .select("aposta_id, moeda, lucro_prejuizo, resultado")
+        .in("aposta_id", chunk);
+      if (pernas) {
+        for (const p of pernas) {
+          if (!pernasMap[p.aposta_id]) pernasMap[p.aposta_id] = [];
+          pernasMap[p.aposta_id].push(p);
+        }
+      }
+    }
+  }
+
   return {
     bookmakerSaldos,
     investorBookmakerIds,
@@ -159,7 +183,8 @@ async function fetchFinancialMetricsRaw(projetoId: string, dateRange?: { from: s
     },
     breakEvenTimeline: (timelineData || []) as { valor: number; valor_confirmado?: number | null; moeda: string; data_transacao: string; tipo_transacao: string; destino_bookmaker_id?: string | null; origem_bookmaker_id?: string | null }[],
     bonusGanhos: (bonusGanhosData || []) as { bonus_amount: number; currency: string }[],
-    apostasPorEstrategia: (apostasPorEstrategia.data || []) as { estrategia: string; lucro_prejuizo: number | null; pl_consolidado: number | null; moeda_operacao: string | null; consolidation_currency: string | null }[],
+    apostasPorEstrategia: apostasArr,
+    apostasPernasMap: pernasMap,
   };
 }
 
@@ -480,16 +505,22 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
     );
 
     // ─── Lucro puro de apostas por estratégia (juice) ───
+    // UNIFICADO: Usa getConsolidatedLucroDirect para consistência com BonusSummaryCards e BonusVisaoGeralTab
     const estrategiaMap: Record<string, number> = {};
     let lucroApostasPuro = 0;
     for (const a of rawMetrics.apostasPorEstrategia) {
-      // CRÍTICO: só usar pl_consolidado se a moeda de consolidação da aposta
-      // bater com a moeda de consolidação do projeto. Caso contrário, converter
-      // lucro_prejuizo (na moeda_operacao) via cotação oficial.
-      const usePl = a.pl_consolidado != null && a.consolidation_currency === moedaConsolidacao;
-      const lucro = usePl
-        ? a.pl_consolidado!
-        : convertToConsolidationOficial(a.lucro_prejuizo ?? 0, a.moeda_operacao || 'BRL');
+      const lucro = getConsolidatedLucroDirect(
+        {
+          lucro_prejuizo: a.lucro_prejuizo,
+          moeda_operacao: a.moeda_operacao,
+          pl_consolidado: a.pl_consolidado,
+          consolidation_currency: a.consolidation_currency,
+          is_multicurrency: a.is_multicurrency,
+        },
+        rawMetrics.apostasPernasMap[a.id],
+        convertToConsolidationOficial,
+        moedaConsolidacao,
+      );
       lucroApostasPuro += lucro;
       const key = a.estrategia || 'OUTROS';
       estrategiaMap[key] = (estrategiaMap[key] || 0) + lucro;
