@@ -454,7 +454,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
     const hasInvestorCapital = depositosInvestidor > 0 || saquesInvestidor > 0 || saldoCasasInvestidor > 0;
 
     return {
-      depositosTotal, depositosReais, depositosVirtuais, depositosInvestidor, depositosInterno,
+      depositosTotal, depositosReais, depositosVirtuais, depositosEfetivos, depositosInvestidor, depositosInterno,
       saquesRecebidos, saquesInvestidor, saquesInterno,
       saquesPendentes, saquesPendentesInvestidor, saquesPendentesInterno,
       saldoCasas, saldoCasasInvestidor, saldoCasasInterno,
@@ -581,8 +581,9 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
         )}
         <MetricRow
           label="(−) Depósitos"
-          value={formatCurrency(metrics.depositosTotal)}
+          value={formatCurrency(metrics.depositosEfetivos)}
           colorClass="text-muted-foreground"
+          tooltip={metrics.depositosVirtuais > 0 ? `Efetivos: ${formatCurrency(metrics.depositosEfetivos)} (exclui baseline de ${formatCurrency(metrics.depositosTotal - metrics.depositosEfetivos)})` : undefined}
         />
         <div className="border-t border-border/30 mt-1.5 pt-1.5">
           <MetricRow
@@ -698,7 +699,15 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
           saldoCasas={metrics.saldoCasas}
           saquesRecebidos={metrics.saquesRecebidos}
           saquesPendentes={metrics.saquesPendentes}
-          depositosTotal={metrics.depositosTotal}
+          depositosEfetivos={metrics.depositosEfetivos}
+          depositosBaseline={metrics.depositosTotal - metrics.depositosEfetivos}
+          ganhoConfirmacaoDeposito={metrics.ganhoConfirmacao}
+          bonusGanhosFinanceiro={metrics.bonusGanhos}
+          girosGratisFinanceiro={metrics.girosGratis}
+          cashbackFinanceiro={metrics.cashbackLiquido}
+          ajustesFinanceiro={metrics.ajustes}
+          perdaOpFinanceiro={metrics.perdaOp}
+          resultadoFxFinanceiro={metrics.ganhoFx - metrics.perdaFx}
         />
       )}
     </div>
