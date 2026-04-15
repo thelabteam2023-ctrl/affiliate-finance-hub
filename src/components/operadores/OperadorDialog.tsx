@@ -23,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { DatePickerInput } from "@/components/ui/date-picker-input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
