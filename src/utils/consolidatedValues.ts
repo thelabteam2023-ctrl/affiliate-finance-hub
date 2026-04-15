@@ -178,8 +178,17 @@ export function getConsolidatedLucroDirect(
   convertToConsolidation?: ConvertFn,
   moedaConsolidacao?: string,
 ): number {
-  // PRIORIDADE 1: pl_consolidado pré-calculado na moeda correta (via RPC com snapshot rates)
-  // Isso garante valor estável e reprodutível para operações multicurrency
+  // PRIORIDADE 1: Multicurrency com pernas disponíveis → conversão DIRETA por perna
+  // Evita cross-rate via pivot BRL que causa divergência entre cards e KPI
+  if (aposta.is_multicurrency && pernas && pernas.length > 0 && convertToConsolidation) {
+    return pernas.reduce((acc, p) => {
+      if (p.resultado && p.resultado === 'PENDENTE') return acc;
+      const moeda = p.moeda || 'BRL';
+      return acc + convertToConsolidation(p.lucro_prejuizo ?? 0, moeda);
+    }, 0);
+  }
+
+  // PRIORIDADE 2: pl_consolidado pré-calculado na moeda correta (single-currency)
   if (
     typeof aposta.pl_consolidado === "number" &&
     aposta.consolidation_currency &&
@@ -189,7 +198,7 @@ export function getConsolidatedLucroDirect(
     return aposta.pl_consolidado;
   }
 
-  // PRIORIDADE 1b: pl_consolidado em outra moeda → converter
+  // PRIORIDADE 2b: pl_consolidado em outra moeda → converter
   if (
     typeof aposta.pl_consolidado === "number" &&
     aposta.consolidation_currency &&
@@ -198,15 +207,6 @@ export function getConsolidatedLucroDirect(
     convertToConsolidation
   ) {
     return convertToConsolidation(aposta.pl_consolidado, aposta.consolidation_currency);
-  }
-
-  // PRIORIDADE 2: Multicurrency com pernas disponíveis mas sem pl_consolidado
-  if (aposta.is_multicurrency && pernas && pernas.length > 0 && convertToConsolidation) {
-    return pernas.reduce((acc, p) => {
-      if (p.resultado && p.resultado === 'PENDENTE') return acc;
-      const moeda = p.moeda || 'BRL';
-      return acc + convertToConsolidation(p.lucro_prejuizo ?? 0, moeda);
-    }, 0);
   }
 
   // Pernas inline com moedas mistas (detecta multicurrency mesmo sem flag)
