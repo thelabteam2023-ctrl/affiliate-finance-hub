@@ -75,7 +75,7 @@ export function useProjetoCurrency(projetoId: string | undefined): ProjectCurren
       
       const { data, error } = await supabase
         .from("projetos")
-        .select("moeda_consolidacao, cotacao_trabalho, fonte_cotacao")
+        .select("moeda_consolidacao, cotacao_trabalho, fonte_cotacao, cotacao_trabalho_eur, cotacao_trabalho_gbp, cotacao_trabalho_myr, cotacao_trabalho_mxn, cotacao_trabalho_ars, cotacao_trabalho_cop")
         .eq("id", projetoId)
         .single();
 
@@ -88,12 +88,21 @@ export function useProjetoCurrency(projetoId: string | undefined): ProjectCurren
     staleTime: 0, // Sempre buscar dados frescos após invalidação
   });
 
-  // CRÍTICO: Usar valor do banco SEM fallback para USD
-  // O banco tem default 'USD', então null significa problema
   const moedaConsolidacao = (projetoConfig?.moeda_consolidacao as MoedaConsolidacao) ?? "BRL";
   const fonteCotacao = (projetoConfig?.fonte_cotacao as FonteCotacao) ?? "TRABALHO";
   const cotacaoTrabalho = projetoConfig?.cotacao_trabalho || null;
-  
+
+  // Cotações de trabalho multi-moeda do projeto
+  const workRates = useMemo(() => ({
+    USD: cotacaoTrabalho || cotacaoUSD,
+    EUR: (projetoConfig as any)?.cotacao_trabalho_eur || cotacaoEUR,
+    GBP: (projetoConfig as any)?.cotacao_trabalho_gbp || cotacaoGBP,
+    MYR: (projetoConfig as any)?.cotacao_trabalho_myr || cotacaoMYR,
+    MXN: (projetoConfig as any)?.cotacao_trabalho_mxn || cotacaoMXN,
+    ARS: (projetoConfig as any)?.cotacao_trabalho_ars || cotacaoARS,
+    COP: (projetoConfig as any)?.cotacao_trabalho_cop || cotacaoCOP,
+  }), [projetoConfig, cotacaoTrabalho, cotacaoUSD, cotacaoEUR, cotacaoGBP, cotacaoMYR, cotacaoMXN, cotacaoARS, cotacaoCOP]);
+
   const cotacaoAtual = useMemo(() => {
     if (fonteCotacao === "TRABALHO" && cotacaoTrabalho) {
       return cotacaoTrabalho;
@@ -109,15 +118,22 @@ export function useProjetoCurrency(projetoId: string | undefined): ProjectCurren
   // Moeda atual do projeto
   const getMoeda = useCallback((): MoedaConsolidacao => moedaConsolidacao, [moedaConsolidacao]);
 
-  // Função interna de conversão parametrizada pela cotação USD a usar
-  const _convert = useCallback((valor: number, moedaOrigem: string, cotacaoUsdToUse: number): number => {
+  // Função interna de conversão parametrizada pelas cotações a usar
+  // CRÍTICO: Todas as cotações devem vir da MESMA fonte (oficial ou trabalho)
+  // para evitar cross-rate mismatch em conversões como EUR→USD
+  const _convert = useCallback((
+    valor: number, 
+    moedaOrigem: string, 
+    rates: { USD: number; EUR: number; GBP: number; MYR: number; MXN: number; ARS: number; COP: number },
+  ): number => {
     if (!valor || isNaN(valor)) return 0;
     if (moedaOrigem === moedaConsolidacao) {
       return valor;
     }
 
-    // PROTEÇÃO: Se cotação é zero/inválida, não converter (retorna valor original)
-    // Isso previne divisão por zero e valores inflados/Infinity
+    const cotacaoUsdToUse = rates.USD;
+
+    // PROTEÇÃO: Se cotação é zero/inválida, não converter
     if (!cotacaoUsdToUse || cotacaoUsdToUse <= 0) {
       console.warn('[useProjetoCurrency._convert] Cotação USD inválida:', cotacaoUsdToUse, '- retornando valor sem conversão');
       return valor;
@@ -136,49 +152,49 @@ export function useProjetoCurrency(projetoId: string | undefined): ProjectCurren
     // EUR -> moeda de consolidação
     if (moedaOrigem === "EUR") {
       if (moedaConsolidacao === "BRL") {
-        return valor * cotacaoEUR;
+        return valor * rates.EUR;
       }
-      return valor * (cotacaoEUR / cotacaoUsdToUse);
+      return valor * (rates.EUR / cotacaoUsdToUse);
     }
 
     // GBP -> moeda de consolidação  
     if (moedaOrigem === "GBP") {
       if (moedaConsolidacao === "BRL") {
-        return valor * cotacaoGBP;
+        return valor * rates.GBP;
       }
-      return valor * (cotacaoGBP / cotacaoUsdToUse);
+      return valor * (rates.GBP / cotacaoUsdToUse);
     }
 
     // MYR -> moeda de consolidação
     if (moedaOrigem === "MYR") {
       if (moedaConsolidacao === "BRL") {
-        return valor * cotacaoMYR;
+        return valor * rates.MYR;
       }
-      return valor * (cotacaoMYR / cotacaoUsdToUse);
+      return valor * (rates.MYR / cotacaoUsdToUse);
     }
 
     // MXN -> moeda de consolidação
     if (moedaOrigem === "MXN") {
       if (moedaConsolidacao === "BRL") {
-        return valor * cotacaoMXN;
+        return valor * rates.MXN;
       }
-      return valor * (cotacaoMXN / cotacaoUsdToUse);
+      return valor * (rates.MXN / cotacaoUsdToUse);
     }
 
     // ARS -> moeda de consolidação
     if (moedaOrigem === "ARS") {
       if (moedaConsolidacao === "BRL") {
-        return valor * cotacaoARS;
+        return valor * rates.ARS;
       }
-      return valor * (cotacaoARS / cotacaoUsdToUse);
+      return valor * (rates.ARS / cotacaoUsdToUse);
     }
 
     // COP -> moeda de consolidação
     if (moedaOrigem === "COP") {
       if (moedaConsolidacao === "BRL") {
-        return valor * cotacaoCOP;
+        return valor * rates.COP;
       }
-      return valor * (cotacaoCOP / cotacaoUsdToUse);
+      return valor * (rates.COP / cotacaoUsdToUse);
     }
 
     // Crypto (USDT, USDC, etc - assumindo paridade 1:1 com USD)
@@ -190,19 +206,38 @@ export function useProjetoCurrency(projetoId: string | undefined): ProjectCurren
     }
 
     return valor;
-  }, [moedaConsolidacao, cotacaoEUR, cotacaoGBP, cotacaoMYR, cotacaoMXN, cotacaoARS, cotacaoCOP]);
+  }, [moedaConsolidacao]);
+
+  // Cotações oficiais agrupadas
+  const officialRates = useMemo(() => ({
+    USD: cotacaoUSD,
+    EUR: cotacaoEUR,
+    GBP: cotacaoGBP,
+    MYR: cotacaoMYR,
+    MXN: cotacaoMXN,
+    ARS: cotacaoARS,
+    COP: cotacaoCOP,
+  }), [cotacaoUSD, cotacaoEUR, cotacaoGBP, cotacaoMYR, cotacaoMXN, cotacaoARS, cotacaoCOP]);
+
+  // Cotações ativas: trabalho quando configurado, senão oficial
+  const activeRates = useMemo(() => {
+    if (fonteCotacao === "TRABALHO") {
+      return workRates;
+    }
+    return officialRates;
+  }, [fonteCotacao, workRates, officialRates]);
 
   // Converter usando cotação ativa (Trabalho se configurada, senão Oficial)
   // Ideal para CALCULADORAS e FORMULÁRIOS
   const convertToConsolidation = useCallback((valor: number, moedaOrigem: string): number => {
-    return _convert(valor, moedaOrigem, cotacaoAtual);
-  }, [_convert, cotacaoAtual]);
+    return _convert(valor, moedaOrigem, activeRates);
+  }, [_convert, activeRates]);
 
   // Converter usando SEMPRE cotação oficial (FastForex)
   // Ideal para KPIs, Dashboards e Relatórios
   const convertToConsolidationOficial = useCallback((valor: number, moedaOrigem: string): number => {
-    return _convert(valor, moedaOrigem, cotacaoUSD);
-  }, [_convert, cotacaoUSD]);
+    return _convert(valor, moedaOrigem, officialRates);
+  }, [_convert, officialRates]);
 
   // Formatar valor NA MOEDA DO PROJETO
   const formatCurrency = useCallback((valor: number, options?: FormatOptions): string => {
