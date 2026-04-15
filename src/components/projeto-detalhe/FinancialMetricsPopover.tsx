@@ -581,8 +581,9 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
         )}
         <MetricRow
           label="(−) Depósitos"
-          value={formatCurrency(metrics.depositosTotal)}
+          value={formatCurrency(metrics.depositosEfetivos)}
           colorClass="text-muted-foreground"
+          tooltip={metrics.depositosVirtuais > 0 ? `Efetivos: ${formatCurrency(metrics.depositosEfetivos)} (exclui baseline de ${formatCurrency(metrics.depositosTotal - metrics.depositosEfetivos)})` : undefined}
         />
         <div className="border-t border-border/30 mt-1.5 pt-1.5">
           <MetricRow
