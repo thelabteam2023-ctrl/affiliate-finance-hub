@@ -246,6 +246,7 @@ export default function Caixa() {
             .from("parceiros")
             .insert({
               nome: "Caixa Operacional",
+              cpf: "00000000000",
               is_caixa_operacional: true,
               workspace_id: workspaceId,
               user_id: userId,
