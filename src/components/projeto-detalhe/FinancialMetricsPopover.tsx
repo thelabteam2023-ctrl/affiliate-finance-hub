@@ -504,7 +504,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
           />
           {hasExtras && (
             <p className="text-[9px] text-muted-foreground/70 mt-0.5">
-              Saques − Depósitos Reais
+              Saques − Depósitos
             </p>
           )}
           {/* Fluxo interno separado quando há investidor */}
