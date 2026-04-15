@@ -107,6 +107,8 @@ export interface RawDeposito {
   moeda: string;
   destino_bookmaker_id: string | null;
   data_transacao: string;
+  tipo_transacao?: string;
+  origem_tipo?: string | null;
 }
 
 export interface RawSaque {
