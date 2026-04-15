@@ -65,7 +65,7 @@ export interface ProjectCurrencyReturn {
  * Hook principal para formatação baseada no projeto
  */
 export function useProjetoCurrency(projetoId: string | undefined): ProjectCurrencyReturn {
-  const { cotacaoUSD, cotacaoEUR, cotacaoGBP, loading: loadingCotacao } = useCotacoes();
+  const { cotacaoUSD, cotacaoEUR, cotacaoGBP, cotacaoMYR, cotacaoMXN, cotacaoARS, cotacaoCOP, loading: loadingCotacao } = useCotacoes();
 
   // Buscar configuração do projeto - SINCRONIZADO COM useProjetoConsolidacao
   const { data: projetoConfig, isLoading: loadingConfig } = useQuery({
