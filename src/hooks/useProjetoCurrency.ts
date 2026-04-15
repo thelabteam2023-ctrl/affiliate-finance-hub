@@ -88,12 +88,21 @@ export function useProjetoCurrency(projetoId: string | undefined): ProjectCurren
     staleTime: 0, // Sempre buscar dados frescos após invalidação
   });
 
-  // CRÍTICO: Usar valor do banco SEM fallback para USD
-  // O banco tem default 'USD', então null significa problema
   const moedaConsolidacao = (projetoConfig?.moeda_consolidacao as MoedaConsolidacao) ?? "BRL";
   const fonteCotacao = (projetoConfig?.fonte_cotacao as FonteCotacao) ?? "TRABALHO";
   const cotacaoTrabalho = projetoConfig?.cotacao_trabalho || null;
-  
+
+  // Cotações de trabalho multi-moeda do projeto
+  const workRates = useMemo(() => ({
+    USD: cotacaoTrabalho || cotacaoUSD,
+    EUR: (projetoConfig as any)?.cotacao_trabalho_eur || cotacaoEUR,
+    GBP: (projetoConfig as any)?.cotacao_trabalho_gbp || cotacaoGBP,
+    MYR: (projetoConfig as any)?.cotacao_trabalho_myr || cotacaoMYR,
+    MXN: (projetoConfig as any)?.cotacao_trabalho_mxn || cotacaoMXN,
+    ARS: (projetoConfig as any)?.cotacao_trabalho_ars || cotacaoARS,
+    COP: (projetoConfig as any)?.cotacao_trabalho_cop || cotacaoCOP,
+  }), [projetoConfig, cotacaoTrabalho, cotacaoUSD, cotacaoEUR, cotacaoGBP, cotacaoMYR, cotacaoMXN, cotacaoARS, cotacaoCOP]);
+
   const cotacaoAtual = useMemo(() => {
     if (fonteCotacao === "TRABALHO" && cotacaoTrabalho) {
       return cotacaoTrabalho;
