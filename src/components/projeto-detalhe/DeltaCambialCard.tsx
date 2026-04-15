@@ -337,7 +337,7 @@ export function DeltaCambialCard({
             disabled={saving || cotacaoLoading}
           >
             <RefreshCw className={`h-2 w-2 mr-0.5 ${saving ? "animate-spin" : ""}`} />
-            Usar {isPtaxFallback ? 'PTAX' : 'FastForex'}
+            Usar {isPtaxFallback ? 'PTAX' : 'Oficial'}
           </Button>
         )}
       </div>
@@ -412,7 +412,7 @@ export function DeltaCambialCard({
           )}
 
           <div className="text-[10px] text-muted-foreground bg-muted/20 p-2 rounded border border-border/30 space-y-1">
-            <p><strong>Hierarquia:</strong> FastForex → PTAX (USD/EUR/GBP) → Trabalho</p>
+            <p><strong>Hierarquia:</strong> Binance (primário) → PTAX (USD/EUR/GBP) → Trabalho</p>
             <p><strong>Delta (Δ):</strong> &lt;1% Alinhado • 1-3% Atenção • ≥3% Defasagem</p>
           </div>
         </div>

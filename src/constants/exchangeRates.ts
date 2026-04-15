@@ -10,7 +10,7 @@
  * O sistema deve priorizar:
  * 1. Cache recente do banco (< 30 min)
  * 2. Cache expirado do banco (< 24h) - com warning
- * 3. API ao vivo (FastForex/PTAX)
+ * 3. API ao vivo (Binance/PTAX)
  * 4. Cotação de trabalho do projeto
  * 5. FALLBACK_RATES (este arquivo) - com bloqueio de operações críticas
  * =============================================================================
