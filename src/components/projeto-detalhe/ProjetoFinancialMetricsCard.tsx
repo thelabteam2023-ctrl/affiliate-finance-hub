@@ -49,7 +49,7 @@ interface DatedLedgerEntry {
 
 interface FinancialMetricsRaw {
   bookmakerSaldos: { saldo_atual: number; moeda: string }[];
-  depositos: LedgerEntry[];
+  depositos: (LedgerEntry & { tipo_transacao: string })[];
   saques: (LedgerEntry & { tipo_moeda?: string | null })[];
   saquesPendentes: LedgerEntry[];
   reconciliation: ReconciliationRaw;
@@ -65,7 +65,7 @@ async function fetchFinancialMetricsRaw(projetoId: string): Promise<FinancialMet
   const bookmakerSaldos = (bookmakers || []).map(b => ({ saldo_atual: b.saldo_atual || 0, moeda: b.moeda || "BRL" }));
 
   const [depositos, saques, saquesPend, cashbackM, cashbackE, giros, ajustes, perdasOp, perdasFx, ganhosFx] = await Promise.all([
-    supabase.from("cash_ledger").select("valor, moeda")
+    supabase.from("cash_ledger").select("valor, moeda, tipo_transacao")
       .in("tipo_transacao", ["DEPOSITO", "DEPOSITO_VIRTUAL"])
       .eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId).limit(10000),
     supabase.from("cash_ledger").select("valor, valor_confirmado, moeda, tipo_moeda")
@@ -103,7 +103,7 @@ async function fetchFinancialMetricsRaw(projetoId: string): Promise<FinancialMet
 
   return {
     bookmakerSaldos,
-    depositos: (depositos.data || []) as LedgerEntry[],
+    depositos: (depositos.data || []) as (LedgerEntry & { tipo_transacao: string })[],
     saques: (saques.data || []) as (LedgerEntry & { tipo_moeda?: string | null })[],
     saquesPendentes: (saquesPend.data || []) as LedgerEntry[],
     reconciliation: {
@@ -138,6 +138,9 @@ export function ProjetoFinancialMetricsCard({ projetoId }: ProjetoFinancialMetri
     const depositosTotal = rawMetrics.depositos.reduce(
       (acc, d) => acc + convertToConsolidationOficial(d.valor, d.moeda), 0
     );
+    const depositosReais = rawMetrics.depositos
+      .filter(d => d.tipo_transacao === 'DEPOSITO')
+      .reduce((acc, d) => acc + convertToConsolidationOficial(d.valor, d.moeda), 0);
     const saquesRecebidos = rawMetrics.saques.reduce(
       (acc, s) => acc + convertToConsolidationOficial(s.valor_confirmado ?? s.valor, s.moeda), 0
     );
@@ -205,7 +208,7 @@ export function ProjetoFinancialMetricsCard({ projetoId }: ProjetoFinancialMetri
       : null;
 
     return {
-      depositosTotal,
+      depositosTotal, depositosReais,
       saquesRecebidos,
       saquesPendentes,
       saldoCasas,
@@ -244,10 +247,10 @@ export function ProjetoFinancialMetricsCard({ projetoId }: ProjetoFinancialMetri
 
     // Créditos Extras = receita operacional (bônus, cashback, giros, ajustes, FX)
     const extrasPositivos = metrics.cashbackLiquido + metrics.girosGratis + metrics.ajustes + metrics.ganhoConfirmacao + metrics.ganhoFx;
-    // Fluxo Líquido Ajustado = Saques - Depósitos (fórmula canônica de fluxo de caixa)
-    const fluxoLiquidoAjustado = metrics.saquesRecebidos - metrics.depositosTotal;
-    // Lucro Operacional Puro = Patrimônio - Depósitos
-    const lucroOperacionalPuro = (metrics.saldoCasas + metrics.saquesRecebidos) - metrics.depositosTotal;
+    // Fluxo Líquido Ajustado = Saques - Depósitos REAIS (dinheiro que saiu do caixa)
+    const fluxoLiquidoAjustado = metrics.saquesRecebidos - metrics.depositosReais;
+    // Lucro Operacional Puro = Patrimônio - Depósitos REAIS
+    const lucroOperacionalPuro = (metrics.saldoCasas + metrics.saquesRecebidos) - metrics.depositosReais;
 
     const breakEvenReached = metrics.fluxoCaixaLiquido >= 0;
 
@@ -379,8 +382,8 @@ export function ProjetoFinancialMetricsCard({ projetoId }: ProjetoFinancialMetri
                         <span className="font-mono">{formatCurrency(metrics.saquesRecebidos)}</span>
                       </div>
                       <div className="flex justify-between gap-6">
-                        <span className="text-muted-foreground">Depósitos</span>
-                        <span className="font-mono">−{formatCurrency(metrics.depositosTotal)}</span>
+                        <span className="text-muted-foreground">Depósitos Reais</span>
+                        <span className="font-mono">−{formatCurrency(metrics.depositosReais)}</span>
                       </div>
                       <div className="border-t border-border/40 pt-1.5 mt-1">
                         <div className="flex justify-between gap-6 font-medium">

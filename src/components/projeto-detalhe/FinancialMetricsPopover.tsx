@@ -313,6 +313,10 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
       .filter(d => d.destino_bookmaker_id && rawMetrics.investorBookmakerIds.includes(d.destino_bookmaker_id))
       .reduce((acc, d) => acc + convertToConsolidationOficial(d.valor, d.moeda), 0);
     const depositosInterno = depositosTotal - depositosInvestidor;
+    const depositosReaisInvestidor = rawMetrics.depositos
+      .filter(d => d.tipo_transacao === 'DEPOSITO' && d.destino_bookmaker_id && rawMetrics.investorBookmakerIds.includes(d.destino_bookmaker_id))
+      .reduce((acc, d) => acc + convertToConsolidationOficial(d.valor, d.moeda), 0);
+    const depositosReaisInterno = depositosReais - depositosReaisInvestidor;
 
     // ─── Saques confirmados: total + breakdown ───
     const saquesRecebidos = rawMetrics.saques.reduce(
@@ -360,15 +364,17 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
     );
 
     // ─── Fluxo consolidado ───
-    const fluxoCaixaLiquido = saquesRecebidos - depositosTotal;
+    // REGRA: Fluxo Líquido usa apenas depósitos REAIS (dinheiro que saiu do caixa)
+    // Baseline de vinculação (DEPOSITO_VIRTUAL) é ajuste contábil interno, não saída de caixa
+    const fluxoCaixaLiquido = saquesRecebidos - depositosReais;
     const extrasPositivos = cashbackLiquido + girosGratis + ajustes + ganhoConfirmacao + ganhoFx + bonusGanhos;
-    const capitalTotal = depositosTotal + extrasPositivos;
+    const capitalTotal = depositosReais + extrasPositivos;
     const fluxoLiquidoAjustado = fluxoCaixaLiquido;
     const patrimonio = saldoCasas + saquesRecebidos + saquesPendentes;
-    const lucroFinanceiro = patrimonio - depositosTotal;
+    const lucroFinanceiro = patrimonio - depositosReais;
 
     // ─── Fluxo INTERNO (sem investidor) ───
-    const fluxoInternoLiquido = saquesInterno - depositosInterno;
+    const fluxoInternoLiquido = saquesInterno - depositosReaisInterno;
 
     // ─── Break-even CONSOLIDADO ───
     const beConsolidado = computeBreakEven(
@@ -500,7 +506,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
           />
           {hasExtras && (
             <p className="text-[9px] text-muted-foreground/70 mt-0.5">
-              Saques − Depósitos
+              Saques − Depósitos Reais
             </p>
           )}
           {/* Fluxo interno separado quando há investidor */}
