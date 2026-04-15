@@ -448,7 +448,6 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
       }
     },
     onSuccess: () => {
-      toast.success("Bônus registrado com sucesso");
       invalidateBonusQueries(projectId);
     },
     onError: (error: Error) => {

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import { useProjectBonuses, ProjectBonus, BonusFormData, FinalizeReason } from "@/hooks/useProjectBonuses";
 import { BonusHistoryDrawer } from "./BonusHistoryDrawer";
 import { BonusDialog } from "./BonusDialog";
@@ -112,6 +113,7 @@ export function VinculoBonusDrawer({
       });
       if (success) {
         setDialogOpen(false);
+        toast.success("Bônus registrado com sucesso");
       }
     }
     if (success && onBonusChange) {
