@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useWorkspace } from "@/hooks/useWorkspace";
-import { Loader2, Plus, Trash2, User, Landmark, Wallet, Copy, Check, AlertTriangle, Zap } from "lucide-react";
+import { Loader2, Plus, Trash2, User, Landmark, Wallet, Copy, Check, AlertTriangle, Zap, ChevronDown, ChevronUp, Building2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -104,6 +104,8 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
   const [hasChanges, setHasChanges] = useState(false);
   const [planLimitError, setPlanLimitError] = useState<string | null>(null);
   const [hasSavedDuringSession, setHasSavedDuringSession] = useState(false);
+  const [expandedBankIndex, setExpandedBankIndex] = useState<number | null>(null);
+  const [expandedWalletIndex, setExpandedWalletIndex] = useState<number | null>(null);
   const { toast } = useToast();
 
   // DEBUG logs removidos — causavam re-render tracking desnecessário
@@ -430,6 +432,8 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
     setCheckingCpf(false);
     setCheckingTelefone(false);
     setHasSavedDuringSession(false);
+    setExpandedBankIndex(null);
+    setExpandedWalletIndex(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -802,6 +806,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
   };
 
   const addBankAccount = () => {
+    const newIndex = bankAccounts.length;
     setBankAccounts([
       ...bankAccounts,
       { 
@@ -815,10 +820,13 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         observacoes: ""
       },
     ]);
+    setExpandedBankIndex(newIndex);
   };
 
   const removeBankAccount = (index: number) => {
     setBankAccounts(bankAccounts.filter((_, i) => i !== index));
+    if (expandedBankIndex === index) setExpandedBankIndex(null);
+    else if (expandedBankIndex !== null && expandedBankIndex > index) setExpandedBankIndex(expandedBankIndex - 1);
   };
 
   const updateBankAccount = (index: number, field: string, value: any) => {
@@ -828,6 +836,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
   };
 
   const addCryptoWallet = () => {
+    const newIndex = cryptoWallets.length;
     setCryptoWallets([
       ...cryptoWallets,
       { 
@@ -838,10 +847,13 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         observacoes: ""
       },
     ]);
+    setExpandedWalletIndex(newIndex);
   };
 
   const removeCryptoWallet = (index: number) => {
     setCryptoWallets(cryptoWallets.filter((_, i) => i !== index));
+    if (expandedWalletIndex === index) setExpandedWalletIndex(null);
+    else if (expandedWalletIndex !== null && expandedWalletIndex > index) setExpandedWalletIndex(expandedWalletIndex - 1);
     
     // Clear errors for this wallet and reorganize remaining errors
     const newErrors: { [key: number]: string } = {};
@@ -1561,128 +1573,161 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                   )}
                 </div>
               ) : (
-                bankAccounts.map((account, index) => (
-                <Card key={index}>
-                  <CardContent className="pt-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {!viewMode && (
-                         <div className="md:col-span-2 flex justify-end">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeBankAccount(index)}
-                          >
-                            <Trash2 className="h-4 w-4 text-red-600" />
-                          </Button>
+                bankAccounts.map((account, index) => {
+                  const isExpanded = expandedBankIndex === index;
+                  const banco = bancos.find(b => b.id === account.banco_id);
+                  const bancoNome = banco?.nome || "Banco não selecionado";
+                  const tipoLabel = account.tipo_conta === "corrente" ? "Corrente" : account.tipo_conta === "poupanca" ? "Poupança" : account.tipo_conta === "pagamento" ? "Pagamento" : account.tipo_conta;
+                  const pixCount = account.pix_keys.filter(k => k.chave).length;
+
+                  return (
+                    <Card key={index} className="overflow-hidden">
+                      {/* Collapsed Header */}
+                      <div
+                        className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-accent/30 transition-colors"
+                        onClick={() => setExpandedBankIndex(isExpanded ? null : index)}
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                            <Building2 className="w-4 h-4 text-primary" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold truncate">{bancoNome}</p>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {tipoLabel} · {account.moeda || "BRL"}
+                              {account.titular && ` · ${account.titular}`}
+                              {pixCount > 0 && ` · ${pixCount} PIX`}
+                            </p>
+                          </div>
                         </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          {!viewMode && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
+                              onClick={(e) => { e.stopPropagation(); removeBankAccount(index); }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                        </div>
+                      </div>
+
+                      {/* Expanded Content */}
+                      {isExpanded && (
+                        <CardContent className="pt-2 pb-4 border-t border-border/50">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div>
+                              <Label>Banco *</Label>
+                              <BancoSelect
+                                value={account.banco_id}
+                                onValueChange={(value) => updateBankAccount(index, "banco_id", value)}
+                                disabled={viewMode}
+                              />
+                            </div>
+                            <div>
+                              <Label>Moeda *</Label>
+                              <Select 
+                                value={account.moeda || "BRL"} 
+                                onValueChange={(value) => updateBankAccount(index, "moeda", value)}
+                                disabled={viewMode}
+                              >
+                                <SelectTrigger className="w-full">
+                                  <SelectValue placeholder="Selecione a moeda" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="BRL">BRL - Real Brasileiro</SelectItem>
+                                  <SelectItem value="USD">USD - Dólar Americano</SelectItem>
+                                  <SelectItem value="EUR">EUR - Euro</SelectItem>
+                                  <SelectItem value="GBP">GBP - Libra Esterlina</SelectItem>
+                                  <SelectItem value="MXN">MXN - Peso Mexicano</SelectItem>
+                                  <SelectItem value="MYR">MYR - Ringgit Malaio</SelectItem>
+                                  <SelectItem value="ARS">ARS - Peso Argentino</SelectItem>
+                                  <SelectItem value="COP">COP - Peso Colombiano</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div>
+                              <Label>
+                                Agência
+                                <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
+                              </Label>
+                              <Input
+                                value={formatAgencia(account.agencia)}
+                                onChange={(e) => updateBankAccount(index, "agencia", e.target.value)}
+                                placeholder="0000-0"
+                                disabled={viewMode}
+                              />
+                            </div>
+                            <div>
+                              <Label>
+                                Conta
+                                <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
+                              </Label>
+                              <Input
+                                value={formatConta(account.conta)}
+                                onChange={(e) => updateBankAccount(index, "conta", e.target.value)}
+                                placeholder="00000-0"
+                                disabled={viewMode}
+                              />
+                            </div>
+                            <div>
+                              <Label>Tipo *</Label>
+                              <Select 
+                                value={account.tipo_conta} 
+                                onValueChange={(value) => updateBankAccount(index, "tipo_conta", value)}
+                                disabled={viewMode}
+                              >
+                                <SelectTrigger className="w-full">
+                                  <SelectValue placeholder="Tipo de conta" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="corrente">Corrente</SelectItem>
+                                  <SelectItem value="poupanca">Poupança</SelectItem>
+                                  <SelectItem value="pagamento">Pagamento</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div>
+                              <Label>Titular *</Label>
+                              <Input
+                                value={account.titular}
+                                onChange={(e) => updateBankAccount(index, "titular", e.target.value.toUpperCase())}
+                                placeholder="Nome do titular"
+                                className="uppercase"
+                                disabled={viewMode}
+                              />
+                            </div>
+                            <div className="md:col-span-2">
+                              <PixKeyInput
+                                keys={account.pix_keys}
+                                onChange={(keys) => updateBankAccount(index, "pix_keys", keys)}
+                                cpf={cpf}
+                                disabled={viewMode}
+                              />
+                            </div>
+                            <div className="md:col-span-2">
+                              <Label>
+                                Observações
+                                <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
+                              </Label>
+                              <Textarea
+                                value={account.observacoes}
+                                onChange={(e) => updateBankAccount(index, "observacoes", e.target.value)}
+                                rows={3}
+                                placeholder="Informações adicionais sobre esta conta"
+                                disabled={viewMode}
+                              />
+                            </div>
+                          </div>
+                        </CardContent>
                       )}
-                      <div>
-                        <Label>Banco *</Label>
-                        <BancoSelect
-                          value={account.banco_id}
-                          onValueChange={(value) => updateBankAccount(index, "banco_id", value)}
-                          disabled={viewMode}
-                        />
-                      </div>
-                      <div>
-                        <Label>Moeda *</Label>
-                        <Select 
-                          value={account.moeda || "BRL"} 
-                          onValueChange={(value) => updateBankAccount(index, "moeda", value)}
-                          disabled={viewMode}
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Selecione a moeda" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="BRL">BRL - Real Brasileiro</SelectItem>
-                            <SelectItem value="USD">USD - Dólar Americano</SelectItem>
-                            <SelectItem value="EUR">EUR - Euro</SelectItem>
-                            <SelectItem value="GBP">GBP - Libra Esterlina</SelectItem>
-                            <SelectItem value="MXN">MXN - Peso Mexicano</SelectItem>
-                            <SelectItem value="MYR">MYR - Ringgit Malaio</SelectItem>
-                            <SelectItem value="ARS">ARS - Peso Argentino</SelectItem>
-                            <SelectItem value="COP">COP - Peso Colombiano</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label>
-                          Agência
-                          <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
-                        </Label>
-                        <Input
-                          value={formatAgencia(account.agencia)}
-                          onChange={(e) => updateBankAccount(index, "agencia", e.target.value)}
-                          placeholder="0000-0"
-                          disabled={viewMode}
-                        />
-                      </div>
-                      <div>
-                        <Label>
-                          Conta
-                          <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
-                        </Label>
-                        <Input
-                          value={formatConta(account.conta)}
-                          onChange={(e) => updateBankAccount(index, "conta", e.target.value)}
-                          placeholder="00000-0"
-                          disabled={viewMode}
-                        />
-                      </div>
-                      <div>
-                       <Label>Tipo *</Label>
-                        <Select 
-                          value={account.tipo_conta} 
-                          onValueChange={(value) => updateBankAccount(index, "tipo_conta", value)}
-                          disabled={viewMode}
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Tipo de conta" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="corrente">Corrente</SelectItem>
-                            <SelectItem value="poupanca">Poupança</SelectItem>
-                            <SelectItem value="pagamento">Pagamento</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label>Titular *</Label>
-                        <Input
-                          value={account.titular}
-                          onChange={(e) => updateBankAccount(index, "titular", e.target.value.toUpperCase())}
-                          placeholder="Nome do titular"
-                          className="uppercase"
-                          disabled={viewMode}
-                        />
-                      </div>
-                      <div className="md:col-span-2">
-                        <PixKeyInput
-                          keys={account.pix_keys}
-                          onChange={(keys) => updateBankAccount(index, "pix_keys", keys)}
-                          cpf={cpf}
-                          disabled={viewMode}
-                        />
-                      </div>
-                      <div className="md:col-span-2">
-                        <Label>
-                          Observações
-                          <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
-                        </Label>
-                        <Textarea
-                          value={account.observacoes}
-                          onChange={(e) => updateBankAccount(index, "observacoes", e.target.value)}
-                          rows={3}
-                          placeholder="Informações adicionais sobre esta conta"
-                          disabled={viewMode}
-                        />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )))}
+                    </Card>
+                  );
+                }))}
 
               {/* Salvar e Continuar button for new partners */}
               {!viewMode && parceiroId && !parceiro && bankAccounts.length > 0 && (
@@ -1736,85 +1781,121 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                   )}
                 </div>
               ) : (
-                cryptoWallets.map((wallet, index) => (
-                <Card key={index}>
-                  <CardContent className="pt-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {!viewMode && (
-                        <div className="md:col-span-2 flex justify-end">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeCryptoWallet(index)}
-                          >
-                            <Trash2 className="h-4 w-4 text-red-600" />
-                          </Button>
+                cryptoWallets.map((wallet, index) => {
+                  const isExpanded = expandedWalletIndex === index;
+                  const rede = redes.find(r => r.id === wallet.rede_id);
+                  const redeNome = rede?.nome || "Rede não selecionada";
+                  const exchangeNome = wallet.exchange || "";
+                  const moedaDisplay = wallet.moeda.length > 0 ? wallet.moeda.join(", ") : "—";
+                  const truncAddr = wallet.endereco 
+                    ? `${wallet.endereco.slice(0, 6)}...${wallet.endereco.slice(-6)}`
+                    : "Sem endereço";
+
+                  return (
+                    <Card key={index} className="overflow-hidden">
+                      {/* Collapsed Header */}
+                      <div
+                        className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-accent/30 transition-colors"
+                        onClick={() => setExpandedWalletIndex(isExpanded ? null : index)}
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                            <Wallet className="w-4 h-4 text-primary" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold truncate">
+                              {exchangeNome || redeNome}
+                            </p>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {moedaDisplay} · {redeNome} · <span className="font-mono">{truncAddr}</span>
+                            </p>
+                          </div>
                         </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          {!viewMode && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
+                              onClick={(e) => { e.stopPropagation(); removeCryptoWallet(index); }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                        </div>
+                      </div>
+
+                      {/* Expanded Content */}
+                      {isExpanded && (
+                        <CardContent className="pt-2 pb-4 border-t border-border/50">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div className="md:col-span-2">
+                              <MoedaMultiSelect
+                                moedas={wallet.moeda}
+                                onChange={(moedas) => updateCryptoWallet(index, "moeda", moedas)}
+                                disabled={viewMode}
+                              />
+                            </div>
+                            <div className="md:col-span-2">
+                              <Label className="text-center block">
+                                Exchange/Wallet
+                                <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
+                              </Label>
+                              <ExchangeSelect
+                                value={wallet.exchange}
+                                onValueChange={(value) => updateCryptoWallet(index, "exchange", value)}
+                                disabled={viewMode}
+                              />
+                            </div>
+                            <div className="md:col-span-2">
+                              <Label className="text-center block">Network *</Label>
+                              <RedeSelect
+                                value={wallet.rede_id}
+                                onValueChange={(value) => updateCryptoWallet(index, "rede_id", value)}
+                                disabled={viewMode}
+                              />
+                            </div>
+                            <div className="md:col-span-2">
+                              <Label className="text-center block">Endereço *</Label>
+                              <Input
+                                value={wallet.endereco}
+                                onChange={(e) => {
+                                  updateCryptoWallet(index, "endereco", e.target.value);
+                                }}
+                                onBlur={() => validateWalletEndereco(wallet.endereco, index, wallet.id)}
+                                placeholder="Endereço da wallet"
+                                disabled={viewMode}
+                                className={`text-center ${enderecoErrors[index] ? "border-destructive" : ""}`}
+                              />
+                              {checkingEnderecos[index] && (
+                                <p className="text-xs text-muted-foreground mt-1 text-center">Verificando endereço...</p>
+                              )}
+                              {enderecoErrors[index] && (
+                                <p className="text-xs text-destructive mt-1 text-center">{enderecoErrors[index]}</p>
+                              )}
+                            </div>
+                            <div className="md:col-span-2">
+                              <Label className="text-center block">
+                                Observações
+                                <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
+                              </Label>
+                              <Textarea
+                                value={wallet.observacoes}
+                                onChange={(e) => updateCryptoWallet(index, "observacoes", e.target.value)}
+                                placeholder="Informações adicionais sobre esta wallet"
+                                disabled={viewMode}
+                                rows={3}
+                                className="text-center"
+                              />
+                            </div>
+                          </div>
+                        </CardContent>
                       )}
-                      <div className="md:col-span-2">
-                        <MoedaMultiSelect
-                          moedas={wallet.moeda}
-                          onChange={(moedas) => updateCryptoWallet(index, "moeda", moedas)}
-                          disabled={viewMode}
-                        />
-                      </div>
-                      <div className="md:col-span-2">
-                        <Label className="text-center block">
-                          Exchange/Wallet
-                          <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
-                        </Label>
-                        <ExchangeSelect
-                          value={wallet.exchange}
-                          onValueChange={(value) => updateCryptoWallet(index, "exchange", value)}
-                          disabled={viewMode}
-                        />
-                      </div>
-                      <div className="md:col-span-2">
-                        <Label className="text-center block">Network *</Label>
-                        <RedeSelect
-                          value={wallet.rede_id}
-                          onValueChange={(value) => updateCryptoWallet(index, "rede_id", value)}
-                          disabled={viewMode}
-                        />
-                      </div>
-                      <div className="md:col-span-2">
-                        <Label className="text-center block">Endereço *</Label>
-                        <Input
-                          value={wallet.endereco}
-                          onChange={(e) => {
-                            updateCryptoWallet(index, "endereco", e.target.value);
-                          }}
-                          onBlur={() => validateWalletEndereco(wallet.endereco, index, wallet.id)}
-                          placeholder="Endereço da wallet"
-                          disabled={viewMode}
-                          className={`text-center ${enderecoErrors[index] ? "border-red-500" : ""}`}
-                        />
-                        {checkingEnderecos[index] && (
-                          <p className="text-xs text-muted-foreground mt-1 text-center">Verificando endereço...</p>
-                        )}
-                        {enderecoErrors[index] && (
-                          <p className="text-xs text-red-500 mt-1 text-center">{enderecoErrors[index]}</p>
-                        )}
-                      </div>
-                      <div className="md:col-span-2">
-                        <Label className="text-center block">
-                          Observações
-                          <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
-                        </Label>
-                        <Textarea
-                          value={wallet.observacoes}
-                          onChange={(e) => updateCryptoWallet(index, "observacoes", e.target.value)}
-                          placeholder="Informações adicionais sobre esta wallet"
-                          disabled={viewMode}
-                          rows={3}
-                          className="text-center"
-                        />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )))}
+                    </Card>
+                  );
+                }))}
             </TabsContent>
           </Tabs>
 
