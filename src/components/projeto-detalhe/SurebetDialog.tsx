@@ -2137,7 +2137,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
           const pernaOriginal = pernasOriginais[idx];
           const mainStake = parseFloat(entry.stake) || 0;
           const mainMoeda = getBookmakerMoedaEdit(entry.bookmaker_id);
-          const mainSnapshotFields = getSnapshotFields(mainStake, mainMoeda);
+          const mainSnapshotFields = getSnapshotFields(mainStake, mainMoeda, getEffectiveRate(mainMoeda).rate);
           
           return {
             selecao: entry.selecao,
@@ -2288,7 +2288,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
         const pernasToSave: SurebetPerna[] = pernasPreenchidas.map((entry, idx) => {
           const mainStake = parseFloat(entry.stake) || 0;
           const mainMoeda = getBookmakerMoeda(entry.bookmaker_id);
-          const mainSnapshotFields = getSnapshotFields(mainStake, mainMoeda);
+          const mainSnapshotFields = getSnapshotFields(mainStake, mainMoeda, getEffectiveRate(mainMoeda).rate);
           
           // Construir array de entradas se houver entradas adicionais
           const hasAdditional = (entry.additionalEntries?.length || 0) > 0;
@@ -2314,7 +2314,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
             const additionalEntries: SurebetPernaEntry[] = (entry.additionalEntries || []).map(ae => {
               const aeMoeda = getBookmakerMoeda(ae.bookmaker_id);
               const aeStake = parseFloat(ae.stake) || 0;
-              const aeSnapshotFields = getSnapshotFields(aeStake, aeMoeda);
+              const aeSnapshotFields = getSnapshotFields(aeStake, aeMoeda, getEffectiveRate(aeMoeda).rate);
               
               return {
                 bookmaker_id: ae.bookmaker_id,
