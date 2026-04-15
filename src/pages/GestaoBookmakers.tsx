@@ -166,6 +166,7 @@ export default function GestaoBookmakers() {
       let query = supabase
         .from("parceiros")
         .select("id, nome, status")
+        .eq("is_caixa_operacional", false)
         .order("nome");
 
       // Aplicar filtro de status no backend

@@ -68,7 +68,7 @@ interface ParceirosQueryData {
 async function fetchParceirosData(workspaceId: string): Promise<ParceirosQueryData> {
   // Fetch parceiros + ROI data + saldos + parcerias in parallel
   const [parceirosResult, bookmakersResult, resultadosResult, saldosFiatResult, saldosCryptoResult, parceriasResult, pagamentosResult] = await Promise.all([
-    supabase.from("parceiros").select("*, contas_bancarias(*), wallets_crypto(*)").order("created_at", { ascending: false }).limit(10000),
+    supabase.from("parceiros").select("*, contas_bancarias(*), wallets_crypto(*)").eq("is_caixa_operacional", false).order("created_at", { ascending: false }).limit(10000),
     supabase.from("bookmakers").select("id, parceiro_id, saldo_atual, moeda, status").limit(10000),
     supabase.from("v_bookmaker_resultado_operacional").select("bookmaker_id, resultado_operacional_total").limit(10000),
     supabase.from("v_saldo_parceiro_contas").select("*").limit(10000),
