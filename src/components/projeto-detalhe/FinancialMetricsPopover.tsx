@@ -261,6 +261,55 @@ function ExtrasCollapsible({ metrics, formatCurrency, onDrillDown }: { metrics: 
   );
 }
 
+const ESTRATEGIA_LABELS: Record<string, string> = {
+  SUREBET: "Surebet",
+  VALUEBET: "Value Bet",
+  DUPLO_GREEN: "Duplo Green",
+  SIMPLES: "Simples",
+  BONUS: "Bônus",
+  FREEBET: "Freebet (SNR)",
+  MULTIPLA: "Múltipla",
+  TRADING: "Trading",
+  OUTROS: "Outros",
+};
+
+function LucroOperacionalCollapsible({ metrics, formatCurrency }: { metrics: any; formatCurrency: (v: number) => string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div>
+      <SectionHeader icon={BarChart3} label="Lucro de Apostas (Juice)" iconClass="text-primary" />
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center justify-between gap-4 w-full group"
+      >
+        <span className="text-[11px] font-medium text-foreground flex items-center gap-1">
+          Resultado Puro
+          <ChevronDown className={`h-3 w-3 text-muted-foreground/60 transition-transform ${open ? "rotate-180" : ""}`} />
+        </span>
+        <span className={`text-[11px] font-mono tabular-nums font-bold ${metrics.lucroApostasPuro >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+          {metrics.lucroApostasPuro < 0 ? `−${formatCurrency(Math.abs(metrics.lucroApostasPuro))}` : formatCurrency(metrics.lucroApostasPuro)}
+        </span>
+      </button>
+      {open && metrics.estrategiaBreakdown.length > 0 && (
+        <div className="mt-1 space-y-0.5 pl-2 border-l-2 border-border/30 ml-1">
+          {metrics.estrategiaBreakdown.map(([key, val]: [string, number]) => (
+            <MetricRow
+              key={key}
+              label={ESTRATEGIA_LABELS[key] || key}
+              value={val < 0 ? `−${formatCurrency(Math.abs(val))}` : formatCurrency(val)}
+              colorClass={val >= 0 ? "text-emerald-500" : "text-red-500"}
+              indent
+            />
+          ))}
+        </div>
+      )}
+      <p className="text-[9px] text-muted-foreground/70 mt-0.5">
+        Lucro/prejuízo exclusivo de apostas liquidadas
+      </p>
+    </div>
+  );
+}
+
 function DepositosCollapsible({ metrics, formatCurrency, onDrillDown }: { metrics: any; formatCurrency: (v: number) => string; onDrillDown?: (key: string, value: number) => void }) {
   const [open, setOpen] = useState(false);
   const hasBreakdown = metrics.depositosReais > 0 || metrics.depositosVirtuais > 0;
