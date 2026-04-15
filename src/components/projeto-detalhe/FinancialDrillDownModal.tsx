@@ -397,14 +397,17 @@ export function FinancialDrillDownModal({
 
     return rows.map((t) => {
       // For ganhoConfirmacao: show the DIFFERENCE, not the confirmed value
-      let valorEfetivo: number;
+      let valorNativo: number;
       if (config?.isConfirmationGain) {
-        valorEfetivo = (t.valor_confirmado ?? t.valor) - t.valor;
+        valorNativo = (t.valor_confirmado ?? t.valor) - t.valor;
       } else if (indicatorKey === "saquesRecebidos") {
-        valorEfetivo = t.valor_confirmado ?? t.valor;
+        valorNativo = t.valor_confirmado ?? t.valor;
       } else {
-        valorEfetivo = t.valor;
+        valorNativo = t.valor;
       }
+
+      // Convert native value to consolidation currency
+      const valorConsolidado = convertToConsolidationOficial(valorNativo, t.moeda || "BRL");
       
       const origem = t.origem_bookmaker_nome || t.destino_bookmaker_nome || t.origem_parceiro_nome || t.destino_parceiro_nome || "—";
       return {
@@ -412,7 +415,8 @@ export function FinancialDrillDownModal({
         tipo: t.tipo_transacao,
         status: t.status,
         valor: t.valor,
-        valorEfetivo,
+        valorNativo,
+        valorConsolidado,
         valorConfirmado: t.valor_confirmado,
         moeda: t.moeda,
         data: t.data_transacao,
@@ -421,7 +425,7 @@ export function FinancialDrillDownModal({
         ajuste_direcao: (t as any).ajuste_direcao,
       };
     });
-  }, [ledgerData, bonusData, isBonus, indicatorKey, config]);
+  }, [ledgerData, bonusData, isBonus, indicatorKey, config, convertToConsolidationOficial]);
 
   // Apply filters, search, sorting
   const filteredRows = useMemo(() => {
