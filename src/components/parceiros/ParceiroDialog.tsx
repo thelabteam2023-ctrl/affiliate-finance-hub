@@ -1779,86 +1779,121 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                   )}
                 </div>
               ) : (
-                cryptoWallets.map((wallet, index) => (
-                <Card key={index}>
-                  <CardContent className="pt-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {!viewMode && (
-                        <div className="md:col-span-2 flex justify-end">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeCryptoWallet(index)}
-                          >
-                            <Trash2 className="h-4 w-4 text-red-600" />
-                          </Button>
+                cryptoWallets.map((wallet, index) => {
+                  const isExpanded = expandedWalletIndex === index;
+                  const rede = redes.find(r => r.id === wallet.rede_id);
+                  const redeNome = rede?.nome || "Rede não selecionada";
+                  const exchangeNome = wallet.exchange || "";
+                  const moedaDisplay = wallet.moeda.length > 0 ? wallet.moeda.join(", ") : "—";
+                  const truncAddr = wallet.endereco 
+                    ? `${wallet.endereco.slice(0, 6)}...${wallet.endereco.slice(-6)}`
+                    : "Sem endereço";
+
+                  return (
+                    <Card key={index} className="overflow-hidden">
+                      {/* Collapsed Header */}
+                      <div
+                        className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-accent/30 transition-colors"
+                        onClick={() => setExpandedWalletIndex(isExpanded ? null : index)}
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                            <Wallet className="w-4 h-4 text-primary" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold truncate">
+                              {exchangeNome || redeNome}
+                            </p>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {moedaDisplay} · {redeNome} · <span className="font-mono">{truncAddr}</span>
+                            </p>
+                          </div>
                         </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          {!viewMode && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
+                              onClick={(e) => { e.stopPropagation(); removeCryptoWallet(index); }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                        </div>
+                      </div>
+
+                      {/* Expanded Content */}
+                      {isExpanded && (
+                        <CardContent className="pt-2 pb-4 border-t border-border/50">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div className="md:col-span-2">
+                              <MoedaMultiSelect
+                                moedas={wallet.moeda}
+                                onChange={(moedas) => updateCryptoWallet(index, "moeda", moedas)}
+                                disabled={viewMode}
+                              />
+                            </div>
+                            <div className="md:col-span-2">
+                              <Label className="text-center block">
+                                Exchange/Wallet
+                                <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
+                              </Label>
+                              <ExchangeSelect
+                                value={wallet.exchange}
+                                onValueChange={(value) => updateCryptoWallet(index, "exchange", value)}
+                                disabled={viewMode}
+                              />
+                            </div>
+                            <div className="md:col-span-2">
+                              <Label className="text-center block">Network *</Label>
+                              <RedeSelect
+                                value={wallet.rede_id}
+                                onValueChange={(value) => updateCryptoWallet(index, "rede_id", value)}
+                                disabled={viewMode}
+                              />
+                            </div>
+                            <div className="md:col-span-2">
+                              <Label className="text-center block">Endereço *</Label>
+                              <Input
+                                value={wallet.endereco}
+                                onChange={(e) => {
+                                  updateCryptoWallet(index, "endereco", e.target.value);
+                                }}
+                                onBlur={() => validateWalletEndereco(wallet.endereco, index, wallet.id)}
+                                placeholder="Endereço da wallet"
+                                disabled={viewMode}
+                                className={`text-center ${enderecoErrors[index] ? "border-destructive" : ""}`}
+                              />
+                              {checkingEnderecos[index] && (
+                                <p className="text-xs text-muted-foreground mt-1 text-center">Verificando endereço...</p>
+                              )}
+                              {enderecoErrors[index] && (
+                                <p className="text-xs text-destructive mt-1 text-center">{enderecoErrors[index]}</p>
+                              )}
+                            </div>
+                            <div className="md:col-span-2">
+                              <Label className="text-center block">
+                                Observações
+                                <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
+                              </Label>
+                              <Textarea
+                                value={wallet.observacoes}
+                                onChange={(e) => updateCryptoWallet(index, "observacoes", e.target.value)}
+                                placeholder="Informações adicionais sobre esta wallet"
+                                disabled={viewMode}
+                                rows={3}
+                                className="text-center"
+                              />
+                            </div>
+                          </div>
+                        </CardContent>
                       )}
-                      <div className="md:col-span-2">
-                        <MoedaMultiSelect
-                          moedas={wallet.moeda}
-                          onChange={(moedas) => updateCryptoWallet(index, "moeda", moedas)}
-                          disabled={viewMode}
-                        />
-                      </div>
-                      <div className="md:col-span-2">
-                        <Label className="text-center block">
-                          Exchange/Wallet
-                          <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
-                        </Label>
-                        <ExchangeSelect
-                          value={wallet.exchange}
-                          onValueChange={(value) => updateCryptoWallet(index, "exchange", value)}
-                          disabled={viewMode}
-                        />
-                      </div>
-                      <div className="md:col-span-2">
-                        <Label className="text-center block">Network *</Label>
-                        <RedeSelect
-                          value={wallet.rede_id}
-                          onValueChange={(value) => updateCryptoWallet(index, "rede_id", value)}
-                          disabled={viewMode}
-                        />
-                      </div>
-                      <div className="md:col-span-2">
-                        <Label className="text-center block">Endereço *</Label>
-                        <Input
-                          value={wallet.endereco}
-                          onChange={(e) => {
-                            updateCryptoWallet(index, "endereco", e.target.value);
-                          }}
-                          onBlur={() => validateWalletEndereco(wallet.endereco, index, wallet.id)}
-                          placeholder="Endereço da wallet"
-                          disabled={viewMode}
-                          className={`text-center ${enderecoErrors[index] ? "border-red-500" : ""}`}
-                        />
-                        {checkingEnderecos[index] && (
-                          <p className="text-xs text-muted-foreground mt-1 text-center">Verificando endereço...</p>
-                        )}
-                        {enderecoErrors[index] && (
-                          <p className="text-xs text-red-500 mt-1 text-center">{enderecoErrors[index]}</p>
-                        )}
-                      </div>
-                      <div className="md:col-span-2">
-                        <Label className="text-center block">
-                          Observações
-                          <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
-                        </Label>
-                        <Textarea
-                          value={wallet.observacoes}
-                          onChange={(e) => updateCryptoWallet(index, "observacoes", e.target.value)}
-                          placeholder="Informações adicionais sobre esta wallet"
-                          disabled={viewMode}
-                          rows={3}
-                          className="text-center"
-                        />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )))}
-            </TabsContent>
+                    </Card>
+                  );
+                }))}
           </Tabs>
 
           <div className="flex gap-3 mt-6 max-md:fixed max-md:bottom-0 max-md:left-0 max-md:right-0 max-md:p-4 max-md:bg-background max-md:border-t max-md:border-border/50 max-md:z-10">
