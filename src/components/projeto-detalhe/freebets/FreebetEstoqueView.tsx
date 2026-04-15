@@ -432,7 +432,7 @@ export function FreebetEstoqueView({ projetoId, formatCurrency, dateRange, onAdd
                   <tr className="border-b bg-muted/50">
                     <th className="text-left p-3 font-medium">Casa</th>
                     <th className="text-right p-3 font-medium">Valor</th>
-                    <th className="text-left p-3 font-medium">Motivo</th>
+                    
                     <th className="text-center p-3 font-medium">Status</th>
                     <th className="text-center p-3 font-medium">Expiração</th>
                     <th className="text-left p-3 font-medium">Data</th>
@@ -465,9 +465,6 @@ export function FreebetEstoqueView({ projetoId, formatCurrency, dateRange, onAdd
                       </td>
                       <td className="p-3 text-right font-medium text-amber-400">
                         {formatNativeCurrency(fb.valor, fb.moeda)}
-                      </td>
-                      <td className="p-3 max-w-[150px] truncate" title={fb.motivo}>
-                        {fb.motivo}
                       </td>
                       <td className="p-3 text-center min-w-[140px]">
                         <div className="flex items-center justify-center gap-1.5">
