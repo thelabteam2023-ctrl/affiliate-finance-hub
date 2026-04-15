@@ -551,14 +551,14 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
       casasMap.set(fb.bookmaker_id, existing);
     });
     
-    // Agregar apostas - SOMENTE apostas de EXTRAÇÃO (que usam freebet E não são qualificadoras)
+    // Agregar apostas - TODAS apostas que UTILIZARAM freebet nesta casa
     apostasNoPeriodo.forEach(ap => {
       const existing = casasMap.get(ap.bookmaker_id);
       if (!existing) return;
       
-      // Só conta como extração se a aposta USOU uma freebet E NÃO é qualificadora
-      // Apostas qualificadoras (gerou_freebet = true) não contam como extração
-      if (!ap.tipo_freebet || ap.gerou_freebet) return;
+      // Conta qualquer aposta que usou freebet (tipo_freebet preenchido OU fonte_saldo = FREEBET)
+      const usouFreebet = !!ap.tipo_freebet || ap.fonte_saldo === "FREEBET";
+      if (!usouFreebet) return;
       
       existing.apostas_realizadas += 1;
       
