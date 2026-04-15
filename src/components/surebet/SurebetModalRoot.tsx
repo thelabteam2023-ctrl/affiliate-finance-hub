@@ -176,6 +176,48 @@ export function SurebetModalRoot({
   } = useProjetoConsolidacao({ projetoId });
   const { getRate: getCotacaoRate } = useCotacoes();
   
+  // Buscar cotações de trabalho multi-moeda do projeto
+  const { data: workingRates } = useQuery({
+    queryKey: ["projeto-working-rates", projetoId],
+    queryFn: async () => {
+      if (!projetoId) return null;
+      const { data, error } = await supabase
+        .from("projetos")
+        .select("cotacao_trabalho, cotacao_trabalho_eur, cotacao_trabalho_gbp, cotacao_trabalho_myr, cotacao_trabalho_mxn, cotacao_trabalho_ars, cotacao_trabalho_cop, fonte_cotacao")
+        .eq("id", projetoId)
+        .single();
+      if (error) return null;
+      return data;
+    },
+    enabled: !!projetoId,
+    staleTime: 30_000,
+  });
+  
+  // Retorna a cotação efetiva (trabalho ou oficial) para uma moeda
+  const getEffectiveRate = useCallback((moeda: string): number => {
+    const m = moeda.toUpperCase();
+    if (m === "BRL") return 1;
+    
+    const usarTrabalho = workingRates?.fonte_cotacao === "TRABALHO";
+    
+    if (usarTrabalho && workingRates) {
+      const workRateMap: Record<string, number | null> = {
+        USD: workingRates.cotacao_trabalho,
+        EUR: workingRates.cotacao_trabalho_eur,
+        GBP: workingRates.cotacao_trabalho_gbp,
+        MYR: (workingRates as any).cotacao_trabalho_myr,
+        MXN: (workingRates as any).cotacao_trabalho_mxn,
+        ARS: (workingRates as any).cotacao_trabalho_ars,
+        COP: (workingRates as any).cotacao_trabalho_cop,
+      };
+      const key = ["USDT", "USDC"].includes(m) ? "USD" : m;
+      const workRate = workRateMap[key];
+      if (workRate && workRate > 0) return workRate;
+    }
+    
+    return getCotacaoRate(moeda) || 1;
+  }, [workingRates, getCotacaoRate]);
+
   const { data: bookmakerSaldos = [], isLoading: saldosLoading } = useBookmakerSaldosQuery({
     projetoId,
     enabled: open,
