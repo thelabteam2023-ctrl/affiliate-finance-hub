@@ -85,6 +85,8 @@ export interface ApostaCardData {
   sub_entries?: SubEntry[];
   /** Fonte de saldo: REAL ou FREEBET */
   fonte_saldo?: string | null;
+  /** Valor de freebet usado na aposta */
+  stake_freebet?: number | null;
   // Multi-currency consolidation
   /** Lucro consolidado na moeda do projeto */
   pl_consolidado?: number | null;
