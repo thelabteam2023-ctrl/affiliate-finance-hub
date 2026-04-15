@@ -457,11 +457,11 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
         )}
         {metrics.depositosVirtuais > 0 && (
           <MetricRow 
-            label="Capital Inicial (vinculação)" 
+            label="Saldo Herdado (vínculo)" 
             value={formatCurrency(metrics.depositosVirtuais)}
             indent
             colorClass="text-muted-foreground"
-            tooltip="Saldo já existente nas casas no momento da vinculação ao projeto. Não representa dinheiro novo — é a baseline contábil."
+            tooltip="Saldo que já existia nas casas quando vinculadas ao projeto. Não é dinheiro novo — é a baseline contábil."
             onClick={() => openDrillDown("depositosVirtuais", metrics.depositosVirtuais)}
           />
         )}
@@ -469,7 +469,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
           label="Total Depósitos" 
           value={formatCurrency(metrics.depositosTotal)}
           bold
-          tooltip={metrics.hasInvestorCapital ? `Interno: ${formatCurrency(metrics.depositosInterno)} · Investidor: ${formatCurrency(metrics.depositosInvestidor)}` : "Soma de depósitos reais + capital inicial das casas vinculadas"}
+          tooltip={metrics.hasInvestorCapital ? `Interno: ${formatCurrency(metrics.depositosInterno)} · Investidor: ${formatCurrency(metrics.depositosInvestidor)}` : "Soma de depósitos reais + saldo herdado das casas vinculadas"}
           onClick={() => openDrillDown("depositosTotal", metrics.depositosTotal)}
         />
         {hasExtras && (
