@@ -16,34 +16,27 @@ function formatDateBCB(date: Date): string {
 
 /**
  * Moedas suportadas pelo sistema
- * Nova hierarquia: FastForex (primário) → PTAX (fallback para USD/EUR/GBP) → Hardcoded
+ * Hierarquia: Binance (primário) → PTAX (fallback para USD/EUR/GBP) → Hardcoded
  * 
- * Todas as moedas usam FastForex como fonte primária
+ * Binance fornece pares USDT: USDTBRL, USDTMXN, USDTARS, USDTCOP
+ * MYR não tem par direto na Binance, usa derivação ou fallback
  * USD, EUR, GBP têm PTAX como segunda opção de fallback
- * Fallback hardcoded é a terceira opção
- */
-/**
- * Moedas suportadas com fallbacks atualizados (última atualização: 2026-01-22)
- * IMPORTANTE: Estes valores devem estar sincronizados com src/constants/exchangeRates.ts
  */
 const CURRENCIES = {
-  USD: { code: 'USD', fallback: 5.32, useDolarDia: true, hasPTAX: true },
-  EUR: { code: 'EUR', fallback: 6.21, useDolarDia: false, hasPTAX: true },
-  GBP: { code: 'GBP', fallback: 7.14, useDolarDia: false, hasPTAX: true },
-  MYR: { code: 'MYR', fallback: 1.32, useDolarDia: false, hasPTAX: false },
-  MXN: { code: 'MXN', fallback: 0.304, useDolarDia: false, hasPTAX: false },  // Atualizado de 0.26
-  ARS: { code: 'ARS', fallback: 0.0037, useDolarDia: false, hasPTAX: false },
-  COP: { code: 'COP', fallback: 0.00145, useDolarDia: false, hasPTAX: false },
+  USD: { code: 'USD', fallback: 5.32, useDolarDia: true, hasPTAX: true, binancePair: 'USDTBRL' },
+  EUR: { code: 'EUR', fallback: 6.21, useDolarDia: false, hasPTAX: true, binancePair: null },
+  GBP: { code: 'GBP', fallback: 7.14, useDolarDia: false, hasPTAX: true, binancePair: null },
+  MYR: { code: 'MYR', fallback: 1.32, useDolarDia: false, hasPTAX: false, binancePair: null },
+  MXN: { code: 'MXN', fallback: 0.29, useDolarDia: false, hasPTAX: false, binancePair: 'USDTMXN' },
+  ARS: { code: 'ARS', fallback: 0.0034, useDolarDia: false, hasPTAX: false, binancePair: 'USDTARS' },
+  COP: { code: 'COP', fallback: 0.00138, useDolarDia: false, hasPTAX: false, binancePair: 'USDTCOP' },
 } as const;
 
 type CurrencyKey = keyof typeof CURRENCIES;
 
-// TTL do cache: 30 minutos - refresh frequente dentro do limite do plano
+// TTL do cache: 30 minutos
 const CACHE_TTL_MINUTES = 30;
 
-/**
- * Cria cliente Supabase com service role para acessar o cache
- */
 function getSupabaseClient() {
   return createClient(
     Deno.env.get('SUPABASE_URL') ?? '',
@@ -51,9 +44,6 @@ function getSupabaseClient() {
   );
 }
 
-/**
- * Busca cotações do cache no banco de dados
- */
 async function getCachedRates(): Promise<Record<string, { rate: number; source: string; expires_at: string }>> {
   const supabase = getSupabaseClient();
   
@@ -82,9 +72,6 @@ async function getCachedRates(): Promise<Record<string, { rate: number; source: 
   return cached;
 }
 
-/**
- * Salva cotações no cache do banco de dados
- */
 async function saveCachedRates(rates: Record<string, { rate: number; source: string }>) {
   const supabase = getSupabaseClient();
   const now = new Date();
@@ -111,53 +98,77 @@ async function saveCachedRates(rates: Record<string, { rate: number; source: str
 }
 
 /**
- * Busca cotações via FastForex API para TODAS as moedas (fonte primária)
+ * Busca cotações via Binance (pares USDT)
+ * Retorna taxas MOEDA/BRL derivadas de USDTBRL e USDTMOEDA
  */
-async function fetchFastForexRates(): Promise<Record<string, number>> {
-  const apiKey = Deno.env.get('FASTFOREX_API_KEY');
-  
-  if (!apiKey) {
-    console.log('FastForex API key não configurada - tentando PTAX como fallback');
-    return {};
-  }
-
+async function fetchBinanceRates(): Promise<Record<string, number>> {
   try {
-    // Buscar TODAS as moedas via FastForex (fonte primária unificada)
-    const currencies = 'USD,EUR,GBP,MYR,MXN,ARS,COP';
-    const url = `https://api.fastforex.io/fetch-multi?from=BRL&to=${currencies}&api_key=${apiKey}`;
+    // Buscar todos os pares de preço da Binance
+    const url = 'https://api.binance.com/api/v3/ticker/price';
+    console.log('Buscando cotações Binance (fonte primária)...');
     
-    console.log('Buscando cotações FastForex (fonte primária)...');
     const response = await fetch(url);
-    
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('FastForex erro:', response.status, errorText);
+      console.error('Binance erro:', response.status);
       return {};
     }
 
     const data = await response.json();
-
-    if (data.error) {
-      console.error('FastForex API error:', data.error);
-      return {};
+    
+    // Indexar por símbolo
+    const priceMap: Record<string, number> = {};
+    for (const item of data) {
+      priceMap[item.symbol] = parseFloat(item.price);
     }
 
     const rates: Record<string, number> = {};
     
-    if (data.results) {
-      for (const [currency, rate] of Object.entries(data.results)) {
-        if (typeof rate === 'number' && rate > 0) {
-          rates[`${currency}BRL`] = 1 / rate;
-          console.log(`FastForex ${currency}/BRL: ${rates[`${currency}BRL`].toFixed(4)}`);
-        }
+    // USDTBRL é a base para derivar todas as outras
+    const usdtBrl = priceMap['USDTBRL'];
+    if (!usdtBrl || usdtBrl <= 0) {
+      console.error('Binance: USDTBRL não encontrado');
+      return {};
+    }
+
+    // USD/BRL = USDTBRL (USDT ≈ USD)
+    rates['USDBRL'] = usdtBrl;
+    console.log(`Binance USD/BRL: ${usdtBrl.toFixed(4)}`);
+
+    // Para moedas com par USDT na Binance, derivar via cross-rate
+    // MXN/BRL = USDTBRL / USDTMXN
+    const crossPairs: Record<string, string> = {
+      MXN: 'USDTMXN',
+      ARS: 'USDTARS',
+      COP: 'USDTCOP',
+    };
+
+    for (const [currency, pair] of Object.entries(crossPairs)) {
+      const usdtRate = priceMap[pair];
+      if (usdtRate && usdtRate > 0) {
+        const crossRate = usdtBrl / usdtRate;
+        rates[`${currency}BRL`] = crossRate;
+        console.log(`Binance ${currency}/BRL: ${crossRate.toFixed(6)} (via ${pair}=${usdtRate})`);
       }
     }
-    
-    console.log(`FastForex: ${Object.keys(rates).length} cotações obtidas (fonte primária)`);
+
+    // EUR e GBP: Binance tem EURUSDT e GBPUSDT (invertidos: 1 EUR = X USDT)
+    const eurUsdt = priceMap['EURUSDT'];
+    if (eurUsdt && eurUsdt > 0) {
+      rates['EURBRL'] = eurUsdt * usdtBrl;
+      console.log(`Binance EUR/BRL: ${rates['EURBRL'].toFixed(4)} (via EURUSDT=${eurUsdt})`);
+    }
+
+    const gbpUsdt = priceMap['GBPUSDT'];
+    if (gbpUsdt && gbpUsdt > 0) {
+      rates['GBPBRL'] = gbpUsdt * usdtBrl;
+      console.log(`Binance GBP/BRL: ${rates['GBPBRL'].toFixed(4)} (via GBPUSDT=${gbpUsdt})`);
+    }
+
+    console.log(`Binance: ${Object.keys(rates).length} cotações obtidas`);
     return rates;
 
   } catch (error) {
-    console.error('Erro ao buscar FastForex:', error);
+    console.error('Erro ao buscar Binance:', error);
     return {};
   }
 }
@@ -171,8 +182,6 @@ serve(async (req) => {
     console.log('Fetching exchange rates');
 
     // 1. Verificar cache no banco de dados
-    // IMPORTANTE: mesmo se o cache estiver expirado, ainda retornamos o último valor
-    // para evitar cair em fallback hardcoded quando houver instabilidade momentânea.
     const cachedRates = await getCachedRates();
     const allCurrencies = Object.keys(CURRENCIES);
     const nowIso = new Date().toISOString();
@@ -221,21 +230,21 @@ serve(async (req) => {
       rates[key] = data.rate;
     }
 
-    // 2. FONTE PRIMÁRIA: FastForex para TODAS as moedas que precisam de refresh
+    // 2. FONTE PRIMÁRIA: Binance para TODAS as moedas que precisam de refresh
     if (currenciesToRefresh.length > 0) {
-      console.log('Buscando FastForex (fonte primária) para:', currenciesToRefresh.join(', '));
-      const fastForexRates = await fetchFastForexRates();
+      console.log('Buscando Binance (fonte primária) para:', currenciesToRefresh.join(', '));
+      const binanceRates = await fetchBinanceRates();
       
       for (const currency of currenciesToRefresh) {
         const rateKey = `${currency}BRL`;
-        if (fastForexRates[rateKey]) {
-          rates[rateKey] = fastForexRates[rateKey];
-          newRatesToCache[rateKey] = { rate: fastForexRates[rateKey], source: 'FASTFOREX' };
+        if (binanceRates[rateKey]) {
+          rates[rateKey] = binanceRates[rateKey];
+          newRatesToCache[rateKey] = { rate: binanceRates[rateKey], source: 'BINANCE' };
         }
       }
     }
 
-    // 3. FALLBACK SECUNDÁRIO: PTAX para USD, EUR, GBP que ainda precisavam de refresh
+    // 3. FALLBACK SECUNDÁRIO: PTAX para USD, EUR, GBP que ainda faltam
     const ptaxCurrencies = Object.entries(CURRENCIES)
       .filter(([key, config]) => config.hasPTAX && currenciesToRefresh.includes(key) && !newRatesToCache[`${key}BRL`])
       .map(([key, config]) => ({ key, config }));
@@ -250,7 +259,6 @@ serve(async (req) => {
         
         for (const { key, config } of ptaxCurrencies) {
            const rateKey = `${key}BRL`;
-           // Se FastForex já atualizou, não precisa tentar PTAX
            if (newRatesToCache[rateKey]) continue;
 
           try {
