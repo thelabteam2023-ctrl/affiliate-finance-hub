@@ -26,7 +26,7 @@ const CURRENCIES = {
   USD: { code: 'USD', fallback: 5.32, useDolarDia: true, hasPTAX: true, binancePair: 'USDTBRL' },
   EUR: { code: 'EUR', fallback: 6.21, useDolarDia: false, hasPTAX: true, binancePair: null },
   GBP: { code: 'GBP', fallback: 7.14, useDolarDia: false, hasPTAX: true, binancePair: null },
-  MYR: { code: 'MYR', fallback: 1.32, useDolarDia: false, hasPTAX: false, binancePair: null },
+  MYR: { code: 'MYR', fallback: 1.262, useDolarDia: false, hasPTAX: false, binancePair: null },
   MXN: { code: 'MXN', fallback: 0.29, useDolarDia: false, hasPTAX: false, binancePair: 'USDTMXN' },
   ARS: { code: 'ARS', fallback: 0.0034, useDolarDia: false, hasPTAX: false, binancePair: 'USDTARS' },
   COP: { code: 'COP', fallback: 0.00138, useDolarDia: false, hasPTAX: false, binancePair: 'USDTCOP' },
