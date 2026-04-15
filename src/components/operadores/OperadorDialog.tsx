@@ -485,10 +485,11 @@ export function OperadorDialog({
                 </div>
                 <div className="space-y-2">
                   <Label>Data de Nascimento</Label>
-                  <DatePicker
+                  <DatePickerInput
                     value={formData.data_nascimento || ""}
                     onChange={(date) => setFormData({ ...formData, data_nascimento: date })}
                     disabled={isViewMode}
+                    minAge={18}
                   />
                 </div>
               </div>
