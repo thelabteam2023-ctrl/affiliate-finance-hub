@@ -53,6 +53,7 @@ import { CasasLimitadasSmartFilter } from "@/components/central-operacoes/CasasL
 import { SaqueProcessamentoCardGrid } from "@/components/central-operacoes/SaqueProcessamentoCardGrid";
 import { ParceriaEncerramentoCardGrid } from "@/components/central-operacoes/ParceriaEncerramentoCardGrid";
 import { ConciliacaoPendenteCardGrid } from "@/components/central-operacoes/ConciliacaoPendenteCardGrid";
+import { ConciliacaoDirectModal } from "@/components/caixa/ConciliacaoDirectModal";
 import { CasasLimitadasCardGrid } from "@/components/central-operacoes/CasasLimitadasCardGrid";
 import { CasasDecisaoCardGrid } from "@/components/central-operacoes/CasasDecisaoCardGrid";
 import { ParticipacoesCardGrid } from "@/components/central-operacoes/ParticipacoesCardGrid";
