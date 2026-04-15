@@ -236,8 +236,8 @@ export function useProjetoCurrency(projetoId: string | undefined): ProjectCurren
   // Converter usando SEMPRE cotação oficial (FastForex)
   // Ideal para KPIs, Dashboards e Relatórios
   const convertToConsolidationOficial = useCallback((valor: number, moedaOrigem: string): number => {
-    return _convert(valor, moedaOrigem, cotacaoUSD);
-  }, [_convert, cotacaoUSD]);
+    return _convert(valor, moedaOrigem, officialRates);
+  }, [_convert, officialRates]);
 
   // Formatar valor NA MOEDA DO PROJETO
   const formatCurrency = useCallback((valor: number, options?: FormatOptions): string => {
