@@ -20,14 +20,15 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, AlertTriangle, User, ShieldAlert } from "lucide-react";
+import { Loader2, AlertTriangle, User, ShieldAlert, Link2, KeyRound, Coins, StickyNote, ChevronDown, Check } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import BookmakerSelect from "./BookmakerSelect";
 import ParceiroSelect from "@/components/parceiros/ParceiroSelect";
 import { PasswordInput } from "@/components/parceiros/PasswordInput";
+import { BookmakerLogo } from "@/components/ui/bookmaker-logo";
 import { FIAT_CURRENCIES, type FiatCurrency, CURRENCY_SYMBOLS } from "@/types/currency";
 import { useWorkspace } from "@/hooks/useWorkspace";
+import { cn } from "@/lib/utils";
 
 export interface VinculoCriadoContext {
   bookmakerId: string;
@@ -55,6 +56,26 @@ interface BookmakerCatalogo {
   links_json: Array<{ referencia: string; url: string }>;
   observacoes: string | null;
   moeda_padrao?: string;
+}
+
+/** Section wrapper with subtle header */
+function FormSection({ icon: Icon, title, children, className, badge }: {
+  icon: React.ElementType;
+  title: string;
+  children: React.ReactNode;
+  className?: string;
+  badge?: React.ReactNode;
+}) {
+  return (
+    <div className={cn("space-y-3", className)}>
+      <div className="flex items-center gap-2">
+        <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{title}</span>
+        {badge}
+      </div>
+      {children}
+    </div>
+  );
 }
 
 export default function BookmakerDialog({ 
@@ -103,7 +124,6 @@ export default function BookmakerDialog({
 
     setCheckingOperations(true);
     try {
-      // Verificar cash_ledger — apenas transações confirmadas/consolidadas
       const { count: cashCount } = await supabase
         .from("cash_ledger")
         .select("id", { count: "exact", head: true })
@@ -115,7 +135,6 @@ export default function BookmakerDialog({
         return;
       }
 
-      // Verificar apostas_unificada — apenas apostas com resultado definido
       const { count: apostasCount } = await supabase
         .from("apostas_unificada")
         .select("id", { count: "exact", head: true })
@@ -127,7 +146,6 @@ export default function BookmakerDialog({
         return;
       }
 
-      // Verificar apostas_pernas — apenas com resultado definido
       const { count: pernasCount } = await supabase
         .from("apostas_pernas")
         .select("id", { count: "exact", head: true })
@@ -139,7 +157,6 @@ export default function BookmakerDialog({
         return;
       }
 
-      // Verificar bônus ativos (não cancelados)
       const { count: bonusCount } = await supabase
         .from("project_bookmaker_link_bonuses")
         .select("id", { count: "exact", head: true })
@@ -154,14 +171,12 @@ export default function BookmakerDialog({
       setHasFinancialOperations(false);
     } catch (error) {
       console.error("Erro ao verificar operações:", error);
-      // Em caso de erro, assumir que há operações (fail-safe)
       setHasFinancialOperations(true);
     } finally {
       setCheckingOperations(false);
     }
   };
 
-  // Função para carregar detalhes da bookmaker
   const fetchBookmakerDetails = async (bookmakerIdToFetch: string, presetLink?: string, preserveMoeda = false) => {
     if (!bookmakerIdToFetch) return;
     
@@ -190,12 +205,10 @@ export default function BookmakerDialog({
       
       setSelectedBookmaker(bookmakerData);
       
-      // Herdar moeda padrão do catálogo (apenas em modo criação, não edição)
       if (!preserveMoeda && bookmakerData.moeda_padrao) {
         setMoedaOperacional(bookmakerData.moeda_padrao as FiatCurrency);
       }
       
-      // Auto-select link
       const linksArray = bookmakerData.links_json;
       if (presetLink) {
         setSelectedLink(presetLink);
@@ -209,7 +222,6 @@ export default function BookmakerDialog({
     }
   };
 
-  // Função para buscar nome do parceiro
   const fetchParceiroNome = async (parceiroIdToFetch: string) => {
     if (!parceiroIdToFetch) return;
     
@@ -228,10 +240,8 @@ export default function BookmakerDialog({
     }
   };
 
-  // Reset quando dialog fecha
   useEffect(() => {
     if (!open) {
-      // Pequeno delay para garantir que o dialog fechou antes de resetar
       const timeout = setTimeout(() => {
         setParceiroId("");
         setParceiroNome("");
@@ -254,24 +264,17 @@ export default function BookmakerDialog({
     }
   }, [open]);
 
-  // Verificar operações quando em modo edição
   useEffect(() => {
     if (open && bookmaker?.id) {
       checkFinancialOperations(bookmaker.id);
     }
   }, [open, bookmaker?.id]);
 
-  // Inicialização quando dialog abre - efeito separado para garantir execução determinística
   useEffect(() => {
     if (!open) return;
     
-    // Modo edição - aguardar bookmaker válido com parceiro_id
     if (bookmaker) {
-      // CRÍTICO: Só inicializar se temos os dados essenciais
-      if (!bookmaker.id || !bookmaker.parceiro_id) {
-        // Dados incompletos, não inicializar ainda
-        return;
-      }
+      if (!bookmaker.id || !bookmaker.parceiro_id) return;
       
       setParceiroId(bookmaker.parceiro_id);
       setBookmakerId(bookmaker.bookmaker_catalogo_id || "");
@@ -292,7 +295,6 @@ export default function BookmakerDialog({
         fetchBookmakerDetails(bookmaker.bookmaker_catalogo_id, bookmaker.link_origem, true);
       }
     } else {
-      // Modo criação - inicialização com valores dos props
       setLoginUsername("");
       setLoginPassword("");
       setStatus("ativo");
@@ -309,30 +311,20 @@ export default function BookmakerDialog({
       setBookmakerId(newBookmakerId);
       setIsInitialized(true);
       
-      if (newParceiroId) {
-        fetchParceiroNome(newParceiroId);
-      }
-      if (newBookmakerId) {
-        fetchBookmakerDetails(newBookmakerId);
-      }
+      if (newParceiroId) fetchParceiroNome(newParceiroId);
+      if (newBookmakerId) fetchBookmakerDetails(newBookmakerId);
     }
   }, [open, bookmaker?.id, bookmaker?.parceiro_id, defaultParceiroId, defaultBookmakerId]);
 
-  // Handler para mudança manual de bookmaker
   const handleBookmakerChange = (newBookmakerId: string) => {
     setBookmakerId(newBookmakerId);
     setSelectedBookmaker(null);
     setSelectedLink("");
-    
-    if (newBookmakerId) {
-      fetchBookmakerDetails(newBookmakerId);
-    }
+    if (newBookmakerId) fetchBookmakerDetails(newBookmakerId);
   };
 
-  // Detectar automaticamente se o parceiro já tem outra conta na mesma casa
   useEffect(() => {
     const checkDuplicateAccounts = async () => {
-      // Se já tem identificador preenchido (edição), sempre mostrar
       if (instanceIdentifier) {
         setShowInstanceField(true);
         return;
@@ -364,8 +356,6 @@ export default function BookmakerDialog({
     checkDuplicateAccounts();
   }, [parceiroId, bookmakerId, bookmaker?.id]);
 
-  // encryptPassword moved to utils/cryptoPassword.ts
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -374,21 +364,10 @@ export default function BookmakerDialog({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      if (!parceiroId) {
-        throw new Error("Selecione um parceiro");
-      }
-
-      if (!bookmakerId) {
-        throw new Error("Selecione uma bookmaker");
-      }
-
-      if (!selectedLink) {
-        throw new Error("Selecione um link de cadastro");
-      }
-
-      if (!workspaceId) {
-        throw new Error("Workspace não disponível nesta aba");
-      }
+      if (!parceiroId) throw new Error("Selecione um parceiro");
+      if (!bookmakerId) throw new Error("Selecione uma bookmaker");
+      if (!selectedLink) throw new Error("Selecione um link de cadastro");
+      if (!workspaceId) throw new Error("Workspace não disponível nesta aba");
 
       const bookmakerData: any = {
         user_id: user.id,
@@ -408,16 +387,12 @@ export default function BookmakerDialog({
       };
 
       if (bookmaker) {
-        // Se não houver nova senha, não atualizar o campo de senha
-        if (!loginPassword) {
-          delete bookmakerData.login_password_encrypted;
-        }
+        if (!loginPassword) delete bookmakerData.login_password_encrypted;
 
         const { error } = await supabase
           .from("bookmakers")
           .update(bookmakerData)
           .eq("id", bookmaker.id);
-
         if (error) throw error;
       } else {
         const { data: insertedData, error } = await supabase
@@ -425,21 +400,19 @@ export default function BookmakerDialog({
           .insert(bookmakerData)
           .select("id")
           .single();
-
         if (error) throw error;
 
-        // After successful creation, notify parent with context for "next best action"
         if (onCreated && insertedData) {
           const createdContext: VinculoCriadoContext = {
             bookmakerId: insertedData.id,
             bookmakerNome: selectedBookmaker?.nome || "",
-            parceiroId: parceiroId,
-            parceiroNome: parceiroNome,
+            parceiroId,
+            parceiroNome,
             moeda: moedaOperacional,
           };
           onClose();
           onCreated(createdContext);
-          return; // Skip default toast — parent handles UX
+          return;
         }
       }
 
@@ -452,21 +425,13 @@ export default function BookmakerDialog({
           : "Os dados foram salvos com sucesso.",
       });
 
-      // Limpar campo de senha após salvar com sucesso
-      if (credentialsUpdated) {
-        setLoginPassword("");
-      }
-
+      if (credentialsUpdated) setLoginPassword("");
       onClose();
     } catch (error: any) {
       let errorMessage = error.message;
-      
-      // MULTI-CONTA: A constraint foi removida, mas mantemos tratamento de erro genérico 23505
-      // para outros possíveis conflitos de unicidade
       if (error.code === '23505') {
         errorMessage = "Conflito de dados detectado. Verifique se os dados são válidos.";
       }
-      
       toast({
         title: "Erro ao salvar vínculo",
         description: errorMessage,
@@ -477,303 +442,307 @@ export default function BookmakerDialog({
     }
   };
 
-  // Em modo edição, mostrar loading até dados estarem prontos
   const isEditMode = !!bookmaker;
   const isWaitingForData = isEditMode && !isInitialized;
+  const hasLinks = !isLoadingDetails && selectedBookmaker?.links_json && selectedBookmaker.links_json.length > 0;
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-center text-2xl">
-            Parceiro ↔ Bookmaker
-          </DialogTitle>
-        </DialogHeader>
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto p-0 gap-0">
+        {/* ── Header ── */}
+        <div className="sticky top-0 z-10 bg-background border-b px-5 py-4">
+          <DialogHeader>
+            <DialogTitle className="text-base font-semibold">
+              {isEditMode ? "Editar Vínculo" : "Novo Vínculo"}
+            </DialogTitle>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {isEditMode ? "Atualize os dados do vínculo Parceiro ↔ Bookmaker." : "Configure o vínculo entre um parceiro e uma casa de apostas."}
+            </p>
+          </DialogHeader>
+        </div>
 
         {isWaitingForData ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            <span className="ml-2 text-muted-foreground">Carregando dados do vínculo...</span>
+          <div className="flex items-center justify-center py-16">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            <span className="ml-2 text-sm text-muted-foreground">Carregando...</span>
           </div>
         ) : (
-          <>
-            <Alert className="mb-4">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>
-                <strong>Segurança:</strong> As credenciais são armazenadas de forma criptografada no banco de dados.
-                Mantenha essas informações confidenciais.
-              </AlertDescription>
-            </Alert>
+          <form onSubmit={handleSubmit} className="flex flex-col">
+            <div className="px-5 py-4 space-y-5">
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Parceiro + Bookmaker em grid 2 colunas */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Parceiro *</Label>
-              {lockParceiro && parceiroId ? (
-                <div className="flex items-center justify-center gap-3 h-12 border rounded-md bg-muted/30 px-4">
-                  <User className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium uppercase">
-                    {parceiroNome || "Carregando..."}
-                  </span>
+              {/* ═══ SECTION: Vínculo (Parceiro + Bookmaker) ═══ */}
+              <FormSection icon={User} title="Vínculo">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Parceiro */}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Parceiro <span className="text-destructive">*</span></Label>
+                    {lockParceiro && parceiroId ? (
+                      <div className="flex items-center gap-2.5 h-9 border rounded-md bg-muted/30 px-3">
+                        <User className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                        <span className="text-sm font-medium uppercase truncate">
+                          {parceiroNome || "Carregando..."}
+                        </span>
+                      </div>
+                    ) : (
+                      <ParceiroSelect
+                        key={open ? 'parceiro-open' : 'parceiro-closed'}
+                        value={parceiroId}
+                        onValueChange={(newParceiroId) => {
+                          setParceiroId(newParceiroId);
+                          if (!bookmaker && !lockBookmaker) {
+                            setBookmakerId("");
+                            setSelectedBookmaker(null);
+                            setSelectedLink("");
+                          }
+                        }}
+                        disabled={loading}
+                        includeParceiroId={bookmaker?.parceiro_id}
+                      />
+                    )}
+                  </div>
+
+                  {/* Bookmaker */}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Bookmaker <span className="text-destructive">*</span></Label>
+                    {lockBookmaker && bookmakerId ? (
+                      <div className="flex items-center gap-2.5 h-9 border rounded-md bg-muted/30 px-3">
+                        {isLoadingDetails ? (
+                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                        ) : selectedBookmaker ? (
+                          <>
+                            <BookmakerLogo
+                              logoUrl={selectedBookmaker.logo_url}
+                              alt={selectedBookmaker.nome}
+                              size="h-5 w-5"
+                              iconSize="h-3 w-3"
+                            />
+                            <span className="text-sm uppercase font-medium truncate">{selectedBookmaker.nome}</span>
+                          </>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">Não encontrada</span>
+                        )}
+                      </div>
+                    ) : (
+                      <BookmakerSelect
+                        key={open ? `bookmaker-${parceiroId || 'none'}` : 'bookmaker-closed'}
+                        value={bookmakerId}
+                        onValueChange={handleBookmakerChange}
+                        disabled={loading}
+                        excludeVinculosDoParceiro={!bookmaker ? parceiroId : undefined}
+                      />
+                    )}
+                  </div>
                 </div>
-              ) : (
-                <ParceiroSelect
-                  key={open ? 'parceiro-open' : 'parceiro-closed'}
-                  value={parceiroId}
-                  onValueChange={(newParceiroId) => {
-                    setParceiroId(newParceiroId);
-                    if (!bookmaker && !lockBookmaker) {
-                      setBookmakerId("");
-                      setSelectedBookmaker(null);
-                      setSelectedLink("");
-                    }
-                  }}
-                  disabled={loading}
-                  includeParceiroId={bookmaker?.parceiro_id}
-                />
-              )}
-              {lockParceiro && (
-                <p className="text-xs text-muted-foreground">
-                  Parceiro selecionado a partir do contexto atual
-                </p>
-              )}
-            </div>
 
-            <div className="space-y-2">
-              <Label>Bookmaker *</Label>
-              {lockBookmaker && bookmakerId ? (
-                <div className="flex items-center justify-center gap-3 h-12 border rounded-md bg-muted/30 px-4">
-                  {isLoadingDetails ? (
+                {/* Multi-conta identifier */}
+                {showInstanceField && (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs flex items-center gap-1.5">
+                      Identificador da Conta
+                      <span className="text-[10px] text-muted-foreground">(recomendado)</span>
+                    </Label>
+                    <Input
+                      value={instanceIdentifier}
+                      onChange={(e) => setInstanceIdentifier(e.target.value)}
+                      placeholder="Ex: Principal, Backup, #1"
+                      disabled={loading}
+                      className="h-9 text-sm"
+                      maxLength={50}
+                    />
+                    <p className="text-[11px] text-amber-500">
+                      Este parceiro já possui outra conta nesta casa.
+                    </p>
+                  </div>
+                )}
+              </FormSection>
+
+              {/* Loading details */}
+              {isLoadingDetails && bookmakerId && (
+                <div className="flex items-center justify-center py-6 border rounded-lg bg-muted/20">
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  <span className="ml-2 text-xs text-muted-foreground">Carregando detalhes...</span>
+                </div>
+              )}
+
+              {/* ═══ SECTION: Link de Cadastro ═══ */}
+              {hasLinks && (
+                <FormSection icon={Link2} title="Link de Cadastro">
+                  <RadioGroup value={selectedLink} onValueChange={setSelectedLink}>
+                    <div className="space-y-1.5">
+                      {selectedBookmaker!.links_json.map((link) => (
+                        <label
+                          key={link.referencia}
+                          htmlFor={`link-${link.referencia}`}
+                          className={cn(
+                            "flex items-center gap-3 px-3 py-2.5 border rounded-lg cursor-pointer transition-all",
+                            selectedLink === link.referencia
+                              ? "border-primary/50 bg-primary/5 ring-1 ring-primary/20"
+                              : "hover:bg-accent/30 border-border"
+                          )}
+                        >
+                          <RadioGroupItem value={link.referencia} id={`link-${link.referencia}`} className="shrink-0" />
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            <Badge variant="secondary" className="uppercase text-[10px] shrink-0 py-0 h-5">
+                              {link.referencia === "PADRÃO" ? "Site Oficial" : link.referencia}
+                            </Badge>
+                            <span className="text-[11px] text-muted-foreground truncate">{link.url}</span>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  </RadioGroup>
+                </FormSection>
+              )}
+
+              {/* ═══ SECTION: Moeda Operacional ═══ */}
+              {!isLoadingDetails && selectedBookmaker && (
+                <FormSection
+                  icon={Coins}
+                  title="Moeda Operacional"
+                  badge={
                     <>
-                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                      <span className="text-muted-foreground">Carregando...</span>
-                    </>
-                  ) : selectedBookmaker ? (
-                    <>
-                      {selectedBookmaker.logo_url && (
-                        <img 
-                          src={selectedBookmaker.logo_url} 
-                          alt="" 
-                          className="h-6 w-6 rounded object-contain"
-                          onError={(e) => { e.currentTarget.style.display = "none"; }}
-                        />
+                      {checkingOperations && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+                      {hasFinancialOperations && !checkingOperations && (
+                        <Badge variant="secondary" className="text-[9px] py-0 px-1.5 h-4">🔒 Bloqueada</Badge>
                       )}
-                      <span className="uppercase font-medium">{selectedBookmaker.nome}</span>
                     </>
-                  ) : (
-                    <span className="text-muted-foreground">Bookmaker não encontrada</span>
-                  )}
-                </div>
-              ) : (
-                <BookmakerSelect
-                  key={open ? `bookmaker-${parceiroId || 'none'}` : 'bookmaker-closed'}
-                  value={bookmakerId}
-                  onValueChange={handleBookmakerChange}
-                  disabled={loading}
-                  excludeVinculosDoParceiro={!bookmaker ? parceiroId : undefined}
-                />
-              )}
-              {lockBookmaker && (
-                <p className="text-xs text-muted-foreground">
-                  Bookmaker selecionada a partir do contexto atual
-                </p>
-              )}
-            </div>
-          </div>
-
-          {isLoadingDetails && bookmakerId && (
-            <div className="flex items-center justify-center py-4 border rounded-lg bg-muted/30">
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-              <span className="ml-2 text-sm text-muted-foreground">Carregando detalhes...</span>
-            </div>
-          )}
-
-          {!isLoadingDetails && selectedBookmaker && selectedBookmaker.links_json && selectedBookmaker.links_json.length > 0 && (
-            <div className="space-y-3">
-              <Label className="text-base">
-                Link de Cadastro *
-              </Label>
-              <RadioGroup value={selectedLink} onValueChange={setSelectedLink}>
-                <div className="space-y-3">
-                  {selectedBookmaker.links_json.map((link) => (
-                    <label
-                      key={link.referencia}
-                      htmlFor={link.referencia}
-                      className="flex items-start gap-3 p-4 border rounded-lg hover:bg-accent/40 transition-colors cursor-pointer"
+                  }
+                >
+                  <div className={cn(
+                    "rounded-lg border p-3 space-y-2.5",
+                    hasFinancialOperations
+                      ? "border-muted bg-muted/10"
+                      : "border-amber-500/30 bg-amber-500/5"
+                  )}>
+                    {!hasFinancialOperations && (
+                      <p className="text-[11px] text-amber-500 leading-tight">
+                        Campo crítico — impacta todas as operações financeiras. Não poderá ser alterado após a primeira transação confirmada.
+                      </p>
+                    )}
+                    <Select 
+                      value={moedaOperacional} 
+                      onValueChange={(val) => {
+                        setMoedaOperacional(val as FiatCurrency);
+                        setMoedaConfirmada(false);
+                      }}
+                      disabled={loading || hasFinancialOperations}
                     >
-                      <RadioGroupItem value={link.referencia} id={link.referencia} className="mt-1 flex-shrink-0" />
-                      <div className="flex-1 flex items-center gap-3">
-                        <Badge variant="secondary" className="uppercase text-xs flex-shrink-0">
-                          {link.referencia === "PADRÃO" ? "SITE OFICIAL" : link.referencia}
-                        </Badge>
-                        <div className="text-xs text-muted-foreground break-all">
-                          {link.url}
-                        </div>
-                      </div>
-                    </label>
-                  ))}
-                </div>
-              </RadioGroup>
-            </div>
-          )}
+                      <SelectTrigger className={cn("h-9 text-sm", hasFinancialOperations && "bg-muted/50 cursor-not-allowed")}>
+                        <SelectValue placeholder="Selecione a moeda" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {FIAT_CURRENCIES.map((currency) => (
+                          <SelectItem key={currency.value} value={currency.value}>
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono text-xs">{currency.symbol}</span>
+                              <span>{currency.value} - {currency.label}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
 
-          {/* ═══════════ MOEDA OPERACIONAL — Campo crítico, posição estratégica ═══════════ */}
-          {!isLoadingDetails && selectedBookmaker && (
-            <div className={`p-4 rounded-lg border-2 transition-colors ${
-              hasFinancialOperations 
-                ? 'border-muted bg-muted/20' 
-                : 'border-amber-500/50 bg-amber-500/5'
-            }`}>
-              <Label htmlFor="moedaOperacional" className="flex items-center gap-2 text-base font-semibold mb-1">
-                <ShieldAlert className={`h-4 w-4 ${hasFinancialOperations ? 'text-muted-foreground' : 'text-amber-500'}`} />
-                Moeda Operacional
-                {checkingOperations && (
-                  <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
-                )}
-                {hasFinancialOperations && !checkingOperations && (
-                  <Badge variant="secondary" className="text-[10px] py-0 px-1.5">
-                    🔒 Bloqueada
-                  </Badge>
-                )}
-              </Label>
-              {!hasFinancialOperations && (
-                <p className="text-xs text-amber-600 dark:text-amber-400 mb-3">
-                  ⚠️ Campo crítico — impacta todas as operações financeiras desta conta. Não poderá ser alterado após a primeira transação confirmada.
-                </p>
+                    {hasFinancialOperations ? (
+                      <p className="text-[11px] text-destructive flex items-center gap-1">
+                        <AlertTriangle className="h-3 w-3 shrink-0" />
+                        Existem transações confirmadas — moeda bloqueada.
+                      </p>
+                    ) : !bookmaker ? (
+                      <div className="flex items-center gap-2 pt-0.5">
+                        <Checkbox
+                          id="moedaConfirmacao"
+                          checked={moedaConfirmada}
+                          onCheckedChange={(checked) => setMoedaConfirmada(checked === true)}
+                        />
+                        <label htmlFor="moedaConfirmacao" className="text-[11px] cursor-pointer select-none leading-tight">
+                          Confirmo que <strong className="font-mono">{moedaOperacional}</strong> está correta para esta conta
+                        </label>
+                      </div>
+                    ) : null}
+                  </div>
+                </FormSection>
               )}
-              <Select 
-                value={moedaOperacional} 
-                onValueChange={(val) => {
-                  setMoedaOperacional(val as FiatCurrency);
-                  setMoedaConfirmada(false);
-                }}
-                disabled={loading || hasFinancialOperations}
-              >
-                <SelectTrigger className={`text-base ${hasFinancialOperations ? "bg-muted/50 cursor-not-allowed" : ""}`}>
-                  <SelectValue placeholder="Selecione a moeda" />
-                </SelectTrigger>
-                <SelectContent>
-                  {FIAT_CURRENCIES.map((currency) => (
-                    <SelectItem key={currency.value} value={currency.value}>
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono">{currency.symbol}</span>
-                        <span>{currency.value} - {currency.label}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {hasFinancialOperations ? (
-                <p className="text-xs text-destructive mt-2 flex items-center gap-1">
-                  <AlertTriangle className="h-3 w-3" />
-                  A moeda não pode ser alterada — existem transações confirmadas associadas.
-                </p>
-              ) : !bookmaker ? (
-                <div className="flex items-center gap-2 mt-3">
-                  <Checkbox
-                    id="moedaConfirmacao"
-                    checked={moedaConfirmada}
-                    onCheckedChange={(checked) => setMoedaConfirmada(checked === true)}
-                  />
-                  <label htmlFor="moedaConfirmacao" className="text-xs cursor-pointer select-none">
-                    Confirmo que a moeda <strong className="font-mono">{moedaOperacional}</strong> está correta para esta conta
-                  </label>
+
+              {/* ═══ SECTION: Credenciais ═══ */}
+              <FormSection icon={KeyRound} title="Credenciais de Acesso">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">
+                      Usuário <span className="text-[10px] text-muted-foreground">(opcional)</span>
+                    </Label>
+                    <Input
+                      value={loginUsername}
+                      onChange={(e) => setLoginUsername(e.target.value)}
+                      placeholder="username ou email"
+                      disabled={loading}
+                      className="h-9 text-sm"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">
+                      Senha <span className="text-[10px] text-muted-foreground">{bookmaker ? "(deixe em branco para manter)" : "(opcional)"}</span>
+                    </Label>
+                    <PasswordInput
+                      value={loginPassword}
+                      onChange={setLoginPassword}
+                      placeholder={bookmaker ? "••••••••" : "senha"}
+                      disabled={loading}
+                    />
+                  </div>
                 </div>
-              ) : null}
-            </div>
-          )}
+              </FormSection>
 
-          {/* MULTI-CONTA: Aparece automaticamente quando o parceiro já tem outra conta na mesma casa */}
-          {showInstanceField && (
-            <div>
-              <Label htmlFor="instanceIdentifier" className="flex items-center gap-2">
-                Identificador da Conta
-                <span className="text-xs text-muted-foreground">(recomendado)</span>
-              </Label>
-              <Input
-                id="instanceIdentifier"
-                value={instanceIdentifier}
-                onChange={(e) => setInstanceIdentifier(e.target.value)}
-                placeholder="Ex: Principal, Backup, Email João, #1"
-                disabled={loading}
-                autoComplete="off"
-                maxLength={50}
-              />
-              <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
-                Este parceiro já possui outra conta nesta casa. Diferencie com um identificador.
-              </p>
-            </div>
-          )}
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="loginUsername">
-                Usuário de Login <span className="text-xs text-muted-foreground">(opcional)</span>
-              </Label>
-              <Input
-                id="loginUsername"
-                value={loginUsername}
-                onChange={(e) => setLoginUsername(e.target.value)}
-                placeholder="username ou email"
-                disabled={loading}
-                autoComplete="off"
-              />
+              {/* ═══ SECTION: Configuração ═══ */}
+              <FormSection icon={StickyNote} title="Configuração">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Status</Label>
+                    <Select value={status} onValueChange={setStatus} disabled={loading}>
+                      <SelectTrigger className="h-9 text-sm">
+                        <SelectValue placeholder="Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ativo">Ativo</SelectItem>
+                        <SelectItem value="limitada">Limitada</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <Label className="text-xs">
+                      Observações <span className="text-[10px] text-muted-foreground">(opcional)</span>
+                    </Label>
+                    <Textarea
+                      value={observacoes}
+                      onChange={(e) => setObservacoes(e.target.value)}
+                      rows={2}
+                      placeholder="Notas internas..."
+                      disabled={loading}
+                      className="text-sm resize-none"
+                    />
+                  </div>
+                </div>
+              </FormSection>
             </div>
 
-            <div>
-              <Label htmlFor="loginPassword">
-                Senha de Login <span className="text-xs text-muted-foreground">{bookmaker ? "(opcional - deixe em branco para não alterar)" : "(opcional)"}</span>
-              </Label>
-              <PasswordInput
-                value={loginPassword}
-                onChange={setLoginPassword}
-                placeholder={bookmaker ? "••••••••" : "senha"}
-                disabled={loading}
-              />
+            {/* ── Footer ── */}
+            <div className="sticky bottom-0 bg-background border-t px-5 py-3 flex gap-2.5">
+              <Button type="button" variant="ghost" onClick={onClose} className="flex-1 h-9" disabled={loading}>
+                Cancelar
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={loading || isLoadingDetails || !parceiroId || !bookmakerId || !selectedLink || (!bookmaker && !moedaConfirmada)} 
+                className="flex-1 h-9"
+              >
+                {loading ? (
+                  <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Check className="mr-2 h-3.5 w-3.5" />
+                )}
+                {bookmaker ? "Salvar" : "Criar Vínculo"}
+              </Button>
             </div>
-
-            <div>
-              <Label htmlFor="status">Status</Label>
-              <Select value={status} onValueChange={setStatus} disabled={loading}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ativo">Ativo</SelectItem>
-                  <SelectItem value="limitada">Limitada</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="col-span-2">
-              <Label htmlFor="observacoes">Observações</Label>
-              <Textarea
-                id="observacoes"
-                value={observacoes}
-                onChange={(e) => setObservacoes(e.target.value)}
-                rows={3}
-                placeholder="Notas internas sobre este vínculo..."
-                disabled={loading}
-              />
-            </div>
-          </div>
-
-          <div className="flex gap-3 pt-4">
-            <Button type="button" variant="outline" onClick={onClose} className="flex-1" disabled={loading}>
-              Cancelar
-            </Button>
-            <Button 
-              type="submit" 
-              disabled={loading || isLoadingDetails || !parceiroId || !bookmakerId || !selectedLink || (!bookmaker && !moedaConfirmada)} 
-              className="flex-1"
-            >
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {bookmaker ? "Atualizar" : "Criar"} Vínculo
-            </Button>
-          </div>
           </form>
-          </>
         )}
       </DialogContent>
 
