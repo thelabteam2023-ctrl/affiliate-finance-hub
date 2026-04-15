@@ -126,12 +126,6 @@ const menuGroups: MenuGroup[] = [
       
     ],
   },
-  {
-    label: "TESTES",
-    items: [
-      { title: "Testes", url: "/testes", icon: FlaskConical, iconName: "FlaskConical", moduleKey: "testes" },
-    ],
-  },
 ];
 
 // Flatten all items for permission check

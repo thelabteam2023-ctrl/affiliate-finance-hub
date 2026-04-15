@@ -101,11 +101,6 @@ export const ROUTE_PERMISSIONS: Record<string, RouteConfig> = {
     requireSystemOwner: true,
     label: 'Admin do Sistema',
   },
-  testes: {
-    path: '/testes',
-    roles: ['owner'],
-    label: 'Testes',
-  },
 };
 
 /**

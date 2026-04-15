@@ -42,7 +42,7 @@ const ROUTE_PERMISSIONS: Record<string, { permission?: string; roles?: string[];
   '/comunidade': { permission: undefined }, // Plan-based check
   '/workspace': { roles: ['owner', 'admin'] },
   '/admin': { requireSystemOwner: true },
-  '/testes': { roles: ['owner'] },
+  
 };
 
 interface PermissionsContextType {
