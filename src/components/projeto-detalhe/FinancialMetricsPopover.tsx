@@ -364,17 +364,15 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
     );
 
     // ─── Fluxo consolidado ───
-    // REGRA: Fluxo Líquido usa apenas depósitos REAIS (dinheiro que saiu do caixa)
-    // Baseline de vinculação (DEPOSITO_VIRTUAL) é ajuste contábil interno, não saída de caixa
-    const fluxoCaixaLiquido = saquesRecebidos - depositosReais;
+    const fluxoCaixaLiquido = saquesRecebidos - depositosTotal;
     const extrasPositivos = cashbackLiquido + girosGratis + ajustes + ganhoConfirmacao + ganhoFx + bonusGanhos;
-    const capitalTotal = depositosReais + extrasPositivos;
+    const capitalTotal = depositosTotal + extrasPositivos;
     const fluxoLiquidoAjustado = fluxoCaixaLiquido;
     const patrimonio = saldoCasas + saquesRecebidos + saquesPendentes;
-    const lucroFinanceiro = patrimonio - depositosReais;
+    const lucroFinanceiro = patrimonio - depositosTotal;
 
     // ─── Fluxo INTERNO (sem investidor) ───
-    const fluxoInternoLiquido = saquesInterno - depositosReaisInterno;
+    const fluxoInternoLiquido = saquesInterno - depositosInterno;
 
     // ─── Break-even CONSOLIDADO ───
     const beConsolidado = computeBreakEven(
