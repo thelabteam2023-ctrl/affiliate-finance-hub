@@ -48,15 +48,19 @@ export function FinancialSummaryCompact({ projetoId, dateRange }: FinancialSumma
   const metrics = useMemo(() => {
     if (!rawData) return null;
 
-    const depositosTotal = rawData.depositos.reduce(
-      (acc, d) => acc + convertToConsolidationOficial(Number(d.valor || 0), d.moeda || 'BRL'), 0
-    );
+    // Depósitos efetivos: exclui DEPOSITO_VIRTUAL de baseline (não é dinheiro real)
+    // Mantém DEPOSITO_VIRTUAL de migração (origem_tipo = 'MIGRACAO')
+    const depositosEfetivos = rawData.depositos
+      .filter(d => d.tipo_transacao === 'DEPOSITO' || (d.tipo_transacao === 'DEPOSITO_VIRTUAL' && d.origem_tipo === 'MIGRACAO'))
+      .reduce(
+        (acc, d) => acc + convertToConsolidationOficial(Number(d.valor || 0), d.moeda || 'BRL'), 0
+      );
     const saquesRecebidos = rawData.saques.reduce(
       (acc, s) => acc + convertToConsolidationOficial(Number(s.valor_confirmado ?? s.valor), s.moeda || 'BRL'), 0
     );
 
-    const lucro = saquesRecebidos - depositosTotal;
-    const roi = depositosTotal > 0 ? (lucro / depositosTotal) * 100 : 0;
+    const lucro = saquesRecebidos - depositosEfetivos;
+    const roi = depositosEfetivos > 0 ? (lucro / depositosEfetivos) * 100 : 0;
 
     return { lucro, roi };
   }, [rawData, convertToConsolidationOficial, cotacaoOficialUSD]);
