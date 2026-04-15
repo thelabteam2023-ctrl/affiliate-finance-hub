@@ -24,7 +24,6 @@ import {
 } from "lucide-react";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { useKpiBreakdowns } from "@/hooks/useKpiBreakdowns";
-import { useProjetoDashboardData } from "@/hooks/useProjetoDashboardData";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const ICON_MAP: Record<string, React.ElementType> = {
@@ -101,12 +100,14 @@ export function LucroProjetadoModal({
   saquesPendentes,
   depositosTotal,
 }: LucroProjetadoModalProps) {
-  const { formatCurrency } = useProjetoCurrency(projetoId);
-  const { data: rawData } = useProjetoDashboardData(projetoId);
+  const { formatCurrency, convertToConsolidationOficial, cotacaoOficialUSD, moedaConsolidacao } = useProjetoCurrency(projetoId);
   const { breakdowns } = useKpiBreakdowns({
     projetoId,
     dataInicio: undefined,
     dataFim: undefined,
+    moedaConsolidacao: moedaConsolidacao || 'BRL',
+    convertToConsolidation: convertToConsolidationOficial,
+    cotacaoKey: cotacaoOficialUSD,
   });
 
   const lucroOperacional = breakdowns?.lucro?.total ?? 0;
