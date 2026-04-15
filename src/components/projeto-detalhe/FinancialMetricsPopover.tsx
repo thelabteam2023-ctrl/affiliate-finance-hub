@@ -144,6 +144,28 @@ async function fetchFinancialMetricsRaw(projetoId: string, dateRange?: { from: s
   
   const { data: bonusGanhosData } = await bonusQuery;
 
+  // Fetch pernas para apostas multicurrency (conversão direta, sem pivot BRL)
+  const apostasArr = (apostasPorEstrategia.data || []) as { id: string; estrategia: string; lucro_prejuizo: number | null; pl_consolidado: number | null; moeda_operacao: string | null; consolidation_currency: string | null; is_multicurrency: boolean | null }[];
+  const multicurrencyIds = apostasArr.filter(a => a.is_multicurrency).map(a => a.id);
+  
+  let pernasMap: Record<string, PernaConsolidavel[]> = {};
+  if (multicurrencyIds.length > 0) {
+    // Buscar em chunks de 100 para evitar URI too long
+    for (let i = 0; i < multicurrencyIds.length; i += 100) {
+      const chunk = multicurrencyIds.slice(i, i + 100);
+      const { data: pernas } = await supabase
+        .from("apostas_pernas")
+        .select("aposta_id, moeda, lucro_prejuizo, resultado")
+        .in("aposta_id", chunk);
+      if (pernas) {
+        for (const p of pernas) {
+          if (!pernasMap[p.aposta_id]) pernasMap[p.aposta_id] = [];
+          pernasMap[p.aposta_id].push(p);
+        }
+      }
+    }
+  }
+
   return {
     bookmakerSaldos,
     investorBookmakerIds,
@@ -161,7 +183,8 @@ async function fetchFinancialMetricsRaw(projetoId: string, dateRange?: { from: s
     },
     breakEvenTimeline: (timelineData || []) as { valor: number; valor_confirmado?: number | null; moeda: string; data_transacao: string; tipo_transacao: string; destino_bookmaker_id?: string | null; origem_bookmaker_id?: string | null }[],
     bonusGanhos: (bonusGanhosData || []) as { bonus_amount: number; currency: string }[],
-    apostasPorEstrategia: (apostasPorEstrategia.data || []) as { estrategia: string; lucro_prejuizo: number | null; pl_consolidado: number | null; moeda_operacao: string | null; consolidation_currency: string | null }[],
+    apostasPorEstrategia: apostasArr,
+    apostasPernasMap: pernasMap,
   };
 }
 
