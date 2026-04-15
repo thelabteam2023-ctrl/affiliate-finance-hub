@@ -587,6 +587,13 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
         </div>
       </div>
 
+      {/* ─── Seção: Lucro Operacional (Juice) ─── */}
+      {Math.abs(metrics.lucroApostasPuro) >= 0.01 && (
+        <div className="border-t border-border/40 pt-3 pb-3 space-y-1">
+          <LucroOperacionalCollapsible metrics={metrics} formatCurrency={formatCurrency} />
+        </div>
+      )}
+
       {/* ─── Seção: Projeção de Lucro ─── */}
       <div className="border-t border-border/40 pt-3 pb-3 space-y-1">
         <SectionHeader icon={TrendingUp} label="Projeção de Lucro" iconClass="text-primary" />
