@@ -454,7 +454,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
     const hasInvestorCapital = depositosInvestidor > 0 || saquesInvestidor > 0 || saldoCasasInvestidor > 0;
 
     return {
-      depositosTotal, depositosReais, depositosVirtuais, depositosInvestidor, depositosInterno,
+      depositosTotal, depositosReais, depositosVirtuais, depositosEfetivos, depositosInvestidor, depositosInterno,
       saquesRecebidos, saquesInvestidor, saquesInterno,
       saquesPendentes, saquesPendentesInvestidor, saquesPendentesInterno,
       saldoCasas, saldoCasasInvestidor, saldoCasasInterno,
@@ -698,8 +698,8 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
           saldoCasas={metrics.saldoCasas}
           saquesRecebidos={metrics.saquesRecebidos}
           saquesPendentes={metrics.saquesPendentes}
-          depositosEfetivos={metrics.depositosTotal - metrics.depositosVirtuais}
-          depositosBaseline={metrics.depositosVirtuais}
+          depositosEfetivos={metrics.depositosEfetivos}
+          depositosBaseline={metrics.depositosTotal - metrics.depositosEfetivos}
           ganhoConfirmacaoDeposito={metrics.ganhoConfirmacao}
           bonusGanhosFinanceiro={metrics.bonusGanhos}
           girosGratisFinanceiro={metrics.girosGratis}
