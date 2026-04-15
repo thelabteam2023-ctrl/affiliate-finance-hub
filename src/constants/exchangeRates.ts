@@ -40,7 +40,7 @@ export const FALLBACK_RATES: ExchangeRates = {
   USDBRL: 4.99,
   EURBRL: 5.89,
   GBPBRL: 6.77,
-  MYRBRL: 1.32,
+  MYRBRL: 1.262,
   MXNBRL: 0.289,
   ARSBRL: 0.0034,
   COPBRL: 0.00138,
