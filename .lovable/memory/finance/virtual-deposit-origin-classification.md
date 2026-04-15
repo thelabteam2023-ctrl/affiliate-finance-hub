@@ -22,8 +22,24 @@ No trigger `fn_ensure_deposito_virtual_on_link`:
 Na RPC `desvincular_bookmaker_atomico`:
 - SAQUE_VIRTUAL sempre recebe `origem_tipo = 'MIGRACAO'`
 
-### Uso Futuro
+### Cálculo de Depósitos Efetivos (Fluxo Líquido Ajustado)
 
-Quando implementada a diferenciação no fluxo líquido:
-- **Fluxo Líquido** = Saques - Depósitos Reais - DVs de MIGRACAO (exclui BASELINE)
-- DVs de BASELINE são informativos (baseline contábil) e não representam desembolso real
+```
+depositosEfetivos = DEPOSITO (real com snapshot) + DEPOSITO_VIRTUAL onde origem_tipo='MIGRACAO'
+```
+
+- **BASELINE é EXCLUÍDO** do cálculo de depósitos efetivos
+- Isso garante que o fluxo líquido reflita apenas o que saiu do caixa operacional + capital migrado entre projetos
+
+### Decisão de Escopo (2026-04-15)
+
+A lógica de exclusão de BASELINE é aplicada **a partir de agora** (novos vínculos).
+Projetos legados onde depósitos foram feitos ANTES do vínculo (sem snapshot) mantêm a BASELINE como fallback natural — não se tenta retroagir a correção para dados históricos.
+
+### Saques e Conciliação
+
+O Fluxo Líquido usa `valor_confirmado` (valor efetivamente recebido) quando disponível:
+```
+saquesRecebidos = SUM(valor_confirmado ?? valor)
+fluxoLiquido = saquesRecebidos - depositosEfetivos
+```
