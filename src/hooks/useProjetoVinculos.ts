@@ -264,9 +264,10 @@ export function useProjetoVinculos(projetoId: string | undefined) {
       });
     },
     enabled: !!projetoId,
-    staleTime: 30 * 1000, // 30 segundos
+    staleTime: 5 * 1000, // 5 segundos - reatividade após invalidação
     gcTime: 5 * 60 * 1000, // 5 minutos
-    refetchOnWindowFocus: false, // Evitar refetch em cascata
+    refetchOnMount: 'always', // CRÍTICO: sempre refetch ao montar (ex: trocar de aba)
+    refetchOnWindowFocus: false,
   });
 
   // Query para histórico
