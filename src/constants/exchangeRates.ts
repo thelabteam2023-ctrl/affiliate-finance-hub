@@ -85,6 +85,9 @@ export const LOCALSTORAGE_BACKUP_TTL_HOURS = 24;
  * Tipos de fonte de cotação
  */
 export type CotacaoSource = 
+  | 'BINANCE'
+  | 'BINANCE_CACHE'
+  | 'MANUAL_UPDATE'
   | 'FASTFOREX' 
   | 'FASTFOREX_CACHE' 
   | 'PTAX_FALLBACK' 
@@ -149,6 +152,29 @@ export function getRateAgeMinutes(fetchedAt: Date | string | null): number | nul
 export function parseSource(rawSource: string): CotacaoSourceInfo {
   const source = rawSource?.toUpperCase() || '';
   
+  // Binance (fonte primária atual para secundárias e USD)
+  if (source === 'BINANCE' || source === 'BINANCE_CACHE') {
+    return {
+      source: source.includes('CACHE') ? 'BINANCE_CACHE' : 'BINANCE',
+      label: 'Binance',
+      isOfficial: true,
+      isFallback: false,
+      isPtaxFallback: false,
+    };
+  }
+
+  // Atualização manual (ex: MYR sem par Binance)
+  if (source === 'MANUAL_UPDATE') {
+    return {
+      source: 'MANUAL_UPDATE',
+      label: 'Manual',
+      isOfficial: true,
+      isFallback: false,
+      isPtaxFallback: false,
+    };
+  }
+
+  // FastForex legado (pode existir em caches antigos)
   if (source === 'FASTFOREX' || source === 'FASTFOREX_CACHE') {
     return {
       source: source.includes('CACHE') ? 'FASTFOREX_CACHE' : 'FASTFOREX',
