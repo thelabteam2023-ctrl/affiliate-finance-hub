@@ -157,6 +157,7 @@ function useProjetoExtrato(projetoId: string) {
         .eq("projeto_id_snapshot", projetoId)
         .not("status", "eq", "CANCELADO")
         .order("data_transacao", { ascending: false })
+        .order("created_at", { ascending: false })
         .limit(500);
 
       if (error) throw error;
