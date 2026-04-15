@@ -430,7 +430,19 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
       (acc, b) => acc + convertToConsolidationOficial(b.bonus_amount, b.currency || 'BRL'), 0
     );
 
-    // ─── Depósitos efetivos (reais + migração, excluindo baseline) ───
+    // ─── Lucro puro de apostas por estratégia (juice) ───
+    const estrategiaMap: Record<string, number> = {};
+    let lucroApostasPuro = 0;
+    for (const a of rawMetrics.apostasPorEstrategia) {
+      const lucro = a.pl_consolidado != null
+        ? a.pl_consolidado
+        : convertToConsolidationOficial(a.lucro_prejuizo ?? 0, a.moeda_operacao || 'BRL');
+      lucroApostasPuro += lucro;
+      const key = a.estrategia || 'OUTROS';
+      estrategiaMap[key] = (estrategiaMap[key] || 0) + lucro;
+    }
+    const estrategiaBreakdown = Object.entries(estrategiaMap)
+      .sort(([, a], [, b]) => Math.abs(b) - Math.abs(a));
     const depositosEfetivos = rawMetrics.depositos
       .filter(d => d.tipo_transacao === 'DEPOSITO' || (d.tipo_transacao === 'DEPOSITO_VIRTUAL' && (d as any).origem_tipo === 'MIGRACAO'))
       .reduce((acc, d) => acc + convertToConsolidationOficial(d.valor, d.moeda), 0);
