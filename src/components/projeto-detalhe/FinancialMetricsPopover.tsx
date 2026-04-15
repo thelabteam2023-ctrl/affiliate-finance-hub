@@ -410,7 +410,7 @@ function computeBreakEven(
 }
 
 export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetricsPopoverProps) {
-  const { formatCurrency, convertToConsolidationOficial, cotacaoOficialUSD, moedaConsolidacao } = useProjetoCurrency(projetoId);
+  const { formatCurrency, convertToConsolidationOficial, convertToConsolidation, cotacaoOficialUSD, moedaConsolidacao } = useProjetoCurrency(projetoId);
   const [drillDownKey, setDrillDownKey] = useState<string | null>(null);
   const [drillDownValue, setDrillDownValue] = useState(0);
   const [showLucroProjetado, setShowLucroProjetado] = useState(false);
@@ -505,7 +505,8 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
     );
 
     // ─── Lucro puro de apostas por estratégia (juice) ───
-    // UNIFICADO: Usa getConsolidatedLucroDirect para consistência com BonusSummaryCards e BonusVisaoGeralTab
+    // UNIFICADO: Usa Cotação de TRABALHO (não Oficial) para KPIs operacionais
+    // Garante convergência com BonusSummaryCards, BonusVisaoGeralTab e cards individuais
     const estrategiaMap: Record<string, number> = {};
     let lucroApostasPuro = 0;
     for (const a of rawMetrics.apostasPorEstrategia) {
@@ -518,7 +519,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
           is_multicurrency: a.is_multicurrency,
         },
         rawMetrics.apostasPernasMap[a.id],
-        convertToConsolidationOficial,
+        convertToConsolidation,
         moedaConsolidacao,
       );
       lucroApostasPuro += lucro;
