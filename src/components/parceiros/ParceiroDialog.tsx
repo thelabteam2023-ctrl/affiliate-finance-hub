@@ -1894,6 +1894,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                     </Card>
                   );
                 }))}
+            </TabsContent>
           </Tabs>
 
           <div className="flex gap-3 mt-6 max-md:fixed max-md:bottom-0 max-md:left-0 max-md:right-0 max-md:p-4 max-md:bg-background max-md:border-t max-md:border-border/50 max-md:z-10">
