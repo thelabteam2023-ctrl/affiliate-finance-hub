@@ -445,7 +445,7 @@ export default function CentralOperacoes() {
             tooltip={{ title: "Conciliação Obrigatória", description: "Casas com transações pendentes não podem ser utilizadas para apostas ou bônus até que a conciliação seja realizada.", flow: "Transações pendentes (depósitos, saques em processamento) devem ser conciliadas para liberar a casa para operação." }}>
             <ConciliacaoPendenteCardGrid
               casas={casasPendentesConciliacao}
-              onConciliar={(casa) => navigate(`/caixa?tab=conciliacao&bookmaker=${casa.bookmaker_id}`)}
+              onConciliar={(casa) => { setConciliacaoDirectBookmaker({ id: casa.bookmaker_id, nome: casa.bookmaker_nome }); setConciliacaoDirectOpen(true); }}}
               onVincular={(casa) => { setSelectedCasaConciliacao(casa); setSelectedProjetoVincular(""); setVincularConciliacaoOpen(true); }}
             />
           </OperationCard>
@@ -965,6 +965,15 @@ export default function CentralOperacoes() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Conciliação direta modal */}
+      <ConciliacaoDirectModal
+        open={conciliacaoDirectOpen}
+        onOpenChange={setConciliacaoDirectOpen}
+        bookmakerId={conciliacaoDirectBookmaker.id}
+        bookmakerNome={conciliacaoDirectBookmaker.nome}
+        onSuccess={() => refetchCentral()}
+      />
     </div>
   );
 }
