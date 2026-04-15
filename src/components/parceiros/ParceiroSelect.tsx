@@ -95,6 +95,7 @@ const ParceiroSelect = forwardRef<ParceiroSelectRef, ParceiroSelectProps>(({
           .from("parceiros")
           .select("id, nome, cpf, status")
           .eq("status", "ativo")
+          .neq("is_caixa_operacional", true)
           .order("nome", { ascending: true });
 
         if (error) throw error;
