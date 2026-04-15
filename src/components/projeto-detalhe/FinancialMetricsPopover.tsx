@@ -505,16 +505,22 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
     );
 
     // ─── Lucro puro de apostas por estratégia (juice) ───
+    // UNIFICADO: Usa getConsolidatedLucroDirect para consistência com BonusSummaryCards e BonusVisaoGeralTab
     const estrategiaMap: Record<string, number> = {};
     let lucroApostasPuro = 0;
     for (const a of rawMetrics.apostasPorEstrategia) {
-      // CRÍTICO: só usar pl_consolidado se a moeda de consolidação da aposta
-      // bater com a moeda de consolidação do projeto. Caso contrário, converter
-      // lucro_prejuizo (na moeda_operacao) via cotação oficial.
-      const usePl = a.pl_consolidado != null && a.consolidation_currency === moedaConsolidacao;
-      const lucro = usePl
-        ? a.pl_consolidado!
-        : convertToConsolidationOficial(a.lucro_prejuizo ?? 0, a.moeda_operacao || 'BRL');
+      const lucro = getConsolidatedLucroDirect(
+        {
+          lucro_prejuizo: a.lucro_prejuizo,
+          moeda_operacao: a.moeda_operacao,
+          pl_consolidado: a.pl_consolidado,
+          consolidation_currency: a.consolidation_currency,
+          is_multicurrency: a.is_multicurrency,
+        },
+        rawMetrics.apostasPernasMap[a.id],
+        convertToConsolidationOficial,
+        moedaConsolidacao,
+      );
       lucroApostasPuro += lucro;
       const key = a.estrategia || 'OUTROS';
       estrategiaMap[key] = (estrategiaMap[key] || 0) + lucro;
