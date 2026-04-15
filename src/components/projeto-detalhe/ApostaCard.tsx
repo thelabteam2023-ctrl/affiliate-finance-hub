@@ -85,6 +85,8 @@ export interface ApostaCardData {
   sub_entries?: SubEntry[];
   /** Fonte de saldo: REAL ou FREEBET */
   fonte_saldo?: string | null;
+  /** Valor de freebet usado na aposta */
+  stake_freebet?: number | null;
   // Multi-currency consolidation
   /** Lucro consolidado na moeda do projeto */
   pl_consolidado?: number | null;
@@ -364,8 +366,10 @@ export function ApostaCard({
   const displayCurrency = isMultiCurrency ? (moedaConsolidacao || "BRL") : moeda;
   const isForeignCurrency = moeda !== "BRL";
   
-  // Detectar freebet: ÚNICA fonte de verdade = fonte_saldo
-  const isFreebet = aposta.fonte_saldo === 'FREEBET';
+  // Detectar freebet: fonte_saldo OU stake_freebet > 0 OU pernas com freebet
+  const isFreebet = aposta.fonte_saldo === 'FREEBET' 
+    || (aposta.stake_freebet != null && aposta.stake_freebet > 0)
+    || (aposta.pernas?.some(p => (p as any).fonte_saldo === 'FREEBET') ?? false);
   const boostPct = aposta.boost_percentual;
   
   // Calcular odd das seleções (produto das odds individuais)
