@@ -382,8 +382,8 @@ export function ProjetoFinancialMetricsCard({ projetoId }: ProjetoFinancialMetri
                         <span className="font-mono">{formatCurrency(metrics.saquesRecebidos)}</span>
                       </div>
                       <div className="flex justify-between gap-6">
-                        <span className="text-muted-foreground">Depósitos</span>
-                        <span className="font-mono">−{formatCurrency(metrics.depositosTotal)}</span>
+                        <span className="text-muted-foreground">Depósitos Reais</span>
+                        <span className="font-mono">−{formatCurrency(metrics.depositosReais)}</span>
                       </div>
                       <div className="border-t border-border/40 pt-1.5 mt-1">
                         <div className="flex justify-between gap-6 font-medium">
