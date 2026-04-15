@@ -369,18 +369,22 @@ export function FinancialDrillDownModal({
   // Unified row processing
   const processedRows = useMemo(() => {
     if (isBonus) {
-      return (bonusData || []).map((b) => ({
-        id: b.id,
-        tipo: b.bonus_type,
-        status: b.status,
-        valor: b.bonus_amount,
-        valorEfetivo: b.bonus_amount,
-        valorConfirmado: null as number | null,
-        moeda: b.currency,
-        data: b.credited_at,
-        origem: b.bookmaker_nome || "—",
-        descricao: null as string | null,
-      }));
+      return (bonusData || []).map((b) => {
+        const valorConsolidado = convertToConsolidationOficial(b.bonus_amount, b.currency || "BRL");
+        return {
+          id: b.id,
+          tipo: b.bonus_type,
+          status: b.status,
+          valor: b.bonus_amount,
+          valorNativo: b.bonus_amount,
+          valorConsolidado,
+          valorConfirmado: null as number | null,
+          moeda: b.currency,
+          data: b.credited_at,
+          origem: b.bookmaker_nome || "—",
+          descricao: null as string | null,
+        };
+      });
     }
 
     let rows = ledgerData || [];
