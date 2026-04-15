@@ -1727,6 +1727,22 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                   );
                 }))}
 
+              {/* Salvar e Continuar button for new partners */}
+              {!viewMode && parceiroId && !parceiro && bankAccounts.length > 0 && (
+                <div className="flex gap-3 mt-6">
+                  <Button
+                    type="button"
+                    onClick={saveBankAccountsAndContinue}
+                    disabled={loading || !bankAccounts.some(acc => acc.banco_id && acc.pix_keys.some(k => k.chave))}
+                    className="w-full"
+                  >
+                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Salvar e Continuar
+                  </Button>
+                </div>
+              )}
+            </TabsContent>
+
             <TabsContent value="crypto" className="space-y-4">
               
               {!viewMode && (
