@@ -687,6 +687,20 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
           totalValue={drillDownValue}
         />
       )}
+
+      {/* Lucro Projetado Modal */}
+      {showLucroProjetado && metrics && (
+        <LucroProjetadoModal
+          open={showLucroProjetado}
+          onOpenChange={setShowLucroProjetado}
+          projetoId={projetoId}
+          lucroProjetado={metrics.lucroFinanceiro}
+          saldoCasas={metrics.saldoCasas}
+          saquesRecebidos={metrics.saquesRecebidos}
+          saquesPendentes={metrics.saquesPendentes}
+          depositosTotal={metrics.depositosTotal}
+        />
+      )}
     </div>
   );
 }
