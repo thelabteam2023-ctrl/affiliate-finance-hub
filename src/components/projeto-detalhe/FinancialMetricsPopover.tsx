@@ -558,6 +558,41 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
         </div>
       </div>
 
+      {/* ─── Seção: Projeção de Lucro ─── */}
+      <div className="border-t border-border/40 pt-3 pb-3 space-y-1">
+        <SectionHeader icon={TrendingUp} label="Projeção de Lucro" iconClass="text-primary" />
+        <MetricRow
+          label="Saldo em Bookmakers"
+          value={formatCurrency(metrics.saldoCasas)}
+          tooltip={metrics.hasInvestorCapital ? `Interno: ${formatCurrency(metrics.saldoCasasInterno)} · Investidor: ${formatCurrency(metrics.saldoCasasInvestidor)}` : undefined}
+        />
+        <MetricRow
+          label="Saques Recebidos"
+          value={formatCurrency(metrics.saquesRecebidos)}
+        />
+        {metrics.saquesPendentes > 0 && (
+          <MetricRow
+            label="Saques Pendentes"
+            value={formatCurrency(metrics.saquesPendentes)}
+            colorClass="text-amber-500"
+          />
+        )}
+        <MetricRow
+          label="(−) Depósitos"
+          value={formatCurrency(metrics.depositosTotal)}
+          colorClass="text-muted-foreground"
+        />
+        <div className="border-t border-border/30 mt-1.5 pt-1.5">
+          <MetricRow
+            label="Lucro Projetado"
+            value={formatCurrency(metrics.lucroFinanceiro)}
+            colorClass={metrics.lucroFinanceiro >= 0 ? "text-emerald-500" : "text-red-500"}
+            bold
+            tooltip="Se todo saldo fosse sacado hoje, esse seria o lucro real. Deve convergir com o Lucro Operacional (KPI)."
+          />
+        </div>
+      </div>
+
       {/* ─── Seção 4: Retorno de Capital ─── */}
       <div className="border-t border-border/40 pt-3 space-y-2">
         {/* Break-even CONSOLIDADO */}
