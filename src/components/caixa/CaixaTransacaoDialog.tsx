@@ -694,19 +694,18 @@ export function CaixaTransacaoDialog({
     prevValor.current = valor;
   }, [valor, tipoMoeda, tipoTransacao, fluxoTransferencia]);
 
-  // TRANSFERENCIA CAIXA_PARCEIRO: quando moeda é selecionada, abrir parceiro destino
+  // TRANSFERENCIA CAIXA_PARCEIRO: quando moeda é selecionada, focar no campo Valor (não no parceiro)
+  // O parceiro será aberto automaticamente após o valor ser preenchido (via efeito na linha 682)
   useEffect(() => {
     if (tipoMoeda !== "FIAT") return;
     if (isResettingContext.current) return;
     if (tipoTransacao !== "TRANSFERENCIA" || fluxoTransferencia !== "CAIXA_PARCEIRO") return;
     if (!moeda) return;
-    // Only trigger when parceiro hasn't been selected yet
-    if (destinoParceiroId) return;
     
     setTimeout(() => {
-      parceiroDestinoSelectRef.current?.open();
+      valorFiatInputRef.current?.focus();
     }, 150);
-  }, [moeda, tipoMoeda, tipoTransacao, fluxoTransferencia, destinoParceiroId]);
+  }, [moeda, tipoMoeda, tipoTransacao, fluxoTransferencia]);
 
   useEffect(() => {
     if (open) {
