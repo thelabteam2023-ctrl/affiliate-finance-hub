@@ -1357,7 +1357,7 @@ export function SurebetModalRoot({
         const pernasParaRPC = allPernasFlat.map((flat, idx) => {
           const stake = parseFloat(flat.stake) || 0;
           const moeda = getBookmakerMoeda(flat.bookmaker_id);
-          const snapshotFields = getSnapshotFields(stake, moeda);
+          const snapshotFields = getSnapshotFields(stake, moeda, getEffectiveRate(moeda));
           
           return {
             id: flat.pernaId || null, // null = perna nova, UUID = perna existente
@@ -1516,7 +1516,7 @@ export function SurebetModalRoot({
         const pernasParaRPC = allPernasFlat.map((flat, idx) => {
           const stake = parseFloat(flat.stake) || 0;
           const moeda = getBookmakerMoeda(flat.bookmaker_id);
-          const snapshotFields = getSnapshotFields(stake, moeda);
+          const snapshotFields = getSnapshotFields(stake, moeda, getEffectiveRate(moeda));
           
           return {
             bookmaker_id: flat.bookmaker_id,
@@ -1658,7 +1658,7 @@ export function SurebetModalRoot({
       const apostasSimples = pernasValidas.map((entry) => {
         const stake = parseFloat(entry.stake) || 0;
         const moeda = getBookmakerMoeda(entry.bookmaker_id);
-        const snapshotFields = getSnapshotFields(stake, moeda);
+        const snapshotFields = getSnapshotFields(stake, moeda, getEffectiveRate(moeda));
         
         return {
           user_id: user.id,
