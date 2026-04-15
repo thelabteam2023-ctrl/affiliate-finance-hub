@@ -236,8 +236,28 @@ export default function Caixa() {
         .from("parceiros")
         .select("id, nome, is_caixa_operacional");
       
-      // Identify the caixa operacional partner and filter it from regular partners
-      const caixaParceiro = parceirosData?.find((p: any) => p.is_caixa_operacional === true);
+      // Identify the caixa operacional partner — auto-create if missing
+      let caixaParceiro = parceirosData?.find((p: any) => p.is_caixa_operacional === true);
+      if (!caixaParceiro && workspaceId) {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const userId = sessionData?.session?.user?.id;
+        if (userId) {
+          const { data: newCaixa } = await supabase
+            .from("parceiros")
+            .insert({
+              nome: "Caixa Operacional",
+              is_caixa_operacional: true,
+              workspace_id: workspaceId,
+              user_id: userId,
+              status: "ativo",
+            })
+            .select("id, nome, is_caixa_operacional")
+            .single();
+          if (newCaixa) {
+            caixaParceiro = newCaixa;
+          }
+        }
+      }
       setCaixaParceiroId(caixaParceiro?.id || null);
       
       const { data: contasData } = await supabase
