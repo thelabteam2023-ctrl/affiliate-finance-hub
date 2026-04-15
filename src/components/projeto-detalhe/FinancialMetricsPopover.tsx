@@ -246,6 +246,56 @@ function ExtrasCollapsible({ metrics, formatCurrency, onDrillDown }: { metrics: 
   );
 }
 
+function DepositosCollapsible({ metrics, formatCurrency, onDrillDown }: { metrics: any; formatCurrency: (v: number) => string; onDrillDown?: (key: string, value: number) => void }) {
+  const [open, setOpen] = useState(false);
+  const hasBreakdown = metrics.depositosReais > 0 || metrics.depositosVirtuais > 0;
+
+  return (
+    <div>
+      <button
+        onClick={() => hasBreakdown && setOpen(!open)}
+        className={`flex items-center justify-between gap-4 w-full ${hasBreakdown ? "cursor-pointer" : "cursor-default"}`}
+      >
+        <span className="text-[11px] font-medium text-foreground flex items-center gap-1">
+          Total Depósitos
+          {hasBreakdown && (
+            <ChevronDown className={`h-3 w-3 text-muted-foreground/60 transition-transform ${open ? "rotate-180" : ""}`} />
+          )}
+        </span>
+        <span
+          className="text-[11px] font-mono tabular-nums font-bold text-foreground cursor-pointer hover:text-primary transition-colors"
+          onClick={(e) => { e.stopPropagation(); onDrillDown?.("depositosTotal", metrics.depositosTotal); }}
+        >
+          {formatCurrency(metrics.depositosTotal)}
+        </span>
+      </button>
+      {open && hasBreakdown && (
+        <div className="mt-1 space-y-0.5 pl-2 border-l-2 border-border/30 ml-1">
+          {metrics.depositosReais > 0 && (
+            <MetricRow
+              label="Depósitos Reais"
+              value={formatCurrency(metrics.depositosReais)}
+              indent
+              tooltip="Dinheiro efetivamente transferido para as casas neste projeto"
+              onClick={() => onDrillDown?.("depositosReais", metrics.depositosReais)}
+            />
+          )}
+          {metrics.depositosVirtuais > 0 && (
+            <MetricRow
+              label="Baseline de Vinculação"
+              value={formatCurrency(metrics.depositosVirtuais)}
+              indent
+              colorClass="text-muted-foreground"
+              tooltip="Saldo residual capturado ao vincular casas ao projeto (ex: diferenças cambiais pré-vínculo). Não é dinheiro novo — é a baseline contábil."
+              onClick={() => onDrillDown?.("depositosVirtuais", metrics.depositosVirtuais)}
+            />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** Helper to compute break-even from a timeline */
 function computeBreakEven(
   timeline: { valor: number; valor_confirmado?: number | null; moeda: string; data_transacao: string; tipo_transacao: string }[],
