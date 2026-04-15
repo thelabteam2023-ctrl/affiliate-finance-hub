@@ -1230,7 +1230,8 @@ export function SurebetDialogTable({
       const pernasToSave: SurebetPerna[] = pernasPreenchidas.map((entry) => {
         const mainStake = parseFloat(entry.stake) || 0;
         const mainMoeda = getBookmakerMoeda(entry.bookmaker_id);
-        const mainSnapshotFields = getSnapshotFields(mainStake, mainMoeda);
+        const effectiveRate = getEffectiveRate(mainMoeda);
+        const mainSnapshotFields = getSnapshotFields(mainStake, mainMoeda, effectiveRate.rate);
         
         return {
           selecao: entry.selecao,
@@ -1337,7 +1338,8 @@ export function SurebetDialogTable({
       const apostasSimples = pernasValidas.map((entry) => {
         const stake = parseFloat(entry.stake) || 0;
         const moeda = getBookmakerMoeda(entry.bookmaker_id);
-        const snapshotFields = getSnapshotFields(stake, moeda);
+        const effectiveRate = getEffectiveRate(moeda);
+        const snapshotFields = getSnapshotFields(stake, moeda, effectiveRate.rate);
         
         return {
           user_id: user.id,

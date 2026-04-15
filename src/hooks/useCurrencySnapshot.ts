@@ -188,11 +188,16 @@ export function useCurrencySnapshot(props?: UseCurrencySnapshotProps) {
   }, [isForeignCurrency, convertToBRL, getCurrentRate]);
 
   /**
-   * Retorna os campos de snapshot para inserção no banco
+   * Retorna os campos de snapshot para inserção no banco.
+   * 
+   * @param overrideRate - Se fornecido, usa essa cotação (ex: Cotação de Trabalho)
+   *   em vez da cotação da API. Isso garante que o snapshot gravado no banco
+   *   seja idêntico ao valor usado nos cálculos do formulário.
    */
   const getSnapshotFields = useCallback((
     valor: number,
-    moeda: SupportedCurrency
+    moeda: SupportedCurrency,
+    overrideRate?: number | null
   ): {
     moeda_operacao: SupportedCurrency;
     cotacao_snapshot: number | null;
@@ -208,6 +213,18 @@ export function useCurrencySnapshot(props?: UseCurrencySnapshotProps) {
       };
     }
     
+    // Se recebeu override (ex: cotação de trabalho), usar diretamente
+    if (overrideRate && overrideRate > 0) {
+      const now = new Date().toISOString();
+      return {
+        moeda_operacao: moeda,
+        cotacao_snapshot: overrideRate,
+        cotacao_snapshot_at: now,
+        valor_brl_referencia: valor * overrideRate,
+      };
+    }
+    
+    // Fallback: usar cotação da API
     const snapshot = createSnapshot(valor, moeda);
     return {
       moeda_operacao: moeda,
