@@ -93,8 +93,13 @@ export function SaldosFiatCard({ caixaParceiroId, formatCurrency, onDataChanged 
   };
 
   const handleAddConta = async () => {
-    if (!caixaParceiroId || !novaConta.titular) {
-      toast({ title: "Preencha os campos obrigatórios", variant: "destructive" });
+    if (!caixaParceiroId) {
+      console.error("[SaldosFiatCard] caixaParceiroId is null — cannot create bank account without Caixa Operacional partner");
+      toast({ title: "Erro de configuração", description: "Parceiro do Caixa Operacional não encontrado. Recarregue a página.", variant: "destructive" });
+      return;
+    }
+    if (!novaConta.titular.trim()) {
+      toast({ title: "Preencha os campos obrigatórios", description: "O campo Titular é obrigatório.", variant: "destructive" });
       return;
     }
     try {
