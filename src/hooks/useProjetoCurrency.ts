@@ -65,7 +65,7 @@ export interface ProjectCurrencyReturn {
  * Hook principal para formatação baseada no projeto
  */
 export function useProjetoCurrency(projetoId: string | undefined): ProjectCurrencyReturn {
-  const { cotacaoUSD, cotacaoEUR, cotacaoGBP, loading: loadingCotacao } = useCotacoes();
+  const { cotacaoUSD, cotacaoEUR, cotacaoGBP, cotacaoMYR, cotacaoMXN, cotacaoARS, cotacaoCOP, loading: loadingCotacao } = useCotacoes();
 
   // Buscar configuração do projeto - SINCRONIZADO COM useProjetoConsolidacao
   const { data: projetoConfig, isLoading: loadingConfig } = useQuery({
@@ -149,6 +149,38 @@ export function useProjetoCurrency(projetoId: string | undefined): ProjectCurren
       return valor * (cotacaoGBP / cotacaoUsdToUse);
     }
 
+    // MYR -> moeda de consolidação
+    if (moedaOrigem === "MYR") {
+      if (moedaConsolidacao === "BRL") {
+        return valor * cotacaoMYR;
+      }
+      return valor * (cotacaoMYR / cotacaoUsdToUse);
+    }
+
+    // MXN -> moeda de consolidação
+    if (moedaOrigem === "MXN") {
+      if (moedaConsolidacao === "BRL") {
+        return valor * cotacaoMXN;
+      }
+      return valor * (cotacaoMXN / cotacaoUsdToUse);
+    }
+
+    // ARS -> moeda de consolidação
+    if (moedaOrigem === "ARS") {
+      if (moedaConsolidacao === "BRL") {
+        return valor * cotacaoARS;
+      }
+      return valor * (cotacaoARS / cotacaoUsdToUse);
+    }
+
+    // COP -> moeda de consolidação
+    if (moedaOrigem === "COP") {
+      if (moedaConsolidacao === "BRL") {
+        return valor * cotacaoCOP;
+      }
+      return valor * (cotacaoCOP / cotacaoUsdToUse);
+    }
+
     // Crypto (USDT, USDC, etc - assumindo paridade 1:1 com USD)
     if (["USDT", "USDC", "BTC", "ETH", "BNB", "TRX", "SOL", "MATIC", "ADA"].includes(moedaOrigem)) {
       if (moedaConsolidacao === "USD") {
@@ -158,7 +190,7 @@ export function useProjetoCurrency(projetoId: string | undefined): ProjectCurren
     }
 
     return valor;
-  }, [moedaConsolidacao, cotacaoEUR, cotacaoGBP]);
+  }, [moedaConsolidacao, cotacaoEUR, cotacaoGBP, cotacaoMYR, cotacaoMXN, cotacaoARS, cotacaoCOP]);
 
   // Converter usando cotação ativa (Trabalho se configurada, senão Oficial)
   // Ideal para CALCULADORAS e FORMULÁRIOS
