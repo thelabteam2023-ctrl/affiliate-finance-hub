@@ -235,6 +235,9 @@ export default function CentralOperacoes() {
   const [selectedCasaConciliacao, setSelectedCasaConciliacao] = useState<typeof casasPendentesConciliacao[0] | null>(null);
   const [selectedProjetoVincular, setSelectedProjetoVincular] = useState("");
   const [vincularConciliacaoLoading, setVincularConciliacaoLoading] = useState(false);
+  // Conciliação direta modal
+  const [conciliacaoDirectOpen, setConciliacaoDirectOpen] = useState(false);
+  const [conciliacaoDirectBookmaker, setConciliacaoDirectBookmaker] = useState<{ id: string; nome: string }>({ id: "", nome: "" });
   const [mainTab, setMainTabState] = useState<'financeiro' | 'contas' | 'ocorrencias' | 'alertas'>(() => {
     const saved = localStorage.getItem('central-operacoes-main-tab');
     if (role === 'operator') return 'financeiro';
