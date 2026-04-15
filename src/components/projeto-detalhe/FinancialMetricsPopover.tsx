@@ -552,7 +552,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
       fluxoInternoFinal: beInterno.fluxoFinal,
       hasInvestorCapital,
     };
-  }, [rawMetrics, convertToConsolidationOficial, cotacaoOficialUSD]);
+  }, [rawMetrics, convertToConsolidationOficial, cotacaoOficialUSD, moedaConsolidacao]);
 
   if (isLoading || !metrics) {
     return (
