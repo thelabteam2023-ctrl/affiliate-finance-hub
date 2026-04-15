@@ -501,7 +501,7 @@ export function PerformancePorCasaCard({
                     <div className="text-right">
                       <p className="text-sm font-mono">{item.totalOperacoes}</p>
                       <p className="text-xs text-muted-foreground">
-                        {item.greens}G / {item.reds}R
+                        {(item.greens > 0 || item.reds > 0) ? `${item.greens}G / ${item.reds}R` : '–'}
                       </p>
                     </div>
                     <div className="text-right">
