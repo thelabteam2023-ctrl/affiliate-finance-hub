@@ -85,7 +85,7 @@ export function ProjectCurrencyProvider({ projetoId, children }: ProjectCurrency
     const cotacaoTrabalho = projetoConfig?.cotacao_trabalho || null;
     
     // REGRA DE COTAÇÃO PARA KPIs:
-    // Prioridade 1: Cotação oficial (FastForex/PTAX) - SEMPRE primária
+    // Prioridade 1: Cotação oficial (Binance/PTAX) - SEMPRE primária
     // Prioridade 2: Cotação de trabalho - FALLBACK se API indisponível
     // Nota: Cotação de trabalho será usada em formulários para conversão entre operações
     let cotacaoAtual = cotacaoUSD;

@@ -229,7 +229,7 @@ export function ExchangeRatesProvider({ children }: ExchangeRatesProviderProps) 
           newRates[rateKey] = Number(row.rate);
           
           if (sourceKey) {
-            // Parse a source do banco (ex: "FASTFOREX", "PTAX_FALLBACK")
+            // Parse a source do banco (ex: "BINANCE", "PTAX_FALLBACK")
             newSources[sourceKey] = parseSource(row.source);
           }
           
