@@ -178,7 +178,29 @@ export function getConsolidatedLucroDirect(
   convertToConsolidation?: ConvertFn,
   moedaConsolidacao?: string,
 ): number {
-  // Multicurrency com pernas disponíveis: converter cada perna individualmente
+  // PRIORIDADE 1: pl_consolidado pré-calculado na moeda correta (via RPC com snapshot rates)
+  // Isso garante valor estável e reprodutível para operações multicurrency
+  if (
+    typeof aposta.pl_consolidado === "number" &&
+    aposta.consolidation_currency &&
+    moedaConsolidacao &&
+    aposta.consolidation_currency === moedaConsolidacao
+  ) {
+    return aposta.pl_consolidado;
+  }
+
+  // PRIORIDADE 1b: pl_consolidado em outra moeda → converter
+  if (
+    typeof aposta.pl_consolidado === "number" &&
+    aposta.consolidation_currency &&
+    moedaConsolidacao &&
+    aposta.consolidation_currency !== moedaConsolidacao &&
+    convertToConsolidation
+  ) {
+    return convertToConsolidation(aposta.pl_consolidado, aposta.consolidation_currency);
+  }
+
+  // PRIORIDADE 2: Multicurrency com pernas disponíveis mas sem pl_consolidado
   if (aposta.is_multicurrency && pernas && pernas.length > 0 && convertToConsolidation) {
     return pernas.reduce((acc, p) => {
       if (p.resultado && p.resultado === 'PENDENTE') return acc;
@@ -213,7 +235,28 @@ export function getConsolidatedStakeDirect(
   convertToConsolidation?: ConvertFn,
   moedaConsolidacao?: string,
 ): number {
-  // Multicurrency com pernas disponíveis: converter cada perna individualmente
+  // PRIORIDADE 1: stake_consolidado pré-calculado na moeda correta
+  if (
+    typeof aposta.stake_consolidado === "number" &&
+    aposta.consolidation_currency &&
+    moedaConsolidacao &&
+    aposta.consolidation_currency === moedaConsolidacao
+  ) {
+    return aposta.stake_consolidado;
+  }
+
+  // PRIORIDADE 1b: stake_consolidado em outra moeda → converter
+  if (
+    typeof aposta.stake_consolidado === "number" &&
+    aposta.consolidation_currency &&
+    moedaConsolidacao &&
+    aposta.consolidation_currency !== moedaConsolidacao &&
+    convertToConsolidation
+  ) {
+    return convertToConsolidation(aposta.stake_consolidado, aposta.consolidation_currency);
+  }
+
+  // PRIORIDADE 2: Multicurrency com pernas disponíveis mas sem stake_consolidado
   if (aposta.is_multicurrency && pernas && pernas.length > 0 && convertToConsolidation) {
     return pernas.reduce((acc, p) => {
       const moeda = p.moeda || 'BRL';
