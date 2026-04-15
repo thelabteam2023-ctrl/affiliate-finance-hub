@@ -53,6 +53,7 @@ import { CasasLimitadasSmartFilter } from "@/components/central-operacoes/CasasL
 import { SaqueProcessamentoCardGrid } from "@/components/central-operacoes/SaqueProcessamentoCardGrid";
 import { ParceriaEncerramentoCardGrid } from "@/components/central-operacoes/ParceriaEncerramentoCardGrid";
 import { ConciliacaoPendenteCardGrid } from "@/components/central-operacoes/ConciliacaoPendenteCardGrid";
+import { ConciliacaoDirectModal } from "@/components/caixa/ConciliacaoDirectModal";
 import { CasasLimitadasCardGrid } from "@/components/central-operacoes/CasasLimitadasCardGrid";
 import { CasasDecisaoCardGrid } from "@/components/central-operacoes/CasasDecisaoCardGrid";
 import { ParticipacoesCardGrid } from "@/components/central-operacoes/ParticipacoesCardGrid";
@@ -234,6 +235,9 @@ export default function CentralOperacoes() {
   const [selectedCasaConciliacao, setSelectedCasaConciliacao] = useState<typeof casasPendentesConciliacao[0] | null>(null);
   const [selectedProjetoVincular, setSelectedProjetoVincular] = useState("");
   const [vincularConciliacaoLoading, setVincularConciliacaoLoading] = useState(false);
+  // Conciliação direta modal
+  const [conciliacaoDirectOpen, setConciliacaoDirectOpen] = useState(false);
+  const [conciliacaoDirectBookmaker, setConciliacaoDirectBookmaker] = useState<{ id: string; nome: string }>({ id: "", nome: "" });
   const [mainTab, setMainTabState] = useState<'financeiro' | 'contas' | 'ocorrencias' | 'alertas'>(() => {
     const saved = localStorage.getItem('central-operacoes-main-tab');
     if (role === 'operator') return 'financeiro';
@@ -441,7 +445,7 @@ export default function CentralOperacoes() {
             tooltip={{ title: "Conciliação Obrigatória", description: "Casas com transações pendentes não podem ser utilizadas para apostas ou bônus até que a conciliação seja realizada.", flow: "Transações pendentes (depósitos, saques em processamento) devem ser conciliadas para liberar a casa para operação." }}>
             <ConciliacaoPendenteCardGrid
               casas={casasPendentesConciliacao}
-              onConciliar={(casa) => navigate(`/caixa?tab=conciliacao&bookmaker=${casa.bookmaker_id}`)}
+              onConciliar={(casa) => { setConciliacaoDirectBookmaker({ id: casa.bookmaker_id, nome: casa.bookmaker_nome }); setConciliacaoDirectOpen(true); }}
               onVincular={(casa) => { setSelectedCasaConciliacao(casa); setSelectedProjetoVincular(""); setVincularConciliacaoOpen(true); }}
             />
           </OperationCard>
@@ -961,6 +965,15 @@ export default function CentralOperacoes() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Conciliação direta modal */}
+      <ConciliacaoDirectModal
+        open={conciliacaoDirectOpen}
+        onOpenChange={setConciliacaoDirectOpen}
+        bookmakerId={conciliacaoDirectBookmaker.id}
+        bookmakerNome={conciliacaoDirectBookmaker.nome}
+        onSuccess={() => refetchCentral()}
+      />
     </div>
   );
 }
