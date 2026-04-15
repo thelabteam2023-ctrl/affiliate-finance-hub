@@ -244,10 +244,10 @@ export function ProjetoFinancialMetricsCard({ projetoId }: ProjetoFinancialMetri
 
     // Créditos Extras = receita operacional (bônus, cashback, giros, ajustes, FX)
     const extrasPositivos = metrics.cashbackLiquido + metrics.girosGratis + metrics.ajustes + metrics.ganhoConfirmacao + metrics.ganhoFx;
-    // Fluxo Líquido Ajustado = Saques - Depósitos (fórmula canônica de fluxo de caixa)
-    const fluxoLiquidoAjustado = metrics.saquesRecebidos - metrics.depositosTotal;
-    // Lucro Operacional Puro = Patrimônio - Depósitos
-    const lucroOperacionalPuro = (metrics.saldoCasas + metrics.saquesRecebidos) - metrics.depositosTotal;
+    // Fluxo Líquido Ajustado = Saques - Depósitos REAIS (dinheiro que saiu do caixa)
+    const fluxoLiquidoAjustado = metrics.saquesRecebidos - metrics.depositosReais;
+    // Lucro Operacional Puro = Patrimônio - Depósitos REAIS
+    const lucroOperacionalPuro = (metrics.saldoCasas + metrics.saquesRecebidos) - metrics.depositosReais;
 
     const breakEvenReached = metrics.fluxoCaixaLiquido >= 0;
 
