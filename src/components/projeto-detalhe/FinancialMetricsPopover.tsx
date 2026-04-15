@@ -483,8 +483,12 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
     const estrategiaMap: Record<string, number> = {};
     let lucroApostasPuro = 0;
     for (const a of rawMetrics.apostasPorEstrategia) {
-      const lucro = a.pl_consolidado != null
-        ? a.pl_consolidado
+      // CRÍTICO: só usar pl_consolidado se a moeda de consolidação da aposta
+      // bater com a moeda de consolidação do projeto. Caso contrário, converter
+      // lucro_prejuizo (na moeda_operacao) via cotação oficial.
+      const usePl = a.pl_consolidado != null && a.consolidation_currency === moedaConsolidacao;
+      const lucro = usePl
+        ? a.pl_consolidado!
         : convertToConsolidationOficial(a.lucro_prejuizo ?? 0, a.moeda_operacao || 'BRL');
       lucroApostasPuro += lucro;
       const key = a.estrategia || 'OUTROS';
