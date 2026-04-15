@@ -457,31 +457,10 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
       {/* ─── Seção 1: Fluxo de Caixa ─── */}
       <div className="space-y-1 pb-3">
         <SectionHeader icon={ArrowRightLeft} label="Fluxo de Caixa" />
-        {metrics.depositosReais > 0 && (
-          <MetricRow 
-            label="Depósitos Reais" 
-            value={formatCurrency(metrics.depositosReais)}
-            indent
-            tooltip="Dinheiro efetivamente transferido para as casas neste projeto"
-            onClick={() => openDrillDown("depositosReais", metrics.depositosReais)}
-          />
-        )}
-        {metrics.depositosVirtuais > 0 && (
-          <MetricRow 
-            label="Baseline de Vinculação" 
-            value={formatCurrency(metrics.depositosVirtuais)}
-            indent
-            colorClass="text-muted-foreground"
-            tooltip="Saldo residual capturado ao vincular casas ao projeto (ex: diferenças cambiais pré-vínculo). Não é dinheiro novo — é a baseline contábil."
-            onClick={() => openDrillDown("depositosVirtuais", metrics.depositosVirtuais)}
-          />
-        )}
-        <MetricRow 
-          label="Total Depósitos" 
-          value={formatCurrency(metrics.depositosTotal)}
-          bold
-          tooltip={metrics.hasInvestorCapital ? `Interno: ${formatCurrency(metrics.depositosInterno)} · Investidor: ${formatCurrency(metrics.depositosInvestidor)}` : "Soma de depósitos reais + baseline de vinculação"}
-          onClick={() => openDrillDown("depositosTotal", metrics.depositosTotal)}
+        <DepositosCollapsible
+          metrics={metrics}
+          formatCurrency={formatCurrency}
+          onDrillDown={openDrillDown}
         />
         {hasExtras && (
           <ExtrasCollapsible metrics={metrics} formatCurrency={formatCurrency} onDrillDown={openDrillDown} />
