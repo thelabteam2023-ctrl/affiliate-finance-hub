@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Building2, Gift, TrendingUp, Target, Percent } from "lucide-react";
+import { Building2, Gift, Target } from "lucide-react";
 import { BookmakerFreebetStats } from "./types";
 
 interface FreebetResumoPorCasaProps {
