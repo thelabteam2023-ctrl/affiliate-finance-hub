@@ -405,15 +405,20 @@ export default function Caixa() {
 
       // Fetch partner bank accounts balance BY CURRENCY (EXCLUDING caixa operacional to avoid double-counting)
       // FIX: Agrupar por moeda ao invés de somar cegamente BRL + USD + EUR
-      // FIX: Filtrar por workspace_id para isolar dados do workspace ativo
-      const contasQuery = supabase
-        .from("v_saldo_parceiro_contas")
-        .select("moeda, saldo")
-        .eq("workspace_id", workspaceId);
-      if (caixaParceiro?.id) {
-        contasQuery.neq("parceiro_id", caixaParceiro.id);
+      // FIX: Filtrar por parceiros do workspace ativo para isolar dados
+      const parceirosDoWorkspace = parceirosData?.filter((p: any) => !p.is_caixa_operacional).map((p: any) => p.id) || [];
+      let contasSaldoData: any[] = [];
+      if (parceirosDoWorkspace.length > 0) {
+        const contasQuery = supabase
+          .from("v_saldo_parceiro_contas")
+          .select("moeda, saldo")
+          .in("parceiro_id", parceirosDoWorkspace);
+        if (caixaParceiro?.id) {
+          contasQuery.neq("parceiro_id", caixaParceiro.id);
+        }
+        const result = await contasQuery;
+        contasSaldoData = result.data || [];
       }
-      const { data: contasSaldoData } = await contasQuery;
       
       const contasPorMoeda: Record<string, number> = {};
       (contasSaldoData || []).forEach((row: any) => {
@@ -427,15 +432,19 @@ export default function Caixa() {
       );
 
       // Fetch partner wallets balance in USD (EXCLUDING caixa operacional to avoid double-counting)
-      // FIX: Filtrar por workspace_id para isolar dados do workspace ativo
-      const walletsQuery = supabase
-        .from("v_saldo_parceiro_wallets")
-        .select("saldo_usd")
-        .eq("workspace_id", workspaceId);
-      if (caixaParceiro?.id) {
-        walletsQuery.neq("parceiro_id", caixaParceiro.id);
+      // FIX: Filtrar por parceiros do workspace ativo para isolar dados
+      let walletsSaldoData: any[] = [];
+      if (parceirosDoWorkspace.length > 0) {
+        const walletsQuery = supabase
+          .from("v_saldo_parceiro_wallets")
+          .select("saldo_usd")
+          .in("parceiro_id", parceirosDoWorkspace);
+        if (caixaParceiro?.id) {
+          walletsQuery.neq("parceiro_id", caixaParceiro.id);
+        }
+        const result = await walletsQuery;
+        walletsSaldoData = result.data || [];
       }
-      const { data: walletsSaldoData } = await walletsQuery;
       
       const totalWallets = walletsSaldoData?.reduce((sum, w) => sum + Math.max(0, w.saldo_usd || 0), 0) || 0;
       setSaldoWalletsParceiros(totalWallets);
