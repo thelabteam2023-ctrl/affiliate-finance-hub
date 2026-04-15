@@ -651,16 +651,23 @@ export function FinancialDrillDownModal({
                       <p className="text-muted-foreground/70 mt-1 font-mono text-[9px]">{row.id.slice(0, 8)}…</p>
                     </TooltipContent>
                   </Tooltip>
-                  <span className={`font-mono tabular-nums text-right font-medium ${
-                    aggregations.isGanhoConf 
-                      ? (row.valorEfetivo >= 0 ? "text-emerald-500" : "text-red-500")
-                      : ""
-                  }`}>
-                    {aggregations.isGanhoConf 
-                      ? formatCurrency(row.valorEfetivo)
-                      : formatCurrency(Math.abs(row.valorEfetivo))
-                    }
-                  </span>
+                  <div className="text-right">
+                    <span className={`font-mono tabular-nums font-medium ${
+                      aggregations.isGanhoConf 
+                        ? (row.valorEfetivo >= 0 ? "text-emerald-500" : "text-red-500")
+                        : ""
+                    }`}>
+                      {aggregations.isGanhoConf 
+                        ? formatCurrency(row.valorEfetivo)
+                        : formatCurrency(Math.abs(row.valorEfetivo))
+                      }
+                    </span>
+                    {row.moeda && row.moeda !== "BRL" && (
+                      <div className="text-[9px] text-muted-foreground mt-0.5">
+                        {getCurrencySymbol(row.moeda)} {Math.abs(row.valorEfetivo).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {row.moeda}
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
