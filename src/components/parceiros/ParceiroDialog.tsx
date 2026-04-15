@@ -432,6 +432,8 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
     setCheckingCpf(false);
     setCheckingTelefone(false);
     setHasSavedDuringSession(false);
+    setExpandedBankIndex(null);
+    setExpandedWalletIndex(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
