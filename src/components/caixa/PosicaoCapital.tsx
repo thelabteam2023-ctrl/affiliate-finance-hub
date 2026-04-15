@@ -349,7 +349,7 @@ export function PosicaoCapital({
                       <span className="text-xs text-muted-foreground">{percentual}%</span>
                     </div>
                     <div className="flex items-center justify-between mt-0.5">
-                      {item.detailItems.length > 1 ? (
+                      {item.detailItems.some(d => d.moeda !== 'BRL') ? (
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -365,8 +365,6 @@ export function PosicaoCapital({
                                 <div className="grid grid-cols-2 gap-2">
                                   {item.detailItems.map((d, i) => {
                                     const sourceInfo = d.moeda !== 'BRL' && d.moeda !== 'CRYPTO' ? getSourceInfo(d.moeda) : null;
-                                    // NOVA LÓGICA: só mostra ⚠️ se REALMENTE usando fallback hardcoded
-                                    // Se veio do banco/edge/localStorage, é confiável mesmo que source diga "FALLBACK"
                                     const isRealFallback = sourceInfo?.isRealFallback === true;
                                     const isBRL = d.moeda === 'BRL';
                                     const isCrypto = d.moeda === 'CRYPTO';
@@ -405,7 +403,7 @@ export function PosicaoCapital({
                                         
                                         {/* Linha 3: Saldo nativo */}
                                         <div className="text-sm font-mono font-medium text-foreground text-center break-all leading-tight">
-                                          {d.symbol} {d.valorOriginal.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
+                                          {d.symbol} {d.valorOriginal.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}
                                         </div>
                                         
                                         {/* Linha 4: Aproximação em BRL */}
