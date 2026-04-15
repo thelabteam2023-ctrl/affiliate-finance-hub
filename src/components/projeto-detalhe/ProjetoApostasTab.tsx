@@ -651,7 +651,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
           workspace_id, moeda_operacao, stake_consolidado, pl_consolidado,
           valor_brl_referencia, lucro_prejuizo_brl_referencia,
           apostas_pernas (
-            id, selecao, selecao_livre, odd, stake, resultado, lucro_prejuizo, bookmaker_id, moeda, ordem
+            id, selecao, selecao_livre, odd, stake, resultado, lucro_prejuizo, bookmaker_id, moeda, ordem, fonte_saldo
           )
         `;
 
