@@ -512,7 +512,7 @@ export function FinancialDrillDownModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col p-0 gap-0">
+      <DialogContent className="max-w-2xl w-[95vw] sm:w-full max-h-[85vh] sm:max-h-[80vh] flex flex-col p-0 gap-0 overflow-hidden">
         {/* Header */}
         <DialogHeader className="p-4 pb-3 border-b border-border/40">
           <DialogTitle className="text-sm font-bold flex items-center gap-2">
@@ -535,7 +535,7 @@ export function FinancialDrillDownModal({
           )}
 
           {/* Aggregation summary */}
-          <div className="flex flex-wrap items-center gap-3 mt-2">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-2">
             <div className="flex items-center gap-1.5 bg-muted/50 rounded-md px-2.5 py-1.5">
               <span className="text-[10px] text-muted-foreground">{aggregations.count} transações</span>
             </div>
@@ -600,7 +600,7 @@ export function FinancialDrillDownModal({
         </div>
 
         {/* Table */}
-        <ScrollArea className="flex-1 min-h-0">
+        <ScrollArea className="flex-1 min-h-0 overflow-auto">
           {isLoading ? (
             <div className="p-4 space-y-2">
               {Array.from({ length: 8 }).map((_, i) => (
@@ -612,9 +612,9 @@ export function FinancialDrillDownModal({
               Nenhuma transação encontrada
             </div>
           ) : (
-            <div className="min-w-0">
+            <div className="min-w-[500px]">
               {/* Table header */}
-              <div className="grid grid-cols-[minmax(90px,1fr)_80px_80px_minmax(100px,1.5fr)_100px] gap-2 px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground border-b border-border/20 sticky top-0 bg-background z-10">
+              <div className="grid grid-cols-[minmax(80px,1fr)_70px_70px_minmax(90px,1.5fr)_100px] sm:grid-cols-[minmax(90px,1fr)_80px_80px_minmax(100px,1.5fr)_100px] gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground border-b border-border/20 sticky top-0 bg-background z-10">
                 <button className="flex items-center gap-1 text-left" onClick={() => toggleSort("data")}>
                   Data <SortIcon field="data" />
                 </button>
@@ -630,7 +630,7 @@ export function FinancialDrillDownModal({
               {filteredRows.map((row) => (
                 <div
                   key={row.id}
-                  className="grid grid-cols-[minmax(90px,1fr)_80px_80px_minmax(100px,1.5fr)_100px] gap-2 px-4 py-2 text-[11px] border-b border-border/10 hover:bg-muted/30 transition-colors items-center"
+                  className="grid grid-cols-[minmax(80px,1fr)_70px_70px_minmax(90px,1.5fr)_100px] sm:grid-cols-[minmax(90px,1fr)_80px_80px_minmax(100px,1.5fr)_100px] gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 text-[11px] border-b border-border/10 hover:bg-muted/30 transition-colors items-center"
                 >
                   <div className="flex flex-col">
                     <span className="font-medium">
