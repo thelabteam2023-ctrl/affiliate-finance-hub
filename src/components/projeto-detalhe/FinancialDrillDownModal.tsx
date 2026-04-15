@@ -512,7 +512,7 @@ export function FinancialDrillDownModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col p-0 gap-0">
+      <DialogContent className="max-w-2xl w-[95vw] sm:w-full max-h-[85vh] sm:max-h-[80vh] flex flex-col p-0 gap-0 overflow-hidden">
         {/* Header */}
         <DialogHeader className="p-4 pb-3 border-b border-border/40">
           <DialogTitle className="text-sm font-bold flex items-center gap-2">
