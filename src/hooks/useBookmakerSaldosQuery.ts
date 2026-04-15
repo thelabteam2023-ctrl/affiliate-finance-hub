@@ -184,6 +184,7 @@ export function useInvalidateBookmakerSaldos() {
       CAPACIDADE_APOSTA: "capacidade-aposta",
       BOOKMAKERS_DISPONIVEIS: "bookmakers-disponiveis",
       BOOKMAKERS: "bookmakers",
+      FREEBET_ESTOQUE: "freebet-estoque",
     };
 
     const invalidations: Promise<void>[] = [];
@@ -240,6 +241,11 @@ export function useInvalidateBookmakerSaldos() {
         queryClient.invalidateQueries({ queryKey: [KEYS.PARCEIRO_FINANCEIRO] }),
         queryClient.invalidateQueries({ queryKey: [KEYS.PARCEIRO_CONSOLIDADO] })
       );
+      
+      // 7. Freebet estoque (aba Promoções) - CRÍTICO para refletir freebets consumidas
+      invalidations.push(
+        queryClient.invalidateQueries({ queryKey: [KEYS.FREEBET_ESTOQUE, projetoId] })
+      );
     } else {
       // Invalidação global
       invalidations.push(
@@ -251,7 +257,8 @@ export function useInvalidateBookmakerSaldos() {
         queryClient.invalidateQueries({ queryKey: [KEYS.PARCEIRO_CONSOLIDADO] }),
         queryClient.invalidateQueries({ queryKey: ["bonus-bets-juice"] }),
         queryClient.invalidateQueries({ queryKey: ["bonus-bets-summary"] }),
-        queryClient.invalidateQueries({ queryKey: ["bonus-analytics"] })
+        queryClient.invalidateQueries({ queryKey: ["bonus-analytics"] }),
+        queryClient.invalidateQueries({ queryKey: [KEYS.FREEBET_ESTOQUE] })
       );
     }
 
@@ -259,7 +266,7 @@ export function useInvalidateBookmakerSaldos() {
     await Promise.all(invalidations);
     
     console.log(
-      `[useInvalidateBookmakerSaldos] Invalidated FINANCIAL_STATE`,
+      `[useInvalidateBookmakerSaldos] Invalidated FINANCIAL_STATE + freebet-estoque`,
       { projetoId: projetoId || 'global', queriesInvalidated: invalidations.length }
     );
   };
