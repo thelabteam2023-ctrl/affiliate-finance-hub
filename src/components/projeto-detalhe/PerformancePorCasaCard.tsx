@@ -79,6 +79,7 @@ interface PerformanceMetrics {
   lucro: number;
   greens: number;
   reds: number;
+  voids: number;
   roi: number;
   /** Breakdown de lucro por moeda original (para tooltip multi-moeda) */
   lucroBreakdown?: Record<string, number>;
