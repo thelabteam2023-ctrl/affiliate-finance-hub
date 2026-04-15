@@ -26,7 +26,7 @@ import { ExchangeSelect } from "./ExchangeSelect";
 import { BankAccountCard } from "./BankAccountCard";
 import { CryptoWalletCard } from "./CryptoWalletCard";
 import { validateCPF, formatCPF, formatCEP, formatAgencia, formatConta } from "@/lib/validators";
-import { DatePicker } from "@/components/ui/date-picker";
+import { DatePickerInput } from "@/components/ui/date-picker-input";
 
 interface PixKey {
   tipo: string;
@@ -1305,11 +1305,11 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                 </div>
                 <div>
                   <Label htmlFor="dataNascimento">Data de Nascimento <span className="text-xs text-muted-foreground font-normal">(opcional)</span></Label>
-                  <DatePicker
+                  <DatePickerInput
                     value={dataNascimento}
                     onChange={setDataNascimento}
                     disabled={loading || viewMode}
-                    placeholder="Selecione a data"
+                    minAge={18}
                   />
                 </div>
                 <div>

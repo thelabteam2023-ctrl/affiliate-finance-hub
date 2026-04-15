@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
+import { DatePickerInput } from "@/components/ui/date-picker-input";
 import {
   Select,
   SelectContent,
@@ -235,12 +236,11 @@ const NovoParceiro = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="dataNascimento">Data de Nascimento</Label>
-                  <Input
-                    id="dataNascimento"
-                    type="date"
+                  <Label htmlFor="dataNascimento">Data de Nascimento <span className="text-xs text-muted-foreground font-normal">(opcional)</span></Label>
+                  <DatePickerInput
                     value={formData.dataNascimento}
-                    onChange={(e) => handleChange("dataNascimento", e.target.value)}
+                    onChange={(date) => handleChange("dataNascimento", date)}
+                    minAge={18}
                   />
                 </div>
               </div>

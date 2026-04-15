@@ -23,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { DatePickerInput } from "@/components/ui/date-picker-input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -485,10 +486,11 @@ export function OperadorDialog({
                 </div>
                 <div className="space-y-2">
                   <Label>Data de Nascimento</Label>
-                  <DatePicker
+                  <DatePickerInput
                     value={formData.data_nascimento || ""}
                     onChange={(date) => setFormData({ ...formData, data_nascimento: date })}
                     disabled={isViewMode}
+                    minAge={18}
                   />
                 </div>
               </div>
