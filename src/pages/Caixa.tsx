@@ -379,9 +379,11 @@ export default function Caixa() {
       // Fetch total bookmaker balance - agregar por moeda
       // Inclui status 'ativo' e 'limitada' (casas com saldo mas operacionalmente limitadas)
       // FIX: Incluir AGUARDANDO_SAQUE - essas casas ainda têm saldo real
+      // FIX: Filtrar por workspace_id para isolar dados do workspace ativo
       const { data: bookmakersBalanceData } = await supabase
         .from("bookmakers")
         .select("saldo_atual, moeda")
+        .eq("workspace_id", workspaceId)
         .in("status", ["ativo", "limitada", "AGUARDANDO_SAQUE"]);
       
       // Agregar saldos por moeda
@@ -403,9 +405,11 @@ export default function Caixa() {
 
       // Fetch partner bank accounts balance BY CURRENCY (EXCLUDING caixa operacional to avoid double-counting)
       // FIX: Agrupar por moeda ao invés de somar cegamente BRL + USD + EUR
+      // FIX: Filtrar por workspace_id para isolar dados do workspace ativo
       const contasQuery = supabase
         .from("v_saldo_parceiro_contas")
-        .select("moeda, saldo");
+        .select("moeda, saldo")
+        .eq("workspace_id", workspaceId);
       if (caixaParceiro?.id) {
         contasQuery.neq("parceiro_id", caixaParceiro.id);
       }
@@ -423,9 +427,11 @@ export default function Caixa() {
       );
 
       // Fetch partner wallets balance in USD (EXCLUDING caixa operacional to avoid double-counting)
+      // FIX: Filtrar por workspace_id para isolar dados do workspace ativo
       const walletsQuery = supabase
         .from("v_saldo_parceiro_wallets")
-        .select("saldo_usd");
+        .select("saldo_usd")
+        .eq("workspace_id", workspaceId);
       if (caixaParceiro?.id) {
         walletsQuery.neq("parceiro_id", caixaParceiro.id);
       }
