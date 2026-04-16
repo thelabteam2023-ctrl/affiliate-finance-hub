@@ -142,9 +142,14 @@ export function BonusSummaryCards({ projetoId, compact = false }: BonusSummaryCa
   const bonusPerformance = useMemo(() => {
     const eligibleBonuses = bonuses.filter(b => b.status === "credited" || b.status === "finalized");
     
-    // HÍBRIDO: Bônus creditado usa Cotação Oficial (valor de realização/nominal)
+    // SNAPSHOT-FIRST: Usar valor_consolidado_snapshot congelado no momento da inserção
     const totalBonusCreditado = eligibleBonuses
-      .reduce((acc, b) => acc + convertToConsolidationOficial(b.bonus_amount || 0, b.currency), 0);
+      .reduce((acc, b) => {
+        if (b.valor_consolidado_snapshot != null && b.valor_consolidado_snapshot > 0) {
+          return acc + b.valor_consolidado_snapshot;
+        }
+        return acc + convertToConsolidationOficial(b.bonus_amount || 0, b.currency);
+      }, 0);
     
     // Breakdown de bônus por moeda original
     const bonusPorMoedaMap: Record<string, number> = {};
