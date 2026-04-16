@@ -268,7 +268,7 @@ export function CalendarioLucros({
 
     // Contar dias por tipo
     lucroPorDia.forEach((dados, key) => {
-      if (matchesPeriod(key) && dados.count > 0) {
+      if (matchesPeriod(key) && (dados.count > 0 || Math.abs(dados.lucro) >= 0.01)) {
         diasOrdenados.push({ key, lucro: dados.lucro });
         if (dados.lucro > 0) diasPositivos++;
         else if (dados.lucro < 0) diasNegativos++;
