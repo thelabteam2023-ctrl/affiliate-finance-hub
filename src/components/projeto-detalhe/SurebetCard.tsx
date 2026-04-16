@@ -441,7 +441,7 @@ function PernaItem({
   );
 }
 
-export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChange, onDelete, onDuplicate, className, formatCurrency, convertToConsolidation, isBonusContext, bookmakerNomeMap }: SurebetCardProps) {
+export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChange, onDelete, onDuplicate, className, formatCurrency, convertToConsolidation, moedaConsolidacao, isBonusContext, bookmakerNomeMap }: SurebetCardProps) {
   // Hook para buscar logos das casas
   const { getLogoUrl } = useBookmakerLogoMap();
   
