@@ -364,7 +364,7 @@ export function SurebetDialogTable({
   
   // Controles
   const [arredondarAtivado, setArredondarAtivado] = useState(true);
-  const [arredondarValor, setArredondarValor] = useState("1");
+  const [arredondarValor, setArredondarValor] = useState("0.01");
   const [saving, setSaving] = useState(false);
   
   // Estado para conversão de operação parcial para apostas simples
