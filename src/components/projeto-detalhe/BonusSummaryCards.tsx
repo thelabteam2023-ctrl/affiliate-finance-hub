@@ -185,7 +185,7 @@ export function BonusSummaryCards({ projetoId, compact = false }: BonusSummaryCa
       : 0;
     
     return { totalBonusCreditado, totalJuice, total, performancePercent, bonusPorMoeda };
-  }, [bonuses, bonusBetsWithPernas, ajustesPostLimitacao, convertToConsolidation, analyticsSummary.moeda_consolidacao]);
+  }, [bonuses, bonusBetsWithPernas, ajustesPostLimitacao, convertToConsolidation, convertToConsolidationOficial, analyticsSummary.moeda_consolidacao]);
 
   const isLoading = bonusesLoading || betsLoading || ajustesLoading;
 
