@@ -756,7 +756,12 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
             }
             
             const totalCredited = eligibleForAvg.reduce(
-              (acc, b) => acc + convertToConsolidation(b.bonus_amount || 0, b.currency), 0
+              (acc, b) => {
+                if (b.valor_consolidado_snapshot != null && b.valor_consolidado_snapshot > 0) {
+                  return acc + b.valor_consolidado_snapshot;
+                }
+                return acc + convertToConsolidation(b.bonus_amount || 0, b.currency);
+              }, 0
             );
             
             // Dias corridos: baseado no primeiro bônus do período (não no início do filtro)
