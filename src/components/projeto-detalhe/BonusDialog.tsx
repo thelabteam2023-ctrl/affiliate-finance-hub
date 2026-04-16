@@ -21,7 +21,6 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { Loader2, Gift, Building2, Sparkles, Check, Info, AlertTriangle, Clock, Lock, Search } from "lucide-react";
 import { BonusFormData, BonusStatus, ProjectBonus, TipoBonus } from "@/hooks/useProjectBonuses";
 import { getFirstLastName } from "@/lib/utils";
-import { getCurrencySymbol } from "@/types/currency";
 import { useBookmakerBonusTemplates, BonusTemplate, calculateRolloverTarget } from "@/hooks/useBookmakerBonusTemplates";
 import { format, addDays } from "date-fns";
 
