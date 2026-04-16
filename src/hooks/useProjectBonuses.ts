@@ -380,6 +380,10 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
         deposit_amount: data.deposit_amount || null,
         min_odds: data.min_odds || null,
         deadline_days: data.deadline_days || null,
+        // Snapshot de consolidação congelado
+        cotacao_credito_snapshot: data.cotacao_credito_snapshot || null,
+        cotacao_credito_at: data.cotacao_credito_snapshot ? new Date().toISOString() : null,
+        valor_consolidado_snapshot: data.valor_consolidado_snapshot || null,
       };
 
       // Step 1: Insert bonus record and capture the ID for potential rollback
