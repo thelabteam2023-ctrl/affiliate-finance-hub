@@ -263,29 +263,22 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
     gcTime: GC_TIME,
   });
 
-  // ---- useQuery: Lucro Operacional KPI canônico (server-side, paridade com KPI card) ----
-  // Usa a mesma RPC de agregação, com filtro de período, para badge do calendário
-  const { data: lucroKpiData } = useQuery({
-    queryKey: ["projeto-lucro-kpi-canonical", projetoId, cotacaoOficialUSD, dateRangeKey],
-    queryFn: async () => {
-      const cotacoes = convertToConsolidationOficial
-        ? derivarCotacoesFromConvertFn(convertToConsolidationOficial)
-        : {};
-      const dataInicio = dateRange ? format(dateRange.start, 'yyyy-MM-dd') : undefined;
-      const dataFim = dateRange ? format(dateRange.end, 'yyyy-MM-dd') : undefined;
-      const result = await fetchProjetosLucroOperacionalKpi({
-        projetoIds: [projetoId],
-        cotacaoUSD: cotacaoOficialUSD || 5.0,
-        cotacoes,
-        moedaConsolidacao: moedaConsolidacao || "BRL",
-        dataInicio,
-        dataFim,
-      });
-      return result[projetoId]?.consolidado ?? null;
-    },
-    staleTime: STALE_TIME,
-    gcTime: GC_TIME,
-  });
+  // ---- Badge do gráfico: derivado da MESMA fonte (canonicalDaily) que alimenta o chart ----
+  // CORREÇÃO: Antes usava uma RPC separada (get_projetos_lucro_operacional) que divergia
+  // do motor client-side. Agora usa a soma dos dados diários canônicos, garantindo
+  // que badge = soma dos pontos do gráfico = paridade absoluta.
+  const lucroKpiData = useMemo(() => {
+    if (!canonicalDaily.length) return null;
+    // Filtrar pelo período selecionado
+    if (dateRange) {
+      const startStr = format(dateRange.start, 'yyyy-MM-dd');
+      const endStr = format(dateRange.end, 'yyyy-MM-dd');
+      return canonicalDaily
+        .filter(d => d.dia >= startStr && d.dia <= endStr)
+        .reduce((sum, d) => sum + d.lucro, 0);
+    }
+    return canonicalDaily.reduce((sum, d) => sum + d.lucro, 0);
+  }, [canonicalDaily, dateRange]);
 
   const loading = isLoadingApostas; // Only true on first load (no cached data)
   const isTransitioning = isFetchingApostas && !isLoadingApostas; // Fetching new period but showing previous data
