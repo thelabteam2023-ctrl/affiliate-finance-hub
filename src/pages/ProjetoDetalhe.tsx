@@ -394,6 +394,7 @@ export default function ProjetoDetalhe() {
     dataFim,
     moedaConsolidacao: projetoResultado?.moedaConsolidacao || 'BRL',
     convertToConsolidation,
+    convertToConsolidationOficial,
     cotacaoKey: cotacaoOficialUSD,
   });
 
