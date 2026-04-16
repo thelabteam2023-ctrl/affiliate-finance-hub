@@ -192,6 +192,7 @@ export function BonusDialog({
         setSelectedTemplateId(null);
         setTemplatePercent(null);
         setTemplateMaxValue(null);
+        setTemplateCurrencyMatch(true);
         setShowCreditConfirmation(false);
       }
     }
@@ -206,6 +207,7 @@ export function BonusDialog({
       setFilledFromTemplate(false);
       setTemplatePercent(null);
       setTemplateMaxValue(null);
+      setTemplateCurrencyMatch(true);
       
       // CRÍTICO: Herdar moeda da bookmaker selecionada
       const bk = bookmakers.find(b => b.id === bookmakerId);
