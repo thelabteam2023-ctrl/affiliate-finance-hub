@@ -52,6 +52,12 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
     queryClient.invalidateQueries({ queryKey: [PROJETO_RESULTADO_QUERY_KEY, projetoId] });
     queryClient.invalidateQueries({ queryKey: ["projeto-breakdowns", projetoId] });
     
+    // Indicadores Financeiros (FinancialMetricsPopover) — inclui giros, cashback, bônus
+    queryClient.invalidateQueries({ queryKey: ["projeto-financial-metrics", projetoId] });
+    
+    // Extras de lucro (Performance, gráfico de evolução)
+    queryClient.invalidateQueries({ queryKey: ["projeto-dashboard-extras", projetoId] });
+    
     // Saldos
     queryClient.invalidateQueries({ queryKey: ["bookmaker-saldos", projetoId] });
     queryClient.invalidateQueries({ queryKey: ["bookmaker-saldos"] });
