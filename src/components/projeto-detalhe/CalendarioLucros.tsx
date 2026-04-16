@@ -268,7 +268,7 @@ export function CalendarioLucros({
 
     // Contar dias por tipo
     lucroPorDia.forEach((dados, key) => {
-      if (matchesPeriod(key) && dados.count > 0) {
+      if (matchesPeriod(key) && (dados.count > 0 || Math.abs(dados.lucro) >= 0.01)) {
         diasOrdenados.push({ key, lucro: dados.lucro });
         if (dados.lucro > 0) diasPositivos++;
         else if (dados.lucro < 0) diasNegativos++;
@@ -303,7 +303,7 @@ export function CalendarioLucros({
 
   const renderDayTooltip = (dia: Date, dadosDia: { lucro: number; count: number } | undefined) => {
     const dataFormatada = format(dia, "dd 'de' MMMM, yyyy", { locale: ptBR });
-    if (!dadosDia || dadosDia.count === 0) {
+    if (!dadosDia || (dadosDia.count === 0 && Math.abs(dadosDia.lucro) < 0.01)) {
       return (
         <div className="space-y-1.5">
           <p className="text-xs font-medium text-popover-foreground">{dataFormatada}</p>
@@ -345,7 +345,7 @@ export function CalendarioLucros({
         {diasDoMes.map((dia, idx) => {
           const dataKey = format(dia, "yyyy-MM-dd");
           const dadosDia = lucroPorDia.get(dataKey);
-          const temDados = dadosDia != null && dadosDia.count > 0;
+          const temDados = dadosDia != null && (dadosDia.count > 0 || Math.abs(dadosDia.lucro) >= 0.01);
           const isMesAtual = isSameMonth(dia, currentMonth);
           const isHoje = isSameDay(dia, hoje);
           const lucro = dadosDia?.lucro || 0;
