@@ -65,10 +65,12 @@ export interface SurebetData {
   lucro_esperado: number | null;
   lucro_real: number | null;
   roi_real: number | null;
-  /** Lucro consolidado na moeda do projeto (já convertido) */
+  /** Lucro consolidado na moeda de consolidação (pode diferir da moeda do projeto!) */
   pl_consolidado?: number | null;
-  /** Stake consolidado na moeda do projeto (já convertido) */
+  /** Stake consolidado na moeda de consolidação */
   stake_consolidado?: number | null;
+  /** Moeda em que pl_consolidado/stake_consolidado estão denominados */
+  consolidation_currency?: string | null;
   status: string;
   resultado: string | null;
   observacoes: string | null;
@@ -107,6 +109,8 @@ interface SurebetCardProps {
   formatCurrency?: (value: number) => string;
   /** Conversão fallback para consolidar pernas multimoeda em runtime */
   convertToConsolidation?: (valor: number, moedaOrigem: string) => number;
+  /** Moeda de consolidação do projeto (ex: USD, BRL) */
+  moedaConsolidacao?: string;
   /** Quando true, exibe badge "Bônus" no lugar de "SUREBET" */
   isBonusContext?: boolean;
   /**
