@@ -345,7 +345,7 @@ export function CalendarioLucros({
         {diasDoMes.map((dia, idx) => {
           const dataKey = format(dia, "yyyy-MM-dd");
           const dadosDia = lucroPorDia.get(dataKey);
-          const temDados = dadosDia != null && dadosDia.count > 0;
+          const temDados = dadosDia != null && (dadosDia.count > 0 || Math.abs(dadosDia.lucro) >= 0.01);
           const isMesAtual = isSameMonth(dia, currentMonth);
           const isHoje = isSameDay(dia, hoje);
           const lucro = dadosDia?.lucro || 0;
