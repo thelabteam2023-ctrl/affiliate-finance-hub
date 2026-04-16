@@ -8,6 +8,7 @@ import { registrarBonusCreditadoViaLedger, estornarBonusViaLedger, getBookmakerM
 import { creditarFreebetViaLedger, estornarFreebetViaLedger } from "@/lib/freebetLedgerService";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { FREEBET_ESTOQUE_KEYS } from "@/hooks/freebet-estoque/types";
+import { invalidateCanonicalCaches } from "@/lib/invalidateCanonicalCaches";
 
 export type BonusStatus = "pending" | "credited" | "failed" | "expired" | "reversed" | "finalized";
 
