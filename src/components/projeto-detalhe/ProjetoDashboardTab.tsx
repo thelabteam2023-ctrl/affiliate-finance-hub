@@ -483,6 +483,7 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
         formatCurrency={formatCurrency}
         getLogoUrl={getCatalogLogoUrl}
         moedaConsolidacao={moedaConsolidacao}
+        convertToConsolidation={convertToConsolidationOficial}
       />
 
       {/* Performance por Esporte */}

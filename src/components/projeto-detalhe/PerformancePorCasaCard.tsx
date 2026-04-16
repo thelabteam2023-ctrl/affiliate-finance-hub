@@ -238,7 +238,7 @@ export function PerformancePorCasaCard({
     return Object.values(estrategiaMap)
       .map((m) => ({ ...m, roi: m.totalStake > 0 ? (m.lucro / m.totalStake) * 100 : 0 }))
       .sort((a, b) => b.totalOperacoes - a.totalOperacoes);
-  }, [apostasUnificadas, extrasLucro]);
+  }, [apostasUnificadas, extrasLucro, moedaConsolidacao, convertToConsolidation]);
 
   /**
    * VISÃO CASA CONSOLIDADA - Agrupa por nome da casa, independente do parceiro
