@@ -163,8 +163,8 @@ async function fetchBonusAnalytics(projectId: string, convertToConsolidationOfic
   const withdrawalsData = withdrawalsRes.data || [];
   const moedaConsolidacao = projetoRes.data?.moeda_consolidacao || 'BRL';
 
-  // PADRONIZADO: Usar EXCLUSIVAMENTE a função oficial de conversão (mesma do useKpiBreakdowns/Visão Geral).
-  // Elimina divergências de taxa entre abas causadas por fallbacks internos diferentes.
+  // SNAPSHOT: Usar Cotação de Trabalho (congelada no registro) para eliminar variação cambial.
+  // A função recebida já é convertToConsolidation (Cotação de Trabalho), não Oficial/PTAX.
   const convertToConsolidation = (valor: number, moedaOrigem: string): number => {
     if (!valor || moedaOrigem === moedaConsolidacao) return valor;
 
@@ -172,8 +172,7 @@ async function fetchBonusAnalytics(projectId: string, convertToConsolidationOfic
       return convertToConsolidationOficial(valor, moedaOrigem);
     }
 
-    // Se a função oficial não está disponível, retornar valor bruto.
-    // Nunca usar fallback próprio — isso causa divergências com Visão Geral.
+    // Se a função não está disponível, retornar valor bruto.
     return valor;
   };
 
