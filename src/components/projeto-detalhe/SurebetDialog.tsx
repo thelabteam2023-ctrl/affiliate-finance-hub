@@ -975,7 +975,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
     setModelo("1-2");
     setObservacoes("");
     setArredondarAtivado(true);
-    setArredondarValor("1");
+    setArredondarValor("0.01");
     const defaultSelecoes = getSelecoesPorMercado("", "1-2");
     setOdds(defaultSelecoes.map((sel, i) => ({
       bookmaker_id: "", moeda: "BRL" as SupportedCurrency, odd: "", stake: "", selecao: sel, selecaoLivre: "", isReference: i === 0, isManuallyEdited: false, stakeOrigem: undefined, additionalEntries: []

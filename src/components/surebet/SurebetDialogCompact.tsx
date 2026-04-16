@@ -113,7 +113,7 @@ export function SurebetDialogCompact({
     setEsporte("Futebol");
     setModelo("1-2");
     setArredondarAtivado(true);
-    setArredondarValor("1");
+    setArredondarValor("0.01");
     setLegs(createInitialLegs("1-2"));
   }, []);
 

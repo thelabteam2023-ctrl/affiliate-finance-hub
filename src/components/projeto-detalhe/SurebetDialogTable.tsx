@@ -695,7 +695,7 @@ export function SurebetDialogTable({
     setModeloTipo("2");
     setNumPernasCustom(4);
     setArredondarAtivado(true);
-    setArredondarValor("1");
+    setArredondarValor("0.01");
     
     const defaultSelecoes = getDefaultSelecoes(2);
     setOdds(defaultSelecoes.map((sel, i) => ({
