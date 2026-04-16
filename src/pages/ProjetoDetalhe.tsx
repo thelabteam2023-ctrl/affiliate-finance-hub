@@ -378,11 +378,12 @@ export default function ProjetoDetalhe() {
   const { start: dataInicio, end: dataFim } = getDateRangeFromFilter();
   
   // FONTE ÚNICA DE VERDADE: Hook centralizado para resultado do projeto
+  // PADRÃO: KPIs operacionais usam Cotação de Trabalho (convergência com aba Bônus/Performance)
   const { resultado: projetoResultado, refresh: refreshResultado } = useProjetoResultado({
     projetoId: id || '',
     dataInicio,
     dataFim,
-    convertToConsolidation: convertToConsolidationOficial,
+    convertToConsolidation,
     cotacaoKey: cotacaoOficialUSD,
   });
 
@@ -392,7 +393,7 @@ export default function ProjetoDetalhe() {
     dataInicio,
     dataFim,
     moedaConsolidacao: projetoResultado?.moedaConsolidacao || 'BRL',
-    convertToConsolidation: convertToConsolidationOficial,
+    convertToConsolidation,
     cotacaoKey: cotacaoOficialUSD,
   });
 
