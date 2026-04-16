@@ -178,6 +178,7 @@ async function fetchFinancialMetricsRaw(projetoId: string, dateRange?: { from: s
       cashbackManual: (cashbackM.data || []) as { valor: number; moeda: string }[],
       cashbackEstorno: (cashbackE.data || []) as { valor: number; moeda: string }[],
       girosGratis: (giros.data || []) as { valor: number; moeda: string }[],
+      girosGratisEstorno: (girosEstorno.data || []) as { valor: number; moeda: string }[],
       ajusteSaldo: (ajustes.data || []) as { valor: number; moeda: string; ajuste_direcao?: string | null }[],
       perdaOperacional: (perdasOp.data || []) as { valor: number; moeda: string }[],
       perdaCambial: (perdasFx.data || []) as { valor: number; moeda: string }[],
