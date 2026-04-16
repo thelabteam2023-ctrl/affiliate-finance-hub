@@ -655,7 +655,8 @@ export function ProjetoValueBetTab({
   );
 
   const metricas = useMemo(() => {
-    const { convertToConsolidation, moedaConsolidacao } = { convertToConsolidation: convertToConsolidationOficialFn, moedaConsolidacao: moedaConsolidacaoVal };
+    // SNAPSHOT: Usa Cotação de Trabalho (congelada no registro) para eliminar variação cambial
+    const { convertToConsolidation, moedaConsolidacao } = { convertToConsolidation: convertToConsolidationFn, moedaConsolidacao: moedaConsolidacaoVal };
     
     const total = apostasParaKpi.length;
     const apostasLiquidadas = apostasParaKpi.filter(a => a.resultado && a.resultado !== "PENDENTE");
@@ -702,7 +703,7 @@ export function ProjetoValueBetTab({
     });
 
     return { total, totalStake, lucroTotal, pendentes, greens, reds, taxaAcerto, roi, porCasa, currencyBreakdown, lucroPorMoeda };
-  }, [apostasParaKpi, convertToConsolidationOficialFn, moedaConsolidacaoVal]);
+  }, [apostasParaKpi, convertToConsolidationFn, moedaConsolidacaoVal]);
 
   // casaData agregado por CASA (não por vínculo) - Padrão unificado
   const casaData = useMemo((): CasaAgregada[] => {
@@ -757,8 +758,8 @@ export function ProjetoValueBetTab({
 
     apostasParaKpi.forEach((a) => {
       const bookmakerNome = a.bookmaker_nome || "Desconhecida";
-      const stake = getConsolidatedStake(a, convertToConsolidationOficialFn, moedaConsolidacaoVal);
-      const lucro = getConsolidatedLucro(a, convertToConsolidationOficialFn, moedaConsolidacaoVal);
+      const stake = getConsolidatedStake(a, convertToConsolidationFn, moedaConsolidacaoVal);
+      const lucro = getConsolidatedLucro(a, convertToConsolidationFn, moedaConsolidacaoVal);
       const resolved = isResolved(a.resultado);
       processEntry(bookmakerNome, a.operador_nome, a.instance_identifier, stake, lucro, resolved);
     });
