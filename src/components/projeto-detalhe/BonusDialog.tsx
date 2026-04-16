@@ -361,6 +361,25 @@ export function BonusDialog({
       }
     }
 
+    // Calcular snapshot de consolidação (congelado no momento da inserção)
+    const moedaConsolidacao = currencyConfig.moedaConsolidacao;
+    const isUSDLike = (m: string) => ["USD", "USDT", "USDC"].includes(m);
+    const moedaNorm = isUSDLike(currency) ? "USD" : currency;
+    const moedaConsNorm = isUSDLike(moedaConsolidacao) ? "USD" : moedaConsolidacao;
+    const needsConversion = moedaNorm !== moedaConsNorm;
+    
+    let cotacaoSnapshot: number | null = null;
+    let valorConsolidadoSnapshot: number | null = null;
+    
+    if (needsConversion && currencyConfig.disponivel && currencyConfig.cotacaoAtual > 0) {
+      cotacaoSnapshot = currencyConfig.cotacaoAtual;
+      valorConsolidadoSnapshot = converterParaConsolidacao(parsedAmount, currency);
+    } else if (!needsConversion) {
+      // Mesma moeda — snapshot = valor original
+      valorConsolidadoSnapshot = parsedAmount;
+      cotacaoSnapshot = 1;
+    }
+
     const data: BonusFormData = {
       bookmaker_id: bookmakerId,
       title: title.trim(),
@@ -379,6 +398,8 @@ export function BonusDialog({
       deposit_amount: parsedDeposit,
       min_odds: parsedMinOdds,
       deadline_days: parsedDeadline,
+      cotacao_credito_snapshot: cotacaoSnapshot,
+      valor_consolidado_snapshot: valorConsolidadoSnapshot,
     };
 
     const success = await onSubmit(data);
