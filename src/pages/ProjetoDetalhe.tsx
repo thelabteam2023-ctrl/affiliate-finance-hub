@@ -68,6 +68,7 @@ import { ProjetoCiclosTab } from "@/components/projeto-detalhe/ProjetoCiclosTab"
 import { ProjetoSurebetTab } from "@/components/projeto-detalhe/ProjetoSurebetTab";
 import { ProjetoValueBetTab } from "@/components/projeto-detalhe/ProjetoValueBetTab";
 import { ProjetoDuploGreenTab } from "@/components/projeto-detalhe/ProjetoDuploGreenTab";
+import { ProjetoPunterTab } from "@/components/projeto-detalhe/ProjetoPunterTab";
 import { ProjetoBonusArea } from "@/components/projeto-detalhe/bonus";
 import { ProjetoCashbackTab } from "@/components/projeto-detalhe/ProjetoCashbackTab";
 import { SaldoOperavelCard } from "@/components/projeto-detalhe/SaldoOperavelCard";

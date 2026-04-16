@@ -28,6 +28,11 @@ const ICON_MAP: Record<string, React.ElementType> = {
 };
 
 const MODULE_INFO: Record<string, { name: string; icon: string; description: string }> = {
+  punter: {
+    name: "Punter",
+    icon: "Crosshair",
+    description: "Apostas tradicionais baseadas em análise própria",
+  },
   surebet: {
     name: "Surebet",
     icon: "ArrowLeftRight",

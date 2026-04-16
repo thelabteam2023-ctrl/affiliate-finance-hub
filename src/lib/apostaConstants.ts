@@ -266,7 +266,7 @@ export const getTabFromEstrategia = (estrategia: ApostaEstrategia | string | nul
   if (!estrategia) return 'apostas';
   
   const estrategiaToTab: Record<string, string> = {
-    PUNTER: 'apostas',
+    PUNTER: 'punter',
     SUREBET: 'surebet',
     VALUEBET: 'valuebet',
     EXTRACAO_FREEBET: 'freebets',
