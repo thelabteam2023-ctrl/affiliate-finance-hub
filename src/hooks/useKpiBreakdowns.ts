@@ -26,7 +26,10 @@ interface UseKpiBreakdownsProps {
   dataInicio?: Date | null;
   dataFim?: Date | null;
   moedaConsolidacao?: string;
+  /** Cotação de Trabalho — usada para apostas, juice, ajustes (KPIs operacionais) */
   convertToConsolidation?: (valor: number, moedaOrigem: string) => number;
+  /** Cotação Oficial (FastForex) — usada para bônus creditado (KPI de realização) */
+  convertToConsolidationOficial?: (valor: number, moedaOrigem: string) => number;
   cotacaoKey?: number;
 }
 
@@ -261,17 +264,20 @@ function deriveCashbackModule(
 function deriveBonusGanhosModule(
   rawData: ProjetoDashboardRawData,
   moedaConsolidacao: string,
-  convert: ConvertFn
+  convert: ConvertFn,
+  convertOficial?: ConvertFn
 ): ModuleDataWithCurrency {
   // REGRA CANÔNICA: FREEBET excluído — lucro SNR já contabilizado no P&L
   const bonuses = rawData.bonus.filter(b => b.tipo_bonus !== 'FREEBET');
   const count = bonuses.length;
 
+  // HÍBRIDO: Bônus creditado usa Cotação Oficial (valor de realização)
+  const bonusConvert = convertOficial || convert;
   const total = bonuses.reduce((acc, b) => {
     const moeda = b.currency || 'BRL';
     const valor = Number(b.bonus_amount || 0);
     if (moeda === moedaConsolidacao) return acc + valor;
-    return acc + convert(valor, moeda);
+    return acc + bonusConvert(valor, moeda);
   }, 0);
 
   const lucroItems = bonuses.map(b => ({
@@ -391,7 +397,8 @@ const normalizeMoeda = (moeda?: string | null): string => {
 function calcularLucroCanonicoFromRpc(
   rawData: ProjetoDashboardRawData,
   convert: ConvertFn,
-  moedaConsolidacao: string
+  moedaConsolidacao: string,
+  convertOficial?: ConvertFn
 ): { consolidado: number; porMoeda: Record<string, number> } {
   const bookmakerMoeda = buildBookmakerMoedaMap(rawData.bookmakers);
   let consolidado = 0;
@@ -440,12 +447,13 @@ function calcularLucroCanonicoFromRpc(
     consolidado += convert(valor, moeda);
   });
 
-  // 4) Bônus (excl FREEBET)
+  // 4) Bônus (excl FREEBET) — HÍBRIDO: usa Cotação Oficial (valor de realização)
+  const bonusConvert = convertOficial || convert;
   rawData.bonus.filter(b => b.tipo_bonus !== 'FREEBET').forEach(b => {
     const moeda = (b.currency || 'BRL').toUpperCase();
     const valor = Number(b.bonus_amount || 0);
     addToMoeda(moeda, valor);
-    consolidado += convert(valor, moeda);
+    consolidado += bonusConvert(valor, moeda);
   });
 
   // 5) Perdas operacionais (subtrai)
@@ -555,7 +563,8 @@ function deriveVolumeTemporalStats(
 function deriveBreakdowns(
   rawData: ProjetoDashboardRawData,
   moedaConsolidacao: string,
-  convert: ConvertFn
+  convert: ConvertFn,
+  convertOficial?: ConvertFn
 ): ProjetoKpiBreakdowns {
   // Build pernas map for per-leg consolidation of arbitrage bets
   const pernasMap = new Map<string, RawApostaPerna[]>();
@@ -570,13 +579,14 @@ function deriveBreakdowns(
   const perdasData = derivePerdasModule(rawData, convert);
   const ajustesData = deriveAjustesModule(rawData, convert);
   const cashbackData = deriveCashbackModule(rawData, moedaConsolidacao, convert);
-  const bonusGanhosData = deriveBonusGanhosModule(rawData, moedaConsolidacao, convert);
+  // HÍBRIDO: Bônus creditado usa Oficial, restante usa Trabalho
+  const bonusGanhosData = deriveBonusGanhosModule(rawData, moedaConsolidacao, convert, convertOficial);
 
   // Extras canônicos (ajuste_saldo, resultado_cambial, promocional, freebet)
   const extrasAgrupados = deriveExtrasFromRpc(rawData, convert, moedaConsolidacao);
 
-  // Lucro canônico (mesma engine dos ciclos)
-  const lucroCanonicoResult = calcularLucroCanonicoFromRpc(rawData, convert, moedaConsolidacao);
+  // Lucro canônico (mesma engine dos ciclos) — HÍBRIDO para bônus
+  const lucroCanonicoResult = calcularLucroCanonicoFromRpc(rawData, convert, moedaConsolidacao, convertOficial);
   const lucroCanonicoTotal = lucroCanonicoResult.consolidado;
 
   // === BREAKDOWN APOSTAS ===
@@ -685,16 +695,18 @@ export function useKpiBreakdowns({
   dataFim = null,
   moedaConsolidacao = 'BRL',
   convertToConsolidation,
+  convertToConsolidationOficial,
   cotacaoKey = 0,
 }: UseKpiBreakdownsProps): UseKpiBreakdownsReturn {
   const { data: rawData, isLoading, error, refresh: refreshDashboard } = useProjetoDashboardData(projetoId || undefined);
 
   const safeConvert = convertToConsolidation || ((valor: number, _moeda: string) => valor);
+  const safeConvertOficial = convertToConsolidationOficial || safeConvert;
 
   const breakdowns = useMemo(() => {
     if (!rawData) return null;
-    return deriveBreakdowns(rawData, moedaConsolidacao, safeConvert);
-  }, [rawData, moedaConsolidacao, safeConvert, cotacaoKey]);
+    return deriveBreakdowns(rawData, moedaConsolidacao, safeConvert, safeConvertOficial);
+  }, [rawData, moedaConsolidacao, safeConvert, safeConvertOficial, cotacaoKey]);
 
   const refresh = useCallback(async () => {
     await refreshDashboard();
