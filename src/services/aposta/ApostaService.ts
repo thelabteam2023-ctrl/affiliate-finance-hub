@@ -629,8 +629,7 @@ export async function liquidarSurebet(
       events_created: eventsCreated,
     });
 
-    // CRÍTICO: Recalcular pl_consolidado para surebets multicurrency
-    await recalcularConsolidacaoSurebet(surebetId);
+    // pl_consolidado já calculado pela RPC fn_recalc_pai_surebet (Source of Truth DB-side)
 
     return {
       success: true,
@@ -654,83 +653,9 @@ export async function liquidarSurebet(
 // RECALCULAR CONSOLIDAÇÃO MULTICURRENCY SUREBET
 // ============================================================================
 
-/**
- * Recalcula pl_consolidado e stake_consolidado no registro pai da surebet
- * a partir dos dados das pernas (apostas_pernas).
- * 
- * Para surebets multicurrency, o campo lucro_prejuizo no pai contém a soma
- * bruta de valores em moedas diferentes (ex: USD + BRL), gerando valor incorreto.
- * Esta função converte cada perna para BRL usando stake_brl_referencia como
- * proxy de taxa de câmbio, e persiste os valores consolidados.
- */
-async function recalcularConsolidacaoSurebet(surebetId: string): Promise<void> {
-  try {
-    const { data: pernas, error } = await supabase
-      .from('apostas_pernas')
-      .select('stake, moeda, lucro_prejuizo, resultado, odd, stake_brl_referencia, lucro_prejuizo_brl_referencia')
-      .eq('aposta_id', surebetId)
-      .order('ordem', { ascending: true });
-
-    if (error || !pernas || pernas.length === 0) return;
-
-    // Detectar se é multicurrency
-    const moedas = new Set(pernas.map(p => p.moeda || 'BRL'));
-    if (moedas.size <= 1) return; // Moeda única — lucro_prejuizo já está correto
-
-    let plConsolidado = 0;
-    let stakeConsolidado = 0;
-    let allResolved = true;
-
-    for (const perna of pernas) {
-      const moeda = perna.moeda || 'BRL';
-      const stake = perna.stake || 0;
-      const stakeBrl = perna.stake_brl_referencia;
-      
-      // Calcular taxa implícita: stake_brl_referencia / stake
-      const taxa = (moeda !== 'BRL' && stakeBrl && stake > 0) 
-        ? stakeBrl / stake 
-        : 1;
-
-      // Stake consolidado
-      stakeConsolidado += moeda === 'BRL' ? stake : (stakeBrl || stake);
-
-      // Lucro consolidado
-      if (perna.resultado && perna.resultado !== 'PENDENTE') {
-        const lucroNominal = perna.lucro_prejuizo ?? 0;
-        // Se temos lucro_prejuizo_brl_referencia, usar diretamente
-        if (moeda !== 'BRL' && typeof perna.lucro_prejuizo_brl_referencia === 'number') {
-          plConsolidado += perna.lucro_prejuizo_brl_referencia;
-        } else {
-          plConsolidado += lucroNominal * taxa;
-        }
-      } else {
-        allResolved = false;
-      }
-    }
-
-    // Persistir consolidação no registro pai
-    const updateData: Record<string, any> = {
-      stake_consolidado: Math.round(stakeConsolidado * 100) / 100,
-      is_multicurrency: true,
-      consolidation_currency: 'BRL',
-    };
-
-    // Só gravar pl_consolidado se todas as pernas estão resolvidas
-    if (allResolved) {
-      updateData.pl_consolidado = Math.round(plConsolidado * 100) / 100;
-    }
-
-    await supabase
-      .from('apostas_unificada')
-      .update(updateData)
-      .eq('id', surebetId);
-
-    console.log("[ApostaService] ✅ Consolidação multicurrency atualizada:", surebetId, updateData);
-  } catch (err) {
-    // Não falhar a liquidação por erro de consolidação — é um enriquecimento
-    console.warn("[ApostaService] ⚠️ Falha ao recalcular consolidação multicurrency:", err);
-  }
-}
+// recalcularConsolidacaoSurebet REMOVIDA — a RPC liquidar_perna_surebet_v1 já
+// invoca fn_recalc_pai_surebet que calcula pl_consolidado com cotacao_snapshot.
+// O client-side recalc sobrescrevia o valor correto com cálculo divergente.
 
 // ============================================================================
 // LIQUIDAR PERNA DE SUREBET (tabela apostas_pernas - Motor Financeiro v9.5)
@@ -816,8 +741,7 @@ export async function liquidarPernaSurebet(
       resultado_pai: result.resultado_final_pai,
     });
     
-    // CRÍTICO: Recalcular pl_consolidado para surebets multicurrency
-    await recalcularConsolidacaoSurebet(surebet_id);
+    // pl_consolidado já calculado pela RPC liquidar_perna_surebet_v1 → fn_recalc_pai_surebet
     
     return {
       success: true,
@@ -882,8 +806,7 @@ export async function liquidarSurebetSimples(
 
     console.log("[ApostaService] ✅ Surebet liquidada (simples):", surebetId);
     
-    // CRÍTICO: Recalcular pl_consolidado para surebets multicurrency
-    await recalcularConsolidacaoSurebet(surebetId);
+    // pl_consolidado já calculado pela RPC fn_recalc_pai_surebet (Source of Truth DB-side)
     
     return { success: true };
 
