@@ -787,21 +787,29 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
             )}
             
             {lucroExibir !== null && lucroExibir !== undefined && (
-              <div className="flex items-center gap-1 shrink-0">
-                <span className={cn(
-                  "text-sm sm:text-base font-semibold whitespace-nowrap",
-                  lucroExibir >= 0 ? 'text-emerald-400' : 'text-red-400',
-                  !isLiquidada && 'opacity-30'
-                )}>
-                  {formatTotal(lucroExibir)}
-                </span>
-                {roiExibir !== null && roiExibir !== undefined && (
+              <div className="flex flex-col items-end shrink-0">
+                <div className="flex items-center gap-1">
                   <span className={cn(
-                    "text-[10px] sm:text-xs whitespace-nowrap",
-                    roiExibir >= 0 ? 'text-emerald-400' : 'text-red-400',
+                    "text-sm sm:text-base font-semibold whitespace-nowrap",
+                    lucroExibir >= 0 ? 'text-emerald-400' : 'text-red-400',
                     !isLiquidada && 'opacity-30'
                   )}>
-                    ({roiExibir >= 0 ? '+' : ''}{roiExibir.toFixed(1)}%)
+                    {formatTotal(lucroExibir)}
+                  </span>
+                  {roiExibir !== null && roiExibir !== undefined && (
+                    <span className={cn(
+                      "text-[10px] sm:text-xs whitespace-nowrap",
+                      roiExibir >= 0 ? 'text-emerald-400' : 'text-red-400',
+                      !isLiquidada && 'opacity-30'
+                    )}>
+                      ({roiExibir >= 0 ? '+' : ''}{roiExibir.toFixed(1)}%)
+                    </span>
+                  )}
+                </div>
+                {/* Equivalência na moeda de consolidação (Cotação de Trabalho) */}
+                {moedaPernas && moedaConsolidacao && moedaPernas !== moedaConsolidacao && isLiquidada && typeof lucroConsolidadoEfetivo === "number" && (
+                  <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                    ≈ {formatValue(lucroConsolidadoEfetivo)}
                   </span>
                 )}
               </div>
