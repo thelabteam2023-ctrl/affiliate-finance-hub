@@ -678,7 +678,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
   
   // Arredondamento de stakes - ativado por padrão
   const [arredondarAtivado, setArredondarAtivado] = useState(true);
-  const [arredondarValor, setArredondarValor] = useState("1");
+  const [arredondarValor, setArredondarValor] = useState("0.01");
   
   // Odds entries (2 for binary, 3 for 1X2)
   const [odds, setOdds] = useState<OddEntry[]>([
@@ -975,7 +975,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
     setModelo("1-2");
     setObservacoes("");
     setArredondarAtivado(true);
-    setArredondarValor("1");
+    setArredondarValor("0.01");
     const defaultSelecoes = getSelecoesPorMercado("", "1-2");
     setOdds(defaultSelecoes.map((sel, i) => ({
       bookmaker_id: "", moeda: "BRL" as SupportedCurrency, odd: "", stake: "", selecao: sel, selecaoLivre: "", isReference: i === 0, isManuallyEdited: false, stakeOrigem: undefined, additionalEntries: []
