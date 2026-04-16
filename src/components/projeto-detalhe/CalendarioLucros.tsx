@@ -303,7 +303,7 @@ export function CalendarioLucros({
 
   const renderDayTooltip = (dia: Date, dadosDia: { lucro: number; count: number } | undefined) => {
     const dataFormatada = format(dia, "dd 'de' MMMM, yyyy", { locale: ptBR });
-    if (!dadosDia || dadosDia.count === 0) {
+    if (!dadosDia || (dadosDia.count === 0 && Math.abs(dadosDia.lucro) < 0.01)) {
       return (
         <div className="space-y-1.5">
           <p className="text-xs font-medium text-popover-foreground">{dataFormatada}</p>
