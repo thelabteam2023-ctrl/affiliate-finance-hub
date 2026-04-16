@@ -494,7 +494,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
       arr.reduce((acc, e) => acc + convertToConsolidationOficial(e.valor, e.moeda), 0);
 
     const cashbackLiquido = sumConvert(r.cashbackManual) - sumConvert(r.cashbackEstorno);
-    const girosGratis = sumConvert(r.girosGratis);
+    const girosGratis = sumConvert(r.girosGratis) - sumConvert(r.girosGratisEstorno);
     const ajustes = r.ajusteSaldo.reduce((acc, e) => {
       const sinal = e.ajuste_direcao === 'SAIDA' ? -1 : 1;
       return acc + convertToConsolidationOficial(e.valor * sinal, e.moeda);
