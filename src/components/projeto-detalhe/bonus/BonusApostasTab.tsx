@@ -1136,6 +1136,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
               lucro_real: (aposta as any).pl_consolidado ?? aposta.lucro_prejuizo,
               roi_real: null,
               pl_consolidado: (aposta as any).pl_consolidado,
+              consolidation_currency: (aposta as any).consolidation_currency,
               stake_consolidado: (aposta as any).stake_consolidado,
               status: aposta.status,
               resultado: aposta.resultado,
