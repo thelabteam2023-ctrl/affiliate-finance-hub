@@ -1588,6 +1588,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
                    onDuplicate={handleDuplicateSurebet}
                   formatCurrency={formatCurrency}
                   convertToConsolidation={convertFnOficial}
+                  moedaConsolidacao={moedaConsolidacao}
                   bookmakerNomeMap={bookmakerNomeMap}
                 />
               );
