@@ -206,6 +206,7 @@ export const ABAS_ESTRATEGIA_FIXA = [
   'surebet',
   'valuebet',
   'duplogreen',
+  'punter',
 ] as const;
 
 /**
@@ -229,6 +230,7 @@ export const getEstrategiaFromTab = (activeTab: string): ApostaEstrategia | null
     surebet: 'SUREBET',
     valuebet: 'VALUEBET',
     duplogreen: 'DUPLO_GREEN',
+    punter: 'PUNTER',
   };
   return tabToEstrategia[activeTab] ?? null;
 };
@@ -247,6 +249,7 @@ export const getContextoFromTab = (activeTab: string): ContextoOperacional | nul
     surebet: null, // Surebet pode usar qualquer contexto
     valuebet: null, // ValueBet pode usar qualquer contexto
     duplogreen: null, // Duplo Green pode usar qualquer contexto
+    punter: null, // Punter pode usar qualquer contexto
   };
   return tabToContexto[activeTab] ?? null;
 };
