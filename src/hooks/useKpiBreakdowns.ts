@@ -26,7 +26,10 @@ interface UseKpiBreakdownsProps {
   dataInicio?: Date | null;
   dataFim?: Date | null;
   moedaConsolidacao?: string;
+  /** Cotação de Trabalho — usada para apostas, juice, ajustes (KPIs operacionais) */
   convertToConsolidation?: (valor: number, moedaOrigem: string) => number;
+  /** Cotação Oficial (FastForex) — usada para bônus creditado (KPI de realização) */
+  convertToConsolidationOficial?: (valor: number, moedaOrigem: string) => number;
   cotacaoKey?: number;
 }
 
@@ -261,17 +264,20 @@ function deriveCashbackModule(
 function deriveBonusGanhosModule(
   rawData: ProjetoDashboardRawData,
   moedaConsolidacao: string,
-  convert: ConvertFn
+  convert: ConvertFn,
+  convertOficial?: ConvertFn
 ): ModuleDataWithCurrency {
   // REGRA CANÔNICA: FREEBET excluído — lucro SNR já contabilizado no P&L
   const bonuses = rawData.bonus.filter(b => b.tipo_bonus !== 'FREEBET');
   const count = bonuses.length;
 
+  // HÍBRIDO: Bônus creditado usa Cotação Oficial (valor de realização)
+  const bonusConvert = convertOficial || convert;
   const total = bonuses.reduce((acc, b) => {
     const moeda = b.currency || 'BRL';
     const valor = Number(b.bonus_amount || 0);
     if (moeda === moedaConsolidacao) return acc + valor;
-    return acc + convert(valor, moeda);
+    return acc + bonusConvert(valor, moeda);
   }, 0);
 
   const lucroItems = bonuses.map(b => ({
