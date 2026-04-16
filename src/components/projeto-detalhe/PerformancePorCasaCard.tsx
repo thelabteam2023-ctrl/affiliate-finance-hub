@@ -100,6 +100,8 @@ interface PerformancePorCasaCardProps {
   formatCurrency: (value: number) => string;
   getLogoUrl: (nome: string) => string | undefined;
   moedaConsolidacao?: string;
+  /** Função de conversão para moeda de consolidação (usando cotação de trabalho) */
+  convertToConsolidation?: (valor: number, moedaOrigem: string) => number;
 }
 
 const VIEW_LABELS: Record<PerformanceView, { label: string; tooltip: string }> = {
@@ -135,6 +137,7 @@ export function PerformancePorCasaCard({
   formatCurrency,
   getLogoUrl,
   moedaConsolidacao = "BRL",
+  convertToConsolidation,
 }: PerformancePorCasaCardProps) {
   const [view, setView] = useState<PerformanceView>("estrategia");
 
@@ -212,7 +215,13 @@ export function PerformancePorCasaCard({
       }
 
       estrategiaMap[tipoNome].totalOperacoes++;
-      estrategiaMap[tipoNome].lucro += extra.valor || 0;
+      // CRÍTICO: Converter valor para moeda de consolidação
+      const moedaExtra = extra.moeda || "BRL";
+      let valorConvertido = extra.valor || 0;
+      if (moedaExtra !== moedaConsolidacao && convertToConsolidation && valorConvertido !== 0) {
+        valorConvertido = convertToConsolidation(valorConvertido, moedaExtra);
+      }
+      estrategiaMap[tipoNome].lucro += valorConvertido;
       
       // Rastrear breakdown por moeda original
       const moedaOriginal = extra.moeda || "BRL";
