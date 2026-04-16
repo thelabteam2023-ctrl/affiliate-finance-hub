@@ -82,7 +82,7 @@ import { SaldoOperavelCard } from "./SaldoOperavelCard";
 // FinancialSummaryCompact removed — now integrated into Lucro KPI popover
 import { useCalendarApostasRpc, transformRpcDailyForCharts } from "@/hooks/useCalendarApostasRpc";
 
-interface ProjetoValueBetTabProps {
+interface ProjetoPunterTabProps {
   projetoId: string;
   onDataChange?: () => void;
   refreshTrigger?: number;
@@ -150,7 +150,7 @@ interface Aposta {
 type NavigationMode = "tabs" | "sidebar";
 type NavTabValue = "visao-geral" | "apostas" | "por-casa";
 
-const NAV_STORAGE_KEY = "valuebet-nav-mode";
+const NAV_STORAGE_KEY = "punter-nav-mode";
 
 // Ordenação para Por Casa
 type SortField = "volume" | "lucro" | "apostas" | "roi";
@@ -183,12 +183,12 @@ interface CasaAgregada {
   vinculos: VinculoData[];
 }
 
-export function ProjetoValueBetTab({ 
+export function ProjetoPunterTab({ 
   projetoId, 
   onDataChange, 
   refreshTrigger,
   actionsSlot
-}: ProjetoValueBetTabProps) {
+}: ProjetoPunterTabProps) {
   const [apostas, setApostas] = useState<Aposta[]>([]);
   const [bookmakers, setBookmakers] = useState<Bookmaker[]>([]);
   const [loading, setLoading] = useState(true);
@@ -209,7 +209,7 @@ export function ProjetoValueBetTab({
   // DESACOPLAMENTO CALENDÁRIO: Dados via RPC (sem truncamento, timezone correto)
   const { daily: calendarDaily, refetch: refetchCalendar } = useCalendarApostasRpc({
     projetoId,
-    estrategia: "VALUEBET",
+    estrategia: "PUNTER",
     cotacaoUSD: convertToConsolidationOficialFn(1, "USD"),
     cotacoes: {
       EUR: getRate("EUR"),
@@ -252,9 +252,9 @@ export function ProjetoValueBetTab({
   const [activeNavTab, setActiveNavTab] = useState<NavTabValue>("visao-geral");
   const [isTransitioning, setIsTransitioning] = useState(false);
 
-  // Filtros LOCAIS da aba ValueBet (isolados de outras abas)
+  // Filtros LOCAIS da aba Punter (isolados de outras abas)
   const tabFilters = useTabFilters({
-    tabId: "valuebet",
+    tabId: "punter",
     projetoId,
     defaultPeriod: "mes_atual",
     persist: true,
@@ -266,7 +266,7 @@ export function ProjetoValueBetTab({
   // Count of open operations for badge - uses the canonical hook
   const { count: openOperationsCount } = useOpenOperationsCount({
     projetoId,
-    estrategia: APOSTA_ESTRATEGIA.VALUEBET,
+    estrategia: APOSTA_ESTRATEGIA.PUNTER,
     refreshTrigger,
   });
 
@@ -331,7 +331,7 @@ export function ProjetoValueBetTab({
           .from("apostas_unificada")
           .select(selectFields)
           .eq("projeto_id", projetoId)
-          .eq("estrategia", APOSTA_ESTRATEGIA.VALUEBET)
+          .eq("estrategia", APOSTA_ESTRATEGIA.PUNTER)
           .is("cancelled_at", null)
           .order("data_aposta", { ascending: false });
         if (dateFilters.startUTC) q = q.gte("data_aposta", dateFilters.startUTC);
@@ -347,7 +347,7 @@ export function ProjetoValueBetTab({
             .from("apostas_unificada")
             .select(selectFields)
             .eq("projeto_id", projetoId)
-            .eq("estrategia", APOSTA_ESTRATEGIA.VALUEBET)
+            .eq("estrategia", APOSTA_ESTRATEGIA.PUNTER)
             .eq("status", "PENDENTE")
             .is("cancelled_at", null)
             .order("data_aposta", { ascending: false })
@@ -436,7 +436,7 @@ export function ProjetoValueBetTab({
       
       setApostas(mappedApostas);
     } catch (error: unknown) {
-      console.error("Erro ao carregar apostas ValueBet:", error);
+      console.error("Erro ao carregar apostas Punter:", error);
     }
   };
 
@@ -516,12 +516,12 @@ export function ProjetoValueBetTab({
 
   // === DUPLICAR APOSTAS ===
   const handleDuplicateSimples = useCallback((apostaId: string) => {
-    const url = `/janela/aposta/novo?projetoId=${encodeURIComponent(projetoId)}&tab=valuebet&duplicateFrom=${apostaId}`;
+    const url = `/janela/aposta/novo?projetoId=${encodeURIComponent(projetoId)}&tab=punter&duplicateFrom=${apostaId}`;
     window.open(url, '_blank', 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
   }, [projetoId]);
 
   const handleDuplicateSurebet = useCallback((surebetId: string) => {
-    const url = `/janela/surebet/novo?projetoId=${encodeURIComponent(projetoId)}&tab=valuebet&duplicateFrom=${surebetId}`;
+    const url = `/janela/surebet/novo?projetoId=${encodeURIComponent(projetoId)}&tab=punter&duplicateFrom=${surebetId}`;
     window.open(url, '_blank', 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
   }, [projetoId]);
 
@@ -965,10 +965,10 @@ export function ProjetoValueBetTab({
       (Array.isArray(a.selecoes) && a.selecoes.length > 0);
 
     if (isMultipla) {
-      const url = `/janela/multipla/${a.id}?projetoId=${encodeURIComponent(projetoId)}&tab=valuebet&estrategia=VALUEBET`;
+      const url = `/janela/multipla/${a.id}?projetoId=${encodeURIComponent(projetoId)}&tab=punter&estrategia=VALUEBET`;
       window.open(url, '_blank', 'width=540,height=750,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
     } else {
-      const url = `/janela/aposta/${a.id}?projetoId=${encodeURIComponent(projetoId)}&tab=valuebet&estrategia=VALUEBET`;
+      const url = `/janela/aposta/${a.id}?projetoId=${encodeURIComponent(projetoId)}&tab=punter&estrategia=VALUEBET`;
       window.open(url, '_blank', 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
     }
   }, [projetoId]);
@@ -1071,11 +1071,11 @@ export function ProjetoValueBetTab({
         }
         items={[
           {
-            label: "Apostas ValueBet",
+            label: "Apostas Punter",
             value: metricas.total,
             tooltip: (
               <div className="space-y-1.5">
-                <p className="font-semibold text-foreground">Detalhamento de ValueBets</p>
+                <p className="font-semibold text-foreground">Detalhamento de Punters</p>
                 <div className="space-y-0.5">
                   <div className="flex justify-between gap-4">
                     <span className="flex items-center gap-1.5"><span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" /> Greens</span>
@@ -1118,7 +1118,7 @@ export function ProjetoValueBetTab({
             tooltip: (
               <div className="space-y-1">
                 <p className="font-semibold text-foreground">Volume Apostado</p>
-                <p className="text-muted-foreground">Soma total das stakes apostadas em ValueBets no período.</p>
+                <p className="text-muted-foreground">Soma total das stakes apostadas em Punters no período.</p>
               </div>
             ),
             minWidth: "min-w-[80px]",
@@ -1216,7 +1216,7 @@ export function ProjetoValueBetTab({
           <div className="flex items-start gap-2">
             <Info className="h-4 w-4 text-purple-400 mt-0.5 shrink-0" />
             <p className="text-xs text-muted-foreground">
-              <span className="font-medium text-purple-400">Visão Especializada:</span> Esta aba exibe apenas apostas com estratégia ValueBet. 
+              <span className="font-medium text-purple-400">Visão Especializada:</span> Esta aba exibe apenas apostas com estratégia Punter. 
               As mesmas apostas também aparecem na aba "Todas Apostas".
             </p>
           </div>
@@ -1252,10 +1252,10 @@ export function ProjetoValueBetTab({
                   getData={() => apostasFiltradas.map(a => transformApostaToExport({
                     ...a,
                     data_aposta: a.data_aposta,
-                    estrategia: "VALUEBET",
-                  }, "ValueBet", convertToConsolidationOficialFn))}
-                  abaOrigem="ValueBet"
-                filename={`valuebets-${projetoId}-${format(new Date(), 'yyyy-MM-dd')}`}
+                    estrategia: "PUNTER",
+                  }, "Punter", convertToConsolidationOficialFn))}
+                  abaOrigem="Punter"
+                filename={`punters-${projetoId}-${format(new Date(), 'yyyy-MM-dd')}`}
                 filtrosAplicados={{
                   periodo: tabFilters.period,
                   dataInicio: dateRange?.start.toISOString(),
