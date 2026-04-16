@@ -92,6 +92,7 @@ const MODULE_ICON_MAP: Record<string, React.ElementType> = {
   Gift,
   Coins,
   Puzzle,
+  Crosshair,
 };
 
 interface Projeto {
