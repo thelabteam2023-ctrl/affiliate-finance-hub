@@ -47,6 +47,7 @@ import {
   Activity,
   CalendarDays,
   BarChart3,
+  Crosshair,
 } from "lucide-react";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { useCotacoes } from "@/hooks/useCotacoes";
