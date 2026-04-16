@@ -1002,6 +1002,23 @@ export default function ProjetoDetalhe() {
             />
           </TabsContent>
 
+          <TabsContent value="punter" forceMount className={cn("h-full m-0", activeTab !== "punter" && "hidden")}>
+            <ProjetoPunterTab 
+              projetoId={id!} 
+              onDataChange={triggerGlobalRefresh}
+              refreshTrigger={refreshTrigger}
+              actionsSlot={
+                <GlobalActionsBar
+                  projetoId={id!}
+                  activeTab={activeTab}
+                  onApostaCreated={triggerGlobalRefresh}
+                  onBonusCreated={triggerGlobalRefresh}
+                  onNavigateToTab={setActiveTab}
+                />
+              }
+            />
+          </TabsContent>
+
           <TabsContent value="surebet" forceMount className={cn("h-full m-0", activeTab !== "surebet" && "hidden")}>
             <ProjetoSurebetTab 
               projetoId={id!} 
