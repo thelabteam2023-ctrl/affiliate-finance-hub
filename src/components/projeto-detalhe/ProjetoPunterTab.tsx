@@ -965,10 +965,10 @@ export function ProjetoPunterTab({
       (Array.isArray(a.selecoes) && a.selecoes.length > 0);
 
     if (isMultipla) {
-      const url = `/janela/multipla/${a.id}?projetoId=${encodeURIComponent(projetoId)}&tab=punter&estrategia=VALUEBET`;
+      const url = `/janela/multipla/${a.id}?projetoId=${encodeURIComponent(projetoId)}&tab=punter&estrategia=PUNTER`;
       window.open(url, '_blank', 'width=540,height=750,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
     } else {
-      const url = `/janela/aposta/${a.id}?projetoId=${encodeURIComponent(projetoId)}&tab=punter&estrategia=VALUEBET`;
+      const url = `/janela/aposta/${a.id}?projetoId=${encodeURIComponent(projetoId)}&tab=punter&estrategia=PUNTER`;
       window.open(url, '_blank', 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
     }
   }, [projetoId]);
