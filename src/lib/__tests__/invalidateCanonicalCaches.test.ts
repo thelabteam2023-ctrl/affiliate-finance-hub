@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { invalidateCanonicalCaches } from "@/lib/invalidateCanonicalCaches";
 
 describe("invalidateCanonicalCaches", () => {
-  it("should invalidate all 7 canonical query keys for the given projetoId", () => {
+  it("should invalidate all 8 canonical query keys for the given projetoId", () => {
     const mockInvalidateQueries = vi.fn();
     const fakeQueryClient = {
       invalidateQueries: mockInvalidateQueries,
@@ -11,14 +11,15 @@ describe("invalidateCanonicalCaches", () => {
     const projetoId = "test-projeto-123";
     invalidateCanonicalCaches(fakeQueryClient, projetoId);
 
-    // Should invalidate exactly 7 query keys
-    expect(mockInvalidateQueries).toHaveBeenCalledTimes(7);
+    // Should invalidate exactly 8 query keys
+    expect(mockInvalidateQueries).toHaveBeenCalledTimes(8);
 
     const calledKeys = mockInvalidateQueries.mock.calls.map(
       (call: any) => call[0].queryKey[0]
     );
 
     expect(calledKeys).toContain("canonical-calendar-daily");
+    expect(calledKeys).toContain("calendar-apostas-rpc");
     expect(calledKeys).toContain("projeto-lucro-kpi-canonical");
     expect(calledKeys).toContain("projeto-dashboard-apostas");
     expect(calledKeys).toContain("projeto-dashboard-calendario");
@@ -39,11 +40,11 @@ describe("invalidateCanonicalCaches", () => {
     invalidateCanonicalCaches(fakeQueryClient, "projeto-A");
     invalidateCanonicalCaches(fakeQueryClient, "projeto-B");
 
-    // 7 keys * 2 calls = 14
-    expect(mockInvalidateQueries).toHaveBeenCalledTimes(14);
+    // 8 keys * 2 calls = 16
+    expect(mockInvalidateQueries).toHaveBeenCalledTimes(16);
 
-    const firstBatch = mockInvalidateQueries.mock.calls.slice(0, 7);
-    const secondBatch = mockInvalidateQueries.mock.calls.slice(7, 14);
+    const firstBatch = mockInvalidateQueries.mock.calls.slice(0, 8);
+    const secondBatch = mockInvalidateQueries.mock.calls.slice(8, 16);
 
     firstBatch.forEach((call: any) => {
       expect(call[0].queryKey[1]).toBe("projeto-A");
