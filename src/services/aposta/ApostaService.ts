@@ -629,8 +629,7 @@ export async function liquidarSurebet(
       events_created: eventsCreated,
     });
 
-    // CRÍTICO: Recalcular pl_consolidado para surebets multicurrency
-    await recalcularConsolidacaoSurebet(surebetId);
+    // pl_consolidado já calculado pela RPC fn_recalc_pai_surebet (Source of Truth DB-side)
 
     return {
       success: true,
@@ -816,8 +815,7 @@ export async function liquidarPernaSurebet(
       resultado_pai: result.resultado_final_pai,
     });
     
-    // CRÍTICO: Recalcular pl_consolidado para surebets multicurrency
-    await recalcularConsolidacaoSurebet(surebet_id);
+    // pl_consolidado já calculado pela RPC liquidar_perna_surebet_v1 → fn_recalc_pai_surebet
     
     return {
       success: true,
@@ -882,8 +880,7 @@ export async function liquidarSurebetSimples(
 
     console.log("[ApostaService] ✅ Surebet liquidada (simples):", surebetId);
     
-    // CRÍTICO: Recalcular pl_consolidado para surebets multicurrency
-    await recalcularConsolidacaoSurebet(surebetId);
+    // pl_consolidado já calculado pela RPC fn_recalc_pai_surebet (Source of Truth DB-side)
     
     return { success: true };
 
