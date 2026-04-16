@@ -15,6 +15,7 @@ import { QueryClient } from "@tanstack/react-query";
  */
 export function invalidateCanonicalCaches(queryClient: QueryClient, projetoId: string): void {
   queryClient.invalidateQueries({ queryKey: ["canonical-calendar-daily", projetoId] });
+  queryClient.invalidateQueries({ queryKey: ["calendar-apostas-rpc", projetoId] });
   queryClient.invalidateQueries({ queryKey: ["projeto-lucro-kpi-canonical", projetoId] });
   queryClient.invalidateQueries({ queryKey: ["projeto-dashboard-apostas", projetoId] });
   queryClient.invalidateQueries({ queryKey: ["projeto-dashboard-calendario", projetoId] });

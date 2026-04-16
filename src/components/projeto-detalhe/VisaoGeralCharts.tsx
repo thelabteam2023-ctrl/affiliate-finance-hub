@@ -629,6 +629,53 @@ export function VisaoGeralCharts({
   }, [extrasLucro, convertToConsolidation, moedaConsolidacao]);
   
   const evolucaoData = useMemo((): EvolucaoData[] => {
+    if (!isSingleDayPeriod && calendarIsRpc) {
+      const filteredDaily = calendarData
+        .map((a) => {
+          const dateKey = a.data_aposta.includes('T') ? extractLocalDateKey(a.data_aposta) : a.data_aposta;
+          const dayDate = new Date(dateKey + 'T12:00:00');
+
+          if (periodStart && periodEnd) {
+            if (dayDate < startOfDay(periodStart) || dayDate > periodEnd) {
+              return null;
+            }
+          }
+
+          return {
+            dateKey,
+            dataFormatada: format(dayDate, "dd/MM", { locale: ptBR }),
+            impacto: a.lucro_prejuizo || 0,
+            apostasNoDia: (a as any).operacoes ?? 0,
+          };
+        })
+        .filter((day): day is {
+          dateKey: string;
+          dataFormatada: string;
+          impacto: number;
+          apostasNoDia: number;
+        } => !!day)
+        .sort((a, b) => a.dateKey.localeCompare(b.dateKey));
+
+      let acumulado = 0;
+      return filteredDaily.map((day, index) => {
+        acumulado += day.impacto;
+
+        return {
+          entrada: index + 1,
+          data: day.dataFormatada,
+          hora: "",
+          xLabel: day.dataFormatada,
+          dateKey: day.dateKey,
+          acumulado,
+          impacto: day.impacto,
+          resultado: day.impacto >= 0 ? 'GREEN' : 'RED',
+          isConsolidated: true,
+          apostasNoDia: day.apostasNoDia,
+          incluiExtras: day.apostasNoDia === 0 && Math.abs(day.impacto) > 0,
+        };
+      });
+    }
+
     const sorted = [...apostas].sort(
       (a, b) => parseLocalDateTime(a.data_aposta).getTime() - parseLocalDateTime(b.data_aposta).getTime()
     );
@@ -766,7 +813,7 @@ export function VisaoGeralCharts({
         incluiExtras: day.incluiExtras,
       };
     });
-  }, [apostas, isSingleDayPeriod, extrasMap, periodStart, periodEnd]);
+  }, [apostas, calendarData, calendarIsRpc, isSingleDayPeriod, extrasMap, periodStart, periodEnd]);
 
   // ==================== DADOS DO GRÁFICO ====================
   // Sempre usa modo atividade: apenas dias com atividade real
