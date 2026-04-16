@@ -1334,7 +1334,7 @@ export function ProjetoPunterTab({
                 esporte: aposta.esporte,
                 mercado: aposta.mercado,
                 modelo: (aposta as any).modelo || '1-N',
-                estrategia: aposta.estrategia || 'VALUEBET',
+                estrategia: aposta.estrategia || 'PUNTER',
                 stake_total: (aposta as any).stake_total ?? aposta.stake ?? 0,
                 spread_calculado: null,
                 roi_esperado: null,
@@ -1393,7 +1393,7 @@ export function ProjetoPunterTab({
                   selecoes: Array.isArray(aposta.selecoes) ? aposta.selecoes : undefined,
                   moeda: aposta.moeda_operacao || "BRL",
                 }}
-                estrategia="VALUEBET"
+                estrategia="PUNTER"
                 onEdit={(apostaId) => {
                   const a = apostasFiltradas.find(ap => ap.id === apostaId);
                   if (a) openEditDialog(a);
@@ -1424,7 +1424,7 @@ export function ProjetoPunterTab({
                 esporte: aposta.esporte,
                 mercado: aposta.mercado,
                 modelo: (aposta as any).modelo || '1-N',
-                estrategia: aposta.estrategia || 'VALUEBET',
+                estrategia: aposta.estrategia || 'PUNTER',
                 stake_total: (aposta as any).stake_total ?? aposta.stake ?? 0,
                 spread_calculado: null,
                 roi_esperado: null,
@@ -1483,7 +1483,7 @@ export function ProjetoPunterTab({
                   selecoes: Array.isArray(aposta.selecoes) ? aposta.selecoes : undefined,
                   moeda: aposta.moeda_operacao || "BRL",
                 }}
-                estrategia="VALUEBET"
+                estrategia="PUNTER"
                 onEdit={(apostaId) => {
                   const a = apostasFiltradas.find(ap => ap.id === apostaId);
                   if (a) openEditDialog(a);
