@@ -11969,6 +11969,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "bookmakers_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "freebets_recebidas_bookmaker_id_fkey"
             columns: ["bookmaker_id"]
             isOneToOne: false
@@ -12037,13 +12044,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_financial_audit"
             referencedColumns: ["bookmaker_id"]
-          },
-          {
-            foreignKeyName: "freebets_recebidas_projeto_id_fkey"
-            columns: ["projeto_id"]
-            isOneToOne: false
-            referencedRelation: "projetos"
-            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "freebets_recebidas_qualificadora_id_fkey"
