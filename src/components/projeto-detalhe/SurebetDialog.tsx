@@ -678,7 +678,7 @@ export function SurebetDialog({ open, onOpenChange, projetoId, surebet, onSucces
   
   // Arredondamento de stakes - ativado por padrão
   const [arredondarAtivado, setArredondarAtivado] = useState(true);
-  const [arredondarValor, setArredondarValor] = useState("1");
+  const [arredondarValor, setArredondarValor] = useState("0.01");
   
   // Odds entries (2 for binary, 3 for 1X2)
   const [odds, setOdds] = useState<OddEntry[]>([

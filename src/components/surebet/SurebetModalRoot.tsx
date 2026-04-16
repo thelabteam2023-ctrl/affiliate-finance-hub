@@ -274,7 +274,7 @@ export function SurebetModalRoot({
   const [equalizedStakesSnapshot, setEqualizedStakesSnapshot] = useState<number[]>([]);
   
   const [arredondarAtivado, setArredondarAtivado] = useState(true);
-  const [arredondarValor, setArredondarValor] = useState("1");
+  const [arredondarValor, setArredondarValor] = useState("0.01");
   const [saving, setSaving] = useState(false);
   const [deletingPerna, setDeletingPerna] = useState(false);
   
