@@ -111,6 +111,7 @@ export function BonusDialog({
   onSubmit,
 }: BonusDialogProps) {
   const { toast } = useToast();
+  const { config: currencyConfig, converterParaConsolidacao } = usePromotionalCurrencyConversion(projectId);
   const [bookmakerId, setBookmakerId] = useState("");
   const [title, setTitle] = useState("");
   const [tipoBonus, setTipoBonus] = useState<TipoBonus>("BONUS");
