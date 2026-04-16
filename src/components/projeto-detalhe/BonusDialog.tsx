@@ -481,14 +481,7 @@ export function BonusDialog({
                   })
                   .map((bk) => {
                     const moeda = bk.moeda || "BRL";
-                    const usaUsd = moeda === "USD" || moeda === "USDT";
-                    const currencySymbol = usaUsd
-                      ? "$"
-                      : moeda === "EUR"
-                        ? "€"
-                        : moeda === "GBP"
-                          ? "£"
-                          : "R$";
+                    const currencySymbol = getCurrencySymbol(moeda);
 
                     const saldo = bk.saldo_atual ?? 0;
 
