@@ -563,7 +563,8 @@ function deriveVolumeTemporalStats(
 function deriveBreakdowns(
   rawData: ProjetoDashboardRawData,
   moedaConsolidacao: string,
-  convert: ConvertFn
+  convert: ConvertFn,
+  convertOficial?: ConvertFn
 ): ProjetoKpiBreakdowns {
   // Build pernas map for per-leg consolidation of arbitrage bets
   const pernasMap = new Map<string, RawApostaPerna[]>();
@@ -578,13 +579,14 @@ function deriveBreakdowns(
   const perdasData = derivePerdasModule(rawData, convert);
   const ajustesData = deriveAjustesModule(rawData, convert);
   const cashbackData = deriveCashbackModule(rawData, moedaConsolidacao, convert);
-  const bonusGanhosData = deriveBonusGanhosModule(rawData, moedaConsolidacao, convert);
+  // HÍBRIDO: Bônus creditado usa Oficial, restante usa Trabalho
+  const bonusGanhosData = deriveBonusGanhosModule(rawData, moedaConsolidacao, convert, convertOficial);
 
   // Extras canônicos (ajuste_saldo, resultado_cambial, promocional, freebet)
   const extrasAgrupados = deriveExtrasFromRpc(rawData, convert, moedaConsolidacao);
 
-  // Lucro canônico (mesma engine dos ciclos)
-  const lucroCanonicoResult = calcularLucroCanonicoFromRpc(rawData, convert, moedaConsolidacao);
+  // Lucro canônico (mesma engine dos ciclos) — HÍBRIDO para bônus
+  const lucroCanonicoResult = calcularLucroCanonicoFromRpc(rawData, convert, moedaConsolidacao, convertOficial);
   const lucroCanonicoTotal = lucroCanonicoResult.consolidado;
 
   // === BREAKDOWN APOSTAS ===
