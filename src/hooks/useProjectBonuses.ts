@@ -226,6 +226,7 @@ async function fetchBonusesFromDb(projectId: string, bookmakerId?: string): Prom
     cotacao_credito_at: b.cotacao_credito_at,
     valor_brl_referencia: b.valor_brl_referencia ? Number(b.valor_brl_referencia) : null,
     valor_creditado_no_saldo: b.valor_creditado_no_saldo ? Number(b.valor_creditado_no_saldo) : null,
+    valor_consolidado_snapshot: b.valor_consolidado_snapshot ? Number(b.valor_consolidado_snapshot) : null,
   }));
 }
 
