@@ -749,8 +749,27 @@ export function HistoricoMovimentacoes({
                       );
                     })() : transacao.tipo_moeda === "CRYPTO" ? (
                       <div className="flex flex-col items-end">
-                        <div className="font-medium text-blue-400">${transacao.valor_usd?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0.00'} USD</div>
-                        <div className="text-xs text-muted-foreground">{transacao.qtd_coin} {transacao.coin}</div>
+                        {/* Cross-currency crypto: moeda_destino differs from coin (e.g. USDT→MXN) */}
+                        {transacao.moeda_destino && transacao.moeda_origem && transacao.moeda_destino !== transacao.moeda_origem && !["USD","USDT","USDC"].includes(transacao.moeda_destino) ? (
+                          <>
+                            <div className="font-medium">
+                              {formatCurrency(transacao.valor_destino ?? transacao.valor, transacao.moeda_destino)}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {transacao.qtd_coin} {transacao.coin} → {transacao.moeda_destino}
+                            </div>
+                            {transacao.cotacao_implicita && (
+                              <div className="text-[10px] text-muted-foreground/70">
+                                Taxa: 1 {transacao.coin} = {(1 / Number(transacao.cotacao_implicita)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} {transacao.moeda_destino}
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <>
+                            <div className="font-medium text-blue-400">${transacao.valor_usd?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0.00'} USD</div>
+                            <div className="text-xs text-muted-foreground">{transacao.qtd_coin} {transacao.coin}</div>
+                          </>
+                        )}
                         {/* Mostrar valor recebido quando diferente do solicitado */}
                         {transacao.tipo_transacao === "SAQUE" && transacao.status === "CONFIRMADO" && transacao.valor_confirmado != null && Number(transacao.valor_confirmado) !== Number(transacao.qtd_coin) && (
                           <div className="text-xs mt-0.5">

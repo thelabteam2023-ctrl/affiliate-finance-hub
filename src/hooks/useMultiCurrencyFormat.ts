@@ -23,8 +23,12 @@ export interface TransacaoMoeda {
  * Retorna o valor correto baseado no tipo de moeda
  * CRYPTO usa valor_usd (dolarizado), FIAT usa valor direto
  */
-export function getValorEfetivo(transacao: TransacaoMoeda): number {
+export function getValorEfetivo(transacao: TransacaoMoeda & { moeda_destino?: string; valor_destino?: number }): number {
   if (transacao.tipo_moeda === "CRYPTO") {
+    // Cross-currency crypto (e.g. USDT → MXN): use the converted destination value
+    if (transacao.moeda_destino && !["USD","USDT","USDC"].includes(transacao.moeda_destino)) {
+      return transacao.valor_destino ?? transacao.valor;
+    }
     return transacao.valor_usd ?? transacao.valor;
   }
   return transacao.valor;
@@ -32,10 +36,15 @@ export function getValorEfetivo(transacao: TransacaoMoeda): number {
 
 /**
  * Retorna a moeda efetiva da transação
- * CRYPTO = USD, FIAT = moeda original (geralmente BRL)
+ * CRYPTO com conversão cross-currency = moeda destino, senão USD
+ * FIAT = moeda original (geralmente BRL)
  */
-export function getMoedaEfetiva(transacao: TransacaoMoeda): string {
+export function getMoedaEfetiva(transacao: TransacaoMoeda & { moeda_destino?: string }): string {
   if (transacao.tipo_moeda === "CRYPTO") {
+    // Cross-currency crypto: use destination currency
+    if (transacao.moeda_destino && !["USD","USDT","USDC"].includes(transacao.moeda_destino)) {
+      return transacao.moeda_destino;
+    }
     return "USD";
   }
   return transacao.moeda || "BRL";
