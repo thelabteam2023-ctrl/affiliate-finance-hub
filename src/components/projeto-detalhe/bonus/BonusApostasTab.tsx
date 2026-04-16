@@ -509,6 +509,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
           lucro_esperado: surebet.lucro_esperado,
           lucro_real: surebet.pl_consolidado ?? surebet.lucro_prejuizo,
           pl_consolidado: surebet.pl_consolidado,
+          consolidation_currency: surebet.consolidation_currency,
           stake_consolidado: surebet.stake_consolidado,
           status: surebet.status,
           resultado: surebet.resultado,
@@ -553,6 +554,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
                 lucro_esperado: surebet.lucro_esperado,
                 lucro_real: surebet.pl_consolidado ?? surebet.lucro_prejuizo,
                 pl_consolidado: surebet.pl_consolidado,
+                consolidation_currency: surebet.consolidation_currency,
                 stake_consolidado: surebet.stake_consolidado,
                 status: surebet.status,
                 resultado: surebet.resultado,
@@ -1096,6 +1098,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
               isBonusContext={true}
               formatCurrency={formatProjectCurrency}
               convertToConsolidation={convertToConsolidation}
+              moedaConsolidacao={moedaConsolidacao}
               bookmakerNomeMap={bookmakerNomeMap}
               onEdit={(surebet) => {
                 // Abrir em janela externa
@@ -1133,6 +1136,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
               lucro_real: (aposta as any).pl_consolidado ?? aposta.lucro_prejuizo,
               roi_real: null,
               pl_consolidado: (aposta as any).pl_consolidado,
+              consolidation_currency: (aposta as any).consolidation_currency,
               stake_consolidado: (aposta as any).stake_consolidado,
               status: aposta.status,
               resultado: aposta.resultado,
@@ -1166,6 +1170,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
                  onDuplicate={handleDuplicateSurebet}
                 formatCurrency={formatProjectCurrency}
                 convertToConsolidation={convertToConsolidation}
+                moedaConsolidacao={moedaConsolidacao}
                 bookmakerNomeMap={bookmakerNomeMap}
               />
             );

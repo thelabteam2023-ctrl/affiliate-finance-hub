@@ -125,6 +125,7 @@ interface Surebet {
   moeda_operacao?: string | null;
   stake_consolidado?: number | null;
   pl_consolidado?: number | null;
+  consolidation_currency?: string | null;
   valor_brl_referencia?: number | null;
   lucro_prejuizo_brl_referencia?: number | null;
   lucro_prejuizo?: number | null;
@@ -311,7 +312,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
           spread_calculado, roi_esperado, lucro_esperado, lucro_prejuizo, roi_real,
           status, resultado, observacoes, forma_registro, estrategia, contexto_operacional,
           odd, selecao, bookmaker_id, bonus_id,
-          moeda_operacao, stake_consolidado, pl_consolidado, valor_brl_referencia, lucro_prejuizo_brl_referencia,
+          moeda_operacao, stake_consolidado, pl_consolidado, consolidation_currency, valor_brl_referencia, lucro_prejuizo_brl_referencia,
           bookmaker:bookmakers(nome, parceiro:parceiros(nome))
         `;
 
@@ -423,6 +424,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
           moeda_operacao: arb.moeda_operacao,
           stake_consolidado: arb.stake_consolidado,
           pl_consolidado: arb.pl_consolidado,
+          consolidation_currency: arb.consolidation_currency,
           valor_brl_referencia: arb.valor_brl_referencia,
           lucro_prejuizo_brl_referencia: arb.lucro_prejuizo_brl_referencia,
           lucro_prejuizo: arb.lucro_prejuizo,
@@ -1586,6 +1588,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
                    onDuplicate={handleDuplicateSurebet}
                   formatCurrency={formatCurrency}
                   convertToConsolidation={convertFnOficial}
+                  moedaConsolidacao={moedaConsolidacao}
                   bookmakerNomeMap={bookmakerNomeMap}
                 />
               );

@@ -65,10 +65,12 @@ export interface SurebetData {
   lucro_esperado: number | null;
   lucro_real: number | null;
   roi_real: number | null;
-  /** Lucro consolidado na moeda do projeto (já convertido) */
+  /** Lucro consolidado na moeda de consolidação (pode diferir da moeda do projeto!) */
   pl_consolidado?: number | null;
-  /** Stake consolidado na moeda do projeto (já convertido) */
+  /** Stake consolidado na moeda de consolidação */
   stake_consolidado?: number | null;
+  /** Moeda em que pl_consolidado/stake_consolidado estão denominados */
+  consolidation_currency?: string | null;
   status: string;
   resultado: string | null;
   observacoes: string | null;
@@ -107,6 +109,8 @@ interface SurebetCardProps {
   formatCurrency?: (value: number) => string;
   /** Conversão fallback para consolidar pernas multimoeda em runtime */
   convertToConsolidation?: (valor: number, moedaOrigem: string) => number;
+  /** Moeda de consolidação do projeto (ex: USD, BRL) */
+  moedaConsolidacao?: string;
   /** Quando true, exibe badge "Bônus" no lugar de "SUREBET" */
   isBonusContext?: boolean;
   /**
@@ -437,7 +441,7 @@ function PernaItem({
   );
 }
 
-export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChange, onDelete, onDuplicate, className, formatCurrency, convertToConsolidation, isBonusContext, bookmakerNomeMap }: SurebetCardProps) {
+export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChange, onDelete, onDuplicate, className, formatCurrency, convertToConsolidation, moedaConsolidacao, isBonusContext, bookmakerNomeMap }: SurebetCardProps) {
   // Hook para buscar logos das casas
   const { getLogoUrl } = useBookmakerLogoMap();
   
@@ -584,8 +588,24 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
   const piorCenarioCalculado = !isLiquidada ? calcularPiorCenario() : null;
   
   // PRIORIDADE: pl_consolidado (atômico, cotação congelada) > fallback runtime
-  const lucroConsolidadoEfetivo = typeof surebet.pl_consolidado === "number"
-    ? surebet.pl_consolidado
+  // CRÍTICO: pl_consolidado pode estar em consolidation_currency diferente da moeda do projeto!
+  // Ex: pl_consolidado=0.14 BRL mas projeto usa USD → precisa converter BRL→USD
+  const plConsolidadoNormalizado = (() => {
+    if (typeof surebet.pl_consolidado !== "number") return null;
+    const ccurrency = surebet.consolidation_currency;
+    // Se consolidation_currency === moedaConsolidacao do projeto, usar direto
+    if (!ccurrency || !moedaConsolidacao || ccurrency === moedaConsolidacao) {
+      return surebet.pl_consolidado;
+    }
+    // Converter de consolidation_currency → moedaConsolidacao do projeto
+    if (convertToConsolidation) {
+      return convertToConsolidation(surebet.pl_consolidado, ccurrency);
+    }
+    return surebet.pl_consolidado; // fallback sem conversão
+  })();
+
+  const lucroConsolidadoEfetivo = typeof plConsolidadoNormalizado === "number"
+    ? plConsolidadoNormalizado
     : (typeof lucroConsolidadoFallback === "number" ? lucroConsolidadoFallback : null);
 
   // Para lucro exibido: FONTE ÚNICA DE VERDADE
