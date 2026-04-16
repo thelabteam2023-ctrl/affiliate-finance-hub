@@ -198,7 +198,9 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
   // ---- Canonical Calendar Daily: mesma lógica do badge (Lucro Operacional completo) ----
   const { daily: canonicalDaily } = useCanonicalCalendarDaily({
     projetoId,
-    convertToConsolidation: convertToConsolidationOficial,
+    // KPIs operacionais da Visão Geral devem usar Cotação de Trabalho
+    // para eliminar variação cambial entre header, gráfico e calendário.
+    convertToConsolidation,
   });
 
   // ---- useCalendarApostasRpc: ainda usado para contagens (greens/reds/operações) ----
@@ -471,7 +473,7 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
         formatCurrency={formatCurrency}
         formatChartAxis={formatChartAxis}
         showScopeToggle={false}
-        convertToConsolidation={convertToConsolidationOficial}
+        convertToConsolidation={convertToConsolidation}
         moedaConsolidacao={moedaConsolidacao}
         lucroOperacionalKpi={lucroKpiData ?? undefined}
       />
@@ -483,7 +485,7 @@ export function ProjetoDashboardTab({ projetoId }: ProjetoDashboardTabProps) {
         formatCurrency={formatCurrency}
         getLogoUrl={getCatalogLogoUrl}
         moedaConsolidacao={moedaConsolidacao}
-        convertToConsolidation={convertToConsolidationOficial}
+        convertToConsolidation={convertToConsolidation}
       />
 
       {/* Performance por Esporte */}
