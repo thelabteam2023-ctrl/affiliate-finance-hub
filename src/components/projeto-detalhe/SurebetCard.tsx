@@ -597,14 +597,14 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
 
   const roiExibir = (() => {
     if (isLiquidada) {
-      if (isMulticurrency) {
-        if (typeof lucroConsolidadoEfetivo === "number" && stakeRealTotal > 0) {
-          return (lucroConsolidadoEfetivo / stakeRealTotal) * 100;
-        }
+      // Priorizar ROI derivado do pl_consolidado (fonte de verdade)
+      if (typeof lucroConsolidadoEfetivo === "number" && stakeRealTotal > 0) {
+        return (lucroConsolidadoEfetivo / stakeRealTotal) * 100;
       }
       return surebet.roi_real;
     }
-    return piorCenarioCalculado?.roi ?? surebet.roi_esperado ?? null;
+    // Pendente: priorizar roi_esperado (cotação congelada) sobre cálculo runtime
+    return surebet.roi_esperado ?? piorCenarioCalculado?.roi ?? null;
   })();
   
   // Configuração do badge principal
