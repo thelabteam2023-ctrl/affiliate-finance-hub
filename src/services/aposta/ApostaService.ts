@@ -779,12 +779,9 @@ export async function liquidarPernaSurebet(
 
   try {
     const { data, error } = await supabase.rpc('liquidar_perna_surebet_v1', {
-      p_surebet_id: surebet_id,
       p_perna_id: perna_id,
       p_resultado: resultado,
-      p_resultado_anterior: resultado_anterior ?? null,
       p_workspace_id: workspace_id,
-      p_fonte_saldo: fonte_saldo,
     });
 
     if (error) {
