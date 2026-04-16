@@ -158,7 +158,7 @@ export default function ProjetoDetalhe() {
   }>({ open: false, moduleId: "", targetTab: "" });
   
   // Hook de formatação de moeda do projeto
-  const { formatCurrency, formatChartAxis, convertToConsolidationOficial, cotacaoOficialUSD } = useProjetoCurrency(id);
+  const { formatCurrency, formatChartAxis, convertToConsolidation, convertToConsolidationOficial, cotacaoOficialUSD } = useProjetoCurrency(id);
   const { getRate, lastUpdate: rateLastUpdate } = useCotacoes();
   
   // Project tab preference (página inicial por projeto)
