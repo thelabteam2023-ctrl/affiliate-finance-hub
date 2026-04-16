@@ -23,7 +23,7 @@ interface BonusSummaryCardsProps {
 
 export function BonusSummaryCards({ projetoId, compact = false }: BonusSummaryCardsProps) {
   const { bonuses, getSummary, loading: bonusesLoading } = useProjectBonuses({ projectId: projetoId });
-  const { formatCurrency, convertToConsolidation } = useProjetoCurrency(projetoId);
+  const { formatCurrency, convertToConsolidation, convertToConsolidationOficial } = useProjetoCurrency(projetoId);
   const { summary: analyticsSummary } = useProjectBonusAnalytics(projetoId, convertToConsolidation);
 
   const summary = getSummary();
@@ -142,8 +142,9 @@ export function BonusSummaryCards({ projetoId, compact = false }: BonusSummaryCa
   const bonusPerformance = useMemo(() => {
     const eligibleBonuses = bonuses.filter(b => b.status === "credited" || b.status === "finalized");
     
+    // HÍBRIDO: Bônus creditado usa Cotação Oficial (valor de realização/nominal)
     const totalBonusCreditado = eligibleBonuses
-      .reduce((acc, b) => acc + convertToConsolidation(b.bonus_amount || 0, b.currency), 0);
+      .reduce((acc, b) => acc + convertToConsolidationOficial(b.bonus_amount || 0, b.currency), 0);
     
     // Breakdown de bônus por moeda original
     const bonusPorMoedaMap: Record<string, number> = {};
