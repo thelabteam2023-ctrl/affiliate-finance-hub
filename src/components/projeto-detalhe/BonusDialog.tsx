@@ -216,8 +216,9 @@ export function BonusDialog({
   }, [bookmakerId, isEditMode, bookmakers]);
 
   // Auto-calculate bonus value when deposit changes and template has percentage
+  // Only when currencies match between template and bookmaker
   useEffect(() => {
-    if (templatePercent && depositAmount) {
+    if (templatePercent && depositAmount && templateCurrencyMatch) {
       const deposit = parseFloat(depositAmount);
       if (!isNaN(deposit) && deposit > 0) {
         let calculatedBonus = (deposit * templatePercent) / 100;
@@ -228,7 +229,7 @@ export function BonusDialog({
         setAmount(calculatedBonus.toFixed(2));
       }
     }
-  }, [depositAmount, templatePercent, templateMaxValue]);
+  }, [depositAmount, templatePercent, templateMaxValue, templateCurrencyMatch]);
 
   const handleSelectTemplate = (template: BonusTemplate) => {
     setSelectedTemplateId(template.id);
