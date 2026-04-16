@@ -14,7 +14,8 @@ import {
   Zap, 
   Gift, 
   Coins, 
-  Puzzle 
+  Puzzle,
+  Crosshair
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -25,9 +26,15 @@ const ICON_MAP: Record<string, React.ElementType> = {
   Gift,
   Coins,
   Puzzle,
+  Crosshair,
 };
 
 const MODULE_INFO: Record<string, { name: string; icon: string; description: string }> = {
+  punter: {
+    name: "Punter",
+    icon: "Crosshair",
+    description: "Apostas tradicionais baseadas em análise própria",
+  },
   surebet: {
     name: "Surebet",
     icon: "ArrowLeftRight",

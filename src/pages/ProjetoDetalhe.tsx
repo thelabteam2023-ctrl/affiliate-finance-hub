@@ -47,6 +47,7 @@ import {
   Activity,
   CalendarDays,
   BarChart3,
+  Crosshair,
 } from "lucide-react";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { useCotacoes } from "@/hooks/useCotacoes";
@@ -68,6 +69,7 @@ import { ProjetoCiclosTab } from "@/components/projeto-detalhe/ProjetoCiclosTab"
 import { ProjetoSurebetTab } from "@/components/projeto-detalhe/ProjetoSurebetTab";
 import { ProjetoValueBetTab } from "@/components/projeto-detalhe/ProjetoValueBetTab";
 import { ProjetoDuploGreenTab } from "@/components/projeto-detalhe/ProjetoDuploGreenTab";
+import { ProjetoPunterTab } from "@/components/projeto-detalhe/ProjetoPunterTab";
 import { ProjetoBonusArea } from "@/components/projeto-detalhe/bonus";
 import { ProjetoCashbackTab } from "@/components/projeto-detalhe/ProjetoCashbackTab";
 import { SaldoOperavelCard } from "@/components/projeto-detalhe/SaldoOperavelCard";
@@ -91,6 +93,7 @@ const MODULE_ICON_MAP: Record<string, React.ElementType> = {
   Gift,
   Coins,
   Puzzle,
+  Crosshair,
 };
 
 interface Projeto {
@@ -226,6 +229,9 @@ export default function ProjetoDetalhe() {
       }
       if (isModuleActive("bonus")) {
         moduleTabs.push({ value: "bonus", label: "Bônus", icon: <Coins className="h-3.5 w-3.5 md:h-4 md:w-4" /> });
+      }
+      if (isModuleActive("punter")) {
+        moduleTabs.push({ value: "punter", label: "Punter", icon: <Crosshair className="h-3.5 w-3.5 md:h-4 md:w-4" /> });
       }
       if (isModuleActive("surebet")) {
         moduleTabs.push({ value: "surebet", label: "Surebet", icon: <ArrowLeftRight className="h-3.5 w-3.5 md:h-4 md:w-4" /> });
@@ -984,6 +990,23 @@ export default function ProjetoDetalhe() {
               projetoId={id!} 
               refreshTrigger={refreshTrigger}
               onDataChange={triggerGlobalRefresh}
+              actionsSlot={
+                <GlobalActionsBar
+                  projetoId={id!}
+                  activeTab={activeTab}
+                  onApostaCreated={triggerGlobalRefresh}
+                  onBonusCreated={triggerGlobalRefresh}
+                  onNavigateToTab={setActiveTab}
+                />
+              }
+            />
+          </TabsContent>
+
+          <TabsContent value="punter" forceMount className={cn("h-full m-0", activeTab !== "punter" && "hidden")}>
+            <ProjetoPunterTab 
+              projetoId={id!} 
+              onDataChange={triggerGlobalRefresh}
+              refreshTrigger={refreshTrigger}
               actionsSlot={
                 <GlobalActionsBar
                   projetoId={id!}

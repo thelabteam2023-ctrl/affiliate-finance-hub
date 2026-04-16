@@ -28,7 +28,8 @@ import {
   Check,
   Archive,
   RotateCcw,
-  Info
+  Info,
+  Crosshair
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -39,6 +40,7 @@ const ICON_MAP: Record<string, React.ElementType> = {
   Gift,
   Coins,
   Puzzle,
+  Crosshair,
 };
 
 interface ProjectModulesManagerProps {
