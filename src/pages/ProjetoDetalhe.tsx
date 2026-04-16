@@ -230,6 +230,9 @@ export default function ProjetoDetalhe() {
       if (isModuleActive("bonus")) {
         moduleTabs.push({ value: "bonus", label: "Bônus", icon: <Coins className="h-3.5 w-3.5 md:h-4 md:w-4" /> });
       }
+      if (isModuleActive("punter")) {
+        moduleTabs.push({ value: "punter", label: "Punter", icon: <Crosshair className="h-3.5 w-3.5 md:h-4 md:w-4" /> });
+      }
       if (isModuleActive("surebet")) {
         moduleTabs.push({ value: "surebet", label: "Surebet", icon: <ArrowLeftRight className="h-3.5 w-3.5 md:h-4 md:w-4" /> });
       }
