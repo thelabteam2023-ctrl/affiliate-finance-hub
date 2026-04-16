@@ -30,8 +30,9 @@
  * Incluir o bonus_amount geraria dupla contagem.
  * 
  * REGRA CRÍTICA: MOEDA
- * Todos os valores são retornados na moeda ORIGINAL.
- * A conversão para a moeda de consolidação é responsabilidade do consumidor.
+ * Os valores são retornados na moeda ORIGINAL, exceto bônus com snapshot
+ * congelado, que retornam já na moeda de consolidação do projeto.
+ * A conversão adicional continua sendo responsabilidade do consumidor.
  */
 
 import { supabase } from '@/integrations/supabase/client';
@@ -90,14 +91,22 @@ export const EXTRA_TIPO_LABELS: Record<ExtraTipo, string> = {
 export async function fetchProjetoExtras(projetoId: string): Promise<ProjetoExtraEntry[]> {
   const extras: ProjetoExtraEntry[] = [];
 
-  // Buscar bookmakers do projeto (necessário para várias queries)
-  const { data: projectBookmakers } = await supabase
-    .from('bookmakers')
-    .select('id, moeda')
-    .eq('projeto_id', projetoId);
+  // Buscar metadados do projeto necessários para extras/snapshots
+  const [{ data: projectBookmakers }, { data: projeto }] = await Promise.all([
+    supabase
+      .from('bookmakers')
+      .select('id, moeda')
+      .eq('projeto_id', projetoId),
+    supabase
+      .from('projetos')
+      .select('moeda_consolidacao')
+      .eq('id', projetoId)
+      .maybeSingle(),
+  ]);
 
   const projectBookmakerIds = new Set(projectBookmakers?.map(b => b.id) || []);
   const projectBookmakerMoeda = new Map((projectBookmakers || []).map(b => [b.id, b.moeda || 'BRL']));
+  const moedaConsolidacaoProjeto = projeto?.moeda_consolidacao || 'BRL';
 
   // Executar todas as queries em paralelo
   const [
@@ -113,7 +122,7 @@ export async function fetchProjetoExtras(projetoId: string): Promise<ProjetoExtr
   ] = await Promise.all([
     fetchCashback(projetoId),
     fetchGirosGratis(projetoId),
-    fetchBonusCreditados(projetoId, projectBookmakerMoeda),
+    fetchBonusCreditados(projetoId, projectBookmakerMoeda, moedaConsolidacaoProjeto),
     fetchEventosPromocionais(projectBookmakerIds),
     fetchPerdasCancelamentoBonuses(projectBookmakerIds),
     fetchAjustesSaldo(projetoId),
@@ -193,11 +202,12 @@ async function fetchGirosGratis(projetoId: string): Promise<ProjetoExtraEntry[]>
  */
 async function fetchBonusCreditados(
   projetoId: string,
-  projectBookmakerMoeda: Map<string, string>
+  projectBookmakerMoeda: Map<string, string>,
+  moedaConsolidacaoProjeto: string,
 ): Promise<ProjetoExtraEntry[]> {
   const { data } = await supabase
     .from('project_bookmaker_link_bonuses')
-    .select('credited_at, bonus_amount, currency, tipo_bonus, bookmaker_id')
+    .select('credited_at, bonus_amount, currency, tipo_bonus, bookmaker_id, valor_consolidado_snapshot')
     .eq('project_id', projetoId)
     .in('status', ['credited', 'finalized'])
     .not('credited_at', 'is', null);
@@ -208,12 +218,18 @@ async function fetchBonusCreditados(
       if (b.tipo_bonus === 'FREEBET') return false;
       return Number(b.bonus_amount || 0) > 0;
     })
-    .map(b => ({
-      data: extractCivilDateKey(b.credited_at!),
-      valor: Number(b.bonus_amount || 0),
-      moeda: b.currency || projectBookmakerMoeda.get(b.bookmaker_id) || 'BRL',
-      tipo: 'bonus' as ExtraTipo,
-    }));
+    .map(b => {
+      const hasSnapshot = Number(b.valor_consolidado_snapshot || 0) > 0;
+
+      return {
+        data: extractCivilDateKey(b.credited_at!),
+        valor: hasSnapshot ? Number(b.valor_consolidado_snapshot || 0) : Number(b.bonus_amount || 0),
+        moeda: hasSnapshot
+          ? moedaConsolidacaoProjeto
+          : (b.currency || projectBookmakerMoeda.get(b.bookmaker_id) || 'BRL'),
+        tipo: 'bonus' as ExtraTipo,
+      };
+    });
 }
 
 async function fetchEventosPromocionais(
