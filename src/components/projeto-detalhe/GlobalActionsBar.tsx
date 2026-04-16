@@ -68,6 +68,7 @@ const ABAS_OPERACIONAIS_APOSTA: readonly string[] = [
   "surebet",
   "valuebet",
   "duplogreen",
+  "punter",
 ] as const;
 
 export function GlobalActionsBar({ 
