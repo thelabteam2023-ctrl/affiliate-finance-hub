@@ -481,14 +481,7 @@ export function BonusDialog({
                   })
                   .map((bk) => {
                     const moeda = bk.moeda || "BRL";
-                    const usaUsd = moeda === "USD" || moeda === "USDT";
-                    const currencySymbol = usaUsd
-                      ? "$"
-                      : moeda === "EUR"
-                        ? "€"
-                        : moeda === "GBP"
-                          ? "£"
-                          : "R$";
+                    const currencySymbol = getCurrencySymbol(moeda);
 
                     const saldo = bk.saldo_atual ?? 0;
 
@@ -508,7 +501,7 @@ export function BonusDialog({
                             <div className="flex flex-col min-w-0">
                               <div className="flex items-center gap-1.5">
                                 <span className="font-semibold text-foreground truncate">{bk.nome}</span>
-                                <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0 ${usaUsd ? 'bg-amber-500/20 text-amber-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0 ${moeda !== "BRL" ? 'bg-amber-500/20 text-amber-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
                                   {bk.moeda || "BRL"}
                                 </span>
                               </div>
