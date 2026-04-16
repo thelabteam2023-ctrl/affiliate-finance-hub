@@ -397,7 +397,8 @@ const normalizeMoeda = (moeda?: string | null): string => {
 function calcularLucroCanonicoFromRpc(
   rawData: ProjetoDashboardRawData,
   convert: ConvertFn,
-  moedaConsolidacao: string
+  moedaConsolidacao: string,
+  convertOficial?: ConvertFn
 ): { consolidado: number; porMoeda: Record<string, number> } {
   const bookmakerMoeda = buildBookmakerMoedaMap(rawData.bookmakers);
   let consolidado = 0;
@@ -446,12 +447,13 @@ function calcularLucroCanonicoFromRpc(
     consolidado += convert(valor, moeda);
   });
 
-  // 4) Bônus (excl FREEBET)
+  // 4) Bônus (excl FREEBET) — HÍBRIDO: usa Cotação Oficial (valor de realização)
+  const bonusConvert = convertOficial || convert;
   rawData.bonus.filter(b => b.tipo_bonus !== 'FREEBET').forEach(b => {
     const moeda = (b.currency || 'BRL').toUpperCase();
     const valor = Number(b.bonus_amount || 0);
     addToMoeda(moeda, valor);
-    consolidado += convert(valor, moeda);
+    consolidado += bonusConvert(valor, moeda);
   });
 
   // 5) Perdas operacionais (subtrai)
