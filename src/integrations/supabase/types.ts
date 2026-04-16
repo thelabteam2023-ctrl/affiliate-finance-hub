@@ -14170,7 +14170,7 @@ export type Database = {
           is_multicurrency: boolean
           lucro_total: number
           pl_consolidado: number
-          resultado_final: string
+          resultado_geral: string
           stake_consolidado: number
           stake_total: number
           todas_liquidadas: boolean
