@@ -132,6 +132,7 @@ export function BonusDialog({
   const [filledFromTemplate, setFilledFromTemplate] = useState(false);
   const [templatePercent, setTemplatePercent] = useState<number | null>(null);
   const [templateMaxValue, setTemplateMaxValue] = useState<number | null>(null);
+  const [templateCurrencyMatch, setTemplateCurrencyMatch] = useState(true);
   const [bookmakerSearch, setBookmakerSearch] = useState("");
   const isEditMode = !!bonus;
   const prevBookmakerIdRef = useRef<string>("");
@@ -191,6 +192,7 @@ export function BonusDialog({
         setSelectedTemplateId(null);
         setTemplatePercent(null);
         setTemplateMaxValue(null);
+        setTemplateCurrencyMatch(true);
         setShowCreditConfirmation(false);
       }
     }
@@ -205,6 +207,7 @@ export function BonusDialog({
       setFilledFromTemplate(false);
       setTemplatePercent(null);
       setTemplateMaxValue(null);
+      setTemplateCurrencyMatch(true);
       
       // CRÍTICO: Herdar moeda da bookmaker selecionada
       const bk = bookmakers.find(b => b.id === bookmakerId);
@@ -215,8 +218,9 @@ export function BonusDialog({
   }, [bookmakerId, isEditMode, bookmakers]);
 
   // Auto-calculate bonus value when deposit changes and template has percentage
+  // Only when currencies match between template and bookmaker
   useEffect(() => {
-    if (templatePercent && depositAmount) {
+    if (templatePercent && depositAmount && templateCurrencyMatch) {
       const deposit = parseFloat(depositAmount);
       if (!isNaN(deposit) && deposit > 0) {
         let calculatedBonus = (deposit * templatePercent) / 100;
@@ -227,7 +231,7 @@ export function BonusDialog({
         setAmount(calculatedBonus.toFixed(2));
       }
     }
-  }, [depositAmount, templatePercent, templateMaxValue]);
+  }, [depositAmount, templatePercent, templateMaxValue, templateCurrencyMatch]);
 
   const handleSelectTemplate = (template: BonusTemplate) => {
     setSelectedTemplateId(template.id);
@@ -253,15 +257,24 @@ export function BonusDialog({
       setCurrency(template.moeda || "BRL");
     }
     
-    // Store percentage for auto-calculation
-    if (template.percent) {
+    // Verificar se a moeda do template corresponde à moeda da bookmaker
+    // Se divergir, NÃO preencher valor automaticamente (valorMax é na moeda do catálogo)
+    const isUSDLike = (m: string) => ["USD", "USDT", "USDC"].includes(m);
+    const templateMoeda = template.moeda || "USD";
+    const bookmakerMoeda = currency;
+    const currenciesMatch = templateMoeda === bookmakerMoeda || 
+      (isUSDLike(templateMoeda) && isUSDLike(bookmakerMoeda));
+    setTemplateCurrencyMatch(currenciesMatch);
+    
+    // Store percentage for auto-calculation (only if currencies match)
+    if (template.percent && currenciesMatch) {
       setTemplatePercent(parseFloat(template.percent));
     } else {
-      setTemplatePercent(null);
+      setTemplatePercent(currenciesMatch ? null : null);
     }
     
-    // Store max value for capping
-    if (template.valorMax) {
+    // Store max value for capping (only if currencies match)
+    if (template.valorMax && currenciesMatch) {
       setTemplateMaxValue(parseFloat(template.valorMax));
     } else {
       setTemplateMaxValue(null);
@@ -284,8 +297,8 @@ export function BonusDialog({
       setExpiresAt(format(expiration, "yyyy-MM-dd"));
     }
     
-    // If deposit already filled, calculate bonus
-    if (depositAmount) {
+    // If deposit already filled AND currencies match, calculate bonus
+    if (depositAmount && currenciesMatch) {
       const deposit = parseFloat(depositAmount);
       if (!isNaN(deposit) && deposit > 0 && template.percent) {
         let calculatedBonus = (deposit * parseFloat(template.percent)) / 100;
@@ -294,6 +307,9 @@ export function BonusDialog({
         }
         setAmount(calculatedBonus.toFixed(2));
       }
+    } else if (!currenciesMatch) {
+      // Limpar valor - usuário deve preencher manualmente
+      setAmount("");
     }
   };
 
