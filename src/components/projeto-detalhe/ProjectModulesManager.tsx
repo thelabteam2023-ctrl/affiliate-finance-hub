@@ -28,7 +28,8 @@ import {
   Check,
   Archive,
   RotateCcw,
-  Info
+  Info,
+  Crosshair
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
