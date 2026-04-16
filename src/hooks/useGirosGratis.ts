@@ -497,11 +497,29 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
         .from("giros_gratis" as any)
         .update({ 
           status: "cancelado",
-          cash_ledger_id: estornoResult.entryId, // Referência ao estorno
+          cash_ledger_id: estornoResult.entryId,
         })
         .eq("id", id);
 
       if (error) throw error;
+
+      // 5. Reverter promoção vinculada de volta para DISPONIVEL
+      const giroDisponivelId = (giroToDelete as any).giro_disponivel_id;
+      if (giroDisponivelId) {
+        const { error: revertError } = await supabase
+          .from("giros_gratis_disponiveis" as any)
+          .update({ 
+            status: "DISPONIVEL",
+            giro_gratis_resultado_id: null,
+            data_utilizacao: null,
+          })
+          .eq("id", giroDisponivelId);
+
+        if (revertError) {
+          console.error("Erro ao reverter promoção vinculada:", revertError);
+          // Não bloqueia a operação principal
+        }
+      }
 
       toast.success("Giro grátis removido e saldo revertido!");
       await fetchGiros();
