@@ -138,7 +138,10 @@ export function BonusResultadoLiquidoChart({
           };
         }
         const rawAmount = b.bonus_amount || 0;
-        const consolidated = convertToConsolidation ? convertToConsolidation(rawAmount, b.currency || "BRL") : rawAmount;
+        const hasSnapshot = typeof b.valor_consolidado_snapshot === 'number' && b.valor_consolidado_snapshot > 0;
+        const consolidated = hasSnapshot
+          ? b.valor_consolidado_snapshot!
+          : convertToConsolidation ? convertToConsolidation(rawAmount, b.currency || "BRL") : rawAmount;
         statsMap[id].total_bonus += consolidated;
         statsMap[id].count += 1;
       });
@@ -170,7 +173,10 @@ export function BonusResultadoLiquidoChart({
         }
         
         const rawAmount = b.bonus_amount || 0;
-        const consolidated = convertToConsolidation ? convertToConsolidation(rawAmount, b.currency || "BRL") : rawAmount;
+        const hasSnapshot = typeof b.valor_consolidado_snapshot === 'number' && b.valor_consolidado_snapshot > 0;
+        const consolidated = hasSnapshot
+          ? b.valor_consolidado_snapshot!
+          : convertToConsolidation ? convertToConsolidation(rawAmount, b.currency || "BRL") : rawAmount;
         bonusByDate[date] = (bonusByDate[date] || 0) + consolidated;
       });
 
@@ -307,7 +313,10 @@ export function BonusResultadoLiquidoChart({
       .forEach(b => {
         const date = extractCivilDateKey(b.credited_at!);
         const rawAmount = b.bonus_amount || 0;
-        const consolidated = convertToConsolidation ? convertToConsolidation(rawAmount, b.currency || "BRL") : rawAmount;
+        const hasSnapshot = typeof b.valor_consolidado_snapshot === 'number' && b.valor_consolidado_snapshot > 0;
+        const consolidated = hasSnapshot
+          ? b.valor_consolidado_snapshot!
+          : convertToConsolidation ? convertToConsolidation(rawAmount, b.currency || "BRL") : rawAmount;
         const entry = resultByDate[date] || { lucro: 0, operacoes: 0 };
         entry.lucro += consolidated;
         // Bônus creditados não incrementam operacoes (não são apostas)
