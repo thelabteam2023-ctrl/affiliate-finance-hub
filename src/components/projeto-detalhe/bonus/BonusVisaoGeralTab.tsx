@@ -393,8 +393,9 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
       });
     }
     
+    // HÍBRIDO: Bônus creditado usa Cotação Oficial (valor de realização/nominal)
     const totalBonusCreditado = eligibleBonuses
-      .reduce((acc, b) => acc + convertToConsolidationTrabalho(b.bonus_amount || 0, b.currency), 0);
+      .reduce((acc, b) => acc + convertToConsolidationOficial(b.bonus_amount || 0, b.currency), 0);
     
     // Breakdown de bônus por moeda original
     const bonusPorMoedaMap: Record<string, number> = {};
