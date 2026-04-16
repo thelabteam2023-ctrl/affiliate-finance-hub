@@ -22,6 +22,7 @@ import { Loader2, Gift, Building2, Sparkles, Check, Info, AlertTriangle, Clock, 
 import { BonusFormData, BonusStatus, ProjectBonus, TipoBonus } from "@/hooks/useProjectBonuses";
 import { getFirstLastName } from "@/lib/utils";
 import { useBookmakerBonusTemplates, BonusTemplate, calculateRolloverTarget } from "@/hooks/useBookmakerBonusTemplates";
+import { usePromotionalCurrencyConversion } from "@/hooks/usePromotionalCurrencyConversion";
 import { format, addDays } from "date-fns";
 
 /** Parse YYYY-MM-DD as local date (not UTC) to avoid timezone shift */
