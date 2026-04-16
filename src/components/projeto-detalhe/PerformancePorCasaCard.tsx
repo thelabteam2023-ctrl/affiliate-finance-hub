@@ -530,7 +530,7 @@ export function PerformancePorCasaCard({
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-mono">{formatCurrency(item.totalStake)}</p>
+                      <p className="text-sm font-mono">{item.totalStake > 0 ? formatCurrency(item.totalStake) : '–'}</p>
                     </div>
                     <div className="text-right flex items-center justify-end gap-1">
                       <p
