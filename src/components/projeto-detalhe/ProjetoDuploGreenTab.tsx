@@ -970,15 +970,46 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
     });
   }, [apostas, tabFilters.sortOrder]);
 
+  // Helpers para coletar bookmaker_ids e parceiro_ids de uma aposta (incluindo pernas)
+  const getApostaBookmakerIds = (a: Aposta): string[] => {
+    const ids: string[] = [];
+    if (a.bookmaker_id) ids.push(a.bookmaker_id);
+    (a.pernas || []).forEach((p: any) => {
+      if (p?.bookmaker_id) ids.push(p.bookmaker_id);
+    });
+    return ids;
+  };
+  const getApostaParceiroIds = (a: Aposta): string[] => {
+    const bkIds = getApostaBookmakerIds(a);
+    const ids: string[] = [];
+    bkIds.forEach(id => {
+      const bk = bookmakers.find(b => b.id === id);
+      if (bk?.parceiro_id) ids.push(bk.parceiro_id);
+    });
+    return ids;
+  };
+  const matchesBookmakerFilter = (a: Aposta): boolean => {
+    if (tabFilters.bookmakerIds.length === 0) return true;
+    return getApostaBookmakerIds(a).some(id => tabFilters.bookmakerIds.includes(id));
+  };
+  const matchesParceiroFilter = (a: Aposta): boolean => {
+    if (tabFilters.parceiroIds.length === 0) return true;
+    return getApostaParceiroIds(a).some(id => tabFilters.parceiroIds.includes(id));
+  };
+
   // Filtered counts per sub-tab for badge display
   const filteredAbertasCount = useMemo(() => apostasAbertas.filter(a => {
+    if (!matchesBookmakerFilter(a)) return false;
+    if (!matchesParceiroFilter(a)) return false;
     const matchesResultado = tabFilters.resultados.length === 0 || tabFilters.resultados.includes(a.resultado as any);
     return matchesResultado;
-  }).length, [apostasAbertas, tabFilters.resultados]);
+  }).length, [apostasAbertas, tabFilters.bookmakerIds, tabFilters.parceiroIds, tabFilters.resultados, bookmakers]);
   const filteredHistoricoCount = useMemo(() => apostasHistorico.filter(a => {
+    if (!matchesBookmakerFilter(a)) return false;
+    if (!matchesParceiroFilter(a)) return false;
     const matchesResultado = tabFilters.resultados.length === 0 || tabFilters.resultados.includes(a.resultado as any);
     return matchesResultado;
-  }).length, [apostasHistorico, tabFilters.resultados]);
+  }).length, [apostasHistorico, tabFilters.bookmakerIds, tabFilters.parceiroIds, tabFilters.resultados, bookmakers]);
 
   // Auto-switch to history tab when no open operations
   useEffect(() => {
@@ -1003,10 +1034,14 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
         const matchesSelecoes = Array.isArray((a as any).selecoes) && (a as any).selecoes.some((s: any) => (s?.descricao || '').toLowerCase().includes(term));
         if (!matchesBase && !matchesPernas && !matchesSelecoes) return false;
       }
+      // Filtro por casa (inclui pernas para multi-leg)
+      if (!matchesBookmakerFilter(a)) return false;
+      // Filtro por parceiro (inclui pernas para multi-leg)
+      if (!matchesParceiroFilter(a)) return false;
       const matchesResultado = tabFilters.resultados.length === 0 || tabFilters.resultados.includes(a.resultado as any);
       return matchesResultado;
     });
-  }, [apostasListaAtual, searchTerm, tabFilters.resultados, suspiciousFilter.active]);
+  }, [apostasListaAtual, searchTerm, tabFilters.bookmakerIds, tabFilters.parceiroIds, tabFilters.resultados, bookmakers, suspiciousFilter.active]);
   
   // Ordenar casaData conforme filtro selecionado
   const casaDataSorted = useMemo(() => {
