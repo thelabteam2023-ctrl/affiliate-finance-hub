@@ -7202,6 +7202,7 @@ export type Database = {
           updated_at: string
           user_id: string
           valor_brl_referencia: number | null
+          valor_consolidado_snapshot: number | null
           valor_creditado_no_saldo: number | null
           workspace_id: string
         }
@@ -7238,6 +7239,7 @@ export type Database = {
           updated_at?: string
           user_id: string
           valor_brl_referencia?: number | null
+          valor_consolidado_snapshot?: number | null
           valor_creditado_no_saldo?: number | null
           workspace_id: string
         }
@@ -7274,6 +7276,7 @@ export type Database = {
           updated_at?: string
           user_id?: string
           valor_brl_referencia?: number | null
+          valor_consolidado_snapshot?: number | null
           valor_creditado_no_saldo?: number | null
           workspace_id?: string
         }

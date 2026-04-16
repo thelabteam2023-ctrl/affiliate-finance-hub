@@ -271,9 +271,15 @@ function deriveBonusGanhosModule(
   const bonuses = rawData.bonus.filter(b => b.tipo_bonus !== 'FREEBET');
   const count = bonuses.length;
 
-  // HÍBRIDO: Bônus creditado usa Cotação Oficial (valor de realização)
+  // SNAPSHOT-FIRST: Usar valor_consolidado_snapshot congelado no momento da inserção
+  // Fallback: conversão via cotação oficial (para bônus antigos sem snapshot)
   const bonusConvert = convertOficial || convert;
   const total = bonuses.reduce((acc, b) => {
+    // Se tem snapshot consolidado, usar diretamente (valor já congelado)
+    if (b.valor_consolidado_snapshot != null && b.valor_consolidado_snapshot > 0) {
+      return acc + b.valor_consolidado_snapshot;
+    }
+    // Fallback: conversão live para bônus antigos
     const moeda = b.currency || 'BRL';
     const valor = Number(b.bonus_amount || 0);
     if (moeda === moedaConsolidacao) return acc + valor;
@@ -281,8 +287,12 @@ function deriveBonusGanhosModule(
   }, 0);
 
   const lucroItems = bonuses.map(b => ({
-    valor: Number(b.bonus_amount || 0),
-    moeda: b.currency || 'BRL'
+    valor: b.valor_consolidado_snapshot != null && b.valor_consolidado_snapshot > 0
+      ? b.valor_consolidado_snapshot
+      : Number(b.bonus_amount || 0),
+    moeda: b.valor_consolidado_snapshot != null && b.valor_consolidado_snapshot > 0
+      ? moedaConsolidacao
+      : (b.currency || 'BRL')
   }));
   const lucroPorMoeda = agregarPorMoeda(lucroItems);
 
@@ -447,13 +457,18 @@ function calcularLucroCanonicoFromRpc(
     consolidado += convert(valor, moeda);
   });
 
-  // 4) Bônus (excl FREEBET) — HÍBRIDO: usa Cotação Oficial (valor de realização)
+  // 4) Bônus (excl FREEBET) — SNAPSHOT-FIRST: usa valor congelado
   const bonusConvert = convertOficial || convert;
   rawData.bonus.filter(b => b.tipo_bonus !== 'FREEBET').forEach(b => {
     const moeda = (b.currency || 'BRL').toUpperCase();
     const valor = Number(b.bonus_amount || 0);
     addToMoeda(moeda, valor);
-    consolidado += bonusConvert(valor, moeda);
+    // Usar snapshot congelado se disponível
+    if (b.valor_consolidado_snapshot != null && b.valor_consolidado_snapshot > 0) {
+      consolidado += b.valor_consolidado_snapshot;
+    } else {
+      consolidado += bonusConvert(valor, moeda);
+    }
   });
 
   // 5) Perdas operacionais (subtrai)

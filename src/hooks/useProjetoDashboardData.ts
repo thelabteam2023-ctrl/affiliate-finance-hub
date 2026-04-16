@@ -86,6 +86,8 @@ export interface RawBonus {
   tipo_bonus: string | null;
   bookmaker_id: string | null;
   created_at: string;
+  valor_consolidado_snapshot: number | null;
+  cotacao_credito_snapshot: number | null;
 }
 
 export interface RawBookmaker {

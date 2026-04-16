@@ -393,9 +393,15 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
       });
     }
     
-    // HÍBRIDO: Bônus creditado usa Cotação Oficial (valor de realização/nominal)
+    // SNAPSHOT-FIRST: Usar valor_consolidado_snapshot congelado no momento da inserção
+    // Fallback: conversão via cotação oficial (para bônus antigos sem snapshot)
     const totalBonusCreditado = eligibleBonuses
-      .reduce((acc, b) => acc + convertToConsolidationOficial(b.bonus_amount || 0, b.currency), 0);
+      .reduce((acc, b) => {
+        if (b.valor_consolidado_snapshot != null && b.valor_consolidado_snapshot > 0) {
+          return acc + b.valor_consolidado_snapshot;
+        }
+        return acc + convertToConsolidationOficial(b.bonus_amount || 0, b.currency);
+      }, 0);
     
     // Breakdown de bônus por moeda original
     const bonusPorMoedaMap: Record<string, number> = {};
@@ -750,7 +756,12 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
             }
             
             const totalCredited = eligibleForAvg.reduce(
-              (acc, b) => acc + convertToConsolidation(b.bonus_amount || 0, b.currency), 0
+              (acc, b) => {
+                if (b.valor_consolidado_snapshot != null && b.valor_consolidado_snapshot > 0) {
+                  return acc + b.valor_consolidado_snapshot;
+                }
+                return acc + convertToConsolidation(b.bonus_amount || 0, b.currency);
+              }, 0
             );
             
             // Dias corridos: baseado no primeiro bônus do período (não no início do filtro)

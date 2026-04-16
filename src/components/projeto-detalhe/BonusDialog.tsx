@@ -22,6 +22,7 @@ import { Loader2, Gift, Building2, Sparkles, Check, Info, AlertTriangle, Clock, 
 import { BonusFormData, BonusStatus, ProjectBonus, TipoBonus } from "@/hooks/useProjectBonuses";
 import { getFirstLastName } from "@/lib/utils";
 import { useBookmakerBonusTemplates, BonusTemplate, calculateRolloverTarget } from "@/hooks/useBookmakerBonusTemplates";
+import { usePromotionalCurrencyConversion } from "@/hooks/usePromotionalCurrencyConversion";
 import { format, addDays } from "date-fns";
 
 /** Parse YYYY-MM-DD as local date (not UTC) to avoid timezone shift */
@@ -110,6 +111,7 @@ export function BonusDialog({
   onSubmit,
 }: BonusDialogProps) {
   const { toast } = useToast();
+  const { config: currencyConfig, converterParaConsolidacao } = usePromotionalCurrencyConversion(projectId);
   const [bookmakerId, setBookmakerId] = useState("");
   const [title, setTitle] = useState("");
   const [tipoBonus, setTipoBonus] = useState<TipoBonus>("BONUS");
@@ -359,6 +361,25 @@ export function BonusDialog({
       }
     }
 
+    // Calcular snapshot de consolidação (congelado no momento da inserção)
+    const moedaConsolidacao = currencyConfig.moedaConsolidacao;
+    const isUSDLike = (m: string) => ["USD", "USDT", "USDC"].includes(m);
+    const moedaNorm = isUSDLike(currency) ? "USD" : currency;
+    const moedaConsNorm = isUSDLike(moedaConsolidacao) ? "USD" : moedaConsolidacao;
+    const needsConversion = moedaNorm !== moedaConsNorm;
+    
+    let cotacaoSnapshot: number | null = null;
+    let valorConsolidadoSnapshot: number | null = null;
+    
+    if (needsConversion && currencyConfig.disponivel && currencyConfig.cotacaoAtual > 0) {
+      cotacaoSnapshot = currencyConfig.cotacaoAtual;
+      valorConsolidadoSnapshot = converterParaConsolidacao(parsedAmount, currency);
+    } else if (!needsConversion) {
+      // Mesma moeda — snapshot = valor original
+      valorConsolidadoSnapshot = parsedAmount;
+      cotacaoSnapshot = 1;
+    }
+
     const data: BonusFormData = {
       bookmaker_id: bookmakerId,
       title: title.trim(),
@@ -377,6 +398,8 @@ export function BonusDialog({
       deposit_amount: parsedDeposit,
       min_odds: parsedMinOdds,
       deadline_days: parsedDeadline,
+      cotacao_credito_snapshot: cotacaoSnapshot,
+      valor_consolidado_snapshot: valorConsolidadoSnapshot,
     };
 
     const success = await onSubmit(data);

@@ -58,6 +58,7 @@ export interface ProjectBonus {
   cotacao_credito_at?: string | null;
   valor_brl_referencia?: number | null;
   valor_creditado_no_saldo?: number | null;
+  valor_consolidado_snapshot?: number | null;
 }
 
 export interface BonusFormData {
@@ -79,6 +80,9 @@ export interface BonusFormData {
   deposit_amount?: number | null;
   min_odds?: number | null;
   deadline_days?: number | null;
+  // Snapshot de consolidação (congelado no momento da inserção)
+  cotacao_credito_snapshot?: number | null;
+  valor_consolidado_snapshot?: number | null;
 }
 
 export interface BonusSummary {
@@ -222,6 +226,7 @@ async function fetchBonusesFromDb(projectId: string, bookmakerId?: string): Prom
     cotacao_credito_at: b.cotacao_credito_at,
     valor_brl_referencia: b.valor_brl_referencia ? Number(b.valor_brl_referencia) : null,
     valor_creditado_no_saldo: b.valor_creditado_no_saldo ? Number(b.valor_creditado_no_saldo) : null,
+    valor_consolidado_snapshot: b.valor_consolidado_snapshot ? Number(b.valor_consolidado_snapshot) : null,
   }));
 }
 
@@ -377,6 +382,10 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
         deposit_amount: data.deposit_amount || null,
         min_odds: data.min_odds || null,
         deadline_days: data.deadline_days || null,
+        // Snapshot de consolidação congelado
+        cotacao_credito_snapshot: data.cotacao_credito_snapshot || null,
+        cotacao_credito_at: data.cotacao_credito_snapshot ? new Date().toISOString() : null,
+        valor_consolidado_snapshot: data.valor_consolidado_snapshot || null,
       };
 
       // Step 1: Insert bonus record and capture the ID for potential rollback
