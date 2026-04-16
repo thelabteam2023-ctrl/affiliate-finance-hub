@@ -427,7 +427,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
           modo_entrada, lay_exchange, lay_odd, lay_stake, lay_liability, lay_comissao,
           back_comissao, back_em_exchange, gerou_freebet, valor_freebet_gerada,
           tipo_freebet, is_bonus_bet, contexto_operacional, forma_registro, pernas,
-          moeda_operacao, stake_consolidado, pl_consolidado, valor_brl_referencia, lucro_prejuizo_brl_referencia,
+          moeda_operacao, stake_consolidado, pl_consolidado, consolidation_currency, valor_brl_referencia, lucro_prejuizo_brl_referencia,
           usar_freebet, fonte_saldo
         `;
 
@@ -569,7 +569,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
           status, resultado, observacoes, bookmaker_id, estrategia,
           tipo_freebet, gerou_freebet, valor_freebet_gerada, is_bonus_bet,
           contexto_operacional, forma_registro, selecoes, tipo_multipla, retorno_potencial,
-          moeda_operacao, stake_consolidado, pl_consolidado, valor_brl_referencia, lucro_prejuizo_brl_referencia
+          moeda_operacao, stake_consolidado, pl_consolidado, consolidation_currency, valor_brl_referencia, lucro_prejuizo_brl_referencia
         `;
 
       let dateFiltersMultipla: { startUTC?: string; endUTC?: string } = {};
@@ -648,7 +648,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
           roi_esperado, roi_real, lucro_esperado, lucro_prejuizo,
           status, resultado, data_aposta, observacoes, created_at, pernas, estrategia,
           contexto_operacional,
-          workspace_id, moeda_operacao, stake_consolidado, pl_consolidado,
+          workspace_id, moeda_operacao, stake_consolidado, pl_consolidado, consolidation_currency,
           valor_brl_referencia, lucro_prejuizo_brl_referencia,
           apostas_pernas (
             id, selecao, selecao_livre, odd, stake, resultado, lucro_prejuizo, bookmaker_id, moeda, ordem, fonte_saldo
@@ -1620,6 +1620,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                 workspace_id: sb.workspace_id,
                 lucro_real: sb.pl_consolidado ?? sb.lucro_prejuizo,
                 pl_consolidado: sb.pl_consolidado,
+                consolidation_currency: (sb as any).consolidation_currency,
                 stake_consolidado: sb.stake_consolidado,
                 pernas: groupPernasBySelecao(
                   (sb.pernas || []).map((p: any) => ({
@@ -1683,6 +1684,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                   lucro_real: aposta.pl_consolidado ?? aposta.lucro_prejuizo,
                   roi_real: (aposta as any).roi_real ?? null,
                   pl_consolidado: aposta.pl_consolidado,
+                  consolidation_currency: (aposta as any).consolidation_currency,
                   stake_consolidado: aposta.stake_consolidado,
                   status: aposta.status,
                   resultado: aposta.resultado,
