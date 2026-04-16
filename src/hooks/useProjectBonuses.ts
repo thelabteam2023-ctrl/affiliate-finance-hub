@@ -58,6 +58,7 @@ export interface ProjectBonus {
   cotacao_credito_at?: string | null;
   valor_brl_referencia?: number | null;
   valor_creditado_no_saldo?: number | null;
+  valor_consolidado_snapshot?: number | null;
 }
 
 export interface BonusFormData {
