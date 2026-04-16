@@ -132,6 +132,7 @@ export function BonusDialog({
   const [filledFromTemplate, setFilledFromTemplate] = useState(false);
   const [templatePercent, setTemplatePercent] = useState<number | null>(null);
   const [templateMaxValue, setTemplateMaxValue] = useState<number | null>(null);
+  const [templateCurrencyMatch, setTemplateCurrencyMatch] = useState(true);
   const [bookmakerSearch, setBookmakerSearch] = useState("");
   const isEditMode = !!bonus;
   const prevBookmakerIdRef = useRef<string>("");
