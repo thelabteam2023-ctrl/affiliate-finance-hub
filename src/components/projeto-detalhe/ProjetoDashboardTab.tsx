@@ -24,7 +24,7 @@ import { VisaoGeralCharts } from "./VisaoGeralCharts";
 import { fetchProjetoExtras, type ProjetoExtraEntry } from "@/services/fetchProjetoExtras";
 import { useCalendarApostasRpc } from "@/hooks/useCalendarApostasRpc";
 import { useCanonicalCalendarDaily, transformCanonicalDailyForCharts } from "@/hooks/useCanonicalCalendarDaily";
-import { fetchProjetosLucroOperacionalKpi, derivarCotacoesFromConvertFn } from "@/services/fetchProjetosLucroOperacionalKpi";
+// fetchProjetosLucroOperacionalKpi removido — badge agora derivado do canonicalDaily
 import { useCotacoes } from "@/hooks/useCotacoes";
 
 import { PerformancePorCasaCard } from "./PerformancePorCasaCard";
