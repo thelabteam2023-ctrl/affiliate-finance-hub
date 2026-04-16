@@ -79,7 +79,7 @@ interface UseProjectBonusAnalyticsReturn {
 
 type ConvertToConsolidationFn = (valor: number, moedaOrigem: string) => number;
 
-async function fetchBonusAnalytics(projectId: string, convertToConsolidationOficial?: ConvertToConsolidationFn): Promise<AnalyticsRawData> {
+async function fetchBonusAnalytics(projectId: string, convertToConsolidationFn?: ConvertToConsolidationFn): Promise<AnalyticsRawData> {
   // 1. Buscar bônus DO PROJETO agrupados por bookmaker
   const { data: bonusData, error: bonusError } = await supabase
     .from("project_bookmaker_link_bonuses")
@@ -163,17 +163,15 @@ async function fetchBonusAnalytics(projectId: string, convertToConsolidationOfic
   const withdrawalsData = withdrawalsRes.data || [];
   const moedaConsolidacao = projetoRes.data?.moeda_consolidacao || 'BRL';
 
-  // PADRONIZADO: Usar EXCLUSIVAMENTE a função oficial de conversão (mesma do useKpiBreakdowns/Visão Geral).
-  // Elimina divergências de taxa entre abas causadas por fallbacks internos diferentes.
+  // SNAPSHOT: Usar Cotação de Trabalho (congelada no registro) para eliminar variação cambial.
   const convertToConsolidation = (valor: number, moedaOrigem: string): number => {
     if (!valor || moedaOrigem === moedaConsolidacao) return valor;
 
-    if (convertToConsolidationOficial) {
-      return convertToConsolidationOficial(valor, moedaOrigem);
+    if (convertToConsolidationFn) {
+      return convertToConsolidationFn(valor, moedaOrigem);
     }
 
-    // Se a função oficial não está disponível, retornar valor bruto.
-    // Nunca usar fallback próprio — isso causa divergências com Visão Geral.
+    // Se a função não está disponível, retornar valor bruto.
     return valor;
   };
 
@@ -389,11 +387,11 @@ const emptySummary: ProjectBonusAnalyticsSummary = {
 
 export function useProjectBonusAnalytics(
   projectId: string,
-  convertToConsolidationOficial?: ConvertToConsolidationFn,
+  convertToConsolidation?: ConvertToConsolidationFn,
 ): UseProjectBonusAnalyticsReturn {
   const { data: rawData, isLoading, error, refetch } = useQuery({
-    queryKey: ["bonus-analytics", projectId, Boolean(convertToConsolidationOficial)],
-    queryFn: () => fetchBonusAnalytics(projectId, convertToConsolidationOficial),
+    queryKey: ["bonus-analytics", projectId, Boolean(convertToConsolidation)],
+    queryFn: () => fetchBonusAnalytics(projectId, convertToConsolidation),
     enabled: !!projectId,
     staleTime: PERIOD_STALE_TIME,
     gcTime: PERIOD_GC_TIME,

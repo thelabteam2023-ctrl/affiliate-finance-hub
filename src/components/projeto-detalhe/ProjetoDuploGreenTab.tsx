@@ -717,9 +717,10 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
     };
 
     const apostasLiquidadas = apostasParaKpi.filter((a) => a.resultado && a.resultado !== "PENDENTE");
-    const totalStake = apostasParaKpi.reduce((acc, a) => acc + getConsolidatedStake(a, convertFnOficial, moedaConsol), 0);
-    const volumeLiquidado = apostasLiquidadas.reduce((acc, a) => acc + getConsolidatedStake(a, convertFnOficial, moedaConsol), 0);
-    const lucroTotal = apostasLiquidadas.reduce((acc, a) => acc + getConsolidatedLucro(a, convertFnOficial, moedaConsol), 0);
+    // SNAPSHOT: Usa Cotação de Trabalho (congelada no registro) para eliminar variação cambial
+    const totalStake = apostasParaKpi.reduce((acc, a) => acc + getConsolidatedStake(a, convertFn, moedaConsol), 0);
+    const volumeLiquidado = apostasLiquidadas.reduce((acc, a) => acc + getConsolidatedStake(a, convertFn, moedaConsol), 0);
+    const lucroTotal = apostasLiquidadas.reduce((acc, a) => acc + getConsolidatedLucro(a, convertFn, moedaConsol), 0);
     const pendentes = apostasParaKpi.filter((a) => !a.resultado || a.resultado === "PENDENTE").length;
     const greens = apostasParaKpi.filter((a) => a.resultado === "GREEN" || a.resultado === "MEIO_GREEN").length;
     const reds = apostasParaKpi.filter((a) => a.resultado === "RED" || a.resultado === "MEIO_RED").length;
@@ -775,13 +776,13 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
       // Aposta simples
       const casa = a.bookmaker_nome || "Desconhecida";
       if (!porCasa[casa]) porCasa[casa] = { stake: 0, lucro: 0, count: 0 };
-      porCasa[casa].stake += getConsolidatedStake(a, convertFnOficial, moedaConsol);
-      porCasa[casa].lucro += getConsolidatedLucro(a, convertFnOficial, moedaConsol);
+      porCasa[casa].stake += getConsolidatedStake(a, convertFn, moedaConsol);
+      porCasa[casa].lucro += getConsolidatedLucro(a, convertFn, moedaConsol);
       porCasa[casa].count++;
     });
 
     return { total, totalStake, lucroTotal, pendentes, greens, reds, taxaAcerto, roi, porCasa, currencyBreakdown, lucroPorMoeda };
-  }, [apostasParaKpi, convertFnOficial, moedaConsol]);
+  }, [apostasParaKpi, convertFn, moedaConsol]);
 
   // Interface para vínculos dentro de cada casa
   interface VinculoData {

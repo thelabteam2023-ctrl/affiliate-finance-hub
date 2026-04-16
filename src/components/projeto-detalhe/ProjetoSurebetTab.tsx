@@ -756,9 +756,10 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
     const liquidadas = surebetsLiquidadasArr.length;
     const greens = surebetsParaKpi.filter(s => s.resultado === "GREEN").length;
     const reds = surebetsParaKpi.filter(s => s.resultado === "RED").length;
-    const lucroTotal = surebetsLiquidadasArr.reduce((acc, s) => acc + getConsolidatedLucro(s, convertFnOficial, moedaConsolidacao), 0);
-    const stakeTotal = surebetsParaKpi.reduce((acc, s) => acc + getConsolidatedStake(s, convertFnOficial, moedaConsolidacao), 0);
-    const volumeLiquidado = surebetsLiquidadasArr.reduce((acc, s) => acc + getConsolidatedStake(s, convertFnOficial, moedaConsolidacao), 0);
+    // SNAPSHOT: Usa Cotação de Trabalho (congelada no registro) para eliminar variação cambial
+    const lucroTotal = surebetsLiquidadasArr.reduce((acc, s) => acc + getConsolidatedLucro(s, convertFn, moedaConsolidacao), 0);
+    const stakeTotal = surebetsParaKpi.reduce((acc, s) => acc + getConsolidatedStake(s, convertFn, moedaConsolidacao), 0);
+    const volumeLiquidado = surebetsLiquidadasArr.reduce((acc, s) => acc + getConsolidatedStake(s, convertFn, moedaConsolidacao), 0);
     // ROI usa volume LIQUIDADO — apostas pendentes não têm resultado
     const roi = volumeLiquidado > 0 ? (lucroTotal / volumeLiquidado) * 100 : 0;
 
@@ -815,7 +816,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
     const lucroPorDiaTrabalhado = diasTrabalhados > 0 ? lucroTotal / diasTrabalhados : 0;
     
     return { total, pendentes, liquidadas, greens, reds, lucroTotal, stakeTotal, roi, currencyBreakdown, lucroPorMoeda, lucroPorDia, lucroPorDiaTrabalhado, diasCorridos, diasTrabalhados };
-  }, [surebetsParaKpi, convertFnOficial, moedaConsolidacao, dateRange]);
+  }, [surebetsParaKpi, convertFn, moedaConsolidacao, dateRange]);
 
   // KPIs FILTRADOS (para Operações) - Aplicam filtros dimensionais
   const kpisOperacoes = useMemo(() => {
@@ -825,13 +826,13 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
     const liquidadas = filtLiquidadasArr.length;
     const greens = filteredSurebetsForOperacoes.filter(s => s.resultado === "GREEN").length;
     const reds = filteredSurebetsForOperacoes.filter(s => s.resultado === "RED").length;
-    const lucroTotal = filtLiquidadasArr.reduce((acc, s) => acc + getConsolidatedLucro(s, convertFnOficial, moedaConsolidacao), 0);
-    const stakeTotal = filteredSurebetsForOperacoes.reduce((acc, s) => acc + getConsolidatedStake(s, convertFnOficial, moedaConsolidacao), 0);
-    const volumeLiquidado = filtLiquidadasArr.reduce((acc, s) => acc + getConsolidatedStake(s, convertFnOficial, moedaConsolidacao), 0);
+    const lucroTotal = filtLiquidadasArr.reduce((acc, s) => acc + getConsolidatedLucro(s, convertFn, moedaConsolidacao), 0);
+    const stakeTotal = filteredSurebetsForOperacoes.reduce((acc, s) => acc + getConsolidatedStake(s, convertFn, moedaConsolidacao), 0);
+    const volumeLiquidado = filtLiquidadasArr.reduce((acc, s) => acc + getConsolidatedStake(s, convertFn, moedaConsolidacao), 0);
     const roi = volumeLiquidado > 0 ? (lucroTotal / volumeLiquidado) * 100 : 0;
     
     return { total, pendentes, liquidadas, greens, reds, lucroTotal, stakeTotal, roi };
-  }, [filteredSurebetsForOperacoes, convertFnOficial, moedaConsolidacao]);
+  }, [filteredSurebetsForOperacoes, convertFn, moedaConsolidacao]);
 
   // Alias para compatibilidade - o KPI de referência depende da sub-aba ativa
   // Mas para a Visão Geral sempre usamos kpisGlobal
