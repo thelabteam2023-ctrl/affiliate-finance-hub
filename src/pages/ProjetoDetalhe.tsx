@@ -18,6 +18,7 @@ import { useKpiBreakdowns } from "@/hooks/useKpiBreakdowns";
 import { useProjectFavorites } from "@/hooks/useProjectFavorites";
 import { useProjectModules } from "@/hooks/useProjectModules";
 import { useProjectTabPreference } from "@/hooks/useProjectTabPreference";
+import { useProjectRealtimeSync } from "@/hooks/useProjectRealtimeSync";
 import { 
   ArrowLeft, 
   FolderKanban, 
@@ -152,6 +153,9 @@ export default function ProjetoDetalhe() {
   
   // Project modules - dynamic menu
   const { activeModules, isModuleActive, activateModule, refresh: refreshModules, loading: modulesLoading, error: modulesError } = useProjectModules(id);
+
+  // Realtime: sincroniza automaticamente alterações feitas por outros usuários no mesmo projeto
+  useProjectRealtimeSync(id);
   
   // Module activation dialog state
   const [moduleActivationDialog, setModuleActivationDialog] = useState<{
