@@ -579,19 +579,21 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
     return hasAnyLucro ? total : null;
   })();
   
-  // Usar lucro_esperado do banco ou calcular a partir das pernas
+  // Usar lucro_esperado do banco (calculado com cotação congelada) como fonte primária
+  // Fallback para cálculo runtime apenas se lucro_esperado não existir
   const piorCenarioCalculado = !isLiquidada ? calcularPiorCenario() : null;
   
-  const lucroConsolidadoEfetivo = isMulticurrency
-    ? (typeof lucroConsolidadoFallback === "number" ? lucroConsolidadoFallback : surebet.pl_consolidado)
-    : (typeof surebet.pl_consolidado === "number" ? surebet.pl_consolidado : lucroConsolidadoFallback);
+  // PRIORIDADE: pl_consolidado (atômico, cotação congelada) > fallback runtime
+  const lucroConsolidadoEfetivo = typeof surebet.pl_consolidado === "number"
+    ? surebet.pl_consolidado
+    : (typeof lucroConsolidadoFallback === "number" ? lucroConsolidadoFallback : null);
 
-  // Para lucro exibido: priorizar consolidado para multicurrency
+  // Para lucro exibido: FONTE ÚNICA DE VERDADE
+  // Liquidada: pl_consolidado (RPC atômica) > lucro_real > fallback
+  // Pendente: lucro_esperado (cotação congelada na criação) > cálculo runtime
   const lucroExibir = isLiquidada 
-    ? (isMulticurrency
-      ? (typeof lucroConsolidadoEfetivo === "number" ? lucroConsolidadoEfetivo : surebet.lucro_real)
-      : surebet.lucro_real)
-    : (piorCenarioCalculado?.lucro ?? surebet.lucro_esperado ?? null);
+    ? (typeof lucroConsolidadoEfetivo === "number" ? lucroConsolidadoEfetivo : surebet.lucro_real)
+    : (surebet.lucro_esperado ?? piorCenarioCalculado?.lucro ?? null);
 
   const roiExibir = (() => {
     if (isLiquidada) {
