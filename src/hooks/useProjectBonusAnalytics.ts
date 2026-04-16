@@ -79,7 +79,7 @@ interface UseProjectBonusAnalyticsReturn {
 
 type ConvertToConsolidationFn = (valor: number, moedaOrigem: string) => number;
 
-async function fetchBonusAnalytics(projectId: string, convertToConsolidationOficial?: ConvertToConsolidationFn): Promise<AnalyticsRawData> {
+async function fetchBonusAnalytics(projectId: string, convertToConsolidationFn?: ConvertToConsolidationFn): Promise<AnalyticsRawData> {
   // 1. Buscar bônus DO PROJETO agrupados por bookmaker
   const { data: bonusData, error: bonusError } = await supabase
     .from("project_bookmaker_link_bonuses")
@@ -164,12 +164,11 @@ async function fetchBonusAnalytics(projectId: string, convertToConsolidationOfic
   const moedaConsolidacao = projetoRes.data?.moeda_consolidacao || 'BRL';
 
   // SNAPSHOT: Usar Cotação de Trabalho (congelada no registro) para eliminar variação cambial.
-  // A função recebida já é convertToConsolidation (Cotação de Trabalho), não Oficial/PTAX.
   const convertToConsolidation = (valor: number, moedaOrigem: string): number => {
     if (!valor || moedaOrigem === moedaConsolidacao) return valor;
 
-    if (convertToConsolidationOficial) {
-      return convertToConsolidationOficial(valor, moedaOrigem);
+    if (convertToConsolidationFn) {
+      return convertToConsolidationFn(valor, moedaOrigem);
     }
 
     // Se a função não está disponível, retornar valor bruto.
@@ -388,11 +387,11 @@ const emptySummary: ProjectBonusAnalyticsSummary = {
 
 export function useProjectBonusAnalytics(
   projectId: string,
-  convertToConsolidationOficial?: ConvertToConsolidationFn,
+  convertToConsolidation?: ConvertToConsolidationFn,
 ): UseProjectBonusAnalyticsReturn {
   const { data: rawData, isLoading, error, refetch } = useQuery({
-    queryKey: ["bonus-analytics", projectId, Boolean(convertToConsolidationOficial)],
-    queryFn: () => fetchBonusAnalytics(projectId, convertToConsolidationOficial),
+    queryKey: ["bonus-analytics", projectId, Boolean(convertToConsolidation)],
+    queryFn: () => fetchBonusAnalytics(projectId, convertToConsolidation),
     enabled: !!projectId,
     staleTime: PERIOD_STALE_TIME,
     gcTime: PERIOD_GC_TIME,
