@@ -695,16 +695,18 @@ export function useKpiBreakdowns({
   dataFim = null,
   moedaConsolidacao = 'BRL',
   convertToConsolidation,
+  convertToConsolidationOficial,
   cotacaoKey = 0,
 }: UseKpiBreakdownsProps): UseKpiBreakdownsReturn {
   const { data: rawData, isLoading, error, refresh: refreshDashboard } = useProjetoDashboardData(projetoId || undefined);
 
   const safeConvert = convertToConsolidation || ((valor: number, _moeda: string) => valor);
+  const safeConvertOficial = convertToConsolidationOficial || safeConvert;
 
   const breakdowns = useMemo(() => {
     if (!rawData) return null;
-    return deriveBreakdowns(rawData, moedaConsolidacao, safeConvert);
-  }, [rawData, moedaConsolidacao, safeConvert, cotacaoKey]);
+    return deriveBreakdowns(rawData, moedaConsolidacao, safeConvert, safeConvertOficial);
+  }, [rawData, moedaConsolidacao, safeConvert, safeConvertOficial, cotacaoKey]);
 
   const refresh = useCallback(async () => {
     await refreshDashboard();
