@@ -121,7 +121,7 @@ export const bonusQueryKeys = {
   ] as const,
 };
 
-// Function to invalidate all bonus-related queries + FINANCIAL_STATE
+// Function to invalidate all bonus-related queries + FINANCIAL_STATE + canonical caches
 export function useInvalidateBonusQueries() {
   const queryClient = useQueryClient();
   
@@ -159,7 +159,10 @@ export function useInvalidateBonusQueries() {
     // Estoque de freebets (aba Promoções) — invalidação nativa via useQuery
     queryClient.invalidateQueries({ queryKey: FREEBET_ESTOQUE_KEYS.all(projectId) });
     
-    console.log(`[useInvalidateBonusQueries] Invalidated FINANCIAL_STATE + freebet-estoque for project ${projectId}`);
+    // CANONICAL CACHES — Evolução do Lucro, calendário, KPIs da Visão Geral
+    invalidateCanonicalCaches(queryClient, projectId);
+    
+    console.log(`[useInvalidateBonusQueries] Invalidated FINANCIAL_STATE + canonical + freebet-estoque for project ${projectId}`);
   }, [queryClient]);
 }
 
