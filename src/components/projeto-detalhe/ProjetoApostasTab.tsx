@@ -1653,6 +1653,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                   onDuplicate={handleDuplicateSurebet}
                   formatCurrency={formatCurrency}
                   convertToConsolidation={convertToConsolidation}
+                  moedaConsolidacao={moedaConsolidacao}
                   bookmakerNomeMap={bookmakerNomeMap}
                 />
               );
@@ -1717,6 +1718,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                     onDuplicate={handleDuplicateSimples}
                     formatCurrency={formatCurrency}
                     convertToConsolidation={convertToConsolidation}
+                    moedaConsolidacao={moedaConsolidacao}
                     bookmakerNomeMap={bookmakerNomeMap}
                   />
                 );

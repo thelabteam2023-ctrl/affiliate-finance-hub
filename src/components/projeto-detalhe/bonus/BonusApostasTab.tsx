@@ -1096,6 +1096,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
               isBonusContext={true}
               formatCurrency={formatProjectCurrency}
               convertToConsolidation={convertToConsolidation}
+              moedaConsolidacao={moedaConsolidacao}
               bookmakerNomeMap={bookmakerNomeMap}
               onEdit={(surebet) => {
                 // Abrir em janela externa
@@ -1166,6 +1167,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
                  onDuplicate={handleDuplicateSurebet}
                 formatCurrency={formatProjectCurrency}
                 convertToConsolidation={convertToConsolidation}
+                moedaConsolidacao={moedaConsolidacao}
                 bookmakerNomeMap={bookmakerNomeMap}
               />
             );
