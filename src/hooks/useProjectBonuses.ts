@@ -79,6 +79,9 @@ export interface BonusFormData {
   deposit_amount?: number | null;
   min_odds?: number | null;
   deadline_days?: number | null;
+  // Snapshot de consolidação (congelado no momento da inserção)
+  cotacao_credito_snapshot?: number | null;
+  valor_consolidado_snapshot?: number | null;
 }
 
 export interface BonusSummary {
