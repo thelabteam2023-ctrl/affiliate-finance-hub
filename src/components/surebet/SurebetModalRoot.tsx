@@ -357,30 +357,27 @@ export function SurebetModalRoot({
 
   // Construir engineConfig com taxas BRL corretas
   // REGRA UNIFICADA PARA FORMULÁRIOS:
-  //   Usa cotacaoAtual do useProjetoConsolidacao (que já aplica: Trabalho > PTAX > fallback)
-  //   Isso garante que TODOS os formulários (Simples, Múltipla, Surebet) usem a mesma cotação.
-  //   Para outras moedas (EUR, GBP, etc.), usa getCotacaoRate (oficial).
+  //   Usa getEffectiveRate (Trabalho > Oficial) para TODAS as moedas — não só USD.
+  //   Isso garante paridade absoluta com useProjetoCurrency.convertToConsolidation
+  //   (que é usado pelo SurebetCard e pela persistência de lucro_esperado).
+  //   ANTES: USD usava cotação de trabalho mas EUR/MXN/etc usavam PTAX live → drift.
   const engineConfig = useMemo((): import("@/utils/surebetCurrencyEngine").SurebetEngineConfig => {
     const consolidation = (moedaConsolidacao || "BRL") as SupportedCurrency;
-    
-    // REGRA UNIFICADA: formulários SEMPRE usam cotacaoAtual (que já aplica Trabalho > PTAX)
-    // Isso garante consistência com useProjetoCurrency.convertToConsolidation
-    const usdBrl = cotacaoUsdFormulario;
     
     return {
       consolidationCurrency: consolidation,
       brlRates: {
         BRL: 1,
-        USD: usdBrl,
-        EUR: getCotacaoRate("EUR"),
-        GBP: getCotacaoRate("GBP"),
-        MXN: getCotacaoRate("MXN"),
-        MYR: getCotacaoRate("MYR"),
-        ARS: getCotacaoRate("ARS"),
-        COP: getCotacaoRate("COP"),
+        USD: getEffectiveRate("USD"),
+        EUR: getEffectiveRate("EUR"),
+        GBP: getEffectiveRate("GBP"),
+        MXN: getEffectiveRate("MXN"),
+        MYR: getEffectiveRate("MYR"),
+        ARS: getEffectiveRate("ARS"),
+        COP: getEffectiveRate("COP"),
       },
     };
-  }, [moedaConsolidacao, cotacaoUsdFormulario, getCotacaoRate]);
+  }, [moedaConsolidacao, getEffectiveRate]);
 
   const { analysis, calculatedStakes, equalizedTargetStakes, targetPayoutsLocal, pernasValidas, arredondarStake, getOddMediaPerna, getStakeTotalPerna, directedStakes } = useSurebetCalculator({
     odds,
