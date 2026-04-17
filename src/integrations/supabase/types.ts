@@ -14138,6 +14138,10 @@ export type Database = {
         }
         Returns: string
       }
+      excluir_movimentacao_caixa: {
+        Args: { p_motivo: string; p_transacao_id: string }
+        Returns: Json
+      }
       executar_marco_zero: {
         Args: { p_projeto_id: string; p_user_id: string }
         Returns: Json
@@ -14834,6 +14838,10 @@ export type Database = {
           reversals_created: number
           success: boolean
         }[]
+      }
+      reverter_movimentacao_caixa: {
+        Args: { p_motivo: string; p_transacao_id: string }
+        Returns: Json
       }
       schedule_downgrade: {
         Args: {
