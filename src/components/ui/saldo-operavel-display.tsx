@@ -159,6 +159,17 @@ interface SaldoOperavelDisplayProps {
   sortSaldo?: "asc" | "desc" | null;
   sortEmAposta?: "asc" | "desc" | null;
   sortDisponivel?: "asc" | "desc" | null;
+  /**
+   * Conversão para moeda de consolidação do projeto.
+   * Quando fornecido E moeda da casa ≠ moeda de consolidação,
+   * exibe linha "≈ $ X.XX" abaixo de cada valor.
+   * Usa Cotação de Trabalho (sem drift de mercado).
+   */
+  convertToConsolidacao?: (valor: number, moedaOrigem: string) => number;
+  /** Moeda de consolidação do projeto (BRL/USD) — usada com convertToConsolidacao */
+  moedaConsolidacao?: string;
+  /** Formatador da moeda de consolidação (ex: formatCurrency do useProjetoCurrency) */
+  formatConsolidacao?: (valor: number) => string;
 }
 
 /**
@@ -182,11 +193,31 @@ export function SaldoOperavelDisplay({
   sortSaldo,
   sortEmAposta,
   sortDisponivel,
+  convertToConsolidacao,
+  moedaConsolidacao,
+  formatConsolidacao,
 }: SaldoOperavelDisplayProps) {
   const hasComposition = saldoFreebet > 0 || saldoBonus > 0;
   // Limitar exibição do saque pendente ao saldo real (não mostrar mais do que existe na conta)
   const saquePendenteEfetivo = Math.min(saldoSaquePendente, saldoReal);
   const hasPendingWithdrawal = saquePendenteEfetivo > 0;
+
+  // Helper: exibe equivalente em moeda de consolidação se aplicável
+  const showConsolidacao =
+    !!convertToConsolidacao &&
+    !!moedaConsolidacao &&
+    !!formatConsolidacao &&
+    moeda !== moedaConsolidacao;
+
+  const renderConsolidacao = (valor: number) => {
+    if (!showConsolidacao) return null;
+    const convertido = convertToConsolidacao!(valor, moeda);
+    return (
+      <span className="block text-[10px] text-muted-foreground/70 tabular-nums leading-tight">
+        ≈ {formatConsolidacao!(convertido)}
+      </span>
+    );
+  };
 
   // Componente de tooltip com composição
   const CompositionTooltip = () => (
