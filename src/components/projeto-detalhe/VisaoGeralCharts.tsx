@@ -25,6 +25,7 @@ import { CalendarioLucros } from "./CalendarioLucros";
 import { getFirstLastName } from "@/lib/utils";
 import { parseLocalDateTime, extractLocalDateKey } from "@/utils/dateUtils";
 import { getConsolidatedLucro, getConsolidatedStake, getConsolidatedLucroDirect } from "@/utils/consolidatedValues";
+import { convertPernaToConsolidacao } from "@/lib/currency-conversion-snapshot";
 
 // =====================================================
 // TIPOS
@@ -43,6 +44,7 @@ interface Perna {
   moeda?: string;
   stake_brl_referencia?: number | null;
   lucro_prejuizo_brl_referencia?: number | null;
+  cotacao_snapshot?: number | null;
 }
 
 interface ApostaBase {
@@ -896,12 +898,24 @@ export function VisaoGeralCharts({
       vinculoData.lucro += lucro;
     };
 
-    // Helper para converter stake/lucro de perna para moeda de consolidação
-    const convertPernaStake = (valor: number, pernaMoeda: string): number => {
+    // Helper: converte stake/lucro de perna para moeda de consolidação
+    // HIERARQUIA: snapshot da perna > Cotação de Trabalho > PTAX live (zero drift)
+    const convertPernaWithSnapshot = (
+      valor: number,
+      pernaMoeda: string,
+      cotacaoSnapshot?: number | null,
+    ): number => {
       if (!valor) return 0;
-      if (moedaConsolidacao && pernaMoeda === moedaConsolidacao) return valor;
-      if (convertToConsolidation && pernaMoeda !== (moedaConsolidacao || "BRL")) return convertToConsolidation(valor, pernaMoeda);
-      return valor;
+      const moedaDest = moedaConsolidacao || "BRL";
+      if (pernaMoeda === moedaDest) return valor;
+      if (!convertToConsolidation) return valor;
+      return convertPernaToConsolidacao(
+        { valor, moedaOrigem: pernaMoeda, cotacaoSnapshot },
+        {
+          moedaConsolidacao: moedaDest,
+          convertToConsolidationFallback: convertToConsolidation,
+        },
+      );
     };
 
     // Filtra apostas pendentes que não pertencem ao período selecionado
@@ -929,10 +943,10 @@ export function VisaoGeralCharts({
           const pernaLucroRaw = typeof perna.lucro_prejuizo === "number" ? perna.lucro_prejuizo : 0;
           const pernaStake = (moedaConsolidacao === "BRL" && typeof perna.stake_brl_referencia === "number")
             ? perna.stake_brl_referencia
-            : convertPernaStake(pernaStakeRaw, pernaMoeda);
+            : convertPernaWithSnapshot(pernaStakeRaw, pernaMoeda, perna.cotacao_snapshot);
           const pernaLucro = (moedaConsolidacao === "BRL" && typeof perna.lucro_prejuizo_brl_referencia === "number")
             ? perna.lucro_prejuizo_brl_referencia
-            : convertPernaStake(pernaLucroRaw, pernaMoeda);
+            : convertPernaWithSnapshot(pernaLucroRaw, pernaMoeda, perna.cotacao_snapshot);
           processEntry(nomeCompleto, parceiroNome, perna.instance_identifier, pernaStake, pernaLucro, moedaConsolidacao || "BRL", isLiquidada);
         });
       } else {

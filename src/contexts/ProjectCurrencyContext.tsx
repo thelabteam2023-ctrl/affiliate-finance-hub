@@ -84,21 +84,22 @@ export function ProjectCurrencyProvider({ projetoId, children }: ProjectCurrency
     const fonteCotacao = (projetoConfig?.fonte_cotacao as FonteCotacao) ?? "TRABALHO";
     const cotacaoTrabalho = projetoConfig?.cotacao_trabalho || null;
     
-    // REGRA DE COTAÇÃO PARA KPIs:
-    // Prioridade 1: Cotação oficial (Binance/PTAX) - SEMPRE primária
-    // Prioridade 2: Cotação de trabalho - FALLBACK se API indisponível
-    // Nota: Cotação de trabalho será usada em formulários para conversão entre operações
-    let cotacaoAtual = cotacaoUSD;
-    if (!cotacaoUSD || cotacaoUSD <= 0) {
-      // Fallback para cotação de trabalho se API indisponível
-      cotacaoAtual = cotacaoTrabalho ?? 0;
+    // REGRA ESTRUTURAL (a partir de agora):
+    // Prioridade 1: Cotação de Trabalho do projeto - SEMPRE primária para análises
+    // Prioridade 2: PTAX live - FALLBACK apenas se Trabalho não definida
+    //
+    // Isso elimina drift de mercado em KPIs analíticos. KPIs de realização
+    // devem usar ptaxAtual diretamente quando precisarem de cotação live.
+    let cotacaoAtual = cotacaoTrabalho ?? 0;
+    if (!cotacaoAtual || cotacaoAtual <= 0) {
+      cotacaoAtual = cotacaoUSD; // fallback PTAX
     }
 
     console.log("[ProjectCurrencyContext] Config processada:", { 
       moedaConsolidacao, 
       fonteCotacao,
       cotacaoAtual,
-      fonte: cotacaoUSD > 0 ? "PTAX" : "TRABALHO"
+      fonte: cotacaoTrabalho && cotacaoTrabalho > 0 ? "TRABALHO" : "PTAX"
     });
 
     return {
