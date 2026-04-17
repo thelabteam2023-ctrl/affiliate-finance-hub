@@ -53,3 +53,15 @@ export {
   formatViolations,
   isInvariantViolation,
 } from './invariants';
+
+// Exportar reabertura (Fase 1: surebets simples)
+export {
+  validarReaberturaSurebet,
+  reabrirSurebet,
+} from './reabertura/ReaberturaService';
+export type {
+  ValidacaoReaberturaResult,
+  ReaberturaResult,
+  ReaberturaBlocker,
+  ReaberturaPernaPreview,
+} from './reabertura/ReaberturaService';
