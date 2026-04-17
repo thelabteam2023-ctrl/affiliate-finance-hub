@@ -499,9 +499,9 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
   // Detectar contexto de bônus pela estratégia ou prop
   const showBonusBadge = isBonusContext || surebet.estrategia === "EXTRACAO_BONUS";
   
-  // Calcular pior cenário a partir das pernas quando pendente
+  // Calcular cenários (pior e melhor) a partir das pernas quando pendente
   // Para multicurrency: converte cada payout para moeda de consolidação antes de comparar
-  const calcularPiorCenario = (): { lucro: number; roi: number } | null => {
+  const calcularCenarios = (): { piorLucro: number; melhorLucro: number; piorRoi: number; melhorRoi: number } | null => {
     if (!surebet.pernas || surebet.pernas.length < 2) return null;
     
     // Calcular stake total e custo real (freebet não é custo)
@@ -538,9 +538,17 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
     });
     
     const piorLucro = Math.min(...cenarios);
+    const melhorLucro = Math.max(...cenarios);
     const piorRoi = stakeRealTotal > 0 ? (piorLucro / stakeRealTotal) * 100 : 0;
+    const melhorRoi = stakeRealTotal > 0 ? (melhorLucro / stakeRealTotal) * 100 : 0;
     
-    return { lucro: piorLucro, roi: piorRoi };
+    return { piorLucro, melhorLucro, piorRoi, melhorRoi };
+  };
+
+  // Manter assinatura antiga para uso interno (apenas pior)
+  const calcularPiorCenario = (): { lucro: number; roi: number } | null => {
+    const c = calcularCenarios();
+    return c ? { lucro: c.piorLucro, roi: c.piorRoi } : null;
   };
 
   const getPernaLucroNominal = (perna: SurebetPerna): number | null => {
