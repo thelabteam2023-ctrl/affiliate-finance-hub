@@ -68,6 +68,7 @@ interface SurebetTableRowProps {
   rowSpan: number;
   scenario: LegScenario | undefined;
   isEditing: boolean;
+  canEditStructure: boolean;
   isFocused: boolean;
   isProcessing: boolean;
   bookmakers: BookmakerOption[];
@@ -100,6 +101,7 @@ export function SurebetTableRow({
   rowSpan,
   scenario,
   isEditing,
+  canEditStructure,
   isFocused,
   isProcessing,
   bookmakers,
@@ -184,156 +186,12 @@ export function SurebetTableRow({
           isFocused ? "bg-muted/30" : "hover:bg-muted/20"
         }`}
         style={{ height: '78px' }}
-        onMouseEnter={() => !isEditing && onFocus(pernaIndex)}
-        onMouseLeave={() => !isEditing && onBlur()}
+        onMouseEnter={() => canEditStructure && onFocus(pernaIndex)}
+        onMouseLeave={() => canEditStructure && onBlur()}
       >
-        {/* Loading OCR */}
-        {isProcessing && (
-          <td colSpan={10} className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 pointer-events-none">
-            <div className="flex items-center gap-2 text-muted-foreground text-xs">
-              <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-              Analisando print...
-            </div>
-          </td>
-        )}
-        
-        {/* Perna Label */}
-        <td rowSpan={mainRowSpan} className="px-2 text-center align-middle" style={{ height: '78px' }}>
-          <div className={`inline-flex items-center justify-center w-9 h-9 rounded-lg font-bold text-sm ${getPernaColor()}`}>
-            {pernaIndex + 1}
-          </div>
-          {entry.selecaoLivre?.trim() && (
-            <div className="text-[10px] text-muted-foreground truncate max-w-[60px] mt-0.5">
-              {entry.selecaoLivre}
-            </div>
-          )}
-          {totalEntries > 1 && (
-            <div className="text-[9px] text-muted-foreground mt-1">{totalEntries}/5</div>
-          )}
-        </td>
-        
-        {/* Casa */}
-        <td className="px-2" style={{ height: '78px' }}>
-          <div className="flex flex-col">
-            <Select 
-              value={entry.bookmaker_id}
-              onValueChange={(v) => onUpdateOdd(pernaIndex, "bookmaker_id", v)}
-            >
-              <SelectTrigger className="h-8 text-[10px] w-full">
-                <SelectValue placeholder="Selecione">
-                  {selectedBookmaker?.nome && (
-                    <div className="flex flex-col items-start min-w-0">
-                      <div className="flex items-center gap-1 min-w-0">
-                        <span className="truncate uppercase text-[10px]">
-                          {selectedBookmaker.nome}
-                        </span>
-                        {selectedBookmaker.instance_identifier && (
-                          <span className="text-[9px] text-primary font-medium truncate normal-case">
-                            {selectedBookmaker.instance_identifier}
-                          </span>
-                        )}
-                      </div>
-                      {selectedBookmaker.parceiro_nome && (
-                        <span className="text-[9px] text-muted-foreground truncate normal-case">
-                          {getFirstLastName(selectedBookmaker.parceiro_nome)}
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </SelectValue>
-              </SelectTrigger>
-              <BookmakerSearchableSelectContent
-                bookmakers={bookmakers}
-                className="max-w-[300px]"
-              />
-            </Select>
-            <BookmakerMetaRow 
-              bookmaker={selectedBookmaker ? {
-                parceiro_nome: selectedBookmaker.parceiro_nome || null,
-                moeda: selectedBookmaker.moeda,
-                saldo_operavel: selectedBookmaker.saldo_operavel,
-                saldo_freebet: selectedBookmaker.saldo_freebet,
-                saldo_disponivel: selectedBookmaker.saldo_disponivel,
-              } : null}
-            />
-          </div>
-        </td>
-        
-        {/* Odd */}
-        <td className="px-1" style={{ height: '78px' }}>
-          <Input 
-            type="number"
-            step="0.00001"
-            placeholder="0.00"
-            value={entry.odd}
-            onChange={(e) => onUpdateOdd(pernaIndex, "odd", e.target.value)}
-            className="h-8 text-xs text-center px-0.5 w-[68px] tabular-nums"
-            onWheel={(e) => e.currentTarget.blur()}
-            data-field-type="odd"
-            onKeyDown={(e) => onFieldKeyDown(e, 'odd')}
-          />
-        </td>
-        
-        {/* Stake */}
-        <td className="px-1" style={{ height: '78px' }}>
-          {(() => {
-            const mainInsufficient = insufficientEntries?.get(`main-${pernaIndex}`) || false;
-            const hasFBAvailable = (selectedBookmaker?.saldo_freebet ?? 0) > 0;
-            return (
-              <div className="flex flex-col items-center gap-0.5">
-                <div className="flex items-center gap-1">
-                  <MoneyInput 
-                    value={entry.stake}
-                    onChange={(val) => onUpdateOdd(pernaIndex, "stake", val)}
-                    currency={entry.moeda}
-                    minDigits={6}
-                    className={cn(
-                      "h-8 text-xs text-center tabular-nums",
-                      entry.fonteSaldo === 'FREEBET' ? "w-[72px]" : "w-[90px]",
-                      mainInsufficient ? "border-destructive focus-visible:ring-destructive/50" : ""
-                    )}
-                    data-field-type="stake"
-                    onKeyDown={(e) => onFieldKeyDown(e as any, 'stake')}
-                  />
-                  {/* FB Toggle — só aparece se a casa tem saldo de freebet */}
-                  {(hasFBAvailable || entry.fonteSaldo === 'FREEBET') && (
-                    <button
-                      type="button"
-                      onClick={() => onUpdateOdd(pernaIndex, "fonteSaldo" as any, entry.fonteSaldo === 'FREEBET' ? 'REAL' : 'FREEBET')}
-                      className={cn(
-                        "shrink-0 px-1.5 py-0.5 rounded text-[9px] font-bold transition-colors border",
-                        entry.fonteSaldo === 'FREEBET'
-                          ? "bg-purple-500/20 text-purple-700 dark:text-purple-400 border-purple-500/40"
-                          : "text-muted-foreground/40 border-transparent hover:text-muted-foreground/60 hover:border-border/40"
-                      )}
-                      title={entry.fonteSaldo === 'FREEBET' ? "Usando Freebet (clique para desativar)" : "Usar Freebet nesta entrada"}
-                    >
-                      FB
-                    </button>
-                  )}
-                </div>
-                {mainInsufficient && (
-                  <span className="text-[9px] text-destructive font-medium">
-                    {entry.fonteSaldo === 'FREEBET' ? 'FB insuf.' : 'Saldo insuf.'}
-                  </span>
-                )}
-              </div>
-            );
-          })()}
-        </td>
-        
-        {/* Linha */}
-        <td className="px-2" style={{ height: '78px' }}>
-          <Input
-            placeholder="Linha"
-            value={entry.selecaoLivre}
-            onChange={(e) => onUpdateOdd(pernaIndex, "selecaoLivre", e.target.value)}
-            className="h-8 text-xs px-1 border-dashed w-20"
-          />
-        </td>
-        
+...
         {/* Referência (Target) */}
-        {!isEditing && (
+        {canEditStructure && (
           <td rowSpan={mainRowSpan} className="px-2 text-center align-middle" style={{ height: '78px' }}>
             <button
               type="button"
@@ -348,22 +206,9 @@ export function SurebetTableRow({
             </button>
           </td>
         )}
-        
-        {/* Resultado (edição) */}
-        {isEditing && (
-          <td rowSpan={mainRowSpan} className="px-1 text-center align-middle" style={{ height: '78px' }}>
-            <div className="group inline-flex rounded-md border border-border/40 bg-muted/20 p-0.5 gap-0.5">
-              <ResultadoButton tipo="GREEN" label="Green" selectedClass="bg-emerald-500/20 text-emerald-500" hoverClass="hover:bg-emerald-500/20 hover:text-emerald-500" />
-              <ResultadoButton tipo="RED" label="Red" selectedClass="bg-red-500/20 text-red-500" hoverClass="hover:bg-red-500/20 hover:text-red-500" />
-              <ResultadoButton tipo="MEIO_GREEN" label="½G" selectedClass="bg-teal-500/20 text-teal-500" hoverClass="hover:bg-teal-500/20 hover:text-teal-500" hidden />
-              <ResultadoButton tipo="MEIO_RED" label="½R" selectedClass="bg-orange-500/20 text-orange-500" hoverClass="hover:bg-orange-500/20 hover:text-orange-500" hidden />
-              <ResultadoButton tipo="VOID" label="Void" selectedClass="bg-slate-500/20 text-slate-400" hoverClass="hover:bg-slate-500/20 hover:text-slate-400" />
-            </div>
-          </td>
-        )}
-        
+...
         {/* D (distribuição) */}
-        {!isEditing && (
+        {canEditStructure && (
           <td rowSpan={mainRowSpan} className="px-2 text-center align-middle" style={{ height: '78px' }}>
             <button
               type="button"
@@ -379,27 +224,9 @@ export function SurebetTableRow({
             </button>
           </td>
         )}
-        
-        {/* Lucro */}
-        <td rowSpan={mainRowSpan} className="px-1 text-center align-middle" style={{ height: '78px' }}>
-          <span className={`font-medium tabular-nums ${
-            lucro >= 0 ? "text-emerald-500" : "text-red-500"
-          } ${Math.abs(lucro) >= 100000 ? "text-[11px]" : "text-sm"}`}>
-            {hasScenarioData ? formatCompactCurrency(lucro, moedaDominante) : "—"}
-          </span>
-        </td>
-        
-        {/* ROI */}
-        <td rowSpan={mainRowSpan} className="px-2 text-center align-middle" style={{ height: '78px' }}>
-          <span className={`text-xs ${
-            roi >= 0 ? "text-emerald-500" : "text-red-500"
-          }`}>
-            {hasScenarioData ? `${roi > 0 ? "+" : ""}${roi.toFixed(2)}%` : "—"}
-          </span>
-        </td>
-        
+...
         {/* Ações */}
-        {!isEditing && (
+        {canEditStructure && (
           <td rowSpan={mainRowSpan} className="px-1 align-middle" style={{ height: '78px' }}>
             {canAddMore && (
               <Button
@@ -415,7 +242,7 @@ export function SurebetTableRow({
             )}
           </td>
         )}
-        {isEditing && (
+        {isStructureLocked && (
           <td rowSpan={mainRowSpan} className="px-1 text-center align-middle" style={{ height: '78px' }}>
             {canDeletePerna && (
               <Button
