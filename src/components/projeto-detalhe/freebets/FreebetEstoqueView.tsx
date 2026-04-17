@@ -308,6 +308,11 @@ export function FreebetEstoqueView({ projetoId, formatCurrency, dateRange, onAdd
                       <p className="font-semibold text-amber-400">
                         {formatNativeCurrency(bk.saldo_nominal, bk.moeda)}
                       </p>
+                      {bk.moeda !== moedaConsolidacao && (
+                        <p className="text-[10px] text-muted-foreground/80">
+                          ≈ {formatCurrency(convertToConsolidation(bk.saldo_nominal, bk.moeda))}
+                        </p>
+                      )}
                     </div>
                     <div className="text-center tabular-nums">
                       <p className="text-xs text-muted-foreground">Liberadas</p>
