@@ -1533,6 +1533,31 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                   )}
                 </div>
                 <div className="md:col-span-2">
+                  <Label>
+                    Qualidade do parceiro
+                    <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
+                  </Label>
+                  <div className="mt-1.5 flex items-center gap-3 rounded-lg border border-border bg-muted/20 px-3 py-2">
+                    <StarRating
+                      value={qualidade}
+                      onChange={(v) => !loading && !viewMode && setQualidade(v)}
+                      readOnly={loading || viewMode}
+                      size="md"
+                      showLabel
+                    />
+                    {qualidade != null && !viewMode && (
+                      <button
+                        type="button"
+                        onClick={() => setQualidade(null)}
+                        className="ml-auto text-xs text-muted-foreground hover:text-foreground transition-colors"
+                        disabled={loading}
+                      >
+                        Limpar
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <div className="md:col-span-2">
                   <Label htmlFor="observacoes">
                     Observações
                     <span className="text-xs text-muted-foreground/60 ml-1">(opcional)</span>
