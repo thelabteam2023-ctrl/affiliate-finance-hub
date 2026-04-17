@@ -898,12 +898,24 @@ export function VisaoGeralCharts({
       vinculoData.lucro += lucro;
     };
 
-    // Helper para converter stake/lucro de perna para moeda de consolidação
-    const convertPernaStake = (valor: number, pernaMoeda: string): number => {
+    // Helper: converte stake/lucro de perna para moeda de consolidação
+    // HIERARQUIA: snapshot da perna > Cotação de Trabalho > PTAX live (zero drift)
+    const convertPernaWithSnapshot = (
+      valor: number,
+      pernaMoeda: string,
+      cotacaoSnapshot?: number | null,
+    ): number => {
       if (!valor) return 0;
-      if (moedaConsolidacao && pernaMoeda === moedaConsolidacao) return valor;
-      if (convertToConsolidation && pernaMoeda !== (moedaConsolidacao || "BRL")) return convertToConsolidation(valor, pernaMoeda);
-      return valor;
+      const moedaDest = moedaConsolidacao || "BRL";
+      if (pernaMoeda === moedaDest) return valor;
+      if (!convertToConsolidation) return valor;
+      return convertPernaToConsolidacao(
+        { valor, moedaOrigem: pernaMoeda, cotacaoSnapshot },
+        {
+          moedaConsolidacao: moedaDest,
+          convertToConsolidationFallback: convertToConsolidation,
+        },
+      );
     };
 
     // Filtra apostas pendentes que não pertencem ao período selecionado
