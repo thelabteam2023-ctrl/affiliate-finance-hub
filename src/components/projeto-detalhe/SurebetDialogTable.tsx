@@ -1839,6 +1839,8 @@ export function SurebetDialogTable({
                     
                     {/* Ações - Adicionar casa */}
                     {!lockStructure && (
+                      <td className="py-6 px-1">
+                        <Button
                           type="button"
                           variant="ghost"
                           size="sm"
@@ -1932,6 +1934,8 @@ export function SurebetDialogTable({
                     
                     {/* Remover */}
                     {!lockStructure && (
+                      <td className="py-1 px-1">
+                        <Button
                           type="button"
                           variant="ghost"
                           size="sm"
