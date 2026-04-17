@@ -997,6 +997,20 @@ export function HistoricoMovimentacoes({
           }}
         />
       )}
+
+      <ReverterMovimentacaoDialog
+        open={!!reverterTx}
+        onOpenChange={(o) => { if (!o) setReverterTx(null); }}
+        transacao={reverterTx}
+        resumoTransacao={reverterTx?._resumo}
+      />
+
+      <ExcluirMovimentacaoDialog
+        open={!!excluirTx}
+        onOpenChange={(o) => { if (!o) setExcluirTx(null); }}
+        transacao={excluirTx}
+        resumoTransacao={excluirTx?._resumo}
+      />
     </>
   );
 }
