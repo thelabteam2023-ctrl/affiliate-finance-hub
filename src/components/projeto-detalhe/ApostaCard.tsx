@@ -416,6 +416,34 @@ export function ApostaCard({
     if (isMultiCurrency && formatCurrencyProp) return formatCurrencyProp(value);
     return defaultFormatCurrency(value, isMultiCurrency ? (moedaConsolidacao || "BRL") : moeda);
   };
+
+  // Exibição dual de moeda: quando aposta single-currency está em moeda
+  // diferente da moeda de consolidação do projeto, exibir conversão (≈ USD/BRL)
+  // Usa convertToConsolidation (Cotação de Trabalho), garantindo paridade com ledger.
+  const isLiquidada = aposta.status === "LIQUIDADA" || (aposta.resultado != null && aposta.resultado !== "PENDENTE");
+  const showDualCurrency =
+    !isMultiCurrency &&
+    !!moedaConsolidacao &&
+    moeda !== moedaConsolidacao &&
+    isLiquidada &&
+    lucroDisplay !== null &&
+    lucroDisplay !== undefined;
+
+  const lucroConsolidadoDual = (() => {
+    if (!showDualCurrency) return null;
+    // Prioriza pl_consolidado (cotação congelada no ledger)
+    if (typeof aposta.pl_consolidado === "number") return aposta.pl_consolidado;
+    // Fallback: converter via Cotação de Trabalho do projeto
+    if (convertToConsolidation && lucroDisplay != null) {
+      return convertToConsolidation(lucroDisplay, moeda);
+    }
+    return null;
+  })();
+
+  const formatConsolidatedDual = (value: number): string => {
+    if (formatCurrencyProp) return formatCurrencyProp(value);
+    return defaultFormatCurrency(value, moedaConsolidacao || "BRL");
+  };
   
   if (variant === "list") {
     // Use centralized formatter - bookmaker_nome may already be pre-formatted
@@ -704,13 +732,20 @@ export function ApostaCard({
             </div>
             
             {lucroDisplay !== null && lucroDisplay !== undefined && (
-              <div className="flex items-center gap-1 shrink-0">
-                <span className={cn("text-xs sm:text-sm font-semibold whitespace-nowrap", lucroDisplay >= 0 ? 'text-emerald-400' : 'text-red-400')}>
-                  {formatTotal(lucroDisplay)}
-                </span>
-                {roi !== null && (
-                  <span className={cn("text-[9px] sm:text-[10px] whitespace-nowrap", roi >= 0 ? 'text-emerald-400' : 'text-red-400')}>
-                    ({roi >= 0 ? '+' : ''}{roi.toFixed(1)}%)
+              <div className="flex flex-col items-end shrink-0">
+                <div className="flex items-center gap-1 shrink-0">
+                  <span className={cn("text-xs sm:text-sm font-semibold whitespace-nowrap", lucroDisplay >= 0 ? 'text-emerald-400' : 'text-red-400')}>
+                    {formatTotal(lucroDisplay)}
+                  </span>
+                  {roi !== null && (
+                    <span className={cn("text-[9px] sm:text-[10px] whitespace-nowrap", roi >= 0 ? 'text-emerald-400' : 'text-red-400')}>
+                      ({roi >= 0 ? '+' : ''}{roi.toFixed(1)}%)
+                    </span>
+                  )}
+                </div>
+                {showDualCurrency && lucroConsolidadoDual !== null && (
+                  <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                    ≈ {formatConsolidatedDual(lucroConsolidadoDual)}
                   </span>
                 )}
               </div>
@@ -827,14 +862,21 @@ export function ApostaCard({
                   </Badge>
                 )}
               </div>
-              <div className="flex items-center gap-2">
-                {aposta.status !== 'PENDENTE' && lucroDisplay !== null && lucroDisplay !== undefined ? (
-                  <span className={cn("text-xs font-semibold", lucroDisplay >= 0 ? "text-emerald-500" : "text-red-500")}>
-                    P/L: {lucroDisplay >= 0 ? '+' : ''}{formatTotal(lucroDisplay)}
-                  </span>
-                ) : (
-                  <span className="text-xs text-muted-foreground">
-                    Retorno: {formatTotal(oddMultiplaFinal * stakeDisplay)}
+              <div className="flex flex-col items-end gap-0.5">
+                <div className="flex items-center gap-2">
+                  {aposta.status !== 'PENDENTE' && lucroDisplay !== null && lucroDisplay !== undefined ? (
+                    <span className={cn("text-xs font-semibold", lucroDisplay >= 0 ? "text-emerald-500" : "text-red-500")}>
+                      P/L: {lucroDisplay >= 0 ? '+' : ''}{formatTotal(lucroDisplay)}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">
+                      Retorno: {formatTotal(oddMultiplaFinal * stakeDisplay)}
+                    </span>
+                  )}
+                </div>
+                {showDualCurrency && lucroConsolidadoDual !== null && (
+                  <span className="text-[10px] text-muted-foreground">
+                    ≈ {formatConsolidatedDual(lucroConsolidadoDual)}
                   </span>
                 )}
               </div>
@@ -983,13 +1025,20 @@ export function ApostaCard({
               Stake: {formatTotal(stakeDisplay)}
             </span>
             {lucroDisplay !== null && lucroDisplay !== undefined && (
-              <div className="flex items-center gap-1 shrink-0">
-                <span className={cn("text-sm sm:text-base font-semibold whitespace-nowrap", lucroDisplay >= 0 ? 'text-emerald-400' : 'text-red-400')}>
-                  {formatTotal(lucroDisplay)}
-                </span>
-                {roi !== null && (
-                  <span className={cn("text-[10px] sm:text-xs whitespace-nowrap", roi >= 0 ? 'text-emerald-400' : 'text-red-400')}>
-                    ({roi >= 0 ? '+' : ''}{roi.toFixed(1)}%)
+              <div className="flex flex-col items-end shrink-0">
+                <div className="flex items-center gap-1 shrink-0">
+                  <span className={cn("text-sm sm:text-base font-semibold whitespace-nowrap", lucroDisplay >= 0 ? 'text-emerald-400' : 'text-red-400')}>
+                    {formatTotal(lucroDisplay)}
+                  </span>
+                  {roi !== null && (
+                    <span className={cn("text-[10px] sm:text-xs whitespace-nowrap", roi >= 0 ? 'text-emerald-400' : 'text-red-400')}>
+                      ({roi >= 0 ? '+' : ''}{roi.toFixed(1)}%)
+                    </span>
+                  )}
+                </div>
+                {showDualCurrency && lucroConsolidadoDual !== null && (
+                  <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                    ≈ {formatConsolidatedDual(lucroConsolidadoDual)}
                   </span>
                 )}
               </div>

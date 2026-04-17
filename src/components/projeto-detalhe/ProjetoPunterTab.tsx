@@ -1377,6 +1377,7 @@ export function ProjetoPunterTab({
                    onDuplicate={handleDuplicateSurebet}
                    formatCurrency={formatCurrency}
                    convertToConsolidation={convertToConsolidationOficialFn}
+                   moedaConsolidacao={moedaConsolidacaoVal}
                    bookmakerNomeMap={bookmakerNomeMap}
                  />
                );
@@ -1467,6 +1468,7 @@ export function ProjetoPunterTab({
                    onDuplicate={handleDuplicateSurebet}
                   formatCurrency={formatCurrency}
                   convertToConsolidation={convertToConsolidationOficialFn}
+                  moedaConsolidacao={moedaConsolidacaoVal}
                   bookmakerNomeMap={bookmakerNomeMap}
                 />
               );
