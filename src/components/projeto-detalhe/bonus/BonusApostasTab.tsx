@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { toast } from "sonner";
 import { useCrossWindowSync } from "@/hooks/useCrossWindowSync";
+import { invalidateCanonicalCaches } from "@/lib/invalidateCanonicalCaches";
 import {
   Target,
   Calendar,
@@ -599,6 +600,10 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
       queryClient.invalidateQueries({ queryKey: ["bonus-bets-summary", currentProjetoId] });
       queryClient.invalidateQueries({ queryKey: ["bonus-analytics", currentProjetoId] });
       queryClient.invalidateQueries({ queryKey: ["bonus-bets-juice", currentProjetoId] });
+      
+      // CRÍTICO: Invalidar caches canônicos da Visão Geral (Evolução do Lucro, calendário, KPIs)
+      // Sem isso, exclusões/edições nesta aba não refletem em "Visão Geral" sem refresh manual.
+      invalidateCanonicalCaches(queryClient, currentProjetoId);
       
       // Notificar pai para refresh global (KPIs, Visão Geral, outras abas)
       onDataChange?.();
