@@ -77,6 +77,10 @@ export function useReabrirSurebetGuard() {
 
   const handleAfterReabertura = useCallback(
     (apostaId: string) => {
+      // Capturar callback ANTES de qualquer cleanup do dialog
+      const cb = pendingCallbackRef.current;
+      pendingCallbackRef.current = null;
+
       // Invalidar caches para refletir o novo status PENDENTE
       queryClient.invalidateQueries({ queryKey: ["apostas"] });
       queryClient.invalidateQueries({ queryKey: ["bookmaker-saldos"] });
@@ -85,8 +89,7 @@ export function useReabrirSurebetGuard() {
       // Executar callback original (abrir editor)
       // Pequeno delay para o cache atualizar antes do dialog de edição abrir
       setTimeout(() => {
-        pendingCallbackRef.current?.(apostaId);
-        pendingCallbackRef.current = null;
+        cb?.(apostaId);
       }, 150);
     },
     [queryClient]
@@ -99,7 +102,9 @@ export function useReabrirSurebetGuard() {
       onOpenChange={(open) => {
         setDialogOpen(open);
         if (!open) {
-          pendingCallbackRef.current = null;
+          // NÃO limpar pendingCallbackRef aqui — handleAfterReabertura já cuida disso.
+          // Limpar aqui causaria race condition: o onReabertura chama onOpenChange(false)
+          // antes de disparar o callback, fazendo com que o editor nunca abra.
           setPendingApostaId(null);
         }
       }}
