@@ -483,7 +483,8 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
   // Métricas globais - separar EXTRAÇÕES de QUALIFICADORAS
   const metricas = useMemo(() => {
     const freebetsLiberadas = freebetsNoPeriodo.filter(fb => fb.status === "LIBERADA");
-    const totalRecebido = freebetsLiberadas.reduce((acc, fb) => acc + fb.valor, 0);
+    // Soma convertendo cada freebet da sua moeda nativa para a moeda de consolidação do projeto
+    const totalRecebido = freebetsLiberadas.reduce((acc, fb) => acc + convertToConsolidation(fb.valor, fb.moeda || "BRL"), 0);
     
     // EXTRAÇÃO: aposta que USA freebet (tipo_freebet não null) E NÃO é qualificadora
     const apostasExtracao = apostasNoPeriodo.filter(ap => ap.tipo_freebet && !ap.gerou_freebet);
@@ -581,7 +582,8 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
       };
       
       existing.total_freebets_recebidas += 1;
-      existing.valor_total_recebido += fb.valor;
+      // Converte para moeda de consolidação para evitar inflar somando MX$ como R$
+      existing.valor_total_recebido += convertToConsolidation(fb.valor, fb.moeda || "BRL");
       
       casasMap.set(fb.bookmaker_id, existing);
     });
