@@ -56,7 +56,9 @@ export function useReabrirSurebetGuard() {
         if (!originalOnEdit) return;
 
         const status = (surebet.status || "PENDENTE").toUpperCase();
-        const isLiquidada = STATUS_LIQUIDADOS.has(status);
+        const resultado = (surebet.resultado || "").toUpperCase();
+        const isLiquidada =
+          STATUS_LIQUIDADOS.has(status) || STATUS_LIQUIDADOS.has(resultado);
 
         if (!isLiquidada) {
           // Aposta pendente: edita direto
