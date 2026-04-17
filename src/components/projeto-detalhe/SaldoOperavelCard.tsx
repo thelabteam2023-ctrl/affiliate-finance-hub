@@ -109,7 +109,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
     moedaConsolidacao
   } = useSaldoOperavel(projetoId);
   
-  const { formatCurrency, getSymbol, cotacaoAtual } = useProjetoCurrency(projetoId);
+  const { formatCurrency, getSymbol, cotacaoAtual, convertToConsolidation } = useProjetoCurrency(projetoId);
   const { cotacaoUSD } = useCotacoes();
   
   const [isRetrying, setIsRetrying] = useState(false);
@@ -359,15 +359,23 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
                       </span>
                     </div>
                   </div>
-                  <div className="flex items-baseline gap-1.5 flex-shrink-0">
-                    <SaldoCompostoSimples
-                      saldoReal={casa.saldoDisponivelNativo}
-                      saldoFreebet={casa.saldoFreebetNativo}
-                      formatCurrency={(val) => formatCurrencyUtil(val, casa.moedaOriginal)}
-                      className="text-sm text-primary font-bold whitespace-nowrap tabular-nums"
-                    />
-                    <span className="text-[9px] text-muted-foreground font-mono">{casa.moedaOriginal}</span>
+                  <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
+                    <div className="flex items-baseline gap-1.5">
+                      <SaldoCompostoSimples
+                        saldoReal={casa.saldoDisponivelNativo}
+                        saldoFreebet={casa.saldoFreebetNativo}
+                        formatCurrency={(val) => formatCurrencyUtil(val, casa.moedaOriginal)}
+                        className="text-sm text-primary font-bold whitespace-nowrap tabular-nums"
+                      />
+                      <span className="text-[9px] text-muted-foreground font-mono">{casa.moedaOriginal}</span>
+                    </div>
+                    {casa.moedaOriginal !== moedaConsolidacao && (casa.saldoDisponivelNativo + casa.saldoFreebetNativo) > 0 && (
+                      <span className="text-[10px] text-muted-foreground/80 tabular-nums whitespace-nowrap">
+                        ≈ {formatCurrency(convertToConsolidation(casa.saldoDisponivelNativo + casa.saldoFreebetNativo, casa.moedaOriginal))}
+                      </span>
+                    )}
                   </div>
+
                 </div>
 
                 {/* Row 2: Titular + Em Jogo */}
