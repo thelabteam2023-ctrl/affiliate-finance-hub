@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useProjectCurrencyFormat } from "@/hooks/useProjectCurrencyFormat";
+import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { useProjectResponsibilities } from "@/hooks/useProjectResponsibilities";
 import { AjusteSaldoDialog } from "./AjusteSaldoDialog";
 import { useBookmakerSaldosQuery, useInvalidateBookmakerSaldos, type BookmakerSaldo } from "@/hooks/useBookmakerSaldosQuery";
@@ -329,6 +330,12 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
     getCotacaoInfo,
     loading: cotacoesLoading 
   } = useProjectCurrencyFormat();
+
+  // Hook de moeda do PROJETO (para conversão à moeda de consolidação usando Cotação de Trabalho)
+  const projetoCurrency = useProjetoCurrency(projetoId);
+  const moedaConsolidacaoProjeto = projetoCurrency.moedaConsolidacao;
+  const convertToConsolidacaoProjeto = projetoCurrency.convertToConsolidation;
+  const formatConsolidacaoProjeto = (valor: number) => projetoCurrency.formatCurrency(valor);
 
   // Agrupar saldos por moeda para KPIs - usando saldo_operavel como base
   const balancesByMoeda = useMemo(() => {
