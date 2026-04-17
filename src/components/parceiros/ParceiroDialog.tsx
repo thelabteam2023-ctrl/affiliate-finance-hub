@@ -28,6 +28,7 @@ import { CryptoWalletCard } from "./CryptoWalletCard";
 import { validateCPF, formatCPF, formatCEP, formatAgencia, formatConta } from "@/lib/validators";
 import { DatePickerInput } from "@/components/ui/date-picker-input";
 import { ParceiroProfileView } from "./ParceiroProfileView";
+import { StarRating } from "./StarRating";
 
 interface PixKey {
   tipo: string;
@@ -88,6 +89,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
   const [cep, setCep] = useState("");
   const [status, setStatus] = useState("ativo");
   const [observacoes, setObservacoes] = useState("");
+  const [qualidade, setQualidade] = useState<number | null>(null);
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [cryptoWallets, setCryptoWallets] = useState<CryptoWallet[]>([]);
   const [bancos, setBancos] = useState<Banco[]>([]);
@@ -161,6 +163,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         cep: formatCEP(parceiro.cep || ""),
         status: parceiro.status || "ativo",
         observacoes: parceiro.observacoes || "",
+        qualidade: parceiro.qualidade ?? null,
         bankAccounts: JSON.stringify(mappedBankAccounts),
         cryptoWallets: JSON.stringify(mappedWallets),
       });
@@ -195,13 +198,14 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       cep,
       status,
       observacoes,
+      qualidade,
       bankAccounts: JSON.stringify(bankAccounts),
       cryptoWallets: JSON.stringify(cryptoWallets)
     };
 
     const changed = JSON.stringify(currentState) !== JSON.stringify(initialState);
     setHasChanges(changed);
-  }, [nome, cpf, email, telefone, dataNascimento, endereco, cidade, cep, status, observacoes, bankAccounts, cryptoWallets, initialState, parceiro, parceiroId]);
+  }, [nome, cpf, email, telefone, dataNascimento, endereco, cidade, cep, status, observacoes, qualidade, bankAccounts, cryptoWallets, initialState, parceiro, parceiroId]);
 
   useEffect(() => {
     fetchBancos();
@@ -229,6 +233,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       setCep(formatCEP(parceiro.cep || "")); // Apply mask when loading
       setStatus(parceiro.status || "ativo");
       setObservacoes(parceiro.observacoes || "");
+      setQualidade((parceiro as any).qualidade ?? null);
       
       // Map bank accounts data using pix_keys JSONB column
       const mappedAccounts = (parceiro.contas_bancarias || []).map((acc: any) => {
@@ -424,6 +429,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
     setCep("");
     setStatus("ativo");
     setObservacoes("");
+    setQualidade(null);
     setBankAccounts([]);
     setCryptoWallets([]);
     setActiveTab("dados");
@@ -591,6 +597,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         cep: cep.replace(/\D/g, "") || null,
         status,
         observacoes: observacoes || null,
+        qualidade: qualidade ?? null,
       };
 
       let currentParceiroId = parceiroId || parceiro?.id;
@@ -987,6 +994,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
         cep: cep.replace(/\D/g, "") || null,
         status,
         observacoes: observacoes || null,
+        qualidade: qualidade ?? null,
       };
 
       if (parceiroId) {
@@ -1257,6 +1265,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                   cep={cep}
                   status={status}
                   observacoes={observacoes}
+                  qualidade={qualidade}
                 />
               ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
