@@ -1852,6 +1852,9 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
         formatCurrency={formatCurrency}
       />
 
+      {/* Guard de reabertura para edição de surebets liquidadas (Fase 1) */}
+      {ReaberturaDialog}
+
       {/* Dialogs removidos - todos os formulários abrem em janela externa */}
     </div>
   );
