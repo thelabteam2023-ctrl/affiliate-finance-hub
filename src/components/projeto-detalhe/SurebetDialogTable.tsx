@@ -1780,9 +1780,7 @@ export function SurebetDialogTable({
                     </td>
                     
                     {/* Checkbox D — Distribuição de lucro */}
-                    {!isEditing && (
-                      <td className="py-6 px-2 text-center">
-                        <button
+                    {!lockStructure && (
                           type="button"
                           onClick={() => {
                             if (directedProfitLegs.includes(pernaIndex)) {
@@ -1838,9 +1836,7 @@ export function SurebetDialogTable({
                     </td>
                     
                     {/* Ações - Adicionar casa */}
-                    {!isEditing && (
-                      <td className="py-6 px-1">
-                        <Button
+                    {!lockStructure && (
                           type="button"
                           variant="ghost"
                           size="sm"
@@ -1924,7 +1920,7 @@ export function SurebetDialogTable({
                     <td className="py-1 px-2"></td>
                     
                     {/* D - vazio */}
-                    {!isEditing && <td className="py-1 px-2"></td>}
+                    {!lockStructure && <td className="py-1 px-2"></td>}
                     
                     {/* Lucro - vazio */}
                     <td className="py-1 px-2"></td>
@@ -1933,9 +1929,7 @@ export function SurebetDialogTable({
                     <td className="py-1 px-2"></td>
                     
                     {/* Remover */}
-                    {!isEditing && (
-                      <td className="py-1 px-1">
-                        <Button
+                    {!lockStructure && (
                           type="button"
                           variant="ghost"
                           size="sm"
