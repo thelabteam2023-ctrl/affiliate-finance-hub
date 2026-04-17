@@ -499,9 +499,9 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
   // Detectar contexto de bônus pela estratégia ou prop
   const showBonusBadge = isBonusContext || surebet.estrategia === "EXTRACAO_BONUS";
   
-  // Calcular pior cenário a partir das pernas quando pendente
+  // Calcular cenários (pior e melhor) a partir das pernas quando pendente
   // Para multicurrency: converte cada payout para moeda de consolidação antes de comparar
-  const calcularPiorCenario = (): { lucro: number; roi: number } | null => {
+  const calcularCenarios = (): { piorLucro: number; melhorLucro: number; piorRoi: number; melhorRoi: number } | null => {
     if (!surebet.pernas || surebet.pernas.length < 2) return null;
     
     // Calcular stake total e custo real (freebet não é custo)
@@ -538,9 +538,17 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
     });
     
     const piorLucro = Math.min(...cenarios);
+    const melhorLucro = Math.max(...cenarios);
     const piorRoi = stakeRealTotal > 0 ? (piorLucro / stakeRealTotal) * 100 : 0;
+    const melhorRoi = stakeRealTotal > 0 ? (melhorLucro / stakeRealTotal) * 100 : 0;
     
-    return { lucro: piorLucro, roi: piorRoi };
+    return { piorLucro, melhorLucro, piorRoi, melhorRoi };
+  };
+
+  // Manter assinatura antiga para uso interno (apenas pior)
+  const calcularPiorCenario = (): { lucro: number; roi: number } | null => {
+    const c = calcularCenarios();
+    return c ? { lucro: c.piorLucro, roi: c.piorRoi } : null;
   };
 
   const getPernaLucroNominal = (perna: SurebetPerna): number | null => {
@@ -585,7 +593,8 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
   
   // Usar lucro_esperado do banco (calculado com cotação congelada) como fonte primária
   // Fallback para cálculo runtime apenas se lucro_esperado não existir
-  const piorCenarioCalculado = !isLiquidada ? calcularPiorCenario() : null;
+  const cenariosCalculados = !isLiquidada ? calcularCenarios() : null;
+  const piorCenarioCalculado = cenariosCalculados ? { lucro: cenariosCalculados.piorLucro, roi: cenariosCalculados.piorRoi } : null;
   
   // PRIORIDADE: pl_consolidado (atômico, cotação congelada) > fallback runtime
   // CRÍTICO: pl_consolidado pode estar em consolidation_currency diferente da moeda do projeto!
@@ -786,34 +795,60 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
               </span>
             )}
             
-            {lucroExibir !== null && lucroExibir !== undefined && (
-              <div className="flex flex-col items-end shrink-0">
-                <div className="flex items-center gap-1">
-                  <span className={cn(
-                    "text-sm sm:text-base font-semibold whitespace-nowrap",
-                    lucroExibir >= 0 ? 'text-emerald-400' : 'text-red-400',
-                    !isLiquidada && 'opacity-30'
-                  )}>
-                    {formatTotal(lucroExibir)}
-                  </span>
-                  {roiExibir !== null && roiExibir !== undefined && (
+            {lucroExibir !== null && lucroExibir !== undefined && (() => {
+              // Faixa de lucro (mín → máx) apenas quando pendente e há cenários distintos
+              const showRange = !isLiquidada
+                && cenariosCalculados
+                && Math.abs(cenariosCalculados.melhorLucro - cenariosCalculados.piorLucro) > 0.005;
+              const sign = (v: number) => (v >= 0 ? "+" : "");
+              return (
+                <div className="flex flex-col items-end shrink-0">
+                  <div className="flex items-center gap-1">
                     <span className={cn(
-                      "text-[10px] sm:text-xs whitespace-nowrap",
-                      roiExibir >= 0 ? 'text-emerald-400' : 'text-red-400',
-                      !isLiquidada && 'opacity-30'
+                      "font-semibold whitespace-nowrap",
+                      showRange ? "text-xs sm:text-sm" : "text-sm sm:text-base",
+                      lucroExibir >= 0 ? 'text-emerald-400' : 'text-red-400',
+                      !isLiquidada && 'opacity-60'
                     )}>
-                      ({roiExibir >= 0 ? '+' : ''}{roiExibir.toFixed(1)}%)
+                      {showRange && cenariosCalculados ? (
+                        <>
+                          {sign(cenariosCalculados.piorLucro)}{formatTotal(cenariosCalculados.piorLucro)}
+                          <span className="text-muted-foreground mx-0.5">→</span>
+                          {sign(cenariosCalculados.melhorLucro)}{formatTotal(cenariosCalculados.melhorLucro)}
+                        </>
+                      ) : (
+                        formatTotal(lucroExibir)
+                      )}
+                    </span>
+                    {roiExibir !== null && roiExibir !== undefined && !showRange && (
+                      <span className={cn(
+                        "text-[10px] sm:text-xs whitespace-nowrap",
+                        roiExibir >= 0 ? 'text-emerald-400' : 'text-red-400',
+                        !isLiquidada && 'opacity-60'
+                      )}>
+                        ({roiExibir >= 0 ? '+' : ''}{roiExibir.toFixed(1)}%)
+                      </span>
+                    )}
+                  </div>
+                  {showRange && cenariosCalculados && (
+                    <span className={cn(
+                      "text-[10px] whitespace-nowrap opacity-70",
+                      cenariosCalculados.piorRoi >= 0 ? 'text-emerald-400' : 'text-red-400'
+                    )}>
+                      {sign(cenariosCalculados.piorRoi)}{cenariosCalculados.piorRoi.toFixed(2)}%
+                      <span className="text-muted-foreground mx-0.5">→</span>
+                      {sign(cenariosCalculados.melhorRoi)}{cenariosCalculados.melhorRoi.toFixed(2)}%
+                    </span>
+                  )}
+                  {/* Equivalência na moeda de consolidação (Cotação de Trabalho) */}
+                  {moedaPernas && moedaConsolidacao && moedaPernas !== moedaConsolidacao && isLiquidada && typeof lucroConsolidadoEfetivo === "number" && (
+                    <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                      ≈ {formatValue(lucroConsolidadoEfetivo)}
                     </span>
                   )}
                 </div>
-                {/* Equivalência na moeda de consolidação (Cotação de Trabalho) */}
-                {moedaPernas && moedaConsolidacao && moedaPernas !== moedaConsolidacao && isLiquidada && typeof lucroConsolidadoEfetivo === "number" && (
-                  <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                    ≈ {formatValue(lucroConsolidadoEfetivo)}
-                  </span>
-                )}
-              </div>
-            )}
+              );
+            })()}
           </div>
         </div>
       </CardContent>
