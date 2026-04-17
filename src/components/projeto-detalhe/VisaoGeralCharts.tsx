@@ -943,10 +943,10 @@ export function VisaoGeralCharts({
           const pernaLucroRaw = typeof perna.lucro_prejuizo === "number" ? perna.lucro_prejuizo : 0;
           const pernaStake = (moedaConsolidacao === "BRL" && typeof perna.stake_brl_referencia === "number")
             ? perna.stake_brl_referencia
-            : convertPernaStake(pernaStakeRaw, pernaMoeda);
+            : convertPernaWithSnapshot(pernaStakeRaw, pernaMoeda, perna.cotacao_snapshot);
           const pernaLucro = (moedaConsolidacao === "BRL" && typeof perna.lucro_prejuizo_brl_referencia === "number")
             ? perna.lucro_prejuizo_brl_referencia
-            : convertPernaStake(pernaLucroRaw, pernaMoeda);
+            : convertPernaWithSnapshot(pernaLucroRaw, pernaMoeda, perna.cotacao_snapshot);
           processEntry(nomeCompleto, parceiroNome, perna.instance_identifier, pernaStake, pernaLucro, moedaConsolidacao || "BRL", isLiquidada);
         });
       } else {
