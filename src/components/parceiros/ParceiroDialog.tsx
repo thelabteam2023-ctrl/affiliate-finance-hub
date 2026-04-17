@@ -27,6 +27,7 @@ import { BankAccountCard } from "./BankAccountCard";
 import { CryptoWalletCard } from "./CryptoWalletCard";
 import { validateCPF, formatCPF, formatCEP, formatAgencia, formatConta } from "@/lib/validators";
 import { DatePickerInput } from "@/components/ui/date-picker-input";
+import { ParceiroProfileView } from "./ParceiroProfileView";
 
 interface PixKey {
   tipo: string;
@@ -1244,6 +1245,20 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
             </TabsList>
 
             <TabsContent value="dados" className="space-y-4">
+              {viewMode ? (
+                <ParceiroProfileView
+                  nome={nome}
+                  cpf={cpf}
+                  email={email}
+                  telefone={telefone}
+                  dataNascimento={dataNascimento}
+                  endereco={endereco}
+                  cidade={cidade}
+                  cep={cep}
+                  status={status}
+                  observacoes={observacoes}
+                />
+              ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="md:col-span-2">
                   <Label htmlFor="nome">Nome Completo *</Label>
@@ -1522,6 +1537,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                   />
                 </div>
               </div>
+              )}
 
               {!viewMode && !parceiro && !parceiroId && (
                 <div className="flex gap-3 mt-6 max-md:fixed max-md:bottom-0 max-md:left-0 max-md:right-0 max-md:p-4 max-md:bg-background max-md:border-t max-md:border-border/50 max-md:z-10">
