@@ -104,7 +104,12 @@ export function SurebetDialogCompact({
   const [arredondarValor, setArredondarValor] = useState("1");
   
   // Legs (nova estrutura)
-...
+  const [legs, setLegs] = useState<Leg[]>(() => createInitialLegs("1-2"));
+
+  // Reset do formulário
+  const resetForm = useCallback(() => {
+    setEvento("");
+    setMercado("");
     setEsporte("Futebol");
     setModelo("1-2");
     setArredondarAtivado(true);
