@@ -242,7 +242,7 @@ export function SurebetTableRow({
             )}
           </td>
         )}
-        {isStructureLocked && (
+        {!canEditStructure && (
           <td rowSpan={mainRowSpan} className="px-1 text-center align-middle" style={{ height: '78px' }}>
             {canDeletePerna && (
               <Button
