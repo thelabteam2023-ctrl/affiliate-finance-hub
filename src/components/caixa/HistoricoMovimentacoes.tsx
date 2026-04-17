@@ -545,6 +545,17 @@ export function HistoricoMovimentacoes({
                   <Badge className={getTipoColor(transacao.tipo_transacao, transacao)}>
                     {getTipoLabel(transacao.tipo_transacao, transacao)}
                   </Badge>
+                  {transacao.reversed_at && (
+                    <Badge variant="outline" className="border-amber-500/40 text-amber-500 bg-amber-500/10">
+                      <Undo2 className="h-3 w-3 mr-1" />
+                      Revertido
+                    </Badge>
+                  )}
+                  {typeof transacao.descricao === "string" && transacao.descricao.startsWith("ESTORNO:") && (
+                    <Badge variant="outline" className="border-violet-500/40 text-violet-400 bg-violet-500/10">
+                      Estorno
+                    </Badge>
+                  )}
                   <div className="flex items-center gap-2 flex-1">
                     {transacao.tipo_transacao === "SAQUE" ? (
                       <>
