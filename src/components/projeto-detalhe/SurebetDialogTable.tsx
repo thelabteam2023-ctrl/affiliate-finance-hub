@@ -1781,6 +1781,8 @@ export function SurebetDialogTable({
                     
                     {/* Checkbox D — Distribuição de lucro */}
                     {!lockStructure && (
+                      <td className="py-6 px-2 text-center">
+                        <button
                           type="button"
                           onClick={() => {
                             if (directedProfitLegs.includes(pernaIndex)) {
