@@ -400,7 +400,7 @@ export function SurebetDialogTable({
   const [focusedLeg, setFocusedLeg] = useState<number | null>(null);
   
   // "Ativo" quando existe pelo menos uma perna desmarcada
-  const profitDirectionActive = !isEditing && directedProfitLegs.length > 0 && directedProfitLegs.length < odds.length;
+  const profitDirectionActive = !lockStructure && directedProfitLegs.length > 0 && directedProfitLegs.length < odds.length;
   
   // ============================================
   // HANDLERS GLOBAIS
@@ -656,7 +656,7 @@ export function SurebetDialogTable({
 
   // Atualizar odds quando número de pernas muda
   useEffect(() => {
-    if (isEditing) return;
+    if (lockStructure) return;
     
     const currentNumPernas = odds.length;
     if (numPernas !== currentNumPernas) {
@@ -1586,14 +1586,14 @@ export function SurebetDialogTable({
               <th className="py-2 px-2 text-center font-medium text-muted-foreground w-10" title="Referência">
                 <Target className="h-3.5 w-3.5 mx-auto" />
               </th>
-              {!isEditing && (
+              {!lockStructure && (
                 <th className="py-2 px-2 text-center font-medium text-muted-foreground w-10" title="Distribuição de lucro">
                   D
                 </th>
               )}
               <th className="py-2 px-2 text-center font-medium text-muted-foreground w-20">Lucro</th>
               <th className="py-2 px-2 text-center font-medium text-muted-foreground w-16">ROI</th>
-              {!isEditing && <th className="py-2 px-2 w-8"></th>}
+              {!lockStructure && <th className="py-2 px-2 w-8"></th>}
             </tr>
           </thead>
           <tbody>
