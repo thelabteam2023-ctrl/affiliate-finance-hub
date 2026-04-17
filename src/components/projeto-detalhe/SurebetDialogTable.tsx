@@ -1519,11 +1519,11 @@ export function SurebetDialogTable({
       <div className="flex flex-wrap items-center gap-4 pb-3 border-b border-border/50">
         <div className="flex items-center gap-2">
           <Label className="text-xs text-muted-foreground whitespace-nowrap">Modelo</Label>
-          <div className={`flex bg-muted/50 rounded p-0.5 ${isEditing ? 'opacity-60' : ''}`}>
+          <div className={`flex bg-muted/50 rounded p-0.5 ${lockStructure ? 'opacity-60' : ''}`}>
             <button
               type="button"
-              onClick={() => !isEditing && setModeloTipo("2")}
-              disabled={isEditing}
+              onClick={() => !lockStructure && setModeloTipo("2")}
+              disabled={lockStructure}
               className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
                 modeloTipo === "2" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
               }`}
@@ -1532,8 +1532,8 @@ export function SurebetDialogTable({
             </button>
             <button
               type="button"
-              onClick={() => !isEditing && setModeloTipo("3")}
-              disabled={isEditing}
+              onClick={() => !lockStructure && setModeloTipo("3")}
+              disabled={lockStructure}
               className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
                 modeloTipo === "3" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
               }`}
@@ -1542,8 +1542,8 @@ export function SurebetDialogTable({
             </button>
             <button
               type="button"
-              onClick={() => !isEditing && setModeloTipo("4+")}
-              disabled={isEditing}
+              onClick={() => !lockStructure && setModeloTipo("4+")}
+              disabled={lockStructure}
               className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
                 modeloTipo === "4+" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
               }`}
@@ -1554,7 +1554,7 @@ export function SurebetDialogTable({
         </div>
         
         {/* Campo numérico para 4+ pernas */}
-        {modeloTipo === "4+" && !isEditing && (
+        {modeloTipo === "4+" && !lockStructure && (
           <div className="flex items-center gap-2">
             <Label className="text-xs text-muted-foreground">Quantidade:</Label>
             <Input
