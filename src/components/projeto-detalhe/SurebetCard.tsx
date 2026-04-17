@@ -822,13 +822,17 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
                 && cenariosCalculados
                 && Math.abs(cenariosCalculados.melhorLucro - cenariosCalculados.piorLucro) > 0.005;
               const sign = (v: number) => (v >= 0 ? "+" : "");
+              // Cor: quando há range, basear no pior cenário (se pior >= 0, operação é lucrativa em todos os cenários).
+              // Quando não há range, usar lucroExibir.
+              const colorBasis = showRange && cenariosCalculados ? cenariosCalculados.piorLucro : lucroExibir;
+              const isPositive = colorBasis >= 0;
               return (
                 <div className="flex flex-col items-end shrink-0">
                   <div className="flex items-center gap-1">
                     <span className={cn(
                       "font-semibold whitespace-nowrap",
                       showRange ? "text-xs sm:text-sm" : "text-sm sm:text-base",
-                      lucroExibir >= 0 ? 'text-emerald-400' : 'text-red-400',
+                      isPositive ? 'text-emerald-400' : 'text-red-400',
                       !isLiquidada && 'opacity-60'
                     )}>
                       {showRange && cenariosCalculados ? (
