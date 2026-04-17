@@ -986,6 +986,8 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
         }))
       ).filter(p => p.bookmaker_id && p.odd && p.odd > 0);
 
+      // Coletar todas as chamadas de liquidação por perna em paralelo (sem refresh intermediário)
+      const liquidacoes: Promise<void>[] = [];
       for (let i = 0; i < pernasAgrupadas.length; i++) {
         const perna = pernasAgrupadas[i];
         const isWinner = quickResult.winners.includes(i);
@@ -1000,7 +1002,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
             const entryPernaId = entry.id;
             if (!entryPernaId || !entry.bookmaker_id) continue;
 
-            await handleSurebetPernaResolve({
+            liquidacoes.push(handleSurebetPernaResolve({
               pernaId: entryPernaId,
               surebetId,
               bookmarkerId: entry.bookmaker_id,
@@ -1011,10 +1013,11 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
               resultadoAnterior: perna.resultado,
               workspaceId: surebet.workspace_id!,
               silent: true,
-            });
+              skipRefresh: true,
+            }));
           }
         } else {
-          await handleSurebetPernaResolve({
+          liquidacoes.push(handleSurebetPernaResolve({
             pernaId: perna.id,
             surebetId,
             bookmarkerId: perna.bookmaker_id!,
@@ -1025,16 +1028,24 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
             resultadoAnterior: perna.resultado,
             workspaceId: surebet.workspace_id!,
             silent: true,
-          });
+            skipRefresh: true,
+          }));
         }
       }
+
+      // Executar todas em paralelo
+      await Promise.all(liquidacoes);
+
+      // Único refresh ao final — elimina o efeito de "tela piscando perna por perna"
+      invalidateSaldos(projetoId);
+      handleApostaUpdated();
 
       toast.success("Resultado da surebet alterado com sucesso");
     } catch (error: any) {
       console.error("Erro ao liquidar surebet:", error);
       toast.error("Erro ao liquidar surebet");
     }
-  }, [surebets, handleSurebetPernaResolve]);
+  }, [surebets, handleSurebetPernaResolve, invalidateSaldos, projetoId, handleApostaUpdated]);
 
   // Handler para deletar Surebet
   const handleDeleteSurebet = async (surebetId: string) => {
