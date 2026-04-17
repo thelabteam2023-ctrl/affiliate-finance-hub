@@ -383,8 +383,9 @@ export function SaldoOperavelDisplay({
               </TooltipProvider>
             )}
           </span>
-          <span className="text-base font-bold text-primary">
+          <span className="text-base font-bold text-primary text-right">
             {formatCurrency(saldoOperavel, moeda)}
+            {renderConsolidacao(saldoOperavel)}
           </span>
         </div>
       </div>
@@ -396,6 +397,7 @@ export function SaldoOperavelDisplay({
           <span className="text-[10px] text-muted-foreground">Em Aposta</span>
           <span className="text-sm font-medium text-warning">
             {formatCurrency(saldoEmAposta, moeda)}
+            {renderConsolidacao(saldoEmAposta)}
           </span>
         </div>
 
@@ -433,6 +435,7 @@ export function SaldoOperavelDisplay({
           <span className="text-[10px] text-muted-foreground">Disponível</span>
           <span className="text-sm font-semibold text-accent-foreground">
             {formatCurrency(saldoDisponivel, moeda)}
+            {renderConsolidacao(saldoDisponivel)}
           </span>
         </div>
       </div>
