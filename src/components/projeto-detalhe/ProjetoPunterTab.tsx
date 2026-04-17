@@ -1,4 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { invalidateCanonicalCaches } from "@/lib/invalidateCanonicalCaches";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAllPaginated } from "@/lib/fetchAllPaginated";
@@ -205,6 +207,7 @@ export function ProjetoPunterTab({
 
   // Hook para invalidar cache de saldos
   const invalidateSaldos = useInvalidateBookmakerSaldos();
+  const queryClient = useQueryClient();
   
   // DESACOPLAMENTO CALENDÁRIO: Dados via RPC (sem truncamento, timezone correto)
   const { daily: calendarDaily, refetch: refetchCalendar } = useCalendarApostasRpc({
@@ -506,13 +509,14 @@ export function ProjetoPunterTab({
       }
       setApostas(prev => prev.filter(a => a.id !== apostaId));
       invalidateSaldos(projetoId);
+      invalidateCanonicalCaches(queryClient, projetoId);
       onDataChange?.();
       toast.success("Aposta excluída");
     } catch (error: any) {
       console.error("Erro ao excluir aposta:", error);
       toast.error("Erro ao excluir aposta");
     }
-  }, [projetoId, invalidateSaldos, onDataChange]);
+  }, [projetoId, invalidateSaldos, onDataChange, queryClient]);
 
   // === DUPLICAR APOSTAS ===
   const handleDuplicateSimples = useCallback((apostaId: string) => {

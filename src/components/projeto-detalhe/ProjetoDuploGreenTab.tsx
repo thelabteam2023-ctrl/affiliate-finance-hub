@@ -1,4 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { invalidateCanonicalCaches } from "@/lib/invalidateCanonicalCaches";
 import { calcSurebetWindowHeight } from "@/lib/windowHelper";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -223,6 +225,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
 
   // Hook para invalidar cache de saldos
   const invalidateSaldos = useInvalidateBookmakerSaldos();
+  const queryClient = useQueryClient();
   
   // Hook para gerenciamento de rollover (bônus)
   // NOTA: processarLiquidacaoBonus e reverterLiquidacaoBonus removidos - modelo unificado
@@ -679,6 +682,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
         return;
       }
       invalidateSaldos(projetoId);
+      invalidateCanonicalCaches(queryClient, projetoId);
       fetchData();
       onDataChange?.();
       toast.success("Aposta excluída");
@@ -686,7 +690,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
       console.error("Erro ao excluir aposta:", error);
       toast.error("Erro ao excluir aposta");
     }
-  }, [projetoId, invalidateSaldos, onDataChange]);
+  }, [projetoId, invalidateSaldos, onDataChange, queryClient]);
 
   // === DUPLICAR ===
   const handleDuplicateAposta = useCallback((apostaId: string) => {
