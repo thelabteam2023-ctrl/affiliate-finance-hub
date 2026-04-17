@@ -1850,6 +1850,8 @@ export type Database = {
           projeto_id_snapshot: string | null
           qtd_coin: number | null
           referencia_transacao_id: string | null
+          reversed_at: string | null
+          reversed_by_id: string | null
           status: string
           status_valor: string | null
           tipo_moeda: string
@@ -1911,6 +1913,8 @@ export type Database = {
           projeto_id_snapshot?: string | null
           qtd_coin?: number | null
           referencia_transacao_id?: string | null
+          reversed_at?: string | null
+          reversed_by_id?: string | null
           status?: string
           status_valor?: string | null
           tipo_moeda: string
@@ -1972,6 +1976,8 @@ export type Database = {
           projeto_id_snapshot?: string | null
           qtd_coin?: number | null
           referencia_transacao_id?: string | null
+          reversed_at?: string | null
+          reversed_by_id?: string | null
           status?: string
           status_valor?: string | null
           tipo_moeda?: string
