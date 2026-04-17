@@ -14873,6 +14873,22 @@ export type Database = {
         Args: { _workspace_id: string }
         Returns: boolean
       }
+      simulate_excluir_movimentacao_caixa: {
+        Args: {
+          p_actor_user_id: string
+          p_motivo: string
+          p_transacao_id: string
+        }
+        Returns: Json
+      }
+      simulate_reverter_movimentacao_caixa: {
+        Args: {
+          p_actor_user_id: string
+          p_motivo: string
+          p_transacao_id: string
+        }
+        Returns: Json
+      }
       supplier_ledger_insert: {
         Args: {
           p_bookmaker_account_id: string
