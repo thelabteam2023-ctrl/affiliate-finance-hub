@@ -253,6 +253,12 @@ export function SurebetDialogTable({
   rascunho = null 
 }: SurebetDialogTableProps) {
   const isEditing = !!surebet;
+  // Quando a aposta está PENDENTE (ex.: foi reaberta), permitir alterar
+  // a estrutura: nº de pernas e adição de casas extras por perna.
+  const surebetStatus = (surebet as any)?.status as string | undefined;
+  const surebetResultado = (surebet as any)?.resultado as string | null | undefined;
+  const isPendente = !isEditing || (surebetStatus === "PENDENTE" && (!surebetResultado || surebetResultado === "PENDENTE"));
+  const lockStructure = isEditing && !isPendente;
   const { workspaceId } = useWorkspace();
   
   const { getSnapshotFields } = useCurrencySnapshot();
