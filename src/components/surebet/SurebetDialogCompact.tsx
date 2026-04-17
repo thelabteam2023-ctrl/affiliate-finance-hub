@@ -101,19 +101,14 @@ export function SurebetDialogCompact({
   
   // Arredondamento
   const [arredondarAtivado, setArredondarAtivado] = useState(true);
-  const [arredondarValor, setArredondarValor] = useState("0.01");
+  const [arredondarValor, setArredondarValor] = useState("1");
   
   // Legs (nova estrutura)
-  const [legs, setLegs] = useState<Leg[]>(() => createInitialLegs("1-2"));
-
-  // Reset formulário
-  const resetForm = useCallback(() => {
-    setEvento("");
-    setMercado("");
+...
     setEsporte("Futebol");
     setModelo("1-2");
     setArredondarAtivado(true);
-    setArredondarValor("0.01");
+    setArredondarValor("1");
     setLegs(createInitialLegs("1-2"));
   }, []);
 
