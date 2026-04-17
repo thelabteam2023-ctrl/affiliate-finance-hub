@@ -44,6 +44,10 @@ export interface SurebetPerna {
   moeda?: string;
   /** Fonte do saldo: REAL ou FREEBET */
   fonte_saldo?: string;
+  /** Stake real (não-freebet) da perna — fonte canônica de custo */
+  stake_real?: number;
+  /** Stake de freebet (SNR) da perna — não é custo, gera lucro líquido stake*(odd-1) */
+  stake_freebet?: number;
   // Campos para múltiplas entradas
   entries?: SurebetPernaEntry[];
   odd_media?: number;
