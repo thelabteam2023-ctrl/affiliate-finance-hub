@@ -6,12 +6,11 @@
  * - Exibição analítica: Sempre na moeda de consolidação do projeto
  * 
  * Este hook garante que Cashback, Giros Grátis e Freebet
- * respeitem a configuração de moeda do projeto.
+ * respeitem a configuração de moeda do projeto, delegando 100%
+ * para useProjetoCurrency (fonte canônica — Cotação de Trabalho prioritária).
  */
 
-import { useState, useEffect, useMemo, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useCotacoes } from "@/hooks/useCotacoes";
+import { useMemo, useCallback } from "react";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 
 export type MoedaConsolidacao = "BRL" | "USD";
@@ -37,119 +36,44 @@ export interface ConversionResult {
 }
 
 /**
- * Hook para obter configuração de moeda do projeto e funções de conversão
+ * Hook para obter configuração de moeda do projeto e funções de conversão.
+ * Delegação total para useProjetoCurrency — fonte canônica.
  */
 export function usePromotionalCurrencyConversion(projetoId: string) {
-  const [projectConfig, setProjectConfig] = useState<{
-    moeda_consolidacao: string | null;
-    fonte_cotacao: string | null;
-    cotacao_trabalho: number | null;
-  } | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const { cotacaoUSD, cotacaoEUR, cotacaoGBP, cotacaoMYR, cotacaoMXN, loading: cotacaoLoading } = useCotacoes();
-
-  // Fonte canônica de conversão — Cotação de Trabalho prioritária (padrão Lovable)
-  // Garante que Freebets, Cashback, Bônus e demais módulos promocionais usem
-  // a mesma cotação que ApostaCard / SurebetCard / KPIs analíticos.
   const projectCurrency = useProjetoCurrency(projetoId);
 
-  // Fetch project configuration
-  useEffect(() => {
-    if (!projetoId) {
-      setLoading(false);
-      return;
-    }
-
-    const fetchConfig = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("projetos")
-          .select("moeda_consolidacao, fonte_cotacao, cotacao_trabalho")
-          .eq("id", projetoId)
-          .single();
-
-        if (error) throw error;
-        setProjectConfig(data);
-      } catch (err) {
-        console.error("[usePromotionalCurrencyConversion] Erro ao buscar config:", err);
-        setProjectConfig(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchConfig();
-  }, [projetoId]);
-
-  // Configuração processada
+  // Configuração processada (compatível com a interface antiga)
   const config: ProjectCurrencyConfig = useMemo(() => {
-    // CRÍTICO: Garantir que moedaConsolidacao seja lido corretamente do projeto
-    // O banco pode retornar null se o campo não foi definido
-    const rawMoeda = projectConfig?.moeda_consolidacao;
-    const moedaConsolidacao: MoedaConsolidacao = 
-      rawMoeda === "USD" || rawMoeda === "BRL" 
-        ? rawMoeda 
-        : "BRL"; // Fallback apenas se realmente null/undefined
-    
-    const fonteCotacao = (projectConfig?.fonte_cotacao as FonteCotacao) || "TRABALHO";
-    const cotacaoTrabalho = projectConfig?.cotacao_trabalho || null;
+    const moedaConsolidacao = (projectCurrency.moedaConsolidacao as MoedaConsolidacao) || "BRL";
+    const cotacaoAtual = projectCurrency.cotacaoAtual || 0;
+    const disponivel = cotacaoAtual > 0;
 
-    // DEBUG: Log para diagnóstico (remover em produção)
-    if (projectConfig) {
-      console.log("[usePromotionalCurrencyConversion] Config carregada:", {
-        rawMoeda,
-        moedaConsolidacao,
-        cotacaoTrabalho,
-      });
-    }
-
-    // Determinar cotação atual para KPIs
-    // REGRA: Cotação oficial (FastForex > PTAX) é SEMPRE primária para exibição
-    // Cotação de trabalho é FALLBACK (se API indisponível)
-    // Nota: Cotação de trabalho será usada em formulários para conversão entre operações
-    let cotacaoAtual = 0;
+    // Fonte: se a cotação ativa é diferente da oficial, é Trabalho.
     let fonte: "TRABALHO" | "OFICIAL" | "INDISPONIVEL" = "INDISPONIVEL";
-    let disponivel = false;
-
-    // Prioridade 1: Cotação oficial (FastForex/PTAX) - SEMPRE primária para KPIs
-    if (cotacaoUSD && cotacaoUSD > 0) {
-      cotacaoAtual = cotacaoUSD;
-      fonte = "OFICIAL";
-      disponivel = true;
-    } 
-    // Prioridade 2: Cotação de trabalho como FALLBACK
-    else if (cotacaoTrabalho && cotacaoTrabalho > 0) {
-      cotacaoAtual = cotacaoTrabalho;
-      fonte = "TRABALHO";
-      disponivel = true;
+    if (disponivel) {
+      fonte = cotacaoAtual !== projectCurrency.cotacaoOficialUSD ? "TRABALHO" : "OFICIAL";
     }
 
     return {
       moedaConsolidacao,
-      fonteCotacao,
-      cotacaoTrabalho,
+      fonteCotacao: "TRABALHO",
+      cotacaoTrabalho: cotacaoAtual,
       cotacaoAtual,
-      loading: loading || cotacaoLoading,
+      loading: projectCurrency.isLoading,
       disponivel,
       fonte,
     };
-  }, [projectConfig, cotacaoUSD, cotacaoEUR, cotacaoGBP, cotacaoMYR, cotacaoMXN, loading, cotacaoLoading]);
+  }, [projectCurrency.moedaConsolidacao, projectCurrency.cotacaoAtual, projectCurrency.cotacaoOficialUSD, projectCurrency.isLoading]);
 
   /**
-   * Converte um valor para a moeda de consolidação do projeto
-   * 
-   * @param valor - Valor original
-   * @param moedaOrigem - Moeda do valor (ex: "USD", "BRL")
-   * @returns Valor convertido para moeda de consolidação
+   * Converte um valor para a moeda de consolidação do projeto.
+   * Delegação para a fonte canônica (Cotação de Trabalho prioritária).
    */
   const converterParaConsolidacao = useCallback((
     valor: number,
     moedaOrigem: string
   ): number => {
     if (!valor || valor === 0) return 0;
-    // Delegar para a fonte canônica (useProjetoCurrency) — usa Cotação de Trabalho
-    // prioritária com fallback para cotação oficial. Padroniza com toda a stack.
     return projectCurrency.convertToConsolidation(valor, moedaOrigem);
   }, [projectCurrency]);
 
@@ -176,14 +100,8 @@ export function usePromotionalCurrencyConversion(projetoId: string) {
    * Formata valor na moeda de consolidação do projeto
    */
   const formatarNaConsolidacao = useCallback((valor: number): string => {
-    const { moedaConsolidacao } = config;
-    const symbol = moedaConsolidacao === "USD" ? "$" : "R$";
-    
-    return `${symbol} ${valor.toLocaleString("pt-BR", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`;
-  }, [config]);
+    return projectCurrency.formatCurrency(valor);
+  }, [projectCurrency]);
 
   /**
    * Verifica se um conjunto de moedas é multi-moeda
