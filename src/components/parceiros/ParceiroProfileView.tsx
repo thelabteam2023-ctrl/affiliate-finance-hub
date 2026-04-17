@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { StarRating } from "./StarRating";
 
 interface ParceiroProfileViewProps {
   nome: string;
@@ -30,6 +31,7 @@ interface ParceiroProfileViewProps {
   cep: string;
   status: string;
   observacoes: string;
+  qualidade?: number | null;
 }
 
 /* ──────────────────────────────────────────────────────────────
@@ -145,6 +147,7 @@ export function ParceiroProfileView({
   cep,
   status,
   observacoes,
+  qualidade,
 }: ParceiroProfileViewProps) {
   const [copiedField, setCopiedField] = useState("");
   const { toast } = useToast();
@@ -231,6 +234,11 @@ export function ParceiroProfileView({
                 </>
               )}
             </div>
+            {qualidade != null && qualidade > 0 && (
+              <div className="mt-2">
+                <StarRating value={qualidade} readOnly size="sm" showLabel />
+              </div>
+            )}
           </div>
         </div>
       </div>

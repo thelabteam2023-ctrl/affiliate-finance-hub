@@ -6514,6 +6514,7 @@ export type Database = {
           is_caixa_operacional: boolean
           nome: string
           observacoes: string | null
+          qualidade: number | null
           status: string
           supplier_titular_id: string | null
           telefone: string | null
@@ -6534,6 +6535,7 @@ export type Database = {
           is_caixa_operacional?: boolean
           nome: string
           observacoes?: string | null
+          qualidade?: number | null
           status?: string
           supplier_titular_id?: string | null
           telefone?: string | null
@@ -6554,6 +6556,7 @@ export type Database = {
           is_caixa_operacional?: boolean
           nome?: string
           observacoes?: string | null
+          qualidade?: number | null
           status?: string
           supplier_titular_id?: string | null
           telefone?: string | null
