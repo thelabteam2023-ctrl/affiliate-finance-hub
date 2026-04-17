@@ -260,6 +260,9 @@ export function HistoricoMovimentacoes({
     tipoCrypto: boolean;
     coin?: string;
   } | null>(null);
+  const [reverterTx, setReverterTx] = useState<any | null>(null);
+  const [excluirTx, setExcluirTx] = useState<any | null>(null);
+  const { role } = useRole();
   // Get all filtered transactions
   const transacoesFiltradas = useMemo(() => getTransacoesFiltradas(), [getTransacoesFiltradas]);
   
