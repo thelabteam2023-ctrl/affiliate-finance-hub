@@ -640,10 +640,13 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
 
   // Para lucro exibido: FONTE ÚNICA DE VERDADE
   // Liquidada: pl_consolidado (RPC atômica) > lucro_real > fallback
-  // Pendente: lucro_esperado (cotação congelada na criação) > cálculo runtime
+  // Pendente: PRIORIZAR cálculo runtime (que detecta freebet/multi-entrada corretamente).
+  //   Só usa lucro_esperado do banco como fallback quando não há pernas para calcular.
+  //   Motivo: lucro_esperado pode estar desatualizado em apostas legadas criadas antes
+  //   das correções de detecção de freebet (mem://finance/surebet-freebet-detection-canonical).
   const lucroExibir = isLiquidada 
     ? (typeof lucroConsolidadoEfetivo === "number" ? lucroConsolidadoEfetivo : surebet.lucro_real)
-    : (surebet.lucro_esperado ?? piorCenarioCalculado?.lucro ?? null);
+    : (piorCenarioCalculado?.lucro ?? surebet.lucro_esperado ?? null);
 
   const roiExibir = (() => {
     if (isLiquidada) {
@@ -653,8 +656,8 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
       }
       return surebet.roi_real;
     }
-    // Pendente: priorizar roi_esperado (cotação congelada) sobre cálculo runtime
-    return surebet.roi_esperado ?? piorCenarioCalculado?.roi ?? null;
+    // Pendente: PRIORIZAR cálculo runtime (mesma justificativa do lucro)
+    return piorCenarioCalculado?.roi ?? surebet.roi_esperado ?? null;
   })();
   
   // Configuração do badge principal
