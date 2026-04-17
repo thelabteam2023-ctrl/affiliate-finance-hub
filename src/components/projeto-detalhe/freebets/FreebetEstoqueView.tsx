@@ -121,11 +121,14 @@ export function FreebetEstoqueView({ projetoId, formatCurrency, dateRange, onAdd
   const [freebetToDelete, setFreebetToDelete] = useState<FreebetRecebidaCompleta | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   
-  const { freebets, bookmakersEstoque, metrics, loading, deleteFreebet, refresh } = useFreebetEstoque({
+  const { freebets, bookmakersEstoque, metrics, loading, deleteFreebet, refresh, moedaConsolidacao } = useFreebetEstoque({
     projetoId,
     dataInicio: dateRange?.start,
     dataFim: dateRange?.end,
   });
+
+  // Conversão para a moeda de consolidação do projeto (Cotação de Trabalho)
+  const { convertToConsolidation } = useProjetoCurrency(projetoId);
 
   // Re-fetch when refreshTrigger changes (e.g. after adding a freebet)
   useEffect(() => {
