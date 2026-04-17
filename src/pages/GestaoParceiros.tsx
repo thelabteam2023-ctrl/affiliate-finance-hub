@@ -509,6 +509,14 @@ export default function GestaoParceiros() {
                     onSelect={handleSelectParceiroDetalhes}
                     showSensitiveData={showSensitiveData}
                     onAddParceiro={() => setDialogOpen(true)}
+                    onViewParceiro={(id) => {
+                      const parceiro = parceiros.find(p => p.id === id);
+                      if (parceiro) {
+                        setEditingParceiro(parceiro);
+                        setViewMode(true);
+                        setDialogOpen(true);
+                      }
+                    }}
                     onEditParceiro={(id) => {
                       const parceiro = parceiros.find(p => p.id === id);
                       if (parceiro) {
@@ -552,6 +560,14 @@ export default function GestaoParceiros() {
                   onSelect={handleSelectParceiroDetalhes}
                   showSensitiveData={showSensitiveData}
                   onAddParceiro={() => setDialogOpen(true)}
+                  onViewParceiro={(id) => {
+                    const parceiro = parceiros.find(p => p.id === id);
+                    if (parceiro) {
+                      setEditingParceiro(parceiro);
+                      setViewMode(true);
+                      setDialogOpen(true);
+                    }
+                  }}
                   onEditParceiro={(id) => {
                     const parceiro = parceiros.find(p => p.id === id);
                     if (parceiro) {
