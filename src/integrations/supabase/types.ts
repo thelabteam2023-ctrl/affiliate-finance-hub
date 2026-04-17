@@ -14339,6 +14339,10 @@ export type Database = {
         }[]
       }
       get_invite_by_token: { Args: { _token: string }; Returns: Json }
+      get_movimentacao_dependencies: {
+        Args: { p_transacao_id: string }
+        Returns: Json
+      }
       get_my_pending_invites: {
         Args: never
         Returns: {
