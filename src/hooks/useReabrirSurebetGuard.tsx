@@ -77,21 +77,31 @@ export function useReabrirSurebetGuard() {
   );
 
   const handleAfterReabertura = useCallback(
-    (apostaId: string) => {
+    async (apostaId: string) => {
       // Capturar callback ANTES de qualquer cleanup do dialog
       const cb = pendingCallbackRef.current;
       pendingCallbackRef.current = null;
 
-      // Invalidar caches para refletir o novo status PENDENTE
+      // Invalidar caches locais
       queryClient.invalidateQueries({ queryKey: ["apostas"] });
       queryClient.invalidateQueries({ queryKey: ["bookmaker-saldos"] });
       queryClient.invalidateQueries({ queryKey: ["financial-events"] });
 
-      // Executar callback original (abrir editor)
-      // Pequeno delay para o cache atualizar antes do dialog de edição abrir
-      setTimeout(() => {
-        cb?.(apostaId);
-      }, 150);
+      // Aguardar confirmação real do DB (poll até 2s) que o status virou PENDENTE
+      // antes de abrir o editor — a janela nova faz fetch próprio e precisa
+      // ler o estado atualizado.
+      const deadline = Date.now() + 2000;
+      while (Date.now() < deadline) {
+        const { data } = await supabase
+          .from("apostas_unificada")
+          .select("status, resultado")
+          .eq("id", apostaId)
+          .maybeSingle();
+        if (data?.status === "PENDENTE" && !data?.resultado) break;
+        await new Promise((r) => setTimeout(r, 100));
+      }
+
+      cb?.(apostaId);
     },
     [queryClient]
   );
