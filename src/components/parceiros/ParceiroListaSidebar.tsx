@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Search, User, Plus, ArrowUpDown, ArrowUp, ArrowDown, Edit, ArrowLeftRight, ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
+import { Search, User, Plus, ArrowUpDown, ArrowUp, ArrowDown, Edit, ArrowLeftRight, ArrowDownToLine, ArrowUpFromLine, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
@@ -36,6 +36,7 @@ interface ParceiroListaSidebarProps {
   onSelect: (id: string) => void;
   showSensitiveData?: boolean;
   onAddParceiro?: () => void;
+  onViewParceiro?: (id: string) => void;
   onEditParceiro?: (id: string) => void;
   onDeposito?: (id: string) => void;
   onSaque?: (id: string) => void;
@@ -57,6 +58,7 @@ export function ParceiroListaSidebar({
   onSelect,
   showSensitiveData = true,
   onAddParceiro,
+  onViewParceiro,
   onEditParceiro,
   onDeposito,
   onSaque,
@@ -188,6 +190,12 @@ export function ParceiroListaSidebar({
                   </button>
                 </ContextMenuTrigger>
                 <ContextMenuContent className="w-52">
+                  {onViewParceiro && (
+                    <ContextMenuItem onClick={() => onViewParceiro(parceiro.id)} className="gap-2">
+                      <Eye className="h-4 w-4" />
+                      Visualizar Perfil
+                    </ContextMenuItem>
+                  )}
                   {onEditParceiro && (
                     <ContextMenuItem onClick={() => onEditParceiro(parceiro.id)} className="gap-2">
                       <Edit className="h-4 w-4" />
