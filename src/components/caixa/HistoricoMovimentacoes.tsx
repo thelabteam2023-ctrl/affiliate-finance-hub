@@ -7,13 +7,15 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Filter, ArrowRight, AlertCircle, Info, Clock, CheckCircle2, XCircle, Building2, Wallet, Search, X, Pencil, FolderKanban, Users, MoreVertical } from "lucide-react";
+import { Filter, ArrowRight, AlertCircle, Info, Clock, CheckCircle2, XCircle, Building2, Wallet, Search, X, Pencil, FolderKanban, Users, MoreVertical, Undo2, Trash2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { getFirstLastName } from "@/lib/utils";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { format, startOfDay, endOfDay } from "date-fns";
@@ -26,6 +28,10 @@ import { DashboardPeriodFilterBar } from "@/components/shared/DashboardPeriodFil
 import { DashboardPeriodFilter, getDashboardDateRange } from "@/types/dashboardFilters";
 import { EditarDataTransacaoDialog } from "./EditarDataTransacaoDialog";
 import { EditarSaqueConfirmadoDialog } from "./EditarSaqueConfirmadoDialog";
+import { ReverterMovimentacaoDialog } from "./ReverterMovimentacaoDialog";
+import { ExcluirMovimentacaoDialog } from "./ExcluirMovimentacaoDialog";
+import { canRevert, canDelete } from "@/lib/movimentacaoEligibility";
+import { useRole } from "@/hooks/useRole";
 const PAGE_SIZE = 50;
 
 const TIPO_OPTIONS = [
