@@ -96,7 +96,7 @@ function InfoRow({
           onClick={() => onCopy(copyValue ?? value!, copyKey)}
         >
           {copied ? (
-            <Check className="h-3.5 w-3.5 text-emerald-500" />
+            <Check className="h-3.5 w-3.5 text-success" />
           ) : (
             <Copy className="h-3.5 w-3.5" />
           )}
@@ -212,8 +212,8 @@ export function ParceiroProfileView({
                 className={cn(
                   "text-xs",
                   status === "ativo"
-                    ? "bg-emerald-500/15 text-emerald-600 hover:bg-emerald-500/20 dark:text-emerald-400"
-                    : "bg-amber-500/15 text-amber-600 hover:bg-amber-500/20 dark:text-amber-400"
+                    ? "bg-success/15 text-success hover:bg-success/20"
+                    : "bg-warning/15 text-warning hover:bg-warning/20"
                 )}
               >
                 {status === "ativo" ? "Ativo" : "Inativo"}
@@ -339,7 +339,7 @@ export function ParceiroProfileView({
             >
               {copiedField === "Observações" ? (
                 <>
-                  <Check className="h-3.5 w-3.5 text-emerald-500" />
+                  <Check className="h-3.5 w-3.5 text-success" />
                   Copiado
                 </>
               ) : (
