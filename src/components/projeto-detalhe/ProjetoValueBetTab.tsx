@@ -63,6 +63,7 @@ import { SurebetCard, SurebetData, SurebetPerna } from "./SurebetCard";
 import { groupPernasBySelecao } from "@/utils/groupPernasBySelecao";
 import { liquidarPernaSurebet } from "@/services/aposta/ApostaService";
 import type { SurebetQuickResult } from "@/components/apostas/SurebetRowActionsMenu";
+import { useReabrirSurebetGuard } from "@/hooks/useReabrirSurebetGuard";
 import { UnifiedStatisticsCard } from "./UnifiedStatisticsCard";
 import { ChartEmptyState } from "@/components/ui/chart-empty-state";
 
@@ -185,10 +186,11 @@ interface CasaAgregada {
 
 export function ProjetoValueBetTab({ 
   projetoId, 
-  onDataChange, 
+  onDataChange,
   refreshTrigger,
   actionsSlot
 }: ProjetoValueBetTabProps) {
+  const { wrapOnEdit, ReaberturaDialog } = useReabrirSurebetGuard();
   const [apostas, setApostas] = useState<Aposta[]>([]);
   const [bookmakers, setBookmakers] = useState<Bookmaker[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1367,10 +1369,10 @@ export function ProjetoValueBetTab({
                 <SurebetCard
                   key={aposta.id}
                   surebet={surebetData}
-                  onEdit={(surebet) => {
+                  onEdit={wrapOnEdit((surebet) => {
                     const a = apostasFiltradas.find(ap => ap.id === surebet.id);
                     if (a) openEditDialog(a);
-                  }}
+                  }, surebetData)}
                   onQuickResolve={handleQuickResolveSurebet}
                    onPernaResultChange={handleSurebetPernaResolve}
                    onDelete={handleDeleteAposta}
@@ -1457,10 +1459,10 @@ export function ProjetoValueBetTab({
                 <SurebetCard
                   key={aposta.id}
                   surebet={surebetData}
-                  onEdit={(surebet) => {
+                  onEdit={wrapOnEdit((surebet) => {
                     const a = apostasFiltradas.find(ap => ap.id === surebet.id);
                     if (a) openEditDialog(a);
-                  }}
+                  }, surebetData)}
                   onQuickResolve={handleQuickResolveSurebet}
                   onPernaResultChange={handleSurebetPernaResolve}
                    onDelete={handleDeleteAposta}
@@ -1689,6 +1691,9 @@ export function ProjetoValueBetTab({
           {renderMainContent()}
         </div>
       </div>
+
+      {/* Guard de reabertura para edição de surebets liquidadas (Fase 1) */}
+      {ReaberturaDialog}
     </div>
   );
 }

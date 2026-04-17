@@ -64,6 +64,7 @@ import { parseLocalDateTime } from "@/utils/dateUtils";
 import { ExportMenu, transformApostaToExport, transformSurebetToExport } from "./ExportMenu";
 import { DeleteBetConfirmDialog, type DeleteBetInfo } from "@/components/apostas/DeleteBetConfirmDialog";
 import type { SurebetQuickResult } from "@/components/apostas/SurebetRowActionsMenu";
+import { useReabrirSurebetGuard } from "@/hooks/useReabrirSurebetGuard";
 
 // Contextos de aposta para filtro unificado
 type ApostaContexto = "NORMAL" | "FREEBET" | "BONUS" | "SUREBET";
@@ -320,6 +321,7 @@ function getCasaLabelFromAposta(aposta: { bookmaker?: any; pernas?: unknown | nu
 
 export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, formatCurrency: formatCurrencyProp, actionsSlot }: ProjetoApostasTabProps) {
   const { convertToConsolidation, moedaConsolidacao } = useProjetoCurrency(projetoId);
+  const { wrapOnEdit, ReaberturaDialog } = useReabrirSurebetGuard();
   const formatCurrency = formatCurrencyProp || defaultFormatCurrency;
   const [apostas, setApostas] = useState<Aposta[]>([]);
   const [apostasMultiplas, setApostasMultiplas] = useState<ApostaMultipla[]>([]);
@@ -1643,11 +1645,11 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                 <SurebetCard
                   key={sb.id}
                   surebet={surebetData}
-                  onEdit={(surebet) => {
+                  onEdit={wrapOnEdit((surebet) => {
                     // Abrir em janela externa
                     const url = `/janela/surebet/${surebet.id}?projetoId=${encodeURIComponent(projetoId)}&tab=apostas`;
                     window.open(url, '_blank', 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
-                  }}
+                  }, surebetData)}
                   onQuickResolve={handleQuickResolveSurebet}
                   onPernaResultChange={handleSurebetPernaResolve}
                   onDelete={prepareDeleteSurebet}
@@ -1710,10 +1712,10 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                   <SurebetCard
                     key={aposta.id}
                     surebet={surebetData}
-                    onEdit={(surebet) => {
+                    onEdit={wrapOnEdit((surebet) => {
                       const a = apostas.find(ap => ap.id === surebet.id);
                       if (a) handleOpenDialog(a);
-                    }}
+                    }, surebetData)}
                     onQuickResolve={handleQuickResolveSurebet}
                     onPernaResultChange={handleSurebetPernaResolve}
                     onDelete={prepareDeleteSimples}
@@ -1849,6 +1851,9 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
         isDeleting={isDeleting}
         formatCurrency={formatCurrency}
       />
+
+      {/* Guard de reabertura para edição de surebets liquidadas (Fase 1) */}
+      {ReaberturaDialog}
 
       {/* Dialogs removidos - todos os formulários abrem em janela externa */}
     </div>
