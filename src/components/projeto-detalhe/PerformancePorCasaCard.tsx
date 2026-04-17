@@ -178,8 +178,19 @@ export function PerformancePorCasaCard({
 
       estrategiaMap[estrategiaNome].totalOperacoes++;
       
-      // Para operações com stake_total (arbitragem/surebet), usa stake_total
-      const stakeOperacao = aposta.stake_total || aposta.stake;
+      // CANÔNICO: Volume usa stake_consolidado (snapshot Cotação de Trabalho) quando disponível
+      // Fallback: converte stake_total/stake da moeda_operacao para moeda de consolidação
+      // Última opção: valor bruto sem conversão (mesma moeda)
+      const stakeRaw = aposta.stake_total || aposta.stake || 0;
+      const moedaOp = aposta.moeda_operacao || moedaConsolidacao;
+      let stakeOperacao: number;
+      if (aposta.stake_consolidado != null && aposta.consolidation_currency === moedaConsolidacao) {
+        stakeOperacao = aposta.stake_consolidado;
+      } else if (moedaOp !== moedaConsolidacao && convertToConsolidation && stakeRaw !== 0) {
+        stakeOperacao = convertToConsolidation(stakeRaw, moedaOp);
+      } else {
+        stakeOperacao = stakeRaw;
+      }
       
       estrategiaMap[estrategiaNome].totalStake += stakeOperacao || 0;
       // Usa pl_consolidado se disponível, senão lucro_prejuizo
