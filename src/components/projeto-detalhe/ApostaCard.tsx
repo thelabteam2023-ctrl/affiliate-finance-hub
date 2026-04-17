@@ -732,13 +732,20 @@ export function ApostaCard({
             </div>
             
             {lucroDisplay !== null && lucroDisplay !== undefined && (
-              <div className="flex items-center gap-1 shrink-0">
-                <span className={cn("text-xs sm:text-sm font-semibold whitespace-nowrap", lucroDisplay >= 0 ? 'text-emerald-400' : 'text-red-400')}>
-                  {formatTotal(lucroDisplay)}
-                </span>
-                {roi !== null && (
-                  <span className={cn("text-[9px] sm:text-[10px] whitespace-nowrap", roi >= 0 ? 'text-emerald-400' : 'text-red-400')}>
-                    ({roi >= 0 ? '+' : ''}{roi.toFixed(1)}%)
+              <div className="flex flex-col items-end shrink-0">
+                <div className="flex items-center gap-1 shrink-0">
+                  <span className={cn("text-xs sm:text-sm font-semibold whitespace-nowrap", lucroDisplay >= 0 ? 'text-emerald-400' : 'text-red-400')}>
+                    {formatTotal(lucroDisplay)}
+                  </span>
+                  {roi !== null && (
+                    <span className={cn("text-[9px] sm:text-[10px] whitespace-nowrap", roi >= 0 ? 'text-emerald-400' : 'text-red-400')}>
+                      ({roi >= 0 ? '+' : ''}{roi.toFixed(1)}%)
+                    </span>
+                  )}
+                </div>
+                {showDualCurrency && lucroConsolidadoDual !== null && (
+                  <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                    ≈ {formatConsolidatedDual(lucroConsolidadoDual)}
                   </span>
                 )}
               </div>
@@ -855,14 +862,21 @@ export function ApostaCard({
                   </Badge>
                 )}
               </div>
-              <div className="flex items-center gap-2">
-                {aposta.status !== 'PENDENTE' && lucroDisplay !== null && lucroDisplay !== undefined ? (
-                  <span className={cn("text-xs font-semibold", lucroDisplay >= 0 ? "text-emerald-500" : "text-red-500")}>
-                    P/L: {lucroDisplay >= 0 ? '+' : ''}{formatTotal(lucroDisplay)}
-                  </span>
-                ) : (
-                  <span className="text-xs text-muted-foreground">
-                    Retorno: {formatTotal(oddMultiplaFinal * stakeDisplay)}
+              <div className="flex flex-col items-end gap-0.5">
+                <div className="flex items-center gap-2">
+                  {aposta.status !== 'PENDENTE' && lucroDisplay !== null && lucroDisplay !== undefined ? (
+                    <span className={cn("text-xs font-semibold", lucroDisplay >= 0 ? "text-emerald-500" : "text-red-500")}>
+                      P/L: {lucroDisplay >= 0 ? '+' : ''}{formatTotal(lucroDisplay)}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">
+                      Retorno: {formatTotal(oddMultiplaFinal * stakeDisplay)}
+                    </span>
+                  )}
+                </div>
+                {showDualCurrency && lucroConsolidadoDual !== null && (
+                  <span className="text-[10px] text-muted-foreground">
+                    ≈ {formatConsolidatedDual(lucroConsolidadoDual)}
                   </span>
                 )}
               </div>
@@ -1011,13 +1025,20 @@ export function ApostaCard({
               Stake: {formatTotal(stakeDisplay)}
             </span>
             {lucroDisplay !== null && lucroDisplay !== undefined && (
-              <div className="flex items-center gap-1 shrink-0">
-                <span className={cn("text-sm sm:text-base font-semibold whitespace-nowrap", lucroDisplay >= 0 ? 'text-emerald-400' : 'text-red-400')}>
-                  {formatTotal(lucroDisplay)}
-                </span>
-                {roi !== null && (
-                  <span className={cn("text-[10px] sm:text-xs whitespace-nowrap", roi >= 0 ? 'text-emerald-400' : 'text-red-400')}>
-                    ({roi >= 0 ? '+' : ''}{roi.toFixed(1)}%)
+              <div className="flex flex-col items-end shrink-0">
+                <div className="flex items-center gap-1 shrink-0">
+                  <span className={cn("text-sm sm:text-base font-semibold whitespace-nowrap", lucroDisplay >= 0 ? 'text-emerald-400' : 'text-red-400')}>
+                    {formatTotal(lucroDisplay)}
+                  </span>
+                  {roi !== null && (
+                    <span className={cn("text-[10px] sm:text-xs whitespace-nowrap", roi >= 0 ? 'text-emerald-400' : 'text-red-400')}>
+                      ({roi >= 0 ? '+' : ''}{roi.toFixed(1)}%)
+                    </span>
+                  )}
+                </div>
+                {showDualCurrency && lucroConsolidadoDual !== null && (
+                  <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                    ≈ {formatConsolidatedDual(lucroConsolidadoDual)}
                   </span>
                 )}
               </div>
