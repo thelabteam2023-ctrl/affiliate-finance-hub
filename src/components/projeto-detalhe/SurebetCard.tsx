@@ -44,6 +44,10 @@ export interface SurebetPerna {
   moeda?: string;
   /** Fonte do saldo: REAL ou FREEBET */
   fonte_saldo?: string;
+  /** Stake real (não-freebet) da perna — fonte canônica de custo */
+  stake_real?: number;
+  /** Stake de freebet (SNR) da perna — não é custo, gera lucro líquido stake*(odd-1) */
+  stake_freebet?: number;
   // Campos para múltiplas entradas
   entries?: SurebetPernaEntry[];
   odd_media?: number;
@@ -501,47 +505,64 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
   
   // Calcular cenários (pior e melhor) a partir das pernas quando pendente
   // Para multicurrency: converte cada payout para moeda de consolidação antes de comparar
+  // FREEBET (SNR): stake não é custo (stake_real=0) e payout = stake*(odd-1)
   const calcularCenarios = (): { piorLucro: number; melhorLucro: number; piorRoi: number; melhorRoi: number } | null => {
     if (!surebet.pernas || surebet.pernas.length < 2) return null;
-    
+
+    // Detecção canônica de freebet (em ordem de prioridade):
+    //  1. Campos do banco: stake_freebet > 0 e stake_real == 0
+    //  2. fonte_saldo da perna === 'FREEBET'
+    //  3. Todas as entries com fonte_saldo === 'FREEBET' (modo multi-entrada)
+    const isPernaFreebet = (p: SurebetPerna): boolean => {
+      const sf = p.stake_freebet || 0;
+      const sr = p.stake_real ?? null;
+      if (sf > 0 && (sr === 0 || sr === null)) return true;
+      if (p.fonte_saldo === 'FREEBET') return true;
+      if (p.entries && p.entries.length > 0) {
+        return p.entries.every(e => (e as any).fonteSaldo === 'FREEBET' || (e as any).fonte_saldo === 'FREEBET');
+      }
+      return false;
+    };
+
     // Calcular stake total e custo real (freebet não é custo)
     let stakeTotal: number = 0;
     let stakeRealTotal: number = 0;
-    
+
     surebet.pernas.forEach(p => {
       const s = p.stake_total || p.stake || 0;
-      const isFB = p.entries?.every(e => (e as any).fonteSaldo === 'FREEBET' || (e as any).fonte_saldo === 'FREEBET') || false;
-      const sConv = (isMulticurrency && convertToConsolidation) 
-        ? convertToConsolidation(s, p.moeda || "BRL") 
+      const isFB = isPernaFreebet(p);
+      const sConv = (isMulticurrency && convertToConsolidation)
+        ? convertToConsolidation(s, p.moeda || "BRL")
         : s;
       stakeTotal += sConv;
       if (!isFB) stakeRealTotal += sConv;
     });
-    
+
     if (stakeTotal <= 0) return null;
-    
+
     // Para cada cenário (cada perna ganhando), calcular o lucro
     const cenarios = surebet.pernas.map(perna => {
       const oddEfetiva = perna.odd_media || perna.odd || 0;
       const stakeNessaPerna = perna.stake_total || perna.stake || 0;
-      const isFB = perna.entries?.every(e => (e as any).fonteSaldo === 'FREEBET' || (e as any).fonte_saldo === 'FREEBET') || false;
-      
-      // SNR: Freebet payout = stake*(odd-1)
+      const isFB = isPernaFreebet(perna);
+
+      // SNR: Freebet payout líquido = stake*(odd-1); aposta real payout = stake*odd
       const retornoLocal = isFB ? stakeNessaPerna * (oddEfetiva - 1) : stakeNessaPerna * oddEfetiva;
-      
+
       // Converter retorno para moeda de consolidação se multicurrency
       const retorno = (isMulticurrency && convertToConsolidation)
         ? convertToConsolidation(retornoLocal, perna.moeda || "BRL")
         : retornoLocal;
-      
+
+      // Lucro = retorno da perna ganhadora - custo real (somente stakes não-freebet)
       return retorno - stakeRealTotal;
     });
-    
+
     const piorLucro = Math.min(...cenarios);
     const melhorLucro = Math.max(...cenarios);
     const piorRoi = stakeRealTotal > 0 ? (piorLucro / stakeRealTotal) * 100 : 0;
     const melhorRoi = stakeRealTotal > 0 ? (melhorLucro / stakeRealTotal) * 100 : 0;
-    
+
     return { piorLucro, melhorLucro, piorRoi, melhorRoi };
   };
 
