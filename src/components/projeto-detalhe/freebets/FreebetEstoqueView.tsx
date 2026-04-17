@@ -35,6 +35,7 @@ import { ptBR } from "date-fns/locale";
 import { useFreebetEstoque, FreebetRecebidaCompleta, BookmakerEstoque, EstoqueMetrics } from "@/hooks/useFreebetEstoque";
 import { CurrencyBreakdownTooltip } from "@/components/ui/currency-breakdown-tooltip";
 import { CURRENCY_SYMBOLS, type SupportedCurrency } from "@/types/currency";
+import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 
 /** Formata valor na moeda nativa da freebet (não na consolidação) */
 function formatNativeCurrency(valor: number, moeda: string): string {
@@ -120,11 +121,14 @@ export function FreebetEstoqueView({ projetoId, formatCurrency, dateRange, onAdd
   const [freebetToDelete, setFreebetToDelete] = useState<FreebetRecebidaCompleta | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   
-  const { freebets, bookmakersEstoque, metrics, loading, deleteFreebet, refresh } = useFreebetEstoque({
+  const { freebets, bookmakersEstoque, metrics, loading, deleteFreebet, refresh, moedaConsolidacao } = useFreebetEstoque({
     projetoId,
     dataInicio: dateRange?.start,
     dataFim: dateRange?.end,
   });
+
+  // Conversão para a moeda de consolidação do projeto (Cotação de Trabalho)
+  const { convertToConsolidation } = useProjetoCurrency(projetoId);
 
   // Re-fetch when refreshTrigger changes (e.g. after adding a freebet)
   useEffect(() => {
@@ -304,6 +308,11 @@ export function FreebetEstoqueView({ projetoId, formatCurrency, dateRange, onAdd
                       <p className="font-semibold text-amber-400">
                         {formatNativeCurrency(bk.saldo_nominal, bk.moeda)}
                       </p>
+                      {bk.moeda !== moedaConsolidacao && (
+                        <p className="text-[10px] text-muted-foreground/80">
+                          ≈ {formatCurrency(convertToConsolidation(bk.saldo_nominal, bk.moeda))}
+                        </p>
+                      )}
                     </div>
                     <div className="text-center tabular-nums">
                       <p className="text-xs text-muted-foreground">Liberadas</p>
@@ -357,6 +366,11 @@ export function FreebetEstoqueView({ projetoId, formatCurrency, dateRange, onAdd
                       <p className="text-2xl font-bold text-amber-400">
                         {formatNativeCurrency(bk.saldo_nominal, bk.moeda)}
                       </p>
+                      {bk.moeda !== moedaConsolidacao && (
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          ≈ {formatCurrency(convertToConsolidation(bk.saldo_nominal, bk.moeda))}
+                        </p>
+                      )}
                       <p className="text-xs text-muted-foreground">Saldo Disponível</p>
                     </div>
 
