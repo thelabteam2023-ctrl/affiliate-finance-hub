@@ -48,6 +48,7 @@ import {
 // import { ApostaMultiplaDialog } from "@/components/projeto-detalhe/ApostaMultiplaDialog";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, NavigationMode as FilterNavMode } from "./StandardTimeFilter";
 import { DateRange } from "react-day-picker";
+import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 
 interface ProjetoFreebetsTabProps {
   projetoId: string;
@@ -76,6 +77,8 @@ const NAV_ITEMS = [
 
 export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, formatCurrency: formatCurrencyProp }: ProjetoFreebetsTabProps) {
   const formatCurrency = formatCurrencyProp || defaultFormatCurrency;
+  // Hook de moeda do projeto — converte freebets nativas (USD/MXN/EUR…) para a consolidação via Cotação de Trabalho
+  const { convertToConsolidation } = useProjetoCurrency(projetoId);
   const [loading, setLoading] = useState(true);
   const loadedOnceRef = useRef(false);
   const [freebets, setFreebets] = useState<FreebetRecebida[]>([]);
