@@ -159,6 +159,9 @@ export function SurebetModalRoot({
   embedded = false
 }: SurebetModalRootProps) {
   const isEditing = !!surebet;
+  const isReopenedPending = isEditing && surebet?.status === 'PENDENTE' && (!surebet?.resultado || surebet?.resultado === 'PENDENTE');
+  const canEditStructure = !isEditing || isReopenedPending;
+  const isStructureLocked = !canEditStructure;
   const { workspaceId } = useWorkspace();
   const isMobile = useIsMobile();
   const queryClient = useQueryClient();
