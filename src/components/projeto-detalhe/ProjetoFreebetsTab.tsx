@@ -554,7 +554,7 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
       extracoesPendentes,
       taxaAcerto
     };
-  }, [freebetsNoPeriodo, apostasNoPeriodo]);
+  }, [freebetsNoPeriodo, apostasNoPeriodo, convertToConsolidation]);
 
   // Estatísticas por casa
   const statsPorCasa = useMemo((): BookmakerFreebetStats[] => {
@@ -645,7 +645,7 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
           : 0
       }))
       .sort((a, b) => b.valor_total_recebido - a.valor_total_recebido);
-  }, [freebetsNoPeriodo, apostasNoPeriodo, bookmakersComFreebet]);
+  }, [freebetsNoPeriodo, apostasNoPeriodo, bookmakersComFreebet, convertToConsolidation]);
 
   // Estoque atual
   const totalFreebetDisponivel = bookmakersComFreebet.reduce((acc, bk) => acc + bk.saldo_freebet, 0);
