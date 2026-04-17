@@ -159,8 +159,9 @@ export function SurebetModalRoot({
   embedded = false
 }: SurebetModalRootProps) {
   const isEditing = !!surebet;
+  const [structureUnlockedByLoadedData, setStructureUnlockedByLoadedData] = useState(false);
   const isReopenedPending = isEditing && surebet?.status === 'PENDENTE' && (!surebet?.resultado || surebet?.resultado === 'PENDENTE');
-  const canEditStructure = !isEditing || isReopenedPending;
+  const canEditStructure = !isEditing || isReopenedPending || structureUnlockedByLoadedData;
   const isStructureLocked = !canEditStructure;
   const { workspaceId } = useWorkspace();
   const isMobile = useIsMobile();
@@ -407,6 +408,10 @@ export function SurebetModalRoot({
   }, [open]);
 
   useEffect(() => {
+    setStructureUnlockedByLoadedData(false);
+  }, [open, surebet?.id]);
+
+  useEffect(() => {
     if (!open) return;
     
     if (surebet && surebet.id) {
@@ -545,7 +550,7 @@ export function SurebetModalRoot({
 
   // Atualizar pernas quando numPernas muda
   useEffect(() => {
-    if (isEditing || !open) return;
+    if (!canEditStructure || !open) return;
     
     const currentCount = odds.length;
     if (currentCount === numPernas) return;
@@ -578,7 +583,7 @@ export function SurebetModalRoot({
     }
     
     initializeLegPrints(numPernas);
-  }, [numPernas, isEditing, open]);
+  }, [numPernas, canEditStructure, open]);
 
   const resetToNewForm = (n: number) => {
     const defaultSelecoes = getDefaultSelecoes(n);
@@ -647,6 +652,8 @@ export function SurebetModalRoot({
         }
       });
       originalStakesByBookmaker.current = stakeMap;
+      const loadedPernasPending = pernasData.every((perna: any) => !perna.resultado);
+      setStructureUnlockedByLoadedData(loadedPernasPending);
       
       // Armazenar IDs e snapshot de TODAS as pernas originais (flat) para edição atômica
       originalPernaIds.current = pernasData.map((p: any) => p.id);
@@ -1083,7 +1090,7 @@ export function SurebetModalRoot({
    * Resultado: stakes balanceadas mesmo com moedas diferentes por perna.
    */
   useEffect(() => {
-    if (isEditing) return;
+    if (isStructureLocked) return;
     
     // Pular se há direcionamento ativo (checkbox D customizado)
     const hasCustomDirection = directedProfitLegs.length > 0 && directedProfitLegs.length < odds.length;
@@ -1170,7 +1177,7 @@ export function SurebetModalRoot({
     odds.map(o => o.isReference).join(','),
     arredondarAtivado,
     arredondarValor,
-    isEditing,
+    isStructureLocked,
     directedProfitLegs,
     engineConfig,
     bookmakerSaldos,
