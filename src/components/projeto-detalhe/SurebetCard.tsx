@@ -593,7 +593,8 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
   
   // Usar lucro_esperado do banco (calculado com cotação congelada) como fonte primária
   // Fallback para cálculo runtime apenas se lucro_esperado não existir
-  const piorCenarioCalculado = !isLiquidada ? calcularPiorCenario() : null;
+  const cenariosCalculados = !isLiquidada ? calcularCenarios() : null;
+  const piorCenarioCalculado = cenariosCalculados ? { lucro: cenariosCalculados.piorLucro, roi: cenariosCalculados.piorRoi } : null;
   
   // PRIORIDADE: pl_consolidado (atômico, cotação congelada) > fallback runtime
   // CRÍTICO: pl_consolidado pode estar em consolidation_currency diferente da moeda do projeto!
