@@ -7,6 +7,8 @@ export interface FreebetRecebida {
   parceiro_nome: string | null;
   logo_url: string | null;
   valor: number;
+  /** Moeda nativa da casa (BRL, USD, EUR, MXN…) — usada para conversão consolidada */
+  moeda: string;
   motivo: string;
   data_recebida: string;
   utilizada: boolean;

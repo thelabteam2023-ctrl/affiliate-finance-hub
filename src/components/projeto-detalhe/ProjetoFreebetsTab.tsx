@@ -48,6 +48,7 @@ import {
 // import { ApostaMultiplaDialog } from "@/components/projeto-detalhe/ApostaMultiplaDialog";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod, NavigationMode as FilterNavMode } from "./StandardTimeFilter";
 import { DateRange } from "react-day-picker";
+import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 
 interface ProjetoFreebetsTabProps {
   projetoId: string;
@@ -76,6 +77,8 @@ const NAV_ITEMS = [
 
 export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, formatCurrency: formatCurrencyProp }: ProjetoFreebetsTabProps) {
   const formatCurrency = formatCurrencyProp || defaultFormatCurrency;
+  // Hook de moeda do projeto — converte freebets nativas (USD/MXN/EUR…) para a consolidação via Cotação de Trabalho
+  const { convertToConsolidation } = useProjetoCurrency(projetoId);
   const [loading, setLoading] = useState(true);
   const loadedOnceRef = useRef(false);
   const [freebets, setFreebets] = useState<FreebetRecebida[]>([]);
@@ -178,7 +181,7 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
           id, bookmaker_id, valor, motivo, data_recebida, utilizada, 
           data_utilizacao, aposta_id, status, tem_rollover,
           bookmakers!freebets_recebidas_bookmaker_id_fkey (
-            nome, parceiro_id,
+            nome, parceiro_id, moeda,
             parceiros!bookmakers_parceiro_id_fkey (nome),
             bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url)
           )
@@ -195,6 +198,7 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
         parceiro_nome: fb.bookmakers?.parceiros?.nome || null,
         logo_url: fb.bookmakers?.bookmakers_catalogo?.logo_url || null,
         valor: fb.valor,
+        moeda: fb.bookmakers?.moeda || "BRL",
         motivo: fb.motivo,
         data_recebida: fb.data_recebida,
         utilizada: fb.utilizada || false,
@@ -479,7 +483,8 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
   // Métricas globais - separar EXTRAÇÕES de QUALIFICADORAS
   const metricas = useMemo(() => {
     const freebetsLiberadas = freebetsNoPeriodo.filter(fb => fb.status === "LIBERADA");
-    const totalRecebido = freebetsLiberadas.reduce((acc, fb) => acc + fb.valor, 0);
+    // Soma convertendo cada freebet da sua moeda nativa para a moeda de consolidação do projeto
+    const totalRecebido = freebetsLiberadas.reduce((acc, fb) => acc + convertToConsolidation(fb.valor, fb.moeda || "BRL"), 0);
     
     // EXTRAÇÃO: aposta que USA freebet (tipo_freebet não null) E NÃO é qualificadora
     const apostasExtracao = apostasNoPeriodo.filter(ap => ap.tipo_freebet && !ap.gerou_freebet);
@@ -549,7 +554,7 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
       extracoesPendentes,
       taxaAcerto
     };
-  }, [freebetsNoPeriodo, apostasNoPeriodo]);
+  }, [freebetsNoPeriodo, apostasNoPeriodo, convertToConsolidation]);
 
   // Estatísticas por casa
   const statsPorCasa = useMemo((): BookmakerFreebetStats[] => {
@@ -577,7 +582,8 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
       };
       
       existing.total_freebets_recebidas += 1;
-      existing.valor_total_recebido += fb.valor;
+      // Converte para moeda de consolidação para evitar inflar somando MX$ como R$
+      existing.valor_total_recebido += convertToConsolidation(fb.valor, fb.moeda || "BRL");
       
       casasMap.set(fb.bookmaker_id, existing);
     });
@@ -639,7 +645,7 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
           : 0
       }))
       .sort((a, b) => b.valor_total_recebido - a.valor_total_recebido);
-  }, [freebetsNoPeriodo, apostasNoPeriodo, bookmakersComFreebet]);
+  }, [freebetsNoPeriodo, apostasNoPeriodo, bookmakersComFreebet, convertToConsolidation]);
 
   // Estoque atual
   const totalFreebetDisponivel = bookmakersComFreebet.reduce((acc, bk) => acc + bk.saldo_freebet, 0);
