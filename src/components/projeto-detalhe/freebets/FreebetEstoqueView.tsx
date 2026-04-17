@@ -35,6 +35,7 @@ import { ptBR } from "date-fns/locale";
 import { useFreebetEstoque, FreebetRecebidaCompleta, BookmakerEstoque, EstoqueMetrics } from "@/hooks/useFreebetEstoque";
 import { CurrencyBreakdownTooltip } from "@/components/ui/currency-breakdown-tooltip";
 import { CURRENCY_SYMBOLS, type SupportedCurrency } from "@/types/currency";
+import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 
 /** Formata valor na moeda nativa da freebet (não na consolidação) */
 function formatNativeCurrency(valor: number, moeda: string): string {
