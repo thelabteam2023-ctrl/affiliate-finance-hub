@@ -234,6 +234,11 @@ export function ParceiroProfileView({
                 </>
               )}
             </div>
+            {qualidade != null && qualidade > 0 && (
+              <div className="mt-2">
+                <StarRating value={qualidade} readOnly size="sm" showLabel />
+              </div>
+            )}
           </div>
         </div>
       </div>
