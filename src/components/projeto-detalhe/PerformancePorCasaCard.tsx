@@ -49,6 +49,10 @@ interface ApostaUnificada {
   resultado: string | null;
   stake: number;
   stake_total: number | null;
+  /** Volume já consolidado na moeda do projeto (Cotação de Trabalho snapshot) */
+  stake_consolidado?: number | null;
+  consolidation_currency?: string | null;
+  moeda_operacao?: string | null;
   esporte: string;
   bookmaker_id: string;
   bookmaker_nome: string;
