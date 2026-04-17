@@ -25,6 +25,7 @@ import { CalendarioLucros } from "./CalendarioLucros";
 import { getFirstLastName } from "@/lib/utils";
 import { parseLocalDateTime, extractLocalDateKey } from "@/utils/dateUtils";
 import { getConsolidatedLucro, getConsolidatedStake, getConsolidatedLucroDirect } from "@/utils/consolidatedValues";
+import { convertPernaToConsolidacao } from "@/lib/currency-conversion-snapshot";
 
 // =====================================================
 // TIPOS
@@ -43,6 +44,7 @@ interface Perna {
   moeda?: string;
   stake_brl_referencia?: number | null;
   lucro_prejuizo_brl_referencia?: number | null;
+  cotacao_snapshot?: number | null;
 }
 
 interface ApostaBase {
