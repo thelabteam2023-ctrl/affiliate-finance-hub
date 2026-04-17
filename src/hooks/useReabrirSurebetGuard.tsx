@@ -21,7 +21,12 @@ import { useState, useCallback, useRef } from "react";
 import { ConfirmReaberturaDialog } from "@/components/surebet/ConfirmReaberturaDialog";
 import { useQueryClient } from "@tanstack/react-query";
 
+// Valores que indicam aposta liquidada — pode aparecer tanto na coluna `status`
+// (LIQUIDADA) quanto na coluna `resultado` (GREEN/RED/VOID/MEIO_*).
+// Em alguns cards o `surebet.status` recebe na verdade o valor de `resultado`,
+// por isso aceitamos ambos os conjuntos.
 const STATUS_LIQUIDADOS = new Set([
+  "LIQUIDADA",
   "GREEN",
   "RED",
   "VOID",
@@ -32,6 +37,7 @@ const STATUS_LIQUIDADOS = new Set([
 interface SurebetMinimal {
   id: string;
   status?: string | null;
+  resultado?: string | null;
   forma_registro?: string | null;
 }
 
@@ -50,7 +56,9 @@ export function useReabrirSurebetGuard() {
         if (!originalOnEdit) return;
 
         const status = (surebet.status || "PENDENTE").toUpperCase();
-        const isLiquidada = STATUS_LIQUIDADOS.has(status);
+        const resultado = (surebet.resultado || "").toUpperCase();
+        const isLiquidada =
+          STATUS_LIQUIDADOS.has(status) || STATUS_LIQUIDADOS.has(resultado);
 
         if (!isLiquidada) {
           // Aposta pendente: edita direto
