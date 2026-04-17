@@ -219,16 +219,18 @@ export function useProjetoCurrency(projetoId: string | undefined): ProjectCurren
     COP: cotacaoCOP,
   }), [cotacaoUSD, cotacaoEUR, cotacaoGBP, cotacaoMYR, cotacaoMXN, cotacaoARS, cotacaoCOP]);
 
-  // Cotações ativas: trabalho quando configurado, senão oficial
-  const activeRates = useMemo(() => {
-    if (fonteCotacao === "TRABALHO") {
-      return workRates;
-    }
-    return officialRates;
-  }, [fonteCotacao, workRates, officialRates]);
+  // PADRÃO ESTRUTURAL (a partir de agora):
+  // convertToConsolidation SEMPRE prioriza Cotação de Trabalho do projeto,
+  // independentemente de fonteCotacao. Isso elimina drift de PTAX live em
+  // KPIs analíticos (Casas Mais Utilizadas, Volume, Distribuição, etc).
+  //
+  // Hierarquia: Cotação de Trabalho (workRates) > PTAX/Live (fallback no workRates)
+  //
+  // Para KPIs de REALIZAÇÃO (que devem usar PTAX), use convertToConsolidationOficial.
+  const activeRates = useMemo(() => workRates, [workRates]);
 
-  // Converter usando cotação ativa (Trabalho se configurada, senão Oficial)
-  // Ideal para CALCULADORAS e FORMULÁRIOS
+  // Converter usando Cotação de Trabalho (estável, sem drift de mercado)
+  // Ideal para: CALCULADORAS, FORMULÁRIOS, KPIs ANALÍTICOS, GRÁFICOS
   const convertToConsolidation = useCallback((valor: number, moedaOrigem: string): number => {
     return _convert(valor, moedaOrigem, activeRates);
   }, [_convert, activeRates]);
