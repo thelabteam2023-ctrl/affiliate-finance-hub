@@ -859,12 +859,10 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
                       formatCurrency={(val, moeda) => formatCurrency(val, moeda || vinculo.moeda)}
                       moeda={vinculo.moeda}
                       variant="card"
+                      convertToConsolidacao={convertToConsolidacaoProjeto}
+                      moedaConsolidacao={moedaConsolidacaoProjeto}
+                      formatConsolidacao={formatConsolidacaoProjeto}
                     />
-                    {vinculo.moeda !== "BRL" && (
-                      <p className="text-[10px] text-muted-foreground text-right mt-1">
-                        ≈ {formatCurrency(convertToBRL(vinculo.saldo_operavel, vinculo.moeda), "BRL")}
-                      </p>
-                    )}
                   </div>
 
                   <div className="flex items-center justify-between pt-2 border-t">
