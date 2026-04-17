@@ -293,23 +293,8 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
         </div>
       </div>
 
-      {/* Extra badges for freebet/bonus */}
-      {(hasFreebet || hasBonus) && (
-        <div className="flex items-center gap-2 flex-wrap">
-          {hasFreebet && (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-warning/10 border border-warning/20">
-              <Gift className="h-3 w-3 text-warning" />
-              <span className="text-[10px] font-medium text-warning">Freebet: {formatCurrency(saldoFreebet)}</span>
-            </div>
-          )}
-          {hasBonus && (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-500/10 border border-purple-500/20">
-              <Gift className="h-3 w-3 text-purple-400" />
-              <span className="text-[10px] font-medium text-purple-400">Bônus: {formatCurrency(saldoBonus)}</span>
-            </div>
-          )}
-        </div>
-      )}
+      {/* Badges de Freebet/Bônus removidos a pedido — informação já visível por casa */}
+
 
       {/* Saldo por Casa */}
       <div className="space-y-3">
