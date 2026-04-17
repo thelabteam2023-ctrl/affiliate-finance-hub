@@ -159,10 +159,6 @@ export function SurebetModalRoot({
   embedded = false
 }: SurebetModalRootProps) {
   const isEditing = !!surebet;
-  const [structureUnlockedByLoadedData, setStructureUnlockedByLoadedData] = useState(false);
-  const isReopenedPending = isEditing && surebet?.status === 'PENDENTE' && (!surebet?.resultado || surebet?.resultado === 'PENDENTE');
-  const canEditStructure = !isEditing || isReopenedPending || structureUnlockedByLoadedData;
-  const isStructureLocked = !canEditStructure;
   const { workspaceId } = useWorkspace();
   const isMobile = useIsMobile();
   const queryClient = useQueryClient();
@@ -408,10 +404,6 @@ export function SurebetModalRoot({
   }, [open]);
 
   useEffect(() => {
-    setStructureUnlockedByLoadedData(false);
-  }, [open, surebet?.id]);
-
-  useEffect(() => {
     if (!open) return;
     
     if (surebet && surebet.id) {
@@ -550,7 +542,7 @@ export function SurebetModalRoot({
 
   // Atualizar pernas quando numPernas muda
   useEffect(() => {
-    if (!canEditStructure || !open) return;
+    if (isEditing || !open) return;
     
     const currentCount = odds.length;
     if (currentCount === numPernas) return;
@@ -583,7 +575,7 @@ export function SurebetModalRoot({
     }
     
     initializeLegPrints(numPernas);
-  }, [numPernas, canEditStructure, open]);
+  }, [numPernas, isEditing, open]);
 
   const resetToNewForm = (n: number) => {
     const defaultSelecoes = getDefaultSelecoes(n);
@@ -652,8 +644,6 @@ export function SurebetModalRoot({
         }
       });
       originalStakesByBookmaker.current = stakeMap;
-      const loadedPernasPending = pernasData.every((perna: any) => !perna.resultado);
-      setStructureUnlockedByLoadedData(loadedPernasPending);
       
       // Armazenar IDs e snapshot de TODAS as pernas originais (flat) para edição atômica
       originalPernaIds.current = pernasData.map((p: any) => p.id);
@@ -1090,7 +1080,7 @@ export function SurebetModalRoot({
    * Resultado: stakes balanceadas mesmo com moedas diferentes por perna.
    */
   useEffect(() => {
-    if (isStructureLocked) return;
+    if (isEditing) return;
     
     // Pular se há direcionamento ativo (checkbox D customizado)
     const hasCustomDirection = directedProfitLegs.length > 0 && directedProfitLegs.length < odds.length;
@@ -1177,7 +1167,7 @@ export function SurebetModalRoot({
     odds.map(o => o.isReference).join(','),
     arredondarAtivado,
     arredondarValor,
-    isStructureLocked,
+    isEditing,
     directedProfitLegs,
     engineConfig,
     bookmakerSaldos,
@@ -2032,7 +2022,7 @@ export function SurebetModalRoot({
             onContextoChange={(v) => setContexto(v)}
             isEditing={isEditing}
             activeTab={activeTab}
-            lockedEstrategia={canEditStructure && isAbaEstrategiaFixa(activeTab) ? getEstrategiaFromTab(activeTab) : null}
+            lockedEstrategia={!isEditing && isAbaEstrategiaFixa(activeTab) ? getEstrategiaFromTab(activeTab) : null}
             gameFields={{
               esporte,
               evento,
@@ -2054,7 +2044,7 @@ export function SurebetModalRoot({
           {/* CONTENT */}
           <div className="p-3 md:p-4 space-y-3 overflow-auto flex-1">
             {/* Operação parcial warning */}
-            {analysis.isOperacaoParcial && canEditStructure && (
+            {analysis.isOperacaoParcial && !isEditing && (
               <div className="flex items-center gap-3 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-sm">
                 <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
                 <div className="flex-1">
@@ -2078,13 +2068,13 @@ export function SurebetModalRoot({
             <div className="flex flex-wrap items-center gap-4 pb-3 border-b border-border/50">
               <div className="flex items-center gap-2">
                 <Label className="text-xs text-muted-foreground whitespace-nowrap">Modelo</Label>
-                <div className={`flex bg-muted/50 rounded p-0.5 ${isStructureLocked ? 'opacity-60' : ''}`}>
+                <div className={`flex bg-muted/50 rounded p-0.5 ${isEditing ? 'opacity-60' : ''}`}>
                   {(["2", "3", "4+"] as const).map((tipo) => (
                     <button
                       key={tipo}
                       type="button"
-                      onClick={() => canEditStructure && setModeloTipo(tipo)}
-                      disabled={isStructureLocked}
+                      onClick={() => !isEditing && setModeloTipo(tipo)}
+                      disabled={isEditing}
                       className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
                         modeloTipo === tipo ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
                       }`}
@@ -2095,7 +2085,7 @@ export function SurebetModalRoot({
                 </div>
               </div>
               
-              {modeloTipo === "4+" && canEditStructure && (
+              {modeloTipo === "4+" && !isEditing && (
                 <div className="flex items-center gap-2">
                   <Label className="text-xs text-muted-foreground">Qtd:</Label>
                   <Input
@@ -2155,7 +2145,6 @@ export function SurebetModalRoot({
                     label={getPernaLabel(pernaIndex, numPernas)}
                     scenario={analysis.scenarios[pernaIndex]}
                     isEditing={isEditing}
-                    canEditStructure={canEditStructure}
                     isProcessing={legPrints[pernaIndex]?.isProcessing || false}
                     bookmakers={getAdjustedBookmakersForLeg(pernaIndex)}
                     directedProfitLegs={directedProfitLegs}
@@ -2171,7 +2160,7 @@ export function SurebetModalRoot({
                     onUpdateAdditionalEntry={updateAdditionalEntry}
                     onRemoveAdditionalEntry={removeAdditionalEntry}
                     onDeletePerna={handleDeletePerna}
-                    canDeletePerna={isStructureLocked && odds.length > 2}
+                    canDeletePerna={isEditing && odds.length > 2}
                     onFieldKeyDown={handleFieldKeyDown}
                   />
                 ))}
@@ -2186,7 +2175,7 @@ export function SurebetModalRoot({
                       <th className="py-2 px-2 text-center font-medium text-muted-foreground w-20">Odd</th>
                       <th className="py-2 px-2 text-center font-medium text-muted-foreground w-24">Stake</th>
                       <th className="py-2 px-2 text-center font-medium text-muted-foreground w-20">Linha</th>
-                      {canEditStructure && (
+                      {!isEditing && (
                         <th className="py-2 px-2 text-center font-medium text-muted-foreground w-10" title="Referência">
                           <Target className="h-3.5 w-3.5 mx-auto" />
                         </th>
@@ -2194,7 +2183,7 @@ export function SurebetModalRoot({
                       {isEditing && (
                         <th className="py-2 px-2 text-center font-medium text-muted-foreground w-28">Resultado</th>
                       )}
-                      {canEditStructure && (
+                      {!isEditing && (
                         <th className="py-2 px-2 text-center font-medium text-muted-foreground w-10" title="Distribuição de lucro">
                           D
                         </th>
@@ -2214,7 +2203,6 @@ export function SurebetModalRoot({
                         rowSpan={1}
                         scenario={analysis.scenarios[pernaIndex]}
                         isEditing={isEditing}
-                        canEditStructure={canEditStructure}
                         isFocused={focusedLeg === pernaIndex}
                         isProcessing={legPrints[pernaIndex]?.isProcessing || false}
                         bookmakers={getAdjustedBookmakersForLeg(pernaIndex)}
@@ -2231,7 +2219,7 @@ export function SurebetModalRoot({
                         onUpdateAdditionalEntry={updateAdditionalEntry}
                         onRemoveAdditionalEntry={removeAdditionalEntry}
                         onDeletePerna={handleDeletePerna}
-                        canDeletePerna={isStructureLocked && odds.length > 2}
+                        canDeletePerna={isEditing && odds.length > 2}
                         onFocus={setFocusedLeg}
                         onBlur={() => setFocusedLeg(null)}
                         onFieldKeyDown={handleFieldKeyDown}
@@ -2246,7 +2234,6 @@ export function SurebetModalRoot({
                   odds={odds}
                   scenarios={analysis.scenarios}
                   isEditing={isEditing}
-                  canEditStructure={canEditStructure}
                   bookmakersByLeg={getAdjustedBookmakersForLeg}
                   directedProfitLegs={directedProfitLegs}
                   numPernas={numPernas}
@@ -2261,7 +2248,7 @@ export function SurebetModalRoot({
                   onUpdateAdditionalEntry={updateAdditionalEntry}
                   onRemoveAdditionalEntry={removeAdditionalEntry}
                   onDeletePerna={handleDeletePerna}
-                  canDeletePerna={isStructureLocked && odds.length > 2}
+                  canDeletePerna={isEditing && odds.length > 2}
                   onFocus={setFocusedLeg}
                   onBlur={() => setFocusedLeg(null)}
                   onFieldKeyDown={handleFieldKeyDown}
@@ -2274,7 +2261,6 @@ export function SurebetModalRoot({
             <SurebetTableFooter
               analysis={analysis}
               isEditing={isEditing}
-              canEditStructure={canEditStructure}
               arredondarAtivado={arredondarAtivado}
               setArredondarAtivado={setArredondarAtivado}
               arredondarValor={arredondarValor}
@@ -2322,7 +2308,7 @@ export function SurebetModalRoot({
                   {isAtualizandoRascunho ? 'Atualizar Rascunho' : 'Rascunho'}
                 </Button>
               )}
-              {analysis.isOperacaoParcial && canEditStructure && (
+              {analysis.isOperacaoParcial && !isEditing && (
                 <Button 
                   variant="secondary"
                   onClick={() => setShowConversionDialog(true)}
@@ -2334,7 +2320,7 @@ export function SurebetModalRoot({
               )}
               <Button 
                 onClick={handleSave} 
-                disabled={saving || analysis.stakeTotal <= 0 || analysis.pernasCompletasCount < numPernas || odds.length < numPernas || (canEditStructure && balanceValidation.hasInsufficientBalance)}
+                disabled={saving || analysis.stakeTotal <= 0 || analysis.pernasCompletasCount < numPernas || odds.length < numPernas || (!isEditing && balanceValidation.hasInsufficientBalance)}
                 title={balanceValidation.hasInsufficientBalance ? "Saldo insuficiente em uma ou mais casas" : undefined}
               >
                 <Save className="h-4 w-4 mr-1" />
@@ -2344,7 +2330,7 @@ export function SurebetModalRoot({
           </div>
 
           {/* Aviso de saldo insuficiente */}
-          {canEditStructure && balanceValidation.hasInsufficientBalance && (
+          {!isEditing && balanceValidation.hasInsufficientBalance && (
             <div className="px-4 pb-3 -mt-2">
               <div className="flex items-center gap-2 p-2 bg-destructive/10 border border-destructive/30 rounded text-xs text-destructive">
                 <AlertTriangle className="h-4 w-4 shrink-0" />

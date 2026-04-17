@@ -52,7 +52,6 @@ import { SurebetDialog } from "./SurebetDialog";
 import { SurebetCard, SurebetData, SurebetPerna } from "./SurebetCard";
 import { groupPernasBySelecao } from "@/utils/groupPernasBySelecao";
 import type { SurebetQuickResult } from "@/components/apostas/SurebetRowActionsMenu";
-import { useReabrirSurebetGuard } from "@/hooks/useReabrirSurebetGuard";
 import { ApostaDialog } from "./ApostaDialog";
 import { ApostaCard, ApostaCardData } from "./ApostaCard";
 import { VisaoGeralCharts } from "./VisaoGeralCharts";
@@ -194,7 +193,7 @@ const getLucroPerna = (perna: SurebetPerna & { lucro_prejuizo?: number | null })
 
 export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, actionsSlot }: ProjetoSurebetTabProps) {
   const queryClient = useQueryClient();
-  const { wrapOnEdit, ReaberturaDialog } = useReabrirSurebetGuard();
+  
   
   // FONTE ÚNICA DE VERDADE: Usa o hook centralizado para saldos de bookmakers
   const { data: bookmakers = [], refetch: refetchBookmakers } = useBookmakerSaldosQuery({
@@ -1580,10 +1579,10 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
                 <SurebetCard
                   key={operacao.id}
                   surebet={operacao}
-                  onEdit={wrapOnEdit((sb) => {
+                  onEdit={(sb) => {
                     const url = `/janela/surebet/${sb.id}?projetoId=${encodeURIComponent(projetoId)}&tab=surebet`;
                     window.open(url, '_blank', 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
-                  }, operacao)}
+                  }}
                   onQuickResolve={handleSurebetQuickResolve}
                   onPernaResultChange={handleSurebetPernaResolve}
                    onDelete={handleSurebetDelete}
@@ -1831,9 +1830,6 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
         onSuccess={handleDataChange}
         activeTab="surebet"
       />
-
-      {/* Guard de reabertura para edição de surebets liquidadas (Fase 1) */}
-      {ReaberturaDialog}
     </div>
   );
 }

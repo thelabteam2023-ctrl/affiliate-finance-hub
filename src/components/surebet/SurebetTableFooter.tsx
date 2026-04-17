@@ -13,7 +13,6 @@ import { type SupportedCurrency } from '@/hooks/useCurrencySnapshot';
 interface SurebetTableFooterProps {
   analysis: SurebetAnalysis;
   isEditing: boolean;
-  canEditStructure: boolean;
   arredondarAtivado: boolean;
   setArredondarAtivado: (value: boolean) => void;
   arredondarValor: string;
@@ -24,7 +23,6 @@ interface SurebetTableFooterProps {
 export function SurebetTableFooter({
   analysis,
   isEditing,
-  canEditStructure,
   arredondarAtivado,
   setArredondarAtivado,
   arredondarValor,

@@ -14723,7 +14723,6 @@ export type Database = {
               success: boolean
             }[]
           }
-      reabrir_surebet_atomica: { Args: { p_aposta_id: string }; Returns: Json }
       recalcular_pai_surebet_multimoeda: {
         Args: { p_surebet_id: string }
         Returns: Record<string, unknown>
@@ -14938,10 +14937,6 @@ export type Database = {
       user_is_owner_or_admin_in_workspace: {
         Args: { check_user_id: string; check_workspace_id: string }
         Returns: boolean
-      }
-      validar_reabertura_surebet: {
-        Args: { p_aposta_id: string }
-        Returns: Json
       }
       validate_and_reserve_stakes:
         | {

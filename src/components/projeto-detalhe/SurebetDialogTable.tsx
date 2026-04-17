@@ -253,12 +253,6 @@ export function SurebetDialogTable({
   rascunho = null 
 }: SurebetDialogTableProps) {
   const isEditing = !!surebet;
-  // Quando a aposta está PENDENTE (ex.: foi reaberta), permitir alterar
-  // a estrutura: nº de pernas e adição de casas extras por perna.
-  const surebetStatus = (surebet as any)?.status as string | undefined;
-  const surebetResultado = (surebet as any)?.resultado as string | null | undefined;
-  const isPendente = !isEditing || (surebetStatus === "PENDENTE" && (!surebetResultado || surebetResultado === "PENDENTE"));
-  const lockStructure = isEditing && !isPendente;
   const { workspaceId } = useWorkspace();
   
   const { getSnapshotFields } = useCurrencySnapshot();
@@ -400,7 +394,7 @@ export function SurebetDialogTable({
   const [focusedLeg, setFocusedLeg] = useState<number | null>(null);
   
   // "Ativo" quando existe pelo menos uma perna desmarcada
-  const profitDirectionActive = !lockStructure && directedProfitLegs.length > 0 && directedProfitLegs.length < odds.length;
+  const profitDirectionActive = !isEditing && directedProfitLegs.length > 0 && directedProfitLegs.length < odds.length;
   
   // ============================================
   // HANDLERS GLOBAIS
@@ -656,7 +650,7 @@ export function SurebetDialogTable({
 
   // Atualizar odds quando número de pernas muda
   useEffect(() => {
-    if (lockStructure) return;
+    if (isEditing) return;
     
     const currentNumPernas = odds.length;
     if (numPernas !== currentNumPernas) {
@@ -1519,11 +1513,11 @@ export function SurebetDialogTable({
       <div className="flex flex-wrap items-center gap-4 pb-3 border-b border-border/50">
         <div className="flex items-center gap-2">
           <Label className="text-xs text-muted-foreground whitespace-nowrap">Modelo</Label>
-          <div className={`flex bg-muted/50 rounded p-0.5 ${lockStructure ? 'opacity-60' : ''}`}>
+          <div className={`flex bg-muted/50 rounded p-0.5 ${isEditing ? 'opacity-60' : ''}`}>
             <button
               type="button"
-              onClick={() => !lockStructure && setModeloTipo("2")}
-              disabled={lockStructure}
+              onClick={() => !isEditing && setModeloTipo("2")}
+              disabled={isEditing}
               className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
                 modeloTipo === "2" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
               }`}
@@ -1532,8 +1526,8 @@ export function SurebetDialogTable({
             </button>
             <button
               type="button"
-              onClick={() => !lockStructure && setModeloTipo("3")}
-              disabled={lockStructure}
+              onClick={() => !isEditing && setModeloTipo("3")}
+              disabled={isEditing}
               className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
                 modeloTipo === "3" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
               }`}
@@ -1542,8 +1536,8 @@ export function SurebetDialogTable({
             </button>
             <button
               type="button"
-              onClick={() => !lockStructure && setModeloTipo("4+")}
-              disabled={lockStructure}
+              onClick={() => !isEditing && setModeloTipo("4+")}
+              disabled={isEditing}
               className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
                 modeloTipo === "4+" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
               }`}
@@ -1554,7 +1548,7 @@ export function SurebetDialogTable({
         </div>
         
         {/* Campo numérico para 4+ pernas */}
-        {modeloTipo === "4+" && !lockStructure && (
+        {modeloTipo === "4+" && !isEditing && (
           <div className="flex items-center gap-2">
             <Label className="text-xs text-muted-foreground">Quantidade:</Label>
             <Input
@@ -1586,14 +1580,14 @@ export function SurebetDialogTable({
               <th className="py-2 px-2 text-center font-medium text-muted-foreground w-10" title="Referência">
                 <Target className="h-3.5 w-3.5 mx-auto" />
               </th>
-              {!lockStructure && (
+              {!isEditing && (
                 <th className="py-2 px-2 text-center font-medium text-muted-foreground w-10" title="Distribuição de lucro">
                   D
                 </th>
               )}
               <th className="py-2 px-2 text-center font-medium text-muted-foreground w-20">Lucro</th>
               <th className="py-2 px-2 text-center font-medium text-muted-foreground w-16">ROI</th>
-              {!lockStructure && <th className="py-2 px-2 w-8"></th>}
+              {!isEditing && <th className="py-2 px-2 w-8"></th>}
             </tr>
           </thead>
           <tbody>
@@ -1780,7 +1774,7 @@ export function SurebetDialogTable({
                     </td>
                     
                     {/* Checkbox D — Distribuição de lucro */}
-                    {!lockStructure && (
+                    {!isEditing && (
                       <td className="py-6 px-2 text-center">
                         <button
                           type="button"
@@ -1838,7 +1832,7 @@ export function SurebetDialogTable({
                     </td>
                     
                     {/* Ações - Adicionar casa */}
-                    {!lockStructure && (
+                    {!isEditing && (
                       <td className="py-6 px-1">
                         <Button
                           type="button"
@@ -1924,7 +1918,7 @@ export function SurebetDialogTable({
                     <td className="py-1 px-2"></td>
                     
                     {/* D - vazio */}
-                    {!lockStructure && <td className="py-1 px-2"></td>}
+                    {!isEditing && <td className="py-1 px-2"></td>}
                     
                     {/* Lucro - vazio */}
                     <td className="py-1 px-2"></td>
@@ -1933,7 +1927,7 @@ export function SurebetDialogTable({
                     <td className="py-1 px-2"></td>
                     
                     {/* Remover */}
-                    {!lockStructure && (
+                    {!isEditing && (
                       <td className="py-1 px-1">
                         <Button
                           type="button"

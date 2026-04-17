@@ -40,7 +40,6 @@ interface SurebetColumnsViewProps {
   odds: OddEntry[];
   scenarios: (LegScenario | undefined)[];
   isEditing: boolean;
-  canEditStructure: boolean;
   bookmakersByLeg: (legIndex: number) => BookmakerOption[];
   directedProfitLegs: number[];
   numPernas: number;
@@ -95,7 +94,6 @@ export function SurebetColumnsView({
   odds,
   scenarios,
   isEditing,
-  canEditStructure,
   bookmakersByLeg,
   directedProfitLegs,
   numPernas,
@@ -141,8 +139,8 @@ export function SurebetColumnsView({
             <div 
               key={pernaIndex} 
               className="flex flex-col rounded-lg border border-border/40 bg-card/50 overflow-hidden"
-              onMouseEnter={() => canEditStructure && onFocus(pernaIndex)}
-              onMouseLeave={() => canEditStructure && onBlur()}
+              onMouseEnter={() => !isEditing && onFocus(pernaIndex)}
+              onMouseLeave={() => !isEditing && onBlur()}
             >
               {/* Header da coluna */}
               <div className="flex items-center justify-between px-3 py-2 bg-muted/30 border-b border-border/30">
@@ -161,7 +159,7 @@ export function SurebetColumnsView({
                 </div>
                 <div className="flex items-center gap-1">
                   {/* Referência */}
-                  {canEditStructure && (
+                  {!isEditing && (
                     <button
                       type="button"
                       onClick={() => onSetReference(pernaIndex)}
@@ -177,7 +175,7 @@ export function SurebetColumnsView({
                     </button>
                   )}
                   {/* Distribuição */}
-                  {canEditStructure && (
+                  {!isEditing && (
                     <button
                       type="button"
                       onClick={() => onToggleDirected(pernaIndex)}
@@ -459,7 +457,7 @@ export function SurebetColumnsView({
 
                 {/* Add entry / Delete perna */}
                 <div className="flex items-center justify-between pt-1">
-                  {canEditStructure && canAddMore && (
+                  {!isEditing && canAddMore && (
                     <Button
                       type="button"
                       variant="ghost"
@@ -472,7 +470,7 @@ export function SurebetColumnsView({
                       Casa
                     </Button>
                   )}
-                  {!canEditStructure && canDeletePerna && (
+                  {isEditing && canDeletePerna && (
                     <Button
                       type="button"
                       variant="ghost"
