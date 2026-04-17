@@ -77,7 +77,7 @@ export function useReabrirSurebetGuard() {
       // Executar callback original (abrir editor)
       // Pequeno delay para o cache atualizar antes do dialog de edição abrir
       setTimeout(() => {
-        pendingCallbackRef.current?.();
+        pendingCallbackRef.current?.(apostaId);
         pendingCallbackRef.current = null;
       }, 150);
     },

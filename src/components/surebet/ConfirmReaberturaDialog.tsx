@@ -95,7 +95,7 @@ export function ConfirmReaberturaDialog({
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-amber-500" />
+            <AlertTriangle className="h-5 w-5 text-warning" />
             Editar aposta liquidada
           </DialogTitle>
           <DialogDescription>
