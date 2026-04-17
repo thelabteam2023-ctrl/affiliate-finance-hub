@@ -109,7 +109,7 @@ export function ProjectCurrencyProvider({ projetoId, children }: ProjectCurrency
       cotacaoAtual,
       ptaxAtual: cotacaoUSD,
     };
-  }, [projetoConfig, cotacaoUSD, cotacaoTrabalho]);
+  }, [projetoConfig, cotacaoUSD]);
 
   // Obter símbolo da moeda de consolidação
   const getSymbol = useMemo(() => () => {
