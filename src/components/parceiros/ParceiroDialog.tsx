@@ -27,6 +27,7 @@ import { BankAccountCard } from "./BankAccountCard";
 import { CryptoWalletCard } from "./CryptoWalletCard";
 import { validateCPF, formatCPF, formatCEP, formatAgencia, formatConta } from "@/lib/validators";
 import { DatePickerInput } from "@/components/ui/date-picker-input";
+import { ParceiroProfileView } from "./ParceiroProfileView";
 
 interface PixKey {
   tipo: string;
