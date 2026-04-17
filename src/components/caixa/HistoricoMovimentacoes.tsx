@@ -865,49 +865,82 @@ export function HistoricoMovimentacoes({
                       </>
                     )}
                     </div>
-                    {transacao.tipo_transacao === "SAQUE" && transacao.status === "CONFIRMADO" && transacao.data_confirmacao ? (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <button
-                            className="p-1 rounded hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover:opacity-100"
-                            title="Editar"
-                          >
-                            <MoreVertical className="h-3.5 w-3.5" />
-                          </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48">
-                          <DropdownMenuItem onClick={() => {
-                            setEditDateId(transacao.id);
-                            setEditDateValue(transacao.data_transacao);
-                          }}>
-                            <Pencil className="h-3.5 w-3.5 mr-2" />
-                            Editar data solicitação
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => setEditConfirmado({
-                            id: transacao.id,
-                            dataConfirmacao: transacao.data_confirmacao,
-                            valorConfirmado: transacao.valor_confirmado ?? null,
-                            moeda: transacao.moeda,
-                            tipoCrypto: transacao.tipo_moeda === "CRYPTO",
-                            coin: transacao.coin || undefined,
-                          })}>
-                            <Pencil className="h-3.5 w-3.5 mr-2" />
-                            Editar recebimento
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    ) : (
-                      <button
-                        onClick={() => {
-                          setEditDateId(transacao.id);
-                          setEditDateValue(transacao.data_transacao);
-                        }}
-                        className="p-1 rounded hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover:opacity-100"
-                        title="Editar data"
-                      >
-                        <Pencil className="h-3 w-3" />
-                      </button>
-                    )}
+                    {(() => {
+                      const isSaqueConfirmado = transacao.tipo_transacao === "SAQUE" && transacao.status === "CONFIRMADO" && transacao.data_confirmacao;
+                      const revertElig = canRevert(transacao, role);
+                      const deleteElig = canDelete(transacao, role);
+                      const resumo = `${transacao.tipo_transacao} · ${transacao.moeda} ${transacao.valor}`;
+                      return (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button
+                              className="p-1 rounded hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover:opacity-100"
+                              title="Ações"
+                            >
+                              <MoreVertical className="h-3.5 w-3.5" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-56">
+                            <DropdownMenuItem onClick={() => {
+                              setEditDateId(transacao.id);
+                              setEditDateValue(transacao.data_transacao);
+                            }}>
+                              <Pencil className="h-3.5 w-3.5 mr-2" />
+                              {isSaqueConfirmado ? "Editar data solicitação" : "Editar data"}
+                            </DropdownMenuItem>
+                            {isSaqueConfirmado && (
+                              <DropdownMenuItem onClick={() => setEditConfirmado({
+                                id: transacao.id,
+                                dataConfirmacao: transacao.data_confirmacao,
+                                valorConfirmado: transacao.valor_confirmado ?? null,
+                                moeda: transacao.moeda,
+                                tipoCrypto: transacao.tipo_moeda === "CRYPTO",
+                                coin: transacao.coin || undefined,
+                              })}>
+                                <Pencil className="h-3.5 w-3.5 mr-2" />
+                                Editar recebimento
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuSeparator />
+                            <TooltipProvider delayDuration={150}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div>
+                                    <DropdownMenuItem
+                                      disabled={!revertElig.allowed}
+                                      onClick={() => revertElig.allowed && setReverterTx({ ...transacao, _resumo: resumo })}
+                                    >
+                                      <Undo2 className="h-3.5 w-3.5 mr-2" />
+                                      Reverter (estorno)
+                                    </DropdownMenuItem>
+                                  </div>
+                                </TooltipTrigger>
+                                {!revertElig.allowed && revertElig.reason && (
+                                  <TooltipContent side="left">{revertElig.reason}</TooltipContent>
+                                )}
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div>
+                                    <DropdownMenuItem
+                                      disabled={!deleteElig.allowed}
+                                      onClick={() => deleteElig.allowed && setExcluirTx({ ...transacao, _resumo: resumo })}
+                                      className="text-destructive focus:text-destructive"
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5 mr-2" />
+                                      Excluir movimentação
+                                    </DropdownMenuItem>
+                                  </div>
+                                </TooltipTrigger>
+                                {!deleteElig.allowed && deleteElig.reason && (
+                                  <TooltipContent side="left">{deleteElig.reason}</TooltipContent>
+                                )}
+                              </Tooltip>
+                            </TooltipProvider>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>
