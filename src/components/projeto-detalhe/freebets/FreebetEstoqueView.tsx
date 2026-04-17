@@ -313,22 +313,22 @@ export function FreebetEstoqueView({ projetoId, formatCurrency, dateRange, onAdd
                     )}
                   </div>
 
-                  <div className="grid grid-cols-4 gap-6 text-center">
-                     <div>
+                  <div className="grid grid-cols-[140px_90px_90px_90px] gap-4 items-center">
+                    <div className="text-right tabular-nums">
                       <p className="text-xs text-muted-foreground">Saldo</p>
                       <p className="font-semibold text-amber-400">
                         {formatNativeCurrency(bk.saldo_nominal, bk.moeda)}
                       </p>
                     </div>
-                    <div>
+                    <div className="text-center tabular-nums">
                       <p className="text-xs text-muted-foreground">Liberadas</p>
                       <p className="font-semibold text-emerald-400">{bk.freebets_liberadas}</p>
                     </div>
-                    <div>
+                    <div className="text-center tabular-nums">
                       <p className="text-xs text-muted-foreground">Pendentes</p>
                       <p className="font-semibold text-amber-400">{bk.freebets_pendentes}</p>
                     </div>
-                    <div>
+                    <div className="text-center tabular-nums">
                       <p className="text-xs text-muted-foreground">Expiração</p>
                       <p className="font-semibold text-sm">
                         {bk.proxima_expiracao
