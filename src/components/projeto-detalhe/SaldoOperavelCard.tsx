@@ -109,7 +109,7 @@ export function SaldoOperavelCard({ projetoId, variant = "default" }: SaldoOpera
     moedaConsolidacao
   } = useSaldoOperavel(projetoId);
   
-  const { formatCurrency, getSymbol, cotacaoAtual } = useProjetoCurrency(projetoId);
+  const { formatCurrency, getSymbol, cotacaoAtual, convertToConsolidation } = useProjetoCurrency(projetoId);
   const { cotacaoUSD } = useCotacoes();
   
   const [isRetrying, setIsRetrying] = useState(false);
