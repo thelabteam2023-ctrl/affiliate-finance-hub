@@ -284,6 +284,7 @@ export function SaldoOperavelDisplay({
             )}
           </p>
           <CompactCurrencyValue value={saldoOperavel} formatCurrency={formatCurrency} moeda={moeda} className="font-bold text-foreground tabular-nums text-xs" />
+          {renderConsolidacao(saldoOperavel)}
         </div>
 
         {/* Em Aposta - Informativo */}
@@ -300,6 +301,7 @@ export function SaldoOperavelDisplay({
             {sortEmAposta === "asc" && <ArrowUp className="h-3 w-3 text-primary" />}
           </p>
           <CompactCurrencyValue value={saldoEmAposta} formatCurrency={formatCurrency} moeda={moeda} className="font-medium text-warning tabular-nums text-xs" />
+          {renderConsolidacao(saldoEmAposta)}
         </div>
 
         {/* Em Saque - Visível apenas se existir */}
@@ -327,6 +329,7 @@ export function SaldoOperavelDisplay({
             {sortDisponivel === "asc" && <ArrowUp className="h-3 w-3 text-primary" />}
           </p>
           <CompactCurrencyValue value={saldoDisponivel} formatCurrency={formatCurrency} moeda={moeda} className="font-semibold text-accent-foreground tabular-nums text-xs" />
+          {renderConsolidacao(saldoDisponivel)}
         </div>
       </div>
     );
