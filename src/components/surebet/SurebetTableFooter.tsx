@@ -29,17 +29,29 @@ export function SurebetTableFooter({
   setArredondarValor,
   
 }: SurebetTableFooterProps) {
+  const hasRange = analysis.stakeTotal > 0 && Math.abs(analysis.maxLucro - analysis.minLucro) > 0.005;
+  const lucroSign = (v: number) => (v >= 0 ? "+" : "");
+  const lucroColor = analysis.minLucro >= 0 ? "text-emerald-500" : "text-red-500";
+  const roiColor = analysis.minRoi >= 0 ? "text-emerald-500" : "text-red-500";
+
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-border/50">
       {/* Totais */}
       <div className="flex items-center gap-3 md:gap-6">
         <div className="text-center">
           <div className="text-[10px] text-muted-foreground uppercase">Lucro Garantido</div>
-          <div className={`text-base md:text-lg font-bold ${analysis.minLucro >= 0 ? "text-emerald-500" : "text-red-500"}`}>
-            {analysis.stakeTotal > 0 
-              ? `${analysis.minLucro >= 0 ? "+" : ""}${formatCurrency(analysis.minLucro, analysis.moedaDominante)}`
-              : "—"
-            }
+          <div className={`font-bold leading-tight whitespace-nowrap ${lucroColor} ${hasRange ? "text-xs md:text-sm" : "text-base md:text-lg"}`}>
+            {analysis.stakeTotal > 0 ? (
+              hasRange ? (
+                <>
+                  {lucroSign(analysis.minLucro)}{formatCurrency(analysis.minLucro, analysis.moedaDominante)}
+                  <span className="text-muted-foreground mx-1">→</span>
+                  {lucroSign(analysis.maxLucro)}{formatCurrency(analysis.maxLucro, analysis.moedaDominante)}
+                </>
+              ) : (
+                `${lucroSign(analysis.minLucro)}${formatCurrency(analysis.minLucro, analysis.moedaDominante)}`
+              )
+            ) : "—"}
           </div>
         </div>
         <div className="text-center">
@@ -53,11 +65,18 @@ export function SurebetTableFooter({
         </div>
         <div className="text-center">
           <div className="text-[10px] text-muted-foreground uppercase">ROI</div>
-          <div className={`text-base md:text-lg font-bold ${analysis.minRoi >= 0 ? "text-emerald-500" : "text-red-500"}`}>
-            {analysis.stakeTotal > 0 
-              ? `${analysis.minRoi >= 0 ? "+" : ""}${analysis.minRoi.toFixed(2)}%`
-              : "—"
-            }
+          <div className={`font-bold leading-tight whitespace-nowrap ${roiColor} ${hasRange ? "text-xs md:text-sm" : "text-base md:text-lg"}`}>
+            {analysis.stakeTotal > 0 ? (
+              hasRange ? (
+                <>
+                  {lucroSign(analysis.minRoi)}{analysis.minRoi.toFixed(2)}%
+                  <span className="text-muted-foreground mx-1">→</span>
+                  {lucroSign(analysis.maxRoi)}{analysis.maxRoi.toFixed(2)}%
+                </>
+              ) : (
+                `${lucroSign(analysis.minRoi)}${analysis.minRoi.toFixed(2)}%`
+              )
+            ) : "—"}
           </div>
         </div>
       </div>
