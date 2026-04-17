@@ -910,6 +910,8 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
     workspaceId: string;
     bookmakerNome?: string;
     silent?: boolean;
+    /** Pula invalidação de cache e refetch — usado em loops de liquidação rápida */
+    skipRefresh?: boolean;
   }) => {
     try {
       const result = await liquidarPernaSurebet({
@@ -929,9 +931,11 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
         return;
       }
 
-      // Invalidar cache e recarregar
-      invalidateSaldos(projetoId);
-      handleApostaUpdated();
+      // Invalidar cache e recarregar — pulado em modo batch (skipRefresh)
+      if (!input.skipRefresh) {
+        invalidateSaldos(projetoId);
+        handleApostaUpdated();
+      }
 
       // Atualizar rollover se houver bônus ativo
       if (input.bookmarkerId && input.resultado !== "VOID") {
