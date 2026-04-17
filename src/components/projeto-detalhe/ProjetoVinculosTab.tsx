@@ -1113,6 +1113,9 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
                     sortSaldo={sortMode === "saldo_desc" ? "desc" : sortMode === "saldo_asc" ? "asc" : null}
                     sortEmAposta={sortMode === "em_aposta_desc" ? "desc" : sortMode === "em_aposta_asc" ? "asc" : null}
                     sortDisponivel={sortMode === "disponivel_desc" ? "desc" : sortMode === "disponivel_asc" ? "asc" : null}
+                    convertToConsolidacao={convertToConsolidacaoProjeto}
+                    moedaConsolidacao={moedaConsolidacaoProjeto}
+                    formatConsolidacao={formatConsolidacaoProjeto}
                   />
 
                   {/* Status Badge */}
