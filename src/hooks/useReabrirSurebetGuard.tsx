@@ -20,6 +20,7 @@
 import { useState, useCallback, useRef } from "react";
 import { ConfirmReaberturaDialog } from "@/components/surebet/ConfirmReaberturaDialog";
 import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 // Valores que indicam aposta liquidada — pode aparecer tanto na coluna `status`
 // (LIQUIDADA) quanto na coluna `resultado` (GREEN/RED/VOID/MEIO_*).
