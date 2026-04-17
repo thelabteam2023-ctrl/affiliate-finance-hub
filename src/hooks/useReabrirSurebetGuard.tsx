@@ -82,14 +82,8 @@ export function useReabrirSurebetGuard() {
       const cb = pendingCallbackRef.current;
       pendingCallbackRef.current = null;
 
-      // Invalidar caches locais
-      queryClient.invalidateQueries({ queryKey: ["apostas"] });
-      queryClient.invalidateQueries({ queryKey: ["bookmaker-saldos"] });
-      queryClient.invalidateQueries({ queryKey: ["financial-events"] });
-
-      // Aguardar confirmação real do DB (poll até 2s) que o status virou PENDENTE
-      // antes de abrir o editor — a janela nova faz fetch próprio e precisa
-      // ler o estado atualizado.
+      // 1) Aguardar confirmação real do DB (poll até 2s) que o status virou
+      // PENDENTE — a janela nova faz fetch próprio e precisa ler estado novo.
       const deadline = Date.now() + 2000;
       while (Date.now() < deadline) {
         const { data } = await supabase
@@ -101,6 +95,44 @@ export function useReabrirSurebetGuard() {
         await new Promise((r) => setTimeout(r, 100));
       }
 
+      // 2) Invalidação ampla — usa predicate para pegar TODAS as queries
+      // relacionadas a apostas/surebets/saldos/calendário, independente
+      // do formato da queryKey usado em cada tab. refetchType="active"
+      // força refetch imediato dos componentes montados.
+      const RELATED_KEYS = new Set([
+        "apostas",
+        "apostas-pernas",
+        "apostas-pernas-analise",
+        "surebets",
+        "projeto-apostas",
+        "projeto-resultado",
+        "projeto-dashboard-apostas",
+        "projeto-dashboard-extras",
+        "projeto-dashboard-calendario",
+        "calendar-apostas",
+        "calendar-apostas-rpc",
+        "bookmaker-saldos",
+        "financial-events",
+      ]);
+      await queryClient.invalidateQueries({
+        predicate: (q) => {
+          const k = q.queryKey?.[0];
+          return typeof k === "string" && RELATED_KEYS.has(k);
+        },
+        refetchType: "active",
+      });
+
+      // 3) Notificar outras abas/janelas via BroadcastChannel — janela nova
+      // pode escutar e refazer fetch ao montar.
+      try {
+        const bc = new BroadcastChannel("aposta-reaberta");
+        bc.postMessage({ apostaId, ts: Date.now() });
+        bc.close();
+      } catch {
+        // ambiente sem BroadcastChannel — ignora
+      }
+
+      // 4) Abrir o editor (janela nova) — agora com DB confirmado e caches limpos
       cb?.(apostaId);
     },
     [queryClient]
