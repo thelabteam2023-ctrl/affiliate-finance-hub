@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useProjectCurrencyFormat } from "@/hooks/useProjectCurrencyFormat";
+import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { useProjectResponsibilities } from "@/hooks/useProjectResponsibilities";
 import { AjusteSaldoDialog } from "./AjusteSaldoDialog";
 import { useBookmakerSaldosQuery, useInvalidateBookmakerSaldos, type BookmakerSaldo } from "@/hooks/useBookmakerSaldosQuery";
@@ -329,6 +330,12 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
     getCotacaoInfo,
     loading: cotacoesLoading 
   } = useProjectCurrencyFormat();
+
+  // Hook de moeda do PROJETO (para conversão à moeda de consolidação usando Cotação de Trabalho)
+  const projetoCurrency = useProjetoCurrency(projetoId);
+  const moedaConsolidacaoProjeto = projetoCurrency.moedaConsolidacao;
+  const convertToConsolidacaoProjeto = projetoCurrency.convertToConsolidation;
+  const formatConsolidacaoProjeto = (valor: number) => projetoCurrency.formatCurrency(valor);
 
   // Agrupar saldos por moeda para KPIs - usando saldo_operavel como base
   const balancesByMoeda = useMemo(() => {
@@ -852,12 +859,10 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
                       formatCurrency={(val, moeda) => formatCurrency(val, moeda || vinculo.moeda)}
                       moeda={vinculo.moeda}
                       variant="card"
+                      convertToConsolidacao={convertToConsolidacaoProjeto}
+                      moedaConsolidacao={moedaConsolidacaoProjeto}
+                      formatConsolidacao={formatConsolidacaoProjeto}
                     />
-                    {vinculo.moeda !== "BRL" && (
-                      <p className="text-[10px] text-muted-foreground text-right mt-1">
-                        ≈ {formatCurrency(convertToBRL(vinculo.saldo_operavel, vinculo.moeda), "BRL")}
-                      </p>
-                    )}
                   </div>
 
                   <div className="flex items-center justify-between pt-2 border-t">
@@ -1108,6 +1113,9 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
                     sortSaldo={sortMode === "saldo_desc" ? "desc" : sortMode === "saldo_asc" ? "asc" : null}
                     sortEmAposta={sortMode === "em_aposta_desc" ? "desc" : sortMode === "em_aposta_asc" ? "asc" : null}
                     sortDisponivel={sortMode === "disponivel_desc" ? "desc" : sortMode === "disponivel_asc" ? "asc" : null}
+                    convertToConsolidacao={convertToConsolidacaoProjeto}
+                    moedaConsolidacao={moedaConsolidacaoProjeto}
+                    formatConsolidacao={formatConsolidacaoProjeto}
                   />
 
                   {/* Status Badge */}

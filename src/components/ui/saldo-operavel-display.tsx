@@ -159,6 +159,17 @@ interface SaldoOperavelDisplayProps {
   sortSaldo?: "asc" | "desc" | null;
   sortEmAposta?: "asc" | "desc" | null;
   sortDisponivel?: "asc" | "desc" | null;
+  /**
+   * Conversão para moeda de consolidação do projeto.
+   * Quando fornecido E moeda da casa ≠ moeda de consolidação,
+   * exibe linha "≈ $ X.XX" abaixo de cada valor.
+   * Usa Cotação de Trabalho (sem drift de mercado).
+   */
+  convertToConsolidacao?: (valor: number, moedaOrigem: string) => number;
+  /** Moeda de consolidação do projeto (BRL/USD) — usada com convertToConsolidacao */
+  moedaConsolidacao?: string;
+  /** Formatador da moeda de consolidação (ex: formatCurrency do useProjetoCurrency) */
+  formatConsolidacao?: (valor: number) => string;
 }
 
 /**
@@ -182,11 +193,31 @@ export function SaldoOperavelDisplay({
   sortSaldo,
   sortEmAposta,
   sortDisponivel,
+  convertToConsolidacao,
+  moedaConsolidacao,
+  formatConsolidacao,
 }: SaldoOperavelDisplayProps) {
   const hasComposition = saldoFreebet > 0 || saldoBonus > 0;
   // Limitar exibição do saque pendente ao saldo real (não mostrar mais do que existe na conta)
   const saquePendenteEfetivo = Math.min(saldoSaquePendente, saldoReal);
   const hasPendingWithdrawal = saquePendenteEfetivo > 0;
+
+  // Helper: exibe equivalente em moeda de consolidação se aplicável
+  const showConsolidacao =
+    !!convertToConsolidacao &&
+    !!moedaConsolidacao &&
+    !!formatConsolidacao &&
+    moeda !== moedaConsolidacao;
+
+  const renderConsolidacao = (valor: number) => {
+    if (!showConsolidacao) return null;
+    const convertido = convertToConsolidacao!(valor, moeda);
+    return (
+      <span className="block text-[10px] text-muted-foreground/70 tabular-nums leading-tight">
+        ≈ {formatConsolidacao!(convertido)}
+      </span>
+    );
+  };
 
   // Componente de tooltip com composição
   const CompositionTooltip = () => (
@@ -253,6 +284,7 @@ export function SaldoOperavelDisplay({
             )}
           </p>
           <CompactCurrencyValue value={saldoOperavel} formatCurrency={formatCurrency} moeda={moeda} className="font-bold text-foreground tabular-nums text-xs" />
+          {renderConsolidacao(saldoOperavel)}
         </div>
 
         {/* Em Aposta - Informativo */}
@@ -269,6 +301,7 @@ export function SaldoOperavelDisplay({
             {sortEmAposta === "asc" && <ArrowUp className="h-3 w-3 text-primary" />}
           </p>
           <CompactCurrencyValue value={saldoEmAposta} formatCurrency={formatCurrency} moeda={moeda} className="font-medium text-warning tabular-nums text-xs" />
+          {renderConsolidacao(saldoEmAposta)}
         </div>
 
         {/* Em Saque - Visível apenas se existir */}
@@ -296,6 +329,7 @@ export function SaldoOperavelDisplay({
             {sortDisponivel === "asc" && <ArrowUp className="h-3 w-3 text-primary" />}
           </p>
           <CompactCurrencyValue value={saldoDisponivel} formatCurrency={formatCurrency} moeda={moeda} className="font-semibold text-accent-foreground tabular-nums text-xs" />
+          {renderConsolidacao(saldoDisponivel)}
         </div>
       </div>
     );
@@ -349,8 +383,9 @@ export function SaldoOperavelDisplay({
               </TooltipProvider>
             )}
           </span>
-          <span className="text-base font-bold text-primary">
+          <span className="text-base font-bold text-primary text-right">
             {formatCurrency(saldoOperavel, moeda)}
+            {renderConsolidacao(saldoOperavel)}
           </span>
         </div>
       </div>
@@ -362,6 +397,7 @@ export function SaldoOperavelDisplay({
           <span className="text-[10px] text-muted-foreground">Em Aposta</span>
           <span className="text-sm font-medium text-warning">
             {formatCurrency(saldoEmAposta, moeda)}
+            {renderConsolidacao(saldoEmAposta)}
           </span>
         </div>
 
@@ -399,6 +435,7 @@ export function SaldoOperavelDisplay({
           <span className="text-[10px] text-muted-foreground">Disponível</span>
           <span className="text-sm font-semibold text-accent-foreground">
             {formatCurrency(saldoDisponivel, moeda)}
+            {renderConsolidacao(saldoDisponivel)}
           </span>
         </div>
       </div>
