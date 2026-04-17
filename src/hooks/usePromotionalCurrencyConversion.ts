@@ -12,6 +12,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCotacoes } from "@/hooks/useCotacoes";
+import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 
 export type MoedaConsolidacao = "BRL" | "USD";
 export type FonteCotacao = "TRABALHO" | "PTAX";
@@ -47,6 +48,11 @@ export function usePromotionalCurrencyConversion(projetoId: string) {
   const [loading, setLoading] = useState(true);
 
   const { cotacaoUSD, cotacaoEUR, cotacaoGBP, cotacaoMYR, cotacaoMXN, loading: cotacaoLoading } = useCotacoes();
+
+  // Fonte canônica de conversão — Cotação de Trabalho prioritária (padrão Lovable)
+  // Garante que Freebets, Cashback, Bônus e demais módulos promocionais usem
+  // a mesma cotação que ApostaCard / SurebetCard / KPIs analíticos.
+  const projectCurrency = useProjetoCurrency(projetoId);
 
   // Fetch project configuration
   useEffect(() => {
@@ -142,53 +148,10 @@ export function usePromotionalCurrencyConversion(projetoId: string) {
     moedaOrigem: string
   ): number => {
     if (!valor || valor === 0) return 0;
-
-    const { moedaConsolidacao, cotacaoAtual, disponivel } = config;
-
-    // Normalizar moeda de origem (stablecoins = USD)
-    const isUSDLike = (m: string) => ["USD", "USDT", "USDC"].includes(m);
-    const moedaOrigemNormalizada = isUSDLike(moedaOrigem) ? "USD" : moedaOrigem;
-    const moedaDestinoNormalizada = isUSDLike(moedaConsolidacao) ? "USD" : moedaConsolidacao;
-
-    // CRÍTICO: Moeda igual (após normalização) = SEM conversão
-    if (moedaOrigemNormalizada === moedaDestinoNormalizada) {
-      return valor;
-    }
-
-    // Se cotação não disponível, retornar valor original
-    if (!disponivel || cotacaoAtual <= 0) {
-      console.warn(`[converterParaConsolidacao] Cotação indisponível para converter ${moedaOrigem} -> ${moedaConsolidacao}`);
-      return valor;
-    }
-
-    // ===================================================================
-    // FÓRMULA PIVOT BRL UNIVERSAL
-    // Converter qualquer moeda -> BRL primeiro, depois BRL -> consolidação
-    // ===================================================================
-    
-    // Mapa de cotações para BRL
-    const getCotacaoBRL = (moeda: string): number | null => {
-      if (moeda === "BRL") return 1;
-      if (moeda === "USD") return cotacaoUSD;
-      if (moeda === "EUR") return cotacaoEUR;
-      if (moeda === "GBP") return cotacaoGBP;
-      if (moeda === "MYR") return cotacaoMYR;
-      if (moeda === "MXN") return cotacaoMXN;
-      return null;
-    };
-
-    const taxaOrigemBRL = getCotacaoBRL(moedaOrigemNormalizada);
-    const taxaDestinoBRL = getCotacaoBRL(moedaDestinoNormalizada);
-
-    if (taxaOrigemBRL && taxaOrigemBRL > 0 && taxaDestinoBRL && taxaDestinoBRL > 0) {
-      // Fórmula Pivot: (valor * taxa_BRL_origem) / taxa_BRL_destino
-      return (valor * taxaOrigemBRL) / taxaDestinoBRL;
-    }
-
-    // Conversão não suportada - retornar original
-    console.warn(`[converterParaConsolidacao] Conversão não suportada: ${moedaOrigem} -> ${moedaConsolidacao}`);
-    return valor;
-  }, [config, cotacaoUSD, cotacaoEUR, cotacaoGBP, cotacaoMYR, cotacaoMXN]);
+    // Delegar para a fonte canônica (useProjetoCurrency) — usa Cotação de Trabalho
+    // prioritária com fallback para cotação oficial. Padroniza com toda a stack.
+    return projectCurrency.convertToConsolidation(valor, moedaOrigem);
+  }, [projectCurrency]);
 
   /**
    * Converte um valor com resultado detalhado
