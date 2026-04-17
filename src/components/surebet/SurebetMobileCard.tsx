@@ -59,6 +59,7 @@ interface SurebetMobileCardProps {
   label: string;
   scenario: LegScenario | undefined;
   isEditing: boolean;
+  canEditStructure: boolean;
   isProcessing: boolean;
   bookmakers: BookmakerOption[];
   directedProfitLegs: number[];
@@ -84,6 +85,7 @@ export function SurebetMobileCard({
   label,
   scenario,
   isEditing,
+  canEditStructure,
   isProcessing,
   bookmakers,
   directedProfitLegs,
