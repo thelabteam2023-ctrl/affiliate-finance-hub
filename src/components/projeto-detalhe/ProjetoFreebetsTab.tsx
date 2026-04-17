@@ -178,7 +178,7 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
           id, bookmaker_id, valor, motivo, data_recebida, utilizada, 
           data_utilizacao, aposta_id, status, tem_rollover,
           bookmakers!freebets_recebidas_bookmaker_id_fkey (
-            nome, parceiro_id,
+            nome, parceiro_id, moeda,
             parceiros!bookmakers_parceiro_id_fkey (nome),
             bookmakers_catalogo!bookmakers_bookmaker_catalogo_id_fkey (logo_url)
           )
@@ -195,6 +195,7 @@ export function ProjetoFreebetsTab({ projetoId, onDataChange, refreshTrigger, fo
         parceiro_nome: fb.bookmakers?.parceiros?.nome || null,
         logo_url: fb.bookmakers?.bookmakers_catalogo?.logo_url || null,
         valor: fb.valor,
+        moeda: fb.bookmakers?.moeda || "BRL",
         motivo: fb.motivo,
         data_recebida: fb.data_recebida,
         utilizada: fb.utilizada || false,
