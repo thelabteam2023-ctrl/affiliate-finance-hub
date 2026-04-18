@@ -61,6 +61,26 @@ export function BankAccountCard({ account }: BankAccountCardProps) {
           </Badge>
         </div>
 
+        {typeof account.saldo === "number" && (
+          <div className="flex items-center justify-between rounded-lg border border-border/50 bg-muted/30 px-3 py-2">
+            <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
+              <Wallet className="w-3.5 h-3.5" />
+              Saldo atual
+            </div>
+            <span
+              className={`text-sm font-bold tabular-nums ${
+                account.saldo > 0
+                  ? "text-success"
+                  : account.saldo < 0
+                  ? "text-destructive"
+                  : "text-foreground"
+              }`}
+            >
+              {formatMoneyValue(account.saldo, account.moeda || "BRL")}
+            </span>
+          </div>
+        )}
+
         <div className="space-y-2">
           <div>
             <p className="text-xs text-muted-foreground uppercase tracking-wider">Titular</p>
