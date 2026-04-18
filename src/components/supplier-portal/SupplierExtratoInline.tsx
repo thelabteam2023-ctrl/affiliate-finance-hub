@@ -97,7 +97,7 @@ export function SupplierExtratoInline({ supplierWorkspaceId }: Props) {
   return (
     <div className="space-y-1.5">
       <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-        Últimas movimentações ({entries.length})
+        Movimentações ({entries.length}{total > entries.length ? ` de ${total}` : ""})
       </p>
       {entries.map((entry: any) => {
         const Icon = TIPO_ICONS[entry.tipo] || RefreshCw;
