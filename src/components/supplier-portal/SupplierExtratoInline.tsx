@@ -43,19 +43,25 @@ function formatCurrency(val: number) {
 }
 
 export function SupplierExtratoInline({ supplierWorkspaceId }: Props) {
-  const { data: entries = [], isLoading } = useQuery({
-    queryKey: ["supplier-extrato-inline", supplierWorkspaceId],
+  const [pageSize, setPageSize] = useState(10);
+
+  const { data: result, isLoading } = useQuery({
+    queryKey: ["supplier-extrato-inline", supplierWorkspaceId, pageSize],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error, count } = await supabase
         .from("supplier_ledger")
-        .select("id, tipo, direcao, valor, saldo_depois, descricao, created_at, metadata, supplier_bookmaker_accounts(login_username, bookmakers_catalogo(nome, logo_url), supplier_titulares(nome))")
+        .select("id, tipo, direcao, valor, saldo_depois, descricao, created_at, metadata, supplier_bookmaker_accounts(login_username, bookmakers_catalogo(nome, logo_url), supplier_titulares(nome))", { count: "exact" })
         .eq("supplier_workspace_id", supplierWorkspaceId)
         .order("sequencia", { ascending: false })
-        .limit(8);
+        .limit(pageSize);
       if (error) throw error;
-      return data || [];
+      return { entries: data || [], total: count || 0 };
     },
   });
+
+  const entries = result?.entries || [];
+  const total = result?.total || 0;
+  const hasMore = entries.length < total;
 
   const { data: titularesMap = {} } = useQuery({
     queryKey: ["supplier-titulares-map-inline", supplierWorkspaceId],
