@@ -210,7 +210,9 @@ export default function GestaoProjetos() {
       const finalProjetoIds = projetosData.map(p => p.id);
       
       // Buscar dados agregados em paralelo
-      const [saldosRpcResult, operadoresResult, bookmakersCountResult, depositosResult, saquesResult] = await Promise.all([
+      // OBS: Lucro Realizado NÃO é mais buscado aqui — vem do fetchProjetosLucroCanonico
+      // (fonte única canônica, mesma do FinancialMetricsCard).
+      const [saldosRpcResult, operadoresResult, bookmakersCountResult] = await Promise.all([
         // USAR RPC CANÔNICA para saldo operável (inclui real + freebet + bonus - em_aposta)
         supabase.rpc("get_saldo_operavel_por_projeto", { p_projeto_ids: finalProjetoIds }),
         
@@ -227,24 +229,6 @@ export default function GestaoProjetos() {
           .select("id, projeto_id, saldo_irrecuperavel, moeda")
           .in("projeto_id", finalProjetoIds)
           .eq("status", "ativo"),
-        
-        // Depósitos confirmados por projeto (para Lucro Realizado)
-        // INCLUI DEPOSITO_VIRTUAL para paridade com Indicadores Financeiros
-        supabase
-          .from("cash_ledger")
-          .select("projeto_id_snapshot, valor, moeda")
-          .eq("status", "CONFIRMADO")
-          .in("tipo_transacao", ["DEPOSITO", "DEPOSITO_VIRTUAL"])
-          .in("projeto_id_snapshot", finalProjetoIds),
-        
-        // Saques confirmados por projeto (para Lucro Realizado)
-        // INCLUI SAQUE_VIRTUAL para paridade com Indicadores Financeiros
-        supabase
-          .from("cash_ledger")
-          .select("projeto_id_snapshot, valor_confirmado, valor, moeda")
-          .eq("status", "CONFIRMADO")
-          .in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])
-          .in("projeto_id_snapshot", finalProjetoIds),
       ]);
       
       // ARQUITETURA DAG: Fetch armazena dados BRUTOS por moeda
