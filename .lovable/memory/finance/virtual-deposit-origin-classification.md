@@ -25,26 +25,36 @@ No trigger `fn_ensure_deposito_virtual_on_link`:
 Na RPC `desvincular_bookmaker_atomico`:
 - SAQUE_VIRTUAL sempre recebe `origem_tipo = 'MIGRACAO'`
 
-### Bug Corrigido (2026-04-18)
-
-**Sintoma**: Desvincular e revincular uma bookmaker ao MESMO projeto inflava o "Total Depósitos" do projeto pelo `saldo_atual` da casa, sem nenhuma operação real ter acontecido.
-
-**Causa raiz**: O trigger marcava como `MIGRACAO` sempre que existia SAQUE_VIRTUAL anterior, sem comparar se foi do mesmo projeto.
-
-**Correção**: Trigger agora compara `projeto_id_snapshot` do último SAQUE_VIRTUAL com o novo `projeto_id`. Apenas projetos diferentes geram MIGRACAO.
-
-### Cálculo de Depósitos Efetivos (Fluxo Líquido Ajustado)
+### Cálculo de Depósitos Efetivos
 
 ```
-depositosEfetivos = DEPOSITO (real com snapshot) + DEPOSITO_VIRTUAL onde origem_tipo='MIGRACAO'
+depositosEfetivos = DEPOSITO (real) + DEPOSITO_VIRTUAL onde origem_tipo='MIGRACAO'
 ```
 
-- **BASELINE é EXCLUÍDO** do cálculo de depósitos efetivos
-- Isso garante que o fluxo líquido reflita apenas o que saiu do caixa operacional + capital migrado entre projetos
+BASELINE é EXCLUÍDO de depósitos efetivos — não saiu do caixa.
+
+### Neutralização de Ciclos de Revinculação (v3 — 2026-04-18)
+
+**Problema**: Quando uma bookmaker é desvinculada e revinculada ao MESMO projeto, gera um par SV+DV BASELINE. O SV infla `saquesRecebidos` e o DV BASELINE infla `saldoCasas` (via `saldo_atual`), criando lucro fantasma na fórmula `Lucro = saldoCasas + saquesRecebidos − depositosEfetivos`.
+
+**Solução CORRETA — neutralização POR BOOKMAKER**:
+```typescript
+// Agrupa baseline DV por destino_bookmaker_id
+const baselineByBM = Map<bmId, valor>;
+// Agrupa SV por origem_bookmaker_id
+const svByBM = Map<bmId, valor>;
+// Neutraliza apenas o min(baseline, sv) PARA CADA bookmaker
+for (const [bmId, baselineVal] of baselineByBM) {
+  baselineNeutralizar += Math.min(baselineVal, svByBM.get(bmId) ?? 0);
+}
+lucroProjetado = (saldoCasas + saquesRecebidos + saquesPendentes) - depositosEfetivos - 2 * baselineNeutralizar;
+```
+
+**Bug corrigido**: A versão anterior somava `baselineAtiva` e `saquesVirtuais` GLOBALMENTE em USD e fazia `Math.min` agregado. Isso incluía DVs BASELINE antigos de OUTRAS bookmakers (que não tiveram SV no mesmo ciclo) na neutralização, causando inflação de centavos por conversão FX. A neutralização por bookmaker garante que apenas pares SV+DV reais do mesmo ciclo são neutralizados.
 
 ### Saques e Conciliação
 
-O Fluxo Líquido usa `valor_confirmado` (valor efetivamente recebido) quando disponível:
+O Fluxo Líquido usa `valor_confirmado` quando disponível:
 ```
 saquesRecebidos = SUM(valor_confirmado ?? valor)
 fluxoLiquido = saquesRecebidos - depositosEfetivos
