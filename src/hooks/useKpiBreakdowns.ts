@@ -404,7 +404,7 @@ const normalizeMoeda = (moeda?: string | null): string => {
   return m;
 };
 
-function calcularLucroCanonicoFromRpc(
+export function calcularLucroCanonicoFromRpc(
   rawData: ProjetoDashboardRawData,
   convert: ConvertFn,
   moedaConsolidacao: string,
