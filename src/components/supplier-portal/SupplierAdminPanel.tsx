@@ -14,10 +14,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { 
   Plus, Truck, Link2, Copy, ExternalLink, Wallet,
   Building2, Users, Clock, CheckCircle2, XCircle, AlertTriangle, Zap,
-  Search, Check, ClipboardList, RefreshCw
+  Search, Check, ClipboardList, RefreshCw, ScrollText
 } from "lucide-react";
 import { SupplierBookmakerConfigDialog } from "./SupplierBookmakerConfigDialog";
 import { SupplierTasksAdmin } from "./SupplierTasksAdmin";
+import { SupplierExtratoInline } from "./SupplierExtratoInline";
 import { Separator } from "@/components/ui/separator";
 import { OrigemPagamentoSelect, OrigemPagamentoData } from "@/components/programa-indicacao/OrigemPagamentoSelect";
 import { format } from "date-fns";
@@ -47,6 +48,7 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
   const [casasConfigOpen, setCasasConfigOpen] = useState(false);
   const [casasConfigSupplier, setCasasConfigSupplier] = useState<any>(null);
   const [tasksSupplier, setTasksSupplier] = useState<any>(null);
+  const [extratoSupplierId, setExtratoSupplierId] = useState<string | null>(null);
 
   // Form state - Novo Fornecedor
   const [nome, setNome] = useState("");
