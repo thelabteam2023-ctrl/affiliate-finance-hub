@@ -460,6 +460,17 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
                 </CardContent>
               </Card>
 
+              {/* Extrato inline panel */}
+              {extratoSupplierId === supplier.workspace_id && (
+                <div className="ml-4 border-l-2 border-primary/20 pl-4">
+                  <Card className="bg-muted/20">
+                    <CardContent className="py-4">
+                      <SupplierExtratoInline supplierWorkspaceId={supplier.workspace_id} />
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+
               {/* Tasks panel for this supplier */}
               {tasksSupplier?.id === supplier.id && (
                 <div className="ml-4 border-l-2 border-primary/20 pl-4">
