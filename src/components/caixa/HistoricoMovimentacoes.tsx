@@ -1,4 +1,5 @@
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { formatCurrencyDynamic, getValorEfetivo, getMoedaEfetiva } from "@/hooks/useMultiCurrencyFormat";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
