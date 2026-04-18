@@ -223,20 +223,60 @@ export async function fetchProjetosLucroCanonico({
       convertOficial
     );
 
-    // === LUCRO REALIZADO (Fluxo Líquido Ajustado) ===
-    // Fórmula canônica: (Saques + Saques Virtuais) - (Depósitos + Depósitos Virtuais)
-    // Usa o MESMO convertOficial do FinancialMetricsCard para garantir paridade absoluta.
-    const totalSaques = (raw.saques || []).reduce((acc: number, s: any) => {
-      const valor = Number(s.valor_confirmado ?? s.valor) || 0;
-      return acc + convertOficial(valor, (s.moeda || "BRL").toUpperCase());
-    }, 0);
-    const totalDepositos = (raw.depositos || []).reduce((acc: number, d: any) => {
-      const valor = Number(d.valor) || 0;
-      return acc + convertOficial(valor, (d.moeda || "BRL").toUpperCase());
-    }, 0);
-    const lucroRealizado = totalSaques - totalDepositos;
+    result[id] = { consolidado, porMoeda, moedaConsolidacao, lucroRealizado: 0, _convertOficial: convertOficial } as any;
+  }
 
-    result[id] = { consolidado, porMoeda, moedaConsolidacao, lucroRealizado };
+  // === LUCRO REALIZADO (Fluxo Líquido Ajustado) ===
+  // Lê DIRETO do cash_ledger com EXATAMENTE os mesmos filtros do FinancialMetricsCard
+  // (status=CONFIRMADO, projeto_id_snapshot, tipo_transacao IN [...]) para garantir
+  // paridade absoluta com o card "Fluxo Líquido Ajustado" da aba Financeiro.
+  const [depositosRes, saquesRes] = await Promise.all([
+    supabase
+      .from("cash_ledger")
+      .select("valor, moeda, projeto_id_snapshot")
+      .in("tipo_transacao", ["DEPOSITO", "DEPOSITO_VIRTUAL"])
+      .eq("status", "CONFIRMADO")
+      .in("projeto_id_snapshot", projetoIds)
+      .limit(50000),
+    supabase
+      .from("cash_ledger")
+      .select("valor, valor_confirmado, moeda, projeto_id_snapshot")
+      .in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])
+      .eq("status", "CONFIRMADO")
+      .in("projeto_id_snapshot", projetoIds)
+      .limit(50000),
+  ]);
+
+  const depositosByProjeto: Record<string, { valor: number; moeda: string }[]> = {};
+  (depositosRes.data || []).forEach((d: any) => {
+    const pid = d.projeto_id_snapshot;
+    if (!pid) return;
+    (depositosByProjeto[pid] ||= []).push({ valor: Number(d.valor) || 0, moeda: (d.moeda || "BRL").toUpperCase() });
+  });
+
+  const saquesByProjeto: Record<string, { valor: number; moeda: string }[]> = {};
+  (saquesRes.data || []).forEach((s: any) => {
+    const pid = s.projeto_id_snapshot;
+    if (!pid) return;
+    const v = Number(s.valor_confirmado ?? s.valor) || 0;
+    (saquesByProjeto[pid] ||= []).push({ valor: v, moeda: (s.moeda || "BRL").toUpperCase() });
+  });
+
+  // Aplica convertOficial do projeto e calcula Fluxo Líquido Ajustado
+  for (const projetoId of projetoIds) {
+    const r = result[projetoId] as any;
+    if (!r || !r._convertOficial) continue;
+    const convertOficial = r._convertOficial as (v: number, m: string) => number;
+    const totalSaques = (saquesByProjeto[projetoId] || []).reduce(
+      (acc, s) => acc + convertOficial(s.valor, s.moeda),
+      0
+    );
+    const totalDepositos = (depositosByProjeto[projetoId] || []).reduce(
+      (acc, d) => acc + convertOficial(d.valor, d.moeda),
+      0
+    );
+    r.lucroRealizado = totalSaques - totalDepositos;
+    delete r._convertOficial;
   }
 
   return result;
