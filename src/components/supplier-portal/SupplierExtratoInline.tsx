@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowUpRight, ArrowDownRight, ArrowLeftRight, RefreshCw, ScrollText, ArrowRight } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, ArrowLeftRight, RefreshCw, ScrollText, ArrowRight, ChevronDown } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Button } from "@/components/ui/button";
 
 interface Props {
   supplierWorkspaceId: string;
