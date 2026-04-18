@@ -115,18 +115,7 @@ function computeDivergenceFactors(
 ): DivergenceFactor[] {
   const factors: DivergenceFactor[] = [];
 
-  // 1. Baseline de Vinculação: O saldo inclui o baseline mas depositosEfetivos não o desconta.
-  // Se baseline > 0, ele infla o lucro projetado porque está no saldo mas não nos depósitos.
-  if (Math.abs(props.depositosBaseline) >= 0.005) {
-    factors.push({
-      label: "Baseline de Vinculação",
-      value: props.depositosBaseline,
-      icon: Info,
-      tooltip: "Saldo residual capturado ao vincular casas ao projeto. Está refletido no saldo da casa mas não é um depósito real — por isso infla o lucro projetado em relação ao operacional.",
-    });
-  }
-
-  // 2. Ganho/Perda de confirmação de depósito: Diferença entre valor solicitado e confirmado.
+  // 1. Ganho/Perda de confirmação de saque: Diferença entre valor solicitado e confirmado.
   if (Math.abs(props.ganhoConfirmacaoDeposito) >= 0.005) {
     factors.push({
       label: "Δ Confirmação de Saques",
@@ -136,7 +125,7 @@ function computeDivergenceFactors(
     });
   }
 
-  // 3. Residual FX (diferença de conversão temporal)
+  // 2. Residual FX (diferença de conversão temporal)
   const knownFactors = factors.reduce((acc, f) => acc + f.value, 0);
   const residual = divergencia - knownFactors;
   if (Math.abs(residual) >= 0.005) {
