@@ -49,8 +49,8 @@ interface DatedLedgerEntry {
 
 interface FinancialMetricsRaw {
   bookmakerSaldos: { saldo_atual: number; moeda: string }[];
-  depositos: (LedgerEntry & { tipo_transacao: string })[];
-  saques: (LedgerEntry & { tipo_moeda?: string | null; tipo_transacao?: string })[];
+  depositos: (LedgerEntry & { tipo_transacao: string; origem_tipo?: string | null; destino_bookmaker_id?: string | null })[];
+  saques: (LedgerEntry & { tipo_moeda?: string | null; tipo_transacao?: string; origem_bookmaker_id?: string | null })[];
   saquesPendentes: LedgerEntry[];
   reconciliation: ReconciliationRaw;
   breakEvenTimeline: DatedLedgerEntry[];
@@ -65,10 +65,10 @@ async function fetchFinancialMetricsRaw(projetoId: string): Promise<FinancialMet
   const bookmakerSaldos = (bookmakers || []).map(b => ({ saldo_atual: b.saldo_atual || 0, moeda: b.moeda || "BRL" }));
 
   const [depositos, saques, saquesPend, cashbackM, cashbackE, giros, ajustes, perdasOp, perdasFx, ganhosFx] = await Promise.all([
-    supabase.from("cash_ledger").select("valor, moeda, tipo_transacao, origem_tipo")
+    supabase.from("cash_ledger").select("valor, moeda, tipo_transacao, origem_tipo, destino_bookmaker_id")
       .in("tipo_transacao", ["DEPOSITO", "DEPOSITO_VIRTUAL"])
       .eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId).limit(10000),
-    supabase.from("cash_ledger").select("valor, valor_confirmado, moeda, tipo_moeda, tipo_transacao")
+    supabase.from("cash_ledger").select("valor, valor_confirmado, moeda, tipo_moeda, tipo_transacao, origem_bookmaker_id")
       .in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])
       .eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId).limit(10000),
     supabase.from("cash_ledger").select("valor, moeda")
@@ -103,8 +103,8 @@ async function fetchFinancialMetricsRaw(projetoId: string): Promise<FinancialMet
 
   return {
     bookmakerSaldos,
-    depositos: (depositos.data || []) as (LedgerEntry & { tipo_transacao: string })[],
-    saques: (saques.data || []) as (LedgerEntry & { tipo_moeda?: string | null; tipo_transacao?: string })[],
+    depositos: (depositos.data || []) as (LedgerEntry & { tipo_transacao: string; origem_tipo?: string | null; destino_bookmaker_id?: string | null })[],
+    saques: (saques.data || []) as (LedgerEntry & { tipo_moeda?: string | null; tipo_transacao?: string; origem_bookmaker_id?: string | null })[],
     saquesPendentes: (saquesPend.data || []) as LedgerEntry[],
     reconciliation: {
       cashbackManual: (cashbackM.data || []) as { valor: number; moeda: string }[],
@@ -179,13 +179,28 @@ export function ProjetoFinancialMetricsCard({ projetoId }: ProjetoFinancialMetri
       .reduce((acc, d) => acc + convertToConsolidationOficial(d.valor, d.moeda), 0);
 
     // Baseline ativa: pares SV+DV BASELINE de revinculação ao mesmo projeto (ciclo neutro)
-    const baselineAtiva = rawMetrics.depositos
-      .filter(d => d.tipo_transacao === 'DEPOSITO_VIRTUAL' && (d as any).origem_tipo === 'BASELINE')
-      .reduce((acc, d) => acc + convertToConsolidationOficial(d.valor, d.moeda), 0);
-    const saquesVirtuais = rawMetrics.saques
-      .filter(s => s.tipo_transacao === 'SAQUE_VIRTUAL')
-      .reduce((acc, s) => acc + convertToConsolidationOficial(s.valor_confirmado ?? s.valor, s.moeda), 0);
-    const baselineNeutralizar = Math.min(baselineAtiva, saquesVirtuais);
+    // Neutralização CORRETA: casar SV+DV BASELINE pela MESMA bookmaker (não agregar global).
+    const baselineByBM = new Map<string, number>();
+    for (const d of rawMetrics.depositos) {
+      if (d.tipo_transacao !== 'DEPOSITO_VIRTUAL' || (d as any).origem_tipo !== 'BASELINE') continue;
+      const bmId = d.destino_bookmaker_id;
+      if (!bmId) continue;
+      const v = convertToConsolidationOficial(d.valor, d.moeda);
+      baselineByBM.set(bmId, (baselineByBM.get(bmId) || 0) + v);
+    }
+    const svByBM = new Map<string, number>();
+    for (const s of rawMetrics.saques) {
+      if (s.tipo_transacao !== 'SAQUE_VIRTUAL') continue;
+      const bmId = s.origem_bookmaker_id;
+      if (!bmId) continue;
+      const v = convertToConsolidationOficial(s.valor_confirmado ?? s.valor, s.moeda);
+      svByBM.set(bmId, (svByBM.get(bmId) || 0) + v);
+    }
+    let baselineNeutralizar = 0;
+    for (const [bmId, baselineVal] of baselineByBM) {
+      const svVal = svByBM.get(bmId) || 0;
+      baselineNeutralizar += Math.min(baselineVal, svVal);
+    }
 
     const fluxoCaixaLiquido = saquesRecebidos - depositosEfetivos;
     const lucroTotal = (saldoCasas + saquesRecebidos) - depositosEfetivos - 2 * baselineNeutralizar;
