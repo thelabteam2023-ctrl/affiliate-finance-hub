@@ -14304,6 +14304,13 @@ export type Database = {
           total_saques: number
         }[]
       }
+      get_cash_ledger_user_names: {
+        Args: { p_user_ids: string[] }
+        Returns: {
+          first_name: string
+          user_id: string
+        }[]
+      }
       get_central_operacoes_data: {
         Args: {
           p_include_financial?: boolean
