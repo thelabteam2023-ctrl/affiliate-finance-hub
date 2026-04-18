@@ -167,7 +167,7 @@ export function EncerrarParceriaDialog({ open, onOpenChange, parceria, loading, 
                 </p>
               </div>
 
-              <ScrollArea className="max-h-[320px] pr-3">
+              <ScrollArea className="flex-1 min-h-0 pr-3">
                 <div className="space-y-3">
                   {pendencias!.saquesPendentes.length > 0 && (
                     <Section
@@ -222,7 +222,7 @@ export function EncerrarParceriaDialog({ open, onOpenChange, parceria, loading, 
           )}
         </div>
 
-        <AlertDialogFooter>
+        <AlertDialogFooter className="flex-shrink-0">
           <AlertDialogCancel disabled={loading}>Cancelar</AlertDialogCancel>
           <AlertDialogAction
             onClick={onConfirm}
