@@ -199,6 +199,20 @@ export function SupplierExtratoInline({ supplierWorkspaceId }: Props) {
           </div>
         );
       })}
+      {hasMore && (
+        <div className="pt-2 flex justify-center">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setPageSize((s) => s + 10)}
+            className="h-7 text-[11px] gap-1"
+          >
+            <ChevronDown className="h-3 w-3" />
+            Carregar mais 10
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
