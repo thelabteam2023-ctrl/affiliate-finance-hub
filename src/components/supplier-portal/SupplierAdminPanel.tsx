@@ -407,6 +407,14 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
                         <Button
                           size="sm"
                           variant="outline"
+                          onClick={() => setExtratoSupplierId(extratoSupplierId === supplier.workspace_id ? null : supplier.workspace_id)}
+                          className="gap-1 text-xs"
+                        >
+                          <ScrollText className="h-3 w-3" /> Extrato
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
                           onClick={() => setTasksSupplier(tasksSupplier?.id === supplier.id ? null : supplier)}
                           className="gap-1 text-xs"
                         >
