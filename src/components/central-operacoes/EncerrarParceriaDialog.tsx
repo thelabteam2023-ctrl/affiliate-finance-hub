@@ -246,9 +246,9 @@ function Section({ icon, title, count, children }: { icon: React.ReactNode; titl
         </div>
         <Badge variant="secondary" className="text-xs">{count}</Badge>
       </div>
-      <ScrollArea className="max-h-[140px] pr-2">
-        <div className="space-y-1">{children}</div>
-      </ScrollArea>
+      <div className="space-y-1 max-h-[160px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
+        {children}
+      </div>
     </div>
   );
 }
