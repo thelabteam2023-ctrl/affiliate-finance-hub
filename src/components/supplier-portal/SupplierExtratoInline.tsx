@@ -106,10 +106,17 @@ export function SupplierExtratoInline({ supplierWorkspaceId }: Props) {
         let origem: string | null = null;
         let destino: string | null = null;
         switch (entry.tipo) {
-          case "ALOCACAO":
-            origem = "Caixa Operacional";
+          case "ALOCACAO": {
+            // Mostrar origem real (parceiro · banco/wallet) quando disponível
+            const parceiro = meta.origem_parceiro_nome;
+            const bancoOrWallet = meta.origem_banco_nome || meta.origem_wallet_nome;
+            if (parceiro && bancoOrWallet) origem = `${parceiro} · ${bancoOrWallet}`;
+            else if (parceiro) origem = parceiro;
+            else if (bancoOrWallet) origem = bancoOrWallet;
+            else origem = "Caixa Operacional";
             destino = "Saldo Disponível";
             break;
+          }
           case "DEPOSITO":
             origem = bancoNome || "Banco";
             destino = casaNome || "Casa";
