@@ -4102,7 +4102,7 @@ export type Database = {
           motivo: string
           observacoes: string | null
           origem: string | null
-          projeto_id: string
+          projeto_id: string | null
           qualificadora_id: string | null
           status: string
           tem_rollover: boolean | null
@@ -4128,7 +4128,7 @@ export type Database = {
           motivo: string
           observacoes?: string | null
           origem?: string | null
-          projeto_id: string
+          projeto_id?: string | null
           qualificadora_id?: string | null
           status?: string
           tem_rollover?: boolean | null
@@ -4154,7 +4154,7 @@ export type Database = {
           motivo?: string
           observacoes?: string | null
           origem?: string | null
-          projeto_id?: string
+          projeto_id?: string | null
           qualificadora_id?: string | null
           status?: string
           tem_rollover?: boolean | null
