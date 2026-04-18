@@ -26,6 +26,12 @@ export interface LucroCanonicoResultado {
   porMoeda: Record<string, number>;
   /** Moeda em que `consolidado` está expresso */
   moedaConsolidacao: string;
+  /**
+   * Lucro Realizado (Fluxo Líquido Ajustado) na MOEDA do projeto.
+   * Fórmula canônica: (Saques + Saques Virtuais) - (Depósitos + Depósitos Virtuais).
+   * Usa o MESMO converter Oficial (FastForex) do FinancialMetricsCard para garantir paridade.
+   */
+  lucroRealizado: number;
 }
 
 interface FetchProjetosLucroCanonicoParams {
