@@ -88,46 +88,24 @@ export async function fetchProjetosLucroOperacionalKpi({
 }: Params): Promise<Record<string, LucroProjetoResumo>> {
   if (projetoIds.length === 0) return {};
 
-  const consolidUpper = moedaConsolidacao.toUpperCase();
-  const consolidIsUsd = isUsdLike(consolidUpper);
-
-  const convertToConsolidation = (valor: number, moedaOrigem: string) => {
-    const m = (moedaOrigem || "BRL").toUpperCase();
-    // Se a moeda de origem é a mesma da consolidação → identidade
-    if (m === consolidUpper) return valor;
-    // USD-like → aplicar cotação USD (mas só se consolidação NÃO é USD)
-    if (isUsdLike(m)) {
-      if (consolidIsUsd) return valor; // USD→USD = identidade
-      return valor * cotacaoUSD;
-    }
-    if (cotacoes[m] != null) return valor * cotacoes[m];
-    return valor;
-  };
-
-  // Chamada única ao banco — toda agregação feita server-side
+  // Chamada única ao banco — agregação E conversão feitas server-side
+  // Usa Cotação de Trabalho de cada projeto (paridade absoluta com Visão Geral)
+  // p_cotacoes vazio: a RPC busca automaticamente as cotações por projeto
   const { data: rpcResult, error } = await supabase
     .rpc('get_projetos_lucro_operacional', {
       p_projeto_ids: projetoIds,
       p_data_inicio: dataInicio || null,
       p_data_fim: dataFim || null,
-    });
+      p_cotacoes: {} as any,
+    } as any);
 
   if (error) {
     console.error('[fetchProjetosLucroOperacionalKpi] RPC error:', error);
     throw error;
   }
 
-  const rawData = (rpcResult || {}) as Record<string, Record<string, Record<string, number>>>;
+  const rawData = (rpcResult || {}) as Record<string, any>;
   const result: Record<string, LucroProjetoResumo> = {};
-
-  // Módulos cujo valor já tem sinal correto (adicionar ao lucro)
-  const ADD_MODULES = [
-    'apostas', 'cashback', 'giros', 'bonus', 'conciliacoes',
-    'ajustes_saldo', 'resultado_cambial', 'promocionais',
-  ];
-
-  // Módulos cujo valor é absoluto (subtrair do lucro)
-  const SUB_MODULES = ['perdas', 'perdas_cancelamento'];
 
   for (const projetoId of projetoIds) {
     const projData = rawData[projetoId];
@@ -136,29 +114,13 @@ export async function fetchProjetosLucroOperacionalKpi({
       continue;
     }
 
-    let consolidado = 0;
+    // Usar valores já calculados pelo servidor (paridade com Visão Geral)
+    const consolidado = Number(projData.__consolidado) || 0;
+    const porMoedaRaw = (projData.__porMoeda || {}) as Record<string, any>;
     const porMoeda: SaldoByMoeda = {};
-
-    // Processar módulos aditivos
-    for (const mod of ADD_MODULES) {
-      const modData = projData[mod] || {};
-      for (const [moeda, valor] of Object.entries(modData)) {
-        const v = Number(valor);
-        if (Math.abs(v) < 0.001) continue;
-        porMoeda[moeda] = (porMoeda[moeda] || 0) + v;
-        consolidado += convertToConsolidation(v, moeda);
-      }
-    }
-
-    // Processar módulos subtrativos (valores absolutos no banco)
-    for (const mod of SUB_MODULES) {
-      const modData = projData[mod] || {};
-      for (const [moeda, valor] of Object.entries(modData)) {
-        const v = Number(valor);
-        if (Math.abs(v) < 0.001) continue;
-        porMoeda[moeda] = (porMoeda[moeda] || 0) - v;
-        consolidado -= convertToConsolidation(v, moeda);
-      }
+    for (const [moeda, valor] of Object.entries(porMoedaRaw)) {
+      const v = Number(valor);
+      if (Math.abs(v) >= 0.001) porMoeda[moeda] = v;
     }
 
     result[projetoId] = { consolidado, porMoeda };
