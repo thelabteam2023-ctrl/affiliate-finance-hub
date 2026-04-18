@@ -1,42 +1,44 @@
 # Memory: finance/canonical-operational-profit-standard
-Updated: 2026-03-10
+Updated: 2026-04-18
 
-A métrica 'Lucro Operacional' segue uma fórmula canônica centralizada no serviço 'fetchProjetosLucroOperacionalKpi':
+A métrica 'Lucro Operacional' segue uma fórmula canônica centralizada na RPC `get_projetos_lucro_operacional`:
 
 ```
 LUCRO_OPERACIONAL = 
-  Apostas Liquidadas (status = LIQUIDADA, via getConsolidatedLucro)
+  Apostas Liquidadas (status = LIQUIDADA, com suporte multicurrency via pernas)
   + Cashback Manual
   + Giros Grátis Confirmados
   + Bônus (exceto FREEBET)
   - Perdas Operacionais Confirmadas
   + Ajustes de Conciliação
-  + Ajustes de Saldo (extras canônicos)
-  + Resultado Cambial (extras canônicos)
+  + Ajustes de Saldo (cash_ledger)
+  + Resultado Cambial (cash_ledger)
+  + Promocionais (cash_ledger)
+  - Perdas de Cancelamento de Bônus
 ```
+
+## Conversão server-side (a partir de 2026-04-18)
+
+A RPC `get_projetos_lucro_operacional` agora calcula o consolidado **dentro do banco** usando a Cotação de Trabalho de cada projeto:
+- Busca automática de `cotacao_trabalho`, `cotacao_trabalho_eur`, `cotacao_trabalho_gbp`, `cotacao_trabalho_myr`, `cotacao_trabalho_mxn`, `cotacao_trabalho_ars`, `cotacao_trabalho_cop` da tabela `projetos`.
+- Parâmetro opcional `p_cotacoes jsonb` permite override por projeto: `{ "<projeto_id>": { "USD": 5.30, "EUR": 6.10 } }`.
+- Retorna campos auxiliares: `__consolidado` (já em moeda do projeto), `__porMoeda` (com sinais), `__moedaConsolidacao`.
 
 ## Fonte Única de Verdade — UNIFICAÇÃO COMPLETA
 
-**TODOS** os consumidores de lucro operacional agora delegam para `fetchProjetosLucroOperacionalKpi`:
-
 | Consumidor | Arquivo | Status |
 |---|---|---|
-| Dashboard Financeiro | `useWorkspaceLucroOperacional` | ✅ Delegado |
+| Listagem de Projetos (cards) | `fetchProjetosLucroOperacionalKpi` → usa `__consolidado` server-side | ✅ Unificado |
+| Visão Geral (calendário diário) | `useCanonicalCalendarDaily` (RPC daily com cotações por projeto) | ✅ Unificado |
+| Dashboard Financeiro | `useWorkspaceLucroOperacional` → delega para fetchProjetosLucroOperacionalKpi | ✅ Delegado |
 | Ciclos / Períodos | `calcularMetricasPeriodo.ts` | ✅ Delegado |
-| **KPI Projeto (Visão Geral)** | **`useKpiBreakdowns.ts`** | **✅ Delegado (v2)** |
+| KPI Projeto (Visão Geral) | `useKpiBreakdowns.ts` (v2) | ✅ Delegado |
 
-### Arquitetura do useKpiBreakdowns (v2)
-- O **total de lucro** vem exclusivamente do `fetchProjetosLucroOperacionalKpi`
-- Os módulos individuais (apostas, cashback, giros, etc.) são buscados separadamente apenas para **breakdown visual** (tooltip)
-- Se houver delta entre a soma dos módulos e o total canônico, uma linha de **Reconciliação** é exibida
-- O ROI usa o total canônico como numerador
-
-### Divergência eliminada
-Antes: useKpiBreakdowns tinha queries próprias com filtros divergentes (sem filtro de data em bônus/ajustes, campo `data_perda` vs `created_at`, sem conversão multimoeda em perdas).
-Depois: Total vem da engine canônica, garantindo paridade exata com ciclos.
+### Paridade absoluta garantida
+A conversão server-side com Cotação de Trabalho por projeto elimina divergências entre a tela de listagem (`/projetos`) e a Visão Geral interna do projeto. Não há mais conversão client-side com cotações globais do workspace para esta métrica.
 
 ## Proteções
-- Paginação automática para >1000 linhas (apostas)
+- Paginação automática agregada em SQL (sem limite de 1000 linhas)
 - Timezone operacional (São Paulo) para filtros de data
-- getConsolidatedLucro para conversão multimoeda consistente
+- Cotação por projeto (não global), com fallback identidade (1) se cotação ausente
 - Exclusão de FREEBET para evitar dupla contagem com P&L de apostas SNR
