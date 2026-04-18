@@ -3,6 +3,7 @@
  * Extracted to reduce main page component size.
  */
 
+import { useMemo } from "react";
 import { Loader2, AlertTriangle, XCircle } from "lucide-react";
 import { getFirstLastName } from "@/lib/utils";
 import {
@@ -113,6 +114,30 @@ export function CentralOperacoesDialogs(props: CentralOperacoesDialogsProps) {
     encerrarDialogOpen, setEncerrarDialogOpen, parceriaToEncerrar, encerrarLoading, onEncerrarParceria,
     renovarDialogOpen, handleRenovarDialogClose, parceriaToRenovar, onRenewalSuccess,
   } = props;
+
+  // Estabiliza a referência do objeto parceria para evitar que o useEffect
+  // do ParceriaDialog re-execute em todo render e resete o formData
+  // (bug que sobrescrevia o valor digitado pelo usuário na renovação).
+  const parceriaForDialog = useMemo(() => {
+    if (!parceriaToRenovar) return null;
+    return {
+      id: parceriaToRenovar.id,
+      parceiro_id: parceriaToRenovar.parceiro_id,
+      parceiro_nome: parceriaToRenovar.parceiroNome,
+      data_inicio: parceriaToRenovar.dataInicio,
+      data_fim_prevista: parceriaToRenovar.dataFim,
+      duracao_dias: parceriaToRenovar.duracaoDias,
+      valor_parceiro: parceriaToRenovar.valor_parceiro,
+      valor_indicador: parceriaToRenovar.valor_indicador,
+      valor_fornecedor: parceriaToRenovar.valor_fornecedor,
+      origem_tipo: parceriaToRenovar.origem_tipo,
+      fornecedor_id: parceriaToRenovar.fornecedor_id,
+      indicacao_id: parceriaToRenovar.indicacao_id,
+      elegivel_renovacao: parceriaToRenovar.elegivel_renovacao,
+      observacoes: parceriaToRenovar.observacoes,
+      status: parceriaToRenovar.status,
+    };
+  }, [parceriaToRenovar]);
 
   return (
     <>
@@ -313,23 +338,7 @@ export function CentralOperacoesDialogs(props: CentralOperacoesDialogsProps) {
       <ParceriaDialog
         open={renovarDialogOpen}
         onOpenChange={handleRenovarDialogClose}
-        parceria={parceriaToRenovar ? {
-          id: parceriaToRenovar.id,
-          parceiro_id: parceriaToRenovar.parceiro_id,
-          parceiro_nome: parceriaToRenovar.parceiroNome,
-          data_inicio: parceriaToRenovar.dataInicio,
-          data_fim_prevista: parceriaToRenovar.dataFim,
-          duracao_dias: parceriaToRenovar.duracaoDias,
-          valor_parceiro: parceriaToRenovar.valor_parceiro,
-          valor_indicador: parceriaToRenovar.valor_indicador,
-          valor_fornecedor: parceriaToRenovar.valor_fornecedor,
-          origem_tipo: parceriaToRenovar.origem_tipo,
-          fornecedor_id: parceriaToRenovar.fornecedor_id,
-          indicacao_id: parceriaToRenovar.indicacao_id,
-          elegivel_renovacao: parceriaToRenovar.elegivel_renovacao,
-          observacoes: parceriaToRenovar.observacoes,
-          status: parceriaToRenovar.status,
-        } : null}
+        parceria={parceriaForDialog}
         isViewMode={false}
         isRenewalMode={true}
         onRenewalSuccess={onRenewalSuccess}
