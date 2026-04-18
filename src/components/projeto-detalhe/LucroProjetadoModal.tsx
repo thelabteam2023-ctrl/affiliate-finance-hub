@@ -211,7 +211,7 @@ export function LucroProjetadoModal(props: LucroProjetadoModalProps) {
                 formatCurrency={formatCurrency}
                 icon={ArrowDownCircle}
                 muted
-                tooltip="Depósitos reais + migrações. Exclui a baseline de vinculação."
+                tooltip="Depósitos reais + migrações entre projetos. Exclui a baseline de vinculação."
               />
               {hasBaseline && (
                 <ReconciliationRow
@@ -221,6 +221,16 @@ export function LucroProjetadoModal(props: LucroProjetadoModalProps) {
                   icon={Info}
                   muted
                   tooltip="Saldo residual capturado ao vincular casas ao projeto. Não é dinheiro novo depositado — é a diferença de baseline contábil."
+                />
+              )}
+              {hasNeutralizado && (
+                <ReconciliationRow
+                  label="(−) Ciclo Revinculação (×2)"
+                  value={2 * baselineNeutralizar}
+                  formatCurrency={formatCurrency}
+                  icon={Info}
+                  muted
+                  tooltip="Pares SAQUE_VIRTUAL + DEPOSITO_VIRTUAL (BASELINE) gerados ao desvincular e revincular casas ao MESMO projeto. São contabilmente neutros: o SV inflou Saques Recebidos e o DV inflou Saldo em Bookmakers, então subtraímos ambos."
                 />
               )}
               <div className="border-t border-border/40 mt-1.5 pt-1.5">
