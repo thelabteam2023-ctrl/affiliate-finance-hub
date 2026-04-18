@@ -322,6 +322,9 @@ export default function GestaoProjetos() {
       const lucroByProjeto: Record<string, Record<string, number>> = {};
       const lucroConsolidadoByProjeto: Record<string, number> = {};
       const moedaConsolidacaoByProjeto: Record<string, string> = {};
+      // FONTE ÚNICA CANÔNICA: Lucro Realizado vem do MESMO serviço,
+      // usando o MESMO convertOficial do FinancialMetricsCard (paridade absoluta).
+      const lucroRealizadoByProjeto: Record<string, number> = {};
 
       finalProjetoIds.forEach((projetoId) => {
         const lucroData = lucroCanonicoByProjeto[projetoId];
@@ -329,6 +332,7 @@ export default function GestaoProjetos() {
         // CRÍTICO: o consolidado JÁ vem na moeda do projeto (não em BRL)
         lucroConsolidadoByProjeto[projetoId] = lucroData?.consolidado || 0;
         moedaConsolidacaoByProjeto[projetoId] = lucroData?.moedaConsolidacao || "BRL";
+        lucroRealizadoByProjeto[projetoId] = lucroData?.lucroRealizado || 0;
       });
       
       // Agregar operadores ativos por projeto
@@ -336,38 +340,6 @@ export default function GestaoProjetos() {
       (operadoresResult.data || []).forEach((op: any) => {
         if (!op.projeto_id) return;
         operadoresByProjeto[op.projeto_id] = (operadoresByProjeto[op.projeto_id] || 0) + 1;
-      });
-      
-      // Agregar Lucro Realizado por projeto: Saques - Depósitos (fluxo de caixa)
-      // Buffer agregado em BRL — convertido para a moeda de cada projeto no map final
-      const cotacoesExtra: Record<string, number> = {
-        EUR: cotacaoEUR,
-        GBP: cotacaoGBP,
-        MYR: cotacaoMYR,
-        MXN: cotacaoMXN,
-        ARS: cotacaoARS,
-        COP: cotacaoCOP,
-      };
-      const convertToConsolidation = (valor: number, moeda: string) => {
-        const m = (moeda || 'BRL').toUpperCase();
-        if (m === 'USD' || m === 'USDT' || m === 'USDC') return valor * USD_TO_BRL_DISPLAY;
-        if (cotacoesExtra[m] && cotacoesExtra[m] > 0.001) return valor * cotacoesExtra[m];
-        return valor;
-      };
-      
-      const lucroRealizadoByProjeto: Record<string, number> = {};
-      (depositosResult.data || []).forEach((dep: any) => {
-        const pid = dep.projeto_id_snapshot;
-        if (!pid) return;
-        const valorConvertido = convertToConsolidation(Number(dep.valor) || 0, dep.moeda || 'BRL');
-        lucroRealizadoByProjeto[pid] = (lucroRealizadoByProjeto[pid] || 0) - valorConvertido;
-      });
-      (saquesResult.data || []).forEach((saq: any) => {
-        const pid = saq.projeto_id_snapshot;
-        if (!pid) return;
-        const valorSaque = Number(saq.valor_confirmado ?? saq.valor) || 0;
-        const valorConvertido = convertToConsolidation(valorSaque, saq.moeda || 'BRL');
-        lucroRealizadoByProjeto[pid] = (lucroRealizadoByProjeto[pid] || 0) + valorConvertido;
       });
       
       // Map to Projeto interface com dados agregados - APENAS DADOS BRUTOS
@@ -379,11 +351,8 @@ export default function GestaoProjetos() {
         const moedaConsolidacao = (proj.moeda_consolidacao || 'BRL').toUpperCase();
         // Lucro Operacional: JÁ VEM na moeda do projeto (engine canônica)
         const lucroOpFinal = lucroConsolidadoByProjeto[proj.id] || 0;
-        // Lucro Realizado: buffer está em BRL → converter para moeda do projeto
-        const lucroRealBRL = lucroRealizadoByProjeto[proj.id] || 0;
-        const lucroRealFinal = moedaConsolidacao === 'USD' && USD_TO_BRL_DISPLAY > 0
-          ? lucroRealBRL / USD_TO_BRL_DISPLAY
-          : lucroRealBRL;
+        // Lucro Realizado: JÁ VEM na moeda do projeto (mesmo serviço canônico)
+        const lucroRealFinal = lucroRealizadoByProjeto[proj.id] || 0;
 
         return {
           id: proj.id,
