@@ -207,8 +207,38 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
       const valorUSD = isCrypto ? numVal / cotacaoUSD : null;
       const qtdCoin = isCrypto && valorUSD ? valorUSD / coinPriceUSD : null;
 
+      // Resolver nomes de origem (parceiro/banco/wallet) para metadata rastreável
+      let origemParceiroNome: string | null = null;
+      let origemBancoNome: string | null = null;
+      let origemWalletNome: string | null = null;
+
+      if (origemData.origemParceiroId) {
+        const { data: pData } = await supabase
+          .from("parceiros")
+          .select("nome")
+          .eq("id", origemData.origemParceiroId)
+          .maybeSingle();
+        origemParceiroNome = (pData as any)?.nome || null;
+      }
+      if (origemData.origemContaBancariaId) {
+        const { data: cbData } = await supabase
+          .from("contas_bancarias")
+          .select("banco")
+          .eq("id", origemData.origemContaBancariaId)
+          .maybeSingle();
+        origemBancoNome = (cbData as any)?.banco || null;
+      }
+      if (origemData.origemWalletId) {
+        const { data: wData } = await supabase
+          .from("wallets_crypto")
+          .select("nome, exchange")
+          .eq("id", origemData.origemWalletId)
+          .maybeSingle();
+        origemWalletNome = (wData as any)?.nome || (wData as any)?.exchange || null;
+      }
+
       // 1. Debitar da origem via cash_ledger (rastreamento real)
-      const { error: ledgerError } = await supabase
+      const { data: cashLedgerInsert, error: ledgerError } = await supabase
         .from("cash_ledger")
         .insert({
           user_id: currentUser.id,
@@ -229,7 +259,9 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
           data_transacao: format(new Date(), "yyyy-MM-dd"),
           descricao: descricaoAlocacao || `Alocação de capital para fornecedor ${selectedSupplier.nome}`,
           status: "CONFIRMADO",
-        });
+        })
+        .select("id")
+        .single();
       if (ledgerError) throw ledgerError;
 
       // 2. Create allocation record
@@ -243,7 +275,7 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
       });
       if (alErr) throw alErr;
 
-      // 3. Credit supplier ledger
+      // 3. Credit supplier ledger com metadata de origem rastreável
       const { data, error } = await supabase.rpc("supplier_ledger_insert", {
         p_supplier_workspace_id: selectedSupplier.workspace_id,
         p_bookmaker_account_id: null,
@@ -251,6 +283,16 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
         p_direcao: "CREDIT",
         p_valor: numVal,
         p_descricao: descricaoAlocacao || `Alocação de capital: ${formatCurrency(numVal)}`,
+        p_metadata: {
+          cash_ledger_id: cashLedgerInsert?.id,
+          origem_tipo: origemData.origemTipo,
+          origem_parceiro_id: origemData.origemParceiroId || null,
+          origem_parceiro_nome: origemParceiroNome,
+          origem_conta_bancaria_id: origemData.origemContaBancariaId || null,
+          origem_banco_nome: origemBancoNome,
+          origem_wallet_id: origemData.origemWalletId || null,
+          origem_wallet_nome: origemWalletNome,
+        },
         p_created_by: `ADMIN:${currentUser.id}`,
         p_idempotency_key: `ALOC_${selectedSupplier.workspace_id}_${Date.now()}`,
       });
