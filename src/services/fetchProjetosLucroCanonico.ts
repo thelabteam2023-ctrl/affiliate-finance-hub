@@ -26,6 +26,12 @@ export interface LucroCanonicoResultado {
   porMoeda: Record<string, number>;
   /** Moeda em que `consolidado` está expresso */
   moedaConsolidacao: string;
+  /**
+   * Lucro Realizado (Fluxo Líquido Ajustado) na MOEDA do projeto.
+   * Fórmula canônica: (Saques + Saques Virtuais) - (Depósitos + Depósitos Virtuais).
+   * Usa o MESMO converter Oficial (FastForex) do FinancialMetricsCard para garantir paridade.
+   */
+  lucroRealizado: number;
 }
 
 interface FetchProjetosLucroCanonicoParams {
@@ -190,7 +196,7 @@ export async function fetchProjetosLucroCanonico({
   for (const { id, raw } of dashboards) {
     const cfg = configs.get(id);
     if (!raw || !cfg) {
-      result[id] = { consolidado: 0, porMoeda: {}, moedaConsolidacao: cfg?.moeda_consolidacao || "BRL" };
+      result[id] = { consolidado: 0, porMoeda: {}, moedaConsolidacao: cfg?.moeda_consolidacao || "BRL", lucroRealizado: 0 };
       continue;
     }
 
@@ -217,7 +223,20 @@ export async function fetchProjetosLucroCanonico({
       convertOficial
     );
 
-    result[id] = { consolidado, porMoeda, moedaConsolidacao };
+    // === LUCRO REALIZADO (Fluxo Líquido Ajustado) ===
+    // Fórmula canônica: (Saques + Saques Virtuais) - (Depósitos + Depósitos Virtuais)
+    // Usa o MESMO convertOficial do FinancialMetricsCard para garantir paridade absoluta.
+    const totalSaques = (raw.saques || []).reduce((acc: number, s: any) => {
+      const valor = Number(s.valor_confirmado ?? s.valor) || 0;
+      return acc + convertOficial(valor, (s.moeda || "BRL").toUpperCase());
+    }, 0);
+    const totalDepositos = (raw.depositos || []).reduce((acc: number, d: any) => {
+      const valor = Number(d.valor) || 0;
+      return acc + convertOficial(valor, (d.moeda || "BRL").toUpperCase());
+    }, 0);
+    const lucroRealizado = totalSaques - totalDepositos;
+
+    result[id] = { consolidado, porMoeda, moedaConsolidacao, lucroRealizado };
   }
 
   return result;
