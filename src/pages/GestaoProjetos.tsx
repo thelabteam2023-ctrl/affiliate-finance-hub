@@ -59,7 +59,7 @@ import { useCotacoes } from "@/hooks/useCotacoes";
 import { ProjetosKanbanView } from "@/components/projetos/kanban";
 import { TIPO_PROJETO_CONFIG, TipoProjeto } from "@/types/projeto";
 import { TipoProjetoIcon } from "@/components/projetos/TipoProjetoIcon";
-import { fetchProjetosLucroOperacionalKpi } from "@/services/fetchProjetosLucroOperacionalKpi";
+import { fetchProjetosLucroCanonico } from "@/services/fetchProjetosLucroCanonico";
 
 type SaldoByMoeda = Record<string, number>;
 
@@ -303,30 +303,32 @@ export default function GestaoProjetos() {
         }
       });
       
-      // Agregar lucro operacional por projeto (KPI-COMPATÍVEL):
-      // FONTE ÚNICA desta tela: mesmo conjunto de módulos do KPI de Lucro do dashboard
-      // Mapa de cotações para moedas não-USD/BRL
-      const cotacoesExtra: Record<string, number> = {};
-      if (cotacaoEUR > 0.001) cotacoesExtra['EUR'] = cotacaoEUR;
-      if (cotacaoGBP > 0.001) cotacoesExtra['GBP'] = cotacaoGBP;
-      if (cotacaoMYR > 0.001) cotacoesExtra['MYR'] = cotacaoMYR;
-      if (cotacaoMXN > 0.001) cotacoesExtra['MXN'] = cotacaoMXN;
-      if (cotacaoARS > 0.001) cotacoesExtra['ARS'] = cotacaoARS;
-      if (cotacaoCOP > 0.001) cotacoesExtra['COP'] = cotacaoCOP;
-
-      const lucroKpiByProjeto = await fetchProjetosLucroOperacionalKpi({
+      // Agregar lucro operacional por projeto — FONTE ÚNICA CANÔNICA
+      // Usa a MESMA engine do KPI "Lucro" da Visão Geral (calcularLucroCanonicoFromRpc),
+      // garantindo paridade absoluta entre o card kanban e a tela de detalhe do projeto.
+      const lucroCanonicoByProjeto = await fetchProjetosLucroCanonico({
         projetoIds: finalProjetoIds,
-        cotacaoUSD: USD_TO_BRL_DISPLAY,
-        cotacoes: cotacoesExtra,
+        cotacoesOficiais: {
+          USD: USD_TO_BRL_DISPLAY,
+          EUR: cotacaoEUR,
+          GBP: cotacaoGBP,
+          MYR: cotacaoMYR,
+          MXN: cotacaoMXN,
+          ARS: cotacaoARS,
+          COP: cotacaoCOP,
+        },
       });
 
       const lucroByProjeto: Record<string, Record<string, number>> = {};
       const lucroConsolidadoByProjeto: Record<string, number> = {};
+      const moedaConsolidacaoByProjeto: Record<string, string> = {};
 
       finalProjetoIds.forEach((projetoId) => {
-        const lucroData = lucroKpiByProjeto[projetoId];
+        const lucroData = lucroCanonicoByProjeto[projetoId];
         lucroByProjeto[projetoId] = lucroData?.porMoeda || {};
+        // CRÍTICO: o consolidado JÁ vem na moeda do projeto (não em BRL)
         lucroConsolidadoByProjeto[projetoId] = lucroData?.consolidado || 0;
+        moedaConsolidacaoByProjeto[projetoId] = lucroData?.moedaConsolidacao || "BRL";
       });
       
       // Agregar operadores ativos por projeto
@@ -337,11 +339,19 @@ export default function GestaoProjetos() {
       });
       
       // Agregar Lucro Realizado por projeto: Saques - Depósitos (fluxo de caixa)
-      // COM conversão de moeda para paridade com Indicadores Financeiros
+      // Buffer agregado em BRL — convertido para a moeda de cada projeto no map final
+      const cotacoesExtra: Record<string, number> = {
+        EUR: cotacaoEUR,
+        GBP: cotacaoGBP,
+        MYR: cotacaoMYR,
+        MXN: cotacaoMXN,
+        ARS: cotacaoARS,
+        COP: cotacaoCOP,
+      };
       const convertToConsolidation = (valor: number, moeda: string) => {
         const m = (moeda || 'BRL').toUpperCase();
         if (m === 'USD' || m === 'USDT' || m === 'USDC') return valor * USD_TO_BRL_DISPLAY;
-        if (cotacoesExtra[m]) return valor * cotacoesExtra[m];
+        if (cotacoesExtra[m] && cotacoesExtra[m] > 0.001) return valor * cotacoesExtra[m];
         return valor;
       };
       
@@ -367,12 +377,10 @@ export default function GestaoProjetos() {
         const lucroData = lucroByProjeto[proj.id];
         
         const moedaConsolidacao = (proj.moeda_consolidacao || 'BRL').toUpperCase();
-        // Valores consolidados vêm em BRL do KPI; converter para moeda do projeto
-        const lucroOpBRL = lucroConsolidadoByProjeto[proj.id] || 0;
+        // Lucro Operacional: JÁ VEM na moeda do projeto (engine canônica)
+        const lucroOpFinal = lucroConsolidadoByProjeto[proj.id] || 0;
+        // Lucro Realizado: buffer está em BRL → converter para moeda do projeto
         const lucroRealBRL = lucroRealizadoByProjeto[proj.id] || 0;
-        const lucroOpFinal = moedaConsolidacao === 'USD' && USD_TO_BRL_DISPLAY > 0
-          ? lucroOpBRL / USD_TO_BRL_DISPLAY
-          : lucroOpBRL;
         const lucroRealFinal = moedaConsolidacao === 'USD' && USD_TO_BRL_DISPLAY > 0
           ? lucroRealBRL / USD_TO_BRL_DISPLAY
           : lucroRealBRL;
