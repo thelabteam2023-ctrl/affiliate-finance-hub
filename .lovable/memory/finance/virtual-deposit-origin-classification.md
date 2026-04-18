@@ -1,6 +1,6 @@
 ---
 name: Virtual Deposit Origin Classification
-description: Campo origem_tipo classifica DEPOSITO_VIRTUAL como BASELINE (primeira vinculação ou revinculação ao mesmo projeto) ou MIGRACAO (transferência entre projetos diferentes)
+description: Campo origem_tipo classifica DEPOSITO_VIRTUAL como BASELINE (primeira vinculação) ou MIGRACAO (transferência entre projetos diferentes). Revinculações fantasma ao mesmo projeto são neutralizadas no backend, sem ajuste de frontend
 type: feature
 ---
 
@@ -10,20 +10,20 @@ O campo `origem_tipo` no `cash_ledger` classifica automaticamente transações v
 
 ### Valores
 
-- **`BASELINE`**: DEPOSITO_VIRTUAL criado quando NÃO há migração real de capital. Cobre dois casos:
-  1. Primeira vinculação (sem SAQUE_VIRTUAL anterior)
-  2. **Revinculação ao MESMO projeto** (desvincula e revincula sem trocar de projeto) — saldo já pertencia ao projeto, não é capital novo
+- **`BASELINE`**: DEPOSITO_VIRTUAL criado na primeira vinculação (sem SAQUE_VIRTUAL anterior). Representa saldo pré-existente, NÃO é capital novo.
 - **`MIGRACAO`**: DEPOSITO_VIRTUAL ou SAQUE_VIRTUAL criado durante transferência entre projetos **diferentes**. Representa capital real em trânsito que DEVE contar no fluxo líquido.
 
-### Lógica de Determinação (v2 — 2026-04-18)
+### Lógica de Determinação (v3 — 2026-04-18)
 
 No trigger `fn_ensure_deposito_virtual_on_link`:
-- Busca o último SAQUE_VIRTUAL da bookmaker (data + `projeto_id_snapshot`)
-- Se `v_last_sv_date IS NOT NULL` **AND** `v_last_sv_projeto != NEW.projeto_id` → `MIGRACAO`
-- Caso contrário → `BASELINE`
+- Busca o último SAQUE_VIRTUAL CONFIRMADO da bookmaker (data + projeto + valor)
+- **Se mesmo projeto + zero uso real**: cancela o SV e NÃO cria novo DV (revinculação fantasma neutralizada)
+- **Se projeto diferente**: cria DV com `origem_tipo = 'MIGRACAO'`
+- **Se não há SV anterior** (primeira vinculação): cria DV com `origem_tipo = 'BASELINE'`
 
 Na RPC `desvincular_bookmaker_atomico`:
-- SAQUE_VIRTUAL sempre recebe `origem_tipo = 'MIGRACAO'`
+- SAQUE_VIRTUAL recebe `origem_tipo = 'MIGRACAO'`
+- Se a casa nunca foi usada, o DV baseline original é cancelado em vez de gerar SV (phantom unlink)
 
 ### Cálculo de Depósitos Efetivos
 
@@ -31,26 +31,16 @@ Na RPC `desvincular_bookmaker_atomico`:
 depositosEfetivos = DEPOSITO (real) + DEPOSITO_VIRTUAL onde origem_tipo='MIGRACAO'
 ```
 
-BASELINE é EXCLUÍDO de depósitos efetivos — não saiu do caixa.
+BASELINE é sempre EXCLUÍDO de depósitos efetivos — não saiu do caixa.
 
-### Neutralização de Ciclos de Revinculação (v3 — 2026-04-18)
+### Lucro Projetado (frontend)
 
-**Problema**: Quando uma bookmaker é desvinculada e revinculada ao MESMO projeto, gera um par SV+DV BASELINE. O SV infla `saquesRecebidos` e o DV BASELINE infla `saldoCasas` (via `saldo_atual`), criando lucro fantasma na fórmula `Lucro = saldoCasas + saquesRecebidos − depositosEfetivos`.
-
-**Solução CORRETA — neutralização POR BOOKMAKER**:
-```typescript
-// Agrupa baseline DV por destino_bookmaker_id
-const baselineByBM = Map<bmId, valor>;
-// Agrupa SV por origem_bookmaker_id
-const svByBM = Map<bmId, valor>;
-// Neutraliza apenas o min(baseline, sv) PARA CADA bookmaker
-for (const [bmId, baselineVal] of baselineByBM) {
-  baselineNeutralizar += Math.min(baselineVal, svByBM.get(bmId) ?? 0);
-}
-lucroProjetado = (saldoCasas + saquesRecebidos + saquesPendentes) - depositosEfetivos - 2 * baselineNeutralizar;
+Fórmula canônica, **sem ajustes defensivos**:
+```
+lucroProjetado = saldoCasas + saquesRecebidos + saquesPendentes − depositosEfetivos
 ```
 
-**Bug corrigido**: A versão anterior somava `baselineAtiva` e `saquesVirtuais` GLOBALMENTE em USD e fazia `Math.min` agregado. Isso incluía DVs BASELINE antigos de OUTRAS bookmakers (que não tiveram SV no mesmo ciclo) na neutralização, causando inflação de centavos por conversão FX. A neutralização por bookmaker garante que apenas pares SV+DV reais do mesmo ciclo são neutralizados.
+O ledger é a fonte da verdade. Revinculações fantasma ao MESMO projeto são neutralizadas pelo trigger no backend (cancela SV anterior, não cria novo DV), eliminando a necessidade de qualquer cálculo de neutralização no frontend. Ver `phantom-link-baseline-neutralization.md`.
 
 ### Saques e Conciliação
 
