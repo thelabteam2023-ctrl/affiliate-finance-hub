@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowUpRight, ArrowDownRight, ArrowLeftRight, RefreshCw, ScrollText, ArrowRight } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, ArrowLeftRight, RefreshCw, ScrollText, ArrowRight, ChevronDown } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Button } from "@/components/ui/button";
 
 interface Props {
   supplierWorkspaceId: string;
@@ -41,19 +43,25 @@ function formatCurrency(val: number) {
 }
 
 export function SupplierExtratoInline({ supplierWorkspaceId }: Props) {
-  const { data: entries = [], isLoading } = useQuery({
-    queryKey: ["supplier-extrato-inline", supplierWorkspaceId],
+  const [pageSize, setPageSize] = useState(10);
+
+  const { data: result, isLoading } = useQuery({
+    queryKey: ["supplier-extrato-inline", supplierWorkspaceId, pageSize],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error, count } = await supabase
         .from("supplier_ledger")
-        .select("id, tipo, direcao, valor, saldo_depois, descricao, created_at, metadata, supplier_bookmaker_accounts(login_username, bookmakers_catalogo(nome, logo_url), supplier_titulares(nome))")
+        .select("id, tipo, direcao, valor, saldo_depois, descricao, created_at, metadata, supplier_bookmaker_accounts(login_username, bookmakers_catalogo(nome, logo_url), supplier_titulares(nome))", { count: "exact" })
         .eq("supplier_workspace_id", supplierWorkspaceId)
         .order("sequencia", { ascending: false })
-        .limit(8);
+        .limit(pageSize);
       if (error) throw error;
-      return data || [];
+      return { entries: data || [], total: count || 0 };
     },
   });
+
+  const entries = result?.entries || [];
+  const total = result?.total || 0;
+  const hasMore = entries.length < total;
 
   const { data: titularesMap = {} } = useQuery({
     queryKey: ["supplier-titulares-map-inline", supplierWorkspaceId],
@@ -89,7 +97,7 @@ export function SupplierExtratoInline({ supplierWorkspaceId }: Props) {
   return (
     <div className="space-y-1.5">
       <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-        Últimas movimentações ({entries.length})
+        Movimentações ({entries.length}{total > entries.length ? ` de ${total}` : ""})
       </p>
       {entries.map((entry: any) => {
         const Icon = TIPO_ICONS[entry.tipo] || RefreshCw;
@@ -191,6 +199,20 @@ export function SupplierExtratoInline({ supplierWorkspaceId }: Props) {
           </div>
         );
       })}
+      {hasMore && (
+        <div className="pt-2 flex justify-center">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setPageSize((s) => s + 10)}
+            className="h-7 text-[11px] gap-1"
+          >
+            <ChevronDown className="h-3 w-3" />
+            Carregar mais 10
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
