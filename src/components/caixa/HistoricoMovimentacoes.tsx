@@ -905,6 +905,11 @@ export function HistoricoMovimentacoes({
                         })()}
                       </>
                     )}
+                    {transacao.user_id && usuariosMap[transacao.user_id] && (
+                      <div className="text-[10px] text-muted-foreground/70 mt-0.5">
+                        por {usuariosMap[transacao.user_id]}
+                      </div>
+                    )}
                     </div>
                     {(() => {
                       const isSaqueConfirmado = transacao.tipo_transacao === "SAQUE" && transacao.status === "CONFIRMADO" && transacao.data_confirmacao;
