@@ -1814,11 +1814,11 @@ export function CaixaTransacaoDialog({
   };
 
   const getParceirosDisponiveisDestino = () => {
-    // Retorna apenas parceiros que têm contas/wallets disponíveis,
-    // excluindo a conta/wallet de origem E o parceiro de origem (evita transferência para si mesmo)
+    // Retorna parceiros que possuem ao menos UMA conta/wallet disponível como destino.
+    // Regra: o mesmo parceiro de origem PODE ser destino, desde que possua outra
+    // conta/wallet diferente da origem (transferência entre contas do mesmo titular).
+    // Apenas o parceiro virtual do Caixa Operacional é sempre excluído.
     const parceirosExcluidos = new Set<string>();
-    if (origemParceiroId) parceirosExcluidos.add(origemParceiroId);
-    // Quando a origem é o Caixa Operacional, excluir o parceiro virtual da Caixa
     if (caixaParceiroId) parceirosExcluidos.add(caixaParceiroId);
 
     if (tipoMoeda === "FIAT") {
