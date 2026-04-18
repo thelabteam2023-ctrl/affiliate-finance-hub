@@ -110,6 +110,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
   const [expandedBankIndex, setExpandedBankIndex] = useState<number | null>(null);
   const [expandedWalletIndex, setExpandedWalletIndex] = useState<number | null>(null);
   const [contaSaldos, setContaSaldos] = useState<Record<string, number>>({});
+  const [walletSaldos, setWalletSaldos] = useState<Record<string, { saldo: number; coin: string }>>({});
   const { toast } = useToast();
 
   // DEBUG logs removidos — causavam re-render tracking desnecessário
