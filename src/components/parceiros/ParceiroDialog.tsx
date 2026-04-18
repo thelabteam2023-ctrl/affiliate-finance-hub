@@ -1636,7 +1636,8 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                         key={index} 
                         account={{
                           ...account,
-                          banco: banco?.nome || ""
+                          banco: banco?.nome || "",
+                          saldo: account.id ? contaSaldos[account.id] ?? 0 : undefined,
                         }} 
                       />
                     );
