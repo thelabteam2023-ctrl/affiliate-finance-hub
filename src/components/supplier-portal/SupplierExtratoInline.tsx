@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowUpRight, ArrowDownRight, ArrowLeftRight, RefreshCw, ScrollText } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, ArrowLeftRight, RefreshCw, ScrollText, ArrowRight } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -46,12 +46,26 @@ export function SupplierExtratoInline({ supplierWorkspaceId }: Props) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("supplier_ledger")
-        .select("id, tipo, direcao, valor, saldo_depois, descricao, created_at, metadata")
+        .select("id, tipo, direcao, valor, saldo_depois, descricao, created_at, metadata, supplier_bookmaker_accounts(login_username, bookmakers_catalogo(nome, logo_url), supplier_titulares(nome))")
         .eq("supplier_workspace_id", supplierWorkspaceId)
         .order("sequencia", { ascending: false })
         .limit(8);
       if (error) throw error;
       return data || [];
+    },
+  });
+
+  const { data: titularesMap = {} } = useQuery({
+    queryKey: ["supplier-titulares-map-inline", supplierWorkspaceId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("supplier_titulares")
+        .select("id, nome")
+        .eq("supplier_workspace_id", supplierWorkspaceId);
+      if (error) throw error;
+      const map: Record<string, string> = {};
+      (data || []).forEach((t: any) => { map[t.id] = t.nome; });
+      return map;
     },
   });
 
@@ -80,25 +94,81 @@ export function SupplierExtratoInline({ supplierWorkspaceId }: Props) {
       {entries.map((entry: any) => {
         const Icon = TIPO_ICONS[entry.tipo] || RefreshCw;
         const isCredit = entry.direcao === "CREDIT";
+        const meta = (entry.metadata || {}) as any;
+        const casaNome = entry.supplier_bookmaker_accounts?.bookmakers_catalogo?.nome;
+        const casaLogo = entry.supplier_bookmaker_accounts?.bookmakers_catalogo?.logo_url;
+        const titularNome = entry.supplier_bookmaker_accounts?.supplier_titulares?.nome
+          || (meta.titular_id ? titularesMap[meta.titular_id] : null)
+          || meta.titular_nome;
+        const bancoNome = meta.banco_nome;
+
+        // Resolve origem → destino
+        let origem: string | null = null;
+        let destino: string | null = null;
+        switch (entry.tipo) {
+          case "ALOCACAO":
+            origem = "Caixa Operacional";
+            destino = "Saldo Disponível";
+            break;
+          case "DEPOSITO":
+            origem = bancoNome || "Banco";
+            destino = casaNome || "Casa";
+            break;
+          case "SAQUE":
+            origem = casaNome || "Casa";
+            destino = bancoNome || "Banco";
+            break;
+          case "TRANSFERENCIA_BANCO":
+            origem = "Saldo Disponível";
+            destino = bancoNome || "Banco";
+            break;
+          case "RECOLHIMENTO_BANCO":
+            origem = bancoNome || "Banco";
+            destino = "Saldo Disponível";
+            break;
+          case "PAGAMENTO_TITULAR":
+            origem = bancoNome || "Saldo Disponível";
+            destino = titularNome || "Titular";
+            break;
+          case "DEVOLUCAO":
+            origem = "Fornecedor";
+            destino = "Caixa Operacional";
+            break;
+        }
+
         return (
           <div
             key={entry.id}
             className="flex items-center justify-between gap-3 px-3 py-2 rounded-md bg-muted/30 hover:bg-muted/50 transition-colors"
           >
             <div className="flex items-center gap-2.5 min-w-0 flex-1">
-              <div
-                className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
-                  isCredit ? "bg-success/10" : "bg-destructive/10"
-                }`}
-              >
-                <Icon className={`h-3.5 w-3.5 ${isCredit ? "text-success" : "text-destructive"}`} />
-              </div>
+              {casaLogo ? (
+                <img src={casaLogo} alt="" className="w-7 h-7 rounded-full object-contain shrink-0" />
+              ) : (
+                <div
+                  className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
+                    isCredit ? "bg-success/10" : "bg-destructive/10"
+                  }`}
+                >
+                  <Icon className={`h-3.5 w-3.5 ${isCredit ? "text-success" : "text-destructive"}`} />
+                </div>
+              )}
               <div className="min-w-0">
                 <p className="text-xs font-medium text-foreground truncate">
                   {TIPO_LABELS[entry.tipo] || entry.tipo}
                 </p>
+                {origem && destino && (
+                  <p className="text-[10px] text-foreground/70 font-medium flex items-center gap-1 truncate">
+                    <span className="truncate">{origem}</span>
+                    <ArrowRight className="h-2.5 w-2.5 shrink-0 text-muted-foreground" />
+                    <span className="truncate">{destino}</span>
+                  </p>
+                )}
                 <p className="text-[10px] text-muted-foreground">
                   {format(new Date(entry.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                  {titularNome && (entry.tipo === "DEPOSITO" || entry.tipo === "SAQUE" || entry.tipo === "TRANSFERENCIA_BANCO" || entry.tipo === "RECOLHIMENTO_BANCO") && (
+                    <span> · {titularNome}</span>
+                  )}
                 </p>
               </div>
             </div>
