@@ -722,6 +722,14 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
           colorClass="text-muted-foreground"
           tooltip={metrics.depositosVirtuais > 0 ? `Efetivos: ${formatCurrency(metrics.depositosEfetivos)} (exclui baseline de ${formatCurrency(metrics.depositosTotal - metrics.depositosEfetivos)})` : undefined}
         />
+        {metrics.baselineNeutralizar > 0.005 && (
+          <MetricRow
+            label="(−) Ciclo Revinculação"
+            value={formatCurrency(2 * metrics.baselineNeutralizar)}
+            colorClass="text-muted-foreground"
+            tooltip="Neutraliza pares SAQUE_VIRTUAL + DEPOSITO_VIRTUAL (BASELINE) gerados ao desvincular e revincular casas ao mesmo projeto. Esses ciclos não representam capital novo."
+          />
+        )}
         <div className="border-t border-border/30 mt-1.5 pt-1.5">
           <MetricRow
             label="Lucro Projetado"
