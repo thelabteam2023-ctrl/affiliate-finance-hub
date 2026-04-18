@@ -1,4 +1,5 @@
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { formatCurrencyDynamic, getValorEfetivo, getMoedaEfetiva } from "@/hooks/useMultiCurrencyFormat";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -263,8 +264,37 @@ export function HistoricoMovimentacoes({
   const [reverterTx, setReverterTx] = useState<any | null>(null);
   const [excluirTx, setExcluirTx] = useState<any | null>(null);
   const { role } = useRole();
+  const [usuariosMap, setUsuariosMap] = useState<Record<string, string>>({});
   // Get all filtered transactions
   const transacoesFiltradas = useMemo(() => getTransacoesFiltradas(), [getTransacoesFiltradas]);
+
+  // Fetch user names (first name) for traceability of who registered each transaction
+  useEffect(() => {
+    const userIds = Array.from(new Set(
+      transacoesFiltradas
+        .map((t: any) => t.user_id)
+        .filter((id: string | null | undefined): id is string => !!id && !usuariosMap[id])
+    ));
+    if (userIds.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("id, full_name, email")
+        .in("id", userIds);
+      if (cancelled || !data) return;
+      setUsuariosMap((prev) => {
+        const next = { ...prev };
+        data.forEach((p: any) => {
+          const fullName = p.full_name || p.email || "";
+          const firstName = fullName.trim().split(/\s+/)[0] || "";
+          next[p.id] = firstName;
+        });
+        return next;
+      });
+    })();
+    return () => { cancelled = true; };
+  }, [transacoesFiltradas, usuariosMap]);
   
   // Apply text search filter
   const transacoesComBusca = useMemo(() => {
@@ -874,6 +904,11 @@ export function HistoricoMovimentacoes({
                           return <div className="text-sm font-medium">{d}/{m}/{y}</div>;
                         })()}
                       </>
+                    )}
+                    {transacao.user_id && usuariosMap[transacao.user_id] && (
+                      <div className="text-[10px] text-muted-foreground/70 mt-0.5">
+                        por {usuariosMap[transacao.user_id]}
+                      </div>
                     )}
                     </div>
                     {(() => {
