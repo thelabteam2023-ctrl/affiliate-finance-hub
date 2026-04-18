@@ -273,25 +273,23 @@ export function HistoricoMovimentacoes({
     const userIds = Array.from(new Set(
       transacoesFiltradas
         .map((t: any) => t.user_id)
-        .filter((id: string | null | undefined): id is string => !!id && !usuariosMap[id])
+        .filter((id: string | null | undefined): id is string => !!id && !(id in usuariosMap))
     ));
     if (userIds.length === 0) return;
     let cancelled = false;
     (async () => {
-      const { data } = await supabase
-        .from("profiles")
-        .select("id, full_name, email")
-        .in("id", userIds);
-      if (cancelled || !data) return;
-      setUsuariosMap((prev) => {
-        const next = { ...prev };
-        data.forEach((p: any) => {
-          const fullName = p.full_name || p.email || "";
-          const firstName = fullName.trim().split(/\s+/)[0] || "";
-          next[p.id] = firstName;
+      const { data, error } = await supabase
+        .rpc("get_cash_ledger_user_names", { p_user_ids: userIds });
+      if (cancelled) return;
+      const next: Record<string, string> = {};
+      if (!error && data) {
+        (data as any[]).forEach((row) => {
+          next[row.user_id] = row.first_name || "";
         });
-        return next;
-      });
+      }
+      // Mark unresolved IDs as empty so we don't refetch them
+      userIds.forEach((id) => { if (!(id in next)) next[id] = ""; });
+      setUsuariosMap((prev) => ({ ...prev, ...next }));
     })();
     return () => { cancelled = true; };
   }, [transacoesFiltradas, usuariosMap]);
