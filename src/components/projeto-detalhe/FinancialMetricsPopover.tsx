@@ -536,18 +536,31 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
       .reduce((acc, d) => acc + convertToConsolidationOficial(d.valor, d.moeda), 0);
 
     // ─── Baseline ativa (ciclos neutros de revinculação ao mesmo projeto) ───
-    // DV BASELINE infla saldoCasas (via saldo_atual) e o SV correspondente infla saquesRecebidos.
-    // Para o lucro projetado, neutralizamos esse par tratando-o como inexistente.
-    const baselineAtiva = rawMetrics.depositos
-      .filter(d => d.tipo_transacao === 'DEPOSITO_VIRTUAL' && (d as any).origem_tipo === 'BASELINE')
-      .reduce((acc, d) => acc + convertToConsolidationOficial(d.valor, d.moeda), 0);
-
-    // SVs gerados em desvinculação (mesmo projeto) — entram em saquesRecebidos e devem ser neutralizados
-    // junto com a baseline. Como SV pode existir sem DV BASELINE (migração real), limitamos ao valor da baseline.
-    const saquesVirtuaisMesmoProjeto = rawMetrics.saques
-      .filter(s => s.tipo_transacao === 'SAQUE_VIRTUAL')
-      .reduce((acc, s) => acc + convertToConsolidationOficial(s.valor_confirmado ?? s.valor, s.moeda), 0);
-    const baselineNeutralizar = Math.min(baselineAtiva, saquesVirtuaisMesmoProjeto);
+    // DV BASELINE infla saldoCasas e o SV correspondente infla saquesRecebidos.
+    // Neutralização CORRETA: casar SV+DV BASELINE pela MESMA bookmaker (não agregar global).
+    // Isso evita inflar a neutralização com DVs BASELINE antigos de outras casas que não tiveram SV.
+    const baselineByBM = new Map<string, number>();
+    for (const d of rawMetrics.depositos) {
+      if (d.tipo_transacao !== 'DEPOSITO_VIRTUAL' || (d as any).origem_tipo !== 'BASELINE') continue;
+      const bmId = d.destino_bookmaker_id;
+      if (!bmId) continue;
+      const v = convertToConsolidationOficial(d.valor, d.moeda);
+      baselineByBM.set(bmId, (baselineByBM.get(bmId) || 0) + v);
+    }
+    const svByBM = new Map<string, number>();
+    for (const s of rawMetrics.saques) {
+      if (s.tipo_transacao !== 'SAQUE_VIRTUAL') continue;
+      const bmId = s.origem_bookmaker_id;
+      if (!bmId) continue;
+      const v = convertToConsolidationOficial(s.valor_confirmado ?? s.valor, s.moeda);
+      svByBM.set(bmId, (svByBM.get(bmId) || 0) + v);
+    }
+    let baselineNeutralizar = 0;
+    for (const [bmId, baselineVal] of baselineByBM) {
+      const svVal = svByBM.get(bmId) || 0;
+      baselineNeutralizar += Math.min(baselineVal, svVal);
+    }
+    const baselineAtiva = Array.from(baselineByBM.values()).reduce((a, b) => a + b, 0);
 
     // ─── Fluxo consolidado ───
     const fluxoCaixaLiquido = saquesRecebidos - depositosEfetivos;
