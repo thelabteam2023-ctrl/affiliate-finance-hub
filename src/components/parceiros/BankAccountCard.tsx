@@ -1,8 +1,9 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Copy, Check } from "lucide-react";
+import { Building2, Copy, Check, Wallet } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { formatMoneyValue } from "@/components/ui/money-display";
 
 interface BankAccountCardProps {
   account: {
@@ -13,6 +14,7 @@ interface BankAccountCardProps {
     pix_keys?: Array<{ tipo: string; chave: string }>;
     agencia?: string;
     conta?: string;
+    saldo?: number | null;
   };
 }
 
