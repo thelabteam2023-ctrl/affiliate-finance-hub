@@ -190,7 +190,27 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
   const [ajusteSaldoDialogOpen, setAjusteSaldoDialogOpen] = useState(false);
   const [vinculoParaAjuste, setVinculoParaAjuste] = useState<Vinculo | null>(null);
   
-  const [sortMode, setSortMode] = useState<VinculoSortMode>("alpha");
+  const sortStorageKey = `vinculos-sort-mode:${projetoId}`;
+  const [sortMode, setSortModeState] = useState<VinculoSortMode>(() => {
+    if (typeof window === "undefined") return "alpha";
+    try {
+      const stored = localStorage.getItem(sortStorageKey);
+      return (stored as VinculoSortMode) || "alpha";
+    } catch {
+      return "alpha";
+    }
+  });
+  const setSortMode = useCallback((value: VinculoSortMode | ((prev: VinculoSortMode) => VinculoSortMode)) => {
+    setSortModeState(prev => {
+      const next = typeof value === "function" ? (value as (p: VinculoSortMode) => VinculoSortMode)(prev) : value;
+      try {
+        localStorage.setItem(sortStorageKey, next);
+      } catch {
+        // ignore quota/availability errors
+      }
+      return next;
+    });
+  }, [sortStorageKey]);
   const [receberContasDialogOpen, setReceberContasDialogOpen] = useState(false);
   const isBroker = isBrokerProp === true;
 
