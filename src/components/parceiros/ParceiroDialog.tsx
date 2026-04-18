@@ -288,6 +288,30 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
     }
   }, [parceiro]);
 
+  // Fetch bank account balances when viewing profile
+  useEffect(() => {
+    if (!viewMode || !open || !parceiroId) {
+      setContaSaldos({});
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from("v_saldo_parceiro_contas")
+        .select("conta_id, saldo")
+        .eq("parceiro_id", parceiroId);
+      if (cancelled || error || !data) return;
+      const map: Record<string, number> = {};
+      data.forEach((r: any) => {
+        if (r.conta_id) map[r.conta_id] = Number(r.saldo) || 0;
+      });
+      setContaSaldos(map);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [viewMode, open, parceiroId, bankAccounts.length]);
+
   // Real-time CPF validation
   useEffect(() => {
     // Skip validation in view mode
