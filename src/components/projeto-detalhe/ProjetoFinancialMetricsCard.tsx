@@ -103,8 +103,8 @@ async function fetchFinancialMetricsRaw(projetoId: string): Promise<FinancialMet
 
   return {
     bookmakerSaldos,
-    depositos: (depositos.data || []) as (LedgerEntry & { tipo_transacao: string })[],
-    saques: (saques.data || []) as (LedgerEntry & { tipo_moeda?: string | null; tipo_transacao?: string })[],
+    depositos: (depositos.data || []) as (LedgerEntry & { tipo_transacao: string; origem_tipo?: string | null; destino_bookmaker_id?: string | null })[],
+    saques: (saques.data || []) as (LedgerEntry & { tipo_moeda?: string | null; tipo_transacao?: string; origem_bookmaker_id?: string | null })[],
     saquesPendentes: (saquesPend.data || []) as LedgerEntry[],
     reconciliation: {
       cashbackManual: (cashbackM.data || []) as { valor: number; moeda: string }[],
