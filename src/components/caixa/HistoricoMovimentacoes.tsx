@@ -264,8 +264,37 @@ export function HistoricoMovimentacoes({
   const [reverterTx, setReverterTx] = useState<any | null>(null);
   const [excluirTx, setExcluirTx] = useState<any | null>(null);
   const { role } = useRole();
+  const [usuariosMap, setUsuariosMap] = useState<Record<string, string>>({});
   // Get all filtered transactions
   const transacoesFiltradas = useMemo(() => getTransacoesFiltradas(), [getTransacoesFiltradas]);
+
+  // Fetch user names (first name) for traceability of who registered each transaction
+  useEffect(() => {
+    const userIds = Array.from(new Set(
+      transacoesFiltradas
+        .map((t: any) => t.user_id)
+        .filter((id: string | null | undefined): id is string => !!id && !usuariosMap[id])
+    ));
+    if (userIds.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("id, full_name, email")
+        .in("id", userIds);
+      if (cancelled || !data) return;
+      setUsuariosMap((prev) => {
+        const next = { ...prev };
+        data.forEach((p: any) => {
+          const fullName = p.full_name || p.email || "";
+          const firstName = fullName.trim().split(/\s+/)[0] || "";
+          next[p.id] = firstName;
+        });
+        return next;
+      });
+    })();
+    return () => { cancelled = true; };
+  }, [transacoesFiltradas, usuariosMap]);
   
   // Apply text search filter
   const transacoesComBusca = useMemo(() => {
