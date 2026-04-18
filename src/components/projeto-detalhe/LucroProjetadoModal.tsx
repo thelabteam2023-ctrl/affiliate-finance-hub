@@ -151,24 +151,19 @@ function computeDivergenceFactors(
   return factors;
 }
 
-export function LucroProjetadoModal({
-  open,
-  onOpenChange,
-  projetoId,
-  lucroProjetado,
-  saldoCasas,
-  saquesRecebidos,
-  saquesPendentes,
-  depositosEfetivos,
-  depositosBaseline,
-  ganhoConfirmacaoDeposito,
-  bonusGanhosFinanceiro,
-  girosGratisFinanceiro,
-  cashbackFinanceiro,
-  ajustesFinanceiro,
-  perdaOpFinanceiro,
-  resultadoFxFinanceiro,
-}: LucroProjetadoModalProps) {
+export function LucroProjetadoModal(props: LucroProjetadoModalProps) {
+  const {
+    open,
+    onOpenChange,
+    projetoId,
+    lucroProjetado,
+    saldoCasas,
+    saquesRecebidos,
+    saquesPendentes,
+    depositosEfetivos,
+    depositosBaseline,
+    baselineNeutralizar = 0,
+  } = props;
   const { formatCurrency, convertToConsolidationOficial, cotacaoOficialUSD, moedaConsolidacao } = useProjetoCurrency(projetoId);
   const { breakdowns } = useKpiBreakdowns({
     projetoId,
@@ -183,17 +178,12 @@ export function LucroProjetadoModal({
   const divergencia = lucroProjetado - lucroOperacional;
   const contributions = breakdowns?.lucro?.contributions ?? [];
 
-  const depositosDisplay = depositosEfetivos + depositosBaseline;
   const hasBaseline = Math.abs(depositosBaseline) >= 0.005;
+  const hasNeutralizado = Math.abs(baselineNeutralizar) >= 0.005;
 
   const divergenceFactors = computeDivergenceFactors(
     divergencia,
-    {
-      open, onOpenChange, projetoId, lucroProjetado, saldoCasas, saquesRecebidos,
-      saquesPendentes, depositosEfetivos, depositosBaseline, ganhoConfirmacaoDeposito,
-      bonusGanhosFinanceiro, girosGratisFinanceiro, cashbackFinanceiro, ajustesFinanceiro,
-      perdaOpFinanceiro, resultadoFxFinanceiro,
-    },
+    props,
     lucroOperacional,
     formatCurrency,
   );
