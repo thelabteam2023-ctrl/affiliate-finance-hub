@@ -70,7 +70,7 @@ async function fetchFinancialMetricsRaw(projetoId: string, dateRange?: { from: s
   );
 
   const saqueQ = applyDateFilter(
-    supabase.from("cash_ledger").select("valor, valor_confirmado, moeda, origem_bookmaker_id, tipo_moeda")
+    supabase.from("cash_ledger").select("valor, valor_confirmado, moeda, origem_bookmaker_id, tipo_moeda, tipo_transacao")
       .in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])
       .eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId),
     dateRange
@@ -172,7 +172,7 @@ async function fetchFinancialMetricsRaw(projetoId: string, dateRange?: { from: s
     bookmakerSaldos,
     investorBookmakerIds,
     depositos: (depositos.data || []) as (LedgerEntry & { destino_bookmaker_id?: string | null; tipo_transacao?: string })[],
-    saques: (saques.data || []) as (LedgerEntry & { origem_bookmaker_id?: string | null; tipo_moeda?: string | null })[],
+    saques: (saques.data || []) as (LedgerEntry & { origem_bookmaker_id?: string | null; tipo_moeda?: string | null; tipo_transacao?: string })[],
     saquesPendentes: (saquesPend.data || []) as (LedgerEntry & { origem_bookmaker_id?: string | null })[],
     reconciliation: {
       cashbackManual: (cashbackM.data || []) as { valor: number; moeda: string }[],
@@ -535,13 +535,28 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
       .filter(d => d.tipo_transacao === 'DEPOSITO' || (d.tipo_transacao === 'DEPOSITO_VIRTUAL' && (d as any).origem_tipo === 'MIGRACAO'))
       .reduce((acc, d) => acc + convertToConsolidationOficial(d.valor, d.moeda), 0);
 
+    // ─── Baseline ativa (ciclos neutros de revinculação ao mesmo projeto) ───
+    // DV BASELINE infla saldoCasas (via saldo_atual) e o SV correspondente infla saquesRecebidos.
+    // Para o lucro projetado, neutralizamos esse par tratando-o como inexistente.
+    const baselineAtiva = rawMetrics.depositos
+      .filter(d => d.tipo_transacao === 'DEPOSITO_VIRTUAL' && (d as any).origem_tipo === 'BASELINE')
+      .reduce((acc, d) => acc + convertToConsolidationOficial(d.valor, d.moeda), 0);
+
+    // SVs gerados em desvinculação (mesmo projeto) — entram em saquesRecebidos e devem ser neutralizados
+    // junto com a baseline. Como SV pode existir sem DV BASELINE (migração real), limitamos ao valor da baseline.
+    const saquesVirtuaisMesmoProjeto = rawMetrics.saques
+      .filter(s => s.tipo_transacao === 'SAQUE_VIRTUAL')
+      .reduce((acc, s) => acc + convertToConsolidationOficial(s.valor_confirmado ?? s.valor, s.moeda), 0);
+    const baselineNeutralizar = Math.min(baselineAtiva, saquesVirtuaisMesmoProjeto);
+
     // ─── Fluxo consolidado ───
     const fluxoCaixaLiquido = saquesRecebidos - depositosEfetivos;
     const extrasPositivos = cashbackLiquido + girosGratis + ajustes + ganhoConfirmacao + ganhoFx + bonusGanhos;
     const capitalTotal = depositosEfetivos + extrasPositivos;
     const fluxoLiquidoAjustado = fluxoCaixaLiquido;
     const patrimonio = saldoCasas + saquesRecebidos + saquesPendentes;
-    const lucroFinanceiro = patrimonio - depositosEfetivos;
+    // Lucro projetado neutraliza o ciclo SV+DV BASELINE da revinculação ao mesmo projeto
+    const lucroFinanceiro = patrimonio - depositosEfetivos - 2 * baselineNeutralizar;
 
     // ─── Fluxo INTERNO (sem investidor) ───
     const depositosEfetivosInterno = depositosEfetivos - depositosEfetivosInvestidor;
@@ -577,7 +592,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
       cashbackLiquido, girosGratis, ajustes, ganhoConfirmacao, ganhoFx, perdaOp, perdaFx,
       bonusGanhos,
       lucroApostasPuro, estrategiaBreakdown,
-      patrimonio, lucroFinanceiro,
+      patrimonio, lucroFinanceiro, baselineNeutralizar,
       // Break-even consolidado
       breakEvenDate: beConsolidado.breakEvenDate,
       breakEvenDays: beConsolidado.breakEvenDays,
@@ -707,6 +722,14 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
           colorClass="text-muted-foreground"
           tooltip={metrics.depositosVirtuais > 0 ? `Efetivos: ${formatCurrency(metrics.depositosEfetivos)} (exclui baseline de ${formatCurrency(metrics.depositosTotal - metrics.depositosEfetivos)})` : undefined}
         />
+        {metrics.baselineNeutralizar > 0.005 && (
+          <MetricRow
+            label="(−) Ciclo Revinculação"
+            value={formatCurrency(2 * metrics.baselineNeutralizar)}
+            colorClass="text-muted-foreground"
+            tooltip="Neutraliza pares SAQUE_VIRTUAL + DEPOSITO_VIRTUAL (BASELINE) gerados ao desvincular e revincular casas ao mesmo projeto. Esses ciclos não representam capital novo."
+          />
+        )}
         <div className="border-t border-border/30 mt-1.5 pt-1.5">
           <MetricRow
             label="Lucro Projetado"
@@ -823,6 +846,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
           saquesPendentes={metrics.saquesPendentes}
           depositosEfetivos={metrics.depositosEfetivos}
           depositosBaseline={metrics.depositosTotal - metrics.depositosEfetivos}
+          baselineNeutralizar={metrics.baselineNeutralizar}
           ganhoConfirmacaoDeposito={metrics.ganhoConfirmacao}
           bonusGanhosFinanceiro={metrics.bonusGanhos}
           girosGratisFinanceiro={metrics.girosGratis}

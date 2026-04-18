@@ -50,7 +50,7 @@ interface DatedLedgerEntry {
 interface FinancialMetricsRaw {
   bookmakerSaldos: { saldo_atual: number; moeda: string }[];
   depositos: (LedgerEntry & { tipo_transacao: string })[];
-  saques: (LedgerEntry & { tipo_moeda?: string | null })[];
+  saques: (LedgerEntry & { tipo_moeda?: string | null; tipo_transacao?: string })[];
   saquesPendentes: LedgerEntry[];
   reconciliation: ReconciliationRaw;
   breakEvenTimeline: DatedLedgerEntry[];
@@ -68,7 +68,7 @@ async function fetchFinancialMetricsRaw(projetoId: string): Promise<FinancialMet
     supabase.from("cash_ledger").select("valor, moeda, tipo_transacao, origem_tipo")
       .in("tipo_transacao", ["DEPOSITO", "DEPOSITO_VIRTUAL"])
       .eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId).limit(10000),
-    supabase.from("cash_ledger").select("valor, valor_confirmado, moeda, tipo_moeda")
+    supabase.from("cash_ledger").select("valor, valor_confirmado, moeda, tipo_moeda, tipo_transacao")
       .in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])
       .eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId).limit(10000),
     supabase.from("cash_ledger").select("valor, moeda")
@@ -104,7 +104,7 @@ async function fetchFinancialMetricsRaw(projetoId: string): Promise<FinancialMet
   return {
     bookmakerSaldos,
     depositos: (depositos.data || []) as (LedgerEntry & { tipo_transacao: string })[],
-    saques: (saques.data || []) as (LedgerEntry & { tipo_moeda?: string | null })[],
+    saques: (saques.data || []) as (LedgerEntry & { tipo_moeda?: string | null; tipo_transacao?: string })[],
     saquesPendentes: (saquesPend.data || []) as LedgerEntry[],
     reconciliation: {
       cashbackManual: (cashbackM.data || []) as { valor: number; moeda: string }[],
@@ -178,8 +178,17 @@ export function ProjetoFinancialMetricsCard({ projetoId }: ProjetoFinancialMetri
       .filter(d => d.tipo_transacao === 'DEPOSITO' || (d.tipo_transacao === 'DEPOSITO_VIRTUAL' && (d as any).origem_tipo === 'MIGRACAO'))
       .reduce((acc, d) => acc + convertToConsolidationOficial(d.valor, d.moeda), 0);
 
+    // Baseline ativa: pares SV+DV BASELINE de revinculação ao mesmo projeto (ciclo neutro)
+    const baselineAtiva = rawMetrics.depositos
+      .filter(d => d.tipo_transacao === 'DEPOSITO_VIRTUAL' && (d as any).origem_tipo === 'BASELINE')
+      .reduce((acc, d) => acc + convertToConsolidationOficial(d.valor, d.moeda), 0);
+    const saquesVirtuais = rawMetrics.saques
+      .filter(s => s.tipo_transacao === 'SAQUE_VIRTUAL')
+      .reduce((acc, s) => acc + convertToConsolidationOficial(s.valor_confirmado ?? s.valor, s.moeda), 0);
+    const baselineNeutralizar = Math.min(baselineAtiva, saquesVirtuais);
+
     const fluxoCaixaLiquido = saquesRecebidos - depositosEfetivos;
-    const lucroTotal = (saldoCasas + saquesRecebidos) - depositosEfetivos;
+    const lucroTotal = (saldoCasas + saquesRecebidos) - depositosEfetivos - 2 * baselineNeutralizar;
 
     // Extras = tudo que não é aposta mas impacta fluxo de caixa
     const totalExtras = cashbackLiquido + girosGratis + ajustes + ganhoConfirmacao + ganhoFx - perdaOp - perdaFx;

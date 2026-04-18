@@ -41,6 +41,7 @@ interface LucroProjetadoModalProps {
   saquesPendentes: number;
   depositosEfetivos: number;
   depositosBaseline: number;
+  baselineNeutralizar?: number;
   ganhoConfirmacaoDeposito: number;
   bonusGanhosFinanceiro: number;
   girosGratisFinanceiro: number;
@@ -114,18 +115,7 @@ function computeDivergenceFactors(
 ): DivergenceFactor[] {
   const factors: DivergenceFactor[] = [];
 
-  // 1. Baseline de Vinculação: O saldo inclui o baseline mas depositosEfetivos não o desconta.
-  // Se baseline > 0, ele infla o lucro projetado porque está no saldo mas não nos depósitos.
-  if (Math.abs(props.depositosBaseline) >= 0.005) {
-    factors.push({
-      label: "Baseline de Vinculação",
-      value: props.depositosBaseline,
-      icon: Info,
-      tooltip: "Saldo residual capturado ao vincular casas ao projeto. Está refletido no saldo da casa mas não é um depósito real — por isso infla o lucro projetado em relação ao operacional.",
-    });
-  }
-
-  // 2. Ganho/Perda de confirmação de depósito: Diferença entre valor solicitado e confirmado.
+  // 1. Ganho/Perda de confirmação de saque: Diferença entre valor solicitado e confirmado.
   if (Math.abs(props.ganhoConfirmacaoDeposito) >= 0.005) {
     factors.push({
       label: "Δ Confirmação de Saques",
@@ -135,7 +125,7 @@ function computeDivergenceFactors(
     });
   }
 
-  // 3. Residual FX (diferença de conversão temporal)
+  // 2. Residual FX (diferença de conversão temporal)
   const knownFactors = factors.reduce((acc, f) => acc + f.value, 0);
   const residual = divergencia - knownFactors;
   if (Math.abs(residual) >= 0.005) {
@@ -150,24 +140,19 @@ function computeDivergenceFactors(
   return factors;
 }
 
-export function LucroProjetadoModal({
-  open,
-  onOpenChange,
-  projetoId,
-  lucroProjetado,
-  saldoCasas,
-  saquesRecebidos,
-  saquesPendentes,
-  depositosEfetivos,
-  depositosBaseline,
-  ganhoConfirmacaoDeposito,
-  bonusGanhosFinanceiro,
-  girosGratisFinanceiro,
-  cashbackFinanceiro,
-  ajustesFinanceiro,
-  perdaOpFinanceiro,
-  resultadoFxFinanceiro,
-}: LucroProjetadoModalProps) {
+export function LucroProjetadoModal(props: LucroProjetadoModalProps) {
+  const {
+    open,
+    onOpenChange,
+    projetoId,
+    lucroProjetado,
+    saldoCasas,
+    saquesRecebidos,
+    saquesPendentes,
+    depositosEfetivos,
+    depositosBaseline,
+    baselineNeutralizar = 0,
+  } = props;
   const { formatCurrency, convertToConsolidationOficial, cotacaoOficialUSD, moedaConsolidacao } = useProjetoCurrency(projetoId);
   const { breakdowns } = useKpiBreakdowns({
     projetoId,
@@ -182,17 +167,12 @@ export function LucroProjetadoModal({
   const divergencia = lucroProjetado - lucroOperacional;
   const contributions = breakdowns?.lucro?.contributions ?? [];
 
-  const depositosDisplay = depositosEfetivos + depositosBaseline;
   const hasBaseline = Math.abs(depositosBaseline) >= 0.005;
+  const hasNeutralizado = Math.abs(baselineNeutralizar) >= 0.005;
 
   const divergenceFactors = computeDivergenceFactors(
     divergencia,
-    {
-      open, onOpenChange, projetoId, lucroProjetado, saldoCasas, saquesRecebidos,
-      saquesPendentes, depositosEfetivos, depositosBaseline, ganhoConfirmacaoDeposito,
-      bonusGanhosFinanceiro, girosGratisFinanceiro, cashbackFinanceiro, ajustesFinanceiro,
-      perdaOpFinanceiro, resultadoFxFinanceiro,
-    },
+    props,
     lucroOperacional,
     formatCurrency,
   );
@@ -231,7 +211,7 @@ export function LucroProjetadoModal({
                 formatCurrency={formatCurrency}
                 icon={ArrowDownCircle}
                 muted
-                tooltip="Depósitos reais + migrações. Exclui a baseline de vinculação."
+                tooltip="Depósitos reais + migrações entre projetos. Exclui a baseline de vinculação."
               />
               {hasBaseline && (
                 <ReconciliationRow
@@ -241,6 +221,16 @@ export function LucroProjetadoModal({
                   icon={Info}
                   muted
                   tooltip="Saldo residual capturado ao vincular casas ao projeto. Não é dinheiro novo depositado — é a diferença de baseline contábil."
+                />
+              )}
+              {hasNeutralizado && (
+                <ReconciliationRow
+                  label="(−) Ciclo Revinculação (×2)"
+                  value={2 * baselineNeutralizar}
+                  formatCurrency={formatCurrency}
+                  icon={Info}
+                  muted
+                  tooltip="Pares SAQUE_VIRTUAL + DEPOSITO_VIRTUAL (BASELINE) gerados ao desvincular e revincular casas ao MESMO projeto. São contabilmente neutros: o SV inflou Saques Recebidos e o DV inflou Saldo em Bookmakers, então subtraímos ambos."
                 />
               )}
               <div className="border-t border-border/40 mt-1.5 pt-1.5">
