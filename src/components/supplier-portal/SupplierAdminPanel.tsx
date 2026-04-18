@@ -14,10 +14,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { 
   Plus, Truck, Link2, Copy, ExternalLink, Wallet,
   Building2, Users, Clock, CheckCircle2, XCircle, AlertTriangle, Zap,
-  Search, Check, ClipboardList, RefreshCw
+  Search, Check, ClipboardList, RefreshCw, ScrollText
 } from "lucide-react";
 import { SupplierBookmakerConfigDialog } from "./SupplierBookmakerConfigDialog";
 import { SupplierTasksAdmin } from "./SupplierTasksAdmin";
+import { SupplierExtratoInline } from "./SupplierExtratoInline";
 import { Separator } from "@/components/ui/separator";
 import { OrigemPagamentoSelect, OrigemPagamentoData } from "@/components/programa-indicacao/OrigemPagamentoSelect";
 import { format } from "date-fns";
@@ -47,6 +48,7 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
   const [casasConfigOpen, setCasasConfigOpen] = useState(false);
   const [casasConfigSupplier, setCasasConfigSupplier] = useState<any>(null);
   const [tasksSupplier, setTasksSupplier] = useState<any>(null);
+  const [extratoSupplierId, setExtratoSupplierId] = useState<string | null>(null);
 
   // Form state - Novo Fornecedor
   const [nome, setNome] = useState("");
@@ -405,6 +407,14 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
                         <Button
                           size="sm"
                           variant="outline"
+                          onClick={() => setExtratoSupplierId(extratoSupplierId === supplier.workspace_id ? null : supplier.workspace_id)}
+                          className="gap-1 text-xs"
+                        >
+                          <ScrollText className="h-3 w-3" /> Extrato
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
                           onClick={() => setTasksSupplier(tasksSupplier?.id === supplier.id ? null : supplier)}
                           className="gap-1 text-xs"
                         >
@@ -449,6 +459,17 @@ export function SupplierAdminPanel({ workspaceId }: Props) {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Extrato inline panel */}
+              {extratoSupplierId === supplier.workspace_id && (
+                <div className="ml-4 border-l-2 border-primary/20 pl-4">
+                  <Card className="bg-muted/20">
+                    <CardContent className="py-4">
+                      <SupplierExtratoInline supplierWorkspaceId={supplier.workspace_id} />
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
 
               {/* Tasks panel for this supplier */}
               {tasksSupplier?.id === supplier.id && (

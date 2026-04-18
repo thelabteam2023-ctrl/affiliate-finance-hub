@@ -641,6 +641,7 @@ export default function Caixa() {
       SAQUE: "Saque",
       PAGTO_PARCEIRO: "Pagto. Parceiro",
       PAGTO_FORNECEDOR: "Pagto. Fornecedor",
+      ALOCACAO_FORNECEDOR: "Alocação Fornecedor",
       COMISSAO_INDICADOR: "Comissão Indicador",
       BONUS_INDICADOR: "Bônus Indicador",
       DESPESA_ADMINISTRATIVA: "Despesa Admin.",
@@ -689,6 +690,7 @@ export default function Caixa() {
       SAQUE: "bg-purple-500/20 text-purple-400 border-purple-500/30",
       PAGTO_PARCEIRO: "bg-orange-500/20 text-orange-400 border-orange-500/30",
       PAGTO_FORNECEDOR: "bg-orange-500/20 text-orange-400 border-orange-500/30",
+      ALOCACAO_FORNECEDOR: "bg-teal-500/20 text-teal-400 border-teal-500/30",
       COMISSAO_INDICADOR: "bg-pink-500/20 text-pink-400 border-pink-500/30",
       BONUS_INDICADOR: "bg-fuchsia-500/20 text-fuchsia-400 border-fuchsia-500/30",
       DESPESA_ADMINISTRATIVA: "bg-red-500/20 text-red-400 border-red-500/30",
@@ -893,6 +895,17 @@ export default function Caixa() {
         };
       }
       return { primary: "Parceiro" };
+    }
+
+    // Alocação de capital para fornecedor
+    if (transacao.destino_tipo === "FORNECEDOR" || transacao.tipo_transacao === "ALOCACAO_FORNECEDOR") {
+      // Extrair nome do fornecedor da descrição: "Alocação de capital para fornecedor NOME"
+      const match = transacao.descricao?.match(/fornecedor\s+(.+?)(?:\s*$|:)/i);
+      const nomeFornecedor = match?.[1]?.trim();
+      return {
+        primary: nomeFornecedor || "Fornecedor",
+        secondary: "Capital alocado"
+      };
     }
     
     if (transacao.destino_tipo === "INDICADOR" || transacao.tipo_transacao === "COMISSAO_INDICADOR") {
