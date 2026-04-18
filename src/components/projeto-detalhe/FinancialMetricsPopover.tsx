@@ -535,41 +535,16 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
       .filter(d => d.tipo_transacao === 'DEPOSITO' || (d.tipo_transacao === 'DEPOSITO_VIRTUAL' && (d as any).origem_tipo === 'MIGRACAO'))
       .reduce((acc, d) => acc + convertToConsolidationOficial(d.valor, d.moeda), 0);
 
-    // ─── Baseline ativa (ciclos neutros de revinculação ao mesmo projeto) ───
-    // DV BASELINE infla saldoCasas e o SV correspondente infla saquesRecebidos.
-    // Neutralização CORRETA: casar SV+DV BASELINE pela MESMA bookmaker (não agregar global).
-    // Isso evita inflar a neutralização com DVs BASELINE antigos de outras casas que não tiveram SV.
-    const baselineByBM = new Map<string, number>();
-    for (const d of rawMetrics.depositos) {
-      if (d.tipo_transacao !== 'DEPOSITO_VIRTUAL' || (d as any).origem_tipo !== 'BASELINE') continue;
-      const bmId = d.destino_bookmaker_id;
-      if (!bmId) continue;
-      const v = convertToConsolidationOficial(d.valor, d.moeda);
-      baselineByBM.set(bmId, (baselineByBM.get(bmId) || 0) + v);
-    }
-    const svByBM = new Map<string, number>();
-    for (const s of rawMetrics.saques) {
-      if (s.tipo_transacao !== 'SAQUE_VIRTUAL') continue;
-      const bmId = s.origem_bookmaker_id;
-      if (!bmId) continue;
-      const v = convertToConsolidationOficial(s.valor_confirmado ?? s.valor, s.moeda);
-      svByBM.set(bmId, (svByBM.get(bmId) || 0) + v);
-    }
-    let baselineNeutralizar = 0;
-    for (const [bmId, baselineVal] of baselineByBM) {
-      const svVal = svByBM.get(bmId) || 0;
-      baselineNeutralizar += Math.min(baselineVal, svVal);
-    }
-    const baselineAtiva = Array.from(baselineByBM.values()).reduce((a, b) => a + b, 0);
-
     // ─── Fluxo consolidado ───
+    // Nota: o ledger é fonte da verdade — revinculações fantasma ao mesmo projeto
+    // são neutralizadas pelo trigger fn_ensure_deposito_virtual_on_link, sem precisar
+    // de ajustes matemáticos aqui.
     const fluxoCaixaLiquido = saquesRecebidos - depositosEfetivos;
     const extrasPositivos = cashbackLiquido + girosGratis + ajustes + ganhoConfirmacao + ganhoFx + bonusGanhos;
     const capitalTotal = depositosEfetivos + extrasPositivos;
     const fluxoLiquidoAjustado = fluxoCaixaLiquido;
     const patrimonio = saldoCasas + saquesRecebidos + saquesPendentes;
-    // Lucro projetado neutraliza o ciclo SV+DV BASELINE da revinculação ao mesmo projeto
-    const lucroFinanceiro = patrimonio - depositosEfetivos - 2 * baselineNeutralizar;
+    const lucroFinanceiro = patrimonio - depositosEfetivos;
 
     // ─── Fluxo INTERNO (sem investidor) ───
     const depositosEfetivosInterno = depositosEfetivos - depositosEfetivosInvestidor;
@@ -605,7 +580,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
       cashbackLiquido, girosGratis, ajustes, ganhoConfirmacao, ganhoFx, perdaOp, perdaFx,
       bonusGanhos,
       lucroApostasPuro, estrategiaBreakdown,
-      patrimonio, lucroFinanceiro, baselineNeutralizar,
+      patrimonio, lucroFinanceiro,
       // Break-even consolidado
       breakEvenDate: beConsolidado.breakEvenDate,
       breakEvenDays: beConsolidado.breakEvenDays,
@@ -735,12 +710,12 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
           colorClass="text-muted-foreground"
           tooltip={metrics.depositosVirtuais > 0 ? `Efetivos: ${formatCurrency(metrics.depositosEfetivos)} (exclui baseline de ${formatCurrency(metrics.depositosTotal - metrics.depositosEfetivos)})` : undefined}
         />
-        {metrics.baselineNeutralizar > 0.005 && (
+        {false && (
           <MetricRow
-            label="(−) Ciclo Revinculação"
-            value={formatCurrency(2 * metrics.baselineNeutralizar)}
+            label=""
+            value=""
             colorClass="text-muted-foreground"
-            tooltip="Neutraliza pares SAQUE_VIRTUAL + DEPOSITO_VIRTUAL (BASELINE) gerados ao desvincular e revincular casas ao mesmo projeto. Esses ciclos não representam capital novo."
+            tooltip=""
           />
         )}
         <div className="border-t border-border/30 mt-1.5 pt-1.5">
@@ -859,7 +834,6 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
           saquesPendentes={metrics.saquesPendentes}
           depositosEfetivos={metrics.depositosEfetivos}
           depositosBaseline={metrics.depositosTotal - metrics.depositosEfetivos}
-          baselineNeutralizar={metrics.baselineNeutralizar}
           ganhoConfirmacaoDeposito={metrics.ganhoConfirmacao}
           bonusGanhosFinanceiro={metrics.bonusGanhos}
           girosGratisFinanceiro={metrics.girosGratis}
