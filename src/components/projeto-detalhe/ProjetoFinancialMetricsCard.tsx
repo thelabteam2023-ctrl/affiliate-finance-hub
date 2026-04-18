@@ -49,8 +49,8 @@ interface DatedLedgerEntry {
 
 interface FinancialMetricsRaw {
   bookmakerSaldos: { saldo_atual: number; moeda: string }[];
-  depositos: (LedgerEntry & { tipo_transacao: string })[];
-  saques: (LedgerEntry & { tipo_moeda?: string | null; tipo_transacao?: string })[];
+  depositos: (LedgerEntry & { tipo_transacao: string; origem_tipo?: string | null; destino_bookmaker_id?: string | null })[];
+  saques: (LedgerEntry & { tipo_moeda?: string | null; tipo_transacao?: string; origem_bookmaker_id?: string | null })[];
   saquesPendentes: LedgerEntry[];
   reconciliation: ReconciliationRaw;
   breakEvenTimeline: DatedLedgerEntry[];
@@ -65,10 +65,10 @@ async function fetchFinancialMetricsRaw(projetoId: string): Promise<FinancialMet
   const bookmakerSaldos = (bookmakers || []).map(b => ({ saldo_atual: b.saldo_atual || 0, moeda: b.moeda || "BRL" }));
 
   const [depositos, saques, saquesPend, cashbackM, cashbackE, giros, ajustes, perdasOp, perdasFx, ganhosFx] = await Promise.all([
-    supabase.from("cash_ledger").select("valor, moeda, tipo_transacao, origem_tipo")
+    supabase.from("cash_ledger").select("valor, moeda, tipo_transacao, origem_tipo, destino_bookmaker_id")
       .in("tipo_transacao", ["DEPOSITO", "DEPOSITO_VIRTUAL"])
       .eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId).limit(10000),
-    supabase.from("cash_ledger").select("valor, valor_confirmado, moeda, tipo_moeda, tipo_transacao")
+    supabase.from("cash_ledger").select("valor, valor_confirmado, moeda, tipo_moeda, tipo_transacao, origem_bookmaker_id")
       .in("tipo_transacao", ["SAQUE", "SAQUE_VIRTUAL"])
       .eq("status", "CONFIRMADO").eq("projeto_id_snapshot", projetoId).limit(10000),
     supabase.from("cash_ledger").select("valor, moeda")
