@@ -227,13 +227,13 @@ export async function fetchProjetosLucroCanonico({
   }
 
   // === LUCRO REALIZADO (Fluxo Líquido Ajustado) ===
-  // Lê DIRETO do cash_ledger com EXATAMENTE os mesmos filtros do FinancialMetricsCard
-  // (status=CONFIRMADO, projeto_id_snapshot, tipo_transacao IN [...]) para garantir
-  // paridade absoluta com o card "Fluxo Líquido Ajustado" da aba Financeiro.
+  // Alinhado EXATAMENTE ao FinancialMetricsPopover:
+  // saques confirmados - depósitos efetivos, onde DEPOSITO_VIRTUAL de baseline
+  // é excluído e só MIGRACAO entra no fluxo.
   const [depositosRes, saquesRes] = await Promise.all([
     supabase
       .from("cash_ledger")
-      .select("valor, moeda, projeto_id_snapshot")
+      .select("valor, moeda, projeto_id_snapshot, tipo_transacao, origem_tipo")
       .in("tipo_transacao", ["DEPOSITO", "DEPOSITO_VIRTUAL"])
       .eq("status", "CONFIRMADO")
       .in("projeto_id_snapshot", projetoIds)
@@ -247,11 +247,18 @@ export async function fetchProjetosLucroCanonico({
       .limit(50000),
   ]);
 
-  const depositosByProjeto: Record<string, { valor: number; moeda: string }[]> = {};
+  const depositosEfetivosByProjeto: Record<string, { valor: number; moeda: string }[]> = {};
   (depositosRes.data || []).forEach((d: any) => {
     const pid = d.projeto_id_snapshot;
     if (!pid) return;
-    (depositosByProjeto[pid] ||= []).push({ valor: Number(d.valor) || 0, moeda: (d.moeda || "BRL").toUpperCase() });
+    const tipo = d.tipo_transacao;
+    const origemTipo = d.origem_tipo;
+    const isEfetivo = tipo === "DEPOSITO" || (tipo === "DEPOSITO_VIRTUAL" && origemTipo === "MIGRACAO");
+    if (!isEfetivo) return;
+    (depositosEfetivosByProjeto[pid] ||= []).push({
+      valor: Number(d.valor) || 0,
+      moeda: (d.moeda || "BRL").toUpperCase(),
+    });
   });
 
   const saquesByProjeto: Record<string, { valor: number; moeda: string }[]> = {};
@@ -262,7 +269,6 @@ export async function fetchProjetosLucroCanonico({
     (saquesByProjeto[pid] ||= []).push({ valor: v, moeda: (s.moeda || "BRL").toUpperCase() });
   });
 
-  // Aplica convertOficial do projeto e calcula Fluxo Líquido Ajustado
   for (const projetoId of projetoIds) {
     const r = result[projetoId] as any;
     if (!r || !r._convertOficial) continue;
@@ -271,11 +277,11 @@ export async function fetchProjetosLucroCanonico({
       (acc, s) => acc + convertOficial(s.valor, s.moeda),
       0
     );
-    const totalDepositos = (depositosByProjeto[projetoId] || []).reduce(
+    const totalDepositosEfetivos = (depositosEfetivosByProjeto[projetoId] || []).reduce(
       (acc, d) => acc + convertOficial(d.valor, d.moeda),
       0
     );
-    r.lucroRealizado = totalSaques - totalDepositos;
+    r.lucroRealizado = totalSaques - totalDepositosEfetivos;
     delete r._convertOficial;
   }
 
