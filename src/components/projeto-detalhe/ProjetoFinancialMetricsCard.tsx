@@ -179,13 +179,28 @@ export function ProjetoFinancialMetricsCard({ projetoId }: ProjetoFinancialMetri
       .reduce((acc, d) => acc + convertToConsolidationOficial(d.valor, d.moeda), 0);
 
     // Baseline ativa: pares SV+DV BASELINE de revinculação ao mesmo projeto (ciclo neutro)
-    const baselineAtiva = rawMetrics.depositos
-      .filter(d => d.tipo_transacao === 'DEPOSITO_VIRTUAL' && (d as any).origem_tipo === 'BASELINE')
-      .reduce((acc, d) => acc + convertToConsolidationOficial(d.valor, d.moeda), 0);
-    const saquesVirtuais = rawMetrics.saques
-      .filter(s => s.tipo_transacao === 'SAQUE_VIRTUAL')
-      .reduce((acc, s) => acc + convertToConsolidationOficial(s.valor_confirmado ?? s.valor, s.moeda), 0);
-    const baselineNeutralizar = Math.min(baselineAtiva, saquesVirtuais);
+    // Neutralização CORRETA: casar SV+DV BASELINE pela MESMA bookmaker (não agregar global).
+    const baselineByBM = new Map<string, number>();
+    for (const d of rawMetrics.depositos) {
+      if (d.tipo_transacao !== 'DEPOSITO_VIRTUAL' || (d as any).origem_tipo !== 'BASELINE') continue;
+      const bmId = d.destino_bookmaker_id;
+      if (!bmId) continue;
+      const v = convertToConsolidationOficial(d.valor, d.moeda);
+      baselineByBM.set(bmId, (baselineByBM.get(bmId) || 0) + v);
+    }
+    const svByBM = new Map<string, number>();
+    for (const s of rawMetrics.saques) {
+      if (s.tipo_transacao !== 'SAQUE_VIRTUAL') continue;
+      const bmId = s.origem_bookmaker_id;
+      if (!bmId) continue;
+      const v = convertToConsolidationOficial(s.valor_confirmado ?? s.valor, s.moeda);
+      svByBM.set(bmId, (svByBM.get(bmId) || 0) + v);
+    }
+    let baselineNeutralizar = 0;
+    for (const [bmId, baselineVal] of baselineByBM) {
+      const svVal = svByBM.get(bmId) || 0;
+      baselineNeutralizar += Math.min(baselineVal, svVal);
+    }
 
     const fluxoCaixaLiquido = saquesRecebidos - depositosEfetivos;
     const lucroTotal = (saldoCasas + saquesRecebidos) - depositosEfetivos - 2 * baselineNeutralizar;
