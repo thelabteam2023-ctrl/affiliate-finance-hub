@@ -167,57 +167,55 @@ export function EncerrarParceriaDialog({ open, onOpenChange, parceria, loading, 
                 </p>
               </div>
 
-              <ScrollArea className="flex-1 min-h-0 pr-3">
-                <div className="space-y-3">
-                  {pendencias!.saquesPendentes.length > 0 && (
-                    <Section
-                      icon={<ArrowUpRight className="h-4 w-4 text-orange-400" />}
-                      title="Saques pendentes"
-                      count={pendencias!.saquesPendentes.length}
-                    >
-                      {pendencias!.saquesPendentes.map((s) => (
-                        <Row key={s.id} label={new Date(s.data).toLocaleDateString("pt-BR")} value={fmt(s.valor, s.moeda)} />
-                      ))}
-                    </Section>
-                  )}
+              <div className="space-y-3 flex-1 min-h-0 overflow-y-auto pr-1">
+                {pendencias!.saquesPendentes.length > 0 && (
+                  <Section
+                    icon={<ArrowUpRight className="h-4 w-4 text-orange-400" />}
+                    title="Saques pendentes"
+                    count={pendencias!.saquesPendentes.length}
+                  >
+                    {pendencias!.saquesPendentes.map((s) => (
+                      <Row key={s.id} label={new Date(s.data).toLocaleDateString("pt-BR")} value={fmt(s.valor, s.moeda)} />
+                    ))}
+                  </Section>
+                )}
 
-                  {pendencias!.depositosPendentes.length > 0 && (
-                    <Section
-                      icon={<ArrowDownLeft className="h-4 w-4 text-blue-400" />}
-                      title="Depósitos pendentes"
-                      count={pendencias!.depositosPendentes.length}
-                    >
-                      {pendencias!.depositosPendentes.map((d) => (
-                        <Row key={d.id} label={new Date(d.data).toLocaleDateString("pt-BR")} value={fmt(d.valor, d.moeda)} />
-                      ))}
-                    </Section>
-                  )}
+                {pendencias!.depositosPendentes.length > 0 && (
+                  <Section
+                    icon={<ArrowDownLeft className="h-4 w-4 text-blue-400" />}
+                    title="Depósitos pendentes"
+                    count={pendencias!.depositosPendentes.length}
+                  >
+                    {pendencias!.depositosPendentes.map((d) => (
+                      <Row key={d.id} label={new Date(d.data).toLocaleDateString("pt-BR")} value={fmt(d.valor, d.moeda)} />
+                    ))}
+                  </Section>
+                )}
 
-                  {pendencias!.pagamentosPendentes.length > 0 && (
-                    <Section
-                      icon={<HandCoins className="h-4 w-4 text-purple-400" />}
-                      title="Pagamentos a parceiro pendentes"
-                      count={pendencias!.pagamentosPendentes.length}
-                    >
-                      {pendencias!.pagamentosPendentes.map((p) => (
-                        <Row key={p.id} label={p.descricao || "Pagamento"} value={fmt(p.valor, "BRL")} />
-                      ))}
-                    </Section>
-                  )}
+                {pendencias!.pagamentosPendentes.length > 0 && (
+                  <Section
+                    icon={<HandCoins className="h-4 w-4 text-purple-400" />}
+                    title="Pagamentos a parceiro pendentes"
+                    count={pendencias!.pagamentosPendentes.length}
+                  >
+                    {pendencias!.pagamentosPendentes.map((p) => (
+                      <Row key={p.id} label={p.descricao || "Pagamento"} value={fmt(p.valor, "BRL")} />
+                    ))}
+                  </Section>
+                )}
 
-                  {pendencias!.bookmakersComSaldo.length > 0 && (
-                    <Section
-                      icon={<Wallet className="h-4 w-4 text-emerald-400" />}
-                      title="Bookmakers com saldo"
-                      count={pendencias!.bookmakersComSaldo.length}
-                    >
-                      {pendencias!.bookmakersComSaldo.map((b) => (
-                        <Row key={b.id} label={b.nome} value={fmt(b.saldo_atual, b.moeda)} />
-                      ))}
-                    </Section>
-                  )}
-                </div>
-              </ScrollArea>
+                {pendencias!.bookmakersComSaldo.length > 0 && (
+                  <Section
+                    icon={<Wallet className="h-4 w-4 text-emerald-400" />}
+                    title="Bookmakers com saldo"
+                    count={pendencias!.bookmakersComSaldo.length}
+                  >
+                    {pendencias!.bookmakersComSaldo.map((b) => (
+                      <Row key={b.id} label={b.nome} value={fmt(b.saldo_atual, b.moeda)} />
+                    ))}
+                  </Section>
+                )}
+              </div>
             </>
           )}
         </div>
@@ -248,7 +246,9 @@ function Section({ icon, title, count, children }: { icon: React.ReactNode; titl
         </div>
         <Badge variant="secondary" className="text-xs">{count}</Badge>
       </div>
-      <div className="space-y-1">{children}</div>
+      <ScrollArea className="max-h-[140px] pr-2">
+        <div className="space-y-1">{children}</div>
+      </ScrollArea>
     </div>
   );
 }
