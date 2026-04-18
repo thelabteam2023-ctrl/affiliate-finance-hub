@@ -41,6 +41,7 @@ interface LucroProjetadoModalProps {
   saquesPendentes: number;
   depositosEfetivos: number;
   depositosBaseline: number;
+  baselineNeutralizar?: number;
   ganhoConfirmacaoDeposito: number;
   bonusGanhosFinanceiro: number;
   girosGratisFinanceiro: number;
