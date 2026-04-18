@@ -114,8 +114,6 @@ export function ProjetoKanbanCard({
   const cardRef = useRef<HTMLDivElement>(null);
   const [showBreakdown, setShowBreakdown] = useState(false);
 
-  const lucroByMoeda = projeto.lucro_by_moeda || {};
-  const moedaEntries = Object.entries(lucroByMoeda).filter(([, v]) => Math.abs(v) > 0.01);
   const lucroOperacional = projeto.lucro_operacional || 0;
   const lucroRealizado = projeto.lucro_realizado || 0;
   const moedaConsolidacao = projeto.moeda_consolidacao || 'BRL';
@@ -225,27 +223,6 @@ export function ProjetoKanbanCard({
             {lucroOpDisplay?.isPositive ? '+' : lucroOperacional < 0 ? '-' : ''}{formatByMoeda(lucroOperacional, moedaConsolidacao)}
           </span>
         </div>
-
-        {/* Currency Breakdown */}
-        {moedaEntries.length > 0 && (
-          <div className="flex flex-wrap items-center justify-center gap-1.5 mt-2">
-            {moedaEntries.map(([moeda, valor]) => (
-              <Badge 
-                key={moeda}
-                variant="outline" 
-                className={cn(
-                  "text-[10px] px-2 py-0.5 font-medium",
-                  valor < 0 
-                    ? 'border-red-500/30 text-red-400 bg-red-500/10' 
-                    : 'border-emerald-500/30 text-emerald-400 bg-emerald-500/10'
-                )}
-              >
-                <CircleDollarSign className="h-2.5 w-2.5 mr-1" />
-                {moeda}: {valor > 0 ? '+' : ''}{formatByMoeda(valor, moeda)}
-              </Badge>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* Lucro Realizado */}
