@@ -896,6 +896,17 @@ export default function Caixa() {
       }
       return { primary: "Parceiro" };
     }
+
+    // Alocação de capital para fornecedor
+    if (transacao.destino_tipo === "FORNECEDOR" || transacao.tipo_transacao === "ALOCACAO_FORNECEDOR") {
+      // Extrair nome do fornecedor da descrição: "Alocação de capital para fornecedor NOME"
+      const match = transacao.descricao?.match(/fornecedor\s+(.+?)(?:\s*$|:)/i);
+      const nomeFornecedor = match?.[1]?.trim();
+      return {
+        primary: nomeFornecedor || "Fornecedor",
+        secondary: "Capital alocado"
+      };
+    }
     
     if (transacao.destino_tipo === "INDICADOR" || transacao.tipo_transacao === "COMISSAO_INDICADOR") {
       const grupoRH = getGrupoInfo("Recursos Humanos");
