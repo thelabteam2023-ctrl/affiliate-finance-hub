@@ -26,6 +26,7 @@ import { RegistrarPerdaRapidaDialog } from "@/components/parceiros/RegistrarPerd
 import { PagamentoFornecedorDialog } from "@/components/programa-indicacao/PagamentoFornecedorDialog";
 import { PagamentoParceiroDialog } from "@/components/programa-indicacao/PagamentoParceiroDialog";
 import { ParceriaDialog, type RenewalSuccessData } from "@/components/parcerias/ParceriaDialog";
+import { EncerrarParceriaDialog } from "@/components/central-operacoes/EncerrarParceriaDialog";
 import type {
   EntregaPendente,
   PagamentoParceiroPendente,
@@ -314,25 +315,14 @@ export function CentralOperacoesDialogs(props: CentralOperacoesDialogsProps) {
         onSuccess={() => fetchData()}
       />
 
-      {/* Dialog Encerrar Parceria */}
-      <AlertDialog open={encerrarDialogOpen} onOpenChange={setEncerrarDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Encerrar Parceria</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja encerrar a parceria com "{parceriaToEncerrar?.parceiroNome}"?
-              O status será alterado para ENCERRADA e a data de fim real será definida como hoje.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={encerrarLoading}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={onEncerrarParceria} disabled={encerrarLoading} className="bg-destructive text-destructive-foreground">
-              {encerrarLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              Encerrar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Dialog Encerrar Parceria — auditoria de pendências */}
+      <EncerrarParceriaDialog
+        open={encerrarDialogOpen}
+        onOpenChange={setEncerrarDialogOpen}
+        parceria={parceriaToEncerrar}
+        loading={encerrarLoading}
+        onConfirm={onEncerrarParceria}
+      />
 
       {/* Dialog Renovar Parceria */}
       <ParceriaDialog
