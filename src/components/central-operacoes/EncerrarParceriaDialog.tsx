@@ -167,7 +167,7 @@ export function EncerrarParceriaDialog({ open, onOpenChange, parceria, loading, 
                 </p>
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-3 flex-1 min-h-0 overflow-y-auto pr-1">
                 {pendencias!.saquesPendentes.length > 0 && (
                   <Section
                     icon={<ArrowUpRight className="h-4 w-4 text-orange-400" />}
