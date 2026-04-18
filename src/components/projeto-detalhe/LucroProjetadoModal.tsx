@@ -41,7 +41,6 @@ interface LucroProjetadoModalProps {
   saquesPendentes: number;
   depositosEfetivos: number;
   depositosBaseline: number;
-  baselineNeutralizar?: number;
   ganhoConfirmacaoDeposito: number;
   bonusGanhosFinanceiro: number;
   girosGratisFinanceiro: number;
@@ -151,7 +150,6 @@ export function LucroProjetadoModal(props: LucroProjetadoModalProps) {
     saquesPendentes,
     depositosEfetivos,
     depositosBaseline,
-    baselineNeutralizar = 0,
   } = props;
   const { formatCurrency, convertToConsolidationOficial, cotacaoOficialUSD, moedaConsolidacao } = useProjetoCurrency(projetoId);
   const { breakdowns } = useKpiBreakdowns({
@@ -168,7 +166,6 @@ export function LucroProjetadoModal(props: LucroProjetadoModalProps) {
   const contributions = breakdowns?.lucro?.contributions ?? [];
 
   const hasBaseline = Math.abs(depositosBaseline) >= 0.005;
-  const hasNeutralizado = Math.abs(baselineNeutralizar) >= 0.005;
 
   const divergenceFactors = computeDivergenceFactors(
     divergencia,
@@ -221,16 +218,6 @@ export function LucroProjetadoModal(props: LucroProjetadoModalProps) {
                   icon={Info}
                   muted
                   tooltip="Saldo residual capturado ao vincular casas ao projeto. Não é dinheiro novo depositado — é a diferença de baseline contábil."
-                />
-              )}
-              {hasNeutralizado && (
-                <ReconciliationRow
-                  label="(−) Ciclo Revinculação (×2)"
-                  value={2 * baselineNeutralizar}
-                  formatCurrency={formatCurrency}
-                  icon={Info}
-                  muted
-                  tooltip="Pares SAQUE_VIRTUAL + DEPOSITO_VIRTUAL (BASELINE) gerados ao desvincular e revincular casas ao MESMO projeto. São contabilmente neutros: o SV inflou Saques Recebidos e o DV inflou Saldo em Bookmakers, então subtraímos ambos."
                 />
               )}
               <div className="border-t border-border/40 mt-1.5 pt-1.5">

@@ -178,32 +178,11 @@ export function ProjetoFinancialMetricsCard({ projetoId }: ProjetoFinancialMetri
       .filter(d => d.tipo_transacao === 'DEPOSITO' || (d.tipo_transacao === 'DEPOSITO_VIRTUAL' && (d as any).origem_tipo === 'MIGRACAO'))
       .reduce((acc, d) => acc + convertToConsolidationOficial(d.valor, d.moeda), 0);
 
-    // Baseline ativa: pares SV+DV BASELINE de revinculação ao mesmo projeto (ciclo neutro)
-    // Neutralização CORRETA: casar SV+DV BASELINE pela MESMA bookmaker (não agregar global).
-    const baselineByBM = new Map<string, number>();
-    for (const d of rawMetrics.depositos) {
-      if (d.tipo_transacao !== 'DEPOSITO_VIRTUAL' || (d as any).origem_tipo !== 'BASELINE') continue;
-      const bmId = d.destino_bookmaker_id;
-      if (!bmId) continue;
-      const v = convertToConsolidationOficial(d.valor, d.moeda);
-      baselineByBM.set(bmId, (baselineByBM.get(bmId) || 0) + v);
-    }
-    const svByBM = new Map<string, number>();
-    for (const s of rawMetrics.saques) {
-      if (s.tipo_transacao !== 'SAQUE_VIRTUAL') continue;
-      const bmId = s.origem_bookmaker_id;
-      if (!bmId) continue;
-      const v = convertToConsolidationOficial(s.valor_confirmado ?? s.valor, s.moeda);
-      svByBM.set(bmId, (svByBM.get(bmId) || 0) + v);
-    }
-    let baselineNeutralizar = 0;
-    for (const [bmId, baselineVal] of baselineByBM) {
-      const svVal = svByBM.get(bmId) || 0;
-      baselineNeutralizar += Math.min(baselineVal, svVal);
-    }
-
+    // Nota: revinculações fantasma ao mesmo projeto são neutralizadas pelo
+    // trigger fn_ensure_deposito_virtual_on_link no backend (cancela SV anterior
+    // e não cria DV). Não há necessidade de ajuste matemático aqui.
     const fluxoCaixaLiquido = saquesRecebidos - depositosEfetivos;
-    const lucroTotal = (saldoCasas + saquesRecebidos) - depositosEfetivos - 2 * baselineNeutralizar;
+    const lucroTotal = (saldoCasas + saquesRecebidos) - depositosEfetivos;
 
     // Extras = tudo que não é aposta mas impacta fluxo de caixa
     const totalExtras = cashbackLiquido + girosGratis + ajustes + ganhoConfirmacao + ganhoFx - perdaOp - perdaFx;
