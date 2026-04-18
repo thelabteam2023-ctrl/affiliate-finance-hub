@@ -109,6 +109,7 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
   const [hasSavedDuringSession, setHasSavedDuringSession] = useState(false);
   const [expandedBankIndex, setExpandedBankIndex] = useState<number | null>(null);
   const [expandedWalletIndex, setExpandedWalletIndex] = useState<number | null>(null);
+  const [contaSaldos, setContaSaldos] = useState<Record<string, number>>({});
   const { toast } = useToast();
 
   // DEBUG logs removidos — causavam re-render tracking desnecessário
@@ -286,6 +287,30 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
       resetForm();
     }
   }, [parceiro]);
+
+  // Fetch bank account balances when viewing profile
+  useEffect(() => {
+    if (!viewMode || !open || !parceiroId) {
+      setContaSaldos({});
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from("v_saldo_parceiro_contas")
+        .select("conta_id, saldo")
+        .eq("parceiro_id", parceiroId);
+      if (cancelled || error || !data) return;
+      const map: Record<string, number> = {};
+      data.forEach((r: any) => {
+        if (r.conta_id) map[r.conta_id] = Number(r.saldo) || 0;
+      });
+      setContaSaldos(map);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [viewMode, open, parceiroId, bankAccounts.length]);
 
   // Real-time CPF validation
   useEffect(() => {
@@ -1611,7 +1636,8 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                         key={index} 
                         account={{
                           ...account,
-                          banco: banco?.nome || ""
+                          banco: banco?.nome || "",
+                          saldo: account.id ? contaSaldos[account.id] ?? 0 : undefined,
                         }} 
                       />
                     );

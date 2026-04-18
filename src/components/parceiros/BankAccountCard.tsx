@@ -1,8 +1,9 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Copy, Check } from "lucide-react";
+import { Building2, Copy, Check, Wallet } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { formatMoneyValue } from "@/components/ui/money-display";
 
 interface BankAccountCardProps {
   account: {
@@ -13,6 +14,7 @@ interface BankAccountCardProps {
     pix_keys?: Array<{ tipo: string; chave: string }>;
     agencia?: string;
     conta?: string;
+    saldo?: number | null;
   };
 }
 
@@ -58,6 +60,26 @@ export function BankAccountCard({ account }: BankAccountCardProps) {
             {account.tipo_conta}
           </Badge>
         </div>
+
+        {typeof account.saldo === "number" && (
+          <div className="flex items-center justify-between rounded-lg border border-border/50 bg-muted/30 px-3 py-2">
+            <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
+              <Wallet className="w-3.5 h-3.5" />
+              Saldo atual
+            </div>
+            <span
+              className={`text-sm font-bold tabular-nums ${
+                account.saldo > 0
+                  ? "text-success"
+                  : account.saldo < 0
+                  ? "text-destructive"
+                  : "text-foreground"
+              }`}
+            >
+              {formatMoneyValue(account.saldo, account.moeda || "BRL")}
+            </span>
+          </div>
+        )}
 
         <div className="space-y-2">
           <div>
