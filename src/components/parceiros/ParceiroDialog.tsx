@@ -313,6 +313,35 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
     };
   }, [viewMode, open, parceiroId, bankAccounts.length]);
 
+  // Fetch crypto wallet balances when viewing profile
+  useEffect(() => {
+    if (!viewMode || !open || !parceiroId) {
+      setWalletSaldos({});
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from("v_wallet_crypto_balances")
+        .select("wallet_id, balance_total_coin, primary_coin")
+        .eq("parceiro_id", parceiroId);
+      if (cancelled || error || !data) return;
+      const map: Record<string, { saldo: number; coin: string }> = {};
+      data.forEach((r: any) => {
+        if (r.wallet_id) {
+          map[r.wallet_id] = {
+            saldo: Number(r.balance_total_coin) || 0,
+            coin: r.primary_coin || "USDT",
+          };
+        }
+      });
+      setWalletSaldos(map);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [viewMode, open, parceiroId, cryptoWallets.length]);
+
   // Real-time CPF validation
   useEffect(() => {
     // Skip validation in view mode
@@ -1840,12 +1869,15 @@ export default function ParceiroDialog({ open, onClose, parceiro, viewMode = fal
                 <div className="grid gap-4">
                   {cryptoWallets.map((wallet, index) => {
                     const rede = redes.find(r => r.id === wallet.rede_id);
+                    const saldoInfo = wallet.id ? walletSaldos[wallet.id] : undefined;
                     return (
                       <CryptoWalletCard 
                         key={index} 
                         wallet={{
                           ...wallet,
-                          network: rede?.nome || ""
+                          network: rede?.nome || "",
+                          saldo: saldoInfo?.saldo,
+                          saldoCoin: saldoInfo?.coin,
                         }}
                         parceiroId={parceiroId || parceiro?.id}
                       />

@@ -12,6 +12,8 @@ interface CryptoWalletCardProps {
     network: string;
     endereco: string;
     exchange?: string;
+    saldo?: number;
+    saldoCoin?: string;
   };
   parceiroId?: string | null;
 }
@@ -55,35 +57,53 @@ export function CryptoWalletCard({ wallet, parceiroId }: CryptoWalletCardProps) 
     <>
       <Card className="bg-card/50 backdrop-blur border-border/50">
         <CardContent className="pt-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
                 <Wallet className="w-5 h-5 text-primary" />
               </div>
-              <h3 className="font-semibold text-foreground">
+              <h3 className="font-semibold text-foreground truncate">
                 {formatExchangeName(wallet.exchange || "")}
               </h3>
             </div>
-            <div className="flex items-center gap-2">
-              {parceiroId && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setSwapOpen(true);
-                  }}
-                  title="Swap Crypto"
-                >
-                  <ArrowRightLeft className="h-4 w-4" />
-                </Button>
+            <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+              <div className="flex items-center gap-2">
+                {parceiroId && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setSwapOpen(true);
+                    }}
+                    title="Swap Crypto"
+                  >
+                    <ArrowRightLeft className="h-4 w-4" />
+                  </Button>
+                )}
+                <Badge variant="outline" className="bg-accent/20 text-accent-foreground uppercase text-xs">
+                  {wallet.network}
+                </Badge>
+              </div>
+              {typeof wallet.saldo === "number" && (
+                <div className="flex items-center gap-1.5">
+                  <Wallet className="w-3 h-3 text-muted-foreground" />
+                  <span
+                    className={`text-sm font-bold tabular-nums ${
+                      wallet.saldo > 0
+                        ? "text-success"
+                        : wallet.saldo < 0
+                        ? "text-destructive"
+                        : "text-foreground"
+                    }`}
+                  >
+                    {wallet.saldo.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 8 })} {wallet.saldoCoin || "USDT"}
+                  </span>
+                </div>
               )}
-              <Badge variant="outline" className="bg-accent/20 text-accent-foreground uppercase text-xs">
-                {wallet.network}
-              </Badge>
             </div>
           </div>
 
