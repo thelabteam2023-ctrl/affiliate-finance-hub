@@ -1,91 +1,49 @@
 
 
-## O que vou implementar
+## Diagnóstico
 
-Um sistema de **Reverter / Excluir** movimentações direto no Histórico do Caixa Operacional, com regras de segurança baseadas em janela de tempo e tipo de transação.
+Você está 100% certo. A memória `architecture/caixa-operacional-virtual-partner` é explícita:
 
----
+> *"O parceiro caixa é **filtrado** das listagens de parceiros reais"*
 
-## 1. UI — Histórico de Movimentações
+O `Caixa Operacional` foi colocado na tabela `parceiros` apenas como **truque de reúso de infraestrutura** (contas bancárias, wallets, ledger, views de saldo). Ele **NÃO é um parceiro real** e não deve aparecer em nenhuma UI voltada ao usuário onde se escolhe/lista parceiros.
 
-No menu **⋮** que já existe em cada linha (`HistoricoMovimentacoes.tsx`, linha ~860), adicionar 2 novos itens com separador:
+## Causa raiz do bug do screenshot
 
+`src/hooks/usePlanningData.ts → useParceirosLite()` (linhas 157-173) consulta `parceiros` filtrando só por `workspace_id` e `status = ativo`, **sem excluir `is_caixa_operacional = true`**. Esse hook alimenta:
+
+1. **`RecursosManager.tsx → PerfisList`** (modal "Gerenciar recursos → Perfis") — onde o vazamento aparece no screenshot
+2. **`PlanejamentoCalendario.tsx`** — usado para resolver labels (aqui pode causar exibição do "Caixa Operacional" como nome de perfil em cards)
+3. **`CampanhaDialog.tsx`** — seletor de parceiro/perfil ao criar/editar campanha
+
+## Correção
+
+### 1. Fix definitivo na fonte (`useParceirosLite`)
+Adicionar `.eq("is_caixa_operacional", false)` no hook. Isso resolve os 3 consumidores de uma vez, mantendo o padrão dos demais hooks já corretos no projeto (`useParceirosData.ts`, `GestaoBookmakers.tsx`, `useCentralAlertsCount.ts` — todos já filtram).
+
+### 2. Auditoria preventiva
+Varrer todas as outras consultas a `parceiros` que ainda não excluem o caixa em contextos de listagem ao usuário, e corrigir as que estiverem expostas. Já mapeei os arquivos que usam `is_caixa_operacional` (14 arquivos), a maioria já filtra corretamente — vou validar os que faltam.
+
+### 3. Memória reforçada
+Atualizar `mem://architecture/caixa-operacional-virtual-partner` para listar explicitamente o **padrão obrigatório**: *toda* query a `parceiros` em hook/componente que serve seleção/listagem ao usuário **deve** incluir `.eq("is_caixa_operacional", false)`. A única exceção continua sendo lookup maps (resolução de label em transações já registradas).
+
+## Arquivos a editar
+
+- `src/hooks/usePlanningData.ts` — adicionar filtro em `useParceirosLite`
+- `.lovable/memory/architecture/caixa-operacional-virtual-partner.md` — reforçar regra
+- (Possíveis outros, após auditoria — vou listar e corrigir se houver vazamento)
+
+## Detalhes técnicos
+
+**Mudança no hook (1 linha):**
+```ts
+.from("parceiros")
+.select("id, nome, email, endereco, cidade")
+.eq("workspace_id", workspaceId!)
+.eq("status", "ativo")
+.eq("is_caixa_operacional", false)  // ← novo
+.order("nome");
 ```
-┌─────────────────────────────┐
-│ ✏  Editar data solicitação  │  (já existe)
-│ ✏  Editar recebimento       │  (já existe)
-├─────────────────────────────┤
-│ ↩  Reverter (estorno)       │  ← NOVO
-│ 🗑  Excluir movimentação    │  ← NOVO (vermelho)
-└─────────────────────────────┘
-```
 
-Cada item abre um **AlertDialog** de confirmação mostrando: tipo, valor, origem → destino, e o que vai acontecer.
-Itens ficam **desabilitados** com tooltip explicativo quando a transação não é elegível (ex: "Janela de 24h expirada", "Transação reconciliada", "Aporte de investidor — use Estorno em Investidores").
-
-O menu ⋮ passa a aparecer em **todas** as linhas (hoje só aparece em SAQUE confirmado).
-
----
-
-## 2. Regras de Elegibilidade
-
-| Ação | Janela | Bloqueios |
-|---|---|---|
-| **Reverter** (cria espelho inverso) | 24h desde `created_at` | `reconciled_at` preenchido · tipos de investidor (APORTE, LIQUIDACAO) · SWAP_IN/OUT (deve reverter o par) |
-| **Excluir** (hard delete) | 30 min desde `created_at` | qualquer um dos acima · `financial_events_generated = true` |
-
-Permissão: **owner** ou **admin** do workspace (via `useRole`).
-
----
-
-## 3. Backend — 2 RPCs novas (migration)
-
-**`reverter_movimentacao_caixa(p_transacao_id uuid, p_motivo text)`**
-- Valida janela 24h, role, não reconciliado, tipo elegível
-- Insere uma transação espelho com `tipo_transacao` original, valores invertidos (origem↔destino), `referencia_transacao_id` apontando para a original, `descricao = 'ESTORNO: ' + motivo`, `auditoria_metadata.reverted_by`
-- Para SWAP: detecta o par via `referencia_transacao_id` e reverte ambos atomicamente
-- Não toca em `saldo_atual` (views recalculam)
-
-**`excluir_movimentacao_caixa(p_transacao_id uuid, p_motivo text)`**
-- Valida janela 30min, role, sem `financial_events_generated`, sem `reconciled_at`
-- Grava registro em `audit_logs` (snapshot completo da row + motivo + user)
-- DELETE FROM cash_ledger WHERE id = ...
-- Para SWAP: deleta o par junto
-
-Ambas retornam `{ success, message, mirror_id? }`.
-
----
-
-## 4. Frontend — Hook + Diálogos
-
-**`useReverterMovimentacao.ts`** (novo): chama as RPCs, invalida caches (`invalidateCanonicalCaches` + `caixa-operacional`, `cash_ledger`, `parceiro-saldos`), mostra toast.
-
-**`ReverterMovimentacaoDialog.tsx`** (novo): AlertDialog com input de motivo (obrigatório, mín 5 chars) + preview "será criado um lançamento espelho".
-
-**`ExcluirMovimentacaoDialog.tsx`** (novo): AlertDialog destrutivo com input de motivo + aviso "ação irreversível, será registrada no log de auditoria".
-
-**Helpers** (`src/lib/movimentacaoEligibility.ts`): funções puras `canRevert(tx, role)` e `canDelete(tx, role)` retornando `{ allowed: boolean, reason?: string }` — reutilizadas no menu (estado disabled + tooltip) e nas RPCs (validação dupla client+server).
-
----
-
-## 5. Riscos cobertos
-
-| Risco | Mitigação |
-|---|---|
-| Apagar transação já reconciliada | Bloqueio por `reconciled_at` |
-| Quebrar saldo de investidor | Bloqueio para APORTE/LIQUIDACAO (forçar fluxo dedicado) |
-| Quebrar par de SWAP | Reversão/exclusão atômica do par via `referencia_transacao_id` |
-| Reverter operação antiga já fechada contabilmente | Janela 24h |
-| Perder histórico em exclusão | Snapshot em `audit_logs` antes do DELETE |
-| Diferença cambial em reversão | Espelho usa `cotacao_snapshot_at` da original, não cotação live |
-| Cascata em `financial_events` | Exclusão bloqueada quando `financial_events_generated=true`; reversão gera evento espelho |
-
----
-
-## 6. Arquivos
-
-**Novos:** `useReverterMovimentacao.ts`, `ReverterMovimentacaoDialog.tsx`, `ExcluirMovimentacaoDialog.tsx`, `src/lib/movimentacaoEligibility.ts`, 1 migration SQL com as 2 RPCs.
-**Editados:** `src/components/caixa/HistoricoMovimentacoes.tsx` (adicionar itens no menu ⋮ existente).
-
-**Fora do escopo desta fase:** "Editar destino" — fica para fase 2 (basta combinar Reverter + criar nova).
+Sem migração de banco. Sem mudança de schema. Sem impacto em ledger/saldos. É apenas filtro de leitura na camada de UI.
 
