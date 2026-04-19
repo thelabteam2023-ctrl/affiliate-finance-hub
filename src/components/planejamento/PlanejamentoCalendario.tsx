@@ -24,6 +24,8 @@ import {
 } from "@/hooks/usePlanningData";
 import { CampanhaDialog } from "./CampanhaDialog";
 import { RecursosManager } from "./RecursosManager";
+import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
+import { BookmakerLogo } from "@/components/ui/bookmaker-logo";
 
 const MES_NOMES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 const DIAS_SEMANA = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
