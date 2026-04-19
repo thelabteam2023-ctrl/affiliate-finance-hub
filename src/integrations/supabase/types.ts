@@ -7605,35 +7605,41 @@ export type Database = {
       }
       planning_perfis: {
         Row: {
+          cor: string
           created_at: string
           created_by: string
           id: string
           is_active: boolean
           label_custom: string | null
+          nome_generico: string | null
           notes: string | null
-          parceiro_id: string
+          parceiro_id: string | null
           updated_at: string
           workspace_id: string
         }
         Insert: {
+          cor?: string
           created_at?: string
           created_by: string
           id?: string
           is_active?: boolean
           label_custom?: string | null
+          nome_generico?: string | null
           notes?: string | null
-          parceiro_id: string
+          parceiro_id?: string | null
           updated_at?: string
           workspace_id: string
         }
         Update: {
+          cor?: string
           created_at?: string
           created_by?: string
           id?: string
           is_active?: boolean
           label_custom?: string | null
+          nome_generico?: string | null
           notes?: string | null
-          parceiro_id?: string
+          parceiro_id?: string | null
           updated_at?: string
           workspace_id?: string
         }

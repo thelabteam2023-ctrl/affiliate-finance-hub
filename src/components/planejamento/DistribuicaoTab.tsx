@@ -112,12 +112,14 @@ export default function DistribuicaoTab() {
     return m;
   }, [membros, planejamentoCatalogoSet]);
 
-  // Mapa perfil_id (planning) -> nome
-  const perfilLabel = (id: string) => {
+  // Mapa perfil_id (planning) -> dados (nome + cor)
+  const perfilInfo = (id: string): { nome: string; cor: string; isGenerico: boolean } => {
     const p = perfis.find((x) => x.id === id);
-    if (!p) return id.slice(0, 6);
-    return p.label_custom || p.parceiro?.nome || "—";
+    if (!p) return { nome: id.slice(0, 6), cor: "#6366f1", isGenerico: false };
+    const nome = p.label_custom?.trim() || p.parceiro?.nome || p.nome_generico || "—";
+    return { nome, cor: p.cor, isGenerico: !p.parceiro_id };
   };
+  const perfilLabel = (id: string) => perfilInfo(id).nome;
 
   const togglePerfil = (id: string) => {
     setSelectedPerfilIds((cur) =>
@@ -168,8 +170,11 @@ export default function DistribuicaoTab() {
     if (!resultado || resultado.celulas.length === 0) return;
     if (!planoNome.trim()) return;
     // Mapear perfil_id (planning) -> parceiro_id (necessário pela FK)
+    // Perfis genéricos (sem parceiro) são ignorados na persistência por enquanto.
     const perfilToParceiro = new Map<string, string>();
-    perfis.forEach((p) => perfilToParceiro.set(p.id, p.parceiro_id));
+    perfis.forEach((p) => {
+      if (p.parceiro_id) perfilToParceiro.set(p.id, p.parceiro_id);
+    });
 
     const parceiroIds = selectedPerfilIds
       .map((pid) => perfilToParceiro.get(pid))
@@ -200,6 +205,11 @@ export default function DistribuicaoTab() {
         .filter((x): x is NonNullable<typeof x> => !!x),
     });
   };
+
+  const selectedGenericosCount = useMemo(
+    () => selectedPerfilIds.filter((id) => !perfis.find((p) => p.id === id)?.parceiro_id).length,
+    [selectedPerfilIds, perfis]
+  );
 
   const gruposDisponiveis = grupos.filter(
     (g) => !grupoConfigs.some((c) => c.grupo_id === g.id)
@@ -267,25 +277,33 @@ export default function DistribuicaoTab() {
         </div>
         <ScrollArea className="h-32 border rounded-md p-2">
           <div className="grid grid-cols-2 md:grid-cols-3 gap-1.5">
-            {perfis.map((p) => (
-              <label
-                key={p.id}
-                className="flex items-center gap-2 cursor-pointer text-sm hover:bg-muted/50 px-1.5 py-1 rounded"
-              >
-                <Checkbox
-                  checked={selectedPerfilIds.includes(p.id)}
-                  onCheckedChange={() => togglePerfil(p.id)}
-                />
-                <span className="truncate text-xs">
-                  {p.label_custom || p.parceiro?.nome || "—"}
-                </span>
-                {!p.is_active && (
-                  <Badge variant="outline" className="text-[9px] h-4">
-                    off
-                  </Badge>
-                )}
-              </label>
-            ))}
+            {perfis.map((p) => {
+              const nome = p.label_custom?.trim() || p.parceiro?.nome || p.nome_generico || "—";
+              const isGenerico = !p.parceiro_id;
+              return (
+                <label
+                  key={p.id}
+                  className="flex items-center gap-2 cursor-pointer text-sm hover:bg-muted/50 px-1.5 py-1 rounded"
+                >
+                  <Checkbox
+                    checked={selectedPerfilIds.includes(p.id)}
+                    onCheckedChange={() => togglePerfil(p.id)}
+                  />
+                  <span
+                    className="h-2.5 w-2.5 rounded-full shrink-0"
+                    style={{ backgroundColor: p.cor }}
+                    title={isGenerico ? "Perfil genérico" : "Perfil real"}
+                  />
+                  <span className="truncate text-xs">{nome}</span>
+                  {isGenerico && (
+                    <Badge variant="outline" className="text-[9px] h-4 shrink-0">gen</Badge>
+                  )}
+                  {!p.is_active && (
+                    <Badge variant="outline" className="text-[9px] h-4">off</Badge>
+                  )}
+                </label>
+              );
+            })}
             {perfis.length === 0 && (
               <p className="text-xs text-muted-foreground col-span-full text-center py-4">
                 Nenhum perfil pré-selecionado. Adicione perfis na aba "Perfis".
@@ -444,6 +462,18 @@ export default function DistribuicaoTab() {
 
       <Separator />
 
+      {/* Aviso sobre genéricos */}
+      {selectedGenericosCount > 0 && (
+        <div className="flex items-start gap-2 text-[11px] rounded-md p-2 bg-warning/10 text-warning-foreground border border-warning/30">
+          <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+          <span>
+            {selectedGenericosCount} perfil(is) genérico(s) selecionado(s). Você pode visualizar a distribuição,
+            mas para <strong>salvar o plano</strong> é preciso vincular cada genérico a um parceiro real
+            (na aba "Perfis", botão <em>Vincular</em>).
+          </span>
+        </div>
+      )}
+
       {/* Ações */}
       <div className="flex flex-wrap gap-2 justify-end">
         <Button
@@ -462,8 +492,10 @@ export default function DistribuicaoTab() {
             !resultado ||
             resultado.celulas.length === 0 ||
             !planoNome.trim() ||
-            createPlano.isPending
+            createPlano.isPending ||
+            selectedGenericosCount > 0
           }
+          title={selectedGenericosCount > 0 ? "Vincule os perfis genéricos a parceiros reais antes de salvar" : undefined}
         >
           <Save className="h-3.5 w-3.5 mr-1" />
           {createPlano.isPending ? "Salvando..." : "Salvar plano"}
@@ -518,9 +550,21 @@ export default function DistribuicaoTab() {
                         <tbody>
                           {Array.from(perCpf.entries()).map(([pid, items]) => {
                             const ipSet = new Set(items.map((i) => i.ip_slot));
+                            const info = perfilInfo(pid);
                             return (
                               <tr key={pid} className="border-b last:border-0">
-                                <td className="p-1.5 font-medium">{perfilLabel(pid)}</td>
+                                <td className="p-1.5 font-medium">
+                                  <div className="flex items-center gap-1.5">
+                                    <span
+                                      className="h-2.5 w-2.5 rounded-full shrink-0"
+                                      style={{ backgroundColor: info.cor }}
+                                    />
+                                    <span className="truncate">{info.nome}</span>
+                                    {info.isGenerico && (
+                                      <Badge variant="outline" className="text-[9px] h-4 shrink-0">gen</Badge>
+                                    )}
+                                  </div>
+                                </td>
                                 <td className="p-1.5">
                                   <div className="flex flex-wrap gap-1">
                                     {items.map((c, idx) => {
