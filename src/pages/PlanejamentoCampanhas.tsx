@@ -1,21 +1,38 @@
+import { useEffect } from "react";
 import { CalendarRange } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useTopBar } from "@/contexts/TopBarContext";
 import { PlanejamentoCalendario } from "@/components/planejamento/PlanejamentoCalendario";
 
 export default function PlanejamentoCampanhas() {
+  const { setContent: setTopBarContent } = useTopBar();
+
+  useEffect(() => {
+    setTopBarContent(
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="flex items-center gap-2 cursor-default">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
+              <CalendarRange className="h-4 w-4 text-primary" />
+            </div>
+            <span className="font-semibold text-sm">Planejamento de Campanhas</span>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">
+          Organize depósitos mensais por casa, com IP, perfil e carteira vinculados.
+        </TooltipContent>
+      </Tooltip>
+    );
+    return () => setTopBarContent(null);
+  }, [setTopBarContent]);
+
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <header className="shrink-0 border-b border-border bg-muted/30 px-3 py-2">
-        <div className="flex items-center gap-2">
-          <CalendarRange className="h-4 w-4 text-primary" />
-          <h1 className="font-semibold text-foreground text-sm">Planejamento de Campanhas</h1>
-          <span className="text-[11px] text-muted-foreground hidden md:inline">
-            • Organize depósitos mensais por casa, com IP, perfil e carteira vinculados.
-          </span>
+    <TooltipProvider>
+      <div className="h-[calc(100vh-3.5rem)] flex flex-col bg-background">
+        <div className="flex-1 overflow-hidden">
+          <PlanejamentoCalendario />
         </div>
-      </header>
-      <main className="flex-1 overflow-hidden">
-        <PlanejamentoCalendario />
-      </main>
-    </div>
+      </div>
+    </TooltipProvider>
   );
 }
