@@ -275,8 +275,12 @@ export function BookmakerGruposDialog({ open, onOpenChange }: BookmakerGruposDia
                         </div>
                       </ScrollArea>
                     </TabsContent>
-                    <TabsContent value="regras" className="flex-1 min-h-0 mt-3 overflow-y-auto pr-2">
-                      <BookmakerGrupoRegrasPanel grupoId={selectedGrupo.id} grupoNome={selectedGrupo.nome} />
+                    <TabsContent value="regras" className="flex-1 min-h-0 mt-3">
+                      <ScrollArea className="h-full">
+                        <div className="pr-3 pb-2">
+                          <BookmakerGrupoRegrasPanel grupoId={selectedGrupo.id} grupoNome={selectedGrupo.nome} />
+                        </div>
+                      </ScrollArea>
                     </TabsContent>
                   </Tabs>
                 </>
