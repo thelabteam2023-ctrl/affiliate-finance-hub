@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { RegulamentacaoFilter, RegFilterValue } from "./RegulamentacaoFilter";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -220,7 +220,7 @@ function CasasList() {
   const del = useDeleteWorkspaceBookmaker();
 
   const [search, setSearch] = useState("");
-  const [filterStatus, setFilterStatus] = useState<"all" | "REGULAMENTADA" | "NAO_REGULAMENTADA">("all");
+  const [filterStatus, setFilterStatus] = useState<RegFilterValue>("all");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [editing, setEditing] = useState<Partial<BookmakerCatalogo> | null>(null);
 
@@ -290,22 +290,13 @@ function CasasList() {
             className="pl-7 h-8 text-sm"
           />
         </div>
-        <ToggleGroup
-          type="single"
+        <RegulamentacaoFilter
           value={filterStatus}
-          onValueChange={(v) => v && setFilterStatus(v as any)}
-          size="sm"
-        >
-          <ToggleGroupItem value="all" className="h-8 text-xs">
-            Todas <Badge variant="secondary" className="ml-1 h-4 px-1 text-[10px]">{casas.length}</Badge>
-          </ToggleGroupItem>
-          <ToggleGroupItem value="REGULAMENTADA" className="h-8 text-xs">
-            Regulamentadas <Badge variant="secondary" className="ml-1 h-4 px-1 text-[10px]">{totalRegulamentadas}</Badge>
-          </ToggleGroupItem>
-          <ToggleGroupItem value="NAO_REGULAMENTADA" className="h-8 text-xs">
-            Não reg. <Badge variant="secondary" className="ml-1 h-4 px-1 text-[10px]">{totalNaoRegulamentadas}</Badge>
-          </ToggleGroupItem>
-        </ToggleGroup>
+          onChange={setFilterStatus}
+          totalAll={casas.length}
+          totalReg={totalRegulamentadas}
+          totalNaoReg={totalNaoRegulamentadas}
+        />
         <Button size="sm" onClick={startNew}><Plus className="h-4 w-4 mr-1" /> Nova casa</Button>
       </div>
 

@@ -7,8 +7,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { ChevronLeft, ChevronRight, Settings2, Plus, AlertTriangle, MapPin, User, Search, Building2 } from "lucide-react";
+import { RegulamentacaoFilter, RegFilterValue } from "./RegulamentacaoFilter";
 import { cn } from "@/lib/utils";
 import {
   PlanningCampanha,
@@ -165,7 +165,7 @@ export function PlanejamentoCalendario() {
   const [editing, setEditing] = useState<{ date: string; campanha?: PlanningCampanha; initialBookmaker?: any } | null>(null);
   const [activeDrag, setActiveDrag] = useState<any>(null);
   const [bmSearch, setBmSearch] = useState("");
-  const [bmFilter, setBmFilter] = useState<"all" | "REGULAMENTADA" | "NAO_REGULAMENTADA">("all");
+  const [bmFilter, setBmFilter] = useState<RegFilterValue>("all");
 
   const { data: campanhas = [] } = usePlanningCampanhas(year, month);
   const { data: bookmakers = [] } = useBookmakersCatalogo();
@@ -315,17 +315,12 @@ export function PlanejamentoCalendario() {
             />
           </div>
 
-          <ToggleGroup
-            type="single"
+          <RegulamentacaoFilter
             value={bmFilter}
-            onValueChange={(v) => v && setBmFilter(v as any)}
+            onChange={setBmFilter}
             size="sm"
-            className="justify-start"
-          >
-            <ToggleGroupItem value="all" className="h-6 text-[10px] px-1.5">Todas</ToggleGroupItem>
-            <ToggleGroupItem value="REGULAMENTADA" className="h-6 text-[10px] px-1.5">Reg.</ToggleGroupItem>
-            <ToggleGroupItem value="NAO_REGULAMENTADA" className="h-6 text-[10px] px-1.5">N/Reg.</ToggleGroupItem>
-          </ToggleGroup>
+            className="self-start"
+          />
 
           <div className="flex-1 overflow-y-auto space-y-1 mt-1 -mx-1 px-1">
             {filteredBookmakers.map(b => (
