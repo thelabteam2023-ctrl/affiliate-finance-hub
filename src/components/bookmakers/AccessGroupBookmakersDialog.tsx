@@ -17,12 +17,14 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Search, FolderOpen, Trash2, Plus, Loader2, Lock, Globe, Users } from "lucide-react";
+import { RegulamentacaoFilter, type RegFilterValue } from "@/components/planejamento/RegulamentacaoFilter";
 
 interface BookmakerCatalogo {
   id: string;
   nome: string;
   logo_url: string | null;
   visibility: string | null;
+  status: string | null;
 }
 
 interface Props {
@@ -48,13 +50,15 @@ export default function AccessGroupBookmakersDialog({ open, onOpenChange, group 
   const [saving, setSaving] = useState(false);
   const [convertPrivate, setConvertPrivate] = useState(true);
   const [activeTab, setActiveTab] = useState<string>("current");
+  const [regFilterCurrent, setRegFilterCurrent] = useState<RegFilterValue>("all");
+  const [regFilterAdd, setRegFilterAdd] = useState<RegFilterValue>("all");
 
   const loadData = async () => {
     try {
       setLoading(true);
       const [groupData, allData] = await Promise.all([
         fetchGroupBookmakers(group.id),
-        supabase.from("bookmakers_catalogo").select("id, nome, logo_url, visibility").order("nome"),
+        supabase.from("bookmakers_catalogo").select("id, nome, logo_url, visibility, status").order("nome"),
       ]);
       setGroupBookmakers(groupData);
       setAllBookmakers(allData.data || []);
@@ -167,12 +171,28 @@ export default function AccessGroupBookmakersDialog({ open, onOpenChange, group 
 
   const filteredGroupBookmakers = groupBookmakers.filter((gb) => {
     const name = gb.bookmaker?.nome?.toLowerCase() || "";
-    return name.includes(searchTerm.toLowerCase());
+    if (!name.includes(searchTerm.toLowerCase())) return false;
+    if (regFilterCurrent === "all") return true;
+    return gb.bookmaker?.status === regFilterCurrent;
   });
 
   const filteredAvailableBookmakers = availableBookmakers.filter((bk) => {
-    return bk.nome.toLowerCase().includes(searchTerm.toLowerCase());
+    if (!bk.nome.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+    if (regFilterAdd === "all") return true;
+    return bk.status === regFilterAdd;
   });
+
+  // Counters for filter pills
+  const groupTotals = {
+    all: groupBookmakers.length,
+    reg: groupBookmakers.filter((gb) => gb.bookmaker?.status === "REGULAMENTADA").length,
+    naoReg: groupBookmakers.filter((gb) => gb.bookmaker?.status === "NAO_REGULAMENTADA").length,
+  };
+  const availableTotals = {
+    all: availableBookmakers.length,
+    reg: availableBookmakers.filter((bk) => bk.status === "REGULAMENTADA").length,
+    naoReg: availableBookmakers.filter((bk) => bk.status === "NAO_REGULAMENTADA").length,
+  };
 
   // Check if any selected bookmaker is private
   const hasPrivateSelected = Array.from(selectedAddIds).some((id) => {
@@ -216,6 +236,15 @@ export default function AccessGroupBookmakersDialog({ open, onOpenChange, group 
                 </Button>
               )}
             </div>
+
+            <RegulamentacaoFilter
+              value={regFilterCurrent}
+              onChange={setRegFilterCurrent}
+              totalAll={groupTotals.all}
+              totalReg={groupTotals.reg}
+              totalNaoReg={groupTotals.naoReg}
+              size="sm"
+            />
 
             {loading ? (
               <div className="py-8 text-center text-muted-foreground">
@@ -278,6 +307,15 @@ export default function AccessGroupBookmakersDialog({ open, onOpenChange, group 
                 />
               </div>
             </div>
+
+            <RegulamentacaoFilter
+              value={regFilterAdd}
+              onChange={setRegFilterAdd}
+              totalAll={availableTotals.all}
+              totalReg={availableTotals.reg}
+              totalNaoReg={availableTotals.naoReg}
+              size="sm"
+            />
 
             {hasPrivateSelected && (
               <div className="flex items-center justify-between p-3 bg-amber-500/10 border border-amber-500/20 rounded-md">

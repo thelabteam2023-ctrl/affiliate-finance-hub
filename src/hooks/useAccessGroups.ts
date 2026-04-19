@@ -41,6 +41,7 @@ export interface GroupBookmaker {
     nome: string;
     logo_url: string | null;
     visibility: string | null;
+    status?: string | null;
   };
 }
 
@@ -351,7 +352,7 @@ export function useAccessGroups() {
       .from("access_group_bookmakers")
       .select(`
         *,
-        bookmaker:bookmakers_catalogo(id, nome, logo_url, visibility)
+        bookmaker:bookmakers_catalogo(id, nome, logo_url, visibility, status)
       `)
       .eq("group_id", groupId);
 
