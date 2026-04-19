@@ -20,6 +20,7 @@ import {
   useParceirosLite,
   usePlanningPerfis,
   useUpsertCampanha,
+  useDeleteCampanha,
 } from "@/hooks/usePlanningData";
 import { CampanhaDialog } from "./CampanhaDialog";
 import { RecursosManager } from "./RecursosManager";
