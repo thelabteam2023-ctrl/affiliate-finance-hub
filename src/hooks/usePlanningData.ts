@@ -64,6 +64,8 @@ export interface BookmakerCatalogo {
   nome: string;
   logo_url: string | null;
   moeda_padrao: string;
+  status: "REGULAMENTADA" | "NAO_REGULAMENTADA";
+  visibility: "WORKSPACE_PRIVATE" | "GLOBAL_REGULATED" | "GLOBAL_RESTRICTED";
 }
 
 // ──────────────────────── QUERIES ────────────────────────
@@ -145,17 +147,95 @@ export function useParceirosLite() {
 }
 
 export function useBookmakersCatalogo() {
+  const { workspaceId } = useAuth();
   return useQuery({
-    queryKey: ["planning-bookmakers-catalogo"],
+    queryKey: ["planning-bookmakers-catalogo", workspaceId],
+    enabled: !!workspaceId,
     queryFn: async () => {
+      // RLS já filtra por workspace (GLOBAL_REGULATED visível a todos +
+      // WORKSPACE_PRIVATE/GLOBAL_RESTRICTED via bookmaker_workspace_access).
       const { data, error } = await supabase
         .from("bookmakers_catalogo")
-        .select("id, nome, logo_url, moeda_padrao")
-        .eq("status", "ativo")
+        .select("id, nome, logo_url, moeda_padrao, status, visibility")
+        .in("status", ["REGULAMENTADA", "NAO_REGULAMENTADA"])
         .order("nome");
       if (error) throw error;
       return (data ?? []) as BookmakerCatalogo[];
     },
+  });
+}
+
+// Mutations para casas privadas do workspace (visibility = WORKSPACE_PRIVATE)
+export function useUpsertWorkspaceBookmaker() {
+  const qc = useQueryClient();
+  const { workspaceId, user } = useAuth();
+  return useMutation({
+    mutationFn: async (payload: {
+      id?: string;
+      nome: string;
+      status: "REGULAMENTADA" | "NAO_REGULAMENTADA";
+      moeda_padrao: string;
+      logo_url?: string | null;
+    }) => {
+      if (!workspaceId || !user) throw new Error("Sem workspace");
+      if (payload.id) {
+        const { error } = await supabase
+          .from("bookmakers_catalogo")
+          .update({
+            nome: payload.nome,
+            status: payload.status,
+            moeda_padrao: payload.moeda_padrao,
+            logo_url: payload.logo_url ?? null,
+          })
+          .eq("id", payload.id);
+        if (error) throw error;
+      } else {
+        // Cria a casa como WORKSPACE_PRIVATE e concede acesso ao workspace atual
+        const { data: created, error } = await supabase
+          .from("bookmakers_catalogo")
+          .insert({
+            nome: payload.nome,
+            status: payload.status,
+            moeda_padrao: payload.moeda_padrao,
+            logo_url: payload.logo_url ?? null,
+            visibility: "WORKSPACE_PRIVATE",
+            user_id: user.id,
+            operacional: "ATIVA",
+          })
+          .select("id")
+          .single();
+        if (error) throw error;
+        // Garante acesso explícito do workspace
+        await supabase.from("bookmaker_workspace_access").insert({
+          bookmaker_catalogo_id: (created as any).id,
+          workspace_id: workspaceId,
+          granted_by: user.id,
+        });
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["planning-bookmakers-catalogo"] });
+      qc.invalidateQueries({ queryKey: ["workspace-bookmakers-catalog"] });
+      toast.success("Casa salva");
+    },
+    onError: (e: any) => toast.error("Erro ao salvar casa", { description: e.message }),
+  });
+}
+
+export function useDeleteWorkspaceBookmaker() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      // Apenas casas WORKSPACE_PRIVATE deste workspace podem ser deletadas (RLS protege).
+      const { error } = await supabase.from("bookmakers_catalogo").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["planning-bookmakers-catalogo"] });
+      qc.invalidateQueries({ queryKey: ["workspace-bookmakers-catalog"] });
+      toast.success("Casa removida");
+    },
+    onError: (e: any) => toast.error("Erro ao remover", { description: e.message }),
   });
 }
 
