@@ -49,6 +49,169 @@ export function RecursosManager({ open, onOpenChange }: Props) {
   );
 }
 
+// ───────────────────────── PERFIS (pré-seleção de parceiros) ─────────────────────────
+
+function PerfisList() {
+  const { data: perfis = [] } = usePlanningPerfis();
+  const { data: parceiros = [] } = useParceirosLite();
+  const addPerfis = useAddPlanningPerfis();
+  const updPerfil = useUpdatePlanningPerfil();
+  const delPerfil = useDeletePlanningPerfil();
+
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerSearch, setPickerSearch] = useState("");
+  const [pickerSelected, setPickerSelected] = useState<Set<string>>(new Set());
+  const [search, setSearch] = useState("");
+
+  const selectedIdsSet = useMemo(() => new Set(perfis.map(p => p.parceiro_id)), [perfis]);
+
+  const availableParceiros = useMemo(() => {
+    return parceiros.filter(p => {
+      if (selectedIdsSet.has(p.id)) return false;
+      if (pickerSearch && !p.nome.toLowerCase().includes(pickerSearch.toLowerCase())) return false;
+      return true;
+    });
+  }, [parceiros, selectedIdsSet, pickerSearch]);
+
+  const filteredPerfis = useMemo(() => {
+    if (!search) return perfis;
+    const s = search.toLowerCase();
+    return perfis.filter(p =>
+      (p.parceiro?.nome ?? "").toLowerCase().includes(s) ||
+      (p.label_custom ?? "").toLowerCase().includes(s) ||
+      (p.parceiro?.email ?? "").toLowerCase().includes(s),
+    );
+  }, [perfis, search]);
+
+  const togglePicker = (id: string) => {
+    setPickerSelected(prev => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id); else n.add(id);
+      return n;
+    });
+  };
+
+  const handleConfirmAdd = async () => {
+    await addPerfis.mutateAsync(Array.from(pickerSelected));
+    setPickerSelected(new Set());
+    setPickerOpen(false);
+    setPickerSearch("");
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Buscar perfil..."
+            className="pl-7 h-8 text-sm"
+          />
+        </div>
+        <Badge variant="secondary" className="h-6">{perfis.length} ativo(s)</Badge>
+        <Button size="sm" onClick={() => setPickerOpen(o => !o)}>
+          <Plus className="h-4 w-4 mr-1" /> Adicionar perfis
+        </Button>
+      </div>
+
+      {pickerOpen && (
+        <Card className="p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-medium">Selecione parceiros para a lista de planejamento</p>
+            <Badge variant="secondary" className="text-[10px]">{pickerSelected.size} marcado(s)</Badge>
+          </div>
+          <div className="relative">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <Input
+              value={pickerSearch}
+              onChange={e => setPickerSearch(e.target.value)}
+              placeholder="Buscar parceiro..."
+              className="pl-7 h-8 text-sm"
+            />
+          </div>
+          <div className="max-h-[260px] overflow-y-auto space-y-1 border rounded-md p-1">
+            {availableParceiros.length === 0 && (
+              <p className="text-xs text-muted-foreground italic text-center py-3">
+                {parceiros.length === 0 ? "Nenhum parceiro ativo no workspace." : "Todos já foram adicionados."}
+              </p>
+            )}
+            {availableParceiros.map(p => {
+              const checked = pickerSelected.has(p.id);
+              return (
+                <label
+                  key={p.id}
+                  className={`flex items-center gap-2 p-1.5 rounded cursor-pointer hover:bg-muted/40 ${checked ? "bg-primary/10" : ""}`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => togglePicker(p.id)}
+                    className="h-3.5 w-3.5"
+                  />
+                  <User className="h-3.5 w-3.5 text-muted-foreground" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm truncate">{p.nome}</div>
+                    {p.email && <div className="text-[10px] text-muted-foreground truncate">{p.email}</div>}
+                  </div>
+                </label>
+              );
+            })}
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" size="sm" onClick={() => { setPickerOpen(false); setPickerSelected(new Set()); }}>
+              Cancelar
+            </Button>
+            <Button size="sm" disabled={pickerSelected.size === 0 || addPerfis.isPending} onClick={handleConfirmAdd}>
+              <Check className="h-4 w-4 mr-1" /> Adicionar {pickerSelected.size > 0 ? `(${pickerSelected.size})` : ""}
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      <div className="space-y-1 max-h-[380px] overflow-y-auto">
+        {filteredPerfis.map(p => (
+          <Card key={p.id} className="p-2 flex items-center gap-2">
+            <User className="h-4 w-4 text-muted-foreground shrink-0" />
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-medium truncate">
+                {p.label_custom || p.parceiro?.nome || "—"}
+                {p.label_custom && p.parceiro?.nome && (
+                  <span className="text-[10px] text-muted-foreground ml-1">({p.parceiro.nome})</span>
+                )}
+              </div>
+              <div className="text-[10px] text-muted-foreground truncate">
+                {p.parceiro?.email || "sem e-mail"}
+                {p.parceiro?.cidade && ` · ${p.parceiro.cidade}`}
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-1">
+                <Switch
+                  checked={p.is_active}
+                  onCheckedChange={(v) => updPerfil.mutate({ id: p.id, is_active: v })}
+                />
+                <span className="text-[10px] text-muted-foreground">{p.is_active ? "ativo" : "off"}</span>
+              </div>
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => delPerfil.mutate(p.id)}>
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </Card>
+        ))}
+        {filteredPerfis.length === 0 && (
+          <p className="text-xs text-muted-foreground text-center py-6">
+            {perfis.length === 0
+              ? "Nenhum perfil pré-selecionado. Clique em \"Adicionar perfis\" para escolher parceiros."
+              : "Nenhum perfil encontrado para a busca."}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ───────────────────────── CASAS ─────────────────────────
 
 function CasasList() {
