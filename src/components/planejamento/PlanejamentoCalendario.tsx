@@ -331,6 +331,29 @@ export function PlanejamentoCalendario() {
     return map;
   }, [campanhas]);
 
+  // Validador de regras de grupo
+  const { validate } = useGrupoRegrasValidator(campanhas);
+  const grupoViolationMap = useMemo(() => {
+    const map = new Map<string, { hasBlock: boolean; hasWarn: boolean }>();
+    campanhas.forEach((c) => {
+      const result = validate({
+        bookmaker_catalogo_id: c.bookmaker_catalogo_id,
+        parceiro_id: c.parceiro_id,
+        ip_id: c.ip_id,
+        wallet_id: c.wallet_id,
+        scheduled_date: c.scheduled_date,
+        excludeCampanhaId: c.id,
+      });
+      if (result.violations.length > 0 || result.warnings.length > 0) {
+        map.set(c.id, {
+          hasBlock: result.violations.length > 0,
+          hasWarn: result.warnings.length > 0,
+        });
+      }
+    });
+    return map;
+  }, [campanhas, validate]);
+
   // Construir grid do mês (semanas)
   const grid = useMemo(() => {
     const firstDay = new Date(year, month - 1, 1);
