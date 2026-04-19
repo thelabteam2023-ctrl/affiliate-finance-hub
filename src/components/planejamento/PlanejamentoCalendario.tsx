@@ -12,7 +12,7 @@ import { RegulamentacaoFilter, RegFilterValue } from "./RegulamentacaoFilter";
 import { cn } from "@/lib/utils";
 import {
   PlanningCampanha,
-  useBookmakersCatalogo,
+  usePlanningCasas,
   usePlanningCampanhas,
   usePlanningIps,
   usePlanningWallets,
