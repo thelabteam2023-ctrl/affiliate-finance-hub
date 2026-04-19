@@ -325,41 +325,51 @@ function CasasList() {
 
 // ───────────────────────── IPs ─────────────────────────
 
+type BulkRow = { label: string; ip_address: string; location_city: string };
+const emptyRow = (): BulkRow => ({ label: "", ip_address: "", location_city: "" });
+
 function IpsList() {
   const { data: ips = [] } = usePlanningIps();
   const upsert = useUpsertPlanningIp();
   const del = useDeletePlanningIp();
   const [editing, setEditing] = useState<Partial<PlanningIp> | null>(null);
   const [bulkOpen, setBulkOpen] = useState(false);
-  const [bulkText, setBulkText] = useState("");
+  const [bulkRows, setBulkRows] = useState<BulkRow[]>([emptyRow(), emptyRow(), emptyRow()]);
   const [bulkBusy, setBulkBusy] = useState(false);
 
   const startNew = () => setEditing({ label: "", ip_address: "", location_city: "", is_active: true });
 
-  const parseBulk = (raw: string): Array<{ label: string; ip_address: string; location_city: string }> => {
-    return raw
-      .split("\n")
-      .map(l => l.trim())
-      .filter(Boolean)
-      .map(line => {
-        const parts = line.split(/[\t,;|]/).map(p => p.trim());
-        const [label = "", ip_address = "", location_city = ""] = parts;
-        return { label, ip_address, location_city };
-      })
-      .filter(r => r.label && r.ip_address);
+  const updateRow = (idx: number, patch: Partial<BulkRow>) => {
+    setBulkRows(prev => prev.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
   };
 
-  const bulkPreview = useMemo(() => parseBulk(bulkText), [bulkText]);
+  const addRow = () => setBulkRows(prev => [...prev, emptyRow()]);
+  const removeRow = (idx: number) =>
+    setBulkRows(prev => (prev.length === 1 ? [emptyRow()] : prev.filter((_, i) => i !== idx)));
+
+  const validRows = useMemo(
+    () => bulkRows.filter(r => r.label.trim() && r.ip_address.trim()),
+    [bulkRows]
+  );
+
+  const resetBulk = () => {
+    setBulkRows([emptyRow(), emptyRow(), emptyRow()]);
+    setBulkOpen(false);
+  };
 
   const handleBulkSubmit = async () => {
-    if (bulkPreview.length === 0) return;
+    if (validRows.length === 0) return;
     setBulkBusy(true);
     try {
-      for (const row of bulkPreview) {
-        await upsert.mutateAsync({ ...row, is_active: true });
+      for (const row of validRows) {
+        await upsert.mutateAsync({
+          label: row.label.trim(),
+          ip_address: row.ip_address.trim(),
+          location_city: row.location_city.trim(),
+          is_active: true,
+        });
       }
-      setBulkText("");
-      setBulkOpen(false);
+      resetBulk();
     } finally {
       setBulkBusy(false);
     }
@@ -379,27 +389,61 @@ function IpsList() {
 
       {bulkOpen && (
         <Card className="p-3 space-y-2">
-          <div>
-            <Label className="text-xs">Cole uma linha por IP — formato: <code className="text-[10px]">label, endereço, cidade</code></Label>
-            <textarea
-              value={bulkText}
-              onChange={e => setBulkText(e.target.value)}
-              placeholder={`Casa Principal, 192.168.0.1, São Paulo\nResidencial 4G, 200.123.45.6, Rio de Janeiro`}
-              rows={6}
-              className="w-full mt-1 rounded-md border border-input bg-background p-2 text-sm font-mono"
-            />
-            <p className="text-[10px] text-muted-foreground mt-1">
-              Separadores aceitos: vírgula, ponto-e-vírgula, tabulação ou pipe ( | ). Cidade é opcional.
-            </p>
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-medium">Adicionar vários IPs</p>
+            <Badge variant="secondary" className="text-[10px]">{validRows.length} válido(s)</Badge>
           </div>
-          <div className="flex justify-between items-center">
-            <Badge variant="secondary" className="text-[10px]">{bulkPreview.length} IP(s) válido(s)</Badge>
-            <div className="flex gap-2">
-              <Button variant="ghost" size="sm" onClick={() => { setBulkOpen(false); setBulkText(""); }}>Cancelar</Button>
-              <Button size="sm" onClick={handleBulkSubmit} disabled={bulkPreview.length === 0 || bulkBusy}>
-                {bulkBusy ? "Salvando..." : `Importar ${bulkPreview.length}`}
-              </Button>
-            </div>
+
+          <div className="grid grid-cols-[1fr_1fr_1fr_auto] gap-1.5 text-[10px] uppercase tracking-wide text-muted-foreground px-1">
+            <span>Label</span>
+            <span>Endereço</span>
+            <span>Cidade</span>
+            <span className="w-7" />
+          </div>
+
+          <div className="space-y-1.5 max-h-[280px] overflow-y-auto">
+            {bulkRows.map((row, idx) => (
+              <div key={idx} className="grid grid-cols-[1fr_1fr_1fr_auto] gap-1.5 items-center">
+                <Input
+                  value={row.label}
+                  onChange={e => updateRow(idx, { label: e.target.value })}
+                  placeholder="Casa Principal"
+                  className="h-8 text-sm"
+                />
+                <Input
+                  value={row.ip_address}
+                  onChange={e => updateRow(idx, { ip_address: e.target.value })}
+                  placeholder="192.168.0.1"
+                  className="h-8 text-sm font-mono"
+                />
+                <Input
+                  value={row.location_city}
+                  onChange={e => updateRow(idx, { location_city: e.target.value })}
+                  placeholder="São Paulo"
+                  className="h-8 text-sm"
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 shrink-0"
+                  onClick={() => removeRow(idx)}
+                  title="Remover linha"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            ))}
+          </div>
+
+          <Button variant="ghost" size="sm" onClick={addRow} className="w-full h-7 text-xs">
+            <Plus className="h-3.5 w-3.5 mr-1" /> Adicionar linha
+          </Button>
+
+          <div className="flex justify-end gap-2 pt-1 border-t">
+            <Button variant="ghost" size="sm" onClick={resetBulk}>Cancelar</Button>
+            <Button size="sm" onClick={handleBulkSubmit} disabled={validRows.length === 0 || bulkBusy}>
+              {bulkBusy ? "Salvando..." : `Importar ${validRows.length}`}
+            </Button>
           </div>
         </Card>
       )}
