@@ -10,7 +10,8 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Plus, Trash2, Pencil, Search, Building2 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Plus, Trash2, Pencil, Search, Building2, User, Check } from "lucide-react";
 import {
   PlanningIp, PlanningWallet,
   usePlanningIps, usePlanningWallets,
@@ -18,6 +19,8 @@ import {
   useUpsertPlanningWallet, useDeletePlanningWallet,
   useBookmakersCatalogo, useUpsertWorkspaceBookmaker, useDeleteWorkspaceBookmaker,
   BookmakerCatalogo,
+  useParceirosLite, usePlanningPerfis, useAddPlanningPerfis,
+  useUpdatePlanningPerfil, useDeletePlanningPerfil,
 } from "@/hooks/usePlanningData";
 
 interface Props { open: boolean; onOpenChange: (v: boolean) => void; }
@@ -32,10 +35,12 @@ export function RecursosManager({ open, onOpenChange }: Props) {
         <Tabs defaultValue="casas">
           <TabsList>
             <TabsTrigger value="casas">Casas</TabsTrigger>
+            <TabsTrigger value="perfis">Perfis</TabsTrigger>
             <TabsTrigger value="ips">IPs / Proxies</TabsTrigger>
             <TabsTrigger value="wallets">Carteiras</TabsTrigger>
           </TabsList>
           <TabsContent value="casas"><CasasList /></TabsContent>
+          <TabsContent value="perfis"><PerfisList /></TabsContent>
           <TabsContent value="ips"><IpsList /></TabsContent>
           <TabsContent value="wallets"><WalletsList /></TabsContent>
         </Tabs>
