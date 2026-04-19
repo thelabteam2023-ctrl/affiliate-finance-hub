@@ -17,6 +17,7 @@ import {
   usePlanningIps,
   usePlanningWallets,
   useParceirosLite,
+  usePlanningPerfis,
   useUpsertCampanha,
 } from "@/hooks/usePlanningData";
 import { CampanhaDialog } from "./CampanhaDialog";
@@ -170,13 +171,22 @@ export function PlanejamentoCalendario() {
   const { data: bookmakers = [] } = useBookmakersCatalogo();
   const { data: ips = [] } = usePlanningIps();
   const { data: parceiros = [] } = useParceirosLite();
+  const { data: perfisPre = [] } = usePlanningPerfis();
   const upsert = useUpsertCampanha();
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
-  // Mapas auxiliares
+  // Mapas auxiliares (usa label_custom dos perfis pré-selecionados quando existir)
   const ipMap = useMemo(() => Object.fromEntries(ips.map(i => [i.id, i])), [ips]);
-  const parceiroMap = useMemo(() => Object.fromEntries(parceiros.map(p => [p.id, p])), [parceiros]);
+  const parceiroMap = useMemo(() => {
+    const labelOverride = new Map<string, string>();
+    perfisPre.forEach(p => {
+      if (p.label_custom) labelOverride.set(p.parceiro_id, p.label_custom);
+    });
+    return Object.fromEntries(
+      parceiros.map(p => [p.id, { ...p, nome: labelOverride.get(p.id) ?? p.nome }]),
+    );
+  }, [parceiros, perfisPre]);
 
   // Filtro da sidebar de casas
   const filteredBookmakers = useMemo(() => {
