@@ -294,10 +294,14 @@ export function PlanejamentoCalendario() {
     const data: any = active.data.current;
 
     if (data?.type === "bookmaker") {
-      // Abrir dialog para definir valor/IP/perfil
-      setEditing({
-        date: dateKey,
-        initialBookmaker: { id: data.bookmakerId, nome: data.nome, moeda_padrao: data.moeda },
+      // Cria campanha PENDENTE imediatamente (sem abrir modal)
+      await upsert.mutateAsync({
+        scheduled_date: dateKey,
+        bookmaker_catalogo_id: data.bookmakerId,
+        bookmaker_nome: data.nome,
+        currency: data.moeda,
+        deposit_amount: 0,
+        status: "planned",
       });
     } else if (data?.type === "campanha") {
       // Mover campanha existente
