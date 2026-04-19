@@ -298,7 +298,7 @@ export function PlanejamentoCalendario() {
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className="flex h-full gap-3 p-3">
         {/* Sidebar de bookmakers */}
-        <Card className="w-64 p-3 flex flex-col gap-2 shrink-0">
+        <Card className="w-72 p-3 flex flex-col gap-2 shrink-0">
           <div className="flex items-center justify-between">
             <div className="text-sm font-semibold">Casas disponíveis</div>
             <Badge variant="secondary" className="text-[10px] h-4 px-1">{filteredBookmakers.length}</Badge>
