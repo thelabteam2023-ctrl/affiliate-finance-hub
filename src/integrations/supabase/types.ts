@@ -7206,6 +7206,64 @@ export type Database = {
           },
         ]
       }
+      planning_casas: {
+        Row: {
+          bookmaker_catalogo_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          label_custom: string | null
+          notes: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          bookmaker_catalogo_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          label_custom?: string | null
+          notes?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          bookmaker_catalogo_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          label_custom?: string | null
+          notes?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "planning_casas_bookmaker_catalogo_id_fkey"
+            columns: ["bookmaker_catalogo_id"]
+            isOneToOne: false
+            referencedRelation: "bookmakers_catalogo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planning_casas_bookmaker_catalogo_id_fkey"
+            columns: ["bookmaker_catalogo_id"]
+            isOneToOne: false
+            referencedRelation: "v_community_bookmaker_stats"
+            referencedColumns: ["bookmaker_catalogo_id"]
+          },
+          {
+            foreignKeyName: "planning_casas_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       planning_ips: {
         Row: {
           created_at: string
