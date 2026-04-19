@@ -314,16 +314,24 @@ export function PlanejamentoCalendario() {
     const { active, over } = e;
     if (!over) return;
     const overData: any = over.data.current;
+    const data: any = active.data.current;
+
+    // Drop na sidebar (zona "remover") → exclui campanha
+    if (overData?.type === "trash") {
+      if (data?.type === "campanha") {
+        await deleteCamp.mutateAsync(data.campanhaId);
+      }
+      return;
+    }
+
     if (overData?.type !== "day") return;
     const dateKey = overData.dateKey;
-    
+
     // Validação: não permitir datas passadas
     if (isDateInPast(dateKey)) {
       toast.error("Não é possível agendar campanhas em datas passadas.");
       return;
     }
-    
-    const data: any = active.data.current;
 
     if (data?.type === "bookmaker") {
       // Cria campanha PENDENTE imediatamente (sem abrir modal)
@@ -336,10 +344,11 @@ export function PlanejamentoCalendario() {
         status: "planned",
       });
     } else if (data?.type === "campanha") {
-      // Mover campanha existente
+      // Mover campanha existente para outra data
       const camp = campanhas.find(c => c.id === data.campanhaId);
       if (camp && camp.scheduled_date !== dateKey) {
         await upsert.mutateAsync({ ...camp, scheduled_date: dateKey });
+        toast.success("Campanha movida");
       }
     }
   };
