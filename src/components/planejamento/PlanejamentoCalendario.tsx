@@ -32,6 +32,7 @@ import {
   useUpsertCampanha,
   useDeleteCampanha,
 } from "@/hooks/usePlanningData";
+import { useGrupoRegrasValidator } from "@/hooks/useGrupoRegrasValidator";
 import { CampanhaDialog } from "./CampanhaDialog";
 import { RecursosManager } from "./RecursosManager";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
