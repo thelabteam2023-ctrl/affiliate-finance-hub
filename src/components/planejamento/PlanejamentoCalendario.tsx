@@ -100,20 +100,25 @@ function DraggableCampanha({ campanha, onClick, ipLabel, parceiroNome, hasConfli
   return (
     <div
       ref={setNodeRef}
+      {...listeners}
       {...attributes}
       className={cn(
-        "rounded border px-1.5 py-1 text-[10px] leading-tight cursor-pointer transition-colors",
+        "rounded border px-1.5 py-1 text-[10px] leading-tight cursor-grab active:cursor-grabbing transition-colors select-none",
         isPending
           ? "bg-warning/10 hover:bg-warning/20 border-warning/50 shadow-[0_0_0_1px_hsl(var(--warning)/0.3)]"
           : "bg-success/10 hover:bg-success/20 border-success/50 shadow-[0_0_0_1px_hsl(var(--success)/0.3)]",
         hasConflict && "border-destructive/60 bg-destructive/5 shadow-[0_0_0_1px_hsl(var(--destructive)/0.4)]",
         isDragging && "opacity-40"
       )}
-      onClick={onClick}
+      onClick={(e) => {
+        // Só abre o modal se não foi um drag (PointerSensor exige 5px de movimento)
+        e.stopPropagation();
+        onClick();
+      }}
     >
       <div className="flex items-start justify-between gap-1">
         <span className="font-semibold truncate flex-1">{campanha.bookmaker_nome}</span>
-        <span {...listeners} className="cursor-grab active:cursor-grabbing select-none px-0.5" onClick={(e) => e.stopPropagation()}>⋮⋮</span>
+        <span className="opacity-50 select-none px-0.5 text-[8px]">⋮⋮</span>
       </div>
       <div className={cn("font-medium", isPending ? "text-warning" : "text-success")}>
         {Number(campanha.deposit_amount) > 0
