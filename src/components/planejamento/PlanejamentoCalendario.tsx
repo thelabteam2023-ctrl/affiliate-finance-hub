@@ -26,6 +26,9 @@ import { CampanhaDialog } from "./CampanhaDialog";
 import { RecursosManager } from "./RecursosManager";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { BookmakerLogo } from "@/components/ui/bookmaker-logo";
+import { useExchangeRates } from "@/contexts/ExchangeRatesContext";
+
+type DisplayCurrency = "BRL" | "USD";
 
 const MES_NOMES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 const DIAS_SEMANA = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
@@ -87,7 +90,7 @@ function DraggableBookmaker({ id, nome, moeda, status, logoUrl }: {
   );
 }
 
-function DraggableCampanha({ campanha, onClick, ipLabel, parceiroNome, hasConflict, isPending, logoUrl }: {
+function DraggableCampanha({ campanha, onClick, ipLabel, parceiroNome, hasConflict, isPending, logoUrl, displayValue, displayCurrency }: {
   campanha: PlanningCampanha;
   onClick: () => void;
   ipLabel?: string;
@@ -95,6 +98,8 @@ function DraggableCampanha({ campanha, onClick, ipLabel, parceiroNome, hasConfli
   hasConflict: boolean;
   isPending: boolean;
   logoUrl?: string | null;
+  displayValue: number;
+  displayCurrency: DisplayCurrency;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `camp-${campanha.id}`,
