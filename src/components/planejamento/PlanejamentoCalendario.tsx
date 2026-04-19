@@ -315,17 +315,12 @@ export function PlanejamentoCalendario() {
             />
           </div>
 
-          <ToggleGroup
-            type="single"
+          <RegulamentacaoFilter
             value={bmFilter}
-            onValueChange={(v) => v && setBmFilter(v as any)}
+            onChange={setBmFilter}
             size="sm"
-            className="justify-start"
-          >
-            <ToggleGroupItem value="all" className="h-6 text-[10px] px-1.5">Todas</ToggleGroupItem>
-            <ToggleGroupItem value="REGULAMENTADA" className="h-6 text-[10px] px-1.5">Reg.</ToggleGroupItem>
-            <ToggleGroupItem value="NAO_REGULAMENTADA" className="h-6 text-[10px] px-1.5">N/Reg.</ToggleGroupItem>
-          </ToggleGroup>
+            className="self-start"
+          />
 
           <div className="flex-1 overflow-y-auto space-y-1 mt-1 -mx-1 px-1">
             {filteredBookmakers.map(b => (
