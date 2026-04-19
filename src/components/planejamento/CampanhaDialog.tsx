@@ -290,6 +290,28 @@ export function CampanhaDialog({ open, onOpenChange, scheduledDate, initialBookm
               </AlertDescription>
             </Alert>
           )}
+
+          {grupoValidation.violations.length > 0 && (
+            <Alert variant="destructive" className="py-2">
+              <ShieldAlert className="h-4 w-4" />
+              <AlertDescription className="text-xs space-y-0.5">
+                {grupoValidation.violations.map((v, i) => (
+                  <div key={i}>🚫 {v.mensagem}</div>
+                ))}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {grupoValidation.warnings.length > 0 && (
+            <Alert className="py-2 border-warning/50 bg-warning/5">
+              <ShieldCheck className="h-4 w-4 text-warning" />
+              <AlertDescription className="text-xs space-y-0.5 text-warning-foreground">
+                {grupoValidation.warnings.map((v, i) => (
+                  <div key={i}>⚠ {v.mensagem}</div>
+                ))}
+              </AlertDescription>
+            </Alert>
+          )}
         </div>
 
         <DialogFooter className="gap-2">
@@ -299,7 +321,10 @@ export function CampanhaDialog({ open, onOpenChange, scheduledDate, initialBookm
             </Button>
           )}
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={handleSave} disabled={upsert.isPending || !form.bookmaker_nome}>
+          <Button
+            onClick={handleSave}
+            disabled={upsert.isPending || !form.bookmaker_nome || grupoValidation.violations.length > 0}
+          >
             {upsert.isPending ? "Salvando..." : "Salvar"}
           </Button>
         </DialogFooter>
