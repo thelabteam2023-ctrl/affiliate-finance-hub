@@ -3406,6 +3406,229 @@ export type Database = {
           },
         ]
       }
+      distribuicao_plano_celulas: {
+        Row: {
+          bookmaker_catalogo_id: string
+          created_at: string
+          id: string
+          ip_slot: string | null
+          ordem: number
+          parceiro_id: string
+          plano_grupo_id: string
+          plano_id: string
+          travada: boolean
+          workspace_id: string
+        }
+        Insert: {
+          bookmaker_catalogo_id: string
+          created_at?: string
+          id?: string
+          ip_slot?: string | null
+          ordem?: number
+          parceiro_id: string
+          plano_grupo_id: string
+          plano_id: string
+          travada?: boolean
+          workspace_id: string
+        }
+        Update: {
+          bookmaker_catalogo_id?: string
+          created_at?: string
+          id?: string
+          ip_slot?: string | null
+          ordem?: number
+          parceiro_id?: string
+          plano_grupo_id?: string
+          plano_id?: string
+          travada?: boolean
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "distribuicao_plano_celulas_bookmaker_catalogo_id_fkey"
+            columns: ["bookmaker_catalogo_id"]
+            isOneToOne: false
+            referencedRelation: "bookmakers_catalogo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "distribuicao_plano_celulas_bookmaker_catalogo_id_fkey"
+            columns: ["bookmaker_catalogo_id"]
+            isOneToOne: false
+            referencedRelation: "v_community_bookmaker_stats"
+            referencedColumns: ["bookmaker_catalogo_id"]
+          },
+          {
+            foreignKeyName: "distribuicao_plano_celulas_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "parceiros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "distribuicao_plano_celulas_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_parceiro_lucro_total"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "distribuicao_plano_celulas_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_contas_bancarias"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "distribuicao_plano_celulas_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_parceiro_contas"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "distribuicao_plano_celulas_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "distribuicao_plano_celulas_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_wallets_crypto"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "distribuicao_plano_celulas_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_wallet_crypto_balances"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "distribuicao_plano_celulas_plano_grupo_id_fkey"
+            columns: ["plano_grupo_id"]
+            isOneToOne: false
+            referencedRelation: "distribuicao_plano_grupos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "distribuicao_plano_celulas_plano_id_fkey"
+            columns: ["plano_id"]
+            isOneToOne: false
+            referencedRelation: "distribuicao_planos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "distribuicao_plano_celulas_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      distribuicao_plano_grupos: {
+        Row: {
+          casas_por_cpf: number | null
+          created_at: string
+          grupo_id: string
+          id: string
+          ordem: number
+          plano_id: string
+          regra_casa: Database["public"]["Enums"]["distribuicao_regra_casa"]
+          regra_ip: Database["public"]["Enums"]["distribuicao_regra_ip"]
+          workspace_id: string
+        }
+        Insert: {
+          casas_por_cpf?: number | null
+          created_at?: string
+          grupo_id: string
+          id?: string
+          ordem?: number
+          plano_id: string
+          regra_casa?: Database["public"]["Enums"]["distribuicao_regra_casa"]
+          regra_ip?: Database["public"]["Enums"]["distribuicao_regra_ip"]
+          workspace_id: string
+        }
+        Update: {
+          casas_por_cpf?: number | null
+          created_at?: string
+          grupo_id?: string
+          id?: string
+          ordem?: number
+          plano_id?: string
+          regra_casa?: Database["public"]["Enums"]["distribuicao_regra_casa"]
+          regra_ip?: Database["public"]["Enums"]["distribuicao_regra_ip"]
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "distribuicao_plano_grupos_grupo_id_fkey"
+            columns: ["grupo_id"]
+            isOneToOne: false
+            referencedRelation: "bookmaker_grupos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "distribuicao_plano_grupos_plano_id_fkey"
+            columns: ["plano_id"]
+            isOneToOne: false
+            referencedRelation: "distribuicao_planos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "distribuicao_plano_grupos_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      distribuicao_planos: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          descricao: string | null
+          id: string
+          nome: string
+          parceiro_ids: string[]
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          descricao?: string | null
+          id?: string
+          nome: string
+          parceiro_ids?: string[]
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          descricao?: string | null
+          id?: string
+          nome?: string
+          parceiro_ids?: string[]
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "distribuicao_planos_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       entregas: {
         Row: {
           ajuste: number | null
@@ -15541,6 +15764,11 @@ export type Database = {
         | "GLOBAL_RESTRICTED"
         | "WORKSPACE_PRIVATE"
       crypto_transit_status: "PENDING" | "CONFIRMED" | "FAILED" | "REVERSED"
+      distribuicao_regra_casa:
+        | "REPETIR_LIVRE"
+        | "NAO_REPETIR_NO_CPF"
+        | "RODIZIO_ENTRE_CPFS"
+      distribuicao_regra_ip: "IP_COMPARTILHADO_GRUPO" | "IP_UNICO_POR_CASA"
       event_scope: "REAL" | "VIRTUAL"
       grupo_regra_escopo: "PERFIL" | "IP" | "CARTEIRA" | "WORKSPACE"
       grupo_regra_severidade: "BLOQUEIO" | "AVISO"
@@ -15771,6 +15999,12 @@ export const Constants = {
         "WORKSPACE_PRIVATE",
       ],
       crypto_transit_status: ["PENDING", "CONFIRMED", "FAILED", "REVERSED"],
+      distribuicao_regra_casa: [
+        "REPETIR_LIVRE",
+        "NAO_REPETIR_NO_CPF",
+        "RODIZIO_ENTRE_CPFS",
+      ],
+      distribuicao_regra_ip: ["IP_COMPARTILHADO_GRUPO", "IP_UNICO_POR_CASA"],
       event_scope: ["REAL", "VIRTUAL"],
       grupo_regra_escopo: ["PERFIL", "IP", "CARTEIRA", "WORKSPACE"],
       grupo_regra_severidade: ["BLOQUEIO", "AVISO"],
