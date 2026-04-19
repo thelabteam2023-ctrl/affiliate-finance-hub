@@ -341,6 +341,83 @@ export function useDeleteWorkspaceBookmaker() {
   });
 }
 
+// ─────────── Lista pré-selecionada de casas para o Planejamento ───────────
+
+export function usePlanningCasas() {
+  const { workspaceId } = useAuth();
+  return useQuery({
+    queryKey: ["planning-casas", workspaceId],
+    enabled: !!workspaceId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("planning_casas" as any)
+        .select("id, workspace_id, bookmaker_catalogo_id, label_custom, is_active, notes, created_at, updated_at, casa:bookmakers_catalogo(id, nome, logo_url, moeda_padrao, status, visibility)")
+        .eq("workspace_id", workspaceId!)
+        .order("created_at");
+      if (error) throw error;
+      return (data ?? []) as unknown as PlanningCasa[];
+    },
+  });
+}
+
+export function useAddPlanningCasas() {
+  const qc = useQueryClient();
+  const { workspaceId, user } = useAuth();
+  return useMutation({
+    mutationFn: async (bookmakerIds: string[]) => {
+      if (!workspaceId || !user) throw new Error("Sem workspace");
+      if (bookmakerIds.length === 0) return;
+      const rows = bookmakerIds.map(bid => ({
+        workspace_id: workspaceId,
+        bookmaker_catalogo_id: bid,
+        created_by: user.id,
+        is_active: true,
+      }));
+      const { error } = await supabase
+        .from("planning_casas" as any)
+        .upsert(rows, { onConflict: "workspace_id,bookmaker_catalogo_id", ignoreDuplicates: true });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["planning-casas"] });
+      toast.success("Casas adicionadas");
+    },
+    onError: (e: any) => toast.error("Erro ao adicionar casas", { description: e.message }),
+  });
+}
+
+export function useUpdatePlanningCasa() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: { id: string; label_custom?: string | null; is_active?: boolean; notes?: string | null }) => {
+      const update: any = {};
+      if (payload.label_custom !== undefined) update.label_custom = payload.label_custom;
+      if (payload.is_active !== undefined) update.is_active = payload.is_active;
+      if (payload.notes !== undefined) update.notes = payload.notes;
+      const { error } = await supabase.from("planning_casas" as any).update(update).eq("id", payload.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["planning-casas"] });
+    },
+    onError: (e: any) => toast.error("Erro ao atualizar casa", { description: e.message }),
+  });
+}
+
+export function useDeletePlanningCasa() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("planning_casas" as any).delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["planning-casas"] });
+      toast.success("Casa removida da lista");
+    },
+  });
+}
+
 // ──────────────────────── MUTATIONS ────────────────────────
 
 export function useUpsertPlanningIp() {
