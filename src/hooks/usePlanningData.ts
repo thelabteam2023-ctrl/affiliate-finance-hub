@@ -539,7 +539,11 @@ export function useUpsertCampanha() {
         if (error) throw error;
         return payload.id;
       } else {
-        const { data, error } = await supabase.from("planning_campanhas" as any).insert(base).select("id").single();
+        const { data, error } = await supabase
+          .from("planning_campanhas" as any)
+          .insert({ ...base, created_by: user.id })
+          .select("id")
+          .single();
         if (error) throw error;
         return (data as any).id;
       }
