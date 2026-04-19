@@ -220,7 +220,7 @@ function CasasList() {
   const del = useDeleteWorkspaceBookmaker();
 
   const [search, setSearch] = useState("");
-  const [filterStatus, setFilterStatus] = useState<"all" | "REGULAMENTADA" | "NAO_REGULAMENTADA">("all");
+  const [filterStatus, setFilterStatus] = useState<RegFilterValue>("all");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [editing, setEditing] = useState<Partial<BookmakerCatalogo> | null>(null);
 
