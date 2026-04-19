@@ -59,6 +59,19 @@ export interface ParceiroLite {
   cidade: string | null;
 }
 
+export interface PlanningPerfil {
+  id: string;
+  workspace_id: string;
+  parceiro_id: string;
+  label_custom: string | null;
+  is_active: boolean;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  // joined
+  parceiro?: ParceiroLite | null;
+}
+
 export interface BookmakerCatalogo {
   id: string;
   nome: string;
@@ -142,6 +155,82 @@ export function useParceirosLite() {
         .order("nome");
       if (error) throw error;
       return (data ?? []) as ParceiroLite[];
+    },
+  });
+}
+
+// Lista de perfis pré-selecionados pelo workspace para uso no planejamento
+export function usePlanningPerfis() {
+  const { workspaceId } = useAuth();
+  return useQuery({
+    queryKey: ["planning-perfis", workspaceId],
+    enabled: !!workspaceId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("planning_perfis" as any)
+        .select("id, workspace_id, parceiro_id, label_custom, is_active, notes, created_at, updated_at, parceiro:parceiros(id, nome, email, endereco, cidade)")
+        .eq("workspace_id", workspaceId!)
+        .order("created_at");
+      if (error) throw error;
+      return (data ?? []) as unknown as PlanningPerfil[];
+    },
+  });
+}
+
+export function useAddPlanningPerfis() {
+  const qc = useQueryClient();
+  const { workspaceId, user } = useAuth();
+  return useMutation({
+    mutationFn: async (parceiroIds: string[]) => {
+      if (!workspaceId || !user) throw new Error("Sem workspace");
+      if (parceiroIds.length === 0) return;
+      const rows = parceiroIds.map(pid => ({
+        workspace_id: workspaceId,
+        parceiro_id: pid,
+        created_by: user.id,
+        is_active: true,
+      }));
+      const { error } = await supabase
+        .from("planning_perfis" as any)
+        .upsert(rows, { onConflict: "workspace_id,parceiro_id", ignoreDuplicates: true });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["planning-perfis"] });
+      toast.success("Perfis adicionados");
+    },
+    onError: (e: any) => toast.error("Erro ao adicionar perfis", { description: e.message }),
+  });
+}
+
+export function useUpdatePlanningPerfil() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: { id: string; label_custom?: string | null; is_active?: boolean; notes?: string | null }) => {
+      const update: any = {};
+      if (payload.label_custom !== undefined) update.label_custom = payload.label_custom;
+      if (payload.is_active !== undefined) update.is_active = payload.is_active;
+      if (payload.notes !== undefined) update.notes = payload.notes;
+      const { error } = await supabase.from("planning_perfis" as any).update(update).eq("id", payload.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["planning-perfis"] });
+    },
+    onError: (e: any) => toast.error("Erro ao atualizar perfil", { description: e.message }),
+  });
+}
+
+export function useDeletePlanningPerfil() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("planning_perfis" as any).delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["planning-perfis"] });
+      toast.success("Perfil removido da lista");
     },
   });
 }
