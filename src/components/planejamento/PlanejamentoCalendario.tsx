@@ -483,6 +483,7 @@ export function PlanejamentoCalendario() {
                         parceiroNome={c.parceiro_id ? parceiroMap[c.parceiro_id]?.nome : undefined}
                         hasConflict={dayConflicts.has(c.id)}
                         isPending={isCampanhaPending(c)}
+                        logoUrl={getLogoUrl(c.bookmaker_nome)}
                       />
                     ))}
                     {dayTotal > 0 && (
