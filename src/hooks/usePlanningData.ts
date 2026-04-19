@@ -288,7 +288,7 @@ export function useAddPlanningPerfisGenericos() {
         .select("nome_generico, cor")
         .eq("workspace_id", workspaceId);
       const usedNumbers = new Set<number>();
-      const existentesArr = (existentes ?? []) as Array<{ nome_generico: string | null; cor: string | null }>;
+      const existentesArr = ((existentes ?? []) as unknown) as Array<{ nome_generico: string | null; cor: string | null }>;
       const prefixo = (params.prefixo ?? "CPF").trim() || "CPF";
       const re = new RegExp(`^${prefixo.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*#(\\d+)$`, "i");
       existentesArr.forEach((p) => {
