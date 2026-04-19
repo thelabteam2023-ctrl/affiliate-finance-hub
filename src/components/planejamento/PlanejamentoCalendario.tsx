@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 import {
   DndContext, DragEndEvent, DragOverlay, DragStartEvent,
   PointerSensor, useDraggable, useDroppable, useSensor, useSensors,
@@ -26,6 +26,9 @@ import { CampanhaDialog } from "./CampanhaDialog";
 import { RecursosManager } from "./RecursosManager";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { BookmakerLogo } from "@/components/ui/bookmaker-logo";
+import { useExchangeRates } from "@/contexts/ExchangeRatesContext";
+
+type DisplayCurrency = "BRL" | "USD";
 
 const MES_NOMES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 const DIAS_SEMANA = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
@@ -87,7 +90,7 @@ function DraggableBookmaker({ id, nome, moeda, status, logoUrl }: {
   );
 }
 
-function DraggableCampanha({ campanha, onClick, ipLabel, parceiroNome, hasConflict, isPending, logoUrl }: {
+function DraggableCampanha({ campanha, onClick, ipLabel, parceiroNome, hasConflict, isPending, logoUrl, displayValue, displayCurrency }: {
   campanha: PlanningCampanha;
   onClick: () => void;
   ipLabel?: string;
@@ -95,6 +98,8 @@ function DraggableCampanha({ campanha, onClick, ipLabel, parceiroNome, hasConfli
   hasConflict: boolean;
   isPending: boolean;
   logoUrl?: string | null;
+  displayValue: number;
+  displayCurrency: DisplayCurrency;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `camp-${campanha.id}`,
@@ -135,7 +140,7 @@ function DraggableCampanha({ campanha, onClick, ipLabel, parceiroNome, hasConfli
           )}
         >
           {hasValue
-            ? formatMoney(Number(campanha.deposit_amount), campanha.currency)
+            ? formatMoney(displayValue, displayCurrency)
             : "s/v"}
         </span>
       </div>
@@ -235,6 +240,7 @@ export function PlanejamentoCalendario() {
   const [bmSearch, setBmSearch] = useState("");
   const [bmFilter, setBmFilter] = useState<RegFilterValue>("all");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [displayCurrency, setDisplayCurrency] = useState<DisplayCurrency>("BRL");
 
   const { data: campanhas = [] } = usePlanningCampanhas(year, month);
   const { data: casasPlan = [] } = usePlanningCasas();
@@ -244,6 +250,16 @@ export function PlanejamentoCalendario() {
   const upsert = useUpsertCampanha();
   const deleteCamp = useDeleteCampanha();
   const { getLogoUrl } = useBookmakerLogoMap();
+  const { convertToBRL, cotacaoUSD, isUsingFallback } = useExchangeRates();
+
+  // Converte qualquer valor da moeda nativa para a moeda de exibição (BRL ou USD)
+  const convertToDisplay = useCallback((value: number, fromCurrency: string): number => {
+    if (!value) return 0;
+    const valueInBRL = convertToBRL(value, fromCurrency);
+    if (displayCurrency === "BRL") return valueInBRL;
+    // USD: converte BRL → USD
+    return cotacaoUSD > 0 ? valueInBRL / cotacaoUSD : 0;
+  }, [convertToBRL, cotacaoUSD, displayCurrency]);
 
   // Casas ativas pré-selecionadas para o workspace
   const bookmakers = useMemo(
@@ -331,16 +347,17 @@ export function PlanejamentoCalendario() {
     return m;
   }, [campanhas]);
 
-  // Totais
+  // Totais (já convertidos para a moeda de exibição)
   const { totalDia, totalMes } = useMemo(() => {
     const dia = new Map<string, number>();
     let mes = 0;
     campanhas.forEach(c => {
-      dia.set(c.scheduled_date, (dia.get(c.scheduled_date) ?? 0) + Number(c.deposit_amount));
-      mes += Number(c.deposit_amount);
+      const valorConvertido = convertToDisplay(Number(c.deposit_amount), c.currency);
+      dia.set(c.scheduled_date, (dia.get(c.scheduled_date) ?? 0) + valorConvertido);
+      mes += valorConvertido;
     });
     return { totalDia: dia, totalMes: mes };
-  }, [campanhas]);
+  }, [campanhas, convertToDisplay]);
 
   const handleDragStart = (e: DragStartEvent) => setActiveDrag(e.active.data.current);
 
@@ -498,9 +515,30 @@ export function PlanejamentoCalendario() {
               <Button variant="ghost" size="icon" onClick={nextMonth}><ChevronRight className="h-4 w-4" /></Button>
               <Button variant="outline" size="sm" onClick={() => { setYear(today.getFullYear()); setMonth(today.getMonth() + 1); }}>Hoje</Button>
             </div>
-            <Badge variant="secondary" className="text-sm">
-              Total do mês: {formatMoney(totalMes, "BRL")}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center rounded-md border bg-card p-0.5">
+                <Button
+                  variant={displayCurrency === "BRL" ? "default" : "ghost"}
+                  size="sm"
+                  className="h-6 px-2 text-[11px]"
+                  onClick={() => setDisplayCurrency("BRL")}
+                >
+                  BRL
+                </Button>
+                <Button
+                  variant={displayCurrency === "USD" ? "default" : "ghost"}
+                  size="sm"
+                  className="h-6 px-2 text-[11px]"
+                  onClick={() => setDisplayCurrency("USD")}
+                  title={isUsingFallback ? "Usando cotação de fallback" : `1 USD = R$ ${cotacaoUSD.toFixed(4)}`}
+                >
+                  USD {isUsingFallback && "⚠️"}
+                </Button>
+              </div>
+              <Badge variant="secondary" className="text-sm">
+                Total do mês: {formatMoney(totalMes, displayCurrency)}
+              </Badge>
+            </div>
           </div>
 
           <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium text-muted-foreground">
@@ -530,11 +568,13 @@ export function PlanejamentoCalendario() {
                         hasConflict={dayConflicts.has(c.id)}
                         isPending={isCampanhaPending(c)}
                         logoUrl={getLogoUrl(c.bookmaker_nome)}
+                        displayValue={convertToDisplay(Number(c.deposit_amount), c.currency)}
+                        displayCurrency={displayCurrency}
                       />
                     ))}
                     {dayTotal > 0 && (
                       <div className="text-[10px] text-muted-foreground border-t pt-0.5 mt-auto">
-                        Σ {formatMoney(dayTotal, "BRL")}
+                        Σ {formatMoney(dayTotal, displayCurrency)}
                       </div>
                     )}
                   </DayCell>
