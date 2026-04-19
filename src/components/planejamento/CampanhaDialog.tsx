@@ -9,7 +9,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle, Trash2, Wand2 } from "lucide-react";
 import {
   PlanningCampanha,
-  useBookmakersCatalogo,
+  usePlanningCasas,
   useDeleteCampanha,
   useParceirosLite,
   usePlanningIps,
@@ -34,7 +34,11 @@ export function CampanhaDialog({ open, onOpenChange, scheduledDate, initialBookm
   const { data: wallets = [] } = usePlanningWallets();
   const { data: parceirosFull = [] } = useParceirosLite();
   const { data: perfisPre = [] } = usePlanningPerfis();
-  const { data: bookmakers = [] } = useBookmakersCatalogo();
+  const { data: casasPlan = [] } = usePlanningCasas();
+  const bookmakers = useMemo(
+    () => casasPlan.filter(p => p.is_active && p.casa).map(p => p.casa!),
+    [casasPlan]
+  );
   const upsert = useUpsertCampanha();
   const del = useDeleteCampanha();
 

@@ -17,10 +17,11 @@ import {
   usePlanningIps, usePlanningWallets,
   useUpsertPlanningIp, useDeletePlanningIp,
   useUpsertPlanningWallet, useDeletePlanningWallet,
-  useBookmakersCatalogo, useUpsertWorkspaceBookmaker, useDeleteWorkspaceBookmaker,
+  useBookmakersCatalogo, useUpsertWorkspaceBookmaker,
   BookmakerCatalogo,
   useParceirosLite, usePlanningPerfis, useAddPlanningPerfis,
   useUpdatePlanningPerfil, useDeletePlanningPerfil,
+  usePlanningCasas, useAddPlanningCasas, useUpdatePlanningCasa, useDeletePlanningCasa,
 } from "@/hooks/usePlanningData";
 
 interface Props { open: boolean; onOpenChange: (v: boolean) => void; }
@@ -212,51 +213,75 @@ function PerfisList() {
   );
 }
 
-// ───────────────────────── CASAS ─────────────────────────
+// ───────────────────────── CASAS (pré-seleção) ─────────────────────────
 
 function CasasList() {
-  const { data: casas = [] } = useBookmakersCatalogo();
+  const { data: casasSelecionadas = [] } = usePlanningCasas();
+  const { data: catalogo = [] } = useBookmakersCatalogo();
   const upsert = useUpsertWorkspaceBookmaker();
-  const del = useDeleteWorkspaceBookmaker();
+  const addCasas = useAddPlanningCasas();
+  const updCasa = useUpdatePlanningCasa();
+  const delCasa = useDeletePlanningCasa();
 
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<RegFilterValue>("all");
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [editing, setEditing] = useState<Partial<BookmakerCatalogo> | null>(null);
 
+  // Picker (modal de adicionar casas)
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerSearch, setPickerSearch] = useState("");
+  const [pickerFilter, setPickerFilter] = useState<RegFilterValue>("all");
+  const [pickerSelected, setPickerSelected] = useState<Set<string>>(new Set());
+
+  const selectedIdsSet = useMemo(
+    () => new Set(casasSelecionadas.map(p => p.bookmaker_catalogo_id)),
+    [casasSelecionadas]
+  );
+
+  // Lista visível na tela principal — apenas as escolhidas pelo workspace
   const filtered = useMemo(() => {
-    return casas.filter(c => {
+    return casasSelecionadas.filter(p => {
+      const c = p.casa;
+      if (!c) return false;
       if (filterStatus !== "all" && c.status !== filterStatus) return false;
       if (search && !c.nome.toLowerCase().includes(search.toLowerCase())) return false;
       return true;
     });
-  }, [casas, search, filterStatus]);
+  }, [casasSelecionadas, search, filterStatus]);
 
-  const allFilteredSelected = filtered.length > 0 && filtered.every(c => selectedIds.has(c.id));
+  // Catálogo disponível para adicionar (excluindo as já selecionadas)
+  const availableCatalogo = useMemo(() => {
+    return catalogo.filter(c => {
+      if (selectedIdsSet.has(c.id)) return false;
+      if (pickerFilter !== "all" && c.status !== pickerFilter) return false;
+      if (pickerSearch && !c.nome.toLowerCase().includes(pickerSearch.toLowerCase())) return false;
+      return true;
+    });
+  }, [catalogo, selectedIdsSet, pickerSearch, pickerFilter]);
 
-  const toggleAll = () => {
-    if (allFilteredSelected) {
-      setSelectedIds(prev => {
-        const next = new Set(prev);
-        filtered.forEach(c => next.delete(c.id));
-        return next;
-      });
-    } else {
-      setSelectedIds(prev => {
-        const next = new Set(prev);
-        filtered.forEach(c => next.add(c.id));
-        return next;
-      });
-    }
+  const togglePicker = (id: string) => {
+    setPickerSelected(prev => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id); else n.add(id);
+      return n;
+    });
   };
 
-  const toggleOne = (id: string) => {
-    setSelectedIds(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
+  const togglePickerAll = () => {
+    const allMarked = availableCatalogo.length > 0 && availableCatalogo.every(c => pickerSelected.has(c.id));
+    setPickerSelected(prev => {
+      const n = new Set(prev);
+      if (allMarked) availableCatalogo.forEach(c => n.delete(c.id));
+      else availableCatalogo.forEach(c => n.add(c.id));
+      return n;
     });
+  };
+
+  const handleConfirmAdd = async () => {
+    await addCasas.mutateAsync(Array.from(pickerSelected));
+    setPickerSelected(new Set());
+    setPickerOpen(false);
+    setPickerSearch("");
   };
 
   const startNew = () => setEditing({
@@ -266,17 +291,12 @@ function CasasList() {
     logo_url: "",
   });
 
-  const handleBulkDelete = async () => {
-    // Só deleta as do workspace (WORKSPACE_PRIVATE) — RLS protege as demais.
-    const privateOnly = casas.filter(c => selectedIds.has(c.id) && c.visibility === "WORKSPACE_PRIVATE");
-    for (const c of privateOnly) {
-      await del.mutateAsync(c.id);
-    }
-    setSelectedIds(new Set());
-  };
+  const totalReg = casasSelecionadas.filter(p => p.casa?.status === "REGULAMENTADA").length;
+  const totalNaoReg = casasSelecionadas.filter(p => p.casa?.status === "NAO_REGULAMENTADA").length;
 
-  const totalRegulamentadas = casas.filter(c => c.status === "REGULAMENTADA").length;
-  const totalNaoRegulamentadas = casas.filter(c => c.status === "NAO_REGULAMENTADA").length;
+  const pickerTotalReg = catalogo.filter(c => c.status === "REGULAMENTADA" && !selectedIdsSet.has(c.id)).length;
+  const pickerTotalNaoReg = catalogo.filter(c => c.status === "NAO_REGULAMENTADA" && !selectedIdsSet.has(c.id)).length;
+  const pickerTotalAll = catalogo.filter(c => !selectedIdsSet.has(c.id)).length;
 
   return (
     <div className="space-y-3">
@@ -293,23 +313,95 @@ function CasasList() {
         <RegulamentacaoFilter
           value={filterStatus}
           onChange={setFilterStatus}
-          totalAll={casas.length}
-          totalReg={totalRegulamentadas}
-          totalNaoReg={totalNaoRegulamentadas}
+          totalAll={casasSelecionadas.length}
+          totalReg={totalReg}
+          totalNaoReg={totalNaoReg}
         />
-        <Button size="sm" onClick={startNew}><Plus className="h-4 w-4 mr-1" /> Nova casa</Button>
+        <Button size="sm" onClick={() => setPickerOpen(o => !o)}>
+          <Plus className="h-4 w-4 mr-1" /> Adicionar casas
+        </Button>
+        <Button size="sm" variant="outline" onClick={startNew}>
+          <Plus className="h-4 w-4 mr-1" /> Nova casa
+        </Button>
       </div>
 
-      {selectedIds.size > 0 && (
-        <div className="flex items-center justify-between bg-muted/50 rounded-md px-3 py-1.5 text-xs">
-          <span>{selectedIds.size} casa(s) selecionada(s)</span>
-          <div className="flex gap-2">
-            <Button variant="ghost" size="sm" className="h-7" onClick={() => setSelectedIds(new Set())}>Limpar</Button>
-            <Button variant="destructive" size="sm" className="h-7" onClick={handleBulkDelete}>
-              <Trash2 className="h-3.5 w-3.5 mr-1" /> Remover privadas
+      {pickerOpen && (
+        <Card className="p-3 space-y-2">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <p className="text-xs font-medium">Selecione casas para a lista de planejamento</p>
+            <Badge variant="secondary" className="text-[10px]">{pickerSelected.size} marcada(s)</Badge>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="relative flex-1 min-w-[160px]">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                value={pickerSearch}
+                onChange={e => setPickerSearch(e.target.value)}
+                placeholder="Buscar casa..."
+                className="pl-7 h-8 text-sm"
+              />
+            </div>
+            <RegulamentacaoFilter
+              value={pickerFilter}
+              onChange={setPickerFilter}
+              totalAll={pickerTotalAll}
+              totalReg={pickerTotalReg}
+              totalNaoReg={pickerTotalNaoReg}
+            />
+          </div>
+          <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+            <button className="hover:text-foreground" onClick={togglePickerAll}>
+              {availableCatalogo.length > 0 && availableCatalogo.every(c => pickerSelected.has(c.id))
+                ? "Desmarcar visíveis"
+                : "Marcar visíveis"} ({availableCatalogo.length})
+            </button>
+          </div>
+          <div className="max-h-[280px] overflow-y-auto space-y-1 border rounded-md p-1">
+            {availableCatalogo.length === 0 && (
+              <p className="text-xs text-muted-foreground italic text-center py-3">
+                {catalogo.length === 0
+                  ? "Nenhuma casa disponível no catálogo."
+                  : "Todas as casas que combinam com o filtro já foram adicionadas."}
+              </p>
+            )}
+            {availableCatalogo.map(c => {
+              const checked = pickerSelected.has(c.id);
+              return (
+                <label
+                  key={c.id}
+                  className={`flex items-center gap-2 p-1.5 rounded cursor-pointer hover:bg-muted/40 ${checked ? "bg-primary/10" : ""}`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => togglePicker(c.id)}
+                    className="h-3.5 w-3.5"
+                  />
+                  {c.logo_url ? (
+                    <img src={c.logo_url} alt="" className="h-5 w-5 rounded object-contain shrink-0" />
+                  ) : (
+                    <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
+                  )}
+                  <div className="flex-1 min-w-0 flex items-center gap-1.5">
+                    <span className="text-sm truncate">{c.nome}</span>
+                    <span className="text-[10px] text-muted-foreground shrink-0">· {c.moeda_padrao}</span>
+                  </div>
+                  <span className={`text-[9px] font-semibold uppercase shrink-0 ${c.status === "REGULAMENTADA" ? "text-success" : "text-warning"}`}>
+                    {c.status === "REGULAMENTADA" ? "REG" : "N/REG"}
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" size="sm" onClick={() => { setPickerOpen(false); setPickerSelected(new Set()); }}>
+              Cancelar
+            </Button>
+            <Button size="sm" disabled={pickerSelected.size === 0 || addCasas.isPending} onClick={handleConfirmAdd}>
+              <Check className="h-4 w-4 mr-1" /> Adicionar {pickerSelected.size > 0 ? `(${pickerSelected.size})` : ""}
             </Button>
           </div>
-        </div>
+        </Card>
       )}
 
       {editing && (
@@ -382,28 +474,11 @@ function CasasList() {
         </Card>
       )}
 
-      <div className="flex items-center justify-between text-xs text-muted-foreground border-b pb-1">
-        <button className="hover:text-foreground" onClick={toggleAll}>
-          {allFilteredSelected ? "Desmarcar todas" : "Selecionar todas"} ({filtered.length})
-        </button>
-        <span>Apenas casas privadas do workspace podem ser editadas/removidas.</span>
-      </div>
-
       <div className="space-y-1 max-h-[380px] overflow-y-auto">
-        {filtered.map(c => {
-          const isPrivate = c.visibility === "WORKSPACE_PRIVATE";
-          const isSelected = selectedIds.has(c.id);
+        {filtered.map(p => {
+          const c = p.casa!;
           return (
-            <Card
-              key={c.id}
-              className={`p-2 flex items-center gap-2 transition-colors ${isSelected ? "bg-primary/10 border-primary/40" : ""}`}
-            >
-              <input
-                type="checkbox"
-                checked={isSelected}
-                onChange={() => toggleOne(c.id)}
-                className="h-3.5 w-3.5"
-              />
+            <Card key={p.id} className="p-2 flex items-center gap-2">
               {c.logo_url ? (
                 <img src={c.logo_url} alt="" className="h-5 w-5 rounded object-contain shrink-0" />
               ) : (
@@ -412,31 +487,30 @@ function CasasList() {
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium truncate">{c.nome}</div>
                 <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                  <Badge
-                    variant={c.status === "REGULAMENTADA" ? "default" : "outline"}
-                    className="h-4 px-1 text-[9px]"
-                  >
-                    {c.status === "REGULAMENTADA" ? "REG" : "N/REG"}
-                  </Badge>
-                  <span>{c.moeda_padrao}</span>
-                  {!isPrivate && <span className="italic">· global</span>}
+                  <span className={c.status === "REGULAMENTADA" ? "text-success" : "text-warning"}>
+                    {c.status === "REGULAMENTADA" ? "Regulamentada" : "Não regulamentada"}
+                  </span>
+                  <span>· {c.moeda_padrao}</span>
                 </div>
               </div>
-              {isPrivate && (
-                <div className="flex gap-1">
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditing(c)}>
-                    <Pencil className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => del.mutate(c.id)}>
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              )}
+              <div className="flex items-center gap-1 shrink-0">
+                <Switch
+                  checked={p.is_active}
+                  onCheckedChange={(v) => updCasa.mutate({ id: p.id, is_active: v })}
+                />
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => delCasa.mutate(p.id)}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
             </Card>
           );
         })}
         {filtered.length === 0 && (
-          <p className="text-xs text-muted-foreground text-center py-6">Nenhuma casa encontrada.</p>
+          <p className="text-xs text-muted-foreground text-center py-6">
+            {casasSelecionadas.length === 0
+              ? "Nenhuma casa na lista. Clique em \"Adicionar casas\" para escolher do catálogo."
+              : "Nenhuma casa encontrada para o filtro atual."}
+          </p>
         )}
       </div>
     </div>

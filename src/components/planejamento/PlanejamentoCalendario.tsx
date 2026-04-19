@@ -12,7 +12,7 @@ import { RegulamentacaoFilter, RegFilterValue } from "./RegulamentacaoFilter";
 import { cn } from "@/lib/utils";
 import {
   PlanningCampanha,
-  useBookmakersCatalogo,
+  usePlanningCasas,
   usePlanningCampanhas,
   usePlanningIps,
   usePlanningWallets,
@@ -168,11 +168,17 @@ export function PlanejamentoCalendario() {
   const [bmFilter, setBmFilter] = useState<RegFilterValue>("all");
 
   const { data: campanhas = [] } = usePlanningCampanhas(year, month);
-  const { data: bookmakers = [] } = useBookmakersCatalogo();
+  const { data: casasPlan = [] } = usePlanningCasas();
   const { data: ips = [] } = usePlanningIps();
   const { data: parceiros = [] } = useParceirosLite();
   const { data: perfisPre = [] } = usePlanningPerfis();
   const upsert = useUpsertCampanha();
+
+  // Casas ativas pré-selecionadas para o workspace
+  const bookmakers = useMemo(
+    () => casasPlan.filter(p => p.is_active && p.casa).map(p => p.casa!),
+    [casasPlan]
+  );
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
