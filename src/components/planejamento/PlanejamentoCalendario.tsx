@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 import {
   DndContext, DragEndEvent, DragOverlay, DragStartEvent,
   PointerSensor, useDraggable, useDroppable, useSensor, useSensors,
@@ -240,6 +240,7 @@ export function PlanejamentoCalendario() {
   const [bmSearch, setBmSearch] = useState("");
   const [bmFilter, setBmFilter] = useState<RegFilterValue>("all");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [displayCurrency, setDisplayCurrency] = useState<DisplayCurrency>("BRL");
 
   const { data: campanhas = [] } = usePlanningCampanhas(year, month);
   const { data: casasPlan = [] } = usePlanningCasas();
@@ -249,6 +250,16 @@ export function PlanejamentoCalendario() {
   const upsert = useUpsertCampanha();
   const deleteCamp = useDeleteCampanha();
   const { getLogoUrl } = useBookmakerLogoMap();
+  const { convertToBRL, cotacaoUSD, isUsingFallback } = useExchangeRates();
+
+  // Converte qualquer valor da moeda nativa para a moeda de exibição (BRL ou USD)
+  const convertToDisplay = useCallback((value: number, fromCurrency: string): number => {
+    if (!value) return 0;
+    const valueInBRL = convertToBRL(value, fromCurrency);
+    if (displayCurrency === "BRL") return valueInBRL;
+    // USD: converte BRL → USD
+    return cotacaoUSD > 0 ? valueInBRL / cotacaoUSD : 0;
+  }, [convertToBRL, cotacaoUSD, displayCurrency]);
 
   // Casas ativas pré-selecionadas para o workspace
   const bookmakers = useMemo(
