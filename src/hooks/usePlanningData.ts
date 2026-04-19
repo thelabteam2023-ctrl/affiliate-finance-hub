@@ -62,14 +62,41 @@ export interface ParceiroLite {
 export interface PlanningPerfil {
   id: string;
   workspace_id: string;
-  parceiro_id: string;
+  parceiro_id: string | null;
   label_custom: string | null;
+  nome_generico: string | null;
+  cor: string;
   is_active: boolean;
   notes: string | null;
   created_at: string;
   updated_at: string;
   // joined
   parceiro?: ParceiroLite | null;
+}
+
+/** Paleta padrão para perfis genéricos — cores HSL que funcionam em dark mode */
+export const PERFIL_CORES: string[] = [
+  "#6366f1", // indigo
+  "#ec4899", // pink
+  "#f59e0b", // amber
+  "#10b981", // emerald
+  "#06b6d4", // cyan
+  "#8b5cf6", // violet
+  "#ef4444", // red
+  "#14b8a6", // teal
+  "#f97316", // orange
+  "#84cc16", // lime
+  "#3b82f6", // blue
+  "#a855f7", // purple
+];
+
+export function pickPerfilCor(index: number): string {
+  return PERFIL_CORES[index % PERFIL_CORES.length];
+}
+
+/** Nome de exibição de um perfil — prioriza label_custom > parceiro.nome > nome_generico */
+export function perfilDisplayName(p: Pick<PlanningPerfil, "label_custom" | "nome_generico"> & { parceiro?: { nome: string } | null }): string {
+  return p.label_custom?.trim() || p.parceiro?.nome || p.nome_generico || "—";
 }
 
 export interface BookmakerCatalogo {
@@ -182,7 +209,7 @@ export function usePlanningPerfis() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("planning_perfis" as any)
-        .select("id, workspace_id, parceiro_id, label_custom, is_active, notes, created_at, updated_at, parceiro:parceiros(id, nome, email, endereco, cidade)")
+        .select("id, workspace_id, parceiro_id, label_custom, nome_generico, cor, is_active, notes, created_at, updated_at, parceiro:parceiros(id, nome, email, endereco, cidade)")
         .eq("workspace_id", workspaceId!)
         .order("created_at");
       if (error) throw error;
@@ -220,11 +247,22 @@ export function useAddPlanningPerfis() {
 export function useUpdatePlanningPerfil() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (payload: { id: string; label_custom?: string | null; is_active?: boolean; notes?: string | null }) => {
+    mutationFn: async (payload: {
+      id: string;
+      label_custom?: string | null;
+      is_active?: boolean;
+      notes?: string | null;
+      cor?: string;
+      nome_generico?: string | null;
+      parceiro_id?: string | null;
+    }) => {
       const update: any = {};
       if (payload.label_custom !== undefined) update.label_custom = payload.label_custom;
       if (payload.is_active !== undefined) update.is_active = payload.is_active;
       if (payload.notes !== undefined) update.notes = payload.notes;
+      if (payload.cor !== undefined) update.cor = payload.cor;
+      if (payload.nome_generico !== undefined) update.nome_generico = payload.nome_generico;
+      if (payload.parceiro_id !== undefined) update.parceiro_id = payload.parceiro_id;
       const { error } = await supabase.from("planning_perfis" as any).update(update).eq("id", payload.id);
       if (error) throw error;
     },
@@ -232,6 +270,56 @@ export function useUpdatePlanningPerfil() {
       qc.invalidateQueries({ queryKey: ["planning-perfis"] });
     },
     onError: (e: any) => toast.error("Erro ao atualizar perfil", { description: e.message }),
+  });
+}
+
+/** Cria N perfis genéricos (sem parceiro real) com nomes "CPF #N" e cores rotativas */
+export function useAddPlanningPerfisGenericos() {
+  const qc = useQueryClient();
+  const { workspaceId, user } = useAuth();
+  return useMutation({
+    mutationFn: async (params: { quantidade: number; prefixo?: string }) => {
+      if (!workspaceId || !user) throw new Error("Sem workspace");
+      const qtd = Math.max(1, Math.min(50, Math.floor(params.quantidade)));
+
+      // Descobre o próximo índice numérico para evitar duplicar nomes
+      const { data: existentes } = await supabase
+        .from("planning_perfis" as any)
+        .select("nome_generico, cor")
+        .eq("workspace_id", workspaceId);
+      const usedNumbers = new Set<number>();
+      const existentesArr = (existentes ?? []) as Array<{ nome_generico: string | null; cor: string | null }>;
+      const prefixo = (params.prefixo ?? "CPF").trim() || "CPF";
+      const re = new RegExp(`^${prefixo.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*#(\\d+)$`, "i");
+      existentesArr.forEach((p) => {
+        const m = p.nome_generico?.match(re);
+        if (m) usedNumbers.add(Number(m[1]));
+      });
+
+      const rows: any[] = [];
+      const totalExistentes = existentesArr.length;
+      let cursor = 1;
+      for (let i = 0; i < qtd; i++) {
+        while (usedNumbers.has(cursor)) cursor++;
+        rows.push({
+          workspace_id: workspaceId,
+          parceiro_id: null,
+          nome_generico: `${prefixo} #${cursor}`,
+          cor: pickPerfilCor(totalExistentes + i),
+          created_by: user.id,
+          is_active: true,
+        });
+        usedNumbers.add(cursor);
+      }
+
+      const { error } = await supabase.from("planning_perfis" as any).insert(rows);
+      if (error) throw error;
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ["planning-perfis"] });
+      toast.success(`${vars.quantidade} perfil(is) criado(s)`);
+    },
+    onError: (e: any) => toast.error("Erro ao criar perfis", { description: e.message }),
   });
 }
 
