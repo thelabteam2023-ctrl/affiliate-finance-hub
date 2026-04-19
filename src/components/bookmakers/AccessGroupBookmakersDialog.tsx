@@ -17,12 +17,14 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Search, FolderOpen, Trash2, Plus, Loader2, Lock, Globe, Users } from "lucide-react";
+import { RegulamentacaoFilter, type RegFilterValue } from "@/components/planejamento/RegulamentacaoFilter";
 
 interface BookmakerCatalogo {
   id: string;
   nome: string;
   logo_url: string | null;
   visibility: string | null;
+  status: string | null;
 }
 
 interface Props {
@@ -48,13 +50,15 @@ export default function AccessGroupBookmakersDialog({ open, onOpenChange, group 
   const [saving, setSaving] = useState(false);
   const [convertPrivate, setConvertPrivate] = useState(true);
   const [activeTab, setActiveTab] = useState<string>("current");
+  const [regFilterCurrent, setRegFilterCurrent] = useState<RegFilterValue>("all");
+  const [regFilterAdd, setRegFilterAdd] = useState<RegFilterValue>("all");
 
   const loadData = async () => {
     try {
       setLoading(true);
       const [groupData, allData] = await Promise.all([
         fetchGroupBookmakers(group.id),
-        supabase.from("bookmakers_catalogo").select("id, nome, logo_url, visibility").order("nome"),
+        supabase.from("bookmakers_catalogo").select("id, nome, logo_url, visibility, status").order("nome"),
       ]);
       setGroupBookmakers(groupData);
       setAllBookmakers(allData.data || []);

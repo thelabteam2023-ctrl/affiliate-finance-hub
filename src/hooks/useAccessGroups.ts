@@ -41,6 +41,7 @@ export interface GroupBookmaker {
     nome: string;
     logo_url: string | null;
     visibility: string | null;
+    status?: string | null;
   };
 }
 
