@@ -24,6 +24,8 @@ import {
 } from "@/hooks/usePlanningData";
 import { CampanhaDialog } from "./CampanhaDialog";
 import { RecursosManager } from "./RecursosManager";
+import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
+import { BookmakerLogo } from "@/components/ui/bookmaker-logo";
 
 const MES_NOMES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 const DIAS_SEMANA = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
@@ -85,18 +87,20 @@ function DraggableBookmaker({ id, nome, moeda, status, logoUrl }: {
   );
 }
 
-function DraggableCampanha({ campanha, onClick, ipLabel, parceiroNome, hasConflict, isPending }: {
+function DraggableCampanha({ campanha, onClick, ipLabel, parceiroNome, hasConflict, isPending, logoUrl }: {
   campanha: PlanningCampanha;
   onClick: () => void;
   ipLabel?: string;
   parceiroNome?: string;
   hasConflict: boolean;
   isPending: boolean;
+  logoUrl?: string | null;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `camp-${campanha.id}`,
     data: { type: "campanha", campanhaId: campanha.id },
   });
+  const hasValue = Number(campanha.deposit_amount) > 0;
   return (
     <div
       ref={setNodeRef}
@@ -111,28 +115,38 @@ function DraggableCampanha({ campanha, onClick, ipLabel, parceiroNome, hasConfli
         isDragging && "opacity-40"
       )}
       onClick={(e) => {
-        // Só abre o modal se não foi um drag (PointerSensor exige 5px de movimento)
         e.stopPropagation();
         onClick();
       }}
     >
-      <div className="flex items-start justify-between gap-1">
-        <span className="font-semibold truncate flex-1">{campanha.bookmaker_nome}</span>
-        <span className="opacity-50 select-none px-0.5 text-[8px]">⋮⋮</span>
-      </div>
-      <div className={cn("font-medium", isPending ? "text-warning" : "text-success")}>
-        {Number(campanha.deposit_amount) > 0
-          ? formatMoney(Number(campanha.deposit_amount), campanha.currency)
-          : <span className="italic opacity-70">sem valor</span>}
+      <div className="flex items-center gap-1.5">
+        <BookmakerLogo
+          logoUrl={logoUrl}
+          alt={campanha.bookmaker_nome}
+          size="h-5 w-5 shrink-0"
+          iconSize="h-3 w-3"
+        />
+        <span className="font-semibold truncate flex-1 min-w-0">{campanha.bookmaker_nome}</span>
+        <span
+          className={cn(
+            "font-medium shrink-0 tabular-nums",
+            isPending ? "text-warning" : "text-success",
+            !hasValue && "italic opacity-70"
+          )}
+        >
+          {hasValue
+            ? formatMoney(Number(campanha.deposit_amount), campanha.currency)
+            : "s/v"}
+        </span>
       </div>
       {(ipLabel || parceiroNome) && (
-        <div className="text-muted-foreground truncate flex items-center gap-1">
+        <div className="text-muted-foreground truncate flex items-center gap-1 mt-0.5 pl-6">
           {parceiroNome && <><User className="h-2.5 w-2.5" />{parceiroNome.split(" ")[0]}</>}
           {ipLabel && <><MapPin className="h-2.5 w-2.5" />{ipLabel}</>}
         </div>
       )}
       {hasConflict && (
-        <div className="text-destructive text-[9px] flex items-center gap-0.5">
+        <div className="text-destructive text-[9px] flex items-center gap-0.5 pl-6">
           <AlertTriangle className="h-2.5 w-2.5" /> conflito
         </div>
       )}
@@ -228,6 +242,7 @@ export function PlanejamentoCalendario() {
   const { data: perfisPre = [] } = usePlanningPerfis();
   const upsert = useUpsertCampanha();
   const deleteCamp = useDeleteCampanha();
+  const { getLogoUrl } = useBookmakerLogoMap();
 
   // Casas ativas pré-selecionadas para o workspace
   const bookmakers = useMemo(
@@ -468,6 +483,7 @@ export function PlanejamentoCalendario() {
                         parceiroNome={c.parceiro_id ? parceiroMap[c.parceiro_id]?.nome : undefined}
                         hasConflict={dayConflicts.has(c.id)}
                         isPending={isCampanhaPending(c)}
+                        logoUrl={getLogoUrl(c.bookmaker_nome)}
                       />
                     ))}
                     {dayTotal > 0 && (
