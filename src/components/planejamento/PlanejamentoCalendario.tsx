@@ -409,13 +409,19 @@ export function PlanejamentoCalendario() {
         status: "planned",
       });
     } else if (data?.type === "campanha") {
-      // Mover campanha existente para outra data
+      // Mover campanha existente para outra data → pede confirmação
       const camp = campanhas.find(c => c.id === data.campanhaId);
       if (camp && camp.scheduled_date !== dateKey) {
-        await upsert.mutateAsync({ ...camp, scheduled_date: dateKey });
-        toast.success("Campanha movida");
+        setPendingMove({ campanha: camp, fromDate: camp.scheduled_date, toDate: dateKey });
       }
     }
+  };
+
+  const confirmMove = async () => {
+    if (!pendingMove) return;
+    await upsert.mutateAsync({ ...pendingMove.campanha, scheduled_date: pendingMove.toDate });
+    toast.success("Campanha movida");
+    setPendingMove(null);
   };
 
   const prevMonth = () => { if (month === 1) { setMonth(12); setYear(year - 1); } else setMonth(month - 1); };
