@@ -309,6 +309,13 @@ export function PlanejamentoCalendario() {
     const overData: any = over.data.current;
     if (overData?.type !== "day") return;
     const dateKey = overData.dateKey;
+    
+    // Validação: não permitir datas passadas
+    if (isDateInPast(dateKey)) {
+      toast.error("Não é possível agendar campanhas em datas passadas.");
+      return;
+    }
+    
     const data: any = active.data.current;
 
     if (data?.type === "bookmaker") {
