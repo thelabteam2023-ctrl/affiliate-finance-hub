@@ -254,6 +254,7 @@ export function PlanejamentoCalendario() {
     fromDate: string;
     toDate: string;
   } | null>(null);
+  const [moveConfirmed, setMoveConfirmed] = useState(false);
 
   const { data: campanhas = [] } = usePlanningCampanhas(year, month);
   const { data: casasPlan = [] } = usePlanningCasas();
@@ -412,7 +413,13 @@ export function PlanejamentoCalendario() {
       // Mover campanha existente para outra data → pede confirmação
       const camp = campanhas.find(c => c.id === data.campanhaId);
       if (camp && camp.scheduled_date !== dateKey) {
-        setPendingMove({ campanha: camp, fromDate: camp.scheduled_date, toDate: dateKey });
+        if (moveConfirmed) {
+          // Já confirmou uma vez nesta sessão → move direto
+          await upsert.mutateAsync({ ...camp, scheduled_date: dateKey });
+          toast.success("Campanha movida");
+        } else {
+          setPendingMove({ campanha: camp, fromDate: camp.scheduled_date, toDate: dateKey });
+        }
       }
     }
   };
@@ -421,6 +428,7 @@ export function PlanejamentoCalendario() {
     if (!pendingMove) return;
     await upsert.mutateAsync({ ...pendingMove.campanha, scheduled_date: pendingMove.toDate });
     toast.success("Campanha movida");
+    setMoveConfirmed(true);
     setPendingMove(null);
   };
 
