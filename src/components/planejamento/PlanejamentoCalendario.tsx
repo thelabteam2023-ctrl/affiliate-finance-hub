@@ -68,12 +68,6 @@ function DraggableBookmaker({ id, nome, moeda, status, logoUrl }: {
         <div className="font-medium truncate">{nome}</div>
         <div className="text-[10px] text-muted-foreground flex items-center gap-1">
           <span>{moeda}</span>
-          <span className={cn(
-            "px-1 rounded text-[9px]",
-            status === "REGULAMENTADA" ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"
-          )}>
-            {status === "REGULAMENTADA" ? "REG" : "N/REG"}
-          </span>
         </div>
       </div>
     </div>
