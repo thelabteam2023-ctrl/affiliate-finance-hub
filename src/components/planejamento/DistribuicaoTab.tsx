@@ -277,25 +277,33 @@ export default function DistribuicaoTab() {
         </div>
         <ScrollArea className="h-32 border rounded-md p-2">
           <div className="grid grid-cols-2 md:grid-cols-3 gap-1.5">
-            {perfis.map((p) => (
-              <label
-                key={p.id}
-                className="flex items-center gap-2 cursor-pointer text-sm hover:bg-muted/50 px-1.5 py-1 rounded"
-              >
-                <Checkbox
-                  checked={selectedPerfilIds.includes(p.id)}
-                  onCheckedChange={() => togglePerfil(p.id)}
-                />
-                <span className="truncate text-xs">
-                  {p.label_custom || p.parceiro?.nome || "—"}
-                </span>
-                {!p.is_active && (
-                  <Badge variant="outline" className="text-[9px] h-4">
-                    off
-                  </Badge>
-                )}
-              </label>
-            ))}
+            {perfis.map((p) => {
+              const nome = p.label_custom?.trim() || p.parceiro?.nome || p.nome_generico || "—";
+              const isGenerico = !p.parceiro_id;
+              return (
+                <label
+                  key={p.id}
+                  className="flex items-center gap-2 cursor-pointer text-sm hover:bg-muted/50 px-1.5 py-1 rounded"
+                >
+                  <Checkbox
+                    checked={selectedPerfilIds.includes(p.id)}
+                    onCheckedChange={() => togglePerfil(p.id)}
+                  />
+                  <span
+                    className="h-2.5 w-2.5 rounded-full shrink-0"
+                    style={{ backgroundColor: p.cor }}
+                    title={isGenerico ? "Perfil genérico" : "Perfil real"}
+                  />
+                  <span className="truncate text-xs">{nome}</span>
+                  {isGenerico && (
+                    <Badge variant="outline" className="text-[9px] h-4 shrink-0">gen</Badge>
+                  )}
+                  {!p.is_active && (
+                    <Badge variant="outline" className="text-[9px] h-4">off</Badge>
+                  )}
+                </label>
+              );
+            })}
             {perfis.length === 0 && (
               <p className="text-xs text-muted-foreground col-span-full text-center py-4">
                 Nenhum perfil pré-selecionado. Adicione perfis na aba "Perfis".
