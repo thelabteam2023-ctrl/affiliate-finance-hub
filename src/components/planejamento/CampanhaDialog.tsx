@@ -13,6 +13,7 @@ import {
   useDeleteCampanha,
   useParceirosLite,
   usePlanningIps,
+  usePlanningPerfis,
   usePlanningWallets,
   useUpsertCampanha,
 } from "@/hooks/usePlanningData";
@@ -31,10 +32,35 @@ const MOEDAS = ["BRL", "USD", "EUR", "GBP", "MXN", "USDT"];
 export function CampanhaDialog({ open, onOpenChange, scheduledDate, initialBookmaker, campanha, campanhasDoMes }: Props) {
   const { data: ips = [] } = usePlanningIps();
   const { data: wallets = [] } = usePlanningWallets();
-  const { data: parceiros = [] } = useParceirosLite();
+  const { data: parceirosFull = [] } = useParceirosLite();
+  const { data: perfisPre = [] } = usePlanningPerfis();
   const { data: bookmakers = [] } = useBookmakersCatalogo();
   const upsert = useUpsertCampanha();
   const del = useDeleteCampanha();
+
+  // Lista efetiva de perfis para o dropdown:
+  // - Se existir pré-seleção, usa apenas perfis ativos.
+  // - Senão, cai para todos os parceiros ativos do workspace (fallback).
+  const parceiros = useMemo(() => {
+    if (perfisPre.length === 0) return parceirosFull;
+    const map = new Map<string, { id: string; nome: string; email: string | null; endereco: string | null }>();
+    perfisPre
+      .filter(p => p.is_active && p.parceiro)
+      .forEach(p => {
+        map.set(p.parceiro!.id, {
+          id: p.parceiro!.id,
+          nome: p.label_custom || p.parceiro!.nome,
+          email: p.parceiro!.email,
+          endereco: p.parceiro!.endereco,
+        });
+      });
+    // Se a campanha sendo editada usa um parceiro fora da lista, garante que ele apareça
+    if (campanha?.parceiro_id && !map.has(campanha.parceiro_id)) {
+      const fallback = parceirosFull.find(p => p.id === campanha.parceiro_id);
+      if (fallback) map.set(fallback.id, fallback);
+    }
+    return Array.from(map.values()).sort((a, b) => a.nome.localeCompare(b.nome));
+  }, [perfisPre, parceirosFull, campanha?.parceiro_id]);
 
   const [form, setForm] = useState({
     bookmaker_catalogo_id: "" as string | "",
