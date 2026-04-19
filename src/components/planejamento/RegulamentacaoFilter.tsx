@@ -68,30 +68,28 @@ export function RegulamentacaoFilter({
           onClick={() => onChange(value === "REGULAMENTADA" ? "all" : "REGULAMENTADA")}
           className={cn(
             h, text,
-            "px-2 rounded font-medium tracking-wide transition-colors uppercase",
+            "px-1.5 rounded font-medium tracking-tight transition-colors uppercase whitespace-nowrap",
             isVertical && "flex-1 text-center",
             value === "REGULAMENTADA"
               ? "bg-success/80 text-success-foreground"
               : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
           )}
         >
-          {isVertical ? "REG" : "Regulamentada"}
-          {typeof totalReg === "number" ? ` (${totalReg})` : ""}
+          Regulamentada{typeof totalReg === "number" ? ` (${totalReg})` : ""}
         </button>
         <button
           type="button"
           onClick={() => onChange(value === "NAO_REGULAMENTADA" ? "all" : "NAO_REGULAMENTADA")}
           className={cn(
             h, text,
-            "px-2 rounded font-medium tracking-wide transition-colors uppercase",
+            "px-1.5 rounded font-medium tracking-tight transition-colors uppercase whitespace-nowrap",
             isVertical && "flex-1 text-center",
             value === "NAO_REGULAMENTADA"
               ? "bg-warning/80 text-warning-foreground"
               : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
           )}
         >
-          {isVertical ? "N/REG" : "Não regulamentada"}
-          {typeof totalNaoReg === "number" ? ` (${totalNaoReg})` : ""}
+          Não regulamentada{typeof totalNaoReg === "number" ? ` (${totalNaoReg})` : ""}
         </button>
       </div>
     </div>
