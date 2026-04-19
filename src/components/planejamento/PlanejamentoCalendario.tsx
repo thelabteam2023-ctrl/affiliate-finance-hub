@@ -249,6 +249,11 @@ export function PlanejamentoCalendario() {
   const [bmFilter, setBmFilter] = useState<RegFilterValue>("all");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [displayCurrency, setDisplayCurrency] = useState<DisplayCurrency>("BRL");
+  const [pendingMove, setPendingMove] = useState<{
+    campanha: PlanningCampanha;
+    fromDate: string;
+    toDate: string;
+  } | null>(null);
 
   const { data: campanhas = [] } = usePlanningCampanhas(year, month);
   const { data: casasPlan = [] } = usePlanningCasas();
