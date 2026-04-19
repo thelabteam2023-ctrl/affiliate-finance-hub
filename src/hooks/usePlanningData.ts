@@ -520,9 +520,8 @@ export function useUpsertCampanha() {
   return useMutation({
     mutationFn: async (payload: Partial<PlanningCampanha> & { id?: string }) => {
       if (!workspaceId || !user) throw new Error("Sem workspace");
-      const base = {
+      const base: any = {
         workspace_id: workspaceId,
-        created_by: user.id,
         scheduled_date: payload.scheduled_date!,
         bookmaker_catalogo_id: payload.bookmaker_catalogo_id ?? null,
         bookmaker_nome: payload.bookmaker_nome ?? "",
