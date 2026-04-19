@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { ChevronLeft, ChevronRight, Settings2, Plus, AlertTriangle, MapPin, User, Search, Building2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Settings2, Plus, AlertTriangle, MapPin, User, Search, Building2, Trash2 } from "lucide-react";
 import { RegulamentacaoFilter, RegFilterValue } from "./RegulamentacaoFilter";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -20,6 +20,7 @@ import {
   useParceirosLite,
   usePlanningPerfis,
   useUpsertCampanha,
+  useDeleteCampanha,
 } from "@/hooks/usePlanningData";
 import { CampanhaDialog } from "./CampanhaDialog";
 import { RecursosManager } from "./RecursosManager";
@@ -99,20 +100,25 @@ function DraggableCampanha({ campanha, onClick, ipLabel, parceiroNome, hasConfli
   return (
     <div
       ref={setNodeRef}
+      {...listeners}
       {...attributes}
       className={cn(
-        "rounded border px-1.5 py-1 text-[10px] leading-tight cursor-pointer transition-colors",
+        "rounded border px-1.5 py-1 text-[10px] leading-tight cursor-grab active:cursor-grabbing transition-colors select-none",
         isPending
           ? "bg-warning/10 hover:bg-warning/20 border-warning/50 shadow-[0_0_0_1px_hsl(var(--warning)/0.3)]"
           : "bg-success/10 hover:bg-success/20 border-success/50 shadow-[0_0_0_1px_hsl(var(--success)/0.3)]",
         hasConflict && "border-destructive/60 bg-destructive/5 shadow-[0_0_0_1px_hsl(var(--destructive)/0.4)]",
         isDragging && "opacity-40"
       )}
-      onClick={onClick}
+      onClick={(e) => {
+        // Só abre o modal se não foi um drag (PointerSensor exige 5px de movimento)
+        e.stopPropagation();
+        onClick();
+      }}
     >
       <div className="flex items-start justify-between gap-1">
         <span className="font-semibold truncate flex-1">{campanha.bookmaker_nome}</span>
-        <span {...listeners} className="cursor-grab active:cursor-grabbing select-none px-0.5" onClick={(e) => e.stopPropagation()}>⋮⋮</span>
+        <span className="opacity-50 select-none px-0.5 text-[8px]">⋮⋮</span>
       </div>
       <div className={cn("font-medium", isPending ? "text-warning" : "text-success")}>
         {Number(campanha.deposit_amount) > 0
@@ -140,6 +146,25 @@ function isCampanhaPending(c: PlanningCampanha): boolean {
     !c.ip_id ||
     !c.wallet_id ||
     Number(c.deposit_amount) <= 0
+  );
+}
+
+function TrashDropZone({ active }: { active: boolean }) {
+  const { setNodeRef, isOver } = useDroppable({ id: "trash-zone", data: { type: "trash" } });
+  if (!active) return null;
+  return (
+    <div
+      ref={setNodeRef}
+      className={cn(
+        "rounded-md border-2 border-dashed p-3 flex items-center justify-center gap-2 text-xs font-medium transition-all",
+        isOver
+          ? "border-destructive bg-destructive/10 text-destructive scale-105"
+          : "border-muted-foreground/40 text-muted-foreground bg-muted/20"
+      )}
+    >
+      <Trash2 className="h-4 w-4" />
+      {isOver ? "Solte para remover" : "Arraste aqui para remover"}
+    </div>
   );
 }
 
@@ -202,6 +227,7 @@ export function PlanejamentoCalendario() {
   const { data: parceiros = [] } = useParceirosLite();
   const { data: perfisPre = [] } = usePlanningPerfis();
   const upsert = useUpsertCampanha();
+  const deleteCamp = useDeleteCampanha();
 
   // Casas ativas pré-selecionadas para o workspace
   const bookmakers = useMemo(
@@ -307,16 +333,24 @@ export function PlanejamentoCalendario() {
     const { active, over } = e;
     if (!over) return;
     const overData: any = over.data.current;
+    const data: any = active.data.current;
+
+    // Drop na sidebar (zona "remover") → exclui campanha
+    if (overData?.type === "trash") {
+      if (data?.type === "campanha") {
+        await deleteCamp.mutateAsync(data.campanhaId);
+      }
+      return;
+    }
+
     if (overData?.type !== "day") return;
     const dateKey = overData.dateKey;
-    
+
     // Validação: não permitir datas passadas
     if (isDateInPast(dateKey)) {
       toast.error("Não é possível agendar campanhas em datas passadas.");
       return;
     }
-    
-    const data: any = active.data.current;
 
     if (data?.type === "bookmaker") {
       // Cria campanha PENDENTE imediatamente (sem abrir modal)
@@ -329,10 +363,11 @@ export function PlanejamentoCalendario() {
         status: "planned",
       });
     } else if (data?.type === "campanha") {
-      // Mover campanha existente
+      // Mover campanha existente para outra data
       const camp = campanhas.find(c => c.id === data.campanhaId);
       if (camp && camp.scheduled_date !== dateKey) {
         await upsert.mutateAsync({ ...camp, scheduled_date: dateKey });
+        toast.success("Campanha movida");
       }
     }
   };
@@ -367,6 +402,9 @@ export function PlanejamentoCalendario() {
             size="sm"
             orientation="vertical"
           />
+
+          <TrashDropZone active={activeDrag?.type === "campanha"} />
+
 
           <div className="flex-1 overflow-y-auto space-y-1 mt-1 -mx-1 px-1">
             {filteredBookmakers.map(b => (
