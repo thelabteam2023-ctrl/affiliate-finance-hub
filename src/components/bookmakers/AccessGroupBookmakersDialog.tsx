@@ -316,6 +316,8 @@ export default function AccessGroupBookmakersDialog({ open, onOpenChange, group 
               totalNaoReg={availableTotals.naoReg}
               size="sm"
             />
+
+            {hasPrivateSelected && (
               <div className="flex items-center justify-between p-3 bg-amber-500/10 border border-amber-500/20 rounded-md">
                 <div>
                   <div className="text-sm font-medium">Converter privadas para restritas?</div>
