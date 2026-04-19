@@ -9,7 +9,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle, Trash2, Wand2 } from "lucide-react";
 import {
   PlanningCampanha,
-  useBookmakersCatalogo,
+  usePlanningCasas,
   useDeleteCampanha,
   useParceirosLite,
   usePlanningIps,
