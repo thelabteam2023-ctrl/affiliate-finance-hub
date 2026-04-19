@@ -330,25 +330,86 @@ function IpsList() {
   const upsert = useUpsertPlanningIp();
   const del = useDeletePlanningIp();
   const [editing, setEditing] = useState<Partial<PlanningIp> | null>(null);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkText, setBulkText] = useState("");
+  const [bulkBusy, setBulkBusy] = useState(false);
 
-  const startNew = () => setEditing({ label: "", ip_address: "", proxy_type: "", location_country: "", location_city: "", provider: "", is_active: true });
+  const startNew = () => setEditing({ label: "", ip_address: "", location_city: "", is_active: true });
+
+  const parseBulk = (raw: string): Array<{ label: string; ip_address: string; location_city: string }> => {
+    return raw
+      .split("\n")
+      .map(l => l.trim())
+      .filter(Boolean)
+      .map(line => {
+        const parts = line.split(/[\t,;|]/).map(p => p.trim());
+        const [label = "", ip_address = "", location_city = ""] = parts;
+        return { label, ip_address, location_city };
+      })
+      .filter(r => r.label && r.ip_address);
+  };
+
+  const bulkPreview = useMemo(() => parseBulk(bulkText), [bulkText]);
+
+  const handleBulkSubmit = async () => {
+    if (bulkPreview.length === 0) return;
+    setBulkBusy(true);
+    try {
+      for (const row of bulkPreview) {
+        await upsert.mutateAsync({ ...row, is_active: true });
+      }
+      setBulkText("");
+      setBulkOpen(false);
+    } finally {
+      setBulkBusy(false);
+    }
+  };
 
   return (
     <div className="space-y-3">
       <div className="flex justify-between items-center">
         <p className="text-sm text-muted-foreground">{ips.length} IP(s) cadastrado(s)</p>
-        <Button size="sm" onClick={startNew}><Plus className="h-4 w-4 mr-1" /> Novo IP</Button>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={() => setBulkOpen(o => !o)}>
+            <Plus className="h-4 w-4 mr-1" /> Em massa
+          </Button>
+          <Button size="sm" onClick={startNew}><Plus className="h-4 w-4 mr-1" /> Novo IP</Button>
+        </div>
       </div>
+
+      {bulkOpen && (
+        <Card className="p-3 space-y-2">
+          <div>
+            <Label className="text-xs">Cole uma linha por IP — formato: <code className="text-[10px]">label, endereço, cidade</code></Label>
+            <textarea
+              value={bulkText}
+              onChange={e => setBulkText(e.target.value)}
+              placeholder={`Casa Principal, 192.168.0.1, São Paulo\nResidencial 4G, 200.123.45.6, Rio de Janeiro`}
+              rows={6}
+              className="w-full mt-1 rounded-md border border-input bg-background p-2 text-sm font-mono"
+            />
+            <p className="text-[10px] text-muted-foreground mt-1">
+              Separadores aceitos: vírgula, ponto-e-vírgula, tabulação ou pipe ( | ). Cidade é opcional.
+            </p>
+          </div>
+          <div className="flex justify-between items-center">
+            <Badge variant="secondary" className="text-[10px]">{bulkPreview.length} IP(s) válido(s)</Badge>
+            <div className="flex gap-2">
+              <Button variant="ghost" size="sm" onClick={() => { setBulkOpen(false); setBulkText(""); }}>Cancelar</Button>
+              <Button size="sm" onClick={handleBulkSubmit} disabled={bulkPreview.length === 0 || bulkBusy}>
+                {bulkBusy ? "Salvando..." : `Importar ${bulkPreview.length}`}
+              </Button>
+            </div>
+          </div>
+        </Card>
+      )}
 
       {editing && (
         <Card className="p-3 space-y-2">
           <div className="grid grid-cols-2 gap-2">
             <div><Label className="text-xs">Label</Label><Input value={editing.label ?? ""} onChange={e => setEditing({ ...editing, label: e.target.value })} /></div>
             <div><Label className="text-xs">Endereço IP</Label><Input value={editing.ip_address ?? ""} onChange={e => setEditing({ ...editing, ip_address: e.target.value })} /></div>
-            <div><Label className="text-xs">Tipo</Label><Input placeholder="Residencial / DC / 4G" value={editing.proxy_type ?? ""} onChange={e => setEditing({ ...editing, proxy_type: e.target.value })} /></div>
-            <div><Label className="text-xs">Provedor</Label><Input value={editing.provider ?? ""} onChange={e => setEditing({ ...editing, provider: e.target.value })} /></div>
-            <div><Label className="text-xs">País</Label><Input value={editing.location_country ?? ""} onChange={e => setEditing({ ...editing, location_country: e.target.value })} /></div>
-            <div><Label className="text-xs">Cidade</Label><Input value={editing.location_city ?? ""} onChange={e => setEditing({ ...editing, location_city: e.target.value })} /></div>
+            <div className="col-span-2"><Label className="text-xs">Cidade</Label><Input value={editing.location_city ?? ""} onChange={e => setEditing({ ...editing, location_city: e.target.value })} /></div>
           </div>
           <div className="flex justify-end gap-2">
             <Button variant="ghost" size="sm" onClick={() => setEditing(null)}>Cancelar</Button>
@@ -363,7 +424,7 @@ function IpsList() {
             <div className="text-sm">
               <span className="font-medium">{ip.label}</span>{" "}
               <span className="text-muted-foreground">· {ip.ip_address}</span>{" "}
-              {ip.location_country && <span className="text-xs text-muted-foreground">({ip.location_country})</span>}
+              {ip.location_city && <span className="text-xs text-muted-foreground">({ip.location_city})</span>}
             </div>
             <div className="flex gap-1">
               <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditing(ip)}><Pencil className="h-3.5 w-3.5" /></Button>
