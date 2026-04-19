@@ -647,18 +647,23 @@ export function PlanejamentoCalendario() {
                     isCurrentMonth={cell.isCurrentMonth}
                     onAdd={() => setEditing({ date: key })}
                   >
-                    {dayCamps.map(c => (
-                      <DraggableCampanha
-                        key={c.id}
-                        campanha={c}
-                        onClick={() => setEditing({ date: key, campanha: c })}
-                        ipLabel={c.ip_id ? ipMap[c.ip_id]?.label : undefined}
-                        parceiroNome={c.parceiro_id ? parceiroMap[c.parceiro_id]?.nome : undefined}
-                        hasConflict={dayConflicts.has(c.id)}
-                        isPending={isCampanhaPending(c)}
-                        logoUrl={getLogoUrl(c.bookmaker_nome)}
-                      />
-                    ))}
+                    {dayCamps.map(c => {
+                      const grupoStatus = grupoViolationMap.get(c.id);
+                      return (
+                        <DraggableCampanha
+                          key={c.id}
+                          campanha={c}
+                          onClick={() => setEditing({ date: key, campanha: c })}
+                          ipLabel={c.ip_id ? ipMap[c.ip_id]?.label : undefined}
+                          parceiroNome={c.parceiro_id ? parceiroMap[c.parceiro_id]?.nome : undefined}
+                          hasConflict={dayConflicts.has(c.id)}
+                          isPending={isCampanhaPending(c)}
+                          logoUrl={getLogoUrl(c.bookmaker_nome)}
+                          grupoBlock={grupoStatus?.hasBlock}
+                          grupoWarn={grupoStatus?.hasWarn}
+                        />
+                      );
+                    })}
                     {dayTotal > 0 && (
                       <div className="text-[10px] text-muted-foreground border-t pt-0.5 mt-auto">
                         Σ {formatMoney(dayTotal, displayCurrency)}
