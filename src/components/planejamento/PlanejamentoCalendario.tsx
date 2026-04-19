@@ -150,8 +150,15 @@ function DayCell({ date, isCurrentMonth, children, onAdd }: {
   onAdd: () => void;
 }) {
   const dateKey = formatDateKey(date);
-  const { setNodeRef, isOver } = useDroppable({ id: `day-${dateKey}`, data: { type: "day", dateKey } });
+  const isPast = isDateInPast(dateKey);
   const isToday = formatDateKey(new Date()) === dateKey;
+  
+  // Desabilita droppable para datas passadas
+  const { setNodeRef, isOver } = useDroppable({ 
+    id: `day-${dateKey}`, 
+    data: { type: "day", dateKey },
+    disabled: isPast,
+  });
 
   return (
     <div
@@ -159,13 +166,14 @@ function DayCell({ date, isCurrentMonth, children, onAdd }: {
       className={cn(
         "min-h-[110px] border rounded-md p-1 flex flex-col gap-1 transition-colors",
         !isCurrentMonth && "bg-muted/30 opacity-50",
-        isOver && "ring-2 ring-primary bg-primary/5",
-        isToday && "border-primary"
+        isPast && "bg-muted/20 opacity-60 cursor-not-allowed",
+        !isPast && isOver && "ring-2 ring-primary bg-primary/5",
+        isToday && !isPast && "border-primary"
       )}
     >
       <div className="flex items-center justify-between">
-        <span className={cn("text-xs font-medium", isToday && "text-primary")}>{date.getDate()}</span>
-        {isCurrentMonth && (
+        <span className={cn("text-xs font-medium", isToday && !isPast && "text-primary", isPast && "text-muted-foreground")}>{date.getDate()}</span>
+        {isCurrentMonth && !isPast && (
           <button onClick={onAdd} className="opacity-0 hover:opacity-100 group-hover:opacity-100 text-muted-foreground hover:text-primary">
             <Plus className="h-3 w-3" />
           </button>
