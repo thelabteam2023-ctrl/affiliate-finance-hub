@@ -208,6 +208,7 @@ export function PlanejamentoCalendario() {
   const { data: parceiros = [] } = useParceirosLite();
   const { data: perfisPre = [] } = usePlanningPerfis();
   const upsert = useUpsertCampanha();
+  const deleteCamp = useDeleteCampanha();
 
   // Casas ativas pré-selecionadas para o workspace
   const bookmakers = useMemo(
