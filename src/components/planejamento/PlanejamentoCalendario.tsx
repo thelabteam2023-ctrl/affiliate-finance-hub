@@ -8,6 +8,16 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ChevronLeft, ChevronRight, Settings2, Plus, AlertTriangle, MapPin, User, Search, Building2, Trash2, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { RegulamentacaoFilter, RegFilterValue } from "./RegulamentacaoFilter";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -239,6 +249,11 @@ export function PlanejamentoCalendario() {
   const [bmFilter, setBmFilter] = useState<RegFilterValue>("all");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [displayCurrency, setDisplayCurrency] = useState<DisplayCurrency>("BRL");
+  const [pendingMove, setPendingMove] = useState<{
+    campanha: PlanningCampanha;
+    fromDate: string;
+    toDate: string;
+  } | null>(null);
 
   const { data: campanhas = [] } = usePlanningCampanhas(year, month);
   const { data: casasPlan = [] } = usePlanningCasas();
@@ -394,13 +409,19 @@ export function PlanejamentoCalendario() {
         status: "planned",
       });
     } else if (data?.type === "campanha") {
-      // Mover campanha existente para outra data
+      // Mover campanha existente para outra data → pede confirmação
       const camp = campanhas.find(c => c.id === data.campanhaId);
       if (camp && camp.scheduled_date !== dateKey) {
-        await upsert.mutateAsync({ ...camp, scheduled_date: dateKey });
-        toast.success("Campanha movida");
+        setPendingMove({ campanha: camp, fromDate: camp.scheduled_date, toDate: dateKey });
       }
     }
+  };
+
+  const confirmMove = async () => {
+    if (!pendingMove) return;
+    await upsert.mutateAsync({ ...pendingMove.campanha, scheduled_date: pendingMove.toDate });
+    toast.success("Campanha movida");
+    setPendingMove(null);
   };
 
   const prevMonth = () => { if (month === 1) { setMonth(12); setYear(year - 1); } else setMonth(month - 1); };
@@ -602,6 +623,40 @@ export function PlanejamentoCalendario() {
       )}
 
       <RecursosManager open={recursosOpen} onOpenChange={setRecursosOpen} />
+
+      <AlertDialog open={!!pendingMove} onOpenChange={(v) => !v && setPendingMove(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-warning" />
+              Mover campanha?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingMove && (
+                <>
+                  Você está movendo a campanha de{" "}
+                  <span className="font-semibold text-foreground">
+                    {pendingMove.campanha.bookmaker_nome}
+                  </span>{" "}
+                  do dia{" "}
+                  <span className="font-semibold text-foreground">
+                    {pendingMove.fromDate.split("-").reverse().join("/")}
+                  </span>{" "}
+                  para{" "}
+                  <span className="font-semibold text-foreground">
+                    {pendingMove.toDate.split("-").reverse().join("/")}
+                  </span>
+                  . Confirma a alteração?
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmMove}>Mover</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DndContext>
   );
 }
