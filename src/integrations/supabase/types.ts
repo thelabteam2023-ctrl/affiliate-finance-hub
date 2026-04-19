@@ -7262,6 +7262,99 @@ export type Database = {
           },
         ]
       }
+      planning_perfis: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          is_active: boolean
+          label_custom: string | null
+          notes: string | null
+          parceiro_id: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          is_active?: boolean
+          label_custom?: string | null
+          notes?: string | null
+          parceiro_id: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          is_active?: boolean
+          label_custom?: string | null
+          notes?: string | null
+          parceiro_id?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "planning_perfis_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "parceiros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planning_perfis_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_parceiro_lucro_total"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "planning_perfis_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_contas_bancarias"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "planning_perfis_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_parceiro_contas"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "planning_perfis_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_parceiro_wallets"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "planning_perfis_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_saldo_wallets_crypto"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "planning_perfis_parceiro_id_fkey"
+            columns: ["parceiro_id"]
+            isOneToOne: false
+            referencedRelation: "v_wallet_crypto_balances"
+            referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "planning_perfis_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       planning_wallets: {
         Row: {
           address: string | null
