@@ -303,9 +303,11 @@ function CasasList() {
                 <span className="text-sm truncate">{c.nome}</span>
                 <span className="text-[10px] text-muted-foreground shrink-0">· {c.moeda_padrao}</span>
               </div>
-              <span className={`text-[9px] font-semibold uppercase shrink-0 ${c.status === "REGULAMENTADA" ? "text-success" : "text-warning"}`}>
-                {c.status === "REGULAMENTADA" ? "Regulamentada" : "Não regulamentada"}
-              </span>
+              {filterStatus === "all" && (
+                <span className={`text-[9px] font-semibold uppercase shrink-0 ${c.status === "REGULAMENTADA" ? "text-success" : "text-warning"}`}>
+                  {c.status === "REGULAMENTADA" ? "Regulamentada" : "Não regulamentada"}
+                </span>
+              )}
             </label>
           );
         })}
