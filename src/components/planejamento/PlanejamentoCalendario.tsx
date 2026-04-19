@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { ChevronLeft, ChevronRight, Settings2, Plus, AlertTriangle, MapPin, User, Search, Building2 } from "lucide-react";
 import { RegulamentacaoFilter, RegFilterValue } from "./RegulamentacaoFilter";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import {
   PlanningCampanha,
   usePlanningCasas,
@@ -28,6 +29,15 @@ const DIAS_SEMANA = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
 function formatDateKey(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+// Verifica se uma data é anterior a hoje (não permitir arrastar para datas passadas)
+function isDateInPast(dateKey: string): boolean {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const [year, month, day] = dateKey.split("-").map(Number);
+  const targetDate = new Date(year, month - 1, day);
+  return targetDate < today;
 }
 
 function formatMoney(v: number, currency: string) {
@@ -140,8 +150,15 @@ function DayCell({ date, isCurrentMonth, children, onAdd }: {
   onAdd: () => void;
 }) {
   const dateKey = formatDateKey(date);
-  const { setNodeRef, isOver } = useDroppable({ id: `day-${dateKey}`, data: { type: "day", dateKey } });
+  const isPast = isDateInPast(dateKey);
   const isToday = formatDateKey(new Date()) === dateKey;
+  
+  // Desabilita droppable para datas passadas
+  const { setNodeRef, isOver } = useDroppable({ 
+    id: `day-${dateKey}`, 
+    data: { type: "day", dateKey },
+    disabled: isPast,
+  });
 
   return (
     <div
@@ -149,13 +166,14 @@ function DayCell({ date, isCurrentMonth, children, onAdd }: {
       className={cn(
         "min-h-[110px] border rounded-md p-1 flex flex-col gap-1 transition-colors",
         !isCurrentMonth && "bg-muted/30 opacity-50",
-        isOver && "ring-2 ring-primary bg-primary/5",
-        isToday && "border-primary"
+        isPast && "bg-muted/20 opacity-60 cursor-not-allowed",
+        !isPast && isOver && "ring-2 ring-primary bg-primary/5",
+        isToday && !isPast && "border-primary"
       )}
     >
       <div className="flex items-center justify-between">
-        <span className={cn("text-xs font-medium", isToday && "text-primary")}>{date.getDate()}</span>
-        {isCurrentMonth && (
+        <span className={cn("text-xs font-medium", isToday && !isPast && "text-primary", isPast && "text-muted-foreground")}>{date.getDate()}</span>
+        {isCurrentMonth && !isPast && (
           <button onClick={onAdd} className="opacity-0 hover:opacity-100 group-hover:opacity-100 text-muted-foreground hover:text-primary">
             <Plus className="h-3 w-3" />
           </button>
@@ -291,6 +309,13 @@ export function PlanejamentoCalendario() {
     const overData: any = over.data.current;
     if (overData?.type !== "day") return;
     const dateKey = overData.dateKey;
+    
+    // Validação: não permitir datas passadas
+    if (isDateInPast(dateKey)) {
+      toast.error("Não é possível agendar campanhas em datas passadas.");
+      return;
+    }
+    
     const data: any = active.data.current;
 
     if (data?.type === "bookmaker") {
