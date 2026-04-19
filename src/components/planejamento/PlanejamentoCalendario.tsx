@@ -74,12 +74,13 @@ function DraggableBookmaker({ id, nome, moeda, status, logoUrl }: {
   );
 }
 
-function DraggableCampanha({ campanha, onClick, ipLabel, parceiroNome, hasConflict }: {
+function DraggableCampanha({ campanha, onClick, ipLabel, parceiroNome, hasConflict, isPending }: {
   campanha: PlanningCampanha;
   onClick: () => void;
   ipLabel?: string;
   parceiroNome?: string;
   hasConflict: boolean;
+  isPending: boolean;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `camp-${campanha.id}`,
@@ -90,8 +91,11 @@ function DraggableCampanha({ campanha, onClick, ipLabel, parceiroNome, hasConfli
       ref={setNodeRef}
       {...attributes}
       className={cn(
-        "rounded border bg-primary/5 hover:bg-primary/10 border-primary/30 px-1.5 py-1 text-[10px] leading-tight cursor-pointer transition-colors",
-        hasConflict && "border-destructive/60 bg-destructive/5",
+        "rounded border px-1.5 py-1 text-[10px] leading-tight cursor-pointer transition-colors",
+        isPending
+          ? "bg-warning/10 hover:bg-warning/20 border-warning/50 shadow-[0_0_0_1px_hsl(var(--warning)/0.3)]"
+          : "bg-success/10 hover:bg-success/20 border-success/50 shadow-[0_0_0_1px_hsl(var(--success)/0.3)]",
+        hasConflict && "border-destructive/60 bg-destructive/5 shadow-[0_0_0_1px_hsl(var(--destructive)/0.4)]",
         isDragging && "opacity-40"
       )}
       onClick={onClick}
@@ -100,7 +104,11 @@ function DraggableCampanha({ campanha, onClick, ipLabel, parceiroNome, hasConfli
         <span className="font-semibold truncate flex-1">{campanha.bookmaker_nome}</span>
         <span {...listeners} className="cursor-grab active:cursor-grabbing select-none px-0.5" onClick={(e) => e.stopPropagation()}>⋮⋮</span>
       </div>
-      <div className="text-primary font-medium">{formatMoney(Number(campanha.deposit_amount), campanha.currency)}</div>
+      <div className={cn("font-medium", isPending ? "text-warning" : "text-success")}>
+        {Number(campanha.deposit_amount) > 0
+          ? formatMoney(Number(campanha.deposit_amount), campanha.currency)
+          : <span className="italic opacity-70">sem valor</span>}
+      </div>
       {(ipLabel || parceiroNome) && (
         <div className="text-muted-foreground truncate flex items-center gap-1">
           {parceiroNome && <><User className="h-2.5 w-2.5" />{parceiroNome.split(" ")[0]}</>}
@@ -113,6 +121,15 @@ function DraggableCampanha({ campanha, onClick, ipLabel, parceiroNome, hasConfli
         </div>
       )}
     </div>
+  );
+}
+
+function isCampanhaPending(c: PlanningCampanha): boolean {
+  return (
+    !c.parceiro_id ||
+    !c.ip_id ||
+    !c.wallet_id ||
+    Number(c.deposit_amount) <= 0
   );
 }
 
@@ -277,10 +294,14 @@ export function PlanejamentoCalendario() {
     const data: any = active.data.current;
 
     if (data?.type === "bookmaker") {
-      // Abrir dialog para definir valor/IP/perfil
-      setEditing({
-        date: dateKey,
-        initialBookmaker: { id: data.bookmakerId, nome: data.nome, moeda_padrao: data.moeda },
+      // Cria campanha PENDENTE imediatamente (sem abrir modal)
+      await upsert.mutateAsync({
+        scheduled_date: dateKey,
+        bookmaker_catalogo_id: data.bookmakerId,
+        bookmaker_nome: data.nome,
+        currency: data.moeda,
+        deposit_amount: 0,
+        status: "planned",
       });
     } else if (data?.type === "campanha") {
       // Mover campanha existente
@@ -383,6 +404,7 @@ export function PlanejamentoCalendario() {
                         ipLabel={c.ip_id ? ipMap[c.ip_id]?.label : undefined}
                         parceiroNome={c.parceiro_id ? parceiroMap[c.parceiro_id]?.nome : undefined}
                         hasConflict={dayConflicts.has(c.id)}
+                        isPending={isCampanhaPending(c)}
                       />
                     ))}
                     {dayTotal > 0 && (
