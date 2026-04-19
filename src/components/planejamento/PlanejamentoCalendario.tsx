@@ -90,7 +90,7 @@ function DraggableBookmaker({ id, nome, moeda, status, logoUrl }: {
   );
 }
 
-function DraggableCampanha({ campanha, onClick, ipLabel, parceiroNome, hasConflict, isPending, logoUrl, displayValue, displayCurrency }: {
+function DraggableCampanha({ campanha, onClick, ipLabel, parceiroNome, hasConflict, isPending, logoUrl }: {
   campanha: PlanningCampanha;
   onClick: () => void;
   ipLabel?: string;
@@ -98,8 +98,6 @@ function DraggableCampanha({ campanha, onClick, ipLabel, parceiroNome, hasConfli
   hasConflict: boolean;
   isPending: boolean;
   logoUrl?: string | null;
-  displayValue: number;
-  displayCurrency: DisplayCurrency;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `camp-${campanha.id}`,
@@ -140,7 +138,7 @@ function DraggableCampanha({ campanha, onClick, ipLabel, parceiroNome, hasConfli
           )}
         >
           {hasValue
-            ? formatMoney(displayValue, displayCurrency)
+            ? formatMoney(Number(campanha.deposit_amount), campanha.currency)
             : "s/v"}
         </span>
       </div>
@@ -568,8 +566,6 @@ export function PlanejamentoCalendario() {
                         hasConflict={dayConflicts.has(c.id)}
                         isPending={isCampanhaPending(c)}
                         logoUrl={getLogoUrl(c.bookmaker_nome)}
-                        displayValue={convertToDisplay(Number(c.deposit_amount), c.currency)}
-                        displayCurrency={displayCurrency}
                       />
                     ))}
                     {dayTotal > 0 && (
