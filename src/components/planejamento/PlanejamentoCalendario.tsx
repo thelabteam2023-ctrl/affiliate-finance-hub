@@ -120,13 +120,16 @@ function DraggableCampanha({ campanha, onClick, ipLabel, parceiroNome, hasConfli
       }}
     >
       <div className="flex items-center gap-1.5">
-        <div className="rounded-md bg-white/95 ring-1 ring-border/40 p-0.5 shrink-0 flex items-center justify-center shadow-sm">
-          <BookmakerLogo
-            logoUrl={logoUrl}
-            alt={campanha.bookmaker_nome}
-            size="h-9 w-9"
-            iconSize="h-5 w-5"
-          />
+        <div className="h-10 w-10 rounded-md bg-white ring-1 ring-border/40 shrink-0 flex items-center justify-center overflow-hidden shadow-sm">
+          {logoUrl ? (
+            <img
+              src={logoUrl}
+              alt={campanha.bookmaker_nome}
+              className="max-h-full max-w-full object-contain p-0.5"
+            />
+          ) : (
+            <Building2 className="h-5 w-5 text-muted-foreground" />
+          )}
         </div>
         <span className="font-semibold truncate flex-1 min-w-0">{campanha.bookmaker_nome}</span>
         <span
