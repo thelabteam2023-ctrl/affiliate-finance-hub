@@ -568,11 +568,13 @@ export function PlanejamentoCalendario() {
                         hasConflict={dayConflicts.has(c.id)}
                         isPending={isCampanhaPending(c)}
                         logoUrl={getLogoUrl(c.bookmaker_nome)}
+                        displayValue={convertToDisplay(Number(c.deposit_amount), c.currency)}
+                        displayCurrency={displayCurrency}
                       />
                     ))}
                     {dayTotal > 0 && (
                       <div className="text-[10px] text-muted-foreground border-t pt-0.5 mt-auto">
-                        Σ {formatMoney(dayTotal, "BRL")}
+                        Σ {formatMoney(dayTotal, displayCurrency)}
                       </div>
                     )}
                   </DayCell>
