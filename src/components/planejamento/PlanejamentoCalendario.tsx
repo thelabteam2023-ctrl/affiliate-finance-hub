@@ -6,7 +6,9 @@ import {
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight, Settings2, Plus, AlertTriangle, MapPin, User, Wallet } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { ChevronLeft, ChevronRight, Settings2, Plus, AlertTriangle, MapPin, User, Search, Building2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   PlanningCampanha,
@@ -37,7 +39,11 @@ function formatMoney(v: number, currency: string) {
 
 // ──────── Componentes drag-and-drop ────────
 
-function DraggableBookmaker({ id, nome, moeda }: { id: string; nome: string; moeda: string }) {
+function DraggableBookmaker({ id, nome, moeda, status, logoUrl }: {
+  id: string; nome: string; moeda: string;
+  status: "REGULAMENTADA" | "NAO_REGULAMENTADA";
+  logoUrl: string | null;
+}) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `bm-${id}`,
     data: { type: "bookmaker", bookmakerId: id, nome, moeda },
@@ -48,12 +54,27 @@ function DraggableBookmaker({ id, nome, moeda }: { id: string; nome: string; moe
       {...listeners}
       {...attributes}
       className={cn(
-        "px-2 py-1.5 rounded-md border bg-card text-xs cursor-grab active:cursor-grabbing hover:border-primary transition-colors",
+        "px-2 py-1.5 rounded-md border bg-card text-xs cursor-grab active:cursor-grabbing hover:border-primary transition-colors flex items-center gap-2",
         isDragging && "opacity-40"
       )}
     >
-      <div className="font-medium truncate">{nome}</div>
-      <div className="text-[10px] text-muted-foreground">{moeda}</div>
+      {logoUrl ? (
+        <img src={logoUrl} alt="" className="h-4 w-4 rounded object-contain shrink-0" />
+      ) : (
+        <Building2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+      )}
+      <div className="flex-1 min-w-0">
+        <div className="font-medium truncate">{nome}</div>
+        <div className="text-[10px] text-muted-foreground flex items-center gap-1">
+          <span>{moeda}</span>
+          <span className={cn(
+            "px-1 rounded text-[9px]",
+            status === "REGULAMENTADA" ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"
+          )}>
+            {status === "REGULAMENTADA" ? "REG" : "N/REG"}
+          </span>
+        </div>
+      </div>
     </div>
   );
 }
@@ -142,6 +163,8 @@ export function PlanejamentoCalendario() {
   const [recursosOpen, setRecursosOpen] = useState(false);
   const [editing, setEditing] = useState<{ date: string; campanha?: PlanningCampanha; initialBookmaker?: any } | null>(null);
   const [activeDrag, setActiveDrag] = useState<any>(null);
+  const [bmSearch, setBmSearch] = useState("");
+  const [bmFilter, setBmFilter] = useState<"all" | "REGULAMENTADA" | "NAO_REGULAMENTADA">("all");
 
   const { data: campanhas = [] } = usePlanningCampanhas(year, month);
   const { data: bookmakers = [] } = useBookmakersCatalogo();
@@ -154,6 +177,15 @@ export function PlanejamentoCalendario() {
   // Mapas auxiliares
   const ipMap = useMemo(() => Object.fromEntries(ips.map(i => [i.id, i])), [ips]);
   const parceiroMap = useMemo(() => Object.fromEntries(parceiros.map(p => [p.id, p])), [parceiros]);
+
+  // Filtro da sidebar de casas
+  const filteredBookmakers = useMemo(() => {
+    return bookmakers.filter(b => {
+      if (bmFilter !== "all" && b.status !== bmFilter) return false;
+      if (bmSearch && !b.nome.toLowerCase().includes(bmSearch.toLowerCase())) return false;
+      return true;
+    });
+  }, [bookmakers, bmFilter, bmSearch]);
 
   // Conflitos por dia
   const conflictMap = useMemo(() => {
@@ -256,19 +288,54 @@ export function PlanejamentoCalendario() {
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className="flex h-full gap-3 p-3">
         {/* Sidebar de bookmakers */}
-        <Card className="w-56 p-3 flex flex-col gap-2 shrink-0">
-          <div className="text-sm font-semibold">Casas disponíveis</div>
+        <Card className="w-64 p-3 flex flex-col gap-2 shrink-0">
+          <div className="flex items-center justify-between">
+            <div className="text-sm font-semibold">Casas disponíveis</div>
+            <Badge variant="secondary" className="text-[10px] h-4 px-1">{filteredBookmakers.length}</Badge>
+          </div>
           <p className="text-[11px] text-muted-foreground">Arraste para o calendário</p>
-          <div className="flex-1 overflow-y-auto space-y-1 mt-2 -mx-1 px-1">
-            {bookmakers.map(b => (
-              <DraggableBookmaker key={b.id} id={b.id} nome={b.nome} moeda={b.moeda_padrao} />
+
+          <div className="relative">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+            <Input
+              value={bmSearch}
+              onChange={e => setBmSearch(e.target.value)}
+              placeholder="Buscar..."
+              className="pl-6 h-7 text-xs"
+            />
+          </div>
+
+          <ToggleGroup
+            type="single"
+            value={bmFilter}
+            onValueChange={(v) => v && setBmFilter(v as any)}
+            size="sm"
+            className="justify-start"
+          >
+            <ToggleGroupItem value="all" className="h-6 text-[10px] px-1.5">Todas</ToggleGroupItem>
+            <ToggleGroupItem value="REGULAMENTADA" className="h-6 text-[10px] px-1.5">Reg.</ToggleGroupItem>
+            <ToggleGroupItem value="NAO_REGULAMENTADA" className="h-6 text-[10px] px-1.5">N/Reg.</ToggleGroupItem>
+          </ToggleGroup>
+
+          <div className="flex-1 overflow-y-auto space-y-1 mt-1 -mx-1 px-1">
+            {filteredBookmakers.map(b => (
+              <DraggableBookmaker
+                key={b.id}
+                id={b.id}
+                nome={b.nome}
+                moeda={b.moeda_padrao}
+                status={b.status}
+                logoUrl={b.logo_url}
+              />
             ))}
-            {bookmakers.length === 0 && (
-              <p className="text-xs text-muted-foreground italic">Nenhuma casa cadastrada.</p>
+            {filteredBookmakers.length === 0 && (
+              <p className="text-xs text-muted-foreground italic text-center py-4">
+                {bookmakers.length === 0 ? "Nenhuma casa cadastrada." : "Sem resultados."}
+              </p>
             )}
           </div>
           <Button variant="outline" size="sm" onClick={() => setRecursosOpen(true)}>
-            <Settings2 className="h-4 w-4 mr-1" /> Recursos
+            <Settings2 className="h-4 w-4 mr-1" /> Gerenciar recursos
           </Button>
         </Card>
 
