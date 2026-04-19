@@ -11,17 +11,22 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Trash2, Pencil, Search, Building2, User, Check } from "lucide-react";
+import { Plus, Trash2, Pencil, Search, Building2, User, Check, UserPlus, Link2, Unlink, Palette } from "lucide-react";
 import {
-  PlanningIp, PlanningWallet,
+  PlanningIp, PlanningWallet, PlanningPerfil,
   usePlanningIps, usePlanningWallets,
   useUpsertPlanningIp, useDeletePlanningIp,
   useUpsertPlanningWallet, useDeletePlanningWallet,
   useBookmakersCatalogo,
   useParceirosLite, usePlanningPerfis, useAddPlanningPerfis,
+  useAddPlanningPerfisGenericos,
   useUpdatePlanningPerfil, useDeletePlanningPerfil,
   usePlanningCasas, useAddPlanningCasas, useDeletePlanningCasa,
+  PERFIL_CORES, perfilDisplayName,
 } from "@/hooks/usePlanningData";
+import {
+  Popover, PopoverContent, PopoverTrigger,
+} from "@/components/ui/popover";
 
 interface Props { open: boolean; onOpenChange: (v: boolean) => void; }
 
