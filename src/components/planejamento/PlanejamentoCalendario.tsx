@@ -319,7 +319,7 @@ export function PlanejamentoCalendario() {
             value={bmFilter}
             onChange={setBmFilter}
             size="sm"
-            className="self-start"
+            orientation="vertical"
           />
 
           <div className="flex-1 overflow-y-auto space-y-1 mt-1 -mx-1 px-1">
