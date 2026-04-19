@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { ChevronLeft, ChevronRight, Settings2, Plus, AlertTriangle, MapPin, User, Search, Building2, Trash2, ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronLeft, ChevronRight, Settings2, Plus, AlertTriangle, MapPin, User, Search, Building2, Trash2, ChevronDown, ChevronUp, ShieldAlert } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -101,7 +101,7 @@ function DraggableBookmaker({ id, nome, moeda, status, logoUrl }: {
   );
 }
 
-function DraggableCampanha({ campanha, onClick, ipLabel, parceiroNome, hasConflict, isPending, logoUrl }: {
+function DraggableCampanha({ campanha, onClick, ipLabel, parceiroNome, hasConflict, isPending, logoUrl, grupoBlock, grupoWarn }: {
   campanha: PlanningCampanha;
   onClick: () => void;
   ipLabel?: string;
@@ -109,6 +109,8 @@ function DraggableCampanha({ campanha, onClick, ipLabel, parceiroNome, hasConfli
   hasConflict: boolean;
   isPending: boolean;
   logoUrl?: string | null;
+  grupoBlock?: boolean;
+  grupoWarn?: boolean;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `camp-${campanha.id}`,
@@ -126,6 +128,7 @@ function DraggableCampanha({ campanha, onClick, ipLabel, parceiroNome, hasConfli
           ? "bg-warning/5 hover:bg-warning/10 border-warning/30"
           : "bg-success/10 hover:bg-success/20 border-success/50 shadow-[0_0_0_1px_hsl(var(--success)/0.3)]",
         hasConflict && "border-destructive/60 bg-destructive/5 shadow-[0_0_0_1px_hsl(var(--destructive)/0.4)]",
+        grupoBlock && "border-destructive bg-destructive/10 shadow-[0_0_0_1px_hsl(var(--destructive)/0.6)]",
         isDragging && "opacity-40"
       )}
       onClick={(e) => {
@@ -141,6 +144,11 @@ function DraggableCampanha({ campanha, onClick, ipLabel, parceiroNome, hasConfli
           iconSize="h-5 w-5"
         />
         <span className="font-semibold truncate flex-1 min-w-0">{campanha.bookmaker_nome}</span>
+        {(grupoBlock || grupoWarn) && (
+          <ShieldAlert
+            className={cn("h-3 w-3 shrink-0", grupoBlock ? "text-destructive" : "text-warning")}
+          />
+        )}
         <span
           className={cn(
             "font-medium shrink-0 tabular-nums",
@@ -162,6 +170,11 @@ function DraggableCampanha({ campanha, onClick, ipLabel, parceiroNome, hasConfli
       {hasConflict && (
         <div className="text-destructive text-[9px] flex items-center gap-0.5 pl-6">
           <AlertTriangle className="h-2.5 w-2.5" /> conflito
+        </div>
+      )}
+      {grupoBlock && (
+        <div className="text-destructive text-[9px] flex items-center gap-0.5 pl-6">
+          <ShieldAlert className="h-2.5 w-2.5" /> regra de grupo violada
         </div>
       )}
     </div>
