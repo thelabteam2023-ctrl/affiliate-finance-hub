@@ -81,6 +81,19 @@ export interface BookmakerCatalogo {
   visibility: "WORKSPACE_PRIVATE" | "GLOBAL_REGULATED" | "GLOBAL_RESTRICTED";
 }
 
+export interface PlanningCasa {
+  id: string;
+  workspace_id: string;
+  bookmaker_catalogo_id: string;
+  label_custom: string | null;
+  is_active: boolean;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  // joined
+  casa?: BookmakerCatalogo | null;
+}
+
 // ──────────────────────── QUERIES ────────────────────────
 
 export function usePlanningIps() {
