@@ -550,9 +550,21 @@ export default function DistribuicaoTab() {
                         <tbody>
                           {Array.from(perCpf.entries()).map(([pid, items]) => {
                             const ipSet = new Set(items.map((i) => i.ip_slot));
+                            const info = perfilInfo(pid);
                             return (
                               <tr key={pid} className="border-b last:border-0">
-                                <td className="p-1.5 font-medium">{perfilLabel(pid)}</td>
+                                <td className="p-1.5 font-medium">
+                                  <div className="flex items-center gap-1.5">
+                                    <span
+                                      className="h-2.5 w-2.5 rounded-full shrink-0"
+                                      style={{ backgroundColor: info.cor }}
+                                    />
+                                    <span className="truncate">{info.nome}</span>
+                                    {info.isGenerico && (
+                                      <Badge variant="outline" className="text-[9px] h-4 shrink-0">gen</Badge>
+                                    )}
+                                  </div>
+                                </td>
                                 <td className="p-1.5">
                                   <div className="flex flex-wrap gap-1">
                                     {items.map((c, idx) => {
