@@ -428,6 +428,7 @@ export function PlanejamentoCalendario() {
     if (!pendingMove) return;
     await upsert.mutateAsync({ ...pendingMove.campanha, scheduled_date: pendingMove.toDate });
     toast.success("Campanha movida");
+    setMoveConfirmed(true);
     setPendingMove(null);
   };
 
