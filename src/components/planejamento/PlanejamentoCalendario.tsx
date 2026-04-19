@@ -404,6 +404,7 @@ export function PlanejamentoCalendario() {
                         ipLabel={c.ip_id ? ipMap[c.ip_id]?.label : undefined}
                         parceiroNome={c.parceiro_id ? parceiroMap[c.parceiro_id]?.nome : undefined}
                         hasConflict={dayConflicts.has(c.id)}
+                        isPending={isCampanhaPending(c)}
                       />
                     ))}
                     {dayTotal > 0 && (
