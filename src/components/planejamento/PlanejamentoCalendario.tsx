@@ -120,14 +120,12 @@ function DraggableCampanha({ campanha, onClick, ipLabel, parceiroNome, hasConfli
       }}
     >
       <div className="flex items-center gap-1.5">
-        <div className="rounded bg-white p-0.5 shrink-0 flex items-center justify-center">
-          <BookmakerLogo
-            logoUrl={logoUrl}
-            alt={campanha.bookmaker_nome}
-            size="h-6 w-6"
-            iconSize="h-4 w-4"
-          />
-        </div>
+        <BookmakerLogo
+          logoUrl={logoUrl}
+          alt={campanha.bookmaker_nome}
+          size="h-7 w-7 shrink-0"
+          iconSize="h-4 w-4"
+        />
         <span className="font-semibold truncate flex-1 min-w-0">{campanha.bookmaker_nome}</span>
         <span
           className={cn(
@@ -205,11 +203,11 @@ function DayCell({ date, isCurrentMonth, children, onAdd }: {
     <div
       ref={setNodeRef}
       className={cn(
-        "min-h-[110px] border rounded-md p-1 flex flex-col gap-1 transition-colors",
-        !isCurrentMonth && "bg-muted/30 opacity-50",
+        "min-h-[110px] border rounded-md p-1 flex flex-col gap-1 transition-colors bg-muted/40",
+        !isCurrentMonth && "bg-muted/10 opacity-50",
         isPast && "bg-muted/20 opacity-60 cursor-not-allowed",
-        !isPast && isOver && "ring-2 ring-primary bg-primary/5",
-        isToday && !isPast && "border-primary"
+        !isPast && isOver && "ring-2 ring-primary bg-primary/10",
+        isToday && !isPast && "border-primary bg-primary/5"
       )}
     >
       <div className="flex items-center justify-between">
