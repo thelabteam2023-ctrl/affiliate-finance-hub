@@ -123,8 +123,8 @@ function DraggableCampanha({ campanha, onClick, ipLabel, parceiroNome, hasConfli
         <BookmakerLogo
           logoUrl={logoUrl}
           alt={campanha.bookmaker_nome}
-          size="h-7 w-7 shrink-0"
-          iconSize="h-4 w-4"
+          size="h-14 w-14 shrink-0"
+          iconSize="h-7 w-7"
         />
         <span className="font-semibold truncate flex-1 min-w-0">{campanha.bookmaker_nome}</span>
         <span
