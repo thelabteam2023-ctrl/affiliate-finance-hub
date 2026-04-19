@@ -149,6 +149,25 @@ function isCampanhaPending(c: PlanningCampanha): boolean {
   );
 }
 
+function TrashDropZone({ active }: { active: boolean }) {
+  const { setNodeRef, isOver } = useDroppable({ id: "trash-zone", data: { type: "trash" } });
+  if (!active) return null;
+  return (
+    <div
+      ref={setNodeRef}
+      className={cn(
+        "rounded-md border-2 border-dashed p-3 flex items-center justify-center gap-2 text-xs font-medium transition-all",
+        isOver
+          ? "border-destructive bg-destructive/10 text-destructive scale-105"
+          : "border-muted-foreground/40 text-muted-foreground bg-muted/20"
+      )}
+    >
+      <Trash2 className="h-4 w-4" />
+      {isOver ? "Solte para remover" : "Arraste aqui para remover"}
+    </div>
+  );
+}
+
 function DayCell({ date, isCurrentMonth, children, onAdd }: {
   date: Date;
   isCurrentMonth: boolean;
