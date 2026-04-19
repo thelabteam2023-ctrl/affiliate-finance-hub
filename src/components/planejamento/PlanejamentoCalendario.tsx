@@ -403,6 +403,9 @@ export function PlanejamentoCalendario() {
             orientation="vertical"
           />
 
+          <TrashDropZone active={activeDrag?.type === "campanha"} />
+
+
           <div className="flex-1 overflow-y-auto space-y-1 mt-1 -mx-1 px-1">
             {filteredBookmakers.map(b => (
               <DraggableBookmaker
