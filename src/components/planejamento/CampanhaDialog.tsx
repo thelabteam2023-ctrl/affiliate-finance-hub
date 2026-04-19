@@ -125,6 +125,19 @@ export function CampanhaDialog({ open, onOpenChange, scheduledDate, initialBookm
     return { ipConflict, parceiroConflict };
   }, [campanhasDoMes, scheduledDate, form.ip_id, form.parceiro_id, campanha?.id]);
 
+  // Validação contra regras de grupo
+  const { validate } = useGrupoRegrasValidator(campanhasDoMes);
+  const grupoValidation = useMemo(() => {
+    return validate({
+      bookmaker_catalogo_id: form.bookmaker_catalogo_id || null,
+      parceiro_id: form.parceiro_id || null,
+      ip_id: form.ip_id || null,
+      wallet_id: form.wallet_id || null,
+      scheduled_date: scheduledDate,
+      excludeCampanhaId: campanha?.id,
+    });
+  }, [validate, form.bookmaker_catalogo_id, form.parceiro_id, form.ip_id, form.wallet_id, scheduledDate, campanha?.id]);
+
   // Auto-sugestão: IP/perfil ainda não usados nesse dia
   const handleAutoAssign = () => {
     const sameDay = campanhasDoMes.filter(c => c.scheduled_date === scheduledDate && c.id !== campanha?.id);
@@ -141,6 +154,10 @@ export function CampanhaDialog({ open, onOpenChange, scheduledDate, initialBookm
 
   const handleSave = async () => {
     if (!form.bookmaker_nome.trim()) return;
+    if (grupoValidation.violations.length > 0) {
+      toast.error(`Bloqueado por regra de grupo: ${grupoValidation.violations[0].mensagem}`);
+      return;
+    }
     const parceiro = parceiros.find(p => p.id === form.parceiro_id);
     await upsert.mutateAsync({
       id: campanha?.id,
