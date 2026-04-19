@@ -424,6 +424,18 @@ export function PlanejamentoCalendario() {
     }
 
     if (data?.type === "bookmaker") {
+      // Valida regras de grupo antes de criar campanha pendente
+      const check = validate({
+        bookmaker_catalogo_id: data.bookmakerId,
+        parceiro_id: null,
+        ip_id: null,
+        wallet_id: null,
+        scheduled_date: dateKey,
+      });
+      if (check.violations.length > 0) {
+        toast.error(`Bloqueado por regra de grupo: ${check.violations[0].mensagem}`);
+        return;
+      }
       // Cria campanha PENDENTE imediatamente (sem abrir modal)
       await upsert.mutateAsync({
         scheduled_date: dateKey,
@@ -437,6 +449,19 @@ export function PlanejamentoCalendario() {
       // Mover campanha existente para outra data → pede confirmação
       const camp = campanhas.find(c => c.id === data.campanhaId);
       if (camp && camp.scheduled_date !== dateKey) {
+        // Valida regras de grupo na nova data
+        const check = validate({
+          bookmaker_catalogo_id: camp.bookmaker_catalogo_id,
+          parceiro_id: camp.parceiro_id,
+          ip_id: camp.ip_id,
+          wallet_id: camp.wallet_id,
+          scheduled_date: dateKey,
+          excludeCampanhaId: camp.id,
+        });
+        if (check.violations.length > 0) {
+          toast.error(`Bloqueado por regra de grupo: ${check.violations[0].mensagem}`);
+          return;
+        }
         if (moveConfirmed) {
           // Já confirmou uma vez nesta sessão → move direto
           await upsert.mutateAsync({ ...camp, scheduled_date: dateKey });
