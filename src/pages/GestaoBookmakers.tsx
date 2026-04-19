@@ -21,7 +21,6 @@ import TransacaoDialog from "@/components/bookmakers/TransacaoDialog";
 import HistoricoTransacoes from "@/components/bookmakers/HistoricoTransacoes";
 import CatalogoBookmakers from "@/components/bookmakers/CatalogoBookmakers";
 import AccessGroupsManager from "@/components/bookmakers/AccessGroupsManager";
-import DistribuicaoTab from "@/components/bookmakers/DistribuicaoTab";
 // AjustePostLimitacaoDialog removed — now lives in ProjetoVinculosTab
 import { useAuth } from "@/hooks/useAuth";
 import { useBookmakerUsageStatus, canDeleteBookmaker } from "@/hooks/useBookmakerUsageStatus";
@@ -467,7 +466,7 @@ export default function GestaoBookmakers() {
       <div className="container mx-auto px-4 pt-4 pb-8 flex flex-col flex-1 min-h-0">
 
         <Tabs defaultValue="contas" className="flex flex-col flex-1 min-h-0">
-          <TabsList className={`grid w-full shrink-0 ${isSystemOwner ? 'grid-cols-5 max-w-2xl' : 'grid-cols-4 max-w-xl'}`}>
+          <TabsList className={`grid w-full max-w-lg shrink-0 ${isSystemOwner ? 'grid-cols-4' : 'grid-cols-3'}`}>
             <TabsTrigger value="contas" className="flex items-center gap-2">
               <Wallet className="h-4 w-4 shrink-0 stroke-current" />
               Vínculos
@@ -479,10 +478,6 @@ export default function GestaoBookmakers() {
             <TabsTrigger value="limitacoes" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4 shrink-0 stroke-current" />
               Estatísticas
-            </TabsTrigger>
-            <TabsTrigger value="distribuicao" className="flex items-center gap-2">
-              <Users className="h-4 w-4 shrink-0 stroke-current" />
-              Distribuição
             </TabsTrigger>
             {isSystemOwner && (
               <TabsTrigger value="grupos" className="flex items-center gap-2">
@@ -498,10 +493,6 @@ export default function GestaoBookmakers() {
 
           <TabsContent value="limitacoes" className="flex-1 min-h-0 overflow-y-auto mt-6">
             <EstatisticasTab />
-          </TabsContent>
-
-          <TabsContent value="distribuicao" className="flex-1 min-h-0 overflow-y-auto mt-6">
-            <DistribuicaoTab />
           </TabsContent>
 
           {isSystemOwner && (

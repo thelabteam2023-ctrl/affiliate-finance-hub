@@ -25,6 +25,8 @@ import {
 
 interface Props { open: boolean; onOpenChange: (v: boolean) => void; }
 
+import DistribuicaoTab from "./DistribuicaoTab";
+
 export function RecursosManager({ open, onOpenChange }: Props) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -38,11 +40,13 @@ export function RecursosManager({ open, onOpenChange }: Props) {
             <TabsTrigger value="perfis">Perfis</TabsTrigger>
             <TabsTrigger value="ips">IPs / Proxies</TabsTrigger>
             <TabsTrigger value="wallets">Carteiras</TabsTrigger>
+            <TabsTrigger value="distribuicao">Distribuição</TabsTrigger>
           </TabsList>
           <TabsContent value="casas"><CasasList /></TabsContent>
           <TabsContent value="perfis"><PerfisList /></TabsContent>
           <TabsContent value="ips"><IpsList /></TabsContent>
           <TabsContent value="wallets"><WalletsList /></TabsContent>
+          <TabsContent value="distribuicao"><DistribuicaoTab /></TabsContent>
         </Tabs>
       </DialogContent>
     </Dialog>
