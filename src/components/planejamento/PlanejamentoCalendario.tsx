@@ -623,6 +623,40 @@ export function PlanejamentoCalendario() {
       )}
 
       <RecursosManager open={recursosOpen} onOpenChange={setRecursosOpen} />
+
+      <AlertDialog open={!!pendingMove} onOpenChange={(v) => !v && setPendingMove(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-warning" />
+              Mover campanha?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingMove && (
+                <>
+                  Você está movendo a campanha de{" "}
+                  <span className="font-semibold text-foreground">
+                    {pendingMove.campanha.bookmaker_nome}
+                  </span>{" "}
+                  do dia{" "}
+                  <span className="font-semibold text-foreground">
+                    {pendingMove.fromDate.split("-").reverse().join("/")}
+                  </span>{" "}
+                  para{" "}
+                  <span className="font-semibold text-foreground">
+                    {pendingMove.toDate.split("-").reverse().join("/")}
+                  </span>
+                  . Confirma a alteração?
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmMove}>Mover</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DndContext>
   );
 }
