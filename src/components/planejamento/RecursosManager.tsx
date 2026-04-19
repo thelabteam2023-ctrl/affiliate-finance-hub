@@ -17,11 +17,10 @@ import {
   usePlanningIps, usePlanningWallets,
   useUpsertPlanningIp, useDeletePlanningIp,
   useUpsertPlanningWallet, useDeletePlanningWallet,
-  useBookmakersCatalogo, useUpsertWorkspaceBookmaker,
-  BookmakerCatalogo,
+  useBookmakersCatalogo,
   useParceirosLite, usePlanningPerfis, useAddPlanningPerfis,
   useUpdatePlanningPerfil, useDeletePlanningPerfil,
-  usePlanningCasas, useAddPlanningCasas, useUpdatePlanningCasa, useDeletePlanningCasa,
+  usePlanningCasas, useAddPlanningCasas, useDeletePlanningCasa,
 } from "@/hooks/usePlanningData";
 
 interface Props { open: boolean; onOpenChange: (v: boolean) => void; }
