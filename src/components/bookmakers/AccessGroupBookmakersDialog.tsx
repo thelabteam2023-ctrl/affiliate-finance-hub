@@ -171,12 +171,28 @@ export default function AccessGroupBookmakersDialog({ open, onOpenChange, group 
 
   const filteredGroupBookmakers = groupBookmakers.filter((gb) => {
     const name = gb.bookmaker?.nome?.toLowerCase() || "";
-    return name.includes(searchTerm.toLowerCase());
+    if (!name.includes(searchTerm.toLowerCase())) return false;
+    if (regFilterCurrent === "all") return true;
+    return gb.bookmaker?.status === regFilterCurrent;
   });
 
   const filteredAvailableBookmakers = availableBookmakers.filter((bk) => {
-    return bk.nome.toLowerCase().includes(searchTerm.toLowerCase());
+    if (!bk.nome.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+    if (regFilterAdd === "all") return true;
+    return bk.status === regFilterAdd;
   });
+
+  // Counters for filter pills
+  const groupTotals = {
+    all: groupBookmakers.length,
+    reg: groupBookmakers.filter((gb) => gb.bookmaker?.status === "REGULAMENTADA").length,
+    naoReg: groupBookmakers.filter((gb) => gb.bookmaker?.status === "NAO_REGULAMENTADA").length,
+  };
+  const availableTotals = {
+    all: availableBookmakers.length,
+    reg: availableBookmakers.filter((bk) => bk.status === "REGULAMENTADA").length,
+    naoReg: availableBookmakers.filter((bk) => bk.status === "NAO_REGULAMENTADA").length,
+  };
 
   // Check if any selected bookmaker is private
   const hasPrivateSelected = Array.from(selectedAddIds).some((id) => {
