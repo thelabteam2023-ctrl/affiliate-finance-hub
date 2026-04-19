@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, useEffect } from "react";
 import {
   DndContext, DragEndEvent, DragOverlay, DragStartEvent,
   PointerSensor, useDraggable, useDroppable, useSensor, useSensors,
@@ -262,7 +262,16 @@ export function PlanejamentoCalendario() {
   const [bmSearch, setBmSearch] = useState("");
   const [bmFilter, setBmFilter] = useState<RegFilterValue>("all");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [displayCurrency, setDisplayCurrency] = useState<DisplayCurrency>("BRL");
+  const [displayCurrency, setDisplayCurrency] = useState<DisplayCurrency>(() => {
+    if (typeof window === "undefined") return "BRL";
+    const saved = window.localStorage.getItem("planejamento:displayCurrency");
+    return saved === "USD" || saved === "BRL" ? saved : "BRL";
+  });
+  useEffect(() => {
+    try {
+      window.localStorage.setItem("planejamento:displayCurrency", displayCurrency);
+    } catch {}
+  }, [displayCurrency]);
   const [pendingMove, setPendingMove] = useState<{
     campanha: PlanningCampanha;
     fromDate: string;
