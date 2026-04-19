@@ -212,90 +212,45 @@ function PerfisList() {
   );
 }
 
-// ───────────────────────── CASAS (pré-seleção) ─────────────────────────
+// ───────────────────────── CASAS (pré-seleção do catálogo) ─────────────────────────
 
 function CasasList() {
   const { data: casasSelecionadas = [] } = usePlanningCasas();
   const { data: catalogo = [] } = useBookmakersCatalogo();
-  const upsert = useUpsertWorkspaceBookmaker();
   const addCasas = useAddPlanningCasas();
-  const updCasa = useUpdatePlanningCasa();
   const delCasa = useDeletePlanningCasa();
 
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<RegFilterValue>("all");
-  const [editing, setEditing] = useState<Partial<BookmakerCatalogo> | null>(null);
 
-  // Picker (modal de adicionar casas)
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const [pickerSearch, setPickerSearch] = useState("");
-  const [pickerFilter, setPickerFilter] = useState<RegFilterValue>("all");
-  const [pickerSelected, setPickerSelected] = useState<Set<string>>(new Set());
+  // Mapa: bookmaker_catalogo_id -> planning_casas.id (para deletar pelo id da seleção)
+  const selectedMap = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const p of casasSelecionadas) m.set(p.bookmaker_catalogo_id, p.id);
+    return m;
+  }, [casasSelecionadas]);
 
-  const selectedIdsSet = useMemo(
-    () => new Set(casasSelecionadas.map(p => p.bookmaker_catalogo_id)),
-    [casasSelecionadas]
-  );
-
-  // Lista visível na tela principal — apenas as escolhidas pelo workspace
+  // Lista única: TODAS as casas do catálogo, com checkbox indicando seleção
   const filtered = useMemo(() => {
-    return casasSelecionadas.filter(p => {
-      const c = p.casa;
-      if (!c) return false;
+    return catalogo.filter(c => {
       if (filterStatus !== "all" && c.status !== filterStatus) return false;
       if (search && !c.nome.toLowerCase().includes(search.toLowerCase())) return false;
       return true;
     });
-  }, [casasSelecionadas, search, filterStatus]);
+  }, [catalogo, search, filterStatus]);
 
-  // Catálogo disponível para adicionar (excluindo as já selecionadas)
-  const availableCatalogo = useMemo(() => {
-    return catalogo.filter(c => {
-      if (selectedIdsSet.has(c.id)) return false;
-      if (pickerFilter !== "all" && c.status !== pickerFilter) return false;
-      if (pickerSearch && !c.nome.toLowerCase().includes(pickerSearch.toLowerCase())) return false;
-      return true;
-    });
-  }, [catalogo, selectedIdsSet, pickerSearch, pickerFilter]);
-
-  const togglePicker = (id: string) => {
-    setPickerSelected(prev => {
-      const n = new Set(prev);
-      if (n.has(id)) n.delete(id); else n.add(id);
-      return n;
-    });
+  const handleToggle = async (catalogoId: string) => {
+    const planningId = selectedMap.get(catalogoId);
+    if (planningId) {
+      await delCasa.mutateAsync(planningId);
+    } else {
+      await addCasas.mutateAsync([catalogoId]);
+    }
   };
 
-  const togglePickerAll = () => {
-    const allMarked = availableCatalogo.length > 0 && availableCatalogo.every(c => pickerSelected.has(c.id));
-    setPickerSelected(prev => {
-      const n = new Set(prev);
-      if (allMarked) availableCatalogo.forEach(c => n.delete(c.id));
-      else availableCatalogo.forEach(c => n.add(c.id));
-      return n;
-    });
-  };
-
-  const handleConfirmAdd = async () => {
-    await addCasas.mutateAsync(Array.from(pickerSelected));
-    setPickerSelected(new Set());
-    setPickerOpen(false);
-    setPickerSearch("");
-  };
-
-  const startNew = () => setEditing({
-    nome: "",
-    status: "REGULAMENTADA",
-    moeda_padrao: "BRL",
-    logo_url: "",
-  });
-
-  const totalReg = casasSelecionadas.filter(p => p.casa?.status === "REGULAMENTADA").length;
-  const totalNaoReg = casasSelecionadas.filter(p => p.casa?.status === "NAO_REGULAMENTADA").length;
-
-  const pickerTotalReg = catalogo.filter(c => c.status === "REGULAMENTADA" && !selectedIdsSet.has(c.id)).length;
-  const pickerTotalNaoReg = catalogo.filter(c => c.status === "NAO_REGULAMENTADA" && !selectedIdsSet.has(c.id)).length;
-  const pickerTotalAll = catalogo.filter(c => !selectedIdsSet.has(c.id)).length;
+  const totalSelected = casasSelecionadas.length;
+  const totalReg = catalogo.filter(c => c.status === "REGULAMENTADA").length;
+  const totalNaoReg = catalogo.filter(c => c.status === "NAO_REGULAMENTADA").length;
 
   return (
     <div className="space-y-3">
@@ -312,202 +267,52 @@ function CasasList() {
         <RegulamentacaoFilter
           value={filterStatus}
           onChange={setFilterStatus}
-          totalAll={casasSelecionadas.length}
+          totalAll={catalogo.length}
           totalReg={totalReg}
           totalNaoReg={totalNaoReg}
         />
-        <Button size="sm" onClick={() => setPickerOpen(o => !o)}>
-          <Plus className="h-4 w-4 mr-1" /> Adicionar casas
-        </Button>
-        <Button size="sm" variant="outline" onClick={startNew}>
-          <Plus className="h-4 w-4 mr-1" /> Nova casa
-        </Button>
+        <Badge variant="secondary" className="h-6">
+          {totalSelected} selecionada{totalSelected === 1 ? "" : "s"}
+        </Badge>
       </div>
 
-      {pickerOpen && (
-        <Card className="p-3 space-y-2">
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <p className="text-xs font-medium">Selecione casas para a lista de planejamento</p>
-            <Badge variant="secondary" className="text-[10px]">{pickerSelected.size} marcada(s)</Badge>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="relative flex-1 min-w-[160px]">
-              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-              <Input
-                value={pickerSearch}
-                onChange={e => setPickerSearch(e.target.value)}
-                placeholder="Buscar casa..."
-                className="pl-7 h-8 text-sm"
-              />
-            </div>
-            <RegulamentacaoFilter
-              value={pickerFilter}
-              onChange={setPickerFilter}
-              totalAll={pickerTotalAll}
-              totalReg={pickerTotalReg}
-              totalNaoReg={pickerTotalNaoReg}
-            />
-          </div>
-          <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-            <button className="hover:text-foreground" onClick={togglePickerAll}>
-              {availableCatalogo.length > 0 && availableCatalogo.every(c => pickerSelected.has(c.id))
-                ? "Desmarcar visíveis"
-                : "Marcar visíveis"} ({availableCatalogo.length})
-            </button>
-          </div>
-          <div className="max-h-[280px] overflow-y-auto space-y-1 border rounded-md p-1">
-            {availableCatalogo.length === 0 && (
-              <p className="text-xs text-muted-foreground italic text-center py-3">
-                {catalogo.length === 0
-                  ? "Nenhuma casa disponível no catálogo."
-                  : "Todas as casas que combinam com o filtro já foram adicionadas."}
-              </p>
-            )}
-            {availableCatalogo.map(c => {
-              const checked = pickerSelected.has(c.id);
-              return (
-                <label
-                  key={c.id}
-                  className={`flex items-center gap-2 p-1.5 rounded cursor-pointer hover:bg-muted/40 ${checked ? "bg-primary/10" : ""}`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={() => togglePicker(c.id)}
-                    className="h-3.5 w-3.5"
-                  />
-                  {c.logo_url ? (
-                    <img src={c.logo_url} alt="" className="h-5 w-5 rounded object-contain shrink-0" />
-                  ) : (
-                    <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
-                  )}
-                  <div className="flex-1 min-w-0 flex items-center gap-1.5">
-                    <span className="text-sm truncate">{c.nome}</span>
-                    <span className="text-[10px] text-muted-foreground shrink-0">· {c.moeda_padrao}</span>
-                  </div>
-                  <span className={`text-[9px] font-semibold uppercase shrink-0 ${c.status === "REGULAMENTADA" ? "text-success" : "text-warning"}`}>
-                    {c.status === "REGULAMENTADA" ? "REG" : "N/REG"}
-                  </span>
-                </label>
-              );
-            })}
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="ghost" size="sm" onClick={() => { setPickerOpen(false); setPickerSelected(new Set()); }}>
-              Cancelar
-            </Button>
-            <Button size="sm" disabled={pickerSelected.size === 0 || addCasas.isPending} onClick={handleConfirmAdd}>
-              <Check className="h-4 w-4 mr-1" /> Adicionar {pickerSelected.size > 0 ? `(${pickerSelected.size})` : ""}
-            </Button>
-          </div>
-        </Card>
-      )}
+      <p className="text-[11px] text-muted-foreground">
+        Marque as casas que devem aparecer na lista de planejamento.
+      </p>
 
-      {editing && (
-        <Card className="p-3 space-y-2">
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <Label className="text-xs">Nome da casa</Label>
-              <Input
-                value={editing.nome ?? ""}
-                onChange={e => setEditing({ ...editing, nome: e.target.value })}
-                placeholder="Ex.: Bet365"
-              />
-            </div>
-            <div>
-              <Label className="text-xs">Status</Label>
-              <Select
-                value={(editing.status as string) ?? "REGULAMENTADA"}
-                onValueChange={(v) => setEditing({ ...editing, status: v as any })}
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="REGULAMENTADA">Regulamentada</SelectItem>
-                  <SelectItem value="NAO_REGULAMENTADA">Não regulamentada</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label className="text-xs">Moeda padrão</Label>
-              <Select
-                value={editing.moeda_padrao ?? "BRL"}
-                onValueChange={(v) => setEditing({ ...editing, moeda_padrao: v })}
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="BRL">BRL</SelectItem>
-                  <SelectItem value="USD">USD</SelectItem>
-                  <SelectItem value="EUR">EUR</SelectItem>
-                  <SelectItem value="GBP">GBP</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label className="text-xs">Logo URL (opcional)</Label>
-              <Input
-                value={editing.logo_url ?? ""}
-                onChange={e => setEditing({ ...editing, logo_url: e.target.value })}
-                placeholder="https://..."
-              />
-            </div>
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="ghost" size="sm" onClick={() => setEditing(null)}>Cancelar</Button>
-            <Button
-              size="sm"
-              onClick={async () => {
-                if (!editing.nome?.trim()) return;
-                await upsert.mutateAsync({
-                  id: editing.id,
-                  nome: editing.nome.trim(),
-                  status: (editing.status as any) ?? "REGULAMENTADA",
-                  moeda_padrao: editing.moeda_padrao ?? "BRL",
-                  logo_url: editing.logo_url || null,
-                });
-                setEditing(null);
-              }}
-            >
-              Salvar
-            </Button>
-          </div>
-        </Card>
-      )}
-
-      <div className="space-y-1 max-h-[380px] overflow-y-auto">
-        {filtered.map(p => {
-          const c = p.casa!;
+      <div className="space-y-1 max-h-[420px] overflow-y-auto border rounded-md p-1">
+        {filtered.map(c => {
+          const checked = selectedMap.has(c.id);
           return (
-            <Card key={p.id} className="p-2 flex items-center gap-2">
+            <label
+              key={c.id}
+              className={`flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-muted/40 ${checked ? "bg-primary/10" : ""}`}
+            >
+              <input
+                type="checkbox"
+                checked={checked}
+                onChange={() => handleToggle(c.id)}
+                className="h-3.5 w-3.5"
+              />
               {c.logo_url ? (
                 <img src={c.logo_url} alt="" className="h-5 w-5 rounded object-contain shrink-0" />
               ) : (
                 <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
               )}
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium truncate">{c.nome}</div>
-                <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                  <span className={c.status === "REGULAMENTADA" ? "text-success" : "text-warning"}>
-                    {c.status === "REGULAMENTADA" ? "Regulamentada" : "Não regulamentada"}
-                  </span>
-                  <span>· {c.moeda_padrao}</span>
-                </div>
+              <div className="flex-1 min-w-0 flex items-center gap-1.5">
+                <span className="text-sm truncate">{c.nome}</span>
+                <span className="text-[10px] text-muted-foreground shrink-0">· {c.moeda_padrao}</span>
               </div>
-              <div className="flex items-center gap-1 shrink-0">
-                <Switch
-                  checked={p.is_active}
-                  onCheckedChange={(v) => updCasa.mutate({ id: p.id, is_active: v })}
-                />
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => delCasa.mutate(p.id)}>
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            </Card>
+              <span className={`text-[9px] font-semibold uppercase shrink-0 ${c.status === "REGULAMENTADA" ? "text-success" : "text-warning"}`}>
+                {c.status === "REGULAMENTADA" ? "Regulamentada" : "Não regulamentada"}
+              </span>
+            </label>
           );
         })}
         {filtered.length === 0 && (
           <p className="text-xs text-muted-foreground text-center py-6">
-            {casasSelecionadas.length === 0
-              ? "Nenhuma casa na lista. Clique em \"Adicionar casas\" para escolher do catálogo."
+            {catalogo.length === 0
+              ? "Nenhuma casa disponível no catálogo."
               : "Nenhuma casa encontrada para o filtro atual."}
           </p>
         )}
