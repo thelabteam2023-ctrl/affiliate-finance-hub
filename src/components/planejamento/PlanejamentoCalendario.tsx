@@ -31,6 +31,15 @@ function formatDateKey(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+// Verifica se uma data é anterior a hoje (não permitir arrastar para datas passadas)
+function isDateInPast(dateKey: string): boolean {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const [year, month, day] = dateKey.split("-").map(Number);
+  const targetDate = new Date(year, month - 1, day);
+  return targetDate < today;
+}
+
 function formatMoney(v: number, currency: string) {
   try {
     return new Intl.NumberFormat("pt-BR", { style: "currency", currency }).format(v);
