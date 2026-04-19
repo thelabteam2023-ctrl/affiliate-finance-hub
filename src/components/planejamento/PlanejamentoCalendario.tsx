@@ -178,6 +178,15 @@ export function PlanejamentoCalendario() {
   const ipMap = useMemo(() => Object.fromEntries(ips.map(i => [i.id, i])), [ips]);
   const parceiroMap = useMemo(() => Object.fromEntries(parceiros.map(p => [p.id, p])), [parceiros]);
 
+  // Filtro da sidebar de casas
+  const filteredBookmakers = useMemo(() => {
+    return bookmakers.filter(b => {
+      if (bmFilter !== "all" && b.status !== bmFilter) return false;
+      if (bmSearch && !b.nome.toLowerCase().includes(bmSearch.toLowerCase())) return false;
+      return true;
+    });
+  }, [bookmakers, bmFilter, bmSearch]);
+
   // Conflitos por dia
   const conflictMap = useMemo(() => {
     const map = new Map<string, Set<string>>();
