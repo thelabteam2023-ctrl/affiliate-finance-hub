@@ -112,12 +112,14 @@ export default function DistribuicaoTab() {
     return m;
   }, [membros, planejamentoCatalogoSet]);
 
-  // Mapa perfil_id (planning) -> nome
-  const perfilLabel = (id: string) => {
+  // Mapa perfil_id (planning) -> dados (nome + cor)
+  const perfilInfo = (id: string): { nome: string; cor: string; isGenerico: boolean } => {
     const p = perfis.find((x) => x.id === id);
-    if (!p) return id.slice(0, 6);
-    return p.label_custom || p.parceiro?.nome || "—";
+    if (!p) return { nome: id.slice(0, 6), cor: "#6366f1", isGenerico: false };
+    const nome = p.label_custom?.trim() || p.parceiro?.nome || p.nome_generico || "—";
+    return { nome, cor: p.cor, isGenerico: !p.parceiro_id };
   };
+  const perfilLabel = (id: string) => perfilInfo(id).nome;
 
   const togglePerfil = (id: string) => {
     setSelectedPerfilIds((cur) =>
@@ -168,8 +170,11 @@ export default function DistribuicaoTab() {
     if (!resultado || resultado.celulas.length === 0) return;
     if (!planoNome.trim()) return;
     // Mapear perfil_id (planning) -> parceiro_id (necessário pela FK)
+    // Perfis genéricos (sem parceiro) são ignorados na persistência por enquanto.
     const perfilToParceiro = new Map<string, string>();
-    perfis.forEach((p) => perfilToParceiro.set(p.id, p.parceiro_id));
+    perfis.forEach((p) => {
+      if (p.parceiro_id) perfilToParceiro.set(p.id, p.parceiro_id);
+    });
 
     const parceiroIds = selectedPerfilIds
       .map((pid) => perfilToParceiro.get(pid))
@@ -200,6 +205,11 @@ export default function DistribuicaoTab() {
         .filter((x): x is NonNullable<typeof x> => !!x),
     });
   };
+
+  const selectedGenericosCount = useMemo(
+    () => selectedPerfilIds.filter((id) => !perfis.find((p) => p.id === id)?.parceiro_id).length,
+    [selectedPerfilIds, perfis]
+  );
 
   const gruposDisponiveis = grupos.filter(
     (g) => !grupoConfigs.some((c) => c.grupo_id === g.id)
