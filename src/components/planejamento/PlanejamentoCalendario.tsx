@@ -203,11 +203,11 @@ function DayCell({ date, isCurrentMonth, children, onAdd }: {
     <div
       ref={setNodeRef}
       className={cn(
-        "min-h-[110px] border rounded-md p-1 flex flex-col gap-1 transition-colors",
-        !isCurrentMonth && "bg-muted/30 opacity-50",
+        "min-h-[110px] border rounded-md p-1 flex flex-col gap-1 transition-colors bg-muted/40",
+        !isCurrentMonth && "bg-muted/10 opacity-50",
         isPast && "bg-muted/20 opacity-60 cursor-not-allowed",
-        !isPast && isOver && "ring-2 ring-primary bg-primary/5",
-        isToday && !isPast && "border-primary"
+        !isPast && isOver && "ring-2 ring-primary bg-primary/10",
+        isToday && !isPast && "border-primary bg-primary/5"
       )}
     >
       <div className="flex items-center justify-between">
