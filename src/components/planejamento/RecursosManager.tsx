@@ -58,36 +58,43 @@ export function RecursosManager({ open, onOpenChange }: Props) {
   );
 }
 
-// ───────────────────────── PERFIS (pré-seleção de parceiros) ─────────────────────────
+// ───────────────────────── PERFIS (genéricos + vínculo a parceiro real) ─────────────────────────
 
 function PerfisList() {
   const { data: perfis = [] } = usePlanningPerfis();
   const { data: parceiros = [] } = useParceirosLite();
   const addPerfis = useAddPlanningPerfis();
+  const addGenericos = useAddPlanningPerfisGenericos();
   const updPerfil = useUpdatePlanningPerfil();
   const delPerfil = useDeletePlanningPerfil();
 
+  const [search, setSearch] = useState("");
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkQtd, setBulkQtd] = useState<number>(5);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerSearch, setPickerSearch] = useState("");
   const [pickerSelected, setPickerSelected] = useState<Set<string>>(new Set());
-  const [search, setSearch] = useState("");
+  const [editingLabelId, setEditingLabelId] = useState<string | null>(null);
+  const [labelDraft, setLabelDraft] = useState("");
 
-  const selectedIdsSet = useMemo(() => new Set(perfis.map(p => p.parceiro_id)), [perfis]);
+  const linkedParceiroIds = useMemo(
+    () => new Set(perfis.filter(p => p.parceiro_id).map(p => p.parceiro_id as string)),
+    [perfis]
+  );
 
   const availableParceiros = useMemo(() => {
     return parceiros.filter(p => {
-      if (selectedIdsSet.has(p.id)) return false;
+      if (linkedParceiroIds.has(p.id)) return false;
       if (pickerSearch && !p.nome.toLowerCase().includes(pickerSearch.toLowerCase())) return false;
       return true;
     });
-  }, [parceiros, selectedIdsSet, pickerSearch]);
+  }, [parceiros, linkedParceiroIds, pickerSearch]);
 
   const filteredPerfis = useMemo(() => {
     if (!search) return perfis;
     const s = search.toLowerCase();
     return perfis.filter(p =>
-      (p.parceiro?.nome ?? "").toLowerCase().includes(s) ||
-      (p.label_custom ?? "").toLowerCase().includes(s) ||
+      perfilDisplayName(p).toLowerCase().includes(s) ||
       (p.parceiro?.email ?? "").toLowerCase().includes(s),
     );
   }, [perfis, search]);
@@ -107,10 +114,20 @@ function PerfisList() {
     setPickerSearch("");
   };
 
+  const handleCreateGenericos = async () => {
+    if (bulkQtd < 1) return;
+    await addGenericos.mutateAsync({ quantidade: bulkQtd });
+    setBulkOpen(false);
+    setBulkQtd(5);
+  };
+
+  const totalGenericos = perfis.filter(p => !p.parceiro_id).length;
+  const totalReais = perfis.filter(p => !!p.parceiro_id).length;
+
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative flex-1 min-w-[180px]">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <Input
             value={search}
@@ -119,11 +136,56 @@ function PerfisList() {
             className="pl-7 h-8 text-sm"
           />
         </div>
-        <Badge variant="secondary" className="h-6">{perfis.length} ativo(s)</Badge>
-        <Button size="sm" onClick={() => setPickerOpen(o => !o)}>
-          <Plus className="h-4 w-4 mr-1" /> Adicionar perfis
+        <Badge variant="secondary" className="h-6 text-[10px]">
+          {perfis.length} total · {totalReais} real · {totalGenericos} genérico
+        </Badge>
+        <Button size="sm" variant="outline" onClick={() => { setBulkOpen(o => !o); setPickerOpen(false); }}>
+          <UserPlus className="h-4 w-4 mr-1" /> Criar genéricos
+        </Button>
+        <Button size="sm" onClick={() => { setPickerOpen(o => !o); setBulkOpen(false); }}>
+          <Plus className="h-4 w-4 mr-1" /> Adicionar parceiros
         </Button>
       </div>
+
+      {bulkOpen && (
+        <Card className="p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-medium">Quantos perfis genéricos criar?</p>
+            <Badge variant="secondary" className="text-[10px]">Numera automaticamente como CPF #N</Badge>
+          </div>
+          <div className="flex items-center gap-2">
+            <Input
+              type="number"
+              min={1}
+              max={50}
+              value={bulkQtd}
+              onChange={e => setBulkQtd(Math.max(1, Math.min(50, Number(e.target.value) || 1)))}
+              className="h-8 text-sm w-24"
+            />
+            <div className="flex gap-1">
+              {[3, 5, 8, 10].map(n => (
+                <Button
+                  key={n}
+                  variant={bulkQtd === n ? "default" : "outline"}
+                  size="sm"
+                  className="h-8 text-xs"
+                  onClick={() => setBulkQtd(n)}
+                >
+                  {n}
+                </Button>
+              ))}
+            </div>
+            <div className="flex-1" />
+            <Button variant="ghost" size="sm" onClick={() => setBulkOpen(false)}>Cancelar</Button>
+            <Button size="sm" onClick={handleCreateGenericos} disabled={addGenericos.isPending}>
+              <Check className="h-4 w-4 mr-1" /> Criar {bulkQtd}
+            </Button>
+          </div>
+          <p className="text-[10px] text-muted-foreground">
+            Cada perfil receberá uma cor única e poderá ser vinculado a um parceiro real depois.
+          </p>
+        </Card>
+      )}
 
       {pickerOpen && (
         <Card className="p-3 space-y-2">
@@ -181,38 +243,30 @@ function PerfisList() {
 
       <div className="space-y-1 max-h-[380px] overflow-y-auto">
         {filteredPerfis.map(p => (
-          <Card key={p.id} className="p-2 flex items-center gap-2">
-            <User className="h-4 w-4 text-muted-foreground shrink-0" />
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium truncate">
-                {p.label_custom || p.parceiro?.nome || "—"}
-                {p.label_custom && p.parceiro?.nome && (
-                  <span className="text-[10px] text-muted-foreground ml-1">({p.parceiro.nome})</span>
-                )}
-              </div>
-              <div className="text-[10px] text-muted-foreground truncate">
-                {p.parceiro?.email || "sem e-mail"}
-                {p.parceiro?.cidade && ` · ${p.parceiro.cidade}`}
-              </div>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <div className="flex items-center gap-1">
-                <Switch
-                  checked={p.is_active}
-                  onCheckedChange={(v) => updPerfil.mutate({ id: p.id, is_active: v })}
-                />
-                <span className="text-[10px] text-muted-foreground">{p.is_active ? "ativo" : "off"}</span>
-              </div>
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => delPerfil.mutate(p.id)}>
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
-            </div>
-          </Card>
+          <PerfilRow
+            key={p.id}
+            perfil={p}
+            isEditingLabel={editingLabelId === p.id}
+            labelDraft={labelDraft}
+            onStartEditLabel={() => { setEditingLabelId(p.id); setLabelDraft(p.label_custom ?? ""); }}
+            onChangeLabelDraft={setLabelDraft}
+            onSaveLabel={async () => {
+              await updPerfil.mutateAsync({ id: p.id, label_custom: labelDraft.trim() || null });
+              setEditingLabelId(null);
+            }}
+            onCancelEditLabel={() => setEditingLabelId(null)}
+            onChangeCor={(cor) => updPerfil.mutate({ id: p.id, cor })}
+            onToggleActive={(v) => updPerfil.mutate({ id: p.id, is_active: v })}
+            onLinkParceiro={(parceiroId) => updPerfil.mutate({ id: p.id, parceiro_id: parceiroId })}
+            onUnlinkParceiro={() => updPerfil.mutate({ id: p.id, parceiro_id: null })}
+            onDelete={() => delPerfil.mutate(p.id)}
+            availableParceiros={parceiros.filter(pp => !linkedParceiroIds.has(pp.id))}
+          />
         ))}
         {filteredPerfis.length === 0 && (
           <p className="text-xs text-muted-foreground text-center py-6">
             {perfis.length === 0
-              ? "Nenhum perfil pré-selecionado. Clique em \"Adicionar perfis\" para escolher parceiros."
+              ? 'Nenhum perfil. Use "Criar genéricos" para começar com placeholders ou "Adicionar parceiros" para puxar perfis reais.'
               : "Nenhum perfil encontrado para a busca."}
           </p>
         )}
@@ -220,6 +274,187 @@ function PerfisList() {
     </div>
   );
 }
+
+// ───────────────────────── Linha individual de perfil ─────────────────────────
+
+interface PerfilRowProps {
+  perfil: PlanningPerfil;
+  isEditingLabel: boolean;
+  labelDraft: string;
+  onStartEditLabel: () => void;
+  onChangeLabelDraft: (v: string) => void;
+  onSaveLabel: () => void;
+  onCancelEditLabel: () => void;
+  onChangeCor: (cor: string) => void;
+  onToggleActive: (v: boolean) => void;
+  onLinkParceiro: (parceiroId: string) => void;
+  onUnlinkParceiro: () => void;
+  onDelete: () => void;
+  availableParceiros: Array<{ id: string; nome: string; email: string | null }>;
+}
+
+function PerfilRow({
+  perfil: p,
+  isEditingLabel,
+  labelDraft,
+  onStartEditLabel,
+  onChangeLabelDraft,
+  onSaveLabel,
+  onCancelEditLabel,
+  onChangeCor,
+  onToggleActive,
+  onLinkParceiro,
+  onUnlinkParceiro,
+  onDelete,
+  availableParceiros,
+}: PerfilRowProps) {
+  const [linkOpen, setLinkOpen] = useState(false);
+  const [linkSearch, setLinkSearch] = useState("");
+  const isGenerico = !p.parceiro_id;
+  const display = perfilDisplayName(p);
+
+  const filteredParceiros = useMemo(() => {
+    if (!linkSearch) return availableParceiros;
+    const s = linkSearch.toLowerCase();
+    return availableParceiros.filter(pp =>
+      pp.nome.toLowerCase().includes(s) || (pp.email ?? "").toLowerCase().includes(s)
+    );
+  }, [availableParceiros, linkSearch]);
+
+  return (
+    <Card className="p-2 flex items-center gap-2">
+      {/* Cor + picker */}
+      <Popover>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            className="h-6 w-6 rounded-full ring-2 ring-background shrink-0 hover:ring-foreground/20 transition"
+            style={{ backgroundColor: p.cor }}
+            title="Alterar cor"
+          />
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-2" align="start">
+          <div className="grid grid-cols-6 gap-1">
+            {PERFIL_CORES.map(c => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => onChangeCor(c)}
+                className={`h-6 w-6 rounded-full ring-2 transition ${
+                  p.cor === c ? "ring-foreground" : "ring-background hover:ring-foreground/30"
+                }`}
+                style={{ backgroundColor: c }}
+                aria-label={c}
+              />
+            ))}
+          </div>
+        </PopoverContent>
+      </Popover>
+
+      <div className="flex-1 min-w-0">
+        {isEditingLabel ? (
+          <div className="flex items-center gap-1">
+            <Input
+              value={labelDraft}
+              onChange={e => onChangeLabelDraft(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === "Enter") onSaveLabel();
+                if (e.key === "Escape") onCancelEditLabel();
+              }}
+              autoFocus
+              placeholder={isGenerico ? "Nome do perfil" : "Apelido (opcional)"}
+              className="h-7 text-sm"
+            />
+            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={onSaveLabel}>
+              <Check className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="text-sm font-medium truncate">{display}</span>
+            {isGenerico ? (
+              <Badge variant="outline" className="text-[9px] h-4 shrink-0">Genérico</Badge>
+            ) : (
+              p.label_custom && p.parceiro?.nome && (
+                <span className="text-[10px] text-muted-foreground truncate">({p.parceiro.nome})</span>
+              )
+            )}
+            <Button size="icon" variant="ghost" className="h-5 w-5 opacity-60 hover:opacity-100" onClick={onStartEditLabel}>
+              <Pencil className="h-3 w-3" />
+            </Button>
+          </div>
+        )}
+        <div className="text-[10px] text-muted-foreground truncate">
+          {isGenerico
+            ? "Sem parceiro vinculado — slot anônimo para planejamento"
+            : (p.parceiro?.email || "sem e-mail") + (p.parceiro?.cidade ? ` · ${p.parceiro.cidade}` : "")}
+        </div>
+      </div>
+
+      <div className="flex items-center gap-1 shrink-0">
+        {/* Vincular / desvincular parceiro */}
+        {isGenerico ? (
+          <Popover open={linkOpen} onOpenChange={setLinkOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-7 px-2 text-[10px]">
+                <Link2 className="h-3.5 w-3.5 mr-1" /> Vincular
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-72 p-2" align="end">
+              <div className="space-y-2">
+                <div className="relative">
+                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                  <Input
+                    value={linkSearch}
+                    onChange={e => setLinkSearch(e.target.value)}
+                    placeholder="Buscar parceiro..."
+                    className="pl-7 h-7 text-xs"
+                  />
+                </div>
+                <div className="max-h-48 overflow-y-auto space-y-0.5">
+                  {filteredParceiros.length === 0 && (
+                    <p className="text-[10px] text-muted-foreground italic text-center py-2">
+                      Nenhum parceiro disponível.
+                    </p>
+                  )}
+                  {filteredParceiros.map(pp => (
+                    <button
+                      key={pp.id}
+                      type="button"
+                      onClick={() => { onLinkParceiro(pp.id); setLinkOpen(false); setLinkSearch(""); }}
+                      className="w-full text-left p-1.5 rounded hover:bg-muted/50 text-xs truncate"
+                    >
+                      <div className="font-medium truncate">{pp.nome}</div>
+                      {pp.email && <div className="text-[9px] text-muted-foreground truncate">{pp.email}</div>}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+        ) : (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            onClick={onUnlinkParceiro}
+            title="Desvincular parceiro (vira genérico)"
+          >
+            <Unlink className="h-3.5 w-3.5" />
+          </Button>
+        )}
+        <Switch
+          checked={p.is_active}
+          onCheckedChange={onToggleActive}
+        />
+        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onDelete}>
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+    </Card>
+  );
+}
+
 
 // ───────────────────────── CASAS (pré-seleção do catálogo) ─────────────────────────
 
