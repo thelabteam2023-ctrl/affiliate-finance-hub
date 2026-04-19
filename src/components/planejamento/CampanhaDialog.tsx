@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertTriangle, Trash2, Wand2 } from "lucide-react";
+import { AlertTriangle, Trash2, Wand2, ShieldAlert, ShieldCheck } from "lucide-react";
 import {
   PlanningCampanha,
   usePlanningCasas,
@@ -17,6 +17,8 @@ import {
   usePlanningWallets,
   useUpsertCampanha,
 } from "@/hooks/usePlanningData";
+import { useGrupoRegrasValidator } from "@/hooks/useGrupoRegrasValidator";
+import { toast } from "sonner";
 
 interface Props {
   open: boolean;
@@ -123,6 +125,19 @@ export function CampanhaDialog({ open, onOpenChange, scheduledDate, initialBookm
     return { ipConflict, parceiroConflict };
   }, [campanhasDoMes, scheduledDate, form.ip_id, form.parceiro_id, campanha?.id]);
 
+  // Validação contra regras de grupo
+  const { validate } = useGrupoRegrasValidator(campanhasDoMes);
+  const grupoValidation = useMemo(() => {
+    return validate({
+      bookmaker_catalogo_id: form.bookmaker_catalogo_id || null,
+      parceiro_id: form.parceiro_id || null,
+      ip_id: form.ip_id || null,
+      wallet_id: form.wallet_id || null,
+      scheduled_date: scheduledDate,
+      excludeCampanhaId: campanha?.id,
+    });
+  }, [validate, form.bookmaker_catalogo_id, form.parceiro_id, form.ip_id, form.wallet_id, scheduledDate, campanha?.id]);
+
   // Auto-sugestão: IP/perfil ainda não usados nesse dia
   const handleAutoAssign = () => {
     const sameDay = campanhasDoMes.filter(c => c.scheduled_date === scheduledDate && c.id !== campanha?.id);
@@ -139,6 +154,10 @@ export function CampanhaDialog({ open, onOpenChange, scheduledDate, initialBookm
 
   const handleSave = async () => {
     if (!form.bookmaker_nome.trim()) return;
+    if (grupoValidation.violations.length > 0) {
+      toast.error(`Bloqueado por regra de grupo: ${grupoValidation.violations[0].mensagem}`);
+      return;
+    }
     const parceiro = parceiros.find(p => p.id === form.parceiro_id);
     await upsert.mutateAsync({
       id: campanha?.id,
@@ -271,6 +290,28 @@ export function CampanhaDialog({ open, onOpenChange, scheduledDate, initialBookm
               </AlertDescription>
             </Alert>
           )}
+
+          {grupoValidation.violations.length > 0 && (
+            <Alert variant="destructive" className="py-2">
+              <ShieldAlert className="h-4 w-4" />
+              <AlertDescription className="text-xs space-y-0.5">
+                {grupoValidation.violations.map((v, i) => (
+                  <div key={i}>🚫 {v.mensagem}</div>
+                ))}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {grupoValidation.warnings.length > 0 && (
+            <Alert className="py-2 border-warning/50 bg-warning/5">
+              <ShieldCheck className="h-4 w-4 text-warning" />
+              <AlertDescription className="text-xs space-y-0.5 text-warning-foreground">
+                {grupoValidation.warnings.map((v, i) => (
+                  <div key={i}>⚠ {v.mensagem}</div>
+                ))}
+              </AlertDescription>
+            </Alert>
+          )}
         </div>
 
         <DialogFooter className="gap-2">
@@ -280,7 +321,10 @@ export function CampanhaDialog({ open, onOpenChange, scheduledDate, initialBookm
             </Button>
           )}
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={handleSave} disabled={upsert.isPending || !form.bookmaker_nome}>
+          <Button
+            onClick={handleSave}
+            disabled={upsert.isPending || !form.bookmaker_nome || grupoValidation.violations.length > 0}
+          >
             {upsert.isPending ? "Salvando..." : "Salvar"}
           </Button>
         </DialogFooter>

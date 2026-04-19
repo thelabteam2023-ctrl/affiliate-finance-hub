@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { ChevronLeft, ChevronRight, Settings2, Plus, AlertTriangle, MapPin, User, Search, Building2, Trash2, ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronLeft, ChevronRight, Settings2, Plus, AlertTriangle, MapPin, User, Search, Building2, Trash2, ChevronDown, ChevronUp, ShieldAlert } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,6 +32,7 @@ import {
   useUpsertCampanha,
   useDeleteCampanha,
 } from "@/hooks/usePlanningData";
+import { useGrupoRegrasValidator } from "@/hooks/useGrupoRegrasValidator";
 import { CampanhaDialog } from "./CampanhaDialog";
 import { RecursosManager } from "./RecursosManager";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
@@ -100,7 +101,7 @@ function DraggableBookmaker({ id, nome, moeda, status, logoUrl }: {
   );
 }
 
-function DraggableCampanha({ campanha, onClick, ipLabel, parceiroNome, hasConflict, isPending, logoUrl }: {
+function DraggableCampanha({ campanha, onClick, ipLabel, parceiroNome, hasConflict, isPending, logoUrl, grupoBlock, grupoWarn }: {
   campanha: PlanningCampanha;
   onClick: () => void;
   ipLabel?: string;
@@ -108,6 +109,8 @@ function DraggableCampanha({ campanha, onClick, ipLabel, parceiroNome, hasConfli
   hasConflict: boolean;
   isPending: boolean;
   logoUrl?: string | null;
+  grupoBlock?: boolean;
+  grupoWarn?: boolean;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `camp-${campanha.id}`,
@@ -125,6 +128,7 @@ function DraggableCampanha({ campanha, onClick, ipLabel, parceiroNome, hasConfli
           ? "bg-warning/5 hover:bg-warning/10 border-warning/30"
           : "bg-success/10 hover:bg-success/20 border-success/50 shadow-[0_0_0_1px_hsl(var(--success)/0.3)]",
         hasConflict && "border-destructive/60 bg-destructive/5 shadow-[0_0_0_1px_hsl(var(--destructive)/0.4)]",
+        grupoBlock && "border-destructive bg-destructive/10 shadow-[0_0_0_1px_hsl(var(--destructive)/0.6)]",
         isDragging && "opacity-40"
       )}
       onClick={(e) => {
@@ -140,6 +144,11 @@ function DraggableCampanha({ campanha, onClick, ipLabel, parceiroNome, hasConfli
           iconSize="h-5 w-5"
         />
         <span className="font-semibold truncate flex-1 min-w-0">{campanha.bookmaker_nome}</span>
+        {(grupoBlock || grupoWarn) && (
+          <ShieldAlert
+            className={cn("h-3 w-3 shrink-0", grupoBlock ? "text-destructive" : "text-warning")}
+          />
+        )}
         <span
           className={cn(
             "font-medium shrink-0 tabular-nums",
@@ -161,6 +170,11 @@ function DraggableCampanha({ campanha, onClick, ipLabel, parceiroNome, hasConfli
       {hasConflict && (
         <div className="text-destructive text-[9px] flex items-center gap-0.5 pl-6">
           <AlertTriangle className="h-2.5 w-2.5" /> conflito
+        </div>
+      )}
+      {grupoBlock && (
+        <div className="text-destructive text-[9px] flex items-center gap-0.5 pl-6">
+          <ShieldAlert className="h-2.5 w-2.5" /> regra de grupo violada
         </div>
       )}
     </div>
@@ -330,6 +344,29 @@ export function PlanejamentoCalendario() {
     return map;
   }, [campanhas]);
 
+  // Validador de regras de grupo
+  const { validate } = useGrupoRegrasValidator(campanhas);
+  const grupoViolationMap = useMemo(() => {
+    const map = new Map<string, { hasBlock: boolean; hasWarn: boolean }>();
+    campanhas.forEach((c) => {
+      const result = validate({
+        bookmaker_catalogo_id: c.bookmaker_catalogo_id,
+        parceiro_id: c.parceiro_id,
+        ip_id: c.ip_id,
+        wallet_id: c.wallet_id,
+        scheduled_date: c.scheduled_date,
+        excludeCampanhaId: c.id,
+      });
+      if (result.violations.length > 0 || result.warnings.length > 0) {
+        map.set(c.id, {
+          hasBlock: result.violations.length > 0,
+          hasWarn: result.warnings.length > 0,
+        });
+      }
+    });
+    return map;
+  }, [campanhas, validate]);
+
   // Construir grid do mês (semanas)
   const grid = useMemo(() => {
     const firstDay = new Date(year, month - 1, 1);
@@ -400,6 +437,18 @@ export function PlanejamentoCalendario() {
     }
 
     if (data?.type === "bookmaker") {
+      // Valida regras de grupo antes de criar campanha pendente
+      const check = validate({
+        bookmaker_catalogo_id: data.bookmakerId,
+        parceiro_id: null,
+        ip_id: null,
+        wallet_id: null,
+        scheduled_date: dateKey,
+      });
+      if (check.violations.length > 0) {
+        toast.error(`Bloqueado por regra de grupo: ${check.violations[0].mensagem}`);
+        return;
+      }
       // Cria campanha PENDENTE imediatamente (sem abrir modal)
       await upsert.mutateAsync({
         scheduled_date: dateKey,
@@ -413,6 +462,19 @@ export function PlanejamentoCalendario() {
       // Mover campanha existente para outra data → pede confirmação
       const camp = campanhas.find(c => c.id === data.campanhaId);
       if (camp && camp.scheduled_date !== dateKey) {
+        // Valida regras de grupo na nova data
+        const check = validate({
+          bookmaker_catalogo_id: camp.bookmaker_catalogo_id,
+          parceiro_id: camp.parceiro_id,
+          ip_id: camp.ip_id,
+          wallet_id: camp.wallet_id,
+          scheduled_date: dateKey,
+          excludeCampanhaId: camp.id,
+        });
+        if (check.violations.length > 0) {
+          toast.error(`Bloqueado por regra de grupo: ${check.violations[0].mensagem}`);
+          return;
+        }
         if (moveConfirmed) {
           // Já confirmou uma vez nesta sessão → move direto
           await upsert.mutateAsync({ ...camp, scheduled_date: dateKey });
@@ -585,18 +647,23 @@ export function PlanejamentoCalendario() {
                     isCurrentMonth={cell.isCurrentMonth}
                     onAdd={() => setEditing({ date: key })}
                   >
-                    {dayCamps.map(c => (
-                      <DraggableCampanha
-                        key={c.id}
-                        campanha={c}
-                        onClick={() => setEditing({ date: key, campanha: c })}
-                        ipLabel={c.ip_id ? ipMap[c.ip_id]?.label : undefined}
-                        parceiroNome={c.parceiro_id ? parceiroMap[c.parceiro_id]?.nome : undefined}
-                        hasConflict={dayConflicts.has(c.id)}
-                        isPending={isCampanhaPending(c)}
-                        logoUrl={getLogoUrl(c.bookmaker_nome)}
-                      />
-                    ))}
+                    {dayCamps.map(c => {
+                      const grupoStatus = grupoViolationMap.get(c.id);
+                      return (
+                        <DraggableCampanha
+                          key={c.id}
+                          campanha={c}
+                          onClick={() => setEditing({ date: key, campanha: c })}
+                          ipLabel={c.ip_id ? ipMap[c.ip_id]?.label : undefined}
+                          parceiroNome={c.parceiro_id ? parceiroMap[c.parceiro_id]?.nome : undefined}
+                          hasConflict={dayConflicts.has(c.id)}
+                          isPending={isCampanhaPending(c)}
+                          logoUrl={getLogoUrl(c.bookmaker_nome)}
+                          grupoBlock={grupoStatus?.hasBlock}
+                          grupoWarn={grupoStatus?.hasWarn}
+                        />
+                      );
+                    })}
                     {dayTotal > 0 && (
                       <div className="text-[10px] text-muted-foreground border-t pt-0.5 mt-auto">
                         Σ {formatMoney(dayTotal, displayCurrency)}

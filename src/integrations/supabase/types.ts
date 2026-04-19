@@ -1055,6 +1055,66 @@ export type Database = {
           },
         ]
       }
+      bookmaker_grupo_regras: {
+        Row: {
+          ativa: boolean
+          created_at: string
+          created_by: string | null
+          escopo: Database["public"]["Enums"]["grupo_regra_escopo"]
+          grupo_id: string
+          id: string
+          mensagem_violacao: string | null
+          severidade: Database["public"]["Enums"]["grupo_regra_severidade"]
+          tipo_regra: Database["public"]["Enums"]["grupo_regra_tipo"]
+          updated_at: string
+          valor_numerico: number | null
+          workspace_id: string
+        }
+        Insert: {
+          ativa?: boolean
+          created_at?: string
+          created_by?: string | null
+          escopo?: Database["public"]["Enums"]["grupo_regra_escopo"]
+          grupo_id: string
+          id?: string
+          mensagem_violacao?: string | null
+          severidade?: Database["public"]["Enums"]["grupo_regra_severidade"]
+          tipo_regra: Database["public"]["Enums"]["grupo_regra_tipo"]
+          updated_at?: string
+          valor_numerico?: number | null
+          workspace_id: string
+        }
+        Update: {
+          ativa?: boolean
+          created_at?: string
+          created_by?: string | null
+          escopo?: Database["public"]["Enums"]["grupo_regra_escopo"]
+          grupo_id?: string
+          id?: string
+          mensagem_violacao?: string | null
+          severidade?: Database["public"]["Enums"]["grupo_regra_severidade"]
+          tipo_regra?: Database["public"]["Enums"]["grupo_regra_tipo"]
+          updated_at?: string
+          valor_numerico?: number | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookmaker_grupo_regras_grupo_id_fkey"
+            columns: ["grupo_id"]
+            isOneToOne: false
+            referencedRelation: "bookmaker_grupos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookmaker_grupo_regras_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bookmaker_grupos: {
         Row: {
           cor: string | null
@@ -15482,6 +15542,13 @@ export type Database = {
         | "WORKSPACE_PRIVATE"
       crypto_transit_status: "PENDING" | "CONFIRMED" | "FAILED" | "REVERSED"
       event_scope: "REAL" | "VIRTUAL"
+      grupo_regra_escopo: "PERFIL" | "IP" | "CARTEIRA" | "WORKSPACE"
+      grupo_regra_severidade: "BLOQUEIO" | "AVISO"
+      grupo_regra_tipo:
+        | "LIMITE_MAX_POR_PERFIL"
+        | "UNICA_POR_PERFIL"
+        | "IP_UNICO_OBRIGATORIO"
+        | "COOLDOWN_DIAS"
       indicador_status: "ATIVO" | "TOP_VIP" | "EM_OBSERVACAO" | "INATIVO"
       ocorrencia_evento_tipo:
         | "criacao"
@@ -15705,6 +15772,14 @@ export const Constants = {
       ],
       crypto_transit_status: ["PENDING", "CONFIRMED", "FAILED", "REVERSED"],
       event_scope: ["REAL", "VIRTUAL"],
+      grupo_regra_escopo: ["PERFIL", "IP", "CARTEIRA", "WORKSPACE"],
+      grupo_regra_severidade: ["BLOQUEIO", "AVISO"],
+      grupo_regra_tipo: [
+        "LIMITE_MAX_POR_PERFIL",
+        "UNICA_POR_PERFIL",
+        "IP_UNICO_OBRIGATORIO",
+        "COOLDOWN_DIAS",
+      ],
       indicador_status: ["ATIVO", "TOP_VIP", "EM_OBSERVACAO", "INATIVO"],
       ocorrencia_evento_tipo: [
         "criacao",
