@@ -234,6 +234,7 @@ export function PlanejamentoCalendario() {
   const [activeDrag, setActiveDrag] = useState<any>(null);
   const [bmSearch, setBmSearch] = useState("");
   const [bmFilter, setBmFilter] = useState<RegFilterValue>("all");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const { data: campanhas = [] } = usePlanningCampanhas(year, month);
   const { data: casasPlan = [] } = usePlanningCasas();
@@ -394,53 +395,98 @@ export function PlanejamentoCalendario() {
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className="flex h-full gap-3 p-3">
         {/* Sidebar de bookmakers */}
-        <Card className="w-72 p-3 flex flex-col gap-2 shrink-0">
-          <div className="flex items-center justify-between">
-            <div className="text-sm font-semibold">Casas disponíveis</div>
-            <Badge variant="secondary" className="text-[10px] h-4 px-1">{filteredBookmakers.length}</Badge>
-          </div>
-          <p className="text-[11px] text-muted-foreground">Arraste para o calendário</p>
+        <Card className={cn(
+          "p-3 flex flex-col gap-2 shrink-0 transition-[width] duration-300",
+          sidebarCollapsed ? "w-12 items-center" : "w-72"
+        )}>
+          {sidebarCollapsed ? (
+            <>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSidebarCollapsed(false)}
+                title="Expandir casas disponíveis"
+                className="h-8 w-8"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <Badge variant="secondary" className="text-[10px] h-4 px-1">
+                {filteredBookmakers.length}
+              </Badge>
+              <div className="writing-mode-vertical text-[11px] text-muted-foreground font-semibold tracking-wider [writing-mode:vertical-rl] rotate-180 mt-2">
+                Casas disponíveis
+              </div>
+              <div className="flex-1" />
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setRecursosOpen(true)}
+                title="Gerenciar recursos"
+                className="h-8 w-8"
+              >
+                <Settings2 className="h-4 w-4" />
+              </Button>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center justify-between">
+                <div className="text-sm font-semibold">Casas disponíveis</div>
+                <div className="flex items-center gap-1">
+                  <Badge variant="secondary" className="text-[10px] h-4 px-1">{filteredBookmakers.length}</Badge>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setSidebarCollapsed(true)}
+                    title="Minimizar"
+                    className="h-6 w-6"
+                  >
+                    <ChevronLeft className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+              <p className="text-[11px] text-muted-foreground">Arraste para o calendário</p>
 
-          <div className="relative">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-            <Input
-              value={bmSearch}
-              onChange={e => setBmSearch(e.target.value)}
-              placeholder="Buscar..."
-              className="pl-6 h-7 text-xs"
-            />
-          </div>
+              <div className="relative">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                <Input
+                  value={bmSearch}
+                  onChange={e => setBmSearch(e.target.value)}
+                  placeholder="Buscar..."
+                  className="pl-6 h-7 text-xs"
+                />
+              </div>
 
-          <RegulamentacaoFilter
-            value={bmFilter}
-            onChange={setBmFilter}
-            size="sm"
-            orientation="vertical"
-          />
-
-          <TrashDropZone active={activeDrag?.type === "campanha"} />
-
-
-          <div className="flex-1 overflow-y-auto space-y-1 mt-1 -mx-1 px-1">
-            {filteredBookmakers.map(b => (
-              <DraggableBookmaker
-                key={b.id}
-                id={b.id}
-                nome={b.nome}
-                moeda={b.moeda_padrao}
-                status={b.status}
-                logoUrl={b.logo_url}
+              <RegulamentacaoFilter
+                value={bmFilter}
+                onChange={setBmFilter}
+                size="sm"
+                orientation="vertical"
               />
-            ))}
-            {filteredBookmakers.length === 0 && (
-              <p className="text-xs text-muted-foreground italic text-center py-4">
-                {bookmakers.length === 0 ? "Nenhuma casa cadastrada." : "Sem resultados."}
-              </p>
-            )}
-          </div>
-          <Button variant="outline" size="sm" onClick={() => setRecursosOpen(true)}>
-            <Settings2 className="h-4 w-4 mr-1" /> Gerenciar recursos
-          </Button>
+
+              <TrashDropZone active={activeDrag?.type === "campanha"} />
+
+              <div className="flex-1 overflow-y-auto space-y-1 mt-1 -mx-1 px-1">
+                {filteredBookmakers.map(b => (
+                  <DraggableBookmaker
+                    key={b.id}
+                    id={b.id}
+                    nome={b.nome}
+                    moeda={b.moeda_padrao}
+                    status={b.status}
+                    logoUrl={b.logo_url}
+                  />
+                ))}
+                {filteredBookmakers.length === 0 && (
+                  <p className="text-xs text-muted-foreground italic text-center py-4">
+                    {bookmakers.length === 0 ? "Nenhuma casa cadastrada." : "Sem resultados."}
+                  </p>
+                )}
+              </div>
+              <Button variant="outline" size="sm" onClick={() => setRecursosOpen(true)}>
+                <Settings2 className="h-4 w-4 mr-1" /> Gerenciar recursos
+              </Button>
+            </>
+          )}
         </Card>
 
         {/* Calendário */}
