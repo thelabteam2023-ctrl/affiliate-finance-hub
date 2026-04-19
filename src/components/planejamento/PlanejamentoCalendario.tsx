@@ -347,16 +347,17 @@ export function PlanejamentoCalendario() {
     return m;
   }, [campanhas]);
 
-  // Totais
+  // Totais (já convertidos para a moeda de exibição)
   const { totalDia, totalMes } = useMemo(() => {
     const dia = new Map<string, number>();
     let mes = 0;
     campanhas.forEach(c => {
-      dia.set(c.scheduled_date, (dia.get(c.scheduled_date) ?? 0) + Number(c.deposit_amount));
-      mes += Number(c.deposit_amount);
+      const valorConvertido = convertToDisplay(Number(c.deposit_amount), c.currency);
+      dia.set(c.scheduled_date, (dia.get(c.scheduled_date) ?? 0) + valorConvertido);
+      mes += valorConvertido;
     });
     return { totalDia: dia, totalMes: mes };
-  }, [campanhas]);
+  }, [campanhas, convertToDisplay]);
 
   const handleDragStart = (e: DragStartEvent) => setActiveDrag(e.active.data.current);
 
@@ -514,9 +515,30 @@ export function PlanejamentoCalendario() {
               <Button variant="ghost" size="icon" onClick={nextMonth}><ChevronRight className="h-4 w-4" /></Button>
               <Button variant="outline" size="sm" onClick={() => { setYear(today.getFullYear()); setMonth(today.getMonth() + 1); }}>Hoje</Button>
             </div>
-            <Badge variant="secondary" className="text-sm">
-              Total do mês: {formatMoney(totalMes, "BRL")}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center rounded-md border bg-card p-0.5">
+                <Button
+                  variant={displayCurrency === "BRL" ? "default" : "ghost"}
+                  size="sm"
+                  className="h-6 px-2 text-[11px]"
+                  onClick={() => setDisplayCurrency("BRL")}
+                >
+                  BRL
+                </Button>
+                <Button
+                  variant={displayCurrency === "USD" ? "default" : "ghost"}
+                  size="sm"
+                  className="h-6 px-2 text-[11px]"
+                  onClick={() => setDisplayCurrency("USD")}
+                  title={isUsingFallback ? "Usando cotação de fallback" : `1 USD = R$ ${cotacaoUSD.toFixed(4)}`}
+                >
+                  USD {isUsingFallback && "⚠️"}
+                </Button>
+              </div>
+              <Badge variant="secondary" className="text-sm">
+                Total do mês: {formatMoney(totalMes, displayCurrency)}
+              </Badge>
+            </div>
           </div>
 
           <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium text-muted-foreground">
