@@ -6,7 +6,9 @@ import {
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight, Settings2, Plus, AlertTriangle, MapPin, User, Wallet } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { ChevronLeft, ChevronRight, Settings2, Plus, AlertTriangle, MapPin, User, Search, Building2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   PlanningCampanha,
@@ -37,7 +39,11 @@ function formatMoney(v: number, currency: string) {
 
 // ──────── Componentes drag-and-drop ────────
 
-function DraggableBookmaker({ id, nome, moeda }: { id: string; nome: string; moeda: string }) {
+function DraggableBookmaker({ id, nome, moeda, status, logoUrl }: {
+  id: string; nome: string; moeda: string;
+  status: "REGULAMENTADA" | "NAO_REGULAMENTADA";
+  logoUrl: string | null;
+}) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `bm-${id}`,
     data: { type: "bookmaker", bookmakerId: id, nome, moeda },
@@ -48,12 +54,27 @@ function DraggableBookmaker({ id, nome, moeda }: { id: string; nome: string; moe
       {...listeners}
       {...attributes}
       className={cn(
-        "px-2 py-1.5 rounded-md border bg-card text-xs cursor-grab active:cursor-grabbing hover:border-primary transition-colors",
+        "px-2 py-1.5 rounded-md border bg-card text-xs cursor-grab active:cursor-grabbing hover:border-primary transition-colors flex items-center gap-2",
         isDragging && "opacity-40"
       )}
     >
-      <div className="font-medium truncate">{nome}</div>
-      <div className="text-[10px] text-muted-foreground">{moeda}</div>
+      {logoUrl ? (
+        <img src={logoUrl} alt="" className="h-4 w-4 rounded object-contain shrink-0" />
+      ) : (
+        <Building2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+      )}
+      <div className="flex-1 min-w-0">
+        <div className="font-medium truncate">{nome}</div>
+        <div className="text-[10px] text-muted-foreground flex items-center gap-1">
+          <span>{moeda}</span>
+          <span className={cn(
+            "px-1 rounded text-[9px]",
+            status === "REGULAMENTADA" ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"
+          )}>
+            {status === "REGULAMENTADA" ? "REG" : "N/REG"}
+          </span>
+        </div>
+      </div>
     </div>
   );
 }
