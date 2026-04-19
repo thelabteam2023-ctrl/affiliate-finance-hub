@@ -138,7 +138,7 @@ function DraggableCampanha({ campanha, onClick, ipLabel, parceiroNome, hasConfli
           )}
         >
           {hasValue
-            ? formatMoney(displayValue, displayCurrency)
+            ? formatMoney(Number(campanha.deposit_amount), campanha.currency)
             : "s/v"}
         </span>
       </div>
