@@ -50,6 +50,7 @@ const SystemAdmin = lazy(() => import("./pages/SystemAdmin"));
 const ProtecaoProgressiva = lazy(() => import("./pages/ProtecaoProgressiva"));
 const CalculadoraEV = lazy(() => import("./pages/CalculadoraEV"));
 const CalculadoraExtracao = lazy(() => import("./pages/CalculadoraExtracao"));
+const PlanejamentoCampanhas = lazy(() => import("./pages/PlanejamentoCampanhas"));
 const SurebetWindowPage = lazy(() => import("./pages/SurebetWindowPage"));
 const ApostaWindowPage = lazy(() => import("./pages/ApostaWindowPage"));
 const ApostaMultiplaWindowPage = lazy(() => import("./pages/ApostaMultiplaWindowPage"));
@@ -364,6 +365,15 @@ const App = () => (
                 <Suspense fallback={<PageLoader />}>
                   <CalculadoraExtracao />
                 </Suspense>
+              </ProtectedRoute>
+            } />
+
+            {/* Planejamento de Campanhas - com layout (sub-aba de Ferramentas) */}
+            <Route path="/ferramentas/planejamento" element={
+              <ProtectedRoute>
+                <AuthenticatedLayout>
+                  <Suspense fallback={<PageLoader />}><PlanejamentoCampanhas /></Suspense>
+                </AuthenticatedLayout>
               </ProtectedRoute>
             } />
             
