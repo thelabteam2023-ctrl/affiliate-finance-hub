@@ -165,6 +165,7 @@ export function useParceirosLite() {
         .select("id, nome, email, endereco, cidade")
         .eq("workspace_id", workspaceId!)
         .eq("status", "ativo")
+        .neq("is_caixa_operacional", true)
         .order("nome");
       if (error) throw error;
       return (data ?? []) as ParceiroLite[];

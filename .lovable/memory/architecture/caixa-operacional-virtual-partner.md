@@ -1,5 +1,5 @@
 # Memory: architecture/caixa-operacional-virtual-partner
-Updated: 2026-03-07
+Updated: 2026-04-19
 
 ## Parceiro Virtual "Caixa Operacional"
 
@@ -18,8 +18,24 @@ Reutiliza 100% da infraestrutura existente:
 - Views `v_saldo_parceiro_contas` e `v_saldo_parceiro_wallets` funcionam sem alteração
 - Ledger, reconciliação, ajuste manual — tudo funciona imediatamente
 
-### Regras
-- O parceiro caixa é **filtrado** das listagens de parceiros reais (SaldosParceirosSheet, filtros)
-- O parceiro caixa é **mantido** no lookup map para resolução de labels em transações
-- UI: Componente `ContasEmpresaSection` no Caixa Operacional exibe bancos/wallets da empresa
+### Regras de Filtragem (OBRIGATÓRIO)
+**Toda query a `parceiros` em hook/componente que serve seleção/listagem ao usuário DEVE incluir filtro de exclusão do caixa virtual:**
+
+```ts
+.from("parceiros")
+.eq("status", "ativo")
+.neq("is_caixa_operacional", true)  // ← OBRIGATÓRIO em listagens UI
+```
+
+**Hooks/componentes que JÁ filtram corretamente:**
+- `ParceiroSelect.tsx`
+- `useParceirosData.ts`
+- `useParceirosLite` (em `usePlanningData.ts`)
+- `GestaoBookmakers.tsx`
+- `useCentralAlertsCount.ts`
+
+**Única exceção permitida:** lookup maps para resolução de label de transações já registradas (ex: exibir "Caixa Operacional" como origem/destino em transação histórica). Nestes casos, mantém-se o registro no map mas filtra-se da listagem de seleção.
+
+### UI Específica
+- Componente `ContasEmpresaSection` no Caixa Operacional exibe bancos/wallets da empresa
 - CPF usa formato `CAIXA-{workspace_id_prefix}` para unicidade sem dados reais
