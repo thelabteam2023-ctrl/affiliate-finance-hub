@@ -566,8 +566,6 @@ export function PlanejamentoCalendario() {
                         hasConflict={dayConflicts.has(c.id)}
                         isPending={isCampanhaPending(c)}
                         logoUrl={getLogoUrl(c.bookmaker_nome)}
-                        displayValue={convertToDisplay(Number(c.deposit_amount), c.currency)}
-                        displayCurrency={displayCurrency}
                       />
                     ))}
                     {dayTotal > 0 && (
