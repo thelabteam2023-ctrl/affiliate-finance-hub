@@ -8,6 +8,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useBookmakerGrupos, BookmakerGrupo } from "@/hooks/useBookmakerGrupos";
 import { useWorkspaceBookmakers } from "@/hooks/useWorkspaceBookmakers";
+import { BookmakerGrupoRegrasPanel } from "./BookmakerGrupoRegrasPanel";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Plus, Trash2, Edit2, Search, FolderOpen, X, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -101,7 +103,7 @@ export function BookmakerGruposDialog({ open, onOpenChange }: BookmakerGruposDia
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col">
+        <DialogContent className="max-w-5xl max-h-[85vh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FolderOpen className="h-5 w-5" />
@@ -214,58 +216,69 @@ export function BookmakerGruposDialog({ open, onOpenChange }: BookmakerGruposDia
                   {selectedGrupo.descricao && (
                     <p className="text-xs text-muted-foreground mb-3">{selectedGrupo.descricao}</p>
                   )}
-                  <div className="relative mb-3">
-                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                    <Input
-                      placeholder="Buscar bookmaker..."
-                      value={bkSearch}
-                      onChange={(e) => setBkSearch(e.target.value)}
-                      className="pl-8 h-8 text-sm"
-                    />
-                  </div>
-                  <div className="flex gap-1.5 mb-3">
-                    {([
-                      { value: "TODAS", label: "Todas" },
-                      { value: "REGULAMENTADA", label: "Regulamentadas" },
-                      { value: "NAO_REGULAMENTADA", label: "Não Regulamentadas" },
-                    ] as const).map((opt) => (
-                      <Button
-                        key={opt.value}
-                        size="sm"
-                        variant={statusFilter === opt.value ? "default" : "outline"}
-                        className="h-7 text-xs"
-                        onClick={() => setStatusFilter(opt.value)}
-                      >
-                        {opt.label}
-                      </Button>
-                    ))}
-                  </div>
-                  <ScrollArea className="flex-1">
-                    <div className="space-y-0.5 pr-2">
-                      {filteredBookmakers.map((bk) => {
-                        const isMembro = membrosDoGrupo.has(bk.id);
-                        return (
-                          <label
-                            key={bk.id}
-                            className={cn(
-                              "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm cursor-pointer hover:bg-accent transition-colors",
-                              isMembro && "bg-primary/5"
-                            )}
+                  <Tabs defaultValue="casas" className="flex-1 flex flex-col min-h-0">
+                    <TabsList className="grid w-full grid-cols-2 h-8">
+                      <TabsTrigger value="casas" className="text-xs">Casas</TabsTrigger>
+                      <TabsTrigger value="regras" className="text-xs">Regras</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="casas" className="flex-1 flex flex-col min-h-0 mt-3">
+                      <div className="relative mb-3">
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                        <Input
+                          placeholder="Buscar bookmaker..."
+                          value={bkSearch}
+                          onChange={(e) => setBkSearch(e.target.value)}
+                          className="pl-8 h-8 text-sm"
+                        />
+                      </div>
+                      <div className="flex gap-1.5 mb-3">
+                        {([
+                          { value: "TODAS", label: "Todas" },
+                          { value: "REGULAMENTADA", label: "Regulamentadas" },
+                          { value: "NAO_REGULAMENTADA", label: "Não Regulamentadas" },
+                        ] as const).map((opt) => (
+                          <Button
+                            key={opt.value}
+                            size="sm"
+                            variant={statusFilter === opt.value ? "default" : "outline"}
+                            className="h-7 text-xs"
+                            onClick={() => setStatusFilter(opt.value)}
                           >
-                            <Checkbox
-                              checked={isMembro}
-                              onCheckedChange={() => handleToggleMembro(bk.id)}
-                            />
-                            {bk.logo_url && (
-                              <img src={bk.logo_url} alt="" className="h-5 w-5 rounded object-contain shrink-0" />
-                            )}
-                            <span className="truncate">{bk.nome}</span>
-                            {isMembro && <Check className="h-3.5 w-3.5 text-primary ml-auto shrink-0" />}
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </ScrollArea>
+                            {opt.label}
+                          </Button>
+                        ))}
+                      </div>
+                      <ScrollArea className="flex-1">
+                        <div className="space-y-0.5 pr-2">
+                          {filteredBookmakers.map((bk) => {
+                            const isMembro = membrosDoGrupo.has(bk.id);
+                            return (
+                              <label
+                                key={bk.id}
+                                className={cn(
+                                  "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm cursor-pointer hover:bg-accent transition-colors",
+                                  isMembro && "bg-primary/5"
+                                )}
+                              >
+                                <Checkbox
+                                  checked={isMembro}
+                                  onCheckedChange={() => handleToggleMembro(bk.id)}
+                                />
+                                {bk.logo_url && (
+                                  <img src={bk.logo_url} alt="" className="h-5 w-5 rounded object-contain shrink-0" />
+                                )}
+                                <span className="truncate">{bk.nome}</span>
+                                {isMembro && <Check className="h-3.5 w-3.5 text-primary ml-auto shrink-0" />}
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </ScrollArea>
+                    </TabsContent>
+                    <TabsContent value="regras" className="flex-1 min-h-0 mt-3 overflow-y-auto pr-2">
+                      <BookmakerGrupoRegrasPanel grupoId={selectedGrupo.id} grupoNome={selectedGrupo.nome} />
+                    </TabsContent>
+                  </Tabs>
                 </>
               ) : (
                 <div className="flex flex-col items-center justify-center flex-1 text-muted-foreground gap-2">

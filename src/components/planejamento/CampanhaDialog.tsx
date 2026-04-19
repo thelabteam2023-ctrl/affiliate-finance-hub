@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertTriangle, Trash2, Wand2 } from "lucide-react";
+import { AlertTriangle, Trash2, Wand2, ShieldAlert, ShieldCheck } from "lucide-react";
 import {
   PlanningCampanha,
   usePlanningCasas,
@@ -17,6 +17,8 @@ import {
   usePlanningWallets,
   useUpsertCampanha,
 } from "@/hooks/usePlanningData";
+import { useGrupoRegrasValidator } from "@/hooks/useGrupoRegrasValidator";
+import { toast } from "sonner";
 
 interface Props {
   open: boolean;
