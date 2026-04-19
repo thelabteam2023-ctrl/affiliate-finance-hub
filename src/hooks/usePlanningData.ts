@@ -520,9 +520,8 @@ export function useUpsertCampanha() {
   return useMutation({
     mutationFn: async (payload: Partial<PlanningCampanha> & { id?: string }) => {
       if (!workspaceId || !user) throw new Error("Sem workspace");
-      const base = {
+      const base: any = {
         workspace_id: workspaceId,
-        created_by: user.id,
         scheduled_date: payload.scheduled_date!,
         bookmaker_catalogo_id: payload.bookmaker_catalogo_id ?? null,
         bookmaker_nome: payload.bookmaker_nome ?? "",
@@ -540,7 +539,11 @@ export function useUpsertCampanha() {
         if (error) throw error;
         return payload.id;
       } else {
-        const { data, error } = await supabase.from("planning_campanhas" as any).insert(base).select("id").single();
+        const { data, error } = await supabase
+          .from("planning_campanhas" as any)
+          .insert({ ...base, created_by: user.id })
+          .select("id")
+          .single();
         if (error) throw error;
         return (data as any).id;
       }
