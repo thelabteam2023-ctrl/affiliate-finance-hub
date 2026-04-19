@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { ChevronLeft, ChevronRight, Settings2, Plus, AlertTriangle, MapPin, User, Search, Building2, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Settings2, Plus, AlertTriangle, MapPin, User, Search, Building2, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { RegulamentacaoFilter, RegFilterValue } from "./RegulamentacaoFilter";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -53,15 +53,41 @@ function formatMoney(v: number, currency: string) {
 
 // ──────── Componentes drag-and-drop ────────
 
-function DraggableBookmaker({ id, nome, moeda, status, logoUrl }: {
+function DraggableBookmaker({ id, nome, moeda, status, logoUrl, collapsed }: {
   id: string; nome: string; moeda: string;
   status: "REGULAMENTADA" | "NAO_REGULAMENTADA";
   logoUrl: string | null;
+  collapsed: boolean;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `bm-${id}`,
     data: { type: "bookmaker", bookmakerId: id, nome, moeda },
   });
+
+  if (collapsed) {
+    return (
+      <div
+        ref={setNodeRef}
+        {...listeners}
+        {...attributes}
+        title={`${nome} (${moeda})`}
+        className={cn(
+          "aspect-square rounded-md border bg-card cursor-grab active:cursor-grabbing hover:border-primary hover:scale-105 transition-all flex items-center justify-center p-1.5 relative",
+          isDragging && "opacity-40"
+        )}
+      >
+        {logoUrl ? (
+          <img src={logoUrl} alt={nome} className="max-h-full max-w-full object-contain" />
+        ) : (
+          <div className="flex flex-col items-center gap-0.5">
+            <Building2 className="h-5 w-5 text-muted-foreground" />
+            <span className="text-[8px] font-semibold truncate max-w-full px-1">{nome.slice(0, 6)}</span>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div
       ref={setNodeRef}
