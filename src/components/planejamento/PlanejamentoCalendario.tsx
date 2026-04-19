@@ -109,7 +109,7 @@ function DraggableCampanha({ campanha, onClick, ipLabel, parceiroNome, hasConfli
       className={cn(
         "rounded border px-1.5 py-1 text-[10px] leading-tight cursor-grab active:cursor-grabbing transition-colors select-none",
         isPending
-          ? "bg-warning/10 hover:bg-warning/20 border-warning/50 shadow-[0_0_0_1px_hsl(var(--warning)/0.3)]"
+          ? "bg-warning/5 hover:bg-warning/10 border-warning/30"
           : "bg-success/10 hover:bg-success/20 border-success/50 shadow-[0_0_0_1px_hsl(var(--success)/0.3)]",
         hasConflict && "border-destructive/60 bg-destructive/5 shadow-[0_0_0_1px_hsl(var(--destructive)/0.4)]",
         isDragging && "opacity-40"
@@ -120,17 +120,12 @@ function DraggableCampanha({ campanha, onClick, ipLabel, parceiroNome, hasConfli
       }}
     >
       <div className="flex items-center gap-1.5">
-        <div className="h-10 w-10 rounded-md bg-white ring-1 ring-border/40 shrink-0 flex items-center justify-center overflow-hidden shadow-sm">
-          {logoUrl ? (
-            <img
-              src={logoUrl}
-              alt={campanha.bookmaker_nome}
-              className="max-h-full max-w-full object-contain p-0.5"
-            />
-          ) : (
-            <Building2 className="h-5 w-5 text-muted-foreground" />
-          )}
-        </div>
+        <BookmakerLogo
+          logoUrl={logoUrl}
+          alt={campanha.bookmaker_nome}
+          size="h-10 w-10 shrink-0"
+          iconSize="h-5 w-5"
+        />
         <span className="font-semibold truncate flex-1 min-w-0">{campanha.bookmaker_nome}</span>
         <span
           className={cn(
