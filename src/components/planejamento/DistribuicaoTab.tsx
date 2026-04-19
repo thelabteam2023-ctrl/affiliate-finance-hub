@@ -462,6 +462,18 @@ export default function DistribuicaoTab() {
 
       <Separator />
 
+      {/* Aviso sobre genéricos */}
+      {selectedGenericosCount > 0 && (
+        <div className="flex items-start gap-2 text-[11px] rounded-md p-2 bg-warning/10 text-warning-foreground border border-warning/30">
+          <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+          <span>
+            {selectedGenericosCount} perfil(is) genérico(s) selecionado(s). Você pode visualizar a distribuição,
+            mas para <strong>salvar o plano</strong> é preciso vincular cada genérico a um parceiro real
+            (na aba "Perfis", botão <em>Vincular</em>).
+          </span>
+        </div>
+      )}
+
       {/* Ações */}
       <div className="flex flex-wrap gap-2 justify-end">
         <Button
@@ -480,8 +492,10 @@ export default function DistribuicaoTab() {
             !resultado ||
             resultado.celulas.length === 0 ||
             !planoNome.trim() ||
-            createPlano.isPending
+            createPlano.isPending ||
+            selectedGenericosCount > 0
           }
+          title={selectedGenericosCount > 0 ? "Vincule os perfis genéricos a parceiros reais antes de salvar" : undefined}
         >
           <Save className="h-3.5 w-3.5 mr-1" />
           {createPlano.isPending ? "Salvando..." : "Salvar plano"}
