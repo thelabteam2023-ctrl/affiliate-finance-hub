@@ -119,7 +119,6 @@ export async function fetchProjetoExtras(projetoId: string): Promise<ProjetoExtr
     eventosPromResult,
     perdasCancelResult,
     ajustesSaldoResult,
-    resultadosCambiaisResult,
     conciliacoesResult,
     perdasOperResult,
   ] = await Promise.all([
@@ -129,7 +128,6 @@ export async function fetchProjetoExtras(projetoId: string): Promise<ProjetoExtr
     fetchEventosPromocionais(projectBookmakerIds),
     fetchPerdasCancelamentoBonuses(projectBookmakerIds),
     fetchAjustesSaldo(projetoId),
-    fetchResultadosCambiais(projetoId),
     fetchConciliacoes(projetoId, projectBookmakerMoeda),
     fetchPerdasOperacionais(projetoId),
   ]);
@@ -141,7 +139,6 @@ export async function fetchProjetoExtras(projetoId: string): Promise<ProjetoExtr
     ...eventosPromResult,
     ...perdasCancelResult,
     ...ajustesSaldoResult,
-    ...resultadosCambiaisResult,
     ...conciliacoesResult,
     ...perdasOperResult,
   );
@@ -307,24 +304,6 @@ async function fetchAjustesSaldo(projetoId: string): Promise<ProjetoExtraEntry[]
       valor: aj.ajuste_direcao === 'SAIDA' ? -Number(aj.valor) : Number(aj.valor),
       moeda: aj.moeda || 'BRL',
       tipo: 'ajuste_saldo' as ExtraTipo,
-    }));
-}
-
-async function fetchResultadosCambiais(projetoId: string): Promise<ProjetoExtraEntry[]> {
-  const { data } = await supabase
-    .from('cash_ledger')
-    .select('data_transacao, valor, moeda, tipo_transacao')
-    .eq('status', 'CONFIRMADO')
-    .in('tipo_transacao', ['GANHO_CAMBIAL', 'PERDA_CAMBIAL'])
-    .eq('projeto_id_snapshot', projetoId);
-
-  return (data || [])
-    .filter(fx => Number(fx.valor || 0) !== 0)
-    .map(fx => ({
-      data: extractCivilDateKey(fx.data_transacao),
-      valor: fx.tipo_transacao === 'PERDA_CAMBIAL' ? -Number(fx.valor) : Number(fx.valor),
-      moeda: fx.moeda || 'BRL',
-      tipo: 'resultado_cambial' as ExtraTipo,
     }));
 }
 
