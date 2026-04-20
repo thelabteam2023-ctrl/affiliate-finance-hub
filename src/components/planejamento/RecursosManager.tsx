@@ -35,11 +35,11 @@ import DistribuicaoTab from "./DistribuicaoTab";
 export function RecursosManager({ open, onOpenChange }: Props) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Gerenciar recursos</DialogTitle>
         </DialogHeader>
-        <Tabs defaultValue="casas">
+        <Tabs defaultValue="casas" className="flex-1 flex flex-col min-h-0">
           <TabsList>
             <TabsTrigger value="casas">Casas</TabsTrigger>
             <TabsTrigger value="perfis">Perfis</TabsTrigger>
@@ -47,11 +47,11 @@ export function RecursosManager({ open, onOpenChange }: Props) {
             <TabsTrigger value="wallets">Carteiras</TabsTrigger>
             <TabsTrigger value="distribuicao">Distribuição</TabsTrigger>
           </TabsList>
-          <TabsContent value="casas"><CasasList /></TabsContent>
-          <TabsContent value="perfis"><PerfisList /></TabsContent>
-          <TabsContent value="ips"><IpsList /></TabsContent>
-          <TabsContent value="wallets"><WalletsList /></TabsContent>
-          <TabsContent value="distribuicao"><DistribuicaoTab /></TabsContent>
+          <TabsContent value="casas" className="flex-1 overflow-y-auto"><CasasList /></TabsContent>
+          <TabsContent value="perfis" className="flex-1 overflow-y-auto"><PerfisList /></TabsContent>
+          <TabsContent value="ips" className="flex-1 overflow-y-auto"><IpsList /></TabsContent>
+          <TabsContent value="wallets" className="flex-1 overflow-y-auto"><WalletsList /></TabsContent>
+          <TabsContent value="distribuicao" className="flex-1 overflow-y-auto"><DistribuicaoTab /></TabsContent>
         </Tabs>
       </DialogContent>
     </Dialog>
