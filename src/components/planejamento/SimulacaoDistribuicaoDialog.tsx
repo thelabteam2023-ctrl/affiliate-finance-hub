@@ -77,6 +77,7 @@ const DEFAULT_CONFIG: AutoSchedulerConfig = {
   toleranciaFaixaPct: 10,
   regrasDiaSemana: [],
   seed: 1,
+  modoAgrupamento: "balanceado",
 };
 
 const DIAS_SEMANA: { value: number; label: string; short: string; label3: string }[] = [
@@ -702,6 +703,46 @@ export function SimulacaoDistribuicaoDialog({
               </div>
 
               <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
+                {/* Modo de distribuição */}
+                <div className="space-y-2">
+                  <Label className="text-[10px] uppercase tracking-wide font-semibold text-muted-foreground">
+                    Modo de distribuição
+                  </Label>
+                  <div className="grid grid-cols-2 gap-1 rounded-md bg-muted/40 p-1">
+                    <button
+                      type="button"
+                      onClick={() => setConfig({ ...config, modoAgrupamento: "balanceado" })}
+                      className={cn(
+                        "rounded px-2 py-1.5 text-[11px] font-medium transition-colors",
+                        (config.modoAgrupamento ?? "balanceado") === "balanceado"
+                          ? "bg-background text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                      title="Espalha as casas ao longo do mês com curva suave."
+                    >
+                      Balanceado
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfig({ ...config, modoAgrupamento: "agrupado" })}
+                      className={cn(
+                        "rounded px-2 py-1.5 text-[11px] font-medium transition-colors",
+                        config.modoAgrupamento === "agrupado"
+                          ? "bg-background text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                      title="Agrupa todas as suportes do CPF no mesmo dia + clones até o limite."
+                    >
+                      Agrupado por CPF
+                    </button>
+                  </div>
+                  <p className="text-[10px] leading-tight text-muted-foreground">
+                    {config.modoAgrupamento === "agrupado"
+                      ? "Suportes do CPF ativo entram juntas no mesmo dia + clones até clonesPorDia. Excedente vai para os dias seguintes."
+                      : "Casas espalhadas ao longo de diaLimite com curva suave de distribuição."}
+                  </p>
+                </div>
+
                 {/* Parâmetros gerais */}
                 <div className="space-y-2">
                   <Label className="text-[10px] uppercase tracking-wide font-semibold text-muted-foreground">
