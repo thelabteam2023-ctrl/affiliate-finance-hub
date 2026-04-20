@@ -179,7 +179,9 @@ export function SimulacaoDistribuicaoDialog({
     return simulacao.agendamentos.map((a) => {
       const novoDia = overrides.get(a.celula.id);
       if (novoDia && novoDia !== a.dia) {
-        return { ...a, dia: novoDia, dateKey: buildDateKeyLocal(simYear, simMonth, novoDia) };
+        const mm = String(simMonth).padStart(2, "0");
+        const dd = String(novoDia).padStart(2, "0");
+        return { ...a, dia: novoDia, dateKey: `${simYear}-${mm}-${dd}` };
       }
       return a;
     });
