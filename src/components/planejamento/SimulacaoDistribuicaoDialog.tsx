@@ -96,6 +96,34 @@ export function SimulacaoDistribuicaoDialog({
   const [simYear, setSimYear] = useState(year);
   const [simMonth, setSimMonth] = useState(month);
 
+  // Cotações para conversão multimoeda → USD (modo simulação)
+  const { cotacaoUSD, cotacaoEUR, cotacaoGBP, cotacaoMYR, cotacaoMXN, cotacaoARS, cotacaoCOP } = useCotacoes();
+
+  /** Converte um valor da moeda original para USD usando cotações ativas. */
+  const toUSD = (valor: number, moeda: string | null | undefined): number => {
+    if (!valor || isNaN(valor)) return 0;
+    const m = (moeda || "BRL").toUpperCase();
+    if (m === "USD" || m === "USDT" || m === "USDC") return valor;
+    if (cotacaoUSD <= 0) return valor; // proteção
+    if (m === "BRL") return valor / cotacaoUSD;
+    // Outras moedas: temos cotação X→BRL; convertemos via BRL → USD
+    const xToBRL: Record<string, number> = {
+      EUR: cotacaoEUR,
+      GBP: cotacaoGBP,
+      MYR: cotacaoMYR,
+      MXN: cotacaoMXN,
+      ARS: cotacaoARS,
+      COP: cotacaoCOP,
+    };
+    const rate = xToBRL[m];
+    if (rate && rate > 0) return (valor * rate) / cotacaoUSD;
+    return valor; // fallback: assume já em USD
+  };
+
+  /** Formata número como USD compacto: $1,234.56 */
+  const fmtUSD = (valor: number): string =>
+    `$${valor.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
   // Sync interno com props quando o dialog abre
   useEffect(() => {
     if (open) {
