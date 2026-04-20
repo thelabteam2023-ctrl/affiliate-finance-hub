@@ -99,11 +99,29 @@ export function usePlanoCelulasDisponiveis(planoId: string | null) {
         })
       );
 
+      // Calcula índice do CPF (parceiro) dentro de cada plano_grupo, ordenando por
+      // primeira aparição (ordem). Resultado: "CPF 1", "CPF 2"... por grupo do plano.
+      const cpfIndexMap = new Map<string, number>(); // key: plano_grupo_id::parceiro_id
+      const cpfCounter = new Map<string, number>();  // key: plano_grupo_id
+      [...celulas]
+        .sort((a: any, b: any) => (a.ordem ?? 0) - (b.ordem ?? 0))
+        .forEach((c: any) => {
+          if (!c.parceiro_id) return;
+          const key = `${c.plano_grupo_id}::${c.parceiro_id}`;
+          if (cpfIndexMap.has(key)) return;
+          const next = (cpfCounter.get(c.plano_grupo_id) ?? 0) + 1;
+          cpfCounter.set(c.plano_grupo_id, next);
+          cpfIndexMap.set(key, next);
+        });
+
       return celulas.map((c: any) => {
         const grupoId = planoGrupoMap.get(c.plano_grupo_id) ?? "";
         const cat = catMap.get(c.bookmaker_catalogo_id);
         const grp = grupoMap.get(grupoId);
         const memb = membroMap.get(`${grupoId}::${c.bookmaker_catalogo_id}`);
+        const cpfIndex = c.parceiro_id
+          ? cpfIndexMap.get(`${c.plano_grupo_id}::${c.parceiro_id}`) ?? null
+          : null;
         return {
           id: c.id,
           plano_id: c.plano_id,
@@ -122,6 +140,7 @@ export function usePlanoCelulasDisponiveis(planoId: string | null) {
           grupo_id: grupoId,
           grupo_nome: grp?.nome ?? "Grupo",
           grupo_cor: grp?.cor ?? "#6366f1",
+          cpf_index: cpfIndex,
         } as CelulaDisponivel;
       });
     },
