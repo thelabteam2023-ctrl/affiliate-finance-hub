@@ -444,10 +444,20 @@ export function PlanejamentoCalendario() {
   const filteredCelulas = useMemo(() => {
     return celulasPlano.filter((c) => {
       if (grupoFiltroId !== "todos" && c.grupo_id !== grupoFiltroId) return false;
+      if (cpfFiltroIdx !== "todos" && String(c.cpf_index ?? "") !== cpfFiltroIdx) return false;
       if (bmSearch && !c.bookmaker_nome.toLowerCase().includes(bmSearch.toLowerCase())) return false;
       return true;
     });
-  }, [celulasPlano, grupoFiltroId, bmSearch]);
+  }, [celulasPlano, grupoFiltroId, cpfFiltroIdx, bmSearch]);
+
+  // Lista de CPFs presentes no plano (para popular filtro)
+  const cpfsDoPlano = useMemo(() => {
+    const set = new Set<number>();
+    celulasPlano.forEach((c) => {
+      if (c.cpf_index) set.add(c.cpf_index);
+    });
+    return Array.from(set).sort((a, b) => a - b);
+  }, [celulasPlano]);
 
   // Grupos disponíveis no plano selecionado (para popular o filtro de grupos)
   const gruposDoPlano = useMemo(() => {
