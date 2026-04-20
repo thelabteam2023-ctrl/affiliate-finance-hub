@@ -7,7 +7,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { ChevronLeft, ChevronRight, Settings2, Plus, AlertTriangle, MapPin, User, Search, Building2, Trash2, ChevronDown, ChevronUp, ShieldAlert, Pencil } from "lucide-react";
+import { ChevronLeft, ChevronRight, Settings2, Plus, AlertTriangle, MapPin, User, Search, Building2, Trash2, ChevronDown, ChevronUp, ShieldAlert, Pencil, Sparkles } from "lucide-react";
+import { SimulacaoDistribuicaoDialog } from "./SimulacaoDistribuicaoDialog";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -428,6 +429,7 @@ export function PlanejamentoCalendario() {
     toDate: string;
   } | null>(null);
   const [moveConfirmed, setMoveConfirmed] = useState(false);
+  const [simulacaoOpen, setSimulacaoOpen] = useState(false);
 
   const { data: campanhas = [] } = usePlanningCampanhas(year, month);
   const { data: casasPlan = [] } = usePlanningCasas();
@@ -1041,6 +1043,19 @@ export function PlanejamentoCalendario() {
               <Button variant="outline" size="sm" onClick={() => { setYear(today.getFullYear()); setMonth(today.getMonth() + 1); }}>Hoje</Button>
             </div>
             <div className="flex items-center gap-2">
+              {modoPlano && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-[11px]"
+                  onClick={() => setSimulacaoOpen(true)}
+                  disabled={celulasPlano.filter((c) => !c.agendada_em && !c.campanha_id).length === 0}
+                  title="Simular distribuição automática (preview)"
+                >
+                  <Sparkles className="h-3.5 w-3.5 mr-1" />
+                  Simular distribuição
+                </Button>
+              )}
               <div className="flex items-center rounded-md border bg-card p-0.5">
                 <Button
                   variant={displayCurrency === "BRL" ? "default" : "ghost"}
@@ -1170,6 +1185,15 @@ export function PlanejamentoCalendario() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <SimulacaoDistribuicaoDialog
+        open={simulacaoOpen}
+        onOpenChange={setSimulacaoOpen}
+        celulas={celulasPlano}
+        campanhasExistentes={campanhas}
+        year={year}
+        month={month}
+      />
     </DndContext>
   );
 }
