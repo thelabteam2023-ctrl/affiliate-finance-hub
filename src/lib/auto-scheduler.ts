@@ -299,8 +299,16 @@ export function simularDistribuicao(input: {
     return outras < minOutrasPorJanela;
   }
 
+  type SelecionarOptions = {
+    forcarOutra?: boolean;
+    somenteClones?: boolean;
+    excluirSuporteCpf?: number | null;
+  };
+
   // Helper: tenta selecionar a melhor célula elegível para o dia
-  function selecionar(dia: number, slot: DaySlot, forcarOutra = false): CelulaDisponivel | null {
+  function selecionar(dia: number, slot: DaySlot, options: SelecionarOptions = {}): CelulaDisponivel | null {
+    const { forcarOutra = false, somenteClones = false, excluirSuporteCpf = null } = options;
+
     // CPF mínimo "ativo" para SUPORTE (não-clone): enquanto houver qualquer outra pendente
     // do CPF N, NÃO permitimos agendar outras de CPF > N. Isso esgota um CPF de cada vez
     // (CPF1 → CPF2 → ...) mantendo as suporte agrupadas por CPF ao longo do mês.
@@ -328,9 +336,14 @@ export function simularDistribuicao(input: {
     const elegiveis = candidatas
       .filter((c) => restantes.has(c.id))
       .filter((c) => {
-        if (forcarOutra && isClone(c)) return false;
+        const clone = isClone(c);
+        if (forcarOutra && clone) return false;
+        if (somenteClones && !clone) return false;
+        if (!clone && excluirSuporteCpf != null && (c.cpf_index ?? 9999) === excluirSuporteCpf) {
+          return false;
+        }
         // PRIORIZAÇÃO POR CPF (suporte): só libera CPF maior se o menor já esgotou
-        if (!isClone(c)) {
+        if (!clone) {
           const ci = c.cpf_index ?? 9999;
           if (ci > menorCpfOutraPendente) return false;
         }
@@ -339,28 +352,21 @@ export function simularDistribuicao(input: {
         // Isso impede que CPF2 (suporte ou clone) consuma uma casa que o CPF1 ainda precisa.
         if (Number.isFinite(menorCpfOutraPendente)) {
           const ci = c.cpf_index ?? 9999;
-          const ehMenorCpf = !isClone(c) && ci === menorCpfOutraPendente;
+          const ehMenorCpf = !clone && ci === menorCpfOutraPendente;
           if (!ehMenorCpf && casasReservadasMenorCpf.has(c.bookmaker_catalogo_id)) {
             return false;
           }
         }
-        // 1) Casa não pode repetir no MESMO dia
         if (slot.casas.has(c.bookmaker_catalogo_id)) return false;
-        // 2) Cooldown casa — aplica APENAS para clones (suporte/outras não têm essa restrição)
-        if (isClone(c)) {
+        if (clone) {
           const ucasa = ultimoUsoCasa.get(c.bookmaker_catalogo_id);
           if (ucasa !== undefined && dia - ucasa <= cooldownCasaDias) return false;
         }
-        // 3) Limite total de casas no dia
         if (maxCasasPorDia > 0 && slot.casas.size >= maxCasasPorDia) return false;
-        // 4) Meta de ganho atingida
         if (metaGanhoDia > 0 && slot.ganho >= metaGanhoDia) return false;
-        // 5) Faixa de dias: não estourar teto (meta + tolerância%)
         const valor = Number(c.deposito_sugerido) || 0;
         if (estouraFaixa(dia, valor)) return false;
-        // Regras específicas de clones
-        if (isClone(c)) {
-          // Limite ESTRITO de clones/dia (conta casas, não CPFs distintos)
+        if (clone) {
           if (slot.clonesCount >= clonesPorDia) return false;
           const ck = cpfKey(c);
           if (ck) {
@@ -371,15 +377,11 @@ export function simularDistribuicao(input: {
         return true;
       })
       .sort((a, b) => {
-        // 1) Se forçando "outra", clones já foram filtrados; pula
-        if (!forcarOutra) {
-          // Clones primeiro (mais restritos)
+        if (!forcarOutra && !somenteClones) {
           const cloneA = isClone(a) ? 1 : 0;
           const cloneB = isClone(b) ? 1 : 0;
           if (cloneA !== cloneB) return cloneB - cloneA;
         }
-        // 2) Para SUPORTE (não-clone): esgota CPF de menor índice antes de passar pro próximo.
-        //    Clones mantêm a lógica de backlog/gap (não devem agrupar-se por CPF).
         const aClone = isClone(a);
         const bClone = isClone(b);
         if (!aClone && !bClone) {
@@ -387,17 +389,14 @@ export function simularDistribuicao(input: {
           const ciB = b.cpf_index ?? 9999;
           if (ciA !== ciB) return ciA - ciB;
         }
-        // 3) CPFs com maior backlog primeiro (clones)
         const ckA = cpfKey(a);
         const ckB = cpfKey(b);
         const blA = ckA ? backlogPorCpf.get(ckA) ?? 0 : 0;
         const blB = ckB ? backlogPorCpf.get(ckB) ?? 0 : 0;
         if (blA !== blB) return blB - blA;
-        // 4) Maior gap desde último uso da casa (variedade)
         const gA = dia - (ultimoUsoCasa.get(a.bookmaker_catalogo_id) ?? -999);
         const gB = dia - (ultimoUsoCasa.get(b.bookmaker_catalogo_id) ?? -999);
         if (gA !== gB) return gB - gA;
-        // 5) Jitter pseudoaleatório (seed) — só entre clones; suporte fica determinístico por CPF.
         if (aClone && bClone) return rand() - 0.5;
         return 0;
       });
@@ -425,13 +424,14 @@ export function simularDistribuicao(input: {
     agendamentos.push({ celula: pick, dia, dateKey: buildDateKey(year, month, dia) });
   }
 
-  // Helper: tenta executar UM passo de agendamento no dia (retorna true se agendou).
-  function tentarPasso(dia: number, slot: DaySlot): boolean {
+  function tentarPasso(dia: number, slot: DaySlot, options: SelecionarOptions = {}): boolean {
     if (maxCasasPorDia > 0 && slot.casas.size >= maxCasasPorDia) return false;
     if (metaGanhoDia > 0 && slot.ganho >= metaGanhoDia) return false;
-    const precisaOutra = violaJanelaOutras(dia);
-    let pick = precisaOutra ? selecionar(dia, slot, true) : selecionar(dia, slot, false);
-    if (!pick && precisaOutra) pick = selecionar(dia, slot, false);
+    const precisaOutra = !options.somenteClones && violaJanelaOutras(dia);
+    let pick = precisaOutra
+      ? selecionar(dia, slot, { ...options, forcarOutra: true })
+      : selecionar(dia, slot, options);
+    if (!pick && precisaOutra) pick = selecionar(dia, slot, options);
     if (!pick) return false;
     efetivarAgendamento(pick, dia, slot);
     return true;
@@ -485,10 +485,9 @@ export function simularDistribuicao(input: {
     metaDistribuicaoPorDia.set(dia, acumuladoAtual - acumuladoAnterior);
   }
 
-  // ---- PASS 1: Distribuição balanceada até a meta suave de cada dia ----
-  // Mantém a prioridade de suporte por CPF (CPF 1 esgota antes do CPF 2),
-  // mas preenche cada dia com mais de uma casa quando a curva ideal pedir.
-  let cpfSuporteAtivoIdx = 0;
+  // ---- PASS 1: Distribuição balanceada por dia ----
+  // Em cada dia, colocamos uma fração das suportes do CPF ativo e reservamos espaço
+  // para intercalar clones/outras, evitando blocos inteiros de um CPF no começo do mês.
   let progrediuBalanceado = true;
   let safetyBalanceado = 0;
   const maxRoundsBalanceado = candidatas.length * 3 + limite;
@@ -497,41 +496,45 @@ export function simularDistribuicao(input: {
     for (let dia = 1; dia <= limite; dia++) {
       const slot = ocupacao.get(dia)!;
       const alvoDia = metaDistribuicaoPorDia.get(dia) ?? 0;
-      let safetyDia = 0;
+      if (alvoDia <= 0) continue;
 
-      while (slot.casas.size < alvoDia && safetyDia++ < 50) {
-        while (
-          cpfSuporteAtivoIdx < cpfsSuporte.length &&
-          !temPendenciaSuporteCpf(cpfsSuporte[cpfSuporteAtivoIdx])
-        ) {
-          cpfSuporteAtivoIdx++;
+      let cpfSuporteAtivo: number | null = null;
+      for (const cpfIdx of cpfsSuporte) {
+        if (temPendenciaSuporteCpf(cpfIdx)) {
+          cpfSuporteAtivo = cpfIdx;
+          break;
         }
-
-        let agendou = false;
-
-        if (cpfSuporteAtivoIdx < cpfsSuporte.length) {
-          agendou = tentarSuporteCpfNoDia(cpfsSuporte[cpfSuporteAtivoIdx], dia, slot);
-          while (
-            cpfSuporteAtivoIdx < cpfsSuporte.length &&
-            !temPendenciaSuporteCpf(cpfsSuporte[cpfSuporteAtivoIdx])
-          ) {
-            cpfSuporteAtivoIdx++;
-          }
-        }
-
-        if (!agendou) {
-          agendou = tentarPasso(dia, slot);
-          while (
-            cpfSuporteAtivoIdx < cpfsSuporte.length &&
-            !temPendenciaSuporteCpf(cpfsSuporte[cpfSuporteAtivoIdx])
-          ) {
-            cpfSuporteAtivoIdx++;
-          }
-        }
-
-        if (!agendou) break;
-        progrediuBalanceado = true;
       }
+
+      const espacoRestante = alvoDia - slot.casas.size;
+      if (espacoRestante <= 0) continue;
+
+      let progrediuNoDia = false;
+      if (cpfSuporteAtivo != null) {
+        const metaSuporteDia = Math.min(
+          espacoRestante,
+          Math.max(1, Math.ceil(alvoDia * 0.6))
+        );
+        let suporteAgendado = 0;
+        let safetySuporte = 0;
+        while (suporteAgendado < metaSuporteDia && safetySuporte++ < 50) {
+          if (!tentarSuporteCpfNoDia(cpfSuporteAtivo, dia, slot)) break;
+          suporteAgendado++;
+          progrediuNoDia = true;
+        }
+      }
+
+      let safetyIntercalado = 0;
+      while (slot.casas.size < alvoDia && safetyIntercalado++ < 50) {
+        const agendou = tentarPasso(dia, slot, {
+          somenteClones: cpfSuporteAtivo != null,
+          excluirSuporteCpf: cpfSuporteAtivo,
+        });
+        if (!agendou) break;
+        progrediuNoDia = true;
+      }
+
+      if (progrediuNoDia) progrediuBalanceado = true;
     }
   }
 
