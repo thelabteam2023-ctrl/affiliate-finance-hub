@@ -38,6 +38,15 @@ import { RecursosManager } from "./RecursosManager";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { BookmakerLogo } from "@/components/ui/bookmaker-logo";
 import { useExchangeRates } from "@/contexts/ExchangeRatesContext";
+import { useDistribuicaoPlanos } from "@/hooks/useDistribuicaoPlanos";
+import {
+  usePlanoCelulasDisponiveis,
+  marcarCelulaAgendada,
+  desmarcarCelulaAgendada,
+  type CelulaDisponivel,
+} from "@/hooks/usePlanoCelulasDisponiveis";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useQueryClient } from "@tanstack/react-query";
 
 type DisplayCurrency = "BRL" | "USD";
 
