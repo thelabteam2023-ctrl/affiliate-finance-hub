@@ -34,11 +34,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Trash2, Save, Wand2, AlertTriangle, Users, FolderOpen, CalendarRange } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { toast } from "sonner";
 import { useExchangeRates } from "@/contexts/ExchangeRatesContext";
-import { useGerarAgendaMutation, useAgendaPlano } from "@/hooks/useAgendaPlano";
-import { useDistribuicaoPlanos, useDistribuicaoPlanoDetalhe } from "@/hooks/useDistribuicaoPlanos";
-import type { CelulaParaAgendar } from "@/lib/agenda-engine";
+import { useDistribuicaoPlanos } from "@/hooks/useDistribuicaoPlanos";
 
 interface CatalogoItem {
   id: string;
