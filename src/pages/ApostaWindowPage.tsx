@@ -89,6 +89,13 @@ export default function ApostaWindowPage() {
         if (fetchError) throw fetchError;
         
         if (isDuplicating && data) {
+          // Buscar pernas adicionais (apostas multi-entry) para clonagem fiel
+          const { data: pernas } = await supabase
+            .from('apostas_pernas')
+            .select('*')
+            .eq('aposta_id', fetchId)
+            .order('ordem', { ascending: true });
+
           // Strip identity fields for duplication — keep all operational data including data_aposta
           const { id: _id, created_at, updated_at, status, resultado, lucro_prejuizo, lucro_prejuizo_brl_referencia, pl_consolidado, retorno_consolidado, roi_real, valor_retorno, ...rest } = data;
           setAposta({
@@ -97,6 +104,8 @@ export default function ApostaWindowPage() {
             status: 'PENDENTE',
             resultado: null,
             lucro_prejuizo: null,
+            // Seed de pernas para o dialog popular additionalEntries sem precisar de id
+            __seedPernas: pernas && pernas.length > 0 ? pernas : null,
           });
         } else {
           setAposta(data);
