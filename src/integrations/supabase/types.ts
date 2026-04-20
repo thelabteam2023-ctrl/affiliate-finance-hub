@@ -3480,7 +3480,8 @@ export type Database = {
           id: string
           ip_slot: string | null
           ordem: number
-          parceiro_id: string
+          parceiro_id: string | null
+          perfil_planejamento_id: string | null
           plano_grupo_id: string
           plano_id: string
           travada: boolean
@@ -3492,7 +3493,8 @@ export type Database = {
           id?: string
           ip_slot?: string | null
           ordem?: number
-          parceiro_id: string
+          parceiro_id?: string | null
+          perfil_planejamento_id?: string | null
           plano_grupo_id: string
           plano_id: string
           travada?: boolean
@@ -3504,7 +3506,8 @@ export type Database = {
           id?: string
           ip_slot?: string | null
           ordem?: number
-          parceiro_id?: string
+          parceiro_id?: string | null
+          perfil_planejamento_id?: string | null
           plano_grupo_id?: string
           plano_id?: string
           travada?: boolean
@@ -3573,6 +3576,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_wallet_crypto_balances"
             referencedColumns: ["parceiro_id"]
+          },
+          {
+            foreignKeyName: "distribuicao_plano_celulas_perfil_planejamento_id_fkey"
+            columns: ["perfil_planejamento_id"]
+            isOneToOne: false
+            referencedRelation: "planning_perfis"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "distribuicao_plano_celulas_plano_grupo_id_fkey"

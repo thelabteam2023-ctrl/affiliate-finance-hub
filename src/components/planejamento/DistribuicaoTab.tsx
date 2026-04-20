@@ -190,15 +190,13 @@ export default function DistribuicaoTab() {
   const handleSalvar = () => {
     if (!resultado || resultado.celulas.length === 0) return;
     if (!planoNome.trim()) return;
-    // Mapear perfil_id (planning) -> parceiro_id (necessário pela FK)
-    // Perfis genéricos (sem parceiro) são ignorados na persistência por enquanto.
-    const perfilToParceiro = new Map<string, string>();
-    perfis.forEach((p) => {
-      if (p.parceiro_id) perfilToParceiro.set(p.id, p.parceiro_id);
-    });
+    // Mapeia perfil_id (planning) -> parceiro_id real (quando houver).
+    // Perfis genéricos salvam só com perfil_planejamento_id (rascunho).
+    const perfilToParceiro = new Map<string, string | null>();
+    perfis.forEach((p) => perfilToParceiro.set(p.id, p.parceiro_id ?? null));
 
     const parceiroIds = selectedPerfilIds
-      .map((pid) => perfilToParceiro.get(pid))
+      .map((pid) => perfilToParceiro.get(pid) ?? null)
       .filter((x): x is string => !!x);
 
     createPlano.mutate(
@@ -212,19 +210,15 @@ export default function DistribuicaoTab() {
           casas_por_cpf: g.casas_por_cpf,
           ordem: idx,
         })),
-        celulas: resultado.celulas
-          .map((c, idx) => {
-            const parceiroId = perfilToParceiro.get(c.parceiro_id);
-            if (!parceiroId) return null;
-            return {
-              grupo_id: c.grupo_id,
-              parceiro_id: parceiroId,
-              bookmaker_catalogo_id: c.bookmaker_catalogo_id,
-              ip_slot: c.ip_slot,
-              ordem: idx,
-            };
-          })
-          .filter((x): x is NonNullable<typeof x> => !!x),
+        celulas: resultado.celulas.map((c, idx) => ({
+          grupo_id: c.grupo_id,
+          // c.parceiro_id no engine = id do perfil de planejamento
+          perfil_planejamento_id: c.parceiro_id,
+          parceiro_id: perfilToParceiro.get(c.parceiro_id) ?? null,
+          bookmaker_catalogo_id: c.bookmaker_catalogo_id,
+          ip_slot: c.ip_slot,
+          ordem: idx,
+        })),
       },
       {
         onSuccess: (plano: any) => {
@@ -536,14 +530,14 @@ export default function DistribuicaoTab() {
 
       <Separator />
 
-      {/* Aviso sobre genéricos */}
+      {/* Aviso informativo sobre genéricos (não bloqueia) */}
       {selectedGenericosCount > 0 && (
-        <div className="flex items-start gap-2 text-[11px] rounded-md p-2 bg-warning/10 text-warning-foreground border border-warning/30">
-          <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+        <div className="flex items-start gap-2 text-[11px] rounded-md p-2 bg-primary/10 text-foreground border border-primary/30">
+          <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0 text-primary" />
           <span>
-            {selectedGenericosCount} perfil(is) genérico(s) selecionado(s). Você pode visualizar a distribuição,
-            mas para <strong>salvar o plano</strong> é preciso vincular cada genérico a um parceiro real
-            (na aba "Perfis", botão <em>Vincular</em>).
+            {selectedGenericosCount} perfil(is) genérico(s) selecionado(s). O plano será salvo como{" "}
+            <strong>rascunho</strong> — você poderá vincular cada genérico a um parceiro real depois,
+            antes de executar a agenda.
           </span>
         </div>
       )}
@@ -553,8 +547,6 @@ export default function DistribuicaoTab() {
         const faltaSalvar: string[] = [];
         if (!resultado || resultado.celulas.length === 0) faltaSalvar.push('Clique em "Gerar distribuição"');
         if (!planoNome.trim()) faltaSalvar.push("Preencha o nome do plano (campo no topo)");
-        if (selectedGenericosCount > 0)
-          faltaSalvar.push(`Vincule os ${selectedGenericosCount} perfil(is) genérico(s) a parceiros reais`);
 
         const faltaAgenda: string[] = [];
         if (!planoSalvoId) faltaAgenda.push("Salve o plano antes de gerar a agenda");
@@ -600,16 +592,13 @@ export default function DistribuicaoTab() {
             !resultado ||
             resultado.celulas.length === 0 ||
             !planoNome.trim() ||
-            createPlano.isPending ||
-            selectedGenericosCount > 0
+            createPlano.isPending
           }
           title={
             !resultado || resultado.celulas.length === 0
               ? 'Clique em "Gerar distribuição" primeiro'
               : !planoNome.trim()
               ? "Preencha o nome do plano no topo"
-              : selectedGenericosCount > 0
-              ? "Vincule os perfis genéricos a parceiros reais antes de salvar"
               : undefined
           }
         >
