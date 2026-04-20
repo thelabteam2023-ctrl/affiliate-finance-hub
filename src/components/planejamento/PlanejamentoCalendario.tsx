@@ -512,6 +512,8 @@ export function PlanejamentoCalendario() {
     return Array.from(map.values());
   }, [celulasPlano]);
 
+  const modoPlano = planoFiltroId !== "none";
+
   // Plano selecionado (para extrair parceiro_ids e mapear CPF por posição)
   const planoSelecionado = useMemo(
     () => planos.find((p) => p.id === planoFiltroId) ?? null,
@@ -525,13 +527,19 @@ export function PlanejamentoCalendario() {
   }, [planoSelecionado]);
 
   // Mapa: campanha_id -> cpf_index (para colorir o card no calendário).
-  // Estratégia: 1) vínculo direto via célula agendada; 2) fallback pelo parceiro_id
-  // da campanha posicionado no parceiro_ids do plano (mesma lógica do hook).
+  // Estratégias em cascata:
+  //  1) Vínculo direto via célula agendada (campanha_id na célula).
+  //  2) Fallback pelo parceiro_id da campanha posicionado no parceiro_ids do plano.
+  //  3) Fallback pelo bookmaker_catalogo_id da campanha — pega a 1ª célula
+  //     do plano com a mesma casa (ordenada) e usa seu cpf_index. Isso resolve
+  //     o caso comum em que o usuário arrastou a casa antes de vincular CPF/IP.
   const campanhaCpfMap = useMemo(() => {
     const map = new Map<string, number>();
+    // 1) Vínculo direto
     celulasPlano.forEach((c) => {
       if (c.campanha_id && c.cpf_index) map.set(c.campanha_id, c.cpf_index);
     });
+    // 2) Por parceiro
     campanhas.forEach((camp) => {
       if (map.has(camp.id)) return;
       if (camp.parceiro_id) {
@@ -539,10 +547,32 @@ export function PlanejamentoCalendario() {
         if (idx) map.set(camp.id, idx);
       }
     });
+    // 3) Por bookmaker_catalogo_id — usa a 1ª célula que combine como "âncora"
+    if (modoPlano) {
+      const celulasOrdenadas = [...celulasPlano].sort(
+        (a, b) => (a.cpf_index ?? 99) - (b.cpf_index ?? 99) || (a.ordem ?? 0) - (b.ordem ?? 0)
+      );
+      campanhas.forEach((camp) => {
+        if (map.has(camp.id)) return;
+        const catId = (camp as any).bookmaker_catalogo_id;
+        if (!catId) return;
+        const cel = celulasOrdenadas.find((c) => c.bookmaker_catalogo_id === catId);
+        if (cel?.cpf_index) map.set(camp.id, cel.cpf_index);
+      });
+    }
+    if (typeof window !== "undefined" && (window as any).__planejamentoDebug) {
+      console.log("[Planejamento] campanhaCpfMap", {
+        modoPlano,
+        planoId: planoFiltroId,
+        celulasPlano: celulasPlano.map((c) => ({ id: c.id, casa: c.bookmaker_nome, cpf_index: c.cpf_index, campanha_id: c.campanha_id, parceiro_id: c.parceiro_id })),
+        campanhas: campanhas.map((c) => ({ id: c.id, casa: c.bookmaker_nome, parceiro_id: c.parceiro_id, bookmaker_catalogo_id: (c as any).bookmaker_catalogo_id })),
+        map: Array.from(map.entries()),
+      });
+    }
     return map;
-  }, [celulasPlano, campanhas, parceiroIdToCpfIdx]);
+  }, [celulasPlano, campanhas, parceiroIdToCpfIdx, modoPlano, planoFiltroId]);
 
-  const modoPlano = planoFiltroId !== "none";
+  // (modoPlano declarado acima)
   const sidebarItemsCount = modoPlano ? filteredCelulas.length : filteredBookmakers.length;
 
   // Excluir campanha do calendário (libera célula vinculada se houver)
