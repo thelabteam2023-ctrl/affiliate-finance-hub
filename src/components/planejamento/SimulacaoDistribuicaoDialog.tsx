@@ -114,18 +114,48 @@ export function SimulacaoDistribuicaoDialog({
         </DialogHeader>
 
         {/* Parâmetros */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 items-end p-3 rounded-md border bg-muted/30">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 items-end p-3 rounded-md border bg-muted/30">
           <div className="space-y-1">
             <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
-              Casas/dia
+              Clones/dia
             </Label>
             <Input
               type="number"
               min={1}
-              max={10}
-              value={config.casasPorDia}
+              max={20}
+              value={config.clonesPorDia}
               onChange={(e) =>
-                setConfig({ ...config, casasPorDia: Math.max(1, Number(e.target.value) || 1) })
+                setConfig({ ...config, clonesPorDia: Math.max(1, Number(e.target.value) || 1) })
+              }
+              className="h-8 text-xs"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
+              Máx casas/dia <span className="opacity-60">(0=∞)</span>
+            </Label>
+            <Input
+              type="number"
+              min={0}
+              max={50}
+              value={config.maxCasasPorDia}
+              onChange={(e) =>
+                setConfig({ ...config, maxCasasPorDia: Math.max(0, Number(e.target.value) || 0) })
+              }
+              className="h-8 text-xs"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
+              Meta ganho/dia <span className="opacity-60">(0=off)</span>
+            </Label>
+            <Input
+              type="number"
+              min={0}
+              step="0.01"
+              value={config.metaGanhoDia}
+              onChange={(e) =>
+                setConfig({ ...config, metaGanhoDia: Math.max(0, Number(e.target.value) || 0) })
               }
               className="h-8 text-xs"
             />
@@ -175,9 +205,11 @@ export function SimulacaoDistribuicaoDialog({
               className="h-8 text-xs"
             />
           </div>
-          <Button onClick={recalcular} size="sm" className="h-8">
-            <RefreshCw className="h-3.5 w-3.5 mr-1" /> Recalcular
-          </Button>
+          <div className="col-span-2 sm:col-span-2 flex justify-end">
+            <Button onClick={recalcular} size="sm" className="h-8 w-full sm:w-auto">
+              <RefreshCw className="h-3.5 w-3.5 mr-1" /> Recalcular
+            </Button>
+          </div>
         </div>
 
         {/* Resumo */}
