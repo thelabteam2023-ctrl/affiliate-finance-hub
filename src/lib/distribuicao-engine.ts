@@ -63,7 +63,8 @@ export function gerarDistribuicao(
   let ordem = 0;
 
   for (const g of grupos) {
-    const casas = [...g.catalogo_ids];
+    // Embaralha as casas do grupo para evitar distribuição alfabética/previsível
+    const casas = shuffleArray(g.catalogo_ids);
     const totalCasas = casas.length;
     if (totalCasas === 0) {
       warnings.push({
@@ -183,4 +184,14 @@ function ipSlot(g: GrupoConfig, parceiroId: string, idx: number): string {
   return g.regra_ip === "IP_COMPARTILHADO_GRUPO"
     ? `G:${grupoShort}:${cpfShort}`
     : `G:${grupoShort}:${cpfShort}:${idx + 1}`;
+}
+
+/** Fisher-Yates shuffle não-mutante. */
+function shuffleArray<T>(arr: readonly T[]): T[] {
+  const out = [...arr];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
 }
