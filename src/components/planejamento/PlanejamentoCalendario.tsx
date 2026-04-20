@@ -572,7 +572,7 @@ export function PlanejamentoCalendario() {
     return map;
   }, [celulasPlano, campanhas, parceiroIdToCpfIdx, modoPlano, planoFiltroId]);
 
-  const modoPlano = planoFiltroId !== "none";
+  // (modoPlano declarado acima)
   const sidebarItemsCount = modoPlano ? filteredCelulas.length : filteredBookmakers.length;
 
   // Excluir campanha do calendário (libera célula vinculada se houver)
