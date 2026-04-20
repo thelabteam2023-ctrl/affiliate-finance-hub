@@ -326,9 +326,21 @@ export function ApostaCard({
   
   // Detectar se é multi-moeda (sub-entries com moedas diferentes)
   const isMultiCurrency = (() => {
-    if (!aposta.sub_entries || aposta.sub_entries.length === 0) return false;
-    const moedas = new Set([aposta.moeda || "BRL", ...aposta.sub_entries.map(e => e.moeda || "BRL")]);
-    return moedas.size > 1;
+    // 1. Flag explícita do banco (RPC reliquidar_aposta_v6 grava is_multicurrency=true)
+    if ((aposta as any).is_multicurrency === true) return true;
+    // 2. moeda_operacao = 'MULTI' (padrão canônico)
+    if ((aposta as any).moeda_operacao === 'MULTI') return true;
+    // 3. Sub-entries (formulário) com moedas diferentes
+    if (aposta.sub_entries && aposta.sub_entries.length > 0) {
+      const moedas = new Set([aposta.moeda || "BRL", ...aposta.sub_entries.map(e => e.moeda || "BRL")]);
+      if (moedas.size > 1) return true;
+    }
+    // 4. Pernas (apostas_pernas) com moedas diferentes
+    if (aposta.pernas && aposta.pernas.length > 1) {
+      const moedas = new Set(aposta.pernas.map((p: any) => p.moeda || "BRL"));
+      if (moedas.size > 1) return true;
+    }
+    return false;
   })();
 
   // Formatar valor na moeda operacional da aposta
