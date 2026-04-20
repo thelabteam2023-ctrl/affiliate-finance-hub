@@ -530,14 +530,14 @@ export default function DistribuicaoTab() {
 
       <Separator />
 
-      {/* Aviso sobre genéricos */}
+      {/* Aviso informativo sobre genéricos (não bloqueia) */}
       {selectedGenericosCount > 0 && (
-        <div className="flex items-start gap-2 text-[11px] rounded-md p-2 bg-warning/10 text-warning-foreground border border-warning/30">
-          <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+        <div className="flex items-start gap-2 text-[11px] rounded-md p-2 bg-primary/10 text-foreground border border-primary/30">
+          <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0 text-primary" />
           <span>
-            {selectedGenericosCount} perfil(is) genérico(s) selecionado(s). Você pode visualizar a distribuição,
-            mas para <strong>salvar o plano</strong> é preciso vincular cada genérico a um parceiro real
-            (na aba "Perfis", botão <em>Vincular</em>).
+            {selectedGenericosCount} perfil(is) genérico(s) selecionado(s). O plano será salvo como{" "}
+            <strong>rascunho</strong> — você poderá vincular cada genérico a um parceiro real depois,
+            antes de executar a agenda.
           </span>
         </div>
       )}
@@ -547,8 +547,6 @@ export default function DistribuicaoTab() {
         const faltaSalvar: string[] = [];
         if (!resultado || resultado.celulas.length === 0) faltaSalvar.push('Clique em "Gerar distribuição"');
         if (!planoNome.trim()) faltaSalvar.push("Preencha o nome do plano (campo no topo)");
-        if (selectedGenericosCount > 0)
-          faltaSalvar.push(`Vincule os ${selectedGenericosCount} perfil(is) genérico(s) a parceiros reais`);
 
         const faltaAgenda: string[] = [];
         if (!planoSalvoId) faltaAgenda.push("Salve o plano antes de gerar a agenda");
@@ -594,16 +592,13 @@ export default function DistribuicaoTab() {
             !resultado ||
             resultado.celulas.length === 0 ||
             !planoNome.trim() ||
-            createPlano.isPending ||
-            selectedGenericosCount > 0
+            createPlano.isPending
           }
           title={
             !resultado || resultado.celulas.length === 0
               ? 'Clique em "Gerar distribuição" primeiro'
               : !planoNome.trim()
               ? "Preencha o nome do plano no topo"
-              : selectedGenericosCount > 0
-              ? "Vincule os perfis genéricos a parceiros reais antes de salvar"
               : undefined
           }
         >
