@@ -318,6 +318,8 @@ export function PlanejamentoCalendario() {
   const [bmSearch, setBmSearch] = useState("");
   const [bmFilter, setBmFilter] = useState<RegFilterValue>("all");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [planoFiltroId, setPlanoFiltroId] = useState<string>("none"); // "none" = mostrar casas livres
+  const [grupoFiltroId, setGrupoFiltroId] = useState<string>("todos"); // "todos" = sem filtro de grupo
   const [displayCurrency, setDisplayCurrency] = useState<DisplayCurrency>(() => {
     if (typeof window === "undefined") return "BRL";
     const saved = window.localStorage.getItem("planejamento:displayCurrency");
