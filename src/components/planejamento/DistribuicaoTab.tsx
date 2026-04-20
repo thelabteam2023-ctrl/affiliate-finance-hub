@@ -51,16 +51,8 @@ export default function DistribuicaoTab() {
   const { data: casasPlanejamento = [] } = usePlanningCasas();
   const { createPlano } = useDistribuicaoPlanos();
   const { convertToBRL, cotacaoUSD } = useExchangeRates();
-  const gerarAgendaMut = useGerarAgendaMutation();
 
   const [planoNome, setPlanoNome] = useState("");
-  const [metaDiariaUsd, setMetaDiariaUsd] = useState<string>("");
-  const [startDate, setStartDate] = useState<string>(() => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  });
-  const [planoSalvoId, setPlanoSalvoId] = useState<string | null>(null);
-  const { data: detalheSalvo } = useDistribuicaoPlanoDetalhe(planoSalvoId);
   const [selectedPerfilIds, setSelectedPerfilIds] = useState<string[]>([]);
   const [grupoConfigs, setGrupoConfigs] = useState<
     Array<{
