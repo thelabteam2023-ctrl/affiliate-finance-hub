@@ -110,6 +110,53 @@ function DraggableBookmaker({ id, nome, moeda, status, logoUrl }: {
   );
 }
 
+// Item arrastável vindo do PLANO de distribuição
+// Carrega tudo: CPF (parceiro), casa, grupo, valor sugerido — pronto para virar campanha
+function DraggableCelula({ celula }: { celula: CelulaDisponivel }) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `cel-${celula.id}`,
+    data: { type: "celula", celula },
+  });
+  const jaAgendada = !!celula.agendada_em;
+  return (
+    <div
+      ref={setNodeRef}
+      {...(jaAgendada ? {} : listeners)}
+      {...attributes}
+      className={cn(
+        "px-2 py-1.5 rounded-md border bg-card text-xs transition-colors flex items-center gap-2",
+        jaAgendada
+          ? "opacity-50 cursor-not-allowed"
+          : "cursor-grab active:cursor-grabbing hover:border-primary",
+        isDragging && "opacity-40"
+      )}
+      style={{ borderLeftColor: celula.grupo_cor, borderLeftWidth: 3 }}
+      title={
+        jaAgendada
+          ? `${celula.bookmaker_nome} • já agendada`
+          : `${celula.bookmaker_nome} • ${celula.grupo_nome}`
+      }
+    >
+      {celula.bookmaker_logo ? (
+        <img src={celula.bookmaker_logo} alt="" className="h-4 w-4 rounded object-contain shrink-0" />
+      ) : (
+        <Building2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+      )}
+      <div className="flex-1 min-w-0">
+        <div className="font-medium truncate">{celula.bookmaker_nome}</div>
+        <div className="text-[10px] text-muted-foreground flex items-center gap-1.5">
+          <span>{celula.moeda}</span>
+          {celula.deposito_sugerido > 0 && (
+            <span className="font-medium text-foreground/70">
+              {formatMoney(celula.deposito_sugerido, celula.moeda)}
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function DraggableCampanha({ campanha, onClick, ipLabel, parceiroNome, hasConflict, isPending, logoUrl, grupoBlock, grupoWarn }: {
   campanha: PlanningCampanha;
   onClick: () => void;
