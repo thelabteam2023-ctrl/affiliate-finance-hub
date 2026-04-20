@@ -201,15 +201,16 @@ export default function DistribuicaoTab() {
         })),
         celulas: resultado.celulas.map((c, idx) => ({
           grupo_id: c.grupo_id,
-          // c.parceiro_id no engine = id do perfil de planejamento
           perfil_planejamento_id: c.parceiro_id,
           parceiro_id: perfilToParceiro.get(c.parceiro_id) ?? null,
           bookmaker_catalogo_id: c.bookmaker_catalogo_id,
           ip_slot: c.ip_slot,
           ordem: idx,
+        })),
       },
-    });
+    );
   };
+
 
 
   const selectedGenericosCount = useMemo(
