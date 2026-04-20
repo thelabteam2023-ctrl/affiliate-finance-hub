@@ -8,7 +8,6 @@ import {
   REGRA_IP_LABELS,
   RegraCasa,
   RegraIp,
-  useDistribuicaoPlanos,
 } from "@/hooks/useDistribuicaoPlanos";
 import {
   usePlanningPerfis,
@@ -86,10 +85,10 @@ export default function DistribuicaoTab() {
       if (catalogoIds.length === 0) return [];
       const { data, error } = await supabase
         .from("bookmakers_catalogo")
-        .select("id, nome, logo_url")
+        .select("id, nome, logo_url, moeda_padrao")
         .in("id", catalogoIds);
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []) as CatalogoItem[];
     },
     enabled: catalogoIds.length > 0,
   });
