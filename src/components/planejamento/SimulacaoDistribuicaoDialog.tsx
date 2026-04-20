@@ -92,26 +92,47 @@ export function SimulacaoDistribuicaoDialog({
   const [config, setConfig] = useState<AutoSchedulerConfig>(DEFAULT_CONFIG);
   const [simulacao, setSimulacao] = useState<SimulacaoResultado | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [simYear, setSimYear] = useState(year);
+  const [simMonth, setSimMonth] = useState(month);
+
+  // Sync interno com props quando o dialog abre
+  useEffect(() => {
+    if (open) {
+      setSimYear(year);
+      setSimMonth(month);
+    }
+  }, [open, year, month]);
 
   useEffect(() => {
     if (!open) return;
-    const r = simularDistribuicao({ celulas, campanhasExistentes, year, month, config });
+    const r = simularDistribuicao({ celulas, campanhasExistentes, year: simYear, month: simMonth, config });
     setSimulacao(r);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, celulas, campanhasExistentes, year, month]);
+  }, [open, celulas, campanhasExistentes, simYear, simMonth]);
 
   const recalcular = () => {
     const novaSeed = Math.floor(Math.random() * 1_000_000) + 1;
     const novoConfig = { ...config, seed: novaSeed };
     setConfig(novoConfig);
-    const r = simularDistribuicao({ celulas, campanhasExistentes, year, month, config: novoConfig });
+    const r = simularDistribuicao({ celulas, campanhasExistentes, year: simYear, month: simMonth, config: novoConfig });
     setSimulacao(r);
   };
 
   const aplicarConfig = () => {
-    const r = simularDistribuicao({ celulas, campanhasExistentes, year, month, config });
+    const r = simularDistribuicao({ celulas, campanhasExistentes, year: simYear, month: simMonth, config });
     setSimulacao(r);
   };
+
+  const mudarMes = (delta: number) => {
+    let m = simMonth + delta;
+    let y = simYear;
+    if (m < 1) { m = 12; y -= 1; }
+    if (m > 12) { m = 1; y += 1; }
+    setSimMonth(m);
+    setSimYear(y);
+  };
+
+  const NOMES_MES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
   const porDia = useMemo(() => {
     const map = new Map<number, SimulacaoResultado["agendamentos"]>();
@@ -147,6 +168,30 @@ export function SimulacaoDistribuicaoDialog({
               </DialogDescription>
             </div>
             <div className="flex items-center gap-2">
+              {/* Seletor de mês */}
+              <div className="flex items-center gap-0.5 rounded-md border bg-background/50 px-1 py-0.5">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={() => mudarMes(-1)}
+                  title="Mês anterior"
+                >
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                </Button>
+                <div className="px-2 text-xs font-semibold tabular-nums min-w-[72px] text-center">
+                  {NOMES_MES[simMonth - 1]} {simYear}
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={() => mudarMes(1)}
+                  title="Próximo mês"
+                >
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </Button>
+              </div>
               <Button
                 variant="outline"
                 size="sm"
@@ -247,7 +292,7 @@ export function SimulacaoDistribuicaoDialog({
                   (sum, a) => sum + (Number(a.celula.deposito_sugerido) || 0),
                   0
                 );
-                const dow = new Date(year, month - 1, dia).getDay();
+                const dow = new Date(simYear, simMonth - 1, dia).getDay();
                 const dowLabel = DIAS_SEMANA[dow]?.label3 ?? "";
                 const isWeekend = dow === 0 || dow === 6;
                 return (
