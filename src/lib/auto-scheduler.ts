@@ -173,6 +173,7 @@ export function simularDistribuicao(input: {
     toleranciaFaixaPct = 0,
     regrasDiaSemana = [],
     seed = 1,
+    modoAgrupamento = "balanceado",
   } = config;
 
   // Pré-calcula dia-da-semana e quotas de regras
