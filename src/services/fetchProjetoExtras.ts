@@ -19,7 +19,6 @@
  *   + Σ eventos_promocionais (freebet_convertida, credito_promocional, giro_gratis_ganho)
  *   - Σ perdas_cancelamento_bonus
  *   + Σ ajustes_saldo
- *   + Σ resultado_cambial (ganho - perda)
  *   + Σ conciliações
  *   - Σ perdas_operacionais (projeto_perdas confirmadas)
  * ─────────────────────────────────────────────────────────
@@ -29,6 +28,12 @@
  * (Stake Not Returned) já está contabilizado no P&L da aposta.
  * Incluir o bonus_amount geraria dupla contagem.
  * 
+ * REGRA CRÍTICA: RESULTADO CAMBIAL (FX)
+ * GANHO_CAMBIAL e PERDA_CAMBIAL são EXCLUÍDOS deste serviço.
+ * Eles são eventos de TESOURARIA (variação cambial entre data do pedido
+ * e confirmação de saque/depósito), não resultado operacional de aposta.
+ * Vivem exclusivamente em Indicadores Financeiros / Caixa.
+ *
  * REGRA CRÍTICA: MOEDA
  * Os valores são retornados na moeda ORIGINAL, exceto bônus com snapshot
  * congelado, que retornam já na moeda de consolidação do projeto.
@@ -49,7 +54,6 @@ export type ExtraTipo =
   | 'freebet'
   | 'promocional'
   | 'ajuste_saldo'
-  | 'resultado_cambial'
   | 'conciliacao'
   | 'perda_operacional';
 
@@ -72,7 +76,6 @@ export const EXTRA_TIPO_LABELS: Record<ExtraTipo, string> = {
   freebet: 'Freebet Convertida',
   promocional: 'Promocional',
   ajuste_saldo: 'Ajuste de Saldo',
-  resultado_cambial: 'Resultado Cambial',
   conciliacao: 'Conciliação',
   perda_operacional: 'Perdas Operacionais',
 };
