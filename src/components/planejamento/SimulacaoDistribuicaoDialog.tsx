@@ -10,12 +10,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, AlertTriangle, RefreshCw, Building2 } from "lucide-react";
+import { Sparkles, AlertTriangle, RefreshCw, Building2, Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   simularDistribuicao,
   type AutoSchedulerConfig,
   type SimulacaoResultado,
+  type FaixaMeta,
 } from "@/lib/auto-scheduler";
 import type { CelulaDisponivel } from "@/hooks/usePlanoCelulasDisponiveis";
 import type { PlanningCampanha } from "@/hooks/usePlanningData";
