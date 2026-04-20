@@ -1376,6 +1376,7 @@ export function ProjetoValueBetTab({
                     if (a) openEditDialog(a);
                   }}
                   onQuickResolve={handleQuickResolveSurebet}
+                  onSimpleMenuQuickResolve={handleQuickResolve}
                    onPernaResultChange={handleSurebetPernaResolve}
                    onSimpleQuickResolve={handleQuickResolve}
                    onDelete={handleDeleteAposta}
@@ -1467,6 +1468,7 @@ export function ProjetoValueBetTab({
                     if (a) openEditDialog(a);
                   }}
                   onQuickResolve={handleQuickResolveSurebet}
+                  onSimpleMenuQuickResolve={handleQuickResolve}
                   onPernaResultChange={handleSurebetPernaResolve}
                   onSimpleQuickResolve={handleQuickResolve}
                    onDelete={handleDeleteAposta}

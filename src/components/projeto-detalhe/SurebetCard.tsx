@@ -103,6 +103,8 @@ interface SurebetCardProps {
   onEdit?: (surebet: SurebetData) => void;
   /** Callback para liquidação rápida com informação de quais pernas ganharam */
   onQuickResolve?: (surebetId: string, result: SurebetQuickResult) => void;
+  /** Callback do menu para multi-entry simples, convertendo o submenu em resultado único global */
+  onSimpleMenuQuickResolve?: (apostaId: string, resultado: string) => void | Promise<void>;
   /** Callback para alterar resultado de perna individual (inline pill) */
   onPernaResultChange?: (input: PernaResultChangeInput) => Promise<void>;
   /**
@@ -461,7 +463,7 @@ function PernaItem({
   );
 }
 
-export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChange, onSimpleQuickResolve, onDelete, onDuplicate, className, formatCurrency, convertToConsolidation, moedaConsolidacao, isBonusContext, bookmakerNomeMap }: SurebetCardProps) {
+export function SurebetCard({ surebet, onEdit, onQuickResolve, onSimpleMenuQuickResolve, onPernaResultChange, onSimpleQuickResolve, onDelete, onDuplicate, className, formatCurrency, convertToConsolidation, moedaConsolidacao, isBonusContext, bookmakerNomeMap }: SurebetCardProps) {
   // Hook para buscar logos das casas
   const { getLogoUrl } = useBookmakerLogoMap();
   
@@ -768,7 +770,19 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
                   }))}
                 onEdit={() => onEdit?.(surebet)}
                 onDuplicate={onDuplicate ? () => onDuplicate(surebet.id) : undefined}
-                onQuickResolve={(result) => onQuickResolve?.(surebet.id, result)}
+                onQuickResolve={(result) => {
+                  if (isSimplesMultiEntry && onSimpleMenuQuickResolve) {
+                    const resultadoFinal = result.type === 'all_void'
+                      ? 'VOID'
+                      : result.winners.length > 0
+                        ? 'GREEN'
+                        : 'RED';
+                    void onSimpleMenuQuickResolve(surebet.id, resultadoFinal);
+                    return;
+                  }
+
+                  onQuickResolve?.(surebet.id, result);
+                }}
                 onDelete={() => onDelete?.(surebet.id)}
               />
             )}

@@ -1725,6 +1725,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                       if (a) handleOpenDialog(a);
                     }}
                     onQuickResolve={handleQuickResolveSurebet}
+                    onSimpleMenuQuickResolve={handleQuickResolve}
                     onPernaResultChange={handleSurebetPernaResolve}
                     onSimpleQuickResolve={handleQuickResolve}
                     onDelete={prepareDeleteSimples}
