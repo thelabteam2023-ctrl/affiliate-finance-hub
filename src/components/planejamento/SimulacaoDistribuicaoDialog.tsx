@@ -29,6 +29,7 @@ import {
 } from "@/lib/auto-scheduler";
 import type { CelulaDisponivel } from "@/hooks/usePlanoCelulasDisponiveis";
 import type { PlanningCampanha } from "@/hooks/usePlanningData";
+import { useCotacoes } from "@/hooks/useCotacoes";
 
 // Mesma palette CPF do calendário
 const CPF_COLORS = [
