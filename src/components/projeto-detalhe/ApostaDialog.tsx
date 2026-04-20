@@ -1038,11 +1038,19 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           
           // Multi-entry: carregar pernas adicionais de apostas_pernas
           (async () => {
-            const { data: pernas } = await supabase
-              .from("apostas_pernas")
-              .select("*")
-              .eq("aposta_id", aposta.id)
-              .order("ordem", { ascending: true });
+            // Em duplicação, o id original foi removido; usar __seedPernas injetado pela página de janela
+            const seedPernas = (aposta as any).__seedPernas as any[] | null | undefined;
+            let pernas: any[] | null = null;
+            if (seedPernas && seedPernas.length > 0) {
+              pernas = seedPernas;
+            } else if (aposta.id) {
+              const { data } = await supabase
+                .from("apostas_pernas")
+                .select("*")
+                .eq("aposta_id", aposta.id)
+                .order("ordem", { ascending: true });
+              pernas = data;
+            }
             
             if (pernas && pernas.length > 1) {
               // Primeira perna = entrada principal (já carregada via aposta.odd/stake/bookmaker_id)
