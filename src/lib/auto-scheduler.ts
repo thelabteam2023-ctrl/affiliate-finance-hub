@@ -486,10 +486,27 @@ export function simularDistribuicao(input: {
   ).sort((a, b) => a - b);
 
   if (modoAgrupamento === "agrupado") {
-    // ---- PASS 1 (AGRUPADO): todas as suportes do CPF no mesmo dia + clones até clonesPorDia.
-    // Se exceder maxCasasPorDia, transborda para os dias contíguos seguintes.
-    let diaCursor = 1;
+    // ---- PASS 1 (AGRUPADO): suportes do CPF no mesmo dia + clones até clonesPorDia.
+    // Os CPFs são distribuídos como ÂNCORAS uniformemente ao longo de [1..limite],
+    // de modo que o primeiro use um dia próximo do início e o último um dia próximo
+    // do limite — evitando concentração no começo do mês.
+    const totalCpfs = cpfsSuporte.length;
+    const ancoraDoCpf = new Map<number, number>();
+    if (totalCpfs > 0) {
+      for (let i = 0; i < totalCpfs; i++) {
+        // Distribui em (i + 0.5)/totalCpfs * limite para centralizar as âncoras.
+        const ancora = Math.max(
+          1,
+          Math.min(limite, Math.round(((i + 0.5) * limite) / totalCpfs))
+        );
+        ancoraDoCpf.set(cpfsSuporte[i], ancora);
+      }
+    }
+
+    let cursorMinimo = 1; // garante ordem CPF1 → CPF2 → ... mesmo se âncora regredir
     for (const cpfIdx of cpfsSuporte) {
+      const ancora = ancoraDoCpf.get(cpfIdx) ?? cursorMinimo;
+      let diaCursor = Math.max(cursorMinimo, ancora);
       let safetyCpf = 0;
       while (temPendenciaSuporteCpf(cpfIdx) && diaCursor <= limite && safetyCpf++ < 200) {
         const slot = ocupacao.get(diaCursor)!;
@@ -522,6 +539,9 @@ export function simularDistribuicao(input: {
           }
         }
       }
+      // Próximo CPF começa pelo menos no dia seguinte ao último que este CPF usou,
+      // preservando ordem cronológica entre CPFs.
+      cursorMinimo = Math.max(cursorMinimo, diaCursor + 1);
     }
 
     // Se ainda restou pendência de suporte e cursor estourou o limite, deixamos
