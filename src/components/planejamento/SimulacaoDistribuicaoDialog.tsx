@@ -218,10 +218,17 @@ export function SimulacaoDistribuicaoDialog({
             <Badge variant={stats.agendadas === stats.totalCelulas ? "default" : "secondary"}>
               {stats.agendadas} / {stats.totalCelulas} agendadas
             </Badge>
+            <Badge variant="outline" className="border-rose-500/40 text-rose-500">
+              Clones: {stats.totalClones}
+            </Badge>
+            <Badge variant="outline">Outras: {stats.totalOutras}</Badge>
             <Badge variant="outline">{stats.diasUsados} dias usados</Badge>
             {stats.capacidadeMaxima > 0 && (
-              <Badge variant="outline">Capacidade: {stats.capacidadeMaxima}</Badge>
+              <Badge variant="outline">Cap. casas: {stats.capacidadeMaxima}</Badge>
             )}
+            <Badge variant="outline">
+              Cap. por CPF clone: {stats.capacidadePorCpfClone}
+            </Badge>
             <Badge variant="outline">
               Ganho total: {stats.ganhoTotal.toFixed(2)}
             </Badge>
