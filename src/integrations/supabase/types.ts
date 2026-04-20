@@ -3415,67 +3415,11 @@ export type Database = {
           },
         ]
       }
-      distribuicao_plano_agenda: {
-        Row: {
-          celula_id: string
-          created_at: string
-          id: string
-          ordem_dia: number
-          plano_id: string
-          scheduled_date: string
-          status: string
-          updated_at: string
-          workspace_id: string
-        }
-        Insert: {
-          celula_id: string
-          created_at?: string
-          id?: string
-          ordem_dia?: number
-          plano_id: string
-          scheduled_date: string
-          status?: string
-          updated_at?: string
-          workspace_id: string
-        }
-        Update: {
-          celula_id?: string
-          created_at?: string
-          id?: string
-          ordem_dia?: number
-          plano_id?: string
-          scheduled_date?: string
-          status?: string
-          updated_at?: string
-          workspace_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "distribuicao_plano_agenda_celula_id_fkey"
-            columns: ["celula_id"]
-            isOneToOne: true
-            referencedRelation: "distribuicao_plano_celulas"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "distribuicao_plano_agenda_plano_id_fkey"
-            columns: ["plano_id"]
-            isOneToOne: false
-            referencedRelation: "distribuicao_planos"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "distribuicao_plano_agenda_workspace_id_fkey"
-            columns: ["workspace_id"]
-            isOneToOne: false
-            referencedRelation: "workspaces"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       distribuicao_plano_celulas: {
         Row: {
+          agendada_em: string | null
           bookmaker_catalogo_id: string
+          campanha_id: string | null
           created_at: string
           id: string
           ip_slot: string | null
@@ -3488,7 +3432,9 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
+          agendada_em?: string | null
           bookmaker_catalogo_id: string
+          campanha_id?: string | null
           created_at?: string
           id?: string
           ip_slot?: string | null
@@ -3501,7 +3447,9 @@ export type Database = {
           workspace_id: string
         }
         Update: {
+          agendada_em?: string | null
           bookmaker_catalogo_id?: string
+          campanha_id?: string | null
           created_at?: string
           id?: string
           ip_slot?: string | null
@@ -3527,6 +3475,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_community_bookmaker_stats"
             referencedColumns: ["bookmaker_catalogo_id"]
+          },
+          {
+            foreignKeyName: "distribuicao_plano_celulas_campanha_id_fkey"
+            columns: ["campanha_id"]
+            isOneToOne: false
+            referencedRelation: "planning_campanhas"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "distribuicao_plano_celulas_parceiro_id_fkey"
