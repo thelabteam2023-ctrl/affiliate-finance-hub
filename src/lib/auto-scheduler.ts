@@ -446,12 +446,10 @@ export function simularDistribuicao(input: {
     )
   ).sort((a, b) => a - b);
 
-  // Estratégia INTERCALADA por CPF:
-  //   Para cada CPF (do menor ao maior), em rounds:
-  //     1) Agenda 1 suporte desse CPF em cada dia (round-robin) — espalha pelo mês
-  //     2) Em cada dia visitado, tenta encaixar clones (tentarPasso normal) — preenche capacidade
-  //   Só passa pro próximo CPF quando o suporte do atual esgotar.
-  // Resultado: dias têm mistura de suporte CPF1 + clones; CPF2 só começa quando CPF1 acabar.
+  // Estratégia: para cada CPF (do menor ao maior), espalha 1 suporte por dia
+  // em round-robin pelos dias 1..limite, até esgotar o suporte desse CPF.
+  // Só ENTÃO passa pro próximo CPF. Clones entram no Pass 3 (depois) para
+  // preencher os dias sem ocupar capacidade prematuramente.
   let cursorDia = 1;
   for (const cpfIdx of cpfsSuporte) {
     const casasDoCpf = candidatas.filter(
@@ -462,8 +460,7 @@ export function simularDistribuicao(input: {
     while (pendentes.length > 0 && voltasSemAgendar <= limite) {
       const slot = ocupacao.get(cursorDia)!;
       let agendouAlgo = false;
-
-      // (1) UMA casa suporte desse CPF nesse dia
+      // UMA casa suporte desse CPF nesse dia (espalha pelo mês)
       for (let k = 0; k < pendentes.length; k++) {
         const casa = pendentes[k];
         if (!restantes.has(casa.id)) continue;
@@ -481,16 +478,8 @@ export function simularDistribuicao(input: {
         restantes.delete(casa.id);
         agendamentos.push({ celula: casa, dia: cursorDia, dateKey: buildDateKey(year, month, cursorDia) });
         agendouAlgo = true;
-        break; // só UMA suporte por visita ao dia (espalhar)
+        break;
       }
-
-      // (2) Tenta preencher o dia com CLONES (até esgotar capacidade ou clones elegíveis)
-      let safety = 0;
-      while (safety++ < 50) {
-        if (!tentarPasso(cursorDia, slot)) break;
-        agendouAlgo = true;
-      }
-
       pendentes = pendentes.filter((c) => restantes.has(c.id));
       cursorDia = (cursorDia % limite) + 1;
       voltasSemAgendar = agendouAlgo ? 0 : voltasSemAgendar + 1;
