@@ -247,11 +247,24 @@ export function SimulacaoDistribuicaoDialog({
                   (sum, a) => sum + (Number(a.celula.deposito_sugerido) || 0),
                   0
                 );
+                const dow = new Date(year, month - 1, dia).getDay();
+                const dowLabel = DIAS_SEMANA[dow]?.label3 ?? "";
+                const isWeekend = dow === 0 || dow === 6;
                 return (
                   <div key={dia} className="flex gap-2 items-start">
                     <div className="shrink-0 w-16 text-right">
                       <div className="text-[10px] uppercase text-muted-foreground">Dia</div>
-                      <div className="text-lg font-bold tabular-nums leading-none">{dia}</div>
+                      <div className="flex items-baseline justify-end gap-1 leading-none">
+                        <span className="text-lg font-bold tabular-nums">{dia}</span>
+                        <span
+                          className={cn(
+                            "text-[10px] font-medium uppercase",
+                            isWeekend ? "text-warning" : "text-muted-foreground"
+                          )}
+                        >
+                          {dowLabel}
+                        </span>
+                      </div>
                       {ganhoDia > 0 && (
                         <div className="text-[9px] text-muted-foreground tabular-nums mt-0.5">
                           Σ {ganhoDia.toFixed(2)}
