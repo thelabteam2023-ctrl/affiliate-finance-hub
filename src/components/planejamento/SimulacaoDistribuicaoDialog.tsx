@@ -293,6 +293,21 @@ export function SimulacaoDistribuicaoDialog({
     });
   };
 
+  /** Troca todas as casas do diaA pelas do diaB (swap completo). */
+  const swapDias = (diaA: number, diaB: number) => {
+    if (diaA === diaB) return;
+    const last = new Date(simYear, simMonth, 0).getDate();
+    if (diaA < 1 || diaA > last || diaB < 1 || diaB > last) return;
+    const itensA = porDia.get(diaA) ?? [];
+    const itensB = porDia.get(diaB) ?? [];
+    setOverrides((prev) => {
+      const next = new Map(prev);
+      itensA.forEach((a) => next.set(a.celula.id, diaB));
+      itensB.forEach((a) => next.set(a.celula.id, diaA));
+      return next;
+    });
+  };
+
   const limparOverrides = () => setOverrides(new Map());
 
   const stats = simulacao?.estatisticas;
