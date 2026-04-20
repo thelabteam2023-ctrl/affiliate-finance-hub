@@ -862,12 +862,25 @@ export async function reliquidarAposta(
     const resultadoAnterior = apostaAtual?.resultado;
     const isArbitragem = apostaAtual?.forma_registro === 'ARBITRAGEM' || apostaAtual?.forma_registro === 'SUREBET';
     const hasNullBookmaker = !apostaAtual?.bookmaker_id;
-    
+
+    // Detectar se é multi-entry SIMPLES (ex: PUNTER multi-casa) que tem pernas em apostas_pernas
+    // mas NÃO é arbitragem. Esse caso DEVE passar pelas RPCs do motor financeiro
+    // (liquidar_aposta_v4 / reliquidar_aposta_v6) para criar STAKE/PAYOUT/AJUSTE no ledger.
+    let hasPernas = false;
+    if (hasNullBookmaker && !isArbitragem) {
+      const { count } = await supabase
+        .from('apostas_pernas')
+        .select('id', { count: 'exact', head: true })
+        .eq('aposta_id', apostaId);
+      hasPernas = (count ?? 0) > 0;
+    }
+    const isMultiEntrySimples = hasNullBookmaker && !isArbitragem && hasPernas;
+
     // ============================================================
-    // CASO ESPECIAL: Surebet/Arbitragem (bookmaker_id NULL)
-    // Não pode usar RPC liquidar_aposta_v4 que requer bookmaker_id
+    // CASO ESPECIAL: Surebet/Arbitragem PURA
+    // (apenas quando é explicitamente arbitragem; multi-entry simples segue fluxo normal)
     // ============================================================
-    if (isArbitragem || hasNullBookmaker) {
+    if (isArbitragem) {
       console.log("[ApostaService] Detectada Surebet/Arbitragem - usando liquidação simples");
       
       const result = await liquidarSurebetSimples(
