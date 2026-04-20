@@ -208,59 +208,8 @@ export default function DistribuicaoTab() {
           ip_slot: c.ip_slot,
           ordem: idx,
         })),
-      },
-      {
-        onSuccess: (plano: any) => {
-          if (plano?.id) setPlanoSalvoId(plano.id);
-        },
-      }
+      undefined
     );
-  };
-
-  // Gera agenda usando o plano salvo (precisa estar salvo pra ter celula_id reais)
-  const handleGerarAgenda = () => {
-    if (!planoSalvoId || !detalheSalvo) {
-      toast.error("Salve o plano antes de gerar a agenda.");
-      return;
-    }
-    const grupoModoMap = new Map(grupos.map((g) => [g.id, g.modo_execucao]));
-    const grupoCelulaMap = new Map(detalheSalvo.grupos.map((g) => [g.id, g.grupo_id]));
-    const membroMap = new Map<string, { sugerido: number; moeda: string | null }>();
-    membros.forEach((m) => {
-      membroMap.set(`${m.grupo_id}::${m.bookmaker_catalogo_id}`, {
-        sugerido: Number(m.deposito_sugerido) || 0,
-        moeda: m.deposito_moeda,
-      });
-    });
-
-    const celulasParaAgendar: CelulaParaAgendar[] = detalheSalvo.celulas
-      .map((c) => {
-        const grupoOriginalId = grupoCelulaMap.get(c.plano_grupo_id);
-        if (!grupoOriginalId) return null;
-        const cat = catalogoMap.get(c.bookmaker_catalogo_id);
-        const memb = membroMap.get(`${grupoOriginalId}::${c.bookmaker_catalogo_id}`);
-        const moeda = memb?.moeda || cat?.moeda_padrao || "BRL";
-        return {
-          celula_id: c.id,
-          grupo_id: grupoOriginalId,
-          parceiro_id: c.parceiro_id,
-          bookmaker_catalogo_id: c.bookmaker_catalogo_id,
-          ip_slot: c.ip_slot ?? "",
-          ordem: c.ordem,
-          modo_execucao: grupoModoMap.get(grupoOriginalId) ?? "AGENDADO",
-          deposito_sugerido: memb?.sugerido ?? 0,
-          moeda,
-        };
-      })
-      .filter((x): x is CelulaParaAgendar => !!x);
-
-    gerarAgendaMut.mutate({
-      planoId: planoSalvoId,
-      celulas: celulasParaAgendar,
-      startDate,
-      metaDiariaUsd: metaDiariaUsd ? Number(metaDiariaUsd) : null,
-      toUsd,
-    });
   };
 
   const selectedGenericosCount = useMemo(
