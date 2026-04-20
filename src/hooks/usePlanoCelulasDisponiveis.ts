@@ -167,9 +167,7 @@ export function usePlanoCelulasDisponiveis(planoId: string | null) {
         const cat = catMap.get(c.bookmaker_catalogo_id);
         const grp = grupoMap.get(grupoId);
         const memb = membroMap.get(`${grupoId}::${c.bookmaker_catalogo_id}`);
-        const cpfIndex = c.parceiro_id
-          ? cpfIndexMap.get(`${c.plano_grupo_id}::${c.parceiro_id}`) ?? null
-          : null;
+        const cpfIndex = cpfIndexFallbackMap.get(c.id) ?? null;
         return {
           id: c.id,
           plano_id: c.plano_id,
