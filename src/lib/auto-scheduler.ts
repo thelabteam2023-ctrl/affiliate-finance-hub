@@ -35,16 +35,25 @@ export interface AgendamentoSimulado {
   dateKey: string; // YYYY-MM-DD
 }
 
+export interface CelulaNaoAgendadaDetalhe {
+  celula: CelulaDisponivel;
+  motivo: "cooldown_cpf" | "cooldown_casa" | "sem_capacidade" | "outro";
+  detalhe: string;
+}
+
 export interface SimulacaoResultado {
   agendamentos: AgendamentoSimulado[];
   warnings: string[];
   naoAgendadas: CelulaDisponivel[];
+  naoAgendadasDetalhe: CelulaNaoAgendadaDetalhe[];
   estatisticas: {
     totalCelulas: number;
     agendadas: number;
     capacidadeMaxima: number;
     diasUsados: number;
     ganhoTotal: number;
+    /** Capacidade teórica por CPF dado o cooldown e a janela. */
+    capacidadePorCpf: number;
   };
 }
 
@@ -84,6 +93,14 @@ export function simularDistribuicao(input: {
 
   const ultimoDia = new Date(year, month, 0).getDate();
   const limite = Math.min(diaLimite, ultimoDia);
+
+  // Conta backlog por CPF para priorizar quem tem mais casas a colocar
+  const backlogPorCpf = new Map<string, number>();
+  candidatas.forEach((c) => {
+    const k = cpfKey(c);
+    if (!k) return;
+    backlogPorCpf.set(k, (backlogPorCpf.get(k) ?? 0) + 1);
+  });
 
   interface DaySlot {
     casas: Set<string>;
@@ -129,10 +146,7 @@ export function simularDistribuicao(input: {
     const slot = ocupacao.get(dia)!;
     // Tenta encher o dia até estourar QUALQUER limite ativo
     // (clonesPorDia, maxCasasPorDia, metaGanhoDia)
-    // Loop até não conseguir mais agendar
-    // Limite de segurança para evitar loop infinito
-    for (let safety = 0; safety < 50; safety++) {
-      // Limites
+    for (let safety = 0; safety < 100; safety++) {
       if (slot.cpfs.size >= clonesPorDia) break;
       if (maxCasasPorDia > 0 && slot.casas.size >= maxCasasPorDia) break;
       if (metaGanhoDia > 0 && slot.ganho >= metaGanhoDia) break;
@@ -152,17 +166,21 @@ export function simularDistribuicao(input: {
           return true;
         })
         .sort((a, b) => {
-          // 1) maior gap desde último uso da casa (favorece variedade)
+          // 1) CPF com MAIOR backlog primeiro (distribui CPFs grandes ao longo do mês)
+          const ckA = cpfKey(a);
+          const ckB = cpfKey(b);
+          const blA = ckA ? backlogPorCpf.get(ckA) ?? 0 : 0;
+          const blB = ckB ? backlogPorCpf.get(ckB) ?? 0 : 0;
+          if (blA !== blB) return blB - blA;
+          // 2) maior gap desde último uso da casa (favorece variedade)
           const gA = dia - (ultimoUsoCasa.get(a.bookmaker_catalogo_id) ?? -999);
           const gB = dia - (ultimoUsoCasa.get(b.bookmaker_catalogo_id) ?? -999);
           if (gA !== gB) return gB - gA;
-          // 2) maior gap desde último uso do CPF
-          const ckA = cpfKey(a);
-          const ckB = cpfKey(b);
+          // 3) maior gap desde último uso do CPF
           const cA = ckA ? dia - (ultimoUsoCpf.get(ckA) ?? -999) : 999;
           const cB = ckB ? dia - (ultimoUsoCpf.get(ckB) ?? -999) : 999;
           if (cA !== cB) return cB - cA;
-          // 3) ordem original como tiebreak
+          // 4) ordem original como tiebreak
           return (a.ordem ?? 0) - (b.ordem ?? 0);
         });
 
@@ -171,7 +189,10 @@ export function simularDistribuicao(input: {
 
       slot.casas.add(pick.bookmaker_catalogo_id);
       const ck = cpfKey(pick);
-      if (ck) slot.cpfs.add(ck);
+      if (ck) {
+        slot.cpfs.add(ck);
+        backlogPorCpf.set(ck, (backlogPorCpf.get(ck) ?? 1) - 1);
+      }
       slot.ganho += Number(pick.deposito_sugerido) || 0;
       ultimoUsoCasa.set(pick.bookmaker_catalogo_id, dia);
       if (ck) ultimoUsoCpf.set(ck, dia);
@@ -186,6 +207,93 @@ export function simularDistribuicao(input: {
   }
 
   const naoAgendadas = candidatas.filter((c) => restantes.has(c.id));
+
+  // Diagnóstico: para cada não agendada, simula uma busca por dia e
+  // descobre o motivo dominante (cooldown CPF, cooldown casa, ou sem capacidade)
+  const naoAgendadasDetalhe: CelulaNaoAgendadaDetalhe[] = naoAgendadas.map((c) => {
+    const ck = cpfKey(c);
+    const catId = c.bookmaker_catalogo_id;
+    let bloqueioCpf = 0;
+    let bloqueioCasa = 0;
+    let semCapacidade = 0;
+    for (let dia = 1; dia <= limite; dia++) {
+      const slot = ocupacao.get(dia)!;
+      const slotCheio =
+        slot.cpfs.size >= clonesPorDia ||
+        (maxCasasPorDia > 0 && slot.casas.size >= maxCasasPorDia) ||
+        (metaGanhoDia > 0 && slot.ganho >= metaGanhoDia);
+      if (slotCheio) {
+        semCapacidade++;
+        continue;
+      }
+      const ucasa = ultimoUsoCasa.get(catId);
+      const blockedCasa =
+        slot.casas.has(catId) ||
+        (ucasa !== undefined && Math.abs(dia - ucasa) <= cooldownCasaDias);
+      const ucpf = ck ? ultimoUsoCpf.get(ck) : undefined;
+      const blockedCpf =
+        (ck && slot.cpfs.has(ck)) ||
+        (ucpf !== undefined && Math.abs(dia - ucpf) <= cooldownCpfDias);
+      if (blockedCpf) bloqueioCpf++;
+      else if (blockedCasa) bloqueioCasa++;
+      else semCapacidade++;
+    }
+    let motivo: CelulaNaoAgendadaDetalhe["motivo"] = "outro";
+    let detalhe = "";
+    const max = Math.max(bloqueioCpf, bloqueioCasa, semCapacidade);
+    if (max === 0) {
+      motivo = "outro";
+      detalhe = "sem janela disponível";
+    } else if (bloqueioCpf === max) {
+      motivo = "cooldown_cpf";
+      detalhe = `CPF ${c.cpf_index ?? "?"} bloqueado por cooldown em ${bloqueioCpf}/${limite} dias`;
+    } else if (bloqueioCasa === max) {
+      motivo = "cooldown_casa";
+      detalhe = `${c.bookmaker_nome} bloqueada por cooldown em ${bloqueioCasa}/${limite} dias`;
+    } else {
+      motivo = "sem_capacidade";
+      detalhe = `${semCapacidade}/${limite} dias já cheios (clones/dia ou meta atingida)`;
+    }
+    return { celula: c, motivo, detalhe };
+  });
+
+  // Capacidade teórica por CPF: aproximação = janela / (cooldown + 1)
+  const capacidadePorCpf =
+    cooldownCpfDias >= 0 ? Math.floor(limite / (cooldownCpfDias + 1)) : limite;
+
+  // Capacidade global: limita pelo menor critério ativo
+  const capacidadePorClones = limite * clonesPorDia;
+  const capacidadePorCasas = maxCasasPorDia > 0 ? limite * maxCasasPorDia : Infinity;
+  const capacidadeMaxima = Math.min(capacidadePorClones, capacidadePorCasas);
+
+  // Diagnóstico por CPF: backlog inicial vs capacidade teórica do CPF
+  const backlogInicialPorCpf = new Map<string, number>();
+  candidatas.forEach((c) => {
+    const k = cpfKey(c);
+    if (!k) return;
+    backlogInicialPorCpf.set(k, (backlogInicialPorCpf.get(k) ?? 0) + 1);
+  });
+
+  const cpfsExcedentes: string[] = [];
+  backlogInicialPorCpf.forEach((qtd, k) => {
+    if (qtd > capacidadePorCpf) {
+      const c = candidatas.find((x) => cpfKey(x) === k);
+      const label = c?.cpf_index ? `CPF ${c.cpf_index}` : k;
+      cpfsExcedentes.push(`${label}: ${qtd} casas, capacidade ${capacidadePorCpf}`);
+    }
+  });
+  if (cpfsExcedentes.length > 0) {
+    warnings.push(
+      `Cooldown CPF de ${cooldownCpfDias}d em janela de ${limite}d permite só ${capacidadePorCpf} casa(s) por CPF: ${cpfsExcedentes.join("; ")}.`
+    );
+  }
+
+  if (Number.isFinite(capacidadeMaxima) && candidatas.length > capacidadeMaxima) {
+    warnings.unshift(
+      `Plano excede capacidade da janela: ${candidatas.length} células para ${capacidadeMaxima} slots.`
+    );
+  }
+
   if (naoAgendadas.length > 0) {
     const partes: string[] = [
       `dias 1–${limite}`,
@@ -200,31 +308,22 @@ export function simularDistribuicao(input: {
     );
   }
 
-  // Capacidade teórica: limita pelo menor critério ativo
-  const capacidadePorClones = limite * clonesPorDia;
-  const capacidadePorCasas = maxCasasPorDia > 0 ? limite * maxCasasPorDia : Infinity;
-  const capacidadeMaxima = Math.min(capacidadePorClones, capacidadePorCasas);
-
   const diasUsados = new Set(agendamentos.map((a) => a.dia)).size;
   let ganhoTotal = 0;
   ocupacao.forEach((s) => (ganhoTotal += s.ganho));
-
-  if (Number.isFinite(capacidadeMaxima) && candidatas.length > capacidadeMaxima) {
-    warnings.unshift(
-      `Plano excede capacidade da janela: ${candidatas.length} células para ${capacidadeMaxima} slots.`
-    );
-  }
 
   return {
     agendamentos,
     warnings,
     naoAgendadas,
+    naoAgendadasDetalhe,
     estatisticas: {
       totalCelulas: candidatas.length,
       agendadas: agendamentos.length,
       capacidadeMaxima: Number.isFinite(capacidadeMaxima) ? capacidadeMaxima : 0,
       diasUsados,
       ganhoTotal,
+      capacidadePorCpf,
     },
   };
 }

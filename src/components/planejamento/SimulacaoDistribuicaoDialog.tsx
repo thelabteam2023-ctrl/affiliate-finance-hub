@@ -300,32 +300,52 @@ export function SimulacaoDistribuicaoDialog({
           })}
         </div>
 
-        {/* Não agendadas */}
-        {simulacao && simulacao.naoAgendadas.length > 0 && (
-          <div className="rounded-md border border-warning/40 bg-warning/5 p-2 max-h-32 overflow-y-auto">
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-warning mb-1">
+        {/* Não agendadas — agrupadas por motivo */}
+        {simulacao && simulacao.naoAgendadasDetalhe.length > 0 && (
+          <div className="rounded-md border border-warning/40 bg-warning/5 p-2 max-h-48 overflow-y-auto space-y-2">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-warning">
               <AlertTriangle className="h-3.5 w-3.5" />
-              {simulacao.naoAgendadas.length} célula(s) não couberam
+              {simulacao.naoAgendadasDetalhe.length} célula(s) não couberam — motivos:
             </div>
-            <div className="flex flex-wrap gap-1">
-              {simulacao.naoAgendadas.map((c) => {
-                const color = getCpfColor(c.cpf_index);
-                return (
-                  <span
-                    key={c.id}
-                    className="text-[10px] px-1.5 py-0.5 rounded border"
-                    style={{
-                      backgroundColor: color?.bg,
-                      borderColor: color?.border,
-                      color: color?.text,
-                    }}
-                  >
-                    {c.cpf_index ? `CPF ${c.cpf_index} • ` : ""}
-                    {c.bookmaker_nome}
-                  </span>
-                );
-              })}
-            </div>
+            {(["cooldown_cpf", "cooldown_casa", "sem_capacidade", "outro"] as const).map((motivo) => {
+              const grupo = simulacao.naoAgendadasDetalhe.filter((d) => d.motivo === motivo);
+              if (grupo.length === 0) return null;
+              const label =
+                motivo === "cooldown_cpf"
+                  ? `Cooldown CPF (${grupo.length})`
+                  : motivo === "cooldown_casa"
+                  ? `Cooldown casa (${grupo.length})`
+                  : motivo === "sem_capacidade"
+                  ? `Sem capacidade no dia (${grupo.length})`
+                  : `Outro (${grupo.length})`;
+              return (
+                <div key={motivo} className="space-y-1">
+                  <div className="text-[10px] uppercase tracking-wide font-semibold text-muted-foreground">
+                    {label}
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {grupo.map(({ celula: c, detalhe }) => {
+                      const color = getCpfColor(c.cpf_index);
+                      return (
+                        <span
+                          key={c.id}
+                          className="text-[10px] px-1.5 py-0.5 rounded border"
+                          style={{
+                            backgroundColor: color?.bg,
+                            borderColor: color?.border,
+                            color: color?.text,
+                          }}
+                          title={detalhe}
+                        >
+                          {c.cpf_index ? `CPF ${c.cpf_index} • ` : ""}
+                          {c.bookmaker_nome}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
 
