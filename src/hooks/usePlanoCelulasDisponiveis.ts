@@ -63,14 +63,16 @@ export function usePlanoCelulasDisponiveis(planoId: string | null) {
       (planoGrupos ?? []).forEach((pg: any) => planoGrupoMap.set(pg.id, pg.grupo_id));
 
       const grupoIds = Array.from(new Set(planoGrupoMap.values()));
-      const catalogoIds = Array.from(new Set(celulas.map((c: any) => c.bookmaker_catalogo_id)));
+      const catalogoIds = Array.from(
+        new Set(celulas.map((c: any) => c.bookmaker_catalogo_id as string))
+      );
 
       // 3) catálogo + grupos + membros (depósito sugerido)
       const [catRes, gruposRes, membrosRes] = await Promise.all([
         supabase
           .from("bookmakers_catalogo")
           .select("id, nome, logo_url, moeda_padrao")
-          .in("id", catalogoIds),
+          .in("id", catalogoIds as string[]),
         (supabase as any)
           .from("bookmaker_grupos")
           .select("id, nome, cor")
