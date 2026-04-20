@@ -125,6 +125,12 @@ function isClone(c: CelulaDisponivel): boolean {
   return n.includes("clone");
 }
 
+/** Label curto do dia da semana (0=Dom..6=Sáb). */
+const DIA_SEMANA_LABEL = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+function diaSemanaLabel(dow: number): string {
+  return DIA_SEMANA_LABEL[((dow % 7) + 7) % 7];
+}
+
 /** PRNG determinístico (Mulberry32) — varia combinação por seed sem perder reprodutibilidade. */
 function mulberry32(seed: number) {
   let a = seed >>> 0;
