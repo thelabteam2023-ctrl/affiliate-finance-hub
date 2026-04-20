@@ -876,6 +876,24 @@ export async function reliquidarAposta(
     }
     const isMultiEntrySimples = hasNullBookmaker && !isArbitragem && hasPernas;
 
+    console.log("[ApostaService] Classificação da reliquidação:", {
+      apostaId,
+      novoResultado,
+      status_atual: apostaAtual?.status,
+      resultado_anterior: resultadoAnterior,
+      forma_registro: apostaAtual?.forma_registro,
+      bookmaker_id: apostaAtual?.bookmaker_id,
+      isArbitragem,
+      hasNullBookmaker,
+      hasPernas,
+      isMultiEntrySimples,
+      metodologia: isArbitragem
+        ? 'surebet-simples-parent-only'
+        : apostaAtual?.status !== 'LIQUIDADA'
+          ? 'liquidar_aposta_v4'
+          : 'reliquidar_aposta_v6',
+    });
+
     // ============================================================
     // CASO ESPECIAL: Surebet/Arbitragem PURA
     // (apenas quando é explicitamente arbitragem; multi-entry simples segue fluxo normal)
@@ -918,6 +936,12 @@ export async function reliquidarAposta(
     }
 
     // Usar reliquidar_aposta_v6 (idempotente - usa AJUSTE único baseado na diferença)
+    console.log("[ApostaService] Executando RPC reliquidar_aposta_v6", {
+      apostaId,
+      novoResultado,
+      lucroPrejuizo: lucroPrejuizo ?? null,
+      isMultiEntrySimples,
+    });
     const { data: reliqData, error: reliqError } = await supabase.rpc('reliquidar_aposta_v6', {
       p_aposta_id: apostaId,
       p_novo_resultado: novoResultado,
