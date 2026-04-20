@@ -548,6 +548,40 @@ export default function DistribuicaoTab() {
         </div>
       )}
 
+      {/* Checklist do que falta para Salvar / Gerar agenda */}
+      {(() => {
+        const faltaSalvar: string[] = [];
+        if (!resultado || resultado.celulas.length === 0) faltaSalvar.push('Clique em "Gerar distribuição"');
+        if (!planoNome.trim()) faltaSalvar.push("Preencha o nome do plano (campo no topo)");
+        if (selectedGenericosCount > 0)
+          faltaSalvar.push(`Vincule os ${selectedGenericosCount} perfil(is) genérico(s) a parceiros reais`);
+
+        const faltaAgenda: string[] = [];
+        if (!planoSalvoId) faltaAgenda.push("Salve o plano antes de gerar a agenda");
+
+        if (faltaSalvar.length === 0 && faltaAgenda.length === 0) return null;
+        return (
+          <div className="rounded-md border border-primary/40 bg-primary/5 p-2.5 text-[11px] space-y-1.5">
+            {faltaSalvar.length > 0 && (
+              <div>
+                <div className="font-semibold text-foreground mb-0.5">Para salvar o plano falta:</div>
+                <ul className="list-disc list-inside text-muted-foreground space-y-0.5">
+                  {faltaSalvar.map((m) => <li key={m}>{m}</li>)}
+                </ul>
+              </div>
+            )}
+            {faltaAgenda.length > 0 && faltaSalvar.length === 0 && (
+              <div>
+                <div className="font-semibold text-foreground mb-0.5">Para gerar a agenda falta:</div>
+                <ul className="list-disc list-inside text-muted-foreground space-y-0.5">
+                  {faltaAgenda.map((m) => <li key={m}>{m}</li>)}
+                </ul>
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       {/* Ações */}
       <div className="flex flex-wrap gap-2 justify-end">
         <Button
@@ -569,7 +603,15 @@ export default function DistribuicaoTab() {
             createPlano.isPending ||
             selectedGenericosCount > 0
           }
-          title={selectedGenericosCount > 0 ? "Vincule os perfis genéricos a parceiros reais antes de salvar" : undefined}
+          title={
+            !resultado || resultado.celulas.length === 0
+              ? 'Clique em "Gerar distribuição" primeiro'
+              : !planoNome.trim()
+              ? "Preencha o nome do plano no topo"
+              : selectedGenericosCount > 0
+              ? "Vincule os perfis genéricos a parceiros reais antes de salvar"
+              : undefined
+          }
         >
           <Save className="h-3.5 w-3.5 mr-1" />
           {createPlano.isPending ? "Salvando..." : "Salvar plano"}
