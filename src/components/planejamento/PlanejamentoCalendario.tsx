@@ -793,6 +793,47 @@ export function PlanejamentoCalendario() {
                 </Select>
               )}
 
+              {/* Filtro de CPF — chips coloridos para diferenciar visualmente */}
+              {modoPlano && cpfsDoPlano.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setCpfFiltroIdx("todos")}
+                    className={cn(
+                      "text-[10px] font-semibold px-2 py-1 rounded-md border transition-all",
+                      cpfFiltroIdx === "todos"
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-muted/50 text-muted-foreground border-border hover:bg-muted"
+                    )}
+                  >
+                    Todos
+                  </button>
+                  {cpfsDoPlano.map((idx) => {
+                    const color = getCpfColor(idx);
+                    const active = cpfFiltroIdx === String(idx);
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setCpfFiltroIdx(active ? "todos" : String(idx))}
+                        className={cn(
+                          "text-[10px] font-bold px-2 py-1 rounded-md border-2 transition-all",
+                          active ? "ring-2 ring-offset-1 ring-offset-background" : "opacity-70 hover:opacity-100"
+                        )}
+                        style={{
+                          backgroundColor: active ? color?.border : color?.bg,
+                          borderColor: color?.border,
+                          color: active ? "hsl(0 0% 100%)" : color?.text,
+                        }}
+                        title={`Mostrar somente CPF ${idx}`}
+                      >
+                        CPF {idx}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
               <div className="relative">
                 <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
                 <Input
