@@ -512,6 +512,15 @@ export function PlanejamentoCalendario() {
     return Array.from(map.values());
   }, [celulasPlano]);
 
+  // Mapa: campanha_id -> cpf_index (para colorir o card no calendário)
+  const campanhaCpfMap = useMemo(() => {
+    const map = new Map<string, number>();
+    celulasPlano.forEach((c) => {
+      if (c.campanha_id && c.cpf_index) map.set(c.campanha_id, c.cpf_index);
+    });
+    return map;
+  }, [celulasPlano]);
+
   const modoPlano = planoFiltroId !== "none";
   const sidebarItemsCount = modoPlano ? filteredCelulas.length : filteredBookmakers.length;
 
