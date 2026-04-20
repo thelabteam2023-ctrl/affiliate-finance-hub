@@ -431,7 +431,7 @@ const getMoneylineSelecoes = (esporte: string | undefined, evento: string): stri
 
 export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess, defaultEstrategia = 'PUNTER', activeTab = 'apostas', embedded = false }: ApostaDialogProps) {
   const { workspaceId } = useWorkspace();
-  const { convertToConsolidation } = useProjetoCurrency(projetoId);
+  const { convertToConsolidation, moedaConsolidacao } = useProjetoCurrency(projetoId);
   const [loading, setLoading] = useState(false);
   const { favoriteSource } = useWorkspaceBetSources(workspaceId);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -1881,8 +1881,15 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         let effectiveOdd = bookmakerOdd;
         let effectiveStake = bookmakerStake;
         
+        // Multi-currency tracking (parent record consolidation)
+        let isMulticurrency = false;
+        let totalStakeConsolidadoParent = 0;
+        let totalStakeRealConsolidadoParent = 0;
+        let totalStakeFreebetConsolidadoParent = 0;
+        const primaryMoedaForCheck = selectedBookmaker?.moeda || 'BRL';
+
         if (hasMultiEntry) {
-          const primaryMoeda = selectedBookmaker?.moeda || 'BRL';
+          const primaryMoeda = primaryMoedaForCheck;
           const allEntries = [
             { odd: bookmakerOdd, stake: bookmakerStake, moeda: primaryMoeda },
             ...additionalEntries.map(e => {
@@ -1892,6 +1899,10 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
               return { odd: parseFloat(e.odd) || 0, stake: entryReal + entryFb, moeda: bk?.moeda || 'BRL' };
             })
           ].filter(e => e.stake > 0 && e.odd > 0);
+
+          // Detectar multi-moeda
+          const moedasUnicas = new Set(allEntries.map(e => e.moeda));
+          isMulticurrency = moedasUnicas.size > 1;
           
           // Converter stakes para moeda de consolidação para ponderação correta
           let totalStakeConsolidado = 0;
@@ -1902,12 +1913,30 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
             const stakeConsolidado = convertToConsolidation(e.stake, e.moeda);
             totalStakeConsolidado += stakeConsolidado;
             weightedOddSum += e.odd * stakeConsolidado;
-            effectiveStake += e.stake; // Nominal total (para exibição)
+            effectiveStake += e.stake; // Nominal total (para exibição/single-currency)
           }
           
+          totalStakeConsolidadoParent = totalStakeConsolidado;
+
           effectiveOdd = totalStakeConsolidado > 0
             ? weightedOddSum / totalStakeConsolidado
             : bookmakerOdd;
+
+          // Consolidar stake_real e stake_freebet (cross-currency safe)
+          {
+            const primaryReal = parseFloat(stake) || 0;
+            const primaryFb = usarFreebetBookmaker ? valorFreebetUsar : 0;
+            totalStakeRealConsolidadoParent = convertToConsolidation(primaryReal, primaryMoeda);
+            totalStakeFreebetConsolidadoParent = convertToConsolidation(primaryFb, primaryMoeda);
+            for (const ae of additionalEntries) {
+              const bk = bookmakers.find(b => b.id === ae.bookmaker_id);
+              const aeMoeda = bk?.moeda || 'BRL';
+              const aeReal = parseFloat(ae.stake) || 0;
+              const aeFb = ae.usar_freebet ? (parseFloat(ae.valor_freebet) || 0) : 0;
+              totalStakeRealConsolidadoParent += convertToConsolidation(aeReal, aeMoeda);
+              totalStakeFreebetConsolidadoParent += convertToConsolidation(aeFb, aeMoeda);
+            }
+          }
         }
         
         // Calcular P/L para Bookmaker
@@ -1974,14 +2003,38 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           0
         );
 
+        // ============================================================
+        // MULTI-ENTRY CONSOLIDATION:
+        // Quando há múltiplas entradas em moedas diferentes, persistimos
+        // o agregado JÁ NA MOEDA DE CONSOLIDAÇÃO do projeto e marcamos
+        // moeda_operacao='MULTI'. Cada perna preserva sua moeda nativa.
+        // ============================================================
+        const isMultiCC = hasMultiEntry && isMulticurrency;
+        const parentStake = isMultiCC ? totalStakeConsolidadoParent : effectiveStake;
+        const parentStakeReal = isMultiCC
+          ? totalStakeRealConsolidadoParent
+          : (bookmakerStakeReal + additionalStakeReal);
+        const parentStakeFreebet = isMultiCC
+          ? totalStakeFreebetConsolidadoParent
+          : (bookmakerStakeFreebet + additionalStakeFreebet);
+        const parentLucroPrejuizo = (isMultiCC && statusResultado !== 'PENDENTE')
+          ? convertToConsolidation(lucroPrejuizo, primaryMoedaForCheck)
+          : lucroPrejuizo;
+        const parentValorRetorno = isMultiCC
+          ? convertToConsolidation(valorRetornoCalculado, primaryMoedaForCheck)
+          : valorRetornoCalculado;
+
         apostaData = {
           ...commonData,
+          moeda_operacao: isMultiCC ? 'MULTI' : moedaOperacao,
+          is_multicurrency: isMultiCC,
+          consolidation_currency: isMultiCC ? moedaConsolidacao : null,
           bookmaker_id: bookmakerId,
           odd: Math.round(effectiveOdd * 100000) / 100000, // 5 casas decimais (padrão de precisão)
-          stake: effectiveStake,
+          stake: parentStake,
           modo_entrada: "PADRAO",
-          valor_retorno: valorRetornoCalculado,
-          lucro_prejuizo: lucroPrejuizo,
+          valor_retorno: parentValorRetorno,
+          lucro_prejuizo: parentLucroPrejuizo,
           lay_exchange: null,
           lay_odd: null,
           lay_stake: null,
@@ -1990,9 +2043,11 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           back_em_exchange: false,
           back_comissao: null,
           tipo_freebet: (usarFreebetBookmaker || additionalEntries.some(e => e.usar_freebet)) ? "freebet_snr" : null,
-          stake_real: bookmakerStakeReal + additionalStakeReal,
-          stake_freebet: bookmakerStakeFreebet + additionalStakeFreebet,
-          stake_total: effectiveStake,
+          stake_real: parentStakeReal,
+          stake_freebet: parentStakeFreebet,
+          stake_total: parentStake,
+          stake_consolidado: isMultiCC ? parentStake : null,
+          pl_consolidado: (isMultiCC && statusResultado !== 'PENDENTE') ? parentLucroPrejuizo : null,
           // WATERFALL: Flag para indicar se freebet deve ser usado no waterfall
           usar_freebet: bookmakerStakeFreebet + additionalStakeFreebet > 0,
         };
