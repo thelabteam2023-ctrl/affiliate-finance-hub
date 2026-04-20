@@ -334,7 +334,7 @@ function PernaItem({
           {/* Result pill per perna */}
           {onResultChange && (
             <SurebetPernaResultPill
-              resultado={perna.resultado}
+              resultado={resultadoExibir}
               onResultChange={onResultChange}
             />
           )}
