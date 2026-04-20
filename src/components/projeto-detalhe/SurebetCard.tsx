@@ -682,9 +682,13 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
       ? { label: "DG", icon: Zap, color: "text-teal-400", bgColor: "bg-teal-500/20", borderColor: "border-teal-500/30" }
       : isValueBet
         ? { label: "VB", icon: TrendingUp, color: "text-purple-400", bgColor: "bg-purple-500/20", borderColor: "border-purple-500/30" }
-        : isSimples
-          ? { label: "SIMPLES", icon: Target, color: "text-blue-400", bgColor: "bg-blue-500/20", borderColor: "border-blue-500/30" }
-          : { label: "SUREBET", icon: ArrowLeftRight, color: "text-amber-400", bgColor: "bg-amber-500/20", borderColor: "border-amber-500/30" };
+        : isPunter
+          ? { label: "PUNTER", icon: Target, color: "text-blue-400", bgColor: "bg-blue-500/20", borderColor: "border-blue-500/30" }
+          : isFreebetStrat
+            ? { label: "FREEBET", icon: Gift, color: "text-cyan-400", bgColor: "bg-cyan-500/20", borderColor: "border-cyan-500/30" }
+            : isSimples
+              ? { label: "SIMPLES", icon: Target, color: "text-blue-400", bgColor: "bg-blue-500/20", borderColor: "border-blue-500/30" }
+              : { label: "SUREBET", icon: ArrowLeftRight, color: "text-amber-400", bgColor: "bg-amber-500/20", borderColor: "border-amber-500/30" };
   
   const Icon = estrategiaConfig.icon;
 
