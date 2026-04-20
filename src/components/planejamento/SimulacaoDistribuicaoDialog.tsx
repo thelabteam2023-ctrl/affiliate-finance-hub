@@ -218,7 +218,7 @@ export function SimulacaoDistribuicaoDialog({
             <Badge variant={stats.agendadas === stats.totalCelulas ? "default" : "secondary"}>
               {stats.agendadas} / {stats.totalCelulas} agendadas
             </Badge>
-            <Badge variant="outline" className="border-rose-500/40 text-rose-500">
+            <Badge variant="outline" className="border-destructive/40 text-destructive">
               Clones: {stats.totalClones}
             </Badge>
             <Badge variant="outline">Outras: {stats.totalOutras}</Badge>
