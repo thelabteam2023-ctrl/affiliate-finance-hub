@@ -5,7 +5,9 @@ type: feature
 ---
 Quando o formulário de aposta simples (ApostaDialog) tem múltiplas entradas (`additionalEntries`):
 
-1. Se TODAS as casas usam a mesma moeda → comportamento single-currency (parent guarda valor nominal somado).
+**REGRA CANÔNICA (multi-bookmaker):** Toda aposta com `additionalEntries.length > 0` grava `bookmaker_id = NULL` no pai, idêntico a Surebet/Múltipla. Isso permite que `get_bookmaker_saldos` distribua o "em jogo" pelas pernas reais em `apostas_pernas` (cada casa mostra exatamente seu stake nativo). Quando há apenas 1 entrada (sem multi-entry), o pai mantém `bookmaker_id` da casa.
+
+1. Se TODAS as casas usam a mesma moeda → parent guarda valor nominal somado, `bookmaker_id=NULL`, `moeda_operacao` = moeda nativa.
 2. Se há **moedas diferentes** (multi-currency):
    - `apostas_unificada.stake`, `stake_total`, `stake_real`, `stake_freebet`, `valor_retorno`, `lucro_prejuizo` são gravados **na moeda de consolidação** do projeto (BRL ou USD).
    - `moeda_operacao = 'MULTI'`
