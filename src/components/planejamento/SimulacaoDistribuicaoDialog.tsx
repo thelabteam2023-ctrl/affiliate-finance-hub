@@ -314,6 +314,18 @@ export function SimulacaoDistribuicaoDialog({
                   <ChevronRight className="h-3.5 w-3.5" />
                 </Button>
               </div>
+              {overrides.size > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs"
+                  onClick={limparOverrides}
+                  title="Desfazer todos os movimentos manuais"
+                >
+                  <RotateCcw className="h-3.5 w-3.5 mr-1" />
+                  Resetar {overrides.size} mov.
+                </Button>
+              )}
               <Button
                 variant="outline"
                 size="sm"
