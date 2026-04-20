@@ -307,9 +307,11 @@ export function simularDistribuicao(input: {
         if (forcarOutra && isClone(c)) return false;
         // 1) Casa não pode repetir no MESMO dia
         if (slot.casas.has(c.bookmaker_catalogo_id)) return false;
-        // 2) Cooldown casa (vale para todos)
-        const ucasa = ultimoUsoCasa.get(c.bookmaker_catalogo_id);
-        if (ucasa !== undefined && dia - ucasa <= cooldownCasaDias) return false;
+        // 2) Cooldown casa — aplica APENAS para clones (suporte/outras não têm essa restrição)
+        if (isClone(c)) {
+          const ucasa = ultimoUsoCasa.get(c.bookmaker_catalogo_id);
+          if (ucasa !== undefined && dia - ucasa <= cooldownCasaDias) return false;
+        }
         // 3) Limite total de casas no dia
         if (maxCasasPorDia > 0 && slot.casas.size >= maxCasasPorDia) return false;
         // 4) Meta de ganho atingida
@@ -441,7 +443,7 @@ export function simularDistribuicao(input: {
       const ucasa = ultimoUsoCasa.get(catId);
       const blockedCasa =
         slot.casas.has(catId) ||
-        (ucasa !== undefined && Math.abs(dia - ucasa) <= cooldownCasaDias);
+        (ehClone && ucasa !== undefined && Math.abs(dia - ucasa) <= cooldownCasaDias);
       let blockedCpf = false;
       if (ehClone && ck) {
         const ucpf = ultimoUsoCpfClone.get(ck);
