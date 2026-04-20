@@ -574,6 +574,108 @@ export function SimulacaoDistribuicaoDialog({
                     ))}
                   </div>
                 </div>
+
+                {/* Mín. por dia da semana */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-[10px] uppercase tracking-wide font-semibold text-muted-foreground">
+                      Mín. por dia da semana
+                    </Label>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-6 text-[10px] px-2"
+                      onClick={() => {
+                        const novas = [...(config.regrasDiaSemana ?? [])];
+                        novas.push({ diasSemana: [4, 5, 6], minimoPorDia: 3 });
+                        setConfig({ ...config, regrasDiaSemana: novas });
+                      }}
+                    >
+                      <Plus className="h-3 w-3 mr-0.5" /> Regra
+                    </Button>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground leading-tight">
+                    Garante mínimo de casas/dia nos dias selecionados. Aviso se não atingir.
+                  </p>
+                  <div className="space-y-1.5">
+                    {(config.regrasDiaSemana ?? []).length === 0 && (
+                      <p className="text-[10px] text-muted-foreground italic text-center py-3 rounded border border-dashed">
+                        Nenhuma regra — sem mínimo por dia da semana.
+                      </p>
+                    )}
+                    {(config.regrasDiaSemana ?? []).map((r, idx) => (
+                      <div
+                        key={idx}
+                        className="rounded border bg-background/60 p-2 space-y-1.5"
+                      >
+                        <div className="flex items-center justify-between">
+                          <Label className="text-[9px] uppercase text-muted-foreground">
+                            Dias
+                          </Label>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-6 w-6"
+                            onClick={() => {
+                              const novas = (config.regrasDiaSemana ?? []).filter(
+                                (_, i) => i !== idx
+                              );
+                              setConfig({ ...config, regrasDiaSemana: novas });
+                            }}
+                          >
+                            <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                          </Button>
+                        </div>
+                        <div className="flex gap-0.5">
+                          {DIAS_SEMANA.map((d) => {
+                            const ativo = r.diasSemana.includes(d.value);
+                            return (
+                              <button
+                                key={d.value}
+                                type="button"
+                                onClick={() => {
+                                  const novosDias = ativo
+                                    ? r.diasSemana.filter((v) => v !== d.value)
+                                    : [...r.diasSemana, d.value].sort((a, b) => a - b);
+                                  const novas = [...(config.regrasDiaSemana ?? [])];
+                                  novas[idx] = { ...r, diasSemana: novosDias };
+                                  setConfig({ ...config, regrasDiaSemana: novas });
+                                }}
+                                title={d.label}
+                                className={cn(
+                                  "flex-1 h-7 rounded text-[10px] font-medium border transition-colors",
+                                  ativo
+                                    ? "bg-primary text-primary-foreground border-primary"
+                                    : "bg-muted/30 text-muted-foreground border-border hover:bg-muted"
+                                )}
+                              >
+                                {d.short}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <div>
+                          <Label className="text-[9px] uppercase text-muted-foreground">
+                            Mínimo de casas/dia
+                          </Label>
+                          <Input
+                            type="number"
+                            min={1}
+                            max={20}
+                            value={r.minimoPorDia}
+                            onChange={(e) => {
+                              const v = Math.max(1, Number(e.target.value) || 1);
+                              const novas = [...(config.regrasDiaSemana ?? [])];
+                              novas[idx] = { ...r, minimoPorDia: v };
+                              setConfig({ ...config, regrasDiaSemana: novas });
+                            }}
+                            className="h-7 text-xs"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             </aside>
           )}
