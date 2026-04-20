@@ -512,6 +512,8 @@ export function PlanejamentoCalendario() {
     return Array.from(map.values());
   }, [celulasPlano]);
 
+  const modoPlano = planoFiltroId !== "none";
+
   // Plano selecionado (para extrair parceiro_ids e mapear CPF por posição)
   const planoSelecionado = useMemo(
     () => planos.find((p) => p.id === planoFiltroId) ?? null,
