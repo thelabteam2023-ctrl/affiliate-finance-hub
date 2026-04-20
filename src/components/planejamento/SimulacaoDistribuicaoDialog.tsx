@@ -243,11 +243,20 @@ export function SimulacaoDistribuicaoDialog({
           )}
           {dias.map((dia) => {
             const itens = porDia.get(dia) ?? [];
+            const ganhoDia = itens.reduce(
+              (sum, a) => sum + (Number(a.celula.deposito_sugerido) || 0),
+              0
+            );
             return (
               <div key={dia} className="flex gap-2 items-start">
-                <div className="shrink-0 w-14 text-right">
+                <div className="shrink-0 w-16 text-right">
                   <div className="text-[10px] uppercase text-muted-foreground">Dia</div>
                   <div className="text-lg font-bold tabular-nums leading-none">{dia}</div>
+                  {ganhoDia > 0 && (
+                    <div className="text-[9px] text-muted-foreground tabular-nums mt-0.5">
+                      Σ {ganhoDia.toFixed(2)}
+                    </div>
+                  )}
                 </div>
                 <div className="flex-1 flex flex-wrap gap-1.5 p-1.5 rounded-md border bg-muted/20 min-h-[44px]">
                   {itens.map((a) => {
