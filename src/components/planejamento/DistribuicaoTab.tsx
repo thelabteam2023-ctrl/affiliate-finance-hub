@@ -207,10 +207,10 @@ export default function DistribuicaoTab() {
           bookmaker_catalogo_id: c.bookmaker_catalogo_id,
           ip_slot: c.ip_slot,
           ordem: idx,
-        })),
-      undefined
-    );
+      },
+    });
   };
+
 
   const selectedGenericosCount = useMemo(
     () => selectedPerfilIds.filter((id) => !perfis.find((p) => p.id === id)?.parceiro_id).length,
