@@ -433,8 +433,49 @@ export function simularDistribuicao(input: {
     return true;
   }
 
-  // ---- PASS 1: Garantia de mínimo por dia da semana (warning-only) ----
-  // Para cada dia coberto por alguma regra, agenda até atingir o maior mínimo aplicável.
+  // ---- PASS 1 (SUPORTES): Esgota CPF por CPF, espalhando pelos dias ----
+  // ANTES de qualquer outra coisa. Para cada CPF (do menor índice ao maior),
+  // agenda TODAS as suas casas suporte distribuindo round-robin pelos dias.
+  // Agendamento DIRETO (sem selecionar()) para garantir que CPF baixo não seja
+  // bloqueado por reservas/filtros que assumem outros CPFs já agendados.
+  const cpfsSuporte = Array.from(
+    new Set(
+      candidatas
+        .filter((c) => !isClone(c))
+        .map((c) => c.cpf_index ?? 9999)
+    )
+  ).sort((a, b) => a - b);
+
+  let cursorDia = 1;
+  for (const cpfIdx of cpfsSuporte) {
+    const casasDoCpf = candidatas.filter(
+      (c) => !isClone(c) && (c.cpf_index ?? 9999) === cpfIdx
+    );
+    for (const casa of casasDoCpf) {
+      if (!restantes.has(casa.id)) continue;
+      for (let i = 0; i < limite; i++) {
+        const dia = ((cursorDia - 1 + i) % limite) + 1;
+        const slot = ocupacao.get(dia)!;
+        if (slot.casas.has(casa.bookmaker_catalogo_id)) continue;
+        if (maxCasasPorDia > 0 && slot.casas.size >= maxCasasPorDia) continue;
+        if (metaGanhoDia > 0 && slot.ganho >= metaGanhoDia) continue;
+        const valor = Number(casa.deposito_sugerido) || 0;
+        if (estouraFaixa(dia, valor)) continue;
+        slot.casas.add(casa.bookmaker_catalogo_id);
+        slot.outrasCount++;
+        slot.ganho += valor;
+        ultimoUsoCasa.set(casa.bookmaker_catalogo_id, dia);
+        const idxFaixa = faixaDoDia(dia);
+        if (idxFaixa >= 0) acumuladoFaixa[idxFaixa] += valor;
+        restantes.delete(casa.id);
+        agendamentos.push({ celula: casa, dia, dateKey: buildDateKey(year, month, dia) });
+        cursorDia = (dia % limite) + 1;
+        break;
+      }
+    }
+  }
+
+  // ---- PASS 2: Garantia de mínimo por dia da semana (warning-only) ----
   if (regrasNorm.length > 0) {
     for (let dia = 1; dia <= limite; dia++) {
       const slot = ocupacao.get(dia)!;
@@ -451,50 +492,7 @@ export function simularDistribuicao(input: {
     }
   }
 
-  // ---- PASS 2A: Suportes — esgota CPF por CPF, espalhando pelos dias ----
-  // Para cada CPF (do menor índice ao maior), tenta agendar TODAS as suas casas suporte
-  // distribuindo round-robin pelos dias (cursor avança 1, 2, ..., limite, 1, 2, ...).
-  // Só passa para o próximo CPF quando o atual esgotar (ou ficar bloqueado).
-  const cpfsSuporte = Array.from(
-    new Set(
-      candidatas
-        .filter((c) => !isClone(c))
-        .map((c) => c.cpf_index ?? 9999)
-    )
-  ).sort((a, b) => a - b);
-
-  let cursorDia = 1;
-  for (const cpfIdx of cpfsSuporte) {
-    let progrediuCpf = true;
-    let safetyCpf = 0;
-    while (progrediuCpf && safetyCpf++ < candidatas.length * 2 + 10) {
-      progrediuCpf = false;
-      const restaDoCpf = candidatas.some(
-        (c) => restantes.has(c.id) && !isClone(c) && (c.cpf_index ?? 9999) === cpfIdx
-      );
-      if (!restaDoCpf) break;
-      for (let i = 0; i < limite; i++) {
-        const dia = ((cursorDia - 1 + i) % limite) + 1;
-        const slot = ocupacao.get(dia)!;
-        const pick = selecionar(dia, slot, true); // forcarOutra=true → ignora clones
-        if (pick && (pick.cpf_index ?? 9999) === cpfIdx && !isClone(pick)) {
-          slot.casas.add(pick.bookmaker_catalogo_id);
-          slot.outrasCount++;
-          slot.ganho += Number(pick.deposito_sugerido) || 0;
-          ultimoUsoCasa.set(pick.bookmaker_catalogo_id, dia);
-          const idxFaixa = faixaDoDia(dia);
-          if (idxFaixa >= 0) acumuladoFaixa[idxFaixa] += Number(pick.deposito_sugerido) || 0;
-          restantes.delete(pick.id);
-          agendamentos.push({ celula: pick, dia, dateKey: buildDateKey(year, month, dia) });
-          cursorDia = (dia % limite) + 1;
-          progrediuCpf = true;
-          break;
-        }
-      }
-    }
-  }
-
-  // ---- PASS 2B: Clones — round-robin pelos dias (lógica original) ----
+  // ---- PASS 3 (CLONES): Round-robin pelos dias ----
   let progrediuClones = true;
   let safetyClones = 0;
   const maxRoundsClones = candidatas.length * 2 + 10;
