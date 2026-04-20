@@ -1377,6 +1377,7 @@ export function ProjetoValueBetTab({
                   }}
                   onQuickResolve={handleQuickResolveSurebet}
                    onPernaResultChange={handleSurebetPernaResolve}
+                   onSimpleQuickResolve={handleQuickResolve}
                    onDelete={handleDeleteAposta}
                    onDuplicate={handleDuplicateSurebet}
                    formatCurrency={formatCurrency}
@@ -1467,6 +1468,7 @@ export function ProjetoValueBetTab({
                   }}
                   onQuickResolve={handleQuickResolveSurebet}
                   onPernaResultChange={handleSurebetPernaResolve}
+                  onSimpleQuickResolve={handleQuickResolve}
                    onDelete={handleDeleteAposta}
                    onDuplicate={handleDuplicateSurebet}
                   formatCurrency={formatCurrency}
