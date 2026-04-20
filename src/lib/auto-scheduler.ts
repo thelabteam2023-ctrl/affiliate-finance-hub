@@ -19,6 +19,15 @@
 import type { CelulaDisponivel } from "@/hooks/usePlanoCelulasDisponiveis";
 import type { PlanningCampanha } from "@/hooks/usePlanningData";
 
+export interface FaixaMeta {
+  /** Dia inicial da faixa (1..31). */
+  diaInicio: number;
+  /** Dia final da faixa (1..31). */
+  diaFim: number;
+  /** Meta de depósito (soma deposito_sugerido) para a faixa. */
+  meta: number;
+}
+
 export interface AutoSchedulerConfig {
   /** Máximo ESTRITO de casas clone por dia (conta cada agendamento, não CPFs distintos). */
   clonesPorDia: number;
@@ -36,6 +45,10 @@ export interface AutoSchedulerConfig {
   minOutrasPorJanela?: number;
   /** Tamanho da janela deslizante (em dias) para a regra de mínimo de "outras". */
   janelaOutrasDias?: number;
+  /** Faixas de dias com meta de depósito (somatório de deposito_sugerido). */
+  faixas?: FaixaMeta[];
+  /** Tolerância (%) que cada faixa pode ultrapassar a meta antes de "fechar". 0 = teto rígido. */
+  toleranciaFaixaPct?: number;
   /** Seed numérica para variar a combinação a cada recálculo. */
   seed?: number;
 }
