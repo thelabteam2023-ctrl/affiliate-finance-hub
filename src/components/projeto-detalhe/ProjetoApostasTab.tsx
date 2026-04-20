@@ -1716,6 +1716,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                     }}
                     onQuickResolve={handleQuickResolveSurebet}
                     onPernaResultChange={handleSurebetPernaResolve}
+                    onSimpleQuickResolve={handleQuickResolve}
                     onDelete={prepareDeleteSimples}
                     onDuplicate={handleDuplicateSimples}
                     formatCurrency={formatCurrency}
