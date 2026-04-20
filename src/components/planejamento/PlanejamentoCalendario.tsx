@@ -112,12 +112,13 @@ function DraggableBookmaker({ id, nome, moeda, status, logoUrl }: {
 
 // Item arrastável vindo do PLANO de distribuição
 // Carrega tudo: CPF (parceiro), casa, grupo, valor sugerido — pronto para virar campanha
-function DraggableCelula({ celula }: { celula: CelulaDisponivel }) {
+function DraggableCelula({ celula, parceiroNome }: { celula: CelulaDisponivel; parceiroNome?: string }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `cel-${celula.id}`,
     data: { type: "celula", celula },
   });
   const jaAgendada = !!celula.agendada_em;
+  const cpfLabel = parceiroNome || "CPF não vinculado";
   return (
     <div
       ref={setNodeRef}
@@ -133,8 +134,8 @@ function DraggableCelula({ celula }: { celula: CelulaDisponivel }) {
       style={{ borderLeftColor: celula.grupo_cor, borderLeftWidth: 3 }}
       title={
         jaAgendada
-          ? `${celula.bookmaker_nome} • já agendada`
-          : `${celula.bookmaker_nome} • ${celula.grupo_nome}`
+          ? `${celula.bookmaker_nome} • ${cpfLabel} • já agendada`
+          : `${celula.bookmaker_nome} • ${cpfLabel} • ${celula.grupo_nome}`
       }
     >
       {celula.bookmaker_logo ? (
@@ -144,6 +145,15 @@ function DraggableCelula({ celula }: { celula: CelulaDisponivel }) {
       )}
       <div className="flex-1 min-w-0">
         <div className="font-medium truncate">{celula.bookmaker_nome}</div>
+        <div
+          className={cn(
+            "text-[10px] flex items-center gap-1 mt-0.5",
+            parceiroNome ? "text-foreground/70" : "text-muted-foreground italic"
+          )}
+        >
+          <User className="h-2.5 w-2.5 shrink-0" />
+          <span className="truncate">{cpfLabel}</span>
+        </div>
         <div className="text-[10px] text-muted-foreground flex items-center gap-1.5">
           <span>{celula.moeda}</span>
           {celula.deposito_sugerido > 0 && (
@@ -759,7 +769,11 @@ export function PlanejamentoCalendario() {
                 {modoPlano ? (
                   <>
                     {filteredCelulas.map((c) => (
-                      <DraggableCelula key={c.id} celula={c} />
+                      <DraggableCelula
+                        key={c.id}
+                        celula={c}
+                        parceiroNome={c.parceiro_id ? parceiroMap[c.parceiro_id]?.nome : undefined}
+                      />
                     ))}
                     {filteredCelulas.length === 0 && (
                       <p className="text-xs text-muted-foreground italic text-center py-4">
