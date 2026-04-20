@@ -200,29 +200,82 @@ export default function DistribuicaoTab() {
       .map((pid) => perfilToParceiro.get(pid))
       .filter((x): x is string => !!x);
 
-    createPlano.mutate({
-      nome: planoNome.trim(),
-      parceiro_ids: parceiroIds,
-      grupos: grupoConfigs.map((g, idx) => ({
-        grupo_id: g.grupo_id,
-        regra_casa: g.regra_casa,
-        regra_ip: g.regra_ip,
-        casas_por_cpf: g.casas_por_cpf,
-        ordem: idx,
-      })),
-      celulas: resultado.celulas
-        .map((c, idx) => {
-          const parceiroId = perfilToParceiro.get(c.parceiro_id);
-          if (!parceiroId) return null;
-          return {
-            grupo_id: c.grupo_id,
-            parceiro_id: parceiroId,
-            bookmaker_catalogo_id: c.bookmaker_catalogo_id,
-            ip_slot: c.ip_slot,
-            ordem: idx,
-          };
-        })
-        .filter((x): x is NonNullable<typeof x> => !!x),
+    createPlano.mutate(
+      {
+        nome: planoNome.trim(),
+        parceiro_ids: parceiroIds,
+        grupos: grupoConfigs.map((g, idx) => ({
+          grupo_id: g.grupo_id,
+          regra_casa: g.regra_casa,
+          regra_ip: g.regra_ip,
+          casas_por_cpf: g.casas_por_cpf,
+          ordem: idx,
+        })),
+        celulas: resultado.celulas
+          .map((c, idx) => {
+            const parceiroId = perfilToParceiro.get(c.parceiro_id);
+            if (!parceiroId) return null;
+            return {
+              grupo_id: c.grupo_id,
+              parceiro_id: parceiroId,
+              bookmaker_catalogo_id: c.bookmaker_catalogo_id,
+              ip_slot: c.ip_slot,
+              ordem: idx,
+            };
+          })
+          .filter((x): x is NonNullable<typeof x> => !!x),
+      },
+      {
+        onSuccess: (plano: any) => {
+          if (plano?.id) setPlanoSalvoId(plano.id);
+        },
+      }
+    );
+  };
+
+  // Gera agenda usando o plano salvo (precisa estar salvo pra ter celula_id reais)
+  const handleGerarAgenda = () => {
+    if (!planoSalvoId || !detalheSalvo) {
+      toast.error("Salve o plano antes de gerar a agenda.");
+      return;
+    }
+    const grupoModoMap = new Map(grupos.map((g) => [g.id, g.modo_execucao]));
+    const grupoCelulaMap = new Map(detalheSalvo.grupos.map((g) => [g.id, g.grupo_id]));
+    const membroMap = new Map<string, { sugerido: number; moeda: string | null }>();
+    membros.forEach((m) => {
+      membroMap.set(`${m.grupo_id}::${m.bookmaker_catalogo_id}`, {
+        sugerido: Number(m.deposito_sugerido) || 0,
+        moeda: m.deposito_moeda,
+      });
+    });
+
+    const celulasParaAgendar: CelulaParaAgendar[] = detalheSalvo.celulas
+      .map((c) => {
+        const grupoOriginalId = grupoCelulaMap.get(c.plano_grupo_id);
+        if (!grupoOriginalId) return null;
+        const cat = catalogoMap.get(c.bookmaker_catalogo_id);
+        const memb = membroMap.get(`${grupoOriginalId}::${c.bookmaker_catalogo_id}`);
+        const moeda = memb?.moeda || cat?.moeda_padrao || "BRL";
+        return {
+          celula_id: c.id,
+          grupo_id: grupoOriginalId,
+          parceiro_id: c.parceiro_id,
+          bookmaker_catalogo_id: c.bookmaker_catalogo_id,
+          ip_slot: c.ip_slot ?? "",
+          ordem: c.ordem,
+          modo_execucao: grupoModoMap.get(grupoOriginalId) ?? "AGENDADO",
+          deposito_sugerido: memb?.sugerido ?? 0,
+          moeda,
+        };
+      })
+      .filter((x): x is CelulaParaAgendar => !!x);
+
+    gerarAgendaMut.mutate({
+      planoId: planoSalvoId,
+      celulas: celulasParaAgendar,
+      startDate,
+      metaDiariaUsd: metaDiariaUsd ? Number(metaDiariaUsd) : null,
+      toUsd,
     });
   };
 
