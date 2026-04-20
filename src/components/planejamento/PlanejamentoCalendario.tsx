@@ -1056,6 +1056,7 @@ export function PlanejamentoCalendario() {
                   Simular distribuição
                 </Button>
               )}
+              <div className="flex items-center rounded-md border bg-card p-0.5">
                 <Button
                   variant={displayCurrency === "BRL" ? "default" : "ghost"}
                   size="sm"
