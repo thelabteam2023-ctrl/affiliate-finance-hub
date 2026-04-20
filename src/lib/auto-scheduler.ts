@@ -209,6 +209,31 @@ export function simularDistribuicao(input: {
   const warnings: string[] = [];
   const restantes = new Set(candidatas.map((c) => c.id));
 
+  // ---- Faixas: normalização e tracking de acumulado por faixa ----
+  const faixasNorm = (faixas ?? [])
+    .filter((f) => f && f.diaInicio >= 1 && f.diaFim >= f.diaInicio && f.meta > 0)
+    .map((f) => ({ ...f, diaFim: Math.min(f.diaFim, limite) }))
+    .filter((f) => f.diaInicio <= limite);
+  const acumuladoFaixa = new Array<number>(faixasNorm.length).fill(0);
+  const tetoFaixa = faixasNorm.map((f) => f.meta * (1 + (toleranciaFaixaPct || 0) / 100));
+
+  /** Retorna o índice da faixa que cobre `dia`, ou -1 se nenhuma. */
+  function faixaDoDia(dia: number): number {
+    for (let i = 0; i < faixasNorm.length; i++) {
+      const f = faixasNorm[i];
+      if (dia >= f.diaInicio && dia <= f.diaFim) return i;
+    }
+    return -1;
+  }
+
+  /** True se adicionar `valor` ao dia estouraria o teto (meta + tolerância) da faixa correspondente. */
+  function estouraFaixa(dia: number, valor: number): boolean {
+    if (faixasNorm.length === 0) return false;
+    const idx = faixaDoDia(dia);
+    if (idx < 0) return false;
+    return acumuladoFaixa[idx] + valor > tetoFaixa[idx];
+  }
+
   /** Conta "outras" agendadas em [diaInicio, diaFim] (inclusivo). */
   function contarOutrasJanela(diaInicio: number, diaFim: number): number {
     let total = 0;
