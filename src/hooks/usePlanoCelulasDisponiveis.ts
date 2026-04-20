@@ -70,7 +70,11 @@ export function usePlanoCelulasDisponiveis(planoId: string | null) {
         .select("id, grupo_id, casas_por_cpf")
         .eq("plano_id", planoId);
       const planoGrupoMap = new Map<string, string>();
-      (planoGrupos ?? []).forEach((pg: any) => planoGrupoMap.set(pg.id, pg.grupo_id));
+      const planoGrupoCasasPorCpfMap = new Map<string, number | null>();
+      (planoGrupos ?? []).forEach((pg: any) => {
+        planoGrupoMap.set(pg.id, pg.grupo_id);
+        planoGrupoCasasPorCpfMap.set(pg.id, pg.casas_por_cpf ?? null);
+      });
 
       const grupoIds = Array.from(new Set(planoGrupoMap.values()));
       const catalogoIds = Array.from(
@@ -107,20 +111,56 @@ export function usePlanoCelulasDisponiveis(planoId: string | null) {
         })
       );
 
-      // Calcula índice do CPF (parceiro) dentro de cada plano_grupo, ordenando por
-      // primeira aparição (ordem). Resultado: "CPF 1", "CPF 2"... por grupo do plano.
-      const cpfIndexMap = new Map<string, number>(); // key: plano_grupo_id::parceiro_id
-      const cpfCounter = new Map<string, number>();  // key: plano_grupo_id
+      // Calcula índice do CPF dentro de cada plano_grupo. Estratégia:
+      // 1) Se o cell tem parceiro_id e ele está no array parceiro_ids do plano,
+      //    usa a posição (1-based) — "CPF 1" = primeiro do plano.
+      // 2) Caso contrário, usa fallback por ordem dentro do grupo: agrupa células
+      //    por chunks de `casas_por_cpf` (ou conta parceiros distintos por ordem).
+      const parceiroPlanoIndex = new Map<string, number>();
+      parceiroIdsPlano.forEach((pid, idx) => parceiroPlanoIndex.set(pid, idx + 1));
+
+      // Fallback: agrupa células por plano_grupo_id, ordena por ordem, e atribui
+      // CPF index sequencial a cada novo parceiro_id (ou bloco de N células sem parceiro)
+      const cpfIndexFallbackMap = new Map<string, number>(); // key: celula.id -> idx
+      const celulasPorGrupo = new Map<string, any[]>();
       [...celulas]
         .sort((a: any, b: any) => (a.ordem ?? 0) - (b.ordem ?? 0))
         .forEach((c: any) => {
-          if (!c.parceiro_id) return;
-          const key = `${c.plano_grupo_id}::${c.parceiro_id}`;
-          if (cpfIndexMap.has(key)) return;
-          const next = (cpfCounter.get(c.plano_grupo_id) ?? 0) + 1;
-          cpfCounter.set(c.plano_grupo_id, next);
-          cpfIndexMap.set(key, next);
+          const arr = celulasPorGrupo.get(c.plano_grupo_id) ?? [];
+          arr.push(c);
+          celulasPorGrupo.set(c.plano_grupo_id, arr);
         });
+
+      celulasPorGrupo.forEach((cells, planoGrupoId) => {
+        const casasPorCpf = planoGrupoCasasPorCpfMap.get(planoGrupoId);
+        const seenParceiros = new Map<string, number>();
+        let counter = 0;
+        cells.forEach((c: any, idx: number) => {
+          let cpfIdx: number;
+          if (c.parceiro_id) {
+            // Prefer índice global do plano se disponível
+            const fromPlano = parceiroPlanoIndex.get(c.parceiro_id);
+            if (fromPlano) {
+              cpfIdx = fromPlano;
+            } else if (seenParceiros.has(c.parceiro_id)) {
+              cpfIdx = seenParceiros.get(c.parceiro_id)!;
+            } else {
+              counter += 1;
+              seenParceiros.set(c.parceiro_id, counter);
+              cpfIdx = counter;
+            }
+          } else if (casasPorCpf && casasPorCpf > 0) {
+            // Sem parceiro: deduz pelo bloco de células (chunks de N)
+            cpfIdx = Math.floor(idx / casasPorCpf) + 1;
+          } else {
+            // Sem parceiro e sem casas_por_cpf: tenta usar tamanho do plano
+            const nCpfs = parceiroIdsPlano.length || 1;
+            const porCpf = Math.max(1, Math.ceil(cells.length / nCpfs));
+            cpfIdx = Math.floor(idx / porCpf) + 1;
+          }
+          cpfIndexFallbackMap.set(c.id, cpfIdx);
+        });
+      });
 
       return celulas.map((c: any) => {
         const grupoId = planoGrupoMap.get(c.plano_grupo_id) ?? "";
