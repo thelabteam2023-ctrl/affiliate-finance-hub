@@ -133,6 +133,8 @@ export function simularDistribuicao(input: {
     diaLimite,
     minOutrasPorJanela = 0,
     janelaOutrasDias = 3,
+    faixas = [],
+    toleranciaFaixaPct = 0,
     seed = 1,
   } = config;
 
