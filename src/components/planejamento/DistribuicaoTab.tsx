@@ -526,7 +526,7 @@ export default function DistribuicaoTab() {
           )}
 
           {matrizAgrupada && matrizAgrupada.size > 0 && (
-            <div className="space-y-4 max-h-[360px] overflow-y-auto">
+            <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
               {Array.from(matrizAgrupada.entries()).map(([grupoId, perCpf]) => {
                 const g = grupoMap.get(grupoId);
                 return (
