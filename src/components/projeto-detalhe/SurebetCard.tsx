@@ -457,6 +457,15 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
   const isFreebetStrat = surebet.estrategia === "EXTRACAO_FREEBET" || surebet.estrategia === "FREEBET";
   const isSimples = surebet.estrategia === "SIMPLES" || surebet.estrategia === "NORMAL";
   const isLiquidada = surebet.status === "LIQUIDADA";
+
+  // CRÍTICO: apostas SIMPLES multi-entry (PUNTER/DUPLO_GREEN/EXTRACAO_BONUS/VALUEBET/FREEBET/SIMPLES)
+  // são UMA aposta com múltiplas casas — NÃO são surebet de verdade. O resultado é único para
+  // toda a aposta (não há "perna ganhou, perna perdeu"). Portanto:
+  //  - badge da perna NÃO deve ser clicável (liquidar_perna_surebet_v1 falharia, perna_id="")
+  //  - quick-resolve deve ser feito pelo dropdown do menu (que chama reliquidar_aposta_v6)
+  // Apenas SUREBET/MULTIPLA têm liquidação por perna independente.
+  const isSimplesMultiEntry = isPunter || isDuploGreen || isFreebetStrat || isSimples
+    || surebet.estrategia === "VALUEBET" || surebet.estrategia === "EXTRACAO_BONUS";
   
   // Detectar se alguma perna usa freebet (badge no nível do card)
   const hasAnyFreebetPerna = surebet.pernas?.some(p => 
