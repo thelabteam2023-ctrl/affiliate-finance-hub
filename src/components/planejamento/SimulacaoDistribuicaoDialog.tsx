@@ -47,7 +47,9 @@ interface Props {
 }
 
 const DEFAULT_CONFIG: AutoSchedulerConfig = {
-  casasPorDia: 3,
+  clonesPorDia: 3,
+  maxCasasPorDia: 0, // 0 = sem limite
+  metaGanhoDia: 0, // 0 = desativado
   cooldownCasaDias: 3,
   cooldownCpfDias: 5,
   diaLimite: 23,
