@@ -69,6 +69,7 @@ import { VolumeKPI } from "@/components/kpis/VolumeKPI";
 import { calcularImpactoResultado } from "@/lib/bookmakerBalanceHelper";
 import { getConsolidatedStake, getConsolidatedLucro } from "@/utils/consolidatedValues";
 import { reliquidarAposta, liquidarPernaSurebet, deletarAposta } from "@/services/aposta/ApostaService";
+import { propagarResultadoParaPernas } from "@/lib/propagatePernasResultado";
 import { useBonusBalanceManager } from "@/hooks/useBonusBalanceManager";
 import { useInvalidateBookmakerSaldos, useBookmakerSaldosQuery, BookmakerSaldo } from "@/hooks/useBookmakerSaldosQuery";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
@@ -496,6 +497,9 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
         toast.error(rpcResult.error?.message || "Erro ao liquidar aposta");
         return;
       }
+
+      // 1b. Propagar resultado para todas as pernas (multi-entry simples)
+      await propagarResultadoParaPernas(apostaId, resultado);
 
       // 2. Atualizar rollover se houver bônus ativo para a casa
       if (bookmakerId && resultado !== "VOID") {

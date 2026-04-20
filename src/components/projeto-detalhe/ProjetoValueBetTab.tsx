@@ -13,6 +13,7 @@ import { FinancialMetricsPopover } from "./FinancialMetricsPopover";
 import { calcularImpactoResultado } from "@/lib/bookmakerBalanceHelper";
 import { getConsolidatedStake, getConsolidatedLucro } from "@/utils/consolidatedValues";
 import { reliquidarAposta } from "@/services/aposta/ApostaService";
+import { propagarResultadoParaPernas } from "@/lib/propagatePernasResultado";
 import { useInvalidateBookmakerSaldos } from "@/hooks/useBookmakerSaldosQuery";
 import { useBonusBalanceManager } from "@/hooks/useBonusBalanceManager";
 import { useCrossWindowSync } from "@/hooks/useCrossWindowSync";
@@ -463,6 +464,9 @@ export function ProjetoValueBetTab({
         toast.error(rpcResult.error?.message || "Erro ao liquidar aposta");
         return;
       }
+
+      // 1b. Propagar resultado para todas as pernas (multi-entry simples)
+      await propagarResultadoParaPernas(apostaId, resultado);
 
       // 2. Atualizar rollover se houver bônus ativo para a casa
       if (bookmakerId && resultado !== "VOID") {
