@@ -20,7 +20,10 @@ import {
   Settings2,
   ChevronLeft,
   ChevronRight,
+  GripVertical,
+  RotateCcw,
 } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
   simularDistribuicao,
@@ -96,6 +99,16 @@ export function SimulacaoDistribuicaoDialog({
   const [simYear, setSimYear] = useState(year);
   const [simMonth, setSimMonth] = useState(month);
 
+  // Overrides manuais: celula.id -> novo dia (preservados entre recálculos)
+  const [overrides, setOverrides] = useState<Map<string, number>>(new Map());
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [dragOverDay, setDragOverDay] = useState<number | null>(null);
+
+  // Reset de overrides ao trocar mês/abrir
+  useEffect(() => {
+    if (open) setOverrides(new Map());
+  }, [open, simYear, simMonth]);
+
   // Cotações para conversão multimoeda → USD (modo simulação)
   const { cotacaoUSD, cotacaoEUR, cotacaoGBP, cotacaoMYR, cotacaoMXN, cotacaoARS, cotacaoCOP } = useCotacoes();
 
@@ -163,21 +176,101 @@ export function SimulacaoDistribuicaoDialog({
 
   const NOMES_MES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
+  // Aplica overrides manuais — cada agendamento pode ter sido movido pelo usuário
+  const agendamentosFinais = useMemo(() => {
+    if (!simulacao) return [];
+    return simulacao.agendamentos.map((a) => {
+      const novoDia = overrides.get(a.celula.id);
+      if (novoDia && novoDia !== a.dia) {
+        const mm = String(simMonth).padStart(2, "0");
+        const dd = String(novoDia).padStart(2, "0");
+        return { ...a, dia: novoDia, dateKey: `${simYear}-${mm}-${dd}` };
+      }
+      return a;
+    });
+  }, [simulacao, overrides, simYear, simMonth]);
+
   const porDia = useMemo(() => {
-    const map = new Map<number, SimulacaoResultado["agendamentos"]>();
-    if (!simulacao) return map;
-    simulacao.agendamentos.forEach((a) => {
+    const map = new Map<number, typeof agendamentosFinais>();
+    agendamentosFinais.forEach((a) => {
       if (!map.has(a.dia)) map.set(a.dia, []);
       map.get(a.dia)!.push(a);
     });
     return map;
-  }, [simulacao]);
+  }, [agendamentosFinais]);
 
   const dias = useMemo(() => {
     const set = new Set<number>();
     porDia.forEach((_, k) => set.add(k));
     return Array.from(set).sort((a, b) => a - b);
   }, [porDia]);
+
+  // Detecta conflitos por agendamento (após overrides) — warnings, não bloqueia
+  const conflitos = useMemo(() => {
+    const conflitosPorId = new Map<string, string[]>();
+    const cooldownCasa = config.cooldownCasaDias ?? 0;
+    const cooldownCpf = config.cooldownCpfDias ?? 0;
+    const isClone = (a: typeof agendamentosFinais[number]) =>
+      (a.celula.grupo_nome || "").toLowerCase().includes("clone");
+
+    // Index por dia → para detectar duplicatas no mesmo dia + cooldowns
+    const porDiaCasa = new Map<string, number[]>(); // catalogoId -> dias
+    const porDiaCpfClone = new Map<string, number[]>(); // cpfKey -> dias (só clones)
+    const porDiaCasaSet = new Map<number, Set<string>>(); // dia -> set de catalogoIds
+
+    agendamentosFinais.forEach((a) => {
+      const k = a.celula.bookmaker_catalogo_id;
+      if (!porDiaCasa.has(k)) porDiaCasa.set(k, []);
+      porDiaCasa.get(k)!.push(a.dia);
+      if (!porDiaCasaSet.has(a.dia)) porDiaCasaSet.set(a.dia, new Set());
+      porDiaCasaSet.get(a.dia)!.add(k);
+      if (isClone(a) && a.celula.cpf_index != null) {
+        const ck = `cpf-${a.celula.cpf_index}`;
+        if (!porDiaCpfClone.has(ck)) porDiaCpfClone.set(ck, []);
+        porDiaCpfClone.get(ck)!.push(a.dia);
+      }
+    });
+
+    agendamentosFinais.forEach((a) => {
+      const issues: string[] = [];
+      const k = a.celula.bookmaker_catalogo_id;
+      // Casa duplicada no mesmo dia (>1)
+      const diasCasa = porDiaCasa.get(k) ?? [];
+      if (diasCasa.filter((d) => d === a.dia).length > 1) {
+        issues.push("Casa duplicada no mesmo dia");
+      }
+      // Cooldown casa (apenas clones, conforme regra)
+      if (isClone(a) && cooldownCasa > 0) {
+        const proximo = diasCasa.find((d) => d !== a.dia && Math.abs(d - a.dia) <= cooldownCasa);
+        if (proximo !== undefined) {
+          issues.push(`Cooldown casa (${cooldownCasa}d) violado vs dia ${proximo}`);
+        }
+      }
+      // Cooldown CPF clone
+      if (isClone(a) && cooldownCpf > 0 && a.celula.cpf_index != null) {
+        const ck = `cpf-${a.celula.cpf_index}`;
+        const diasCpf = porDiaCpfClone.get(ck) ?? [];
+        const proximo = diasCpf.find((d) => d !== a.dia && Math.abs(d - a.dia) <= cooldownCpf);
+        if (proximo !== undefined) {
+          issues.push(`Cooldown CPF ${a.celula.cpf_index} (${cooldownCpf}d) violado vs dia ${proximo}`);
+        }
+      }
+      if (issues.length > 0) conflitosPorId.set(a.celula.id, issues);
+    });
+    return conflitosPorId;
+  }, [agendamentosFinais, config]);
+
+  const moverPara = (celulaId: string, novoDia: number) => {
+    const last = new Date(simYear, simMonth, 0).getDate();
+    if (novoDia < 1 || novoDia > last) return;
+    setOverrides((prev) => {
+      const next = new Map(prev);
+      next.set(celulaId, novoDia);
+      return next;
+    });
+  };
+
+  const limparOverrides = () => setOverrides(new Map());
 
   const stats = simulacao?.estatisticas;
   const excedeu = stats ? stats.totalCelulas > stats.capacidadeMaxima : false;
@@ -221,6 +314,18 @@ export function SimulacaoDistribuicaoDialog({
                   <ChevronRight className="h-3.5 w-3.5" />
                 </Button>
               </div>
+              {overrides.size > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs"
+                  onClick={limparOverrides}
+                  title="Desfazer todos os movimentos manuais"
+                >
+                  <RotateCcw className="h-3.5 w-3.5 mr-1" />
+                  Resetar {overrides.size} mov.
+                </Button>
+              )}
               <Button
                 variant="outline"
                 size="sm"
@@ -352,19 +457,64 @@ export function SimulacaoDistribuicaoDialog({
                         </div>
                       )}
                     </div>
-                    <div className="flex-1 flex flex-wrap gap-1.5 p-1.5 rounded-md border bg-muted/20 min-h-[44px]">
+                    <div
+                      className={cn(
+                        "flex-1 flex flex-wrap gap-1.5 p-1.5 rounded-md border bg-muted/20 min-h-[44px] transition-colors",
+                        dragOverDay === dia && "ring-2 ring-primary border-primary/50 bg-primary/5"
+                      )}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        if (dragOverDay !== dia) setDragOverDay(dia);
+                      }}
+                      onDragLeave={() => {
+                        if (dragOverDay === dia) setDragOverDay(null);
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        setDragOverDay(null);
+                        if (!draggedId) return;
+                        const ag = agendamentosFinais.find((x) => x.celula.id === draggedId);
+                        if (!ag) return;
+                        if (ag.dia === dia) return;
+                        moverPara(draggedId, dia);
+                        toast.success(`Movido para dia ${dia}`, {
+                          description: ag.celula.bookmaker_nome,
+                        });
+                        setDraggedId(null);
+                      }}
+                    >
                       {itens.map((a) => {
                         const color = getCpfColor(a.celula.cpf_index);
+                        const issues = conflitos.get(a.celula.id);
+                        const moved = overrides.has(a.celula.id);
                         return (
                           <div
                             key={a.celula.id}
-                            className="flex items-center gap-1.5 px-1.5 py-1 rounded border text-[11px]"
+                            draggable
+                            onDragStart={(e) => {
+                              setDraggedId(a.celula.id);
+                              e.dataTransfer.effectAllowed = "move";
+                            }}
+                            onDragEnd={() => {
+                              setDraggedId(null);
+                              setDragOverDay(null);
+                            }}
+                            className={cn(
+                              "flex items-center gap-1 px-1.5 py-1 rounded border text-[11px] cursor-grab active:cursor-grabbing transition-opacity",
+                              draggedId === a.celula.id && "opacity-40",
+                              issues && "ring-1 ring-warning/70"
+                            )}
                             style={{
                               backgroundColor: color?.bg ?? "hsl(var(--card))",
-                              borderColor: color?.border ?? "hsl(var(--border))",
+                              borderColor: issues ? "hsl(var(--warning))" : color?.border ?? "hsl(var(--border))",
                             }}
-                            title={`${a.celula.bookmaker_nome} • CPF ${a.celula.cpf_index ?? "?"} • ${a.celula.grupo_nome}`}
+                            title={
+                              issues
+                                ? `${a.celula.bookmaker_nome} • ${a.celula.grupo_nome}\n⚠ ${issues.join("\n⚠ ")}`
+                                : `${a.celula.bookmaker_nome} • CPF ${a.celula.cpf_index ?? "?"} • ${a.celula.grupo_nome}${moved ? "\n(movido manualmente)" : ""}`
+                            }
                           >
+                            <GripVertical className="h-3 w-3 text-muted-foreground/60 shrink-0" />
                             {a.celula.cpf_index ? (
                               <div
                                 className="h-4 w-4 shrink-0 rounded flex items-center justify-center text-[9px] font-bold"
@@ -385,6 +535,12 @@ export function SimulacaoDistribuicaoDialog({
                             <span className="font-medium truncate max-w-[120px]">
                               {a.celula.bookmaker_nome}
                             </span>
+                            {moved && (
+                              <span className="text-[8px] px-1 rounded bg-primary/20 text-primary font-bold">M</span>
+                            )}
+                            {issues && (
+                              <AlertTriangle className="h-3 w-3 text-warning shrink-0" />
+                            )}
                           </div>
                         );
                       })}
