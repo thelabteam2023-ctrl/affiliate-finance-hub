@@ -494,6 +494,9 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
         return;
       }
 
+      // 1b. Propagar resultado para todas as pernas (multi-entry simples)
+      await propagarResultadoParaPernas(apostaId, resultado);
+
       // 2. Atualizar rollover se houver bônus ativo para a casa
       if (bookmakerId && resultado !== "VOID") {
         const temBonusAtivo = await hasActiveRolloverBonus(projetoId, bookmakerId);
