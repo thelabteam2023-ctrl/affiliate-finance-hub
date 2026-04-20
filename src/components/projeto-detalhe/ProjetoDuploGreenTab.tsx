@@ -445,53 +445,62 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
     }
   };
 
-  // Resolução rápida de apostas simples - USA RPC ATÔMICA + ROLLOVER
+  // Resolução rápida de apostas simples / multi-entry simples
+  // CRÍTICO: multi-entry simples DEVE usar a mesma metodologia global das outras abas
+  // (reliquidarAposta no pai), nunca liquidação per-perna, para evitar inflação de saldo.
   const handleQuickResolve = useCallback(async (apostaId: string, resultado: string) => {
     try {
       const aposta = apostas.find(a => a.id === apostaId);
       if (!aposta) return;
 
-      // Multi-entry SIMPLES: rotear para motor de surebet que processa por perna
-      const hasPernas = Array.isArray(aposta.pernas) && aposta.pernas.length > 1;
-      if (hasPernas) {
-        // Delegar para liquidação por perna individual (mesmo motor das surebets)
-        const workspaceId = (aposta as any).workspace_id || aposta.pernas[0]?.workspace_id || '';
-        for (const perna of aposta.pernas as any[]) {
-          if (!perna.id || !perna.bookmaker_id) continue;
-          await liquidarPernaSurebet({
-            surebet_id: apostaId,
-            perna_id: perna.id,
-            bookmaker_id: perna.bookmaker_id,
-            resultado: resultado as any,
-            resultado_anterior: perna.resultado || null,
-            stake: perna.stake,
-            odd: perna.odd,
-            moeda: perna.moeda || 'BRL',
-            workspace_id: workspaceId,
-          });
-        }
-        invalidateSaldos(projetoId);
-        fetchData();
-        onDataChange?.();
-        const resultLabel = { GREEN: "Green", RED: "Red", MEIO_GREEN: "½ Green", MEIO_RED: "½ Red", VOID: "Void" }[resultado] || resultado;
-        toast.success(`Aposta marcada como ${resultLabel}`);
-        return;
-      }
-
+      const subEntries = (aposta as any)._sub_entries;
+      const isMultiEntrySimples = Array.isArray(subEntries) && subEntries.length > 1;
       const stake = typeof aposta.stake_total === "number" ? aposta.stake_total : aposta.stake;
       const odd = aposta.odd || 1;
       const bookmakerId = aposta.bookmaker_id;
+
+      console.log("[ProjetoDuploGreenTab] handleQuickResolve iniciado", {
+        apostaId,
+        resultado,
+        forma_registro: aposta.forma_registro,
+        status_atual: aposta.status,
+        resultado_atual: aposta.resultado,
+        isMultiEntrySimples,
+        subEntriesCount: Array.isArray(subEntries) ? subEntries.length : 0,
+        stake,
+        odd,
+      });
       
       // Calcular lucro usando função canônica
       const lucro = calcularImpactoResultado(stake, odd, resultado);
+
+      console.log("[ProjetoDuploGreenTab] Chamando reliquidarAposta (fluxo global)", {
+        apostaId,
+        resultado,
+        lucro,
+        metodologia: isMultiEntrySimples ? "parent-rpc-multi-entry" : "parent-rpc-default",
+      });
 
       // 1. Liquidar via RPC atômica (atualiza aposta + registra no ledger + trigger atualiza saldo)
       const rpcResult = await reliquidarAposta(apostaId, resultado, lucro);
       
       if (!rpcResult.success) {
+        console.error("[ProjetoDuploGreenTab] reliquidarAposta falhou", {
+          apostaId,
+          resultado,
+          error: rpcResult.error,
+          isMultiEntrySimples,
+        });
         toast.error(rpcResult.error?.message || "Erro ao liquidar aposta");
         return;
       }
+
+      console.log("[ProjetoDuploGreenTab] reliquidarAposta sucesso", {
+        apostaId,
+        resultado,
+        isMultiEntrySimples,
+        rpcData: rpcResult.data,
+      });
 
       // 2. Atualizar rollover se houver bônus ativo para a casa
       if (bookmakerId && resultado !== "VOID") {
