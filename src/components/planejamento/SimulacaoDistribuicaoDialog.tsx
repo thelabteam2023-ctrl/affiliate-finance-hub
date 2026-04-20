@@ -22,7 +22,9 @@ import {
   ChevronRight,
   GripVertical,
   RotateCcw,
+  Info,
 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
