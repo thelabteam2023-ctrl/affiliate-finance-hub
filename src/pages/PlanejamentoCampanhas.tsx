@@ -1,11 +1,14 @@
-import { useEffect } from "react";
-import { CalendarRange } from "lucide-react";
+import { useEffect, useState } from "react";
+import { CalendarRange, CalendarCheck2, Sparkles } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useTopBar } from "@/contexts/TopBarContext";
 import { PlanejamentoCalendario } from "@/components/planejamento/PlanejamentoCalendario";
+import { CalendarioSimulado } from "@/components/planejamento/CalendarioSimulado";
 
 export default function PlanejamentoCampanhas() {
   const { setContent: setTopBarContent } = useTopBar();
+  const [tab, setTab] = useState<"real" | "simulado">("real");
 
   useEffect(() => {
     setTopBarContent(
@@ -29,9 +32,26 @@ export default function PlanejamentoCampanhas() {
   return (
     <TooltipProvider>
       <div className="h-[calc(100vh-3.5rem)] flex flex-col bg-background">
-        <div className="flex-1 overflow-hidden">
-          <PlanejamentoCalendario />
-        </div>
+        <Tabs value={tab} onValueChange={(v) => setTab(v as "real" | "simulado")} className="flex-1 flex flex-col min-h-0">
+          <div className="px-3 pt-2 border-b">
+            <TabsList className="h-9">
+              <TabsTrigger value="real" className="text-xs gap-1.5">
+                <CalendarCheck2 className="h-3.5 w-3.5" />
+                Calendário Real
+              </TabsTrigger>
+              <TabsTrigger value="simulado" className="text-xs gap-1.5">
+                <Sparkles className="h-3.5 w-3.5" />
+                Calendário Simulado
+              </TabsTrigger>
+            </TabsList>
+          </div>
+          <TabsContent value="real" className="flex-1 overflow-hidden m-0">
+            <PlanejamentoCalendario />
+          </TabsContent>
+          <TabsContent value="simulado" className="flex-1 overflow-hidden m-0">
+            <CalendarioSimulado />
+          </TabsContent>
+        </Tabs>
       </div>
     </TooltipProvider>
   );

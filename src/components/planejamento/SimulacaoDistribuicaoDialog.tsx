@@ -23,8 +23,12 @@ import {
   GripVertical,
   RotateCcw,
   Info,
+  Save,
+  FolderOpen,
+  Check,
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -35,6 +39,11 @@ import {
 import type { CelulaDisponivel } from "@/hooks/usePlanoCelulasDisponiveis";
 import type { PlanningCampanha } from "@/hooks/usePlanningData";
 import { useCotacoes } from "@/hooks/useCotacoes";
+import {
+  usePlanejamentoCenarios,
+  useSaveCenario,
+  type PlanejamentoCenario,
+} from "@/hooks/usePlanejamentoCenarios";
 
 // Mesma palette CPF do calendário — 10 cores distintas (CPF 9 ≠ CPF 1, CPF 10 ≠ CPF 2)
 const CPF_COLORS = [
@@ -62,6 +71,8 @@ interface Props {
   campanhasExistentes: PlanningCampanha[];
   year: number;
   month: number; // 1..12
+  /** Plano vinculado — necessário para salvar/carregar cenários. */
+  planoId?: string | null;
 }
 
 const DEFAULT_CONFIG: AutoSchedulerConfig = {
@@ -97,12 +108,22 @@ export function SimulacaoDistribuicaoDialog({
   campanhasExistentes,
   year,
   month,
+  planoId = null,
 }: Props) {
   const [config, setConfig] = useState<AutoSchedulerConfig>(DEFAULT_CONFIG);
   const [simulacao, setSimulacao] = useState<SimulacaoResultado | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [simYear, setSimYear] = useState(year);
   const [simMonth, setSimMonth] = useState(month);
+
+  // Cenários salvos (UI de salvar/carregar)
+  const { data: cenariosSalvos = [] } = usePlanejamentoCenarios(planoId);
+  const saveCenario = useSaveCenario();
+  const [saveOpen, setSaveOpen] = useState(false);
+  const [loadOpen, setLoadOpen] = useState(false);
+  const [cenarioNome, setCenarioNome] = useState("");
+  const [cenarioDescricao, setCenarioDescricao] = useState("");
+  const [editingCenarioId, setEditingCenarioId] = useState<string | null>(null);
 
   // Overrides manuais: celula.id -> novo dia (preservados entre recálculos)
   const [overrides, setOverrides] = useState<Map<string, number>>(new Map());
@@ -322,6 +343,69 @@ export function SimulacaoDistribuicaoDialog({
   const stats = simulacao?.estatisticas;
   const excedeu = stats ? stats.totalCelulas > stats.capacidadeMaxima : false;
 
+  const buildSnapshot = () =>
+    agendamentosFinais.map((a) => ({
+      celulaId: a.celula.id,
+      dia: a.dia,
+      dateKey: a.dateKey,
+      bookmaker_catalogo_id: a.celula.bookmaker_catalogo_id,
+      bookmaker_nome: a.celula.bookmaker_nome,
+      moeda: a.celula.moeda,
+      deposito_sugerido: Number(a.celula.deposito_sugerido) || 0,
+      parceiro_id: a.celula.parceiro_id,
+      cpf_index: a.celula.cpf_index,
+      grupo_id: a.celula.grupo_id,
+      grupo_nome: a.celula.grupo_nome,
+      grupo_cor: a.celula.grupo_cor,
+    }));
+
+  const handleSalvarCenario = async () => {
+    if (!planoId) { toast.error("Selecione um plano antes de salvar."); return; }
+    if (!cenarioNome.trim()) { toast.error("Dê um nome ao cenário."); return; }
+    try {
+      await saveCenario.mutateAsync({
+        id: editingCenarioId ?? undefined,
+        plano_id: planoId,
+        nome: cenarioNome,
+        descricao: cenarioDescricao || null,
+        ano: simYear,
+        mes: simMonth,
+        config,
+        agendamentos: buildSnapshot(),
+        overrides: Object.fromEntries(overrides),
+        slots_aplicados: [],
+      });
+      toast.success(editingCenarioId ? "Cenário atualizado" : "Cenário salvo");
+      setSaveOpen(false);
+      setCenarioNome("");
+      setCenarioDescricao("");
+      setEditingCenarioId(null);
+    } catch (e: any) {
+      toast.error(e?.message || "Erro ao salvar cenário");
+    }
+  };
+
+  const handleCarregarCenario = (c: PlanejamentoCenario) => {
+    setConfig(c.config as AutoSchedulerConfig);
+    setSimYear(c.ano);
+    setSimMonth(c.mes);
+    const ov = new Map<string, number>();
+    Object.entries(c.overrides ?? {}).forEach(([k, v]) => ov.set(k, Number(v)));
+    setOverrides(ov);
+    setEditingCenarioId(c.id);
+    setCenarioNome(c.nome);
+    setCenarioDescricao(c.descricao ?? "");
+    setLoadOpen(false);
+    toast.success(`Cenário "${c.nome}" carregado`);
+    setTimeout(() => {
+      const r = simularDistribuicao({
+        celulas, campanhasExistentes, year: c.ano, month: c.mes,
+        config: c.config as AutoSchedulerConfig,
+      });
+      setSimulacao(r);
+    }, 0);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[95vw] w-[95vw] h-[94vh] flex flex-col p-0 gap-0">
@@ -373,6 +457,111 @@ export function SimulacaoDistribuicaoDialog({
                   Resetar {overrides.size} mov.
                 </Button>
               )}
+
+              {/* Carregar cenário salvo */}
+              {planoId && cenariosSalvos.length > 0 && (
+                <Popover open={loadOpen} onOpenChange={setLoadOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-8 text-xs">
+                      <FolderOpen className="h-3.5 w-3.5 mr-1" />
+                      Carregar
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent align="end" className="w-72 p-2">
+                    <div className="text-[10px] uppercase font-semibold text-muted-foreground mb-1.5 px-1">
+                      Cenários salvos
+                    </div>
+                    <div className="space-y-1 max-h-72 overflow-y-auto">
+                      {cenariosSalvos.map((c) => (
+                        <button
+                          key={c.id}
+                          onClick={() => handleCarregarCenario(c)}
+                          className={cn(
+                            "w-full text-left rounded-md p-2 text-xs hover:bg-muted/60 transition-colors border",
+                            editingCenarioId === c.id ? "border-primary bg-primary/5" : "border-transparent"
+                          )}
+                        >
+                          <div className="flex items-center gap-1 font-medium truncate">
+                            {editingCenarioId === c.id && <Check className="h-3 w-3 text-primary" />}
+                            {c.nome}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground truncate">
+                            {NOMES_MES[c.mes - 1]} {c.ano} • {c.agendamentos?.length ?? 0} slots
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              )}
+
+              {/* Salvar cenário */}
+              {planoId && (
+                <Popover open={saveOpen} onOpenChange={setSaveOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="h-8 text-xs"
+                      onClick={() => {
+                        if (!editingCenarioId) {
+                          setCenarioNome(`Cenário ${NOMES_MES[simMonth - 1]} ${simYear}`);
+                          setCenarioDescricao("");
+                        }
+                      }}
+                    >
+                      <Save className="h-3.5 w-3.5 mr-1" />
+                      {editingCenarioId ? "Atualizar" : "Salvar"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent align="end" className="w-80 p-3 space-y-2">
+                    <div className="text-xs font-semibold">
+                      {editingCenarioId ? "Atualizar cenário" : "Salvar cenário"}
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] uppercase text-muted-foreground">Nome</Label>
+                      <Input
+                        value={cenarioNome}
+                        onChange={(e) => setCenarioNome(e.target.value)}
+                        placeholder="Ex: Cenário Abril Agrupado"
+                        className="h-8 text-xs"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] uppercase text-muted-foreground">Descrição (opcional)</Label>
+                      <Textarea
+                        value={cenarioDescricao}
+                        onChange={(e) => setCenarioDescricao(e.target.value)}
+                        placeholder="Notas sobre essa simulação..."
+                        rows={2}
+                        className="text-xs resize-none"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between gap-2 pt-1">
+                      {editingCenarioId && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-[11px]"
+                          onClick={() => { setEditingCenarioId(null); setCenarioNome(""); setCenarioDescricao(""); }}
+                        >
+                          Salvar como novo
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        className="h-7 text-[11px] ml-auto"
+                        onClick={handleSalvarCenario}
+                        disabled={saveCenario.isPending || !cenarioNome.trim()}
+                      >
+                        <Save className="h-3 w-3 mr-1" />
+                        {editingCenarioId ? "Atualizar" : "Salvar"}
+                      </Button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              )}
+
               <Button
                 variant="outline"
                 size="sm"

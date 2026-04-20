@@ -7382,6 +7382,65 @@ export type Database = {
           },
         ]
       }
+      planejamento_cenarios: {
+        Row: {
+          agendamentos: Json
+          ano: number
+          config: Json
+          created_at: string
+          descricao: string | null
+          id: string
+          mes: number
+          nome: string
+          overrides: Json
+          plano_id: string
+          slots_aplicados: Json
+          updated_at: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          agendamentos?: Json
+          ano: number
+          config?: Json
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          mes: number
+          nome: string
+          overrides?: Json
+          plano_id: string
+          slots_aplicados?: Json
+          updated_at?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          agendamentos?: Json
+          ano?: number
+          config?: Json
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          mes?: number
+          nome?: string
+          overrides?: Json
+          plano_id?: string
+          slots_aplicados?: Json
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "planejamento_cenarios_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       planning_campanhas: {
         Row: {
           bookmaker_catalogo_id: string | null
