@@ -337,18 +337,28 @@ export function simularDistribuicao(input: {
           const cloneB = isClone(b) ? 1 : 0;
           if (cloneA !== cloneB) return cloneB - cloneA;
         }
-        // 2) CPFs com maior backlog primeiro (clones)
+        // 2) Para SUPORTE (não-clone): esgota CPF de menor índice antes de passar pro próximo.
+        //    Clones mantêm a lógica de backlog/gap (não devem agrupar-se por CPF).
+        const aClone = isClone(a);
+        const bClone = isClone(b);
+        if (!aClone && !bClone) {
+          const ciA = a.cpf_index ?? 9999;
+          const ciB = b.cpf_index ?? 9999;
+          if (ciA !== ciB) return ciA - ciB;
+        }
+        // 3) CPFs com maior backlog primeiro (clones)
         const ckA = cpfKey(a);
         const ckB = cpfKey(b);
         const blA = ckA ? backlogPorCpf.get(ckA) ?? 0 : 0;
         const blB = ckB ? backlogPorCpf.get(ckB) ?? 0 : 0;
         if (blA !== blB) return blB - blA;
-        // 3) Maior gap desde último uso da casa (variedade)
+        // 4) Maior gap desde último uso da casa (variedade)
         const gA = dia - (ultimoUsoCasa.get(a.bookmaker_catalogo_id) ?? -999);
         const gB = dia - (ultimoUsoCasa.get(b.bookmaker_catalogo_id) ?? -999);
         if (gA !== gB) return gB - gA;
-        // 4) Jitter pseudoaleatório (seed) para variar combinação a cada recálculo
-        return rand() - 0.5;
+        // 5) Jitter pseudoaleatório (seed) — só entre clones; suporte fica determinístico por CPF.
+        if (aClone && bClone) return rand() - 0.5;
+        return 0;
       });
     return elegiveis[0] ?? null;
   }
