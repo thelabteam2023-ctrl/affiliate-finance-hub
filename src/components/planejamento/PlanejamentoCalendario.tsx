@@ -38,6 +38,15 @@ import { RecursosManager } from "./RecursosManager";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
 import { BookmakerLogo } from "@/components/ui/bookmaker-logo";
 import { useExchangeRates } from "@/contexts/ExchangeRatesContext";
+import { useDistribuicaoPlanos } from "@/hooks/useDistribuicaoPlanos";
+import {
+  usePlanoCelulasDisponiveis,
+  marcarCelulaAgendada,
+  desmarcarCelulaAgendada,
+  type CelulaDisponivel,
+} from "@/hooks/usePlanoCelulasDisponiveis";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useQueryClient } from "@tanstack/react-query";
 
 type DisplayCurrency = "BRL" | "USD";
 
@@ -95,6 +104,53 @@ function DraggableBookmaker({ id, nome, moeda, status, logoUrl }: {
         <div className="font-medium truncate">{nome}</div>
         <div className="text-[10px] text-muted-foreground flex items-center gap-1">
           <span>{moeda}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Item arrastável vindo do PLANO de distribuição
+// Carrega tudo: CPF (parceiro), casa, grupo, valor sugerido — pronto para virar campanha
+function DraggableCelula({ celula }: { celula: CelulaDisponivel }) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `cel-${celula.id}`,
+    data: { type: "celula", celula },
+  });
+  const jaAgendada = !!celula.agendada_em;
+  return (
+    <div
+      ref={setNodeRef}
+      {...(jaAgendada ? {} : listeners)}
+      {...attributes}
+      className={cn(
+        "px-2 py-1.5 rounded-md border bg-card text-xs transition-colors flex items-center gap-2",
+        jaAgendada
+          ? "opacity-50 cursor-not-allowed"
+          : "cursor-grab active:cursor-grabbing hover:border-primary",
+        isDragging && "opacity-40"
+      )}
+      style={{ borderLeftColor: celula.grupo_cor, borderLeftWidth: 3 }}
+      title={
+        jaAgendada
+          ? `${celula.bookmaker_nome} • já agendada`
+          : `${celula.bookmaker_nome} • ${celula.grupo_nome}`
+      }
+    >
+      {celula.bookmaker_logo ? (
+        <img src={celula.bookmaker_logo} alt="" className="h-4 w-4 rounded object-contain shrink-0" />
+      ) : (
+        <Building2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+      )}
+      <div className="flex-1 min-w-0">
+        <div className="font-medium truncate">{celula.bookmaker_nome}</div>
+        <div className="text-[10px] text-muted-foreground flex items-center gap-1.5">
+          <span>{celula.moeda}</span>
+          {celula.deposito_sugerido > 0 && (
+            <span className="font-medium text-foreground/70">
+              {formatMoney(celula.deposito_sugerido, celula.moeda)}
+            </span>
+          )}
         </div>
       </div>
     </div>
@@ -262,6 +318,8 @@ export function PlanejamentoCalendario() {
   const [bmSearch, setBmSearch] = useState("");
   const [bmFilter, setBmFilter] = useState<RegFilterValue>("all");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [planoFiltroId, setPlanoFiltroId] = useState<string>("none"); // "none" = mostrar casas livres
+  const [grupoFiltroId, setGrupoFiltroId] = useState<string>("todos"); // "todos" = sem filtro de grupo
   const [displayCurrency, setDisplayCurrency] = useState<DisplayCurrency>(() => {
     if (typeof window === "undefined") return "BRL";
     const saved = window.localStorage.getItem("planejamento:displayCurrency");
@@ -288,6 +346,11 @@ export function PlanejamentoCalendario() {
   const deleteCamp = useDeleteCampanha();
   const { getLogoUrl } = useBookmakerLogoMap();
   const { convertToBRL, cotacaoUSD, isUsingFallback } = useExchangeRates();
+  const { planos } = useDistribuicaoPlanos();
+  const { data: celulasPlano = [] } = usePlanoCelulasDisponiveis(
+    planoFiltroId !== "none" ? planoFiltroId : null
+  );
+  const qc = useQueryClient();
 
   // Converte qualquer valor da moeda nativa para a moeda de exibição (BRL ou USD)
   const convertToDisplay = useCallback((value: number, fromCurrency: string): number => {
@@ -318,7 +381,7 @@ export function PlanejamentoCalendario() {
     );
   }, [parceiros, perfisPre]);
 
-  // Filtro da sidebar de casas
+  // Filtro da sidebar de casas (modo "casas livres" — quando não há plano selecionado)
   const filteredBookmakers = useMemo(() => {
     return bookmakers.filter(b => {
       if (bmFilter !== "all" && b.status !== bmFilter) return false;
@@ -326,6 +389,29 @@ export function PlanejamentoCalendario() {
       return true;
     });
   }, [bookmakers, bmFilter, bmSearch]);
+
+  // Filtro de células do plano (modo "plano selecionado")
+  const filteredCelulas = useMemo(() => {
+    return celulasPlano.filter((c) => {
+      if (grupoFiltroId !== "todos" && c.grupo_id !== grupoFiltroId) return false;
+      if (bmSearch && !c.bookmaker_nome.toLowerCase().includes(bmSearch.toLowerCase())) return false;
+      return true;
+    });
+  }, [celulasPlano, grupoFiltroId, bmSearch]);
+
+  // Grupos disponíveis no plano selecionado (para popular o filtro de grupos)
+  const gruposDoPlano = useMemo(() => {
+    const map = new Map<string, { id: string; nome: string; cor: string }>();
+    celulasPlano.forEach((c) => {
+      if (!map.has(c.grupo_id)) {
+        map.set(c.grupo_id, { id: c.grupo_id, nome: c.grupo_nome, cor: c.grupo_cor });
+      }
+    });
+    return Array.from(map.values());
+  }, [celulasPlano]);
+
+  const modoPlano = planoFiltroId !== "none";
+  const sidebarItemsCount = modoPlano ? filteredCelulas.length : filteredBookmakers.length;
 
   // Conflitos por dia
   const conflictMap = useMemo(() => {
@@ -428,10 +514,21 @@ export function PlanejamentoCalendario() {
     const overData: any = over.data.current;
     const data: any = active.data.current;
 
-    // Drop na sidebar (zona "remover") → exclui campanha
+    // Drop na sidebar (zona "remover") → exclui campanha + libera célula vinculada
     if (overData?.type === "trash") {
       if (data?.type === "campanha") {
+        const camp = campanhas.find((c) => c.id === data.campanhaId);
         await deleteCamp.mutateAsync(data.campanhaId);
+        // Se a campanha estava vinculada a uma célula de plano, libera-a
+        const celulaVinculada = celulasPlano.find((cel) => cel.campanha_id === data.campanhaId);
+        if (celulaVinculada) {
+          try {
+            await desmarcarCelulaAgendada(celulaVinculada.id);
+            qc.invalidateQueries({ queryKey: ["plano-celulas-disponiveis"] });
+          } catch (err) {
+            console.error("[planejamento] desmarcarCelula falhou", err);
+          }
+        }
       }
       return;
     }
@@ -445,7 +542,45 @@ export function PlanejamentoCalendario() {
       return;
     }
 
-    if (data?.type === "bookmaker") {
+    if (data?.type === "celula") {
+      // Arrasto de célula do PLANO → cria campanha já com CPF + casa + valor sugerido
+      const celula: CelulaDisponivel = data.celula;
+      if (celula.agendada_em) {
+        toast.warning("Esta célula já está agendada.");
+        return;
+      }
+      const check = validate({
+        bookmaker_catalogo_id: celula.bookmaker_catalogo_id,
+        parceiro_id: celula.parceiro_id,
+        ip_id: null,
+        wallet_id: null,
+        scheduled_date: dateKey,
+      });
+      if (check.violations.length > 0) {
+        toast.error(`Bloqueado por regra de grupo: ${check.violations[0].mensagem}`);
+        return;
+      }
+      try {
+        const novaCamp: any = await upsert.mutateAsync({
+          scheduled_date: dateKey,
+          bookmaker_catalogo_id: celula.bookmaker_catalogo_id,
+          bookmaker_nome: celula.bookmaker_nome,
+          currency: celula.moeda,
+          deposit_amount: celula.deposito_sugerido || 0,
+          parceiro_id: celula.parceiro_id ?? undefined,
+          status: "planned",
+        } as any);
+        // Marca célula como agendada (vincula à campanha criada, se id retornado)
+        const campanhaId = novaCamp?.id ?? novaCamp?.[0]?.id;
+        if (campanhaId) {
+          await marcarCelulaAgendada(celula.id, campanhaId);
+          qc.invalidateQueries({ queryKey: ["plano-celulas-disponiveis"] });
+        }
+        toast.success(`${celula.bookmaker_nome} agendada`);
+      } catch (err: any) {
+        toast.error(err?.message || "Erro ao agendar célula");
+      }
+    } else if (data?.type === "bookmaker") {
       // Valida regras de grupo antes de criar campanha pendente
       const check = validate({
         bookmaker_catalogo_id: data.bookmakerId,
@@ -526,7 +661,7 @@ export function PlanejamentoCalendario() {
                 <ChevronRight className="h-4 w-4" />
               </Button>
               <Badge variant="secondary" className="text-[10px] h-4 px-1">
-                {filteredBookmakers.length}
+                {sidebarItemsCount}
               </Badge>
               <div className="writing-mode-vertical text-[11px] text-muted-foreground font-semibold tracking-wider [writing-mode:vertical-rl] rotate-180 mt-2">
                 Casas disponíveis
@@ -547,7 +682,7 @@ export function PlanejamentoCalendario() {
               <div className="flex items-center justify-between">
                 <div className="text-sm font-semibold">Casas disponíveis</div>
                 <div className="flex items-center gap-1">
-                  <Badge variant="secondary" className="text-[10px] h-4 px-1">{filteredBookmakers.length}</Badge>
+                  <Badge variant="secondary" className="text-[10px] h-4 px-1">{sidebarItemsCount}</Badge>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -559,7 +694,44 @@ export function PlanejamentoCalendario() {
                   </Button>
                 </div>
               </div>
-              <p className="text-[11px] text-muted-foreground">Arraste para o calendário</p>
+              <p className="text-[11px] text-muted-foreground">
+                {modoPlano
+                  ? "Células do plano — arraste para o calendário"
+                  : "Arraste para o calendário"}
+              </p>
+
+              {/* Seletor de Plano de Distribuição */}
+              <Select value={planoFiltroId} onValueChange={(v) => { setPlanoFiltroId(v); setGrupoFiltroId("todos"); }}>
+                <SelectTrigger className="h-7 text-xs">
+                  <SelectValue placeholder="Plano de distribuição" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sem plano (casas livres)</SelectItem>
+                  {planos.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Filtro de Grupo (só faz sentido com plano) */}
+              {modoPlano && gruposDoPlano.length > 0 && (
+                <Select value={grupoFiltroId} onValueChange={setGrupoFiltroId}>
+                  <SelectTrigger className="h-7 text-xs">
+                    <SelectValue placeholder="Grupo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos os grupos</SelectItem>
+                    {gruposDoPlano.map((g) => (
+                      <SelectItem key={g.id} value={g.id}>
+                        <div className="flex items-center gap-2">
+                          <div className="h-2 w-2 rounded-full" style={{ backgroundColor: g.cor }} />
+                          {g.nome}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
 
               <div className="relative">
                 <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
@@ -571,30 +743,50 @@ export function PlanejamentoCalendario() {
                 />
               </div>
 
-              <RegulamentacaoFilter
-                value={bmFilter}
-                onChange={setBmFilter}
-                size="sm"
-                orientation="vertical"
-              />
+              {/* Filtro de regulamentação só faz sentido em modo "casas livres" */}
+              {!modoPlano && (
+                <RegulamentacaoFilter
+                  value={bmFilter}
+                  onChange={setBmFilter}
+                  size="sm"
+                  orientation="vertical"
+                />
+              )}
 
               <TrashDropZone active={activeDrag?.type === "campanha"} />
 
               <div className="flex-1 overflow-y-auto space-y-1 mt-1 -mx-1 px-1">
-                {filteredBookmakers.map(b => (
-                  <DraggableBookmaker
-                    key={b.id}
-                    id={b.id}
-                    nome={b.nome}
-                    moeda={b.moeda_padrao}
-                    status={b.status}
-                    logoUrl={b.logo_url}
-                  />
-                ))}
-                {filteredBookmakers.length === 0 && (
-                  <p className="text-xs text-muted-foreground italic text-center py-4">
-                    {bookmakers.length === 0 ? "Nenhuma casa cadastrada." : "Sem resultados."}
-                  </p>
+                {modoPlano ? (
+                  <>
+                    {filteredCelulas.map((c) => (
+                      <DraggableCelula key={c.id} celula={c} />
+                    ))}
+                    {filteredCelulas.length === 0 && (
+                      <p className="text-xs text-muted-foreground italic text-center py-4">
+                        {celulasPlano.length === 0
+                          ? "Plano sem células."
+                          : "Sem resultados."}
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {filteredBookmakers.map(b => (
+                      <DraggableBookmaker
+                        key={b.id}
+                        id={b.id}
+                        nome={b.nome}
+                        moeda={b.moeda_padrao}
+                        status={b.status}
+                        logoUrl={b.logo_url}
+                      />
+                    ))}
+                    {filteredBookmakers.length === 0 && (
+                      <p className="text-xs text-muted-foreground italic text-center py-4">
+                        {bookmakers.length === 0 ? "Nenhuma casa cadastrada." : "Sem resultados."}
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
               <Button variant="outline" size="sm" onClick={() => setRecursosOpen(true)}>
