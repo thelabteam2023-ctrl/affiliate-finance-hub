@@ -1419,6 +1419,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
                   surebet={surebetData}
                   onEdit={() => handleOpenAposta(aposta)}
                   onQuickResolve={handleQuickResolveSurebet}
+                  onSimpleMenuQuickResolve={handleQuickResolve}
                   onPernaResultChange={handleSurebetPernaResolve}
                   onSimpleQuickResolve={handleQuickResolve}
                    onDelete={handleDeleteSurebet}
@@ -1479,6 +1480,7 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
                         surebet={surebetData}
                         onEdit={() => handleOpenAposta(aposta)}
                         onQuickResolve={handleQuickResolveSurebet}
+                        onSimpleMenuQuickResolve={handleQuickResolve}
                         onPernaResultChange={handleSurebetPernaResolve}
                         onSimpleQuickResolve={handleQuickResolve}
                          onDelete={handleDeleteAposta}

@@ -1126,6 +1126,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
                 window.open(url, '_blank', 'width=780,height=900,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=yes');
               }}
               onQuickResolve={(surebetId, result) => handleQuickResolveSurebet(surebetId, result)}
+              onSimpleMenuQuickResolve={handleQuickResolve}
               onPernaResultChange={handleSurebetPernaResolve}
                onDelete={handleDeleteSurebet}
                onDuplicate={handleDuplicateSurebet}
@@ -1185,6 +1186,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
                 isBonusContext={true}
                 onEdit={() => handleOpenDialog(aposta)}
                 onQuickResolve={(surebetId, result) => handleQuickResolveSurebet(surebetId, result)}
+                onSimpleMenuQuickResolve={handleQuickResolve}
                 onPernaResultChange={handleSurebetPernaResolve}
                  onDelete={handleDeleteAposta}
                  onDuplicate={handleDuplicateSurebet}

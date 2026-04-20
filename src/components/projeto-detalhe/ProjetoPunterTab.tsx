@@ -1376,6 +1376,7 @@ export function ProjetoPunterTab({
                     if (a) openEditDialog(a);
                   }}
                   onQuickResolve={handleQuickResolveSurebet}
+                  onSimpleMenuQuickResolve={handleQuickResolve}
                    onPernaResultChange={handleSurebetPernaResolve}
                    onDelete={handleDeleteAposta}
                    onDuplicate={handleDuplicateSurebet}
@@ -1467,6 +1468,7 @@ export function ProjetoPunterTab({
                     if (a) openEditDialog(a);
                   }}
                   onQuickResolve={handleQuickResolveSurebet}
+                  onSimpleMenuQuickResolve={handleQuickResolve}
                   onPernaResultChange={handleSurebetPernaResolve}
                    onDelete={handleDeleteAposta}
                    onDuplicate={handleDuplicateSurebet}
