@@ -53,6 +53,9 @@ const DEFAULT_CONFIG: AutoSchedulerConfig = {
   cooldownCasaDias: 3,
   cooldownCpfDias: 5,
   diaLimite: 23,
+  minOutrasPorJanela: 1,
+  janelaOutrasDias: 3,
+  seed: 1,
 };
 
 export function SimulacaoDistribuicaoDialog({
@@ -75,7 +78,11 @@ export function SimulacaoDistribuicaoDialog({
   }, [open, celulas, campanhasExistentes, year, month]);
 
   const recalcular = () => {
-    const r = simularDistribuicao({ celulas, campanhasExistentes, year, month, config });
+    // Cada clique troca a seed → varia a combinação respeitando todas as restrições
+    const novaSeed = Math.floor(Math.random() * 1_000_000) + 1;
+    const novoConfig = { ...config, seed: novaSeed };
+    setConfig(novoConfig);
+    const r = simularDistribuicao({ celulas, campanhasExistentes, year, month, config: novoConfig });
     setSimulacao(r);
   };
 
