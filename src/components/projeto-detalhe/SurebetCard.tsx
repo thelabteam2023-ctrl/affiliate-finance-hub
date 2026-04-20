@@ -772,7 +772,7 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
                   getLogoUrl={getLogoUrl}
                   bookmakerNomeMap={bookmakerNomeMap}
                   convertToConsolidation={convertToConsolidation}
-                  onResultChange={onPernaResultChange && perna.bookmaker_id ? async (resultado: string) => {
+                  onResultChange={!isSimplesMultiEntry && onPernaResultChange && perna.bookmaker_id ? async (resultado: string) => {
                     // CORREÇÃO: Para pernas agrupadas (múltiplas entradas/casas),
                     // liquidar TODAS as sub-entradas, não apenas a primeira.
                     if (perna.entries && perna.entries.length > 1) {
