@@ -2726,6 +2726,17 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
         // MULTI-ENTRY: Inserir pernas em apostas_pernas para rastreio granular
         // ================================================================
         if (novaApostaId && tipoAposta === "bookmaker" && additionalEntries.length > 0) {
+          console.log('[ApostaDialog][MULTI-ENTRY] Inserindo pernas:', {
+            novaApostaId,
+            additionalEntriesCount: additionalEntries.length,
+            additionalEntries: additionalEntries.map(e => ({
+              bookmaker_id: e.bookmaker_id,
+              odd: e.odd,
+              stake: e.stake,
+              valor_freebet: e.valor_freebet,
+              usar_freebet: e.usar_freebet,
+            })),
+          });
           const allPernas = [
             {
               aposta_id: novaApostaId,
@@ -2757,15 +2768,17 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
               }))
           ];
 
+          console.log('[ApostaDialog][MULTI-ENTRY] allPernas a inserir:', allPernas);
+
           const { error: pernasError } = await supabase
             .from("apostas_pernas")
             .insert(allPernas);
 
           if (pernasError) {
-            console.error("[ApostaDialog] Erro ao inserir pernas multi-entry:", pernasError);
+            console.error("[ApostaDialog][MULTI-ENTRY] ❌ Erro ao inserir pernas:", pernasError, { allPernas });
             // Não bloquear - a aposta principal já foi criada
           } else {
-            console.log(`[ApostaDialog] ✅ ${allPernas.length} pernas multi-entry inseridas`);
+            console.log(`[ApostaDialog][MULTI-ENTRY] ✅ ${allPernas.length} pernas inseridas com sucesso`);
           }
         }
 
