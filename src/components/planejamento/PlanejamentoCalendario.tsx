@@ -512,14 +512,35 @@ export function PlanejamentoCalendario() {
     return Array.from(map.values());
   }, [celulasPlano]);
 
-  // Mapa: campanha_id -> cpf_index (para colorir o card no calendário)
+  // Plano selecionado (para extrair parceiro_ids e mapear CPF por posição)
+  const planoSelecionado = useMemo(
+    () => planos.find((p) => p.id === planoFiltroId) ?? null,
+    [planos, planoFiltroId]
+  );
+  const parceiroIdToCpfIdx = useMemo(() => {
+    const m = new Map<string, number>();
+    const ids: string[] = (planoSelecionado as any)?.parceiro_ids ?? [];
+    ids.forEach((pid, idx) => m.set(pid, idx + 1));
+    return m;
+  }, [planoSelecionado]);
+
+  // Mapa: campanha_id -> cpf_index (para colorir o card no calendário).
+  // Estratégia: 1) vínculo direto via célula agendada; 2) fallback pelo parceiro_id
+  // da campanha posicionado no parceiro_ids do plano (mesma lógica do hook).
   const campanhaCpfMap = useMemo(() => {
     const map = new Map<string, number>();
     celulasPlano.forEach((c) => {
       if (c.campanha_id && c.cpf_index) map.set(c.campanha_id, c.cpf_index);
     });
+    campanhas.forEach((camp) => {
+      if (map.has(camp.id)) return;
+      if (camp.parceiro_id) {
+        const idx = parceiroIdToCpfIdx.get(camp.parceiro_id);
+        if (idx) map.set(camp.id, idx);
+      }
+    });
     return map;
-  }, [celulasPlano]);
+  }, [celulasPlano, campanhas, parceiroIdToCpfIdx]);
 
   const modoPlano = planoFiltroId !== "none";
   const sidebarItemsCount = modoPlano ? filteredCelulas.length : filteredBookmakers.length;
