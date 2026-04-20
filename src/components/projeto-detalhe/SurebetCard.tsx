@@ -822,8 +822,15 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
                     <p className="font-medium mb-1">Stakes por moeda:</p>
                     {Object.entries(
                       (surebet.pernas || []).reduce<Record<string, number>>((acc, p) => {
-                        const m = p.moeda || 'BRL';
-                        acc[m] = (acc[m] || 0) + (p.stake_total || p.stake || 0);
+                        if (p.entries && p.entries.length > 0) {
+                          for (const e of p.entries) {
+                            const m = e.moeda || 'BRL';
+                            acc[m] = (acc[m] || 0) + (e.stake || 0);
+                          }
+                        } else {
+                          const m = p.moeda || 'BRL';
+                          acc[m] = (acc[m] || 0) + (p.stake_total || p.stake || 0);
+                        }
                         return acc;
                       }, {})
                     ).map(([m, v]) => (
