@@ -257,7 +257,14 @@ export function SimulacaoDistribuicaoDialog({
                 </Badge>
                 <Badge variant="outline">Outras: {stats.totalOutras}</Badge>
                 <Badge variant="outline">{stats.diasUsados} dias usados</Badge>
-                <Badge variant="outline">Σ depósito: {stats.ganhoTotal.toFixed(2)}</Badge>
+                <Badge variant="outline" title="Total convertido para USD pela cotação atual">
+                  Σ depósito: {fmtUSD(
+                    simulacao?.agendamentos.reduce(
+                      (sum, a) => sum + toUSD(Number(a.celula.deposito_sugerido) || 0, a.celula.moeda),
+                      0
+                    ) ?? 0
+                  )}
+                </Badge>
                 {stats.capacidadeMaxima > 0 && (
                   <Badge variant="outline">Cap. casas: {stats.capacidadeMaxima}</Badge>
                 )}
@@ -318,7 +325,7 @@ export function SimulacaoDistribuicaoDialog({
               {dias.map((dia) => {
                 const itens = porDia.get(dia) ?? [];
                 const ganhoDia = itens.reduce(
-                  (sum, a) => sum + (Number(a.celula.deposito_sugerido) || 0),
+                  (sum, a) => sum + toUSD(Number(a.celula.deposito_sugerido) || 0, a.celula.moeda),
                   0
                 );
                 const dow = new Date(simYear, simMonth - 1, dia).getDay();
@@ -341,7 +348,7 @@ export function SimulacaoDistribuicaoDialog({
                       </div>
                       {ganhoDia > 0 && (
                         <div className="text-[9px] text-muted-foreground tabular-nums mt-0.5">
-                          Σ {ganhoDia.toFixed(2)}
+                          Σ {fmtUSD(ganhoDia)}
                         </div>
                       )}
                     </div>
