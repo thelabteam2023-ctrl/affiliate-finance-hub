@@ -485,65 +485,108 @@ export function simularDistribuicao(input: {
     )
   ).sort((a, b) => a - b);
 
-  // Meta suave de distribuição: reparte o total de casas ao longo do diaLimite,
-  // evitando inflar o começo do mês e permitindo múltiplas casas no mesmo dia.
-  const metaDistribuicaoPorDia = new Map<number, number>();
-  for (let dia = 1; dia <= limite; dia++) {
-    const acumuladoAtual = Math.floor((candidatas.length * dia) / limite);
-    const acumuladoAnterior = Math.floor((candidatas.length * (dia - 1)) / limite);
-    metaDistribuicaoPorDia.set(dia, acumuladoAtual - acumuladoAnterior);
-  }
+  if (modoAgrupamento === "agrupado") {
+    // ---- PASS 1 (AGRUPADO): todas as suportes do CPF no mesmo dia + clones até clonesPorDia.
+    // Se exceder maxCasasPorDia, transborda para os dias contíguos seguintes.
+    let diaCursor = 1;
+    for (const cpfIdx of cpfsSuporte) {
+      let safetyCpf = 0;
+      while (temPendenciaSuporteCpf(cpfIdx) && diaCursor <= limite && safetyCpf++ < 200) {
+        const slot = ocupacao.get(diaCursor)!;
+        const slotCheio =
+          (maxCasasPorDia > 0 && slot.casas.size >= maxCasasPorDia) ||
+          (metaGanhoDia > 0 && slot.ganho >= metaGanhoDia);
+        if (slotCheio) {
+          diaCursor++;
+          continue;
+        }
 
-  // ---- PASS 1: Distribuição balanceada por dia ----
-  // Em cada dia, colocamos uma fração das suportes do CPF ativo e reservamos espaço
-  // para intercalar clones/outras, evitando blocos inteiros de um CPF no começo do mês.
-  let progrediuBalanceado = true;
-  let safetyBalanceado = 0;
-  const maxRoundsBalanceado = candidatas.length * 3 + limite;
-  while (progrediuBalanceado && safetyBalanceado++ < maxRoundsBalanceado) {
-    progrediuBalanceado = false;
-    for (let dia = 1; dia <= limite; dia++) {
-      const slot = ocupacao.get(dia)!;
-      const alvoDia = metaDistribuicaoPorDia.get(dia) ?? 0;
-      if (alvoDia <= 0) continue;
+        // 1) Tenta agendar uma suporte do CPF ativo neste dia.
+        const agendouSuporte = tentarSuporteCpfNoDia(cpfIdx, diaCursor, slot);
 
-      let cpfSuporteAtivo: number | null = null;
-      for (const cpfIdx of cpfsSuporte) {
-        if (temPendenciaSuporteCpf(cpfIdx)) {
-          cpfSuporteAtivo = cpfIdx;
-          break;
+        if (!agendouSuporte) {
+          // Esta casa-suporte não cabe neste dia (colisão de casa, faixa, etc.).
+          // Avança o cursor para tentar a próxima vaga.
+          diaCursor++;
+          continue;
+        }
+
+        // 2) Após colocar uma suporte, completa o dia com clones (até clonesPorDia
+        //    e respeitando maxCasasPorDia/cooldowns). Só fazemos isso uma vez por
+        //    dia: na primeira suporte do CPF que cair ali.
+        const ehPrimeiraSuporteDoDia = slot.outrasCount === 1;
+        if (ehPrimeiraSuporteDoDia) {
+          let safetyClones = 0;
+          while (slot.clonesCount < clonesPorDia && safetyClones++ < 50) {
+            if (!tentarPasso(diaCursor, slot, { somenteClones: true })) break;
+          }
         }
       }
+    }
 
-      const espacoRestante = alvoDia - slot.casas.size;
-      if (espacoRestante <= 0) continue;
+    // Se ainda restou pendência de suporte e cursor estourou o limite, deixamos
+    // para o PASS 3 (overflow) tentar reaproveitar dias com vaga.
+  } else {
+    // Meta suave de distribuição: reparte o total de casas ao longo do diaLimite,
+    // evitando inflar o começo do mês e permitindo múltiplas casas no mesmo dia.
+    const metaDistribuicaoPorDia = new Map<number, number>();
+    for (let dia = 1; dia <= limite; dia++) {
+      const acumuladoAtual = Math.floor((candidatas.length * dia) / limite);
+      const acumuladoAnterior = Math.floor((candidatas.length * (dia - 1)) / limite);
+      metaDistribuicaoPorDia.set(dia, acumuladoAtual - acumuladoAnterior);
+    }
 
-      let progrediuNoDia = false;
-      if (cpfSuporteAtivo != null) {
-        const metaSuporteDia = Math.min(
-          espacoRestante,
-          Math.max(1, Math.ceil(alvoDia * 0.6))
-        );
-        let suporteAgendado = 0;
-        let safetySuporte = 0;
-        while (suporteAgendado < metaSuporteDia && safetySuporte++ < 50) {
-          if (!tentarSuporteCpfNoDia(cpfSuporteAtivo, dia, slot)) break;
-          suporteAgendado++;
+    // ---- PASS 1 (BALANCEADO): Distribuição balanceada por dia ----
+    // Em cada dia, colocamos uma fração das suportes do CPF ativo e reservamos espaço
+    // para intercalar clones/outras, evitando blocos inteiros de um CPF no começo do mês.
+    let progrediuBalanceado = true;
+    let safetyBalanceado = 0;
+    const maxRoundsBalanceado = candidatas.length * 3 + limite;
+    while (progrediuBalanceado && safetyBalanceado++ < maxRoundsBalanceado) {
+      progrediuBalanceado = false;
+      for (let dia = 1; dia <= limite; dia++) {
+        const slot = ocupacao.get(dia)!;
+        const alvoDia = metaDistribuicaoPorDia.get(dia) ?? 0;
+        if (alvoDia <= 0) continue;
+
+        let cpfSuporteAtivo: number | null = null;
+        for (const cpfIdx of cpfsSuporte) {
+          if (temPendenciaSuporteCpf(cpfIdx)) {
+            cpfSuporteAtivo = cpfIdx;
+            break;
+          }
+        }
+
+        const espacoRestante = alvoDia - slot.casas.size;
+        if (espacoRestante <= 0) continue;
+
+        let progrediuNoDia = false;
+        if (cpfSuporteAtivo != null) {
+          const metaSuporteDia = Math.min(
+            espacoRestante,
+            Math.max(1, Math.ceil(alvoDia * 0.6))
+          );
+          let suporteAgendado = 0;
+          let safetySuporte = 0;
+          while (suporteAgendado < metaSuporteDia && safetySuporte++ < 50) {
+            if (!tentarSuporteCpfNoDia(cpfSuporteAtivo, dia, slot)) break;
+            suporteAgendado++;
+            progrediuNoDia = true;
+          }
+        }
+
+        let safetyIntercalado = 0;
+        while (slot.casas.size < alvoDia && safetyIntercalado++ < 50) {
+          const agendou = tentarPasso(dia, slot, {
+            somenteClones: cpfSuporteAtivo != null,
+            excluirSuporteCpf: cpfSuporteAtivo,
+          });
+          if (!agendou) break;
           progrediuNoDia = true;
         }
-      }
 
-      let safetyIntercalado = 0;
-      while (slot.casas.size < alvoDia && safetyIntercalado++ < 50) {
-        const agendou = tentarPasso(dia, slot, {
-          somenteClones: cpfSuporteAtivo != null,
-          excluirSuporteCpf: cpfSuporteAtivo,
-        });
-        if (!agendou) break;
-        progrediuNoDia = true;
+        if (progrediuNoDia) progrediuBalanceado = true;
       }
-
-      if (progrediuNoDia) progrediuBalanceado = true;
     }
   }
 
