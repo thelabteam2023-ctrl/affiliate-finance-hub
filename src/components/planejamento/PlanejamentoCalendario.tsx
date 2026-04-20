@@ -381,7 +381,7 @@ export function PlanejamentoCalendario() {
     );
   }, [parceiros, perfisPre]);
 
-  // Filtro da sidebar de casas
+  // Filtro da sidebar de casas (modo "casas livres" — quando não há plano selecionado)
   const filteredBookmakers = useMemo(() => {
     return bookmakers.filter(b => {
       if (bmFilter !== "all" && b.status !== bmFilter) return false;
@@ -389,6 +389,29 @@ export function PlanejamentoCalendario() {
       return true;
     });
   }, [bookmakers, bmFilter, bmSearch]);
+
+  // Filtro de células do plano (modo "plano selecionado")
+  const filteredCelulas = useMemo(() => {
+    return celulasPlano.filter((c) => {
+      if (grupoFiltroId !== "todos" && c.grupo_id !== grupoFiltroId) return false;
+      if (bmSearch && !c.bookmaker_nome.toLowerCase().includes(bmSearch.toLowerCase())) return false;
+      return true;
+    });
+  }, [celulasPlano, grupoFiltroId, bmSearch]);
+
+  // Grupos disponíveis no plano selecionado (para popular o filtro de grupos)
+  const gruposDoPlano = useMemo(() => {
+    const map = new Map<string, { id: string; nome: string; cor: string }>();
+    celulasPlano.forEach((c) => {
+      if (!map.has(c.grupo_id)) {
+        map.set(c.grupo_id, { id: c.grupo_id, nome: c.grupo_nome, cor: c.grupo_cor });
+      }
+    });
+    return Array.from(map.values());
+  }, [celulasPlano]);
+
+  const modoPlano = planoFiltroId !== "none";
+  const sidebarItemsCount = modoPlano ? filteredCelulas.length : filteredBookmakers.length;
 
   // Conflitos por dia
   const conflictMap = useMemo(() => {
