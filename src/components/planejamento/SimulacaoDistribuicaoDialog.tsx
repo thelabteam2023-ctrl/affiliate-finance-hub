@@ -179,9 +179,10 @@ export function SimulacaoDistribuicaoDialog({
   const NOMES_MES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
   // Aplica overrides manuais — cada agendamento pode ter sido movido pelo usuário
+  // Também inclui células que estavam em "não couberam" mas foram arrastadas para um dia.
   const agendamentosFinais = useMemo(() => {
     if (!simulacao) return [];
-    return simulacao.agendamentos.map((a) => {
+    const base = simulacao.agendamentos.map((a) => {
       const novoDia = overrides.get(a.celula.id);
       if (novoDia && novoDia !== a.dia) {
         const mm = String(simMonth).padStart(2, "0");
@@ -190,6 +191,17 @@ export function SimulacaoDistribuicaoDialog({
       }
       return a;
     });
+    // Adiciona células não agendadas que receberam override (arrastadas para um dia)
+    const idsAgendados = new Set(base.map((a) => a.celula.id));
+    const extras = (simulacao.naoAgendadas ?? [])
+      .filter((c) => overrides.has(c.id) && !idsAgendados.has(c.id))
+      .map((c) => {
+        const dia = overrides.get(c.id)!;
+        const mm = String(simMonth).padStart(2, "0");
+        const dd = String(dia).padStart(2, "0");
+        return { celula: c, dia, dateKey: `${simYear}-${mm}-${dd}` };
+      });
+    return [...base, ...extras];
   }, [simulacao, overrides, simYear, simMonth]);
 
   const porDia = useMemo(() => {
@@ -200,6 +212,13 @@ export function SimulacaoDistribuicaoDialog({
     });
     return map;
   }, [agendamentosFinais]);
+
+  // Células ainda "não couberam" (após overrides) — para o painel
+  const naoAgendadasRestantes = useMemo(() => {
+    if (!simulacao) return [];
+    const idsAgendados = new Set(agendamentosFinais.map((a) => a.celula.id));
+    return (simulacao.naoAgendadasDetalhe ?? []).filter((d) => !idsAgendados.has(d.celula.id));
+  }, [simulacao, agendamentosFinais]);
 
   const dias = useMemo(() => {
     const set = new Set<number>();
