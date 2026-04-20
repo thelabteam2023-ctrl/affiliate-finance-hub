@@ -1185,6 +1185,15 @@ export function PlanejamentoCalendario() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <SimulacaoDistribuicaoDialog
+        open={simulacaoOpen}
+        onOpenChange={setSimulacaoOpen}
+        celulas={celulasPlano}
+        campanhasExistentes={campanhas}
+        year={year}
+        month={month}
+      />
     </DndContext>
   );
 }
