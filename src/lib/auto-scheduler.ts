@@ -353,6 +353,54 @@ export function simularDistribuicao(input: {
     return elegiveis[0] ?? null;
   }
 
+  // Helper: tenta executar UM passo de agendamento no dia (retorna true se agendou).
+  function tentarPasso(dia: number, slot: DaySlot): boolean {
+    if (maxCasasPorDia > 0 && slot.casas.size >= maxCasasPorDia) return false;
+    if (metaGanhoDia > 0 && slot.ganho >= metaGanhoDia) return false;
+    const precisaOutra = violaJanelaOutras(dia);
+    let pick = precisaOutra ? selecionar(dia, slot, true) : selecionar(dia, slot, false);
+    if (!pick && precisaOutra) pick = selecionar(dia, slot, false);
+    if (!pick) return false;
+    slot.casas.add(pick.bookmaker_catalogo_id);
+    const ck = cpfKey(pick);
+    if (isClone(pick)) {
+      slot.clonesCount++;
+      if (ck) {
+        slot.cpfsClone.add(ck);
+        ultimoUsoCpfClone.set(ck, dia);
+        backlogPorCpf.set(ck, (backlogPorCpf.get(ck) ?? 1) - 1);
+      }
+    } else {
+      slot.outrasCount++;
+    }
+    slot.ganho += Number(pick.deposito_sugerido) || 0;
+    ultimoUsoCasa.set(pick.bookmaker_catalogo_id, dia);
+    const idxFaixa = faixaDoDia(dia);
+    if (idxFaixa >= 0) acumuladoFaixa[idxFaixa] += Number(pick.deposito_sugerido) || 0;
+    restantes.delete(pick.id);
+    agendamentos.push({ celula: pick, dia, dateKey: buildDateKey(year, month, dia) });
+    return true;
+  }
+
+  // ---- PASS 1: Garantia de mínimo por dia da semana (warning-only) ----
+  // Para cada dia coberto por alguma regra, agenda até atingir o maior mínimo aplicável.
+  if (regrasNorm.length > 0) {
+    for (let dia = 1; dia <= limite; dia++) {
+      const slot = ocupacao.get(dia)!;
+      const dow = diaSemanaDe(dia);
+      let alvo = 0;
+      for (const r of regrasNorm) {
+        if (r.diasSemana.has(dow) && r.minimoPorDia > alvo) alvo = r.minimoPorDia;
+      }
+      if (alvo === 0) continue;
+      let safety = 0;
+      while (slot.casas.size < alvo && safety++ < 50) {
+        if (!tentarPasso(dia, slot)) break;
+      }
+    }
+  }
+
+  // ---- PASS 2: Preenchimento normal (greedy) ----
   for (let dia = 1; dia <= limite; dia++) {
     const slot = ocupacao.get(dia)!;
     for (let safety = 0; safety < 200; safety++) {
