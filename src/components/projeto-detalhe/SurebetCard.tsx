@@ -772,7 +772,29 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
                   getLogoUrl={getLogoUrl}
                   bookmakerNomeMap={bookmakerNomeMap}
                   convertToConsolidation={convertToConsolidation}
-                  onResultChange={!isSimplesMultiEntry && onPernaResultChange && perna.bookmaker_id ? async (resultado: string) => {
+                  onResultChange={
+                    // CASO 1: Aposta simples multi-entry (PUNTER, VALUEBET, DUPLO_GREEN, EXTRACAO_BONUS, FREEBET, SIMPLES)
+                    // → resultado é único para toda a aposta. O badge dispara reliquidação global via onQuickResolve.
+                    isSimplesMultiEntry && onQuickResolve ? async (resultado: string) => {
+                      // Mapear resultado para o formato SurebetQuickResult esperado pelo handler.
+                      // Para apostas simples, todas as "pernas" recebem o mesmo resultado:
+                      //  - GREEN/MEIO_GREEN → todas vencem (winners = todos os índices)
+                      //  - RED/MEIO_RED → todas perdem (winners = [])
+                      //  - VOID → all_void
+                      const totalPernas = (surebet.pernas || []).filter(p => p.bookmaker_id && p.odd && p.odd > 0).length;
+                      let quickResult: SurebetQuickResult;
+                      if (resultado === "VOID") {
+                        quickResult = { type: "all_void", winners: [] };
+                      } else if (resultado === "GREEN" || resultado === "MEIO_GREEN") {
+                        quickResult = { type: "all_green", winners: Array.from({ length: totalPernas }, (_, i) => i) };
+                      } else {
+                        // RED ou MEIO_RED → todas perdem
+                        quickResult = { type: "all_red", winners: [] };
+                      }
+                      await onQuickResolve(surebet.id, quickResult);
+                    }
+                    // CASO 2: Surebet/Múltipla real → liquidação por perna individual
+                    : !isSimplesMultiEntry && onPernaResultChange && perna.bookmaker_id ? async (resultado: string) => {
                     // CORREÇÃO: Para pernas agrupadas (múltiplas entradas/casas),
                     // liquidar TODAS as sub-entradas, não apenas a primeira.
                     if (perna.entries && perna.entries.length > 1) {
