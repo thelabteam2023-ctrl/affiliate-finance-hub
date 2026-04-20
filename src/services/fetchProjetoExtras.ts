@@ -19,7 +19,6 @@
  *   + Σ eventos_promocionais (freebet_convertida, credito_promocional, giro_gratis_ganho)
  *   - Σ perdas_cancelamento_bonus
  *   + Σ ajustes_saldo
- *   + Σ resultado_cambial (ganho - perda)
  *   + Σ conciliações
  *   - Σ perdas_operacionais (projeto_perdas confirmadas)
  * ─────────────────────────────────────────────────────────
@@ -29,6 +28,12 @@
  * (Stake Not Returned) já está contabilizado no P&L da aposta.
  * Incluir o bonus_amount geraria dupla contagem.
  * 
+ * REGRA CRÍTICA: RESULTADO CAMBIAL (FX)
+ * GANHO_CAMBIAL e PERDA_CAMBIAL são EXCLUÍDOS deste serviço.
+ * Eles são eventos de TESOURARIA (variação cambial entre data do pedido
+ * e confirmação de saque/depósito), não resultado operacional de aposta.
+ * Vivem exclusivamente em Indicadores Financeiros / Caixa.
+ *
  * REGRA CRÍTICA: MOEDA
  * Os valores são retornados na moeda ORIGINAL, exceto bônus com snapshot
  * congelado, que retornam já na moeda de consolidação do projeto.
@@ -49,7 +54,6 @@ export type ExtraTipo =
   | 'freebet'
   | 'promocional'
   | 'ajuste_saldo'
-  | 'resultado_cambial'
   | 'conciliacao'
   | 'perda_operacional';
 
@@ -72,7 +76,6 @@ export const EXTRA_TIPO_LABELS: Record<ExtraTipo, string> = {
   freebet: 'Freebet Convertida',
   promocional: 'Promocional',
   ajuste_saldo: 'Ajuste de Saldo',
-  resultado_cambial: 'Resultado Cambial',
   conciliacao: 'Conciliação',
   perda_operacional: 'Perdas Operacionais',
 };
@@ -116,7 +119,6 @@ export async function fetchProjetoExtras(projetoId: string): Promise<ProjetoExtr
     eventosPromResult,
     perdasCancelResult,
     ajustesSaldoResult,
-    resultadosCambiaisResult,
     conciliacoesResult,
     perdasOperResult,
   ] = await Promise.all([
@@ -126,7 +128,6 @@ export async function fetchProjetoExtras(projetoId: string): Promise<ProjetoExtr
     fetchEventosPromocionais(projectBookmakerIds),
     fetchPerdasCancelamentoBonuses(projectBookmakerIds),
     fetchAjustesSaldo(projetoId),
-    fetchResultadosCambiais(projetoId),
     fetchConciliacoes(projetoId, projectBookmakerMoeda),
     fetchPerdasOperacionais(projetoId),
   ]);
@@ -138,7 +139,6 @@ export async function fetchProjetoExtras(projetoId: string): Promise<ProjetoExtr
     ...eventosPromResult,
     ...perdasCancelResult,
     ...ajustesSaldoResult,
-    ...resultadosCambiaisResult,
     ...conciliacoesResult,
     ...perdasOperResult,
   );
@@ -304,24 +304,6 @@ async function fetchAjustesSaldo(projetoId: string): Promise<ProjetoExtraEntry[]
       valor: aj.ajuste_direcao === 'SAIDA' ? -Number(aj.valor) : Number(aj.valor),
       moeda: aj.moeda || 'BRL',
       tipo: 'ajuste_saldo' as ExtraTipo,
-    }));
-}
-
-async function fetchResultadosCambiais(projetoId: string): Promise<ProjetoExtraEntry[]> {
-  const { data } = await supabase
-    .from('cash_ledger')
-    .select('data_transacao, valor, moeda, tipo_transacao')
-    .eq('status', 'CONFIRMADO')
-    .in('tipo_transacao', ['GANHO_CAMBIAL', 'PERDA_CAMBIAL'])
-    .eq('projeto_id_snapshot', projetoId);
-
-  return (data || [])
-    .filter(fx => Number(fx.valor || 0) !== 0)
-    .map(fx => ({
-      data: extractCivilDateKey(fx.data_transacao),
-      valor: fx.tipo_transacao === 'PERDA_CAMBIAL' ? -Number(fx.valor) : Number(fx.valor),
-      moeda: fx.moeda || 'BRL',
-      tipo: 'resultado_cambial' as ExtraTipo,
     }));
 }
 

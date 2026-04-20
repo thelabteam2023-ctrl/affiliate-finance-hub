@@ -309,7 +309,9 @@ interface ExtraAgrupado {
   porMoeda: CurrencyBreakdownItem[];
 }
 
-type ExtraTipo = 'ajuste_saldo' | 'resultado_cambial' | 'promocional' | 'freebet';
+// NOTA: 'resultado_cambial' (GANHO/PERDA_CAMBIAL) foi REMOVIDO do Lucro Operacional.
+// FX é evento de tesouraria, não de operação de aposta. Vive em Indicadores Financeiros/Caixa.
+type ExtraTipo = 'ajuste_saldo' | 'promocional' | 'freebet';
 
 function deriveExtrasFromRpc(
   rawData: ProjetoDashboardRawData,
@@ -352,12 +354,8 @@ function deriveExtrasFromRpc(
         }
         break;
       }
-      case 'GANHO_CAMBIAL':
-        addEntry('resultado_cambial', valor, moeda);
-        break;
-      case 'PERDA_CAMBIAL':
-        addEntry('resultado_cambial', -valor, moeda);
-        break;
+      // GANHO_CAMBIAL / PERDA_CAMBIAL: EXCLUÍDOS do Lucro Operacional.
+      // FX é evento de tesouraria — visível apenas em Indicadores Financeiros/Caixa.
       case 'FREEBET_CONVERTIDA':
         addEntry('freebet', valor, moeda);
         break;
@@ -374,7 +372,7 @@ function deriveExtrasFromRpc(
 
   // Converter Maps para arrays
   const formatted: Record<string, ExtraAgrupado> = {};
-  const tipos: ExtraTipo[] = ['ajuste_saldo', 'resultado_cambial', 'promocional', 'freebet'];
+  const tipos: ExtraTipo[] = ['ajuste_saldo', 'promocional', 'freebet'];
   tipos.forEach(tipo => {
     const data = result[tipo];
     formatted[tipo] = {
@@ -641,7 +639,7 @@ function deriveBreakdowns(
     createModuleContribution('perdas', 'Perdas Operacionais', -(perdasData.confirmadas || 0), (perdasData.confirmadas || 0) > 0, { icon: 'TrendingDown', color: 'negative' }),
     createModuleContribution('ajustes', 'Ajustes Conciliação', ajustesData.total || 0, (ajustesData.total || 0) !== 0, { icon: 'Minus', color: (ajustesData.total || 0) >= 0 ? 'positive' : 'negative' }),
     createModuleContribution('ajuste_saldo', 'Ajustes de Saldo/FX', extrasAgrupados.ajuste_saldo?.total || 0, (extrasAgrupados.ajuste_saldo?.count || 0) > 0, { icon: 'Settings', color: (extrasAgrupados.ajuste_saldo?.total || 0) >= 0 ? 'positive' : 'negative' }),
-    createModuleContribution('resultado_cambial', 'Resultado Cambial', extrasAgrupados.resultado_cambial?.total || 0, (extrasAgrupados.resultado_cambial?.count || 0) > 0, { icon: 'Globe', color: (extrasAgrupados.resultado_cambial?.total || 0) >= 0 ? 'positive' : 'negative' }),
+    // Resultado Cambial REMOVIDO — vive em Indicadores Financeiros/Caixa, não no Lucro Operacional.
     createModuleContribution('promocional', 'Eventos Promocionais', extrasAgrupados.promocional?.total || 0, (extrasAgrupados.promocional?.count || 0) > 0, { icon: 'Megaphone', color: (extrasAgrupados.promocional?.total || 0) >= 0 ? 'positive' : 'negative' }),
     createModuleContribution('freebet', 'Freebet Convertida', extrasAgrupados.freebet?.total || 0, (extrasAgrupados.freebet?.count || 0) > 0, { icon: 'Gift', color: (extrasAgrupados.freebet?.total || 0) >= 0 ? 'positive' : 'negative' }),
   ], moedaConsolidacao);
@@ -667,7 +665,6 @@ function deriveBreakdowns(
     perdasData.lucroPorMoeda.map(item => ({ ...item, valor: -item.valor })),
     ajustesData.lucroPorMoeda,
     extrasAgrupados.ajuste_saldo?.porMoeda || [],
-    extrasAgrupados.resultado_cambial?.porMoeda || [],
     extrasAgrupados.promocional?.porMoeda || [],
     extrasAgrupados.freebet?.porMoeda || [],
   );
