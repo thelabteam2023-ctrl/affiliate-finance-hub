@@ -1043,7 +1043,19 @@ export function PlanejamentoCalendario() {
               <Button variant="outline" size="sm" onClick={() => { setYear(today.getFullYear()); setMonth(today.getMonth() + 1); }}>Hoje</Button>
             </div>
             <div className="flex items-center gap-2">
-              <div className="flex items-center rounded-md border bg-card p-0.5">
+              {modoPlano && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-[11px]"
+                  onClick={() => setSimulacaoOpen(true)}
+                  disabled={celulasPlano.filter((c) => !c.agendada_em && !c.campanha_id).length === 0}
+                  title="Simular distribuição automática (preview)"
+                >
+                  <Sparkles className="h-3.5 w-3.5 mr-1" />
+                  Simular distribuição
+                </Button>
+              )}
                 <Button
                   variant={displayCurrency === "BRL" ? "default" : "ghost"}
                   size="sm"
