@@ -1003,6 +1003,7 @@ export function PlanejamentoCalendario() {
                           key={c.id}
                           campanha={c}
                           onClick={() => setEditing({ date: key, campanha: c })}
+                          onDelete={() => handleDeleteCampanha(c.id)}
                           ipLabel={c.ip_id ? ipMap[c.ip_id]?.label : undefined}
                           parceiroNome={c.parceiro_id ? parceiroMap[c.parceiro_id]?.nome : undefined}
                           hasConflict={dayConflicts.has(c.id)}
