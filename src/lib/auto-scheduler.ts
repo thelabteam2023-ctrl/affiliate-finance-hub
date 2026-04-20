@@ -305,11 +305,24 @@ export function simularDistribuicao(input: {
     // do CPF N, NÃO permitimos agendar outras de CPF > N. Isso esgota um CPF de cada vez
     // (CPF1 → CPF2 → ...) mantendo as suporte agrupadas por CPF ao longo do mês.
     let menorCpfOutraPendente = Number.POSITIVE_INFINITY;
+    // Casas (bookmaker_catalogo_id) que ainda têm SUPORTE pendente do menor CPF.
+    // Reservamos essas casas — CPFs maiores não podem "roubá-las" no mesmo dia.
+    const casasReservadasMenorCpf = new Set<string>();
     for (const c of candidatas) {
       if (!restantes.has(c.id)) continue;
       if (isClone(c)) continue;
       const ci = c.cpf_index ?? 9999;
       if (ci < menorCpfOutraPendente) menorCpfOutraPendente = ci;
+    }
+    if (Number.isFinite(menorCpfOutraPendente)) {
+      for (const c of candidatas) {
+        if (!restantes.has(c.id)) continue;
+        if (isClone(c)) continue;
+        const ci = c.cpf_index ?? 9999;
+        if (ci === menorCpfOutraPendente) {
+          casasReservadasMenorCpf.add(c.bookmaker_catalogo_id);
+        }
+      }
     }
 
     const elegiveis = candidatas
@@ -320,6 +333,16 @@ export function simularDistribuicao(input: {
         if (!isClone(c)) {
           const ci = c.cpf_index ?? 9999;
           if (ci > menorCpfOutraPendente) return false;
+        }
+        // RESERVA DE CASAS: se esta célula é suporte de um CPF > menor pendente OU é clone,
+        // e a casa pertence ao "pool reservado" do menor CPF pendente, bloqueia.
+        // Isso impede que CPF2 (suporte ou clone) consuma uma casa que o CPF1 ainda precisa.
+        if (Number.isFinite(menorCpfOutraPendente)) {
+          const ci = c.cpf_index ?? 9999;
+          const ehMenorCpf = !isClone(c) && ci === menorCpfOutraPendente;
+          if (!ehMenorCpf && casasReservadasMenorCpf.has(c.bookmaker_catalogo_id)) {
+            return false;
+          }
         }
         // 1) Casa não pode repetir no MESMO dia
         if (slot.casas.has(c.bookmaker_catalogo_id)) return false;
