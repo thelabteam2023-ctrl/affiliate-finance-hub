@@ -56,6 +56,8 @@ const DEFAULT_CONFIG: AutoSchedulerConfig = {
   diaLimite: 23,
   minOutrasPorJanela: 1,
   janelaOutrasDias: 3,
+  faixas: [],
+  toleranciaFaixaPct: 10,
   seed: 1,
 };
 
