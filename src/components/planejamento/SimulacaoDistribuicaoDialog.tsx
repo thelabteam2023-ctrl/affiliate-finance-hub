@@ -20,7 +20,10 @@ import {
   Settings2,
   ChevronLeft,
   ChevronRight,
+  GripVertical,
+  RotateCcw,
 } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
   simularDistribuicao,
@@ -442,19 +445,64 @@ export function SimulacaoDistribuicaoDialog({
                         </div>
                       )}
                     </div>
-                    <div className="flex-1 flex flex-wrap gap-1.5 p-1.5 rounded-md border bg-muted/20 min-h-[44px]">
+                    <div
+                      className={cn(
+                        "flex-1 flex flex-wrap gap-1.5 p-1.5 rounded-md border bg-muted/20 min-h-[44px] transition-colors",
+                        dragOverDay === dia && "ring-2 ring-primary border-primary/50 bg-primary/5"
+                      )}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        if (dragOverDay !== dia) setDragOverDay(dia);
+                      }}
+                      onDragLeave={() => {
+                        if (dragOverDay === dia) setDragOverDay(null);
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        setDragOverDay(null);
+                        if (!draggedId) return;
+                        const ag = agendamentosFinais.find((x) => x.celula.id === draggedId);
+                        if (!ag) return;
+                        if (ag.dia === dia) return;
+                        moverPara(draggedId, dia);
+                        toast.success(`Movido para dia ${dia}`, {
+                          description: ag.celula.bookmaker_nome,
+                        });
+                        setDraggedId(null);
+                      }}
+                    >
                       {itens.map((a) => {
                         const color = getCpfColor(a.celula.cpf_index);
+                        const issues = conflitos.get(a.celula.id);
+                        const moved = overrides.has(a.celula.id);
                         return (
                           <div
                             key={a.celula.id}
-                            className="flex items-center gap-1.5 px-1.5 py-1 rounded border text-[11px]"
+                            draggable
+                            onDragStart={(e) => {
+                              setDraggedId(a.celula.id);
+                              e.dataTransfer.effectAllowed = "move";
+                            }}
+                            onDragEnd={() => {
+                              setDraggedId(null);
+                              setDragOverDay(null);
+                            }}
+                            className={cn(
+                              "flex items-center gap-1 px-1.5 py-1 rounded border text-[11px] cursor-grab active:cursor-grabbing transition-opacity",
+                              draggedId === a.celula.id && "opacity-40",
+                              issues && "ring-1 ring-warning/70"
+                            )}
                             style={{
                               backgroundColor: color?.bg ?? "hsl(var(--card))",
-                              borderColor: color?.border ?? "hsl(var(--border))",
+                              borderColor: issues ? "hsl(var(--warning))" : color?.border ?? "hsl(var(--border))",
                             }}
-                            title={`${a.celula.bookmaker_nome} • CPF ${a.celula.cpf_index ?? "?"} • ${a.celula.grupo_nome}`}
+                            title={
+                              issues
+                                ? `${a.celula.bookmaker_nome} • ${a.celula.grupo_nome}\n⚠ ${issues.join("\n⚠ ")}`
+                                : `${a.celula.bookmaker_nome} • CPF ${a.celula.cpf_index ?? "?"} • ${a.celula.grupo_nome}${moved ? "\n(movido manualmente)" : ""}`
+                            }
                           >
+                            <GripVertical className="h-3 w-3 text-muted-foreground/60 shrink-0" />
                             {a.celula.cpf_index ? (
                               <div
                                 className="h-4 w-4 shrink-0 rounded flex items-center justify-center text-[9px] font-bold"
@@ -475,6 +523,12 @@ export function SimulacaoDistribuicaoDialog({
                             <span className="font-medium truncate max-w-[120px]">
                               {a.celula.bookmaker_nome}
                             </span>
+                            {moved && (
+                              <span className="text-[8px] px-1 rounded bg-primary/20 text-primary font-bold">M</span>
+                            )}
+                            {issues && (
+                              <AlertTriangle className="h-3 w-3 text-warning shrink-0" />
+                            )}
                           </div>
                         );
                       })}
