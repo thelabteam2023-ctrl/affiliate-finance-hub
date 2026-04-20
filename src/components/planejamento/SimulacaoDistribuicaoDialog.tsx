@@ -77,6 +77,7 @@ const DEFAULT_CONFIG: AutoSchedulerConfig = {
   toleranciaFaixaPct: 10,
   regrasDiaSemana: [],
   seed: 1,
+  modoAgrupamento: "balanceado",
 };
 
 const DIAS_SEMANA: { value: number; label: string; short: string; label3: string }[] = [
