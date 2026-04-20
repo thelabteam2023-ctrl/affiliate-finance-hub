@@ -659,62 +659,14 @@ export default function DistribuicaoTab() {
         </Button>
       </div>
 
-      {/* Agenda automática (após salvar) */}
-      <Card className="p-3 space-y-3 border-primary/30 bg-primary/5">
-        <div className="flex items-center gap-2">
-          <CalendarRange className="h-4 w-4 text-primary" />
-          <div className="text-sm font-semibold">Agenda automática (calendário)</div>
-        </div>
-        <p className="text-[11px] text-muted-foreground">
-          O motor distribui os depósitos ao longo dos dias respeitando a meta diária em USD,
-          o modo de execução do grupo (agendado vs sob demanda) e evita CPF repetido em sequência.
-          Salve o plano antes para usar.
-        </p>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-          <div>
-            <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
-              Início
-            </Label>
-            <Input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="h-8 text-xs"
-            />
-          </div>
-          <div>
-            <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
-              Meta diária (USD)
-            </Label>
-            <Input
-              type="number"
-              min={0}
-              step="0.01"
-              value={metaDiariaUsd}
-              onChange={(e) => setMetaDiariaUsd(e.target.value)}
-              placeholder="ex: 500"
-              className="h-8 text-xs"
-            />
-          </div>
-          <div className="flex items-end">
-            <Button
-              size="sm"
-              className="w-full"
-              onClick={handleGerarAgenda}
-              disabled={!planoSalvoId || gerarAgendaMut.isPending}
-              title={!planoSalvoId ? "Salve o plano primeiro" : undefined}
-            >
-              <CalendarRange className="h-3.5 w-3.5 mr-1" />
-              {gerarAgendaMut.isPending ? "Gerando..." : "Gerar agenda"}
-            </Button>
-          </div>
-        </div>
-        {planoSalvoId && (
-          <div className="text-[10px] text-muted-foreground">
-            Plano salvo. As células agendadas aparecerão no calendário do Planejamento.
-          </div>
-        )}
-      </Card>
+      <div className="rounded-md border border-primary/30 bg-primary/5 p-2.5 text-[11px] text-muted-foreground flex items-start gap-2">
+        <CalendarRange className="h-3.5 w-3.5 text-primary mt-0.5 shrink-0" />
+        <span>
+          Após salvar o plano, vá para a aba <strong>Calendário</strong> e use o filtro
+          "Plano + CPF" no painel "Casas disponíveis" para arrastar as casas para os dias desejados.
+        </span>
+      </div>
+
 
       {/* Resultado */}
       {resultado && (
