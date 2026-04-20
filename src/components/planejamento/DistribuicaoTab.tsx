@@ -52,8 +52,17 @@ export default function DistribuicaoTab() {
   const { data: perfis = [] } = usePlanningPerfis();
   const { data: casasPlanejamento = [] } = usePlanningCasas();
   const { createPlano } = useDistribuicaoPlanos();
+  const { convertToBRL, cotacaoUSD } = useExchangeRates();
+  const gerarAgendaMut = useGerarAgendaMutation();
 
   const [planoNome, setPlanoNome] = useState("");
+  const [metaDiariaUsd, setMetaDiariaUsd] = useState<string>("");
+  const [startDate, setStartDate] = useState<string>(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  });
+  const [planoSalvoId, setPlanoSalvoId] = useState<string | null>(null);
+  const { data: detalheSalvo } = useDistribuicaoPlanoDetalhe(planoSalvoId);
   const [selectedPerfilIds, setSelectedPerfilIds] = useState<string[]>([]);
   const [grupoConfigs, setGrupoConfigs] = useState<
     Array<{
@@ -64,6 +73,13 @@ export default function DistribuicaoTab() {
     }>
   >([]);
   const [resultado, setResultado] = useState<ReturnType<typeof gerarDistribuicao> | null>(null);
+
+  // Conversão moeda nativa → USD (via BRL)
+  const toUsd = (valor: number, moeda: string): number => {
+    if (!valor) return 0;
+    const brl = convertToBRL(valor, moeda);
+    return cotacaoUSD > 0 ? brl / cotacaoUSD : 0;
+  };
 
   // Universo de catálogos visíveis: APENAS casas adicionadas ao Planejamento
   const planejamentoCatalogoSet = useMemo(() => {
