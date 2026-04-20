@@ -511,15 +511,28 @@ export function SimulacaoDistribuicaoDialog({
                           setDraggedDay(null);
                           return;
                         }
-                        // Caso 2: mover célula individual
+                        // Caso 2: mover célula individual (agendada OU não-agendada)
                         if (!draggedId) return;
                         const ag = agendamentosFinais.find((x) => x.celula.id === draggedId);
-                        if (!ag) return;
-                        if (ag.dia === dia) return;
-                        moverPara(draggedId, dia);
-                        toast.success(`Movido para dia ${dia}`, {
-                          description: ag.celula.bookmaker_nome,
-                        });
+                        if (ag) {
+                          if (ag.dia === dia) {
+                            setDraggedId(null);
+                            return;
+                          }
+                          moverPara(draggedId, dia);
+                          toast.success(`Movido para dia ${dia}`, {
+                            description: ag.celula.bookmaker_nome,
+                          });
+                        } else {
+                          // Célula vinda do painel "não couberam"
+                          const naoAg = naoAgendadasRestantes.find((d) => d.celula.id === draggedId);
+                          if (naoAg) {
+                            moverPara(draggedId, dia);
+                            toast.success(`Adicionado ao dia ${dia}`, {
+                              description: naoAg.celula.bookmaker_nome,
+                            });
+                          }
+                        }
                         setDraggedId(null);
                       }}
                     >
