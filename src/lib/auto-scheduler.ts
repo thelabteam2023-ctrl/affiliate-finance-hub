@@ -28,6 +28,16 @@ export interface FaixaMeta {
   meta: number;
 }
 
+/** Regra de mínimo de criações por conjunto de dias da semana. */
+export interface RegraDiaSemana {
+  /** Dias da semana (0=Dom, 1=Seg, ..., 6=Sáb). */
+  diasSemana: number[];
+  /** Mínimo de casas que CADA dia selecionado deve ter no mês. */
+  minimoPorDia: number;
+  /** Rótulo opcional para warnings (ex.: "Fins de semana"). */
+  label?: string;
+}
+
 export interface AutoSchedulerConfig {
   /** Máximo ESTRITO de casas clone por dia (conta cada agendamento, não CPFs distintos). */
   clonesPorDia: number;
@@ -49,6 +59,8 @@ export interface AutoSchedulerConfig {
   faixas?: FaixaMeta[];
   /** Tolerância (%) que cada faixa pode ultrapassar a meta antes de "fechar". 0 = teto rígido. */
   toleranciaFaixaPct?: number;
+  /** Regras de mínimo por dia da semana (warning-only — não bloqueia). */
+  regrasDiaSemana?: RegraDiaSemana[];
   /** Seed numérica para variar a combinação a cada recálculo. */
   seed?: number;
 }
@@ -113,6 +125,12 @@ function isClone(c: CelulaDisponivel): boolean {
   return n.includes("clone");
 }
 
+/** Label curto do dia da semana (0=Dom..6=Sáb). */
+const DIA_SEMANA_LABEL = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+function diaSemanaLabel(dow: number): string {
+  return DIA_SEMANA_LABEL[((dow % 7) + 7) % 7];
+}
+
 /** PRNG determinístico (Mulberry32) — varia combinação por seed sem perder reprodutibilidade. */
 function mulberry32(seed: number) {
   let a = seed >>> 0;
@@ -145,8 +163,32 @@ export function simularDistribuicao(input: {
     janelaOutrasDias = 3,
     faixas = [],
     toleranciaFaixaPct = 0,
+    regrasDiaSemana = [],
     seed = 1,
   } = config;
+
+  // Pré-calcula dia-da-semana e quotas de regras
+  const diaSemanaDe = (dia: number) => new Date(year, month - 1, dia).getDay();
+  const regrasNorm = (regrasDiaSemana ?? [])
+    .filter((r) => r && Array.isArray(r.diasSemana) && r.diasSemana.length > 0 && r.minimoPorDia > 0)
+    .map((r) => ({
+      diasSemana: new Set(r.diasSemana),
+      minimoPorDia: r.minimoPorDia,
+      label: r.label || r.diasSemana.map(diaSemanaLabel).join("/"),
+    }));
+
+  /** Para um dia D: maior déficit (faltante) entre as regras que cobrem o weekday de D. */
+  function deficitDoDia(dia: number, slot: { casas: Set<string> }): number {
+    if (regrasNorm.length === 0) return 0;
+    const dow = diaSemanaDe(dia);
+    let maxDef = 0;
+    for (const r of regrasNorm) {
+      if (!r.diasSemana.has(dow)) continue;
+      const def = r.minimoPorDia - slot.casas.size;
+      if (def > maxDef) maxDef = def;
+    }
+    return maxDef;
+  }
 
   const rand = mulberry32(seed || 1);
 
@@ -311,48 +353,58 @@ export function simularDistribuicao(input: {
     return elegiveis[0] ?? null;
   }
 
+  // Helper: tenta executar UM passo de agendamento no dia (retorna true se agendou).
+  function tentarPasso(dia: number, slot: DaySlot): boolean {
+    if (maxCasasPorDia > 0 && slot.casas.size >= maxCasasPorDia) return false;
+    if (metaGanhoDia > 0 && slot.ganho >= metaGanhoDia) return false;
+    const precisaOutra = violaJanelaOutras(dia);
+    let pick = precisaOutra ? selecionar(dia, slot, true) : selecionar(dia, slot, false);
+    if (!pick && precisaOutra) pick = selecionar(dia, slot, false);
+    if (!pick) return false;
+    slot.casas.add(pick.bookmaker_catalogo_id);
+    const ck = cpfKey(pick);
+    if (isClone(pick)) {
+      slot.clonesCount++;
+      if (ck) {
+        slot.cpfsClone.add(ck);
+        ultimoUsoCpfClone.set(ck, dia);
+        backlogPorCpf.set(ck, (backlogPorCpf.get(ck) ?? 1) - 1);
+      }
+    } else {
+      slot.outrasCount++;
+    }
+    slot.ganho += Number(pick.deposito_sugerido) || 0;
+    ultimoUsoCasa.set(pick.bookmaker_catalogo_id, dia);
+    const idxFaixa = faixaDoDia(dia);
+    if (idxFaixa >= 0) acumuladoFaixa[idxFaixa] += Number(pick.deposito_sugerido) || 0;
+    restantes.delete(pick.id);
+    agendamentos.push({ celula: pick, dia, dateKey: buildDateKey(year, month, dia) });
+    return true;
+  }
+
+  // ---- PASS 1: Garantia de mínimo por dia da semana (warning-only) ----
+  // Para cada dia coberto por alguma regra, agenda até atingir o maior mínimo aplicável.
+  if (regrasNorm.length > 0) {
+    for (let dia = 1; dia <= limite; dia++) {
+      const slot = ocupacao.get(dia)!;
+      const dow = diaSemanaDe(dia);
+      let alvo = 0;
+      for (const r of regrasNorm) {
+        if (r.diasSemana.has(dow) && r.minimoPorDia > alvo) alvo = r.minimoPorDia;
+      }
+      if (alvo === 0) continue;
+      let safety = 0;
+      while (slot.casas.size < alvo && safety++ < 50) {
+        if (!tentarPasso(dia, slot)) break;
+      }
+    }
+  }
+
+  // ---- PASS 2: Preenchimento normal (greedy) ----
   for (let dia = 1; dia <= limite; dia++) {
     const slot = ocupacao.get(dia)!;
     for (let safety = 0; safety < 200; safety++) {
-      // Limites globais que param o dia inteiro
-      if (maxCasasPorDia > 0 && slot.casas.size >= maxCasasPorDia) break;
-      if (metaGanhoDia > 0 && slot.ganho >= metaGanhoDia) break;
-
-      // Se estamos no último dia de uma janela e ela ainda não atingiu o mínimo de outras,
-      // forçamos seleção de "outra" antes de qualquer clone.
-      const precisaOutra = violaJanelaOutras(dia);
-
-      let pick = precisaOutra ? selecionar(dia, slot, true) : selecionar(dia, slot, false);
-      if (!pick && precisaOutra) {
-        // Fallback: não há "outra" disponível — tenta qualquer (não bloquear o dia)
-        pick = selecionar(dia, slot, false);
-      }
-      if (!pick) break;
-
-      slot.casas.add(pick.bookmaker_catalogo_id);
-      const ck = cpfKey(pick);
-      if (isClone(pick)) {
-        slot.clonesCount++;
-        if (ck) {
-          slot.cpfsClone.add(ck);
-          ultimoUsoCpfClone.set(ck, dia);
-          backlogPorCpf.set(ck, (backlogPorCpf.get(ck) ?? 1) - 1);
-        }
-      } else {
-        slot.outrasCount++;
-      }
-      slot.ganho += Number(pick.deposito_sugerido) || 0;
-      ultimoUsoCasa.set(pick.bookmaker_catalogo_id, dia);
-      // Atualiza acumulado da faixa correspondente
-      const idxFaixa = faixaDoDia(dia);
-      if (idxFaixa >= 0) acumuladoFaixa[idxFaixa] += Number(pick.deposito_sugerido) || 0;
-      restantes.delete(pick.id);
-
-      agendamentos.push({
-        celula: pick,
-        dia,
-        dateKey: buildDateKey(year, month, dia),
-      });
+      if (!tentarPasso(dia, slot)) break;
     }
   }
 
@@ -461,6 +513,28 @@ export function simularDistribuicao(input: {
       warnings.push(
         `Mínimo de "outras" não atingido em ${janelasFalhas.length} janela(s): ${janelasFalhas.join("; ")}.`
       );
+    }
+  }
+
+  // Diagnóstico: regras de dia-da-semana não atingidas (warning-only)
+  if (regrasNorm.length > 0) {
+    const falhas: string[] = [];
+    for (const r of regrasNorm) {
+      const diasAfetados: string[] = [];
+      for (let d = 1; d <= limite; d++) {
+        const dow = diaSemanaDe(d);
+        if (!r.diasSemana.has(dow)) continue;
+        const slot = ocupacao.get(d)!;
+        if (slot.casas.size < r.minimoPorDia) {
+          diasAfetados.push(`${d}/${diaSemanaLabel(dow)}:${slot.casas.size}`);
+        }
+      }
+      if (diasAfetados.length > 0) {
+        falhas.push(`${r.label} (mín ${r.minimoPorDia}) — ${diasAfetados.join(", ")}`);
+      }
+    }
+    if (falhas.length > 0) {
+      warnings.push(`Mínimo por dia da semana não atingido: ${falhas.join("; ")}.`);
     }
   }
 
