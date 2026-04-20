@@ -59,6 +59,8 @@ export interface AutoSchedulerConfig {
   faixas?: FaixaMeta[];
   /** Tolerância (%) que cada faixa pode ultrapassar a meta antes de "fechar". 0 = teto rígido. */
   toleranciaFaixaPct?: number;
+  /** Regras de mínimo por dia da semana (warning-only — não bloqueia). */
+  regrasDiaSemana?: RegraDiaSemana[];
   /** Seed numérica para variar a combinação a cada recálculo. */
   seed?: number;
 }
