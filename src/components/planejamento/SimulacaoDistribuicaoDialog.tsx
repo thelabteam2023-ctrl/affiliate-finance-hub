@@ -92,26 +92,47 @@ export function SimulacaoDistribuicaoDialog({
   const [config, setConfig] = useState<AutoSchedulerConfig>(DEFAULT_CONFIG);
   const [simulacao, setSimulacao] = useState<SimulacaoResultado | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [simYear, setSimYear] = useState(year);
+  const [simMonth, setSimMonth] = useState(month);
+
+  // Sync interno com props quando o dialog abre
+  useEffect(() => {
+    if (open) {
+      setSimYear(year);
+      setSimMonth(month);
+    }
+  }, [open, year, month]);
 
   useEffect(() => {
     if (!open) return;
-    const r = simularDistribuicao({ celulas, campanhasExistentes, year, month, config });
+    const r = simularDistribuicao({ celulas, campanhasExistentes, year: simYear, month: simMonth, config });
     setSimulacao(r);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, celulas, campanhasExistentes, year, month]);
+  }, [open, celulas, campanhasExistentes, simYear, simMonth]);
 
   const recalcular = () => {
     const novaSeed = Math.floor(Math.random() * 1_000_000) + 1;
     const novoConfig = { ...config, seed: novaSeed };
     setConfig(novoConfig);
-    const r = simularDistribuicao({ celulas, campanhasExistentes, year, month, config: novoConfig });
+    const r = simularDistribuicao({ celulas, campanhasExistentes, year: simYear, month: simMonth, config: novoConfig });
     setSimulacao(r);
   };
 
   const aplicarConfig = () => {
-    const r = simularDistribuicao({ celulas, campanhasExistentes, year, month, config });
+    const r = simularDistribuicao({ celulas, campanhasExistentes, year: simYear, month: simMonth, config });
     setSimulacao(r);
   };
+
+  const mudarMes = (delta: number) => {
+    let m = simMonth + delta;
+    let y = simYear;
+    if (m < 1) { m = 12; y -= 1; }
+    if (m > 12) { m = 1; y += 1; }
+    setSimMonth(m);
+    setSimYear(y);
+  };
+
+  const NOMES_MES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
   const porDia = useMemo(() => {
     const map = new Map<number, SimulacaoResultado["agendamentos"]>();
