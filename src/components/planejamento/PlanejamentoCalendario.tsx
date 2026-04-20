@@ -514,13 +514,121 @@ export function PlanejamentoCalendario() {
     const overData: any = over.data.current;
     const data: any = active.data.current;
 
-    // Drop na sidebar (zona "remover") → exclui campanha
+    // Drop na sidebar (zona "remover") → exclui campanha + libera célula vinculada
     if (overData?.type === "trash") {
       if (data?.type === "campanha") {
+        const camp = campanhas.find((c) => c.id === data.campanhaId);
         await deleteCamp.mutateAsync(data.campanhaId);
+        // Se a campanha estava vinculada a uma célula de plano, libera-a
+        const celulaVinculada = celulasPlano.find((cel) => cel.campanha_id === data.campanhaId);
+        if (celulaVinculada) {
+          try {
+            await desmarcarCelulaAgendada(celulaVinculada.id);
+            qc.invalidateQueries({ queryKey: ["plano-celulas-disponiveis"] });
+          } catch (err) {
+            console.error("[planejamento] desmarcarCelula falhou", err);
+          }
+        }
       }
       return;
     }
+
+    if (overData?.type !== "day") return;
+    const dateKey = overData.dateKey;
+
+    // Validação: não permitir datas passadas
+    if (isDateInPast(dateKey)) {
+      toast.error("Não é possível agendar campanhas em datas passadas.");
+      return;
+    }
+
+    if (data?.type === "celula") {
+      // Arrasto de célula do PLANO → cria campanha já com CPF + casa + valor sugerido
+      const celula: CelulaDisponivel = data.celula;
+      if (celula.agendada_em) {
+        toast.warning("Esta célula já está agendada.");
+        return;
+      }
+      const check = validate({
+        bookmaker_catalogo_id: celula.bookmaker_catalogo_id,
+        parceiro_id: celula.parceiro_id,
+        ip_id: null,
+        wallet_id: null,
+        scheduled_date: dateKey,
+      });
+      if (check.violations.length > 0) {
+        toast.error(`Bloqueado por regra de grupo: ${check.violations[0].mensagem}`);
+        return;
+      }
+      try {
+        const novaCamp: any = await upsert.mutateAsync({
+          scheduled_date: dateKey,
+          bookmaker_catalogo_id: celula.bookmaker_catalogo_id,
+          bookmaker_nome: celula.bookmaker_nome,
+          currency: celula.moeda,
+          deposit_amount: celula.deposito_sugerido || 0,
+          parceiro_id: celula.parceiro_id ?? undefined,
+          status: "planned",
+        } as any);
+        // Marca célula como agendada (vincula à campanha criada, se id retornado)
+        const campanhaId = novaCamp?.id ?? novaCamp?.[0]?.id;
+        if (campanhaId) {
+          await marcarCelulaAgendada(celula.id, campanhaId);
+          qc.invalidateQueries({ queryKey: ["plano-celulas-disponiveis"] });
+        }
+        toast.success(`${celula.bookmaker_nome} agendada`);
+      } catch (err: any) {
+        toast.error(err?.message || "Erro ao agendar célula");
+      }
+    } else if (data?.type === "bookmaker") {
+      // Valida regras de grupo antes de criar campanha pendente
+      const check = validate({
+        bookmaker_catalogo_id: data.bookmakerId,
+        parceiro_id: null,
+        ip_id: null,
+        wallet_id: null,
+        scheduled_date: dateKey,
+      });
+      if (check.violations.length > 0) {
+        toast.error(`Bloqueado por regra de grupo: ${check.violations[0].mensagem}`);
+        return;
+      }
+      // Cria campanha PENDENTE imediatamente (sem abrir modal)
+      await upsert.mutateAsync({
+        scheduled_date: dateKey,
+        bookmaker_catalogo_id: data.bookmakerId,
+        bookmaker_nome: data.nome,
+        currency: data.moeda,
+        deposit_amount: 0,
+        status: "planned",
+      });
+    } else if (data?.type === "campanha") {
+      // Mover campanha existente para outra data → pede confirmação
+      const camp = campanhas.find(c => c.id === data.campanhaId);
+      if (camp && camp.scheduled_date !== dateKey) {
+        // Valida regras de grupo na nova data
+        const check = validate({
+          bookmaker_catalogo_id: camp.bookmaker_catalogo_id,
+          parceiro_id: camp.parceiro_id,
+          ip_id: camp.ip_id,
+          wallet_id: camp.wallet_id,
+          scheduled_date: dateKey,
+          excludeCampanhaId: camp.id,
+        });
+        if (check.violations.length > 0) {
+          toast.error(`Bloqueado por regra de grupo: ${check.violations[0].mensagem}`);
+          return;
+        }
+        if (moveConfirmed) {
+          // Já confirmou uma vez nesta sessão → move direto
+          await upsert.mutateAsync({ ...camp, scheduled_date: dateKey });
+          toast.success("Campanha movida");
+        } else {
+          setPendingMove({ campanha: camp, fromDate: camp.scheduled_date, toDate: dateKey });
+        }
+      }
+    }
+  };
 
     if (overData?.type !== "day") return;
     const dateKey = overData.dateKey;
