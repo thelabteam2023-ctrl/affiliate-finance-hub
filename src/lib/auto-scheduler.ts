@@ -483,11 +483,29 @@ export function simularDistribuicao(input: {
   let ganhoTotal = 0;
   ocupacao.forEach((s) => (ganhoTotal += s.ganho));
 
+  // Resultado por faixa
+  const faixasResultado: FaixaResultado[] = faixasNorm.map((f, i) => {
+    const acumulado = acumuladoFaixa[i];
+    const cheia = acumulado >= f.meta;
+    const saturada = acumulado >= tetoFaixa[i];
+    return { diaInicio: f.diaInicio, diaFim: f.diaFim, meta: f.meta, acumulado, cheia, saturada };
+  });
+
+  // Warning de faixas que não atingiram a meta
+  const faixasNaoAtingidas = faixasResultado.filter((f) => !f.cheia);
+  if (faixasNaoAtingidas.length > 0) {
+    const desc = faixasNaoAtingidas
+      .map((f) => `dias ${f.diaInicio}–${f.diaFim}: ${f.acumulado.toFixed(2)}/${f.meta.toFixed(2)}`)
+      .join("; ");
+    warnings.push(`Faixa(s) não atingiram a meta: ${desc}.`);
+  }
+
   return {
     agendamentos,
     warnings,
     naoAgendadas,
     naoAgendadasDetalhe,
+    faixasResultado,
     estatisticas: {
       totalCelulas: candidatas.length,
       totalClones,
