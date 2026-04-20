@@ -23,8 +23,12 @@ import {
   GripVertical,
   RotateCcw,
   Info,
+  Save,
+  FolderOpen,
+  Check,
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -35,6 +39,11 @@ import {
 import type { CelulaDisponivel } from "@/hooks/usePlanoCelulasDisponiveis";
 import type { PlanningCampanha } from "@/hooks/usePlanningData";
 import { useCotacoes } from "@/hooks/useCotacoes";
+import {
+  usePlanejamentoCenarios,
+  useSaveCenario,
+  type PlanejamentoCenario,
+} from "@/hooks/usePlanejamentoCenarios";
 
 // Mesma palette CPF do calendário — 10 cores distintas (CPF 9 ≠ CPF 1, CPF 10 ≠ CPF 2)
 const CPF_COLORS = [
@@ -62,6 +71,8 @@ interface Props {
   campanhasExistentes: PlanningCampanha[];
   year: number;
   month: number; // 1..12
+  /** Plano vinculado — necessário para salvar/carregar cenários. */
+  planoId?: string | null;
 }
 
 const DEFAULT_CONFIG: AutoSchedulerConfig = {
@@ -97,12 +108,22 @@ export function SimulacaoDistribuicaoDialog({
   campanhasExistentes,
   year,
   month,
+  planoId = null,
 }: Props) {
   const [config, setConfig] = useState<AutoSchedulerConfig>(DEFAULT_CONFIG);
   const [simulacao, setSimulacao] = useState<SimulacaoResultado | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [simYear, setSimYear] = useState(year);
   const [simMonth, setSimMonth] = useState(month);
+
+  // Cenários salvos (UI de salvar/carregar)
+  const { data: cenariosSalvos = [] } = usePlanejamentoCenarios(planoId);
+  const saveCenario = useSaveCenario();
+  const [saveOpen, setSaveOpen] = useState(false);
+  const [loadOpen, setLoadOpen] = useState(false);
+  const [cenarioNome, setCenarioNome] = useState("");
+  const [cenarioDescricao, setCenarioDescricao] = useState("");
+  const [editingCenarioId, setEditingCenarioId] = useState<string | null>(null);
 
   // Overrides manuais: celula.id -> novo dia (preservados entre recálculos)
   const [overrides, setOverrides] = useState<Map<string, number>>(new Map());
