@@ -6,7 +6,6 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,7 +18,8 @@ import {
   Plus,
   Trash2,
   Settings2,
-  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -80,7 +80,7 @@ export function SimulacaoDistribuicaoDialog({
 }: Props) {
   const [config, setConfig] = useState<AutoSchedulerConfig>(DEFAULT_CONFIG);
   const [simulacao, setSimulacao] = useState<SimulacaoResultado | null>(null);
-  const [tab, setTab] = useState<"simulacao" | "config">("simulacao");
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   useEffect(() => {
     if (!open) return;
@@ -100,7 +100,6 @@ export function SimulacaoDistribuicaoDialog({
   const aplicarConfig = () => {
     const r = simularDistribuicao({ celulas, campanhasExistentes, year, month, config });
     setSimulacao(r);
-    setTab("simulacao");
   };
 
   const porDia = useMemo(() => {
@@ -124,51 +123,47 @@ export function SimulacaoDistribuicaoDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl h-[92vh] flex flex-col p-0 gap-0">
-        <DialogHeader className="px-6 pt-5 pb-3 border-b">
-          <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-primary" />
-            Simulação de Distribuição
-          </DialogTitle>
-          <DialogDescription>
-            Pré-visualize como as casas se distribuem no mês. A inserção no calendário continua manual.
-          </DialogDescription>
+      <DialogContent className="max-w-[95vw] w-[95vw] h-[94vh] flex flex-col p-0 gap-0">
+        <DialogHeader className="px-5 pt-4 pb-3 border-b">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <DialogTitle className="flex items-center gap-2 text-base">
+                <Sparkles className="h-4 w-4 text-primary" />
+                Simulação de Distribuição
+              </DialogTitle>
+              <DialogDescription className="text-xs mt-0.5">
+                Pré-visualize como as casas se distribuem no mês. A inserção no calendário continua manual.
+              </DialogDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs"
+                onClick={() => setSidebarOpen((v) => !v)}
+              >
+                <Settings2 className="h-3.5 w-3.5 mr-1" />
+                {sidebarOpen ? "Ocultar config" : "Mostrar config"}
+                {sidebarOpen ? (
+                  <ChevronLeft className="h-3.5 w-3.5 ml-1" />
+                ) : (
+                  <ChevronRight className="h-3.5 w-3.5 ml-1" />
+                )}
+              </Button>
+              <Button onClick={recalcular} size="sm" className="h-8 text-xs">
+                <RefreshCw className="h-3.5 w-3.5 mr-1" /> Recalcular
+              </Button>
+            </div>
+          </div>
         </DialogHeader>
 
-        <Tabs
-          value={tab}
-          onValueChange={(v) => setTab(v as "simulacao" | "config")}
-          className="flex-1 flex flex-col min-h-0"
-        >
-          <div className="px-6 pt-3 flex items-center justify-between gap-3 border-b">
-            <TabsList className="h-9">
-              <TabsTrigger value="simulacao" className="gap-1.5 text-xs">
-                <CalendarDays className="h-3.5 w-3.5" />
-                Simulação
-                {stats && (
-                  <Badge variant="secondary" className="ml-1 h-4 px-1 text-[10px]">
-                    {stats.agendadas}/{stats.totalCelulas}
-                  </Badge>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="config" className="gap-1.5 text-xs">
-                <Settings2 className="h-3.5 w-3.5" />
-                Configuração
-              </TabsTrigger>
-            </TabsList>
-            <Button onClick={recalcular} size="sm" className="h-8 text-xs">
-              <RefreshCw className="h-3.5 w-3.5 mr-1" /> Recalcular
-            </Button>
-          </div>
-
-          {/* ============ TAB SIMULAÇÃO ============ */}
-          <TabsContent
-            value="simulacao"
-            className="flex-1 min-h-0 m-0 flex flex-col data-[state=inactive]:hidden"
-          >
+        {/* Layout split: sidebar + main */}
+        <div className="flex-1 min-h-0 flex">
+          {/* ============ MAIN — SIMULAÇÃO ============ */}
+          <div className="flex-1 min-w-0 flex flex-col">
             {/* Resumo compacto */}
             {stats && (
-              <div className="px-6 py-2.5 border-b flex flex-wrap items-center gap-1.5 text-xs bg-muted/20">
+              <div className="px-5 py-2.5 border-b flex flex-wrap items-center gap-1.5 text-xs bg-muted/20">
                 <Badge variant={stats.agendadas === stats.totalCelulas ? "default" : "secondary"}>
                   {stats.agendadas} / {stats.totalCelulas} agendadas
                 </Badge>
@@ -193,7 +188,7 @@ export function SimulacaoDistribuicaoDialog({
 
             {/* Faixas — barras compactas */}
             {simulacao && (simulacao.faixasResultado?.length ?? 0) > 0 && (
-              <div className="px-6 py-2 border-b bg-muted/10 space-y-1.5">
+              <div className="px-5 py-2 border-b bg-muted/10 space-y-1.5">
                 {simulacao.faixasResultado.map((res, idx) => {
                   const pct = res.meta > 0 ? Math.min(100, (res.acumulado / res.meta) * 100) : 0;
                   return (
@@ -229,7 +224,7 @@ export function SimulacaoDistribuicaoDialog({
             )}
 
             {/* Calendário por dia — área principal */}
-            <div className="flex-1 overflow-y-auto px-6 py-3 space-y-1.5">
+            <div className="flex-1 overflow-y-auto px-5 py-3 space-y-1.5">
               {dias.length === 0 && (
                 <p className="text-center text-xs text-muted-foreground italic py-12">
                   Nenhuma célula disponível para simular.
@@ -359,94 +354,116 @@ export function SimulacaoDistribuicaoDialog({
                 </div>
               )}
             </div>
-          </TabsContent>
+          </div>
 
-          {/* ============ TAB CONFIGURAÇÃO ============ */}
-          <TabsContent
-            value="config"
-            className="flex-1 min-h-0 m-0 overflow-y-auto px-6 py-4 space-y-4 data-[state=inactive]:hidden"
-          >
-            {/* Parâmetros gerais */}
-            <div className="space-y-2">
-              <Label className="text-[11px] uppercase tracking-wide font-semibold text-muted-foreground">
-                Parâmetros gerais
-              </Label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-3 rounded-md border bg-muted/30">
-                <ParamField
-                  label="Clones/dia"
-                  value={config.clonesPorDia}
-                  onChange={(v) => setConfig({ ...config, clonesPorDia: Math.max(1, v) })}
-                  min={1}
-                  max={20}
-                />
-                <ParamField
-                  label="Máx casas/dia (0=∞)"
-                  value={config.maxCasasPorDia}
-                  onChange={(v) => setConfig({ ...config, maxCasasPorDia: Math.max(0, v) })}
-                  min={0}
-                  max={50}
-                />
-                <ParamField
-                  label="Meta ganho/dia (0=off)"
-                  value={config.metaGanhoDia}
-                  onChange={(v) => setConfig({ ...config, metaGanhoDia: Math.max(0, v) })}
-                  min={0}
-                  step="0.01"
-                />
-                <ParamField
-                  label="Cooldown casa (d)"
-                  value={config.cooldownCasaDias}
-                  onChange={(v) => setConfig({ ...config, cooldownCasaDias: Math.max(0, v) })}
-                  min={0}
-                  max={30}
-                />
-                <ParamField
-                  label="Cooldown CPF (d)"
-                  value={config.cooldownCpfDias}
-                  onChange={(v) => setConfig({ ...config, cooldownCpfDias: Math.max(0, v) })}
-                  min={0}
-                  max={30}
-                />
-                <ParamField
-                  label="Dia limite"
-                  value={config.diaLimite}
-                  onChange={(v) =>
-                    setConfig({ ...config, diaLimite: Math.min(31, Math.max(1, v)) })
-                  }
-                  min={1}
-                  max={31}
-                />
-                <ParamField
-                  label="Mín outras/janela"
-                  value={config.minOutrasPorJanela ?? 0}
-                  onChange={(v) => setConfig({ ...config, minOutrasPorJanela: Math.max(0, v) })}
-                  min={0}
-                  max={20}
-                />
-                <ParamField
-                  label="Janela outras (d)"
-                  value={config.janelaOutrasDias ?? 3}
-                  onChange={(v) => setConfig({ ...config, janelaOutrasDias: Math.max(1, v) })}
-                  min={1}
-                  max={30}
-                />
-              </div>
-            </div>
-
-            {/* Faixas de meta */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label className="text-[11px] uppercase tracking-wide font-semibold text-muted-foreground">
-                    Faixas de meta (Σ depósito por intervalo)
-                  </Label>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">
-                    Ex.: dias 1–10 = R$ 5.000, 11–20 = R$ 3.000. Tolerância permite passar do teto.
-                  </p>
-                </div>
+          {/* ============ SIDEBAR — CONFIGURAÇÃO ============ */}
+          {sidebarOpen && (
+            <aside className="w-[340px] shrink-0 border-l bg-muted/10 flex flex-col">
+              <div className="px-4 py-2.5 border-b flex items-center justify-between bg-background/40">
                 <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-1">
-                    <Label className="text-[10px] text-muted-foreground">Tol.%</Label>
+                  <Settings2 className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-xs font-semibold">Configuração</span>
+                </div>
+                <Button size="sm" className="h-7 text-[11px]" onClick={aplicarConfig}>
+                  <Sparkles className="h-3 w-3 mr-1" />
+                  Aplicar
+                </Button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
+                {/* Parâmetros gerais */}
+                <div className="space-y-2">
+                  <Label className="text-[10px] uppercase tracking-wide font-semibold text-muted-foreground">
+                    Parâmetros gerais
+                  </Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <ParamField
+                      label="Clones/dia"
+                      value={config.clonesPorDia}
+                      onChange={(v) => setConfig({ ...config, clonesPorDia: Math.max(1, v) })}
+                      min={1}
+                      max={20}
+                    />
+                    <ParamField
+                      label="Máx casas/dia"
+                      value={config.maxCasasPorDia}
+                      onChange={(v) => setConfig({ ...config, maxCasasPorDia: Math.max(0, v) })}
+                      min={0}
+                      max={50}
+                    />
+                    <ParamField
+                      label="Meta ganho/dia"
+                      value={config.metaGanhoDia}
+                      onChange={(v) => setConfig({ ...config, metaGanhoDia: Math.max(0, v) })}
+                      min={0}
+                      step="0.01"
+                    />
+                    <ParamField
+                      label="Cooldown casa"
+                      value={config.cooldownCasaDias}
+                      onChange={(v) => setConfig({ ...config, cooldownCasaDias: Math.max(0, v) })}
+                      min={0}
+                      max={30}
+                    />
+                    <ParamField
+                      label="Cooldown CPF"
+                      value={config.cooldownCpfDias}
+                      onChange={(v) => setConfig({ ...config, cooldownCpfDias: Math.max(0, v) })}
+                      min={0}
+                      max={30}
+                    />
+                    <ParamField
+                      label="Dia limite"
+                      value={config.diaLimite}
+                      onChange={(v) =>
+                        setConfig({ ...config, diaLimite: Math.min(31, Math.max(1, v)) })
+                      }
+                      min={1}
+                      max={31}
+                    />
+                    <ParamField
+                      label="Mín outras/jan."
+                      value={config.minOutrasPorJanela ?? 0}
+                      onChange={(v) => setConfig({ ...config, minOutrasPorJanela: Math.max(0, v) })}
+                      min={0}
+                      max={20}
+                    />
+                    <ParamField
+                      label="Janela outras (d)"
+                      value={config.janelaOutrasDias ?? 3}
+                      onChange={(v) => setConfig({ ...config, janelaOutrasDias: Math.max(1, v) })}
+                      min={1}
+                      max={30}
+                    />
+                  </div>
+                </div>
+
+                {/* Faixas de meta */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-[10px] uppercase tracking-wide font-semibold text-muted-foreground">
+                      Faixas de meta
+                    </Label>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-6 text-[10px] px-2"
+                      onClick={() => {
+                        const novas = [...(config.faixas ?? [])];
+                        const ultimoFim = novas.length ? novas[novas.length - 1].diaFim : 0;
+                        novas.push({
+                          diaInicio: Math.min(ultimoFim + 1, config.diaLimite),
+                          diaFim: Math.min(ultimoFim + 10, config.diaLimite),
+                          meta: 1000,
+                        });
+                        setConfig({ ...config, faixas: novas });
+                      }}
+                    >
+                      <Plus className="h-3 w-3 mr-0.5" /> Faixa
+                    </Button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Label className="text-[10px] text-muted-foreground">Tolerância %</Label>
                     <Input
                       type="number"
                       min={0}
@@ -458,117 +475,101 @@ export function SimulacaoDistribuicaoDialog({
                           toleranciaFaixaPct: Math.max(0, Number(e.target.value) || 0),
                         })
                       }
-                      className="h-7 w-14 text-xs"
+                      className="h-7 w-16 text-xs"
                     />
                   </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-7 text-xs"
-                    onClick={() => {
-                      const novas = [...(config.faixas ?? [])];
-                      const ultimoFim = novas.length ? novas[novas.length - 1].diaFim : 0;
-                      novas.push({
-                        diaInicio: Math.min(ultimoFim + 1, config.diaLimite),
-                        diaFim: Math.min(ultimoFim + 10, config.diaLimite),
-                        meta: 1000,
-                      });
-                      setConfig({ ...config, faixas: novas });
-                    }}
-                  >
-                    <Plus className="h-3 w-3 mr-1" /> Faixa
-                  </Button>
+                  <p className="text-[10px] text-muted-foreground leading-tight">
+                    Σ depósito por intervalo. Ex.: dias 1–10 = R$ 5.000.
+                  </p>
+                  <div className="space-y-1.5">
+                    {(config.faixas ?? []).length === 0 && (
+                      <p className="text-[10px] text-muted-foreground italic text-center py-3 rounded border border-dashed">
+                        Nenhuma faixa — distribuição livre.
+                      </p>
+                    )}
+                    {(config.faixas ?? []).map((f, idx) => (
+                      <div
+                        key={idx}
+                        className="rounded border bg-background/60 p-2 space-y-1.5"
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <div className="flex-1">
+                            <Label className="text-[9px] uppercase text-muted-foreground">
+                              Início
+                            </Label>
+                            <Input
+                              type="number"
+                              min={1}
+                              max={31}
+                              value={f.diaInicio}
+                              onChange={(e) => {
+                                const v = Math.max(1, Number(e.target.value) || 1);
+                                const novas = [...(config.faixas ?? [])];
+                                novas[idx] = { ...f, diaInicio: v };
+                                setConfig({ ...config, faixas: novas });
+                              }}
+                              className="h-7 text-xs"
+                            />
+                          </div>
+                          <div className="flex-1">
+                            <Label className="text-[9px] uppercase text-muted-foreground">
+                              Fim
+                            </Label>
+                            <Input
+                              type="number"
+                              min={1}
+                              max={31}
+                              value={f.diaFim}
+                              onChange={(e) => {
+                                const v = Math.max(1, Number(e.target.value) || 1);
+                                const novas = [...(config.faixas ?? [])];
+                                novas[idx] = { ...f, diaFim: v };
+                                setConfig({ ...config, faixas: novas });
+                              }}
+                              className="h-7 text-xs"
+                            />
+                          </div>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7 shrink-0 self-end"
+                            onClick={() => {
+                              const novas = (config.faixas ?? []).filter((_, i) => i !== idx);
+                              setConfig({ ...config, faixas: novas });
+                            }}
+                          >
+                            <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                          </Button>
+                        </div>
+                        <div>
+                          <Label className="text-[9px] uppercase text-muted-foreground">
+                            Meta (Σ depósito)
+                          </Label>
+                          <Input
+                            type="number"
+                            min={0}
+                            step="0.01"
+                            value={f.meta}
+                            onChange={(e) => {
+                              const v = Math.max(0, Number(e.target.value) || 0);
+                              const novas = [...(config.faixas ?? [])];
+                              novas[idx] = { ...f, meta: v };
+                              setConfig({ ...config, faixas: novas });
+                            }}
+                            className="h-7 text-xs"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
-              <div className="rounded-md border bg-muted/30 p-3 space-y-2">
-                {(config.faixas ?? []).length === 0 && (
-                  <p className="text-[11px] text-muted-foreground italic text-center py-4">
-                    Nenhuma faixa — distribuição livre dentro do dia limite.
-                  </p>
-                )}
-                {(config.faixas ?? []).map((f, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-end gap-2 rounded border bg-background/40 p-2"
-                  >
-                    <div className="space-y-1">
-                      <Label className="text-[9px] uppercase text-muted-foreground">Dia ini</Label>
-                      <Input
-                        type="number"
-                        min={1}
-                        max={31}
-                        value={f.diaInicio}
-                        onChange={(e) => {
-                          const v = Math.max(1, Number(e.target.value) || 1);
-                          const novas = [...(config.faixas ?? [])];
-                          novas[idx] = { ...f, diaInicio: v };
-                          setConfig({ ...config, faixas: novas });
-                        }}
-                        className="h-7 w-16 text-xs"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-[9px] uppercase text-muted-foreground">Dia fim</Label>
-                      <Input
-                        type="number"
-                        min={1}
-                        max={31}
-                        value={f.diaFim}
-                        onChange={(e) => {
-                          const v = Math.max(1, Number(e.target.value) || 1);
-                          const novas = [...(config.faixas ?? [])];
-                          novas[idx] = { ...f, diaFim: v };
-                          setConfig({ ...config, faixas: novas });
-                        }}
-                        className="h-7 w-16 text-xs"
-                      />
-                    </div>
-                    <div className="space-y-1 flex-1">
-                      <Label className="text-[9px] uppercase text-muted-foreground">Meta (Σ)</Label>
-                      <Input
-                        type="number"
-                        min={0}
-                        step="0.01"
-                        value={f.meta}
-                        onChange={(e) => {
-                          const v = Math.max(0, Number(e.target.value) || 0);
-                          const novas = [...(config.faixas ?? [])];
-                          novas[idx] = { ...f, meta: v };
-                          setConfig({ ...config, faixas: novas });
-                        }}
-                        className="h-7 text-xs"
-                      />
-                    </div>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-7 w-7 shrink-0"
-                      onClick={() => {
-                        const novas = (config.faixas ?? []).filter((_, i) => i !== idx);
-                        setConfig({ ...config, faixas: novas });
-                      }}
-                    >
-                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </div>
+            </aside>
+          )}
+        </div>
 
-            <div className="flex justify-end gap-2 pt-2 border-t">
-              <Button variant="outline" size="sm" onClick={() => setTab("simulacao")}>
-                Voltar
-              </Button>
-              <Button size="sm" onClick={aplicarConfig}>
-                <Sparkles className="h-3.5 w-3.5 mr-1" />
-                Aplicar e ver simulação
-              </Button>
-            </div>
-          </TabsContent>
-        </Tabs>
-
-        <div className="px-6 py-3 border-t flex justify-end gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+        <div className="px-5 py-2.5 border-t flex justify-end gap-2">
+          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
             Fechar
           </Button>
         </div>
@@ -603,7 +604,7 @@ function ParamField({
         step={step}
         value={value}
         onChange={(e) => onChange(Number(e.target.value) || 0)}
-        className="h-8 text-xs"
+        className="h-7 text-xs"
       />
     </div>
   );
