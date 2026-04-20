@@ -65,11 +65,21 @@ export interface CelulaNaoAgendadaDetalhe {
   detalhe: string;
 }
 
+export interface FaixaResultado {
+  diaInicio: number;
+  diaFim: number;
+  meta: number;
+  acumulado: number;
+  cheia: boolean;
+  saturada: boolean; // ultrapassou meta + tolerância
+}
+
 export interface SimulacaoResultado {
   agendamentos: AgendamentoSimulado[];
   warnings: string[];
   naoAgendadas: CelulaDisponivel[];
   naoAgendadasDetalhe: CelulaNaoAgendadaDetalhe[];
+  faixasResultado: FaixaResultado[];
   estatisticas: {
     totalCelulas: number;
     totalClones: number;
