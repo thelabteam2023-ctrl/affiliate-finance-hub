@@ -168,6 +168,30 @@ export function SimulacaoDistribuicaoDialog({
               </DialogDescription>
             </div>
             <div className="flex items-center gap-2">
+              {/* Seletor de mês */}
+              <div className="flex items-center gap-0.5 rounded-md border bg-background/50 px-1 py-0.5">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={() => mudarMes(-1)}
+                  title="Mês anterior"
+                >
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                </Button>
+                <div className="px-2 text-xs font-semibold tabular-nums min-w-[72px] text-center">
+                  {NOMES_MES[simMonth - 1]} {simYear}
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={() => mudarMes(1)}
+                  title="Próximo mês"
+                >
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </Button>
+              </div>
               <Button
                 variant="outline"
                 size="sm"
@@ -268,7 +292,7 @@ export function SimulacaoDistribuicaoDialog({
                   (sum, a) => sum + (Number(a.celula.deposito_sugerido) || 0),
                   0
                 );
-                const dow = new Date(year, month - 1, dia).getDay();
+                const dow = new Date(simYear, simMonth - 1, dia).getDay();
                 const dowLabel = DIAS_SEMANA[dow]?.label3 ?? "";
                 const isWeekend = dow === 0 || dow === 6;
                 return (
