@@ -1038,6 +1038,7 @@ export function PlanejamentoCalendario() {
                           logoUrl={getLogoUrl(c.bookmaker_nome)}
                           grupoBlock={grupoStatus?.hasBlock}
                           grupoWarn={grupoStatus?.hasWarn}
+                          cpfIndex={campanhaCpfMap.get(c.id) ?? null}
                         />
                       );
                     })}
