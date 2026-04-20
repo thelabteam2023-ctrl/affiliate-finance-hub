@@ -788,6 +788,7 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
                   getLogoUrl={getLogoUrl}
                   bookmakerNomeMap={bookmakerNomeMap}
                   convertToConsolidation={convertToConsolidation}
+                  parentResultado={isSimplesMultiEntry ? surebet.resultado : undefined}
                   onResultChange={
                     // CASO 1: Aposta simples multi-entry (PUNTER, VALUEBET, DUPLO_GREEN, EXTRACAO_BONUS, FREEBET, SIMPLES)
                     // → resultado é único para toda a aposta. O badge dispara reliquidação global via reliquidar_aposta_v6.
