@@ -1585,6 +1585,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
                   }}
                   onQuickResolve={handleSurebetQuickResolve}
                   onPernaResultChange={handleSurebetPernaResolve}
+                  onSimpleQuickResolve={handleQuickResolve}
                    onDelete={handleSurebetDelete}
                    onDuplicate={handleDuplicateSurebet}
                   formatCurrency={formatCurrency}
