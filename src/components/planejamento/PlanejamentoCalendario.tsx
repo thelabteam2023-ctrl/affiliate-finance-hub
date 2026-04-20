@@ -769,7 +769,11 @@ export function PlanejamentoCalendario() {
                 {modoPlano ? (
                   <>
                     {filteredCelulas.map((c) => (
-                      <DraggableCelula key={c.id} celula={c} />
+                      <DraggableCelula
+                        key={c.id}
+                        celula={c}
+                        parceiroNome={c.parceiro_id ? parceiroMap[c.parceiro_id]?.nome : undefined}
+                      />
                     ))}
                     {filteredCelulas.length === 0 && (
                       <p className="text-xs text-muted-foreground italic text-center py-4">
