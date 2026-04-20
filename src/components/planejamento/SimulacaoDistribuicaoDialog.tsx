@@ -810,9 +810,40 @@ export function SimulacaoDistribuicaoDialog({
                 {/* Mín. por dia da semana */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <Label className="text-[10px] uppercase tracking-wide font-semibold text-muted-foreground">
-                      Mín. por dia da semana
-                    </Label>
+                    <div className="flex items-center gap-1">
+                      <Label className="text-[10px] uppercase tracking-wide font-semibold text-muted-foreground">
+                        Mín. por dia da semana
+                      </Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <button
+                            type="button"
+                            className="text-muted-foreground/60 hover:text-primary transition-colors"
+                            aria-label="Sobre Mín. por dia da semana"
+                          >
+                            <Info className="h-3 w-3" />
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent side="left" align="start" className="w-72 text-xs space-y-2">
+                          <div className="font-semibold text-sm">Mínimo por dia da semana</div>
+                          <p className="text-muted-foreground leading-relaxed">
+                            Garante uma quantidade mínima de casas em dias específicos da semana
+                            (ex: sextas, sábados, domingos). É <strong>warning-only</strong> — se
+                            não houver células suficientes, gera aviso mas não bloqueia.
+                          </p>
+                          <div className="rounded-md bg-muted/40 border p-2 space-y-0.5">
+                            <div className="text-[10px] uppercase tracking-wide font-semibold text-primary/80">
+                              Exemplo
+                            </div>
+                            <p className="text-[11px] leading-relaxed">
+                              Regra: <strong>Sex/Sáb/Dom = 3 casas/dia</strong>. Toda sexta, sábado
+                              e domingo do mês receberá pelo menos 3 casas (puxando do estoque
+                              antes de outros dias).
+                            </p>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
                     <Button
                       size="sm"
                       variant="outline"
