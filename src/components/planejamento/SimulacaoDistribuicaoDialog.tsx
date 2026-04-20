@@ -173,21 +173,99 @@ export function SimulacaoDistribuicaoDialog({
 
   const NOMES_MES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
+  // Aplica overrides manuais — cada agendamento pode ter sido movido pelo usuário
+  const agendamentosFinais = useMemo(() => {
+    if (!simulacao) return [];
+    return simulacao.agendamentos.map((a) => {
+      const novoDia = overrides.get(a.celula.id);
+      if (novoDia && novoDia !== a.dia) {
+        return { ...a, dia: novoDia, dateKey: buildDateKeyLocal(simYear, simMonth, novoDia) };
+      }
+      return a;
+    });
+  }, [simulacao, overrides, simYear, simMonth]);
+
   const porDia = useMemo(() => {
-    const map = new Map<number, SimulacaoResultado["agendamentos"]>();
-    if (!simulacao) return map;
-    simulacao.agendamentos.forEach((a) => {
+    const map = new Map<number, typeof agendamentosFinais>();
+    agendamentosFinais.forEach((a) => {
       if (!map.has(a.dia)) map.set(a.dia, []);
       map.get(a.dia)!.push(a);
     });
     return map;
-  }, [simulacao]);
+  }, [agendamentosFinais]);
 
   const dias = useMemo(() => {
     const set = new Set<number>();
     porDia.forEach((_, k) => set.add(k));
     return Array.from(set).sort((a, b) => a - b);
   }, [porDia]);
+
+  // Detecta conflitos por agendamento (após overrides) — warnings, não bloqueia
+  const conflitos = useMemo(() => {
+    const conflitosPorId = new Map<string, string[]>();
+    const cooldownCasa = config.cooldownCasaDias ?? 0;
+    const cooldownCpf = config.cooldownCpfDias ?? 0;
+    const isClone = (a: typeof agendamentosFinais[number]) =>
+      (a.celula.grupo_nome || "").toLowerCase().includes("clone");
+
+    // Index por dia → para detectar duplicatas no mesmo dia + cooldowns
+    const porDiaCasa = new Map<string, number[]>(); // catalogoId -> dias
+    const porDiaCpfClone = new Map<string, number[]>(); // cpfKey -> dias (só clones)
+    const porDiaCasaSet = new Map<number, Set<string>>(); // dia -> set de catalogoIds
+
+    agendamentosFinais.forEach((a) => {
+      const k = a.celula.bookmaker_catalogo_id;
+      if (!porDiaCasa.has(k)) porDiaCasa.set(k, []);
+      porDiaCasa.get(k)!.push(a.dia);
+      if (!porDiaCasaSet.has(a.dia)) porDiaCasaSet.set(a.dia, new Set());
+      porDiaCasaSet.get(a.dia)!.add(k);
+      if (isClone(a) && a.celula.cpf_index != null) {
+        const ck = `cpf-${a.celula.cpf_index}`;
+        if (!porDiaCpfClone.has(ck)) porDiaCpfClone.set(ck, []);
+        porDiaCpfClone.get(ck)!.push(a.dia);
+      }
+    });
+
+    agendamentosFinais.forEach((a) => {
+      const issues: string[] = [];
+      const k = a.celula.bookmaker_catalogo_id;
+      // Casa duplicada no mesmo dia (>1)
+      const diasCasa = porDiaCasa.get(k) ?? [];
+      if (diasCasa.filter((d) => d === a.dia).length > 1) {
+        issues.push("Casa duplicada no mesmo dia");
+      }
+      // Cooldown casa (apenas clones, conforme regra)
+      if (isClone(a) && cooldownCasa > 0) {
+        const proximo = diasCasa.find((d) => d !== a.dia && Math.abs(d - a.dia) <= cooldownCasa);
+        if (proximo !== undefined) {
+          issues.push(`Cooldown casa (${cooldownCasa}d) violado vs dia ${proximo}`);
+        }
+      }
+      // Cooldown CPF clone
+      if (isClone(a) && cooldownCpf > 0 && a.celula.cpf_index != null) {
+        const ck = `cpf-${a.celula.cpf_index}`;
+        const diasCpf = porDiaCpfClone.get(ck) ?? [];
+        const proximo = diasCpf.find((d) => d !== a.dia && Math.abs(d - a.dia) <= cooldownCpf);
+        if (proximo !== undefined) {
+          issues.push(`Cooldown CPF ${a.celula.cpf_index} (${cooldownCpf}d) violado vs dia ${proximo}`);
+        }
+      }
+      if (issues.length > 0) conflitosPorId.set(a.celula.id, issues);
+    });
+    return conflitosPorId;
+  }, [agendamentosFinais, config]);
+
+  const moverPara = (celulaId: string, novoDia: number) => {
+    const last = new Date(simYear, simMonth, 0).getDate();
+    if (novoDia < 1 || novoDia > last) return;
+    setOverrides((prev) => {
+      const next = new Map(prev);
+      next.set(celulaId, novoDia);
+      return next;
+    });
+  };
+
+  const limparOverrides = () => setOverrides(new Map());
 
   const stats = simulacao?.estatisticas;
   const excedeu = stats ? stats.totalCelulas > stats.capacidadeMaxima : false;
