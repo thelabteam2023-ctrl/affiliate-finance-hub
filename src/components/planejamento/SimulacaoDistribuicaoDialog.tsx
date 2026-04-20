@@ -22,7 +22,9 @@ import {
   ChevronRight,
   GripVertical,
   RotateCcw,
+  Info,
 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -693,6 +695,13 @@ export function SimulacaoDistribuicaoDialog({
                       onChange={(v) => setConfig({ ...config, clonesPorDia: Math.max(1, v) })}
                       min={1}
                       max={20}
+                      tooltip={{
+                        titulo: "Clones por dia",
+                        descricao:
+                          "Limite ESTRITO de casas do grupo CLONES agendadas em um mesmo dia. Conta cada casa-clone (não CPFs distintos).",
+                        exemplo:
+                          "Se = 3, no dia 5 podem entrar no máximo 3 clones (ex: Bet365-CPF1, Pinnacle-CPF2, Stake-CPF3). Uma 4ª clone irá para outro dia, mesmo que ainda haja vaga em 'Máx casas/dia'.",
+                      }}
                     />
                     <ParamField
                       label="Máx casas/dia"
@@ -700,6 +709,13 @@ export function SimulacaoDistribuicaoDialog({
                       onChange={(v) => setConfig({ ...config, maxCasasPorDia: Math.max(0, v) })}
                       min={0}
                       max={50}
+                      tooltip={{
+                        titulo: "Máximo de casas por dia",
+                        descricao:
+                          "Teto global de casas (clones + suporte) por dia. 0 = sem limite — só vale o limite de clones/dia.",
+                        exemplo:
+                          "Se = 10, no dia 5 podem entrar 3 clones + 7 casas suporte. A 11ª (qualquer tipo) será adiada.",
+                      }}
                     />
                     <ParamField
                       label="Meta ganho/dia"
@@ -707,6 +723,13 @@ export function SimulacaoDistribuicaoDialog({
                       onChange={(v) => setConfig({ ...config, metaGanhoDia: Math.max(0, v) })}
                       min={0}
                       step="0.01"
+                      tooltip={{
+                        titulo: "Meta de ganho por dia",
+                        descricao:
+                          "Quando a soma de 'depósito sugerido' do dia atinge esse valor, o dia 'fecha' e novas casas vão para o próximo. 0 = desativado.",
+                        exemplo:
+                          "Se = 1.500 e o dia 5 já tem 3 casas somando $1.500, qualquer nova casa pulará para o dia 6 — mesmo com vaga em 'Máx casas/dia'.",
+                      }}
                     />
                     <ParamField
                       label="Cooldown casa"
@@ -714,6 +737,13 @@ export function SimulacaoDistribuicaoDialog({
                       onChange={(v) => setConfig({ ...config, cooldownCasaDias: Math.max(0, v) })}
                       min={0}
                       max={30}
+                      tooltip={{
+                        titulo: "Cooldown da mesma casa (dias)",
+                        descricao:
+                          "Intervalo mínimo entre 2 agendamentos da MESMA casa-clone. Aplica-se apenas a clones (suporte pode repetir).",
+                        exemplo:
+                          "Se = 3 e Bet365-CPF1 foi agendada no dia 4, a próxima clone Bet365 (qualquer CPF) só poderá entrar a partir do dia 8.",
+                      }}
                     />
                     <ParamField
                       label="Cooldown CPF"
@@ -721,6 +751,13 @@ export function SimulacaoDistribuicaoDialog({
                       onChange={(v) => setConfig({ ...config, cooldownCpfDias: Math.max(0, v) })}
                       min={0}
                       max={30}
+                      tooltip={{
+                        titulo: "Cooldown do mesmo CPF (dias)",
+                        descricao:
+                          "Intervalo mínimo entre 2 clones do MESMO CPF. Evita sobrecarga de criações no mesmo titular em janelas curtas.",
+                        exemplo:
+                          "Se = 5 e CPF1 fez uma clone no dia 4, a próxima clone do CPF1 só poderá entrar a partir do dia 10.",
+                      }}
                     />
                     <ParamField
                       label="Dia limite"
@@ -730,6 +767,13 @@ export function SimulacaoDistribuicaoDialog({
                       }
                       min={1}
                       max={31}
+                      tooltip={{
+                        titulo: "Último dia utilizável do mês",
+                        descricao:
+                          "Janela de simulação vai do dia 1 até este dia. Casas que não couberem ficam no painel 'não couberam'.",
+                        exemplo:
+                          "Se = 25, a simulação só usa dias 1–25. Os últimos 5–6 dias do mês ficam livres (ex: para fechamento ou folga).",
+                      }}
                     />
                     <ParamField
                       label="Mín outras/jan."
@@ -737,6 +781,13 @@ export function SimulacaoDistribuicaoDialog({
                       onChange={(v) => setConfig({ ...config, minOutrasPorJanela: Math.max(0, v) })}
                       min={0}
                       max={20}
+                      tooltip={{
+                        titulo: "Mínimo de casas suporte por janela",
+                        descricao:
+                          "Garante que a cada N dias (definidos em 'Janela outras') haja ao menos X casas SUPORTE (não-clone). Evita concentração de clones puros. 0 = desativado.",
+                        exemplo:
+                          "Se = 1 e janela = 3, a cada 3 dias deve haver ≥ 1 casa suporte. Se chegando ao dia 3 só houver clones, o algoritmo força entrar uma suporte.",
+                      }}
                     />
                     <ParamField
                       label="Janela outras (d)"
@@ -744,6 +795,13 @@ export function SimulacaoDistribuicaoDialog({
                       onChange={(v) => setConfig({ ...config, janelaOutrasDias: Math.max(1, v) })}
                       min={1}
                       max={30}
+                      tooltip={{
+                        titulo: "Tamanho da janela (dias) para 'Mín outras'",
+                        descricao:
+                          "Define o tamanho da janela deslizante usada pela regra 'Mín outras'. Trabalha em conjunto com aquele campo.",
+                        exemplo:
+                          "Se = 3 e 'Mín outras' = 1, então em qualquer trio de dias consecutivos (1-3, 2-4, 3-5...) deve haver pelo menos 1 casa suporte.",
+                      }}
                     />
                   </div>
                 </div>
@@ -752,9 +810,40 @@ export function SimulacaoDistribuicaoDialog({
                 {/* Mín. por dia da semana */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <Label className="text-[10px] uppercase tracking-wide font-semibold text-muted-foreground">
-                      Mín. por dia da semana
-                    </Label>
+                    <div className="flex items-center gap-1">
+                      <Label className="text-[10px] uppercase tracking-wide font-semibold text-muted-foreground">
+                        Mín. por dia da semana
+                      </Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <button
+                            type="button"
+                            className="text-muted-foreground/60 hover:text-primary transition-colors"
+                            aria-label="Sobre Mín. por dia da semana"
+                          >
+                            <Info className="h-3 w-3" />
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent side="left" align="start" className="w-72 text-xs space-y-2">
+                          <div className="font-semibold text-sm">Mínimo por dia da semana</div>
+                          <p className="text-muted-foreground leading-relaxed">
+                            Garante uma quantidade mínima de casas em dias específicos da semana
+                            (ex: sextas, sábados, domingos). É <strong>warning-only</strong> — se
+                            não houver células suficientes, gera aviso mas não bloqueia.
+                          </p>
+                          <div className="rounded-md bg-muted/40 border p-2 space-y-0.5">
+                            <div className="text-[10px] uppercase tracking-wide font-semibold text-primary/80">
+                              Exemplo
+                            </div>
+                            <p className="text-[11px] leading-relaxed">
+                              Regra: <strong>Sex/Sáb/Dom = 3 casas/dia</strong>. Toda sexta, sábado
+                              e domingo do mês receberá pelo menos 3 casas (puxando do estoque
+                              antes de outros dias).
+                            </p>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
                     <Button
                       size="sm"
                       variant="outline"
@@ -865,7 +954,7 @@ export function SimulacaoDistribuicaoDialog({
   );
 }
 
-// Campo numérico compacto reutilizável
+// Campo numérico compacto reutilizável (com tooltip explicativo opcional)
 function ParamField({
   label,
   value,
@@ -873,6 +962,7 @@ function ParamField({
   min,
   max,
   step,
+  tooltip,
 }: {
   label: string;
   value: number;
@@ -880,10 +970,36 @@ function ParamField({
   min?: number;
   max?: number;
   step?: string;
+  tooltip?: { titulo: string; descricao: string; exemplo: string };
 }) {
   return (
     <div className="space-y-1">
-      <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</Label>
+      <div className="flex items-center justify-between gap-1">
+        <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</Label>
+        {tooltip && (
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                className="text-muted-foreground/60 hover:text-primary transition-colors"
+                aria-label={`Sobre ${label}`}
+              >
+                <Info className="h-3 w-3" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent side="left" align="start" className="w-72 text-xs space-y-2">
+              <div className="font-semibold text-sm">{tooltip.titulo}</div>
+              <p className="text-muted-foreground leading-relaxed">{tooltip.descricao}</p>
+              <div className="rounded-md bg-muted/40 border p-2 space-y-0.5">
+                <div className="text-[10px] uppercase tracking-wide font-semibold text-primary/80">
+                  Exemplo
+                </div>
+                <p className="text-[11px] leading-relaxed">{tooltip.exemplo}</p>
+              </div>
+            </PopoverContent>
+          </Popover>
+        )}
+      </div>
       <Input
         type="number"
         min={min}
