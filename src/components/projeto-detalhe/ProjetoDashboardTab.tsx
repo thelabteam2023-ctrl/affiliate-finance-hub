@@ -107,7 +107,7 @@ async function fetchApostasFiltradas(
       (idsChunk) =>
         supabase
           .from("apostas_pernas")
-          .select(`aposta_id, bookmaker_id, selecao, odd, stake, moeda, resultado, lucro_prejuizo, gerou_freebet, valor_freebet_gerada, bookmakers (nome, instance_identifier, parceiro_id, parceiros (nome), bookmakers_catalogo (logo_url))`)
+          .select(`aposta_id, bookmaker_id, selecao, odd, stake, stake_brl_referencia, cotacao_snapshot, moeda, resultado, lucro_prejuizo, lucro_prejuizo_brl_referencia, gerou_freebet, valor_freebet_gerada, bookmakers (nome, instance_identifier, parceiro_id, parceiros (nome), bookmakers_catalogo (logo_url))`)
           .in("aposta_id", idsChunk)
           .order("ordem", { ascending: true }),
       apostaIds
@@ -123,6 +123,9 @@ async function fetchApostasFiltradas(
         logo_url: p.bookmakers?.bookmakers_catalogo?.logo_url || null,
         selecao: p.selecao, odd: p.odd, stake: p.stake, moeda: p.moeda,
         resultado: p.resultado, lucro_prejuizo: p.lucro_prejuizo,
+        stake_brl_referencia: p.stake_brl_referencia,
+        lucro_prejuizo_brl_referencia: p.lucro_prejuizo_brl_referencia,
+        cotacao_snapshot: p.cotacao_snapshot,
         gerou_freebet: p.gerou_freebet, valor_freebet_gerada: p.valor_freebet_gerada,
       });
     });
@@ -158,7 +161,12 @@ async function fetchApostasFiltradas(
       stake_consolidado: item.stake_consolidado,
       valor_brl_referencia: item.valor_brl_referencia,
       lucro_prejuizo_brl_referencia: item.lucro_prejuizo_brl_referencia,
-      pernas: item.forma_registro === 'ARBITRAGEM' ? pernasMap[item.id] || [] : undefined,
+      // Inclui pernas para ARBITRAGEM e também para SIMPLES multi-entry (>=2 pernas)
+      pernas: (() => {
+        const pernas = pernasMap[item.id] || [];
+        if (item.forma_registro === 'ARBITRAGEM') return pernas;
+        return pernas.length >= 2 ? pernas : undefined;
+      })(),
     };
   });
 }
