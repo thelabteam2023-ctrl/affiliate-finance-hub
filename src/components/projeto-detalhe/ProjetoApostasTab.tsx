@@ -5,7 +5,6 @@ import { fetchChunkedIn } from "@/lib/fetchChunkedIn";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { calcularImpactoResultado } from "@/lib/bookmakerBalanceHelper";
 import { reliquidarAposta, deletarAposta, liquidarPernaSurebet } from "@/services/aposta/ApostaService";
-import { propagarResultadoParaPernas } from "@/lib/propagatePernasResultado";
 import { useInvalidateBookmakerSaldos } from "@/hooks/useBookmakerSaldosQuery";
 import { SaldoOperavelCard } from "./SaldoOperavelCard";
 import { getConsolidatedStake, getConsolidatedLucro } from "@/utils/consolidatedValues";
@@ -789,9 +788,6 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
       }
 
      console.log('[ProjetoApostasTab] reliquidarAposta sucesso, atualizando estado local');
-
-      // 1b. Propagar resultado para todas as pernas (multi-entry simples)
-      await propagarResultadoParaPernas(apostaId, resultado);
      
       // 2. Atualizar estado local — no array correto
       if (apostaSimples) {
