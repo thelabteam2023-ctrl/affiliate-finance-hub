@@ -451,11 +451,19 @@ export function simularDistribuicao(input: {
     }
   }
 
-  // ---- PASS 2: Preenchimento normal (greedy) ----
-  for (let dia = 1; dia <= limite; dia++) {
-    const slot = ocupacao.get(dia)!;
-    for (let safety = 0; safety < 200; safety++) {
-      if (!tentarPasso(dia, slot)) break;
+  // ---- PASS 2: Preenchimento round-robin pelos dias ----
+  // Em vez de esgotar dia 1 antes de ir para dia 2 (que concentra tudo no início do mês),
+  // distribuímos uma célula por dia em rounds sucessivos. Como `selecionar()` já prioriza
+  // CPF1 suporte → CPF2 → ..., cada round vai naturalmente espalhar os suportes do CPF1
+  // por todos os dias antes de começar o CPF2, e o mesmo vale para clones (que usam backlog).
+  let progrediu = true;
+  let safetyRounds = 0;
+  const maxRounds = candidatas.length * 2 + 10;
+  while (progrediu && safetyRounds++ < maxRounds) {
+    progrediu = false;
+    for (let dia = 1; dia <= limite; dia++) {
+      const slot = ocupacao.get(dia)!;
+      if (tentarPasso(dia, slot)) progrediu = true;
     }
   }
 
