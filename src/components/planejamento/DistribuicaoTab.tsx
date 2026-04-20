@@ -295,6 +295,69 @@ export default function DistribuicaoTab() {
     return map;
   }, [resultado]);
 
+  /**
+   * Projeção de depósito (em USD) por CPF e total do plano.
+   * Usa a configuração atual dos grupos + depósito sugerido (na moeda nativa) de cada casa.
+   * Atualiza em tempo real conforme o usuário muda "casas por CPF", adiciona/remove grupos
+   * ou seleciona perfis — antes mesmo de gerar a distribuição.
+   */
+  const projecaoDeposito = useMemo(() => {
+    const nCpfs = selectedPerfilIds.length;
+    if (nCpfs === 0 || grupoConfigs.length === 0) {
+      return {
+        porCpfUsd: 0,
+        totalUsd: 0,
+        porGrupo: [] as Array<{ nome: string; cor: string; porCpfUsd: number; casasUsadas: number; totalCasasGrupo: number }>,
+      };
+    }
+    const membrosPorGrupo = new Map<string, Array<{ sugerido: number; moeda: string }>>();
+    membros.forEach((m) => {
+      if (!planejamentoCatalogoSet.has(m.bookmaker_catalogo_id)) return;
+      const cat = catalogoMap.get(m.bookmaker_catalogo_id);
+      const moeda = m.deposito_moeda || cat?.moeda_padrao || "BRL";
+      const sugerido = Number(m.deposito_sugerido) || 0;
+      if (!membrosPorGrupo.has(m.grupo_id)) membrosPorGrupo.set(m.grupo_id, []);
+      membrosPorGrupo.get(m.grupo_id)!.push({ sugerido, moeda });
+    });
+
+    let porCpfUsd = 0;
+    const porGrupo: Array<{ nome: string; cor: string; porCpfUsd: number; casasUsadas: number; totalCasasGrupo: number }> = [];
+
+    for (const cfg of grupoConfigs) {
+      const lista = membrosPorGrupo.get(cfg.grupo_id) ?? [];
+      const totalCasas = lista.length;
+      const desejado = cfg.casas_por_cpf ?? totalCasas;
+      const usar = Math.min(desejado, totalCasas);
+
+      // Como o engine embaralha as casas, usamos a média do grupo × `usar` (estimativa estável).
+      let somaGrupoUsd = 0;
+      lista.forEach((c) => (somaGrupoUsd += toUsd(c.sugerido, c.moeda)));
+      const mediaCasaUsd = totalCasas > 0 ? somaGrupoUsd / totalCasas : 0;
+      const grupoPorCpfUsd = mediaCasaUsd * usar;
+      porCpfUsd += grupoPorCpfUsd;
+
+      const meta = grupoMap.get(cfg.grupo_id);
+      porGrupo.push({
+        nome: meta?.nome ?? "Grupo",
+        cor: meta?.cor ?? "#6366f1",
+        porCpfUsd: grupoPorCpfUsd,
+        casasUsadas: usar,
+        totalCasasGrupo: totalCasas,
+      });
+    }
+
+    return { porCpfUsd, totalUsd: porCpfUsd * nCpfs, porGrupo };
+  }, [selectedPerfilIds.length, grupoConfigs, membros, planejamentoCatalogoSet, catalogoMap, grupoMap, convertToBRL, cotacaoUSD]);
+
+  const fmtUsd = (v: number) =>
+    `$${v.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+
+  /** Quantos CPFs seriam necessários para atingir um objetivo total em USD */
+  const cpfsParaMeta = (metaUsd: number): number => {
+    if (projecaoDeposito.porCpfUsd <= 0) return 0;
+    return Math.ceil(metaUsd / projecaoDeposito.porCpfUsd);
+  };
+
   return (
     <div className="space-y-4">
       <div className="text-xs text-muted-foreground">
