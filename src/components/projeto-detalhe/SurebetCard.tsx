@@ -105,6 +105,12 @@ interface SurebetCardProps {
   onQuickResolve?: (surebetId: string, result: SurebetQuickResult) => void;
   /** Callback para alterar resultado de perna individual (inline pill) */
   onPernaResultChange?: (input: PernaResultChangeInput) => Promise<void>;
+  /**
+   * Callback para liquidação rápida de apostas simples multi-entry (PUNTER, VALUEBET, etc.).
+   * O resultado é único para toda a aposta — não há vencedores por perna individual.
+   * Quando definido, o badge da perna fica clicável e dispara reliquidação global.
+   */
+  onSimpleQuickResolve?: (apostaId: string, resultado: string) => void | Promise<void>;
   /** Callback para excluir surebet */
   onDelete?: (surebetId: string) => void;
   /** Callback para duplicar surebet */
@@ -445,7 +451,7 @@ function PernaItem({
   );
 }
 
-export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChange, onDelete, onDuplicate, className, formatCurrency, convertToConsolidation, moedaConsolidacao, isBonusContext, bookmakerNomeMap }: SurebetCardProps) {
+export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChange, onSimpleQuickResolve, onDelete, onDuplicate, className, formatCurrency, convertToConsolidation, moedaConsolidacao, isBonusContext, bookmakerNomeMap }: SurebetCardProps) {
   // Hook para buscar logos das casas
   const { getLogoUrl } = useBookmakerLogoMap();
   
@@ -774,24 +780,9 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
                   convertToConsolidation={convertToConsolidation}
                   onResultChange={
                     // CASO 1: Aposta simples multi-entry (PUNTER, VALUEBET, DUPLO_GREEN, EXTRACAO_BONUS, FREEBET, SIMPLES)
-                    // → resultado é único para toda a aposta. O badge dispara reliquidação global via onQuickResolve.
-                    isSimplesMultiEntry && onQuickResolve ? async (resultado: string) => {
-                      // Mapear resultado para o formato SurebetQuickResult esperado pelo handler.
-                      // Para apostas simples, todas as "pernas" recebem o mesmo resultado:
-                      //  - GREEN/MEIO_GREEN → todas vencem (winners = todos os índices)
-                      //  - RED/MEIO_RED → todas perdem (winners = [])
-                      //  - VOID → all_void
-                      const totalPernas = (surebet.pernas || []).filter(p => p.bookmaker_id && p.odd && p.odd > 0).length;
-                      let quickResult: SurebetQuickResult;
-                      if (resultado === "VOID") {
-                        quickResult = { type: "all_void", winners: [] };
-                      } else if (resultado === "GREEN" || resultado === "MEIO_GREEN") {
-                        quickResult = { type: "all_green", winners: Array.from({ length: totalPernas }, (_, i) => i) };
-                      } else {
-                        // RED ou MEIO_RED → todas perdem
-                        quickResult = { type: "all_red", winners: [] };
-                      }
-                      await onQuickResolve(surebet.id, quickResult);
+                    // → resultado é único para toda a aposta. O badge dispara reliquidação global via reliquidar_aposta_v6.
+                    isSimplesMultiEntry && onSimpleQuickResolve ? async (resultado: string) => {
+                      await onSimpleQuickResolve(surebet.id, resultado);
                     }
                     // CASO 2: Surebet/Múltipla real → liquidação por perna individual
                     : !isSimplesMultiEntry && onPernaResultChange && perna.bookmaker_id ? async (resultado: string) => {
