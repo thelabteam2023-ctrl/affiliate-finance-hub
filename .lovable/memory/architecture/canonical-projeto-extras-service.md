@@ -1,11 +1,11 @@
 # Memory: architecture/canonical-projeto-extras-service
-Updated: 2026-03-08
+Updated: 2026-04-20
 
 ## Serviço Canônico de Extras: `src/services/fetchProjetoExtras.ts`
 
 **FONTE ÚNICA DE VERDADE** para todos os eventos que contribuem ao lucro operacional ALÉM das apostas liquidadas.
 
-### Fórmula Canônica:
+### Fórmula Canônica (atualizada 2026-04-20):
 ```
 LUCRO_OPERACIONAL = 
   Σ apostas_liquidadas (P&L consolidado)
@@ -14,22 +14,28 @@ LUCRO_OPERACIONAL =
   + Σ bônus_creditados (EXCETO FREEBET)
   + Σ eventos_promocionais
   - Σ perdas_cancelamento_bonus
-  + Σ ajustes_pos_limitacao
   + Σ ajustes_saldo
-  + Σ resultado_cambial
   + Σ conciliações
   - Σ perdas_operacionais
 ```
 
 ### Regra FREEBET (CRÍTICA):
-Bônus do tipo FREEBET são **EXCLUÍDOS** de todos os cálculos de lucro.
-O lucro SNR (Stake Not Returned) já está contabilizado no P&L da aposta.
-Incluir `bonus_amount` geraria dupla contagem.
+Bônus do tipo FREEBET são **EXCLUÍDOS**. O lucro SNR já está no P&L da aposta.
+
+### Regra RESULTADO CAMBIAL (CRÍTICA — 2026-04-20):
+`GANHO_CAMBIAL` e `PERDA_CAMBIAL` foram **REMOVIDOS** do Lucro Operacional.
+Esses eventos representam variação cambial entre o pedido e a confirmação de saque/depósito (tesouraria), NÃO resultado de aposta.
+Vivem exclusivamente em:
+- Indicadores Financeiros (`FinancialMetricsPopover`, `ProjetoFinancialMetricsCard`)
+- Caixa Operacional (`ConciliacaoSaldos`)
+- Drill-down financeiro (`FinancialDrillDownModal`)
+
+PROIBIDO somá-los novamente no Lucro Operacional, evolução do lucro, calendário ou cards de breakdown.
 
 ### Consumidores:
-- `ProjetoDashboardTab.tsx` — gráfico Evolução do Lucro + calendário ✅
-- `useKpiBreakdowns.ts` — KPI cards (aplica filtro FREEBET alinhado) ✅
-- `VisaoGeralCharts.tsx` — consome via `ExtraLucroEntry` (re-export de `ProjetoExtraEntry`) ✅
+- `useKpiBreakdowns.ts` — KPI cards + Evolução do Lucro + Calendário ✅ (FX excluído)
+- `ProjetoDashboardTab.tsx` — gráfico Evolução do Lucro ✅
+- `VisaoGeralCharts.tsx` — consome via `ExtraLucroEntry` ✅
 
 ### Regra Absoluta:
 **PROIBIDO** criar nova lógica de fetching de extras em qualquer componente.
