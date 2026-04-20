@@ -639,7 +639,7 @@ function deriveBreakdowns(
     createModuleContribution('perdas', 'Perdas Operacionais', -(perdasData.confirmadas || 0), (perdasData.confirmadas || 0) > 0, { icon: 'TrendingDown', color: 'negative' }),
     createModuleContribution('ajustes', 'Ajustes Conciliação', ajustesData.total || 0, (ajustesData.total || 0) !== 0, { icon: 'Minus', color: (ajustesData.total || 0) >= 0 ? 'positive' : 'negative' }),
     createModuleContribution('ajuste_saldo', 'Ajustes de Saldo/FX', extrasAgrupados.ajuste_saldo?.total || 0, (extrasAgrupados.ajuste_saldo?.count || 0) > 0, { icon: 'Settings', color: (extrasAgrupados.ajuste_saldo?.total || 0) >= 0 ? 'positive' : 'negative' }),
-    createModuleContribution('resultado_cambial', 'Resultado Cambial', extrasAgrupados.resultado_cambial?.total || 0, (extrasAgrupados.resultado_cambial?.count || 0) > 0, { icon: 'Globe', color: (extrasAgrupados.resultado_cambial?.total || 0) >= 0 ? 'positive' : 'negative' }),
+    // Resultado Cambial REMOVIDO — vive em Indicadores Financeiros/Caixa, não no Lucro Operacional.
     createModuleContribution('promocional', 'Eventos Promocionais', extrasAgrupados.promocional?.total || 0, (extrasAgrupados.promocional?.count || 0) > 0, { icon: 'Megaphone', color: (extrasAgrupados.promocional?.total || 0) >= 0 ? 'positive' : 'negative' }),
     createModuleContribution('freebet', 'Freebet Convertida', extrasAgrupados.freebet?.total || 0, (extrasAgrupados.freebet?.count || 0) > 0, { icon: 'Gift', color: (extrasAgrupados.freebet?.total || 0) >= 0 ? 'positive' : 'negative' }),
   ], moedaConsolidacao);
@@ -665,7 +665,6 @@ function deriveBreakdowns(
     perdasData.lucroPorMoeda.map(item => ({ ...item, valor: -item.valor })),
     ajustesData.lucroPorMoeda,
     extrasAgrupados.ajuste_saldo?.porMoeda || [],
-    extrasAgrupados.resultado_cambial?.porMoeda || [],
     extrasAgrupados.promocional?.porMoeda || [],
     extrasAgrupados.freebet?.porMoeda || [],
   );
