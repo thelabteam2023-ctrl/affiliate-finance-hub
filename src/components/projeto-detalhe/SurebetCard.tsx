@@ -453,6 +453,8 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
   const formatValue = formatCurrency || defaultFormatCurrency;
   const isDuploGreen = surebet.estrategia === "DUPLO_GREEN";
   const isValueBet = surebet.estrategia === "VALUEBET";
+  const isPunter = surebet.estrategia === "PUNTER";
+  const isFreebetStrat = surebet.estrategia === "EXTRACAO_FREEBET" || surebet.estrategia === "FREEBET";
   const isSimples = surebet.estrategia === "SIMPLES" || surebet.estrategia === "NORMAL";
   const isLiquidada = surebet.status === "LIQUIDADA";
   
@@ -461,9 +463,17 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
     p.fonte_saldo === 'FREEBET' || p.entries?.some(e => e.fonte_saldo === 'FREEBET')
   ) ?? false;
   // Detectar moeda predominante das pernas (se todas iguais, usar essa; senão, usar formatValue do projeto)
+  // CRITICAL: também precisa olhar entries[] dentro de cada perna (multi-entry agrupado por seleção)
   const moedaPernas = (() => {
     if (!surebet.pernas || surebet.pernas.length === 0) return null;
-    const moedas = new Set(surebet.pernas.map(p => p.moeda || "BRL"));
+    const moedas = new Set<string>();
+    for (const p of surebet.pernas) {
+      if (p.entries && p.entries.length > 0) {
+        for (const e of p.entries) moedas.add(e.moeda || "BRL");
+      } else {
+        moedas.add(p.moeda || "BRL");
+      }
+    }
     return moedas.size === 1 ? moedas.values().next().value : null;
   })();
   
@@ -476,16 +486,21 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
     : formatValue;
   
   // Para multicurrency, priorizar consolidação runtime (source-of-truth por perna).
-  // Só cai em stake_consolidado se não houver fallback disponível.
+  // Quando uma perna tem entries[] com moedas diferentes (multi-entry agrupado),
+  // somar cada entry individualmente convertida — JAMAIS usar stake_total bruto.
   const stakeConsolidadoFallback = (() => {
     if (!isMulticurrency || !surebet.pernas || surebet.pernas.length === 0 || !convertToConsolidation) {
       return null;
     }
 
     return surebet.pernas.reduce((sum, p) => {
-      const stakePerna = p.stake_total || p.stake || 0;
-      const moedaPerna = p.moeda || "BRL";
-      return sum + convertToConsolidation(stakePerna, moedaPerna);
+      if (p.entries && p.entries.length > 0) {
+        return sum + p.entries.reduce(
+          (s, e) => s + convertToConsolidation(e.stake || 0, e.moeda || "BRL"),
+          0,
+        );
+      }
+      return sum + convertToConsolidation(p.stake_total || p.stake || 0, p.moeda || "BRL");
     }, 0);
   })();
 
