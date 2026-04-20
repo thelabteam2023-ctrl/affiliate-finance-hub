@@ -225,10 +225,16 @@ export function SimulacaoDistribuicaoDialog({
   }, [simulacao, agendamentosFinais]);
 
   const dias = useMemo(() => {
-    const set = new Set<number>();
-    porDia.forEach((_, k) => set.add(k));
-    return Array.from(set).sort((a, b) => a - b);
-  }, [porDia]);
+    // Mostra TODOS os dias do mês (1..últimoDia), mesmo vazios, para permitir
+    // arrastar manualmente células para qualquer dia (inclusive além do diaLimite).
+    const ultimoDiaMes = new Date(simYear, simMonth, 0).getDate();
+    const arr: number[] = [];
+    for (let d = 1; d <= ultimoDiaMes; d++) arr.push(d);
+    porDia.forEach((_, k) => {
+      if (!arr.includes(k)) arr.push(k);
+    });
+    return arr.sort((a, b) => a - b);
+  }, [porDia, simYear, simMonth]);
 
   // Detecta conflitos por agendamento (após overrides) — warnings, não bloqueia
   const conflitos = useMemo(() => {
