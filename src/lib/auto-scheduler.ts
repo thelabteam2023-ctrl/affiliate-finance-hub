@@ -516,7 +516,27 @@ export function simularDistribuicao(input: {
     }
   }
 
-  if (naoAgendadas.length > 0) {
+  // Diagnóstico: regras de dia-da-semana não atingidas (warning-only)
+  if (regrasNorm.length > 0) {
+    const falhas: string[] = [];
+    for (const r of regrasNorm) {
+      const diasAfetados: string[] = [];
+      for (let d = 1; d <= limite; d++) {
+        const dow = diaSemanaDe(d);
+        if (!r.diasSemana.has(dow)) continue;
+        const slot = ocupacao.get(d)!;
+        if (slot.casas.size < r.minimoPorDia) {
+          diasAfetados.push(`${d}/${diaSemanaLabel(dow)}:${slot.casas.size}`);
+        }
+      }
+      if (diasAfetados.length > 0) {
+        falhas.push(`${r.label} (mín ${r.minimoPorDia}) — ${diasAfetados.join(", ")}`);
+      }
+    }
+    if (falhas.length > 0) {
+      warnings.push(`Mínimo por dia da semana não atingido: ${falhas.join("; ")}.`);
+    }
+  }
     const partes: string[] = [
       `dias 1–${limite}`,
       `clones: ${clonesPorDia}/dia, cooldown CPF ${cooldownCpfDias}d`,
