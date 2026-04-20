@@ -534,18 +534,16 @@ export function SimulacaoDistribuicaoDialog({
                 );
               })}
 
-              {/* Não agendadas — agrupadas por motivo */}
-              {simulacao && (simulacao.naoAgendadasDetalhe?.length ?? 0) > 0 && (
+              {/* Não agendadas — agrupadas por motivo (arrastáveis para qualquer dia) */}
+              {naoAgendadasRestantes.length > 0 && (
                 <div className="mt-3 rounded-md border border-warning/40 bg-warning/5 p-2 space-y-2">
                   <div className="flex items-center gap-1.5 text-xs font-semibold text-warning">
                     <AlertTriangle className="h-3.5 w-3.5" />
-                    {simulacao.naoAgendadasDetalhe.length} célula(s) não couberam — motivos:
+                    {naoAgendadasRestantes.length} célula(s) não couberam — arraste para um dia:
                   </div>
                   {(["cooldown_cpf", "cooldown_casa", "sem_capacidade", "outro"] as const).map(
                     (motivo) => {
-                      const grupo = (simulacao.naoAgendadasDetalhe ?? []).filter(
-                        (d) => d.motivo === motivo
-                      );
+                      const grupo = naoAgendadasRestantes.filter((d) => d.motivo === motivo);
                       if (grupo.length === 0) return null;
                       const label =
                         motivo === "cooldown_cpf"
@@ -566,14 +564,27 @@ export function SimulacaoDistribuicaoDialog({
                               return (
                                 <span
                                   key={c.id}
-                                  className="text-[10px] px-1.5 py-0.5 rounded border"
+                                  draggable
+                                  onDragStart={(e) => {
+                                    setDraggedId(c.id);
+                                    e.dataTransfer.effectAllowed = "move";
+                                  }}
+                                  onDragEnd={() => {
+                                    setDraggedId(null);
+                                    setDragOverDay(null);
+                                  }}
+                                  className={cn(
+                                    "inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border cursor-grab active:cursor-grabbing transition-opacity",
+                                    draggedId === c.id && "opacity-40"
+                                  )}
                                   style={{
                                     backgroundColor: color?.bg,
                                     borderColor: color?.border,
                                     color: color?.text,
                                   }}
-                                  title={detalhe}
+                                  title={`${detalhe}\n\nArraste para um dia para forçar agendamento`}
                                 >
+                                  <GripVertical className="h-2.5 w-2.5 opacity-60" />
                                   {c.cpf_index ? `CPF ${c.cpf_index} • ` : ""}
                                   {c.bookmaker_nome}
                                   <span className="opacity-60 ml-1">({c.grupo_nome})</span>
