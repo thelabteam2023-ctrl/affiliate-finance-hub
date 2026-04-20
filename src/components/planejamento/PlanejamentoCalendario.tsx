@@ -136,45 +136,63 @@ function DraggableCelula({ celula, parceiroNome }: { celula: CelulaDisponivel; p
     data: { type: "celula", celula },
   });
   const jaAgendada = !!celula.agendada_em;
+  const cpfColor = getCpfColor(celula.cpf_index);
   const cpfTag = celula.cpf_index ? `CPF ${celula.cpf_index}` : null;
-  const cpfLabel = parceiroNome
-    ? cpfTag ? `${cpfTag} • ${parceiroNome}` : parceiroNome
-    : cpfTag ?? "CPF não vinculado";
+  const titleStr = jaAgendada
+    ? `${celula.bookmaker_nome} • ${cpfTag ?? "CPF ?"}${parceiroNome ? ` (${parceiroNome})` : ""} • já agendada`
+    : `${celula.bookmaker_nome} • ${cpfTag ?? "CPF ?"}${parceiroNome ? ` (${parceiroNome})` : ""} • ${celula.grupo_nome}`;
   return (
     <div
       ref={setNodeRef}
       {...(jaAgendada ? {} : listeners)}
       {...attributes}
       className={cn(
-        "px-2 py-1.5 rounded-md border bg-card text-xs transition-colors flex items-center gap-2",
+        "px-2 py-1.5 rounded-md border text-xs transition-colors flex items-center gap-2",
         jaAgendada
-          ? "opacity-50 cursor-not-allowed"
-          : "cursor-grab active:cursor-grabbing hover:border-primary",
+          ? "opacity-50 cursor-not-allowed bg-card"
+          : "cursor-grab active:cursor-grabbing hover:brightness-110",
         isDragging && "opacity-40"
       )}
-      style={{ borderLeftColor: celula.grupo_cor, borderLeftWidth: 3 }}
-      title={
-        jaAgendada
-          ? `${celula.bookmaker_nome} • ${cpfLabel} • já agendada`
-          : `${celula.bookmaker_nome} • ${cpfLabel} • ${celula.grupo_nome}`
-      }
+      style={{
+        backgroundColor: cpfColor?.bg ?? "hsl(var(--card))",
+        borderColor: cpfColor?.border ?? "hsl(var(--border))",
+        borderLeftColor: celula.grupo_cor,
+        borderLeftWidth: 3,
+      }}
+      title={titleStr}
     >
+      {/* Badge CPF — bem visível */}
+      {cpfTag ? (
+        <div
+          className="shrink-0 flex flex-col items-center justify-center rounded-md px-1.5 py-1 font-bold leading-none"
+          style={{
+            backgroundColor: cpfColor?.border ?? "hsl(var(--muted))",
+            color: "hsl(0 0% 100%)",
+            minWidth: 32,
+          }}
+        >
+          <span className="text-[8px] opacity-80 tracking-wide">CPF</span>
+          <span className="text-sm">{celula.cpf_index}</span>
+        </div>
+      ) : (
+        <div className="shrink-0 flex items-center justify-center rounded-md px-2 py-1 bg-muted text-muted-foreground text-[9px] font-semibold" style={{ minWidth: 32 }}>
+          ?
+        </div>
+      )}
+
       {celula.bookmaker_logo ? (
         <img src={celula.bookmaker_logo} alt="" className="h-4 w-4 rounded object-contain shrink-0" />
       ) : (
         <Building2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
       )}
       <div className="flex-1 min-w-0">
-        <div className="font-medium truncate">{celula.bookmaker_nome}</div>
-        <div
-          className={cn(
-            "text-[10px] flex items-center gap-1 mt-0.5",
-            parceiroNome ? "text-foreground/70" : "text-muted-foreground italic"
-          )}
-        >
-          <User className="h-2.5 w-2.5 shrink-0" />
-          <span className="truncate">{cpfLabel}</span>
-        </div>
+        <div className="font-medium truncate text-foreground">{celula.bookmaker_nome}</div>
+        {parceiroNome && (
+          <div className="text-[10px] flex items-center gap-1 mt-0.5 text-foreground/70">
+            <User className="h-2.5 w-2.5 shrink-0" />
+            <span className="truncate">{parceiroNome}</span>
+          </div>
+        )}
         <div className="text-[10px] text-muted-foreground flex items-center gap-1.5">
           <span>{celula.moeda}</span>
           {celula.deposito_sugerido > 0 && (
