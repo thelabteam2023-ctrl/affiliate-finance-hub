@@ -1,119 +1,70 @@
 
-## Pedido
 
-Auto-distribuir as casas-clone do plano com:
-- **3 casas/dia**
-- **Casa não repete em ≤3 dias**
-- **CPF não repete em ≤5 dias**
-- **Tudo dentro dos 23 primeiros dias do mês**
-- Abrir uma **janela de simulação** (preview) — usuário decide se aplica manualmente no calendário ou não
+## Separar Resultado Cambial do Lucro Operacional
 
-## Onde mexer
+Atualmente o `GANHO_CAMBIAL` e `PERDA_CAMBIAL` (gerados na Conciliação de Saldos quando o valor confirmado difere do nominal) são somados ao **Lucro Operacional** da Visão Geral, contaminando:
 
-1. **Novo:** `src/lib/auto-scheduler.ts` — algoritmo puro
-2. **Novo:** `src/components/planejamento/SimulacaoDistribuicaoDialog.tsx` — janela de preview
-3. **Editar:** `src/components/planejamento/PlanejamentoCalendario.tsx` — botão "Simular distribuição"
+- KPI "Lucro Operacional"
+- Gráfico "Evolução do Lucro"
+- Calendário (heatmap diário)
+- Cards de breakdown
 
-## Algoritmo (`auto-scheduler.ts`)
+Isso causa divergência com a Performance por Estratégia (que já exclui FX) e gera ruído conceitual: FX é evento de **tesouraria/câmbio**, não de **operação de aposta**.
 
-Entrada:
-```ts
-{
-  celulas: CelulaDisponivel[],          // do usePlanoCelulasDisponiveis
-  campanhasExistentes: Campanha[],      // ocupação atual no mês
-  mesAno: Date,                         // mês alvo
-  config: {
-    casasPorDia: 3,
-    cooldownCasaDias: 3,
-    cooldownCpfDias: 5,
-    diaLimite: 23,                      // só agenda dias 1..23
-  }
-}
-```
+## Objetivo
 
-Lógica greedy:
+Tornar a **Visão Geral 100% operacional** (somente resultados de apostas + bônus + cashback + giros + ajustes operacionais). Resultado Cambial passa a viver exclusivamente no módulo **Indicadores Financeiros** / **Caixa**, onde já é a métrica natural.
+
+## Mudanças
+
+### 1. Serviço canônico — `src/services/fetchProjetoExtras.ts`
+Remover `GANHO_CAMBIAL` e `PERDA_CAMBIAL` da agregação de extras.
+
+Atualizar a fórmula canônica:
 ```text
-dias = [dia 1 .. dia 23] do mês alvo
-ocupacao = inicializar a partir de campanhasExistentes
-  (mapa: dia -> {casas:Set, cpfs:Set})
-ultimoUsoCasa = mapa casa -> dia
-ultimoUsoCpf  = mapa cpf -> dia
-
-resultado = []
-warnings = []
-
-para cada dia D em ordem:
-  para slot 1..3:
-    candidatas = celulas_disponiveis ordenadas por:
-      1) menos vezes agendada
-      2) maior gap desde ultimoUsoCasa
-      3) maior gap desde ultimoUsoCpf
-    pick = primeira que satisfaz:
-      - casa ∉ ocupacao[D].casas
-      - cpf  ∉ ocupacao[D].cpfs
-      - (D - ultimoUsoCasa[casa]) > cooldownCasaDias
-      - (D - ultimoUsoCpf[cpf])  > cooldownCpfDias
-    se pick:
-      resultado.push({celula, dia:D})
-      atualizar ocupacao + ultimoUso*
-      remover de celulas_disponiveis
-    senão:
-      warnings.push(`Dia D slot S: nenhuma célula compatível`)
-
-celulas restantes não agendadas → warnings ("X células não couberam")
-return { agendamentos, warnings, estatisticas }
+LUCRO_OPERACIONAL =
+  Σ apostas_liquidadas
+  + Σ cashback
+  + Σ giros_gratis
+  + Σ bônus_creditados (exceto FREEBET)
+  + Σ eventos_promocionais
+  - Σ perdas_cancelamento_bonus
+  + Σ ajustes_pos_limitacao
+  + Σ ajustes_saldo
+  + Σ conciliações
+  - Σ perdas_operacionais
+  // REMOVIDO: ± resultado_cambial
 ```
 
-## Janela de simulação (`SimulacaoDistribuicaoDialog`)
+### 2. RPC server-side — `get_projetos_lucro_operacional`
+Remover `GANHO_CAMBIAL` e `PERDA_CAMBIAL` do bloco de `cash_ledger` agregado por moeda. Garante que `fetchProjetosLucroOperacionalKpi` (consumido pelo card kanban e pelo dashboard financeiro do workspace) também fique alinhado.
 
-Layout do Dialog (max-w-3xl):
+Migração SQL: `DROP FUNCTION` + `CREATE OR REPLACE` da RPC sem os dois tipos.
 
-```text
-┌──────────────────────────────────────────────┐
-│ Simular Distribuição                       X │
-├──────────────────────────────────────────────┤
-│ [Casas/dia: 3] [Cooldown casa: 3d]           │
-│ [Cooldown CPF: 5d] [Dia limite: 23]          │
-│                       [Recalcular]            │
-├──────────────────────────────────────────────┤
-│ Resumo: 45/48 agendadas · 3 não couberam     │
-├──────────────────────────────────────────────┤
-│  Dia 1  ┃ 🟡 Bet365(CPF1) 🟢 Pinn(CPF2) ...  │
-│  Dia 2  ┃ 🟢 Stake(CPF2) 🟡 1xBet(CPF1) ...  │
-│  Dia 3  ┃ ...                                 │
-│  ...                                          │
-│  Dia 23 ┃ ...                                 │
-├──────────────────────────────────────────────┤
-│ ⚠ Warnings:                                  │
-│  - Amunra: cooldown CPF impediu agendamento  │
-├──────────────────────────────────────────────┤
-│         [Fechar]  [Aplicar no calendário]    │
-└──────────────────────────────────────────────┘
-```
+### 3. Hook de breakdown — `src/hooks/useKpiBreakdowns.ts`
+Aplicar o mesmo filtro client-side de FX para que os cards de breakdown da Visão Geral fiquem coerentes com o gráfico/calendário.
 
-- Cada item mostra logo + nome da casa + badge CPF colorido (mesma palette `CPF_COLORS` já existente)
-- Inputs no topo permitem ajustar parâmetros e clicar **Recalcular** sem fechar
-- Botão **Aplicar no calendário** cria as campanhas em batch (`useUpsertCampanha` + `marcarCelulaAgendada`), com `Promise.all` em chunks de 5 e UM `invalidateQueries` ao final (padrão batch-refresh já adotado)
-- Botão **Fechar** descarta a simulação sem efeito colateral
+### 4. Re-export — `VisaoGeralCharts.tsx`
+Já consome via `ExtraLucroEntry`; nenhuma mudança direta — herda o filtro do serviço.
 
-## Botão no calendário
+### 5. Indicadores Financeiros — manter intacto
+O módulo de Indicadores Financeiros / Caixa continua exibindo `GANHO_CAMBIAL` e `PERDA_CAMBIAL` normalmente (lá é o lugar correto). Nenhuma alteração nesse fluxo.
 
-Adicionar ao header do `PlanejamentoCalendario` (próximo aos filtros existentes):
-```text
-[Plano: Abril ▾] [Simular distribuição 🪄]
-```
-Habilitado apenas quando há plano selecionado e há células disponíveis.
+### 6. Memória do projeto
+Atualizar `mem://architecture/canonical-projeto-extras-service.md` documentando que FX está **EXCLUÍDO** do Lucro Operacional, e adicionar regra core no `mem://index.md`:
+> "Resultado Cambial (GANHO/PERDA_CAMBIAL) NÃO entra no Lucro Operacional da Visão Geral. Vive em Indicadores Financeiros/Caixa."
 
-## Detalhes técnicos
+## Resultado Esperado
 
-- Sem nada novo no banco — usa hooks existentes
-- A simulação é 100% client-side; só persiste ao clicar "Aplicar"
-- Os parâmetros default ficam memorizados em `useState` no Dialog (não persistem entre sessões nesta versão)
-- Validação: se `celulas.length > 23 * casasPorDia` → aviso amarelo no resumo ("plano excede capacidade da janela")
-- Re-simulação é instantânea (algoritmo greedy é O(n·d))
+- Visão Geral, Evolução do Lucro, Calendário e cards passam a refletir **apenas operação pura de apostas**.
+- Performance por Estratégia e KPI Lucro Operacional ficam 100% reconciliados (sem o "buraco" do FX).
+- Lucro Real (Indicadores Financeiros) continua incluindo FX implicitamente via fluxo de caixa confirmado — é o lugar correto para visualizar o impacto cambial.
+- Card kanban de projetos (consome `fetchProjetosLucroCanonico`) — verificar se também usa essa engine; se sim, herda automaticamente.
 
-## Fora de escopo
+## Arquivos afetados
 
-- Persistir presets de configuração
-- Pular fins de semana / feriados
-- Re-otimização global (ILP) — fica greedy mesmo
+- `src/services/fetchProjetoExtras.ts` (remover FX da agregação)
+- `src/hooks/useKpiBreakdowns.ts` (filtro alinhado)
+- Nova migration: redefinir `get_projetos_lucro_operacional` sem FX
+- `mem://architecture/canonical-projeto-extras-service.md` + `mem://index.md`
+
