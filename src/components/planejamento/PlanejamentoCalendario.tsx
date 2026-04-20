@@ -485,6 +485,9 @@ export function PlanejamentoCalendario() {
   // Filtro de células do plano (modo "plano selecionado")
   const filteredCelulas = useMemo(() => {
     return celulasPlano.filter((c) => {
+      // Esconde células já agendadas (vinculadas a uma campanha no calendário)
+      // para evitar duplicar a casa na sidebar e facilitar o manuseio das restantes.
+      if (c.agendada_em || c.campanha_id) return false;
       if (grupoFiltroId !== "todos" && c.grupo_id !== grupoFiltroId) return false;
       if (cpfFiltroIdx !== "todos" && String(c.cpf_index ?? "") !== cpfFiltroIdx) return false;
       if (bmSearch && !c.bookmaker_nome.toLowerCase().includes(bmSearch.toLowerCase())) return false;
