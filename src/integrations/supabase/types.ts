@@ -1006,6 +1006,8 @@ export type Database = {
         Row: {
           added_at: string
           bookmaker_catalogo_id: string
+          deposito_moeda: string | null
+          deposito_sugerido: number
           grupo_id: string
           id: string
           workspace_id: string
@@ -1013,6 +1015,8 @@ export type Database = {
         Insert: {
           added_at?: string
           bookmaker_catalogo_id: string
+          deposito_moeda?: string | null
+          deposito_sugerido?: number
           grupo_id: string
           id?: string
           workspace_id: string
@@ -1020,6 +1024,8 @@ export type Database = {
         Update: {
           added_at?: string
           bookmaker_catalogo_id?: string
+          deposito_moeda?: string | null
+          deposito_sugerido?: number
           grupo_id?: string
           id?: string
           workspace_id?: string
@@ -1121,6 +1127,7 @@ export type Database = {
           created_at: string
           descricao: string | null
           id: string
+          modo_execucao: Database["public"]["Enums"]["grupo_modo_execucao"]
           nome: string
           updated_at: string
           workspace_id: string
@@ -1130,6 +1137,7 @@ export type Database = {
           created_at?: string
           descricao?: string | null
           id?: string
+          modo_execucao?: Database["public"]["Enums"]["grupo_modo_execucao"]
           nome: string
           updated_at?: string
           workspace_id: string
@@ -1139,6 +1147,7 @@ export type Database = {
           created_at?: string
           descricao?: string | null
           id?: string
+          modo_execucao?: Database["public"]["Enums"]["grupo_modo_execucao"]
           nome?: string
           updated_at?: string
           workspace_id?: string
@@ -3594,6 +3603,7 @@ export type Database = {
           created_by: string | null
           descricao: string | null
           id: string
+          meta_diaria_usd: number | null
           nome: string
           parceiro_ids: string[]
           updated_at: string
@@ -3604,6 +3614,7 @@ export type Database = {
           created_by?: string | null
           descricao?: string | null
           id?: string
+          meta_diaria_usd?: number | null
           nome: string
           parceiro_ids?: string[]
           updated_at?: string
@@ -3614,6 +3625,7 @@ export type Database = {
           created_by?: string | null
           descricao?: string | null
           id?: string
+          meta_diaria_usd?: number | null
           nome?: string
           parceiro_ids?: string[]
           updated_at?: string
@@ -15776,6 +15788,7 @@ export type Database = {
         | "RODIZIO_ENTRE_CPFS"
       distribuicao_regra_ip: "IP_COMPARTILHADO_GRUPO" | "IP_UNICO_POR_CASA"
       event_scope: "REAL" | "VIRTUAL"
+      grupo_modo_execucao: "AGENDADO" | "SOB_DEMANDA"
       grupo_regra_escopo: "PERFIL" | "IP" | "CARTEIRA" | "WORKSPACE"
       grupo_regra_severidade: "BLOQUEIO" | "AVISO"
       grupo_regra_tipo:
@@ -16012,6 +16025,7 @@ export const Constants = {
       ],
       distribuicao_regra_ip: ["IP_COMPARTILHADO_GRUPO", "IP_UNICO_POR_CASA"],
       event_scope: ["REAL", "VIRTUAL"],
+      grupo_modo_execucao: ["AGENDADO", "SOB_DEMANDA"],
       grupo_regra_escopo: ["PERFIL", "IP", "CARTEIRA", "WORKSPACE"],
       grupo_regra_severidade: ["BLOQUEIO", "AVISO"],
       grupo_regra_tipo: [

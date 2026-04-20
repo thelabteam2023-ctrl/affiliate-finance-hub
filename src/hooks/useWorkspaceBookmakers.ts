@@ -7,6 +7,7 @@ export interface WorkspaceBookmakerOption {
   nome: string;
   logo_url: string | null;
   status: string | null;
+  moeda_padrao: string;
 }
 
 /**
@@ -20,7 +21,7 @@ async function fetchWorkspaceBookmakers(workspaceId: string): Promise<WorkspaceB
   // O mesmo resultado que aparece na aba "Bookmakers" da gestão.
   const { data, error } = await (supabase as any)
     .from('bookmakers_catalogo')
-    .select('id, nome, logo_url, status')
+    .select('id, nome, logo_url, status, moeda_padrao')
     .order('nome', { ascending: true });
 
   if (error) throw error;
@@ -29,6 +30,7 @@ async function fetchWorkspaceBookmakers(workspaceId: string): Promise<WorkspaceB
     nome: item.nome,
     logo_url: item.logo_url ?? null,
     status: item.status ?? null,
+    moeda_padrao: item.moeda_padrao ?? 'BRL',
   }));
 }
 
