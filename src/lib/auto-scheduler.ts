@@ -443,7 +443,7 @@ export function simularDistribuicao(input: {
       const ucasa = ultimoUsoCasa.get(catId);
       const blockedCasa =
         slot.casas.has(catId) ||
-        (ucasa !== undefined && Math.abs(dia - ucasa) <= cooldownCasaDias);
+        (ehClone && ucasa !== undefined && Math.abs(dia - ucasa) <= cooldownCasaDias);
       let blockedCpf = false;
       if (ehClone && ck) {
         const ucpf = ultimoUsoCpfClone.get(ck);
