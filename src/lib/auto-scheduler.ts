@@ -446,32 +446,40 @@ export function simularDistribuicao(input: {
     )
   ).sort((a, b) => a - b);
 
+  // Estratégia: para cada CPF, ENCHE o dia atual com o máximo de casas desse CPF
+  // (respeitando max casas/dia, meta e faixa) antes de avançar para o próximo dia.
+  // Assim o dia 1 fica cheio de CPF1, dia 2 idem, e quando CPF1 esgotar começa CPF2.
   let cursorDia = 1;
   for (const cpfIdx of cpfsSuporte) {
     const casasDoCpf = candidatas.filter(
       (c) => !isClone(c) && (c.cpf_index ?? 9999) === cpfIdx
     );
-    for (const casa of casasDoCpf) {
-      if (!restantes.has(casa.id)) continue;
-      for (let i = 0; i < limite; i++) {
-        const dia = ((cursorDia - 1 + i) % limite) + 1;
-        const slot = ocupacao.get(dia)!;
+    let pendentes = casasDoCpf.filter((c) => restantes.has(c.id));
+    let voltasSemAgendar = 0;
+    while (pendentes.length > 0 && voltasSemAgendar <= limite) {
+      const slot = ocupacao.get(cursorDia)!;
+      let agendouNoDia = false;
+      // Tenta encher o dia atual
+      for (const casa of pendentes) {
+        if (!restantes.has(casa.id)) continue;
         if (slot.casas.has(casa.bookmaker_catalogo_id)) continue;
-        if (maxCasasPorDia > 0 && slot.casas.size >= maxCasasPorDia) continue;
-        if (metaGanhoDia > 0 && slot.ganho >= metaGanhoDia) continue;
+        if (maxCasasPorDia > 0 && slot.casas.size >= maxCasasPorDia) break;
+        if (metaGanhoDia > 0 && slot.ganho >= metaGanhoDia) break;
         const valor = Number(casa.deposito_sugerido) || 0;
-        if (estouraFaixa(dia, valor)) continue;
+        if (estouraFaixa(cursorDia, valor)) continue;
         slot.casas.add(casa.bookmaker_catalogo_id);
         slot.outrasCount++;
         slot.ganho += valor;
-        ultimoUsoCasa.set(casa.bookmaker_catalogo_id, dia);
-        const idxFaixa = faixaDoDia(dia);
+        ultimoUsoCasa.set(casa.bookmaker_catalogo_id, cursorDia);
+        const idxFaixa = faixaDoDia(cursorDia);
         if (idxFaixa >= 0) acumuladoFaixa[idxFaixa] += valor;
         restantes.delete(casa.id);
-        agendamentos.push({ celula: casa, dia, dateKey: buildDateKey(year, month, dia) });
-        cursorDia = (dia % limite) + 1;
-        break;
+        agendamentos.push({ celula: casa, dia: cursorDia, dateKey: buildDateKey(year, month, cursorDia) });
+        agendouNoDia = true;
       }
+      pendentes = pendentes.filter((c) => restantes.has(c.id));
+      cursorDia = (cursorDia % limite) + 1;
+      voltasSemAgendar = agendouNoDia ? 0 : voltasSemAgendar + 1;
     }
   }
 
