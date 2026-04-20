@@ -212,9 +212,39 @@ export function SimulacaoDistribuicaoDialog({
               className="h-8 text-xs"
             />
           </div>
+          <div className="space-y-1">
+            <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
+              Mín outras/janela
+            </Label>
+            <Input
+              type="number"
+              min={0}
+              max={20}
+              value={config.minOutrasPorJanela ?? 0}
+              onChange={(e) =>
+                setConfig({ ...config, minOutrasPorJanela: Math.max(0, Number(e.target.value) || 0) })
+              }
+              className="h-8 text-xs"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
+              Janela outras (d)
+            </Label>
+            <Input
+              type="number"
+              min={1}
+              max={30}
+              value={config.janelaOutrasDias ?? 3}
+              onChange={(e) =>
+                setConfig({ ...config, janelaOutrasDias: Math.max(1, Number(e.target.value) || 1) })
+              }
+              className="h-8 text-xs"
+            />
+          </div>
           <div className="col-span-2 sm:col-span-2 flex justify-end">
             <Button onClick={recalcular} size="sm" className="h-8 w-full sm:w-auto">
-              <RefreshCw className="h-3.5 w-3.5 mr-1" /> Recalcular
+              <RefreshCw className="h-3.5 w-3.5 mr-1" /> Recalcular (varia combinação)
             </Button>
           </div>
         </div>
