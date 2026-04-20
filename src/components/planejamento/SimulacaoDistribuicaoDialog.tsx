@@ -105,6 +105,8 @@ export function SimulacaoDistribuicaoDialog({
   const [overrides, setOverrides] = useState<Map<string, number>>(new Map());
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverDay, setDragOverDay] = useState<number | null>(null);
+  // Drag de linha inteira: dia origem (swap entre dias)
+  const [draggedDay, setDraggedDay] = useState<number | null>(null);
 
   // Reset de overrides ao trocar mês/abrir
   useEffect(() => {
@@ -291,6 +293,21 @@ export function SimulacaoDistribuicaoDialog({
     });
   };
 
+  /** Troca todas as casas do diaA pelas do diaB (swap completo). */
+  const swapDias = (diaA: number, diaB: number) => {
+    if (diaA === diaB) return;
+    const last = new Date(simYear, simMonth, 0).getDate();
+    if (diaA < 1 || diaA > last || diaB < 1 || diaB > last) return;
+    const itensA = porDia.get(diaA) ?? [];
+    const itensB = porDia.get(diaB) ?? [];
+    setOverrides((prev) => {
+      const next = new Map(prev);
+      itensA.forEach((a) => next.set(a.celula.id, diaB));
+      itensB.forEach((a) => next.set(a.celula.id, diaA));
+      return next;
+    });
+  };
+
   const limparOverrides = () => setOverrides(new Map());
 
   const stats = simulacao?.estatisticas;
@@ -423,8 +440,27 @@ export function SimulacaoDistribuicaoDialog({
                 const isWeekend = dow === 0 || dow === 6;
                 return (
                   <div key={dia} className="flex gap-2 items-start">
-                    <div className="shrink-0 w-16 text-right">
-                      <div className="text-[10px] uppercase text-muted-foreground">Dia</div>
+                    <div
+                      draggable
+                      onDragStart={(e) => {
+                        setDraggedDay(dia);
+                        setDraggedId(null);
+                        e.dataTransfer.effectAllowed = "move";
+                      }}
+                      onDragEnd={() => {
+                        setDraggedDay(null);
+                        setDragOverDay(null);
+                      }}
+                      className={cn(
+                        "shrink-0 w-16 text-right cursor-grab active:cursor-grabbing rounded-md px-1.5 py-1 transition-colors hover:bg-muted/40",
+                        draggedDay === dia && "opacity-40 bg-primary/10"
+                      )}
+                      title="Arraste para trocar todas as casas deste dia com outro"
+                    >
+                      <div className="text-[10px] uppercase text-muted-foreground flex items-center justify-end gap-0.5">
+                        <GripVertical className="h-2.5 w-2.5 opacity-50" />
+                        Dia
+                      </div>
                       <div className="flex items-baseline justify-end gap-1 leading-none">
                         <span className="text-lg font-bold tabular-nums">{dia}</span>
                         <span
@@ -445,7 +481,10 @@ export function SimulacaoDistribuicaoDialog({
                     <div
                       className={cn(
                         "flex-1 flex flex-wrap gap-1.5 p-1.5 rounded-md border bg-muted/20 min-h-[44px] transition-colors",
-                        dragOverDay === dia && "ring-2 ring-primary border-primary/50 bg-primary/5"
+                        dragOverDay === dia &&
+                          (draggedDay !== null
+                            ? "ring-2 ring-warning border-warning/60 bg-warning/5"
+                            : "ring-2 ring-primary border-primary/50 bg-primary/5")
                       )}
                       onDragOver={(e) => {
                         e.preventDefault();
@@ -457,6 +496,20 @@ export function SimulacaoDistribuicaoDialog({
                       onDrop={(e) => {
                         e.preventDefault();
                         setDragOverDay(null);
+                        // Caso 1: swap de dia inteiro
+                        if (draggedDay !== null) {
+                          if (draggedDay !== dia) {
+                            const a = (porDia.get(draggedDay) ?? []).length;
+                            const b = (porDia.get(dia) ?? []).length;
+                            swapDias(draggedDay, dia);
+                            toast.success(`Dia ${draggedDay} ↔ Dia ${dia}`, {
+                              description: `${a} ↔ ${b} casa(s) trocadas`,
+                            });
+                          }
+                          setDraggedDay(null);
+                          return;
+                        }
+                        // Caso 2: mover célula individual
                         if (!draggedId) return;
                         const ag = agendamentosFinais.find((x) => x.celula.id === draggedId);
                         if (!ag) return;
