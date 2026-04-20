@@ -69,6 +69,7 @@ import { VolumeKPI } from "@/components/kpis/VolumeKPI";
 import { calcularImpactoResultado } from "@/lib/bookmakerBalanceHelper";
 import { getConsolidatedStake, getConsolidatedLucro } from "@/utils/consolidatedValues";
 import { reliquidarAposta, liquidarPernaSurebet, deletarAposta } from "@/services/aposta/ApostaService";
+import { propagarResultadoParaPernas } from "@/lib/propagatePernasResultado";
 import { useBonusBalanceManager } from "@/hooks/useBonusBalanceManager";
 import { useInvalidateBookmakerSaldos, useBookmakerSaldosQuery, BookmakerSaldo } from "@/hooks/useBookmakerSaldosQuery";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";

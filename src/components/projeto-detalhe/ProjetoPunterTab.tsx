@@ -13,6 +13,7 @@ import { FinancialMetricsPopover } from "./FinancialMetricsPopover";
 import { calcularImpactoResultado } from "@/lib/bookmakerBalanceHelper";
 import { getConsolidatedStake, getConsolidatedLucro } from "@/utils/consolidatedValues";
 import { reliquidarAposta } from "@/services/aposta/ApostaService";
+import { propagarResultadoParaPernas } from "@/lib/propagatePernasResultado";
 import { useInvalidateBookmakerSaldos } from "@/hooks/useBookmakerSaldosQuery";
 import { useBonusBalanceManager } from "@/hooks/useBonusBalanceManager";
 import { useCrossWindowSync } from "@/hooks/useCrossWindowSync";
