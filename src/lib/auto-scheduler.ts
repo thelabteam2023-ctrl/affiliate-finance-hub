@@ -3,13 +3,16 @@
  *
  * Distingue duas categorias:
  *  - CLONES: células do grupo "CLONES" (case-insensitive). Sujeitas a:
- *      - clonesPorDia (limite de CPFs distintos clones por dia)
+ *      - clonesPorDia (limite ESTRITO de clones por dia — conta CASAS clone, não CPFs)
  *      - cooldownCpfDias (mesmo CPF não pode criar outra clone antes de N dias)
  *      - cooldownCasaDias (mesma casa não pode repetir antes de N dias)
  *  - OUTRAS (Arbitragem, Promoções, Value, etc.): só sujeitas a:
  *      - cooldownCasaDias (evita repetir a casa)
  *      - maxCasasPorDia (teto global do dia)
  *      - metaGanhoDia (teto de soma de depósito sugerido)
+ *      - minOutrasPorJanela (mínimo de "outras" a cada janelaOutrasDias dias)
+ *
+ * Suporta `seed` para variar a combinação a cada recálculo (mantendo as restrições).
  *
  * 100% client-side, puro (sem React, sem Supabase).
  */
@@ -17,7 +20,7 @@ import type { CelulaDisponivel } from "@/hooks/usePlanoCelulasDisponiveis";
 import type { PlanningCampanha } from "@/hooks/usePlanningData";
 
 export interface AutoSchedulerConfig {
-  /** Máximo de CPFs distintos da categoria CLONES por dia. */
+  /** Máximo ESTRITO de casas clone por dia (conta cada agendamento, não CPFs distintos). */
   clonesPorDia: number;
   /** Máximo de casas (qualquer categoria) por dia. 0 = sem limite. */
   maxCasasPorDia: number;
@@ -29,6 +32,12 @@ export interface AutoSchedulerConfig {
   cooldownCpfDias: number;
   /** Último dia do mês a usar (ex.: 23). */
   diaLimite: number;
+  /** Mínimo de casas "não-clone" exigido a cada `janelaOutrasDias` dias. 0 = desativado. */
+  minOutrasPorJanela?: number;
+  /** Tamanho da janela deslizante (em dias) para a regra de mínimo de "outras". */
+  janelaOutrasDias?: number;
+  /** Seed numérica para variar a combinação a cada recálculo. */
+  seed?: number;
 }
 
 export interface AgendamentoSimulado {
@@ -81,6 +90,19 @@ function isClone(c: CelulaDisponivel): boolean {
   return n.includes("clone");
 }
 
+/** PRNG determinístico (Mulberry32) — varia combinação por seed sem perder reprodutibilidade. */
+function mulberry32(seed: number) {
+  let a = seed >>> 0;
+  return function () {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
 export function simularDistribuicao(input: {
   celulas: CelulaDisponivel[];
   campanhasExistentes: PlanningCampanha[];
@@ -96,7 +118,12 @@ export function simularDistribuicao(input: {
     cooldownCasaDias,
     cooldownCpfDias,
     diaLimite,
+    minOutrasPorJanela = 0,
+    janelaOutrasDias = 3,
+    seed = 1,
   } = config;
+
+  const rand = mulberry32(seed || 1);
 
   const candidatas = celulas.filter((c) => !c.agendada_em && !c.campanha_id);
   const totalClones = candidatas.filter(isClone).length;
@@ -117,18 +144,25 @@ export function simularDistribuicao(input: {
   interface DaySlot {
     casas: Set<string>; // todas as casas (clone + não-clone)
     cpfsClone: Set<string>; // CPFs de clones nesse dia
+    clonesCount: number; // contagem ESTRITA de casas clone agendadas
+    outrasCount: number; // contagem de casas não-clone agendadas
     ganho: number;
   }
   const ocupacao = new Map<number, DaySlot>();
   for (let d = 1; d <= limite; d++) {
-    ocupacao.set(d, { casas: new Set(), cpfsClone: new Set(), ganho: 0 });
+    ocupacao.set(d, {
+      casas: new Set(),
+      cpfsClone: new Set(),
+      clonesCount: 0,
+      outrasCount: 0,
+      ganho: 0,
+    });
   }
 
   const ultimoUsoCasa = new Map<string, number>();
   const ultimoUsoCpfClone = new Map<string, number>(); // só clones
 
   // Pré-popula com campanhas existentes — bloqueio da casa sempre, CPF só se for de clone
-  // (não conhecemos grupo_nome das campanhas existentes aqui; tratamos a casa sempre)
   campanhasExistentes.forEach((c) => {
     const parts = c.scheduled_date.split("-");
     const cy = Number(parts[0]);
@@ -144,20 +178,41 @@ export function simularDistribuicao(input: {
       const prev = ultimoUsoCasa.get(catId);
       if (prev === undefined || cd > prev) ultimoUsoCasa.set(catId, cd);
     }
-    // Conservador: NÃO assume que campanha existente é clone (sem essa info aqui).
-    // Se for clone real, o usuário verá a sobreposição visualmente; cooldown se aplica
-    // só entre células sendo agendadas pela simulação.
   });
 
   const agendamentos: AgendamentoSimulado[] = [];
   const warnings: string[] = [];
   const restantes = new Set(candidatas.map((c) => c.id));
 
+  /** Conta "outras" agendadas em [diaInicio, diaFim] (inclusivo). */
+  function contarOutrasJanela(diaInicio: number, diaFim: number): number {
+    let total = 0;
+    for (let d = Math.max(1, diaInicio); d <= Math.min(limite, diaFim); d++) {
+      total += ocupacao.get(d)?.outrasCount ?? 0;
+    }
+    return total;
+  }
+
+  /** True se permitir adicionar uma CLONE neste dia violaria a regra de mínimo de outras
+   * em ALGUMA janela que termine em dia ≤ diaAtual (já fechada — não tem como compensar). */
+  function violaJanelaOutras(diaAtual: number): boolean {
+    if (minOutrasPorJanela <= 0 || janelaOutrasDias <= 0) return false;
+    // Janelas "fechadas": terminam em diaAtual ou antes. A primeira janela completa
+    // fecha em janelaOutrasDias. Se já estamos preenchendo o último dia de uma janela,
+    // verificamos se ela atingiu o mínimo de outras.
+    if (diaAtual < janelaOutrasDias) return false;
+    // Verifica a janela que TERMINA em diaAtual: [diaAtual - janelaOutrasDias + 1, diaAtual]
+    const inicio = diaAtual - janelaOutrasDias + 1;
+    const outras = contarOutrasJanela(inicio, diaAtual);
+    return outras < minOutrasPorJanela;
+  }
+
   // Helper: tenta selecionar a melhor célula elegível para o dia
-  function selecionar(dia: number, slot: DaySlot): CelulaDisponivel | null {
+  function selecionar(dia: number, slot: DaySlot, forcarOutra = false): CelulaDisponivel | null {
     const elegiveis = candidatas
       .filter((c) => restantes.has(c.id))
       .filter((c) => {
+        if (forcarOutra && isClone(c)) return false;
         // 1) Casa não pode repetir no MESMO dia
         if (slot.casas.has(c.bookmaker_catalogo_id)) return false;
         // 2) Cooldown casa (vale para todos)
@@ -169,13 +224,8 @@ export function simularDistribuicao(input: {
         if (metaGanhoDia > 0 && slot.ganho >= metaGanhoDia) return false;
         // Regras específicas de clones
         if (isClone(c)) {
-          if (slot.cpfsClone.size >= clonesPorDia) {
-            // só rejeita se esse CPF não está já no slot (entrar com casa adicional do mesmo CPF
-            // estouraria clones distintos? Aqui contamos CPFs distintos, então adicionar nova
-            // casa do MESMO CPF não incrementa cpfsClone — permitimos.)
-            const ck = cpfKey(c);
-            if (!ck || !slot.cpfsClone.has(ck)) return false;
-          }
+          // Limite ESTRITO de clones/dia (conta casas, não CPFs distintos)
+          if (slot.clonesCount >= clonesPorDia) return false;
           const ck = cpfKey(c);
           if (ck) {
             const ucpf = ultimoUsoCpfClone.get(ck);
@@ -185,22 +235,25 @@ export function simularDistribuicao(input: {
         return true;
       })
       .sort((a, b) => {
-        // 1) Clones primeiro (mais restritos, ocupam slots escassos)
-        const cloneA = isClone(a) ? 1 : 0;
-        const cloneB = isClone(b) ? 1 : 0;
-        if (cloneA !== cloneB) return cloneB - cloneA;
-        // 2) CPFs com maior backlog primeiro (só faz diferença pra clones)
+        // 1) Se forçando "outra", clones já foram filtrados; pula
+        if (!forcarOutra) {
+          // Clones primeiro (mais restritos)
+          const cloneA = isClone(a) ? 1 : 0;
+          const cloneB = isClone(b) ? 1 : 0;
+          if (cloneA !== cloneB) return cloneB - cloneA;
+        }
+        // 2) CPFs com maior backlog primeiro (clones)
         const ckA = cpfKey(a);
         const ckB = cpfKey(b);
         const blA = ckA ? backlogPorCpf.get(ckA) ?? 0 : 0;
         const blB = ckB ? backlogPorCpf.get(ckB) ?? 0 : 0;
         if (blA !== blB) return blB - blA;
-        // 3) maior gap desde último uso da casa (variedade)
+        // 3) Maior gap desde último uso da casa (variedade)
         const gA = dia - (ultimoUsoCasa.get(a.bookmaker_catalogo_id) ?? -999);
         const gB = dia - (ultimoUsoCasa.get(b.bookmaker_catalogo_id) ?? -999);
         if (gA !== gB) return gB - gA;
-        // 4) ordem original como tiebreak
-        return (a.ordem ?? 0) - (b.ordem ?? 0);
+        // 4) Jitter pseudoaleatório (seed) para variar combinação a cada recálculo
+        return rand() - 0.5;
       });
     return elegiveis[0] ?? null;
   }
@@ -212,15 +265,28 @@ export function simularDistribuicao(input: {
       if (maxCasasPorDia > 0 && slot.casas.size >= maxCasasPorDia) break;
       if (metaGanhoDia > 0 && slot.ganho >= metaGanhoDia) break;
 
-      const pick = selecionar(dia, slot);
+      // Se estamos no último dia de uma janela e ela ainda não atingiu o mínimo de outras,
+      // forçamos seleção de "outra" antes de qualquer clone.
+      const precisaOutra = violaJanelaOutras(dia);
+
+      let pick = precisaOutra ? selecionar(dia, slot, true) : selecionar(dia, slot, false);
+      if (!pick && precisaOutra) {
+        // Fallback: não há "outra" disponível — tenta qualquer (não bloquear o dia)
+        pick = selecionar(dia, slot, false);
+      }
       if (!pick) break;
 
       slot.casas.add(pick.bookmaker_catalogo_id);
       const ck = cpfKey(pick);
-      if (isClone(pick) && ck) {
-        slot.cpfsClone.add(ck);
-        ultimoUsoCpfClone.set(ck, dia);
-        backlogPorCpf.set(ck, (backlogPorCpf.get(ck) ?? 1) - 1);
+      if (isClone(pick)) {
+        slot.clonesCount++;
+        if (ck) {
+          slot.cpfsClone.add(ck);
+          ultimoUsoCpfClone.set(ck, dia);
+          backlogPorCpf.set(ck, (backlogPorCpf.get(ck) ?? 1) - 1);
+        }
+      } else {
+        slot.outrasCount++;
       }
       slot.ganho += Number(pick.deposito_sugerido) || 0;
       ultimoUsoCasa.set(pick.bookmaker_catalogo_id, dia);
@@ -248,7 +314,8 @@ export function simularDistribuicao(input: {
       const slot = ocupacao.get(dia)!;
       const slotCheioGlobal =
         (maxCasasPorDia > 0 && slot.casas.size >= maxCasasPorDia) ||
-        (metaGanhoDia > 0 && slot.ganho >= metaGanhoDia);
+        (metaGanhoDia > 0 && slot.ganho >= metaGanhoDia) ||
+        (ehClone && slot.clonesCount >= clonesPorDia);
       if (slotCheioGlobal) {
         semCapacidade++;
         continue;
@@ -260,9 +327,7 @@ export function simularDistribuicao(input: {
       let blockedCpf = false;
       if (ehClone && ck) {
         const ucpf = ultimoUsoCpfClone.get(ck);
-        blockedCpf =
-          (slot.cpfsClone.size >= clonesPorDia && !slot.cpfsClone.has(ck)) ||
-          (ucpf !== undefined && Math.abs(dia - ucpf) <= cooldownCpfDias);
+        blockedCpf = ucpf !== undefined && Math.abs(dia - ucpf) <= cooldownCpfDias;
       }
       if (blockedCpf) bloqueioCpf++;
       else if (blockedCasa) bloqueioCasa++;
@@ -276,13 +341,13 @@ export function simularDistribuicao(input: {
       detalhe = "sem janela disponível";
     } else if (bloqueioCpf === max) {
       motivo = "cooldown_cpf";
-      detalhe = `[CLONE] CPF ${c.cpf_index ?? "?"} bloqueado em ${bloqueioCpf}/${limite} dias (cooldown ${cooldownCpfDias}d ou clones/dia cheio)`;
+      detalhe = `[CLONE] CPF ${c.cpf_index ?? "?"} bloqueado em ${bloqueioCpf}/${limite} dias (cooldown ${cooldownCpfDias}d)`;
     } else if (bloqueioCasa === max) {
       motivo = "cooldown_casa";
       detalhe = `${c.bookmaker_nome} bloqueada em ${bloqueioCasa}/${limite} dias (cooldown casa ${cooldownCasaDias}d)`;
     } else {
       motivo = "sem_capacidade";
-      detalhe = `${semCapacidade}/${limite} dias já cheios (máx casas/dia ou meta de ganho)`;
+      detalhe = `${semCapacidade}/${limite} dias já cheios (clones/dia, máx casas/dia ou meta de ganho)`;
     }
     return { celula: c, motivo, detalhe };
   });
@@ -326,6 +391,23 @@ export function simularDistribuicao(input: {
     );
   }
 
+  // Diagnóstico: janelas que não atingiram mínimo de outras
+  if (minOutrasPorJanela > 0 && janelaOutrasDias > 0) {
+    const janelasFalhas: string[] = [];
+    for (let fim = janelaOutrasDias; fim <= limite; fim += janelaOutrasDias) {
+      const inicio = fim - janelaOutrasDias + 1;
+      const outras = contarOutrasJanela(inicio, fim);
+      if (outras < minOutrasPorJanela) {
+        janelasFalhas.push(`dias ${inicio}–${fim}: ${outras}/${minOutrasPorJanela}`);
+      }
+    }
+    if (janelasFalhas.length > 0) {
+      warnings.push(
+        `Mínimo de "outras" não atingido em ${janelasFalhas.length} janela(s): ${janelasFalhas.join("; ")}.`
+      );
+    }
+  }
+
   if (naoAgendadas.length > 0) {
     const partes: string[] = [
       `dias 1–${limite}`,
@@ -334,6 +416,8 @@ export function simularDistribuicao(input: {
     if (maxCasasPorDia > 0) partes.push(`máx ${maxCasasPorDia} casas/dia`);
     if (metaGanhoDia > 0) partes.push(`meta ${metaGanhoDia.toFixed(2)}/dia`);
     partes.push(`cooldown casa ${cooldownCasaDias}d`);
+    if (minOutrasPorJanela > 0)
+      partes.push(`mín ${minOutrasPorJanela} outras/${janelaOutrasDias}d`);
     warnings.push(
       `${naoAgendadas.length} célula(s) não couberam (${partes.join(", ")}).`
     );
