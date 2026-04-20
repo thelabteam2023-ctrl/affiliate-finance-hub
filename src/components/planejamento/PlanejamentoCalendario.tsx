@@ -761,7 +761,7 @@ export function PlanejamentoCalendario() {
               </p>
 
               {/* Seletor de Plano de Distribuição */}
-              <Select value={planoFiltroId} onValueChange={(v) => { setPlanoFiltroId(v); setGrupoFiltroId("todos"); }}>
+              <Select value={planoFiltroId} onValueChange={(v) => { setPlanoFiltroId(v); setGrupoFiltroId("todos"); setCpfFiltroIdx("todos"); }}>
                 <SelectTrigger className="h-7 text-xs">
                   <SelectValue placeholder="Plano de distribuição" />
                 </SelectTrigger>
