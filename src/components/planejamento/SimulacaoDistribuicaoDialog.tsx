@@ -219,7 +219,12 @@ export function SimulacaoDistribuicaoDialog({
               {stats.agendadas} / {stats.totalCelulas} agendadas
             </Badge>
             <Badge variant="outline">{stats.diasUsados} dias usados</Badge>
-            <Badge variant="outline">Capacidade: {stats.capacidadeMaxima}</Badge>
+            {stats.capacidadeMaxima > 0 && (
+              <Badge variant="outline">Capacidade: {stats.capacidadeMaxima}</Badge>
+            )}
+            <Badge variant="outline">
+              Ganho total: {stats.ganhoTotal.toFixed(2)}
+            </Badge>
             {excedeu && (
               <Badge variant="outline" className="border-warning text-warning">
                 <AlertTriangle className="h-3 w-3 mr-1" />
