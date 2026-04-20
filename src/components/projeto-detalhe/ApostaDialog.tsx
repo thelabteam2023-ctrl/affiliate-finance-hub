@@ -2029,7 +2029,11 @@ export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess,
           moeda_operacao: isMultiCC ? 'MULTI' : moedaOperacao,
           is_multicurrency: isMultiCC,
           consolidation_currency: isMultiCC ? moedaConsolidacao : null,
-          bookmaker_id: bookmakerId,
+          // CANÔNICO: aposta multi-entry (multi-bookmaker) grava bookmaker_id=NULL no pai,
+          // exatamente como Surebet/Múltipla. Assim o get_bookmaker_saldos distribui o
+          // "em jogo" pelas pernas reais (apostas_pernas) em vez de concentrar tudo na
+          // primeira casa. Quando há apenas 1 entrada, mantém o bookmaker_id no pai.
+          bookmaker_id: hasMultiEntry ? null : bookmakerId,
           odd: Math.round(effectiveOdd * 100000) / 100000, // 5 casas decimais (padrão de precisão)
           stake: parentStake,
           modo_entrada: "PADRAO",
