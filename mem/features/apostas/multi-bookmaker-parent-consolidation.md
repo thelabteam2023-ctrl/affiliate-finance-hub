@@ -18,6 +18,6 @@ Quando o formulário de aposta simples (ApostaDialog) tem múltiplas entradas (`
 
 **Liquidação inicial (`liquidar_aposta_v4`)**: já iterava por pernas (path multi-entry).
 
-**Edição com stake/odd diferentes (`atualizar_aposta_liquidada_atomica_v2`)**: ainda opera apenas no parent. Para multi-entry editado, recomenda-se reverter + recriar via fluxo de edição PENDENTE.
+**Edição (`atualizar_aposta_liquidada_atomica_v2`)**: detecta multi-entry via `apostas_pernas`. Mudança apenas de resultado é delegada para `reliquidar_aposta_v6` (que itera pernas). Mudança estrutural (stake/odd/bookmaker/moeda) retorna erro `MULTI_ENTRY_STRUCT_EDIT_NOT_SUPPORTED` — UI deve orientar excluir + recadastrar.
 
 **ApostaCard**: já prioriza `pl_consolidado` e `stake_consolidado` quando presentes (isMultiCurrency true).
