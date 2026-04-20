@@ -301,10 +301,26 @@ export function simularDistribuicao(input: {
 
   // Helper: tenta selecionar a melhor célula elegível para o dia
   function selecionar(dia: number, slot: DaySlot, forcarOutra = false): CelulaDisponivel | null {
+    // CPF mínimo "ativo" para SUPORTE (não-clone): enquanto houver qualquer outra pendente
+    // do CPF N, NÃO permitimos agendar outras de CPF > N. Isso esgota um CPF de cada vez
+    // (CPF1 → CPF2 → ...) mantendo as suporte agrupadas por CPF ao longo do mês.
+    let menorCpfOutraPendente = Number.POSITIVE_INFINITY;
+    for (const c of candidatas) {
+      if (!restantes.has(c.id)) continue;
+      if (isClone(c)) continue;
+      const ci = c.cpf_index ?? 9999;
+      if (ci < menorCpfOutraPendente) menorCpfOutraPendente = ci;
+    }
+
     const elegiveis = candidatas
       .filter((c) => restantes.has(c.id))
       .filter((c) => {
         if (forcarOutra && isClone(c)) return false;
+        // PRIORIZAÇÃO POR CPF (suporte): só libera CPF maior se o menor já esgotou
+        if (!isClone(c)) {
+          const ci = c.cpf_index ?? 9999;
+          if (ci > menorCpfOutraPendente) return false;
+        }
         // 1) Casa não pode repetir no MESMO dia
         if (slot.casas.has(c.bookmaker_catalogo_id)) return false;
         // 2) Cooldown casa — aplica APENAS para clones (suporte/outras não têm essa restrição)
