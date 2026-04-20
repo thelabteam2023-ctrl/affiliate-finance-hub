@@ -47,7 +47,9 @@ interface Props {
 }
 
 const DEFAULT_CONFIG: AutoSchedulerConfig = {
-  casasPorDia: 3,
+  clonesPorDia: 3,
+  maxCasasPorDia: 0, // 0 = sem limite
+  metaGanhoDia: 0, // 0 = desativado
   cooldownCasaDias: 3,
   cooldownCpfDias: 5,
   diaLimite: 23,
@@ -112,18 +114,48 @@ export function SimulacaoDistribuicaoDialog({
         </DialogHeader>
 
         {/* Parâmetros */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 items-end p-3 rounded-md border bg-muted/30">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 items-end p-3 rounded-md border bg-muted/30">
           <div className="space-y-1">
             <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
-              Casas/dia
+              Clones/dia
             </Label>
             <Input
               type="number"
               min={1}
-              max={10}
-              value={config.casasPorDia}
+              max={20}
+              value={config.clonesPorDia}
               onChange={(e) =>
-                setConfig({ ...config, casasPorDia: Math.max(1, Number(e.target.value) || 1) })
+                setConfig({ ...config, clonesPorDia: Math.max(1, Number(e.target.value) || 1) })
+              }
+              className="h-8 text-xs"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
+              Máx casas/dia <span className="opacity-60">(0=∞)</span>
+            </Label>
+            <Input
+              type="number"
+              min={0}
+              max={50}
+              value={config.maxCasasPorDia}
+              onChange={(e) =>
+                setConfig({ ...config, maxCasasPorDia: Math.max(0, Number(e.target.value) || 0) })
+              }
+              className="h-8 text-xs"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
+              Meta ganho/dia <span className="opacity-60">(0=off)</span>
+            </Label>
+            <Input
+              type="number"
+              min={0}
+              step="0.01"
+              value={config.metaGanhoDia}
+              onChange={(e) =>
+                setConfig({ ...config, metaGanhoDia: Math.max(0, Number(e.target.value) || 0) })
               }
               className="h-8 text-xs"
             />
@@ -173,9 +205,11 @@ export function SimulacaoDistribuicaoDialog({
               className="h-8 text-xs"
             />
           </div>
-          <Button onClick={recalcular} size="sm" className="h-8">
-            <RefreshCw className="h-3.5 w-3.5 mr-1" /> Recalcular
-          </Button>
+          <div className="col-span-2 sm:col-span-2 flex justify-end">
+            <Button onClick={recalcular} size="sm" className="h-8 w-full sm:w-auto">
+              <RefreshCw className="h-3.5 w-3.5 mr-1" /> Recalcular
+            </Button>
+          </div>
         </div>
 
         {/* Resumo */}
@@ -185,7 +219,12 @@ export function SimulacaoDistribuicaoDialog({
               {stats.agendadas} / {stats.totalCelulas} agendadas
             </Badge>
             <Badge variant="outline">{stats.diasUsados} dias usados</Badge>
-            <Badge variant="outline">Capacidade: {stats.capacidadeMaxima}</Badge>
+            {stats.capacidadeMaxima > 0 && (
+              <Badge variant="outline">Capacidade: {stats.capacidadeMaxima}</Badge>
+            )}
+            <Badge variant="outline">
+              Ganho total: {stats.ganhoTotal.toFixed(2)}
+            </Badge>
             {excedeu && (
               <Badge variant="outline" className="border-warning text-warning">
                 <AlertTriangle className="h-3 w-3 mr-1" />
@@ -204,11 +243,20 @@ export function SimulacaoDistribuicaoDialog({
           )}
           {dias.map((dia) => {
             const itens = porDia.get(dia) ?? [];
+            const ganhoDia = itens.reduce(
+              (sum, a) => sum + (Number(a.celula.deposito_sugerido) || 0),
+              0
+            );
             return (
               <div key={dia} className="flex gap-2 items-start">
-                <div className="shrink-0 w-14 text-right">
+                <div className="shrink-0 w-16 text-right">
                   <div className="text-[10px] uppercase text-muted-foreground">Dia</div>
                   <div className="text-lg font-bold tabular-nums leading-none">{dia}</div>
+                  {ganhoDia > 0 && (
+                    <div className="text-[9px] text-muted-foreground tabular-nums mt-0.5">
+                      Σ {ganhoDia.toFixed(2)}
+                    </div>
+                  )}
                 </div>
                 <div className="flex-1 flex flex-wrap gap-1.5 p-1.5 rounded-md border bg-muted/20 min-h-[44px]">
                   {itens.map((a) => {
