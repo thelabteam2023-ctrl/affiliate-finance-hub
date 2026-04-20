@@ -429,6 +429,7 @@ export function PlanejamentoCalendario() {
     toDate: string;
   } | null>(null);
   const [moveConfirmed, setMoveConfirmed] = useState(false);
+  const [simulacaoOpen, setSimulacaoOpen] = useState(false);
 
   const { data: campanhas = [] } = usePlanningCampanhas(year, month);
   const { data: casasPlan = [] } = usePlanningCasas();
