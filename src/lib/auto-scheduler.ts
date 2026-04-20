@@ -19,6 +19,15 @@
 import type { CelulaDisponivel } from "@/hooks/usePlanoCelulasDisponiveis";
 import type { PlanningCampanha } from "@/hooks/usePlanningData";
 
+export interface FaixaMeta {
+  /** Dia inicial da faixa (1..31). */
+  diaInicio: number;
+  /** Dia final da faixa (1..31). */
+  diaFim: number;
+  /** Meta de depósito (soma deposito_sugerido) para a faixa. */
+  meta: number;
+}
+
 export interface AutoSchedulerConfig {
   /** Máximo ESTRITO de casas clone por dia (conta cada agendamento, não CPFs distintos). */
   clonesPorDia: number;
@@ -36,6 +45,10 @@ export interface AutoSchedulerConfig {
   minOutrasPorJanela?: number;
   /** Tamanho da janela deslizante (em dias) para a regra de mínimo de "outras". */
   janelaOutrasDias?: number;
+  /** Faixas de dias com meta de depósito (somatório de deposito_sugerido). */
+  faixas?: FaixaMeta[];
+  /** Tolerância (%) que cada faixa pode ultrapassar a meta antes de "fechar". 0 = teto rígido. */
+  toleranciaFaixaPct?: number;
   /** Seed numérica para variar a combinação a cada recálculo. */
   seed?: number;
 }
@@ -52,11 +65,21 @@ export interface CelulaNaoAgendadaDetalhe {
   detalhe: string;
 }
 
+export interface FaixaResultado {
+  diaInicio: number;
+  diaFim: number;
+  meta: number;
+  acumulado: number;
+  cheia: boolean;
+  saturada: boolean; // ultrapassou meta + tolerância
+}
+
 export interface SimulacaoResultado {
   agendamentos: AgendamentoSimulado[];
   warnings: string[];
   naoAgendadas: CelulaDisponivel[];
   naoAgendadasDetalhe: CelulaNaoAgendadaDetalhe[];
+  faixasResultado: FaixaResultado[];
   estatisticas: {
     totalCelulas: number;
     totalClones: number;
@@ -120,6 +143,8 @@ export function simularDistribuicao(input: {
     diaLimite,
     minOutrasPorJanela = 0,
     janelaOutrasDias = 3,
+    faixas = [],
+    toleranciaFaixaPct = 0,
     seed = 1,
   } = config;
 
@@ -184,6 +209,31 @@ export function simularDistribuicao(input: {
   const warnings: string[] = [];
   const restantes = new Set(candidatas.map((c) => c.id));
 
+  // ---- Faixas: normalização e tracking de acumulado por faixa ----
+  const faixasNorm = (faixas ?? [])
+    .filter((f) => f && f.diaInicio >= 1 && f.diaFim >= f.diaInicio && f.meta > 0)
+    .map((f) => ({ ...f, diaFim: Math.min(f.diaFim, limite) }))
+    .filter((f) => f.diaInicio <= limite);
+  const acumuladoFaixa = new Array<number>(faixasNorm.length).fill(0);
+  const tetoFaixa = faixasNorm.map((f) => f.meta * (1 + (toleranciaFaixaPct || 0) / 100));
+
+  /** Retorna o índice da faixa que cobre `dia`, ou -1 se nenhuma. */
+  function faixaDoDia(dia: number): number {
+    for (let i = 0; i < faixasNorm.length; i++) {
+      const f = faixasNorm[i];
+      if (dia >= f.diaInicio && dia <= f.diaFim) return i;
+    }
+    return -1;
+  }
+
+  /** True se adicionar `valor` ao dia estouraria o teto (meta + tolerância) da faixa correspondente. */
+  function estouraFaixa(dia: number, valor: number): boolean {
+    if (faixasNorm.length === 0) return false;
+    const idx = faixaDoDia(dia);
+    if (idx < 0) return false;
+    return acumuladoFaixa[idx] + valor > tetoFaixa[idx];
+  }
+
   /** Conta "outras" agendadas em [diaInicio, diaFim] (inclusivo). */
   function contarOutrasJanela(diaInicio: number, diaFim: number): number {
     let total = 0;
@@ -222,6 +272,9 @@ export function simularDistribuicao(input: {
         if (maxCasasPorDia > 0 && slot.casas.size >= maxCasasPorDia) return false;
         // 4) Meta de ganho atingida
         if (metaGanhoDia > 0 && slot.ganho >= metaGanhoDia) return false;
+        // 5) Faixa de dias: não estourar teto (meta + tolerância%)
+        const valor = Number(c.deposito_sugerido) || 0;
+        if (estouraFaixa(dia, valor)) return false;
         // Regras específicas de clones
         if (isClone(c)) {
           // Limite ESTRITO de clones/dia (conta casas, não CPFs distintos)
@@ -290,6 +343,9 @@ export function simularDistribuicao(input: {
       }
       slot.ganho += Number(pick.deposito_sugerido) || 0;
       ultimoUsoCasa.set(pick.bookmaker_catalogo_id, dia);
+      // Atualiza acumulado da faixa correspondente
+      const idxFaixa = faixaDoDia(dia);
+      if (idxFaixa >= 0) acumuladoFaixa[idxFaixa] += Number(pick.deposito_sugerido) || 0;
       restantes.delete(pick.id);
 
       agendamentos.push({
@@ -427,11 +483,29 @@ export function simularDistribuicao(input: {
   let ganhoTotal = 0;
   ocupacao.forEach((s) => (ganhoTotal += s.ganho));
 
+  // Resultado por faixa
+  const faixasResultado: FaixaResultado[] = faixasNorm.map((f, i) => {
+    const acumulado = acumuladoFaixa[i];
+    const cheia = acumulado >= f.meta;
+    const saturada = acumulado >= tetoFaixa[i];
+    return { diaInicio: f.diaInicio, diaFim: f.diaFim, meta: f.meta, acumulado, cheia, saturada };
+  });
+
+  // Warning de faixas que não atingiram a meta
+  const faixasNaoAtingidas = faixasResultado.filter((f) => !f.cheia);
+  if (faixasNaoAtingidas.length > 0) {
+    const desc = faixasNaoAtingidas
+      .map((f) => `dias ${f.diaInicio}–${f.diaFim}: ${f.acumulado.toFixed(2)}/${f.meta.toFixed(2)}`)
+      .join("; ");
+    warnings.push(`Faixa(s) não atingiram a meta: ${desc}.`);
+  }
+
   return {
     agendamentos,
     warnings,
     naoAgendadas,
     naoAgendadasDetalhe,
+    faixasResultado,
     estatisticas: {
       totalCelulas: candidatas.length,
       totalClones,

@@ -10,12 +10,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, AlertTriangle, RefreshCw, Building2 } from "lucide-react";
+import { Sparkles, AlertTriangle, RefreshCw, Building2, Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   simularDistribuicao,
   type AutoSchedulerConfig,
   type SimulacaoResultado,
+  type FaixaMeta,
 } from "@/lib/auto-scheduler";
 import type { CelulaDisponivel } from "@/hooks/usePlanoCelulasDisponiveis";
 import type { PlanningCampanha } from "@/hooks/usePlanningData";
@@ -55,6 +56,8 @@ const DEFAULT_CONFIG: AutoSchedulerConfig = {
   diaLimite: 23,
   minOutrasPorJanela: 1,
   janelaOutrasDias: 3,
+  faixas: [],
+  toleranciaFaixaPct: 10,
   seed: 1,
 };
 
@@ -247,6 +250,159 @@ export function SimulacaoDistribuicaoDialog({
               <RefreshCw className="h-3.5 w-3.5 mr-1" /> Recalcular (varia combinação)
             </Button>
           </div>
+        </div>
+
+        {/* Faixas de meta de depósito */}
+        <div className="rounded-md border bg-muted/30 p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <Label className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">
+                Faixas de meta (Σ depósito por intervalo)
+              </Label>
+              <p className="text-[10px] text-muted-foreground mt-0.5">
+                Ex.: dias 1–10 = R$ 5.000, 11–20 = R$ 3.000. Tolerância permite passar do teto.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
+                <Label className="text-[10px] text-muted-foreground">Tol.%</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={config.toleranciaFaixaPct ?? 0}
+                  onChange={(e) =>
+                    setConfig({
+                      ...config,
+                      toleranciaFaixaPct: Math.max(0, Number(e.target.value) || 0),
+                    })
+                  }
+                  className="h-7 w-14 text-xs"
+                />
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs"
+                onClick={() => {
+                  const novas = [...(config.faixas ?? [])];
+                  const ultimoFim = novas.length ? novas[novas.length - 1].diaFim : 0;
+                  novas.push({
+                    diaInicio: Math.min(ultimoFim + 1, config.diaLimite),
+                    diaFim: Math.min(ultimoFim + 10, config.diaLimite),
+                    meta: 1000,
+                  });
+                  setConfig({ ...config, faixas: novas });
+                }}
+              >
+                <Plus className="h-3 w-3 mr-1" /> Faixa
+              </Button>
+            </div>
+          </div>
+          {(config.faixas ?? []).length === 0 && (
+            <p className="text-[11px] text-muted-foreground italic">
+              Nenhuma faixa — distribuição livre dentro do dia limite.
+            </p>
+          )}
+          {(config.faixas ?? []).map((f, idx) => {
+            const res = simulacao?.faixasResultado?.[idx];
+            const pct = res && res.meta > 0 ? Math.min(100, (res.acumulado / res.meta) * 100) : 0;
+            return (
+              <div key={idx} className="flex items-end gap-2 rounded border bg-background/40 p-2">
+                <div className="space-y-1">
+                  <Label className="text-[9px] uppercase text-muted-foreground">Dia ini</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={31}
+                    value={f.diaInicio}
+                    onChange={(e) => {
+                      const v = Math.max(1, Number(e.target.value) || 1);
+                      const novas = [...(config.faixas ?? [])];
+                      novas[idx] = { ...f, diaInicio: v };
+                      setConfig({ ...config, faixas: novas });
+                    }}
+                    className="h-7 w-14 text-xs"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-[9px] uppercase text-muted-foreground">Dia fim</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={31}
+                    value={f.diaFim}
+                    onChange={(e) => {
+                      const v = Math.max(1, Number(e.target.value) || 1);
+                      const novas = [...(config.faixas ?? [])];
+                      novas[idx] = { ...f, diaFim: v };
+                      setConfig({ ...config, faixas: novas });
+                    }}
+                    className="h-7 w-14 text-xs"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-[9px] uppercase text-muted-foreground">Meta (Σ)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={f.meta}
+                    onChange={(e) => {
+                      const v = Math.max(0, Number(e.target.value) || 0);
+                      const novas = [...(config.faixas ?? [])];
+                      novas[idx] = { ...f, meta: v };
+                      setConfig({ ...config, faixas: novas });
+                    }}
+                    className="h-7 w-24 text-xs"
+                  />
+                </div>
+                <div className="flex-1 min-w-0 space-y-1">
+                  <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                    <span>
+                      {res ? `${res.acumulado.toFixed(2)} / ${res.meta.toFixed(2)}` : "—"}
+                    </span>
+                    <span
+                      className={cn(
+                        "tabular-nums font-semibold",
+                        res?.saturada
+                          ? "text-warning"
+                          : res?.cheia
+                          ? "text-success"
+                          : "text-muted-foreground"
+                      )}
+                    >
+                      {res ? `${pct.toFixed(0)}%` : ""}
+                    </span>
+                  </div>
+                  <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                    <div
+                      className={cn(
+                        "h-full transition-all",
+                        res?.saturada
+                          ? "bg-warning"
+                          : res?.cheia
+                          ? "bg-success"
+                          : "bg-primary"
+                      )}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                </div>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7 shrink-0"
+                  onClick={() => {
+                    const novas = (config.faixas ?? []).filter((_, i) => i !== idx);
+                    setConfig({ ...config, faixas: novas });
+                  }}
+                >
+                  <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                </Button>
+              </div>
+            );
+          })}
         </div>
 
         {/* Resumo */}
