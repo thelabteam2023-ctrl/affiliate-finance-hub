@@ -74,6 +74,24 @@ function formatMoney(v: number, currency: string) {
   }
 }
 
+// Paleta de cores por CPF — diferenciar visualmente cada CPF do plano.
+// Usa HSL fixo (não tokens) propositalmente para distinguir CPFs entre si.
+const CPF_COLORS: { bg: string; border: string; text: string; dot: string }[] = [
+  { bg: "hsl(45 95% 55% / 0.15)", border: "hsl(45 95% 55%)", text: "hsl(45 95% 65%)", dot: "hsl(45 95% 55%)" },   // amarelo
+  { bg: "hsl(142 70% 45% / 0.15)", border: "hsl(142 70% 45%)", text: "hsl(142 70% 55%)", dot: "hsl(142 70% 45%)" }, // verde
+  { bg: "hsl(217 90% 60% / 0.15)", border: "hsl(217 90% 60%)", text: "hsl(217 90% 70%)", dot: "hsl(217 90% 60%)" }, // azul
+  { bg: "hsl(0 80% 60% / 0.15)", border: "hsl(0 80% 60%)", text: "hsl(0 80% 70%)", dot: "hsl(0 80% 60%)" },         // vermelho
+  { bg: "hsl(280 70% 60% / 0.15)", border: "hsl(280 70% 60%)", text: "hsl(280 70% 70%)", dot: "hsl(280 70% 60%)" }, // roxo
+  { bg: "hsl(25 90% 55% / 0.15)", border: "hsl(25 90% 55%)", text: "hsl(25 90% 65%)", dot: "hsl(25 90% 55%)" },     // laranja
+  { bg: "hsl(180 70% 45% / 0.15)", border: "hsl(180 70% 45%)", text: "hsl(180 70% 55%)", dot: "hsl(180 70% 45%)" }, // ciano
+  { bg: "hsl(330 75% 60% / 0.15)", border: "hsl(330 75% 60%)", text: "hsl(330 75% 70%)", dot: "hsl(330 75% 60%)" }, // pink
+];
+
+function getCpfColor(idx: number | null | undefined) {
+  if (!idx || idx < 1) return null;
+  return CPF_COLORS[(idx - 1) % CPF_COLORS.length];
+}
+
 // ──────── Componentes drag-and-drop ────────
 
 function DraggableBookmaker({ id, nome, moeda, status, logoUrl }: {
@@ -118,45 +136,63 @@ function DraggableCelula({ celula, parceiroNome }: { celula: CelulaDisponivel; p
     data: { type: "celula", celula },
   });
   const jaAgendada = !!celula.agendada_em;
+  const cpfColor = getCpfColor(celula.cpf_index);
   const cpfTag = celula.cpf_index ? `CPF ${celula.cpf_index}` : null;
-  const cpfLabel = parceiroNome
-    ? cpfTag ? `${cpfTag} • ${parceiroNome}` : parceiroNome
-    : cpfTag ?? "CPF não vinculado";
+  const titleStr = jaAgendada
+    ? `${celula.bookmaker_nome} • ${cpfTag ?? "CPF ?"}${parceiroNome ? ` (${parceiroNome})` : ""} • já agendada`
+    : `${celula.bookmaker_nome} • ${cpfTag ?? "CPF ?"}${parceiroNome ? ` (${parceiroNome})` : ""} • ${celula.grupo_nome}`;
   return (
     <div
       ref={setNodeRef}
       {...(jaAgendada ? {} : listeners)}
       {...attributes}
       className={cn(
-        "px-2 py-1.5 rounded-md border bg-card text-xs transition-colors flex items-center gap-2",
+        "px-2 py-1.5 rounded-md border text-xs transition-colors flex items-center gap-2",
         jaAgendada
-          ? "opacity-50 cursor-not-allowed"
-          : "cursor-grab active:cursor-grabbing hover:border-primary",
+          ? "opacity-50 cursor-not-allowed bg-card"
+          : "cursor-grab active:cursor-grabbing hover:brightness-110",
         isDragging && "opacity-40"
       )}
-      style={{ borderLeftColor: celula.grupo_cor, borderLeftWidth: 3 }}
-      title={
-        jaAgendada
-          ? `${celula.bookmaker_nome} • ${cpfLabel} • já agendada`
-          : `${celula.bookmaker_nome} • ${cpfLabel} • ${celula.grupo_nome}`
-      }
+      style={{
+        backgroundColor: cpfColor?.bg ?? "hsl(var(--card))",
+        borderColor: cpfColor?.border ?? "hsl(var(--border))",
+        borderLeftColor: celula.grupo_cor,
+        borderLeftWidth: 3,
+      }}
+      title={titleStr}
     >
+      {/* Badge CPF — bem visível */}
+      {cpfTag ? (
+        <div
+          className="shrink-0 flex flex-col items-center justify-center rounded-md px-1.5 py-1 font-bold leading-none"
+          style={{
+            backgroundColor: cpfColor?.border ?? "hsl(var(--muted))",
+            color: "hsl(0 0% 100%)",
+            minWidth: 32,
+          }}
+        >
+          <span className="text-[8px] opacity-80 tracking-wide">CPF</span>
+          <span className="text-sm">{celula.cpf_index}</span>
+        </div>
+      ) : (
+        <div className="shrink-0 flex items-center justify-center rounded-md px-2 py-1 bg-muted text-muted-foreground text-[9px] font-semibold" style={{ minWidth: 32 }}>
+          ?
+        </div>
+      )}
+
       {celula.bookmaker_logo ? (
         <img src={celula.bookmaker_logo} alt="" className="h-4 w-4 rounded object-contain shrink-0" />
       ) : (
         <Building2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
       )}
       <div className="flex-1 min-w-0">
-        <div className="font-medium truncate">{celula.bookmaker_nome}</div>
-        <div
-          className={cn(
-            "text-[10px] flex items-center gap-1 mt-0.5",
-            parceiroNome ? "text-foreground/70" : "text-muted-foreground italic"
-          )}
-        >
-          <User className="h-2.5 w-2.5 shrink-0" />
-          <span className="truncate">{cpfLabel}</span>
-        </div>
+        <div className="font-medium truncate text-foreground">{celula.bookmaker_nome}</div>
+        {parceiroNome && (
+          <div className="text-[10px] flex items-center gap-1 mt-0.5 text-foreground/70">
+            <User className="h-2.5 w-2.5 shrink-0" />
+            <span className="truncate">{parceiroNome}</span>
+          </div>
+        )}
         <div className="text-[10px] text-muted-foreground flex items-center gap-1.5">
           <span>{celula.moeda}</span>
           {celula.deposito_sugerido > 0 && (
@@ -333,6 +369,7 @@ export function PlanejamentoCalendario() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [planoFiltroId, setPlanoFiltroId] = useState<string>("none"); // "none" = mostrar casas livres
   const [grupoFiltroId, setGrupoFiltroId] = useState<string>("todos"); // "todos" = sem filtro de grupo
+  const [cpfFiltroIdx, setCpfFiltroIdx] = useState<string>("todos"); // "todos" = sem filtro de CPF
   const [displayCurrency, setDisplayCurrency] = useState<DisplayCurrency>(() => {
     if (typeof window === "undefined") return "BRL";
     const saved = window.localStorage.getItem("planejamento:displayCurrency");
@@ -407,10 +444,20 @@ export function PlanejamentoCalendario() {
   const filteredCelulas = useMemo(() => {
     return celulasPlano.filter((c) => {
       if (grupoFiltroId !== "todos" && c.grupo_id !== grupoFiltroId) return false;
+      if (cpfFiltroIdx !== "todos" && String(c.cpf_index ?? "") !== cpfFiltroIdx) return false;
       if (bmSearch && !c.bookmaker_nome.toLowerCase().includes(bmSearch.toLowerCase())) return false;
       return true;
     });
-  }, [celulasPlano, grupoFiltroId, bmSearch]);
+  }, [celulasPlano, grupoFiltroId, cpfFiltroIdx, bmSearch]);
+
+  // Lista de CPFs presentes no plano (para popular filtro)
+  const cpfsDoPlano = useMemo(() => {
+    const set = new Set<number>();
+    celulasPlano.forEach((c) => {
+      if (c.cpf_index) set.add(c.cpf_index);
+    });
+    return Array.from(set).sort((a, b) => a - b);
+  }, [celulasPlano]);
 
   // Grupos disponíveis no plano selecionado (para popular o filtro de grupos)
   const gruposDoPlano = useMemo(() => {
@@ -714,7 +761,7 @@ export function PlanejamentoCalendario() {
               </p>
 
               {/* Seletor de Plano de Distribuição */}
-              <Select value={planoFiltroId} onValueChange={(v) => { setPlanoFiltroId(v); setGrupoFiltroId("todos"); }}>
+              <Select value={planoFiltroId} onValueChange={(v) => { setPlanoFiltroId(v); setGrupoFiltroId("todos"); setCpfFiltroIdx("todos"); }}>
                 <SelectTrigger className="h-7 text-xs">
                   <SelectValue placeholder="Plano de distribuição" />
                 </SelectTrigger>
@@ -744,6 +791,47 @@ export function PlanejamentoCalendario() {
                     ))}
                   </SelectContent>
                 </Select>
+              )}
+
+              {/* Filtro de CPF — chips coloridos para diferenciar visualmente */}
+              {modoPlano && cpfsDoPlano.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setCpfFiltroIdx("todos")}
+                    className={cn(
+                      "text-[10px] font-semibold px-2 py-1 rounded-md border transition-all",
+                      cpfFiltroIdx === "todos"
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-muted/50 text-muted-foreground border-border hover:bg-muted"
+                    )}
+                  >
+                    Todos
+                  </button>
+                  {cpfsDoPlano.map((idx) => {
+                    const color = getCpfColor(idx);
+                    const active = cpfFiltroIdx === String(idx);
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setCpfFiltroIdx(active ? "todos" : String(idx))}
+                        className={cn(
+                          "text-[10px] font-bold px-2 py-1 rounded-md border-2 transition-all",
+                          active ? "ring-2 ring-offset-1 ring-offset-background" : "opacity-70 hover:opacity-100"
+                        )}
+                        style={{
+                          backgroundColor: active ? color?.border : color?.bg,
+                          borderColor: color?.border,
+                          color: active ? "hsl(0 0% 100%)" : color?.text,
+                        }}
+                        title={`Mostrar somente CPF ${idx}`}
+                      >
+                        CPF {idx}
+                      </button>
+                    );
+                  })}
+                </div>
               )}
 
               <div className="relative">
