@@ -161,7 +161,12 @@ async function fetchApostasFiltradas(
       stake_consolidado: item.stake_consolidado,
       valor_brl_referencia: item.valor_brl_referencia,
       lucro_prejuizo_brl_referencia: item.lucro_prejuizo_brl_referencia,
-      pernas: item.forma_registro === 'ARBITRAGEM' ? pernasMap[item.id] || [] : undefined,
+      // Inclui pernas para ARBITRAGEM e também para SIMPLES multi-entry (>=2 pernas)
+      pernas: (() => {
+        const pernas = pernasMap[item.id] || [];
+        if (item.forma_registro === 'ARBITRAGEM') return pernas;
+        return pernas.length >= 2 ? pernas : undefined;
+      })(),
     };
   });
 }
