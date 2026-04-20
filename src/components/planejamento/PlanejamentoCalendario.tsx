@@ -118,7 +118,10 @@ function DraggableCelula({ celula, parceiroNome }: { celula: CelulaDisponivel; p
     data: { type: "celula", celula },
   });
   const jaAgendada = !!celula.agendada_em;
-  const cpfLabel = parceiroNome || "CPF não vinculado";
+  const cpfTag = celula.cpf_index ? `CPF ${celula.cpf_index}` : null;
+  const cpfLabel = parceiroNome
+    ? cpfTag ? `${cpfTag} • ${parceiroNome}` : parceiroNome
+    : cpfTag ?? "CPF não vinculado";
   return (
     <div
       ref={setNodeRef}
