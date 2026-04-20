@@ -63,7 +63,8 @@ export function gerarDistribuicao(
   let ordem = 0;
 
   for (const g of grupos) {
-    const casas = [...g.catalogo_ids];
+    // Embaralha as casas do grupo para evitar distribuição alfabética/previsível
+    const casas = shuffleArray(g.catalogo_ids);
     const totalCasas = casas.length;
     if (totalCasas === 0) {
       warnings.push({
