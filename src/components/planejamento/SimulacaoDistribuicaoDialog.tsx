@@ -67,8 +67,19 @@ const DEFAULT_CONFIG: AutoSchedulerConfig = {
   janelaOutrasDias: 3,
   faixas: [],
   toleranciaFaixaPct: 10,
+  regrasDiaSemana: [],
   seed: 1,
 };
+
+const DIAS_SEMANA: { value: number; label: string; short: string }[] = [
+  { value: 0, label: "Domingo", short: "D" },
+  { value: 1, label: "Segunda", short: "S" },
+  { value: 2, label: "Terça", short: "T" },
+  { value: 3, label: "Quarta", short: "Q" },
+  { value: 4, label: "Quinta", short: "Q" },
+  { value: 5, label: "Sexta", short: "S" },
+  { value: 6, label: "Sábado", short: "S" },
+];
 
 export function SimulacaoDistribuicaoDialog({
   open,
