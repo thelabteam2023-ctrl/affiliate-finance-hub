@@ -754,14 +754,20 @@ export function PlanejamentoCalendario() {
           parceiro_id: celula.parceiro_id ?? undefined,
           status: "planned",
         } as any);
-        // Marca célula como agendada (vincula à campanha criada, se id retornado)
-        const campanhaId = novaCamp?.id ?? novaCamp?.[0]?.id;
+        // useUpsertCampanha retorna o ID como string (não objeto). Aceita ambos.
+        const campanhaId =
+          typeof novaCamp === "string"
+            ? novaCamp
+            : novaCamp?.id ?? novaCamp?.[0]?.id;
         if (campanhaId) {
           await marcarCelulaAgendada(celula.id, campanhaId);
           qc.invalidateQueries({ queryKey: ["plano-celulas-disponiveis"] });
+        } else {
+          console.warn("[planejamento] upsert não retornou id da campanha", novaCamp);
         }
         toast.success(`${celula.bookmaker_nome} agendada`);
       } catch (err: any) {
+        console.error("[planejamento] erro ao agendar célula", err);
         toast.error(err?.message || "Erro ao agendar célula");
       }
     } else if (data?.type === "bookmaker") {
