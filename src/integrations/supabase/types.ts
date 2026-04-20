@@ -3415,6 +3415,64 @@ export type Database = {
           },
         ]
       }
+      distribuicao_plano_agenda: {
+        Row: {
+          celula_id: string
+          created_at: string
+          id: string
+          ordem_dia: number
+          plano_id: string
+          scheduled_date: string
+          status: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          celula_id: string
+          created_at?: string
+          id?: string
+          ordem_dia?: number
+          plano_id: string
+          scheduled_date: string
+          status?: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          celula_id?: string
+          created_at?: string
+          id?: string
+          ordem_dia?: number
+          plano_id?: string
+          scheduled_date?: string
+          status?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "distribuicao_plano_agenda_celula_id_fkey"
+            columns: ["celula_id"]
+            isOneToOne: true
+            referencedRelation: "distribuicao_plano_celulas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "distribuicao_plano_agenda_plano_id_fkey"
+            columns: ["plano_id"]
+            isOneToOne: false
+            referencedRelation: "distribuicao_planos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "distribuicao_plano_agenda_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       distribuicao_plano_celulas: {
         Row: {
           bookmaker_catalogo_id: string
