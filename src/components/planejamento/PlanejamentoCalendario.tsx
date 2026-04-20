@@ -661,7 +661,7 @@ export function PlanejamentoCalendario() {
                 <ChevronRight className="h-4 w-4" />
               </Button>
               <Badge variant="secondary" className="text-[10px] h-4 px-1">
-                {filteredBookmakers.length}
+                {sidebarItemsCount}
               </Badge>
               <div className="writing-mode-vertical text-[11px] text-muted-foreground font-semibold tracking-wider [writing-mode:vertical-rl] rotate-180 mt-2">
                 Casas disponíveis
@@ -682,7 +682,7 @@ export function PlanejamentoCalendario() {
               <div className="flex items-center justify-between">
                 <div className="text-sm font-semibold">Casas disponíveis</div>
                 <div className="flex items-center gap-1">
-                  <Badge variant="secondary" className="text-[10px] h-4 px-1">{filteredBookmakers.length}</Badge>
+                  <Badge variant="secondary" className="text-[10px] h-4 px-1">{sidebarItemsCount}</Badge>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -694,7 +694,44 @@ export function PlanejamentoCalendario() {
                   </Button>
                 </div>
               </div>
-              <p className="text-[11px] text-muted-foreground">Arraste para o calendário</p>
+              <p className="text-[11px] text-muted-foreground">
+                {modoPlano
+                  ? "Células do plano — arraste para o calendário"
+                  : "Arraste para o calendário"}
+              </p>
+
+              {/* Seletor de Plano de Distribuição */}
+              <Select value={planoFiltroId} onValueChange={(v) => { setPlanoFiltroId(v); setGrupoFiltroId("todos"); }}>
+                <SelectTrigger className="h-7 text-xs">
+                  <SelectValue placeholder="Plano de distribuição" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sem plano (casas livres)</SelectItem>
+                  {planos.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Filtro de Grupo (só faz sentido com plano) */}
+              {modoPlano && gruposDoPlano.length > 0 && (
+                <Select value={grupoFiltroId} onValueChange={setGrupoFiltroId}>
+                  <SelectTrigger className="h-7 text-xs">
+                    <SelectValue placeholder="Grupo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos os grupos</SelectItem>
+                    {gruposDoPlano.map((g) => (
+                      <SelectItem key={g.id} value={g.id}>
+                        <div className="flex items-center gap-2">
+                          <div className="h-2 w-2 rounded-full" style={{ backgroundColor: g.cor }} />
+                          {g.nome}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
 
               <div className="relative">
                 <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
@@ -706,30 +743,50 @@ export function PlanejamentoCalendario() {
                 />
               </div>
 
-              <RegulamentacaoFilter
-                value={bmFilter}
-                onChange={setBmFilter}
-                size="sm"
-                orientation="vertical"
-              />
+              {/* Filtro de regulamentação só faz sentido em modo "casas livres" */}
+              {!modoPlano && (
+                <RegulamentacaoFilter
+                  value={bmFilter}
+                  onChange={setBmFilter}
+                  size="sm"
+                  orientation="vertical"
+                />
+              )}
 
               <TrashDropZone active={activeDrag?.type === "campanha"} />
 
               <div className="flex-1 overflow-y-auto space-y-1 mt-1 -mx-1 px-1">
-                {filteredBookmakers.map(b => (
-                  <DraggableBookmaker
-                    key={b.id}
-                    id={b.id}
-                    nome={b.nome}
-                    moeda={b.moeda_padrao}
-                    status={b.status}
-                    logoUrl={b.logo_url}
-                  />
-                ))}
-                {filteredBookmakers.length === 0 && (
-                  <p className="text-xs text-muted-foreground italic text-center py-4">
-                    {bookmakers.length === 0 ? "Nenhuma casa cadastrada." : "Sem resultados."}
-                  </p>
+                {modoPlano ? (
+                  <>
+                    {filteredCelulas.map((c) => (
+                      <DraggableCelula key={c.id} celula={c} />
+                    ))}
+                    {filteredCelulas.length === 0 && (
+                      <p className="text-xs text-muted-foreground italic text-center py-4">
+                        {celulasPlano.length === 0
+                          ? "Plano sem células."
+                          : "Sem resultados."}
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {filteredBookmakers.map(b => (
+                      <DraggableBookmaker
+                        key={b.id}
+                        id={b.id}
+                        nome={b.nome}
+                        moeda={b.moeda_padrao}
+                        status={b.status}
+                        logoUrl={b.logo_url}
+                      />
+                    ))}
+                    {filteredBookmakers.length === 0 && (
+                      <p className="text-xs text-muted-foreground italic text-center py-4">
+                        {bookmakers.length === 0 ? "Nenhuma casa cadastrada." : "Sem resultados."}
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
               <Button variant="outline" size="sm" onClick={() => setRecursosOpen(true)}>
