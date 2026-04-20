@@ -71,14 +71,14 @@ const DEFAULT_CONFIG: AutoSchedulerConfig = {
   seed: 1,
 };
 
-const DIAS_SEMANA: { value: number; label: string; short: string }[] = [
-  { value: 0, label: "Domingo", short: "D" },
-  { value: 1, label: "Segunda", short: "S" },
-  { value: 2, label: "Terça", short: "T" },
-  { value: 3, label: "Quarta", short: "Q" },
-  { value: 4, label: "Quinta", short: "Q" },
-  { value: 5, label: "Sexta", short: "S" },
-  { value: 6, label: "Sábado", short: "S" },
+const DIAS_SEMANA: { value: number; label: string; short: string; label3: string }[] = [
+  { value: 0, label: "Domingo", short: "D", label3: "Dom" },
+  { value: 1, label: "Segunda", short: "S", label3: "Seg" },
+  { value: 2, label: "Terça", short: "T", label3: "Ter" },
+  { value: 3, label: "Quarta", short: "Q", label3: "Qua" },
+  { value: 4, label: "Quinta", short: "Q", label3: "Qui" },
+  { value: 5, label: "Sexta", short: "S", label3: "Sex" },
+  { value: 6, label: "Sábado", short: "S", label3: "Sáb" },
 ];
 
 export function SimulacaoDistribuicaoDialog({
