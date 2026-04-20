@@ -497,6 +497,25 @@ export function PlanejamentoCalendario() {
   const modoPlano = planoFiltroId !== "none";
   const sidebarItemsCount = modoPlano ? filteredCelulas.length : filteredBookmakers.length;
 
+  // Excluir campanha do calendário (libera célula vinculada se houver)
+  const handleDeleteCampanha = useCallback(async (campanhaId: string) => {
+    try {
+      await deleteCamp.mutateAsync(campanhaId);
+      const celulaVinculada = celulasPlano.find((cel) => cel.campanha_id === campanhaId);
+      if (celulaVinculada) {
+        try {
+          await desmarcarCelulaAgendada(celulaVinculada.id);
+          qc.invalidateQueries({ queryKey: ["plano-celulas-disponiveis"] });
+        } catch (err) {
+          console.error("[planejamento] desmarcarCelula falhou", err);
+        }
+      }
+      toast.success("Casa removida do calendário");
+    } catch (err: any) {
+      toast.error(err?.message || "Erro ao excluir");
+    }
+  }, [deleteCamp, celulasPlano, qc]);
+
   // Conflitos por dia
   const conflictMap = useMemo(() => {
     const map = new Map<string, Set<string>>();
