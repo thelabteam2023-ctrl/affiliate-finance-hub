@@ -28,6 +28,16 @@ export interface FaixaMeta {
   meta: number;
 }
 
+/** Regra de mínimo de criações por conjunto de dias da semana. */
+export interface RegraDiaSemana {
+  /** Dias da semana (0=Dom, 1=Seg, ..., 6=Sáb). */
+  diasSemana: number[];
+  /** Mínimo de casas que CADA dia selecionado deve ter no mês. */
+  minimoPorDia: number;
+  /** Rótulo opcional para warnings (ex.: "Fins de semana"). */
+  label?: string;
+}
+
 export interface AutoSchedulerConfig {
   /** Máximo ESTRITO de casas clone por dia (conta cada agendamento, não CPFs distintos). */
   clonesPorDia: number;
