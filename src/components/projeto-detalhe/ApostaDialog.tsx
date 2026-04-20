@@ -431,7 +431,7 @@ const getMoneylineSelecoes = (esporte: string | undefined, evento: string): stri
 
 export function ApostaDialog({ open, onOpenChange, aposta, projetoId, onSuccess, defaultEstrategia = 'PUNTER', activeTab = 'apostas', embedded = false }: ApostaDialogProps) {
   const { workspaceId } = useWorkspace();
-  const { convertToConsolidation } = useProjetoCurrency(projetoId);
+  const { convertToConsolidation, moedaConsolidacao } = useProjetoCurrency(projetoId);
   const [loading, setLoading] = useState(false);
   const { favoriteSource } = useWorkspaceBetSources(workspaceId);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
