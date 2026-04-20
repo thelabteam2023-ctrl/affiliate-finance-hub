@@ -125,31 +125,15 @@ export function gerarDistribuicao(
             });
           }
         });
-        // Diversidade: se nCpfs * usar > totalCasas há sobreposição entre CPFs
-        const slots = nCpfs * usar;
-        if (slots > totalCasas) {
-          warnings.push({
-            level: "warn",
-            grupo_id: g.grupo_id,
-            message: `"${g.grupo_nome}": ${slots} usos para ${totalCasas} casas — haverá repetição entre CPFs.`,
-          });
-        }
+        // Repetição da MESMA casa entre CPFs diferentes é permitida — sem aviso.
         break;
       }
 
       case "RODIZIO_ENTRE_CPFS": {
-        // Cada CPF deve receber casas únicas no grupo, e entre CPFs também só repete depois de
-        // todas serem usadas. Ou seja: distribuição circular — CPF1 pega [0..k-1], CPF2 pega [k..2k-1], etc.
+        // Cada CPF deve receber casas únicas no grupo. Repetição entre CPFs é aceitável quando
+        // não há casas suficientes — não emitimos warning para isso.
         const usar = Math.min(desejado, totalCasas);
-        const necessario = nCpfs * usar;
-        if (necessario > totalCasas) {
-          warnings.push({
-            level: "warn",
-            grupo_id: g.grupo_id,
-            message: `"${g.grupo_nome}": rodízio precisaria de ${necessario} casas distintas mas só há ${totalCasas}. Algumas casas se repetirão entre CPFs.`,
-          });
-        }
-        if (usar > totalCasas) {
+        if (desejado > totalCasas) {
           warnings.push({
             level: "warn",
             grupo_id: g.grupo_id,
