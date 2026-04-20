@@ -867,7 +867,7 @@ export function SimulacaoDistribuicaoDialog({
   );
 }
 
-// Campo numérico compacto reutilizável
+// Campo numérico compacto reutilizável (com tooltip explicativo opcional)
 function ParamField({
   label,
   value,
@@ -875,6 +875,7 @@ function ParamField({
   min,
   max,
   step,
+  tooltip,
 }: {
   label: string;
   value: number;
@@ -882,10 +883,36 @@ function ParamField({
   min?: number;
   max?: number;
   step?: string;
+  tooltip?: { titulo: string; descricao: string; exemplo: string };
 }) {
   return (
     <div className="space-y-1">
-      <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</Label>
+      <div className="flex items-center justify-between gap-1">
+        <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</Label>
+        {tooltip && (
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                className="text-muted-foreground/60 hover:text-primary transition-colors"
+                aria-label={`Sobre ${label}`}
+              >
+                <Info className="h-3 w-3" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent side="left" align="start" className="w-72 text-xs space-y-2">
+              <div className="font-semibold text-sm">{tooltip.titulo}</div>
+              <p className="text-muted-foreground leading-relaxed">{tooltip.descricao}</p>
+              <div className="rounded-md bg-muted/40 border p-2 space-y-0.5">
+                <div className="text-[10px] uppercase tracking-wide font-semibold text-primary/80">
+                  Exemplo
+                </div>
+                <p className="text-[11px] leading-relaxed">{tooltip.exemplo}</p>
+              </div>
+            </PopoverContent>
+          </Popover>
+        )}
+      </div>
       <Input
         type="number"
         min={min}
