@@ -34,11 +34,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Trash2, Save, Wand2, AlertTriangle, Users, FolderOpen, CalendarRange } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { toast } from "sonner";
 import { useExchangeRates } from "@/contexts/ExchangeRatesContext";
-import { useGerarAgendaMutation, useAgendaPlano } from "@/hooks/useAgendaPlano";
-import { useDistribuicaoPlanos, useDistribuicaoPlanoDetalhe } from "@/hooks/useDistribuicaoPlanos";
-import type { CelulaParaAgendar } from "@/lib/agenda-engine";
+import { useDistribuicaoPlanos } from "@/hooks/useDistribuicaoPlanos";
 
 interface CatalogoItem {
   id: string;
@@ -54,16 +51,8 @@ export default function DistribuicaoTab() {
   const { data: casasPlanejamento = [] } = usePlanningCasas();
   const { createPlano } = useDistribuicaoPlanos();
   const { convertToBRL, cotacaoUSD } = useExchangeRates();
-  const gerarAgendaMut = useGerarAgendaMutation();
 
   const [planoNome, setPlanoNome] = useState("");
-  const [metaDiariaUsd, setMetaDiariaUsd] = useState<string>("");
-  const [startDate, setStartDate] = useState<string>(() => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  });
-  const [planoSalvoId, setPlanoSalvoId] = useState<string | null>(null);
-  const { data: detalheSalvo } = useDistribuicaoPlanoDetalhe(planoSalvoId);
   const [selectedPerfilIds, setSelectedPerfilIds] = useState<string[]>([]);
   const [grupoConfigs, setGrupoConfigs] = useState<
     Array<{
@@ -212,7 +201,6 @@ export default function DistribuicaoTab() {
         })),
         celulas: resultado.celulas.map((c, idx) => ({
           grupo_id: c.grupo_id,
-          // c.parceiro_id no engine = id do perfil de planejamento
           perfil_planejamento_id: c.parceiro_id,
           parceiro_id: perfilToParceiro.get(c.parceiro_id) ?? null,
           bookmaker_catalogo_id: c.bookmaker_catalogo_id,
@@ -220,59 +208,10 @@ export default function DistribuicaoTab() {
           ordem: idx,
         })),
       },
-      {
-        onSuccess: (plano: any) => {
-          if (plano?.id) setPlanoSalvoId(plano.id);
-        },
-      }
     );
   };
 
-  // Gera agenda usando o plano salvo (precisa estar salvo pra ter celula_id reais)
-  const handleGerarAgenda = () => {
-    if (!planoSalvoId || !detalheSalvo) {
-      toast.error("Salve o plano antes de gerar a agenda.");
-      return;
-    }
-    const grupoModoMap = new Map(grupos.map((g) => [g.id, g.modo_execucao]));
-    const grupoCelulaMap = new Map(detalheSalvo.grupos.map((g) => [g.id, g.grupo_id]));
-    const membroMap = new Map<string, { sugerido: number; moeda: string | null }>();
-    membros.forEach((m) => {
-      membroMap.set(`${m.grupo_id}::${m.bookmaker_catalogo_id}`, {
-        sugerido: Number(m.deposito_sugerido) || 0,
-        moeda: m.deposito_moeda,
-      });
-    });
 
-    const celulasParaAgendar: CelulaParaAgendar[] = detalheSalvo.celulas
-      .map((c) => {
-        const grupoOriginalId = grupoCelulaMap.get(c.plano_grupo_id);
-        if (!grupoOriginalId) return null;
-        const cat = catalogoMap.get(c.bookmaker_catalogo_id);
-        const memb = membroMap.get(`${grupoOriginalId}::${c.bookmaker_catalogo_id}`);
-        const moeda = memb?.moeda || cat?.moeda_padrao || "BRL";
-        return {
-          celula_id: c.id,
-          grupo_id: grupoOriginalId,
-          parceiro_id: c.parceiro_id,
-          bookmaker_catalogo_id: c.bookmaker_catalogo_id,
-          ip_slot: c.ip_slot ?? "",
-          ordem: c.ordem,
-          modo_execucao: grupoModoMap.get(grupoOriginalId) ?? "AGENDADO",
-          deposito_sugerido: memb?.sugerido ?? 0,
-          moeda,
-        };
-      })
-      .filter((x): x is CelulaParaAgendar => !!x);
-
-    gerarAgendaMut.mutate({
-      planoId: planoSalvoId,
-      celulas: celulasParaAgendar,
-      startDate,
-      metaDiariaUsd: metaDiariaUsd ? Number(metaDiariaUsd) : null,
-      toUsd,
-    });
-  };
 
   const selectedGenericosCount = useMemo(
     () => selectedPerfilIds.filter((id) => !perfis.find((p) => p.id === id)?.parceiro_id).length,
@@ -655,37 +594,24 @@ export default function DistribuicaoTab() {
         </div>
       )}
 
-      {/* Checklist do que falta para Salvar / Gerar agenda */}
+      {/* Checklist do que falta para Salvar */}
       {(() => {
         const faltaSalvar: string[] = [];
         if (!resultado || resultado.celulas.length === 0) faltaSalvar.push('Clique em "Gerar distribuição"');
         if (!planoNome.trim()) faltaSalvar.push("Preencha o nome do plano (campo no topo)");
-
-        const faltaAgenda: string[] = [];
-        if (!planoSalvoId) faltaAgenda.push("Salve o plano antes de gerar a agenda");
-
-        if (faltaSalvar.length === 0 && faltaAgenda.length === 0) return null;
+        if (faltaSalvar.length === 0) return null;
         return (
           <div className="rounded-md border border-primary/40 bg-primary/5 p-2.5 text-[11px] space-y-1.5">
-            {faltaSalvar.length > 0 && (
-              <div>
-                <div className="font-semibold text-foreground mb-0.5">Para salvar o plano falta:</div>
-                <ul className="list-disc list-inside text-muted-foreground space-y-0.5">
-                  {faltaSalvar.map((m) => <li key={m}>{m}</li>)}
-                </ul>
-              </div>
-            )}
-            {faltaAgenda.length > 0 && faltaSalvar.length === 0 && (
-              <div>
-                <div className="font-semibold text-foreground mb-0.5">Para gerar a agenda falta:</div>
-                <ul className="list-disc list-inside text-muted-foreground space-y-0.5">
-                  {faltaAgenda.map((m) => <li key={m}>{m}</li>)}
-                </ul>
-              </div>
-            )}
+            <div>
+              <div className="font-semibold text-foreground mb-0.5">Para salvar o plano falta:</div>
+              <ul className="list-disc list-inside text-muted-foreground space-y-0.5">
+                {faltaSalvar.map((m) => <li key={m}>{m}</li>)}
+              </ul>
+            </div>
           </div>
         );
       })()}
+
 
       {/* Ações */}
       <div className="flex flex-wrap gap-2 justify-end">
@@ -720,62 +646,14 @@ export default function DistribuicaoTab() {
         </Button>
       </div>
 
-      {/* Agenda automática (após salvar) */}
-      <Card className="p-3 space-y-3 border-primary/30 bg-primary/5">
-        <div className="flex items-center gap-2">
-          <CalendarRange className="h-4 w-4 text-primary" />
-          <div className="text-sm font-semibold">Agenda automática (calendário)</div>
-        </div>
-        <p className="text-[11px] text-muted-foreground">
-          O motor distribui os depósitos ao longo dos dias respeitando a meta diária em USD,
-          o modo de execução do grupo (agendado vs sob demanda) e evita CPF repetido em sequência.
-          Salve o plano antes para usar.
-        </p>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-          <div>
-            <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
-              Início
-            </Label>
-            <Input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="h-8 text-xs"
-            />
-          </div>
-          <div>
-            <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
-              Meta diária (USD)
-            </Label>
-            <Input
-              type="number"
-              min={0}
-              step="0.01"
-              value={metaDiariaUsd}
-              onChange={(e) => setMetaDiariaUsd(e.target.value)}
-              placeholder="ex: 500"
-              className="h-8 text-xs"
-            />
-          </div>
-          <div className="flex items-end">
-            <Button
-              size="sm"
-              className="w-full"
-              onClick={handleGerarAgenda}
-              disabled={!planoSalvoId || gerarAgendaMut.isPending}
-              title={!planoSalvoId ? "Salve o plano primeiro" : undefined}
-            >
-              <CalendarRange className="h-3.5 w-3.5 mr-1" />
-              {gerarAgendaMut.isPending ? "Gerando..." : "Gerar agenda"}
-            </Button>
-          </div>
-        </div>
-        {planoSalvoId && (
-          <div className="text-[10px] text-muted-foreground">
-            Plano salvo. As células agendadas aparecerão no calendário do Planejamento.
-          </div>
-        )}
-      </Card>
+      <div className="rounded-md border border-primary/30 bg-primary/5 p-2.5 text-[11px] text-muted-foreground flex items-start gap-2">
+        <CalendarRange className="h-3.5 w-3.5 text-primary mt-0.5 shrink-0" />
+        <span>
+          Após salvar o plano, vá para a aba <strong>Calendário</strong> e use o filtro
+          "Plano + CPF" no painel "Casas disponíveis" para arrastar as casas para os dias desejados.
+        </span>
+      </div>
+
 
       {/* Resultado */}
       {resultado && (
