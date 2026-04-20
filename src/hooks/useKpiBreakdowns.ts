@@ -309,7 +309,9 @@ interface ExtraAgrupado {
   porMoeda: CurrencyBreakdownItem[];
 }
 
-type ExtraTipo = 'ajuste_saldo' | 'resultado_cambial' | 'promocional' | 'freebet';
+// NOTA: 'resultado_cambial' (GANHO/PERDA_CAMBIAL) foi REMOVIDO do Lucro Operacional.
+// FX é evento de tesouraria, não de operação de aposta. Vive em Indicadores Financeiros/Caixa.
+type ExtraTipo = 'ajuste_saldo' | 'promocional' | 'freebet';
 
 function deriveExtrasFromRpc(
   rawData: ProjetoDashboardRawData,
@@ -352,12 +354,8 @@ function deriveExtrasFromRpc(
         }
         break;
       }
-      case 'GANHO_CAMBIAL':
-        addEntry('resultado_cambial', valor, moeda);
-        break;
-      case 'PERDA_CAMBIAL':
-        addEntry('resultado_cambial', -valor, moeda);
-        break;
+      // GANHO_CAMBIAL / PERDA_CAMBIAL: EXCLUÍDOS do Lucro Operacional.
+      // FX é evento de tesouraria — visível apenas em Indicadores Financeiros/Caixa.
       case 'FREEBET_CONVERTIDA':
         addEntry('freebet', valor, moeda);
         break;
@@ -374,7 +372,7 @@ function deriveExtrasFromRpc(
 
   // Converter Maps para arrays
   const formatted: Record<string, ExtraAgrupado> = {};
-  const tipos: ExtraTipo[] = ['ajuste_saldo', 'resultado_cambial', 'promocional', 'freebet'];
+  const tipos: ExtraTipo[] = ['ajuste_saldo', 'promocional', 'freebet'];
   tipos.forEach(tipo => {
     const data = result[tipo];
     formatted[tipo] = {
