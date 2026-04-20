@@ -105,6 +105,8 @@ export function SimulacaoDistribuicaoDialog({
   const [overrides, setOverrides] = useState<Map<string, number>>(new Map());
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverDay, setDragOverDay] = useState<number | null>(null);
+  // Drag de linha inteira: dia origem (swap entre dias)
+  const [draggedDay, setDraggedDay] = useState<number | null>(null);
 
   // Reset de overrides ao trocar mês/abrir
   useEffect(() => {
