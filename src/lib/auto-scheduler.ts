@@ -63,6 +63,14 @@ export interface AutoSchedulerConfig {
   regrasDiaSemana?: RegraDiaSemana[];
   /** Seed numérica para variar a combinação a cada recálculo. */
   seed?: number;
+  /**
+   * Estratégia de distribuição:
+   *  - "balanceado" (default): espalha as casas ao longo de diaLimite com curva suave.
+   *  - "agrupado": coloca todas as suportes do CPF ativo no mesmo dia, completa com clones
+   *    até clonesPorDia, e só avança para o próximo CPF quando o atual esgota. Se exceder
+   *    maxCasasPorDia, distribui o excedente nos dias contíguos seguintes.
+   */
+  modoAgrupamento?: "balanceado" | "agrupado";
 }
 
 export interface AgendamentoSimulado {
