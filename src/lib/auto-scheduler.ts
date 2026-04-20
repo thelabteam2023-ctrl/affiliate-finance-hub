@@ -404,45 +404,7 @@ export function simularDistribuicao(input: {
   for (let dia = 1; dia <= limite; dia++) {
     const slot = ocupacao.get(dia)!;
     for (let safety = 0; safety < 200; safety++) {
-      // Limites globais que param o dia inteiro
-      if (maxCasasPorDia > 0 && slot.casas.size >= maxCasasPorDia) break;
-      if (metaGanhoDia > 0 && slot.ganho >= metaGanhoDia) break;
-
-      // Se estamos no último dia de uma janela e ela ainda não atingiu o mínimo de outras,
-      // forçamos seleção de "outra" antes de qualquer clone.
-      const precisaOutra = violaJanelaOutras(dia);
-
-      let pick = precisaOutra ? selecionar(dia, slot, true) : selecionar(dia, slot, false);
-      if (!pick && precisaOutra) {
-        // Fallback: não há "outra" disponível — tenta qualquer (não bloquear o dia)
-        pick = selecionar(dia, slot, false);
-      }
-      if (!pick) break;
-
-      slot.casas.add(pick.bookmaker_catalogo_id);
-      const ck = cpfKey(pick);
-      if (isClone(pick)) {
-        slot.clonesCount++;
-        if (ck) {
-          slot.cpfsClone.add(ck);
-          ultimoUsoCpfClone.set(ck, dia);
-          backlogPorCpf.set(ck, (backlogPorCpf.get(ck) ?? 1) - 1);
-        }
-      } else {
-        slot.outrasCount++;
-      }
-      slot.ganho += Number(pick.deposito_sugerido) || 0;
-      ultimoUsoCasa.set(pick.bookmaker_catalogo_id, dia);
-      // Atualiza acumulado da faixa correspondente
-      const idxFaixa = faixaDoDia(dia);
-      if (idxFaixa >= 0) acumuladoFaixa[idxFaixa] += Number(pick.deposito_sugerido) || 0;
-      restantes.delete(pick.id);
-
-      agendamentos.push({
-        celula: pick,
-        dia,
-        dateKey: buildDateKey(year, month, dia),
-      });
+      if (!tentarPasso(dia, slot)) break;
     }
   }
 
