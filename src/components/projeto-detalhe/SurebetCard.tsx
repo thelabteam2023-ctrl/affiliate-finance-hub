@@ -241,6 +241,7 @@ function PernaItem({
   bookmakerNomeMap,
   onResultChange,
   convertToConsolidation,
+  parentResultado,
 }: { 
   perna: SurebetPerna; 
   formatValue: (value: number) => string;
@@ -248,11 +249,20 @@ function PernaItem({
   bookmakerNomeMap?: Map<string, string>;
   onResultChange?: (resultado: string) => Promise<void>;
   convertToConsolidation?: (valor: number, moedaOrigem: string) => number;
+  /**
+   * Quando definido, força o pill de resultado a exibir esse valor (em vez de perna.resultado).
+   * Usado em apostas simples multi-entry (PUNTER/VALUEBET/DUPLO_GREEN/etc.), onde o resultado
+   * é único no nível do pai (apostas_unificada.resultado) e as pernas individuais ficam null.
+   */
+  parentResultado?: string | null;
 }) {
   const hasMultipleEntries = perna.entries && perna.entries.length > 1;
   const [isOpen, setIsOpen] = useState(
     hasMultipleEntries ? (perna.entries!.length <= 3) : false
   );
+  // Resultado efetivo a exibir no pill: para simples multi-entry usa o do pai;
+  // para surebet/múltipla real usa o da perna individual.
+  const resultadoExibir = parentResultado ?? perna.resultado;
   
   // Detectar se perna usa freebet
   const isFreebet = perna.fonte_saldo === 'FREEBET';
@@ -324,7 +334,7 @@ function PernaItem({
           {/* Result pill per perna */}
           {onResultChange && (
             <SurebetPernaResultPill
-              resultado={perna.resultado}
+              resultado={resultadoExibir}
               onResultChange={onResultChange}
             />
           )}
@@ -404,7 +414,7 @@ function PernaItem({
           {/* Result pill per grouped perna */}
           {onResultChange && (
             <SurebetPernaResultPill
-              resultado={perna.resultado}
+              resultado={resultadoExibir}
               onResultChange={onResultChange}
             />
           )}
@@ -778,6 +788,7 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onPernaResultChan
                   getLogoUrl={getLogoUrl}
                   bookmakerNomeMap={bookmakerNomeMap}
                   convertToConsolidation={convertToConsolidation}
+                  parentResultado={isSimplesMultiEntry ? surebet.resultado : undefined}
                   onResultChange={
                     // CASO 1: Aposta simples multi-entry (PUNTER, VALUEBET, DUPLO_GREEN, EXTRACAO_BONUS, FREEBET, SIMPLES)
                     // → resultado é único para toda a aposta. O badge dispara reliquidação global via reliquidar_aposta_v6.
