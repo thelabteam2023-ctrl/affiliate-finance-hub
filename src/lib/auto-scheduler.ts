@@ -404,14 +404,7 @@ export function simularDistribuicao(input: {
     return elegiveis[0] ?? null;
   }
 
-  // Helper: tenta executar UM passo de agendamento no dia (retorna true se agendou).
-  function tentarPasso(dia: number, slot: DaySlot): boolean {
-    if (maxCasasPorDia > 0 && slot.casas.size >= maxCasasPorDia) return false;
-    if (metaGanhoDia > 0 && slot.ganho >= metaGanhoDia) return false;
-    const precisaOutra = violaJanelaOutras(dia);
-    let pick = precisaOutra ? selecionar(dia, slot, true) : selecionar(dia, slot, false);
-    if (!pick && precisaOutra) pick = selecionar(dia, slot, false);
-    if (!pick) return false;
+  function efetivarAgendamento(pick: CelulaDisponivel, dia: number, slot: DaySlot) {
     slot.casas.add(pick.bookmaker_catalogo_id);
     const ck = cpfKey(pick);
     if (isClone(pick)) {
@@ -430,14 +423,51 @@ export function simularDistribuicao(input: {
     if (idxFaixa >= 0) acumuladoFaixa[idxFaixa] += Number(pick.deposito_sugerido) || 0;
     restantes.delete(pick.id);
     agendamentos.push({ celula: pick, dia, dateKey: buildDateKey(year, month, dia) });
+  }
+
+  // Helper: tenta executar UM passo de agendamento no dia (retorna true se agendou).
+  function tentarPasso(dia: number, slot: DaySlot): boolean {
+    if (maxCasasPorDia > 0 && slot.casas.size >= maxCasasPorDia) return false;
+    if (metaGanhoDia > 0 && slot.ganho >= metaGanhoDia) return false;
+    const precisaOutra = violaJanelaOutras(dia);
+    let pick = precisaOutra ? selecionar(dia, slot, true) : selecionar(dia, slot, false);
+    if (!pick && precisaOutra) pick = selecionar(dia, slot, false);
+    if (!pick) return false;
+    efetivarAgendamento(pick, dia, slot);
     return true;
   }
 
-  // ---- PASS 1 (SUPORTES): Esgota CPF por CPF, espalhando pelos dias ----
-  // ANTES de qualquer outra coisa. Para cada CPF (do menor índice ao maior),
-  // agenda TODAS as suas casas suporte distribuindo round-robin pelos dias.
-  // Agendamento DIRETO (sem selecionar()) para garantir que CPF baixo não seja
-  // bloqueado por reservas/filtros que assumem outros CPFs já agendados.
+  function temPendenciaSuporteCpf(cpfIdx: number): boolean {
+    return candidatas.some(
+      (c) => restantes.has(c.id) && !isClone(c) && (c.cpf_index ?? 9999) === cpfIdx
+    );
+  }
+
+  function tentarSuporteCpfNoDia(cpfIdx: number, dia: number, slot: DaySlot): boolean {
+    if (maxCasasPorDia > 0 && slot.casas.size >= maxCasasPorDia) return false;
+    if (metaGanhoDia > 0 && slot.ganho >= metaGanhoDia) return false;
+
+    const pick = candidatas
+      .filter(
+        (c) =>
+          restantes.has(c.id) &&
+          !isClone(c) &&
+          (c.cpf_index ?? 9999) === cpfIdx &&
+          !slot.casas.has(c.bookmaker_catalogo_id) &&
+          !estouraFaixa(dia, Number(c.deposito_sugerido) || 0)
+      )
+      .sort((a, b) => {
+        const gA = dia - (ultimoUsoCasa.get(a.bookmaker_catalogo_id) ?? -999);
+        const gB = dia - (ultimoUsoCasa.get(b.bookmaker_catalogo_id) ?? -999);
+        if (gA !== gB) return gB - gA;
+        return (a.bookmaker_nome || "").localeCompare(b.bookmaker_nome || "");
+      })[0];
+
+    if (!pick) return false;
+    efetivarAgendamento(pick, dia, slot);
+    return true;
+  }
+
   const cpfsSuporte = Array.from(
     new Set(
       candidatas
@@ -446,43 +476,62 @@ export function simularDistribuicao(input: {
     )
   ).sort((a, b) => a - b);
 
-  // Estratégia: para cada CPF (do menor ao maior), espalha 1 suporte por dia
-  // em round-robin pelos dias 1..limite, até esgotar o suporte desse CPF.
-  // Só ENTÃO passa pro próximo CPF. Clones entram no Pass 3 (depois) para
-  // preencher os dias sem ocupar capacidade prematuramente.
-  let cursorDia = 1;
-  for (const cpfIdx of cpfsSuporte) {
-    const casasDoCpf = candidatas.filter(
-      (c) => !isClone(c) && (c.cpf_index ?? 9999) === cpfIdx
-    );
-    let pendentes = casasDoCpf.filter((c) => restantes.has(c.id));
-    let voltasSemAgendar = 0;
-    while (pendentes.length > 0 && voltasSemAgendar <= limite) {
-      const slot = ocupacao.get(cursorDia)!;
-      let agendouAlgo = false;
-      // UMA casa suporte desse CPF nesse dia (espalha pelo mês)
-      for (let k = 0; k < pendentes.length; k++) {
-        const casa = pendentes[k];
-        if (!restantes.has(casa.id)) continue;
-        if (slot.casas.has(casa.bookmaker_catalogo_id)) continue;
-        if (maxCasasPorDia > 0 && slot.casas.size >= maxCasasPorDia) break;
-        if (metaGanhoDia > 0 && slot.ganho >= metaGanhoDia) break;
-        const valor = Number(casa.deposito_sugerido) || 0;
-        if (estouraFaixa(cursorDia, valor)) continue;
-        slot.casas.add(casa.bookmaker_catalogo_id);
-        slot.outrasCount++;
-        slot.ganho += valor;
-        ultimoUsoCasa.set(casa.bookmaker_catalogo_id, cursorDia);
-        const idxFaixa = faixaDoDia(cursorDia);
-        if (idxFaixa >= 0) acumuladoFaixa[idxFaixa] += valor;
-        restantes.delete(casa.id);
-        agendamentos.push({ celula: casa, dia: cursorDia, dateKey: buildDateKey(year, month, cursorDia) });
-        agendouAlgo = true;
-        break;
+  // Meta suave de distribuição: reparte o total de casas ao longo do diaLimite,
+  // evitando inflar o começo do mês e permitindo múltiplas casas no mesmo dia.
+  const metaDistribuicaoPorDia = new Map<number, number>();
+  for (let dia = 1; dia <= limite; dia++) {
+    const acumuladoAtual = Math.floor((candidatas.length * dia) / limite);
+    const acumuladoAnterior = Math.floor((candidatas.length * (dia - 1)) / limite);
+    metaDistribuicaoPorDia.set(dia, acumuladoAtual - acumuladoAnterior);
+  }
+
+  // ---- PASS 1: Distribuição balanceada até a meta suave de cada dia ----
+  // Mantém a prioridade de suporte por CPF (CPF 1 esgota antes do CPF 2),
+  // mas preenche cada dia com mais de uma casa quando a curva ideal pedir.
+  let cpfSuporteAtivoIdx = 0;
+  let progrediuBalanceado = true;
+  let safetyBalanceado = 0;
+  const maxRoundsBalanceado = candidatas.length * 3 + limite;
+  while (progrediuBalanceado && safetyBalanceado++ < maxRoundsBalanceado) {
+    progrediuBalanceado = false;
+    for (let dia = 1; dia <= limite; dia++) {
+      const slot = ocupacao.get(dia)!;
+      const alvoDia = metaDistribuicaoPorDia.get(dia) ?? 0;
+      let safetyDia = 0;
+
+      while (slot.casas.size < alvoDia && safetyDia++ < 50) {
+        while (
+          cpfSuporteAtivoIdx < cpfsSuporte.length &&
+          !temPendenciaSuporteCpf(cpfsSuporte[cpfSuporteAtivoIdx])
+        ) {
+          cpfSuporteAtivoIdx++;
+        }
+
+        let agendou = false;
+
+        if (cpfSuporteAtivoIdx < cpfsSuporte.length) {
+          agendou = tentarSuporteCpfNoDia(cpfsSuporte[cpfSuporteAtivoIdx], dia, slot);
+          while (
+            cpfSuporteAtivoIdx < cpfsSuporte.length &&
+            !temPendenciaSuporteCpf(cpfsSuporte[cpfSuporteAtivoIdx])
+          ) {
+            cpfSuporteAtivoIdx++;
+          }
+        }
+
+        if (!agendou) {
+          agendou = tentarPasso(dia, slot);
+          while (
+            cpfSuporteAtivoIdx < cpfsSuporte.length &&
+            !temPendenciaSuporteCpf(cpfsSuporte[cpfSuporteAtivoIdx])
+          ) {
+            cpfSuporteAtivoIdx++;
+          }
+        }
+
+        if (!agendou) break;
+        progrediuBalanceado = true;
       }
-      pendentes = pendentes.filter((c) => restantes.has(c.id));
-      cursorDia = (cursorDia % limite) + 1;
-      voltasSemAgendar = agendouAlgo ? 0 : voltasSemAgendar + 1;
     }
   }
 
@@ -503,16 +552,15 @@ export function simularDistribuicao(input: {
     }
   }
 
-  // ---- PASS 3 (CLONES restantes): Round-robin pelos dias ----
-  // Caso ainda sobrem clones depois do Pass 1 (ex.: cooldown CPF), tenta colocar nos dias livres.
-  let progrediuClones = true;
-  let safetyClones = 0;
-  const maxRoundsClones = candidatas.length * 2 + 10;
-  while (progrediuClones && safetyClones++ < maxRoundsClones) {
-    progrediuClones = false;
+  // ---- PASS 3: Overflow final para sobras que não encaixaram na curva ideal ----
+  let progrediuSobras = true;
+  let safetySobras = 0;
+  const maxRoundsSobras = candidatas.length * 2 + 10;
+  while (progrediuSobras && safetySobras++ < maxRoundsSobras) {
+    progrediuSobras = false;
     for (let dia = 1; dia <= limite; dia++) {
       const slot = ocupacao.get(dia)!;
-      if (tentarPasso(dia, slot)) progrediuClones = true;
+      if (tentarPasso(dia, slot)) progrediuSobras = true;
     }
   }
 
