@@ -301,18 +301,18 @@ export function SimulacaoDistribuicaoDialog({
         </div>
 
         {/* Não agendadas — agrupadas por motivo */}
-        {simulacao && simulacao.naoAgendadasDetalhe.length > 0 && (
+        {simulacao && (simulacao.naoAgendadasDetalhe?.length ?? 0) > 0 && (
           <div className="rounded-md border border-warning/40 bg-warning/5 p-2 max-h-48 overflow-y-auto space-y-2">
             <div className="flex items-center gap-1.5 text-xs font-semibold text-warning">
               <AlertTriangle className="h-3.5 w-3.5" />
               {simulacao.naoAgendadasDetalhe.length} célula(s) não couberam — motivos:
             </div>
             {(["cooldown_cpf", "cooldown_casa", "sem_capacidade", "outro"] as const).map((motivo) => {
-              const grupo = simulacao.naoAgendadasDetalhe.filter((d) => d.motivo === motivo);
+              const grupo = (simulacao.naoAgendadasDetalhe ?? []).filter((d) => d.motivo === motivo);
               if (grupo.length === 0) return null;
               const label =
                 motivo === "cooldown_cpf"
-                  ? `Cooldown CPF (${grupo.length})`
+                  ? `Cooldown CPF — só clones (${grupo.length})`
                   : motivo === "cooldown_casa"
                   ? `Cooldown casa (${grupo.length})`
                   : motivo === "sem_capacidade"
@@ -339,6 +339,7 @@ export function SimulacaoDistribuicaoDialog({
                         >
                           {c.cpf_index ? `CPF ${c.cpf_index} • ` : ""}
                           {c.bookmaker_nome}
+                          <span className="opacity-60 ml-1">({c.grupo_nome})</span>
                         </span>
                       );
                     })}
@@ -350,7 +351,7 @@ export function SimulacaoDistribuicaoDialog({
         )}
 
         {/* Warnings */}
-        {simulacao && simulacao.warnings.length > 0 && (
+        {simulacao && (simulacao.warnings?.length ?? 0) > 0 && (
           <div className="text-[11px] text-muted-foreground space-y-0.5">
             {simulacao.warnings.map((w, i) => (
               <div key={i} className="flex items-start gap-1">
