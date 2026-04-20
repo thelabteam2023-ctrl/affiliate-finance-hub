@@ -74,6 +74,24 @@ function formatMoney(v: number, currency: string) {
   }
 }
 
+// Paleta de cores por CPF — diferenciar visualmente cada CPF do plano.
+// Usa HSL fixo (não tokens) propositalmente para distinguir CPFs entre si.
+const CPF_COLORS: { bg: string; border: string; text: string; dot: string }[] = [
+  { bg: "hsl(45 95% 55% / 0.15)", border: "hsl(45 95% 55%)", text: "hsl(45 95% 65%)", dot: "hsl(45 95% 55%)" },   // amarelo
+  { bg: "hsl(142 70% 45% / 0.15)", border: "hsl(142 70% 45%)", text: "hsl(142 70% 55%)", dot: "hsl(142 70% 45%)" }, // verde
+  { bg: "hsl(217 90% 60% / 0.15)", border: "hsl(217 90% 60%)", text: "hsl(217 90% 70%)", dot: "hsl(217 90% 60%)" }, // azul
+  { bg: "hsl(0 80% 60% / 0.15)", border: "hsl(0 80% 60%)", text: "hsl(0 80% 70%)", dot: "hsl(0 80% 60%)" },         // vermelho
+  { bg: "hsl(280 70% 60% / 0.15)", border: "hsl(280 70% 60%)", text: "hsl(280 70% 70%)", dot: "hsl(280 70% 60%)" }, // roxo
+  { bg: "hsl(25 90% 55% / 0.15)", border: "hsl(25 90% 55%)", text: "hsl(25 90% 65%)", dot: "hsl(25 90% 55%)" },     // laranja
+  { bg: "hsl(180 70% 45% / 0.15)", border: "hsl(180 70% 45%)", text: "hsl(180 70% 55%)", dot: "hsl(180 70% 45%)" }, // ciano
+  { bg: "hsl(330 75% 60% / 0.15)", border: "hsl(330 75% 60%)", text: "hsl(330 75% 70%)", dot: "hsl(330 75% 60%)" }, // pink
+];
+
+function getCpfColor(idx: number | null | undefined) {
+  if (!idx || idx < 1) return null;
+  return CPF_COLORS[(idx - 1) % CPF_COLORS.length];
+}
+
 // ──────── Componentes drag-and-drop ────────
 
 function DraggableBookmaker({ id, nome, moeda, status, logoUrl }: {
