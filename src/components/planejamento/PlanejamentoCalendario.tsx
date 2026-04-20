@@ -7,7 +7,14 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { ChevronLeft, ChevronRight, Settings2, Plus, AlertTriangle, MapPin, User, Search, Building2, Trash2, ChevronDown, ChevronUp, ShieldAlert } from "lucide-react";
+import { ChevronLeft, ChevronRight, Settings2, Plus, AlertTriangle, MapPin, User, Search, Building2, Trash2, ChevronDown, ChevronUp, ShieldAlert, Pencil } from "lucide-react";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -206,9 +213,10 @@ function DraggableCelula({ celula, parceiroNome }: { celula: CelulaDisponivel; p
   );
 }
 
-function DraggableCampanha({ campanha, onClick, ipLabel, parceiroNome, hasConflict, isPending, logoUrl, grupoBlock, grupoWarn }: {
+function DraggableCampanha({ campanha, onClick, onDelete, ipLabel, parceiroNome, hasConflict, isPending, logoUrl, grupoBlock, grupoWarn }: {
   campanha: PlanningCampanha;
   onClick: () => void;
+  onDelete: () => void;
   ipLabel?: string;
   parceiroNome?: string;
   hasConflict: boolean;
@@ -223,66 +231,82 @@ function DraggableCampanha({ campanha, onClick, ipLabel, parceiroNome, hasConfli
   });
   const hasValue = Number(campanha.deposit_amount) > 0;
   return (
-    <div
-      ref={setNodeRef}
-      {...listeners}
-      {...attributes}
-      className={cn(
-        "rounded border px-1.5 py-1 text-[10px] leading-tight cursor-grab active:cursor-grabbing transition-colors select-none",
-        isPending
-          ? "bg-warning/5 hover:bg-warning/10 border-warning/30"
-          : "bg-success/10 hover:bg-success/20 border-success/50 shadow-[0_0_0_1px_hsl(var(--success)/0.3)]",
-        hasConflict && "border-destructive/60 bg-destructive/5 shadow-[0_0_0_1px_hsl(var(--destructive)/0.4)]",
-        grupoBlock && "border-destructive bg-destructive/10 shadow-[0_0_0_1px_hsl(var(--destructive)/0.6)]",
-        isDragging && "opacity-40"
-      )}
-      onClick={(e) => {
-        e.stopPropagation();
-        onClick();
-      }}
-    >
-      <div className="flex items-center gap-1.5">
-        <BookmakerLogo
-          logoUrl={logoUrl}
-          alt={campanha.bookmaker_nome}
-          size="h-10 w-10 shrink-0"
-          iconSize="h-5 w-5"
-        />
-        <span className="font-semibold truncate flex-1 min-w-0">{campanha.bookmaker_nome}</span>
-        {(grupoBlock || grupoWarn) && (
-          <ShieldAlert
-            className={cn("h-3 w-3 shrink-0", grupoBlock ? "text-destructive" : "text-warning")}
-          />
-        )}
-        <span
+    <ContextMenu>
+      <ContextMenuTrigger asChild>
+        <div
+          ref={setNodeRef}
+          {...listeners}
+          {...attributes}
           className={cn(
-            "font-medium shrink-0 tabular-nums",
-            isPending ? "text-warning" : "text-success",
-            !hasValue && "italic opacity-70"
+            "rounded border px-1.5 py-1 text-[10px] leading-tight cursor-grab active:cursor-grabbing transition-colors select-none",
+            isPending
+              ? "bg-warning/5 hover:bg-warning/10 border-warning/30"
+              : "bg-success/10 hover:bg-success/20 border-success/50 shadow-[0_0_0_1px_hsl(var(--success)/0.3)]",
+            hasConflict && "border-destructive/60 bg-destructive/5 shadow-[0_0_0_1px_hsl(var(--destructive)/0.4)]",
+            grupoBlock && "border-destructive bg-destructive/10 shadow-[0_0_0_1px_hsl(var(--destructive)/0.6)]",
+            isDragging && "opacity-40"
           )}
+          onClick={(e) => {
+            e.stopPropagation();
+            onClick();
+          }}
         >
-          {hasValue
-            ? formatMoney(Number(campanha.deposit_amount), campanha.currency)
-            : "s/v"}
-        </span>
-      </div>
-      {(ipLabel || parceiroNome) && (
-        <div className="text-muted-foreground truncate flex items-center gap-1 mt-0.5 pl-6">
-          {parceiroNome && <><User className="h-2.5 w-2.5" />{parceiroNome.split(" ")[0]}</>}
-          {ipLabel && <><MapPin className="h-2.5 w-2.5" />{ipLabel}</>}
+          <div className="flex items-center gap-1.5">
+            <BookmakerLogo
+              logoUrl={logoUrl}
+              alt={campanha.bookmaker_nome}
+              size="h-10 w-10 shrink-0"
+              iconSize="h-5 w-5"
+            />
+            <span className="font-semibold truncate flex-1 min-w-0">{campanha.bookmaker_nome}</span>
+            {(grupoBlock || grupoWarn) && (
+              <ShieldAlert
+                className={cn("h-3 w-3 shrink-0", grupoBlock ? "text-destructive" : "text-warning")}
+              />
+            )}
+            <span
+              className={cn(
+                "font-medium shrink-0 tabular-nums",
+                isPending ? "text-warning" : "text-success",
+                !hasValue && "italic opacity-70"
+              )}
+            >
+              {hasValue
+                ? formatMoney(Number(campanha.deposit_amount), campanha.currency)
+                : "s/v"}
+            </span>
+          </div>
+          {(ipLabel || parceiroNome) && (
+            <div className="text-muted-foreground truncate flex items-center gap-1 mt-0.5 pl-6">
+              {parceiroNome && <><User className="h-2.5 w-2.5" />{parceiroNome.split(" ")[0]}</>}
+              {ipLabel && <><MapPin className="h-2.5 w-2.5" />{ipLabel}</>}
+            </div>
+          )}
+          {hasConflict && (
+            <div className="text-destructive text-[9px] flex items-center gap-0.5 pl-6">
+              <AlertTriangle className="h-2.5 w-2.5" /> conflito
+            </div>
+          )}
+          {grupoBlock && (
+            <div className="text-destructive text-[9px] flex items-center gap-0.5 pl-6">
+              <ShieldAlert className="h-2.5 w-2.5" /> regra de grupo violada
+            </div>
+          )}
         </div>
-      )}
-      {hasConflict && (
-        <div className="text-destructive text-[9px] flex items-center gap-0.5 pl-6">
-          <AlertTriangle className="h-2.5 w-2.5" /> conflito
-        </div>
-      )}
-      {grupoBlock && (
-        <div className="text-destructive text-[9px] flex items-center gap-0.5 pl-6">
-          <ShieldAlert className="h-2.5 w-2.5" /> regra de grupo violada
-        </div>
-      )}
-    </div>
+      </ContextMenuTrigger>
+      <ContextMenuContent className="w-48">
+        <ContextMenuItem onClick={onClick}>
+          <Pencil className="h-3.5 w-3.5 mr-2" /> Editar
+        </ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuItem
+          onClick={onDelete}
+          className="text-destructive focus:text-destructive focus:bg-destructive/10"
+        >
+          <Trash2 className="h-3.5 w-3.5 mr-2" /> Excluir do calendário
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
   );
 }
 
@@ -472,6 +496,25 @@ export function PlanejamentoCalendario() {
 
   const modoPlano = planoFiltroId !== "none";
   const sidebarItemsCount = modoPlano ? filteredCelulas.length : filteredBookmakers.length;
+
+  // Excluir campanha do calendário (libera célula vinculada se houver)
+  const handleDeleteCampanha = useCallback(async (campanhaId: string) => {
+    try {
+      await deleteCamp.mutateAsync(campanhaId);
+      const celulaVinculada = celulasPlano.find((cel) => cel.campanha_id === campanhaId);
+      if (celulaVinculada) {
+        try {
+          await desmarcarCelulaAgendada(celulaVinculada.id);
+          qc.invalidateQueries({ queryKey: ["plano-celulas-disponiveis"] });
+        } catch (err) {
+          console.error("[planejamento] desmarcarCelula falhou", err);
+        }
+      }
+      toast.success("Casa removida do calendário");
+    } catch (err: any) {
+      toast.error(err?.message || "Erro ao excluir");
+    }
+  }, [deleteCamp, celulasPlano, qc]);
 
   // Conflitos por dia
   const conflictMap = useMemo(() => {
@@ -960,6 +1003,7 @@ export function PlanejamentoCalendario() {
                           key={c.id}
                           campanha={c}
                           onClick={() => setEditing({ date: key, campanha: c })}
+                          onDelete={() => handleDeleteCampanha(c.id)}
                           ipLabel={c.ip_id ? ipMap[c.ip_id]?.label : undefined}
                           parceiroNome={c.parceiro_id ? parceiroMap[c.parceiro_id]?.nome : undefined}
                           hasConflict={dayConflicts.has(c.id)}
