@@ -21,3 +21,5 @@ Quando o formulário de aposta simples (ApostaDialog) tem múltiplas entradas (`
 **Edição (`atualizar_aposta_liquidada_atomica_v2`)**: detecta multi-entry via `apostas_pernas`. Mudança apenas de resultado é delegada para `reliquidar_aposta_v6` (que itera pernas). Mudança estrutural (stake/odd/bookmaker/moeda) retorna erro `MULTI_ENTRY_STRUCT_EDIT_NOT_SUPPORTED` — UI deve orientar excluir + recadastrar.
 
 **ApostaCard**: já prioriza `pl_consolidado` e `stake_consolidado` quando presentes (isMultiCurrency true).
+
+**SurebetCard (renderiza multi-entry simples)**: detecta multi-currency olhando `entries[]` dentro de cada `SurebetPerna` (não apenas `perna.moeda`). Soma `stakeConsolidadoFallback` por entry com `convertToConsolidation`. Suporta badges PUNTER e FREEBET além de SUREBET/SIMPLES/DG/VB/BÔNUS — quando aposta simples multi-entry tem estratégia ≠ SUREBET, exibe a estratégia correta.
