@@ -26,6 +26,8 @@ export interface CelulaDisponivel {
   grupo_id: string;
   grupo_nome: string;
   grupo_cor: string;
+  // Índice do CPF dentro do grupo do plano (1-based) — "CPF 1", "CPF 2"...
+  cpf_index: number | null;
 }
 
 /**
