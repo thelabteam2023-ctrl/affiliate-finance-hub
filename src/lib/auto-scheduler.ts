@@ -446,9 +446,12 @@ export function simularDistribuicao(input: {
     )
   ).sort((a, b) => a - b);
 
-  // Estratégia: para cada CPF, ENCHE o dia atual com o máximo de casas desse CPF
-  // (respeitando max casas/dia, meta e faixa) antes de avançar para o próximo dia.
-  // Assim o dia 1 fica cheio de CPF1, dia 2 idem, e quando CPF1 esgotar começa CPF2.
+  // Estratégia INTERCALADA por CPF:
+  //   Para cada CPF (do menor ao maior), em rounds:
+  //     1) Agenda 1 suporte desse CPF em cada dia (round-robin) — espalha pelo mês
+  //     2) Em cada dia visitado, tenta encaixar clones (tentarPasso normal) — preenche capacidade
+  //   Só passa pro próximo CPF quando o suporte do atual esgotar.
+  // Resultado: dias têm mistura de suporte CPF1 + clones; CPF2 só começa quando CPF1 acabar.
   let cursorDia = 1;
   for (const cpfIdx of cpfsSuporte) {
     const casasDoCpf = candidatas.filter(
@@ -458,9 +461,11 @@ export function simularDistribuicao(input: {
     let voltasSemAgendar = 0;
     while (pendentes.length > 0 && voltasSemAgendar <= limite) {
       const slot = ocupacao.get(cursorDia)!;
-      let agendouNoDia = false;
-      // Tenta encher o dia atual
-      for (const casa of pendentes) {
+      let agendouAlgo = false;
+
+      // (1) UMA casa suporte desse CPF nesse dia
+      for (let k = 0; k < pendentes.length; k++) {
+        const casa = pendentes[k];
         if (!restantes.has(casa.id)) continue;
         if (slot.casas.has(casa.bookmaker_catalogo_id)) continue;
         if (maxCasasPorDia > 0 && slot.casas.size >= maxCasasPorDia) break;
@@ -475,11 +480,20 @@ export function simularDistribuicao(input: {
         if (idxFaixa >= 0) acumuladoFaixa[idxFaixa] += valor;
         restantes.delete(casa.id);
         agendamentos.push({ celula: casa, dia: cursorDia, dateKey: buildDateKey(year, month, cursorDia) });
-        agendouNoDia = true;
+        agendouAlgo = true;
+        break; // só UMA suporte por visita ao dia (espalhar)
       }
+
+      // (2) Tenta preencher o dia com CLONES (até esgotar capacidade ou clones elegíveis)
+      let safety = 0;
+      while (safety++ < 50) {
+        if (!tentarPasso(cursorDia, slot)) break;
+        agendouAlgo = true;
+      }
+
       pendentes = pendentes.filter((c) => restantes.has(c.id));
       cursorDia = (cursorDia % limite) + 1;
-      voltasSemAgendar = agendouNoDia ? 0 : voltasSemAgendar + 1;
+      voltasSemAgendar = agendouAlgo ? 0 : voltasSemAgendar + 1;
     }
   }
 
@@ -500,7 +514,8 @@ export function simularDistribuicao(input: {
     }
   }
 
-  // ---- PASS 3 (CLONES): Round-robin pelos dias ----
+  // ---- PASS 3 (CLONES restantes): Round-robin pelos dias ----
+  // Caso ainda sobrem clones depois do Pass 1 (ex.: cooldown CPF), tenta colocar nos dias livres.
   let progrediuClones = true;
   let safetyClones = 0;
   const maxRoundsClones = candidatas.length * 2 + 10;
