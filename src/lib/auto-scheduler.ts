@@ -272,6 +272,9 @@ export function simularDistribuicao(input: {
         if (maxCasasPorDia > 0 && slot.casas.size >= maxCasasPorDia) return false;
         // 4) Meta de ganho atingida
         if (metaGanhoDia > 0 && slot.ganho >= metaGanhoDia) return false;
+        // 5) Faixa de dias: não estourar teto (meta + tolerância%)
+        const valor = Number(c.deposito_sugerido) || 0;
+        if (estouraFaixa(dia, valor)) return false;
         // Regras específicas de clones
         if (isClone(c)) {
           // Limite ESTRITO de clones/dia (conta casas, não CPFs distintos)
@@ -340,6 +343,9 @@ export function simularDistribuicao(input: {
       }
       slot.ganho += Number(pick.deposito_sugerido) || 0;
       ultimoUsoCasa.set(pick.bookmaker_catalogo_id, dia);
+      // Atualiza acumulado da faixa correspondente
+      const idxFaixa = faixaDoDia(dia);
+      if (idxFaixa >= 0) acumuladoFaixa[idxFaixa] += Number(pick.deposito_sugerido) || 0;
       restantes.delete(pick.id);
 
       agendamentos.push({
