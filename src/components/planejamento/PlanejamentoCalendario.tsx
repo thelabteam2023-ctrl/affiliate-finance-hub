@@ -346,6 +346,11 @@ export function PlanejamentoCalendario() {
   const deleteCamp = useDeleteCampanha();
   const { getLogoUrl } = useBookmakerLogoMap();
   const { convertToBRL, cotacaoUSD, isUsingFallback } = useExchangeRates();
+  const { planos } = useDistribuicaoPlanos();
+  const { data: celulasPlano = [] } = usePlanoCelulasDisponiveis(
+    planoFiltroId !== "none" ? planoFiltroId : null
+  );
+  const qc = useQueryClient();
 
   // Converte qualquer valor da moeda nativa para a moeda de exibição (BRL ou USD)
   const convertToDisplay = useCallback((value: number, fromCurrency: string): number => {
