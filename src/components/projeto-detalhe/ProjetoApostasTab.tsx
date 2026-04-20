@@ -864,12 +864,22 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
   const prepareDeleteSimples = useCallback((apostaId: string) => {
     const aposta = apostas.find(a => a.id === apostaId);
     if (!aposta) return;
-    
+
+    // Multi-entry: derivar nomes das casas a partir das pernas quando o pai não tiver bookmaker
+    let bookmakerLabel = aposta.bookmaker?.nome || "—";
+    if ((!aposta.bookmaker || !aposta.bookmaker.nome) && Array.isArray((aposta as any)._sub_entries)) {
+      const nomes = ((aposta as any)._sub_entries as any[])
+        .map((p) => p?.bookmaker?.nome)
+        .filter(Boolean);
+      const unicos = Array.from(new Set(nomes));
+      if (unicos.length > 0) bookmakerLabel = unicos.join(", ");
+    }
+
     setBetToDelete({
       id: aposta.id,
       evento: aposta.evento,
       stake: aposta.stake,
-      bookmaker: aposta.bookmaker?.nome || "—",
+      bookmaker: bookmakerLabel,
       tipo: "simples",
     });
     setDeleteDialogOpen(true);
