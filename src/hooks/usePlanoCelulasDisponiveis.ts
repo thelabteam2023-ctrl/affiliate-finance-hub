@@ -46,6 +46,14 @@ export function usePlanoCelulasDisponiveis(planoId: string | null) {
     queryFn: async (): Promise<CelulaDisponivel[]> => {
       if (!planoId || !workspaceId) return [];
 
+      // 0) plano (precisamos do parceiro_ids para ordenar CPF 1, CPF 2...)
+      const { data: plano } = await (supabase as any)
+        .from("distribuicao_planos")
+        .select("parceiro_ids")
+        .eq("id", planoId)
+        .maybeSingle();
+      const parceiroIdsPlano: string[] = plano?.parceiro_ids ?? [];
+
       // 1) células do plano
       const { data: celulas, error: cErr } = await (supabase as any)
         .from("distribuicao_plano_celulas")
@@ -56,10 +64,10 @@ export function usePlanoCelulasDisponiveis(planoId: string | null) {
       if (cErr) throw cErr;
       if (!celulas?.length) return [];
 
-      // 2) grupos do plano (para mapear plano_grupo_id -> grupo_id real)
+      // 2) grupos do plano (para mapear plano_grupo_id -> grupo_id real + casas_por_cpf)
       const { data: planoGrupos } = await (supabase as any)
         .from("distribuicao_plano_grupos")
-        .select("id, grupo_id")
+        .select("id, grupo_id, casas_por_cpf")
         .eq("plano_id", planoId);
       const planoGrupoMap = new Map<string, string>();
       (planoGrupos ?? []).forEach((pg: any) => planoGrupoMap.set(pg.id, pg.grupo_id));
