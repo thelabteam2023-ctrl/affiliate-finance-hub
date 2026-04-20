@@ -3,6 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
+export type GrupoModoExecucao = "AGENDADO" | "SOB_DEMANDA";
+
 export interface BookmakerGrupo {
   id: string;
   nome: string;
@@ -10,6 +12,7 @@ export interface BookmakerGrupo {
   cor: string;
   workspace_id: string;
   created_at: string;
+  modo_execucao: GrupoModoExecucao;
 }
 
 export interface BookmakerGrupoMembro {
@@ -17,6 +20,8 @@ export interface BookmakerGrupoMembro {
   grupo_id: string;
   bookmaker_catalogo_id: string;
   workspace_id: string;
+  deposito_sugerido: number;
+  deposito_moeda: string | null;
 }
 
 const QUERY_KEY = "bookmaker-grupos";
@@ -61,11 +66,22 @@ export function useBookmakerGrupos() {
   };
 
   const createGrupo = useMutation({
-    mutationFn: async (params: { nome: string; descricao?: string; cor?: string }) => {
+    mutationFn: async (params: {
+      nome: string;
+      descricao?: string;
+      cor?: string;
+      modo_execucao?: GrupoModoExecucao;
+    }) => {
       if (!workspaceId) throw new Error("Workspace não encontrado");
       const { data, error } = await (supabase as any)
         .from("bookmaker_grupos")
-        .insert({ workspace_id: workspaceId, nome: params.nome, descricao: params.descricao || null, cor: params.cor || "#6366f1" })
+        .insert({
+          workspace_id: workspaceId,
+          nome: params.nome,
+          descricao: params.descricao || null,
+          cor: params.cor || "#6366f1",
+          modo_execucao: params.modo_execucao || "AGENDADO",
+        })
         .select()
         .single();
       if (error) throw error;
@@ -79,15 +95,25 @@ export function useBookmakerGrupos() {
   });
 
   const updateGrupo = useMutation({
-    mutationFn: async (params: { id: string; nome: string; descricao?: string; cor?: string }) => {
+    mutationFn: async (params: {
+      id: string;
+      nome?: string;
+      descricao?: string;
+      cor?: string;
+      modo_execucao?: GrupoModoExecucao;
+    }) => {
+      const updates: any = { updated_at: new Date().toISOString() };
+      if (params.nome !== undefined) updates.nome = params.nome;
+      if (params.descricao !== undefined) updates.descricao = params.descricao || null;
+      if (params.cor !== undefined) updates.cor = params.cor || "#6366f1";
+      if (params.modo_execucao !== undefined) updates.modo_execucao = params.modo_execucao;
       const { error } = await (supabase as any)
         .from("bookmaker_grupos")
-        .update({ nome: params.nome, descricao: params.descricao || null, cor: params.cor || "#6366f1", updated_at: new Date().toISOString() })
+        .update(updates)
         .eq("id", params.id);
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Grupo atualizado");
       invalidate();
     },
     onError: (err: any) => toast.error(err.message || "Erro ao atualizar grupo"),
@@ -109,12 +135,17 @@ export function useBookmakerGrupos() {
   });
 
   const addMembros = useMutation({
-    mutationFn: async (params: { grupoId: string; catalogoIds: string[] }) => {
+    mutationFn: async (params: {
+      grupoId: string;
+      catalogoIds: string[];
+      moedaPorCatalogo?: Record<string, string>;
+    }) => {
       if (!workspaceId) throw new Error("Workspace não encontrado");
       const rows = params.catalogoIds.map((cid) => ({
         grupo_id: params.grupoId,
         bookmaker_catalogo_id: cid,
         workspace_id: workspaceId,
+        deposito_moeda: params.moedaPorCatalogo?.[cid] ?? null,
       }));
       const { error } = await (supabase as any)
         .from("bookmaker_grupo_membros")
@@ -122,7 +153,6 @@ export function useBookmakerGrupos() {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Bookmakers adicionadas ao grupo");
       invalidate();
     },
     onError: (err: any) => toast.error(err.message || "Erro ao adicionar ao grupo"),
@@ -138,10 +168,32 @@ export function useBookmakerGrupos() {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Bookmaker removida do grupo");
       invalidate();
     },
     onError: (err: any) => toast.error(err.message || "Erro ao remover do grupo"),
+  });
+
+  /** Atualiza apenas o depósito sugerido de uma casa-no-grupo. */
+  const updateMembroDeposito = useMutation({
+    mutationFn: async (params: {
+      grupoId: string;
+      catalogoId: string;
+      deposito_sugerido: number;
+      deposito_moeda?: string | null;
+    }) => {
+      const updates: any = { deposito_sugerido: params.deposito_sugerido };
+      if (params.deposito_moeda !== undefined) updates.deposito_moeda = params.deposito_moeda;
+      const { error } = await (supabase as any)
+        .from("bookmaker_grupo_membros")
+        .update(updates)
+        .eq("grupo_id", params.grupoId)
+        .eq("bookmaker_catalogo_id", params.catalogoId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      invalidate();
+    },
+    onError: (err: any) => toast.error(err.message || "Erro ao atualizar depósito"),
   });
 
   // Helper: get catalogo IDs for a given grupo
@@ -151,6 +203,11 @@ export function useBookmakerGrupos() {
       if (m.grupo_id === grupoId) ids.add(m.bookmaker_catalogo_id);
     });
     return ids;
+  };
+
+  // Helper: get full membros for a given grupo
+  const getMembrosByGrupo = (grupoId: string): BookmakerGrupoMembro[] => {
+    return (membrosQuery.data ?? []).filter((m) => m.grupo_id === grupoId);
   };
 
   // Helper: get grupo IDs for a given catalogo
@@ -169,7 +226,9 @@ export function useBookmakerGrupos() {
     deleteGrupo,
     addMembros,
     removeMembro,
+    updateMembroDeposito,
     getCatalogoIdsByGrupo,
+    getMembrosByGrupo,
     getGrupoIdsByCatalogo,
     invalidate,
   };
