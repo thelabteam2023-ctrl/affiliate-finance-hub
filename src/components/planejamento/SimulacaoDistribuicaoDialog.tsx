@@ -71,14 +71,14 @@ const DEFAULT_CONFIG: AutoSchedulerConfig = {
   seed: 1,
 };
 
-const DIAS_SEMANA: { value: number; label: string; short: string }[] = [
-  { value: 0, label: "Domingo", short: "D" },
-  { value: 1, label: "Segunda", short: "S" },
-  { value: 2, label: "Terça", short: "T" },
-  { value: 3, label: "Quarta", short: "Q" },
-  { value: 4, label: "Quinta", short: "Q" },
-  { value: 5, label: "Sexta", short: "S" },
-  { value: 6, label: "Sábado", short: "S" },
+const DIAS_SEMANA: { value: number; label: string; short: string; label3: string }[] = [
+  { value: 0, label: "Domingo", short: "D", label3: "Dom" },
+  { value: 1, label: "Segunda", short: "S", label3: "Seg" },
+  { value: 2, label: "Terça", short: "T", label3: "Ter" },
+  { value: 3, label: "Quarta", short: "Q", label3: "Qua" },
+  { value: 4, label: "Quinta", short: "Q", label3: "Qui" },
+  { value: 5, label: "Sexta", short: "S", label3: "Sex" },
+  { value: 6, label: "Sábado", short: "S", label3: "Sáb" },
 ];
 
 export function SimulacaoDistribuicaoDialog({
@@ -247,11 +247,24 @@ export function SimulacaoDistribuicaoDialog({
                   (sum, a) => sum + (Number(a.celula.deposito_sugerido) || 0),
                   0
                 );
+                const dow = new Date(year, month - 1, dia).getDay();
+                const dowLabel = DIAS_SEMANA[dow]?.label3 ?? "";
+                const isWeekend = dow === 0 || dow === 6;
                 return (
                   <div key={dia} className="flex gap-2 items-start">
                     <div className="shrink-0 w-16 text-right">
                       <div className="text-[10px] uppercase text-muted-foreground">Dia</div>
-                      <div className="text-lg font-bold tabular-nums leading-none">{dia}</div>
+                      <div className="flex items-baseline justify-end gap-1 leading-none">
+                        <span className="text-lg font-bold tabular-nums">{dia}</span>
+                        <span
+                          className={cn(
+                            "text-[10px] font-medium uppercase",
+                            isWeekend ? "text-warning" : "text-muted-foreground"
+                          )}
+                        >
+                          {dowLabel}
+                        </span>
+                      </div>
                       {ganhoDia > 0 && (
                         <div className="text-[9px] text-muted-foreground tabular-nums mt-0.5">
                           Σ {ganhoDia.toFixed(2)}
