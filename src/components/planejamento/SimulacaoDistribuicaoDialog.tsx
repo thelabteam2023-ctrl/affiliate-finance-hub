@@ -96,6 +96,16 @@ export function SimulacaoDistribuicaoDialog({
   const [simYear, setSimYear] = useState(year);
   const [simMonth, setSimMonth] = useState(month);
 
+  // Overrides manuais: celula.id -> novo dia (preservados entre recálculos)
+  const [overrides, setOverrides] = useState<Map<string, number>>(new Map());
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [dragOverDay, setDragOverDay] = useState<number | null>(null);
+
+  // Reset de overrides ao trocar mês/abrir
+  useEffect(() => {
+    if (open) setOverrides(new Map());
+  }, [open, simYear, simMonth]);
+
   // Cotações para conversão multimoeda → USD (modo simulação)
   const { cotacaoUSD, cotacaoEUR, cotacaoGBP, cotacaoMYR, cotacaoMXN, cotacaoARS, cotacaoCOP } = useCotacoes();
 
