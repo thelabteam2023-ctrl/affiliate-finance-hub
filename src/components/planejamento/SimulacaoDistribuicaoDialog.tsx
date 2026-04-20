@@ -29,6 +29,7 @@ import {
 } from "@/lib/auto-scheduler";
 import type { CelulaDisponivel } from "@/hooks/usePlanoCelulasDisponiveis";
 import type { PlanningCampanha } from "@/hooks/usePlanningData";
+import { useCotacoes } from "@/hooks/useCotacoes";
 
 // Mesma palette CPF do calendário
 const CPF_COLORS = [
@@ -94,6 +95,34 @@ export function SimulacaoDistribuicaoDialog({
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [simYear, setSimYear] = useState(year);
   const [simMonth, setSimMonth] = useState(month);
+
+  // Cotações para conversão multimoeda → USD (modo simulação)
+  const { cotacaoUSD, cotacaoEUR, cotacaoGBP, cotacaoMYR, cotacaoMXN, cotacaoARS, cotacaoCOP } = useCotacoes();
+
+  /** Converte um valor da moeda original para USD usando cotações ativas. */
+  const toUSD = (valor: number, moeda: string | null | undefined): number => {
+    if (!valor || isNaN(valor)) return 0;
+    const m = (moeda || "BRL").toUpperCase();
+    if (m === "USD" || m === "USDT" || m === "USDC") return valor;
+    if (cotacaoUSD <= 0) return valor; // proteção
+    if (m === "BRL") return valor / cotacaoUSD;
+    // Outras moedas: temos cotação X→BRL; convertemos via BRL → USD
+    const xToBRL: Record<string, number> = {
+      EUR: cotacaoEUR,
+      GBP: cotacaoGBP,
+      MYR: cotacaoMYR,
+      MXN: cotacaoMXN,
+      ARS: cotacaoARS,
+      COP: cotacaoCOP,
+    };
+    const rate = xToBRL[m];
+    if (rate && rate > 0) return (valor * rate) / cotacaoUSD;
+    return valor; // fallback: assume já em USD
+  };
+
+  /** Formata número como USD compacto: $1,234.56 */
+  const fmtUSD = (valor: number): string =>
+    `$${valor.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   // Sync interno com props quando o dialog abre
   useEffect(() => {
@@ -228,7 +257,14 @@ export function SimulacaoDistribuicaoDialog({
                 </Badge>
                 <Badge variant="outline">Outras: {stats.totalOutras}</Badge>
                 <Badge variant="outline">{stats.diasUsados} dias usados</Badge>
-                <Badge variant="outline">Σ depósito: {stats.ganhoTotal.toFixed(2)}</Badge>
+                <Badge variant="outline" title="Total convertido para USD pela cotação atual">
+                  Σ depósito: {fmtUSD(
+                    simulacao?.agendamentos.reduce(
+                      (sum, a) => sum + toUSD(Number(a.celula.deposito_sugerido) || 0, a.celula.moeda),
+                      0
+                    ) ?? 0
+                  )}
+                </Badge>
                 {stats.capacidadeMaxima > 0 && (
                   <Badge variant="outline">Cap. casas: {stats.capacidadeMaxima}</Badge>
                 )}
@@ -289,7 +325,7 @@ export function SimulacaoDistribuicaoDialog({
               {dias.map((dia) => {
                 const itens = porDia.get(dia) ?? [];
                 const ganhoDia = itens.reduce(
-                  (sum, a) => sum + (Number(a.celula.deposito_sugerido) || 0),
+                  (sum, a) => sum + toUSD(Number(a.celula.deposito_sugerido) || 0, a.celula.moeda),
                   0
                 );
                 const dow = new Date(simYear, simMonth - 1, dia).getDay();
@@ -312,7 +348,7 @@ export function SimulacaoDistribuicaoDialog({
                       </div>
                       {ganhoDia > 0 && (
                         <div className="text-[9px] text-muted-foreground tabular-nums mt-0.5">
-                          Σ {ganhoDia.toFixed(2)}
+                          Σ {fmtUSD(ganhoDia)}
                         </div>
                       )}
                     </div>
