@@ -593,6 +593,56 @@ export default function DistribuicaoTab() {
 
       <Separator />
 
+      <Separator />
+
+      {/* Projeção de depósito (em USD) — atualiza ao mudar perfis/grupos/casas-por-CPF */}
+      {selectedPerfilIds.length > 0 && grupoConfigs.length > 0 && projecaoDeposito.porCpfUsd > 0 && (
+        <Card className="p-3 space-y-2.5 border-primary/30 bg-card">
+          <div className="flex items-center gap-2">
+            <CalendarRange className="h-4 w-4 text-primary" />
+            <div className="text-sm font-semibold">Projeção de depósito (estimativa em USD)</div>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+            <div className="rounded-md border bg-muted/30 p-2">
+              <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Por CPF</div>
+              <div className="text-base font-semibold tabular-nums">{fmtUsd(projecaoDeposito.porCpfUsd)}</div>
+            </div>
+            <div className="rounded-md border bg-muted/30 p-2">
+              <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                Total ({selectedPerfilIds.length} CPF{selectedPerfilIds.length > 1 ? "s" : ""})
+              </div>
+              <div className="text-base font-semibold tabular-nums text-primary">{fmtUsd(projecaoDeposito.totalUsd)}</div>
+            </div>
+            <div className="rounded-md border bg-muted/30 p-2">
+              <div className="text-[10px] uppercase tracking-wide text-muted-foreground">CPFs p/ metas</div>
+              <div className="text-[11px] tabular-nums leading-tight">
+                <div>$5k → <strong>{cpfsParaMeta(5_000)} CPFs</strong></div>
+                <div>$10k → <strong>{cpfsParaMeta(10_000)} CPFs</strong></div>
+                <div>$25k → <strong>{cpfsParaMeta(25_000)} CPFs</strong></div>
+              </div>
+            </div>
+          </div>
+          {projecaoDeposito.porGrupo.length > 0 && (
+            <div className="space-y-1">
+              <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Por grupo (por CPF)</div>
+              <div className="flex flex-wrap gap-1.5">
+                {projecaoDeposito.porGrupo.map((g) => (
+                  <Badge key={g.nome} variant="outline" className="text-[10px] gap-1.5 font-normal">
+                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: g.cor }} />
+                    <span>{g.nome}:</span>
+                    <span className="font-semibold tabular-nums">{fmtUsd(g.porCpfUsd)}</span>
+                    <span className="text-muted-foreground">({g.casasUsadas}/{g.totalCasasGrupo} casas)</span>
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="text-[10px] text-muted-foreground italic">
+            Estimativa baseada na média do depósito sugerido por casa de cada grupo, convertido pela cotação de trabalho.
+          </div>
+        </Card>
+      )}
+
       {/* Aviso informativo sobre genéricos (não bloqueia) */}
       {selectedGenericosCount > 0 && (
         <div className="flex items-start gap-2 text-[11px] rounded-md p-2 bg-primary/10 text-foreground border border-primary/30">
