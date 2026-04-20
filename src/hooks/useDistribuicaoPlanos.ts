@@ -88,7 +88,8 @@ export function useDistribuicaoPlanos() {
       celulas: Array<{
         plano_grupo_id?: string;
         grupo_id: string;
-        parceiro_id: string;
+        parceiro_id: string | null;
+        perfil_planejamento_id: string | null;
         bookmaker_catalogo_id: string;
         ip_slot: string | null;
         ordem: number;
@@ -131,6 +132,7 @@ export function useDistribuicaoPlanos() {
         workspace_id: workspaceId,
         plano_grupo_id: grupoMap.get(c.grupo_id)!,
         parceiro_id: c.parceiro_id,
+        perfil_planejamento_id: c.perfil_planejamento_id,
         bookmaker_catalogo_id: c.bookmaker_catalogo_id,
         ip_slot: c.ip_slot,
         ordem: c.ordem,
