@@ -157,8 +157,32 @@ export function simularDistribuicao(input: {
     janelaOutrasDias = 3,
     faixas = [],
     toleranciaFaixaPct = 0,
+    regrasDiaSemana = [],
     seed = 1,
   } = config;
+
+  // Pré-calcula dia-da-semana e quotas de regras
+  const diaSemanaDe = (dia: number) => new Date(year, month - 1, dia).getDay();
+  const regrasNorm = (regrasDiaSemana ?? [])
+    .filter((r) => r && Array.isArray(r.diasSemana) && r.diasSemana.length > 0 && r.minimoPorDia > 0)
+    .map((r) => ({
+      diasSemana: new Set(r.diasSemana),
+      minimoPorDia: r.minimoPorDia,
+      label: r.label || r.diasSemana.map(diaSemanaLabel).join("/"),
+    }));
+
+  /** Para um dia D: maior déficit (faltante) entre as regras que cobrem o weekday de D. */
+  function deficitDoDia(dia: number, slot: { casas: Set<string> }): number {
+    if (regrasNorm.length === 0) return 0;
+    const dow = diaSemanaDe(dia);
+    let maxDef = 0;
+    for (const r of regrasNorm) {
+      if (!r.diasSemana.has(dow)) continue;
+      const def = r.minimoPorDia - slot.casas.size;
+      if (def > maxDef) maxDef = def;
+    }
+    return maxDef;
+  }
 
   const rand = mulberry32(seed || 1);
 
