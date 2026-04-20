@@ -537,6 +537,8 @@ export function simularDistribuicao(input: {
       warnings.push(`Mínimo por dia da semana não atingido: ${falhas.join("; ")}.`);
     }
   }
+
+  if (naoAgendadas.length > 0) {
     const partes: string[] = [
       `dias 1–${limite}`,
       `clones: ${clonesPorDia}/dia, cooldown CPF ${cooldownCpfDias}d`,
