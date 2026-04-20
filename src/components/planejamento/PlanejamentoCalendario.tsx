@@ -213,7 +213,7 @@ function DraggableCelula({ celula, parceiroNome }: { celula: CelulaDisponivel; p
   );
 }
 
-function DraggableCampanha({ campanha, onClick, onDelete, ipLabel, parceiroNome, hasConflict, isPending, logoUrl, grupoBlock, grupoWarn }: {
+function DraggableCampanha({ campanha, onClick, onDelete, ipLabel, parceiroNome, hasConflict, isPending, logoUrl, grupoBlock, grupoWarn, cpfIndex }: {
   campanha: PlanningCampanha;
   onClick: () => void;
   onDelete: () => void;
@@ -224,12 +224,19 @@ function DraggableCampanha({ campanha, onClick, onDelete, ipLabel, parceiroNome,
   logoUrl?: string | null;
   grupoBlock?: boolean;
   grupoWarn?: boolean;
+  cpfIndex?: number | null;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `camp-${campanha.id}`,
     data: { type: "campanha", campanhaId: campanha.id },
   });
   const hasValue = Number(campanha.deposit_amount) > 0;
+  const cpfColor = getCpfColor(cpfIndex);
+  // Quando há CPF vinculado, usamos a cor do CPF como destaque dominante
+  // (mas mantemos overrides de erro: conflito/regra de grupo).
+  const cpfStyle = cpfColor && !hasConflict && !grupoBlock
+    ? { backgroundColor: cpfColor.bg, borderColor: cpfColor.border, boxShadow: `0 0 0 1px ${cpfColor.border}` }
+    : undefined;
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>
@@ -237,11 +244,13 @@ function DraggableCampanha({ campanha, onClick, onDelete, ipLabel, parceiroNome,
           ref={setNodeRef}
           {...listeners}
           {...attributes}
+          style={cpfStyle}
           className={cn(
             "rounded border px-1.5 py-1 text-[10px] leading-tight cursor-grab active:cursor-grabbing transition-colors select-none",
-            isPending
+            // Estilo padrão (sem CPF) — fallback verde/amarelo
+            !cpfStyle && (isPending
               ? "bg-warning/5 hover:bg-warning/10 border-warning/30"
-              : "bg-success/10 hover:bg-success/20 border-success/50 shadow-[0_0_0_1px_hsl(var(--success)/0.3)]",
+              : "bg-success/10 hover:bg-success/20 border-success/50 shadow-[0_0_0_1px_hsl(var(--success)/0.3)]"),
             hasConflict && "border-destructive/60 bg-destructive/5 shadow-[0_0_0_1px_hsl(var(--destructive)/0.4)]",
             grupoBlock && "border-destructive bg-destructive/10 shadow-[0_0_0_1px_hsl(var(--destructive)/0.6)]",
             isDragging && "opacity-40"
@@ -252,6 +261,15 @@ function DraggableCampanha({ campanha, onClick, onDelete, ipLabel, parceiroNome,
           }}
         >
           <div className="flex items-center gap-1.5">
+            {cpfColor && cpfIndex ? (
+              <div
+                className="h-5 w-5 shrink-0 rounded flex items-center justify-center text-[10px] font-bold tabular-nums"
+                style={{ backgroundColor: cpfColor.dot, color: "hsl(0 0% 10%)" }}
+                title={`CPF ${cpfIndex}${parceiroNome ? ` — ${parceiroNome}` : ""}`}
+              >
+                {cpfIndex}
+              </div>
+            ) : null}
             <BookmakerLogo
               logoUrl={logoUrl}
               alt={campanha.bookmaker_nome}
