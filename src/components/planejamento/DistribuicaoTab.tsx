@@ -594,37 +594,24 @@ export default function DistribuicaoTab() {
         </div>
       )}
 
-      {/* Checklist do que falta para Salvar / Gerar agenda */}
+      {/* Checklist do que falta para Salvar */}
       {(() => {
         const faltaSalvar: string[] = [];
         if (!resultado || resultado.celulas.length === 0) faltaSalvar.push('Clique em "Gerar distribuição"');
         if (!planoNome.trim()) faltaSalvar.push("Preencha o nome do plano (campo no topo)");
-
-        const faltaAgenda: string[] = [];
-        if (!planoSalvoId) faltaAgenda.push("Salve o plano antes de gerar a agenda");
-
-        if (faltaSalvar.length === 0 && faltaAgenda.length === 0) return null;
+        if (faltaSalvar.length === 0) return null;
         return (
           <div className="rounded-md border border-primary/40 bg-primary/5 p-2.5 text-[11px] space-y-1.5">
-            {faltaSalvar.length > 0 && (
-              <div>
-                <div className="font-semibold text-foreground mb-0.5">Para salvar o plano falta:</div>
-                <ul className="list-disc list-inside text-muted-foreground space-y-0.5">
-                  {faltaSalvar.map((m) => <li key={m}>{m}</li>)}
-                </ul>
-              </div>
-            )}
-            {faltaAgenda.length > 0 && faltaSalvar.length === 0 && (
-              <div>
-                <div className="font-semibold text-foreground mb-0.5">Para gerar a agenda falta:</div>
-                <ul className="list-disc list-inside text-muted-foreground space-y-0.5">
-                  {faltaAgenda.map((m) => <li key={m}>{m}</li>)}
-                </ul>
-              </div>
-            )}
+            <div>
+              <div className="font-semibold text-foreground mb-0.5">Para salvar o plano falta:</div>
+              <ul className="list-disc list-inside text-muted-foreground space-y-0.5">
+                {faltaSalvar.map((m) => <li key={m}>{m}</li>)}
+              </ul>
+            </div>
           </div>
         );
       })()}
+
 
       {/* Ações */}
       <div className="flex flex-wrap gap-2 justify-end">
