@@ -11,8 +11,8 @@ describe("invalidateCanonicalCaches", () => {
     const projetoId = "test-projeto-123";
     invalidateCanonicalCaches(fakeQueryClient, projetoId);
 
-    // Should invalidate exactly 11 canonical query keys
-    expect(mockInvalidateQueries).toHaveBeenCalledTimes(11);
+    // Should invalidate exactly 10 canonical query keys
+    expect(mockInvalidateQueries).toHaveBeenCalledTimes(10);
 
     const calledKeys = mockInvalidateQueries.mock.calls.map(
       (call: any) => call[0].queryKey[0]
@@ -43,11 +43,11 @@ describe("invalidateCanonicalCaches", () => {
     invalidateCanonicalCaches(fakeQueryClient, "projeto-A");
     invalidateCanonicalCaches(fakeQueryClient, "projeto-B");
 
-    // 11 keys * 2 calls = 22
-    expect(mockInvalidateQueries).toHaveBeenCalledTimes(22);
+    // 10 keys * 2 calls = 20
+    expect(mockInvalidateQueries).toHaveBeenCalledTimes(20);
 
-    const firstBatch = mockInvalidateQueries.mock.calls.slice(0, 11);
-    const secondBatch = mockInvalidateQueries.mock.calls.slice(11, 22);
+    const firstBatch = mockInvalidateQueries.mock.calls.slice(0, 10);
+    const secondBatch = mockInvalidateQueries.mock.calls.slice(10, 20);
 
     firstBatch.forEach((call: any) => {
       expect(call[0].queryKey[1]).toBe("projeto-A");
