@@ -7,6 +7,7 @@ import { PROJETO_RESULTADO_QUERY_KEY } from "./useProjetoResultado";
 import { PROJETO_DASHBOARD_QUERY_KEY } from "./useProjetoDashboardData";
 import { estornarGiroGratisViaLedger } from "@/lib/ledgerService";
 import { useWorkspace } from "@/hooks/useWorkspace";
+import { invalidateCanonicalCaches } from "@/lib/invalidateCanonicalCaches";
 import { 
   GiroGratis, 
   GiroGratisComBookmaker, 
@@ -46,6 +47,9 @@ export function useGirosGratis({ projetoId, dataInicio, dataFim }: UseGirosGrati
 
   // Invalidar grupo FINANCIAL_STATE completo após mutação
   const invalidateProjectKPIs = useCallback(() => {
+    // CANÔNICOS — Lucro, Evolução do Lucro, Calendário (refetch ativo <1s)
+    invalidateCanonicalCaches(queryClient, projetoId);
+
     // Dashboard RPC centralizado (fonte de dados para KPIs)
     queryClient.invalidateQueries({ queryKey: [PROJETO_DASHBOARD_QUERY_KEY, projetoId] });
     // Legacy keys (mantido por segurança)
