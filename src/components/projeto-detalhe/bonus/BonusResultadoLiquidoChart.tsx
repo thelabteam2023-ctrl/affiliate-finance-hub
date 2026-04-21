@@ -64,6 +64,8 @@ interface BonusResultadoLiquidoChartProps {
   bonusBets: BonusBetData[];
   pernasMap?: PernasMap;
   ajustesPostLimitacao?: AjustePostLimitacao[];
+  /** Perdas por cancelamento (NÃO somadas ao Juice — entram só no resultado_dia/acumulado) */
+  perdasCancelamento?: AjustePostLimitacao[];
   formatCurrency: (value: number) => string;
   /** Função para converter valores para moeda de consolidação do projeto */
   convertToConsolidation?: (valor: number, moedaOrigem: string) => number;
