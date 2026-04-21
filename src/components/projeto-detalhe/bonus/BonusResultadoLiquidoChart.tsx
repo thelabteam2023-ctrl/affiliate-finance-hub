@@ -104,6 +104,7 @@ export function BonusResultadoLiquidoChart({
   bonusBets,
   pernasMap = {},
   ajustesPostLimitacao = [],
+  perdasCancelamento = [],
   formatCurrency,
   convertToConsolidation,
   moedaConsolidacao,
