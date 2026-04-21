@@ -23,7 +23,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { PERIOD_STALE_TIME, PERIOD_GC_TIME } from "@/lib/query-cache-config";
 import { BonusResultadoLiquidoChart } from "./BonusResultadoLiquidoChart";
 import { CurrencyBreakdownTooltip } from "@/components/ui/currency-breakdown-tooltip";
-import { extractCivilDateKey } from "@/utils/dateUtils";
+import { extractCivilDateKey, extractLocalDateKey } from "@/utils/dateUtils";
 
 interface DateRangeResult {
   start: Date;
@@ -420,7 +420,10 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
       if (!isBonusBet) return acc;
 
       if (dateRange) {
-        const betDate = new Date(extractCivilDateKey(bet.data_aposta) + "T12:00:00");
+        // CORREÇÃO: data_aposta é timestamp REAL (com hora) — usar extractLocalDateKey
+        // (BRT) para paridade com BonusResultadoLiquidoChart. extractCivilDateKey
+        // agrupava por dia UTC, deslocando apostas de madrugada (BRT) para outro dia.
+        const betDate = new Date(extractLocalDateKey(bet.data_aposta) + "T12:00:00");
         if (betDate < startOfDay(dateRange.start) || betDate > dateRange.end) return acc;
       }
       
@@ -923,7 +926,8 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
         bonuses={bonuses}
         bonusBets={bonusBetsWithPernas.bets}
         pernasMap={bonusBetsWithPernas.pernasMap}
-        ajustesPostLimitacao={[...ajustesPostLimitacao, ...perdasCancelamento]}
+        ajustesPostLimitacao={ajustesPostLimitacao}
+        perdasCancelamento={perdasCancelamento}
         formatCurrency={formatCurrency}
         convertToConsolidation={convertToConsolidation}
         moedaConsolidacao={analyticsSummary.moeda_consolidacao}
