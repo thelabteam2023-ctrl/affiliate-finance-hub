@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useWorkspace } from "@/hooks/useWorkspace";
-import { useInvalidateProjectQueries } from "@/hooks/useInvalidateProjectQueries";
+import { useInvalidateAfterMutation } from "@/hooks/useInvalidateAfterMutation";
 import { 
   registrarCashbackViaLedger, 
   estornarCashbackViaLedger 
@@ -66,7 +66,8 @@ export function useCashbackManual({ projetoId, dataInicio, dataFim }: UseCashbac
   const { user } = useAuth();
   const { workspaceId } = useWorkspace();
   const queryClient = useQueryClient();
-  const invalidateProject = useInvalidateProjectQueries();
+  // Helper unificado: invalida canônicos (Lucro/Evolução/Calendário) + queries do projeto
+  const invalidateProject = useInvalidateAfterMutation();
 
   // Hook centralizado para conversão de moeda
   const { 
