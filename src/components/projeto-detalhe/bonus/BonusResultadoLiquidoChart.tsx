@@ -236,8 +236,29 @@ export function BonusResultadoLiquidoChart({
       juiceByDate[date] = (juiceByDate[date] || 0) + valor;
     });
 
+    // Perdas por cancelamento — agrupadas SEPARADAMENTE (não somam ao Juice).
+    // Entram apenas no resultado_dia/acumulado para preservar paridade com o KPI da Visão Geral,
+    // que mostra Juice e Perdas em linhas distintas (totalJuice ≠ totalPerdasCancelamento).
+    const perdasByDate: Record<string, number> = {};
+    perdasCancelamento.forEach(perda => {
+      if (selectedBookmaker && perda.bookmaker_id !== selectedBookmaker) return;
+      const date = extractCivilDateKey(perda.data_operacional);
+      if (dateRange) {
+        const perdaDate = new Date(date + "T12:00:00");
+        if (perdaDate < startOfDay(dateRange.start) || perdaDate > dateRange.end) return;
+      }
+      const valor = convertToConsolidation
+        ? convertToConsolidation(perda.valor, perda.moeda)
+        : perda.valor;
+      perdasByDate[date] = (perdasByDate[date] || 0) + valor;
+    });
+
     // Combina todas as datas COM ATIVIDADE (Activity Mode — sem dias vazios)
-    const allDates = new Set([...Object.keys(bonusByDate), ...Object.keys(juiceByDate)]);
+    const allDates = new Set([
+      ...Object.keys(bonusByDate),
+      ...Object.keys(juiceByDate),
+      ...Object.keys(perdasByDate),
+    ]);
     
     const sortedDates = Array.from(allDates).sort();
 
@@ -248,7 +269,8 @@ export function BonusResultadoLiquidoChart({
     const data: ChartDataPoint[] = sortedDates.map((date, index) => {
       const bonus = bonusByDate[date] || 0;
       const juice = juiceByDate[date] || 0;
-      const resultado_dia = bonus + juice;
+      const perdas = perdasByDate[date] || 0;
+      const resultado_dia = bonus + juice + perdas;
       acumulado += resultado_dia;
 
       return {
@@ -266,7 +288,7 @@ export function BonusResultadoLiquidoChart({
     });
 
     return data;
-  }, [filteredBonuses, bonusBets, bonuses, ajustesPostLimitacao, dateRange, selectedBookmaker, convertToConsolidation, pernasMap, moedaConsolidacao]);
+  }, [filteredBonuses, bonusBets, bonuses, ajustesPostLimitacao, perdasCancelamento, dateRange, selectedBookmaker, convertToConsolidation, pernasMap, moedaConsolidacao]);
 
   const kpis = useMemo(() => {
     const totalBonus = chartData.reduce((acc, d) => acc + d.bonus_creditado, 0);
