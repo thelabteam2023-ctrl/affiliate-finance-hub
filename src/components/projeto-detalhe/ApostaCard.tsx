@@ -1024,7 +1024,7 @@ export function ApostaCard({
               {format(parseLocalDateTime(aposta.data_aposta), "dd/MM HH:mm", { locale: ptBR })}
             </span>
             <DateAnomalyBadge
-              anomaly={detectDateAnomaly(aposta.data_aposta)}
+              anomaly={detectDateAnomaly(aposta.data_aposta, aposta.created_at ? new Date(aposta.created_at) : undefined)}
               onClick={() => onEdit?.(aposta.id)}
             />
             {(isForeignCurrency || isMultiCurrency) && (
