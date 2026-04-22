@@ -296,6 +296,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
           saldo_atual,
           saldo_freebet,
           moeda,
+          parceiro_id,
           parceiro:parceiros (nome),
           bookmakers_catalogo (logo_url)
         `)
