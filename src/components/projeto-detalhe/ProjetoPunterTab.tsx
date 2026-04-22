@@ -64,6 +64,7 @@ import { ApostaCard } from "./ApostaCard";
 import { SurebetCard, SurebetData, SurebetPerna } from "./SurebetCard";
 import { groupPernasBySelecao } from "@/utils/groupPernasBySelecao";
 import { liquidarPernaSurebet } from "@/services/aposta/ApostaService";
+import { apostaMatchesBookmakerFilter, apostaMatchesParceiroFilter } from "@/utils/apostaFilterHelpers";
 import type { SurebetQuickResult } from "@/components/apostas/SurebetRowActionsMenu";
 import { UnifiedStatisticsCard } from "./UnifiedStatisticsCard";
 import { ChartEmptyState } from "@/components/ui/chart-empty-state";
@@ -918,16 +919,11 @@ export function ProjetoPunterTab({
         if (!matchesBase && !matchesSelecoes && !matchesPernas) return false;
       }
 
-      // Filtro por bookmaker (Casas)
-      if (bookmakerIds.length > 0) {
-        if (!a.bookmaker_id || !bookmakerIds.includes(a.bookmaker_id)) return false;
-      }
+      // Filtro por bookmaker (Casas) — considera entrada principal + sub_entries + pernas
+      if (!apostaMatchesBookmakerFilter(a as any, bookmakerIds)) return false;
 
-      // Filtro por parceiro
-      if (parceiroIds.length > 0) {
-        const bk = bookmakers.find(b => b.id === a.bookmaker_id);
-        if (!bk?.parceiro_id || !parceiroIds.includes(bk.parceiro_id)) return false;
-      }
+      // Filtro por parceiro — considera entrada principal + sub_entries + pernas
+      if (!apostaMatchesParceiroFilter(a as any, parceiroIds, bookmakers as any)) return false;
 
       // Filtro por resultado
       const matchesResultado = resultados.length === 0 || resultados.includes(a.resultado as any);
@@ -937,20 +933,14 @@ export function ProjetoPunterTab({
 
   // Filtered counts per sub-tab for badge display
   const filteredAbertasCount = useMemo(() => apostasAbertas.filter(a => {
-    if (tabFilters.bookmakerIds.length > 0 && (!a.bookmaker_id || !tabFilters.bookmakerIds.includes(a.bookmaker_id))) return false;
-    if (tabFilters.parceiroIds.length > 0) {
-      const bk = bookmakers.find(b => b.id === a.bookmaker_id);
-      if (!bk?.parceiro_id || !tabFilters.parceiroIds.includes(bk.parceiro_id)) return false;
-    }
+    if (!apostaMatchesBookmakerFilter(a as any, tabFilters.bookmakerIds)) return false;
+    if (!apostaMatchesParceiroFilter(a as any, tabFilters.parceiroIds, bookmakers as any)) return false;
     const matchesResultado = tabFilters.resultados.length === 0 || tabFilters.resultados.includes(a.resultado as any);
     return matchesResultado;
   }).length, [apostasAbertas, tabFilters.bookmakerIds, tabFilters.parceiroIds, tabFilters.resultados, bookmakers]);
   const filteredHistoricoCount = useMemo(() => apostasHistorico.filter(a => {
-    if (tabFilters.bookmakerIds.length > 0 && (!a.bookmaker_id || !tabFilters.bookmakerIds.includes(a.bookmaker_id))) return false;
-    if (tabFilters.parceiroIds.length > 0) {
-      const bk = bookmakers.find(b => b.id === a.bookmaker_id);
-      if (!bk?.parceiro_id || !tabFilters.parceiroIds.includes(bk.parceiro_id)) return false;
-    }
+    if (!apostaMatchesBookmakerFilter(a as any, tabFilters.bookmakerIds)) return false;
+    if (!apostaMatchesParceiroFilter(a as any, tabFilters.parceiroIds, bookmakers as any)) return false;
     const matchesResultado = tabFilters.resultados.length === 0 || tabFilters.resultados.includes(a.resultado as any);
     return matchesResultado;
   }).length, [apostasHistorico, tabFilters.bookmakerIds, tabFilters.parceiroIds, tabFilters.resultados, bookmakers]);
