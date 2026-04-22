@@ -381,6 +381,17 @@ export function BonusResultadoLiquidoChart({
       resultByDate[date] = entry;
     });
 
+    // Perdas por cancelamento (sem filtro de data) — não contam como operações
+    // CORREÇÃO: Faltava no calendário, causando divergência com o KPI "Performance de Bônus"
+    perdasCancelamento.forEach(perda => {
+      if (selectedBookmaker && perda.bookmaker_id !== selectedBookmaker) return;
+      const date = extractCivilDateKey(perda.data_operacional);
+      const valor = convertToConsolidation ? convertToConsolidation(perda.valor, perda.moeda) : perda.valor;
+      const entry = resultByDate[date] || { lucro: 0, operacoes: 0 };
+      entry.lucro += valor;
+      resultByDate[date] = entry;
+    });
+
     return Object.entries(resultByDate)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([date, { lucro, operacoes }]) => ({
@@ -389,7 +400,7 @@ export function BonusResultadoLiquidoChart({
         lucro_prejuizo: lucro,
         operacoes,
       }));
-  }, [bonuses, bonusBets, ajustesPostLimitacao, selectedBookmaker, convertToConsolidation, pernasMap, moedaConsolidacao]);
+  }, [bonuses, bonusBets, ajustesPostLimitacao, perdasCancelamento, selectedBookmaker, convertToConsolidation, pernasMap, moedaConsolidacao]);
 
   // Mês inicial do calendário: abre no mês do filtro ativo
   const calendarInitialMonth = useMemo(() => {
