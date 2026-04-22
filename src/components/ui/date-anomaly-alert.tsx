@@ -142,7 +142,7 @@ export function DateAnomalyBadge({ anomaly, onClick, className }: DateAnomalyBad
       ) : (
         <AlertTriangle className="h-3.5 w-3.5" />
       )}
-      Data suspeita: {Math.abs(anomaly.differenceInDays)}d {anomaly.anomalyType === "past" ? "atrás" : "à frente"}
+      Data suspeita: {Math.abs(anomaly.differenceInDays)}d {anomaly.anomalyType === "past" ? "antes do registro" : "após o registro"}
     </button>
   );
 }

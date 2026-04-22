@@ -1759,6 +1759,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
                  odd: aposta.odd,
                  stake: aposta.stake,
                  data_aposta: aposta.data_aposta,
+                 created_at: aposta.created_at,
                  resultado: aposta.resultado,
                  status: aposta.status,
                  lucro_prejuizo: aposta.lucro_prejuizo,
