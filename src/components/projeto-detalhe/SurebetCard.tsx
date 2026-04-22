@@ -482,8 +482,23 @@ export function SurebetCard({ surebet, onEdit, onQuickResolve, onSimpleMenuQuick
   //  - badge da perna NÃO deve ser clicável (liquidar_perna_surebet_v1 falharia, perna_id="")
   //  - quick-resolve deve ser feito pelo dropdown do menu (que chama reliquidar_aposta_v6)
   // Apenas SUREBET/MULTIPLA têm liquidação por perna independente.
-  const isSimplesMultiEntry = isPunter || isDuploGreen || isFreebetStrat || isSimples
+  //
+  // IMPORTANTE: a estratégia sozinha NÃO determina o tipo. Uma aposta com estrategia
+  // "EXTRACAO_BONUS" pode ser tanto:
+  //   (a) simples multi-entry — todas as pernas com a MESMA seleção (mesma aposta em várias casas)
+  //   (b) SUREBET/Múltipla real — pernas com seleções DIFERENTES (ex: 1-X-2, Sim/Não/Fora)
+  //
+  // Distinguimos contando seleções únicas: se houver 2+ seleções distintas, é surebet/múltipla
+  // real e o submenu "Uma perna ganha" deve liquidar perna a perna.
+  const pernasComBookmaker = (surebet.pernas || []).filter(p => p.bookmaker_id && p.odd && p.odd > 0);
+  const selecoesUnicas = new Set(
+    pernasComBookmaker.map(p => (p.selecao_livre || p.selecao || '').trim().toLowerCase()).filter(Boolean)
+  );
+  const hasMultipleDistinctSelecoes = selecoesUnicas.size >= 2;
+
+  const couldBeSimples = isPunter || isDuploGreen || isFreebetStrat || isSimples
     || surebet.estrategia === "VALUEBET" || surebet.estrategia === "EXTRACAO_BONUS";
+  const isSimplesMultiEntry = couldBeSimples && !hasMultipleDistinctSelecoes;
   
   // Detectar se alguma perna usa freebet (badge no nível do card)
   const hasAnyFreebetPerna = surebet.pernas?.some(p => 
