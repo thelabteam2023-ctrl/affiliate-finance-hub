@@ -404,6 +404,7 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
           saldo_atual,
           saldo_freebet,
           instance_identifier,
+          parceiro_id,
           parceiro:parceiros (nome),
           bookmakers_catalogo (logo_url)
         `)
