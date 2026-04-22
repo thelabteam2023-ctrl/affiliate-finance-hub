@@ -52,6 +52,7 @@ import { useProjectBonuses, FinalizeReason } from "@/hooks/useProjectBonuses";
 import { cn, getFirstLastName } from "@/lib/utils";
 import { buildBookmakerNomeMap, collectMissingBookmakerIds, mergeBookmakerNomeMaps } from "@/lib/bookmaker-display";
 import { useUnlinkedBookmakerNames } from "@/hooks/useUnlinkedBookmakerNames";
+import { apostaMatchesBookmakerFilter, apostaMatchesParceiroFilter } from "@/utils/apostaFilterHelpers";
 import { 
   OperationsSubTabHeader,
   type HistorySubTab,
@@ -296,6 +297,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
           saldo_atual,
           saldo_freebet,
           moeda,
+          parceiro_id,
           parceiro:parceiros (nome),
           bookmakers_catalogo (logo_url)
         `)
@@ -629,6 +631,14 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
     return true;
   };
 
+  // Multi-entry/pernas-aware dimensional filter (considera _sub_entries e pernas)
+  const matchesDimensionalFilterAposta = (aposta: any) => {
+    const { bookmakerIds, parceiroIds } = dimensionalFilter;
+    if (!apostaMatchesBookmakerFilter(aposta, bookmakerIds)) return false;
+    if (!apostaMatchesParceiroFilter(aposta, parceiroIds, bookmakers as any)) return false;
+    return true;
+  };
+
   // Filter apostas
   const filteredApostas = apostas.filter((aposta) => {
     const matchesSearch = 
@@ -640,7 +650,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
     const matchesResultado = resultadoFilter === "all" || aposta.resultado === resultadoFilter;
     const matchesDimResultado = dimensionalFilter.resultados.length === 0 || dimensionalFilter.resultados.includes(aposta.resultado as any);
     const matchesTipo = tipoFilter === "todas" || tipoFilter === "simples";
-    const matchesDim = matchesDimensionalFilter(aposta.bookmaker_id, aposta.bookmaker?.parceiro_id);
+    const matchesDim = matchesDimensionalFilterAposta(aposta);
     return matchesSearch && matchesStatus && matchesResultado && matchesDimResultado && matchesTipo && matchesDim;
   });
 
@@ -653,7 +663,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
     const matchesResultado = resultadoFilter === "all" || am.resultado === resultadoFilter;
     const matchesDimResultado = dimensionalFilter.resultados.length === 0 || dimensionalFilter.resultados.includes(am.resultado as any);
     const matchesTipo = tipoFilter === "todas" || tipoFilter === "multiplas";
-    const matchesDim = matchesDimensionalFilter(am.bookmaker_id, am.bookmaker?.parceiro_id);
+    const matchesDim = matchesDimensionalFilterAposta(am);
     return (searchTerm === "" || matchesSearch) && matchesStatus && matchesResultado && matchesDimResultado && matchesTipo && matchesDim;
   });
 
