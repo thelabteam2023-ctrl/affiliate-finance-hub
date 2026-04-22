@@ -52,6 +52,7 @@ import { useProjectBonuses, FinalizeReason } from "@/hooks/useProjectBonuses";
 import { cn, getFirstLastName } from "@/lib/utils";
 import { buildBookmakerNomeMap, collectMissingBookmakerIds, mergeBookmakerNomeMaps } from "@/lib/bookmaker-display";
 import { useUnlinkedBookmakerNames } from "@/hooks/useUnlinkedBookmakerNames";
+import { apostaMatchesBookmakerFilter, apostaMatchesParceiroFilter } from "@/utils/apostaFilterHelpers";
 import { 
   OperationsSubTabHeader,
   type HistorySubTab,
