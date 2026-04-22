@@ -34,6 +34,7 @@ import {
 import { SurebetCard, SurebetData, SurebetPerna } from "./SurebetCard";
 import { groupPernasBySelecao } from "@/utils/groupPernasBySelecao";
 import { SurebetDialog } from "./SurebetDialog";
+import { apostaMatchesBookmakerFilter, apostaMatchesParceiroFilter } from "@/utils/apostaFilterHelpers";
 import { ApostaPernasResumo, ApostaPernasInline, Perna } from "./ApostaPernasResumo";
 import { ApostaCard, type ApostaCardData } from "./ApostaCard";
 import { format } from "date-fns";
