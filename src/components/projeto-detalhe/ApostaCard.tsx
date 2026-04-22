@@ -67,6 +67,8 @@ export interface ApostaCardData {
   stake: number;
   stake_total?: number;
   data_aposta: string;
+  /** Data de criação do registro (usada para detectar datas suspeitas no momento do lançamento) */
+  created_at?: string;
   resultado?: string | null;
   status?: string;
   lucro_prejuizo?: number | null;
