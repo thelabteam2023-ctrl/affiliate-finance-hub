@@ -1533,6 +1533,7 @@ export function ProjetoSurebetTab({ projetoId, onDataChange, refreshTrigger, act
                   odd: operacao.odd,
                   stake: operacao.stake || operacao.stake_total,
                   data_aposta: operacao.data_operacao,
+                  created_at: (operacao as any).created_at,
                   resultado: operacao.resultado,
                   status: operacao.status,
                   lucro_prejuizo: operacao.lucro_real,
