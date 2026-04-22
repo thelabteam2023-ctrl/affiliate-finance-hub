@@ -1057,13 +1057,11 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
       const contexto = getApostaContexto(aposta, bookmakersComBonusAtivo);
       const estrategia = inferEstrategiaLegado(aposta);
       
-      // Filtro de casa (bookmaker)
-      const matchesBookmaker = selectedBookmakerIds.length === 0 || 
-        selectedBookmakerIds.includes(aposta.bookmaker_id);
+      // Filtro de casa (bookmaker) — considera entrada principal + sub_entries + pernas
+      const matchesBookmaker = apostaMatchesBookmakerFilter(aposta as any, selectedBookmakerIds);
       
-      // Filtro de parceiro
-      const matchesParceiro = selectedParceiroIds.length === 0 || 
-        (aposta.bookmaker?.parceiro_id && selectedParceiroIds.includes(aposta.bookmaker.parceiro_id));
+      // Filtro de parceiro — considera entrada principal + sub_entries + pernas
+      const matchesParceiro = apostaMatchesParceiroFilter(aposta as any, selectedParceiroIds, bookmakers as any);
       
       // Filtro de estratégia do contexto global
       const matchesEstrategia = selectedEstrategias.includes("all") || 
@@ -1090,13 +1088,11 @@ export function ProjetoApostasTab({ projetoId, onDataChange, refreshTrigger, for
       const contexto = getApostaContexto(am, bookmakersComBonusAtivo);
       const estrategiaMultipla = am.estrategia || inferEstrategiaLegado(am);
       
-      // Filtro de casa (bookmaker)
-      const matchesBookmaker = selectedBookmakerIds.length === 0 || 
-        selectedBookmakerIds.includes(am.bookmaker_id);
+      // Filtro de casa — considera todas as pernas da múltipla
+      const matchesBookmaker = apostaMatchesBookmakerFilter(am as any, selectedBookmakerIds);
       
-      // Filtro de parceiro
-      const matchesParceiro = selectedParceiroIds.length === 0 || 
-        (am.bookmaker?.parceiro_id && selectedParceiroIds.includes(am.bookmaker.parceiro_id));
+      // Filtro de parceiro — considera todas as pernas da múltipla
+      const matchesParceiro = apostaMatchesParceiroFilter(am as any, selectedParceiroIds, bookmakers as any);
       
       // Filtro de estratégia
       const matchesEstrategia = selectedEstrategias.includes("all") || 
