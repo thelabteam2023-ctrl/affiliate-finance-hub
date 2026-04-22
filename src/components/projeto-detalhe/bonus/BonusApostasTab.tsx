@@ -1221,6 +1221,7 @@ export function BonusApostasTab({ projetoId, dateRange, onDataChange }: BonusApo
              odd: aposta.odd,
              stake: aposta.stake,
              data_aposta: aposta.data_aposta,
+             created_at: (aposta as any).created_at,
              resultado: aposta.resultado,
              status: aposta.status,
              lucro_prejuizo: aposta.lucro_prejuizo,
