@@ -579,6 +579,17 @@ export function HistoricoMovimentacoes({
               onChange={setFiltroParceiro}
               parceiros={parceirosLista}
             />
+            {/* Casa (Bookmaker) filter with search */}
+            <BookmakerFilterCombobox
+              bookmakers={bookmakerOptions}
+              selectedIds={filtroBookmakerIds}
+              onSelectionChange={(ids) => {
+                setFiltroBookmakerIds(ids);
+                pagination.goToFirstPage();
+              }}
+              label="Casa"
+              searchPlaceholder="Buscar casa…"
+            />
             <DashboardPeriodFilterBar
               value={periodFilter}
               onChange={handlePeriodChange}
