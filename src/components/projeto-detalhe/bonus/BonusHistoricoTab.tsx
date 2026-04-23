@@ -52,6 +52,7 @@ export function BonusHistoricoTab({ projetoId }: BonusHistoricoTabProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [reasonFilter, setReasonFilter] = useState<string>("all");
   const [editingBonus, setEditingBonus] = useState<ProjectBonus | null>(null);
+  const [reclassifyingBonus, setReclassifyingBonus] = useState<ProjectBonus | null>(null);
 
   // Fetch ajustes pós-limitação
   const { data: ajustesData = [] } = useQuery({
