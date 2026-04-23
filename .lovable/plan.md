@@ -1,70 +1,58 @@
+## Bônus Órfãos em Migração de Bookmaker entre Projetos
 
+### Contexto / Diagnóstico
 
-## Separar Resultado Cambial do Lucro Operacional
+Quando uma bookmaker (já existente em outro projeto) é vinculada a um **novo projeto**, o sistema:
+- ✅ Cria `DEPOSITO_VIRTUAL` (BACKFILL/MIGRACAO) no projeto destino com a parte real
+- ✅ Cria `SAQUE_VIRTUAL` no projeto origem
+- ❌ **NÃO** migra registros ativos de `project_bookmaker_link_bonuses` (status `credited`)
 
-Atualmente o `GANHO_CAMBIAL` e `PERDA_CAMBIAL` (gerados na Conciliação de Saldos quando o valor confirmado difere do nominal) são somados ao **Lucro Operacional** da Visão Geral, contaminando:
+### Caso real (Diego/Everygame – bookmaker `8de2ba2c`)
 
-- KPI "Lucro Operacional"
-- Gráfico "Evolução do Lucro"
-- Calendário (heatmap diário)
-- Cards de breakdown
+Origem: projeto `8d836024` → tinha `BONUS_CREDITADO` ($200, "Boas-vindas 50%") em 2026-03-16.
+Destino: projeto Fênix `438cef89` → recebeu `DEPOSITO_VIRTUAL` $400 (parte real) mas **zero** registros em `project_bookmaker_link_bonuses`.
 
-Isso causa divergência com a Performance por Estratégia (que já exclui FX) e gera ruído conceitual: FX é evento de **tesouraria/câmbio**, não de **operação de aposta**.
+Consequências:
+- Tentativa de excluir o bônus na UI gerou `BONUS_ESTORNO` ($200) no ledger (já existe, ID `1ca6f54f`), mas **nada** mudou na UI/KPIs porque não havia registro em `project_bookmaker_link_bonuses` para deletar.
+- KPI Performance de Bônus continua mostrando o $200 antigo porque a fonte (ledger no projeto origem) ainda tem `BONUS_CREDITADO` ativo.
+- Bookmaker some do "Por Casa" do projeto Fênix porque o filtro `getBookmakersWithAnyBonus` exigia ≥1 registro em `project_bookmaker_link_bonuses`.
 
-## Objetivo
+### Plano de Ação
 
-Tornar a **Visão Geral 100% operacional** (somente resultados de apostas + bônus + cashback + giros + ajustes operacionais). Resultado Cambial passa a viver exclusivamente no módulo **Indicadores Financeiros** / **Caixa**, onde já é a métrica natural.
+#### Parte A — Restauração pontual (Diego/Everygame em Fênix)
 
-## Mudanças
+1. **Criar registro órfão** em `project_bookmaker_link_bonuses` para o bookmaker `8de2ba2c` no projeto Fênix `438cef89`, replicando os dados do bônus original ($200, "Boas-vindas 50%", status `credited`, currency USD, created_at preservado).
+2. **Não gerar novo `BONUS_CREDITADO`** no ledger — o histórico financeiro já existe no projeto origem (não duplicar).
+3. **Reverter o `BONUS_ESTORNO` indevido** (`1ca6f54f`) gerado pela tentativa anterior de exclusão (cancelar via `cancelled_at`/`cancelled_by_rpc` para não contaminar caixa).
 
-### 1. Serviço canônico — `src/services/fetchProjetoExtras.ts`
-Remover `GANHO_CAMBIAL` e `PERDA_CAMBIAL` da agregação de extras.
+#### Parte B — Correção sistêmica (migração automática de bônus)
 
-Atualizar a fórmula canônica:
-```text
-LUCRO_OPERACIONAL =
-  Σ apostas_liquidadas
-  + Σ cashback
-  + Σ giros_gratis
-  + Σ bônus_creditados (exceto FREEBET)
-  + Σ eventos_promocionais
-  - Σ perdas_cancelamento_bonus
-  + Σ ajustes_pos_limitacao
-  + Σ ajustes_saldo
-  + Σ conciliações
-  - Σ perdas_operacionais
-  // REMOVIDO: ± resultado_cambial
-```
+1. **Ajustar `fn_ensure_deposito_virtual_on_link`** (trigger que dispara em UPDATE de `bookmakers.projeto_id`):
+   - Quando detectar tipo MIGRACAO (bookmaker vindo de outro projeto), ler todos os bônus com status `credited` no projeto origem para esse bookmaker.
+   - Para cada bônus ativo, **inserir uma cópia** em `project_bookmaker_link_bonuses` apontando para o `project_id` destino, preservando todos os campos (amount, type, currency, rollover, etc.).
+   - **Manter o registro original** no projeto origem com status atualizado para `migrated` (novo valor permitido) OU adicionar coluna `migrated_to_project_id` para rastreabilidade — sem gerar `BONUS_ESTORNO`/`BONUS_CREDITADO` (não duplica ledger).
+2. **Adicionar enum value** `migrated` ao status (se for enum) ou validar via CHECK constraint.
+3. **Criar índice** para acelerar busca de bônus ativos por `(bookmaker_id, status)`.
 
-### 2. RPC server-side — `get_projetos_lucro_operacional`
-Remover `GANHO_CAMBIAL` e `PERDA_CAMBIAL` do bloco de `cash_ledger` agregado por moeda. Garante que `fetchProjetosLucroOperacionalKpi` (consumido pelo card kanban e pelo dashboard financeiro do workspace) também fique alinhado.
+#### Parte C — Auditoria de outros casos órfãos
 
-Migração SQL: `DROP FUNCTION` + `CREATE OR REPLACE` da RPC sem os dois tipos.
+Rodar query para detectar TODOS os bookmakers que sofreram migração (origem com `BONUS_CREDITADO` + destino com `DEPOSITO_VIRTUAL` MIGRACAO + zero registros em `project_bookmaker_link_bonuses` no destino) e listar para decisão de remediação em batch.
 
-### 3. Hook de breakdown — `src/hooks/useKpiBreakdowns.ts`
-Aplicar o mesmo filtro client-side de FX para que os cards de breakdown da Visão Geral fiquem coerentes com o gráfico/calendário.
+#### Parte D — Memória
 
-### 4. Re-export — `VisaoGeralCharts.tsx`
-Já consome via `ExtraLucroEntry`; nenhuma mudança direta — herda o filtro do serviço.
+- `mem://architecture/bonus-tab-unified-resolution-flow` → adicionar nota: "Bônus ativos migram automaticamente quando bookmaker é vinculada a novo projeto via trigger `fn_ensure_deposito_virtual_on_link`."
+- Nova memória `mem://finance/bonus-migration-cross-project-standard.md`.
 
-### 5. Indicadores Financeiros — manter intacto
-O módulo de Indicadores Financeiros / Caixa continua exibindo `GANHO_CAMBIAL` e `PERDA_CAMBIAL` normalmente (lá é o lugar correto). Nenhuma alteração nesse fluxo.
+### Arquivos / Migrations afetados
 
-### 6. Memória do projeto
-Atualizar `mem://architecture/canonical-projeto-extras-service.md` documentando que FX está **EXCLUÍDO** do Lucro Operacional, e adicionar regra core no `mem://index.md`:
-> "Resultado Cambial (GANHO/PERDA_CAMBIAL) NÃO entra no Lucro Operacional da Visão Geral. Vive em Indicadores Financeiros/Caixa."
+- **Migration 1** (Parte A): INSERT no `project_bookmaker_link_bonuses` + UPDATE `cash_ledger` (cancelar estorno indevido).
+- **Migration 2** (Parte B): `CREATE OR REPLACE FUNCTION fn_ensure_deposito_virtual_on_link` (estendida) + possível ALTER no enum/CHECK de status.
+- **Auditoria** (Parte C): query SELECT-only via tool `read_query` — sem mudança de código.
+- Nenhuma mudança no frontend é necessária (após migração os hooks existentes leem corretamente).
 
-## Resultado Esperado
+### Resultado esperado
 
-- Visão Geral, Evolução do Lucro, Calendário e cards passam a refletir **apenas operação pura de apostas**.
-- Performance por Estratégia e KPI Lucro Operacional ficam 100% reconciliados (sem o "buraco" do FX).
-- Lucro Real (Indicadores Financeiros) continua incluindo FX implicitamente via fluxo de caixa confirmado — é o lugar correto para visualizar o impacto cambial.
-- Card kanban de projetos (consome `fetchProjetosLucroCanonico`) — verificar se também usa essa engine; se sim, herda automaticamente.
-
-## Arquivos afetados
-
-- `src/services/fetchProjetoExtras.ts` (remover FX da agregação)
-- `src/hooks/useKpiBreakdowns.ts` (filtro alinhado)
-- Nova migration: redefinir `get_projetos_lucro_operacional` sem FX
-- `mem://architecture/canonical-projeto-extras-service.md` + `mem://index.md`
-
+- ✅ Diego/Everygame volta a aparecer em "Por Casa" no Fênix com bônus de $200 ativo.
+- ✅ KPIs de Performance de Bônus do Fênix passam a refletir corretamente esse bônus migrado.
+- ✅ Exclusão do bônus pela UI funciona normalmente (existe registro para deletar + idempotência do estorno).
+- ✅ Toda futura vinculação de bookmaker que carrega bônus ativos preserva metadados automaticamente.
