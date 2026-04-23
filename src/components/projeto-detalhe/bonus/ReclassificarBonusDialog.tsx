@@ -111,13 +111,11 @@ export function ReclassificarBonusDialog({
     enabled: open && !!bonus,
   });
 
-  if (!bonus) return null;
-
   const apostasNoAntigo = validacao?.count ?? 0;
   const bookmakerJaTransferido =
-    bookmaker?.projeto_id && bookmaker.projeto_id !== bonus.project_id;
+    bookmaker?.projeto_id && bonus && bookmaker.projeto_id !== bonus.project_id;
   const podeReclassificar =
-    apostasNoAntigo === 0 && bookmakerJaTransferido && !validandoApostas;
+    !!bonus && apostasNoAntigo === 0 && !!bookmakerJaTransferido && !validandoApostas;
 
   // Sugerir automaticamente o projeto atual da casa
   useEffect(() => {
@@ -128,12 +126,13 @@ export function ReclassificarBonusDialog({
 
   // Sugerir moeda da casa
   useEffect(() => {
-    if (open && bookmaker?.moeda && novaMoeda === bonus.currency && bookmaker.moeda !== bonus.currency) {
+    if (open && bonus && bookmaker?.moeda && novaMoeda === bonus.currency && bookmaker.moeda !== bonus.currency) {
       setNovaMoeda(bookmaker.moeda);
     }
-  }, [open, bookmaker?.moeda, bonus.currency, novaMoeda]);
+  }, [open, bookmaker?.moeda, bonus, novaMoeda]);
 
   const handleSubmit = async () => {
+    if (!bonus) return;
     if (!novoProjetoId) {
       toast.error("Selecione o projeto de destino");
       return;
@@ -156,8 +155,9 @@ export function ReclassificarBonusDialog({
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["project-bonuses"] }),
         queryClient.invalidateQueries({ queryKey: ["bonus-historico-ajustes"] }),
-        invalidateCanonicalCaches(queryClient, [bonus.project_id, novoProjetoId]),
       ]);
+      invalidateCanonicalCaches(queryClient, bonus.project_id);
+      invalidateCanonicalCaches(queryClient, novoProjetoId);
       onSuccess?.();
       onOpenChange(false);
     } catch (err: any) {
@@ -167,6 +167,8 @@ export function ReclassificarBonusDialog({
       setSubmitting(false);
     }
   };
+
+  if (!bonus) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -230,8 +232,8 @@ export function ReclassificarBonusDialog({
           )}
 
           {!validandoApostas && podeReclassificar && (
-            <Alert className="border-emerald-500/30 bg-emerald-500/5">
-              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+            <Alert className="border-primary/30 bg-primary/5">
+              <CheckCircle2 className="h-4 w-4 text-primary" />
               <AlertDescription>
                 Elegível: zero apostas no projeto de origem e a casa já está no novo projeto.
               </AlertDescription>
