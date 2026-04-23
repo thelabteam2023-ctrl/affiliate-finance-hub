@@ -498,16 +498,27 @@ export function FreebetEstoqueView({ projetoId, formatCurrency, dateRange, onAdd
                         {format(new Date(fb.data_recebida), "dd/MM/yyyy", { locale: ptBR })}
                       </td>
                       <td className="p-3 text-center">
-                        {!fb.utilizada && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                            onClick={() => setFreebetToDelete(fb)}
-                            title="Excluir freebet"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
+                        {!fb.utilizada && fb.status === "LIBERADA" && (
+                          <div className="flex items-center justify-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-muted-foreground hover:text-primary"
+                              onClick={() => setFreebetToMigrate(fb)}
+                              title="Migrar freebet para outro projeto"
+                            >
+                              <ArrowRightLeft className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                              onClick={() => setFreebetToDelete(fb)}
+                              title="Excluir freebet"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
                         )}
                       </td>
                     </tr>
