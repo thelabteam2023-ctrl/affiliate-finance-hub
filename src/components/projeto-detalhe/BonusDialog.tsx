@@ -149,6 +149,12 @@ export function BonusDialog({
     bookmakerCatalogoId: selectedBookmaker?.bookmaker_catalogo_id,
   });
 
+  // CRÍTICO: este efeito reinicializa o formulário SOMENTE quando o modal abre
+  // ou quando muda o bônus em edição / a casa pré-selecionada.
+  // NÃO depender de `bookmakers`: a lista pode mudar de referência durante o
+  // ciclo de vida do dialog (refetch de saldos, hooks externos, etc.) e isso
+  // estava resetando `bookmakerId` para "" no meio do fluxo, fazendo a casa
+  // selecionada "desaparecer" ao clicar em uma sugestão de campanha.
   useEffect(() => {
     if (open) {
       if (bonus) {
@@ -201,7 +207,8 @@ export function BonusDialog({
         setShowCreditConfirmation(false);
       }
     }
-  }, [open, bonus, preselectedBookmakerId, bookmakers]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, bonus, preselectedBookmakerId]);
 
   // Reset template selection when bookmaker changes AND inherit currency from bookmaker
   // Track previous bookmakerId to only reset when it ACTUALLY changes (not on bookmakers array ref change)
