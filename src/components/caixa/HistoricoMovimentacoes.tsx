@@ -33,6 +33,7 @@ import { ReverterMovimentacaoDialog } from "./ReverterMovimentacaoDialog";
 import { ExcluirMovimentacaoDialog } from "./ExcluirMovimentacaoDialog";
 import { canRevert, canDelete } from "@/lib/movimentacaoEligibility";
 import { useRole } from "@/hooks/useRole";
+import { BookmakerFilterCombobox, type BookmakerFilterOption } from "@/components/ui/bookmaker-filter-combobox";
 const PAGE_SIZE = 50;
 
 const TIPO_OPTIONS = [
