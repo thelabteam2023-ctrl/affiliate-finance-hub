@@ -1,58 +1,80 @@
-## Bônus Órfãos em Migração de Bookmaker entre Projetos
 
-### Contexto / Diagnóstico
 
-Quando uma bookmaker (já existente em outro projeto) é vinculada a um **novo projeto**, o sistema:
-- ✅ Cria `DEPOSITO_VIRTUAL` (BACKFILL/MIGRACAO) no projeto destino com a parte real
-- ✅ Cria `SAQUE_VIRTUAL` no projeto origem
-- ❌ **NÃO** migra registros ativos de `project_bookmaker_link_bonuses` (status `credited`)
+## Diagnóstico Final
 
-### Caso real (Diego/Everygame – bookmaker `8de2ba2c`)
-
-Origem: projeto `8d836024` → tinha `BONUS_CREDITADO` ($200, "Boas-vindas 50%") em 2026-03-16.
-Destino: projeto Fênix `438cef89` → recebeu `DEPOSITO_VIRTUAL` $400 (parte real) mas **zero** registros em `project_bookmaker_link_bonuses`.
+A re-liquidação de Surebets falha silenciosamente porque `reliquidarAposta()` desvia para `liquidarSurebetSimples()`, que faz `UPDATE` direto em `apostas_unificada` (status, resultado, lucro_prejuizo) **sem tocar nas pernas e sem gerar eventos no ledger**.
 
 Consequências:
-- Tentativa de excluir o bônus na UI gerou `BONUS_ESTORNO` ($200) no ledger (já existe, ID `1ca6f54f`), mas **nada** mudou na UI/KPIs porque não havia registro em `project_bookmaker_link_bonuses` para deletar.
-- KPI Performance de Bônus continua mostrando o $200 antigo porque a fonte (ledger no projeto origem) ainda tem `BONUS_CREDITADO` ativo.
-- Bookmaker some do "Por Casa" do projeto Fênix porque o filtro `getBookmakersWithAnyBonus` exigia ≥1 registro em `project_bookmaker_link_bonuses`.
+- As `apostas_pernas` continuam com `resultado=NULL` → o trigger `fn_recalc_pai_surebet` recalcula o pai e pode sobrescrever ou divergir do valor "manual".
+- Nenhum `PAYOUT`/`VOID_REFUND` é criado → saldo do bookmaker não muda.
+- Nenhum `REVERSAL` da liquidação anterior → double-counting silencioso quando há re-liquidação.
+- A UI parece "não atualizar" porque a verdade (pernas) permanece intacta e o trigger volta a recalcular o pai.
 
-### Plano de Ação
+A arquitetura correta de Surebet (já documentada em `architecture/surebet-engine-and-liquidation-standard`) diz: **a verdade da surebet vive nas pernas**. Toda liquidação deve passar por `liquidar_perna_surebet_v1`, e o pai é recalculado automaticamente por `fn_recalc_pai_surebet`.
 
-#### Parte A — Restauração pontual (Diego/Everygame em Fênix)
+## Solução Proposta
 
-1. **Criar registro órfão** em `project_bookmaker_link_bonuses` para o bookmaker `8de2ba2c` no projeto Fênix `438cef89`, replicando os dados do bônus original ($200, "Boas-vindas 50%", status `credited`, currency USD, created_at preservado).
-2. **Não gerar novo `BONUS_CREDITADO`** no ledger — o histórico financeiro já existe no projeto origem (não duplicar).
-3. **Reverter o `BONUS_ESTORNO` indevido** (`1ca6f54f`) gerado pela tentativa anterior de exclusão (cancelar via `cancelled_at`/`cancelled_by_rpc` para não contaminar caixa).
+Substituir o caminho `liquidarSurebetSimples` por um **orquestrador por perna** — sem criar nova RPC, reutilizando a infra atômica que já existe (`liquidar_perna_surebet_v1`). Isso elimina o desvio "raw update" e alinha 100% com o padrão Surebet.
 
-#### Parte B — Correção sistêmica (migração automática de bônus)
+### Mudanças
 
-1. **Ajustar `fn_ensure_deposito_virtual_on_link`** (trigger que dispara em UPDATE de `bookmakers.projeto_id`):
-   - Quando detectar tipo MIGRACAO (bookmaker vindo de outro projeto), ler todos os bônus com status `credited` no projeto origem para esse bookmaker.
-   - Para cada bônus ativo, **inserir uma cópia** em `project_bookmaker_link_bonuses` apontando para o `project_id` destino, preservando todos os campos (amount, type, currency, rollover, etc.).
-   - **Manter o registro original** no projeto origem com status atualizado para `migrated` (novo valor permitido) OU adicionar coluna `migrated_to_project_id` para rastreabilidade — sem gerar `BONUS_ESTORNO`/`BONUS_CREDITADO` (não duplica ledger).
-2. **Adicionar enum value** `migrated` ao status (se for enum) ou validar via CHECK constraint.
-3. **Criar índice** para acelerar busca de bônus ativos por `(bookmaker_id, status)`.
+**1. `src/services/aposta/ApostaService.ts` — `reliquidarAposta()` (caso `isArbitragem`)**
 
-#### Parte C — Auditoria de outros casos órfãos
+Substituir a chamada `liquidarSurebetSimples()` por um orquestrador:
 
-Rodar query para detectar TODOS os bookmakers que sofreram migração (origem com `BONUS_CREDITADO` + destino com `DEPOSITO_VIRTUAL` MIGRACAO + zero registros em `project_bookmaker_link_bonuses` no destino) e listar para decisão de remediação em batch.
+```text
+SE forma_registro = ARBITRAGEM:
+  1. Buscar todas as pernas (apostas_pernas) ordenadas por `ordem`
+  2. Mapear novoResultado global → resultado por perna:
+       GREEN  → primeira perna GREEN, demais RED   (ou política a confirmar — ver pergunta)
+       VOID   → todas as pernas VOID
+       RED    → todas as pernas RED
+  3. Para cada perna, chamar `liquidarPernaSurebet({ pernaId, resultado })`
+     em paralelo (Promise.all, skipRefresh:true)
+  4. Recalcular pai é automático via fn_recalc_pai_surebet
+  5. Um único invalidateCanonicalCaches no final
+```
 
-#### Parte D — Memória
+**2. Depreciar `liquidarSurebetSimples()`**
 
-- `mem://architecture/bonus-tab-unified-resolution-flow` → adicionar nota: "Bônus ativos migram automaticamente quando bookmaker é vinculada a novo projeto via trigger `fn_ensure_deposito_virtual_on_link`."
-- Nova memória `mem://finance/bonus-migration-cross-project-standard.md`.
+Manter exportado por compatibilidade, mas marcar `@deprecated` e logar warning. Nenhum chamador novo deve usar.
 
-### Arquivos / Migrations afetados
+**3. `SurebetRowActionsMenu` — opção "Liquidar Pai" (liquidação simples global)**
 
-- **Migration 1** (Parte A): INSERT no `project_bookmaker_link_bonuses` + UPDATE `cash_ledger` (cancelar estorno indevido).
-- **Migration 2** (Parte B): `CREATE OR REPLACE FUNCTION fn_ensure_deposito_virtual_on_link` (estendida) + possível ALTER no enum/CHECK de status.
-- **Auditoria** (Parte C): query SELECT-only via tool `read_query` — sem mudança de código.
-- Nenhuma mudança no frontend é necessária (após migração os hooks existentes leem corretamente).
+Avaliar se faz sentido manter "Liquidar (resultado simples)" em surebets quando existe o submenu Quick Resolve por cenário. Proposta: **remover** essa opção do menu de surebet, deixando apenas o Quick Resolve (que já passa por `liquidar_perna_surebet_v1`). Isso elimina o caminho ambíguo.
 
-### Resultado esperado
+**4. Validação no banco (defesa em profundidade)**
 
-- ✅ Diego/Everygame volta a aparecer em "Por Casa" no Fênix com bônus de $200 ativo.
-- ✅ KPIs de Performance de Bônus do Fênix passam a refletir corretamente esse bônus migrado.
-- ✅ Exclusão do bônus pela UI funciona normalmente (existe registro para deletar + idempotência do estorno).
-- ✅ Toda futura vinculação de bookmaker que carrega bônus ativos preserva metadados automaticamente.
+Trigger `BEFORE UPDATE ON apostas_unificada` que bloqueia mudança direta de `resultado`/`lucro_prejuizo` em registros com `forma_registro='ARBITRAGEM'` quando feita fora do contexto da RPC `fn_recalc_pai_surebet`. Implementação: a função `fn_recalc_pai_surebet` seta uma `SET LOCAL` flag de sessão que o trigger consulta. Se a flag não está setada e é arbitragem, RAISE EXCEPTION. Garante que nenhum UPDATE raw passe.
+
+**5. Testes de cenário (sem tocar dados reais)**
+
+Replicar via `read_query` os 3 cenários:
+- Surebet nunca liquidada → quick resolve
+- Surebet liquidada uma vez → re-liquidação pelo mesmo cenário (idempotência)
+- Surebet liquidada → re-liquidação por cenário diferente (REVERSAL + novo PAYOUT)
+
+Validar que o saldo do bookmaker fecha em todos os casos via `financial_events`.
+
+## Arquivos afetados
+
+- `src/services/aposta/ApostaService.ts` — refator de `reliquidarAposta` no ramo arbitragem
+- `src/components/apostas/SurebetRowActionsMenu.tsx` — remover ação "Liquidar Pai"
+- Migration nova — trigger guard contra UPDATE raw em arbitragem
+- Sem mudança em `liquidarPernaSurebet` (já é a fonte canônica)
+
+## Pergunta de regra de negócio
+
+Para o caminho legado "Liquidar Pai com GREEN/RED/VOID global" em surebets, qual é o mapeamento esperado para as pernas?
+
+- **GREEN global**: qual perna ganha? A primeira? A de maior odd? Não temos como saber sem heurística — esse é exatamente o motivo pelo qual o Quick Resolve por cenário existe.
+
+Sugestão: **bloquear** essa ação em surebets (forçar uso do Quick Resolve), ao invés de inferir.
+
+## Riscos e mitigação
+
+- **Regressão em fluxos legados**: se algum lugar antigo chama `liquidarSurebetSimples` direto (ex.: import de planilha), continuará funcionando mas com warning. Auditar via `code--search_files` antes de remover.
+- **Pernas com freebet**: o orquestrador delega 100% para `liquidar_perna_surebet_v1`, que já trata `tipo_uso=FREEBET` e direção do payout (`freebet-snr-payout-direction-standard`).
+- **Multimoeda**: `fn_recalc_pai_surebet` já consolida via `cotacao_snapshot`. Sem mudança aqui.
+- **Cache UI**: usar o padrão `surebet-quick-resolve-batch-refresh` (Promise.all + skipRefresh + único invalidate).
+
