@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { extractCivilDateKey } from "@/utils/dateUtils";
+import { extractCivilDateKey, toLocalTimestamp } from "@/utils/dateUtils";
 import { Loader2 } from "lucide-react";
 
 interface EditarDataTransacaoDialogProps {
