@@ -29,6 +29,7 @@ import {
   Timer,
   Lock,
   Trash2,
+  ArrowRightLeft,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -36,6 +37,7 @@ import { useFreebetEstoque, FreebetRecebidaCompleta, BookmakerEstoque, EstoqueMe
 import { CurrencyBreakdownTooltip } from "@/components/ui/currency-breakdown-tooltip";
 import { CURRENCY_SYMBOLS, type SupportedCurrency } from "@/types/currency";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
+import { MigrarFreebetDialog } from "./MigrarFreebetDialog";
 
 /** Formata valor na moeda nativa da freebet (não na consolidação) */
 function formatNativeCurrency(valor: number, moeda: string): string {
