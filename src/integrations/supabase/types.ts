@@ -15588,6 +15588,14 @@ export type Database = {
           saldo_calculado: number
         }[]
       }
+      reclassificar_bonus_origem: {
+        Args: {
+          p_bonus_id: string
+          p_nova_moeda?: string
+          p_novo_projeto_id: string
+        }
+        Returns: Json
+      }
       reconciliar_saldo_bookmaker: {
         Args: { p_bookmaker_id: string }
         Returns: Json
