@@ -367,7 +367,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
   const bonusPerformance = useMemo(() => {
     // GUARD: Não calcular enquanto cotações não estão disponíveis (evita distorção por fallback)
     if (currencyLoading) {
-      return { totalBonusCreditado: 0, totalJuice: 0, totalPerdasCancelamento: 0, total: 0, performancePercent: 0, bonusPorMoeda: [] };
+      return { totalBonusCreditado: 0, totalJuice: 0, totalPerdasCancelamento: 0, total: 0, performancePercent: 0, bonusPorMoeda: [], totalOperacoes: 0, juiceMedio: 0 };
     }
     // Filtrar bônus por período (usar credited_at como data de competência)
     // CRÍTICO: Excluir FREEBET — o lucro SNR já está contabilizado no P&L da aposta (evita dupla contagem)
@@ -419,6 +419,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
     const moedaConsolidacaoProjeto = analyticsSummary.moeda_consolidacao || "USD";
     const { bets: bonusBetsFlat, pernasMap } = bonusBetsWithPernas;
     
+    let totalOperacoes = 0;
     const juiceBets = bonusBetsFlat.reduce((acc, bet) => {
       const isBonusBet = bet.bonus_id || bet.estrategia === "EXTRACAO_BONUS";
       if (!isBonusBet) return acc;
@@ -431,6 +432,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
         if (betDate < startOfDay(dateRange.start) || betDate > dateRange.end) return acc;
       }
       
+      totalOperacoes += 1;
       return acc + getConsolidatedLucroDirect(
         {
           lucro_prejuizo: bet.lucro_prejuizo,
@@ -481,8 +483,11 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
     const performancePercent = totalBonusCreditado > 0 
       ? ((total / totalBonusCreditado) * 100) 
       : 0;
-    
-    return { totalBonusCreditado, totalJuice, totalPerdasCancelamento, total, performancePercent, bonusPorMoeda };
+
+    // Juice Médio = juice das apostas (sem ajustes pós-limitação) dividido pelo nº de operações
+    const juiceMedio = totalOperacoes > 0 ? juiceBets / totalOperacoes : 0;
+
+    return { totalBonusCreditado, totalJuice, totalPerdasCancelamento, total, performancePercent, bonusPorMoeda, totalOperacoes, juiceMedio };
   }, [bonuses, bonusBetsWithPernas, ajustesPostLimitacao, perdasCancelamento, convertToConsolidationTrabalho, dateRange, currencyLoading]);
 
   // NOTA: totalSaldoOperavel agora vem do hook useSaldoOperavel (já declarado no início)
@@ -657,6 +662,15 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
                       <span className="font-semibold text-red-500">{formatCurrency(bonusPerformance.totalPerdasCancelamento)}</span>
                     </div>
                   )}
+                </div>
+                <div className="border-t border-border/50 pt-1 space-y-0.5">
+                  <div className="flex justify-between gap-4">
+                    <span className="flex items-center gap-1.5 text-muted-foreground"><span className="inline-block w-1.5 h-1.5 rounded-full bg-sky-500" /> Juice Médio / op.</span>
+                    <span className="font-semibold text-foreground">
+                      {formatCurrency(bonusPerformance.juiceMedio)}
+                      <span className="text-muted-foreground font-normal ml-1">({bonusPerformance.totalOperacoes} op.)</span>
+                    </span>
+                  </div>
                 </div>
                 <div className="border-t border-border/50 pt-1 flex justify-between gap-4">
                   <span className="font-semibold">Extração</span>
