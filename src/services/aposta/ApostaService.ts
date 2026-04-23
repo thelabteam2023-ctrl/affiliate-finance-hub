@@ -775,13 +775,23 @@ export async function liquidarPernaSurebet(
  * 1. Atualiza status para LIQUIDADA
  * 2. Define o resultado
  * 3. Grava o lucro/prejuízo
+ *
+ * @deprecated USO PROIBIDO em novos chamadores. Esta função faz UPDATE direto
+ * em apostas_unificada SEM tocar nas pernas e SEM gerar eventos no ledger,
+ * o que causa dessincronização entre pai/pernas e double-counting silencioso
+ * em re-liquidações. Use o orquestrador por perna via `liquidarPernaSurebet`
+ * (RPC `liquidar_perna_surebet_v1`), que é a fonte canônica para Surebets.
+ * Mantida apenas por compatibilidade com importadores legados.
  */
 export async function liquidarSurebetSimples(
   surebetId: string,
   resultadoFinal: 'GREEN' | 'RED' | 'VOID',
   lucroTotal: number
 ): Promise<ApostaServiceResult> {
-  console.log("[ApostaService] Liquidando Surebet (simples):", surebetId, resultadoFinal);
+  console.warn(
+    "[ApostaService] ⚠️ liquidarSurebetSimples está DEPRECATED — use o orquestrador por perna (liquidarPernaSurebet/liquidar_perna_surebet_v1).",
+    { surebetId, resultadoFinal }
+  );
 
   try {
     const { error } = await supabase
