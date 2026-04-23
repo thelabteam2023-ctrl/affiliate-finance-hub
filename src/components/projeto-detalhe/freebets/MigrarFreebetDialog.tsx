@@ -225,8 +225,8 @@ export function MigrarFreebetDialog({
           )}
 
           {!loadingPreview && estado === "TOTAL" && (
-            <Alert className="border-emerald-500/30 bg-emerald-500/5">
-              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+            <Alert className="border-primary/30 bg-primary/5">
+              <CheckCircle2 className="h-4 w-4 text-primary" />
               <AlertDescription>
                 <strong>Migração total:</strong> esta freebet nunca foi utilizada. O registro
                 inteiro será movido para o novo projeto.
@@ -235,8 +235,8 @@ export function MigrarFreebetDialog({
           )}
 
           {!loadingPreview && estado === "PARCIAL" && (
-            <Alert className="border-amber-500/30 bg-amber-500/5">
-              <SplitSquareHorizontal className="h-4 w-4 text-amber-500" />
+            <Alert className="border-accent/30 bg-accent/10">
+              <SplitSquareHorizontal className="h-4 w-4 text-accent-foreground" />
               <AlertDescription className="space-y-1">
                 <p>
                   <strong>Migração com quebra:</strong> esta freebet já foi parcialmente usada
@@ -253,7 +253,7 @@ export function MigrarFreebetDialog({
                   </li>
                   <li>
                     Será migrado:{" "}
-                    <strong className="text-amber-600 dark:text-amber-400">
+                    <strong className="text-accent-foreground">
                       {formatNative(preview?.valor_restante || 0, freebet.moeda)}
                     </strong>
                   </li>
