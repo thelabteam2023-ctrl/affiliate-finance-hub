@@ -663,6 +663,15 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
                     </div>
                   )}
                 </div>
+                <div className="border-t border-border/50 pt-1 space-y-0.5">
+                  <div className="flex justify-between gap-4">
+                    <span className="flex items-center gap-1.5 text-muted-foreground"><span className="inline-block w-1.5 h-1.5 rounded-full bg-sky-500" /> Juice Médio / op.</span>
+                    <span className="font-semibold text-foreground">
+                      {formatCurrency(bonusPerformance.juiceMedio)}
+                      <span className="text-muted-foreground font-normal ml-1">({bonusPerformance.totalOperacoes} op.)</span>
+                    </span>
+                  </div>
+                </div>
                 <div className="border-t border-border/50 pt-1 flex justify-between gap-4">
                   <span className="font-semibold">Extração</span>
                   <span className="font-semibold text-foreground">{bonusPerformance.performancePercent.toFixed(1)}%</span>
