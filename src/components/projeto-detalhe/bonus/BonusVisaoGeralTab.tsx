@@ -395,51 +395,14 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
     }
     
     // SNAPSHOT-FIRST: Usar valor_consolidado_snapshot congelado no momento da inserção
-    // Fallback: conversão via cotação oficial (para bônus antigos sem snapshot)
+    // Fallback: conversão via cotação de trabalho para bônus antigos sem snapshot
     const totalBonusCreditado = eligibleBonuses
       .reduce((acc, b) => {
         if (b.valor_consolidado_snapshot != null && b.valor_consolidado_snapshot > 0) {
           return acc + b.valor_consolidado_snapshot;
         }
-        return acc + convertToConsolidationOficial(b.bonus_amount || 0, b.currency);
+        return acc + convertToConsolidationTrabalho(b.bonus_amount || 0, b.currency);
       }, 0);
-
-    // 🔍 DIAGNÓSTICO TEMPORÁRIO — investigar discrepância KPI Performance de Bônus
-    if (typeof window !== "undefined") {
-      // eslint-disable-next-line no-console
-      console.log("[🔍 BONUS-KPI DEBUG]", {
-        projetoId,
-        moedaConsolidacao,
-        dateRange: dateRange ? {
-          start: dateRange.start.toISOString(),
-          end: dateRange.end.toISOString(),
-        } : null,
-        totalBonusesNoArray: bonuses.length,
-        eligibleAposFiltro: eligibleBonuses.length,
-        totalBonusCreditadoCalculado: totalBonusCreditado,
-        breakdownPorMoeda: eligibleBonuses.reduce((acc, b) => {
-          const k = b.currency || "?";
-          acc[k] = acc[k] || { count: 0, soma_snapshot: 0, soma_nominal: 0, sem_snapshot: 0 };
-          acc[k].count += 1;
-          acc[k].soma_nominal += b.bonus_amount || 0;
-          if (b.valor_consolidado_snapshot != null && b.valor_consolidado_snapshot > 0) {
-            acc[k].soma_snapshot += b.valor_consolidado_snapshot;
-          } else {
-            acc[k].sem_snapshot += 1;
-          }
-          return acc;
-        }, {} as Record<string, { count: number; soma_snapshot: number; soma_nominal: number; sem_snapshot: number }>),
-        primeiros3Eligible: eligibleBonuses.slice(0, 3).map(b => ({
-          id: b.id,
-          credited_at: b.credited_at,
-          bonus_amount: b.bonus_amount,
-          currency: b.currency,
-          valor_consolidado_snapshot: b.valor_consolidado_snapshot,
-          status: b.status,
-          tipo_bonus: b.tipo_bonus,
-        })),
-      });
-    }
     
     // Breakdown de bônus por moeda original
     const bonusPorMoedaMap: Record<string, number> = {};
@@ -447,7 +410,11 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
       const moeda = b.currency || "BRL";
       bonusPorMoedaMap[moeda] = (bonusPorMoedaMap[moeda] || 0) + (b.bonus_amount || 0);
     });
-    const bonusPorMoeda = Object.entries(bonusPorMoedaMap).map(([moeda, valor]) => ({ moeda, valor }));
+    const bonusPorMoeda = Object.entries(bonusPorMoedaMap).map(([moeda, valor]) => ({
+      moeda,
+      valor,
+      label: `${moeda} original`,
+    }));
     
     const moedaConsolidacaoProjeto = analyticsSummary.moeda_consolidacao || "USD";
     const { bets: bonusBetsFlat, pernasMap } = bonusBetsWithPernas;
@@ -516,7 +483,7 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
       : 0;
     
     return { totalBonusCreditado, totalJuice, totalPerdasCancelamento, total, performancePercent, bonusPorMoeda };
-  }, [bonuses, bonusBetsWithPernas, ajustesPostLimitacao, perdasCancelamento, convertToConsolidationTrabalho, convertToConsolidationOficial, dateRange, moedaConsolidacao, currencyLoading]);
+  }, [bonuses, bonusBetsWithPernas, ajustesPostLimitacao, perdasCancelamento, convertToConsolidationTrabalho, dateRange, currencyLoading]);
 
   // NOTA: totalSaldoOperavel agora vem do hook useSaldoOperavel (já declarado no início)
 
