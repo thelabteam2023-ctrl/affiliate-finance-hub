@@ -122,6 +122,7 @@ export function FreebetEstoqueView({ projetoId, formatCurrency, dateRange, onAdd
   const [viewMode, setViewMode] = useState<"card" | "list">("list");
   const [freebetToDelete, setFreebetToDelete] = useState<FreebetRecebidaCompleta | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [freebetToMigrate, setFreebetToMigrate] = useState<FreebetRecebidaCompleta | null>(null);
   
   const { freebets, bookmakersEstoque, metrics, loading, deleteFreebet, refresh, moedaConsolidacao } = useFreebetEstoque({
     projetoId,
