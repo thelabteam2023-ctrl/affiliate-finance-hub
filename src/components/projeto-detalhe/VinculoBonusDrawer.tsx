@@ -63,6 +63,22 @@ export function VinculoBonusDrawer({
   const bookmakerBonuses = getBonusesByBookmaker(bookmakerId);
   const summary = getSummary();
 
+  useEffect(() => {
+    if (!open) return;
+
+    console.info("[VinculoBonusDrawer] open", {
+      projectId,
+      bookmakerId,
+      bookmakerName,
+      totalBonuses: bookmakerBonuses.length,
+      byStatus: bookmakerBonuses.reduce((acc: Record<string, number>, bonus) => {
+        acc[bonus.status] = (acc[bonus.status] || 0) + 1;
+        return acc;
+      }, {}),
+      bonusIds: bookmakerBonuses.map((bonus) => bonus.id),
+    });
+  }, [open, projectId, bookmakerId, bookmakerName, bookmakerBonuses]);
+
   const handleAddBonus = () => {
     setEditingBonus(null);
     setDialogOpen(true);
@@ -74,7 +90,21 @@ export function VinculoBonusDrawer({
   };
 
   const handleDeleteBonus = async (id: string): Promise<boolean> => {
+    console.info("[VinculoBonusDrawer] handleDeleteBonus", {
+      projectId,
+      bookmakerId,
+      bonusId: id,
+    });
+
     const success = await deleteBonus(id);
+
+    console.info("[VinculoBonusDrawer] handleDeleteBonus:result", {
+      projectId,
+      bookmakerId,
+      bonusId: id,
+      success,
+    });
+
     if (success && onBonusChange) {
       onBonusChange();
     }
