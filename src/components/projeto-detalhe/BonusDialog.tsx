@@ -179,7 +179,10 @@ export function BonusDialog({
         prevBookmakerIdRef.current = initialBk;
         setTitle("");
         setAmount("");
-        setCurrency("BRL");
+        // CRÍTICO: Herdar moeda da bookmaker pré-selecionada (caso ela exista no array)
+        // Fallback BRL apenas quando não há bookmaker pré-selecionada ou ela ainda não foi carregada
+        const preselectedBk = initialBk ? bookmakers.find(b => b.id === initialBk) : null;
+        setCurrency(preselectedBk?.moeda || "BRL");
         setTipoBonus("BONUS");
         setStatus("credited");
         setCreditedAt(format(new Date(), "yyyy-MM-dd"));
@@ -198,26 +201,37 @@ export function BonusDialog({
         setShowCreditConfirmation(false);
       }
     }
-  }, [open, bonus, preselectedBookmakerId]);
+  }, [open, bonus, preselectedBookmakerId, bookmakers]);
 
   // Reset template selection when bookmaker changes AND inherit currency from bookmaker
   // Track previous bookmakerId to only reset when it ACTUALLY changes (not on bookmakers array ref change)
   useEffect(() => {
-    if (!isEditMode && bookmakerId && bookmakerId !== prevBookmakerIdRef.current) {
+    if (isEditMode || !bookmakerId) return;
+
+    const bk = bookmakers.find(b => b.id === bookmakerId);
+
+    // Caso 1: bookmaker mudou de fato (usuário trocou no select OU bookmaker pré-selecionada foi carregada agora)
+    if (bookmakerId !== prevBookmakerIdRef.current) {
       prevBookmakerIdRef.current = bookmakerId;
       setSelectedTemplateId(null);
       setFilledFromTemplate(false);
       setTemplatePercent(null);
       setTemplateMaxValue(null);
       setTemplateCurrencyMatch(true);
-      
+
       // CRÍTICO: Herdar moeda da bookmaker selecionada
-      const bk = bookmakers.find(b => b.id === bookmakerId);
       if (bk?.moeda) {
         setCurrency(bk.moeda);
       }
+      return;
     }
-  }, [bookmakerId, isEditMode, bookmakers]);
+
+    // Caso 2: bookmaker pré-selecionada já estava setada antes da array `bookmakers` chegar.
+    // Quando ela chegar (race condition de fetch), aplicar a moeda mesmo assim.
+    if (bk?.moeda && bk.moeda !== currency) {
+      setCurrency(bk.moeda);
+    }
+  }, [bookmakerId, isEditMode, bookmakers, currency]);
 
   // Auto-calculate bonus value when deposit changes and template has percentage
   // Only when currencies match between template and bookmaker
