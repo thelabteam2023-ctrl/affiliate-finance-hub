@@ -185,40 +185,51 @@ export default function Caixa() {
       setLoading(true);
       
       // Fetch transactions with date filter applied server-side
-      // Use current filter dates or default to last 90 days for better coverage
-      const queryStartDate = dataInicio 
-        ? format(dataInicio, "yyyy-MM-dd")
-        : format(subDays(new Date(), 90), "yyyy-MM-dd");
-      const queryEndDate = dataFim 
-        ? format(dataFim, "yyyy-MM-dd")
-        : format(new Date(), "yyyy-MM-dd");
+      // Quando dataInicio/dataFim são undefined (filtro "Tudo"), trazemos TODO o histórico
+      // do workspace (sem cortar por janela). Isso evita que lançamentos antigos
+      // "sumam" da paginação local. O Supabase traz até 1000 linhas por padrão; usamos
+      // .range para garantir até 10000 linhas em uma única consulta.
+      const queryStartDate = dataInicio ? format(dataInicio, "yyyy-MM-dd") : null;
+      const queryEndDate = dataFim ? format(dataFim, "yyyy-MM-dd") : null;
       
       // ARQUITETURA: Caixa Operacional só exibe transações de CASH REAL
       // Eventos promocionais (GIRO_GRATIS, BONUS_CREDITADO, etc.) são filtrados
       // para manter a visão pura de "dinheiro que entra e sai do sistema"
       // Motor Financeiro v11: Exclui status de duplicidade para evitar confusão visual
       // Busca principal: transações pela data_transacao no período
-      const { data: transacoesData, error: transacoesError } = await supabase
+      let principalQuery = supabase
         .from("cash_ledger")
         .select("*")
         .in("tipo_transacao", [...CASH_REAL_TYPES])
         .not("status", "in", "(DUPLICADO_CORRIGIDO,DUPLICADO_BLOQUEADO)")
-        .gte("data_transacao", `${queryStartDate}T00:00:00.000Z`)
-        .lte("data_transacao", `${queryEndDate}T23:59:59.999Z`)
-        .order("data_transacao", { ascending: false });
+        .order("data_transacao", { ascending: false })
+        .range(0, 9999);
+      if (queryStartDate) {
+        principalQuery = principalQuery.gte("data_transacao", `${queryStartDate}T00:00:00.000Z`);
+      }
+      if (queryEndDate) {
+        principalQuery = principalQuery.lte("data_transacao", `${queryEndDate}T23:59:59.999Z`);
+      }
+      const { data: transacoesData, error: transacoesError } = await principalQuery;
 
       if (transacoesError) throw transacoesError;
 
       // Busca complementar: saques confirmados no período cujo pedido foi ANTES do período
-      // Isso garante que saques recebidos apareçam na cronologia correta
-      const { data: transacoesConfirmadas } = await supabase
-        .from("cash_ledger")
-        .select("*")
-        .in("tipo_transacao", [...CASH_REAL_TYPES])
-        .not("status", "in", "(DUPLICADO_CORRIGIDO,DUPLICADO_BLOQUEADO)")
-        .lt("data_transacao", `${queryStartDate}T00:00:00.000Z`)
-        .gte("data_confirmacao", `${queryStartDate}T00:00:00.000Z`)
-        .lte("data_confirmacao", `${queryEndDate}T23:59:59.999Z`);
+      // Isso garante que saques recebidos apareçam na cronologia correta.
+      // Só faz sentido quando há janela definida (queryStartDate/queryEndDate).
+      let transacoesConfirmadas: any[] | null = null;
+      if (queryStartDate && queryEndDate) {
+        const { data } = await supabase
+          .from("cash_ledger")
+          .select("*")
+          .in("tipo_transacao", [...CASH_REAL_TYPES])
+          .not("status", "in", "(DUPLICADO_CORRIGIDO,DUPLICADO_BLOQUEADO)")
+          .lt("data_transacao", `${queryStartDate}T00:00:00.000Z`)
+          .gte("data_confirmacao", `${queryStartDate}T00:00:00.000Z`)
+          .lte("data_confirmacao", `${queryEndDate}T23:59:59.999Z`)
+          .range(0, 9999);
+        transacoesConfirmadas = data;
+      }
 
       // Merge e deduplicar
       const allIds = new Set((transacoesData || []).map((t: any) => t.id));
