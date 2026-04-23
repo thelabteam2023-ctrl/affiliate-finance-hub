@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { extractCivilDateKey } from "@/utils/dateUtils";
+import { extractCivilDateKey, toLocalTimestamp } from "@/utils/dateUtils";
 import { Loader2 } from "lucide-react";
 
 interface EditarDataTransacaoDialogProps {
@@ -64,8 +64,13 @@ export function EditarDataTransacaoDialog({
     try {
       const { data: { user } } = await supabase.auth.getUser();
 
-      // Format the new date as ISO string for storage
-      const novaDataStr = format(novaData, "yyyy-MM-dd HH:mm:ss");
+      // Format the new date as São Paulo-local ISO string with -03:00 offset.
+      // CRÍTICO: gravar SEM offset faz o Postgres interpretar como UTC.
+      // Ao reler com parseLocalDateTime (que converte UTC → São Paulo, -3h),
+      // a data fica deslocada e a transação "some" do filtro de período.
+      // toLocalTimestamp injeta o offset -03:00 para preservar a data civil escolhida.
+      const localInput = format(novaData, "yyyy-MM-dd'T'HH:mm:ss");
+      const novaDataStr = toLocalTimestamp(localInput);
 
       // Build audit metadata
       const auditEntry = {
