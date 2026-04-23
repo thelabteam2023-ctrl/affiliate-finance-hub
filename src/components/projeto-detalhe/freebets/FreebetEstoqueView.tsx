@@ -29,6 +29,7 @@ import {
   Timer,
   Lock,
   Trash2,
+  ArrowRightLeft,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -36,6 +37,7 @@ import { useFreebetEstoque, FreebetRecebidaCompleta, BookmakerEstoque, EstoqueMe
 import { CurrencyBreakdownTooltip } from "@/components/ui/currency-breakdown-tooltip";
 import { CURRENCY_SYMBOLS, type SupportedCurrency } from "@/types/currency";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
+import { MigrarFreebetDialog } from "./MigrarFreebetDialog";
 
 /** Formata valor na moeda nativa da freebet (não na consolidação) */
 function formatNativeCurrency(valor: number, moeda: string): string {
@@ -120,6 +122,7 @@ export function FreebetEstoqueView({ projetoId, formatCurrency, dateRange, onAdd
   const [viewMode, setViewMode] = useState<"card" | "list">("list");
   const [freebetToDelete, setFreebetToDelete] = useState<FreebetRecebidaCompleta | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [freebetToMigrate, setFreebetToMigrate] = useState<FreebetRecebidaCompleta | null>(null);
   
   const { freebets, bookmakersEstoque, metrics, loading, deleteFreebet, refresh, moedaConsolidacao } = useFreebetEstoque({
     projetoId,
@@ -495,16 +498,27 @@ export function FreebetEstoqueView({ projetoId, formatCurrency, dateRange, onAdd
                         {format(new Date(fb.data_recebida), "dd/MM/yyyy", { locale: ptBR })}
                       </td>
                       <td className="p-3 text-center">
-                        {!fb.utilizada && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                            onClick={() => setFreebetToDelete(fb)}
-                            title="Excluir freebet"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
+                        {!fb.utilizada && fb.status === "LIBERADA" && (
+                          <div className="flex items-center justify-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-muted-foreground hover:text-primary"
+                              onClick={() => setFreebetToMigrate(fb)}
+                              title="Migrar freebet para outro projeto"
+                            >
+                              <ArrowRightLeft className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                              onClick={() => setFreebetToDelete(fb)}
+                              title="Excluir freebet"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
                         )}
                       </td>
                     </tr>
@@ -555,6 +569,30 @@ export function FreebetEstoqueView({ projetoId, formatCurrency, dateRange, onAdd
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Dialog de migração de freebet para outro projeto */}
+      <MigrarFreebetDialog
+        open={!!freebetToMigrate}
+        onOpenChange={(open) => !open && setFreebetToMigrate(null)}
+        freebet={
+          freebetToMigrate
+            ? {
+                id: freebetToMigrate.id,
+                motivo: freebetToMigrate.motivo,
+                valor: freebetToMigrate.valor,
+                moeda: freebetToMigrate.moeda,
+                bookmaker_id: freebetToMigrate.bookmaker_id,
+                bookmaker_nome: freebetToMigrate.bookmaker_nome,
+                projeto_id_atual: projetoId,
+                data_validade: freebetToMigrate.data_validade,
+              }
+            : null
+        }
+        onSuccess={() => {
+          setFreebetToMigrate(null);
+          refresh();
+        }}
+      />
     </div>
   );
 }

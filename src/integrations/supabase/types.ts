@@ -4416,6 +4416,12 @@ export type Database = {
           data_utilizacao: string | null
           data_validade: string | null
           id: string
+          migrada_de_freebet_id: string | null
+          migrada_de_projeto_id: string | null
+          migrada_para_freebet_id: string | null
+          migrada_para_projeto_id: string | null
+          migrated_at: string | null
+          migrated_by: string | null
           moeda_operacao: string | null
           motivo: string
           observacoes: string | null
@@ -4429,6 +4435,8 @@ export type Database = {
           utilizada: boolean | null
           valor: number
           valor_brl_referencia: number | null
+          valor_consumido_no_origem: number | null
+          valor_original_referencia: number | null
           workspace_id: string
         }
         Insert: {
@@ -4442,6 +4450,12 @@ export type Database = {
           data_utilizacao?: string | null
           data_validade?: string | null
           id?: string
+          migrada_de_freebet_id?: string | null
+          migrada_de_projeto_id?: string | null
+          migrada_para_freebet_id?: string | null
+          migrada_para_projeto_id?: string | null
+          migrated_at?: string | null
+          migrated_by?: string | null
           moeda_operacao?: string | null
           motivo: string
           observacoes?: string | null
@@ -4455,6 +4469,8 @@ export type Database = {
           utilizada?: boolean | null
           valor: number
           valor_brl_referencia?: number | null
+          valor_consumido_no_origem?: number | null
+          valor_original_referencia?: number | null
           workspace_id: string
         }
         Update: {
@@ -4468,6 +4484,12 @@ export type Database = {
           data_utilizacao?: string | null
           data_validade?: string | null
           id?: string
+          migrada_de_freebet_id?: string | null
+          migrada_de_projeto_id?: string | null
+          migrada_para_freebet_id?: string | null
+          migrada_para_projeto_id?: string | null
+          migrated_at?: string | null
+          migrated_by?: string | null
           moeda_operacao?: string | null
           motivo?: string
           observacoes?: string | null
@@ -4481,6 +4503,8 @@ export type Database = {
           utilizada?: boolean | null
           valor?: number
           valor_brl_referencia?: number | null
+          valor_consumido_no_origem?: number | null
+          valor_original_referencia?: number | null
           workspace_id?: string
         }
         Relationships: [
@@ -4553,6 +4577,48 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_financial_audit"
             referencedColumns: ["bookmaker_id"]
+          },
+          {
+            foreignKeyName: "freebets_recebidas_migrada_de_freebet_id_fkey"
+            columns: ["migrada_de_freebet_id"]
+            isOneToOne: false
+            referencedRelation: "freebets_recebidas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "freebets_recebidas_migrada_de_freebet_id_fkey"
+            columns: ["migrada_de_freebet_id"]
+            isOneToOne: false
+            referencedRelation: "v_freebets_disponibilidade"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "freebets_recebidas_migrada_de_projeto_id_fkey"
+            columns: ["migrada_de_projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "freebets_recebidas_migrada_para_freebet_id_fkey"
+            columns: ["migrada_para_freebet_id"]
+            isOneToOne: false
+            referencedRelation: "freebets_recebidas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "freebets_recebidas_migrada_para_freebet_id_fkey"
+            columns: ["migrada_para_freebet_id"]
+            isOneToOne: false
+            referencedRelation: "v_freebets_disponibilidade"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "freebets_recebidas_migrada_para_projeto_id_fkey"
+            columns: ["migrada_para_projeto_id"]
+            isOneToOne: false
+            referencedRelation: "projetos"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "freebets_recebidas_projeto_id_fkey"
@@ -15423,6 +15489,10 @@ export type Database = {
         Args: { p_bookmaker_id: string }
         Returns: undefined
       }
+      migrar_freebet_estoque: {
+        Args: { p_destino_projeto_id: string; p_freebet_id: string }
+        Returns: Json
+      }
       moderate_clear_chat: {
         Args: {
           _context_id?: string
@@ -15446,6 +15516,10 @@ export type Database = {
       operator_has_project_access: {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
+      }
+      preview_migracao_freebet: {
+        Args: { p_freebet_id: string }
+        Returns: Json
       }
       process_financial_event:
         | {
