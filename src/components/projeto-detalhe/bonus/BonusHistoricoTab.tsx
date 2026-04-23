@@ -311,6 +311,13 @@ export function BonusHistoricoTab({ projetoId }: BonusHistoricoTabProps) {
                           <div className="flex items-center gap-1 justify-end">
                             {getReasonBadge(bonus.finalize_reason)}
                             <button
+                              onClick={() => setReclassifyingBonus(bonus)}
+                              className="p-1 rounded hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
+                              title="Reclassificar projeto de origem"
+                            >
+                              <ArrowRightLeft className="h-3 w-3" />
+                            </button>
+                            <button
                               onClick={() => setEditingBonus(bonus)}
                               className="p-1 rounded hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
                               title="Editar motivo"
@@ -383,6 +390,19 @@ export function BonusHistoricoTab({ projetoId }: BonusHistoricoTabProps) {
           onSave={(reason) => updateFinalizeReason(editingBonus.id, reason)}
         />
       )}
+      <ReclassificarBonusDialog
+        open={!!reclassifyingBonus}
+        onOpenChange={(open) => { if (!open) setReclassifyingBonus(null); }}
+        bonus={reclassifyingBonus ? {
+          id: reclassifyingBonus.id,
+          title: reclassifyingBonus.title,
+          bonus_amount: reclassifyingBonus.bonus_amount,
+          currency: reclassifyingBonus.currency,
+          project_id: projetoId,
+          bookmaker_id: reclassifyingBonus.bookmaker_id,
+          bookmaker_nome: reclassifyingBonus.bookmaker_nome,
+        } : null}
+      />
     </div>
   );
 }
