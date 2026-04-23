@@ -23,7 +23,7 @@ interface BonusSummaryCardsProps {
 
 export function BonusSummaryCards({ projetoId, compact = false }: BonusSummaryCardsProps) {
   const { bonuses, getSummary, loading: bonusesLoading } = useProjectBonuses({ projectId: projetoId });
-  const { formatCurrency, convertToConsolidation, convertToConsolidationOficial } = useProjetoCurrency(projetoId);
+  const { formatCurrency, convertToConsolidation } = useProjetoCurrency(projetoId);
   const { summary: analyticsSummary } = useProjectBonusAnalytics(projetoId, convertToConsolidation);
 
   const summary = getSummary();
@@ -140,7 +140,9 @@ export function BonusSummaryCards({ projetoId, compact = false }: BonusSummaryCa
 
   // Performance de Bônus = Total de bônus creditados + Juice das operações + Ajustes Pós-Limitação
   const bonusPerformance = useMemo(() => {
-    const eligibleBonuses = bonuses.filter(b => b.status === "credited" || b.status === "finalized");
+    const eligibleBonuses = bonuses.filter(
+      b => (b.status === "credited" || b.status === "finalized") && b.tipo_bonus !== "FREEBET"
+    );
     
     // SNAPSHOT-FIRST: Usar valor_consolidado_snapshot congelado no momento da inserção
     const totalBonusCreditado = eligibleBonuses
@@ -148,7 +150,7 @@ export function BonusSummaryCards({ projetoId, compact = false }: BonusSummaryCa
         if (b.valor_consolidado_snapshot != null && b.valor_consolidado_snapshot > 0) {
           return acc + b.valor_consolidado_snapshot;
         }
-        return acc + convertToConsolidationOficial(b.bonus_amount || 0, b.currency);
+        return acc + convertToConsolidation(b.bonus_amount || 0, b.currency);
       }, 0);
     
     // Breakdown de bônus por moeda original
@@ -157,7 +159,11 @@ export function BonusSummaryCards({ projetoId, compact = false }: BonusSummaryCa
       const moeda = b.currency || "BRL";
       bonusPorMoedaMap[moeda] = (bonusPorMoedaMap[moeda] || 0) + (b.bonus_amount || 0);
     });
-    const bonusPorMoeda = Object.entries(bonusPorMoedaMap).map(([moeda, valor]) => ({ moeda, valor }));
+    const bonusPorMoeda = Object.entries(bonusPorMoedaMap).map(([moeda, valor]) => ({
+      moeda,
+      valor,
+      label: `${moeda} original`,
+    }));
     
     const moedaConsolidacaoProjeto = analyticsSummary.moeda_consolidacao || "USD";
     const { bets, pernasMap } = bonusBetsWithPernas;
@@ -190,7 +196,7 @@ export function BonusSummaryCards({ projetoId, compact = false }: BonusSummaryCa
       : 0;
     
     return { totalBonusCreditado, totalJuice, total, performancePercent, bonusPorMoeda };
-  }, [bonuses, bonusBetsWithPernas, ajustesPostLimitacao, convertToConsolidation, convertToConsolidationOficial, analyticsSummary.moeda_consolidacao]);
+  }, [bonuses, bonusBetsWithPernas, ajustesPostLimitacao, convertToConsolidation, analyticsSummary.moeda_consolidacao]);
 
   const isLoading = bonusesLoading || betsLoading || ajustesLoading;
 
