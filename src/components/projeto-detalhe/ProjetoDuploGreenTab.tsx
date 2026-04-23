@@ -967,14 +967,17 @@ export function ProjetoDuploGreenTab({ projetoId, onDataChange, refreshTrigger, 
 
   // Separar apostas em abertas e histórico
   // Abertas: ordenadas por data_aposta crescente (jogo mais próximo primeiro)
-  const apostasAbertas = useMemo(() => 
+  // FONTE DA VERDADE: usamos `status` (servidor) — não `resultado` — para evitar
+  // dessincronização entre badges (que usam status) e a lista (ver incidente
+  // de inconsistência status/resultado corrigido pela RPC reverter_liquidacao_v4 idempotente).
+  const apostasAbertas = useMemo(() =>
     apostas
-      .filter(a => !a.resultado || a.resultado === "PENDENTE")
+      .filter(a => a.status === "PENDENTE")
       .sort((a, b) => new Date(a.data_aposta).getTime() - new Date(b.data_aposta).getTime()),
     [apostas]
   );
   const apostasHistorico = useMemo(() => {
-    const hist = apostas.filter(a => a.resultado && a.resultado !== "PENDENTE");
+    const hist = apostas.filter(a => a.status === "LIQUIDADA");
     const asc = tabFilters.sortOrder === "asc";
     return hist.sort((a, b) => {
       const ta = new Date(a.data_aposta).getTime();
