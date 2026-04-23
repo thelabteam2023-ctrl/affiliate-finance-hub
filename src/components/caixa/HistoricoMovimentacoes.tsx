@@ -33,6 +33,7 @@ import { ReverterMovimentacaoDialog } from "./ReverterMovimentacaoDialog";
 import { ExcluirMovimentacaoDialog } from "./ExcluirMovimentacaoDialog";
 import { canRevert, canDelete } from "@/lib/movimentacaoEligibility";
 import { useRole } from "@/hooks/useRole";
+import { BookmakerFilterCombobox, type BookmakerFilterOption } from "@/components/ui/bookmaker-filter-combobox";
 const PAGE_SIZE = 50;
 
 const TIPO_OPTIONS = [
@@ -265,8 +266,41 @@ export function HistoricoMovimentacoes({
   const [excluirTx, setExcluirTx] = useState<any | null>(null);
   const { role } = useRole();
   const [usuariosMap, setUsuariosMap] = useState<Record<string, string>>({});
+  // Filtro local por casa (bookmaker) — filtra origem OU destino
+  const [filtroBookmakerIds, setFiltroBookmakerIds] = useState<string[]>([]);
   // Get all filtered transactions
-  const transacoesFiltradas = useMemo(() => getTransacoesFiltradas(), [getTransacoesFiltradas]);
+  const transacoesBase = useMemo(() => getTransacoesFiltradas(), [getTransacoesFiltradas]);
+
+  // Aplica filtro por casa (origem OU destino) sobre o resultado base
+  const transacoesFiltradas = useMemo(() => {
+    if (filtroBookmakerIds.length === 0) return transacoesBase;
+    const set = new Set(filtroBookmakerIds);
+    return transacoesBase.filter((t: any) =>
+      (t.origem_bookmaker_id && set.has(t.origem_bookmaker_id)) ||
+      (t.destino_bookmaker_id && set.has(t.destino_bookmaker_id))
+    );
+  }, [transacoesBase, filtroBookmakerIds]);
+
+  // Opções do combobox: apenas casas presentes nas transações do período (mais leve e relevante)
+  const bookmakerOptions = useMemo<BookmakerFilterOption[]>(() => {
+    const ids = new Set<string>();
+    for (const t of transacoesBase as any[]) {
+      if (t.origem_bookmaker_id) ids.add(t.origem_bookmaker_id);
+      if (t.destino_bookmaker_id) ids.add(t.destino_bookmaker_id);
+    }
+    const opts: BookmakerFilterOption[] = [];
+    ids.forEach((id) => {
+      const bk = bookmakers[id];
+      if (!bk) return;
+      const parceiroId = (bk as any).parceiro_id as string | undefined;
+      opts.push({
+        id,
+        nome: bk.nome,
+        parceiroNome: parceiroId ? parceiros[parceiroId] : undefined,
+      });
+    });
+    return opts.sort((a, b) => a.nome.localeCompare(b.nome));
+  }, [transacoesBase, bookmakers, parceiros]);
 
   // Fetch user names (first name) for traceability of who registered each transaction
   useEffect(() => {
@@ -544,6 +578,17 @@ export function HistoricoMovimentacoes({
               value={filtroParceiro}
               onChange={setFiltroParceiro}
               parceiros={parceirosLista}
+            />
+            {/* Casa (Bookmaker) filter with search */}
+            <BookmakerFilterCombobox
+              bookmakers={bookmakerOptions}
+              selectedIds={filtroBookmakerIds}
+              onSelectionChange={(ids) => {
+                setFiltroBookmakerIds(ids);
+                pagination.goToFirstPage();
+              }}
+              label="Casa"
+              searchPlaceholder="Buscar casa…"
             />
             <DashboardPeriodFilterBar
               value={periodFilter}
