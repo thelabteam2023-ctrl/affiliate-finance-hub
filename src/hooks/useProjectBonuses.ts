@@ -192,6 +192,18 @@ async function fetchBonusesFromDb(projectId: string, bookmakerId?: string): Prom
 
   if (error) throw error;
 
+  console.info("[useProjectBonuses] fetchBonusesFromDb", {
+    projectId,
+    bookmakerId: bookmakerId || null,
+    total: data?.length || 0,
+    byStatus: (data || []).reduce((acc: Record<string, number>, bonus: any) => {
+      const status = bonus.status || "unknown";
+      acc[status] = (acc[status] || 0) + 1;
+      return acc;
+    }, {}),
+    bonusIds: (data || []).map((bonus: any) => bonus.id),
+  });
+
   return (data || []).map((b: any) => ({
     id: b.id,
     workspace_id: b.workspace_id,
@@ -331,11 +343,11 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
   }, [bonuses]);
 
  const getBookmakersWithAnyBonus = useCallback((): string[] => {
-   // Retorna bookmakers que têm QUALQUER bônus (credited OU finalized)
-   // Usado para análise histórica por casa
+   // Retorna bookmakers que têm QUALQUER bônus, independentemente do status.
+   // Isso evita sumir com casas que só tenham histórico expirado/revertido/pendente.
    const ids = new Set<string>();
    bonuses.forEach((b) => {
-     if (b.status === "credited" || b.status === "finalized") {
+      if (b.bookmaker_id) {
        ids.add(b.bookmaker_id);
      }
    });
@@ -805,6 +817,17 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
 
       const shouldRevert = bonusData.status === "credited" || freebetFinalizadaSemEstorno;
 
+      console.info("[useProjectBonuses] deleteBonus:start", {
+        projectId,
+        id,
+        bookmakerId: bonusData.bookmaker_id,
+        status: bonusData.status,
+        tipoBonus,
+        finalizeReason,
+        valorCreditado,
+        shouldRevert,
+      });
+
       if (shouldRevert && valorCreditado > 0) {
         if (tipoBonus === 'FREEBET') {
           const result = await estornarFreebetViaLedger(
@@ -837,6 +860,11 @@ export function useProjectBonuses({ projectId, bookmakerId }: UseProjectBonusesP
         .eq("id", id);
 
       if (error) throw error;
+
+      console.info("[useProjectBonuses] deleteBonus:success", {
+        projectId,
+        id,
+      });
     },
     onSuccess: () => {
       toast.success("Bônus excluído e saldo estornado com sucesso");
