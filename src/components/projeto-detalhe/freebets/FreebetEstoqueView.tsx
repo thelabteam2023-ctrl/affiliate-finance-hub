@@ -569,6 +569,30 @@ export function FreebetEstoqueView({ projetoId, formatCurrency, dateRange, onAdd
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Dialog de migração de freebet para outro projeto */}
+      <MigrarFreebetDialog
+        open={!!freebetToMigrate}
+        onOpenChange={(open) => !open && setFreebetToMigrate(null)}
+        freebet={
+          freebetToMigrate
+            ? {
+                id: freebetToMigrate.id,
+                motivo: freebetToMigrate.motivo,
+                valor: freebetToMigrate.valor,
+                moeda: freebetToMigrate.moeda,
+                bookmaker_id: freebetToMigrate.bookmaker_id,
+                bookmaker_nome: freebetToMigrate.bookmaker_nome,
+                projeto_id_atual: projetoId,
+                data_validade: freebetToMigrate.data_validade,
+              }
+            : null
+        }
+        onSuccess={() => {
+          setFreebetToMigrate(null);
+          refresh();
+        }}
+      />
     </div>
   );
 }
