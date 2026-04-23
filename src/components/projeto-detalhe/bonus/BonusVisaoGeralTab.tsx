@@ -403,6 +403,43 @@ export function BonusVisaoGeralTab({ projetoId, dateRange, isSingleDayPeriod = f
         }
         return acc + convertToConsolidationOficial(b.bonus_amount || 0, b.currency);
       }, 0);
+
+    // 🔍 DIAGNÓSTICO TEMPORÁRIO — investigar discrepância KPI Performance de Bônus
+    if (typeof window !== "undefined") {
+      // eslint-disable-next-line no-console
+      console.log("[🔍 BONUS-KPI DEBUG]", {
+        projetoId,
+        moedaConsolidacao,
+        dateRange: dateRange ? {
+          start: dateRange.start.toISOString(),
+          end: dateRange.end.toISOString(),
+        } : null,
+        totalBonusesNoArray: bonuses.length,
+        eligibleAposFiltro: eligibleBonuses.length,
+        totalBonusCreditadoCalculado: totalBonusCreditado,
+        breakdownPorMoeda: eligibleBonuses.reduce((acc, b) => {
+          const k = b.currency || "?";
+          acc[k] = acc[k] || { count: 0, soma_snapshot: 0, soma_nominal: 0, sem_snapshot: 0 };
+          acc[k].count += 1;
+          acc[k].soma_nominal += b.bonus_amount || 0;
+          if (b.valor_consolidado_snapshot != null && b.valor_consolidado_snapshot > 0) {
+            acc[k].soma_snapshot += b.valor_consolidado_snapshot;
+          } else {
+            acc[k].sem_snapshot += 1;
+          }
+          return acc;
+        }, {} as Record<string, { count: number; soma_snapshot: number; soma_nominal: number; sem_snapshot: number }>),
+        primeiros3Eligible: eligibleBonuses.slice(0, 3).map(b => ({
+          id: b.id,
+          credited_at: b.credited_at,
+          bonus_amount: b.bonus_amount,
+          currency: b.currency,
+          valor_consolidado_snapshot: b.valor_consolidado_snapshot,
+          status: b.status,
+          tipo_bonus: b.tipo_bonus,
+        })),
+      });
+    }
     
     // Breakdown de bônus por moeda original
     const bonusPorMoedaMap: Record<string, number> = {};
