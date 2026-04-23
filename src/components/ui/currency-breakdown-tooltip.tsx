@@ -5,6 +5,7 @@ import { Info } from "lucide-react";
 export interface CurrencyBreakdownItem {
   moeda: string;
   valor: number;
+  label?: string;
 }
 
 interface CurrencyBreakdownTooltipProps {
@@ -66,10 +67,10 @@ export function CurrencyBreakdownTooltip({
         <TooltipContent side="bottom" className="max-w-xs">
           <div className="space-y-1.5">
             <p className="text-xs font-medium mb-2">Valores por moeda original:</p>
-            {breakdown.map((item) => (
-              <div key={item.moeda} className="flex items-center justify-between gap-4 text-xs">
+            {breakdown.map((item, index) => (
+              <div key={`${item.moeda}-${item.label || index}`} className="flex items-center justify-between gap-4 text-xs">
                 <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                  {item.moeda}
+                  {item.label || item.moeda}
                 </Badge>
                 <span className="font-medium">{formatarPorMoeda(item.valor, item.moeda)}</span>
               </div>
