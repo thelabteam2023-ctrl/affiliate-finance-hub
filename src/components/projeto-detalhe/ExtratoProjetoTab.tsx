@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
@@ -35,6 +35,8 @@ import {
   Sparkles,
   Gift,
   RefreshCcw,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { CURRENCY_SYMBOLS, type SupportedCurrency } from "@/types/currency";
 
@@ -66,6 +68,21 @@ interface ProjetoTransaction {
   ajuste_motivo: string | null;
   ajuste_direcao: string | null;
   evento_promocional_tipo: string | null;
+  /**
+   * Classificação de auditoria — define visualização e KPIs.
+   *  - EFFECTIVE: entra em todos os fluxos/KPIs.
+   *  - BASELINE_EXCLUDED: DV BASELINE confirmado (saldo inicial — não conta no KPI).
+   *  - RECONCILED_PHANTOM: SV cancelada por revínculo neutralizado (mesmo projeto, sem uso).
+   *  - RECONCILED_DUPLICATE: DV cancelado classificado como BASELINE em auditoria_metadata.
+   *  - RECONCILED_OTHER: outras SV/DV canceladas.
+   */
+  audit_class:
+    | "EFFECTIVE"
+    | "BASELINE_EXCLUDED"
+    | "RECONCILED_PHANTOM"
+    | "RECONCILED_DUPLICATE"
+    | "RECONCILED_OTHER";
+  cancelled_reason: string | null;
 }
 
 // Metrics separated by currency
