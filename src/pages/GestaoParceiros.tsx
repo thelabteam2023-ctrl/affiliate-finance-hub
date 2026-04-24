@@ -662,8 +662,11 @@ export default function GestaoParceiros() {
             defaultDestinoBookmakerId={transacaoBookmaker && transacaoTipo === "DEPOSITO" ? transacaoBookmaker.id : undefined}
             defaultOrigemParceiroId={transacaoTipo === "DEPOSITO" ? selectedParceiroDetalhes || undefined : undefined}
             defaultDestinoParceiroId={transacaoTipo === "SAQUE" ? selectedParceiroDetalhes || undefined : undefined}
-            defaultTipoMoeda="FIAT"
+            // tipoMoeda intencionalmente omitido: a inferência por histórico
+            // (fetchLastFundingSource) decide entre FIAT/CRYPTO. defaultMoeda
+            // segue como fallback FIAT caso não haja histórico de funding.
             defaultMoeda={transacaoBookmaker?.moeda || "BRL"}
+            lockBookmakerDestino={!!transacaoBookmaker && transacaoTipo === "DEPOSITO"}
             entryPoint={transacaoEntryPoint}
           />
         )}

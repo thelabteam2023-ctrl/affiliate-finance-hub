@@ -96,6 +96,12 @@ interface CaixaTransacaoDialogProps {
   entryPoint?: string;
   /** Restrict which transaction types are shown in the selector */
   allowedTipoTransacao?: string[];
+  /**
+   * When true and a destination bookmaker is pre-set (DEPOSITO contextual flow),
+   * the BookmakerSelect is rendered in read-only mode and the auto-focus chain
+   * does NOT re-open the bookmaker popover.
+   */
+  lockBookmakerDestino?: boolean;
 }
 
 interface BancoTaxa {
@@ -176,6 +182,7 @@ export function CaixaTransacaoDialog({
   defaultCoin,
   entryPoint,
   allowedTipoTransacao,
+  lockBookmakerDestino,
 }: CaixaTransacaoDialogProps) {
   const { toast } = useToast();
   const { workspaceId } = useWorkspace();
@@ -242,6 +249,15 @@ export function CaixaTransacaoDialog({
   const isResettingContext = useRef<boolean>(false);
 
   // ============================================================================
+  // LOCK DE BOOKMAKER DESTINO: quando o dialog é aberto a partir de um contexto
+  // específico (ex.: Gestão de Parceiros → Depósito em uma bookmaker já escolhida),
+  // o BookmakerSelect fica travado em modo read-only e a auto-focus chain NÃO
+  // pode reabrir o popover. Evita re-render visual e cliques redundantes.
+  // ============================================================================
+  const isDestinoBookmakerLocked =
+    !!lockBookmakerDestino && !!defaultDestinoBookmakerId;
+
+  // ============================================================================
   // FIX: Ref para armazenar defaults pendentes que devem ser aplicados
   // APÓS o efeito de tipoTransacao ter sido executado (evita race condition)
   // ============================================================================
@@ -256,11 +272,14 @@ export function CaixaTransacaoDialog({
   } | null>(null);
 
   // ============================================================================
-  // INTELIGÊNCIA DE SAQUE: Detectar origem do último depósito para pré-selecionar
-  // tipo de moeda correto (FIAT vs CRYPTO) baseado na verdade operacional
-  // "A origem do dinheiro define o saque, não a moeda contábil da casa."
+  // INTELIGÊNCIA DE FUNDING: Detectar origem do último depósito de uma bookmaker
+  // para pré-selecionar tipo de moeda correto (FIAT vs CRYPTO) baseado na
+  // verdade operacional. Usado tanto em SAQUE (descobre a origem do dinheiro
+  // existente na casa) quanto em DEPOSITO contextual (descobre como aquela
+  // casa é tipicamente abastecida pelo parceiro).
+  // "A origem do dinheiro define o fluxo, não a moeda contábil da casa."
   // ============================================================================
-  const fetchLastDepositFundingSource = async (bookmakerId: string): Promise<{
+  const fetchLastFundingSource = async (bookmakerId: string): Promise<{
     tipoMoeda: "FIAT" | "CRYPTO";
     moeda?: string;
     coin?: string;
@@ -278,14 +297,14 @@ export function CaixaTransacaoDialog({
 
       if (error || !data) return null;
 
-      console.log("[CaixaTransacaoDialog] Último depósito detectado:", data);
+      console.log("[CaixaTransacaoDialog] Último funding detectado para", bookmakerId, ":", data);
       return {
         tipoMoeda: data.tipo_moeda === "CRYPTO" ? "CRYPTO" : "FIAT",
         moeda: data.moeda || undefined,
         coin: data.coin || undefined,
       };
     } catch (err) {
-      console.error("[CaixaTransacaoDialog] Erro ao buscar último depósito:", err);
+      console.error("[CaixaTransacaoDialog] Erro ao buscar último funding:", err);
       return null;
     }
   };
@@ -311,14 +330,31 @@ export function CaixaTransacaoDialog({
       }
       
       // ========================================================================
-      // SAQUE INTELIGENTE: Se é um saque com bookmaker pré-definida,
+      // FUNDING INTELIGENTE: Se é SAQUE ou DEPOSITO com bookmaker pré-definida,
       // buscar o último depósito para detectar a origem real do dinheiro
-      // e sobrescrever tipoMoeda/moeda/coin nos pendingDefaults
+      // e sobrescrever tipoMoeda/moeda/coin nos pendingDefaults.
+      //
+      // - SAQUE: olha origem (bookmaker de onde sai o dinheiro)
+      // - DEPOSITO contextual: olha destino (bookmaker que recebe o aporte)
+      //   → assim TALISMANIA pré-selecionada com histórico de USDT abre direto
+      //   em CRYPTO/USDT em vez de defaultar para FIAT/USD.
       // ========================================================================
-      if (defaultTipoTransacao === "SAQUE" && defaultOrigemBookmakerId) {
-        fetchLastDepositFundingSource(defaultOrigemBookmakerId).then((fundingSource) => {
+      const fundingBookmakerId =
+        defaultTipoTransacao === "SAQUE"
+          ? defaultOrigemBookmakerId
+          : defaultTipoTransacao === "DEPOSITO"
+            ? defaultDestinoBookmakerId
+            : undefined;
+
+      if (fundingBookmakerId) {
+        fetchLastFundingSource(fundingBookmakerId).then((fundingSource) => {
           if (fundingSource && pendingDefaultsRef.current) {
-            console.log("[CaixaTransacaoDialog] Sobrescrevendo defaults com origem do último depósito:", fundingSource);
+            console.log(
+              "[CaixaTransacaoDialog] Sobrescrevendo defaults com funding histórico (",
+              defaultTipoTransacao,
+              "):",
+              fundingSource,
+            );
             pendingDefaultsRef.current = {
               ...pendingDefaultsRef.current,
               tipoMoeda: fundingSource.tipoMoeda,
@@ -327,7 +363,7 @@ export function CaixaTransacaoDialog({
             };
           }
           // Aplicar tipo de transação APÓS a detecção (para que pendingDefaults esteja atualizado)
-          setTipoTransacao(defaultTipoTransacao);
+          setTipoTransacao(defaultTipoTransacao!);
         });
       } else {
         // Aplicar tipo de transação imediatamente - isso dispara o reset de contexto
@@ -993,14 +1029,14 @@ export function CaixaTransacaoDialog({
         setTimeout(() => {
           valorFiatInputRef.current?.focus();
         }, 150);
-      } else if (bookmakerSelectRef.current) {
+      } else if (bookmakerSelectRef.current && !isDestinoBookmakerLocked) {
         setTimeout(() => {
           bookmakerSelectRef.current?.open();
         }, 150);
       }
     }
     prevOrigemContaId.current = origemContaId;
-  }, [origemContaId, tipoMoeda, tipoTransacao, destinoBookmakerId]);
+  }, [origemContaId, tipoMoeda, tipoTransacao, destinoBookmakerId, isDestinoBookmakerLocked]);
 
   // ====== AUTO-FOCUS CHAIN FOR SAQUE (WITHDRAWAL) FLOW ======
   
@@ -1233,13 +1269,31 @@ export function CaixaTransacaoDialog({
   // Auto-focus CRYPTO DEPÓSITO: quando wallet de origem é selecionada, abre o select Bookmaker (destino)
   useEffect(() => {
     if (tipoTransacao !== "DEPOSITO") return;
-    if (tipoMoeda === "CRYPTO" && origemWalletId && origemWalletId !== prevOrigemWalletId.current && bookmakerSelectRef.current) {
+    if (
+      tipoMoeda === "CRYPTO" &&
+      origemWalletId &&
+      origemWalletId !== prevOrigemWalletId.current &&
+      bookmakerSelectRef.current &&
+      !isDestinoBookmakerLocked
+    ) {
       setTimeout(() => {
         bookmakerSelectRef.current?.open();
       }, 150);
     }
+    // Quando travado e já temos bookmaker + wallet, foca direto no campo de quantidade
+    if (
+      tipoMoeda === "CRYPTO" &&
+      origemWalletId &&
+      origemWalletId !== prevOrigemWalletId.current &&
+      isDestinoBookmakerLocked &&
+      destinoBookmakerId
+    ) {
+      setTimeout(() => {
+        qtdCoinInputRef.current?.focus();
+      }, 150);
+    }
     prevOrigemWalletId.current = origemWalletId;
-  }, [origemWalletId, tipoMoeda, tipoTransacao]);
+  }, [origemWalletId, tipoMoeda, tipoTransacao, isDestinoBookmakerLocked, destinoBookmakerId]);
 
   // Auto-focus DEPÓSITO: quando bookmaker é selecionado, foca no campo Valor
   useEffect(() => {
@@ -3195,7 +3249,19 @@ export function CaixaTransacaoDialog({
             <Alert variant="destructive" className="border-warning/50 bg-warning/10">
               <AlertTriangle className="h-4 w-4 text-warning" />
               <AlertDescription className="text-warning">
-                Este parceiro não possui contas bancárias com saldo disponível em {moeda}.
+                Este parceiro não possui contas bancárias com saldo disponível em {moeda}.{' '}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAlertParceiroId(origemParceiroId);
+                    setAlertTipo("FIAT");
+                    setParceiroDialogInitialTab("bancos");
+                    setParceiroDialogOpen(true);
+                  }}
+                  className="underline font-medium"
+                >
+                  Cadastrar conta agora
+                </button>
               </AlertDescription>
             </Alert>
           )}
@@ -4027,13 +4093,34 @@ export function CaixaTransacaoDialog({
               O operador pode enviar BRL (via Pix) para uma casa EUR/MXN.
               A conversão é feita pela casa - o sistema registra moeda_origem e moeda_destino.
             */}
-            <BookmakerSelect
-              ref={bookmakerSelectRef}
-              value={destinoBookmakerId}
-              onValueChange={setDestinoBookmakerId}
-              disabled={!isOrigemCompleta}
-              parceiroId={origemParceiroId}
-            />
+            {isDestinoBookmakerLocked && destinoBookmakerId ? (
+              (() => {
+                const lockedBm = bookmakers.find((b) => b.id === destinoBookmakerId);
+                return (
+                  <div className="flex items-center justify-between gap-2 rounded-md border border-input bg-muted/40 px-3 py-2 text-sm">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="font-medium truncate">
+                        {lockedBm?.nome ?? "Bookmaker selecionada"}
+                      </span>
+                      {lockedBm?.moeda && (
+                        <span className="text-[10px] uppercase tracking-wider rounded bg-background px-1.5 py-0.5 text-muted-foreground border">
+                          {lockedBm.moeda}
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[10px] text-muted-foreground">Definida pelo contexto</span>
+                  </div>
+                );
+              })()
+            ) : (
+              <BookmakerSelect
+                ref={bookmakerSelectRef}
+                value={destinoBookmakerId}
+                onValueChange={setDestinoBookmakerId}
+                disabled={!isOrigemCompleta}
+                parceiroId={origemParceiroId}
+              />
+            )}
           </div>
         </>
       );
