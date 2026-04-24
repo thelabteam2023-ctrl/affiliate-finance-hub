@@ -503,7 +503,7 @@ export function SwapCryptoDialog({ open, onClose, onSuccess, caixaParceiroId }: 
                 <span className="text-xs text-muted-foreground">O que você recebeu</span>
               </div>
 
-              {/* Destino: mesma wallet ou outra */}
+              {/* Destino: mesmo endereço ou outro */}
               <div className="flex gap-2">
                 <Button
                   type="button"
@@ -512,7 +512,7 @@ export function SwapCryptoDialog({ open, onClose, onSuccess, caixaParceiroId }: 
                   className="text-xs h-7"
                   onClick={() => { setDestinoMode("same"); setWalletDestinoId(""); }}
                 >
-                  Mesma wallet
+                  Mesmo endereço
                 </Button>
                 <Button
                   type="button"
@@ -521,7 +521,7 @@ export function SwapCryptoDialog({ open, onClose, onSuccess, caixaParceiroId }: 
                   className="text-xs h-7"
                   onClick={() => setDestinoMode("other")}
                 >
-                  Outra wallet/rede
+                  Outro endereço/rede
                 </Button>
               </div>
 
