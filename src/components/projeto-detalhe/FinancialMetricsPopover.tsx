@@ -383,38 +383,145 @@ const ESTRATEGIA_LABELS: Record<string, string> = {
 };
 
 function LucroOperacionalCollapsible({ metrics, formatCurrency }: { metrics: any; formatCurrency: (v: number) => string }) {
-  const [open, setOpen] = useState(false);
+  const [openJuice, setOpenJuice] = useState(false);
+  const fmtSigned = (v: number) =>
+    v < 0 ? `−${formatCurrency(Math.abs(v))}` : formatCurrency(v);
+
+  const hasFx = Math.abs(metrics.efeitosFinanceiros) >= 0.01;
+  const hasAdj = Math.abs(metrics.ajustesExtraordinarios) >= 0.01;
+
   return (
-    <div>
-      <SectionHeader icon={BarChart3} label="Lucro de Apostas (Juice)" iconClass="text-primary" />
-      <button
-        onClick={() => setOpen(!open)}
-        className="flex items-center justify-between gap-4 w-full group"
-      >
-        <span className="text-[11px] font-medium text-foreground flex items-center gap-1">
-          Resultado Puro
-          <ChevronDown className={`h-3 w-3 text-muted-foreground/60 transition-transform ${open ? "rotate-180" : ""}`} />
-        </span>
-        <span className={`text-[11px] font-mono tabular-nums font-bold ${metrics.lucroApostasPuro >= 0 ? "text-emerald-500" : "text-red-500"}`}>
-          {metrics.lucroApostasPuro < 0 ? `−${formatCurrency(Math.abs(metrics.lucroApostasPuro))}` : formatCurrency(metrics.lucroApostasPuro)}
-        </span>
-      </button>
-      {open && metrics.estrategiaBreakdown.length > 0 && (
-        <div className="mt-1 space-y-0.5 pl-2 border-l-2 border-border/30 ml-1">
-          {metrics.estrategiaBreakdown.map(([key, val]: [string, number]) => (
-            <MetricRow
-              key={key}
-              label={ESTRATEGIA_LABELS[key] || key}
-              value={val < 0 ? `−${formatCurrency(Math.abs(val))}` : formatCurrency(val)}
-              colorClass={val >= 0 ? "text-emerald-500" : "text-red-500"}
-              indent
-            />
-          ))}
+    <div className="space-y-2">
+      {/* 🟢 Performance Pura (numerador de ROI) */}
+      <div className="rounded-md border border-emerald-500/20 bg-emerald-500/[0.03] px-2.5 py-2">
+        <div className="flex items-center gap-1.5 mb-1">
+          <Sparkles className="h-3 w-3 text-emerald-500" />
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-500/90">Performance Pura</span>
+        </div>
+        <button
+          onClick={() => setOpenJuice(!openJuice)}
+          className="flex items-center justify-between gap-4 w-full group"
+        >
+          <span className="text-[11px] font-medium text-foreground flex items-center gap-1">
+            Lucro de Apostas (juice)
+            <ChevronDown className={`h-3 w-3 text-muted-foreground/60 transition-transform ${openJuice ? "rotate-180" : ""}`} />
+          </span>
+          <span className={`text-[11px] font-mono tabular-nums font-semibold ${metrics.lucroApostasPuro >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+            {fmtSigned(metrics.lucroApostasPuro)}
+          </span>
+        </button>
+        {openJuice && metrics.estrategiaBreakdown.length > 0 && (
+          <div className="mt-1 space-y-0.5 pl-2 border-l-2 border-emerald-500/30 ml-1">
+            {metrics.estrategiaBreakdown.map(([key, val]: [string, number]) => (
+              <MetricRow
+                key={key}
+                label={ESTRATEGIA_LABELS[key] || key}
+                value={fmtSigned(val)}
+                colorClass={val >= 0 ? "text-emerald-500" : "text-red-500"}
+                indent
+              />
+            ))}
+          </div>
+        )}
+        {Math.abs(metrics.bonusGanhos) >= 0.01 && (
+          <MetricRow label="Bônus Ganhos" value={formatCurrency(metrics.bonusGanhos)} colorClass="text-emerald-500" />
+        )}
+        {Math.abs(metrics.cashbackLiquido) >= 0.01 && (
+          <MetricRow label="Cashback Líquido" value={fmtSigned(metrics.cashbackLiquido)} colorClass={metrics.cashbackLiquido >= 0 ? "text-emerald-500" : "text-red-500"} />
+        )}
+        {Math.abs(metrics.girosGratis) >= 0.01 && (
+          <MetricRow label="Giros Grátis" value={formatCurrency(metrics.girosGratis)} colorClass="text-emerald-500" />
+        )}
+        <div className="border-t border-emerald-500/15 mt-1.5 pt-1.5">
+          <div className="flex items-center justify-between gap-4">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="text-[11px] font-bold text-foreground border-b border-dotted border-muted-foreground/40 cursor-help">
+                  Performance Total
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="left" className="max-w-[260px] text-xs">
+                Numerador de ROI. Mede a qualidade da operação: juice + créditos promocionais. Não inclui FX nem ajustes.
+              </TooltipContent>
+            </Tooltip>
+            <span className={`text-[11px] font-mono tabular-nums font-bold ${metrics.performancePura >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+              {fmtSigned(metrics.performancePura)}
+            </span>
+          </div>
+          <p className="text-[9px] text-muted-foreground/70 mt-0.5">
+            Esta é a parcela atribuída ao trabalho do operador
+          </p>
+        </div>
+      </div>
+
+      {/* 🟡 Efeitos Financeiros */}
+      {hasFx && (
+        <div className="rounded-md border border-amber-500/20 bg-amber-500/[0.03] px-2.5 py-2">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5">
+              <Globe className="h-3 w-3 text-amber-500" />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-500/90 border-b border-dotted border-amber-500/40 cursor-help">
+                    Efeitos Financeiros (FX)
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="left" className="max-w-[260px] text-xs">
+                  Variação cambial e ganho/perda na confirmação de saques. Não é performance — é efeito macro fora do controle do operador.
+                </TooltipContent>
+              </Tooltip>
+            </div>
+            <span className={`text-[11px] font-mono tabular-nums font-bold ${metrics.efeitosFinanceiros >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+              {fmtSigned(metrics.efeitosFinanceiros)}
+            </span>
+          </div>
         </div>
       )}
-      <p className="text-[9px] text-muted-foreground/70 mt-0.5">
-        Lucro/prejuízo exclusivo de apostas liquidadas
-      </p>
+
+      {/* 🟠 Ajustes & Extraordinários */}
+      {hasAdj && (
+        <div className="rounded-md border border-orange-500/20 bg-orange-500/[0.03] px-2.5 py-2">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5">
+              <Wrench className="h-3 w-3 text-orange-500" />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-orange-500/90 border-b border-dotted border-orange-500/40 cursor-help">
+                    Ajustes & Extraordinários
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="left" className="max-w-[260px] text-xs">
+                  Correções contábeis (AJUSTE_SALDO) e incidentes (PERDA_OPERACIONAL). Afeta o caixa, mas não compõe a performance recorrente nem a remuneração do operador.
+                </TooltipContent>
+              </Tooltip>
+            </div>
+            <span className={`text-[11px] font-mono tabular-nums font-bold ${metrics.ajustesExtraordinarios >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+              {fmtSigned(metrics.ajustesExtraordinarios)}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Resultado Operacional Total */}
+      {(hasFx || hasAdj) && (
+        <div className="border-t border-border/40 pt-2 mt-1">
+          <div className="flex items-center justify-between gap-4">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="text-[11px] font-bold text-foreground border-b border-dotted border-muted-foreground/40 cursor-help">
+                  Resultado Operacional Total
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="left" className="max-w-[260px] text-xs">
+                Performance + Efeitos FX + Ajustes. Este é o número que reconcilia com o Patrimônio (Camada 2).
+              </TooltipContent>
+            </Tooltip>
+            <span className={`text-[11px] font-mono tabular-nums font-bold ${metrics.resultadoOperacionalTotal >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+              {fmtSigned(metrics.resultadoOperacionalTotal)}
+            </span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
