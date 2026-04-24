@@ -50,22 +50,41 @@ export function useBookmakerUsageStatus(bookmakerIds: string[]) {
     setError(null);
 
     try {
-      // Buscar histórico de vínculos com dados do projeto
-      const { data: historico, error: histError } = await supabase
-        .from("projeto_bookmaker_historico")
-        .select("bookmaker_id, data_desvinculacao, tipo_projeto_snapshot, projeto_id, projetos(nome)")
-        .in("bookmaker_id", bookmakerIds);
+      const [historicoResult, bookmakersAtivosResult, apostasResult, ledgerOrigemResult, ledgerDestinoResult] = await Promise.all([
+        supabase
+          .from("projeto_bookmaker_historico")
+          .select("bookmaker_id, data_desvinculacao, tipo_projeto_snapshot, projeto_id, projetos(nome)")
+          .in("bookmaker_id", bookmakerIds),
+        supabase
+          .from("bookmakers")
+          .select("id, projeto_id, projetos:projetos!bookmakers_projeto_id_fkey(nome, tipo_projeto)")
+          .in("id", bookmakerIds)
+          .not("projeto_id", "is", null),
+        supabase
+          .from("apostas_unificada")
+          .select("bookmaker_id")
+          .in("bookmaker_id", bookmakerIds),
+        supabase
+          .from("cash_ledger")
+          .select("origem_bookmaker_id")
+          .in("origem_bookmaker_id", bookmakerIds),
+        supabase
+          .from("cash_ledger")
+          .select("destino_bookmaker_id")
+          .in("destino_bookmaker_id", bookmakerIds),
+      ]);
 
-      if (histError) throw histError;
+      if (historicoResult.error) throw historicoResult.error;
+      if (bookmakersAtivosResult.error) throw bookmakersAtivosResult.error;
+      if (apostasResult.error) throw apostasResult.error;
+      if (ledgerOrigemResult.error) throw ledgerOrigemResult.error;
+      if (ledgerDestinoResult.error) throw ledgerDestinoResult.error;
 
-      // Buscar vínculo ativo direto na tabela bookmakers (fonte primária de verdade)
-      const { data: bookmakersAtivos, error: bmError } = await supabase
-        .from("bookmakers")
-        .select("id, projeto_id, projetos:projetos!bookmakers_projeto_id_fkey(nome, tipo_projeto)")
-        .in("id", bookmakerIds)
-        .not("projeto_id", "is", null);
-
-      if (bmError) throw bmError;
+      const historico = historicoResult.data;
+      const bookmakersAtivos = bookmakersAtivosResult.data;
+      const apostasData = apostasResult.data;
+      const ledgerOrigemData = ledgerOrigemResult.data;
+      const ledgerDestinoData = ledgerDestinoResult.data;
 
       // Mapa de vínculos ativos diretos da tabela bookmakers
       const activeProjectMap = new Map<string, { projetoNome: string; tipoProjeto: string | null }>();
@@ -78,28 +97,15 @@ export function useBookmakerUsageStatus(bookmakerIds: string[]) {
         }
       });
 
-      // Buscar se tem operações (apostas, transações, bônus) - para bloquear delete
-      const { data: apostasData, error: apostasError } = await supabase
-        .from("apostas_unificada")
-        .select("bookmaker_id")
-        .in("bookmaker_id", bookmakerIds);
-
-      if (apostasError) throw apostasError;
-
-      const { data: ledgerData, error: ledgerError } = await supabase
-        .from("cash_ledger")
-        .select("origem_bookmaker_id, destino_bookmaker_id")
-        .or(`origem_bookmaker_id.in.(${bookmakerIds.join(",")}),destino_bookmaker_id.in.(${bookmakerIds.join(",")})`);
-
-      if (ledgerError) throw ledgerError;
-
       // Montar mapa de operações por bookmaker
       const operacoesSet = new Set<string>();
       apostasData?.forEach((a) => {
         if (a.bookmaker_id) operacoesSet.add(a.bookmaker_id);
       });
-      ledgerData?.forEach((l) => {
+      ledgerOrigemData?.forEach((l) => {
         if (l.origem_bookmaker_id) operacoesSet.add(l.origem_bookmaker_id);
+      });
+      ledgerDestinoData?.forEach((l) => {
         if (l.destino_bookmaker_id) operacoesSet.add(l.destino_bookmaker_id);
       });
 
