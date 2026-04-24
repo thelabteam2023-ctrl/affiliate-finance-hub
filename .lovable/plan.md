@@ -1,118 +1,69 @@
-# Plano — Reorganização dos Indicadores Financeiros (3 perspectivas)
+## Objetivo
 
-## 🎯 Objetivo
-O popover atual mostra **Resultado Realizado**, **Patrimônio Líquido** e **Resultado Operacional Total** com peso visual parecido — confundindo o usuário sobre **qual número é o "lucro real"**. Esta reforma é **puramente visual + de copy**: zero mudança em cálculos, zero migração, zero risco financeiro.
+Corrigir o bug de **double-counting** no card "Resultado de Caixa" da aba Extrato, que está somando os Extras (bônus, cashback, ajustes) duas vezes — uma vez via `saldoCasasTotal` (já refletido pelos triggers do ledger) e outra vez via `ajustesTotal`.
 
-## 🧭 Princípio condutor
-Cada KPI responde a uma **pergunta diferente**. Vamos rotular cada bloco com a pergunta que ele responde:
+## Diagnóstico (já confirmado na auditoria anterior)
 
-| Camada | Pergunta | Campo existente |
-|---|---|---|
-| 💰 **Patrimônio** | *"Quanto eu teria de lucro se sacasse tudo hoje?"* | `metrics.lucroFinanceiro` |
-| 🏦 **Caixa** | *"Quanto já voltou pro meu bolso?"* | `metrics.lucroRealizado` |
-| 📊 **Operação** | *"Quanto a operação produziu (perf + FX + extraord)?"* | `metrics.resultadoOperacionalTotal` |
+**Fórmula atual (errada)** em `ExtratoProjetoTab.tsx`:
+```
+resultadoCaixa = saquesTotal + saldoCasasTotal + ajustesTotal − depositosTotal
+```
 
----
+**Por quê está errada**: quando um `BONUS_CREDITADO` ou `CASHBACK` é lançado, o trigger do ledger já atualiza o `saldo_atual` da bookmaker. Logo, esses valores **já estão dentro de `saldoCasasTotal`**. Ao somar `ajustesTotal` separadamente, contamos duas vezes.
 
-## 📦 Fase 1 — Card-resumo "Lucro se sacar tudo hoje"
+**Exemplo do print do usuário**:
+- Depósitos: $898,67 / Saques: $0 / Saldo Casas: ~$1.198,67 / Extras (bônus): $300
+- Atual (errado): 0 + 1.198,67 + 300 − 898,67 = **$600** ❌
+- Correto: 0 + 1.198,67 − 898,67 = **$300** ✅ (bate com Patrimônio Líquido da Visão Geral)
 
-**Local**: topo do popover (acima do bloco atual de patrimônio), `FinancialMetricsPopover.tsx` ~linha 970.
+## Mudanças
 
-**Componente novo**: card com gradiente sutil (emerald se positivo, rose se negativo), maior e mais proeminente:
-- Label primário: **"💰 Lucro se sacar tudo hoje"**
-- Valor: `formatCurrency(metrics.lucroFinanceiro)` (já existe, é `patrimônio − depósitos`)
-- Sublinha em texto pequeno: *"Saldo nas casas + saques recebidos − depósitos confirmados"*
-- Tooltip do `?` ao lado: *"Esta é a resposta principal. Se você sacasse todo o saldo das casas hoje e fechasse a operação, este é o lucro/prejuízo que ficaria no seu bolso."*
+### 1. `src/components/projeto-detalhe/ExtratoProjetoTab.tsx`
 
-**Sem novo cálculo** — apenas reusa `metrics.lucroFinanceiro` que já é renderizado mais abaixo.
+**a) Corrigir fórmula** (remover `ajustesTotal` da soma):
+```ts
+const resultadoCaixa = saquesTotal + saldoCasasTotal − depositosTotal;
+```
 
----
+**b) Renomear card** "Resultado de Caixa" → **"Lucro se sacar tudo"** (alinhado com a nomenclatura do `FinancialMetricsPopover`).
 
-## 🪜 Fase 2 — Reordenação e renomeação das 3 camadas
+**c) Atualizar tooltip do `KpiInfoButton` do card renomeado**:
+- Nova fórmula
+- Explicar que bônus/cashback/ajustes já estão refletidos no Saldo Casas via triggers
+- Manter aviso sobre divergência cambial vs Saldo Operável (mark-to-market vs snapshot)
 
-### Ordem nova (top→bottom)
-1. **Card-resumo** (Fase 1)
-2. **🏦 Lucro em Caixa** (renomeado de "Resultado Realizado")
-   - Subtítulo: *"Dinheiro que já voltou pra conta"*
-   - Mantém barra de "Faltam X para recuperar" (já existe)
-   - Tooltip: *"Saques confirmados − depósitos confirmados. Só conta dinheiro que efetivamente voltou ao seu banco."*
-3. **📊 Performance da Operação** (renomeado de "Resultado Operacional Total")
-   - Subtítulo: *"Performance + FX + extraordinários"*
-   - Mantém os 3 sub-blocos (Performance Pura / Efeitos Financeiros / Extraordinários) inalterados
-   - Tooltip: *"Mede o que a operação produziu de valor. Em equilíbrio, deve convergir com o Lucro se sacar tudo hoje."*
+**d) Card "Extras"** permanece, mas com tooltip atualizado:
+> *"Soma informativa dos lançamentos extras (bônus, cashback, ajustes) no período. **Estes valores já estão refletidos no Saldo Casas** via triggers do ledger e NÃO são somados novamente no Lucro se sacar tudo."*
 
-### Renomeações de copy (zero refactor de campo)
-| Texto atual | Texto novo |
-|---|---|
-| "Resultado Realizado" | "Lucro em Caixa" |
-| "Patrimônio Líquido" | "Lucro se sacar tudo hoje" (no card-resumo) |
-| "Resultado Operacional Total" | "Performance da Operação" |
-| "Ajustes & Extraordinários" (já renomeado na fase anterior) | "Extraordinários" (mantém) |
+### 2. `mem://finance/extrato-kpi-dual-view-standard.md`
 
----
+Atualizar a tabela e adicionar seção "Anti-double-counting":
+- Corrigir fórmula do "Resultado de Caixa" → "Lucro se sacar tudo"
+- Documentar que Extras é **informativo apenas**, não entra no cálculo
+- Justificar: triggers do ledger já refletem extras no `saldo_atual`
 
-## 🎚️ Fase 3 — Badge de paridade Patrimônio ↔ Operação
+### 3. `mem://finance/extrato-projeto-canonical-kpi-standard.md`
 
-Ao lado do valor de **"Performance da Operação"**, adicionar badge:
-- **🟢 Convergente** se `|lucroFinanceiro − resultadoOperacionalTotal| < 0.01`
-- **🟡 Divergência: $X.XX** se acima do threshold
+Atualizar seção "Resultado de Caixa" com:
+- Nova fórmula sem `ajustesTotal`
+- Renomeação do card
+- Nota explicativa sobre por que não somar extras
 
-Tooltip do badge: *"Em uma operação saudável, a Performance da Operação deve bater com o Lucro se sacar tudo hoje. Divergência indica saldos ainda não realizados, FX pendente ou ajustes recém-classificados."*
+## Validação esperada após o fix
 
-Sem novo cálculo — diff já está disponível em memória do componente.
+Com os números do print do usuário:
+- **Lucro se sacar tudo (Extrato)** ≈ **Patrimônio Líquido (Popover)** ≈ **Lucro Operacional (Visão Geral)** ± variação cambial
 
----
+A divergência residual entre Extrato e Visão Geral será apenas **variação cambial** (snapshot vs live), o que é o comportamento intencional documentado em `extrato-kpi-dual-view-standard`.
 
-## 📈 Fase 4 — Barra de progresso de recuperação
+## Arquivos afetados
 
-No bloco **"Lucro em Caixa"**, substituir o texto solto *"Faltam $X para recuperar"* por:
-- `<Progress value={recovered/depositos*100} />` do shadcn (`@/components/ui/progress`)
-- Label: *"Recuperação de capital: $X / $Y"* (X = soma de saques confirmados, Y = soma de depósitos)
-- Cor da barra: amber se < 100%, emerald se ≥ 100%
+- `src/components/projeto-detalhe/ExtratoProjetoTab.tsx` (fórmula + label + tooltip)
+- `.lovable/memory/finance/extrato-kpi-dual-view-standard.md` (atualização)
+- `.lovable/memory/finance/extrato-projeto-canonical-kpi-standard.md` (atualização)
 
-Quando ≥ 100% (saques superam depósitos), trocar copy para: *"✓ Capital recuperado · Excedente: $Z"*.
+## Não-objetivos
 
----
-
-## 🧠 Fase 5 — Header educacional do popover
-
-No topo do popover (acima do card-resumo), uma linha-guia compacta:
-> 💡 *3 perspectivas de lucro: o que voltou pro caixa · o que voltaria se sacasse tudo · o que a operação produziu.*
-
-Hover no ícone 💡 expande tooltip explicando quando olhar cada um (resumo do que está nesta resposta).
-
----
-
-## 📚 Fase 6 — Memória
-
-**`mem://finance/indicadores-financeiros-3-camadas-standard.md`** (novo):
-- Define as 3 camadas como padrão de comunicação financeira ao usuário.
-- Mapeia cada campo (`lucroRealizado`, `lucroFinanceiro`, `resultadoOperacionalTotal`) à pergunta que responde.
-- Documenta o badge de paridade como verificação saudável.
-- Regra: **não inventar nova camada** — qualquer novo KPI financeiro deve se enquadrar em uma das 3 categorias ou justificar a criação de uma 4ª.
-
-**`mem://index.md`**: nova entrada Core curta:
-> *Indicadores Financeiros = 3 camadas: Caixa (lucroRealizado) · Patrimônio (lucroFinanceiro = "se sacar tudo hoje") · Operação (resultadoOperacionalTotal). Card-resumo destaca Patrimônio como resposta principal.*
-
----
-
-## 🛡️ Garantias
-
-| Risco | Mitigação |
-|---|---|
-| Quebra de cálculo | **Zero alteração** em fórmulas — só reusa campos do `metrics` existente |
-| Confusão durante transição | Tooltips explícitos em cada KPI explicam o renome |
-| Divergência permanente Patrimônio ↔ Operação | Badge amarelo expõe o problema visualmente em vez de esconder |
-| Componente Progress ausente | Já existe em `src/components/ui/progress.tsx` |
-
----
-
-## 📁 Arquivos tocados
-
-1. `src/components/projeto-detalhe/FinancialMetricsPopover.tsx` (UI: card-resumo, reordenação, renomeações, badge paridade, barra progress)
-2. `.lovable/memory/finance/indicadores-financeiros-3-camadas-standard.md` (novo)
-3. `.lovable/memory/index.md` (nova entrada Core)
-
----
-
-**Aprovando este plano**, executo em sequência: header educacional → card-resumo de Patrimônio → reordenação + renomeação das camadas → badge de paridade → barra de progresso → memórias.
+- Não alterar lógica de `saldoCasasTotal` (continua live mark-to-market)
+- Não alterar conversão dos Extras (continua snapshot via `convertToConsolidation`)
+- Não tocar em RPCs ou triggers do banco (anti-retrofix)
