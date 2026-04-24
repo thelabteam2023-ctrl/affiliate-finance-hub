@@ -641,7 +641,20 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
     // são neutralizadas pelo trigger fn_ensure_deposito_virtual_on_link, sem precisar
     // de ajustes matemáticos aqui.
     const fluxoCaixaLiquido = saquesRecebidos - depositosEfetivos;
-    const extrasPositivos = cashbackLiquido + girosGratis + ajustes + ganhoConfirmacao + ganhoFx + bonusGanhos;
+
+    // ─── SEGREGAÇÃO CONCEITUAL (Performance vs FX vs Ajustes) ───
+    // Performance Pura (denominador de ROI): juice + créditos promocionais
+    const creditosPerformance = bonusGanhos + cashbackLiquido + girosGratis;
+    const performancePura = lucroApostasPuro + creditosPerformance;
+    // Efeitos Financeiros (FX): variação cambial e ganho/perda de confirmação — fora de ROI
+    const efeitosFinanceiros = (ganhoFx - perdaFx) + ganhoConfirmacao;
+    // Ajustes & Extraordinários: correções contábeis e incidentes — fora de ROI
+    const ajustesExtraordinarios = ajustes - perdaOp;
+    // Resultado Operacional Total (reconcilia com Patrimônio)
+    const resultadoOperacionalTotal = performancePura + efeitosFinanceiros + ajustesExtraordinarios;
+
+    // Mantido por retrocompatibilidade (Camada 1 — créditos somados ao caixa)
+    const extrasPositivos = creditosPerformance + ajustes + ganhoConfirmacao + (ganhoFx - perdaFx) - perdaOp;
     const capitalTotal = depositosEfetivos + extrasPositivos;
     const fluxoLiquidoAjustado = fluxoCaixaLiquido;
     const patrimonio = saldoCasas + saquesRecebidos + saquesPendentes;
@@ -683,6 +696,10 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
       cashbackLiquido, girosGratis, ajustes, ganhoConfirmacao, ganhoFx, perdaOp, perdaFx,
       bonusGanhos,
       lucroApostasPuro, estrategiaBreakdown,
+      // Segregação conceitual
+      creditosPerformance, performancePura,
+      efeitosFinanceiros, ajustesExtraordinarios,
+      resultadoOperacionalTotal,
       patrimonio, lucroFinanceiro,
       // Break-even consolidado
       breakEvenDate: beConsolidado.breakEvenDate,
