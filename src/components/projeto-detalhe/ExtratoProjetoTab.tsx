@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { useProjectCurrencyFormat } from "@/hooks/useProjectCurrencyFormat";
+import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -72,11 +73,16 @@ interface CurrencyMetrics {
 
 interface ProjetoFlowMetrics {
   byCurrency: CurrencyMetrics[];
+  /** Totais já convertidos para a moeda de consolidação do projeto via Cotação de Trabalho */
   depositosTotal: number;
   saquesTotal: number;
   ajustesTotal: number;
   saldoCasasTotal: number;
-  lucroConsolidado: number;
+  resultadoCaixa: number;
+  /** Quantidade de DEPOSITO_VIRTUAL classificados como BASELINE (excluídos do KPI) */
+  baselineExcluidoCount: number;
+  /** Soma (já convertida) dos baselines excluídos — apenas para tooltip informativo */
+  baselineExcluidoTotalConvertido: number;
 }
 
 function getSymbol(moeda: string) {
