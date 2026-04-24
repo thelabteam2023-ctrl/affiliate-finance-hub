@@ -853,7 +853,7 @@ export function HistoricoMovimentacoes({
                             </div>
                             {transacao.cotacao_implicita && (
                               <div className="text-[10px] text-muted-foreground/70">
-                                Taxa: 1 {transacao.coin} = {(1 / Number(transacao.cotacao_implicita)).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} {transacao.moeda_destino}
+                                Taxa: 1 {transacao.moeda_origem} = {(1 / Number(transacao.cotacao_implicita)).toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 })} {transacao.moeda_destino}
                               </div>
                             )}
                           </>
