@@ -340,7 +340,11 @@ function LucroOperacionalCollapsible({ metrics, formatCurrency }: { metrics: any
 
 function DepositosCollapsible({ metrics, formatCurrency, onDrillDown }: { metrics: any; formatCurrency: (v: number) => string; onDrillDown?: (key: string, value: number) => void }) {
   const [open, setOpen] = useState(false);
-  const hasBreakdown = metrics.depositosReais > 0 || metrics.depositosVirtuais > 0;
+  // Componentes do total (efetivos = reais + migração; baseline é informativo separado)
+  const hasBreakdown =
+    metrics.depositosReais > 0 ||
+    metrics.depositosMigracao > 0 ||
+    metrics.depositosBaseline > 0;
 
   return (
     <div>
@@ -349,37 +353,46 @@ function DepositosCollapsible({ metrics, formatCurrency, onDrillDown }: { metric
         className={`flex items-center justify-between gap-4 w-full ${hasBreakdown ? "cursor-pointer" : "cursor-default"}`}
       >
         <span className="text-[11px] font-medium text-foreground flex items-center gap-1">
-          Total Depósitos
+          Depósitos Efetivos
           {hasBreakdown && (
             <ChevronDown className={`h-3 w-3 text-muted-foreground/60 transition-transform ${open ? "rotate-180" : ""}`} />
           )}
         </span>
         <span
           className="text-[11px] font-mono tabular-nums font-bold text-foreground cursor-pointer hover:text-primary transition-colors"
-          onClick={(e) => { e.stopPropagation(); onDrillDown?.("depositosTotal", metrics.depositosTotal); }}
+          onClick={(e) => { e.stopPropagation(); onDrillDown?.("depositosTotal", metrics.depositosEfetivos); }}
         >
-          {formatCurrency(metrics.depositosTotal)}
+          {formatCurrency(metrics.depositosEfetivos)}
         </span>
       </button>
       {open && hasBreakdown && (
         <div className="mt-1 space-y-0.5 pl-2 border-l-2 border-border/30 ml-1">
           {metrics.depositosReais > 0 && (
             <MetricRow
-              label="Depósitos Reais"
+              label="Dinheiro novo"
               value={formatCurrency(metrics.depositosReais)}
               indent
-              tooltip="Dinheiro efetivamente transferido para as casas neste projeto"
+              tooltip="Capital efetivamente transferido do caixa operacional para as casas neste projeto."
               onClick={() => onDrillDown?.("depositosReais", metrics.depositosReais)}
             />
           )}
-          {metrics.depositosVirtuais > 0 && (
+          {metrics.depositosMigracao > 0 && (
             <MetricRow
-              label="Baseline de Vinculação"
-              value={formatCurrency(metrics.depositosVirtuais)}
+              label="Recebido de outro projeto"
+              value={formatCurrency(metrics.depositosMigracao)}
+              indent
+              tooltip="Saldo migrado de outro projeto ao vincular casas que já possuíam fundos. Conta como capital efetivo neste projeto."
+              onClick={() => onDrillDown?.("depositosVirtuais", metrics.depositosMigracao)}
+            />
+          )}
+          {metrics.depositosBaseline > 0 && (
+            <MetricRow
+              label="Saldo inicial adotado"
+              value={formatCurrency(metrics.depositosBaseline)}
               indent
               colorClass="text-muted-foreground"
-              tooltip="Saldo residual capturado ao vincular casas ao projeto (ex: diferenças cambiais pré-vínculo). Não é dinheiro novo — é a baseline contábil."
-              onClick={() => onDrillDown?.("depositosVirtuais", metrics.depositosVirtuais)}
+              tooltip="Saldo residual já existente quando uma casa foi vinculada. Não é dinheiro novo nem migração — é a baseline contábil. Não soma aos Depósitos Efetivos."
+              onClick={() => onDrillDown?.("depositosVirtuais", metrics.depositosBaseline)}
             />
           )}
         </div>
