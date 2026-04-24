@@ -188,6 +188,7 @@ export function CaixaTransacaoDialog({
 }: CaixaTransacaoDialogProps) {
   const { toast } = useToast();
   const { workspaceId } = useWorkspace();
+  const queryClient = useQueryClient();
   const { 
     cotacaoUSD, cotacaoEUR, cotacaoGBP, 
     cotacaoMXN, cotacaoMYR, cotacaoARS, cotacaoCOP,
