@@ -1086,7 +1086,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
               <AlertCircle className="h-3 w-3 text-amber-500" />
             )}
             <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Lucro Realizado
+              Recuperação de Capital
               {metrics.hasInvestorCapital && (
                 <span className="ml-1 text-[9px] font-normal normal-case text-muted-foreground/60">(consolidado)</span>
               )}
@@ -1095,23 +1095,43 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
           
           {breakEvenReached ? (
             <div className="rounded-lg bg-emerald-500/5 border border-emerald-500/15 px-3 py-2">
-              <p className="text-[11px] text-foreground font-medium">
-                Capital recuperado em {metrics.breakEvenDays ?? "—"} dias
-              </p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">
-                Saques superaram depósitos em{" "}
-                {metrics.breakEvenDate && format(parseISO(metrics.breakEvenDate), "dd/MM/yyyy")}.
-                O caixa já recebeu de volta todo o valor investido.
+              <div className="flex items-center justify-between gap-2 mb-1.5">
+                <p className="text-[11px] text-foreground font-medium">
+                  ✓ Capital recuperado
+                </p>
+                <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono tabular-nums font-semibold">
+                  Excedente: {formatCurrency(Math.abs(metrics.fluxoCaixaLiquido))}
+                </p>
+              </div>
+              <Progress value={100} className="h-1.5 bg-emerald-500/20 [&>div]:bg-emerald-500" />
+              <p className="text-[9.5px] text-muted-foreground mt-1.5">
+                Recuperado em {metrics.breakEvenDays ?? "—"} dias
+                {metrics.breakEvenDate && ` · ${format(parseISO(metrics.breakEvenDate), "dd/MM/yyyy")}`}
               </p>
             </div>
           ) : (
             <div className="rounded-lg bg-amber-500/5 border border-amber-500/15 px-3 py-2">
-              <p className="text-[11px] text-foreground font-medium">
-                Faltam {formatCurrency(Math.abs(metrics.fluxoCaixaLiquido))} para recuperar
-              </p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">
-                Saques recebidos ainda não cobriram os depósitos realizados.
-              </p>
+              {(() => {
+                const recovered = metrics.saquesRecebidos || 0;
+                const target = metrics.depositosEfetivos || 0;
+                const pct = target > 0 ? Math.min(100, (recovered / target) * 100) : 0;
+                return (
+                  <>
+                    <div className="flex items-center justify-between gap-2 mb-1.5">
+                      <p className="text-[11px] text-foreground font-medium">
+                        Recuperação de capital
+                      </p>
+                      <p className="text-[10px] text-muted-foreground font-mono tabular-nums">
+                        {formatCurrency(recovered)} / {formatCurrency(target)}
+                      </p>
+                    </div>
+                    <Progress value={pct} className="h-1.5 bg-amber-500/15 [&>div]:bg-amber-500" />
+                    <p className="text-[9.5px] text-muted-foreground mt-1.5">
+                      Faltam {formatCurrency(Math.abs(metrics.fluxoCaixaLiquido))} ({pct.toFixed(0)}% recuperado)
+                    </p>
+                  </>
+                );
+              })()}
             </div>
           )}
         </div>
