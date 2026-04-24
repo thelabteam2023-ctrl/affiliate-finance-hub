@@ -4081,13 +4081,34 @@ export function CaixaTransacaoDialog({
               O operador pode enviar BRL (via Pix) para uma casa EUR/MXN.
               A conversão é feita pela casa - o sistema registra moeda_origem e moeda_destino.
             */}
-            <BookmakerSelect
-              ref={bookmakerSelectRef}
-              value={destinoBookmakerId}
-              onValueChange={setDestinoBookmakerId}
-              disabled={!isOrigemCompleta}
-              parceiroId={origemParceiroId}
-            />
+            {isDestinoBookmakerLocked && destinoBookmakerId ? (
+              (() => {
+                const lockedBm = bookmakers.find((b) => b.id === destinoBookmakerId);
+                return (
+                  <div className="flex items-center justify-between gap-2 rounded-md border border-input bg-muted/40 px-3 py-2 text-sm">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="font-medium truncate">
+                        {lockedBm?.nome ?? "Bookmaker selecionada"}
+                      </span>
+                      {lockedBm?.moeda && (
+                        <span className="text-[10px] uppercase tracking-wider rounded bg-background px-1.5 py-0.5 text-muted-foreground border">
+                          {lockedBm.moeda}
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[10px] text-muted-foreground">Definida pelo contexto</span>
+                  </div>
+                );
+              })()
+            ) : (
+              <BookmakerSelect
+                ref={bookmakerSelectRef}
+                value={destinoBookmakerId}
+                onValueChange={setDestinoBookmakerId}
+                disabled={!isOrigemCompleta}
+                parceiroId={origemParceiroId}
+              />
+            )}
           </div>
         </>
       );
