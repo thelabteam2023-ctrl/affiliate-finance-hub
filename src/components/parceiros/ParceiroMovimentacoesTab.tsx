@@ -34,7 +34,7 @@ import {
   WalletCrypto 
 } from "@/hooks/useParceiroTabsCache";
 import { useBookmakerLogoMap } from "@/hooks/useBookmakerLogoMap";
-import { parseLocalDateTime } from "@/utils/dateUtils";
+import { parseLocalDateTime, getTransactionDisplayTimestamp } from "@/utils/dateUtils";
 import { CryptoTransactionCard, CryptoTransactionData, CryptoParty } from "./CryptoTransactionCard";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
@@ -300,6 +300,12 @@ export const ParceiroMovimentacoesTab = memo(function ParceiroMovimentacoesTab({
       hour: "2-digit",
       minute: "2-digit",
     });
+  };
+
+  // Timestamp REAL para exibição: prefere created_at quando data_transacao é
+  // apenas data civil (00:00 UTC), evitando o "21:00 fixo" causado por UTC-3.
+  const formatTransacaoDate = (transacao: Transacao) => {
+    return formatDate(getTransactionDisplayTimestamp(transacao));
   };
 
   // Mapeamento de tipos para labels amigáveis
