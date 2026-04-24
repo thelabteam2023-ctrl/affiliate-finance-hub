@@ -2387,6 +2387,8 @@ export function CaixaTransacaoDialog({
       // DETERMINAÇÃO DE MOEDAS ORIGEM/DESTINO
       // - DEPÓSITO: Origem = moeda de transporte (BRL/USDT), Destino = moeda da CASA
       // - SAQUE: Origem = moeda da CASA, Destino = moeda de recebimento (BRL/USDT)
+      // - TRANSFERENCIA: Origem = moeda enviada; Destino = moeda da conta/wallet de destino
+      //   (cripto: o próprio coin — USDT permanece USDT; fiat: moeda da conta bancária destino)
       // =========================================================================
       let moedaOrigem = tipoMoeda === "CRYPTO" ? coin : moeda;
       let moedaDestino = tipoMoeda === "FIAT" ? moeda : "USD";
@@ -2404,6 +2406,21 @@ export function CaixaTransacaoDialog({
         moedaOrigem = moedaCasa; // A origem é a moeda NATIVA da casa!
         moedaDestino = tipoMoeda === "CRYPTO" ? coin : moeda; // Destino é onde vai receber
         destinoBookmakerMoeda = moedaCasa;
+      } else if (tipoTransacao === "TRANSFERENCIA") {
+        // TRANSFERENCIA: a moeda de destino é determinada pela conta/wallet que RECEBE.
+        // - CRYPTO wallet → wallet: o "coin" é a moeda nativa (USDT permanece USDT, etc.)
+        // - FIAT conta → conta: usar a moeda da conta bancária de destino
+        // Isso evita o bug em que o destino virava "USD" e gerava cotações invertidas.
+        if (tipoMoeda === "CRYPTO") {
+          moedaDestino = coin;            // 1 USDT permanece 1 USDT no destino
+          destinoBookmakerMoeda = coin;   // sem conversão cambial cripto↔cripto da mesma coin
+        } else {
+          // FIAT: prioriza a moeda da conta bancária de destino quando disponível
+          const contaDestinoFiat = contasBancarias.find(c => c.id === destinoContaId);
+          const moedaContaDestino = contaDestinoFiat?.moeda || moeda;
+          moedaDestino = moedaContaDestino;
+          destinoBookmakerMoeda = moedaContaDestino;
+        }
       }
 
       // Determinar se há conversão de moeda
