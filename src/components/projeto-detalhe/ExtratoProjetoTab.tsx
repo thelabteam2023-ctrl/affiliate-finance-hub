@@ -84,6 +84,10 @@ interface ProjetoFlowMetrics {
   baselineExcluidoCount: number;
   /** Soma (já convertida) dos baselines excluídos — apenas para tooltip informativo */
   baselineExcluidoTotalConvertido: number;
+  /** Equivalente LIVE (mark-to-market) dos depósitos — para comparativo no popover */
+  depositosLiveEquivalente: number;
+  /** Diferença cambial: depositosLiveEquivalente − depositosTotal(snapshot) */
+  variacaoCambialDepositos: number;
 }
 
 function getSymbol(moeda: string) {
