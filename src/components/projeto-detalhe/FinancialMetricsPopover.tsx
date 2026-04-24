@@ -1141,71 +1141,67 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
             value={formatCurrency(metrics.lucroFinanceiro)}
             colorClass={metrics.lucroFinanceiro >= 0 ? "text-emerald-500" : "text-red-500"}
             bold
-            tooltip="Mesma resposta do card destacado no topo. Clique para reconciliar com a Performance da Operação."
+            tooltip="Totalizador da fórmula. Mesma resposta do card 💰 no topo."
             onClick={() => setShowLucroProjetado(true)}
           />
           <p className="text-[9px] text-muted-foreground/70 mt-0.5">
             Saldo + Saques − Depósitos
           </p>
         </div>
-      </div>
+          </AccordionContent>
+        </AccordionItem>
 
-      {/* ─── CAMADA 3: OPERACIONAL (Performance + FX + Ajustes segregados) ─── */}
-      {(Math.abs(metrics.performancePura) >= 0.01 || Math.abs(metrics.efeitosFinanceiros) >= 0.01 || Math.abs(metrics.ajustesExtraordinarios) >= 0.01) && (
-        <div className="border-t border-border/40 pt-3 pb-3 space-y-1">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-1.5">
-              <BarChart3 className="h-3 w-3 text-primary" />
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">📊 Performance da Operação</span>
+        {/* Camada 3: Detalhe da Performance */}
+        {(Math.abs(metrics.performancePura) >= 0.01 || Math.abs(metrics.efeitosFinanceiros) >= 0.01 || Math.abs(metrics.ajustesExtraordinarios) >= 0.01) && (
+          <AccordionItem value="performance" className="border rounded-md border-border/40 bg-muted/10">
+            <AccordionTrigger className="px-3 py-2 hover:no-underline [&>svg]:h-3 [&>svg]:w-3">
+              <div className="flex items-center justify-between gap-2 flex-1 pr-2">
+                <div className="flex items-center gap-1.5">
+                  <BarChart3 className="h-3 w-3 text-primary" />
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">📊 Detalhe da Performance</span>
+                </div>
+                <span className={`text-[11px] font-mono tabular-nums font-semibold ${metrics.performancePura >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                  {fmtSigned(metrics.performancePura)}
+                </span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="px-3 pb-3 pt-0">
+              <p className="text-[9.5px] text-muted-foreground/70 mb-1.5">
+                Decomposição operacional: Performance Pura + Efeitos Financeiros + Extraordinários.
+              </p>
+              <LucroOperacionalCollapsible metrics={metrics} formatCurrency={formatCurrency} />
+            </AccordionContent>
+          </AccordionItem>
+        )}
+
+        {/* Recuperação de Capital */}
+        <AccordionItem value="recuperacao" className="border rounded-md border-border/40 bg-muted/10">
+          <AccordionTrigger className="px-3 py-2 hover:no-underline [&>svg]:h-3 [&>svg]:w-3">
+            <div className="flex items-center justify-between gap-2 flex-1 pr-2">
+              <div className="flex items-center gap-1.5">
+                {breakEvenReached ? (
+                  <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                ) : (
+                  <AlertCircle className="h-3 w-3 text-amber-500" />
+                )}
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">🎯 Recuperação de Capital</span>
+              </div>
+              <span className={`text-[10px] font-medium ${breakEvenReached ? "text-emerald-500" : "text-amber-500"}`}>
+                {breakEvenReached ? "✓ Recuperado" : (() => {
+                  const recovered = metrics.saquesRecebidos || 0;
+                  const target = metrics.depositosEfetivos || 0;
+                  const pct = target > 0 ? Math.min(100, (recovered / target) * 100) : 0;
+                  return `${pct.toFixed(0)}%`;
+                })()}
+              </span>
             </div>
-            {(() => {
-              const diff = metrics.lucroFinanceiro - metrics.resultadoOperacionalTotal;
-              const convergente = Math.abs(diff) < 0.01;
-              return (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span
-                      className={`text-[9px] px-1.5 py-0.5 rounded border cursor-help font-medium ${
-                        convergente
-                          ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
-                          : "bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400"
-                      }`}
-                    >
-                      {convergente ? "🟢 Convergente" : `🟡 Δ ${formatCurrency(Math.abs(diff))}`}
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent side="left" className="max-w-[280px] text-xs">
-                    Em uma operação saudável, a Performance da Operação deve bater com o "Lucro se sacar tudo hoje". Divergência indica saldos ainda não realizados, FX pendente ou ajustes recém-classificados.
-                  </TooltipContent>
-                </Tooltip>
-              );
-            })()}
-          </div>
-          <p className="text-[9.5px] text-muted-foreground/70 -mt-1 mb-1.5">
-            Performance Pura + Efeitos Financeiros + Extraordinários
-          </p>
-          <LucroOperacionalCollapsible metrics={metrics} formatCurrency={formatCurrency} />
-        </div>
-      )}
-
-      {/* ─── STATUS: Recuperação de Capital ─── */}
-      <div className="border-t border-border/40 pt-3 space-y-2">
-        {/* Break-even CONSOLIDADO */}
-        <div>
-          <div className="flex items-center gap-1.5 mb-1.5">
-            {breakEvenReached ? (
-              <CheckCircle2 className="h-3 w-3 text-emerald-500" />
-            ) : (
-              <AlertCircle className="h-3 w-3 text-amber-500" />
-            )}
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Recuperação de Capital
-              {metrics.hasInvestorCapital && (
-                <span className="ml-1 text-[9px] font-normal normal-case text-muted-foreground/60">(consolidado)</span>
-              )}
-            </span>
-          </div>
-          
+          </AccordionTrigger>
+          <AccordionContent className="px-3 pb-3 pt-0">
+            <div className="space-y-2">
+              <div>
+                {metrics.hasInvestorCapital && (
+                  <p className="text-[9px] text-muted-foreground/70 mb-1.5">Consolidado (Interno + Investidor)</p>
+                )}
           {breakEvenReached ? (
             <div className="rounded-lg bg-emerald-500/5 border border-emerald-500/15 px-3 py-2">
               <div className="flex items-center justify-between gap-2 mb-1.5">
