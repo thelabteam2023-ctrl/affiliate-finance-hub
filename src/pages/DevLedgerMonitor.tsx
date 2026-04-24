@@ -493,23 +493,65 @@ export default function DevLedgerMonitor() {
                       <th className="px-2 py-1.5 text-right">Saldo Atual</th>
                       <th className="px-2 py-1.5 text-right">Freebet</th>
                       <th className="px-2 py-1.5 text-right">Bônus</th>
+                      <th className="px-2 py-1.5 text-right">≈ USD</th>
+                      <th className="px-2 py-1.5 text-right">≈ BRL</th>
                     </tr>
                   </thead>
                   <tbody className="font-mono">
-                    {bookmakersFiltered.map((r) => (
-                      <tr key={r.id} className="border-b hover:bg-accent/30">
-                        <td className="px-2 py-1 whitespace-nowrap text-muted-foreground">{fmtTime(r.updated_at)}</td>
-                        <td className="px-2 py-1 font-semibold">{r.nome}</td>
-                        <td className="px-2 py-1">{r.moeda}</td>
-                        <td className="px-2 py-1"><Badge variant={statusVariant(r.status)} className="text-[10px]">{r.status}</Badge></td>
-                        <td className="px-2 py-1 text-[10px] text-muted-foreground">{r.projeto_id ? r.projeto_id.slice(0, 8) : "—"}</td>
-                        <td className="px-2 py-1 text-right tabular-nums">{fmtMoney(r.saldo_atual, r.moeda)}</td>
-                        <td className="px-2 py-1 text-right tabular-nums text-amber-500">{fmtMoney(r.saldo_freebet, r.moeda)}</td>
-                        <td className="px-2 py-1 text-right tabular-nums">{fmtMoney(r.saldo_bonus, r.moeda)}</td>
-                      </tr>
-                    ))}
+                    {bookmakersFiltered.map((r) => {
+                      // Converte saldo nativo → USD e → BRL via cotações de Trabalho (BRL pivô)
+                      const fromRate = getRate(r.moeda);
+                      const usdRate = getRate("USD");
+                      const saldo = Number(r.saldo_atual ?? 0);
+                      const valorBRL =
+                        fromRate && fromRate > 0 ? saldo * fromRate : null;
+                      const valorUSD =
+                        valorBRL != null && usdRate && usdRate > 0
+                          ? valorBRL / usdRate
+                          : null;
+                      const rateInfo =
+                        fromRate && usdRate
+                          ? `Cotação: 1 ${r.moeda} = ${fromRate.toFixed(4)} BRL · 1 USD = ${usdRate.toFixed(4)} BRL`
+                          : "Cotação indisponível";
+                      return (
+                        <tr key={r.id} className="border-b hover:bg-accent/30">
+                          <td className="px-2 py-1 whitespace-nowrap text-muted-foreground">{fmtTime(r.updated_at)}</td>
+                          <td className="px-2 py-1 font-semibold">{r.nome}</td>
+                          <td className="px-2 py-1">{r.moeda}</td>
+                          <td className="px-2 py-1"><Badge variant={statusVariant(r.status)} className="text-[10px]">{r.status}</Badge></td>
+                          <td className="px-2 py-1 text-[10px] text-muted-foreground">{r.projeto_id ? r.projeto_id.slice(0, 8) : "—"}</td>
+                          <td className="px-2 py-1 text-right tabular-nums">{fmtMoney(r.saldo_atual, r.moeda)}</td>
+                          <td className="px-2 py-1 text-right tabular-nums text-amber-500">{fmtMoney(r.saldo_freebet, r.moeda)}</td>
+                          <td className="px-2 py-1 text-right tabular-nums">{fmtMoney(r.saldo_bonus, r.moeda)}</td>
+                          <td className="px-2 py-1 text-right tabular-nums text-muted-foreground">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="cursor-help">
+                                  {valorUSD != null ? fmtMoney(valorUSD, "USD") : "—"}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent side="left" className="text-xs">
+                                {rateInfo}
+                              </TooltipContent>
+                            </Tooltip>
+                          </td>
+                          <td className="px-2 py-1 text-right tabular-nums text-muted-foreground">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="cursor-help">
+                                  {valorBRL != null ? fmtMoney(valorBRL, "BRL") : "—"}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent side="left" className="text-xs">
+                                {rateInfo}
+                              </TooltipContent>
+                            </Tooltip>
+                          </td>
+                        </tr>
+                      );
+                    })}
                     {bookmakersFiltered.length === 0 && (
-                      <tr><td colSpan={8} className="text-center py-6 text-muted-foreground">Nenhum bookmaker</td></tr>
+                      <tr><td colSpan={10} className="text-center py-6 text-muted-foreground">Nenhum bookmaker</td></tr>
                     )}
                   </tbody>
                 </table>
