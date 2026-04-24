@@ -50,6 +50,10 @@ interface ProjetoTransaction {
   tipo_moeda: string;
   valor_usd: number | null;
   cotacao: number | null;
+  /** Cotação real congelada (snapshot) — preferir sobre `cotacao` legado */
+  cotacao_efetiva: number | null;
+  /** Equivalente em USD do valor (snapshot) — usado no popover do card */
+  valor_usd_referencia: number | null;
   status: string;
   data_transacao: string;
   created_at: string;
