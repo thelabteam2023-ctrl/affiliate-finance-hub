@@ -432,6 +432,14 @@ function LucroOperacionalCollapsible({ metrics, formatCurrency }: { metrics: any
         {Math.abs(metrics.girosGratis) >= 0.01 && (
           <MetricRow label="Giros Grátis" value={formatCurrency(metrics.girosGratis)} colorClass="text-emerald-500" />
         )}
+        {Math.abs(metrics.ajustesOperacionais) >= 0.01 && (
+          <MetricRow
+            label="Reconciliação Operacional"
+            value={fmtSigned(metrics.ajustesOperacionais)}
+            colorClass={metrics.ajustesOperacionais >= 0 ? "text-emerald-500" : "text-red-500"}
+            tooltip="Ajustes de saldo classificados como reconciliação operacional (centavos por arredondamento de odds, retornos fracionados). Faz parte da performance da operação."
+          />
+        )}
         <div className="border-t border-emerald-500/15 mt-1.5 pt-1.5">
           <div className="flex items-center justify-between gap-4">
             <Tooltip>
@@ -441,7 +449,7 @@ function LucroOperacionalCollapsible({ metrics, formatCurrency }: { metrics: any
                 </span>
               </TooltipTrigger>
               <TooltipContent side="left" className="max-w-[260px] text-xs">
-                Numerador de ROI. Mede a qualidade da operação: juice + créditos promocionais. Não inclui FX nem ajustes.
+                Numerador de ROI. Mede a qualidade da operação: juice + créditos promocionais + reconciliações operacionais (ajustes que materializam imprecisão da operação). Não inclui FX nem ajustes administrativos.
               </TooltipContent>
             </Tooltip>
             <span className={`text-[11px] font-mono tabular-nums font-bold ${metrics.performancePura >= 0 ? "text-emerald-500" : "text-red-500"}`}>
@@ -478,7 +486,7 @@ function LucroOperacionalCollapsible({ metrics, formatCurrency }: { metrics: any
         </div>
       )}
 
-      {/* 🟠 Ajustes & Extraordinários */}
+      {/* 🟠 Extraordinários */}
       {hasAdj && (
         <div className="rounded-md border border-orange-500/20 bg-orange-500/[0.03] px-2.5 py-2">
           <div className="flex items-center justify-between gap-2">
@@ -487,11 +495,11 @@ function LucroOperacionalCollapsible({ metrics, formatCurrency }: { metrics: any
               <Tooltip>
                 <TooltipTrigger asChild>
                   <span className="text-[10px] font-semibold uppercase tracking-wider text-orange-500/90 border-b border-dotted border-orange-500/40 cursor-help">
-                    Ajustes & Extraordinários
+                    Extraordinários
                   </span>
                 </TooltipTrigger>
                 <TooltipContent side="left" className="max-w-[260px] text-xs">
-                  Correções contábeis (AJUSTE_SALDO) e incidentes (PERDA_OPERACIONAL). Afeta o caixa, mas não compõe a performance recorrente nem a remuneração do operador.
+                  Incidentes (perdas operacionais) e ajustes administrativos sem vínculo operacional. Afeta o caixa, mas não compõe a performance recorrente nem a remuneração do operador.
                 </TooltipContent>
               </Tooltip>
             </div>
