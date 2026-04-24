@@ -951,7 +951,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <span className="text-[11px] font-bold tracking-tight text-foreground border-b border-dotted border-muted-foreground/40 cursor-help">
-                      🎯 Lucro Real Ajustado
+                      Lucro Real Ajustado
                     </span>
                   </TooltipTrigger>
                   <TooltipContent side="bottom" className="max-w-[280px] text-xs">
@@ -963,13 +963,17 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <span
-                      className={`text-[9px] px-1.5 py-0.5 rounded border cursor-help font-medium ${
+                      className={`text-[9px] px-1.5 py-0.5 rounded border cursor-help font-medium inline-flex items-center gap-1 ${
                         convergente
                           ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
                           : "bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400"
                       }`}
                     >
-                      {convergente ? "🟢" : `Δ ${formatCurrency(Math.abs(diff))}`}
+                      {convergente ? (
+                        <CheckCircle2 className="h-2.5 w-2.5" />
+                      ) : (
+                        <>Δ {formatCurrency(Math.abs(diff))}</>
+                      )}
                     </span>
                   </TooltipTrigger>
                   <TooltipContent side="left" className="max-w-[260px] text-xs">
@@ -983,17 +987,18 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
             </div>
             <div className="flex items-center gap-1 flex-wrap">
               <span
-                className={`text-[9px] px-1.5 py-0.5 rounded border font-mono tabular-nums ${
+                className={`text-[9px] px-1.5 py-0.5 rounded border font-mono tabular-nums inline-flex items-center gap-1 ${
                   metrics.performancePura >= 0
                     ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
                     : "bg-red-500/10 border-red-500/30 text-red-600 dark:text-red-400"
                 }`}
                 title="Performance pura — mérito do operador"
               >
-                📊 {fmtSigned(metrics.performancePura)}
+                <BarChart3 className="h-2.5 w-2.5" />
+                {fmtSigned(metrics.performancePura)}
               </span>
               <span
-                className={`text-[9px] px-1.5 py-0.5 rounded border font-mono tabular-nums ${
+                className={`text-[9px] px-1.5 py-0.5 rounded border font-mono tabular-nums inline-flex items-center gap-1 ${
                   Math.abs(metrics.efeitosFinanceiros) < 0.01
                     ? "bg-muted/40 border-border/40 text-muted-foreground"
                     : metrics.efeitosFinanceiros >= 0
@@ -1002,10 +1007,11 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
                 }`}
                 title="Efeitos financeiros — variação cambial e confirmação"
               >
-                💱 {fmtSigned(metrics.efeitosFinanceiros)}
+                <ArrowRightLeft className="h-2.5 w-2.5" />
+                {fmtSigned(metrics.efeitosFinanceiros)}
               </span>
               <span
-                className={`text-[9px] px-1.5 py-0.5 rounded border font-mono tabular-nums ${
+                className={`text-[9px] px-1.5 py-0.5 rounded border font-mono tabular-nums inline-flex items-center gap-1 ${
                   Math.abs(metrics.ajustesExtraordinarios) < 0.01
                     ? "bg-muted/40 border-border/40 text-muted-foreground"
                     : metrics.ajustesExtraordinarios >= 0
@@ -1014,7 +1020,8 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
                 }`}
                 title="Ajustes administrativos e perdas operacionais"
               >
-                ⚙️ {fmtSigned(metrics.ajustesExtraordinarios)}
+                <Wrench className="h-2.5 w-2.5" />
+                {fmtSigned(metrics.ajustesExtraordinarios)}
               </span>
             </div>
             <p className="text-[9.5px] text-muted-foreground/80 leading-snug mt-1.5">
