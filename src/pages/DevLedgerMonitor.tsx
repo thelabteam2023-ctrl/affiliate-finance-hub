@@ -32,6 +32,17 @@ function fmtMoney(v: number | null | undefined, moeda?: string | null) {
   return `${moeda ?? ""} ${Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`.trim();
 }
 
+function fmtCoin(qtd: number | null | undefined, coin?: string | null) {
+  if (qtd == null) return "—";
+  return `${Number(qtd).toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 8 })} ${coin ?? ""}`.trim();
+}
+
+function fmtRate(rate: number | null | undefined, from?: string | null, to?: string | null) {
+  if (rate == null || !isFinite(rate) || rate === 0) return null;
+  const r = Number(rate).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 6 });
+  return `1 ${from ?? "?"} = ${r} ${to ?? "?"}`;
+}
+
 // ─── Cash Ledger Stream ───
 function useCashLedger(enabled: boolean) {
   return useQuery({
@@ -39,7 +50,7 @@ function useCashLedger(enabled: boolean) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("cash_ledger")
-        .select("id, created_at, data_transacao, tipo_transacao, status, moeda, valor, descricao, origem_tipo, destino_tipo, origem_bookmaker_id, destino_bookmaker_id, projeto_id_snapshot, balance_processed_at, reversed_at")
+        .select("id, created_at, data_transacao, tipo_transacao, status, moeda, valor, descricao, origem_tipo, destino_tipo, origem_bookmaker_id, destino_bookmaker_id, projeto_id_snapshot, balance_processed_at, reversed_at, moeda_origem, valor_origem, moeda_destino, valor_destino, qtd_coin, coin, cotacao, cotacao_origem_usd, cotacao_destino_usd")
         .order("created_at", { ascending: false })
         .limit(100);
       if (error) throw error;
