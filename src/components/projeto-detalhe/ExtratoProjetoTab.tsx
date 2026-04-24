@@ -851,9 +851,11 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
                             {sign === "positive" ? "+" : sign === "negative" ? "-" : ""}
                             {formatVal(t.valor, t.moeda)}
                           </p>
-                          {isForeign && t.cotacao && (
+                          {isForeign && t.cotacao_efetiva && t.cotacao_efetiva !== 1 && (
                             <p className="text-[9px] text-muted-foreground/60">
-                              cotação {t.cotacao.toFixed(4)}
+                              1 {t.moeda} ≈ {t.cotacao_efetiva < 0.01
+                                ? t.cotacao_efetiva.toFixed(6)
+                                : t.cotacao_efetiva.toFixed(4)} USD
                             </p>
                           )}
                           <p className="text-[10px] text-muted-foreground">
