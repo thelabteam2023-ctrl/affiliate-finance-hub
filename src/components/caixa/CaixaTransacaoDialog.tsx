@@ -2602,15 +2602,25 @@ export function CaixaTransacaoDialog({
       }
       
       // Calcular cotação da moeda de destino (casa) para USD
-      // Usando getRate() como fonte única de verdade para TODAS as moedas
-      // Cripto: a "moeda de destino" é o próprio coin (USDT/BTC/etc.) — sua cotação USD vem
-      // do preço da moeda (1 USDT = 1 USD; 1 BTC = X USD), NÃO de getRate (que é fiat→BRL).
-      if (tipoMoeda === "CRYPTO") {
-        const coinDestino = destinoBookmakerMoeda || coin;
-        cotacaoDestinoUsd = cryptoPrices[coinDestino] || cryptoPrices[coin] || 1;
+      // CRÍTICO: A cotação de destino depende da MOEDA DE DESTINO REAL (não do tipo de origem).
+      // Casos possíveis:
+      //  - Cripto → Cripto (ex: USDT→USDT): usar cryptoPrices
+      //  - Cripto → FIAT  (ex: USDT→EUR):   usar getRate (fiat→BRL → USD)
+      //  - FIAT   → FIAT  (ex: BRL→EUR):    usar getRate
+      //  - FIAT   → Cripto (ex: BRL→USDT): usar cryptoPrices
+      const moedaDestinoFinal = destinoBookmakerMoeda || moedaDestino;
+      // Destino é cripto se for uma das moedas crypto conhecidas
+      const CRYPTO_SET = new Set([
+        "USDT","USDC","BTC","ETH","BNB","TRX","SOL","MATIC","ADA","DOT","AVAX","LINK","UNI","LTC","XRP"
+      ]);
+      const destinoEhCripto = CRYPTO_SET.has((moedaDestinoFinal || "").toUpperCase());
+      if (destinoEhCripto) {
+        // Destino é cripto: cotação vem do preço da coin (USDT=1, BTC=X USD)
+        cotacaoDestinoUsd = cryptoPrices[moedaDestinoFinal] || (tipoMoeda === "CRYPTO" ? cryptoPrices[coin] : 0) || 1;
       } else {
-        const taxaBrlDestino = getRate(destinoBookmakerMoeda);
-        cotacaoDestinoUsd = cotacaoUSD > 0 ? taxaBrlDestino / cotacaoUSD : 1;
+        // Destino é FIAT (BRL, EUR, USD, GBP, MXN, etc.): cotação vem das cotações cambiais
+        const taxaBrlDestino = getRate(moedaDestinoFinal);
+        cotacaoDestinoUsd = cotacaoUSD > 0 && taxaBrlDestino > 0 ? taxaBrlDestino / cotacaoUSD : 1;
       }
       
       // Calcular valor de destino (na moeda da casa)
