@@ -1029,14 +1029,14 @@ export function CaixaTransacaoDialog({
         setTimeout(() => {
           valorFiatInputRef.current?.focus();
         }, 150);
-      } else if (bookmakerSelectRef.current) {
+      } else if (bookmakerSelectRef.current && !isDestinoBookmakerLocked) {
         setTimeout(() => {
           bookmakerSelectRef.current?.open();
         }, 150);
       }
     }
     prevOrigemContaId.current = origemContaId;
-  }, [origemContaId, tipoMoeda, tipoTransacao, destinoBookmakerId]);
+  }, [origemContaId, tipoMoeda, tipoTransacao, destinoBookmakerId, isDestinoBookmakerLocked]);
 
   // ====== AUTO-FOCUS CHAIN FOR SAQUE (WITHDRAWAL) FLOW ======
   
@@ -1269,13 +1269,31 @@ export function CaixaTransacaoDialog({
   // Auto-focus CRYPTO DEPÓSITO: quando wallet de origem é selecionada, abre o select Bookmaker (destino)
   useEffect(() => {
     if (tipoTransacao !== "DEPOSITO") return;
-    if (tipoMoeda === "CRYPTO" && origemWalletId && origemWalletId !== prevOrigemWalletId.current && bookmakerSelectRef.current) {
+    if (
+      tipoMoeda === "CRYPTO" &&
+      origemWalletId &&
+      origemWalletId !== prevOrigemWalletId.current &&
+      bookmakerSelectRef.current &&
+      !isDestinoBookmakerLocked
+    ) {
       setTimeout(() => {
         bookmakerSelectRef.current?.open();
       }, 150);
     }
+    // Quando travado e já temos bookmaker + wallet, foca direto no campo de quantidade
+    if (
+      tipoMoeda === "CRYPTO" &&
+      origemWalletId &&
+      origemWalletId !== prevOrigemWalletId.current &&
+      isDestinoBookmakerLocked &&
+      destinoBookmakerId
+    ) {
+      setTimeout(() => {
+        qtdCoinInputRef.current?.focus();
+      }, 150);
+    }
     prevOrigemWalletId.current = origemWalletId;
-  }, [origemWalletId, tipoMoeda, tipoTransacao]);
+  }, [origemWalletId, tipoMoeda, tipoTransacao, isDestinoBookmakerLocked, destinoBookmakerId]);
 
   // Auto-focus DEPÓSITO: quando bookmaker é selecionado, foca no campo Valor
   useEffect(() => {
