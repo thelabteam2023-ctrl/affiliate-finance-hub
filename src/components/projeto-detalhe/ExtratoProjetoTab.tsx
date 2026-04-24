@@ -424,19 +424,27 @@ function useProjetoExtrato(
         // 4) SAQUE_VIRTUAL não-MIGRACAO (raros) — ignora no KPI; aparece só no histórico
         if (e.tipo_transacao === "SAQUE_VIRTUAL") return;
 
-        // 5) Demais (AJUSTE_*, CASHBACK, etc) — somente se tiverem direção/sinal claro
+        // 5) Demais (AJUSTE_*, CASHBACK, BONUS, ESTORNO, PERDA_CAMBIAL, GANHO_CAMBIAL)
+        // O sinal define se é entrada ou saída do caixa do projeto. Tudo isso é
+        // responsabilidade do projeto (não da empresa) e PRECISA influenciar o
+        // Resultado de Caixa para o fechamento final refletir a realidade.
         const cm = ensureCM(moeda);
         const consolidadoEv = resolveConsolidado(e, valorBase, moeda);
-        if (e.ajuste_direcao === "ENTRADA" || e.ajuste_direcao === "CREDITO") {
-          cm.ajustes += valorBase;
-          ajustesConsolidadoSnap += consolidadoEv;
+
+        // Sinal explícito por tipo (sobrepõe ajuste_direcao quando o tipo é claro)
+        let sinal: 1 | -1 = 1;
+        if (e.tipo_transacao === "PERDA_CAMBIAL" || e.tipo_transacao === "ESTORNO") {
+          sinal = -1;
+        } else if (e.tipo_transacao === "GANHO_CAMBIAL" || e.tipo_transacao === "CASHBACK" || e.tipo_transacao === "BONUS") {
+          sinal = 1;
         } else if (e.ajuste_direcao === "SAIDA" || e.ajuste_direcao === "DEBITO") {
-          cm.ajustes -= valorBase;
-          ajustesConsolidadoSnap -= consolidadoEv;
-        } else {
-          cm.ajustes += valorBase;
-          ajustesConsolidadoSnap += consolidadoEv;
+          sinal = -1;
+        } else if (e.ajuste_direcao === "ENTRADA" || e.ajuste_direcao === "CREDITO") {
+          sinal = 1;
         }
+
+        cm.ajustes += sinal * valorBase;
+        ajustesConsolidadoSnap += sinal * consolidadoEv;
       });
 
       // Saldo REAL atual das casas vinculadas (somente saldo_atual; freebet à parte)
@@ -702,7 +710,12 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
                 title="Extras (Ajustes / Cashback / Bônus)"
                 body={
                   <>
-                    <p>Soma de ajustes manuais, cashbacks e bônus creditados no caixa do projeto. Entradas somam, saídas subtraem.</p>
+                    <p>Soma tudo o que entra ou sai do caixa do projeto <strong>fora</strong> de depósitos e saques: ajustes manuais, cashbacks, bônus creditados, perdas no recebimento e variações cambiais reconciliadas.</p>
+                    <ul className="list-disc pl-4 space-y-0.5">
+                      <li><strong>Entradas</strong> (cashback, bônus, ganho cambial) somam.</li>
+                      <li><strong>Saídas</strong> (perda no recebimento, estorno, perda cambial) subtraem.</li>
+                    </ul>
+                    <p>Esses valores são <strong>responsabilidade do projeto</strong> (não da empresa) e por isso entram diretamente no Resultado de Caixa, refletindo o que você realmente terá no fechamento.</p>
                     <p>Convertido pela cotação do dia de cada lançamento.</p>
                   </>
                 }
@@ -733,11 +746,12 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
                 body={
                   <>
                     <p><strong>Conta:</strong> Saques + Saldo Casas + Extras − Depósitos.</p>
-                    <p>Mostra a realidade do caixa hoje. Pode ficar negativo antes de operar por dois motivos:</p>
+                    <p>Mostra a realidade do caixa hoje, considerando tudo que afeta o fechamento do projeto. Pode ficar negativo antes de operar por dois motivos:</p>
                     <ul className="list-disc pl-4 space-y-0.5">
-                      <li><strong>Perda no recebimento:</strong> a casa creditou menos do que você enviou (taxa de rede, fee da casa). Esse é o valor real que você tem para operar.</li>
+                      <li><strong>Perda no recebimento:</strong> a casa creditou menos do que você enviou (taxa de rede, fee da casa). Já entra como saída em <em>Extras</em>.</li>
                       <li><strong>Variação cambial:</strong> o dinheiro nas casas vale menos hoje do que custou para colocar lá (ou mais, se valorizou).</li>
                     </ul>
+                    <p className="text-[10px] text-muted-foreground/80">Essas perdas/ganhos são <strong>do projeto</strong>, não da empresa — quando você sacar, vai sacar com o câmbio do dia. Por isso entram no fechamento final.</p>
                     {metrics && Math.abs(metrics.variacaoCambialDepositos) > 0.01 && (
                       <div className="mt-2 p-2 rounded bg-muted/50 space-y-1">
                         <p className="text-[10px] uppercase tracking-wide font-semibold">Variação cambial estimada</p>
