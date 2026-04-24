@@ -844,7 +844,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
 
   if (isLoading || !metrics) {
     return (
-      <div className="p-5 space-y-3 w-[340px]">
+      <div className="p-5 space-y-3 w-[380px] max-w-[calc(100vw-2rem)]">
         <Skeleton className="h-5 w-40" />
         <Skeleton className="h-10 w-full" />
         <Skeleton className="h-10 w-full" />
@@ -861,7 +861,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
     v < 0 ? `−${formatCurrency(Math.abs(v))}` : formatCurrency(v);
 
   return (
-    <div className="p-4 w-[340px] space-y-0">
+    <div className="p-4 w-[380px] max-w-[calc(100vw-2rem)] space-y-0">
       {/* Header */}
       <div className="flex items-center justify-between gap-2 mb-4">
         <div className="flex items-center gap-2">
