@@ -366,19 +366,12 @@ function useProjetoExtrato(
 
       const byCurrency = Array.from(currencyMap.values());
 
-      // Totais GLOBAIS já convertidos para a moeda de consolidação (USD, BRL, etc)
-      const depositosTotal = byCurrency.reduce(
-        (s, c) => s + convertToConsolidation(c.depositos, c.moeda),
-        0
-      );
-      const saquesTotal = byCurrency.reduce(
-        (s, c) => s + convertToConsolidation(c.saques, c.moeda),
-        0
-      );
-      const ajustesTotal = byCurrency.reduce(
-        (s, c) => s + convertToConsolidation(c.ajustes, c.moeda),
-        0
-      );
+      // Totais GLOBAIS na moeda de consolidação usam SNAPSHOT (cotação congelada
+      // no momento de cada registro), não cotação live. Garante que KPIs históricos
+      // não flutuem com mudanças de Cotação de Trabalho ou PTAX.
+      const depositosTotal = depositosConsolidadoSnap;
+      const saquesTotal = saquesConsolidadoSnap;
+      const ajustesTotal = ajustesConsolidadoSnap;
 
       // Resultado de Caixa (NÃO é Lucro Operacional canônico — é fluxo de caixa do projeto):
       //   saques + saldo casas + ajustes − depósitos
