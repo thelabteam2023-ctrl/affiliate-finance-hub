@@ -29,6 +29,7 @@ import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Progress } from "@/components/ui/progress";
 import { Lightbulb, PiggyBank, Banknote, Target } from "lucide-react";
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 
 
 interface FinancialMetricsPopoverProps {
