@@ -2609,7 +2609,11 @@ export function CaixaTransacaoDialog({
       //  - FIAT   → FIAT  (ex: BRL→EUR):    usar getRate
       //  - FIAT   → Cripto (ex: BRL→USDT): usar cryptoPrices
       const moedaDestinoFinal = destinoBookmakerMoeda || moedaDestino;
-      const destinoEhCripto = isCryptoCurrency(moedaDestinoFinal);
+      // Destino é cripto se for uma das moedas crypto conhecidas
+      const CRYPTO_SET = new Set([
+        "USDT","USDC","BTC","ETH","BNB","TRX","SOL","MATIC","ADA","DOT","AVAX","LINK","UNI","LTC","XRP"
+      ]);
+      const destinoEhCripto = CRYPTO_SET.has((moedaDestinoFinal || "").toUpperCase());
       if (destinoEhCripto) {
         // Destino é cripto: cotação vem do preço da coin (USDT=1, BTC=X USD)
         cotacaoDestinoUsd = cryptoPrices[moedaDestinoFinal] || (tipoMoeda === "CRYPTO" ? cryptoPrices[coin] : 0) || 1;
