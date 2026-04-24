@@ -127,6 +127,7 @@ export default function DevLedgerMonitor() {
   const navigate = useNavigate();
   const [paused, setPaused] = useState(false);
   const [filter, setFilter] = useState("");
+  const { getRate } = useExchangeRates();
 
   // Hard guard — only system owner
   useEffect(() => {
@@ -302,44 +303,104 @@ export default function DevLedgerMonitor() {
                             const isCripto = r.coin != null && r.qtd_coin != null;
                             const isCrossCurrency =
                               r.moeda_origem && r.moeda_destino && r.moeda_origem !== r.moeda_destino;
-                            // Caso 1: Cripto (mostra qtd_coin como verdade primária)
+
+                            // Calcula a conversão ESPERADA usando cotações oficiais (BRL pivô).
+                            // Detecta divergências entre o que está GRAVADO no banco e o
+                            // valor saudável atual — útil para auditoria do System Owner.
+                            const expectedConvert = (
+                              valor: number,
+                              from: string,
+                              to: string
+                            ): number | null => {
+                              if (!valor || !from || !to) return null;
+                              const fromRate = getRate(from);
+                              const toRate = getRate(to);
+                              if (!fromRate || !toRate) return null;
+                              return (valor * fromRate) / toRate;
+                            };
+
+                            const renderDivergence = (
+                              storedAmount: number,
+                              expectedAmount: number | null,
+                              moedaDestino: string,
+                              from: string,
+                              fromAmount: number
+                            ) => {
+                              if (expectedAmount == null || !isFinite(expectedAmount)) return null;
+                              const diffPct =
+                                expectedAmount !== 0
+                                  ? Math.abs((storedAmount - expectedAmount) / expectedAmount)
+                                  : 0;
+                              // Tolerância de 5% (acomoda flutuação cambial vs cotação histórica)
+                              if (diffPct < 0.05) return null;
+                              const expectedRate = fromAmount !== 0 ? expectedAmount / fromAmount : null;
+                              return (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className="text-[10px] text-destructive flex items-center gap-1 justify-end cursor-help">
+                                      <AlertTriangle className="h-3 w-3" />
+                                      Divergente {(diffPct * 100).toFixed(1)}%
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="left" className="text-xs max-w-[260px]">
+                                    <div>Esperado: {fmtMoney(expectedAmount, moedaDestino)}</div>
+                                    {expectedRate && (
+                                      <div className="text-muted-foreground">
+                                        Cotação atual: {fmtRate(expectedRate, from, moedaDestino)}
+                                      </div>
+                                    )}
+                                  </TooltipContent>
+                                </Tooltip>
+                              );
+                            };
+
+                            // Caso 1: Cripto (qtd_coin = verdade primária)
                             if (isCripto) {
-                              const rate =
-                                r.qtd_coin && Number(r.qtd_coin) !== 0
-                                  ? Number(r.valor_destino ?? r.valor) / Number(r.qtd_coin)
-                                  : null;
+                              const qtd = Number(r.qtd_coin);
+                              const stored = Number(r.valor_destino ?? r.valor);
+                              const moedaDest = r.moeda_destino ?? r.moeda;
+                              const storedRate = qtd !== 0 ? stored / qtd : null;
+                              const expected = expectedConvert(qtd, r.coin!, moedaDest);
                               return (
                                 <div className="flex flex-col items-end leading-tight">
-                                  <span className="font-semibold">{fmtCoin(Number(r.qtd_coin), r.coin)}</span>
+                                  <span className="font-semibold">{fmtCoin(qtd, r.coin)}</span>
                                   <span className="text-[10px] text-muted-foreground">
-                                    ≈ {fmtMoney(Number(r.valor_destino ?? r.valor), r.moeda_destino ?? r.moeda)}
+                                    ≈ {fmtMoney(stored, moedaDest)}
                                   </span>
-                                  {rate && (
+                                  {storedRate && (
                                     <span className="text-[10px] text-amber-500/80">
-                                      {fmtRate(rate, r.coin, r.moeda_destino ?? r.moeda)}
+                                      {fmtRate(storedRate, r.coin, moedaDest)}
                                     </span>
                                   )}
+                                  {renderDivergence(stored, expected, moedaDest, r.coin!, qtd)}
                                 </div>
                               );
                             }
                             // Caso 2: Cross-currency fiat (origem ≠ destino)
                             if (isCrossCurrency) {
-                              const rate =
-                                r.valor_origem && Number(r.valor_origem) !== 0
-                                  ? Number(r.valor_destino) / Number(r.valor_origem)
-                                  : null;
+                              const vOrigem = Number(r.valor_origem);
+                              const vDestino = Number(r.valor_destino);
+                              const storedRate = vOrigem !== 0 ? vDestino / vOrigem : null;
+                              const expected = expectedConvert(vOrigem, r.moeda_origem!, r.moeda_destino!);
                               return (
                                 <div className="flex flex-col items-end leading-tight">
                                   <span className="font-semibold">
-                                    {fmtMoney(Number(r.valor_origem), r.moeda_origem)}
+                                    {fmtMoney(vOrigem, r.moeda_origem)}
                                   </span>
                                   <span className="text-[10px] text-muted-foreground">
-                                    → {fmtMoney(Number(r.valor_destino), r.moeda_destino)}
+                                    → {fmtMoney(vDestino, r.moeda_destino)}
                                   </span>
-                                  {rate && (
+                                  {storedRate && (
                                     <span className="text-[10px] text-amber-500/80">
-                                      {fmtRate(rate, r.moeda_origem, r.moeda_destino)}
+                                      {fmtRate(storedRate, r.moeda_origem, r.moeda_destino)}
                                     </span>
+                                  )}
+                                  {renderDivergence(
+                                    vDestino,
+                                    expected,
+                                    r.moeda_destino!,
+                                    r.moeda_origem!,
+                                    vOrigem
                                   )}
                                 </div>
                               );
