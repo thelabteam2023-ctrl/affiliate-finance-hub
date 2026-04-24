@@ -424,19 +424,27 @@ function useProjetoExtrato(
         // 4) SAQUE_VIRTUAL não-MIGRACAO (raros) — ignora no KPI; aparece só no histórico
         if (e.tipo_transacao === "SAQUE_VIRTUAL") return;
 
-        // 5) Demais (AJUSTE_*, CASHBACK, etc) — somente se tiverem direção/sinal claro
+        // 5) Demais (AJUSTE_*, CASHBACK, BONUS, ESTORNO, PERDA_CAMBIAL, GANHO_CAMBIAL)
+        // O sinal define se é entrada ou saída do caixa do projeto. Tudo isso é
+        // responsabilidade do projeto (não da empresa) e PRECISA influenciar o
+        // Resultado de Caixa para o fechamento final refletir a realidade.
         const cm = ensureCM(moeda);
         const consolidadoEv = resolveConsolidado(e, valorBase, moeda);
-        if (e.ajuste_direcao === "ENTRADA" || e.ajuste_direcao === "CREDITO") {
-          cm.ajustes += valorBase;
-          ajustesConsolidadoSnap += consolidadoEv;
+
+        // Sinal explícito por tipo (sobrepõe ajuste_direcao quando o tipo é claro)
+        let sinal: 1 | -1 = 1;
+        if (e.tipo_transacao === "PERDA_CAMBIAL" || e.tipo_transacao === "ESTORNO") {
+          sinal = -1;
+        } else if (e.tipo_transacao === "GANHO_CAMBIAL" || e.tipo_transacao === "CASHBACK" || e.tipo_transacao === "BONUS") {
+          sinal = 1;
         } else if (e.ajuste_direcao === "SAIDA" || e.ajuste_direcao === "DEBITO") {
-          cm.ajustes -= valorBase;
-          ajustesConsolidadoSnap -= consolidadoEv;
-        } else {
-          cm.ajustes += valorBase;
-          ajustesConsolidadoSnap += consolidadoEv;
+          sinal = -1;
+        } else if (e.ajuste_direcao === "ENTRADA" || e.ajuste_direcao === "CREDITO") {
+          sinal = 1;
         }
+
+        cm.ajustes += sinal * valorBase;
+        ajustesConsolidadoSnap += sinal * consolidadoEv;
       });
 
       // Saldo REAL atual das casas vinculadas (somente saldo_atual; freebet à parte)
