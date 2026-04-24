@@ -738,10 +738,10 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
           </CardContent>
         </Card>
 
-        <Card className="border-border/50">
+        <Card className="border-border/50 col-span-2 sm:col-span-3 lg:col-span-1 bg-gradient-to-br from-card to-muted/20">
           <CardContent className="p-3">
             <div className="flex items-center gap-2 mb-1">
-              <TrendingUp className="h-3.5 w-3.5 text-emerald-400" />
+              <TrendingUp className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
               <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Resultado de Caixa</span>
               <KpiInfoButton
                 title="Resultado de Caixa"
