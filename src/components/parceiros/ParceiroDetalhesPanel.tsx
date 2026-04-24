@@ -1392,6 +1392,11 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                                           </Popover>
                                         )}
                                       </div>
+                                      {bm.instance_identifier && (
+                                        <p className="text-[10px] text-muted-foreground truncate uppercase tracking-wide leading-tight mt-0.5">
+                                          {bm.instance_identifier}
+                                        </p>
+                                      )}
                                       <div className="flex items-center gap-1 flex-wrap">
                                         <Badge variant="outline" className={cn("text-[9px] px-1 py-0 h-4", bm.status === "ativo" ? "border-success/50 text-success" : bm.status === "limitada" ? "border-warning/50 text-warning" : bm.status === "encerrada" ? "border-destructive/50 text-destructive" : "border-muted-foreground/50 text-muted-foreground")}>
                                           {bm.status === "ativo" ? "Ativa" : bm.status === "limitada" ? "Limitada" : bm.status === "encerrada" ? "Encerrada" : bm.status}
