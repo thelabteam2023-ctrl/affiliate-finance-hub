@@ -137,6 +137,7 @@ interface Bookmaker {
   saldo_atual: number;
   saldo_usd: number;
   moeda: string;
+  logo_url?: string | null;
 }
 
 interface SaldoCaixaFiat {
@@ -1735,11 +1736,19 @@ export function CaixaTransacaoDialog({
     try {
       const { data } = await supabase
         .from("bookmakers")
-        .select("id, nome, saldo_atual, saldo_usd, moeda")
+        .select("id, nome, saldo_atual, saldo_usd, moeda, bookmakers_catalogo:bookmaker_catalogo_id(logo_url)")
         .eq("workspace_id", workspaceId) // Filtro explícito de workspace
         .order("nome");
       
-      setBookmakers(data || []);
+      const mapped: Bookmaker[] = (data || []).map((b: any) => ({
+        id: b.id,
+        nome: b.nome,
+        saldo_atual: b.saldo_atual,
+        saldo_usd: b.saldo_usd,
+        moeda: b.moeda,
+        logo_url: b.bookmakers_catalogo?.logo_url ?? null,
+      }));
+      setBookmakers(mapped);
     } catch (error) {
       console.error("Erro ao carregar bookmakers:", error);
     }
