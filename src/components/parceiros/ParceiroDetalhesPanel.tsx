@@ -67,6 +67,10 @@ interface ParceiroDetalhesPanelProps {
 
 const clampSaldoVisual = (value: number | null | undefined) => Math.max(0, Number(value ?? 0));
 
+/** Nome de exibição completo: "CASA · IDENTIFICADOR" quando há instance_identifier. */
+const nomeExibicao = (bm: { bookmaker_nome: string; instance_identifier?: string | null }) =>
+  bm.instance_identifier ? `${bm.bookmaker_nome} · ${bm.instance_identifier}` : bm.bookmaker_nome;
+
 // Mobile Progressive KPIs component
 interface MobileProgressiveKpisProps {
   kpisFiltrados: any;
