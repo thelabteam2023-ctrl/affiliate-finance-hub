@@ -22,6 +22,9 @@ import {
   Megaphone,
   AlertTriangle,
   Info,
+  Sparkles,
+  Wrench,
+  Handshake,
 } from "lucide-react";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { useKpiBreakdowns } from "@/hooks/useKpiBreakdowns";
@@ -48,6 +51,10 @@ interface LucroProjetadoModalProps {
   ajustesFinanceiro: number;
   perdaOpFinanceiro: number;
   resultadoFxFinanceiro: number;
+  // Segregação conceitual (Performance vs FX vs Ajustes)
+  performancePura?: number;
+  efeitosFinanceiros?: number;
+  ajustesExtraordinarios?: number;
 }
 
 function ReconciliationRow({
