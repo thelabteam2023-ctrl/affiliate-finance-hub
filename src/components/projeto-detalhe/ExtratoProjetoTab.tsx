@@ -625,12 +625,12 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
                 title="Saldo Casas (Mark-to-Market)"
                 body={
                   <>
-                    <p>Soma de <strong>tudo que está nas casas vinculadas agora</strong>, convertido pela <strong>cotação atual</strong>.</p>
-                    <p>Representa quanto você teria, em moeda do projeto, se sacasse tudo nesse momento.</p>
+                    <p>Soma de <strong>tudo que está nas casas vinculadas agora</strong>, convertido pela <strong>cotação de hoje</strong>.</p>
+                    <p>É o quanto você teria se sacasse tudo neste momento.</p>
                   </>
                 }
                 divergencia={
-                  <p>Aqui usamos cotação <strong>live</strong> (mark-to-market), enquanto Depósitos/Saques acima usam cotação <strong>histórica</strong> (snapshot). Essa diferença de "ponto de vista" é o que gera a variação cambial no Resultado de Caixa.</p>
+                  <p>Esse card usa a cotação <strong>de hoje</strong>, enquanto Depósitos e Saques usam a cotação <strong>do dia em que aconteceram</strong>. Essa diferença de "ponto de vista" é o que aparece como variação cambial no Resultado de Caixa.</p>
                 }
               />
             </div>
