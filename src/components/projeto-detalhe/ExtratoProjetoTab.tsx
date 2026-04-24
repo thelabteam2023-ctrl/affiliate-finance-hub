@@ -545,109 +545,76 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
     <div className="space-y-4">
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Card className="border-border/50">
-                <CardContent className="p-3">
-                  <div className="flex items-center gap-2 mb-1">
-                    <ArrowDownToLine className="h-3.5 w-3.5 text-red-400" />
-                    <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Depósitos</span>
-                    <KpiInfoButton
-                      title="Depósitos (Histórico Contábil)"
-                      body={
-                        <>
-                          <p>Soma de todos os depósitos efetivos, convertidos pela <strong>cotação congelada no momento de cada operação</strong> (snapshot).</p>
-                          <p>Inclui DEPOSITO real + DEPOSITO_VIRTUAL (MIGRACAO). Baselines de vinculação são excluídos para evitar dupla contagem.</p>
-                        </>
-                      }
-                      divergencia={
-                        <p>Este KPI usa cotação <strong>histórica</strong> (snapshot do dia do depósito). Já o Saldo Operável reflete a cotação <strong>atual</strong>. Por isso, mesmo sem operar, podem divergir conforme o câmbio se move.</p>
-                      }
-                    />
-                  </div>
-                  <p className="text-lg font-bold text-foreground">
-                    {formatConsolidated(metrics?.depositosTotal || 0)}
-                  </p>
-                  {isMultiCurrency && metrics?.byCurrency && (
-                    <div className="mt-1 flex flex-wrap gap-1">
-                      {metrics.byCurrency.filter(c => c.depositos > 0.01).map(c => (
-                        <Badge key={c.moeda} variant="outline" className="text-[9px] px-1 py-0">
-                          {formatVal(c.depositos, c.moeda)}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                  {!!metrics?.baselineExcluidoCount && (
-                    <p className="mt-1 text-[9px] text-muted-foreground/70">
-                      +{metrics.baselineExcluidoCount} baseline(s) virtual(is) excluído(s) ({formatConsolidated(metrics.baselineExcluidoTotalConvertido)})
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-            </TooltipTrigger>
-            {(isMultiCurrency || !!metrics?.baselineExcluidoCount) && (
-              <TooltipContent side="bottom" className="text-xs">
-                <div className="space-y-1">
-                  <p className="font-semibold">Depósitos efetivos</p>
-                  <p className="text-muted-foreground">
-                    DEPOSITO real + DEPOSITO_VIRTUAL (MIGRACAO).{"\n"}
-                    Baselines de vinculação não contam (evita duplicação).
-                  </p>
-                  {renderCurrencyBreakdown(metrics?.byCurrency, "depositos")}
-                </div>
-              </TooltipContent>
+        <Card className="border-border/50">
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2 mb-1">
+              <ArrowDownToLine className="h-3.5 w-3.5 text-red-400" />
+              <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Depósitos</span>
+              <KpiInfoButton
+                title="Depósitos"
+                body={
+                  <>
+                    <p>Soma de tudo que você colocou no projeto, usando a <strong>cotação do dia em que cada depósito foi feito</strong>.</p>
+                    <p>Esse valor é histórico: não muda quando o câmbio se mexe depois.</p>
+                  </>
+                }
+                divergencia={
+                  <p>O Saldo Operável (em Vínculos) usa cotação <strong>atual</strong>. Por isso, mesmo sem você operar, os números podem ficar diferentes conforme o câmbio se move.</p>
+                }
+              />
+            </div>
+            <p className="text-lg font-bold text-foreground">
+              {formatConsolidated(metrics?.depositosTotal || 0)}
+            </p>
+            {isMultiCurrency && metrics?.byCurrency && (
+              <div className="mt-1 flex flex-wrap gap-1">
+                {metrics.byCurrency.filter(c => c.depositos > 0.01).map(c => (
+                  <Badge key={c.moeda} variant="outline" className="text-[9px] px-1 py-0">
+                    {formatVal(c.depositos, c.moeda)}
+                  </Badge>
+                ))}
+              </div>
             )}
-          </Tooltip>
-        </TooltipProvider>
+            {!!metrics?.baselineExcluidoCount && (
+              <p className="mt-1 text-[9px] text-muted-foreground/70">
+                +{metrics.baselineExcluidoCount} saldo(s) inicial(is) de vinculação não contado(s) ({formatConsolidated(metrics.baselineExcluidoTotalConvertido)})
+              </p>
+            )}
+          </CardContent>
+        </Card>
 
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Card className="border-border/50">
-                <CardContent className="p-3">
-                  <div className="flex items-center gap-2 mb-1">
-                    <ArrowUpFromLine className="h-3.5 w-3.5 text-emerald-400" />
-                    <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Saques</span>
-                    <KpiInfoButton
-                      title="Saques (Histórico Contábil)"
-                      body={
-                        <>
-                          <p>Soma de todos os saques efetivos, convertidos pela <strong>cotação congelada no momento de cada saque</strong> (snapshot).</p>
-                          <p>Inclui SAQUE real + SAQUE_VIRTUAL (MIGRACAO entre projetos).</p>
-                        </>
-                      }
-                      divergencia={
-                        <p>Cada saque registra a cotação do dia. O valor exibido aqui é a soma dessas cotações históricas, não o valor recalculado em câmbio atual.</p>
-                      }
-                    />
-                  </div>
-                  <p className="text-lg font-bold text-foreground">
-                    {formatConsolidated(metrics?.saquesTotal || 0)}
-                  </p>
-                  {isMultiCurrency && metrics?.byCurrency && (
-                    <div className="mt-1 flex flex-wrap gap-1">
-                      {metrics.byCurrency.filter(c => c.saques > 0.01).map(c => (
-                        <Badge key={c.moeda} variant="outline" className="text-[9px] px-1 py-0">
-                          {formatVal(c.saques, c.moeda)}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TooltipTrigger>
-            {isMultiCurrency && (
-              <TooltipContent side="bottom" className="text-xs">
-                <div className="space-y-1">
-                  <p className="font-semibold">Saques efetivos</p>
-                  <p className="text-muted-foreground">SAQUE real + SAQUE_VIRTUAL (MIGRACAO).</p>
-                  {renderCurrencyBreakdown(metrics?.byCurrency, "saques")}
-                </div>
-              </TooltipContent>
+        <Card className="border-border/50">
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2 mb-1">
+              <ArrowUpFromLine className="h-3.5 w-3.5 text-emerald-400" />
+              <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Saques</span>
+              <KpiInfoButton
+                title="Saques"
+                body={
+                  <>
+                    <p>Soma de tudo que saiu das casas para o seu caixa, usando a <strong>cotação do dia de cada saque</strong>.</p>
+                    <p>Também é histórico: não recalcula com a cotação de hoje.</p>
+                  </>
+                }
+                divergencia={
+                  <p>Cada saque guarda a cotação do dia em que foi feito, então o total não muda com o câmbio.</p>
+                }
+              />
+            </div>
+            <p className="text-lg font-bold text-foreground">
+              {formatConsolidated(metrics?.saquesTotal || 0)}
+            </p>
+            {isMultiCurrency && metrics?.byCurrency && (
+              <div className="mt-1 flex flex-wrap gap-1">
+                {metrics.byCurrency.filter(c => c.saques > 0.01).map(c => (
+                  <Badge key={c.moeda} variant="outline" className="text-[9px] px-1 py-0">
+                    {formatVal(c.saques, c.moeda)}
+                  </Badge>
+                ))}
+              </div>
             )}
-          </Tooltip>
-        </TooltipProvider>
+          </CardContent>
+        </Card>
 
         <Card className="border-border/50">
           <CardContent className="p-3">
@@ -658,12 +625,12 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
                 title="Saldo Casas (Mark-to-Market)"
                 body={
                   <>
-                    <p>Soma de <strong>tudo que está nas casas vinculadas agora</strong>, convertido pela <strong>cotação atual</strong>.</p>
-                    <p>Representa quanto você teria, em moeda do projeto, se sacasse tudo nesse momento.</p>
+                    <p>Soma de <strong>tudo que está nas casas vinculadas agora</strong>, convertido pela <strong>cotação de hoje</strong>.</p>
+                    <p>É o quanto você teria se sacasse tudo neste momento.</p>
                   </>
                 }
                 divergencia={
-                  <p>Aqui usamos cotação <strong>live</strong> (mark-to-market), enquanto Depósitos/Saques acima usam cotação <strong>histórica</strong> (snapshot). Essa diferença de "ponto de vista" é o que gera a variação cambial no Resultado de Caixa.</p>
+                  <p>Esse card usa a cotação <strong>de hoje</strong>, enquanto Depósitos e Saques usam a cotação <strong>do dia em que aconteceram</strong>. Essa diferença de "ponto de vista" é o que aparece como variação cambial no Resultado de Caixa.</p>
                 }
               />
             </div>
@@ -682,8 +649,8 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
                 title="Extras (Ajustes / Cashback / Bônus)"
                 body={
                   <>
-                    <p>Soma de ajustes manuais, cashbacks e bônus creditados ao caixa do projeto, com sinal conforme a direção (CRÉDITO soma, DÉBITO subtrai).</p>
-                    <p>Convertido pela cotação congelada no momento de cada lançamento.</p>
+                    <p>Soma de ajustes manuais, cashbacks e bônus creditados no caixa do projeto. Entradas somam, saídas subtraem.</p>
+                    <p>Convertido pela cotação do dia de cada lançamento.</p>
                   </>
                 }
               />
@@ -709,21 +676,20 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
               <TrendingUp className="h-3.5 w-3.5 text-emerald-400" />
               <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Resultado de Caixa</span>
               <KpiInfoButton
-                title="Resultado de Caixa (Realidade Econômica)"
+                title="Resultado de Caixa"
                 body={
                   <>
-                    <p><strong>Fórmula:</strong> Saques + Saldo Casas + Extras − Depósitos.</p>
-                    <p>Mistura intencionalmente <strong>histórico contábil</strong> (depósitos/saques pelo snapshot) com <strong>mark-to-market</strong> (saldo casas pela cotação atual).</p>
-                    <p>Se for negativo antes de operar, é <strong>variação cambial</strong>: o que está nas casas vale menos hoje do que custou para colocar lá. Se positivo, valorizou.</p>
+                    <p><strong>Conta:</strong> Saques + Saldo Casas + Extras − Depósitos.</p>
+                    <p>Mostra a realidade do caixa hoje. Se ficar negativo antes de operar, é <strong>variação cambial</strong>: o dinheiro que está nas casas vale menos hoje do que custou para colocar lá. Se positivo, valorizou.</p>
                     {metrics && Math.abs(metrics.variacaoCambialDepositos) > 0.01 && (
                       <div className="mt-2 p-2 rounded bg-muted/50 space-y-1">
                         <p className="text-[10px] uppercase tracking-wide font-semibold">Variação cambial estimada</p>
                         <div className="flex justify-between gap-2">
-                          <span>Depósitos a custo histórico:</span>
+                          <span>Depósitos pela cotação do dia:</span>
                           <span>{formatConsolidated(metrics.depositosTotal)}</span>
                         </div>
                         <div className="flex justify-between gap-2">
-                          <span>Mesmos depósitos hoje:</span>
+                          <span>Mesmos depósitos pela cotação de hoje:</span>
                           <span>{formatConsolidated(metrics.depositosLiveEquivalente)}</span>
                         </div>
                         <div className={`flex justify-between gap-2 font-semibold ${metrics.variacaoCambialDepositos >= 0 ? "text-emerald-400" : "text-red-400"}`}>
@@ -735,7 +701,7 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
                   </>
                 }
                 divergencia={
-                  <p>Não é Lucro Operacional. É o reflexo de caixa do projeto considerando o câmbio do dia. Para análise de performance pura, use a Visão Geral.</p>
+                  <p>Não é Lucro Operacional. É o reflexo do caixa do projeto considerando o câmbio do dia. Para a performance real das operações, use a Visão Geral.</p>
                 }
               />
             </div>
