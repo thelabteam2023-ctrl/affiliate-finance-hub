@@ -91,6 +91,7 @@ export default function GestaoBookmakers() {
   const [vinculoCriadoConfirmOpen, setVinculoCriadoConfirmOpen] = useState(false);
   const [vinculoCriadoContext, setVinculoCriadoContext] = useState<VinculoCriadoContext | null>(null);
   const [depositDialogOpen, setDepositDialogOpen] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   // ajustePostLimitacao state removed — now in ProjetoVinculosTab
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -227,6 +228,8 @@ export default function GestaoBookmakers() {
   };
 
   const handleDelete = async (id: string) => {
+    if (deletingId) return;
+
     // Verificar se pode excluir baseado no status de uso
     const usage = usageMap[id];
     const { canDelete: canDeleteBm, reason } = canDeleteBookmaker(usage);
@@ -242,6 +245,7 @@ export default function GestaoBookmakers() {
 
     if (!confirm("Tem certeza que deseja excluir este vínculo? Esta ação é irreversível.")) return;
 
+    setDeletingId(id);
     try {
       const { error } = await supabase
         .from("bookmakers")
@@ -261,6 +265,8 @@ export default function GestaoBookmakers() {
         description: error.message,
         variant: "destructive",
       });
+    } finally {
+      setDeletingId(null);
     }
   };
 
