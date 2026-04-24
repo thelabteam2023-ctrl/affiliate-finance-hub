@@ -1,0 +1,450 @@
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import {
+  getRpcLogs,
+  subscribeRpcLogs,
+  clearRpcLogs,
+  type RpcCallLog,
+} from "@/lib/dev/rpcInterceptor";
+import { Activity, Database, Receipt, Wallet, Zap, Trash2, Pause, Play } from "lucide-react";
+
+const POLL_MS = 3000;
+
+function fmtTime(iso: string | null | undefined) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  return d.toLocaleTimeString("pt-BR", { hour12: false }) + "." + String(d.getMilliseconds()).padStart(3, "0");
+}
+
+function fmtMoney(v: number | null | undefined, moeda?: string | null) {
+  if (v == null) return "—";
+  return `${moeda ?? ""} ${Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`.trim();
+}
+
+// ─── Cash Ledger Stream ───
+function useCashLedger(enabled: boolean) {
+  return useQuery({
+    queryKey: ["dev-monitor", "cash-ledger"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("cash_ledger")
+        .select("id, created_at, data_transacao, tipo_transacao, status, moeda, valor, descricao, origem_tipo, destino_tipo, origem_bookmaker_id, destino_bookmaker_id, projeto_id_snapshot, balance_processed_at, reversed_at")
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (error) throw error;
+      return data ?? [];
+    },
+    refetchInterval: enabled ? POLL_MS : false,
+    refetchIntervalInBackground: true,
+  });
+}
+
+// ─── Apostas Stream ───
+function useApostas(enabled: boolean) {
+  return useQuery({
+    queryKey: ["dev-monitor", "apostas"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("apostas_unificada")
+        .select("id, created_at, updated_at, estrategia, status, resultado, evento, stake, moeda_operacao, lucro_prejuizo, projeto_id, bookmaker_id")
+        .order("updated_at", { ascending: false })
+        .limit(100);
+      if (error) throw error;
+      return data ?? [];
+    },
+    refetchInterval: enabled ? POLL_MS : false,
+    refetchIntervalInBackground: true,
+  });
+}
+
+// ─── Bookmaker Saldos ───
+function useBookmakerSaldos(enabled: boolean) {
+  return useQuery({
+    queryKey: ["dev-monitor", "bookmakers"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("bookmakers")
+        .select("id, nome, moeda, saldo_atual, saldo_freebet, saldo_bonus, status, projeto_id, updated_at")
+        .order("updated_at", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return data ?? [];
+    },
+    refetchInterval: enabled ? POLL_MS : false,
+    refetchIntervalInBackground: true,
+  });
+}
+
+// ─── Hook RPC Logs (subscribe to in-memory store) ───
+function useRpcLogs(): RpcCallLog[] {
+  return useSyncExternalStore(
+    (cb) => subscribeRpcLogs(cb),
+    () => getRpcLogs(),
+    () => getRpcLogs(),
+  );
+}
+
+// ─── Status badge helpers ───
+function statusVariant(status: string): "default" | "secondary" | "destructive" | "outline" {
+  const s = status?.toUpperCase();
+  if (s === "CONFIRMADO" || s === "GANHO" || s === "success") return "default";
+  if (s === "PENDENTE" || s === "pending") return "secondary";
+  if (s === "CANCELADO" || s === "PERDIDO" || s === "error") return "destructive";
+  return "outline";
+}
+
+export default function DevLedgerMonitor() {
+  const { user, isSystemOwner, initialized } = useAuth();
+  const navigate = useNavigate();
+  const [paused, setPaused] = useState(false);
+  const [filter, setFilter] = useState("");
+
+  // Hard guard — only system owner
+  useEffect(() => {
+    if (initialized && (!user || !isSystemOwner)) {
+      navigate("/", { replace: true });
+    }
+  }, [initialized, user, isSystemOwner, navigate]);
+
+  const enabled = !paused && isSystemOwner;
+  const ledger = useCashLedger(enabled);
+  const apostas = useApostas(enabled);
+  const bookmakers = useBookmakerSaldos(enabled);
+  const rpcLogs = useRpcLogs();
+
+  const filterFn = (text: string) => {
+    if (!filter.trim()) return true;
+    return text.toLowerCase().includes(filter.toLowerCase().trim());
+  };
+
+  const ledgerFiltered = useMemo(
+    () => (ledger.data ?? []).filter((r) =>
+      filterFn(`${r.tipo_transacao} ${r.descricao ?? ""} ${r.moeda} ${r.status}`)
+    ),
+    [ledger.data, filter]
+  );
+
+  const apostasFiltered = useMemo(
+    () => (apostas.data ?? []).filter((r) =>
+      filterFn(`${r.estrategia} ${r.evento ?? ""} ${r.status} ${r.resultado ?? ""}`)
+    ),
+    [apostas.data, filter]
+  );
+
+  const bookmakersFiltered = useMemo(
+    () => (bookmakers.data ?? []).filter((r) => filterFn(`${r.nome} ${r.moeda} ${r.status}`)),
+    [bookmakers.data, filter]
+  );
+
+  const rpcFiltered = useMemo(
+    () => rpcLogs.filter((r) => filterFn(`${r.fn_name} ${r.status} ${r.error ?? ""}`)),
+    [rpcLogs, filter]
+  );
+
+  if (!initialized) {
+    return <div className="p-8 text-muted-foreground">Carregando...</div>;
+  }
+
+  if (!isSystemOwner) {
+    return null;
+  }
+
+  return (
+    <div className="p-4 space-y-4 h-full flex flex-col">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-3">
+          <Activity className="h-6 w-6 text-primary" />
+          <div>
+            <h1 className="text-xl font-bold">Ledger Monitor</h1>
+            <p className="text-xs text-muted-foreground">
+              System Owner Only · Polling {POLL_MS / 1000}s · {paused ? "Pausado" : "Ao vivo"}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Input
+            placeholder="Filtrar..."
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            className="w-48 h-8"
+          />
+          <div className="flex items-center gap-2">
+            <Switch id="pause" checked={!paused} onCheckedChange={(v) => setPaused(!v)} />
+            <Label htmlFor="pause" className="text-xs flex items-center gap-1">
+              {paused ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
+              {paused ? "Pausado" : "Ativo"}
+            </Label>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => clearRpcLogs()}>
+            <Trash2 className="h-3 w-3 mr-1" /> Limpar RPCs
+          </Button>
+        </div>
+      </div>
+
+      {/* Counters */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        <Card className="bg-card">
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2">
+              <Receipt className="h-4 w-4 text-blue-500" />
+              <div>
+                <div className="text-xs text-muted-foreground">Ledger</div>
+                <div className="text-lg font-bold tabular-nums">{ledger.data?.length ?? 0}</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2">
+              <Database className="h-4 w-4 text-purple-500" />
+              <div>
+                <div className="text-xs text-muted-foreground">Apostas</div>
+                <div className="text-lg font-bold tabular-nums">{apostas.data?.length ?? 0}</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2">
+              <Wallet className="h-4 w-4 text-emerald-500" />
+              <div>
+                <div className="text-xs text-muted-foreground">Bookmakers</div>
+                <div className="text-lg font-bold tabular-nums">{bookmakers.data?.length ?? 0}</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2">
+              <Zap className="h-4 w-4 text-amber-500" />
+              <div>
+                <div className="text-xs text-muted-foreground">RPCs (sessão)</div>
+                <div className="text-lg font-bold tabular-nums">{rpcLogs.length}</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Tabs */}
+      <Tabs defaultValue="ledger" className="flex-1 flex flex-col min-h-0">
+        <TabsList className="self-start">
+          <TabsTrigger value="ledger">Cash Ledger</TabsTrigger>
+          <TabsTrigger value="apostas">Apostas</TabsTrigger>
+          <TabsTrigger value="bookmakers">Saldos Bookmakers</TabsTrigger>
+          <TabsTrigger value="rpc">RPCs</TabsTrigger>
+        </TabsList>
+
+        {/* Ledger */}
+        <TabsContent value="ledger" className="flex-1 min-h-0 mt-2">
+          <Card className="h-full flex flex-col">
+            <CardHeader className="py-2">
+              <CardTitle className="text-sm flex items-center justify-between">
+                <span>Últimos 100 eventos</span>
+                {ledger.isFetching && <span className="text-xs text-muted-foreground">atualizando...</span>}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1 min-h-0 p-0">
+              <ScrollArea className="h-full">
+                <table className="w-full text-xs">
+                  <thead className="sticky top-0 bg-card border-b">
+                    <tr className="text-left text-muted-foreground">
+                      <th className="px-2 py-1.5">Hora</th>
+                      <th className="px-2 py-1.5">Tipo</th>
+                      <th className="px-2 py-1.5">Status</th>
+                      <th className="px-2 py-1.5 text-right">Valor</th>
+                      <th className="px-2 py-1.5">Origem → Destino</th>
+                      <th className="px-2 py-1.5">Descrição</th>
+                    </tr>
+                  </thead>
+                  <tbody className="font-mono">
+                    {ledgerFiltered.map((r) => (
+                      <tr key={r.id} className="border-b hover:bg-accent/30">
+                        <td className="px-2 py-1 whitespace-nowrap text-muted-foreground">{fmtTime(r.created_at)}</td>
+                        <td className="px-2 py-1"><Badge variant="outline" className="text-[10px]">{r.tipo_transacao}</Badge></td>
+                        <td className="px-2 py-1"><Badge variant={statusVariant(r.status)} className="text-[10px]">{r.status}</Badge></td>
+                        <td className="px-2 py-1 text-right tabular-nums">{fmtMoney(Number(r.valor), r.moeda)}</td>
+                        <td className="px-2 py-1 text-muted-foreground text-[11px]">
+                          {r.origem_tipo ?? "—"} → {r.destino_tipo ?? "—"}
+                        </td>
+                        <td className="px-2 py-1 truncate max-w-[300px]" title={r.descricao ?? ""}>{r.descricao ?? "—"}</td>
+                      </tr>
+                    ))}
+                    {ledgerFiltered.length === 0 && (
+                      <tr><td colSpan={6} className="text-center py-6 text-muted-foreground">Nenhum evento</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Apostas */}
+        <TabsContent value="apostas" className="flex-1 min-h-0 mt-2">
+          <Card className="h-full flex flex-col">
+            <CardHeader className="py-2">
+              <CardTitle className="text-sm flex items-center justify-between">
+                <span>Últimas 100 apostas (por updated_at)</span>
+                {apostas.isFetching && <span className="text-xs text-muted-foreground">atualizando...</span>}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1 min-h-0 p-0">
+              <ScrollArea className="h-full">
+                <table className="w-full text-xs">
+                  <thead className="sticky top-0 bg-card border-b">
+                    <tr className="text-left text-muted-foreground">
+                      <th className="px-2 py-1.5">Atualizado</th>
+                      <th className="px-2 py-1.5">Estratégia</th>
+                      <th className="px-2 py-1.5">Status</th>
+                      <th className="px-2 py-1.5">Resultado</th>
+                      <th className="px-2 py-1.5">Evento</th>
+                      <th className="px-2 py-1.5 text-right">Stake</th>
+                      <th className="px-2 py-1.5 text-right">P&L</th>
+                    </tr>
+                  </thead>
+                  <tbody className="font-mono">
+                    {apostasFiltered.map((r) => (
+                      <tr key={r.id} className="border-b hover:bg-accent/30">
+                        <td className="px-2 py-1 whitespace-nowrap text-muted-foreground">{fmtTime(r.updated_at)}</td>
+                        <td className="px-2 py-1"><Badge variant="outline" className="text-[10px]">{r.estrategia}</Badge></td>
+                        <td className="px-2 py-1"><Badge variant={statusVariant(r.status)} className="text-[10px]">{r.status}</Badge></td>
+                        <td className="px-2 py-1"><Badge variant={statusVariant(r.resultado ?? "")} className="text-[10px]">{r.resultado ?? "—"}</Badge></td>
+                        <td className="px-2 py-1 truncate max-w-[200px]" title={r.evento ?? ""}>{r.evento ?? "—"}</td>
+                        <td className="px-2 py-1 text-right tabular-nums">{fmtMoney(Number(r.stake), r.moeda_operacao)}</td>
+                        <td className={`px-2 py-1 text-right tabular-nums ${(r.lucro_prejuizo ?? 0) > 0 ? "text-emerald-500" : (r.lucro_prejuizo ?? 0) < 0 ? "text-destructive" : ""}`}>
+                          {fmtMoney(r.lucro_prejuizo, r.moeda_operacao)}
+                        </td>
+                      </tr>
+                    ))}
+                    {apostasFiltered.length === 0 && (
+                      <tr><td colSpan={7} className="text-center py-6 text-muted-foreground">Nenhuma aposta</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Bookmakers */}
+        <TabsContent value="bookmakers" className="flex-1 min-h-0 mt-2">
+          <Card className="h-full flex flex-col">
+            <CardHeader className="py-2">
+              <CardTitle className="text-sm flex items-center justify-between">
+                <span>Saldos de bookmakers (top 50 por updated_at)</span>
+                {bookmakers.isFetching && <span className="text-xs text-muted-foreground">atualizando...</span>}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1 min-h-0 p-0">
+              <ScrollArea className="h-full">
+                <table className="w-full text-xs">
+                  <thead className="sticky top-0 bg-card border-b">
+                    <tr className="text-left text-muted-foreground">
+                      <th className="px-2 py-1.5">Atualizado</th>
+                      <th className="px-2 py-1.5">Bookmaker</th>
+                      <th className="px-2 py-1.5">Moeda</th>
+                      <th className="px-2 py-1.5">Status</th>
+                      <th className="px-2 py-1.5">Projeto</th>
+                      <th className="px-2 py-1.5 text-right">Saldo Atual</th>
+                      <th className="px-2 py-1.5 text-right">Freebet</th>
+                      <th className="px-2 py-1.5 text-right">Bônus</th>
+                    </tr>
+                  </thead>
+                  <tbody className="font-mono">
+                    {bookmakersFiltered.map((r) => (
+                      <tr key={r.id} className="border-b hover:bg-accent/30">
+                        <td className="px-2 py-1 whitespace-nowrap text-muted-foreground">{fmtTime(r.updated_at)}</td>
+                        <td className="px-2 py-1 font-semibold">{r.nome}</td>
+                        <td className="px-2 py-1">{r.moeda}</td>
+                        <td className="px-2 py-1"><Badge variant={statusVariant(r.status)} className="text-[10px]">{r.status}</Badge></td>
+                        <td className="px-2 py-1 text-[10px] text-muted-foreground">{r.projeto_id ? r.projeto_id.slice(0, 8) : "—"}</td>
+                        <td className="px-2 py-1 text-right tabular-nums">{fmtMoney(r.saldo_atual, r.moeda)}</td>
+                        <td className="px-2 py-1 text-right tabular-nums text-amber-500">{fmtMoney(r.saldo_freebet, r.moeda)}</td>
+                        <td className="px-2 py-1 text-right tabular-nums">{fmtMoney(r.saldo_bonus, r.moeda)}</td>
+                      </tr>
+                    ))}
+                    {bookmakersFiltered.length === 0 && (
+                      <tr><td colSpan={8} className="text-center py-6 text-muted-foreground">Nenhum bookmaker</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* RPCs */}
+        <TabsContent value="rpc" className="flex-1 min-h-0 mt-2">
+          <Card className="h-full flex flex-col">
+            <CardHeader className="py-2">
+              <CardTitle className="text-sm flex items-center justify-between">
+                <span>Chamadas RPC (sessão atual, max 500)</span>
+                <span className="text-xs text-muted-foreground">capturado via interceptor</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1 min-h-0 p-0">
+              <ScrollArea className="h-full">
+                <table className="w-full text-xs">
+                  <thead className="sticky top-0 bg-card border-b">
+                    <tr className="text-left text-muted-foreground">
+                      <th className="px-2 py-1.5">Hora</th>
+                      <th className="px-2 py-1.5">Função</th>
+                      <th className="px-2 py-1.5">Status</th>
+                      <th className="px-2 py-1.5 text-right">Duração</th>
+                      <th className="px-2 py-1.5">Args / Erro / Preview</th>
+                    </tr>
+                  </thead>
+                  <tbody className="font-mono">
+                    {rpcFiltered.map((r) => (
+                      <tr key={r.id} className="border-b hover:bg-accent/30 align-top">
+                        <td className="px-2 py-1 whitespace-nowrap text-muted-foreground">{fmtTime(r.started_at)}</td>
+                        <td className="px-2 py-1 font-semibold text-primary">{r.fn_name}</td>
+                        <td className="px-2 py-1"><Badge variant={statusVariant(r.status)} className="text-[10px]">{r.status}</Badge></td>
+                        <td className="px-2 py-1 text-right tabular-nums">{r.duration_ms != null ? `${r.duration_ms}ms` : "..."}</td>
+                        <td className="px-2 py-1 max-w-[500px]">
+                          {r.error ? (
+                            <span className="text-destructive text-[11px]">{r.error}</span>
+                          ) : (
+                            <details>
+                              <summary className="cursor-pointer text-[11px] text-muted-foreground">
+                                {JSON.stringify(r.args).slice(0, 80)}
+                              </summary>
+                              <pre className="text-[10px] whitespace-pre-wrap mt-1 p-2 bg-muted rounded">
+                                args: {JSON.stringify(r.args, null, 2)}
+                                {r.result_preview && `\n\nresult: ${r.result_preview}`}
+                              </pre>
+                            </details>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                    {rpcFiltered.length === 0 && (
+                      <tr><td colSpan={5} className="text-center py-6 text-muted-foreground">Nenhuma RPC capturada ainda. Interaja com o sistema.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
