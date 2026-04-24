@@ -243,6 +243,10 @@ serve(async (req) => {
   try {
     console.log('Fetching exchange rates');
 
+    const requestBody = req.method === 'POST' ? await req.json().catch(() => ({})) : {};
+    const refreshReason = typeof requestBody?.reason === 'string' ? requestBody.reason : 'on_demand';
+    const forceRefresh = requestBody?.forceRefresh === true;
+
     // 1. Verificar cache no banco de dados
     const cachedRates = await getCachedRates();
     const allCurrencies = Object.keys(CURRENCIES);
@@ -250,7 +254,7 @@ serve(async (req) => {
 
     const currenciesToRefresh = allCurrencies.filter((c) => {
       const entry = cachedRates[`${c}BRL`];
-      return !entry || entry.expires_at <= nowIso;
+      return forceRefresh || !entry || entry.expires_at <= nowIso;
     });
     
     // Se temos todas as moedas em cache válido, retornar direto
@@ -355,8 +359,13 @@ serve(async (req) => {
 
     // 4. Salvar novas cotações no cache
     if (Object.keys(newRatesToCache).length > 0) {
-      await saveCachedRates(newRatesToCache);
+      await saveCachedRates(newRatesToCache, refreshReason);
     }
+
+    const unresolvedPairs = currenciesToRefresh
+      .map((currency) => `${currency}BRL`)
+      .filter((rateKey) => !newRatesToCache[rateKey] && cachedRates[rateKey]);
+    await markRefreshFailures(unresolvedPairs, cachedRates, 'Fontes externas indisponíveis; mantendo última cotação válida conhecida.');
 
     // 5. Preparar resposta final
     const finalRates: Record<string, number | null> = {};
