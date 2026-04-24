@@ -49,8 +49,8 @@ export function installRpcInterceptor() {
   installed = true;
 
   const originalRpc = supabase.rpc.bind(supabase);
-  // @ts-expect-error — monkey-patching for dev observability
-  supabase.rpc = (fn: string, args?: unknown, options?: unknown) => {
+  
+  (supabase as any).rpc = (fn: string, args?: unknown, options?: unknown) => {
     const id = crypto.randomUUID();
     const startedAt = new Date().toISOString();
     const t0 = performance.now();
@@ -66,8 +66,8 @@ export function installRpcInterceptor() {
     };
     pushLog(log);
 
-    // @ts-expect-error — passthrough
-    const builder = originalRpc(fn, args, options);
+    
+    const builder = (originalRpc as any)(fn, args, options);
 
     const originalThen = builder.then.bind(builder);
     builder.then = (onFulfilled: any, onRejected: any) =>

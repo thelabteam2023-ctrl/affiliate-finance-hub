@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuthContext } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -105,7 +105,7 @@ function statusVariant(status: string): "default" | "secondary" | "destructive" 
 }
 
 export default function DevLedgerMonitor() {
-  const { user, isSystemOwner, initialized } = useAuth();
+  const { user, isSystemOwner, initialized } = useAuthContext();
   const navigate = useNavigate();
   const [paused, setPaused] = useState(false);
   const [filter, setFilter] = useState("");
