@@ -883,6 +883,16 @@ export function CaixaTransacaoDialog({
     } else if (tipoTransacao === "DEPOSITO") {
       setOrigemTipo("PARCEIRO_CONTA");
       setDestinoTipo("BOOKMAKER");
+      // CRÍTICO: aplicar tipoMoeda inferido (histórico/capacidade do parceiro/
+      // moeda da bookmaker ≠ BRL → CRYPTO). Sem isso o reset força FIAT e a
+      // inferência feita na abertura do dialog é perdida.
+      const defaultedTipoMoedaDep = pendingDefaults?.tipoMoeda || "FIAT";
+      setTipoMoeda(defaultedTipoMoedaDep);
+      prevTipoMoeda.current = defaultedTipoMoedaDep;
+      // Ajustar origem para wallet quando inferido CRYPTO
+      if (defaultedTipoMoedaDep === "CRYPTO") {
+        setOrigemTipo("PARCEIRO_WALLET");
+      }
     } else if (tipoTransacao === "SAQUE") {
       setOrigemTipo("BOOKMAKER");
       setDestinoTipo("PARCEIRO_CONTA");
