@@ -951,8 +951,11 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
                       <li><strong>Entradas</strong> (cashback, bônus, ganho cambial) somam.</li>
                       <li><strong>Saídas</strong> (perda no recebimento, estorno, perda cambial) subtraem.</li>
                     </ul>
-                    <p>Esses valores são <strong>responsabilidade do projeto</strong> (não da empresa) e por isso entram diretamente no Resultado de Caixa, refletindo o que você realmente terá no fechamento.</p>
-                    <p>Convertido pela cotação do dia de cada lançamento.</p>
+                    <div className="mt-2 p-2 rounded bg-amber-500/10 border border-amber-500/30 text-[11px]">
+                      <p className="font-semibold text-amber-300">📌 Card informativo</p>
+                      <p className="text-amber-100/90">Estes valores <strong>já estão refletidos no Saldo Casas</strong> via triggers do ledger (bônus, cashback e ajustes mexem direto no <code>saldo_atual</code> das bookmakers). Por isso <strong>NÃO são somados novamente</strong> em "Lucro se sacar tudo" — somar duas vezes inflaria o resultado.</p>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground/80">Convertido pela cotação do dia de cada lançamento (snapshot).</p>
                   </>
                 }
               />
