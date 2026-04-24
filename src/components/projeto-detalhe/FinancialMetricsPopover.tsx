@@ -882,7 +882,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
           saquesRecebidos={metrics.saquesRecebidos}
           saquesPendentes={metrics.saquesPendentes}
           depositosEfetivos={metrics.depositosEfetivos}
-          depositosBaseline={metrics.depositosTotal - metrics.depositosEfetivos}
+          depositosBaseline={metrics.depositosBaseline}
           ganhoConfirmacaoDeposito={metrics.ganhoConfirmacao}
           bonusGanhosFinanceiro={metrics.bonusGanhos}
           girosGratisFinanceiro={metrics.girosGratis}
