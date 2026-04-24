@@ -417,13 +417,20 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in get-exchange-rates function:', error);
     const errorMessage = error instanceof Error ? error.message : 'Internal server error';
+    const cachedRates = await getCachedRates();
     
     const fallbackRates: Record<string, number | null> = {};
     const sources: Record<string, string> = {};
     
     for (const [key, config] of Object.entries(CURRENCIES)) {
-      fallbackRates[`${key}BRL`] = config.fallback;
-      sources[key] = 'FALLBACK_ERRO';
+      const rateKey = `${key}BRL`;
+      if (cachedRates[rateKey]) {
+        fallbackRates[rateKey] = cachedRates[rateKey].rate;
+        sources[key] = cachedRates[rateKey].source + '_CACHE_ERROR';
+      } else {
+        fallbackRates[rateKey] = config.fallback;
+        sources[key] = 'FALLBACK_ERRO';
+      }
     }
     
     return new Response(
