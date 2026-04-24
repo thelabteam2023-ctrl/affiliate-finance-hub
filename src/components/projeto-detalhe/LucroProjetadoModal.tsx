@@ -174,6 +174,14 @@ export function LucroProjetadoModal(props: LucroProjetadoModalProps) {
 
   const hasBaseline = Math.abs(depositosBaseline) >= 0.005;
 
+  // Segregação conceitual (fallbacks para retrocompatibilidade)
+  const performancePura = props.performancePura ?? lucroOperacional;
+  const efeitosFinanceiros = props.efeitosFinanceiros ?? props.resultadoFxFinanceiro;
+  const ajustesExtraordinarios = props.ajustesExtraordinarios ?? (props.ajustesFinanceiro - props.perdaOpFinanceiro);
+  const naoOperacional = efeitosFinanceiros + ajustesExtraordinarios;
+  const totalProjeto = performancePura + naoOperacional;
+  const hasNaoOperacional = Math.abs(naoOperacional) >= 0.01;
+
   const divergenceFactors = computeDivergenceFactors(
     divergencia,
     props,
