@@ -251,6 +251,108 @@ function getTransactionSign(tipo: string, ajusteDirecao?: string | null): "posit
   return "neutral";
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+// Badge clicável para reclassificar a natureza de um AJUSTE_SALDO.
+// As 3 naturezas mapeiam para diferentes blocos no card de Indicadores Financeiros:
+//   - RECONCILIACAO_OPERACIONAL → entra em Performance Pura (operação)
+//   - EFEITO_FINANCEIRO         → entra em Efeitos Financeiros (FX)
+//   - EXTRAORDINARIO            → entra em Extraordinários (fora de performance)
+// O update direto via supabase é protegido por RLS (apenas owner/admin podem UPDATE).
+// ─────────────────────────────────────────────────────────────────────────
+type AjusteNaturezaKey = 'RECONCILIACAO_OPERACIONAL' | 'EFEITO_FINANCEIRO' | 'EXTRAORDINARIO';
+
+const NATUREZA_META: Record<AjusteNaturezaKey, { label: string; icon: React.ElementType; color: string; description: string }> = {
+  RECONCILIACAO_OPERACIONAL: {
+    label: 'Reconciliação Operacional',
+    icon: Wrench,
+    color: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
+    description: 'Centavos por arredondamento de odds, retornos fracionados. Faz parte da performance da operação.',
+  },
+  EFEITO_FINANCEIRO: {
+    label: 'Efeito Financeiro',
+    icon: Globe,
+    color: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
+    description: 'Variação cambial ou ganho/perda no recebimento. Não é performance — é efeito macro.',
+  },
+  EXTRAORDINARIO: {
+    label: 'Extraordinário',
+    icon: AlertTriangle,
+    color: 'bg-orange-500/15 text-orange-300 border-orange-500/30',
+    description: 'Estorno administrativo ou correção de lançamento sem vínculo operacional. Fora da performance.',
+  },
+};
+
+function AjusteNaturezaBadge({
+  ledgerId,
+  natureza,
+  projetoId,
+}: {
+  ledgerId: string;
+  natureza: AjusteNaturezaKey | null;
+  projetoId: string;
+}) {
+  const queryClient = useQueryClient();
+  const current: AjusteNaturezaKey = natureza ?? 'RECONCILIACAO_OPERACIONAL';
+  const meta = NATUREZA_META[current];
+  const Icon = meta.icon;
+
+  const handleSelect = async (novo: AjusteNaturezaKey) => {
+    if (novo === current) return;
+    const { error } = await supabase
+      .from('cash_ledger')
+      .update({ ajuste_natureza: novo })
+      .eq('id', ledgerId);
+    if (error) {
+      toast.error('Sem permissão para reclassificar este ajuste');
+      return;
+    }
+    toast.success(`Reclassificado: ${NATUREZA_META[novo].label}`);
+    queryClient.invalidateQueries({ queryKey: ['projeto-extrato-history', projetoId] });
+    queryClient.invalidateQueries({ queryKey: ['financial-metrics-popover', projetoId] });
+    invalidateCanonicalCaches(queryClient, projetoId);
+  };
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          onClick={(e) => e.stopPropagation()}
+          className={`inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] font-medium transition-opacity hover:opacity-80 ${meta.color}`}
+          title={meta.description}
+        >
+          <Icon className="h-2.5 w-2.5" />
+          {meta.label}
+          <ChevronDown className="h-2.5 w-2.5 opacity-60" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-72">
+        <DropdownMenuLabel className="text-xs">Classificar este ajuste como:</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        {(Object.keys(NATUREZA_META) as AjusteNaturezaKey[]).map((key) => {
+          const m = NATUREZA_META[key];
+          const ItemIcon = m.icon;
+          const isCurrent = key === current;
+          return (
+            <DropdownMenuItem
+              key={key}
+              onClick={() => handleSelect(key)}
+              className="flex flex-col items-start gap-0.5 py-2 cursor-pointer"
+            >
+              <div className="flex items-center gap-1.5 w-full">
+                <ItemIcon className="h-3 w-3" />
+                <span className="text-xs font-medium">{m.label}</span>
+                {isCurrent && <span className="ml-auto text-[10px] text-muted-foreground">atual</span>}
+              </div>
+              <span className="text-[10px] text-muted-foreground leading-snug">{m.description}</span>
+            </DropdownMenuItem>
+          );
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 function useProjetoExtrato(
   projetoId: string,
   convertToConsolidation: (valor: number, moedaOrigem: string) => number,
