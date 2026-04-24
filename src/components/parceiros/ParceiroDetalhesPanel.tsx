@@ -322,6 +322,14 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
   const { workspaceId } = useWorkspace();
   const queryClient = useQueryClient();
 
+  // IDs dos bookmakers para buscar status de uso (deve vir antes dos handlers
+  // pois eles dependem de refetchUsageMap)
+  const bookmakerIdsForUsage = useMemo(
+    () => data?.bookmakers.map((b: any) => b.bookmaker_id) ?? [],
+    [data?.bookmakers]
+  );
+  const { usageMap, refetch: refetchUsageMap } = useBookmakerUsageStatus(bookmakerIdsForUsage);
+
   // Fetch projects for "Vincular a projeto" submenu
   const { data: projetos } = useQuery({
     queryKey: ["projetos-list-for-link", workspaceId],
@@ -375,8 +383,12 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
 
       toast({ title: "Projeto vinculado", description: `Casa vinculada ao projeto "${projetoNome}"` });
       queryClient.invalidateQueries({ queryKey: ["parceiro-financeiro"] });
+      queryClient.invalidateQueries({ queryKey: ["bookmakers"] });
+      // Recarrega status de uso por bookmaker_id para atualizar o menu de contexto
+      // (fonte: useBookmakerUsageStatus mantém estado local, não passa pelo react-query)
+      refetchUsageMap();
     }
-  }, [toast, queryClient]);
+  }, [toast, queryClient, refetchUsageMap]);
 
   const handleDesvincularProjeto = useCallback(async (bookmakerId: string, projetoNome: string) => {
     try {
@@ -413,10 +425,12 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
         toast({ title: "Projeto desvinculado", description: `Casa desvinculada do projeto "${projetoNome}"` });
       }
       queryClient.invalidateQueries({ queryKey: ["parceiro-financeiro"] });
+      queryClient.invalidateQueries({ queryKey: ["bookmakers"] });
+      refetchUsageMap();
     } catch (err: any) {
       toast({ title: "Erro ao desvincular", description: err.message, variant: "destructive" });
     }
-  }, [toast, queryClient]);
+  }, [toast, queryClient, refetchUsageMap]);
 
   // Reset currency filter when partner changes to prevent filtering with a currency
   // that may not exist for the new partner
@@ -497,13 +511,6 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
     bookmakersFiltradosPorMoeda.filter(b => b.status === "encerrada").length, 
     [bookmakersFiltradosPorMoeda]
   );
-
-  // IDs dos bookmakers para buscar status de uso
-  const bookmakerIds = useMemo(() => 
-    data?.bookmakers.map(b => b.bookmaker_id) ?? [], 
-    [data?.bookmakers]
-  );
-  const { usageMap } = useBookmakerUsageStatus(bookmakerIds);
 
   // Lista de moedas únicas para o filtro
   const moedasDisponiveis = useMemo(() => {
