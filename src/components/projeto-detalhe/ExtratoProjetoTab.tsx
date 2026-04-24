@@ -50,6 +50,10 @@ interface ProjetoTransaction {
   tipo_moeda: string;
   valor_usd: number | null;
   cotacao: number | null;
+  /** Cotação real congelada (snapshot) — preferir sobre `cotacao` legado */
+  cotacao_efetiva: number | null;
+  /** Equivalente em USD do valor (snapshot) — usado no popover do card */
+  valor_usd_referencia: number | null;
   status: string;
   data_transacao: string;
   created_at: string;
@@ -205,7 +209,9 @@ function useProjetoExtrato(
       const { data: ledger, error } = await supabase
         .from("cash_ledger")
         .select(`
-          id, tipo_transacao, valor, moeda, tipo_moeda, valor_usd, cotacao, status, 
+          id, tipo_transacao, valor, valor_destino, moeda, tipo_moeda,
+          valor_usd, valor_usd_referencia,
+          cotacao, cotacao_origem_usd, cotacao_destino_usd, status,
           data_transacao, created_at, descricao,
           origem_bookmaker_id, destino_bookmaker_id, origem_tipo, destino_tipo,
           ajuste_motivo, ajuste_direcao, evento_promocional_tipo
@@ -242,6 +248,19 @@ function useProjetoExtrato(
       return (ledger || []).map((e: any): ProjetoTransaction => {
         const bmId = e.destino_bookmaker_id || e.origem_bookmaker_id;
         const bm = bmId ? bmMap[bmId] : null;
+        // Cotação efetiva: para moeda estrangeira, usar snapshot real
+        // (cotacao_destino_usd → unidades USD por 1 unidade da moeda).
+        // Ex: EUR → 1.1787 (1 EUR = 1.1787 USD), MXN → 0.0572.
+        // O campo legado `cotacao` quase sempre vem 1.0000 e não reflete a verdade.
+        let cotacaoEfetiva: number | null = null;
+        if (e.moeda && e.moeda !== "USD") {
+          // Snapshot moeda→USD
+          const c = Number(e.cotacao_destino_usd ?? 0);
+          if (c > 0) cotacaoEfetiva = c;
+        }
+        if (cotacaoEfetiva == null && e.cotacao != null && Number(e.cotacao) !== 1) {
+          cotacaoEfetiva = Number(e.cotacao);
+        }
         return {
           id: e.id,
           tipo_transacao: e.tipo_transacao,
@@ -250,6 +269,8 @@ function useProjetoExtrato(
           tipo_moeda: e.tipo_moeda,
           valor_usd: e.valor_usd,
           cotacao: e.cotacao,
+          cotacao_efetiva: cotacaoEfetiva,
+          valor_usd_referencia: e.valor_usd_referencia ?? null,
           status: e.status,
           data_transacao: e.data_transacao,
           created_at: e.created_at,
@@ -830,9 +851,11 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
                             {sign === "positive" ? "+" : sign === "negative" ? "-" : ""}
                             {formatVal(t.valor, t.moeda)}
                           </p>
-                          {isForeign && t.cotacao && (
+                          {isForeign && t.cotacao_efetiva && t.cotacao_efetiva !== 1 && (
                             <p className="text-[9px] text-muted-foreground/60">
-                              cotação {t.cotacao.toFixed(4)}
+                              1 {t.moeda} ≈ {t.cotacao_efetiva < 0.01
+                                ? t.cotacao_efetiva.toFixed(6)
+                                : t.cotacao_efetiva.toFixed(4)} USD
                             </p>
                           )}
                           <p className="text-[10px] text-muted-foreground">
