@@ -2461,8 +2461,15 @@ export function CaixaTransacaoDialog({
       
       // Calcular cotação da moeda de destino (casa) para USD
       // Usando getRate() como fonte única de verdade para TODAS as moedas
-      const taxaBrlDestino = getRate(destinoBookmakerMoeda);
-      cotacaoDestinoUsd = taxaBrlDestino / cotacaoUSD;
+      // Cripto: a "moeda de destino" é o próprio coin (USDT/BTC/etc.) — sua cotação USD vem
+      // do preço da moeda (1 USDT = 1 USD; 1 BTC = X USD), NÃO de getRate (que é fiat→BRL).
+      if (tipoMoeda === "CRYPTO") {
+        const coinDestino = destinoBookmakerMoeda || coin;
+        cotacaoDestinoUsd = cryptoPrices[coinDestino] || cryptoPrices[coin] || 1;
+      } else {
+        const taxaBrlDestino = getRate(destinoBookmakerMoeda);
+        cotacaoDestinoUsd = cotacaoUSD > 0 ? taxaBrlDestino / cotacaoUSD : 1;
+      }
       
       // Calcular valor de destino (na moeda da casa)
       // Agora SEMPRE usa estimativa - o valor real será informado na Conciliação
