@@ -745,7 +745,26 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
       if (filterType !== "todos") {
         if (filterType === "depositos" && !t.tipo_transacao.includes("DEPOSITO")) return false;
         if (filterType === "saques" && !t.tipo_transacao.includes("SAQUE")) return false;
-        if (filterType === "ajustes" && !["AJUSTE", "AJUSTE_SALDO", "CASHBACK", "BONUS", "ESTORNO", "PERDA_CAMBIAL", "GANHO_CAMBIAL"].includes(t.tipo_transacao)) return false;
+        if (
+          filterType === "ajustes" &&
+          ![
+            "AJUSTE",
+            "AJUSTE_SALDO",
+            "CASHBACK",
+            "CASHBACK_MANUAL",
+            "CASHBACK_ESTORNO",
+            "BONUS",
+            "BONUS_CREDITADO",
+            "BONUS_ESTORNO",
+            "GIRO_GRATIS",
+            "GIRO_GRATIS_ESTORNO",
+            "ESTORNO",
+            "PERDA_CAMBIAL",
+            "GANHO_CAMBIAL",
+            "PERDA_OPERACIONAL",
+          ].includes(t.tipo_transacao)
+        )
+          return false;
       }
       if (filterStatus !== "todos" && t.status !== filterStatus) return false;
       if (searchTerm) {
