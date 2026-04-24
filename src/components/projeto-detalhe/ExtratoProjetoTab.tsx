@@ -553,6 +553,18 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
                   <div className="flex items-center gap-2 mb-1">
                     <ArrowDownToLine className="h-3.5 w-3.5 text-red-400" />
                     <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Depósitos</span>
+                    <KpiInfoButton
+                      title="Depósitos (Histórico Contábil)"
+                      body={
+                        <>
+                          <p>Soma de todos os depósitos efetivos, convertidos pela <strong>cotação congelada no momento de cada operação</strong> (snapshot).</p>
+                          <p>Inclui DEPOSITO real + DEPOSITO_VIRTUAL (MIGRACAO). Baselines de vinculação são excluídos para evitar dupla contagem.</p>
+                        </>
+                      }
+                      divergencia={
+                        <p>Este KPI usa cotação <strong>histórica</strong> (snapshot do dia do depósito). Já o Saldo Operável reflete a cotação <strong>atual</strong>. Por isso, mesmo sem operar, podem divergir conforme o câmbio se move.</p>
+                      }
+                    />
                   </div>
                   <p className="text-lg font-bold text-foreground">
                     {formatConsolidated(metrics?.depositosTotal || 0)}
