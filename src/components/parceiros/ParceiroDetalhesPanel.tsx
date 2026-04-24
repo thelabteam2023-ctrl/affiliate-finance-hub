@@ -322,6 +322,14 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
   const { workspaceId } = useWorkspace();
   const queryClient = useQueryClient();
 
+  // IDs dos bookmakers para buscar status de uso (deve vir antes dos handlers
+  // pois eles dependem de refetchUsageMap)
+  const bookmakerIdsForUsage = useMemo(
+    () => data?.bookmakers.map((b: any) => b.bookmaker_id) ?? [],
+    [data?.bookmakers]
+  );
+  const { usageMap, refetch: refetchUsageMap } = useBookmakerUsageStatus(bookmakerIdsForUsage);
+
   // Fetch projects for "Vincular a projeto" submenu
   const { data: projetos } = useQuery({
     queryKey: ["projetos-list-for-link", workspaceId],
