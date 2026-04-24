@@ -22,7 +22,6 @@ import { Activity, AlertTriangle, Database, Receipt, Wallet, Zap, Trash2, Pause,
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
