@@ -269,7 +269,7 @@ function useProjetoExtrato(
           cotacao, cotacao_origem_usd, cotacao_destino_usd, status,
           data_transacao, created_at, descricao,
           origem_bookmaker_id, destino_bookmaker_id, origem_tipo, destino_tipo,
-          ajuste_motivo, ajuste_direcao, evento_promocional_tipo,
+          ajuste_motivo, ajuste_direcao, ajuste_natureza, evento_promocional_tipo,
           auditoria_metadata
         `)
         .eq("projeto_id_snapshot", projetoId)
@@ -367,6 +367,7 @@ function useProjetoExtrato(
           destino_tipo: e.destino_tipo,
           ajuste_motivo: e.ajuste_motivo,
           ajuste_direcao: e.ajuste_direcao,
+          ajuste_natureza: (e as any).ajuste_natureza ?? null,
           evento_promocional_tipo: e.evento_promocional_tipo,
           audit_class: auditClass,
           cancelled_reason: cancelledReason,
