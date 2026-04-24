@@ -20,6 +20,9 @@ import {
   ChevronDown,
   Users,
   Building2,
+  Sparkles,
+  Globe,
+  Wrench,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
