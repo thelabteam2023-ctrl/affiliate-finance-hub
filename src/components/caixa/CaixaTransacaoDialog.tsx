@@ -182,6 +182,7 @@ export function CaixaTransacaoDialog({
   defaultCoin,
   entryPoint,
   allowedTipoTransacao,
+  lockBookmakerDestino,
 }: CaixaTransacaoDialogProps) {
   const { toast } = useToast();
   const { workspaceId } = useWorkspace();
@@ -262,11 +263,14 @@ export function CaixaTransacaoDialog({
   } | null>(null);
 
   // ============================================================================
-  // INTELIGÊNCIA DE SAQUE: Detectar origem do último depósito para pré-selecionar
-  // tipo de moeda correto (FIAT vs CRYPTO) baseado na verdade operacional
-  // "A origem do dinheiro define o saque, não a moeda contábil da casa."
+  // INTELIGÊNCIA DE FUNDING: Detectar origem do último depósito de uma bookmaker
+  // para pré-selecionar tipo de moeda correto (FIAT vs CRYPTO) baseado na
+  // verdade operacional. Usado tanto em SAQUE (descobre a origem do dinheiro
+  // existente na casa) quanto em DEPOSITO contextual (descobre como aquela
+  // casa é tipicamente abastecida pelo parceiro).
+  // "A origem do dinheiro define o fluxo, não a moeda contábil da casa."
   // ============================================================================
-  const fetchLastDepositFundingSource = async (bookmakerId: string): Promise<{
+  const fetchLastFundingSource = async (bookmakerId: string): Promise<{
     tipoMoeda: "FIAT" | "CRYPTO";
     moeda?: string;
     coin?: string;
@@ -284,14 +288,14 @@ export function CaixaTransacaoDialog({
 
       if (error || !data) return null;
 
-      console.log("[CaixaTransacaoDialog] Último depósito detectado:", data);
+      console.log("[CaixaTransacaoDialog] Último funding detectado para", bookmakerId, ":", data);
       return {
         tipoMoeda: data.tipo_moeda === "CRYPTO" ? "CRYPTO" : "FIAT",
         moeda: data.moeda || undefined,
         coin: data.coin || undefined,
       };
     } catch (err) {
-      console.error("[CaixaTransacaoDialog] Erro ao buscar último depósito:", err);
+      console.error("[CaixaTransacaoDialog] Erro ao buscar último funding:", err);
       return null;
     }
   };
