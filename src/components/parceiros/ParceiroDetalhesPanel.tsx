@@ -67,6 +67,10 @@ interface ParceiroDetalhesPanelProps {
 
 const clampSaldoVisual = (value: number | null | undefined) => Math.max(0, Number(value ?? 0));
 
+/** Nome de exibição completo: "CASA · IDENTIFICADOR" quando há instance_identifier. */
+const nomeExibicao = (bm: { bookmaker_nome: string; instance_identifier?: string | null }) =>
+  bm.instance_identifier ? `${bm.bookmaker_nome} · ${bm.instance_identifier}` : bm.bookmaker_nome;
+
 // Mobile Progressive KPIs component
 interface MobileProgressiveKpisProps {
   kpisFiltrados: any;
@@ -199,6 +203,9 @@ function MobileBookmakerCard({ bm, showSensitiveData, parceiroStatus, formatMone
   const moeda = bm.moeda || "BRL";
   const resultado = bm.lucro_prejuizo ?? 0;
   const saldoAtual = clampSaldoVisual(bm.saldo_atual);
+  const nomeExibicaoModal = bm.instance_identifier
+    ? `${bm.bookmaker_nome} · ${bm.instance_identifier}`
+    : bm.bookmaker_nome;
 
   return (
     <div 
@@ -224,6 +231,11 @@ function MobileBookmakerCard({ bm, showSensitiveData, parceiroStatus, formatMone
               {moeda}
             </Badge>
           </div>
+          {bm.instance_identifier && (
+            <p className="text-[10px] text-muted-foreground truncate uppercase tracking-wide mt-0.5">
+              {bm.instance_identifier}
+            </p>
+          )}
           {/* Saldo atual destaque */}
           <div className="flex items-center justify-between mt-1">
             <span className="text-[10px] text-muted-foreground">Saldo Atual</span>
@@ -1384,6 +1396,11 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                                           </Popover>
                                         )}
                                       </div>
+                                      {bm.instance_identifier && (
+                                        <p className="text-[10px] text-muted-foreground truncate uppercase tracking-wide leading-tight mt-0.5">
+                                          {bm.instance_identifier}
+                                        </p>
+                                      )}
                                       <div className="flex items-center gap-1 flex-wrap">
                                         <Badge variant="outline" className={cn("text-[9px] px-1 py-0 h-4", bm.status === "ativo" ? "border-success/50 text-success" : bm.status === "limitada" ? "border-warning/50 text-warning" : bm.status === "encerrada" ? "border-destructive/50 text-destructive" : "border-muted-foreground/50 text-muted-foreground")}>
                                           {bm.status === "ativo" ? "Ativa" : bm.status === "limitada" ? "Limitada" : bm.status === "encerrada" ? "Encerrada" : bm.status}
@@ -1414,7 +1431,7 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                                       return (
                                         <Tooltip>
                                           <TooltipTrigger asChild>
-                                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setHistoricoDialog({ open: true, bookmakerId: bm.bookmaker_id, bookmakerNome: bm.bookmaker_nome, logoUrl: bm.logo_url, status: bm.status })}>
+                                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setHistoricoDialog({ open: true, bookmakerId: bm.bookmaker_id, bookmakerNome: nomeExibicao(bm), logoUrl: bm.logo_url, status: bm.status })}>
                                               <IconComponent className={cn("h-4 w-4", iconColorClass, "hover:opacity-80")} />
                                             </Button>
                                           </TooltipTrigger>
@@ -1461,10 +1478,10 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                                 <ContextMenuSub>
                                   <ContextMenuSubTrigger className="gap-2"><DollarSign className="h-4 w-4" />Financeiro</ContextMenuSubTrigger>
                                   <ContextMenuSubContent className="min-w-[180px]">
-                                    <ContextMenuItem onClick={() => onNewTransacao?.(bm.bookmaker_id, bm.bookmaker_nome, bm.moeda || "BRL", bm.saldo_atual ?? 0, 0, "deposito")} className="gap-2"><Plus className="h-4 w-4 text-success" />Depósito</ContextMenuItem>
-                                    <ContextMenuItem onClick={() => onNewTransacao?.(bm.bookmaker_id, bm.bookmaker_nome, bm.moeda || "BRL", bm.saldo_atual ?? 0, 0, "retirada")} className="gap-2"><Minus className="h-4 w-4 text-destructive" />Saque</ContextMenuItem>
+                                    <ContextMenuItem onClick={() => onNewTransacao?.(bm.bookmaker_id, nomeExibicao(bm), bm.moeda || "BRL", bm.saldo_atual ?? 0, 0, "deposito")} className="gap-2"><Plus className="h-4 w-4 text-success" />Depósito</ContextMenuItem>
+                                    <ContextMenuItem onClick={() => onNewTransacao?.(bm.bookmaker_id, nomeExibicao(bm), bm.moeda || "BRL", bm.saldo_atual ?? 0, 0, "retirada")} className="gap-2"><Minus className="h-4 w-4 text-destructive" />Saque</ContextMenuItem>
                                     <ContextMenuSeparator />
-                                    <ContextMenuItem onClick={() => setPerdaDialog({ open: true, bookmakerId: bm.bookmaker_id, bookmakerNome: bm.bookmaker_nome, moeda: bm.moeda || "BRL", saldoAtual: bm.saldo_atual ?? 0 })} className="gap-2 text-destructive focus:text-destructive"><AlertTriangle className="h-4 w-4" />Registrar perda</ContextMenuItem>
+                                    <ContextMenuItem onClick={() => setPerdaDialog({ open: true, bookmakerId: bm.bookmaker_id, bookmakerNome: nomeExibicao(bm), moeda: bm.moeda || "BRL", saldoAtual: bm.saldo_atual ?? 0 })} className="gap-2 text-destructive focus:text-destructive"><AlertTriangle className="h-4 w-4" />Registrar perda</ContextMenuItem>
                                   </ContextMenuSubContent>
                                 </ContextMenuSub>
                                 <ContextMenuSeparator />
@@ -1507,9 +1524,9 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                               clampSaldoVisual={clampSaldoVisual}
                               usageCategory={usage?.category}
                               usageTooltip={usage?.category === "ATIVA" && usage.projetoAtivoNome ? `Projeto: ${usage.projetoAtivoNome}` : config?.tooltip || "Ver histórico"}
-                              onHistorico={() => setHistoricoDialog({ open: true, bookmakerId: bm.bookmaker_id, bookmakerNome: bm.bookmaker_nome, logoUrl: bm.logo_url, status: bm.status })}
-                              onDeposito={() => onNewTransacao?.(bm.bookmaker_id, bm.bookmaker_nome, bm.moeda || "BRL", bm.saldo_atual ?? 0, 0, "deposito")}
-                              onSaque={() => onNewTransacao?.(bm.bookmaker_id, bm.bookmaker_nome, bm.moeda || "BRL", bm.saldo_atual ?? 0, 0, "retirada")}
+                              onHistorico={() => setHistoricoDialog({ open: true, bookmakerId: bm.bookmaker_id, bookmakerNome: nomeExibicao(bm), logoUrl: bm.logo_url, status: bm.status })}
+                              onDeposito={() => onNewTransacao?.(bm.bookmaker_id, nomeExibicao(bm), bm.moeda || "BRL", bm.saldo_atual ?? 0, 0, "deposito")}
+                              onSaque={() => onNewTransacao?.(bm.bookmaker_id, nomeExibicao(bm), bm.moeda || "BRL", bm.saldo_atual ?? 0, 0, "retirada")}
                             />
                           );
                         })}
