@@ -1431,7 +1431,7 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                                       return (
                                         <Tooltip>
                                           <TooltipTrigger asChild>
-                                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setHistoricoDialog({ open: true, bookmakerId: bm.bookmaker_id, bookmakerNome: bm.bookmaker_nome, logoUrl: bm.logo_url, status: bm.status })}>
+                                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setHistoricoDialog({ open: true, bookmakerId: bm.bookmaker_id, bookmakerNome: nomeExibicao(bm), logoUrl: bm.logo_url, status: bm.status })}>
                                               <IconComponent className={cn("h-4 w-4", iconColorClass, "hover:opacity-80")} />
                                             </Button>
                                           </TooltipTrigger>
@@ -1478,10 +1478,10 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                                 <ContextMenuSub>
                                   <ContextMenuSubTrigger className="gap-2"><DollarSign className="h-4 w-4" />Financeiro</ContextMenuSubTrigger>
                                   <ContextMenuSubContent className="min-w-[180px]">
-                                    <ContextMenuItem onClick={() => onNewTransacao?.(bm.bookmaker_id, bm.bookmaker_nome, bm.moeda || "BRL", bm.saldo_atual ?? 0, 0, "deposito")} className="gap-2"><Plus className="h-4 w-4 text-success" />Depósito</ContextMenuItem>
-                                    <ContextMenuItem onClick={() => onNewTransacao?.(bm.bookmaker_id, bm.bookmaker_nome, bm.moeda || "BRL", bm.saldo_atual ?? 0, 0, "retirada")} className="gap-2"><Minus className="h-4 w-4 text-destructive" />Saque</ContextMenuItem>
+                                    <ContextMenuItem onClick={() => onNewTransacao?.(bm.bookmaker_id, nomeExibicao(bm), bm.moeda || "BRL", bm.saldo_atual ?? 0, 0, "deposito")} className="gap-2"><Plus className="h-4 w-4 text-success" />Depósito</ContextMenuItem>
+                                    <ContextMenuItem onClick={() => onNewTransacao?.(bm.bookmaker_id, nomeExibicao(bm), bm.moeda || "BRL", bm.saldo_atual ?? 0, 0, "retirada")} className="gap-2"><Minus className="h-4 w-4 text-destructive" />Saque</ContextMenuItem>
                                     <ContextMenuSeparator />
-                                    <ContextMenuItem onClick={() => setPerdaDialog({ open: true, bookmakerId: bm.bookmaker_id, bookmakerNome: bm.bookmaker_nome, moeda: bm.moeda || "BRL", saldoAtual: bm.saldo_atual ?? 0 })} className="gap-2 text-destructive focus:text-destructive"><AlertTriangle className="h-4 w-4" />Registrar perda</ContextMenuItem>
+                                    <ContextMenuItem onClick={() => setPerdaDialog({ open: true, bookmakerId: bm.bookmaker_id, bookmakerNome: nomeExibicao(bm), moeda: bm.moeda || "BRL", saldoAtual: bm.saldo_atual ?? 0 })} className="gap-2 text-destructive focus:text-destructive"><AlertTriangle className="h-4 w-4" />Registrar perda</ContextMenuItem>
                                   </ContextMenuSubContent>
                                 </ContextMenuSub>
                                 <ContextMenuSeparator />
@@ -1524,9 +1524,9 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
                               clampSaldoVisual={clampSaldoVisual}
                               usageCategory={usage?.category}
                               usageTooltip={usage?.category === "ATIVA" && usage.projetoAtivoNome ? `Projeto: ${usage.projetoAtivoNome}` : config?.tooltip || "Ver histórico"}
-                              onHistorico={() => setHistoricoDialog({ open: true, bookmakerId: bm.bookmaker_id, bookmakerNome: bm.bookmaker_nome, logoUrl: bm.logo_url, status: bm.status })}
-                              onDeposito={() => onNewTransacao?.(bm.bookmaker_id, bm.bookmaker_nome, bm.moeda || "BRL", bm.saldo_atual ?? 0, 0, "deposito")}
-                              onSaque={() => onNewTransacao?.(bm.bookmaker_id, bm.bookmaker_nome, bm.moeda || "BRL", bm.saldo_atual ?? 0, 0, "retirada")}
+                              onHistorico={() => setHistoricoDialog({ open: true, bookmakerId: bm.bookmaker_id, bookmakerNome: nomeExibicao(bm), logoUrl: bm.logo_url, status: bm.status })}
+                              onDeposito={() => onNewTransacao?.(bm.bookmaker_id, nomeExibicao(bm), bm.moeda || "BRL", bm.saldo_atual ?? 0, 0, "deposito")}
+                              onSaque={() => onNewTransacao?.(bm.bookmaker_id, nomeExibicao(bm), bm.moeda || "BRL", bm.saldo_atual ?? 0, 0, "retirada")}
                             />
                           );
                         })}
