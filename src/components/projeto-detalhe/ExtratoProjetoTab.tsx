@@ -663,10 +663,16 @@ function useProjetoExtrato(
       });
       const variacaoCambialDepositos = depositosLiveEquivalente - depositosConsolidadoSnap;
 
-      // Resultado de Caixa (NÃO é Lucro Operacional canônico — é fluxo de caixa do projeto):
-      //   saques + saldo casas + ajustes − depósitos
+      // Lucro se sacar tudo (NÃO é Lucro Operacional canônico — é o patrimônio líquido do projeto):
+      //   saques + saldo casas − depósitos
+      //
+      // ⚠️ ANTI-DOUBLE-COUNTING: NÃO somar `ajustesTotal` aqui. Bônus, cashback,
+      // ajustes manuais e variações cambiais já estão refletidos no `saldo_atual`
+      // das bookmakers via triggers do ledger (BONUS_CREDITADO, CASHBACK_MANUAL,
+      // AJUSTE_SALDO, etc. atualizam saldo_atual). Somar ajustesTotal de novo
+      // duplicaria o lucro. O card "Extras" permanece como informativo.
       const resultadoCaixa =
-        saquesTotal + saldoCasasTotal + ajustesTotal - depositosTotal;
+        saquesTotal + saldoCasasTotal - depositosTotal;
 
       return {
         byCurrency,
