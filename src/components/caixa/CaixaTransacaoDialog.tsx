@@ -310,6 +310,48 @@ export function CaixaTransacaoDialog({
     }
   };
 
+  // ============================================================================
+  // FALLBACK DE INFERÊNCIA: Quando não há histórico de funding na bookmaker,
+  // olhar o parceiro de origem para determinar se ele só consegue depositar via
+  // wallet crypto (CRYPTO) ou tem contas FIAT compatíveis.
+  // ============================================================================
+  const fetchPartnerFundingCapability = async (parceiroId: string): Promise<{
+    tipoMoeda: "FIAT" | "CRYPTO";
+    coin?: string;
+    moeda?: string;
+  } | null> => {
+    if (!workspaceId) return null;
+    try {
+      const [walletsResp, contasResp] = await Promise.all([
+        supabase
+          .from("v_saldo_parceiro_wallets")
+          .select("coin, saldo_disponivel, saldo_usd")
+          .eq("parceiro_id", parceiroId),
+        supabase
+          .from("v_saldo_parceiro_contas")
+          .select("moeda, saldo")
+          .eq("parceiro_id", parceiroId),
+      ]);
+      const wallets = (walletsResp.data || []).filter(
+        (w: any) => (w.saldo_disponivel ?? w.saldo_usd ?? 0) > 0,
+      );
+      const contas = (contasResp.data || []).filter((c: any) => (c.saldo ?? 0) > 0);
+      // Se só tem wallet com saldo (e nenhuma conta FIAT com saldo), inferir CRYPTO
+      if (wallets.length > 0 && contas.length === 0) {
+        const coin = wallets[0]?.coin || undefined;
+        return { tipoMoeda: "CRYPTO", coin };
+      }
+      // Se só tem conta FIAT com saldo, inferir FIAT
+      if (contas.length > 0 && wallets.length === 0) {
+        return { tipoMoeda: "FIAT", moeda: contas[0]?.moeda || undefined };
+      }
+      return null;
+    } catch (err) {
+      console.error("[CaixaTransacaoDialog] Erro ao inferir capacidade do parceiro:", err);
+      return null;
+    }
+  };
+
   // Aplicar defaults quando dialog abre
   useEffect(() => {
     if (open) {
