@@ -390,19 +390,30 @@ export function CaixaTransacaoDialog({
             : undefined;
 
       if (fundingBookmakerId) {
-        fetchLastFundingSource(fundingBookmakerId).then((fundingSource) => {
-          if (fundingSource && pendingDefaultsRef.current) {
+        fetchLastFundingSource(fundingBookmakerId).then(async (fundingSource) => {
+          let inferred = fundingSource;
+          // Fallback DEPOSITO: se não há histórico, olhar capacidade do parceiro
+          if (!inferred && defaultTipoTransacao === "DEPOSITO" && defaultOrigemParceiroId) {
+            inferred = await fetchPartnerFundingCapability(defaultOrigemParceiroId);
+            if (inferred) {
+              console.log(
+                "[CaixaTransacaoDialog] Inferência por capacidade do parceiro (sem histórico):",
+                inferred,
+              );
+            }
+          }
+          if (inferred && pendingDefaultsRef.current) {
             console.log(
               "[CaixaTransacaoDialog] Sobrescrevendo defaults com funding histórico (",
               defaultTipoTransacao,
               "):",
-              fundingSource,
+              inferred,
             );
             pendingDefaultsRef.current = {
               ...pendingDefaultsRef.current,
-              tipoMoeda: fundingSource.tipoMoeda,
-              moeda: fundingSource.tipoMoeda === "FIAT" ? (fundingSource.moeda || pendingDefaultsRef.current.moeda) : undefined,
-              coin: fundingSource.tipoMoeda === "CRYPTO" ? (fundingSource.coin || undefined) : undefined,
+              tipoMoeda: inferred.tipoMoeda,
+              moeda: inferred.tipoMoeda === "FIAT" ? (inferred.moeda || pendingDefaultsRef.current.moeda) : undefined,
+              coin: inferred.tipoMoeda === "CRYPTO" ? (inferred.coin || undefined) : undefined,
             };
           }
           // Aplicar tipo de transação APÓS a detecção (para que pendingDefaults esteja atualizado)
@@ -4150,6 +4161,17 @@ export function CaixaTransacaoDialog({
                 return (
                   <div className="flex items-center justify-between gap-2 rounded-md border border-input bg-muted/40 px-3 py-2 text-sm">
                     <div className="flex items-center gap-2 min-w-0">
+                      {lockedBm?.logo_url ? (
+                        <img
+                          src={lockedBm.logo_url}
+                          alt={lockedBm.nome}
+                          className="h-6 w-6 rounded object-contain bg-background border border-border shrink-0"
+                        />
+                      ) : (
+                        <div className="h-6 w-6 rounded bg-background border border-border shrink-0 flex items-center justify-center text-[10px] font-semibold text-muted-foreground">
+                          {lockedBm?.nome?.[0] ?? "?"}
+                        </div>
+                      )}
                       <span className="font-medium truncate">
                         {lockedBm?.nome ?? "Bookmaker selecionada"}
                       </span>
@@ -4159,7 +4181,7 @@ export function CaixaTransacaoDialog({
                         </span>
                       )}
                     </div>
-                    <span className="text-[10px] text-muted-foreground">Definida pelo contexto</span>
+                    <span className="text-[10px] text-muted-foreground shrink-0">Definida pelo contexto</span>
                   </div>
                 );
               })()
