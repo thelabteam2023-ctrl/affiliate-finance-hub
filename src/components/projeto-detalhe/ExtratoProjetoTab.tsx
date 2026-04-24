@@ -790,7 +790,7 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-2">
-        <div className="relative flex-1 min-w-[200px] max-w-xs">
+        <div className="relative flex-1 min-w-full sm:min-w-[200px] sm:max-w-xs order-1">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <Input
             placeholder="Buscar por casa, parceiro..."
@@ -801,7 +801,7 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
         </div>
 
         <Select value={filterType} onValueChange={setFilterType}>
-          <SelectTrigger className="h-8 w-auto min-w-[140px] text-xs">
+          <SelectTrigger className="h-8 flex-1 sm:flex-initial sm:w-auto sm:min-w-[140px] text-xs order-2">
             <SelectValue placeholder="Tipo" />
           </SelectTrigger>
           <SelectContent>
@@ -813,7 +813,7 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
         </Select>
 
         <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="h-8 w-auto min-w-[140px] text-xs">
+          <SelectTrigger className="h-8 flex-1 sm:flex-initial sm:w-auto sm:min-w-[140px] text-xs order-3">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
@@ -824,7 +824,7 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
           </SelectContent>
         </Select>
 
-        <span className="text-[11px] text-muted-foreground ml-auto">
+        <span className="text-[11px] text-muted-foreground ml-auto order-4 w-full sm:w-auto text-right">
           {filteredTransactions.length} / {transactions.length} registros
         </span>
       </div>
