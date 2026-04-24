@@ -340,7 +340,11 @@ function LucroOperacionalCollapsible({ metrics, formatCurrency }: { metrics: any
 
 function DepositosCollapsible({ metrics, formatCurrency, onDrillDown }: { metrics: any; formatCurrency: (v: number) => string; onDrillDown?: (key: string, value: number) => void }) {
   const [open, setOpen] = useState(false);
-  const hasBreakdown = metrics.depositosReais > 0 || metrics.depositosVirtuais > 0;
+  // Componentes do total (efetivos = reais + migração; baseline é informativo separado)
+  const hasBreakdown =
+    metrics.depositosReais > 0 ||
+    metrics.depositosMigracao > 0 ||
+    metrics.depositosBaseline > 0;
 
   return (
     <div>
@@ -349,37 +353,46 @@ function DepositosCollapsible({ metrics, formatCurrency, onDrillDown }: { metric
         className={`flex items-center justify-between gap-4 w-full ${hasBreakdown ? "cursor-pointer" : "cursor-default"}`}
       >
         <span className="text-[11px] font-medium text-foreground flex items-center gap-1">
-          Total Depósitos
+          Depósitos Efetivos
           {hasBreakdown && (
             <ChevronDown className={`h-3 w-3 text-muted-foreground/60 transition-transform ${open ? "rotate-180" : ""}`} />
           )}
         </span>
         <span
           className="text-[11px] font-mono tabular-nums font-bold text-foreground cursor-pointer hover:text-primary transition-colors"
-          onClick={(e) => { e.stopPropagation(); onDrillDown?.("depositosTotal", metrics.depositosTotal); }}
+          onClick={(e) => { e.stopPropagation(); onDrillDown?.("depositosTotal", metrics.depositosEfetivos); }}
         >
-          {formatCurrency(metrics.depositosTotal)}
+          {formatCurrency(metrics.depositosEfetivos)}
         </span>
       </button>
       {open && hasBreakdown && (
         <div className="mt-1 space-y-0.5 pl-2 border-l-2 border-border/30 ml-1">
           {metrics.depositosReais > 0 && (
             <MetricRow
-              label="Depósitos Reais"
+              label="Dinheiro novo"
               value={formatCurrency(metrics.depositosReais)}
               indent
-              tooltip="Dinheiro efetivamente transferido para as casas neste projeto"
+              tooltip="Capital efetivamente transferido do caixa operacional para as casas neste projeto."
               onClick={() => onDrillDown?.("depositosReais", metrics.depositosReais)}
             />
           )}
-          {metrics.depositosVirtuais > 0 && (
+          {metrics.depositosMigracao > 0 && (
             <MetricRow
-              label="Baseline de Vinculação"
-              value={formatCurrency(metrics.depositosVirtuais)}
+              label="Recebido de outro projeto"
+              value={formatCurrency(metrics.depositosMigracao)}
+              indent
+              tooltip="Saldo migrado de outro projeto ao vincular casas que já possuíam fundos. Conta como capital efetivo neste projeto."
+              onClick={() => onDrillDown?.("depositosVirtuais", metrics.depositosMigracao)}
+            />
+          )}
+          {metrics.depositosBaseline > 0 && (
+            <MetricRow
+              label="Saldo inicial adotado"
+              value={formatCurrency(metrics.depositosBaseline)}
               indent
               colorClass="text-muted-foreground"
-              tooltip="Saldo residual capturado ao vincular casas ao projeto (ex: diferenças cambiais pré-vínculo). Não é dinheiro novo — é a baseline contábil."
-              onClick={() => onDrillDown?.("depositosVirtuais", metrics.depositosVirtuais)}
+              tooltip="Saldo residual já existente quando uma casa foi vinculada. Não é dinheiro novo nem migração — é a baseline contábil. Não soma aos Depósitos Efetivos."
+              onClick={() => onDrillDown?.("depositosVirtuais", metrics.depositosBaseline)}
             />
           )}
         </div>
@@ -449,9 +462,16 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
     const depositosReais = rawMetrics.depositos
       .filter(d => d.tipo_transacao === 'DEPOSITO')
       .reduce((acc, d) => acc + convertToConsolidationOficial(d.valor, d.moeda), 0);
-    const depositosVirtuais = rawMetrics.depositos
-      .filter(d => d.tipo_transacao === 'DEPOSITO_VIRTUAL')
+    // Migração entre projetos: conta como capital efetivo (dinheiro real recebido)
+    const depositosMigracao = rawMetrics.depositos
+      .filter(d => d.tipo_transacao === 'DEPOSITO_VIRTUAL' && (d as any).origem_tipo === 'MIGRACAO')
       .reduce((acc, d) => acc + convertToConsolidationOficial(d.valor, d.moeda), 0);
+    // Baseline (residual de vinculação): NÃO conta como capital efetivo
+    const depositosBaseline = rawMetrics.depositos
+      .filter(d => d.tipo_transacao === 'DEPOSITO_VIRTUAL' && (d as any).origem_tipo !== 'MIGRACAO')
+      .reduce((acc, d) => acc + convertToConsolidationOficial(d.valor, d.moeda), 0);
+    // Mantém compatibilidade com chamadas legadas
+    const depositosVirtuais = depositosMigracao + depositosBaseline;
     const depositosInvestidor = rawMetrics.depositos
       .filter(d => d.destino_bookmaker_id && rawMetrics.investorBookmakerIds.includes(d.destino_bookmaker_id))
       .reduce((acc, d) => acc + convertToConsolidationOficial(d.valor, d.moeda), 0);
@@ -571,7 +591,9 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
     const hasInvestorCapital = depositosInvestidor > 0 || saquesInvestidor > 0 || saldoCasasInvestidor > 0;
 
     return {
-      depositosTotal, depositosReais, depositosVirtuais, depositosEfetivos, depositosInvestidor, depositosInterno,
+      depositosTotal, depositosReais, depositosVirtuais,
+      depositosMigracao, depositosBaseline,
+      depositosEfetivos, depositosInvestidor, depositosInterno,
       saquesRecebidos, saquesInvestidor, saquesInterno,
       saquesPendentes, saquesPendentesInvestidor, saquesPendentesInterno,
       saldoCasas, saldoCasasInvestidor, saldoCasasInterno,
@@ -624,9 +646,22 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
         )}
       </div>
 
-      {/* ─── Seção 1: Fluxo de Caixa ─── */}
+      {/* ─── CAMADA 1: REALIZADO (Caixa) ─── */}
       <div className="space-y-1 pb-3">
-        <SectionHeader icon={ArrowRightLeft} label="Fluxo de Caixa" />
+        <div className="flex items-center justify-between mb-1.5">
+          <div className="flex items-center gap-1.5">
+            <ArrowRightLeft className="h-3 w-3 text-muted-foreground" />
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">1. Realizado · Caixa</span>
+          </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="text-[9px] text-muted-foreground/70 border-b border-dotted border-muted-foreground/40 cursor-help">o que entrou e saiu</span>
+            </TooltipTrigger>
+            <TooltipContent side="left" className="max-w-[260px] text-xs">
+              Fluxo de caixa puro: dinheiro que efetivamente saiu (depósitos) e voltou (saques). Não considera saldo ainda dentro das casas nem variação cambial.
+            </TooltipContent>
+          </Tooltip>
+        </div>
         <DepositosCollapsible
           metrics={metrics}
           formatCurrency={formatCurrency}
@@ -652,17 +687,15 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
         )}
         <div className="border-t border-border/30 mt-1.5 pt-1.5">
           <MetricRow 
-            label={hasExtras ? "Fluxo Líquido Ajustado" : "Fluxo Líquido"} 
+            label="Resultado Realizado" 
             value={formatCurrency(hasExtras ? metrics.fluxoLiquidoAjustado : metrics.fluxoCaixaLiquido)} 
             colorClass={(hasExtras ? metrics.fluxoLiquidoAjustado : metrics.fluxoCaixaLiquido) >= 0 ? "text-emerald-500" : "text-red-500"}
             bold
-            tooltip={metrics.hasInvestorCapital ? `Consolidado (Interno + Investidor). Interno: ${formatCurrency(metrics.fluxoInternoLiquido)}` : undefined}
+            tooltip={`Saques recebidos − Depósitos efetivos${hasExtras ? ' (já considerando créditos extras)' : ''}.${metrics.hasInvestorCapital ? ` Consolidado (Interno + Investidor). Interno: ${formatCurrency(metrics.fluxoInternoLiquido)}.` : ''}`}
           />
-          {hasExtras && (
-            <p className="text-[9px] text-muted-foreground/70 mt-0.5">
-              Saques − Depósitos
-            </p>
-          )}
+          <p className="text-[9px] text-muted-foreground/70 mt-0.5">
+            {hasExtras ? 'Saques − Depósitos + Extras' : 'Saques − Depósitos'}
+          </p>
           {/* Fluxo interno separado quando há investidor */}
           {metrics.hasInvestorCapital && (
             <div className="mt-1.5 pt-1.5 border-t border-dashed border-border/20">
@@ -678,59 +711,75 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
         </div>
       </div>
 
-      {/* ─── Seção: Lucro Operacional (Juice) ─── */}
-      {Math.abs(metrics.lucroApostasPuro) >= 0.01 && (
-        <div className="border-t border-border/40 pt-3 pb-3 space-y-1">
-          <LucroOperacionalCollapsible metrics={metrics} formatCurrency={formatCurrency} />
-        </div>
-      )}
-
-      {/* ─── Seção: Projeção de Lucro ─── */}
+      {/* ─── CAMADA 2: MARK-TO-MARKET (Patrimônio) ─── */}
       <div className="border-t border-border/40 pt-3 pb-3 space-y-1">
-        <SectionHeader icon={TrendingUp} label="Projeção de Lucro" iconClass="text-primary" />
+        <div className="flex items-center justify-between mb-1.5">
+          <div className="flex items-center gap-1.5">
+            <TrendingUp className="h-3 w-3 text-primary" />
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">2. Mark-to-Market · Patrimônio</span>
+          </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="text-[9px] text-muted-foreground/70 border-b border-dotted border-muted-foreground/40 cursor-help">se sacar tudo agora</span>
+            </TooltipTrigger>
+            <TooltipContent side="left" className="max-w-[260px] text-xs">
+              Quanto o projeto valeria se todas as casas fossem sacadas hoje. Usa cotação live, então flutua com câmbio mesmo sem operar — isso é variação cambial real, não bug.
+            </TooltipContent>
+          </Tooltip>
+        </div>
         <MetricRow
           label="Saldo em Bookmakers"
           value={formatCurrency(metrics.saldoCasas)}
           tooltip={metrics.hasInvestorCapital ? `Interno: ${formatCurrency(metrics.saldoCasasInterno)} · Investidor: ${formatCurrency(metrics.saldoCasasInvestidor)}` : undefined}
         />
         <MetricRow
-          label="Saques Recebidos"
+          label="(+) Saques já recebidos"
           value={formatCurrency(metrics.saquesRecebidos)}
+          colorClass="text-muted-foreground"
         />
-        {metrics.saquesPendentes > 0 && (
-          <MetricRow
-            label="Saques Pendentes"
-            value={formatCurrency(metrics.saquesPendentes)}
-            colorClass="text-amber-500"
-          />
-        )}
         <MetricRow
-          label="(−) Depósitos"
+          label="(−) Depósitos efetivos"
           value={formatCurrency(metrics.depositosEfetivos)}
           colorClass="text-muted-foreground"
-          tooltip={metrics.depositosVirtuais > 0 ? `Efetivos: ${formatCurrency(metrics.depositosEfetivos)} (exclui baseline de ${formatCurrency(metrics.depositosTotal - metrics.depositosEfetivos)})` : undefined}
+          tooltip={metrics.depositosBaseline > 0 ? `Inclui dinheiro novo + migrações. Exclui ${formatCurrency(metrics.depositosBaseline)} de saldo inicial adotado (baseline contábil).` : undefined}
         />
-        {false && (
-          <MetricRow
-            label=""
-            value=""
-            colorClass="text-muted-foreground"
-            tooltip=""
-          />
-        )}
         <div className="border-t border-border/30 mt-1.5 pt-1.5">
           <MetricRow
-            label="Lucro Projetado"
+            label="Patrimônio Líquido"
             value={formatCurrency(metrics.lucroFinanceiro)}
             colorClass={metrics.lucroFinanceiro >= 0 ? "text-emerald-500" : "text-red-500"}
             bold
-            tooltip="Se todo saldo fosse sacado hoje, esse seria o lucro real. Clique para ver a reconciliação com o Lucro Operacional."
+            tooltip="Resultado se todo saldo fosse sacado hoje. Clique para reconciliar com o Lucro Operacional."
             onClick={() => setShowLucroProjetado(true)}
           />
+          <p className="text-[9px] text-muted-foreground/70 mt-0.5">
+            Saldo + Saques − Depósitos
+          </p>
         </div>
       </div>
 
-      {/* ─── Seção 4: Retorno de Capital ─── */}
+      {/* ─── CAMADA 3: OPERACIONAL (Performance) ─── */}
+      {Math.abs(metrics.lucroApostasPuro) >= 0.01 && (
+        <div className="border-t border-border/40 pt-3 pb-3 space-y-1">
+          <div className="flex items-center justify-between mb-1.5">
+            <div className="flex items-center gap-1.5">
+              <BarChart3 className="h-3 w-3 text-primary" />
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">3. Operacional · Performance</span>
+            </div>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="text-[9px] text-muted-foreground/70 border-b border-dotted border-muted-foreground/40 cursor-help">como chegou aqui</span>
+              </TooltipTrigger>
+              <TooltipContent side="left" className="max-w-[260px] text-xs">
+                Lucro/prejuízo gerado pelas apostas em si. Isola câmbio e fluxo de caixa — mostra a qualidade da operação. Diferença com Patrimônio = câmbio + ajustes.
+              </TooltipContent>
+            </Tooltip>
+          </div>
+          <LucroOperacionalCollapsible metrics={metrics} formatCurrency={formatCurrency} />
+        </div>
+      )}
+
+      {/* ─── STATUS: Recuperação de Capital ─── */}
       <div className="border-t border-border/40 pt-3 space-y-2">
         {/* Break-even CONSOLIDADO */}
         <div>
@@ -833,7 +882,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
           saquesRecebidos={metrics.saquesRecebidos}
           saquesPendentes={metrics.saquesPendentes}
           depositosEfetivos={metrics.depositosEfetivos}
-          depositosBaseline={metrics.depositosTotal - metrics.depositosEfetivos}
+          depositosBaseline={metrics.depositosBaseline}
           ganhoConfirmacaoDeposito={metrics.ganhoConfirmacao}
           bonusGanhosFinanceiro={metrics.bonusGanhos}
           girosGratisFinanceiro={metrics.girosGratis}

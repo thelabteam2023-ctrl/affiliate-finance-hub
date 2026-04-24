@@ -183,17 +183,17 @@ export function LucroProjetadoModal(props: LucroProjetadoModalProps) {
             Reconciliação de Lucro
           </DialogTitle>
           <p className="text-[10px] text-muted-foreground mt-1">
-            Comparação entre o lucro financeiro (se sacássemos tudo) e o lucro operacional (KPI).
+            Por que o Patrimônio (mark-to-market) difere do Lucro Operacional (juice das apostas)? Aqui está a ponte.
           </p>
         </DialogHeader>
 
         <div className="px-5 pb-5 space-y-4 mt-3">
-          {/* Composição do Lucro Projetado */}
+          {/* Camada 2: Patrimônio (Mark-to-Market) */}
           <div className="space-y-1.5">
             <div className="flex items-center gap-1.5 mb-2">
               <TrendingUp className="h-3 w-3 text-primary" />
               <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Lucro Projetado (Financeiro)
+                Patrimônio Líquido (se sacar agora)
               </span>
             </div>
             <div className="rounded-lg bg-muted/30 border border-border/40 px-3 py-2.5 space-y-1">
@@ -208,30 +208,30 @@ export function LucroProjetadoModal(props: LucroProjetadoModalProps) {
                 formatCurrency={formatCurrency}
                 icon={ArrowDownCircle}
                 muted
-                tooltip="Depósitos reais + migrações entre projetos. Exclui a baseline de vinculação."
+                tooltip="Dinheiro novo + recebido de outros projetos. Exclui o saldo inicial adotado (baseline contábil)."
               />
               {hasBaseline && (
                 <ReconciliationRow
-                  label="(−) Baseline Vinculação"
+                  label="(−) Saldo inicial adotado"
                   value={depositosBaseline}
                   formatCurrency={formatCurrency}
                   icon={Info}
                   muted
-                  tooltip="Saldo residual capturado ao vincular casas ao projeto. Não é dinheiro novo depositado — é a diferença de baseline contábil."
+                  tooltip="Saldo já existente quando uma casa foi vinculada ao projeto. Não é dinheiro novo — é a baseline contábil."
                 />
               )}
               <div className="border-t border-border/40 mt-1.5 pt-1.5">
-                <ReconciliationRow label="Total" value={lucroProjetado} formatCurrency={formatCurrency} bold icon={TrendingUp} />
+                <ReconciliationRow label="Patrimônio Líquido" value={lucroProjetado} formatCurrency={formatCurrency} bold icon={TrendingUp} />
               </div>
             </div>
           </div>
 
-          {/* Composição do Lucro Operacional */}
+          {/* Camada 3: Operacional (Juice) */}
           <div className="space-y-1.5">
             <div className="flex items-center gap-1.5 mb-2">
               <BarChart3 className="h-3 w-3 text-primary" />
               <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Lucro Operacional (KPI)
+                Lucro Operacional (juice das apostas)
               </span>
             </div>
             <div className="rounded-lg bg-muted/30 border border-border/40 px-3 py-2.5 space-y-1">
@@ -248,7 +248,7 @@ export function LucroProjetadoModal(props: LucroProjetadoModalProps) {
                 );
               })}
               <div className="border-t border-border/40 mt-1.5 pt-1.5">
-                <ReconciliationRow label="Total" value={lucroOperacional} formatCurrency={formatCurrency} bold icon={BarChart3} />
+                <ReconciliationRow label="Lucro Operacional" value={lucroOperacional} formatCurrency={formatCurrency} bold icon={BarChart3} />
               </div>
             </div>
           </div>
@@ -258,7 +258,7 @@ export function LucroProjetadoModal(props: LucroProjetadoModalProps) {
             <div className="flex items-center gap-1.5 mb-2">
               <AlertTriangle className={`h-3 w-3 ${Math.abs(divergencia) < 0.01 ? "text-emerald-500" : "text-amber-500"}`} />
               <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Divergência (Δ)
+                Ponte de Reconciliação (Δ)
               </span>
             </div>
             <div
@@ -290,7 +290,7 @@ export function LucroProjetadoModal(props: LucroProjetadoModalProps) {
                   ))}
                   <div className="border-t border-border/40 mt-1.5 pt-1.5">
                     <ReconciliationRow
-                      label="Divergência Total"
+                      label="Δ Total (Patrimônio − Operacional)"
                       value={divergencia}
                       formatCurrency={formatCurrency}
                       bold
@@ -300,7 +300,7 @@ export function LucroProjetadoModal(props: LucroProjetadoModalProps) {
                   <p className="text-[9px] text-muted-foreground/80 mt-1.5">
                     {Math.abs(divergencia) < 1
                       ? "Diferença mínima — arredondamentos de conversão cambial."
-                      : "Esses fatores explicam a diferença entre o lucro projetado (saldo + saques − depósitos) e o lucro operacional (soma dos módulos)."}
+                      : "A diferença entre Patrimônio (mark-to-market live) e Operacional (juice puro) vem de variação cambial e ganhos/perdas em confirmação de saques. Não é erro — é a realidade econômica do projeto."}
                   </p>
                 </>
               )}
