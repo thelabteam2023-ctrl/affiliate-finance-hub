@@ -3172,6 +3172,10 @@ export function CaixaTransacaoDialog({
       setTaxaBancariaInfo(null);
       resetForm();
       dispatchCaixaDataChanged();
+      // Invalidar queries de Central de Operações e conciliação
+      queryClient.invalidateQueries({ queryKey: ["central-operacoes-data"] });
+      queryClient.invalidateQueries({ queryKey: ["pending-transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["contas-disponiveis-count"] });
       onSuccess();
       onClose();
     } catch (error: any) {
