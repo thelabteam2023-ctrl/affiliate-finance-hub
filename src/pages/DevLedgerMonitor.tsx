@@ -32,6 +32,17 @@ function fmtMoney(v: number | null | undefined, moeda?: string | null) {
   return `${moeda ?? ""} ${Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`.trim();
 }
 
+function fmtCoin(qtd: number | null | undefined, coin?: string | null) {
+  if (qtd == null) return "—";
+  return `${Number(qtd).toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 8 })} ${coin ?? ""}`.trim();
+}
+
+function fmtRate(rate: number | null | undefined, from?: string | null, to?: string | null) {
+  if (rate == null || !isFinite(rate) || rate === 0) return null;
+  const r = Number(rate).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 6 });
+  return `1 ${from ?? "?"} = ${r} ${to ?? "?"}`;
+}
+
 // ─── Cash Ledger Stream ───
 function useCashLedger(enabled: boolean) {
   return useQuery({
@@ -39,7 +50,7 @@ function useCashLedger(enabled: boolean) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("cash_ledger")
-        .select("id, created_at, data_transacao, tipo_transacao, status, moeda, valor, descricao, origem_tipo, destino_tipo, origem_bookmaker_id, destino_bookmaker_id, projeto_id_snapshot, balance_processed_at, reversed_at")
+        .select("id, created_at, data_transacao, tipo_transacao, status, moeda, valor, descricao, origem_tipo, destino_tipo, origem_bookmaker_id, destino_bookmaker_id, projeto_id_snapshot, balance_processed_at, reversed_at, moeda_origem, valor_origem, moeda_destino, valor_destino, qtd_coin, coin, cotacao, cotacao_origem_usd, cotacao_destino_usd")
         .order("created_at", { ascending: false })
         .limit(100);
       if (error) throw error;
@@ -279,7 +290,57 @@ export default function DevLedgerMonitor() {
                         <td className="px-2 py-1 whitespace-nowrap text-muted-foreground">{fmtTime(r.created_at)}</td>
                         <td className="px-2 py-1"><Badge variant="outline" className="text-[10px]">{r.tipo_transacao}</Badge></td>
                         <td className="px-2 py-1"><Badge variant={statusVariant(r.status)} className="text-[10px]">{r.status}</Badge></td>
-                        <td className="px-2 py-1 text-right tabular-nums">{fmtMoney(Number(r.valor), r.moeda)}</td>
+                        <td className="px-2 py-1 text-right tabular-nums">
+                          {(() => {
+                            const isCripto = r.coin != null && r.qtd_coin != null;
+                            const isCrossCurrency =
+                              r.moeda_origem && r.moeda_destino && r.moeda_origem !== r.moeda_destino;
+                            // Caso 1: Cripto (mostra qtd_coin como verdade primária)
+                            if (isCripto) {
+                              const rate =
+                                r.qtd_coin && Number(r.qtd_coin) !== 0
+                                  ? Number(r.valor_destino ?? r.valor) / Number(r.qtd_coin)
+                                  : null;
+                              return (
+                                <div className="flex flex-col items-end leading-tight">
+                                  <span className="font-semibold">{fmtCoin(Number(r.qtd_coin), r.coin)}</span>
+                                  <span className="text-[10px] text-muted-foreground">
+                                    ≈ {fmtMoney(Number(r.valor_destino ?? r.valor), r.moeda_destino ?? r.moeda)}
+                                  </span>
+                                  {rate && (
+                                    <span className="text-[10px] text-amber-500/80">
+                                      {fmtRate(rate, r.coin, r.moeda_destino ?? r.moeda)}
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            }
+                            // Caso 2: Cross-currency fiat (origem ≠ destino)
+                            if (isCrossCurrency) {
+                              const rate =
+                                r.valor_origem && Number(r.valor_origem) !== 0
+                                  ? Number(r.valor_destino) / Number(r.valor_origem)
+                                  : null;
+                              return (
+                                <div className="flex flex-col items-end leading-tight">
+                                  <span className="font-semibold">
+                                    {fmtMoney(Number(r.valor_origem), r.moeda_origem)}
+                                  </span>
+                                  <span className="text-[10px] text-muted-foreground">
+                                    → {fmtMoney(Number(r.valor_destino), r.moeda_destino)}
+                                  </span>
+                                  {rate && (
+                                    <span className="text-[10px] text-amber-500/80">
+                                      {fmtRate(rate, r.moeda_origem, r.moeda_destino)}
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            }
+                            // Caso 3: Single currency
+                            return fmtMoney(Number(r.valor), r.moeda);
+                          })()}
+                        </td>
                         <td className="px-2 py-1 text-muted-foreground text-[11px]">
                           {r.origem_tipo ?? "—"} → {r.destino_tipo ?? "—"}
                         </td>
