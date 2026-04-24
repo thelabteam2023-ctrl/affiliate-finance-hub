@@ -1,86 +1,174 @@
 
+# Plano: Separação Conceitual entre Performance, FX e Ajustes
 
-## Problema
+## Diagnóstico do estado atual
 
-No fluxo **Gestão de Parceiros → Financeiro → Depósito**, o `CaixaTransacaoDialog` recebe a bookmaker pré-selecionada (ex: TALISMANIA) mas:
+Após varrer `FinancialMetricsPopover.tsx` (linhas 100-120, 244-290, 510-615, 761-780) e `LucroProjetadoModal.tsx`, confirmei o problema:
 
-1. Força `defaultTipoMoeda="FIAT"` e `defaultMoeda=bookmaker.moeda` (USD), ignorando o histórico real de funding (USDT) → usuário precisa trocar manualmente para CRYPTO.
-2. Não há detecção do **último depósito** para DEPOSITO (só existe para SAQUE via `fetchLastDepositFundingSource`), então o sistema "esquece" que aquela conta é tipicamente abastecida em USDT.
-3. Quando o usuário troca a moeda manualmente, a auto-focus chain reabre o popover do BookmakerSelect (apesar do bookmaker já estar travado no destino), causando o re-render e a sensação de "fluxo quebrado" da imagem 2.
-4. O alerta "este parceiro não possui contas com saldo em USD" aparece como bloqueio, mas é só a consequência da inferência errada (deveria ser USDT em wallet, não USD em conta).
-
-## Solução
-
-Tornar o dialog **context-aware** para DEPOSITO da mesma forma que já é para SAQUE, e blindar o BookmakerSelect contra re-aberturas quando o destino já está travado.
-
-### 1. Inferência inteligente de moeda no DEPOSITO contextual
-
-**`src/components/caixa/CaixaTransacaoDialog.tsx`**
-
-- Renomear `fetchLastDepositFundingSource` para `fetchLastFundingSource` e parametrizar para aceitar `bookmakerId` + direção (`destino` para DEPOSITO, `destino` para SAQUE).
-- No `useEffect` de abertura (linha ~318), adicionar branch para `defaultTipoTransacao === "DEPOSITO" && defaultDestinoBookmakerId`:
-  - Buscar o último depósito daquela bookmaker (mesma query já existente).
-  - Se encontrar `tipo_moeda = CRYPTO`, sobrescrever `pendingDefaultsRef` com `tipoMoeda: "CRYPTO"` + `coin` detectado.
-  - Se não houver histórico, manter o `defaultTipoMoeda` recebido (FIAT/USD) como hoje.
-
-**Hierarquia de inferência (DEPOSITO):**
-```
-1. Histórico de depósitos da bookmaker → fonte de verdade
-2. Saldo disponível do parceiro (se só tem wallet USDT, infere CRYPTO)
-3. Fallback: defaultTipoMoeda recebido via props
-```
-
-### 2. Validação suave do parceiro (sem bloquear)
-
-- Quando a moeda inferida não tem origem compatível no parceiro, manter o alerta atual ("Este parceiro não possui contas/wallets com saldo em X") **mas não impedir** o usuário de trocar tipoMoeda manualmente.
-- Adicionar CTA inline no alerta: "Cadastrar wallet" / "Cadastrar conta" reaproveitando o `ParceiroDialog` que já é importado, abrindo na aba correta (`"crypto"` ou `"bancos"`).
-
-### 3. Travar BookmakerSelect quando vem por contexto
-
-- Adicionar prop `lockBookmakerDestino?: boolean` no `CaixaTransacaoDialog`.
-- Quando `defaultDestinoBookmakerId` vem preenchido e `entryPoint === "affiliate_deposit"`, considerar o bookmaker travado.
-- Em todos os `bookmakerSelectRef.current?.open()` da auto-focus chain (linhas 998, 1049, 1092, 1226, 1238), adicionar guard:
-  ```
-  if (destinoBookmakerId && lockBookmakerDestino) return;
-  ```
-- Visualmente: renderizar o BookmakerSelect em modo read-only (mostra a logo + nome + moeda em badge, sem chevron de abrir popover) quando travado.
-
-### 4. Ajustar a chamada em `GestaoParceiros.tsx`
-
-- No `handleNewTransacao` (linha 285), passar também a logo/contexto se disponível (não obrigatório).
-- Na renderização do `<CaixaTransacaoDialog>` (linha 656), **remover** o hard-coded `defaultTipoMoeda="FIAT"`. Deixar `undefined` para que a inferência decida. O `defaultMoeda={transacaoBookmaker?.moeda}` continua como fallback.
-
-### 5. Reordenação visual da seção FLUXO DA TRANSAÇÃO
-
-Sequência guiada (sem mudar componentes, só a cadeia de auto-focus):
+### Como está hoje (Camada 3 — Operacional)
 
 ```
-Bookmaker (travado, vem do contexto)
-   ↓ (inferido, sem clique)
-Tipo de Moeda (CRYPTO/FIAT auto)
-   ↓
-Moeda/Coin (auto-selecionado via inferência)
-   ↓
-Parceiro (já vem do contexto)
-   ↓
-Conta/Wallet de origem (abre popover)
-   ↓
-Quantidade/Valor (foco final)
+Lucro Apostas Puro (juice)        ← performance real
++ Créditos Extras
+   ├── Bônus Ganhos               ← performance (estoque promocional)
+   ├── Cashback Líquido           ← performance (devolução da casa)
+   ├── Giros Grátis               ← performance (promo)
+   ├── Ganho de Confirmação       ← FX disfarçado (Δ saque solicitado vs recebido)
+   ├── Ajustes de Saldo           ⚠️ MISTURADO: ajuste contábil
+   ├── Resultado Cambial (FX)     ⚠️ MISTURADO: efeito macro
+   └── Perdas Operacionais        ← evento extraordinário (conta bloqueada)
 ```
 
-## Detalhes técnicos
+**Resultado**: o KPI de Performance está contaminado por:
+- **Variação cambial** (PERDA_CAMBIAL/GANHO_CAMBIAL) — não é operação, é macro
+- **Ajustes de Saldo** (AJUSTE_SALDO) — não é operação, é correção contábil
+- **Ganho de Confirmação** — é FX disfarçado (mesma natureza)
+- **Perdas Operacionais** — é evento extraordinário, não performance recorrente
 
-- **Arquivos editados**:
-  - `src/components/caixa/CaixaTransacaoDialog.tsx` — generalizar `fetchLastFundingSource`, novo branch DEPOSITO no useEffect de abertura, guards na auto-focus chain do BookmakerSelect, modo read-only quando travado, prop `lockBookmakerDestino`.
-  - `src/pages/GestaoParceiros.tsx` — remover `defaultTipoMoeda="FIAT"` hardcoded; passar `lockBookmakerDestino={true}` quando há `transacaoBookmaker`.
-- **Sem migração SQL** — toda a inteligência usa a query já existente em `cash_ledger`.
-- **Sem regressão** — fluxos sem contexto (Caixa principal, novo vínculo, etc.) continuam idênticos pois o branch novo só dispara quando há `defaultDestinoBookmakerId` + `DEPOSITO`.
-- **Compatível com a regra USDT≈USD** já corrigida — a inferência apenas alinha a UI à verdade contábil.
+Isso distorce ROI, eficiência e a leitura de "qualidade da operação" — exatamente o que você apontou.
 
-## Resultado esperado
+---
 
-- TALISMANIA pré-selecionada → sistema detecta histórico USDT → abre direto em CRYPTO/USDT, parceiro já fixado, foca na wallet de origem.
-- BookmakerSelect não reabre mais sozinho.
-- Alerta de "sem saldo" vira informativo com atalho de cadastro, não bloqueio.
-- Redução de ~4 cliques para ~1 (selecionar wallet) + digitar valor.
+## Proposta: 3 blocos visuais distintos dentro da Camada 3
 
+Em vez de criar uma Camada 4 (que poluiria mais), vou **reorganizar a Camada 3 atual em 3 sub-blocos visuais segregados** com totalizador final:
+
+### Estrutura proposta da Camada 3
+
+```
+3. OPERACIONAL — visão completa de resultado
+─────────────────────────────────────────────
+🟢 PERFORMANCE PURA                    R$ X.XXX
+   ├── Lucro de Apostas (juice)        R$ ...
+   ├── Bônus Ganhos                    R$ ...
+   ├── Cashback Líquido                R$ ...
+   └── Giros Grátis                    R$ ...
+   → Esta é a performance que você cobra do operador
+
+🟡 EFEITOS FINANCEIROS (não-operacional) ±R$ XXX
+   ├── Resultado Cambial (FX)          ±R$ ...
+   ├── Ganho/Perda de Confirmação      ±R$ ...
+   → Variação de moeda na liquidação. Fora do controle do operador.
+
+🟠 AJUSTES & EXTRAORDINÁRIOS          ±R$ XXX
+   ├── Ajustes de Saldo (reconciliação) ±R$ ...
+   └── Perdas Operacionais              −R$ ...
+   → Correções e incidentes. Não é performance, mas afeta o caixa.
+
+═════════════════════════════════════════════
+RESULTADO OPERACIONAL TOTAL            R$ X.XXX
+   = Performance + Efeitos FX + Ajustes
+   (este é o número que reconcilia com o Patrimônio)
+```
+
+### Por que dentro da Camada 3 e não como Camada 4
+
+- Manter as 3 camadas mentais (Realizado / Patrimônio / Operacional) que você já aprovou.
+- A reconciliação com Patrimônio (Camada 2) continua coerente — o "Operacional Total" precisa bater com o Patrimônio.
+- Visualmente segregado, mas matematicamente unificado.
+
+---
+
+## Decisões já tomadas (consolidando as 3 perguntas da rodada anterior)
+
+### 1. Estratégia de separação
+✅ **Performance pura + sub-blocos no operacional** (opção 1) — segregação visual mantendo unidade matemática.
+
+### 2. ROI e Performance
+✅ **ROI = só Performance Pura** (opção 1)
+- ROI passa a usar apenas: `lucroApostasPuro + bonusGanhos + cashbackLiquido + girosGratis`
+- FX e Ajustes saem do denominador/numerador de eficiência
+- Razão: ROI mede qualidade da operação, não risco cambial nem correções contábeis
+
+### 3. Conta de Fechamento com Operador
+✅ **Adicionar no LucroProjetadoModal** (opção 1) — o modal de reconciliação já existe e é o lugar natural.
+
+---
+
+## Implementação técnica
+
+### Arquivo 1: `src/components/projeto-detalhe/FinancialMetricsPopover.tsx`
+
+**A) Novos campos calculados em `metrics`** (no `useMemo` linhas 510-615):
+```typescript
+// PERFORMANCE PURA (ROI usa só isto)
+const performancePura = lucroApostasPuro + bonusGanhos + cashbackLiquido + girosGratis;
+
+// EFEITOS FINANCEIROS (FX)
+const efeitosFinanceiros = (ganhoFx - perdaFx) + ganhoConfirmacao;
+
+// AJUSTES & EXTRAORDINÁRIOS
+const ajustesExtraordinarios = ajustes - perdaOp;
+
+// TOTAL OPERACIONAL (substitui o atual extrasPositivos para reconciliação)
+const resultadoOperacionalTotal = performancePura + efeitosFinanceiros + ajustesExtraordinarios;
+```
+
+**B) Refatorar `LucroOperacionalCollapsible`** (linhas 304-339):
+- Renomear seção principal para "Operacional · Resultado Completo"
+- Criar 3 sub-componentes colapsáveis: `PerformancePuraSection`, `EfeitosFinanceirosSection`, `AjustesSection`
+- Cada um com cor de borda própria (emerald/amber/orange) e ícone (TrendingUp/ArrowRightLeft/AlertCircle)
+- Totalizador "Resultado Operacional Total" no rodapé
+
+**C) Atualizar tooltip da Camada 3** (linha 773-775):
+> "Performance Pura mostra a qualidade da operação. Efeitos Financeiros (FX) e Ajustes são apresentados separados — eles afetam o caixa mas não medem performance."
+
+**D) Remover `ExtrasCollapsible` redundante** (linhas 244-290) — sua função vai ser absorvida pelos novos sub-blocos. Os mesmos drill-downs continuam disponíveis.
+
+### Arquivo 2: `src/components/projeto-detalhe/LucroProjetadoModal.tsx`
+
+Adicionar **novo bloco "Conta de Fechamento com Operador"** após a Ponte de Reconciliação:
+
+```
+─── CONTA DE FECHAMENTO ───
+✅ Lucro do Operador (performance pura)    R$ X.XXX
+   Apostas + Bônus + Cashback + Giros
+   → Esta é a parcela atribuída ao trabalho do operador
+
+ℹ️ Efeitos Não-Operacionais (informativo)  ±R$ XXX
+   ├── Variação Cambial                     ±R$ ...
+   ├── Ajustes de Saldo                     ±R$ ...
+   └── Perdas Operacionais                  −R$ ...
+   → Esta parcela NÃO compõe a remuneração do operador
+
+═════════════════════════════════════════
+TOTAL DO PROJETO                           R$ X.XXX
+```
+
+**Props novos** no `LucroProjetadoModal`:
+- `performancePura: number`
+- `efeitosFinanceiros: number`
+- `ajustesExtraordinarios: number`
+
+### Arquivo 3 (memória): criar `mem://finance/operational-performance-segregation-standard`
+
+Documentar a regra:
+- Performance Pura = juice + bônus + cashback + giros (denominador de ROI)
+- Efeitos Financeiros = FX + ganho de confirmação (informativo, fora de ROI)
+- Ajustes & Extraordinários = AJUSTE_SALDO + PERDA_OPERACIONAL (fora de ROI)
+- Resultado Operacional Total = soma dos 3 (reconcilia com Patrimônio)
+
+### Arquivo 4 (memória): atualizar `mem://index.md`
+Adicionar uma linha no Core:
+> ROI usa apenas Performance Pura. FX e Ajustes ficam segregados visualmente, fora do denominador.
+
+---
+
+## Impactos colaterais a verificar
+
+1. **`useKpiBreakdowns.ts`** — usado pelo `LucroProjetadoModal` para o breakdown de "Lucro Operacional". Verificar se já segrega ou se replica o problema. Se replicar, não mexer agora — apenas o popover é o escopo desta iteração (consistente com sua diretriz "refatorar o popover atual").
+
+2. **ROI em outros lugares** — esta refatoração toca apenas o popover de Indicadores Financeiros do header. ROI exibido em outros componentes (PerformancePorCasaCard, badges de estratégia, etc.) **não é alterado** nesta iteração — eles usam fontes RPC canônicas. Se quiser propagar a regra, fica para iteração futura.
+
+3. **Cores e ícones** — vou usar:
+   - Performance: emerald + `TrendingUp`
+   - Efeitos FX: amber + `ArrowRightLeft`
+   - Ajustes: orange + `AlertCircle`
+
+---
+
+## Pergunta única antes de implementar
+
+Você confirma que esta iteração foca **apenas o popover + modal** (não propaga ROI segregado para PerformancePorCasaCard, cards de estratégia, etc.)? Ou prefere que eu já mapeie e proponha a 2ª fase de propagação no mesmo plano?
+
+Aguardando aprovação para implementar.
