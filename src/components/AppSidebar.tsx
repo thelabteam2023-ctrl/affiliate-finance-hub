@@ -1,4 +1,4 @@
-import { Bell, Users, Users2, Landmark, Wallet, Building2, TrendingUp, UserPlus, PieChart, Briefcase, FolderKanban, Settings, LogOut, Star, Shield, Calculator, StickyNote, ShieldCheck, ChevronUp, ChevronDown, Sun, Moon, Target, Layers, ArrowLeftRight, Zap, Truck, ClipboardList, CalendarDays } from "lucide-react";
+import { Bell, Users, Users2, Landmark, Wallet, Building2, TrendingUp, UserPlus, PieChart, Briefcase, FolderKanban, Settings, LogOut, Star, Shield, Calculator, StickyNote, ShieldCheck, ChevronUp, ChevronDown, Sun, Moon, Target, Layers, ArrowLeftRight, Zap, Truck, ClipboardList, CalendarDays, Activity } from "lucide-react";
 import { useSolicitacoesKpis } from "@/hooks/useSolicitacoes";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -667,6 +667,12 @@ export function AppSidebar() {
               <DropdownMenuItem onClick={() => navigate("/admin")}>
                 <ShieldCheck className="mr-2 h-4 w-4" />
                 Administração do Sistema
+              </DropdownMenuItem>
+            )}
+            {isSystemOwner && (
+              <DropdownMenuItem onClick={() => navigate("/dev/ledger-monitor")}>
+                <Activity className="mr-2 h-4 w-4" />
+                Ledger Monitor
               </DropdownMenuItem>
             )}
             {canManageWorkspace && (
