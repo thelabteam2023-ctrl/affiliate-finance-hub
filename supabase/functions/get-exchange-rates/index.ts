@@ -44,23 +44,31 @@ function getSupabaseClient() {
   );
 }
 
-async function getCachedRates(): Promise<Record<string, { rate: number; source: string; expires_at: string }>> {
+type CachedRate = {
+  rate: number;
+  source: string;
+  expires_at: string;
+  fetched_at?: string;
+};
+
+async function getCachedRates(): Promise<Record<string, CachedRate>> {
   const supabase = getSupabaseClient();
   
   const { data, error } = await supabase
     .from('exchange_rate_cache')
-    .select('currency_pair, rate, source, expires_at');
+    .select('currency_pair, rate, source, fetched_at, expires_at');
   
   if (error) {
     console.error('Erro ao buscar cache:', error);
     return {};
   }
   
-  const cached: Record<string, { rate: number; source: string; expires_at: string }> = {};
+  const cached: Record<string, CachedRate> = {};
   for (const row of data || []) {
     cached[row.currency_pair] = { 
       rate: Number(row.rate), 
       source: row.source,
+      fetched_at: row.fetched_at,
       expires_at: row.expires_at,
     };
   }
@@ -72,7 +80,15 @@ async function getCachedRates(): Promise<Record<string, { rate: number; source: 
   return cached;
 }
 
-async function saveCachedRates(rates: Record<string, { rate: number; source: string }>) {
+function getCacheStatus(lastSuccessAt: Date): string {
+  const ageHours = (Date.now() - lastSuccessAt.getTime()) / (60 * 60 * 1000);
+  if (ageHours > 24) return 'critical';
+  if (ageHours > 12) return 'degraded';
+  if (ageHours > 2) return 'stale';
+  return 'active';
+}
+
+async function saveCachedRates(rates: Record<string, { rate: number; source: string }>, refreshReason: string) {
   const supabase = getSupabaseClient();
   const now = new Date();
   const expiresAt = new Date(now.getTime() + CACHE_TTL_MINUTES * 60 * 1000);
@@ -83,7 +99,21 @@ async function saveCachedRates(rates: Record<string, { rate: number; source: str
     source: data.source,
     fetched_at: now.toISOString(),
     expires_at: expiresAt.toISOString(),
+    status: 'active',
+    failure_count: 0,
+    last_success_at: now.toISOString(),
+    last_error_at: null,
+    last_error_message: null,
     updated_at: now.toISOString(),
+  }));
+
+  const historyRows = Object.entries(rates).map(([currencyPair, data]) => ({
+    currency_pair: currencyPair,
+    rate: data.rate,
+    source: data.source,
+    fetched_at: now.toISOString(),
+    refresh_reason: refreshReason,
+    is_fallback: data.source.includes('FALLBACK'),
   }));
   
   const { error } = await supabase
@@ -95,6 +125,38 @@ async function saveCachedRates(rates: Record<string, { rate: number; source: str
   } else {
     console.log(`Cache salvo: ${Object.keys(rates).length} cotações (expira em ${CACHE_TTL_MINUTES}min)`);
   }
+
+  const { error: historyError } = await supabase
+    .from('exchange_rate_history')
+    .insert(historyRows);
+
+  if (historyError) {
+    console.error('Erro ao salvar histórico de cotações:', historyError);
+  }
+}
+
+async function markRefreshFailures(currencyPairs: string[], cachedRates: Record<string, CachedRate>, message: string) {
+  if (currencyPairs.length === 0) return;
+
+  const supabase = getSupabaseClient();
+  const nowIso = new Date().toISOString();
+
+  await Promise.all(currencyPairs.map(async (currencyPair) => {
+    const cached = cachedRates[currencyPair];
+    if (!cached) return;
+
+    const lastSuccess = cached.fetched_at ? new Date(cached.fetched_at) : new Date();
+    const { error } = await supabase
+      .from('exchange_rate_cache')
+      .update({
+        status: getCacheStatus(lastSuccess),
+        last_error_at: nowIso,
+        last_error_message: message,
+      })
+      .eq('currency_pair', currencyPair);
+
+    if (error) console.error(`Erro ao marcar falha em ${currencyPair}:`, error);
+  }));
 }
 
 /**
