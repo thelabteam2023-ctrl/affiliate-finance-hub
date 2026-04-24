@@ -365,9 +365,19 @@ function useProjetoExtrato(
         // Fonte canônica na MOEDA ORIGINAL do registro:
         //   valor_destino  → reflexo cross-currency, sempre na moeda do destino
         //   valor          → fallback para o lançamento original
-        // NÃO usar valor_confirmado: a RPC confirm_wallet_transit grava ali o equivalente
-        // em USD, contaminando KPIs por moeda (ex.: EUR aparecendo como 116,80 em vez de 99,09).
-        const valorBase = Number(e.valor_destino ?? e.valor ?? 0);
+        // Em cross-currency (cotacao_destino_usd ou cotacao_origem_usd != null), o
+        // `valor_confirmado` é o equivalente em outra moeda, NÃO podemos usá-lo.
+        // Em mesma moeda (sem snapshot cross), `valor_confirmado` < `valor` indica
+        // PERDA NO TRÂNSITO (taxa, IOF, fee) e DEVE refletir no KPI.
+        const isCrossCurrency =
+          e.cotacao_destino_usd != null || e.cotacao_origem_usd != null;
+        const valorLancado = Number(e.valor_destino ?? e.valor ?? 0);
+        const valorConfirmado = e.valor_confirmado != null ? Number(e.valor_confirmado) : null;
+        // Se mesma moeda E valor_confirmado existir → usa o real recebido (pode ser menor por taxa)
+        const valorBase =
+          !isCrossCurrency && valorConfirmado != null && valorConfirmado > 0
+            ? valorConfirmado
+            : valorLancado;
 
         // 1) Baseline DV: NÃO entra no KPI (seria duplicação do DEPOSITO real)
         if (isBaselineDV(e)) {
