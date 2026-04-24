@@ -806,7 +806,7 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
             <SelectItem value="todos">Todos os tipos</SelectItem>
             <SelectItem value="depositos">Depósitos</SelectItem>
             <SelectItem value="saques">Saques</SelectItem>
-            <SelectItem value="ajustes">Ajustes / Extras</SelectItem>
+            <SelectItem value="ajustes">Extras (ajustes, cashback, câmbio)</SelectItem>
           </SelectContent>
         </Select>
 
