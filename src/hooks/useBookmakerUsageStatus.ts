@@ -145,11 +145,15 @@ export function useBookmakerUsageStatus(bookmakerIds: string[]) {
         const hasOperations = operacoesSet.has(id);
         const isActiveInProject = projetosAtivos > 0 || isActiveFromBookmakers;
 
-        // Categoria baseada em vínculos a projetos E operações
+        // Categoria baseada APENAS em vínculos a projetos.
+        // hasOperations (depósitos/saques avulsos) NÃO deve marcar a casa como
+        // "JA_USADA" — esse status reflete fluxo de projeto, não movimentação
+        // financeira solta. hasOperations continua exposto no objeto para
+        // outras regras (ex.: canDeleteBookmaker).
         let category: BookmakerUsageCategory;
         if (isActiveInProject) {
           category = "ATIVA";
-        } else if (hasHistory || hasOperations) {
+        } else if (hasHistory) {
           category = "JA_USADA";
         } else {
           category = "VIRGEM";
