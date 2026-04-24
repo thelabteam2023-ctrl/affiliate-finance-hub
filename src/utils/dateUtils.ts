@@ -428,3 +428,45 @@ export const dateToCivilDateString = (date: Date): string => {
   const day = String(zonedDate.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 };
+
+/**
+ * Detecta se uma string de timestamp representa "meia-noite UTC pura"
+ * (i.e., uma DATA CIVIL armazenada como timestamp, sem hora real).
+ *
+ * Ex: "2026-04-23 00:00:00+00" → true (data civil)
+ * Ex: "2026-04-23 20:51:37+00" → false (timestamp real)
+ *
+ * Usado para decidir se devemos preferir `created_at` (timestamp real) na exibição,
+ * em vez de `data_transacao` (data civil que renderizaria como 21:00 do dia anterior em SP).
+ */
+export const isCivilDateOnlyTimestamp = (
+  dateString: string | null | undefined
+): boolean => {
+  if (!dateString) return false;
+  // Aceita "YYYY-MM-DD" puro ou "YYYY-MM-DD[T ]00:00:00(.000)?(+00(:00)?|Z)"
+  return /^\d{4}-\d{2}-\d{2}([T ]00:00:00(\.0+)?(\+00(:00)?|Z)?)?$/.test(
+    dateString.trim()
+  );
+};
+
+/**
+ * Retorna o timestamp REAL de uma transação para fins de exibição.
+ *
+ * REGRA: Se `data_transacao` é uma "data civil pura" (00:00:00 UTC), o horário não é
+ * significativo e foi atribuído por convenção — devemos usar `created_at` (ou
+ * `data_confirmacao`) como source of truth do horário real.
+ *
+ * Caso contrário, `data_transacao` já contém o horário real escolhido pelo usuário
+ * e deve ser preservado.
+ *
+ * Isso elimina o "21:00 fixo" exibido no histórico de movimentações.
+ */
+export const getTransactionDisplayTimestamp = (tx: {
+  data_transacao?: string | null;
+  created_at?: string | null;
+  data_confirmacao?: string | null;
+}): string => {
+  const data = tx.data_transacao;
+  if (data && !isCivilDateOnlyTimestamp(data)) return data;
+  return tx.data_confirmacao || tx.created_at || data || '';
+};
