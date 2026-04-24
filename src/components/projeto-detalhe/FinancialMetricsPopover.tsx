@@ -759,13 +759,15 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
     const fluxoCaixaLiquido = saquesRecebidos - depositosEfetivos;
 
     // ─── SEGREGAÇÃO CONCEITUAL (Performance vs FX vs Ajustes) ───
-    // Performance Pura (denominador de ROI): juice + créditos promocionais
+    // Performance Pura (numerador de ROI): juice + créditos promocionais + reconciliações operacionais
+    // Reconciliações operacionais (centavos por arredondamento de odds, retornos fracionados)
+    // SÃO parte da operação — devem entrar em performance.
     const creditosPerformance = bonusGanhos + cashbackLiquido + girosGratis;
-    const performancePura = lucroApostasPuro + creditosPerformance;
-    // Efeitos Financeiros (FX): variação cambial e ganho/perda de confirmação — fora de ROI
-    const efeitosFinanceiros = (ganhoFx - perdaFx) + ganhoConfirmacao;
-    // Ajustes & Extraordinários: correções contábeis e incidentes — fora de ROI
-    const ajustesExtraordinarios = ajustes - perdaOp;
+    const performancePura = lucroApostasPuro + creditosPerformance + ajustesOperacionais;
+    // Efeitos Financeiros (FX): variação cambial + ajustes classificados como FX — fora de ROI
+    const efeitosFinanceiros = (ganhoFx - perdaFx) + ganhoConfirmacao + ajustesFx;
+    // Extraordinários: incidentes operacionais e ajustes administrativos — fora de ROI
+    const ajustesExtraordinarios = ajustesExtraord - perdaOp;
     // Resultado Operacional Total (reconcilia com Patrimônio)
     const resultadoOperacionalTotal = performancePura + efeitosFinanceiros + ajustesExtraordinarios;
 
@@ -810,6 +812,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
       fluxoCaixaLiquido, fluxoLiquidoAjustado, capitalTotal, extrasPositivos,
       fluxoInternoLiquido,
       cashbackLiquido, girosGratis, ajustes, ganhoConfirmacao, ganhoFx, perdaOp, perdaFx,
+      ajustesOperacionais, ajustesFx, ajustesExtraord,
       bonusGanhos,
       lucroApostasPuro, estrategiaBreakdown,
       // Segregação conceitual
