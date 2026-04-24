@@ -877,21 +877,20 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
         )}
       </div>
 
-      {/* ─── HEADER EDUCACIONAL: 4 perspectivas ─── */}
-      <div className="flex items-start gap-2 mb-3 px-2.5 py-2 rounded-md bg-muted/30 border border-border/40">
-        <Lightbulb className="h-3 w-3 text-amber-500 mt-0.5 shrink-0" />
+      {/* ─── HEADER EDUCACIONAL COMPACTO ─── */}
+      <div className="flex items-center gap-1.5 mb-3 px-2 py-1 rounded bg-muted/20">
+        <Lightbulb className="h-3 w-3 text-amber-500 shrink-0" />
         <Tooltip>
           <TooltipTrigger asChild>
-            <p className="text-[10px] leading-snug text-muted-foreground border-b border-dotted border-muted-foreground/40 cursor-help">
-              <span className="font-semibold text-foreground">4 perspectivas de lucro:</span> o que voltou pro caixa · o que voltaria se sacasse tudo · o que a operação produziu · o lucro real ajustado por câmbio.
+            <p className="text-[10px] text-muted-foreground border-b border-dotted border-muted-foreground/40 cursor-help">
+              <span className="font-medium text-foreground">2 leituras rápidas</span> + auditoria sob demanda
             </p>
           </TooltipTrigger>
           <TooltipContent side="bottom" className="max-w-[300px] text-xs">
             <div className="space-y-1.5">
-              <p><span className="font-semibold text-emerald-500">💰 Patrimônio:</span> resposta principal — quanto sobraria no seu bolso se você sacasse tudo das casas hoje.</p>
-              <p><span className="font-semibold text-foreground">🏦 Caixa:</span> dinheiro que efetivamente já voltou pra conta (saques − depósitos).</p>
-              <p><span className="font-semibold text-foreground">📊 Operação:</span> o que a operação produziu (performance + FX + extraordinários). Em equilíbrio, deve bater com Patrimônio.</p>
-              <p><span className="font-semibold text-sky-500">🎯 Real Ajustado:</span> mesma resposta do Patrimônio, mas decomposta — quanto veio de operação, quanto de câmbio e quanto de ajustes.</p>
+              <p><span className="font-semibold text-emerald-500">💰 Patrimônio:</span> quanto sobraria no seu bolso se você sacasse tudo das casas hoje.</p>
+              <p><span className="font-semibold text-sky-500">🎯 Real Ajustado:</span> mesma resposta, decomposta — quanto veio de operação, câmbio e ajustes.</p>
+              <p className="text-muted-foreground">Expanda os blocos abaixo para auditar cada componente.</p>
             </div>
           </TooltipContent>
         </Tooltip>
