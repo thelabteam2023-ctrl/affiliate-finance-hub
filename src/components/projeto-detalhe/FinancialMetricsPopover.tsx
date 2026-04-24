@@ -462,9 +462,16 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
     const depositosReais = rawMetrics.depositos
       .filter(d => d.tipo_transacao === 'DEPOSITO')
       .reduce((acc, d) => acc + convertToConsolidationOficial(d.valor, d.moeda), 0);
-    const depositosVirtuais = rawMetrics.depositos
-      .filter(d => d.tipo_transacao === 'DEPOSITO_VIRTUAL')
+    // Migração entre projetos: conta como capital efetivo (dinheiro real recebido)
+    const depositosMigracao = rawMetrics.depositos
+      .filter(d => d.tipo_transacao === 'DEPOSITO_VIRTUAL' && (d as any).origem_tipo === 'MIGRACAO')
       .reduce((acc, d) => acc + convertToConsolidationOficial(d.valor, d.moeda), 0);
+    // Baseline (residual de vinculação): NÃO conta como capital efetivo
+    const depositosBaseline = rawMetrics.depositos
+      .filter(d => d.tipo_transacao === 'DEPOSITO_VIRTUAL' && (d as any).origem_tipo !== 'MIGRACAO')
+      .reduce((acc, d) => acc + convertToConsolidationOficial(d.valor, d.moeda), 0);
+    // Mantém compatibilidade com chamadas legadas
+    const depositosVirtuais = depositosMigracao + depositosBaseline;
     const depositosInvestidor = rawMetrics.depositos
       .filter(d => d.destino_bookmaker_id && rawMetrics.investorBookmakerIds.includes(d.destino_bookmaker_id))
       .reduce((acc, d) => acc + convertToConsolidationOficial(d.valor, d.moeda), 0);
@@ -584,7 +591,9 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
     const hasInvestorCapital = depositosInvestidor > 0 || saquesInvestidor > 0 || saldoCasasInvestidor > 0;
 
     return {
-      depositosTotal, depositosReais, depositosVirtuais, depositosEfetivos, depositosInvestidor, depositosInterno,
+      depositosTotal, depositosReais, depositosVirtuais,
+      depositosMigracao, depositosBaseline,
+      depositosEfetivos, depositosInvestidor, depositosInterno,
       saquesRecebidos, saquesInvestidor, saquesInterno,
       saquesPendentes, saquesPendentesInvestidor, saquesPendentesInterno,
       saldoCasas, saldoCasasInvestidor, saldoCasasInterno,
