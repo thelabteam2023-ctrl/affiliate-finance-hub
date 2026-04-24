@@ -1099,24 +1099,26 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
             </div>
           )}
         </div>
-      </div>
+          </AccordionContent>
+        </AccordionItem>
 
-      {/* ─── CAMADA 2: MARK-TO-MARKET (Patrimônio) ─── */}
-      <div className="border-t border-border/40 pt-3 pb-3 space-y-1">
-        <div className="flex items-center justify-between mb-1.5">
-          <div className="flex items-center gap-1.5">
-            <TrendingUp className="h-3 w-3 text-primary" />
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">📐 Composição do Patrimônio</span>
-          </div>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="text-[9px] text-muted-foreground/70 border-b border-dotted border-muted-foreground/40 cursor-help">como chegamos lá</span>
-            </TooltipTrigger>
-            <TooltipContent side="left" className="max-w-[260px] text-xs">
-              Detalhamento dos componentes que somam ao "Lucro se sacar tudo hoje" do card acima. Usa cotação live, então flutua com câmbio mesmo sem operar — isso é variação cambial real, não bug.
-            </TooltipContent>
-          </Tooltip>
-        </div>
+        {/* Camada 2: Composição do Patrimônio */}
+        <AccordionItem value="patrimonio" className="border rounded-md border-border/40 bg-muted/10">
+          <AccordionTrigger className="px-3 py-2 hover:no-underline [&>svg]:h-3 [&>svg]:w-3">
+            <div className="flex items-center justify-between gap-2 flex-1 pr-2">
+              <div className="flex items-center gap-1.5">
+                <TrendingUp className="h-3 w-3 text-primary" />
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">📐 Composição do Patrimônio</span>
+              </div>
+              <span className={`text-[11px] font-mono tabular-nums font-semibold ${metrics.lucroFinanceiro >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                {formatCurrency(metrics.lucroFinanceiro)}
+              </span>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent className="px-3 pb-3 pt-0">
+            <p className="text-[9.5px] text-muted-foreground/70 mb-1.5">
+              Como chegamos no número do card 💰. Usa cotação live — flutua com câmbio mesmo sem operar.
+            </p>
         <MetricRow
           label="Saldo em Bookmakers"
           value={formatCurrency(metrics.saldoCasas)}
