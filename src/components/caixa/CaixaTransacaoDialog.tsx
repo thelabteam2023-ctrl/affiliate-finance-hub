@@ -3249,7 +3249,19 @@ export function CaixaTransacaoDialog({
             <Alert variant="destructive" className="border-warning/50 bg-warning/10">
               <AlertTriangle className="h-4 w-4 text-warning" />
               <AlertDescription className="text-warning">
-                Este parceiro não possui contas bancárias com saldo disponível em {moeda}.
+                Este parceiro não possui contas bancárias com saldo disponível em {moeda}.{' '}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAlertParceiroId(origemParceiroId);
+                    setAlertTipo("FIAT");
+                    setParceiroDialogInitialTab("bancos");
+                    setParceiroDialogOpen(true);
+                  }}
+                  className="underline font-medium"
+                >
+                  Cadastrar conta agora
+                </button>
               </AlertDescription>
             </Alert>
           )}
