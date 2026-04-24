@@ -20,6 +20,9 @@ import {
   ChevronDown,
   Users,
   Building2,
+  Sparkles,
+  Globe,
+  Wrench,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
@@ -241,48 +244,126 @@ function SectionHeader({ icon: Icon, label, iconClass = "text-muted-foreground" 
   );
 }
 
-function ExtrasCollapsible({ metrics, formatCurrency, onDrillDown }: { metrics: any; formatCurrency: (v: number) => string; onDrillDown?: (key: string, value: number) => void }) {
-  const [open, setOpen] = useState(false);
+function SegregatedExtrasBlock({
+  metrics,
+  formatCurrency,
+  onDrillDown,
+}: {
+  metrics: any;
+  formatCurrency: (v: number) => string;
+  onDrillDown?: (key: string, value: number) => void;
+}) {
+  const [openPerf, setOpenPerf] = useState(false);
+  const [openFx, setOpenFx] = useState(false);
+  const [openAdj, setOpenAdj] = useState(false);
+
+  const fmtSigned = (v: number) =>
+    v < 0 ? `−${formatCurrency(Math.abs(v))}` : formatCurrency(v);
+
+  const hasPerf = Math.abs(metrics.creditosPerformance) >= 0.01;
+  const hasFx = Math.abs(metrics.efeitosFinanceiros) >= 0.01;
+  const hasAdj = Math.abs(metrics.ajustesExtraordinarios) >= 0.01;
+
+  if (!hasPerf && !hasFx && !hasAdj) return null;
+
   return (
-    <div>
-      <button
-        onClick={() => setOpen(!open)}
-        className="flex items-center justify-between gap-4 w-full group"
-      >
-        <span className="text-[11px] text-muted-foreground flex items-center gap-1">
-          Créditos Extras
-          <ChevronDown className={`h-3 w-3 text-muted-foreground/60 transition-transform ${open ? "rotate-180" : ""}`} />
-        </span>
-        <span className="text-[11px] font-mono tabular-nums font-semibold text-emerald-500">
-          {formatCurrency(metrics.extrasPositivos)}
-        </span>
-      </button>
-      {open && (
-        <div className="mt-1 space-y-0.5 pl-2 border-l-2 border-border/30 ml-1">
-          {Math.abs(metrics.bonusGanhos) >= 0.01 && (
-            <MetricRow label="Bônus Ganhos" value={formatCurrency(metrics.bonusGanhos)} colorClass="text-emerald-500" indent tooltip="Valor total de bônus creditados nas casas de apostas. Representa o capital promocional recebido que contribui para o patrimônio do projeto." onClick={() => onDrillDown?.("bonusGanhos", metrics.bonusGanhos)} />
+    <div className="space-y-1">
+      {/* 🟢 PERFORMANCE — Créditos da operação */}
+      {hasPerf && (
+        <div>
+          <button
+            onClick={() => setOpenPerf(!openPerf)}
+            className="flex items-center justify-between gap-4 w-full group"
+          >
+            <span className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+              <Sparkles className="h-3 w-3 text-emerald-500/80" />
+              Créditos de Performance
+              <ChevronDown className={`h-3 w-3 text-muted-foreground/60 transition-transform ${openPerf ? "rotate-180" : ""}`} />
+            </span>
+            <span className="text-[11px] font-mono tabular-nums font-semibold text-emerald-500">
+              {formatCurrency(metrics.creditosPerformance)}
+            </span>
+          </button>
+          {openPerf && (
+            <div className="mt-1 space-y-0.5 pl-2 border-l-2 border-emerald-500/30 ml-1">
+              {Math.abs(metrics.bonusGanhos) >= 0.01 && (
+                <MetricRow label="Bônus Ganhos" value={formatCurrency(metrics.bonusGanhos)} colorClass="text-emerald-500" indent tooltip="Valor total de bônus creditados nas casas. Capital promocional que contribui para o patrimônio." onClick={() => onDrillDown?.("bonusGanhos", metrics.bonusGanhos)} />
+              )}
+              {Math.abs(metrics.cashbackLiquido) >= 0.01 && (
+                <MetricRow label="Cashback Líquido" value={formatCurrency(metrics.cashbackLiquido)} colorClass="text-emerald-500" indent onClick={() => onDrillDown?.("cashbackLiquido", metrics.cashbackLiquido)} />
+              )}
+              {Math.abs(metrics.girosGratis) >= 0.01 && (
+                <MetricRow label="Giros Grátis" value={formatCurrency(metrics.girosGratis)} colorClass="text-emerald-500" indent onClick={() => onDrillDown?.("girosGratis", metrics.girosGratis)} />
+              )}
+            </div>
           )}
-          {Math.abs(metrics.cashbackLiquido) >= 0.01 && (
-            <MetricRow label="Cashback Líquido" value={formatCurrency(metrics.cashbackLiquido)} colorClass="text-emerald-500" indent onClick={() => onDrillDown?.("cashbackLiquido", metrics.cashbackLiquido)} />
+        </div>
+      )}
+
+      {/* 🟡 EFEITOS FINANCEIROS — FX */}
+      {hasFx && (
+        <div>
+          <button
+            onClick={() => setOpenFx(!openFx)}
+            className="flex items-center justify-between gap-4 w-full group"
+          >
+            <span className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+              <Globe className="h-3 w-3 text-amber-500/80" />
+              Efeitos Financeiros (FX)
+              <ChevronDown className={`h-3 w-3 text-muted-foreground/60 transition-transform ${openFx ? "rotate-180" : ""}`} />
+            </span>
+            <span className={`text-[11px] font-mono tabular-nums font-semibold ${metrics.efeitosFinanceiros >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+              {fmtSigned(metrics.efeitosFinanceiros)}
+            </span>
+          </button>
+          {openFx && (
+            <div className="mt-1 space-y-0.5 pl-2 border-l-2 border-amber-500/30 ml-1">
+              {(() => {
+                const fxLiquido = metrics.ganhoFx - metrics.perdaFx;
+                return Math.abs(fxLiquido) >= 0.01 ? (
+                  <MetricRow label="Resultado Cambial" value={fmtSigned(fxLiquido)} colorClass={fxLiquido >= 0 ? "text-emerald-500" : "text-red-500"} indent tooltip="Diferença entre valor solicitado e valor recebido nos saques, causada por variação cambial entre pedido e confirmação. Não é performance — é efeito macro." onClick={() => onDrillDown?.("resultadoCambial", fxLiquido)} />
+                ) : null;
+              })()}
+              {Math.abs(metrics.ganhoConfirmacao) >= 0.01 && (
+                <MetricRow label="Ganho/Perda de Confirmação" value={fmtSigned(metrics.ganhoConfirmacao)} colorClass={metrics.ganhoConfirmacao >= 0 ? "text-emerald-500" : "text-red-500"} indent tooltip="Diferença entre o valor solicitado e o valor confirmado em depósitos. Variação cambial implícita na liquidação." onClick={() => onDrillDown?.("ganhoConfirmacao", metrics.ganhoConfirmacao)} />
+              )}
+            </div>
           )}
-          {Math.abs(metrics.girosGratis) >= 0.01 && (
-            <MetricRow label="Giros Grátis" value={formatCurrency(metrics.girosGratis)} colorClass="text-emerald-500" indent onClick={() => onDrillDown?.("girosGratis", metrics.girosGratis)} />
+          <p className="text-[9px] text-muted-foreground/60 mt-0.5 pl-4">
+            Variação de moeda. Fora do controle do operador.
+          </p>
+        </div>
+      )}
+
+      {/* 🟠 AJUSTES & EXTRAORDINÁRIOS */}
+      {hasAdj && (
+        <div>
+          <button
+            onClick={() => setOpenAdj(!openAdj)}
+            className="flex items-center justify-between gap-4 w-full group"
+          >
+            <span className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+              <Wrench className="h-3 w-3 text-orange-500/80" />
+              Ajustes & Extraordinários
+              <ChevronDown className={`h-3 w-3 text-muted-foreground/60 transition-transform ${openAdj ? "rotate-180" : ""}`} />
+            </span>
+            <span className={`text-[11px] font-mono tabular-nums font-semibold ${metrics.ajustesExtraordinarios >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+              {fmtSigned(metrics.ajustesExtraordinarios)}
+            </span>
+          </button>
+          {openAdj && (
+            <div className="mt-1 space-y-0.5 pl-2 border-l-2 border-orange-500/30 ml-1">
+              {Math.abs(metrics.ajustes) >= 0.01 && (
+                <MetricRow label="Ajustes de Saldo" value={fmtSigned(metrics.ajustes)} colorClass={metrics.ajustes >= 0 ? "text-emerald-500" : "text-red-500"} indent tooltip="Correções para fechar a conta quando o saldo da casa diverge do esperado (ex.: arredondamento de odds). Não é performance — é correção contábil." onClick={() => onDrillDown?.("ajustes", metrics.ajustes)} />
+              )}
+              {Math.abs(metrics.perdaOp) >= 0.01 && (
+                <MetricRow label="Perdas Operacionais" value={`−${formatCurrency(metrics.perdaOp)}`} colorClass="text-red-500" indent tooltip="Capital perdido por incidentes (contas bloqueadas, saldos retidos). Evento extraordinário, fora da performance recorrente." onClick={() => onDrillDown?.("perdaOp", metrics.perdaOp)} />
+              )}
+            </div>
           )}
-          {Math.abs(metrics.ganhoConfirmacao) >= 0.01 && (
-            <MetricRow label="Ganho de Confirmação" value={formatCurrency(metrics.ganhoConfirmacao)} colorClass="text-emerald-500" indent onClick={() => onDrillDown?.("ganhoConfirmacao", metrics.ganhoConfirmacao)} />
-          )}
-          {Math.abs(metrics.ajustes) >= 0.01 && (
-            <MetricRow label="Ajustes de Saldo" value={formatCurrency(metrics.ajustes)} colorClass={metrics.ajustes >= 0 ? "text-emerald-500" : "text-red-500"} indent tooltip="Correções feitas quando o saldo da casa diverge do esperado — por exemplo, variações de odds em décimos durante a operação que geram pequenas diferenças. O ajuste garante que o lucro real seja apurado corretamente." onClick={() => onDrillDown?.("ajustes", metrics.ajustes)} />
-          )}
-          {(() => {
-            const fxLiquido = metrics.ganhoFx - metrics.perdaFx;
-            return Math.abs(fxLiquido) >= 0.01 ? (
-              <MetricRow label="Resultado Cambial" value={fxLiquido < 0 ? `−${formatCurrency(Math.abs(fxLiquido))}` : formatCurrency(fxLiquido)} colorClass={fxLiquido >= 0 ? "text-emerald-500" : "text-red-500"} indent tooltip="Diferença entre o valor solicitado no saque e o valor efetivamente recebido, causada por variação cambial entre a data do pedido e a data de confirmação. Ganhos e perdas são apurados automaticamente na conciliação." onClick={() => onDrillDown?.("resultadoCambial", fxLiquido)} />
-            ) : null;
-          })()}
-          {Math.abs(metrics.perdaOp) >= 0.01 && (
-            <MetricRow label="Perdas Operacionais" value={`−${formatCurrency(metrics.perdaOp)}`} colorClass="text-red-500" indent tooltip="Capital perdido por incidentes operacionais — como contas bloqueadas, saldos retidos ou fundos irrecuperáveis. Registrado via ocorrências ou ação rápida de perda." onClick={() => onDrillDown?.("perdaOp", metrics.perdaOp)} />
-          )}
+          <p className="text-[9px] text-muted-foreground/60 mt-0.5 pl-4">
+            Correções e incidentes. Não é performance, mas afeta o caixa.
+          </p>
         </div>
       )}
     </div>
@@ -302,38 +383,145 @@ const ESTRATEGIA_LABELS: Record<string, string> = {
 };
 
 function LucroOperacionalCollapsible({ metrics, formatCurrency }: { metrics: any; formatCurrency: (v: number) => string }) {
-  const [open, setOpen] = useState(false);
+  const [openJuice, setOpenJuice] = useState(false);
+  const fmtSigned = (v: number) =>
+    v < 0 ? `−${formatCurrency(Math.abs(v))}` : formatCurrency(v);
+
+  const hasFx = Math.abs(metrics.efeitosFinanceiros) >= 0.01;
+  const hasAdj = Math.abs(metrics.ajustesExtraordinarios) >= 0.01;
+
   return (
-    <div>
-      <SectionHeader icon={BarChart3} label="Lucro de Apostas (Juice)" iconClass="text-primary" />
-      <button
-        onClick={() => setOpen(!open)}
-        className="flex items-center justify-between gap-4 w-full group"
-      >
-        <span className="text-[11px] font-medium text-foreground flex items-center gap-1">
-          Resultado Puro
-          <ChevronDown className={`h-3 w-3 text-muted-foreground/60 transition-transform ${open ? "rotate-180" : ""}`} />
-        </span>
-        <span className={`text-[11px] font-mono tabular-nums font-bold ${metrics.lucroApostasPuro >= 0 ? "text-emerald-500" : "text-red-500"}`}>
-          {metrics.lucroApostasPuro < 0 ? `−${formatCurrency(Math.abs(metrics.lucroApostasPuro))}` : formatCurrency(metrics.lucroApostasPuro)}
-        </span>
-      </button>
-      {open && metrics.estrategiaBreakdown.length > 0 && (
-        <div className="mt-1 space-y-0.5 pl-2 border-l-2 border-border/30 ml-1">
-          {metrics.estrategiaBreakdown.map(([key, val]: [string, number]) => (
-            <MetricRow
-              key={key}
-              label={ESTRATEGIA_LABELS[key] || key}
-              value={val < 0 ? `−${formatCurrency(Math.abs(val))}` : formatCurrency(val)}
-              colorClass={val >= 0 ? "text-emerald-500" : "text-red-500"}
-              indent
-            />
-          ))}
+    <div className="space-y-2">
+      {/* 🟢 Performance Pura (numerador de ROI) */}
+      <div className="rounded-md border border-emerald-500/20 bg-emerald-500/[0.03] px-2.5 py-2">
+        <div className="flex items-center gap-1.5 mb-1">
+          <Sparkles className="h-3 w-3 text-emerald-500" />
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-500/90">Performance Pura</span>
+        </div>
+        <button
+          onClick={() => setOpenJuice(!openJuice)}
+          className="flex items-center justify-between gap-4 w-full group"
+        >
+          <span className="text-[11px] font-medium text-foreground flex items-center gap-1">
+            Lucro de Apostas (juice)
+            <ChevronDown className={`h-3 w-3 text-muted-foreground/60 transition-transform ${openJuice ? "rotate-180" : ""}`} />
+          </span>
+          <span className={`text-[11px] font-mono tabular-nums font-semibold ${metrics.lucroApostasPuro >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+            {fmtSigned(metrics.lucroApostasPuro)}
+          </span>
+        </button>
+        {openJuice && metrics.estrategiaBreakdown.length > 0 && (
+          <div className="mt-1 space-y-0.5 pl-2 border-l-2 border-emerald-500/30 ml-1">
+            {metrics.estrategiaBreakdown.map(([key, val]: [string, number]) => (
+              <MetricRow
+                key={key}
+                label={ESTRATEGIA_LABELS[key] || key}
+                value={fmtSigned(val)}
+                colorClass={val >= 0 ? "text-emerald-500" : "text-red-500"}
+                indent
+              />
+            ))}
+          </div>
+        )}
+        {Math.abs(metrics.bonusGanhos) >= 0.01 && (
+          <MetricRow label="Bônus Ganhos" value={formatCurrency(metrics.bonusGanhos)} colorClass="text-emerald-500" />
+        )}
+        {Math.abs(metrics.cashbackLiquido) >= 0.01 && (
+          <MetricRow label="Cashback Líquido" value={fmtSigned(metrics.cashbackLiquido)} colorClass={metrics.cashbackLiquido >= 0 ? "text-emerald-500" : "text-red-500"} />
+        )}
+        {Math.abs(metrics.girosGratis) >= 0.01 && (
+          <MetricRow label="Giros Grátis" value={formatCurrency(metrics.girosGratis)} colorClass="text-emerald-500" />
+        )}
+        <div className="border-t border-emerald-500/15 mt-1.5 pt-1.5">
+          <div className="flex items-center justify-between gap-4">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="text-[11px] font-bold text-foreground border-b border-dotted border-muted-foreground/40 cursor-help">
+                  Performance Total
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="left" className="max-w-[260px] text-xs">
+                Numerador de ROI. Mede a qualidade da operação: juice + créditos promocionais. Não inclui FX nem ajustes.
+              </TooltipContent>
+            </Tooltip>
+            <span className={`text-[11px] font-mono tabular-nums font-bold ${metrics.performancePura >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+              {fmtSigned(metrics.performancePura)}
+            </span>
+          </div>
+          <p className="text-[9px] text-muted-foreground/70 mt-0.5">
+            Esta é a parcela atribuída ao trabalho do operador
+          </p>
+        </div>
+      </div>
+
+      {/* 🟡 Efeitos Financeiros */}
+      {hasFx && (
+        <div className="rounded-md border border-amber-500/20 bg-amber-500/[0.03] px-2.5 py-2">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5">
+              <Globe className="h-3 w-3 text-amber-500" />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-500/90 border-b border-dotted border-amber-500/40 cursor-help">
+                    Efeitos Financeiros (FX)
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="left" className="max-w-[260px] text-xs">
+                  Variação cambial e ganho/perda na confirmação de saques. Não é performance — é efeito macro fora do controle do operador.
+                </TooltipContent>
+              </Tooltip>
+            </div>
+            <span className={`text-[11px] font-mono tabular-nums font-bold ${metrics.efeitosFinanceiros >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+              {fmtSigned(metrics.efeitosFinanceiros)}
+            </span>
+          </div>
         </div>
       )}
-      <p className="text-[9px] text-muted-foreground/70 mt-0.5">
-        Lucro/prejuízo exclusivo de apostas liquidadas
-      </p>
+
+      {/* 🟠 Ajustes & Extraordinários */}
+      {hasAdj && (
+        <div className="rounded-md border border-orange-500/20 bg-orange-500/[0.03] px-2.5 py-2">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5">
+              <Wrench className="h-3 w-3 text-orange-500" />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-orange-500/90 border-b border-dotted border-orange-500/40 cursor-help">
+                    Ajustes & Extraordinários
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="left" className="max-w-[260px] text-xs">
+                  Correções contábeis (AJUSTE_SALDO) e incidentes (PERDA_OPERACIONAL). Afeta o caixa, mas não compõe a performance recorrente nem a remuneração do operador.
+                </TooltipContent>
+              </Tooltip>
+            </div>
+            <span className={`text-[11px] font-mono tabular-nums font-bold ${metrics.ajustesExtraordinarios >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+              {fmtSigned(metrics.ajustesExtraordinarios)}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Resultado Operacional Total */}
+      {(hasFx || hasAdj) && (
+        <div className="border-t border-border/40 pt-2 mt-1">
+          <div className="flex items-center justify-between gap-4">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="text-[11px] font-bold text-foreground border-b border-dotted border-muted-foreground/40 cursor-help">
+                  Resultado Operacional Total
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="left" className="max-w-[260px] text-xs">
+                Performance + Efeitos FX + Ajustes. Este é o número que reconcilia com o Patrimônio (Camada 2).
+              </TooltipContent>
+            </Tooltip>
+            <span className={`text-[11px] font-mono tabular-nums font-bold ${metrics.resultadoOperacionalTotal >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+              {fmtSigned(metrics.resultadoOperacionalTotal)}
+            </span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -560,7 +748,20 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
     // são neutralizadas pelo trigger fn_ensure_deposito_virtual_on_link, sem precisar
     // de ajustes matemáticos aqui.
     const fluxoCaixaLiquido = saquesRecebidos - depositosEfetivos;
-    const extrasPositivos = cashbackLiquido + girosGratis + ajustes + ganhoConfirmacao + ganhoFx + bonusGanhos;
+
+    // ─── SEGREGAÇÃO CONCEITUAL (Performance vs FX vs Ajustes) ───
+    // Performance Pura (denominador de ROI): juice + créditos promocionais
+    const creditosPerformance = bonusGanhos + cashbackLiquido + girosGratis;
+    const performancePura = lucroApostasPuro + creditosPerformance;
+    // Efeitos Financeiros (FX): variação cambial e ganho/perda de confirmação — fora de ROI
+    const efeitosFinanceiros = (ganhoFx - perdaFx) + ganhoConfirmacao;
+    // Ajustes & Extraordinários: correções contábeis e incidentes — fora de ROI
+    const ajustesExtraordinarios = ajustes - perdaOp;
+    // Resultado Operacional Total (reconcilia com Patrimônio)
+    const resultadoOperacionalTotal = performancePura + efeitosFinanceiros + ajustesExtraordinarios;
+
+    // Mantido por retrocompatibilidade (Camada 1 — créditos somados ao caixa)
+    const extrasPositivos = creditosPerformance + ajustes + ganhoConfirmacao + (ganhoFx - perdaFx) - perdaOp;
     const capitalTotal = depositosEfetivos + extrasPositivos;
     const fluxoLiquidoAjustado = fluxoCaixaLiquido;
     const patrimonio = saldoCasas + saquesRecebidos + saquesPendentes;
@@ -602,6 +803,10 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
       cashbackLiquido, girosGratis, ajustes, ganhoConfirmacao, ganhoFx, perdaOp, perdaFx,
       bonusGanhos,
       lucroApostasPuro, estrategiaBreakdown,
+      // Segregação conceitual
+      creditosPerformance, performancePura,
+      efeitosFinanceiros, ajustesExtraordinarios,
+      resultadoOperacionalTotal,
       patrimonio, lucroFinanceiro,
       // Break-even consolidado
       breakEvenDate: beConsolidado.breakEvenDate,
@@ -668,7 +873,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
           onDrillDown={openDrillDown}
         />
         {hasExtras && (
-          <ExtrasCollapsible metrics={metrics} formatCurrency={formatCurrency} onDrillDown={openDrillDown} />
+          <SegregatedExtrasBlock metrics={metrics} formatCurrency={formatCurrency} onDrillDown={openDrillDown} />
         )}
         <MetricRow 
           label="Saques Recebidos" 
@@ -758,20 +963,20 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
         </div>
       </div>
 
-      {/* ─── CAMADA 3: OPERACIONAL (Performance) ─── */}
-      {Math.abs(metrics.lucroApostasPuro) >= 0.01 && (
+      {/* ─── CAMADA 3: OPERACIONAL (Performance + FX + Ajustes segregados) ─── */}
+      {(Math.abs(metrics.performancePura) >= 0.01 || Math.abs(metrics.efeitosFinanceiros) >= 0.01 || Math.abs(metrics.ajustesExtraordinarios) >= 0.01) && (
         <div className="border-t border-border/40 pt-3 pb-3 space-y-1">
-          <div className="flex items-center justify-between mb-1.5">
+          <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-1.5">
               <BarChart3 className="h-3 w-3 text-primary" />
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">3. Operacional · Performance</span>
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">3. Operacional · Resultado Completo</span>
             </div>
             <Tooltip>
               <TooltipTrigger asChild>
-                <span className="text-[9px] text-muted-foreground/70 border-b border-dotted border-muted-foreground/40 cursor-help">como chegou aqui</span>
+                <span className="text-[9px] text-muted-foreground/70 border-b border-dotted border-muted-foreground/40 cursor-help">3 blocos segregados</span>
               </TooltipTrigger>
-              <TooltipContent side="left" className="max-w-[260px] text-xs">
-                Lucro/prejuízo gerado pelas apostas em si. Isola câmbio e fluxo de caixa — mostra a qualidade da operação. Diferença com Patrimônio = câmbio + ajustes.
+              <TooltipContent side="left" className="max-w-[280px] text-xs">
+                Performance Pura mostra a qualidade da operação (numerador de ROI). Efeitos Financeiros (FX) e Ajustes são apresentados separados — afetam o caixa, mas não medem performance nem compõem a remuneração do operador.
               </TooltipContent>
             </Tooltip>
           </div>
@@ -890,6 +1095,9 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
           ajustesFinanceiro={metrics.ajustes}
           perdaOpFinanceiro={metrics.perdaOp}
           resultadoFxFinanceiro={metrics.ganhoFx - metrics.perdaFx}
+          performancePura={metrics.performancePura}
+          efeitosFinanceiros={metrics.efeitosFinanceiros}
+          ajustesExtraordinarios={metrics.ajustesExtraordinarios}
         />
       )}
     </div>

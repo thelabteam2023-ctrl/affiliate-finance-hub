@@ -22,6 +22,9 @@ import {
   Megaphone,
   AlertTriangle,
   Info,
+  Sparkles,
+  Wrench,
+  Handshake,
 } from "lucide-react";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { useKpiBreakdowns } from "@/hooks/useKpiBreakdowns";
@@ -48,6 +51,10 @@ interface LucroProjetadoModalProps {
   ajustesFinanceiro: number;
   perdaOpFinanceiro: number;
   resultadoFxFinanceiro: number;
+  // Segregação conceitual (Performance vs FX vs Ajustes)
+  performancePura?: number;
+  efeitosFinanceiros?: number;
+  ajustesExtraordinarios?: number;
 }
 
 function ReconciliationRow({
@@ -166,6 +173,14 @@ export function LucroProjetadoModal(props: LucroProjetadoModalProps) {
   const contributions = breakdowns?.lucro?.contributions ?? [];
 
   const hasBaseline = Math.abs(depositosBaseline) >= 0.005;
+
+  // Segregação conceitual (fallbacks para retrocompatibilidade)
+  const performancePura = props.performancePura ?? lucroOperacional;
+  const efeitosFinanceiros = props.efeitosFinanceiros ?? props.resultadoFxFinanceiro;
+  const ajustesExtraordinarios = props.ajustesExtraordinarios ?? (props.ajustesFinanceiro - props.perdaOpFinanceiro);
+  const naoOperacional = efeitosFinanceiros + ajustesExtraordinarios;
+  const totalProjeto = performancePura + naoOperacional;
+  const hasNaoOperacional = Math.abs(naoOperacional) >= 0.01;
 
   const divergenceFactors = computeDivergenceFactors(
     divergencia,
@@ -304,6 +319,90 @@ export function LucroProjetadoModal(props: LucroProjetadoModalProps) {
                   </p>
                 </>
               )}
+            </div>
+          </div>
+
+          {/* Conta de Fechamento com Operador */}
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-1.5 mb-2">
+              <Handshake className="h-3 w-3 text-primary" />
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Conta de Fechamento (Operador)
+              </span>
+            </div>
+            <div className="rounded-lg border border-border/40 bg-muted/20 px-3 py-2.5 space-y-2">
+              {/* Performance Pura */}
+              <div className="rounded-md border border-emerald-500/20 bg-emerald-500/[0.04] px-2.5 py-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5">
+                    <Sparkles className="h-3 w-3 text-emerald-500" />
+                    <span className="text-[10px] font-semibold text-emerald-500/90 uppercase tracking-wide">
+                      Lucro do Operador
+                    </span>
+                  </div>
+                  <span className={`text-[12px] font-mono tabular-nums font-bold ${performancePura >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                    {performancePura < 0 ? `−${formatCurrency(Math.abs(performancePura))}` : formatCurrency(performancePura)}
+                  </span>
+                </div>
+                <p className="text-[9px] text-muted-foreground mt-1">
+                  Apostas + Bônus + Cashback + Giros — parcela atribuída ao trabalho do operador
+                </p>
+              </div>
+
+              {/* Não-Operacional (informativo) */}
+              {hasNaoOperacional && (
+                <div className="rounded-md border border-amber-500/20 bg-amber-500/[0.04] px-2.5 py-2 space-y-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5">
+                      <Info className="h-3 w-3 text-amber-500" />
+                      <span className="text-[10px] font-semibold text-amber-500/90 uppercase tracking-wide">
+                        Efeitos Não-Operacionais
+                      </span>
+                    </div>
+                    <span className={`text-[11px] font-mono tabular-nums font-bold ${naoOperacional >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                      {naoOperacional < 0 ? `−${formatCurrency(Math.abs(naoOperacional))}` : formatCurrency(naoOperacional)}
+                    </span>
+                  </div>
+                  <div className="space-y-0.5 pl-1">
+                    {Math.abs(efeitosFinanceiros) >= 0.01 && (
+                      <ReconciliationRow
+                        label="Variação Cambial (FX)"
+                        value={efeitosFinanceiros}
+                        formatCurrency={formatCurrency}
+                        icon={Globe}
+                        tooltip="Resultado cambial + ganho/perda na confirmação de saques. Fora do controle do operador."
+                      />
+                    )}
+                    {Math.abs(ajustesExtraordinarios) >= 0.01 && (
+                      <ReconciliationRow
+                        label="Ajustes & Perdas Op."
+                        value={ajustesExtraordinarios}
+                        formatCurrency={formatCurrency}
+                        icon={Wrench}
+                        tooltip="Ajustes de saldo (reconciliação) e perdas operacionais (incidentes). Não compõem a remuneração do operador."
+                      />
+                    )}
+                  </div>
+                  <p className="text-[9px] text-muted-foreground mt-1">
+                    Esta parcela <strong>NÃO</strong> compõe a remuneração do operador
+                  </p>
+                </div>
+              )}
+
+              {/* Total do Projeto */}
+              <div className="border-t border-border/40 pt-2 mt-1">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-bold text-foreground">
+                    Total do Projeto
+                  </span>
+                  <span className={`text-[12px] font-mono tabular-nums font-bold ${totalProjeto >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                    {totalProjeto < 0 ? `−${formatCurrency(Math.abs(totalProjeto))}` : formatCurrency(totalProjeto)}
+                  </span>
+                </div>
+                <p className="text-[9px] text-muted-foreground/70 mt-0.5">
+                  Performance + Efeitos Não-Operacionais
+                </p>
+              </div>
             </div>
           </div>
         </div>
