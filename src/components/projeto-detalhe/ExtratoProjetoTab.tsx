@@ -910,6 +910,35 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
         <span className="text-[11px] text-muted-foreground ml-auto order-4 w-full sm:w-auto text-right">
           {filteredTransactions.length} / {transactions.length} registros
         </span>
+
+        {(reconciledHiddenCount > 0 || showReconciled) && (
+          <button
+            type="button"
+            onClick={() => toggleShowReconciled(!showReconciled)}
+            className={`order-5 inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md border text-[11px] transition-colors ${
+              showReconciled
+                ? "bg-amber-500/10 border-amber-500/30 text-amber-300 hover:bg-amber-500/15"
+                : "bg-muted/40 border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted"
+            }`}
+            title={
+              showReconciled
+                ? "Ocultar reconciliações automáticas (revínculo, baselines duplicados)"
+                : "Mostrar reconciliações automáticas (revínculo, baselines duplicados) — não afetam KPIs"
+            }
+          >
+            {showReconciled ? (
+              <>
+                <EyeOff className="h-3 w-3" />
+                Ocultar reconciliações
+              </>
+            ) : (
+              <>
+                <RefreshCcw className="h-3 w-3" />
+                {reconciledHiddenCount} reconciliaç{reconciledHiddenCount === 1 ? "ão oculta" : "ões ocultas"}
+              </>
+            )}
+          </button>
+        )}
       </div>
 
       {/* Transaction List */}
