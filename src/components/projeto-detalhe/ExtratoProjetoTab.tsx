@@ -415,6 +415,14 @@ function useProjetoExtrato(
       const saquesTotal = saquesConsolidadoSnap;
       const ajustesTotal = ajustesConsolidadoSnap;
 
+      // Equivalente LIVE (mark-to-market) dos depósitos — usado apenas
+      // para mostrar a diferença cambial vs snapshot no popover informativo.
+      let depositosLiveEquivalente = 0;
+      Array.from(currencyMap.values()).forEach((cm) => {
+        depositosLiveEquivalente += convertToConsolidation(cm.depositos, cm.moeda);
+      });
+      const variacaoCambialDepositos = depositosLiveEquivalente - depositosConsolidadoSnap;
+
       // Resultado de Caixa (NÃO é Lucro Operacional canônico — é fluxo de caixa do projeto):
       //   saques + saldo casas + ajustes − depósitos
       const resultadoCaixa =
@@ -429,6 +437,8 @@ function useProjetoExtrato(
         resultadoCaixa,
         baselineExcluidoCount,
         baselineExcluidoTotalConvertido,
+        depositosLiveEquivalente,
+        variacaoCambialDepositos,
       } as ProjetoFlowMetrics;
     },
     enabled: !!projetoId && !!workspaceId,
