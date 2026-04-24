@@ -604,7 +604,9 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
   return (
     <div className="space-y-4">
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+      {/* Mobile: 2 colunas, com Resultado de Caixa em destaque (col-span-2) */}
+      {/* Tablet: 3 colunas. Desktop: 5 colunas em linha única */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
         <Card className="border-border/50">
           <CardContent className="p-3">
             <div className="flex items-center gap-2 mb-1">
