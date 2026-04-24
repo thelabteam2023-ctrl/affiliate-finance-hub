@@ -717,8 +717,9 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
       </div>
 
       {/* Lista de Vínculos Ativos — scroll interno (anti-regressão) */}
+      {/* Altura responsiva: mais alta em desktop, menor em mobile para não dominar a tela */}
       <div className="relative">
-        <ScrollArea className="h-[520px] pr-2">
+        <ScrollArea className="h-[60vh] sm:h-[520px] pr-2">
           {sortedVinculos.length === 0 ? (
         <Card>
           <CardContent className="pt-6">
