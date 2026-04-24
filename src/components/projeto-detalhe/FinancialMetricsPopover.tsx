@@ -897,7 +897,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
       </div>
 
       {/* ─── CARDS DE TOPO: 2 leituras rápidas lado-a-lado ─── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 mb-3">
+      <div className="grid grid-cols-1 @[480px]:grid-cols-2 gap-2.5 mb-3">
       <div
         className={`rounded-lg border px-3 py-3 cursor-pointer transition-all hover:shadow-md ${
           metrics.lucroFinanceiro >= 0
