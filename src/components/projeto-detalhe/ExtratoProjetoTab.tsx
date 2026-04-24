@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/hooks/useWorkspace";
@@ -35,6 +35,8 @@ import {
   Sparkles,
   Gift,
   RefreshCcw,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { CURRENCY_SYMBOLS, type SupportedCurrency } from "@/types/currency";
 
@@ -66,6 +68,21 @@ interface ProjetoTransaction {
   ajuste_motivo: string | null;
   ajuste_direcao: string | null;
   evento_promocional_tipo: string | null;
+  /**
+   * Classificação de auditoria — define visualização e KPIs.
+   *  - EFFECTIVE: entra em todos os fluxos/KPIs.
+   *  - BASELINE_EXCLUDED: DV BASELINE confirmado (saldo inicial — não conta no KPI).
+   *  - RECONCILED_PHANTOM: SV cancelada por revínculo neutralizado (mesmo projeto, sem uso).
+   *  - RECONCILED_DUPLICATE: DV cancelado classificado como BASELINE em auditoria_metadata.
+   *  - RECONCILED_OTHER: outras SV/DV canceladas.
+   */
+  audit_class:
+    | "EFFECTIVE"
+    | "BASELINE_EXCLUDED"
+    | "RECONCILED_PHANTOM"
+    | "RECONCILED_DUPLICATE"
+    | "RECONCILED_OTHER";
+  cancelled_reason: string | null;
 }
 
 // Metrics separated by currency
@@ -236,10 +253,16 @@ function useProjetoExtrato(
           cotacao, cotacao_origem_usd, cotacao_destino_usd, status,
           data_transacao, created_at, descricao,
           origem_bookmaker_id, destino_bookmaker_id, origem_tipo, destino_tipo,
-          ajuste_motivo, ajuste_direcao, evento_promocional_tipo
+          ajuste_motivo, ajuste_direcao, evento_promocional_tipo,
+          auditoria_metadata
         `)
         .eq("projeto_id_snapshot", projetoId)
-        .not("status", "eq", "CANCELADO")
+        // Mantemos cancelados APENAS quando são SV/DV — para auditoria de
+        // reconciliações automáticas (revínculo, baseline duplicado).
+        // Demais cancelados (DEPOSITO, SAQUE, AJUSTE...) seguem ocultos.
+        .or(
+          "status.neq.CANCELADO,tipo_transacao.in.(SAQUE_VIRTUAL,DEPOSITO_VIRTUAL)"
+        )
         .order("data_transacao", { ascending: false })
         .order("created_at", { ascending: false })
         .limit(500);
@@ -283,6 +306,30 @@ function useProjetoExtrato(
         if (cotacaoEfetiva == null && e.cotacao != null && Number(e.cotacao) !== 1) {
           cotacaoEfetiva = Number(e.cotacao);
         }
+        // === Classificação de auditoria ===
+        const meta = (e.auditoria_metadata || {}) as Record<string, any>;
+        const cancelledReason: string | null = meta.cancelled_reason ?? null;
+        let auditClass: ProjetoTransaction["audit_class"] = "EFFECTIVE";
+        if (e.status === "CANCELADO") {
+          if (
+            e.tipo_transacao === "SAQUE_VIRTUAL" &&
+            cancelledReason === "ping_pong_neutralized_by_usage"
+          ) {
+            auditClass = "RECONCILED_PHANTOM";
+          } else if (
+            e.tipo_transacao === "DEPOSITO_VIRTUAL" &&
+            (meta.origem_tipo === "BASELINE" || cancelledReason === "phantom_link_unused")
+          ) {
+            auditClass = "RECONCILED_DUPLICATE";
+          } else {
+            auditClass = "RECONCILED_OTHER";
+          }
+        } else if (
+          e.tipo_transacao === "DEPOSITO_VIRTUAL" &&
+          (e.origem_tipo === "BASELINE" || e.origem_tipo == null)
+        ) {
+          auditClass = "BASELINE_EXCLUDED";
+        }
         return {
           id: e.id,
           tipo_transacao: e.tipo_transacao,
@@ -305,6 +352,8 @@ function useProjetoExtrato(
           ajuste_motivo: e.ajuste_motivo,
           ajuste_direcao: e.ajuste_direcao,
           evento_promocional_tipo: e.evento_promocional_tipo,
+          audit_class: auditClass,
+          cancelled_reason: cancelledReason,
         };
       });
     },
@@ -530,12 +579,43 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
     convertToConsolidation,
     moedaConsolidacao,
   );
+  const { workspaceId } = useWorkspace();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<string>("todos");
   const [filterStatus, setFilterStatus] = useState<string>("todos");
 
+  // Toggle de visibilidade de reconciliações (default OFF, persistido por workspace).
+  // Reconciliações = SV/DV canceladas pelo motor (revínculo neutralizado, baseline duplicado).
+  // NÃO entram em KPIs — toggle é puramente visual/auditoria.
+  const showReconciledStorageKey = `extrato:show-reconciled:${workspaceId || "anon"}`;
+  const [showReconciled, setShowReconciled] = useState<boolean>(false);
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem(showReconciledStorageKey);
+      if (v != null) setShowReconciled(v === "1");
+    } catch {
+      /* ignore */
+    }
+  }, [showReconciledStorageKey]);
+  const toggleShowReconciled = (next: boolean) => {
+    setShowReconciled(next);
+    try {
+      localStorage.setItem(showReconciledStorageKey, next ? "1" : "0");
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const reconciledHiddenCount = useMemo(
+    () =>
+      transactions.filter((t) => t.audit_class.startsWith("RECONCILED_")).length,
+    [transactions],
+  );
+
   const filteredTransactions = useMemo(() => {
     return transactions.filter((t) => {
+      // Reconciliações ficam ocultas até o usuário ligar o toggle.
+      if (!showReconciled && t.audit_class.startsWith("RECONCILED_")) return false;
       if (filterType !== "todos") {
         if (filterType === "depositos" && !t.tipo_transacao.includes("DEPOSITO")) return false;
         if (filterType === "saques" && !t.tipo_transacao.includes("SAQUE")) return false;
@@ -553,7 +633,7 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
       }
       return true;
     });
-  }, [transactions, filterType, filterStatus, searchTerm]);
+  }, [transactions, filterType, filterStatus, searchTerm, showReconciled]);
 
   // Detect multi-currency
   const currencies = useMemo(() => {
@@ -620,6 +700,7 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
                     <p>Soma do que <strong>realmente entrou na casa</strong> em cada depósito (já descontando taxas de trânsito), usando a <strong>cotação do dia</strong>.</p>
                     <p>Se você lançou 200 e a casa creditou 198, o card mostra 198. Os 2 perdidos no caminho aparecem como diferença no Resultado de Caixa.</p>
                     <p>Esse valor é histórico: não muda com o câmbio depois.</p>
+                    <p className="text-[10px] text-muted-foreground/80">Reconciliações automáticas (revínculo da mesma casa ao mesmo projeto sem operações entre) <strong>não entram aqui</strong> — você pode visualizá-las marcando “Mostrar reconciliações” nos filtros.</p>
                   </>
                 }
                 divergencia={
@@ -658,6 +739,7 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
                   <>
                     <p>Soma de tudo que saiu das casas para o seu caixa, usando a <strong>cotação do dia de cada saque</strong>.</p>
                     <p>Também é histórico: não recalcula com a cotação de hoje.</p>
+                    <p className="text-[10px] text-muted-foreground/80">Reconciliações automáticas (revínculo da mesma casa ao mesmo projeto sem operações entre) <strong>não entram aqui</strong> — você pode visualizá-las marcando “Mostrar reconciliações” nos filtros.</p>
                   </>
                 }
                 divergencia={
@@ -828,6 +910,35 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
         <span className="text-[11px] text-muted-foreground ml-auto order-4 w-full sm:w-auto text-right">
           {filteredTransactions.length} / {transactions.length} registros
         </span>
+
+        {(reconciledHiddenCount > 0 || showReconciled) && (
+          <button
+            type="button"
+            onClick={() => toggleShowReconciled(!showReconciled)}
+            className={`order-5 inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md border text-[11px] transition-colors ${
+              showReconciled
+                ? "bg-amber-500/10 border-amber-500/30 text-amber-300 hover:bg-amber-500/15"
+                : "bg-muted/40 border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted"
+            }`}
+            title={
+              showReconciled
+                ? "Ocultar reconciliações automáticas (revínculo, baselines duplicados)"
+                : "Mostrar reconciliações automáticas (revínculo, baselines duplicados) — não afetam KPIs"
+            }
+          >
+            {showReconciled ? (
+              <>
+                <EyeOff className="h-3 w-3" />
+                Ocultar reconciliações
+              </>
+            ) : (
+              <>
+                <RefreshCcw className="h-3 w-3" />
+                {reconciledHiddenCount} reconciliaç{reconciledHiddenCount === 1 ? "ão oculta" : "ões ocultas"}
+              </>
+            )}
+          </button>
+        )}
       </div>
 
       {/* Transaction List */}
@@ -854,17 +965,35 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
                 {txns.map((t) => {
                   const sign = getTransactionSign(t.tipo_transacao, t.ajuste_direcao);
                   const isForeign = t.moeda !== "BRL";
+                  const isReconciled = t.audit_class.startsWith("RECONCILED_");
+                  const isBaselineExcluded = t.audit_class === "BASELINE_EXCLUDED";
+                  const reconciledLabel =
+                    t.audit_class === "RECONCILED_PHANTOM"
+                      ? "🔁 Reconciliada (revínculo)"
+                      : t.audit_class === "RECONCILED_DUPLICATE"
+                        ? "🧹 Baseline limpo (duplicava depósito)"
+                        : "⊘ Cancelada";
+                  const reconciledTooltip =
+                    t.audit_class === "RECONCILED_PHANTOM"
+                      ? "Esta transação foi neutralizada automaticamente: a casa foi desvinculada e revinculada ao mesmo projeto sem operações entre. Mantida no histórico para auditoria. NÃO entra em Saques / Depósitos / Resultado de Caixa."
+                      : t.audit_class === "RECONCILED_DUPLICATE"
+                        ? "Saldo inicial de vinculação cancelado pelo motor (já contado pelo depósito real correspondente). NÃO entra em Saques / Depósitos / Resultado de Caixa."
+                        : "Transação cancelada. NÃO entra em Saques / Depósitos / Resultado de Caixa.";
 
                   return (
                     <Card
                       key={t.id}
-                      className="border-border/30 hover:border-border/60 transition-colors"
+                      className={`border-border/30 hover:border-border/60 transition-colors ${
+                        isReconciled ? "opacity-60 border-dashed border-amber-500/30" : ""
+                      }`}
                     >
                       <CardContent className="p-3">
                         {/* Mobile-first: ícone + título/valor empilhado em 2 linhas; desktop volta a 1 linha */}
                         <div className="flex items-start gap-3">
                           {/* Icon */}
-                          <div className="shrink-0 h-8 w-8 rounded-full flex items-center justify-center bg-muted/50">
+                          <div className={`shrink-0 h-8 w-8 rounded-full flex items-center justify-center ${
+                            isReconciled ? "bg-amber-500/10" : "bg-muted/50"
+                          }`}>
                             {getTransactionIcon(t.tipo_transacao)}
                           </div>
 
@@ -889,6 +1018,7 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
                               </div>
                               <div className="text-right shrink-0">
                                 <p className={`text-sm font-semibold whitespace-nowrap ${
+                                  isReconciled ? "line-through text-muted-foreground" :
                                   sign === "positive" ? "text-emerald-400" :
                                   sign === "negative" ? "text-red-400" : "text-foreground"
                                 }`}>
@@ -910,16 +1040,46 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
                               {t.bookmaker_nome || "—"}
                               {t.parceiro_nome && ` · ${t.parceiro_nome}`}
                               {t.tipo_transacao === "DEPOSITO_VIRTUAL"
-                                ? " · Saldo existente incorporado ao projeto na vinculação"
+                                ? t.origem_tipo === "MIGRACAO"
+                                  ? " · Saldo migrado de outro projeto"
+                                  : " · Saldo inicial da vinculação"
                                 : t.tipo_transacao === "SAQUE_VIRTUAL"
-                                ? " · Saldo transferido para fora do projeto na desvinculação"
+                                ? " · Saldo transferido (desvinculação)"
                                 : t.descricao ? ` · ${t.descricao}` : ""}
                               {t.ajuste_motivo && ` · ${t.ajuste_motivo}`}
                             </p>
 
                             {/* Linha 3: status + horário */}
                             <div className="flex items-center justify-between gap-2 mt-1.5">
-                              {getStatusBadge(t.status)}
+                              {isReconciled ? (
+                                <TooltipProvider delayDuration={150}>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Badge className="bg-amber-500/15 text-amber-300 border-amber-500/30 text-[10px] cursor-help">
+                                        {reconciledLabel}
+                                      </Badge>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" className="max-w-xs text-xs">
+                                      {reconciledTooltip}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              ) : isBaselineExcluded ? (
+                                <TooltipProvider delayDuration={150}>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Badge className="bg-blue-500/15 text-blue-300 border-blue-500/30 text-[10px] cursor-help">
+                                        📥 Saldo inicial · não contabilizado
+                                      </Badge>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" className="max-w-xs text-xs">
+                                      Saldo já existente na casa no momento da vinculação. Como não saiu do caixa do projeto, NÃO entra em Depósitos / Resultado de Caixa. Aparece aqui apenas para transparência da formação do saldo da casa.
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              ) : (
+                                getStatusBadge(t.status)
+                              )}
                               <span className="text-[10px] text-muted-foreground">
                                 {new Date(t.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                               </span>
