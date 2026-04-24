@@ -1033,22 +1033,25 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
       })()}
       </div>
 
-      {/* ─── CAMADA 1: REALIZADO (Caixa) ─── */}
-      <div className="space-y-1 pb-3">
-        <div className="flex items-center justify-between mb-1.5">
-          <div className="flex items-center gap-1.5">
-            <Banknote className="h-3 w-3 text-muted-foreground" />
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">🏦 Lucro em Caixa</span>
-          </div>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="text-[9px] text-muted-foreground/70 border-b border-dotted border-muted-foreground/40 cursor-help">dinheiro que já voltou pra conta</span>
-            </TooltipTrigger>
-            <TooltipContent side="left" className="max-w-[260px] text-xs">
-              Saques confirmados − depósitos confirmados. Só conta dinheiro que efetivamente voltou ao seu banco. Não considera saldo ainda dentro das casas nem variação cambial.
-            </TooltipContent>
-          </Tooltip>
-        </div>
+      {/* ─── ACCORDIONS DE AUDITORIA (colapsados por padrão) ─── */}
+      <Accordion type="multiple" className="w-full space-y-1.5">
+        {/* Camada 1: Lucro em Caixa */}
+        <AccordionItem value="caixa" className="border rounded-md border-border/40 bg-muted/10">
+          <AccordionTrigger className="px-3 py-2 hover:no-underline [&>svg]:h-3 [&>svg]:w-3">
+            <div className="flex items-center justify-between gap-2 flex-1 pr-2">
+              <div className="flex items-center gap-1.5">
+                <Banknote className="h-3 w-3 text-muted-foreground" />
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">🏦 Lucro em Caixa</span>
+              </div>
+              <span className={`text-[11px] font-mono tabular-nums font-semibold ${(hasExtras ? metrics.fluxoLiquidoAjustado : metrics.fluxoCaixaLiquido) >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                {formatCurrency(hasExtras ? metrics.fluxoLiquidoAjustado : metrics.fluxoCaixaLiquido)}
+              </span>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent className="px-3 pb-3 pt-0">
+            <p className="text-[9.5px] text-muted-foreground/70 mb-1.5">
+              Dinheiro que já voltou pra sua conta (saques − depósitos confirmados).
+            </p>
         <DepositosCollapsible
           metrics={metrics}
           formatCurrency={formatCurrency}
