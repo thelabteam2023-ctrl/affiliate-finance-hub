@@ -23,13 +23,15 @@ DV antigos com `origem_tipo = NULL` (rebaselines manuais pré-classificação) s
 - `saldo_atual` das bookmakers ativas também é convertido por moeda antes de somar em `saldoCasasTotal`.
 - `formatConsolidated` (do hook) renderiza com símbolo correto (USD, BRL, etc.).
 
-### "Resultado de Caixa" (não é Lucro Operacional)
+### "Lucro se sacar tudo" (= Patrimônio Líquido, NÃO é Lucro Operacional)
 
 ```
-resultadoCaixa = saquesTotal + saldoCasasTotal + ajustesTotal − depositosTotal
+resultadoCaixa = saquesTotal + saldoCasasTotal − depositosTotal
 ```
 
-Card renomeado de "Lucro Consolidado" → "Resultado de Caixa". O Lucro Operacional canônico vive em Visão Geral / Indicadores Financeiros via `fetchProjetosLucroCanonico`.
+Card renomeado: "Lucro Consolidado" → "Resultado de Caixa" → **"Lucro se sacar tudo"** (alinhado com `lucroFinanceiro` do `FinancialMetricsPopover`). O Lucro Operacional canônico vive em Visão Geral / Indicadores Financeiros via `fetchProjetosLucroCanonico`.
+
+**⚠️ ANTI-DOUBLE-COUNTING:** `ajustesTotal` (extras) NÃO entra na fórmula. Bônus, cashback e ajustes já mexem em `saldo_atual` via triggers do ledger, logo já estão dentro de `saldoCasasTotal`. Somar de novo causa lucro inflado. O card "Extras" permanece como referência informativa do histórico.
 
 ### Tooltip informativo de baseline excluído
 

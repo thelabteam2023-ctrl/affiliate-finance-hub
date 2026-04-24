@@ -663,10 +663,16 @@ function useProjetoExtrato(
       });
       const variacaoCambialDepositos = depositosLiveEquivalente - depositosConsolidadoSnap;
 
-      // Resultado de Caixa (NÃO é Lucro Operacional canônico — é fluxo de caixa do projeto):
-      //   saques + saldo casas + ajustes − depósitos
+      // Lucro se sacar tudo (NÃO é Lucro Operacional canônico — é o patrimônio líquido do projeto):
+      //   saques + saldo casas − depósitos
+      //
+      // ⚠️ ANTI-DOUBLE-COUNTING: NÃO somar `ajustesTotal` aqui. Bônus, cashback,
+      // ajustes manuais e variações cambiais já estão refletidos no `saldo_atual`
+      // das bookmakers via triggers do ledger (BONUS_CREDITADO, CASHBACK_MANUAL,
+      // AJUSTE_SALDO, etc. atualizam saldo_atual). Somar ajustesTotal de novo
+      // duplicaria o lucro. O card "Extras" permanece como informativo.
       const resultadoCaixa =
-        saquesTotal + saldoCasasTotal + ajustesTotal - depositosTotal;
+        saquesTotal + saldoCasasTotal - depositosTotal;
 
       return {
         byCurrency,
@@ -945,8 +951,11 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
                       <li><strong>Entradas</strong> (cashback, bônus, ganho cambial) somam.</li>
                       <li><strong>Saídas</strong> (perda no recebimento, estorno, perda cambial) subtraem.</li>
                     </ul>
-                    <p>Esses valores são <strong>responsabilidade do projeto</strong> (não da empresa) e por isso entram diretamente no Resultado de Caixa, refletindo o que você realmente terá no fechamento.</p>
-                    <p>Convertido pela cotação do dia de cada lançamento.</p>
+                    <div className="mt-2 p-2 rounded bg-amber-500/10 border border-amber-500/30 text-[11px]">
+                      <p className="font-semibold text-amber-300">📌 Card informativo</p>
+                      <p className="text-amber-100/90">Estes valores <strong>já estão refletidos no Saldo Casas</strong> via triggers do ledger (bônus, cashback e ajustes mexem direto no <code>saldo_atual</code> das bookmakers). Por isso <strong>NÃO são somados novamente</strong> em "Lucro se sacar tudo" — somar duas vezes inflaria o resultado.</p>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground/80">Convertido pela cotação do dia de cada lançamento (snapshot).</p>
                   </>
                 }
               />
@@ -970,16 +979,21 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
           <CardContent className="p-3">
             <div className="flex items-center gap-2 mb-1">
               <TrendingUp className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
-              <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Resultado de Caixa</span>
+              <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Lucro se sacar tudo</span>
               <KpiInfoButton
-                title="Resultado de Caixa"
+                title="Lucro se sacar tudo"
                 body={
                   <>
-                    <p><strong>Conta:</strong> Saques + Saldo Casas + Extras − Depósitos.</p>
-                    <p>Mostra a realidade do caixa hoje, considerando tudo que afeta o fechamento do projeto. Pode ficar negativo antes de operar por dois motivos:</p>
+                    <p><strong>Fórmula:</strong> Saques + Saldo Casas − Depósitos.</p>
+                    <p>Responde à pergunta: <em>"Quanto eu teria de lucro se sacasse tudo das casas hoje?"</em> Equivale ao <strong>Patrimônio Líquido</strong> exibido na Visão Geral.</p>
+                    <div className="mt-2 p-2 rounded bg-blue-500/10 border border-blue-500/30 text-[11px]">
+                      <p className="font-semibold text-blue-300">Por que Extras NÃO entra na conta?</p>
+                      <p className="text-blue-100/90">Bônus, cashback e ajustes <strong>já mexeram no <code>saldo_atual</code></strong> das bookmakers via triggers do ledger. Logo, esses valores já estão dentro de "Saldo Casas". Somar "Extras" de novo causaria <strong>dupla contagem</strong> e inflaria o lucro.</p>
+                    </div>
+                    <p>Pode divergir do Patrimônio Líquido (Visão Geral) por dois motivos:</p>
                     <ul className="list-disc pl-4 space-y-0.5">
-                      <li><strong>Perda no recebimento:</strong> a casa creditou menos do que você enviou (taxa de rede, fee da casa). Já entra como saída em <em>Extras</em>.</li>
-                      <li><strong>Variação cambial:</strong> o dinheiro nas casas vale menos hoje do que custou para colocar lá (ou mais, se valorizou).</li>
+                      <li><strong>Variação cambial:</strong> Saldo Casas usa cotação de hoje (mark-to-market) e Depósitos usam a cotação do dia em que foram feitos (snapshot histórico).</li>
+                      <li><strong>Perda no recebimento:</strong> a casa creditou menos do que você enviou — isso já está embutido no Saldo Casas.</li>
                     </ul>
                     <p className="text-[10px] text-muted-foreground/80">Essas perdas/ganhos são <strong>do projeto</strong>, não da empresa — quando você sacar, vai sacar com o câmbio do dia. Por isso entram no fechamento final.</p>
                     {metrics && Math.abs(metrics.variacaoCambialDepositos) > 0.01 && (
@@ -1002,7 +1016,7 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
                   </>
                 }
                 divergencia={
-                  <p>Não é Lucro Operacional. É o reflexo do caixa do projeto considerando o câmbio do dia. Para a performance real das operações, use a Visão Geral.</p>
+                  <p>Não é Lucro Operacional. É o patrimônio líquido do projeto considerando o câmbio do dia. Para a performance real das operações (juice, bônus, FX segregados), use a Visão Geral.</p>
                 }
               />
             </div>
@@ -1010,7 +1024,7 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
               {formatConsolidated(metrics?.resultadoCaixa || 0)}
             </p>
             <p className="mt-1 text-[9px] text-muted-foreground/70">
-              saques + saldo + extras − depósitos · não é Lucro Operacional
+              saques + saldo − depósitos · = Patrimônio Líquido
             </p>
           </CardContent>
         </Card>
