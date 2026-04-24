@@ -538,7 +538,7 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
       if (filterType !== "todos") {
         if (filterType === "depositos" && !t.tipo_transacao.includes("DEPOSITO")) return false;
         if (filterType === "saques" && !t.tipo_transacao.includes("SAQUE")) return false;
-        if (filterType === "ajustes" && !["AJUSTE", "CASHBACK", "BONUS", "ESTORNO"].includes(t.tipo_transacao)) return false;
+        if (filterType === "ajustes" && !["AJUSTE", "CASHBACK", "BONUS", "ESTORNO", "PERDA_CAMBIAL", "GANHO_CAMBIAL"].includes(t.tipo_transacao)) return false;
       }
       if (filterStatus !== "todos" && t.status !== filterStatus) return false;
       if (searchTerm) {
@@ -806,7 +806,7 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
             <SelectItem value="todos">Todos os tipos</SelectItem>
             <SelectItem value="depositos">Depósitos</SelectItem>
             <SelectItem value="saques">Saques</SelectItem>
-            <SelectItem value="ajustes">Ajustes / Extras</SelectItem>
+            <SelectItem value="ajustes">Extras (ajustes, cashback, câmbio)</SelectItem>
           </SelectContent>
         </Select>
 
