@@ -14,6 +14,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -83,10 +84,55 @@ interface ProjetoFlowMetrics {
   baselineExcluidoCount: number;
   /** Soma (já convertida) dos baselines excluídos — apenas para tooltip informativo */
   baselineExcluidoTotalConvertido: number;
+  /** Equivalente LIVE (mark-to-market) dos depósitos — para comparativo no popover */
+  depositosLiveEquivalente: number;
+  /** Diferença cambial: depositosLiveEquivalente − depositosTotal(snapshot) */
+  variacaoCambialDepositos: number;
 }
 
 function getSymbol(moeda: string) {
   return CURRENCY_SYMBOLS[moeda as SupportedCurrency] || moeda;
+}
+
+/**
+ * Botão informativo (ⓘ) para KPI: explica metodologia e divergências esperadas.
+ * Usado em todos os cards do Extrato para deixar claro o "ponto de vista" de cada número.
+ */
+function KpiInfoButton({
+  title,
+  body,
+  divergencia,
+}: {
+  title: string;
+  body: React.ReactNode;
+  divergencia?: React.ReactNode;
+}) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          onClick={(e) => e.stopPropagation()}
+          className="ml-auto text-muted-foreground/60 hover:text-foreground transition-colors"
+          aria-label="Sobre este KPI"
+        >
+          <Info className="h-3.5 w-3.5" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent side="bottom" align="end" className="w-80 text-xs space-y-2 p-3">
+        <p className="font-semibold text-sm">{title}</p>
+        <div className="text-muted-foreground leading-relaxed space-y-1.5">{body}</div>
+        {divergencia && (
+          <div className="pt-2 mt-2 border-t border-border/40">
+            <p className="text-[10px] uppercase tracking-wide font-semibold text-amber-400 mb-1">
+              Por que diverge do Saldo Operável?
+            </p>
+            <div className="text-muted-foreground leading-relaxed">{divergencia}</div>
+          </div>
+        )}
+      </PopoverContent>
+    </Popover>
+  );
 }
 
 function formatVal(value: number, moeda: string = "BRL") {
@@ -373,6 +419,14 @@ function useProjetoExtrato(
       const saquesTotal = saquesConsolidadoSnap;
       const ajustesTotal = ajustesConsolidadoSnap;
 
+      // Equivalente LIVE (mark-to-market) dos depósitos — usado apenas
+      // para mostrar a diferença cambial vs snapshot no popover informativo.
+      let depositosLiveEquivalente = 0;
+      Array.from(currencyMap.values()).forEach((cm) => {
+        depositosLiveEquivalente += convertToConsolidation(cm.depositos, cm.moeda);
+      });
+      const variacaoCambialDepositos = depositosLiveEquivalente - depositosConsolidadoSnap;
+
       // Resultado de Caixa (NÃO é Lucro Operacional canônico — é fluxo de caixa do projeto):
       //   saques + saldo casas + ajustes − depósitos
       const resultadoCaixa =
@@ -387,6 +441,8 @@ function useProjetoExtrato(
         resultadoCaixa,
         baselineExcluidoCount,
         baselineExcluidoTotalConvertido,
+        depositosLiveEquivalente,
+        variacaoCambialDepositos,
       } as ProjetoFlowMetrics;
     },
     enabled: !!projetoId && !!workspaceId,
@@ -497,6 +553,18 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
                   <div className="flex items-center gap-2 mb-1">
                     <ArrowDownToLine className="h-3.5 w-3.5 text-red-400" />
                     <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Depósitos</span>
+                    <KpiInfoButton
+                      title="Depósitos (Histórico Contábil)"
+                      body={
+                        <>
+                          <p>Soma de todos os depósitos efetivos, convertidos pela <strong>cotação congelada no momento de cada operação</strong> (snapshot).</p>
+                          <p>Inclui DEPOSITO real + DEPOSITO_VIRTUAL (MIGRACAO). Baselines de vinculação são excluídos para evitar dupla contagem.</p>
+                        </>
+                      }
+                      divergencia={
+                        <p>Este KPI usa cotação <strong>histórica</strong> (snapshot do dia do depósito). Já o Saldo Operável reflete a cotação <strong>atual</strong>. Por isso, mesmo sem operar, podem divergir conforme o câmbio se move.</p>
+                      }
+                    />
                   </div>
                   <p className="text-lg font-bold text-foreground">
                     {formatConsolidated(metrics?.depositosTotal || 0)}
@@ -541,6 +609,18 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
                   <div className="flex items-center gap-2 mb-1">
                     <ArrowUpFromLine className="h-3.5 w-3.5 text-emerald-400" />
                     <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Saques</span>
+                    <KpiInfoButton
+                      title="Saques (Histórico Contábil)"
+                      body={
+                        <>
+                          <p>Soma de todos os saques efetivos, convertidos pela <strong>cotação congelada no momento de cada saque</strong> (snapshot).</p>
+                          <p>Inclui SAQUE real + SAQUE_VIRTUAL (MIGRACAO entre projetos).</p>
+                        </>
+                      }
+                      divergencia={
+                        <p>Cada saque registra a cotação do dia. O valor exibido aqui é a soma dessas cotações históricas, não o valor recalculado em câmbio atual.</p>
+                      }
+                    />
                   </div>
                   <p className="text-lg font-bold text-foreground">
                     {formatConsolidated(metrics?.saquesTotal || 0)}
@@ -574,6 +654,18 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
             <div className="flex items-center gap-2 mb-1">
               <Wallet className="h-3.5 w-3.5 text-blue-400" />
               <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Saldo Casas</span>
+              <KpiInfoButton
+                title="Saldo Casas (Mark-to-Market)"
+                body={
+                  <>
+                    <p>Soma de <strong>tudo que está nas casas vinculadas agora</strong>, convertido pela <strong>cotação atual</strong>.</p>
+                    <p>Representa quanto você teria, em moeda do projeto, se sacasse tudo nesse momento.</p>
+                  </>
+                }
+                divergencia={
+                  <p>Aqui usamos cotação <strong>live</strong> (mark-to-market), enquanto Depósitos/Saques acima usam cotação <strong>histórica</strong> (snapshot). Essa diferença de "ponto de vista" é o que gera a variação cambial no Resultado de Caixa.</p>
+                }
+              />
             </div>
             <p className="text-lg font-bold text-foreground">
               {formatConsolidated(metrics?.saldoCasasTotal || 0)}
@@ -586,6 +678,15 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
             <div className="flex items-center gap-2 mb-1">
               <ArrowRightLeft className="h-3.5 w-3.5 text-purple-400" />
               <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Extras</span>
+              <KpiInfoButton
+                title="Extras (Ajustes / Cashback / Bônus)"
+                body={
+                  <>
+                    <p>Soma de ajustes manuais, cashbacks e bônus creditados ao caixa do projeto, com sinal conforme a direção (CRÉDITO soma, DÉBITO subtrai).</p>
+                    <p>Convertido pela cotação congelada no momento de cada lançamento.</p>
+                  </>
+                }
+              />
             </div>
             <p className={`text-lg font-bold ${(metrics?.ajustesTotal || 0) >= 0 ? "text-emerald-400" : "text-red-400"}`}>
               {formatConsolidated(metrics?.ajustesTotal || 0)}
@@ -607,6 +708,36 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
             <div className="flex items-center gap-2 mb-1">
               <TrendingUp className="h-3.5 w-3.5 text-emerald-400" />
               <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Resultado de Caixa</span>
+              <KpiInfoButton
+                title="Resultado de Caixa (Realidade Econômica)"
+                body={
+                  <>
+                    <p><strong>Fórmula:</strong> Saques + Saldo Casas + Extras − Depósitos.</p>
+                    <p>Mistura intencionalmente <strong>histórico contábil</strong> (depósitos/saques pelo snapshot) com <strong>mark-to-market</strong> (saldo casas pela cotação atual).</p>
+                    <p>Se for negativo antes de operar, é <strong>variação cambial</strong>: o que está nas casas vale menos hoje do que custou para colocar lá. Se positivo, valorizou.</p>
+                    {metrics && Math.abs(metrics.variacaoCambialDepositos) > 0.01 && (
+                      <div className="mt-2 p-2 rounded bg-muted/50 space-y-1">
+                        <p className="text-[10px] uppercase tracking-wide font-semibold">Variação cambial estimada</p>
+                        <div className="flex justify-between gap-2">
+                          <span>Depósitos a custo histórico:</span>
+                          <span>{formatConsolidated(metrics.depositosTotal)}</span>
+                        </div>
+                        <div className="flex justify-between gap-2">
+                          <span>Mesmos depósitos hoje:</span>
+                          <span>{formatConsolidated(metrics.depositosLiveEquivalente)}</span>
+                        </div>
+                        <div className={`flex justify-between gap-2 font-semibold ${metrics.variacaoCambialDepositos >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                          <span>Diferença:</span>
+                          <span>{metrics.variacaoCambialDepositos >= 0 ? "+" : ""}{formatConsolidated(metrics.variacaoCambialDepositos)}</span>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                }
+                divergencia={
+                  <p>Não é Lucro Operacional. É o reflexo de caixa do projeto considerando o câmbio do dia. Para análise de performance pura, use a Visão Geral.</p>
+                }
+              />
             </div>
             <p className={`text-lg font-bold ${(metrics?.resultadoCaixa || 0) >= 0 ? "text-emerald-400" : "text-red-400"}`}>
               {formatConsolidated(metrics?.resultadoCaixa || 0)}
