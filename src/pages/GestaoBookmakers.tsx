@@ -91,6 +91,7 @@ export default function GestaoBookmakers() {
   const [vinculoCriadoConfirmOpen, setVinculoCriadoConfirmOpen] = useState(false);
   const [vinculoCriadoContext, setVinculoCriadoContext] = useState<VinculoCriadoContext | null>(null);
   const [depositDialogOpen, setDepositDialogOpen] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   // ajustePostLimitacao state removed — now in ProjetoVinculosTab
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -227,6 +228,8 @@ export default function GestaoBookmakers() {
   };
 
   const handleDelete = async (id: string) => {
+    if (deletingId) return;
+
     // Verificar se pode excluir baseado no status de uso
     const usage = usageMap[id];
     const { canDelete: canDeleteBm, reason } = canDeleteBookmaker(usage);
@@ -242,6 +245,7 @@ export default function GestaoBookmakers() {
 
     if (!confirm("Tem certeza que deseja excluir este vínculo? Esta ação é irreversível.")) return;
 
+    setDeletingId(id);
     try {
       const { error } = await supabase
         .from("bookmakers")
@@ -261,6 +265,8 @@ export default function GestaoBookmakers() {
         description: error.message,
         variant: "destructive",
       });
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -967,7 +973,7 @@ export default function GestaoBookmakers() {
                             size="sm"
                             className={`flex-1 ${canDeleteBm ? "text-destructive hover:text-destructive" : "text-muted-foreground cursor-not-allowed"}`}
                             onClick={() => handleDelete(bookmaker.id)}
-                            disabled={!canDeleteBm}
+                            disabled={!canDeleteBm || deletingId === bookmaker.id}
                           >
                             {canDeleteBm ? <Trash2 className="mr-1 h-4 w-4" /> : <Ban className="mr-1 h-4 w-4" />}
                             {canDeleteBm ? "Excluir" : "Protegida"}
@@ -1170,7 +1176,7 @@ export default function GestaoBookmakers() {
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => handleDelete(bookmaker.id)}
-                                  disabled={!canDeleteBm}
+                                  disabled={!canDeleteBm || deletingId === bookmaker.id}
                                   className={canDeleteBm ? "text-destructive hover:text-destructive hover:bg-destructive/10" : "text-muted-foreground cursor-not-allowed"}
                                 >
                                   {canDeleteBm ? <Trash2 className="h-4 w-4" /> : <Ban className="h-4 w-4" />}
