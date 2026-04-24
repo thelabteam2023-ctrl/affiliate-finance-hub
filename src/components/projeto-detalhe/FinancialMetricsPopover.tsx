@@ -749,7 +749,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
           onDrillDown={openDrillDown}
         />
         {hasExtras && (
-          <ExtrasCollapsible metrics={metrics} formatCurrency={formatCurrency} onDrillDown={openDrillDown} />
+          <SegregatedExtrasBlock metrics={metrics} formatCurrency={formatCurrency} onDrillDown={openDrillDown} />
         )}
         <MetricRow 
           label="Saques Recebidos" 
