@@ -151,10 +151,29 @@ function getTransactionIcon(tipo: string) {
   if (tipo === "CASHBACK") return <Sparkles className="h-3.5 w-3.5 text-purple-400" />;
   if (tipo === "BONUS") return <Gift className="h-3.5 w-3.5 text-amber-400" />;
   if (tipo === "ESTORNO") return <RefreshCcw className="h-3.5 w-3.5 text-orange-400" />;
+  if (tipo === "PERDA_CAMBIAL") return <ArrowRightLeft className="h-3.5 w-3.5 text-red-400" />;
+  if (tipo === "GANHO_CAMBIAL") return <ArrowRightLeft className="h-3.5 w-3.5 text-emerald-400" />;
   return <ArrowRightLeft className="h-3.5 w-3.5 text-muted-foreground" />;
 }
 
-function getTransactionLabel(tipo: string) {
+/**
+ * Label visual para o tipo de transação.
+ * Para PERDA_CAMBIAL / GANHO_CAMBIAL geradas pela conciliação de mesma moeda,
+ * exibimos como "Perda/Crédito de Trânsito" porque a diferença não é câmbio,
+ * é taxa cobrada pela casa no recebimento (ex: depositou 200 USD, casa creditou 198 USD).
+ * Para diferenças vindas de cross-currency real (origem≠destino), mantém "cambial".
+ */
+function getTransactionLabel(tipo: string, descricao?: string | null) {
+  if (tipo === "PERDA_CAMBIAL") {
+    const d = (descricao || "").toLowerCase();
+    if (d.includes("conciliação")) return "Perda no recebimento";
+    return "Perda cambial";
+  }
+  if (tipo === "GANHO_CAMBIAL") {
+    const d = (descricao || "").toLowerCase();
+    if (d.includes("conciliação")) return "Crédito no recebimento";
+    return "Ganho cambial";
+  }
   switch (tipo) {
     case "DEPOSITO": return "Depósito";
     case "DEPOSITO_VIRTUAL": return "Depósito Virtual";
@@ -193,6 +212,8 @@ function getTransactionSign(tipo: string, ajusteDirecao?: string | null): "posit
   }
   if (tipo === "CASHBACK" || tipo === "BONUS") return "positive";
   if (tipo === "ESTORNO") return "negative";
+  if (tipo === "PERDA_CAMBIAL") return "negative";
+  if (tipo === "GANHO_CAMBIAL") return "positive";
   return "neutral";
 }
 
