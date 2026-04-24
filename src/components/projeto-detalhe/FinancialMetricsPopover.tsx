@@ -335,7 +335,7 @@ function SegregatedExtrasBlock({
         </div>
       )}
 
-      {/* 🟠 AJUSTES & EXTRAORDINÁRIOS */}
+      {/* 🟠 EXTRAORDINÁRIOS */}
       {hasAdj && (
         <div>
           <button
@@ -344,7 +344,7 @@ function SegregatedExtrasBlock({
           >
             <span className="text-[11px] text-muted-foreground flex items-center gap-1.5">
               <Wrench className="h-3 w-3 text-orange-500/80" />
-              Ajustes & Extraordinários
+              Extraordinários
               <ChevronDown className={`h-3 w-3 text-muted-foreground/60 transition-transform ${openAdj ? "rotate-180" : ""}`} />
             </span>
             <span className={`text-[11px] font-mono tabular-nums font-semibold ${metrics.ajustesExtraordinarios >= 0 ? "text-emerald-500" : "text-red-500"}`}>
@@ -353,8 +353,8 @@ function SegregatedExtrasBlock({
           </button>
           {openAdj && (
             <div className="mt-1 space-y-0.5 pl-2 border-l-2 border-orange-500/30 ml-1">
-              {Math.abs(metrics.ajustes) >= 0.01 && (
-                <MetricRow label="Ajustes de Saldo" value={fmtSigned(metrics.ajustes)} colorClass={metrics.ajustes >= 0 ? "text-emerald-500" : "text-red-500"} indent tooltip="Correções para fechar a conta quando o saldo da casa diverge do esperado (ex.: arredondamento de odds). Não é performance — é correção contábil." onClick={() => onDrillDown?.("ajustes", metrics.ajustes)} />
+              {Math.abs(metrics.ajustesExtraord) >= 0.01 && (
+                <MetricRow label="Ajustes Extraordinários" value={fmtSigned(metrics.ajustesExtraord)} colorClass={metrics.ajustesExtraord >= 0 ? "text-emerald-500" : "text-red-500"} indent tooltip="Ajustes de saldo classificados como administrativos/sem vínculo operacional (estornos, correções de lançamento). Reclassifique no Extrato se necessário." onClick={() => onDrillDown?.("ajustes", metrics.ajustesExtraord)} />
               )}
               {Math.abs(metrics.perdaOp) >= 0.01 && (
                 <MetricRow label="Perdas Operacionais" value={`−${formatCurrency(metrics.perdaOp)}`} colorClass="text-red-500" indent tooltip="Capital perdido por incidentes (contas bloqueadas, saldos retidos). Evento extraordinário, fora da performance recorrente." onClick={() => onDrillDown?.("perdaOp", metrics.perdaOp)} />
@@ -362,7 +362,7 @@ function SegregatedExtrasBlock({
             </div>
           )}
           <p className="text-[9px] text-muted-foreground/60 mt-0.5 pl-4">
-            Correções e incidentes. Não é performance, mas afeta o caixa.
+            Incidentes e ajustes administrativos. Afeta o caixa, mas não é performance.
           </p>
         </div>
       )}
