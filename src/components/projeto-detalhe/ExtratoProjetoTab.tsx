@@ -649,8 +649,8 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
                 title="Extras (Ajustes / Cashback / Bônus)"
                 body={
                   <>
-                    <p>Soma de ajustes manuais, cashbacks e bônus creditados ao caixa do projeto, com sinal conforme a direção (CRÉDITO soma, DÉBITO subtrai).</p>
-                    <p>Convertido pela cotação congelada no momento de cada lançamento.</p>
+                    <p>Soma de ajustes manuais, cashbacks e bônus creditados no caixa do projeto. Entradas somam, saídas subtraem.</p>
+                    <p>Convertido pela cotação do dia de cada lançamento.</p>
                   </>
                 }
               />
