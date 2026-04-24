@@ -710,7 +710,12 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
                 title="Extras (Ajustes / Cashback / Bônus)"
                 body={
                   <>
-                    <p>Soma de ajustes manuais, cashbacks e bônus creditados no caixa do projeto. Entradas somam, saídas subtraem.</p>
+                    <p>Soma tudo o que entra ou sai do caixa do projeto <strong>fora</strong> de depósitos e saques: ajustes manuais, cashbacks, bônus creditados, perdas no recebimento e variações cambiais reconciliadas.</p>
+                    <ul className="list-disc pl-4 space-y-0.5">
+                      <li><strong>Entradas</strong> (cashback, bônus, ganho cambial) somam.</li>
+                      <li><strong>Saídas</strong> (perda no recebimento, estorno, perda cambial) subtraem.</li>
+                    </ul>
+                    <p>Esses valores são <strong>responsabilidade do projeto</strong> (não da empresa) e por isso entram diretamente no Resultado de Caixa, refletindo o que você realmente terá no fechamento.</p>
                     <p>Convertido pela cotação do dia de cada lançamento.</p>
                   </>
                 }
