@@ -995,14 +995,14 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
         <div className="flex items-center justify-between mb-1.5">
           <div className="flex items-center gap-1.5">
             <TrendingUp className="h-3 w-3 text-primary" />
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">2. Mark-to-Market · Patrimônio</span>
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">📐 Composição do Patrimônio</span>
           </div>
           <Tooltip>
             <TooltipTrigger asChild>
-              <span className="text-[9px] text-muted-foreground/70 border-b border-dotted border-muted-foreground/40 cursor-help">se sacar tudo agora</span>
+              <span className="text-[9px] text-muted-foreground/70 border-b border-dotted border-muted-foreground/40 cursor-help">como chegamos lá</span>
             </TooltipTrigger>
             <TooltipContent side="left" className="max-w-[260px] text-xs">
-              Quanto o projeto valeria se todas as casas fossem sacadas hoje. Usa cotação live, então flutua com câmbio mesmo sem operar — isso é variação cambial real, não bug.
+              Detalhamento dos componentes que somam ao "Lucro se sacar tudo hoje" do card acima. Usa cotação live, então flutua com câmbio mesmo sem operar — isso é variação cambial real, não bug.
             </TooltipContent>
           </Tooltip>
         </div>
@@ -1024,11 +1024,11 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
         />
         <div className="border-t border-border/30 mt-1.5 pt-1.5">
           <MetricRow
-            label="Patrimônio Líquido"
+            label="= Lucro se sacar tudo hoje"
             value={formatCurrency(metrics.lucroFinanceiro)}
             colorClass={metrics.lucroFinanceiro >= 0 ? "text-emerald-500" : "text-red-500"}
             bold
-            tooltip="Resultado se todo saldo fosse sacado hoje. Clique para reconciliar com o Lucro Operacional."
+            tooltip="Mesma resposta do card destacado no topo. Clique para reconciliar com a Performance da Operação."
             onClick={() => setShowLucroProjetado(true)}
           />
           <p className="text-[9px] text-muted-foreground/70 mt-0.5">
@@ -1043,17 +1043,34 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-1.5">
               <BarChart3 className="h-3 w-3 text-primary" />
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">3. Operacional · Resultado Completo</span>
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">📊 Performance da Operação</span>
             </div>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="text-[9px] text-muted-foreground/70 border-b border-dotted border-muted-foreground/40 cursor-help">3 blocos segregados</span>
-              </TooltipTrigger>
-              <TooltipContent side="left" className="max-w-[280px] text-xs">
-                Performance Pura mostra a qualidade da operação (numerador de ROI). Efeitos Financeiros (FX) e Ajustes são apresentados separados — afetam o caixa, mas não medem performance nem compõem a remuneração do operador.
-              </TooltipContent>
-            </Tooltip>
+            {(() => {
+              const diff = metrics.lucroFinanceiro - metrics.resultadoOperacionalTotal;
+              const convergente = Math.abs(diff) < 0.01;
+              return (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span
+                      className={`text-[9px] px-1.5 py-0.5 rounded border cursor-help font-medium ${
+                        convergente
+                          ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
+                          : "bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400"
+                      }`}
+                    >
+                      {convergente ? "🟢 Convergente" : `🟡 Δ ${formatCurrency(Math.abs(diff))}`}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="left" className="max-w-[280px] text-xs">
+                    Em uma operação saudável, a Performance da Operação deve bater com o "Lucro se sacar tudo hoje". Divergência indica saldos ainda não realizados, FX pendente ou ajustes recém-classificados.
+                  </TooltipContent>
+                </Tooltip>
+              );
+            })()}
           </div>
+          <p className="text-[9.5px] text-muted-foreground/70 -mt-1 mb-1.5">
+            Performance Pura + Efeitos Financeiros + Extraordinários
+          </p>
           <LucroOperacionalCollapsible metrics={metrics} formatCurrency={formatCurrency} />
         </div>
       )}
