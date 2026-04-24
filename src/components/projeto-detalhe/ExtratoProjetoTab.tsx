@@ -230,7 +230,7 @@ function useProjetoExtrato(
       const { data: ledger, error } = await supabase
         .from("cash_ledger")
         .select(
-          "tipo_transacao, valor, valor_confirmado, valor_destino, moeda, tipo_moeda, valor_usd, cotacao, ajuste_direcao, origem_tipo, descricao"
+          "tipo_transacao, valor, valor_confirmado, valor_destino, moeda, tipo_moeda, valor_usd, valor_usd_referencia, cotacao_origem_usd, cotacao_destino_usd, cotacao_snapshot_at, cotacao, ajuste_direcao, origem_tipo, descricao"
         )
         .eq("projeto_id_snapshot", projetoId)
         .eq("status", "CONFIRMADO");
@@ -263,6 +263,36 @@ function useProjetoExtrato(
       let baselineExcluidoCount = 0;
       let baselineExcluidoTotalConvertido = 0;
 
+      // Acumuladores em moeda de consolidação usando SNAPSHOT (valor_usd_referencia).
+      // Hierarquia (memory: analytics-snapshot-conversion-hierarchy):
+      //   1º  valor_usd_referencia → cotação congelada no momento do registro
+      //   2º  Cotação de Trabalho do projeto (convertToConsolidation)
+      //   3º  PTAX/live (já dentro do convertToConsolidation como fallback)
+      let depositosConsolidadoSnap = 0;
+      let saquesConsolidadoSnap = 0;
+      let ajustesConsolidadoSnap = 0;
+
+      // Converte snapshot USD → moeda de consolidação do projeto (USD ou BRL).
+      // Para USD: passthrough. Para BRL: usa Cotação de Trabalho USD→BRL do projeto
+      // (estável dentro do ciclo, não flutua com PTAX live).
+      const snapshotToConsolidacao = (valorUsdSnap: number): number => {
+        if (!valorUsdSnap) return 0;
+        if (moedaConsolidacao === "USD") return valorUsdSnap;
+        // Converter USD → moeda consolidação via Cotação de Trabalho
+        return convertToConsolidation(valorUsdSnap, "USD");
+      };
+
+      // Resolve o valor consolidado de UM evento usando hierarquia snapshot → trabalho.
+      const resolveConsolidado = (e: any, valorBase: number, moeda: string): number => {
+        const snap = Number(e.valor_usd_referencia ?? 0);
+        if (snap > 0) {
+          // Snapshot congelado existe → fonte da verdade histórica
+          return snapshotToConsolidacao(snap);
+        }
+        // Fallback (registros antigos sem snapshot): Cotação de Trabalho
+        return convertToConsolidation(valorBase, moeda);
+      };
+
       (ledger || []).forEach((e: any) => {
         const moeda = e.moeda || "BRL";
         // Fonte canônica na MOEDA ORIGINAL do registro:
@@ -275,19 +305,21 @@ function useProjetoExtrato(
         // 1) Baseline DV: NÃO entra no KPI (seria duplicação do DEPOSITO real)
         if (isBaselineDV(e)) {
           baselineExcluidoCount += 1;
-          baselineExcluidoTotalConvertido += convertToConsolidation(valorBase, moeda);
+          baselineExcluidoTotalConvertido += resolveConsolidado(e, valorBase, moeda);
           return;
         }
 
         // 2) Depósito efetivo
         if (e.tipo_transacao === "DEPOSITO" || isMigracaoDV(e)) {
           ensureCM(moeda).depositos += valorBase;
+          depositosConsolidadoSnap += resolveConsolidado(e, valorBase, moeda);
           return;
         }
 
         // 3) Saque efetivo
         if (e.tipo_transacao === "SAQUE" || isMigracaoSV(e)) {
           ensureCM(moeda).saques += valorBase;
+          saquesConsolidadoSnap += resolveConsolidado(e, valorBase, moeda);
           return;
         }
 
@@ -296,12 +328,16 @@ function useProjetoExtrato(
 
         // 5) Demais (AJUSTE_*, CASHBACK, etc) — somente se tiverem direção/sinal claro
         const cm = ensureCM(moeda);
+        const consolidadoEv = resolveConsolidado(e, valorBase, moeda);
         if (e.ajuste_direcao === "ENTRADA" || e.ajuste_direcao === "CREDITO") {
           cm.ajustes += valorBase;
+          ajustesConsolidadoSnap += consolidadoEv;
         } else if (e.ajuste_direcao === "SAIDA" || e.ajuste_direcao === "DEBITO") {
           cm.ajustes -= valorBase;
+          ajustesConsolidadoSnap -= consolidadoEv;
         } else {
           cm.ajustes += valorBase;
+          ajustesConsolidadoSnap += consolidadoEv;
         }
       });
 
@@ -330,19 +366,12 @@ function useProjetoExtrato(
 
       const byCurrency = Array.from(currencyMap.values());
 
-      // Totais GLOBAIS já convertidos para a moeda de consolidação (USD, BRL, etc)
-      const depositosTotal = byCurrency.reduce(
-        (s, c) => s + convertToConsolidation(c.depositos, c.moeda),
-        0
-      );
-      const saquesTotal = byCurrency.reduce(
-        (s, c) => s + convertToConsolidation(c.saques, c.moeda),
-        0
-      );
-      const ajustesTotal = byCurrency.reduce(
-        (s, c) => s + convertToConsolidation(c.ajustes, c.moeda),
-        0
-      );
+      // Totais GLOBAIS na moeda de consolidação usam SNAPSHOT (cotação congelada
+      // no momento de cada registro), não cotação live. Garante que KPIs históricos
+      // não flutuem com mudanças de Cotação de Trabalho ou PTAX.
+      const depositosTotal = depositosConsolidadoSnap;
+      const saquesTotal = saquesConsolidadoSnap;
+      const ajustesTotal = ajustesConsolidadoSnap;
 
       // Resultado de Caixa (NÃO é Lucro Operacional canônico — é fluxo de caixa do projeto):
       //   saques + saldo casas + ajustes − depósitos
