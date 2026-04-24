@@ -609,6 +609,18 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
                   <div className="flex items-center gap-2 mb-1">
                     <ArrowUpFromLine className="h-3.5 w-3.5 text-emerald-400" />
                     <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Saques</span>
+                    <KpiInfoButton
+                      title="Saques (Histórico Contábil)"
+                      body={
+                        <>
+                          <p>Soma de todos os saques efetivos, convertidos pela <strong>cotação congelada no momento de cada saque</strong> (snapshot).</p>
+                          <p>Inclui SAQUE real + SAQUE_VIRTUAL (MIGRACAO entre projetos).</p>
+                        </>
+                      }
+                      divergencia={
+                        <p>Cada saque registra a cotação do dia. O valor exibido aqui é a soma dessas cotações históricas, não o valor recalculado em câmbio atual.</p>
+                      }
+                    />
                   </div>
                   <p className="text-lg font-bold text-foreground">
                     {formatConsolidated(metrics?.saquesTotal || 0)}
