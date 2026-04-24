@@ -19,6 +19,10 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { InactivityWarningBanner } from "@/components/InactivityWarningBanner";
 import { useInactivityTimeout } from "@/hooks/useInactivityTimeout";
 import { Loader2 } from "lucide-react";
+import { installRpcInterceptor } from "@/lib/dev/rpcInterceptor";
+
+// Install RPC interceptor for the system-owner Ledger Monitor (no-op for everyone else)
+installRpcInterceptor();
 
 // ─── Eager imports: lightweight pages / public routes ───
 import Index from "./pages/Index";
@@ -58,6 +62,7 @@ const SharedProject = lazy(() => import("./pages/SharedProject"));
 const SupplierPortal = lazy(() => import("./pages/SupplierPortal"));
 const FornecedoresPortal = lazy(() => import("./pages/FornecedoresPortal"));
 const Solicitacoes = lazy(() => import("./pages/Solicitacoes"));
+const DevLedgerMonitor = lazy(() => import("./pages/DevLedgerMonitor"));
 
 // ─── QueryClient com defaults globais de performance ───
 const queryClient = new QueryClient({
@@ -425,6 +430,15 @@ const App = () => (
               </ProtectedRoute>
             } />
             
+            {/* Dev — Ledger Monitor (System Owner only) */}
+            <Route path="/dev/ledger-monitor" element={
+              <ProtectedRoute requireSystemOwner>
+                <AuthenticatedLayout>
+                  <DevLedgerMonitor />
+                </AuthenticatedLayout>
+              </ProtectedRoute>
+            } />
+
             {/* Catch-all route */}
             <Route path="*" element={<NotFound />} />
             </Routes>
