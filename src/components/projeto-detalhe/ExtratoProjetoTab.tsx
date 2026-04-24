@@ -654,6 +654,18 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
             <div className="flex items-center gap-2 mb-1">
               <Wallet className="h-3.5 w-3.5 text-blue-400" />
               <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Saldo Casas</span>
+              <KpiInfoButton
+                title="Saldo Casas (Mark-to-Market)"
+                body={
+                  <>
+                    <p>Soma de <strong>tudo que está nas casas vinculadas agora</strong>, convertido pela <strong>cotação atual</strong>.</p>
+                    <p>Representa quanto você teria, em moeda do projeto, se sacasse tudo nesse momento.</p>
+                  </>
+                }
+                divergencia={
+                  <p>Aqui usamos cotação <strong>live</strong> (mark-to-market), enquanto Depósitos/Saques acima usam cotação <strong>histórica</strong> (snapshot). Essa diferença de "ponto de vista" é o que gera a variação cambial no Resultado de Caixa.</p>
+                }
+              />
             </div>
             <p className="text-lg font-bold text-foreground">
               {formatConsolidated(metrics?.saldoCasasTotal || 0)}
@@ -666,6 +678,15 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
             <div className="flex items-center gap-2 mb-1">
               <ArrowRightLeft className="h-3.5 w-3.5 text-purple-400" />
               <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Extras</span>
+              <KpiInfoButton
+                title="Extras (Ajustes / Cashback / Bônus)"
+                body={
+                  <>
+                    <p>Soma de ajustes manuais, cashbacks e bônus creditados ao caixa do projeto, com sinal conforme a direção (CRÉDITO soma, DÉBITO subtrai).</p>
+                    <p>Convertido pela cotação congelada no momento de cada lançamento.</p>
+                  </>
+                }
+              />
             </div>
             <p className={`text-lg font-bold ${(metrics?.ajustesTotal || 0) >= 0 ? "text-emerald-400" : "text-red-400"}`}>
               {formatConsolidated(metrics?.ajustesTotal || 0)}
