@@ -137,6 +137,7 @@ interface Bookmaker {
   saldo_atual: number;
   saldo_usd: number;
   moeda: string;
+  logo_url?: string | null;
 }
 
 interface SaldoCaixaFiat {
@@ -309,6 +310,48 @@ export function CaixaTransacaoDialog({
     }
   };
 
+  // ============================================================================
+  // FALLBACK DE INFERÊNCIA: Quando não há histórico de funding na bookmaker,
+  // olhar o parceiro de origem para determinar se ele só consegue depositar via
+  // wallet crypto (CRYPTO) ou tem contas FIAT compatíveis.
+  // ============================================================================
+  const fetchPartnerFundingCapability = async (parceiroId: string): Promise<{
+    tipoMoeda: "FIAT" | "CRYPTO";
+    coin?: string;
+    moeda?: string;
+  } | null> => {
+    if (!workspaceId) return null;
+    try {
+      const [walletsResp, contasResp] = await Promise.all([
+        supabase
+          .from("v_saldo_parceiro_wallets")
+          .select("coin, saldo_disponivel, saldo_usd")
+          .eq("parceiro_id", parceiroId),
+        supabase
+          .from("v_saldo_parceiro_contas")
+          .select("moeda, saldo")
+          .eq("parceiro_id", parceiroId),
+      ]);
+      const wallets = (walletsResp.data || []).filter(
+        (w: any) => (w.saldo_disponivel ?? w.saldo_usd ?? 0) > 0,
+      );
+      const contas = (contasResp.data || []).filter((c: any) => (c.saldo ?? 0) > 0);
+      // Se só tem wallet com saldo (e nenhuma conta FIAT com saldo), inferir CRYPTO
+      if (wallets.length > 0 && contas.length === 0) {
+        const coin = wallets[0]?.coin || undefined;
+        return { tipoMoeda: "CRYPTO", coin };
+      }
+      // Se só tem conta FIAT com saldo, inferir FIAT
+      if (contas.length > 0 && wallets.length === 0) {
+        return { tipoMoeda: "FIAT", moeda: contas[0]?.moeda || undefined };
+      }
+      return null;
+    } catch (err) {
+      console.error("[CaixaTransacaoDialog] Erro ao inferir capacidade do parceiro:", err);
+      return null;
+    }
+  };
+
   // Aplicar defaults quando dialog abre
   useEffect(() => {
     if (open) {
@@ -347,19 +390,30 @@ export function CaixaTransacaoDialog({
             : undefined;
 
       if (fundingBookmakerId) {
-        fetchLastFundingSource(fundingBookmakerId).then((fundingSource) => {
-          if (fundingSource && pendingDefaultsRef.current) {
+        fetchLastFundingSource(fundingBookmakerId).then(async (fundingSource) => {
+          let inferred = fundingSource;
+          // Fallback DEPOSITO: se não há histórico, olhar capacidade do parceiro
+          if (!inferred && defaultTipoTransacao === "DEPOSITO" && defaultOrigemParceiroId) {
+            inferred = await fetchPartnerFundingCapability(defaultOrigemParceiroId);
+            if (inferred) {
+              console.log(
+                "[CaixaTransacaoDialog] Inferência por capacidade do parceiro (sem histórico):",
+                inferred,
+              );
+            }
+          }
+          if (inferred && pendingDefaultsRef.current) {
             console.log(
               "[CaixaTransacaoDialog] Sobrescrevendo defaults com funding histórico (",
               defaultTipoTransacao,
               "):",
-              fundingSource,
+              inferred,
             );
             pendingDefaultsRef.current = {
               ...pendingDefaultsRef.current,
-              tipoMoeda: fundingSource.tipoMoeda,
-              moeda: fundingSource.tipoMoeda === "FIAT" ? (fundingSource.moeda || pendingDefaultsRef.current.moeda) : undefined,
-              coin: fundingSource.tipoMoeda === "CRYPTO" ? (fundingSource.coin || undefined) : undefined,
+              tipoMoeda: inferred.tipoMoeda,
+              moeda: inferred.tipoMoeda === "FIAT" ? (inferred.moeda || pendingDefaultsRef.current.moeda) : undefined,
+              coin: inferred.tipoMoeda === "CRYPTO" ? (inferred.coin || undefined) : undefined,
             };
           }
           // Aplicar tipo de transação APÓS a detecção (para que pendingDefaults esteja atualizado)
@@ -1735,11 +1789,19 @@ export function CaixaTransacaoDialog({
     try {
       const { data } = await supabase
         .from("bookmakers")
-        .select("id, nome, saldo_atual, saldo_usd, moeda")
+        .select("id, nome, saldo_atual, saldo_usd, moeda, bookmakers_catalogo:bookmaker_catalogo_id(logo_url)")
         .eq("workspace_id", workspaceId) // Filtro explícito de workspace
         .order("nome");
       
-      setBookmakers(data || []);
+      const mapped: Bookmaker[] = (data || []).map((b: any) => ({
+        id: b.id,
+        nome: b.nome,
+        saldo_atual: b.saldo_atual,
+        saldo_usd: b.saldo_usd,
+        moeda: b.moeda,
+        logo_url: b.bookmakers_catalogo?.logo_url ?? null,
+      }));
+      setBookmakers(mapped);
     } catch (error) {
       console.error("Erro ao carregar bookmakers:", error);
     }
@@ -4099,6 +4161,17 @@ export function CaixaTransacaoDialog({
                 return (
                   <div className="flex items-center justify-between gap-2 rounded-md border border-input bg-muted/40 px-3 py-2 text-sm">
                     <div className="flex items-center gap-2 min-w-0">
+                      {lockedBm?.logo_url ? (
+                        <img
+                          src={lockedBm.logo_url}
+                          alt={lockedBm.nome}
+                          className="h-6 w-6 rounded object-contain bg-background border border-border shrink-0"
+                        />
+                      ) : (
+                        <div className="h-6 w-6 rounded bg-background border border-border shrink-0 flex items-center justify-center text-[10px] font-semibold text-muted-foreground">
+                          {lockedBm?.nome?.[0] ?? "?"}
+                        </div>
+                      )}
                       <span className="font-medium truncate">
                         {lockedBm?.nome ?? "Bookmaker selecionada"}
                       </span>
@@ -4108,7 +4181,7 @@ export function CaixaTransacaoDialog({
                         </span>
                       )}
                     </div>
-                    <span className="text-[10px] text-muted-foreground">Definida pelo contexto</span>
+                    <span className="text-[10px] text-muted-foreground shrink-0">Definida pelo contexto</span>
                   </div>
                 );
               })()
