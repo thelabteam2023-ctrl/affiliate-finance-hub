@@ -973,7 +973,7 @@ export default function GestaoBookmakers() {
                             size="sm"
                             className={`flex-1 ${canDeleteBm ? "text-destructive hover:text-destructive" : "text-muted-foreground cursor-not-allowed"}`}
                             onClick={() => handleDelete(bookmaker.id)}
-                            disabled={!canDeleteBm}
+                            disabled={!canDeleteBm || deletingId === bookmaker.id}
                           >
                             {canDeleteBm ? <Trash2 className="mr-1 h-4 w-4" /> : <Ban className="mr-1 h-4 w-4" />}
                             {canDeleteBm ? "Excluir" : "Protegida"}
@@ -1176,7 +1176,7 @@ export default function GestaoBookmakers() {
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => handleDelete(bookmaker.id)}
-                                  disabled={!canDeleteBm}
+                                  disabled={!canDeleteBm || deletingId === bookmaker.id}
                                   className={canDeleteBm ? "text-destructive hover:text-destructive hover:bg-destructive/10" : "text-muted-foreground cursor-not-allowed"}
                                 >
                                   {canDeleteBm ? <Trash2 className="h-4 w-4" /> : <Ban className="h-4 w-4" />}
