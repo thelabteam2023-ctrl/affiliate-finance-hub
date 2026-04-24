@@ -896,9 +896,10 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
         </Tooltip>
       </div>
 
-      {/* ─── CARD-RESUMO: Lucro se sacar tudo hoje (Patrimônio destacado) ─── */}
+      {/* ─── CARDS DE TOPO: 2 leituras rápidas lado-a-lado ─── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 mb-3">
       <div
-        className={`mb-4 rounded-lg border px-3 py-3 cursor-pointer transition-all hover:shadow-md ${
+        className={`rounded-lg border px-3 py-3 cursor-pointer transition-all hover:shadow-md ${
           metrics.lucroFinanceiro >= 0
             ? "border-emerald-500/30 bg-gradient-to-br from-emerald-500/[0.08] to-emerald-500/[0.02]"
             : "border-red-500/30 bg-gradient-to-br from-red-500/[0.08] to-red-500/[0.02]"
@@ -925,7 +926,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
           </span>
         </div>
         <p className="text-[9.5px] text-muted-foreground/80 leading-snug">
-          Saldo nas casas + saques recebidos − depósitos confirmados
+          Patrimônio se liquidar tudo agora
         </p>
       </div>
 
@@ -937,7 +938,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
         const positivo = real >= 0;
         return (
           <div
-            className={`mb-4 rounded-lg border px-3 py-3 cursor-pointer transition-all hover:shadow-md ${
+            className={`rounded-lg border px-3 py-3 cursor-pointer transition-all hover:shadow-md ${
               positivo
                 ? "border-sky-500/30 bg-gradient-to-br from-sky-500/[0.08] to-sky-500/[0.02]"
                 : "border-red-500/30 bg-gradient-to-br from-red-500/[0.08] to-red-500/[0.02]"
@@ -1025,11 +1026,12 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
               </span>
             </div>
             <p className="text-[9.5px] text-muted-foreground/80 leading-snug mt-1.5">
-              Performance + Câmbio + Ajustes (decomposto na Camada 3 abaixo)
+              Performance + Câmbio + Ajustes
             </p>
           </div>
         );
       })()}
+      </div>
 
       {/* ─── CAMADA 1: REALIZADO (Caixa) ─── */}
       <div className="space-y-1 pb-3">
