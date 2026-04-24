@@ -849,7 +849,7 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-medium text-foreground truncate">
-                              {getTransactionLabel(t.tipo_transacao)}
+                              {getTransactionLabel(t.tipo_transacao, t.descricao)}
                             </span>
                             {isForeign && (
                               <Badge variant="outline" className="text-[9px] px-1 py-0 text-blue-400 border-blue-400/30">
