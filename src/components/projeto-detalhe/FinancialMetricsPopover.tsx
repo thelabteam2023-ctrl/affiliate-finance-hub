@@ -963,20 +963,20 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
         </div>
       </div>
 
-      {/* ─── CAMADA 3: OPERACIONAL (Performance) ─── */}
-      {Math.abs(metrics.lucroApostasPuro) >= 0.01 && (
+      {/* ─── CAMADA 3: OPERACIONAL (Performance + FX + Ajustes segregados) ─── */}
+      {(Math.abs(metrics.performancePura) >= 0.01 || Math.abs(metrics.efeitosFinanceiros) >= 0.01 || Math.abs(metrics.ajustesExtraordinarios) >= 0.01) && (
         <div className="border-t border-border/40 pt-3 pb-3 space-y-1">
-          <div className="flex items-center justify-between mb-1.5">
+          <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-1.5">
               <BarChart3 className="h-3 w-3 text-primary" />
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">3. Operacional · Performance</span>
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">3. Operacional · Resultado Completo</span>
             </div>
             <Tooltip>
               <TooltipTrigger asChild>
-                <span className="text-[9px] text-muted-foreground/70 border-b border-dotted border-muted-foreground/40 cursor-help">como chegou aqui</span>
+                <span className="text-[9px] text-muted-foreground/70 border-b border-dotted border-muted-foreground/40 cursor-help">3 blocos segregados</span>
               </TooltipTrigger>
-              <TooltipContent side="left" className="max-w-[260px] text-xs">
-                Lucro/prejuízo gerado pelas apostas em si. Isola câmbio e fluxo de caixa — mostra a qualidade da operação. Diferença com Patrimônio = câmbio + ajustes.
+              <TooltipContent side="left" className="max-w-[280px] text-xs">
+                Performance Pura mostra a qualidade da operação (numerador de ROI). Efeitos Financeiros (FX) e Ajustes são apresentados separados — afetam o caixa, mas não medem performance nem compõem a remuneração do operador.
               </TooltipContent>
             </Tooltip>
           </div>
