@@ -676,21 +676,20 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
               <TrendingUp className="h-3.5 w-3.5 text-emerald-400" />
               <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Resultado de Caixa</span>
               <KpiInfoButton
-                title="Resultado de Caixa (Realidade Econômica)"
+                title="Resultado de Caixa"
                 body={
                   <>
-                    <p><strong>Fórmula:</strong> Saques + Saldo Casas + Extras − Depósitos.</p>
-                    <p>Mistura intencionalmente <strong>histórico contábil</strong> (depósitos/saques pelo snapshot) com <strong>mark-to-market</strong> (saldo casas pela cotação atual).</p>
-                    <p>Se for negativo antes de operar, é <strong>variação cambial</strong>: o que está nas casas vale menos hoje do que custou para colocar lá. Se positivo, valorizou.</p>
+                    <p><strong>Conta:</strong> Saques + Saldo Casas + Extras − Depósitos.</p>
+                    <p>Mostra a realidade do caixa hoje. Se ficar negativo antes de operar, é <strong>variação cambial</strong>: o dinheiro que está nas casas vale menos hoje do que custou para colocar lá. Se positivo, valorizou.</p>
                     {metrics && Math.abs(metrics.variacaoCambialDepositos) > 0.01 && (
                       <div className="mt-2 p-2 rounded bg-muted/50 space-y-1">
                         <p className="text-[10px] uppercase tracking-wide font-semibold">Variação cambial estimada</p>
                         <div className="flex justify-between gap-2">
-                          <span>Depósitos a custo histórico:</span>
+                          <span>Depósitos pela cotação do dia:</span>
                           <span>{formatConsolidated(metrics.depositosTotal)}</span>
                         </div>
                         <div className="flex justify-between gap-2">
-                          <span>Mesmos depósitos hoje:</span>
+                          <span>Mesmos depósitos pela cotação de hoje:</span>
                           <span>{formatConsolidated(metrics.depositosLiveEquivalente)}</span>
                         </div>
                         <div className={`flex justify-between gap-2 font-semibold ${metrics.variacaoCambialDepositos >= 0 ? "text-emerald-400" : "text-red-400"}`}>
@@ -702,7 +701,7 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
                   </>
                 }
                 divergencia={
-                  <p>Não é Lucro Operacional. É o reflexo de caixa do projeto considerando o câmbio do dia. Para análise de performance pura, use a Visão Geral.</p>
+                  <p>Não é Lucro Operacional. É o reflexo do caixa do projeto considerando o câmbio do dia. Para a performance real das operações, use a Visão Geral.</p>
                 }
               />
             </div>
