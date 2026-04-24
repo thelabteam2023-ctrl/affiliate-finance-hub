@@ -907,23 +907,21 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
         onClick={() => setShowLucroProjetado(true)}
         role="button"
       >
-        <div className="flex items-center justify-between gap-2 mb-1.5">
-          <div className="flex items-center gap-1.5">
-            <PiggyBank className={`h-3.5 w-3.5 ${metrics.lucroFinanceiro >= 0 ? "text-emerald-500" : "text-red-500"}`} />
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="text-[11px] font-bold tracking-tight text-foreground border-b border-dotted border-muted-foreground/40 cursor-help">
-                  💰 Lucro se sacar tudo hoje
-                </span>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="max-w-[280px] text-xs">
-                Esta é a resposta principal. Se você sacasse todo o saldo das casas hoje e fechasse a operação, este é o lucro/prejuízo que ficaria no seu bolso.
-              </TooltipContent>
-            </Tooltip>
-          </div>
-          <span className={`text-base font-mono tabular-nums font-bold ${metrics.lucroFinanceiro >= 0 ? "text-emerald-500" : "text-red-500"}`}>
-            {formatCurrency(metrics.lucroFinanceiro)}
-          </span>
+        <div className="flex items-center gap-1.5 mb-1">
+          <PiggyBank className={`h-3.5 w-3.5 shrink-0 ${metrics.lucroFinanceiro >= 0 ? "text-emerald-500" : "text-red-500"}`} />
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="text-[11px] font-bold tracking-tight text-foreground border-b border-dotted border-muted-foreground/40 cursor-help truncate">
+                💰 Lucro se sacar tudo hoje
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="max-w-[280px] text-xs">
+              Esta é a resposta principal. Se você sacasse todo o saldo das casas hoje e fechasse a operação, este é o lucro/prejuízo que ficaria no seu bolso.
+            </TooltipContent>
+          </Tooltip>
+        </div>
+        <div className={`text-lg font-mono tabular-nums font-bold mb-0.5 ${metrics.lucroFinanceiro >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+          {formatCurrency(metrics.lucroFinanceiro)}
         </div>
         <p className="text-[9.5px] text-muted-foreground/80 leading-snug">
           Patrimônio se liquidar tudo agora
@@ -946,45 +944,41 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
             onClick={() => setShowLucroProjetado(true)}
             role="button"
           >
-            <div className="flex items-center justify-between gap-2 mb-1.5">
-              <div className="flex items-center gap-1.5">
-                <Target className={`h-3.5 w-3.5 ${positivo ? "text-sky-500" : "text-red-500"}`} />
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span className="text-[11px] font-bold tracking-tight text-foreground border-b border-dotted border-muted-foreground/40 cursor-help">
-                      Lucro Real Ajustado
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" className="max-w-[280px] text-xs">
-                    Mesma resposta do "Lucro se sacar tudo", porém decomposto: quanto veio de mérito da operação (performance), quanto veio de câmbio (efeito macro) e quanto veio de ajustes administrativos.
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span
-                      className={`text-[9px] px-1.5 py-0.5 rounded border cursor-help font-medium inline-flex items-center gap-1 ${
-                        convergente
-                          ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
-                          : "bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400"
-                      }`}
-                    >
-                      {convergente ? (
-                        <CheckCircle2 className="h-2.5 w-2.5" />
-                      ) : (
-                        <>Δ {formatCurrency(Math.abs(diff))}</>
-                      )}
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent side="left" className="max-w-[260px] text-xs">
-                    Convergência com "Lucro se sacar tudo". Divergência indica saldos não realizados, FX em trânsito ou eventos recém-classificados.
-                  </TooltipContent>
-                </Tooltip>
-                <span className={`text-base font-mono tabular-nums font-bold ${positivo ? "text-sky-500" : "text-red-500"}`}>
-                  {formatCurrency(real)}
-                </span>
-              </div>
+            <div className="flex items-center gap-1.5 mb-1">
+              <Target className={`h-3.5 w-3.5 shrink-0 ${positivo ? "text-sky-500" : "text-red-500"}`} />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="text-[11px] font-bold tracking-tight text-foreground border-b border-dotted border-muted-foreground/40 cursor-help truncate">
+                    🎯 Lucro Real Ajustado
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-[280px] text-xs">
+                  Mesma resposta do "Lucro se sacar tudo", porém decomposto: quanto veio de mérito da operação (performance), quanto veio de câmbio (efeito macro) e quanto veio de ajustes administrativos.
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span
+                    className={`ml-auto shrink-0 text-[9px] px-1.5 py-0.5 rounded border cursor-help font-medium inline-flex items-center gap-1 ${
+                      convergente
+                        ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
+                        : "bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400"
+                    }`}
+                  >
+                    {convergente ? (
+                      <CheckCircle2 className="h-2.5 w-2.5" />
+                    ) : (
+                      <>Δ {formatCurrency(Math.abs(diff))}</>
+                    )}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="left" className="max-w-[260px] text-xs">
+                  Convergência com "Lucro se sacar tudo". Divergência indica saldos não realizados, FX em trânsito ou eventos recém-classificados.
+                </TooltipContent>
+              </Tooltip>
+            </div>
+            <div className={`text-lg font-mono tabular-nums font-bold mb-1.5 ${positivo ? "text-sky-500" : "text-red-500"}`}>
+              {formatCurrency(real)}
             </div>
             <div className="flex items-center gap-1 flex-wrap">
               <span
