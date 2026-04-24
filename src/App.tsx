@@ -430,6 +430,15 @@ const App = () => (
               </ProtectedRoute>
             } />
             
+            {/* Dev — Ledger Monitor (System Owner only) */}
+            <Route path="/dev/ledger-monitor" element={
+              <ProtectedRoute requireSystemOwner>
+                <AuthenticatedLayout>
+                  <DevLedgerMonitor />
+                </AuthenticatedLayout>
+              </ProtectedRoute>
+            } />
+
             {/* Catch-all route */}
             <Route path="*" element={<NotFound />} />
             </Routes>
