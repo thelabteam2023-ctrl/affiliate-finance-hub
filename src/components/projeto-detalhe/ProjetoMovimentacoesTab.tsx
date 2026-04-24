@@ -31,7 +31,7 @@ import {
 } from "lucide-react";
 import { format, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { parseLocalDateTime } from "@/utils/dateUtils";
+import { parseLocalDateTime, getTransactionDisplayTimestamp } from "@/utils/dateUtils";
 import { StandardTimeFilter, StandardPeriodFilter, getDateRangeFromPeriod } from "./StandardTimeFilter";
 import { DateRange } from "react-day-picker";
 
@@ -43,6 +43,8 @@ interface Transacao {
   id: string;
   tipo_transacao: string;
   data_transacao: string;
+  created_at: string | null;
+  data_confirmacao: string | null;
   valor: number;
   moeda: string;
   descricao: string | null;
@@ -696,7 +698,7 @@ export function ProjetoMovimentacoesTab({ projetoId }: ProjetoMovimentacoesTabPr
                             {formatCurrency(transacao.valor, transacao.moeda)}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {format(parseLocalDateTime(transacao.data_transacao), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                            {format(parseLocalDateTime(getTransactionDisplayTimestamp(transacao)), "dd/MM/yyyy HH:mm", { locale: ptBR })}
                           </p>
                         </div>
                       </div>
