@@ -180,6 +180,7 @@ function getTransactionLabel(tipo: string, descricao?: string | null) {
     case "SAQUE": return "Saque";
     case "SAQUE_VIRTUAL": return "Saque Virtual";
     case "AJUSTE": return "Ajuste";
+    case "AJUSTE_SALDO": return "Ajuste de Saldo";
     case "CASHBACK": return "Cashback";
     case "BONUS": return "Bônus";
     case "ESTORNO": return "Estorno";
@@ -205,7 +206,7 @@ function getStatusBadge(status: string) {
 function getTransactionSign(tipo: string, ajusteDirecao?: string | null): "positive" | "negative" | "neutral" {
   if (tipo.includes("SAQUE")) return "positive";
   if (tipo.includes("DEPOSITO")) return "negative";
-  if (tipo === "AJUSTE") {
+  if (tipo === "AJUSTE" || tipo === "AJUSTE_SALDO") {
     if (ajusteDirecao === "CREDITO") return "positive";
     if (ajusteDirecao === "DEBITO") return "negative";
     return "neutral";
@@ -538,7 +539,7 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
       if (filterType !== "todos") {
         if (filterType === "depositos" && !t.tipo_transacao.includes("DEPOSITO")) return false;
         if (filterType === "saques" && !t.tipo_transacao.includes("SAQUE")) return false;
-        if (filterType === "ajustes" && !["AJUSTE", "CASHBACK", "BONUS", "ESTORNO", "PERDA_CAMBIAL", "GANHO_CAMBIAL"].includes(t.tipo_transacao)) return false;
+        if (filterType === "ajustes" && !["AJUSTE", "AJUSTE_SALDO", "CASHBACK", "BONUS", "ESTORNO", "PERDA_CAMBIAL", "GANHO_CAMBIAL"].includes(t.tipo_transacao)) return false;
       }
       if (filterStatus !== "todos" && t.status !== filterStatus) return false;
       if (searchTerm) {
