@@ -512,13 +512,6 @@ export const ParceiroDetalhesPanel = memo(function ParceiroDetalhesPanel({
     [bookmakersFiltradosPorMoeda]
   );
 
-  // IDs dos bookmakers para buscar status de uso
-  const bookmakerIds = useMemo(() => 
-    data?.bookmakers.map(b => b.bookmaker_id) ?? [], 
-    [data?.bookmakers]
-  );
-  const { usageMap, refetch: refetchUsageMap } = useBookmakerUsageStatus(bookmakerIds);
-
   // Lista de moedas únicas para o filtro
   const moedasDisponiveis = useMemo(() => {
     if (!data?.bookmakers) return [];
