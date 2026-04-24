@@ -249,6 +249,15 @@ export function CaixaTransacaoDialog({
   const isResettingContext = useRef<boolean>(false);
 
   // ============================================================================
+  // LOCK DE BOOKMAKER DESTINO: quando o dialog é aberto a partir de um contexto
+  // específico (ex.: Gestão de Parceiros → Depósito em uma bookmaker já escolhida),
+  // o BookmakerSelect fica travado em modo read-only e a auto-focus chain NÃO
+  // pode reabrir o popover. Evita re-render visual e cliques redundantes.
+  // ============================================================================
+  const isDestinoBookmakerLocked =
+    !!lockBookmakerDestino && !!defaultDestinoBookmakerId;
+
+  // ============================================================================
   // FIX: Ref para armazenar defaults pendentes que devem ser aplicados
   // APÓS o efeito de tipoTransacao ter sido executado (evita race condition)
   // ============================================================================
