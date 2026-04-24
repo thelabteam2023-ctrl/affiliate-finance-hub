@@ -646,9 +646,22 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
         )}
       </div>
 
-      {/* ─── Seção 1: Fluxo de Caixa ─── */}
+      {/* ─── CAMADA 1: REALIZADO (Caixa) ─── */}
       <div className="space-y-1 pb-3">
-        <SectionHeader icon={ArrowRightLeft} label="Fluxo de Caixa" />
+        <div className="flex items-center justify-between mb-1.5">
+          <div className="flex items-center gap-1.5">
+            <ArrowRightLeft className="h-3 w-3 text-muted-foreground" />
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">1. Realizado · Caixa</span>
+          </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="text-[9px] text-muted-foreground/70 border-b border-dotted border-muted-foreground/40 cursor-help">o que entrou e saiu</span>
+            </TooltipTrigger>
+            <TooltipContent side="left" className="max-w-[260px] text-xs">
+              Fluxo de caixa puro: dinheiro que efetivamente saiu (depósitos) e voltou (saques). Não considera saldo ainda dentro das casas nem variação cambial.
+            </TooltipContent>
+          </Tooltip>
+        </div>
         <DepositosCollapsible
           metrics={metrics}
           formatCurrency={formatCurrency}
@@ -674,17 +687,15 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
         )}
         <div className="border-t border-border/30 mt-1.5 pt-1.5">
           <MetricRow 
-            label={hasExtras ? "Fluxo Líquido Ajustado" : "Fluxo Líquido"} 
+            label="Resultado Realizado" 
             value={formatCurrency(hasExtras ? metrics.fluxoLiquidoAjustado : metrics.fluxoCaixaLiquido)} 
             colorClass={(hasExtras ? metrics.fluxoLiquidoAjustado : metrics.fluxoCaixaLiquido) >= 0 ? "text-emerald-500" : "text-red-500"}
             bold
-            tooltip={metrics.hasInvestorCapital ? `Consolidado (Interno + Investidor). Interno: ${formatCurrency(metrics.fluxoInternoLiquido)}` : undefined}
+            tooltip={`Saques recebidos − Depósitos efetivos${hasExtras ? ' (já considerando créditos extras)' : ''}.${metrics.hasInvestorCapital ? ` Consolidado (Interno + Investidor). Interno: ${formatCurrency(metrics.fluxoInternoLiquido)}.` : ''}`}
           />
-          {hasExtras && (
-            <p className="text-[9px] text-muted-foreground/70 mt-0.5">
-              Saques − Depósitos
-            </p>
-          )}
+          <p className="text-[9px] text-muted-foreground/70 mt-0.5">
+            {hasExtras ? 'Saques − Depósitos + Extras' : 'Saques − Depósitos'}
+          </p>
           {/* Fluxo interno separado quando há investidor */}
           {metrics.hasInvestorCapital && (
             <div className="mt-1.5 pt-1.5 border-t border-dashed border-border/20">
@@ -700,59 +711,75 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
         </div>
       </div>
 
-      {/* ─── Seção: Lucro Operacional (Juice) ─── */}
-      {Math.abs(metrics.lucroApostasPuro) >= 0.01 && (
-        <div className="border-t border-border/40 pt-3 pb-3 space-y-1">
-          <LucroOperacionalCollapsible metrics={metrics} formatCurrency={formatCurrency} />
-        </div>
-      )}
-
-      {/* ─── Seção: Projeção de Lucro ─── */}
+      {/* ─── CAMADA 2: MARK-TO-MARKET (Patrimônio) ─── */}
       <div className="border-t border-border/40 pt-3 pb-3 space-y-1">
-        <SectionHeader icon={TrendingUp} label="Projeção de Lucro" iconClass="text-primary" />
+        <div className="flex items-center justify-between mb-1.5">
+          <div className="flex items-center gap-1.5">
+            <TrendingUp className="h-3 w-3 text-primary" />
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">2. Mark-to-Market · Patrimônio</span>
+          </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="text-[9px] text-muted-foreground/70 border-b border-dotted border-muted-foreground/40 cursor-help">se sacar tudo agora</span>
+            </TooltipTrigger>
+            <TooltipContent side="left" className="max-w-[260px] text-xs">
+              Quanto o projeto valeria se todas as casas fossem sacadas hoje. Usa cotação live, então flutua com câmbio mesmo sem operar — isso é variação cambial real, não bug.
+            </TooltipContent>
+          </Tooltip>
+        </div>
         <MetricRow
           label="Saldo em Bookmakers"
           value={formatCurrency(metrics.saldoCasas)}
           tooltip={metrics.hasInvestorCapital ? `Interno: ${formatCurrency(metrics.saldoCasasInterno)} · Investidor: ${formatCurrency(metrics.saldoCasasInvestidor)}` : undefined}
         />
         <MetricRow
-          label="Saques Recebidos"
+          label="(+) Saques já recebidos"
           value={formatCurrency(metrics.saquesRecebidos)}
+          colorClass="text-muted-foreground"
         />
-        {metrics.saquesPendentes > 0 && (
-          <MetricRow
-            label="Saques Pendentes"
-            value={formatCurrency(metrics.saquesPendentes)}
-            colorClass="text-amber-500"
-          />
-        )}
         <MetricRow
-          label="(−) Depósitos"
+          label="(−) Depósitos efetivos"
           value={formatCurrency(metrics.depositosEfetivos)}
           colorClass="text-muted-foreground"
-          tooltip={metrics.depositosVirtuais > 0 ? `Efetivos: ${formatCurrency(metrics.depositosEfetivos)} (exclui baseline de ${formatCurrency(metrics.depositosTotal - metrics.depositosEfetivos)})` : undefined}
+          tooltip={metrics.depositosBaseline > 0 ? `Inclui dinheiro novo + migrações. Exclui ${formatCurrency(metrics.depositosBaseline)} de saldo inicial adotado (baseline contábil).` : undefined}
         />
-        {false && (
-          <MetricRow
-            label=""
-            value=""
-            colorClass="text-muted-foreground"
-            tooltip=""
-          />
-        )}
         <div className="border-t border-border/30 mt-1.5 pt-1.5">
           <MetricRow
-            label="Lucro Projetado"
+            label="Patrimônio Líquido"
             value={formatCurrency(metrics.lucroFinanceiro)}
             colorClass={metrics.lucroFinanceiro >= 0 ? "text-emerald-500" : "text-red-500"}
             bold
-            tooltip="Se todo saldo fosse sacado hoje, esse seria o lucro real. Clique para ver a reconciliação com o Lucro Operacional."
+            tooltip="Resultado se todo saldo fosse sacado hoje. Clique para reconciliar com o Lucro Operacional."
             onClick={() => setShowLucroProjetado(true)}
           />
+          <p className="text-[9px] text-muted-foreground/70 mt-0.5">
+            Saldo + Saques − Depósitos
+          </p>
         </div>
       </div>
 
-      {/* ─── Seção 4: Retorno de Capital ─── */}
+      {/* ─── CAMADA 3: OPERACIONAL (Performance) ─── */}
+      {Math.abs(metrics.lucroApostasPuro) >= 0.01 && (
+        <div className="border-t border-border/40 pt-3 pb-3 space-y-1">
+          <div className="flex items-center justify-between mb-1.5">
+            <div className="flex items-center gap-1.5">
+              <BarChart3 className="h-3 w-3 text-primary" />
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">3. Operacional · Performance</span>
+            </div>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="text-[9px] text-muted-foreground/70 border-b border-dotted border-muted-foreground/40 cursor-help">como chegou aqui</span>
+              </TooltipTrigger>
+              <TooltipContent side="left" className="max-w-[260px] text-xs">
+                Lucro/prejuízo gerado pelas apostas em si. Isola câmbio e fluxo de caixa — mostra a qualidade da operação. Diferença com Patrimônio = câmbio + ajustes.
+              </TooltipContent>
+            </Tooltip>
+          </div>
+          <LucroOperacionalCollapsible metrics={metrics} formatCurrency={formatCurrency} />
+        </div>
+      )}
+
+      {/* ─── STATUS: Recuperação de Capital ─── */}
       <div className="border-t border-border/40 pt-3 space-y-2">
         {/* Break-even CONSOLIDADO */}
         <div>
