@@ -888,8 +888,8 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
           </TooltipTrigger>
           <TooltipContent side="bottom" className="max-w-[300px] text-xs">
             <div className="space-y-1.5">
-              <p><span className="font-semibold text-emerald-500">💰 Patrimônio:</span> quanto sobraria no seu bolso se você sacasse tudo das casas hoje.</p>
-              <p><span className="font-semibold text-sky-500">🎯 Real Ajustado:</span> mesma resposta, decomposta — quanto veio de operação, câmbio e ajustes.</p>
+              <p><span className="font-semibold text-emerald-500">Patrimônio:</span> quanto sobraria no seu bolso se você sacasse tudo das casas hoje.</p>
+              <p><span className="font-semibold text-sky-500">Real Ajustado:</span> mesma resposta, decomposta — quanto veio de operação, câmbio e ajustes.</p>
               <p className="text-muted-foreground">Expanda os blocos abaixo para auditar cada componente.</p>
             </div>
           </TooltipContent>
@@ -912,7 +912,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
           <Tooltip>
             <TooltipTrigger asChild>
               <span className="text-[11px] font-bold tracking-tight text-foreground border-b border-dotted border-muted-foreground/40 cursor-help truncate">
-                💰 Lucro se sacar tudo hoje
+                Lucro se sacar tudo hoje
               </span>
             </TooltipTrigger>
             <TooltipContent side="bottom" className="max-w-[280px] text-xs">
@@ -949,7 +949,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
               <Tooltip>
                 <TooltipTrigger asChild>
                   <span className="text-[11px] font-bold tracking-tight text-foreground border-b border-dotted border-muted-foreground/40 cursor-help truncate">
-                    🎯 Lucro Real Ajustado
+                    Lucro Real Ajustado
                   </span>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="max-w-[280px] text-xs">
@@ -1035,7 +1035,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
             <div className="flex items-center justify-between gap-2 flex-1 pr-2">
               <div className="flex items-center gap-1.5">
                 <Banknote className="h-3 w-3 text-muted-foreground" />
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">🏦 Lucro em Caixa</span>
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Lucro em Caixa</span>
               </div>
               <span className={`text-[11px] font-mono tabular-nums font-semibold ${(hasExtras ? metrics.fluxoLiquidoAjustado : metrics.fluxoCaixaLiquido) >= 0 ? "text-emerald-500" : "text-red-500"}`}>
                 {formatCurrency(hasExtras ? metrics.fluxoLiquidoAjustado : metrics.fluxoCaixaLiquido)}
@@ -1102,7 +1102,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
             <div className="flex items-center justify-between gap-2 flex-1 pr-2">
               <div className="flex items-center gap-1.5">
                 <TrendingUp className="h-3 w-3 text-primary" />
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">📐 Composição do Patrimônio</span>
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Composição do Patrimônio</span>
               </div>
               <span className={`text-[11px] font-mono tabular-nums font-semibold ${metrics.lucroFinanceiro >= 0 ? "text-emerald-500" : "text-red-500"}`}>
                 {formatCurrency(metrics.lucroFinanceiro)}
@@ -1111,7 +1111,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
           </AccordionTrigger>
           <AccordionContent className="px-3 pb-3 pt-0">
             <p className="text-[9.5px] text-muted-foreground/70 mb-1.5">
-              Como chegamos no número do card 💰. Usa cotação live — flutua com câmbio mesmo sem operar.
+              Como chegamos no número do card de Patrimônio. Usa cotação live — flutua com câmbio mesmo sem operar.
             </p>
         <MetricRow
           label="Saldo em Bookmakers"
@@ -1135,7 +1135,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
             value={formatCurrency(metrics.lucroFinanceiro)}
             colorClass={metrics.lucroFinanceiro >= 0 ? "text-emerald-500" : "text-red-500"}
             bold
-            tooltip="Totalizador da fórmula. Mesma resposta do card 💰 no topo."
+            tooltip="Totalizador da fórmula. Mesma resposta do card de Patrimônio no topo."
             onClick={() => setShowLucroProjetado(true)}
           />
           <p className="text-[9px] text-muted-foreground/70 mt-0.5">
@@ -1152,7 +1152,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
               <div className="flex items-center justify-between gap-2 flex-1 pr-2">
                 <div className="flex items-center gap-1.5">
                   <BarChart3 className="h-3 w-3 text-primary" />
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">📊 Detalhe da Performance</span>
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Detalhe da Performance</span>
                 </div>
                 <span className={`text-[11px] font-mono tabular-nums font-semibold ${metrics.performancePura >= 0 ? "text-emerald-500" : "text-red-500"}`}>
                   {fmtSigned(metrics.performancePura)}
@@ -1178,10 +1178,10 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
                 ) : (
                   <AlertCircle className="h-3 w-3 text-amber-500" />
                 )}
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">🎯 Recuperação de Capital</span>
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Recuperação de Capital</span>
               </div>
               <span className={`text-[10px] font-medium ${breakEvenReached ? "text-emerald-500" : "text-amber-500"}`}>
-                {breakEvenReached ? "✓ Recuperado" : (() => {
+                {breakEvenReached ? "Recuperado" : (() => {
                   const recovered = metrics.saquesRecebidos || 0;
                   const target = metrics.depositosEfetivos || 0;
                   const pct = target > 0 ? Math.min(100, (recovered / target) * 100) : 0;
