@@ -1,9 +1,11 @@
 # Memory: finance/indicadores-financeiros-3-camadas-standard
 Updated: 2026-04-24
 
-## Padrão dos Indicadores Financeiros — 3 perspectivas de lucro
+> ⚠️ **SUPERSEDED** — este padrão foi expandido para 4 camadas. Ver `mem://finance/lucro-real-ajustado-quarta-camada` para o padrão atual.
 
-O popover **`FinancialMetricsPopover.tsx`** organiza os KPIs financeiros em exatamente **3 camadas**, cada uma respondendo a uma pergunta diferente. Não inventar quarta camada sem justificativa explícita.
+## Padrão dos Indicadores Financeiros — 3 perspectivas de lucro (legado)
+
+O popover **`FinancialMetricsPopover.tsx`** originalmente organizava os KPIs em 3 camadas. A partir de 2026-04-24 foi adicionada a 4ª camada (Lucro Real Ajustado) como segundo card-resumo no topo, decompondo o Patrimônio em Performance × FX × Ajustes.
 
 ### Mapeamento campo → pergunta → comunicação
 

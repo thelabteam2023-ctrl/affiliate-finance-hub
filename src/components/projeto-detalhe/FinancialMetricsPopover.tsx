@@ -28,7 +28,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Progress } from "@/components/ui/progress";
-import { Lightbulb, PiggyBank, Banknote } from "lucide-react";
+import { Lightbulb, PiggyBank, Banknote, Target } from "lucide-react";
 
 
 interface FinancialMetricsPopoverProps {
@@ -856,6 +856,9 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
   const breakEvenInternoReached = metrics.fluxoInternoLiquido >= 0;
   const hasExtras = Math.abs(metrics.extrasPositivos) >= 0.01;
 
+  const fmtSigned = (v: number) =>
+    v < 0 ? `−${formatCurrency(Math.abs(v))}` : formatCurrency(v);
+
   return (
     <div className="p-4 w-[340px] space-y-0">
       {/* Header */}
@@ -873,13 +876,13 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
         )}
       </div>
 
-      {/* ─── HEADER EDUCACIONAL: 3 perspectivas ─── */}
+      {/* ─── HEADER EDUCACIONAL: 4 perspectivas ─── */}
       <div className="flex items-start gap-2 mb-3 px-2.5 py-2 rounded-md bg-muted/30 border border-border/40">
         <Lightbulb className="h-3 w-3 text-amber-500 mt-0.5 shrink-0" />
         <Tooltip>
           <TooltipTrigger asChild>
             <p className="text-[10px] leading-snug text-muted-foreground border-b border-dotted border-muted-foreground/40 cursor-help">
-              <span className="font-semibold text-foreground">3 perspectivas de lucro:</span> o que voltou pro caixa · o que voltaria se sacasse tudo · o que a operação produziu.
+              <span className="font-semibold text-foreground">4 perspectivas de lucro:</span> o que voltou pro caixa · o que voltaria se sacasse tudo · o que a operação produziu · o lucro real ajustado por câmbio.
             </p>
           </TooltipTrigger>
           <TooltipContent side="bottom" className="max-w-[300px] text-xs">
@@ -887,6 +890,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
               <p><span className="font-semibold text-emerald-500">💰 Patrimônio:</span> resposta principal — quanto sobraria no seu bolso se você sacasse tudo das casas hoje.</p>
               <p><span className="font-semibold text-foreground">🏦 Caixa:</span> dinheiro que efetivamente já voltou pra conta (saques − depósitos).</p>
               <p><span className="font-semibold text-foreground">📊 Operação:</span> o que a operação produziu (performance + FX + extraordinários). Em equilíbrio, deve bater com Patrimônio.</p>
+              <p><span className="font-semibold text-sky-500">🎯 Real Ajustado:</span> mesma resposta do Patrimônio, mas decomposta — quanto veio de operação, quanto de câmbio e quanto de ajustes.</p>
             </div>
           </TooltipContent>
         </Tooltip>
@@ -924,6 +928,101 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
           Saldo nas casas + saques recebidos − depósitos confirmados
         </p>
       </div>
+
+      {/* ─── CARD-RESUMO 2: Lucro Real Ajustado (decomposição operacional) ─── */}
+      {(() => {
+        const real = metrics.resultadoOperacionalTotal;
+        const diff = metrics.lucroFinanceiro - real;
+        const convergente = Math.abs(diff) < 0.01;
+        const positivo = real >= 0;
+        return (
+          <div
+            className={`mb-4 rounded-lg border px-3 py-3 cursor-pointer transition-all hover:shadow-md ${
+              positivo
+                ? "border-sky-500/30 bg-gradient-to-br from-sky-500/[0.08] to-sky-500/[0.02]"
+                : "border-red-500/30 bg-gradient-to-br from-red-500/[0.08] to-red-500/[0.02]"
+            }`}
+            onClick={() => setShowLucroProjetado(true)}
+            role="button"
+          >
+            <div className="flex items-center justify-between gap-2 mb-1.5">
+              <div className="flex items-center gap-1.5">
+                <Target className={`h-3.5 w-3.5 ${positivo ? "text-sky-500" : "text-red-500"}`} />
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="text-[11px] font-bold tracking-tight text-foreground border-b border-dotted border-muted-foreground/40 cursor-help">
+                      🎯 Lucro Real Ajustado
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-[280px] text-xs">
+                    Mesma resposta do "Lucro se sacar tudo", porém decomposto: quanto veio de mérito da operação (performance), quanto veio de câmbio (efeito macro) e quanto veio de ajustes administrativos.
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span
+                      className={`text-[9px] px-1.5 py-0.5 rounded border cursor-help font-medium ${
+                        convergente
+                          ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
+                          : "bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400"
+                      }`}
+                    >
+                      {convergente ? "🟢" : `Δ ${formatCurrency(Math.abs(diff))}`}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="left" className="max-w-[260px] text-xs">
+                    Convergência com "Lucro se sacar tudo". Divergência indica saldos não realizados, FX em trânsito ou eventos recém-classificados.
+                  </TooltipContent>
+                </Tooltip>
+                <span className={`text-base font-mono tabular-nums font-bold ${positivo ? "text-sky-500" : "text-red-500"}`}>
+                  {formatCurrency(real)}
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-1 flex-wrap">
+              <span
+                className={`text-[9px] px-1.5 py-0.5 rounded border font-mono tabular-nums ${
+                  metrics.performancePura >= 0
+                    ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
+                    : "bg-red-500/10 border-red-500/30 text-red-600 dark:text-red-400"
+                }`}
+                title="Performance pura — mérito do operador"
+              >
+                📊 {fmtSigned(metrics.performancePura)}
+              </span>
+              <span
+                className={`text-[9px] px-1.5 py-0.5 rounded border font-mono tabular-nums ${
+                  Math.abs(metrics.efeitosFinanceiros) < 0.01
+                    ? "bg-muted/40 border-border/40 text-muted-foreground"
+                    : metrics.efeitosFinanceiros >= 0
+                    ? "bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400"
+                    : "bg-red-500/10 border-red-500/30 text-red-600 dark:text-red-400"
+                }`}
+                title="Efeitos financeiros — variação cambial e confirmação"
+              >
+                💱 {fmtSigned(metrics.efeitosFinanceiros)}
+              </span>
+              <span
+                className={`text-[9px] px-1.5 py-0.5 rounded border font-mono tabular-nums ${
+                  Math.abs(metrics.ajustesExtraordinarios) < 0.01
+                    ? "bg-muted/40 border-border/40 text-muted-foreground"
+                    : metrics.ajustesExtraordinarios >= 0
+                    ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
+                    : "bg-red-500/10 border-red-500/30 text-red-600 dark:text-red-400"
+                }`}
+                title="Ajustes administrativos e perdas operacionais"
+              >
+                ⚙️ {fmtSigned(metrics.ajustesExtraordinarios)}
+              </span>
+            </div>
+            <p className="text-[9.5px] text-muted-foreground/80 leading-snug mt-1.5">
+              Performance + Câmbio + Ajustes (decomposto na Camada 3 abaixo)
+            </p>
+          </div>
+        );
+      })()}
 
       {/* ─── CAMADA 1: REALIZADO (Caixa) ─── */}
       <div className="space-y-1 pb-3">

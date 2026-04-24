@@ -1,69 +1,77 @@
 ## Objetivo
 
-Corrigir o bug de **double-counting** no card "Resultado de Caixa" da aba Extrato, que está somando os Extras (bônus, cashback, ajustes) duas vezes — uma vez via `saldoCasasTotal` (já refletido pelos triggers do ledger) e outra vez via `ajustesTotal`.
+Criar uma **4ª camada de leitura financeira** no `FinancialMetricsPopover` que torne explícita a diferença entre:
 
-## Diagnóstico (já confirmado na auditoria anterior)
+1. **Lucro de Performance** (mérito do operador — apostas + créditos promocionais)
+2. **Lucro de Câmbio** (efeito macro fora do controle — variação cambial + ganho de confirmação)
+3. **Lucro de Ajustes** (eventos administrativos — ajustes manuais − perdas operacionais)
+4. **Lucro Real Ajustado** = soma dos 3 = deveria convergir com Patrimônio Líquido
 
-**Fórmula atual (errada)** em `ExtratoProjetoTab.tsx`:
-```
-resultadoCaixa = saquesTotal + saldoCasasTotal + ajustesTotal − depositosTotal
-```
-
-**Por quê está errada**: quando um `BONUS_CREDITADO` ou `CASHBACK` é lançado, o trigger do ledger já atualiza o `saldo_atual` da bookmaker. Logo, esses valores **já estão dentro de `saldoCasasTotal`**. Ao somar `ajustesTotal` separadamente, contamos duas vezes.
-
-**Exemplo do print do usuário**:
-- Depósitos: $898,67 / Saques: $0 / Saldo Casas: ~$1.198,67 / Extras (bônus): $300
-- Atual (errado): 0 + 1.198,67 + 300 − 898,67 = **$600** ❌
-- Correto: 0 + 1.198,67 − 898,67 = **$300** ✅ (bate com Patrimônio Líquido da Visão Geral)
+> **Não há novos cálculos no backend.** Todos os campos (`performancePura`, `efeitosFinanceiros`, `ajustesExtraordinarios`, `resultadoOperacionalTotal`) já existem em `metrics`. A mudança é **puramente de UI/destaque**.
 
 ## Mudanças
 
-### 1. `src/components/projeto-detalhe/ExtratoProjetoTab.tsx`
+### 1. `src/components/projeto-detalhe/FinancialMetricsPopover.tsx`
 
-**a) Corrigir fórmula** (remover `ajustesTotal` da soma):
-```ts
-const resultadoCaixa = saquesTotal + saldoCasasTotal − depositosTotal;
+**1.1 — Adicionar segundo card-resumo no topo (gêmeo do "Lucro se sacar tudo")**
+
+Logo abaixo do card "💰 Lucro se sacar tudo hoje" (linha ~926), inserir um novo card-resumo:
+
+- **Título:** `🎯 Lucro Real Ajustado`
+- **Valor:** `metrics.resultadoOperacionalTotal`
+- **Subtítulo:** "Performance + Câmbio + Ajustes (decomposto abaixo)"
+- **Visual:** mesmo padrão do card existente (gradiente emerald/red + borda + clique abre `LucroOperacionalCollapsible` aberto)
+- **Mini-decomposição inline em 3 chips:**
+  - `📊 Perf: {performancePura}` (verde se positivo)
+  - `💱 FX: {efeitosFinanceiros}` (âmbar se ≠ 0)
+  - `⚙️ Ajustes: {ajustesExtraordinarios}` (cinza se ≠ 0)
+- **Badge de paridade no canto:** mesma lógica do existente (🟢 Convergente vs 🟡 Δ vs Patrimônio)
+
+**1.2 — Tooltip educacional**
+
+Atualizar o tooltip do header de "3 perspectivas" (linha ~882) para "**4 perspectivas de lucro**" e adicionar bullet do Lucro Real Ajustado:
+
+> 🎯 **Real Ajustado:** mesma resposta do Patrimônio, mas decomposta — quanto veio de operação, quanto de câmbio, quanto de ajustes.
+
+**1.3 — Garantir separação visual de Ajustes vs FX**
+
+A função `efeitosFinanceiros` (linha 778) hoje é: `(ganhoFx − perdaFx) + ganhoConfirmacao + ajustesFx`
+
+→ **Manter como está** (ajustes classificados como FX seguem em FX, ajustes administrativos seguem em `ajustesExtraordinarios`). Isso já respeita "ajustes em categoria própria" porque a UI mostra os 3 blocos segregados em `LucroOperacionalCollapsible` (linhas 263-380).
+
+**1.4 — Reordenação visual final do popover:**
+
+```
+[Header educacional 4 perspectivas]
+[💰 Card-resumo: Lucro se sacar tudo hoje]   ← já existe
+[🎯 Card-resumo: Lucro Real Ajustado]         ← NOVO (gêmeo)
+─────────────────────────────────
+[🏦 Camada 1: Lucro em Caixa]                 ← já existe
+[📐 Camada 2: Composição do Patrimônio]       ← já existe
+[📊 Camada 3: Performance da Operação]        ← já existe (mantém colapsável detalhado)
+[Status de Recuperação de Capital]            ← já existe
 ```
 
-**b) Renomear card** "Resultado de Caixa" → **"Lucro se sacar tudo"** (alinhado com a nomenclatura do `FinancialMetricsPopover`).
+### 2. Documentação — `mem://finance/lucro-real-ajustado-quarta-camada.md`
 
-**c) Atualizar tooltip do `KpiInfoButton` do card renomeado**:
-- Nova fórmula
-- Explicar que bônus/cashback/ajustes já estão refletidos no Saldo Casas via triggers
-- Manter aviso sobre divergência cambial vs Saldo Operável (mark-to-market vs snapshot)
+Novo memory documentando o padrão das 4 camadas:
 
-**d) Card "Extras"** permanece, mas com tooltip atualizado:
-> *"Soma informativa dos lançamentos extras (bônus, cashback, ajustes) no período. **Estes valores já estão refletidos no Saldo Casas** via triggers do ledger e NÃO são somados novamente no Lucro se sacar tudo."*
+- **Camada 1 (Caixa):** `saquesRecebidos − depositosEfetivos` — pergunta: *"O que voltou pro meu bolso?"*
+- **Camada 2 (Patrimônio):** `saldoCasas + saquesRecebidos − depositosEfetivos` — pergunta: *"E se eu sacasse tudo agora?"*
+- **Camada 3 (Performance Pura):** `lucroApostas + bônus + cashback + giros + ajustesOp` — pergunta: *"O quanto a operação realmente performou?"*
+- **Camada 4 (Real Ajustado):** `performancePura + efeitosFinanceiros + ajustesExtraordinarios` — pergunta: *"Qual o lucro real considerando câmbio e ajustes?"*
 
-### 2. `mem://finance/extrato-kpi-dual-view-standard.md`
+Mapear cada campo ao componente UI e estabelecer a regra: **Camada 4 deve convergir com Camada 2** (delta < 0,01). Divergências indicam saldos não realizados, FX em trânsito ou eventos recém-lançados.
 
-Atualizar a tabela e adicionar seção "Anti-double-counting":
-- Corrigir fórmula do "Resultado de Caixa" → "Lucro se sacar tudo"
-- Documentar que Extras é **informativo apenas**, não entra no cálculo
-- Justificar: triggers do ledger já refletem extras no `saldo_atual`
+### 3. Atualizar `mem://index.md`
 
-### 3. `mem://finance/extrato-projeto-canonical-kpi-standard.md`
+Adicionar referência ao novo memory na seção `## Memories`:
+- `[Lucro Real Ajustado 4 Camadas](mem://finance/lucro-real-ajustado-quarta-camada) — 4ª perspectiva no FinancialMetricsPopover decompondo Performance × FX × Ajustes; deve convergir com Patrimônio`
 
-Atualizar seção "Resultado de Caixa" com:
-- Nova fórmula sem `ajustesTotal`
-- Renomeação do card
-- Nota explicativa sobre por que não somar extras
+## Garantias
 
-## Validação esperada após o fix
-
-Com os números do print do usuário:
-- **Lucro se sacar tudo (Extrato)** ≈ **Patrimônio Líquido (Popover)** ≈ **Lucro Operacional (Visão Geral)** ± variação cambial
-
-A divergência residual entre Extrato e Visão Geral será apenas **variação cambial** (snapshot vs live), o que é o comportamento intencional documentado em `extrato-kpi-dual-view-standard`.
-
-## Arquivos afetados
-
-- `src/components/projeto-detalhe/ExtratoProjetoTab.tsx` (fórmula + label + tooltip)
-- `.lovable/memory/finance/extrato-kpi-dual-view-standard.md` (atualização)
-- `.lovable/memory/finance/extrato-projeto-canonical-kpi-standard.md` (atualização)
-
-## Não-objetivos
-
-- Não alterar lógica de `saldoCasasTotal` (continua live mark-to-market)
-- Não alterar conversão dos Extras (continua snapshot via `convertToConsolidation`)
-- Não tocar em RPCs ou triggers do banco (anti-retrofix)
+- ✅ **Zero novos cálculos** — apenas reuso de campos já existentes em `metrics`
+- ✅ **Zero migração de banco** — view de patrimônio e operacional já consolida tudo
+- ✅ **Compatibilidade total** com `useKpiBreakdowns` e `fetchProjetoExtras`
+- ✅ **Respeita a regra anti-double-counting** consolidada no Extrato (bônus/cashback no `saldo_atual` via triggers)
+- ✅ **Respeita memória existente** "Resultado Cambial NÃO entra no Lucro Operacional da Visão Geral" — porque esse padrão é da **Visão Geral** (KPI canônico server-side), não do popover financeiro detalhado, que sempre teve a missão de mostrar reconciliação completa
