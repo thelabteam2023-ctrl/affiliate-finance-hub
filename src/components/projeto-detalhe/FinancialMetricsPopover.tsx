@@ -29,6 +29,7 @@ import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Progress } from "@/components/ui/progress";
 import { Lightbulb, PiggyBank, Banknote, Target } from "lucide-react";
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 
 
 interface FinancialMetricsPopoverProps {
@@ -876,29 +877,29 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
         )}
       </div>
 
-      {/* ─── HEADER EDUCACIONAL: 4 perspectivas ─── */}
-      <div className="flex items-start gap-2 mb-3 px-2.5 py-2 rounded-md bg-muted/30 border border-border/40">
-        <Lightbulb className="h-3 w-3 text-amber-500 mt-0.5 shrink-0" />
+      {/* ─── HEADER EDUCACIONAL COMPACTO ─── */}
+      <div className="flex items-center gap-1.5 mb-3 px-2 py-1 rounded bg-muted/20">
+        <Lightbulb className="h-3 w-3 text-amber-500 shrink-0" />
         <Tooltip>
           <TooltipTrigger asChild>
-            <p className="text-[10px] leading-snug text-muted-foreground border-b border-dotted border-muted-foreground/40 cursor-help">
-              <span className="font-semibold text-foreground">4 perspectivas de lucro:</span> o que voltou pro caixa · o que voltaria se sacasse tudo · o que a operação produziu · o lucro real ajustado por câmbio.
+            <p className="text-[10px] text-muted-foreground border-b border-dotted border-muted-foreground/40 cursor-help">
+              <span className="font-medium text-foreground">2 leituras rápidas</span> + auditoria sob demanda
             </p>
           </TooltipTrigger>
           <TooltipContent side="bottom" className="max-w-[300px] text-xs">
             <div className="space-y-1.5">
-              <p><span className="font-semibold text-emerald-500">💰 Patrimônio:</span> resposta principal — quanto sobraria no seu bolso se você sacasse tudo das casas hoje.</p>
-              <p><span className="font-semibold text-foreground">🏦 Caixa:</span> dinheiro que efetivamente já voltou pra conta (saques − depósitos).</p>
-              <p><span className="font-semibold text-foreground">📊 Operação:</span> o que a operação produziu (performance + FX + extraordinários). Em equilíbrio, deve bater com Patrimônio.</p>
-              <p><span className="font-semibold text-sky-500">🎯 Real Ajustado:</span> mesma resposta do Patrimônio, mas decomposta — quanto veio de operação, quanto de câmbio e quanto de ajustes.</p>
+              <p><span className="font-semibold text-emerald-500">💰 Patrimônio:</span> quanto sobraria no seu bolso se você sacasse tudo das casas hoje.</p>
+              <p><span className="font-semibold text-sky-500">🎯 Real Ajustado:</span> mesma resposta, decomposta — quanto veio de operação, câmbio e ajustes.</p>
+              <p className="text-muted-foreground">Expanda os blocos abaixo para auditar cada componente.</p>
             </div>
           </TooltipContent>
         </Tooltip>
       </div>
 
-      {/* ─── CARD-RESUMO: Lucro se sacar tudo hoje (Patrimônio destacado) ─── */}
+      {/* ─── CARDS DE TOPO: 2 leituras rápidas lado-a-lado ─── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 mb-3">
       <div
-        className={`mb-4 rounded-lg border px-3 py-3 cursor-pointer transition-all hover:shadow-md ${
+        className={`rounded-lg border px-3 py-3 cursor-pointer transition-all hover:shadow-md ${
           metrics.lucroFinanceiro >= 0
             ? "border-emerald-500/30 bg-gradient-to-br from-emerald-500/[0.08] to-emerald-500/[0.02]"
             : "border-red-500/30 bg-gradient-to-br from-red-500/[0.08] to-red-500/[0.02]"
@@ -925,7 +926,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
           </span>
         </div>
         <p className="text-[9.5px] text-muted-foreground/80 leading-snug">
-          Saldo nas casas + saques recebidos − depósitos confirmados
+          Patrimônio se liquidar tudo agora
         </p>
       </div>
 
@@ -937,7 +938,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
         const positivo = real >= 0;
         return (
           <div
-            className={`mb-4 rounded-lg border px-3 py-3 cursor-pointer transition-all hover:shadow-md ${
+            className={`rounded-lg border px-3 py-3 cursor-pointer transition-all hover:shadow-md ${
               positivo
                 ? "border-sky-500/30 bg-gradient-to-br from-sky-500/[0.08] to-sky-500/[0.02]"
                 : "border-red-500/30 bg-gradient-to-br from-red-500/[0.08] to-red-500/[0.02]"
@@ -1025,28 +1026,32 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
               </span>
             </div>
             <p className="text-[9.5px] text-muted-foreground/80 leading-snug mt-1.5">
-              Performance + Câmbio + Ajustes (decomposto na Camada 3 abaixo)
+              Performance + Câmbio + Ajustes
             </p>
           </div>
         );
       })()}
+      </div>
 
-      {/* ─── CAMADA 1: REALIZADO (Caixa) ─── */}
-      <div className="space-y-1 pb-3">
-        <div className="flex items-center justify-between mb-1.5">
-          <div className="flex items-center gap-1.5">
-            <Banknote className="h-3 w-3 text-muted-foreground" />
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">🏦 Lucro em Caixa</span>
-          </div>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="text-[9px] text-muted-foreground/70 border-b border-dotted border-muted-foreground/40 cursor-help">dinheiro que já voltou pra conta</span>
-            </TooltipTrigger>
-            <TooltipContent side="left" className="max-w-[260px] text-xs">
-              Saques confirmados − depósitos confirmados. Só conta dinheiro que efetivamente voltou ao seu banco. Não considera saldo ainda dentro das casas nem variação cambial.
-            </TooltipContent>
-          </Tooltip>
-        </div>
+      {/* ─── ACCORDIONS DE AUDITORIA (colapsados por padrão) ─── */}
+      <Accordion type="multiple" className="w-full space-y-1.5">
+        {/* Camada 1: Lucro em Caixa */}
+        <AccordionItem value="caixa" className="border rounded-md border-border/40 bg-muted/10">
+          <AccordionTrigger className="px-3 py-2 hover:no-underline [&>svg]:h-3 [&>svg]:w-3">
+            <div className="flex items-center justify-between gap-2 flex-1 pr-2">
+              <div className="flex items-center gap-1.5">
+                <Banknote className="h-3 w-3 text-muted-foreground" />
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">🏦 Lucro em Caixa</span>
+              </div>
+              <span className={`text-[11px] font-mono tabular-nums font-semibold ${(hasExtras ? metrics.fluxoLiquidoAjustado : metrics.fluxoCaixaLiquido) >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                {formatCurrency(hasExtras ? metrics.fluxoLiquidoAjustado : metrics.fluxoCaixaLiquido)}
+              </span>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent className="px-3 pb-3 pt-0">
+            <p className="text-[9.5px] text-muted-foreground/70 mb-1.5">
+              Dinheiro que já voltou pra sua conta (saques − depósitos confirmados).
+            </p>
         <DepositosCollapsible
           metrics={metrics}
           formatCurrency={formatCurrency}
@@ -1094,24 +1099,26 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
             </div>
           )}
         </div>
-      </div>
+          </AccordionContent>
+        </AccordionItem>
 
-      {/* ─── CAMADA 2: MARK-TO-MARKET (Patrimônio) ─── */}
-      <div className="border-t border-border/40 pt-3 pb-3 space-y-1">
-        <div className="flex items-center justify-between mb-1.5">
-          <div className="flex items-center gap-1.5">
-            <TrendingUp className="h-3 w-3 text-primary" />
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">📐 Composição do Patrimônio</span>
-          </div>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="text-[9px] text-muted-foreground/70 border-b border-dotted border-muted-foreground/40 cursor-help">como chegamos lá</span>
-            </TooltipTrigger>
-            <TooltipContent side="left" className="max-w-[260px] text-xs">
-              Detalhamento dos componentes que somam ao "Lucro se sacar tudo hoje" do card acima. Usa cotação live, então flutua com câmbio mesmo sem operar — isso é variação cambial real, não bug.
-            </TooltipContent>
-          </Tooltip>
-        </div>
+        {/* Camada 2: Composição do Patrimônio */}
+        <AccordionItem value="patrimonio" className="border rounded-md border-border/40 bg-muted/10">
+          <AccordionTrigger className="px-3 py-2 hover:no-underline [&>svg]:h-3 [&>svg]:w-3">
+            <div className="flex items-center justify-between gap-2 flex-1 pr-2">
+              <div className="flex items-center gap-1.5">
+                <TrendingUp className="h-3 w-3 text-primary" />
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">📐 Composição do Patrimônio</span>
+              </div>
+              <span className={`text-[11px] font-mono tabular-nums font-semibold ${metrics.lucroFinanceiro >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                {formatCurrency(metrics.lucroFinanceiro)}
+              </span>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent className="px-3 pb-3 pt-0">
+            <p className="text-[9.5px] text-muted-foreground/70 mb-1.5">
+              Como chegamos no número do card 💰. Usa cotação live — flutua com câmbio mesmo sem operar.
+            </p>
         <MetricRow
           label="Saldo em Bookmakers"
           value={formatCurrency(metrics.saldoCasas)}
@@ -1134,71 +1141,67 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
             value={formatCurrency(metrics.lucroFinanceiro)}
             colorClass={metrics.lucroFinanceiro >= 0 ? "text-emerald-500" : "text-red-500"}
             bold
-            tooltip="Mesma resposta do card destacado no topo. Clique para reconciliar com a Performance da Operação."
+            tooltip="Totalizador da fórmula. Mesma resposta do card 💰 no topo."
             onClick={() => setShowLucroProjetado(true)}
           />
           <p className="text-[9px] text-muted-foreground/70 mt-0.5">
             Saldo + Saques − Depósitos
           </p>
         </div>
-      </div>
+          </AccordionContent>
+        </AccordionItem>
 
-      {/* ─── CAMADA 3: OPERACIONAL (Performance + FX + Ajustes segregados) ─── */}
-      {(Math.abs(metrics.performancePura) >= 0.01 || Math.abs(metrics.efeitosFinanceiros) >= 0.01 || Math.abs(metrics.ajustesExtraordinarios) >= 0.01) && (
-        <div className="border-t border-border/40 pt-3 pb-3 space-y-1">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-1.5">
-              <BarChart3 className="h-3 w-3 text-primary" />
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">📊 Performance da Operação</span>
+        {/* Camada 3: Detalhe da Performance */}
+        {(Math.abs(metrics.performancePura) >= 0.01 || Math.abs(metrics.efeitosFinanceiros) >= 0.01 || Math.abs(metrics.ajustesExtraordinarios) >= 0.01) && (
+          <AccordionItem value="performance" className="border rounded-md border-border/40 bg-muted/10">
+            <AccordionTrigger className="px-3 py-2 hover:no-underline [&>svg]:h-3 [&>svg]:w-3">
+              <div className="flex items-center justify-between gap-2 flex-1 pr-2">
+                <div className="flex items-center gap-1.5">
+                  <BarChart3 className="h-3 w-3 text-primary" />
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">📊 Detalhe da Performance</span>
+                </div>
+                <span className={`text-[11px] font-mono tabular-nums font-semibold ${metrics.performancePura >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                  {fmtSigned(metrics.performancePura)}
+                </span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="px-3 pb-3 pt-0">
+              <p className="text-[9.5px] text-muted-foreground/70 mb-1.5">
+                Decomposição operacional: Performance Pura + Efeitos Financeiros + Extraordinários.
+              </p>
+              <LucroOperacionalCollapsible metrics={metrics} formatCurrency={formatCurrency} />
+            </AccordionContent>
+          </AccordionItem>
+        )}
+
+        {/* Recuperação de Capital */}
+        <AccordionItem value="recuperacao" className="border rounded-md border-border/40 bg-muted/10">
+          <AccordionTrigger className="px-3 py-2 hover:no-underline [&>svg]:h-3 [&>svg]:w-3">
+            <div className="flex items-center justify-between gap-2 flex-1 pr-2">
+              <div className="flex items-center gap-1.5">
+                {breakEvenReached ? (
+                  <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                ) : (
+                  <AlertCircle className="h-3 w-3 text-amber-500" />
+                )}
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">🎯 Recuperação de Capital</span>
+              </div>
+              <span className={`text-[10px] font-medium ${breakEvenReached ? "text-emerald-500" : "text-amber-500"}`}>
+                {breakEvenReached ? "✓ Recuperado" : (() => {
+                  const recovered = metrics.saquesRecebidos || 0;
+                  const target = metrics.depositosEfetivos || 0;
+                  const pct = target > 0 ? Math.min(100, (recovered / target) * 100) : 0;
+                  return `${pct.toFixed(0)}%`;
+                })()}
+              </span>
             </div>
-            {(() => {
-              const diff = metrics.lucroFinanceiro - metrics.resultadoOperacionalTotal;
-              const convergente = Math.abs(diff) < 0.01;
-              return (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span
-                      className={`text-[9px] px-1.5 py-0.5 rounded border cursor-help font-medium ${
-                        convergente
-                          ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
-                          : "bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400"
-                      }`}
-                    >
-                      {convergente ? "🟢 Convergente" : `🟡 Δ ${formatCurrency(Math.abs(diff))}`}
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent side="left" className="max-w-[280px] text-xs">
-                    Em uma operação saudável, a Performance da Operação deve bater com o "Lucro se sacar tudo hoje". Divergência indica saldos ainda não realizados, FX pendente ou ajustes recém-classificados.
-                  </TooltipContent>
-                </Tooltip>
-              );
-            })()}
-          </div>
-          <p className="text-[9.5px] text-muted-foreground/70 -mt-1 mb-1.5">
-            Performance Pura + Efeitos Financeiros + Extraordinários
-          </p>
-          <LucroOperacionalCollapsible metrics={metrics} formatCurrency={formatCurrency} />
-        </div>
-      )}
-
-      {/* ─── STATUS: Recuperação de Capital ─── */}
-      <div className="border-t border-border/40 pt-3 space-y-2">
-        {/* Break-even CONSOLIDADO */}
-        <div>
-          <div className="flex items-center gap-1.5 mb-1.5">
-            {breakEvenReached ? (
-              <CheckCircle2 className="h-3 w-3 text-emerald-500" />
-            ) : (
-              <AlertCircle className="h-3 w-3 text-amber-500" />
-            )}
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Recuperação de Capital
-              {metrics.hasInvestorCapital && (
-                <span className="ml-1 text-[9px] font-normal normal-case text-muted-foreground/60">(consolidado)</span>
-              )}
-            </span>
-          </div>
-          
+          </AccordionTrigger>
+          <AccordionContent className="px-3 pb-3 pt-0">
+            <div className="space-y-2">
+              <div>
+                {metrics.hasInvestorCapital && (
+                  <p className="text-[9px] text-muted-foreground/70 mb-1.5">Consolidado (Interno + Investidor)</p>
+                )}
           {breakEvenReached ? (
             <div className="rounded-lg bg-emerald-500/5 border border-emerald-500/15 px-3 py-2">
               <div className="flex items-center justify-between gap-2 mb-1.5">
@@ -1279,7 +1282,10 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
             )}
           </div>
         )}
-      </div>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
 
       {/* Drill-Down Modal */}
       {drillDownKey && (
