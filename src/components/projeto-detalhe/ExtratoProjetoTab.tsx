@@ -90,6 +90,47 @@ function getSymbol(moeda: string) {
   return CURRENCY_SYMBOLS[moeda as SupportedCurrency] || moeda;
 }
 
+/**
+ * Botão informativo (ⓘ) para KPI: explica metodologia e divergências esperadas.
+ * Usado em todos os cards do Extrato para deixar claro o "ponto de vista" de cada número.
+ */
+function KpiInfoButton({
+  title,
+  body,
+  divergencia,
+}: {
+  title: string;
+  body: React.ReactNode;
+  divergencia?: React.ReactNode;
+}) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          onClick={(e) => e.stopPropagation()}
+          className="ml-auto text-muted-foreground/60 hover:text-foreground transition-colors"
+          aria-label="Sobre este KPI"
+        >
+          <Info className="h-3.5 w-3.5" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent side="bottom" align="end" className="w-80 text-xs space-y-2 p-3">
+        <p className="font-semibold text-sm">{title}</p>
+        <div className="text-muted-foreground leading-relaxed space-y-1.5">{body}</div>
+        {divergencia && (
+          <div className="pt-2 mt-2 border-t border-border/40">
+            <p className="text-[10px] uppercase tracking-wide font-semibold text-amber-400 mb-1">
+              Por que diverge do Saldo Operável?
+            </p>
+            <div className="text-muted-foreground leading-relaxed">{divergencia}</div>
+          </div>
+        )}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function formatVal(value: number, moeda: string = "BRL") {
   const symbol = getSymbol(moeda);
   return `${symbol} ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
