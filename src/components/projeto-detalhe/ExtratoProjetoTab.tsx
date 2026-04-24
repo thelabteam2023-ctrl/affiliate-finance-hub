@@ -146,7 +146,11 @@ function getTransactionSign(tipo: string, ajusteDirecao?: string | null): "posit
   return "neutral";
 }
 
-function useProjetoExtrato(projetoId: string) {
+function useProjetoExtrato(
+  projetoId: string,
+  convertToConsolidation: (valor: number, moedaOrigem: string) => number,
+  moedaConsolidacao: string,
+) {
   const { workspaceId } = useWorkspace();
 
   const historyQuery = useQuery({
@@ -220,58 +224,125 @@ function useProjetoExtrato(projetoId: string) {
   });
 
   const metricsQuery = useQuery({
-    queryKey: ["projeto-extrato-metrics", projetoId],
+    queryKey: ["projeto-extrato-metrics", projetoId, moedaConsolidacao],
     queryFn: async () => {
       // Get confirmed ledger entries for metrics
       const { data: ledger, error } = await supabase
         .from("cash_ledger")
-        .select("tipo_transacao, valor, moeda, tipo_moeda, valor_usd, cotacao, ajuste_direcao")
+        .select(
+          "tipo_transacao, valor, valor_confirmado, moeda, tipo_moeda, valor_usd, cotacao, ajuste_direcao, origem_tipo, descricao"
+        )
         .eq("projeto_id_snapshot", projetoId)
         .eq("status", "CONFIRMADO");
       if (error) throw error;
 
-      // Aggregate by currency
+      // === CLASSIFICAÇÃO CANÔNICA (memory: virtual-deposit-origin-classification) ===
+      // Depósitos efetivos = DEPOSITO real + DEPOSITO_VIRTUAL onde origem_tipo='MIGRACAO'
+      // Saques efetivos    = SAQUE real    + SAQUE_VIRTUAL    onde origem_tipo='MIGRACAO'
+      // EXCLUI: BASELINE (primeira vinculação) e NULL (rebaselines antigos sem classificação)
+      // ============================================================================
+      const isBaselineDV = (e: any) =>
+        e.tipo_transacao === "DEPOSITO_VIRTUAL" &&
+        (e.origem_tipo === "BASELINE" || e.origem_tipo == null);
+
+      const isMigracaoDV = (e: any) =>
+        e.tipo_transacao === "DEPOSITO_VIRTUAL" && e.origem_tipo === "MIGRACAO";
+
+      const isMigracaoSV = (e: any) =>
+        e.tipo_transacao === "SAQUE_VIRTUAL" && e.origem_tipo === "MIGRACAO";
+
+      // Aggregate by currency (apenas o que conta como movimento efetivo)
       const currencyMap = new Map<string, CurrencyMetrics>();
-      
-      (ledger || []).forEach((e: any) => {
-        const moeda = e.moeda || "BRL";
+      const ensureCM = (moeda: string) => {
         if (!currencyMap.has(moeda)) {
           currencyMap.set(moeda, { moeda, depositos: 0, saques: 0, ajustes: 0 });
         }
-        const cm = currencyMap.get(moeda)!;
-        
-        if (e.tipo_transacao === "DEPOSITO" || e.tipo_transacao === "DEPOSITO_VIRTUAL") {
-          cm.depositos += e.valor;
-        } else if (e.tipo_transacao === "SAQUE" || e.tipo_transacao === "SAQUE_VIRTUAL") {
-          cm.saques += e.valor;
+        return currencyMap.get(moeda)!;
+      };
+
+      let baselineExcluidoCount = 0;
+      let baselineExcluidoTotalConvertido = 0;
+
+      (ledger || []).forEach((e: any) => {
+        const moeda = e.moeda || "BRL";
+        const valorBase = Number(e.valor_confirmado ?? e.valor ?? 0);
+
+        // 1) Baseline DV: NÃO entra no KPI (seria duplicação do DEPOSITO real)
+        if (isBaselineDV(e)) {
+          baselineExcluidoCount += 1;
+          baselineExcluidoTotalConvertido += convertToConsolidation(valorBase, moeda);
+          return;
+        }
+
+        // 2) Depósito efetivo
+        if (e.tipo_transacao === "DEPOSITO" || isMigracaoDV(e)) {
+          ensureCM(moeda).depositos += valorBase;
+          return;
+        }
+
+        // 3) Saque efetivo
+        if (e.tipo_transacao === "SAQUE" || isMigracaoSV(e)) {
+          ensureCM(moeda).saques += valorBase;
+          return;
+        }
+
+        // 4) SAQUE_VIRTUAL não-MIGRACAO (raros) — ignora no KPI; aparece só no histórico
+        if (e.tipo_transacao === "SAQUE_VIRTUAL") return;
+
+        // 5) Demais (AJUSTE_*, CASHBACK, etc) — somente se tiverem direção/sinal claro
+        const cm = ensureCM(moeda);
+        if (e.ajuste_direcao === "ENTRADA" || e.ajuste_direcao === "CREDITO") {
+          cm.ajustes += valorBase;
+        } else if (e.ajuste_direcao === "SAIDA" || e.ajuste_direcao === "DEBITO") {
+          cm.ajustes -= valorBase;
         } else {
-          // AJUSTE, CASHBACK, etc
-          if (e.ajuste_direcao === "CREDITO") {
-            cm.ajustes += e.valor;
-          } else if (e.ajuste_direcao === "DEBITO") {
-            cm.ajustes -= e.valor;
-          } else {
-            cm.ajustes += e.valor;
-          }
+          cm.ajustes += valorBase;
         }
       });
 
-      // Get active bookmaker balances
+      // Saldo REAL atual das casas vinculadas (somente saldo_atual; freebet à parte)
       const { data: balances } = await supabase
         .from("bookmakers")
         .select("saldo_atual, moeda")
         .eq("projeto_id", projetoId)
-        .in("status", ["ativo", "ATIVO", "EM_USO", "limitada", "LIMITADA", "AGUARDANDO_SAQUE"]);
+        .in("status", [
+          "ativo",
+          "ATIVO",
+          "EM_USO",
+          "limitada",
+          "LIMITADA",
+          "AGUARDANDO_SAQUE",
+        ]);
 
+      // Saldo Casas convertido p/ moeda de consolidação
       let saldoCasasTotal = 0;
       (balances || []).forEach((b: any) => {
-        saldoCasasTotal += b.saldo_atual || 0;
+        saldoCasasTotal += convertToConsolidation(
+          Number(b.saldo_atual || 0),
+          b.moeda || "BRL"
+        );
       });
 
       const byCurrency = Array.from(currencyMap.values());
-      const depositosTotal = byCurrency.reduce((s, c) => s + c.depositos, 0);
-      const saquesTotal = byCurrency.reduce((s, c) => s + c.saques, 0);
-      const ajustesTotal = byCurrency.reduce((s, c) => s + c.ajustes, 0);
+
+      // Totais GLOBAIS já convertidos para a moeda de consolidação (USD, BRL, etc)
+      const depositosTotal = byCurrency.reduce(
+        (s, c) => s + convertToConsolidation(c.depositos, c.moeda),
+        0
+      );
+      const saquesTotal = byCurrency.reduce(
+        (s, c) => s + convertToConsolidation(c.saques, c.moeda),
+        0
+      );
+      const ajustesTotal = byCurrency.reduce(
+        (s, c) => s + convertToConsolidation(c.ajustes, c.moeda),
+        0
+      );
+
+      // Resultado de Caixa (NÃO é Lucro Operacional canônico — é fluxo de caixa do projeto):
+      //   saques + saldo casas + ajustes − depósitos
+      const resultadoCaixa =
+        saquesTotal + saldoCasasTotal + ajustesTotal - depositosTotal;
 
       return {
         byCurrency,
@@ -279,7 +350,9 @@ function useProjetoExtrato(projetoId: string) {
         saquesTotal,
         ajustesTotal,
         saldoCasasTotal,
-        lucroConsolidado: saquesTotal - depositosTotal + saldoCasasTotal + ajustesTotal,
+        resultadoCaixa,
+        baselineExcluidoCount,
+        baselineExcluidoTotalConvertido,
       } as ProjetoFlowMetrics;
     },
     enabled: !!projetoId && !!workspaceId,
@@ -294,7 +367,18 @@ function useProjetoExtrato(projetoId: string) {
 }
 
 export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
-  const { transactions, metrics, isLoading } = useProjetoExtrato(projetoId);
+  const {
+    convertToConsolidation,
+    moedaConsolidacao,
+    formatCurrency: formatConsolidated,
+    getSymbol: getConsolidatedSymbol,
+  } = useProjetoCurrency(projetoId);
+
+  const { transactions, metrics, isLoading } = useProjetoExtrato(
+    projetoId,
+    convertToConsolidation,
+    moedaConsolidacao,
+  );
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<string>("todos");
   const [filterStatus, setFilterStatus] = useState<string>("todos");
