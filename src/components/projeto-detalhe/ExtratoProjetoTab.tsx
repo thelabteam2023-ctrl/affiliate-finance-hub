@@ -579,12 +579,43 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
     convertToConsolidation,
     moedaConsolidacao,
   );
+  const { workspaceId } = useWorkspace();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<string>("todos");
   const [filterStatus, setFilterStatus] = useState<string>("todos");
 
+  // Toggle de visibilidade de reconciliações (default OFF, persistido por workspace).
+  // Reconciliações = SV/DV canceladas pelo motor (revínculo neutralizado, baseline duplicado).
+  // NÃO entram em KPIs — toggle é puramente visual/auditoria.
+  const showReconciledStorageKey = `extrato:show-reconciled:${workspaceId || "anon"}`;
+  const [showReconciled, setShowReconciled] = useState<boolean>(false);
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem(showReconciledStorageKey);
+      if (v != null) setShowReconciled(v === "1");
+    } catch {
+      /* ignore */
+    }
+  }, [showReconciledStorageKey]);
+  const toggleShowReconciled = (next: boolean) => {
+    setShowReconciled(next);
+    try {
+      localStorage.setItem(showReconciledStorageKey, next ? "1" : "0");
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const reconciledHiddenCount = useMemo(
+    () =>
+      transactions.filter((t) => t.audit_class.startsWith("RECONCILED_")).length,
+    [transactions],
+  );
+
   const filteredTransactions = useMemo(() => {
     return transactions.filter((t) => {
+      // Reconciliações ficam ocultas até o usuário ligar o toggle.
+      if (!showReconciled && t.audit_class.startsWith("RECONCILED_")) return false;
       if (filterType !== "todos") {
         if (filterType === "depositos" && !t.tipo_transacao.includes("DEPOSITO")) return false;
         if (filterType === "saques" && !t.tipo_transacao.includes("SAQUE")) return false;
@@ -602,7 +633,7 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
       }
       return true;
     });
-  }, [transactions, filterType, filterStatus, searchTerm]);
+  }, [transactions, filterType, filterStatus, searchTerm, showReconciled]);
 
   // Detect multi-currency
   const currencies = useMemo(() => {
