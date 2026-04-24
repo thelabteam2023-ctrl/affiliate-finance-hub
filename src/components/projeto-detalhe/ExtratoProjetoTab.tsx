@@ -182,7 +182,7 @@ function getTransactionIcon(tipo: string) {
   if (tipo.includes("SAQUE")) return <ArrowUpFromLine className="h-3.5 w-3.5 text-emerald-400" />;
   if (tipo === "AJUSTE") return <ArrowRightLeft className="h-3.5 w-3.5 text-blue-400" />;
   if (tipo === "CASHBACK") return <Sparkles className="h-3.5 w-3.5 text-purple-400" />;
-  if (tipo === "BONUS") return <Gift className="h-3.5 w-3.5 text-amber-400" />;
+  if (tipo === "BONUS" || tipo === "BONUS_CREDITADO" || tipo === "BONUS_ESTORNO") return <Gift className="h-3.5 w-3.5 text-amber-400" />;
   if (tipo === "ESTORNO") return <RefreshCcw className="h-3.5 w-3.5 text-orange-400" />;
   if (tipo === "PERDA_CAMBIAL") return <ArrowRightLeft className="h-3.5 w-3.5 text-red-400" />;
   if (tipo === "GANHO_CAMBIAL") return <ArrowRightLeft className="h-3.5 w-3.5 text-emerald-400" />;
@@ -216,6 +216,13 @@ function getTransactionLabel(tipo: string, descricao?: string | null) {
     case "AJUSTE_SALDO": return "Ajuste de Saldo";
     case "CASHBACK": return "Cashback";
     case "BONUS": return "Bônus";
+    case "BONUS_CREDITADO": return "Bônus Creditado";
+    case "BONUS_ESTORNO": return "Estorno de Bônus";
+    case "GIRO_GRATIS": return "Giro Grátis";
+    case "GIRO_GRATIS_ESTORNO": return "Estorno de Giro";
+    case "CASHBACK_MANUAL": return "Cashback";
+    case "CASHBACK_ESTORNO": return "Estorno de Cashback";
+    case "PERDA_OPERACIONAL": return "Perda Operacional";
     case "ESTORNO": return "Estorno";
     default: return tipo;
   }
@@ -244,8 +251,8 @@ function getTransactionSign(tipo: string, ajusteDirecao?: string | null): "posit
     if (ajusteDirecao === "DEBITO") return "negative";
     return "neutral";
   }
-  if (tipo === "CASHBACK" || tipo === "BONUS") return "positive";
-  if (tipo === "ESTORNO") return "negative";
+  if (tipo === "CASHBACK" || tipo === "CASHBACK_MANUAL" || tipo === "BONUS" || tipo === "BONUS_CREDITADO" || tipo === "GIRO_GRATIS") return "positive";
+  if (tipo === "ESTORNO" || tipo === "BONUS_ESTORNO" || tipo === "GIRO_GRATIS_ESTORNO" || tipo === "CASHBACK_ESTORNO" || tipo === "PERDA_OPERACIONAL") return "negative";
   if (tipo === "PERDA_CAMBIAL") return "negative";
   if (tipo === "GANHO_CAMBIAL") return "positive";
   return "neutral";
