@@ -199,6 +199,9 @@ function MobileBookmakerCard({ bm, showSensitiveData, parceiroStatus, formatMone
   const moeda = bm.moeda || "BRL";
   const resultado = bm.lucro_prejuizo ?? 0;
   const saldoAtual = clampSaldoVisual(bm.saldo_atual);
+  const nomeExibicaoModal = bm.instance_identifier
+    ? `${bm.bookmaker_nome} · ${bm.instance_identifier}`
+    : bm.bookmaker_nome;
 
   return (
     <div 
@@ -224,6 +227,11 @@ function MobileBookmakerCard({ bm, showSensitiveData, parceiroStatus, formatMone
               {moeda}
             </Badge>
           </div>
+          {bm.instance_identifier && (
+            <p className="text-[10px] text-muted-foreground truncate uppercase tracking-wide mt-0.5">
+              {bm.instance_identifier}
+            </p>
+          )}
           {/* Saldo atual destaque */}
           <div className="flex items-center justify-between mt-1">
             <span className="text-[10px] text-muted-foreground">Saldo Atual</span>
