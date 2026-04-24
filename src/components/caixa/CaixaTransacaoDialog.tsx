@@ -402,6 +402,22 @@ export function CaixaTransacaoDialog({
               );
             }
           }
+          // Fallback DEPOSITO (regra de negócio): se a bookmaker opera em moeda
+          // ≠ BRL (USD, EUR, etc.), por padrão é abastecida via CRYPTO (USDT).
+          // Apenas BRL implica FIAT. Esta regra cobre o caso de bookmakers novas
+          // (sem histórico) cujo parceiro ainda não tem wallet/conta cadastrada.
+          if (!inferred && defaultTipoTransacao === "DEPOSITO" && defaultMoeda) {
+            const moedaUpper = defaultMoeda.toUpperCase();
+            if (moedaUpper !== "BRL") {
+              inferred = { tipoMoeda: "CRYPTO", coin: "USDT" };
+              console.log(
+                "[CaixaTransacaoDialog] Inferência por moeda da bookmaker (",
+                moedaUpper,
+                "≠ BRL → CRYPTO/USDT):",
+                inferred,
+              );
+            }
+          }
           if (inferred && pendingDefaultsRef.current) {
             console.log(
               "[CaixaTransacaoDialog] Sobrescrevendo defaults com funding histórico (",
