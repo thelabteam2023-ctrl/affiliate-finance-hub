@@ -49,6 +49,7 @@ type CachedRate = {
   source: string;
   expires_at: string;
   fetched_at?: string;
+  failure_count?: number;
 };
 
 async function getCachedRates(): Promise<Record<string, CachedRate>> {
@@ -56,7 +57,7 @@ async function getCachedRates(): Promise<Record<string, CachedRate>> {
   
   const { data, error } = await supabase
     .from('exchange_rate_cache')
-    .select('currency_pair, rate, source, fetched_at, expires_at');
+    .select('currency_pair, rate, source, fetched_at, expires_at, failure_count');
   
   if (error) {
     console.error('Erro ao buscar cache:', error);
@@ -70,6 +71,7 @@ async function getCachedRates(): Promise<Record<string, CachedRate>> {
       source: row.source,
       fetched_at: row.fetched_at,
       expires_at: row.expires_at,
+      failure_count: Number(row.failure_count || 0),
     };
   }
   
@@ -150,6 +152,7 @@ async function markRefreshFailures(currencyPairs: string[], cachedRates: Record<
       .from('exchange_rate_cache')
       .update({
         status: getCacheStatus(lastSuccess),
+        failure_count: (cached.failure_count || 0) + 1,
         last_error_at: nowIso,
         last_error_message: message,
       })
