@@ -321,14 +321,31 @@ export function CaixaTransacaoDialog({
       }
       
       // ========================================================================
-      // SAQUE INTELIGENTE: Se é um saque com bookmaker pré-definida,
+      // FUNDING INTELIGENTE: Se é SAQUE ou DEPOSITO com bookmaker pré-definida,
       // buscar o último depósito para detectar a origem real do dinheiro
-      // e sobrescrever tipoMoeda/moeda/coin nos pendingDefaults
+      // e sobrescrever tipoMoeda/moeda/coin nos pendingDefaults.
+      //
+      // - SAQUE: olha origem (bookmaker de onde sai o dinheiro)
+      // - DEPOSITO contextual: olha destino (bookmaker que recebe o aporte)
+      //   → assim TALISMANIA pré-selecionada com histórico de USDT abre direto
+      //   em CRYPTO/USDT em vez de defaultar para FIAT/USD.
       // ========================================================================
-      if (defaultTipoTransacao === "SAQUE" && defaultOrigemBookmakerId) {
-        fetchLastDepositFundingSource(defaultOrigemBookmakerId).then((fundingSource) => {
+      const fundingBookmakerId =
+        defaultTipoTransacao === "SAQUE"
+          ? defaultOrigemBookmakerId
+          : defaultTipoTransacao === "DEPOSITO"
+            ? defaultDestinoBookmakerId
+            : undefined;
+
+      if (fundingBookmakerId) {
+        fetchLastFundingSource(fundingBookmakerId).then((fundingSource) => {
           if (fundingSource && pendingDefaultsRef.current) {
-            console.log("[CaixaTransacaoDialog] Sobrescrevendo defaults com origem do último depósito:", fundingSource);
+            console.log(
+              "[CaixaTransacaoDialog] Sobrescrevendo defaults com funding histórico (",
+              defaultTipoTransacao,
+              "):",
+              fundingSource,
+            );
             pendingDefaultsRef.current = {
               ...pendingDefaultsRef.current,
               tipoMoeda: fundingSource.tipoMoeda,
@@ -337,7 +354,7 @@ export function CaixaTransacaoDialog({
             };
           }
           // Aplicar tipo de transação APÓS a detecção (para que pendingDefaults esteja atualizado)
-          setTipoTransacao(defaultTipoTransacao);
+          setTipoTransacao(defaultTipoTransacao!);
         });
       } else {
         // Aplicar tipo de transação imediatamente - isso dispara o reset de contexto
