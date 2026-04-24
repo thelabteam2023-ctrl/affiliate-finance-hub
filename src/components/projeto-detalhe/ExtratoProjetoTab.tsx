@@ -585,8 +585,9 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
                 title="Depósitos"
                 body={
                   <>
-                    <p>Soma de tudo que você colocou no projeto, usando a <strong>cotação do dia em que cada depósito foi feito</strong>.</p>
-                    <p>Esse valor é histórico: não muda quando o câmbio se mexe depois.</p>
+                    <p>Soma do que <strong>realmente entrou na casa</strong> em cada depósito (já descontando taxas de trânsito), usando a <strong>cotação do dia</strong>.</p>
+                    <p>Se você lançou 200 e a casa creditou 198, o card mostra 198. Os 2 perdidos no caminho aparecem como diferença no Resultado de Caixa.</p>
+                    <p>Esse valor é histórico: não muda com o câmbio depois.</p>
                   </>
                 }
                 divergencia={
