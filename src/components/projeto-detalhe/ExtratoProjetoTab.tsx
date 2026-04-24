@@ -1134,6 +1134,13 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
                                     {t.evento_promocional_tipo}
                                   </Badge>
                                 )}
+                                {t.tipo_transacao === "AJUSTE_SALDO" && (
+                                  <AjusteNaturezaBadge
+                                    ledgerId={t.id}
+                                    natureza={t.ajuste_natureza}
+                                    projetoId={projetoId}
+                                  />
+                                )}
                               </div>
                               <div className="text-right shrink-0">
                                 <p className={`text-sm font-semibold whitespace-nowrap ${
