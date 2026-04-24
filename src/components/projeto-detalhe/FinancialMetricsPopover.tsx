@@ -27,6 +27,8 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useProjetoCurrency } from "@/hooks/useProjetoCurrency";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Progress } from "@/components/ui/progress";
+import { Lightbulb, PiggyBank, Banknote } from "lucide-react";
 
 
 interface FinancialMetricsPopoverProps {
@@ -871,19 +873,71 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
         )}
       </div>
 
+      {/* ─── HEADER EDUCACIONAL: 3 perspectivas ─── */}
+      <div className="flex items-start gap-2 mb-3 px-2.5 py-2 rounded-md bg-muted/30 border border-border/40">
+        <Lightbulb className="h-3 w-3 text-amber-500 mt-0.5 shrink-0" />
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <p className="text-[10px] leading-snug text-muted-foreground border-b border-dotted border-muted-foreground/40 cursor-help">
+              <span className="font-semibold text-foreground">3 perspectivas de lucro:</span> o que voltou pro caixa · o que voltaria se sacasse tudo · o que a operação produziu.
+            </p>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" className="max-w-[300px] text-xs">
+            <div className="space-y-1.5">
+              <p><span className="font-semibold text-emerald-500">💰 Patrimônio:</span> resposta principal — quanto sobraria no seu bolso se você sacasse tudo das casas hoje.</p>
+              <p><span className="font-semibold text-foreground">🏦 Caixa:</span> dinheiro que efetivamente já voltou pra conta (saques − depósitos).</p>
+              <p><span className="font-semibold text-foreground">📊 Operação:</span> o que a operação produziu (performance + FX + extraordinários). Em equilíbrio, deve bater com Patrimônio.</p>
+            </div>
+          </TooltipContent>
+        </Tooltip>
+      </div>
+
+      {/* ─── CARD-RESUMO: Lucro se sacar tudo hoje (Patrimônio destacado) ─── */}
+      <div
+        className={`mb-4 rounded-lg border px-3 py-3 cursor-pointer transition-all hover:shadow-md ${
+          metrics.lucroFinanceiro >= 0
+            ? "border-emerald-500/30 bg-gradient-to-br from-emerald-500/[0.08] to-emerald-500/[0.02]"
+            : "border-red-500/30 bg-gradient-to-br from-red-500/[0.08] to-red-500/[0.02]"
+        }`}
+        onClick={() => setShowLucroProjetado(true)}
+        role="button"
+      >
+        <div className="flex items-center justify-between gap-2 mb-1.5">
+          <div className="flex items-center gap-1.5">
+            <PiggyBank className={`h-3.5 w-3.5 ${metrics.lucroFinanceiro >= 0 ? "text-emerald-500" : "text-red-500"}`} />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="text-[11px] font-bold tracking-tight text-foreground border-b border-dotted border-muted-foreground/40 cursor-help">
+                  💰 Lucro se sacar tudo hoje
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-[280px] text-xs">
+                Esta é a resposta principal. Se você sacasse todo o saldo das casas hoje e fechasse a operação, este é o lucro/prejuízo que ficaria no seu bolso.
+              </TooltipContent>
+            </Tooltip>
+          </div>
+          <span className={`text-base font-mono tabular-nums font-bold ${metrics.lucroFinanceiro >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+            {formatCurrency(metrics.lucroFinanceiro)}
+          </span>
+        </div>
+        <p className="text-[9.5px] text-muted-foreground/80 leading-snug">
+          Saldo nas casas + saques recebidos − depósitos confirmados
+        </p>
+      </div>
+
       {/* ─── CAMADA 1: REALIZADO (Caixa) ─── */}
       <div className="space-y-1 pb-3">
         <div className="flex items-center justify-between mb-1.5">
           <div className="flex items-center gap-1.5">
-            <ArrowRightLeft className="h-3 w-3 text-muted-foreground" />
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">1. Realizado · Caixa</span>
+            <Banknote className="h-3 w-3 text-muted-foreground" />
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">🏦 Lucro em Caixa</span>
           </div>
           <Tooltip>
             <TooltipTrigger asChild>
-              <span className="text-[9px] text-muted-foreground/70 border-b border-dotted border-muted-foreground/40 cursor-help">o que entrou e saiu</span>
+              <span className="text-[9px] text-muted-foreground/70 border-b border-dotted border-muted-foreground/40 cursor-help">dinheiro que já voltou pra conta</span>
             </TooltipTrigger>
             <TooltipContent side="left" className="max-w-[260px] text-xs">
-              Fluxo de caixa puro: dinheiro que efetivamente saiu (depósitos) e voltou (saques). Não considera saldo ainda dentro das casas nem variação cambial.
+              Saques confirmados − depósitos confirmados. Só conta dinheiro que efetivamente voltou ao seu banco. Não considera saldo ainda dentro das casas nem variação cambial.
             </TooltipContent>
           </Tooltip>
         </div>
@@ -912,7 +966,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
         )}
         <div className="border-t border-border/30 mt-1.5 pt-1.5">
           <MetricRow 
-            label="Resultado Realizado" 
+            label="Lucro em Caixa" 
             value={formatCurrency(hasExtras ? metrics.fluxoLiquidoAjustado : metrics.fluxoCaixaLiquido)} 
             colorClass={(hasExtras ? metrics.fluxoLiquidoAjustado : metrics.fluxoCaixaLiquido) >= 0 ? "text-emerald-500" : "text-red-500"}
             bold
@@ -941,14 +995,14 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
         <div className="flex items-center justify-between mb-1.5">
           <div className="flex items-center gap-1.5">
             <TrendingUp className="h-3 w-3 text-primary" />
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">2. Mark-to-Market · Patrimônio</span>
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">📐 Composição do Patrimônio</span>
           </div>
           <Tooltip>
             <TooltipTrigger asChild>
-              <span className="text-[9px] text-muted-foreground/70 border-b border-dotted border-muted-foreground/40 cursor-help">se sacar tudo agora</span>
+              <span className="text-[9px] text-muted-foreground/70 border-b border-dotted border-muted-foreground/40 cursor-help">como chegamos lá</span>
             </TooltipTrigger>
             <TooltipContent side="left" className="max-w-[260px] text-xs">
-              Quanto o projeto valeria se todas as casas fossem sacadas hoje. Usa cotação live, então flutua com câmbio mesmo sem operar — isso é variação cambial real, não bug.
+              Detalhamento dos componentes que somam ao "Lucro se sacar tudo hoje" do card acima. Usa cotação live, então flutua com câmbio mesmo sem operar — isso é variação cambial real, não bug.
             </TooltipContent>
           </Tooltip>
         </div>
@@ -970,11 +1024,11 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
         />
         <div className="border-t border-border/30 mt-1.5 pt-1.5">
           <MetricRow
-            label="Patrimônio Líquido"
+            label="= Lucro se sacar tudo hoje"
             value={formatCurrency(metrics.lucroFinanceiro)}
             colorClass={metrics.lucroFinanceiro >= 0 ? "text-emerald-500" : "text-red-500"}
             bold
-            tooltip="Resultado se todo saldo fosse sacado hoje. Clique para reconciliar com o Lucro Operacional."
+            tooltip="Mesma resposta do card destacado no topo. Clique para reconciliar com a Performance da Operação."
             onClick={() => setShowLucroProjetado(true)}
           />
           <p className="text-[9px] text-muted-foreground/70 mt-0.5">
@@ -989,17 +1043,34 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-1.5">
               <BarChart3 className="h-3 w-3 text-primary" />
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">3. Operacional · Resultado Completo</span>
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">📊 Performance da Operação</span>
             </div>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="text-[9px] text-muted-foreground/70 border-b border-dotted border-muted-foreground/40 cursor-help">3 blocos segregados</span>
-              </TooltipTrigger>
-              <TooltipContent side="left" className="max-w-[280px] text-xs">
-                Performance Pura mostra a qualidade da operação (numerador de ROI). Efeitos Financeiros (FX) e Ajustes são apresentados separados — afetam o caixa, mas não medem performance nem compõem a remuneração do operador.
-              </TooltipContent>
-            </Tooltip>
+            {(() => {
+              const diff = metrics.lucroFinanceiro - metrics.resultadoOperacionalTotal;
+              const convergente = Math.abs(diff) < 0.01;
+              return (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span
+                      className={`text-[9px] px-1.5 py-0.5 rounded border cursor-help font-medium ${
+                        convergente
+                          ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
+                          : "bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400"
+                      }`}
+                    >
+                      {convergente ? "🟢 Convergente" : `🟡 Δ ${formatCurrency(Math.abs(diff))}`}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="left" className="max-w-[280px] text-xs">
+                    Em uma operação saudável, a Performance da Operação deve bater com o "Lucro se sacar tudo hoje". Divergência indica saldos ainda não realizados, FX pendente ou ajustes recém-classificados.
+                  </TooltipContent>
+                </Tooltip>
+              );
+            })()}
           </div>
+          <p className="text-[9.5px] text-muted-foreground/70 -mt-1 mb-1.5">
+            Performance Pura + Efeitos Financeiros + Extraordinários
+          </p>
           <LucroOperacionalCollapsible metrics={metrics} formatCurrency={formatCurrency} />
         </div>
       )}
@@ -1015,7 +1086,7 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
               <AlertCircle className="h-3 w-3 text-amber-500" />
             )}
             <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Lucro Realizado
+              Recuperação de Capital
               {metrics.hasInvestorCapital && (
                 <span className="ml-1 text-[9px] font-normal normal-case text-muted-foreground/60">(consolidado)</span>
               )}
@@ -1024,23 +1095,43 @@ export function FinancialMetricsPopover({ projetoId, dateRange }: FinancialMetri
           
           {breakEvenReached ? (
             <div className="rounded-lg bg-emerald-500/5 border border-emerald-500/15 px-3 py-2">
-              <p className="text-[11px] text-foreground font-medium">
-                Capital recuperado em {metrics.breakEvenDays ?? "—"} dias
-              </p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">
-                Saques superaram depósitos em{" "}
-                {metrics.breakEvenDate && format(parseISO(metrics.breakEvenDate), "dd/MM/yyyy")}.
-                O caixa já recebeu de volta todo o valor investido.
+              <div className="flex items-center justify-between gap-2 mb-1.5">
+                <p className="text-[11px] text-foreground font-medium">
+                  ✓ Capital recuperado
+                </p>
+                <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono tabular-nums font-semibold">
+                  Excedente: {formatCurrency(Math.abs(metrics.fluxoCaixaLiquido))}
+                </p>
+              </div>
+              <Progress value={100} className="h-1.5 bg-emerald-500/20 [&>div]:bg-emerald-500" />
+              <p className="text-[9.5px] text-muted-foreground mt-1.5">
+                Recuperado em {metrics.breakEvenDays ?? "—"} dias
+                {metrics.breakEvenDate && ` · ${format(parseISO(metrics.breakEvenDate), "dd/MM/yyyy")}`}
               </p>
             </div>
           ) : (
             <div className="rounded-lg bg-amber-500/5 border border-amber-500/15 px-3 py-2">
-              <p className="text-[11px] text-foreground font-medium">
-                Faltam {formatCurrency(Math.abs(metrics.fluxoCaixaLiquido))} para recuperar
-              </p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">
-                Saques recebidos ainda não cobriram os depósitos realizados.
-              </p>
+              {(() => {
+                const recovered = metrics.saquesRecebidos || 0;
+                const target = metrics.depositosEfetivos || 0;
+                const pct = target > 0 ? Math.min(100, (recovered / target) * 100) : 0;
+                return (
+                  <>
+                    <div className="flex items-center justify-between gap-2 mb-1.5">
+                      <p className="text-[11px] text-foreground font-medium">
+                        Recuperação de capital
+                      </p>
+                      <p className="text-[10px] text-muted-foreground font-mono tabular-nums">
+                        {formatCurrency(recovered)} / {formatCurrency(target)}
+                      </p>
+                    </div>
+                    <Progress value={pct} className="h-1.5 bg-amber-500/15 [&>div]:bg-amber-500" />
+                    <p className="text-[9.5px] text-muted-foreground mt-1.5">
+                      Faltam {formatCurrency(Math.abs(metrics.fluxoCaixaLiquido))} ({pct.toFixed(0)}% recuperado)
+                    </p>
+                  </>
+                );
+              })()}
             </div>
           )}
         </div>
