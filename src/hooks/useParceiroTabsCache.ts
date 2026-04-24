@@ -29,6 +29,8 @@ export interface Transacao {
   coin: string | null; // Ativo crypto (USDT, ETH, BTC, etc.)
   qtd_coin: number | null; // Quantidade do ativo
   data_transacao: string;
+  created_at: string | null;
+  data_confirmacao: string | null;
   status: string;
   descricao: string | null;
   origem_bookmaker_id: string | null;
