@@ -230,7 +230,7 @@ function useProjetoExtrato(
       const { data: ledger, error } = await supabase
         .from("cash_ledger")
         .select(
-          "tipo_transacao, valor, valor_confirmado, moeda, tipo_moeda, valor_usd, cotacao, ajuste_direcao, origem_tipo, descricao"
+          "tipo_transacao, valor, valor_confirmado, valor_destino, moeda, tipo_moeda, valor_usd, cotacao, ajuste_direcao, origem_tipo, descricao"
         )
         .eq("projeto_id_snapshot", projetoId)
         .eq("status", "CONFIRMADO");
@@ -265,7 +265,12 @@ function useProjetoExtrato(
 
       (ledger || []).forEach((e: any) => {
         const moeda = e.moeda || "BRL";
-        const valorBase = Number(e.valor_confirmado ?? e.valor ?? 0);
+        // Fonte canônica na MOEDA ORIGINAL do registro:
+        //   valor_destino  → reflexo cross-currency, sempre na moeda do destino
+        //   valor          → fallback para o lançamento original
+        // NÃO usar valor_confirmado: a RPC confirm_wallet_transit grava ali o equivalente
+        // em USD, contaminando KPIs por moeda (ex.: EUR aparecendo como 116,80 em vez de 99,09).
+        const valorBase = Number(e.valor_destino ?? e.valor ?? 0);
 
         // 1) Baseline DV: NÃO entra no KPI (seria duplicação do DEPOSITO real)
         if (isBaselineDV(e)) {
