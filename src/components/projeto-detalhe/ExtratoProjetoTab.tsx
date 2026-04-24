@@ -253,10 +253,16 @@ function useProjetoExtrato(
           cotacao, cotacao_origem_usd, cotacao_destino_usd, status,
           data_transacao, created_at, descricao,
           origem_bookmaker_id, destino_bookmaker_id, origem_tipo, destino_tipo,
-          ajuste_motivo, ajuste_direcao, evento_promocional_tipo
+          ajuste_motivo, ajuste_direcao, evento_promocional_tipo,
+          auditoria_metadata
         `)
         .eq("projeto_id_snapshot", projetoId)
-        .not("status", "eq", "CANCELADO")
+        // Mantemos cancelados APENAS quando são SV/DV — para auditoria de
+        // reconciliações automáticas (revínculo, baseline duplicado).
+        // Demais cancelados (DEPOSITO, SAQUE, AJUSTE...) seguem ocultos.
+        .or(
+          "status.neq.CANCELADO,tipo_transacao.in.(SAQUE_VIRTUAL,DEPOSITO_VIRTUAL)"
+        )
         .order("data_transacao", { ascending: false })
         .order("created_at", { ascending: false })
         .limit(500);
@@ -300,6 +306,30 @@ function useProjetoExtrato(
         if (cotacaoEfetiva == null && e.cotacao != null && Number(e.cotacao) !== 1) {
           cotacaoEfetiva = Number(e.cotacao);
         }
+        // === Classificação de auditoria ===
+        const meta = (e.auditoria_metadata || {}) as Record<string, any>;
+        const cancelledReason: string | null = meta.cancelled_reason ?? null;
+        let auditClass: ProjetoTransaction["audit_class"] = "EFFECTIVE";
+        if (e.status === "CANCELADO") {
+          if (
+            e.tipo_transacao === "SAQUE_VIRTUAL" &&
+            cancelledReason === "ping_pong_neutralized_by_usage"
+          ) {
+            auditClass = "RECONCILED_PHANTOM";
+          } else if (
+            e.tipo_transacao === "DEPOSITO_VIRTUAL" &&
+            (meta.origem_tipo === "BASELINE" || cancelledReason === "phantom_link_unused")
+          ) {
+            auditClass = "RECONCILED_DUPLICATE";
+          } else {
+            auditClass = "RECONCILED_OTHER";
+          }
+        } else if (
+          e.tipo_transacao === "DEPOSITO_VIRTUAL" &&
+          (e.origem_tipo === "BASELINE" || e.origem_tipo == null)
+        ) {
+          auditClass = "BASELINE_EXCLUDED";
+        }
         return {
           id: e.id,
           tipo_transacao: e.tipo_transacao,
@@ -322,6 +352,8 @@ function useProjetoExtrato(
           ajuste_motivo: e.ajuste_motivo,
           ajuste_direcao: e.ajuste_direcao,
           evento_promocional_tipo: e.evento_promocional_tipo,
+          audit_class: auditClass,
+          cancelled_reason: cancelledReason,
         };
       });
     },
