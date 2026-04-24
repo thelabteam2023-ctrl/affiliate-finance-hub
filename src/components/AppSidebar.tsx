@@ -670,7 +670,11 @@ export function AppSidebar() {
               </DropdownMenuItem>
             )}
             {isSystemOwner && (
-              <DropdownMenuItem onClick={() => navigate("/dev/ledger-monitor")}>
+              <DropdownMenuItem
+                onClick={() =>
+                  window.open("/dev/ledger-monitor", "_blank", "noopener,noreferrer")
+                }
+              >
                 <Activity className="mr-2 h-4 w-4" />
                 Ledger Monitor
               </DropdownMenuItem>
