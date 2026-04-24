@@ -604,7 +604,9 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
   return (
     <div className="space-y-4">
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+      {/* Mobile: 2 colunas, com Resultado de Caixa em destaque (col-span-2) */}
+      {/* Tablet: 3 colunas. Desktop: 5 colunas em linha única */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
         <Card className="border-border/50">
           <CardContent className="p-3">
             <div className="flex items-center gap-2 mb-1">
@@ -736,10 +738,10 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
           </CardContent>
         </Card>
 
-        <Card className="border-border/50">
+        <Card className="border-border/50 col-span-2 sm:col-span-3 lg:col-span-1 bg-gradient-to-br from-card to-muted/20">
           <CardContent className="p-3">
             <div className="flex items-center gap-2 mb-1">
-              <TrendingUp className="h-3.5 w-3.5 text-emerald-400" />
+              <TrendingUp className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
               <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Resultado de Caixa</span>
               <KpiInfoButton
                 title="Resultado de Caixa"
@@ -788,7 +790,7 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-2">
-        <div className="relative flex-1 min-w-[200px] max-w-xs">
+        <div className="relative flex-1 min-w-full sm:min-w-[200px] sm:max-w-xs order-1">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <Input
             placeholder="Buscar por casa, parceiro..."
@@ -799,7 +801,7 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
         </div>
 
         <Select value={filterType} onValueChange={setFilterType}>
-          <SelectTrigger className="h-8 w-auto min-w-[140px] text-xs">
+          <SelectTrigger className="h-8 flex-1 sm:flex-initial sm:w-auto sm:min-w-[140px] text-xs order-2">
             <SelectValue placeholder="Tipo" />
           </SelectTrigger>
           <SelectContent>
@@ -811,7 +813,7 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
         </Select>
 
         <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="h-8 w-auto min-w-[140px] text-xs">
+          <SelectTrigger className="h-8 flex-1 sm:flex-initial sm:w-auto sm:min-w-[140px] text-xs order-3">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
@@ -822,7 +824,7 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
           </SelectContent>
         </Select>
 
-        <span className="text-[11px] text-muted-foreground ml-auto">
+        <span className="text-[11px] text-muted-foreground ml-auto order-4 w-full sm:w-auto text-right">
           {filteredTransactions.length} / {transactions.length} registros
         </span>
       </div>
@@ -857,65 +859,71 @@ export function ExtratoProjetoTab({ projetoId }: ExtratoProjetoTabProps) {
                       key={t.id}
                       className="border-border/30 hover:border-border/60 transition-colors"
                     >
-                      <CardContent className="p-3 flex items-center gap-3">
-                        {/* Icon */}
-                        <div className="shrink-0 h-8 w-8 rounded-full flex items-center justify-center bg-muted/50">
-                          {getTransactionIcon(t.tipo_transacao)}
-                        </div>
-
-                        {/* Info */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-foreground truncate">
-                              {getTransactionLabel(t.tipo_transacao, t.descricao)}
-                            </span>
-                            {isForeign && (
-                              <Badge variant="outline" className="text-[9px] px-1 py-0 text-blue-400 border-blue-400/30">
-                                {t.moeda}
-                              </Badge>
-                            )}
-                            {t.evento_promocional_tipo && (
-                              <Badge variant="outline" className="text-[9px] px-1 py-0 text-purple-400 border-purple-400/30">
-                                {t.evento_promocional_tipo}
-                              </Badge>
-                            )}
+                      <CardContent className="p-3">
+                        {/* Mobile-first: ícone + título/valor empilhado em 2 linhas; desktop volta a 1 linha */}
+                        <div className="flex items-start gap-3">
+                          {/* Icon */}
+                          <div className="shrink-0 h-8 w-8 rounded-full flex items-center justify-center bg-muted/50">
+                            {getTransactionIcon(t.tipo_transacao)}
                           </div>
-                          <p className="text-xs text-muted-foreground truncate">
-                            {t.bookmaker_nome || "—"}
-                            {t.parceiro_nome && ` · ${t.parceiro_nome}`}
-                            {t.tipo_transacao === "DEPOSITO_VIRTUAL" 
-                              ? " · Saldo existente incorporado ao projeto na vinculação"
-                              : t.tipo_transacao === "SAQUE_VIRTUAL"
-                              ? " · Saldo transferido para fora do projeto na desvinculação"
-                              : t.descricao ? ` · ${t.descricao}` : ""}
-                            {t.ajuste_motivo && ` · ${t.ajuste_motivo}`}
-                          </p>
-                        </div>
 
-                        {/* Value */}
-                        <div className="text-right shrink-0">
-                          <p className={`text-sm font-semibold ${
-                            sign === "positive" ? "text-emerald-400" : 
-                            sign === "negative" ? "text-red-400" : "text-foreground"
-                          }`}>
-                            {sign === "positive" ? "+" : sign === "negative" ? "-" : ""}
-                            {formatVal(t.valor, t.moeda)}
-                          </p>
-                          {isForeign && t.cotacao_efetiva && t.cotacao_efetiva !== 1 && (
-                            <p className="text-[9px] text-muted-foreground/60">
-                              1 {t.moeda} ≈ {t.cotacao_efetiva < 0.01
-                                ? t.cotacao_efetiva.toFixed(6)
-                                : t.cotacao_efetiva.toFixed(4)} USD
+                          {/* Conteúdo principal */}
+                          <div className="flex-1 min-w-0">
+                            {/* Linha 1: label + valor (sempre lado a lado) */}
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex items-center gap-1.5 flex-wrap min-w-0 flex-1">
+                                <span className="text-sm font-medium text-foreground">
+                                  {getTransactionLabel(t.tipo_transacao, t.descricao)}
+                                </span>
+                                {isForeign && (
+                                  <Badge variant="outline" className="text-[9px] px-1 py-0 text-blue-400 border-blue-400/30">
+                                    {t.moeda}
+                                  </Badge>
+                                )}
+                                {t.evento_promocional_tipo && (
+                                  <Badge variant="outline" className="text-[9px] px-1 py-0 text-purple-400 border-purple-400/30">
+                                    {t.evento_promocional_tipo}
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="text-right shrink-0">
+                                <p className={`text-sm font-semibold whitespace-nowrap ${
+                                  sign === "positive" ? "text-emerald-400" :
+                                  sign === "negative" ? "text-red-400" : "text-foreground"
+                                }`}>
+                                  {sign === "positive" ? "+" : sign === "negative" ? "-" : ""}
+                                  {formatVal(t.valor, t.moeda)}
+                                </p>
+                                {isForeign && t.cotacao_efetiva && t.cotacao_efetiva !== 1 && (
+                                  <p className="text-[9px] text-muted-foreground/60 whitespace-nowrap">
+                                    1 {t.moeda} ≈ {t.cotacao_efetiva < 0.01
+                                      ? t.cotacao_efetiva.toFixed(6)
+                                      : t.cotacao_efetiva.toFixed(4)} USD
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Linha 2: descrição (bookmaker · parceiro · obs) */}
+                            <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
+                              {t.bookmaker_nome || "—"}
+                              {t.parceiro_nome && ` · ${t.parceiro_nome}`}
+                              {t.tipo_transacao === "DEPOSITO_VIRTUAL"
+                                ? " · Saldo existente incorporado ao projeto na vinculação"
+                                : t.tipo_transacao === "SAQUE_VIRTUAL"
+                                ? " · Saldo transferido para fora do projeto na desvinculação"
+                                : t.descricao ? ` · ${t.descricao}` : ""}
+                              {t.ajuste_motivo && ` · ${t.ajuste_motivo}`}
                             </p>
-                          )}
-                          <p className="text-[10px] text-muted-foreground">
-                            {new Date(t.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-                          </p>
-                        </div>
 
-                        {/* Status */}
-                        <div className="shrink-0">
-                          {getStatusBadge(t.status)}
+                            {/* Linha 3: status + horário */}
+                            <div className="flex items-center justify-between gap-2 mt-1.5">
+                              {getStatusBadge(t.status)}
+                              <span className="text-[10px] text-muted-foreground">
+                                {new Date(t.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                              </span>
+                            </div>
+                          </div>
                         </div>
                       </CardContent>
                     </Card>

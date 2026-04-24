@@ -571,17 +571,18 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
         onFixed={invalidateVinculos}
       />
       
-      <div className="flex items-center gap-4 flex-wrap">
+      {/* Toolbar responsiva: empilha em mobile, alinha em desktop */}
+      <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
         {/* Botão Adicionar Vínculos - com controle de responsabilidade */}
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <span className="inline-block">
+              <span className="inline-block w-full sm:w-auto">
                 <Button 
                   size="sm"
                   onClick={handleOpenAddDialog}
                   disabled={!canManageVinculos || responsibilitiesLoading}
-                  className={!canManageVinculos && !responsibilitiesLoading ? "opacity-50 cursor-not-allowed text-xs" : "text-xs"}
+                  className={`text-xs w-full sm:w-auto ${!canManageVinculos && !responsibilitiesLoading ? "opacity-50 cursor-not-allowed" : ""}`}
                 >
                   {responsibilitiesLoading ? (
                     <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
@@ -612,8 +613,8 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
             className="text-xs"
             onClick={() => setReceberContasDialogOpen(true)}
           >
-            <Users className="mr-1.5 h-3.5 w-3.5" />
-            Receber Contas
+            <Users className="h-3.5 w-3.5 sm:mr-1.5" />
+            <span className="hidden sm:inline">Receber Contas</span>
           </Button>
         )}
         {/* Botão Desvinculação em Massa */}
@@ -624,8 +625,8 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
             className="text-xs text-destructive border-destructive/30 hover:bg-destructive/10"
             onClick={() => setBulkUnlinkOpen(true)}
           >
-            <Link2Off className="mr-1.5 h-3.5 w-3.5" />
-            Desvincular em Massa
+            <Link2Off className="h-3.5 w-3.5 sm:mr-1.5" />
+            <span className="hidden sm:inline">Desvincular em Massa</span>
           </Button>
         )}
         <Toggle
@@ -657,7 +658,7 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
           onSelectionChange={setSelectedParceiros}
         />
 
-        <div className="relative flex-1 max-w-sm">
+        <div className="relative flex-1 min-w-full sm:min-w-[200px] sm:max-w-sm order-last sm:order-none">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Buscar por nome, parceiro ou login..."
@@ -672,7 +673,7 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm" className="h-9 gap-1.5 shrink-0">
               <ArrowUpDown className="h-4 w-4" />
-              <span className="text-[11px] text-muted-foreground whitespace-nowrap">
+              <span className="text-[11px] text-muted-foreground whitespace-nowrap hidden xs:inline sm:inline">
                 {sortMode === "alpha" ? "A-Z" 
                   : sortMode === "newest" ? "Recentes" 
                   : sortMode === "oldest" ? "Antigos"
@@ -716,8 +717,9 @@ export function ProjetoVinculosTab({ projetoId, tipoProjeto, investidorId, isBro
       </div>
 
       {/* Lista de Vínculos Ativos — scroll interno (anti-regressão) */}
+      {/* Altura responsiva: mais alta em desktop, menor em mobile para não dominar a tela */}
       <div className="relative">
-        <ScrollArea className="h-[520px] pr-2">
+        <ScrollArea className="h-[60vh] sm:h-[520px] pr-2">
           {sortedVinculos.length === 0 ? (
         <Card>
           <CardContent className="pt-6">
