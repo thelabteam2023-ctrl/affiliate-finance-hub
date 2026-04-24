@@ -3988,31 +3988,82 @@ export type Database = {
           created_at: string
           currency_pair: string
           expires_at: string
+          failure_count: number
           fetched_at: string
           id: string
+          last_error_at: string | null
+          last_error_message: string | null
+          last_success_at: string | null
           rate: number
           source: string
+          status: string
           updated_at: string
         }
         Insert: {
           created_at?: string
           currency_pair: string
           expires_at: string
+          failure_count?: number
           fetched_at?: string
           id?: string
+          last_error_at?: string | null
+          last_error_message?: string | null
+          last_success_at?: string | null
           rate: number
           source: string
+          status?: string
           updated_at?: string
         }
         Update: {
           created_at?: string
           currency_pair?: string
           expires_at?: string
+          failure_count?: number
           fetched_at?: string
           id?: string
+          last_error_at?: string | null
+          last_error_message?: string | null
+          last_success_at?: string | null
           rate?: number
           source?: string
+          status?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      exchange_rate_history: {
+        Row: {
+          created_at: string
+          currency_pair: string
+          fetched_at: string
+          id: string
+          is_fallback: boolean
+          provider_payload: Json | null
+          rate: number
+          refresh_reason: string
+          source: string
+        }
+        Insert: {
+          created_at?: string
+          currency_pair: string
+          fetched_at?: string
+          id?: string
+          is_fallback?: boolean
+          provider_payload?: Json | null
+          rate: number
+          refresh_reason?: string
+          source: string
+        }
+        Update: {
+          created_at?: string
+          currency_pair?: string
+          fetched_at?: string
+          id?: string
+          is_fallback?: boolean
+          provider_payload?: Json | null
+          rate?: number
+          refresh_reason?: string
+          source?: string
         }
         Relationships: []
       }
